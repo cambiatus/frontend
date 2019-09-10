@@ -1,0 +1,380 @@
+{
+  "bespiral": "Cambiatus",
+  "menu": {
+    "title": "Menu",
+    "my_communities": "Mis Comunidades",
+    "dashboard": "Inicio",
+    "news": "Noticias",
+    "learn": "Aprende",
+    "shop": "Tienda",
+    "faq": "Preguntas Frecuentes",
+    "profile": "Perfil",
+    "invite": "Invitaciones",
+    "notifications": "Notificaciones",
+    "new_notifications": "Notificaciones nuevas",
+    "previous_notifications": "Notificaciones anteriores",
+    "no_notification": "Sin notificaciones",
+    "chat_message_notification": "Nuevo mensaje de: {{username}}",
+    "view_all": "Ver todo",
+    "more": "Mas",
+    "logout": "Salir",
+    "explore": "Explorar",
+    "explore_communities": "Explorar Comunidades",
+    "welcome_message": "Hola {{user_name}} ",
+    "back_to_dashboard": "Ir al Inicio",
+    "edit": "Editar",
+    "cancel": "Cancelar",
+    "save": "Salvar",
+    "create": "Crear",
+    "send": "Enviar",
+    "add": "Añadir",
+    "close": "Cerrar",
+    "loading": "Cargando...",
+    "try_again": "Intenta de nuevo",
+    "coming_soon": "Próximamente"
+  },
+  "error": {
+    "validator": {
+      "number": {
+        "positive": "El número debe ser positivo",
+        "negative": "El número debe ser negativo",
+        "greater_than": "El número debe ser mayor que {{base}}",
+        "greater_than_or_equal": "El número debe ser mayor o igual que {{base}}",
+        "lower_than": "El número debe ser inferior a {{base}}",
+        "lower_than_or_equal": "El número debe ser inferior o igual a {{base}}"
+      },
+      "text": {
+        "only_numbers": "Sólo se permiten números",
+        "only_letters": "Sólo se permiten letras",
+        "exactly": "El texto debe tener exactamente {{base}} caracteres",
+        "longer_than": "El texto debe tener más de {{base}} caracteres",
+        "shorter_than": "El texto debe tener menos de {{base}} caracteres"
+      },
+      "enum": {
+        "one_of": "El texto debe ser uno de los siguientes: [{{base}}]",
+        "none_of": "El texto no debe ser ninguno de: [{{base}}]"
+      }
+    },
+    "objective": {
+        "invalid_id": "ID de objetivo no válido "
+    },
+    "pageNotFound": "¡Pagina no encontrada.",
+    "required": "Parece que olvidaste completar esto.",
+    "tooShort": "Muy corto. Debes usar al menos {{minLength}} caracteres.",
+    "tooLong": "Muy largo. Debes usar como maximo {{maxLength}} caracteres.",
+    "invalidChar": "Caracter invalido {{invalidChar}}.",
+    "alreadyTaken": "Ya esta en uso. Por favor, intenta de nuevo.",
+    "notMember": "Este usuario no es miembro.",
+    "chooseOrUploadLogo": "Escoje o sube tu propio logo.",
+    "invalidSymbol": "Simbolo invalido.",
+    "unknown": "Oh oh. Algo salió mal."
+  },
+  "auth": {
+    "title": "Use su clave privada y PIN o inicie sesión por",
+    "verifyingScatter": "Verificando Disponibilidad de Scatter",
+    "loginScatter": "Inicia sesión con Scatter",
+    "scatterUnavailable": "Scatter no esta disponible",
+    "loginPin": "Bienvenido {{accountName}}, use su nombre de usuario de PIN por",
+    "chooseAccount": "Escoge una cuenta",
+    "required": "Autenticación requerida para esta acción",
+    "pin_instr": "6 números",
+    "login": {
+      "loginTab": "Iniciar sesión",
+      "registerTab": "Crea tu cuenta",
+      "scatter_prompt": "Inicie sesión usando",
+      "privateKeyMode": {
+        "input": {
+          "label": "Clave privada (guardaste al crear tu cuenta)",
+          "tooltip": "También puedes usar tus 12 PALABRAS",
+          "toggle": "I want to use the 12 words"
+        }
+      },
+      "wordsMode": {
+        "input": {
+          "label": "Sus 12 palabras (que guardó al crear su cuenta)",
+          "tooltip": "También puedes usar tu CLAVE PRIVADA",
+          "toggle": "Quiero usar la clave privada"
+        }
+      },
+      "submit": "Iniciar sesión",
+      "register": "¿Aún no tienes una cuenta? ",
+      "registerLink": "Crea ahora"
+    },
+    "pin": {
+      "label": "PIN de seguridad (solo números)",
+      "tooltip": "El PIN debe contener 6 números, para su seguridad, ingrese el PIN que creó cada vez que lo solicitamos"
+    },
+    "pinConfirmation": {
+      "label": "Escriba el PIN nuevamente",
+      "tooltip": ""
+    }
+  },
+  "register": {
+    "registerTab": "Crea tu cuenta",
+    "loginTab": "Iniciar sesión",
+    "form": {
+      "title": "Crea tu cuenta Bespiral y disfruta de nuestra plataforma",
+      "name": {
+        "label": "Nombre completo",
+        "tooltip": "",
+        "placeholder": ""
+      },
+      "email": {
+        "label": "Email",
+        "tooltip": "",
+        "placeholder": ""
+      },
+      "account": {
+        "label": "Crea un nombre de usuario con exactamente 12 caracteres",
+        "tooltip": "El nombre de usuario será como los demás participantes lo conocerán en la plataforma, debe tener exactamente 12 caracteres.",
+        "placeholder": "Solo letras de la A a la Z y números del 1 al 5"
+      },
+      "accountCharError": "Hemos encontrado un caracter invalido. Usa solamente letras y numeros de 1-5",
+      "pin": "PIN",
+      "confirmPin": "Confirma tu PIN",
+      "pinCharError": "Tu PIN debe contener solamente numeros",
+      "pinConfirmError": "Por favor ingresa el mismo PIN que arriba",
+      "checkingAvailability": "Comprobando disponibilidad de la cuenta",
+      "button": "Crear"
+    },
+    "login": "¿Ya tienes una cuenta? ",
+    "authLink": "Iniciar sesión",
+    "account_error": {
+      "title": "Oh-oh. Algo salió mal mientras creabamos tu cuenta"
+    },
+    "account_created": {
+      "congrats": "Felicidades",
+        "account": "Su cuenta fue",
+        "created": "creada ;)",
+        "welcome_message": "Bienvenido {{username}}, siempre podrá acceder a Cambiatus con este dispositivo de una manera simple y segura, pero si desea usar una computadora, teléfono inteligente o tableta diferente, necesitará tener a mano la siguiente información:",
+        "twelve_words": "Tus 12 palabras",
+        "private_key": "Tu clave privada",
+        "recommendation": "Le recomendamos que guarde esta información haciendo clic en el botón a continuación; si la pierde, no podrá volver a iniciar sesión en su cuenta",
+        "download": "Guardar clave privada y 12 palabras",
+        "instructions": "Guardará la clave privada y las 12 palabras en su computadora en formato PDF."
+    }
+  },
+  "account": {
+    "my_wallet": {
+      "title": "Mi Cartera",
+      "my_transfers": "Mis Transferencias",
+      "transaction_sent": "¡Tu transacción fue enviada con exito a blockchain.",
+      "your_current_balance": "Su saldo actual: {{balance}}",
+      "balances": {
+        "current": "Balance Actual",
+        "subtitle": "Ver communidad",
+        "button": "Enviar"
+      },
+      "transfer": {
+        "title": "Enviando {{symbol}}",
+        "send_to": "Enviar a:",
+        "send_to_placeholder": "Cuenta a enviar",
+        "amount": "Monto:",
+        "amount_placeholder": "0.00",
+        "memo": "Memo:",
+        "memo_placeholder": "Gracias por tu ayuda",
+        "submit": "Enviar"
+      }
+    }
+  },
+  "transfer": {
+    "last_title": "Últimas transferencias",
+    "loading_error": "Algo salió mal mientras recuperabamos las transferencias.",
+    "no_transfers_yet": "Aun no hay transferencias.",
+    "info": "{{from}} transfirió {{value}} a {{to}}",
+    "you": "tu"
+  },
+  "community": {
+    "title": "Comunidad",
+    "create_button": "Crear Comunidad",
+    "create": {
+      "title": "Crear comunidad",
+      "labels": {
+        "title": "Nombre",
+        "symbol": "Simbolo",
+        "description": "Descripción",
+        "max_supply": "Monedas emitidas",
+        "min_balance": "Minimo balance de monedas",
+        "inviter_reward": "Recompensa para quien envia invitación",
+        "invited_reward": "Recompensa para quien recibe invitación",
+        "currency_name": "Nombre de la moneda",
+        "currency_symbol": "Simbolo",
+        "upload_icon": "Sube tu icono"
+      },
+      "tooltips": {
+        "description": "Dinos sobre tu comunidad y cual problema esta enfrentando.",
+        "currency_name": "¡El nombre de la moneda de tu comunidad debe ser corto, atractivo y facil de recordar. Piensa en algo relacionado con el problema que quieres resolver.",
+        "currency_symbol": "El simbolo esta compuesto por 3 letras mayusculas que identifican la moneda de tu comunidad."
+      },
+      "cancel": "Cancelar",
+      "submit": "Crear"
+    },
+    "edit": {
+      "title": "Editar comunidad",
+      "unauthorized": "No tienes autorización para editar esta comunidad",
+      "submit": "Guardar"
+    },
+    "index": {
+      "created_by": "Creada por {{account_name}}",
+      "members": "{{quantity}} Membresia",
+      "transfers": "{{quantity}} Transferencias"
+    },
+    "invite": {
+      "title": "Invita a tus amigas y amigos",
+      "subtitle": "Invita a tus amigas y amigos a la comunidad {{community_title}}",
+      "labels": {
+        "emails": "Correos electrónicos, separados por comas"
+      },
+      "placeholders": {
+        "emails": "Introduce los correos electrónicos separados por comas"
+      },
+      "submit": "Enviar invitaciones",
+      "succeed": "Invitación exitosa",
+      "failed": "Invitación fallida"
+    },
+    "details": {
+      "creator": "Creador/a",
+      "supply": "Monedas emitidas",
+      "max_supply": "Suministro maximo de monedas"
+    },
+    "objectives": {
+      "title": "Objetivo",
+      "title_plural": "Objetivos",
+      "new": "Nuevo objetivo",
+      "description_label": "Cual es tu objetivo?",
+      "description_placeholder": "Define un objetivo que atienda el problema que enfrenta tu comunidad."
+    },
+    "actions": {
+      "title": "Acción",
+      "last_title": "Últimas acciones",
+      "loading_error": "Algo salió mal mientras recuperabamos las acciones.",
+      "no_actions_yet": "Aun no hay acciones.",
+      "reward": "Recompensa",
+      "manually_verified_by": "Manualmente verificada por",
+      "aumatically_verified_by": "Automaticamente verificada por",
+      "validation_reward": "Recompensa de validación",
+      "validation_reward_none": "Ninguna",
+      "new": "Crear nueva acción",
+      "description_label": "Que acciones debes promover para alcanzar este objetivo?",
+      "reward_label": "Los usuarios ganaran esta recompensa al completar la acción.",
+      "verification_label": "Cómo sera verificada esta acción?",
+      "manually_label": "Manualmente",
+      "manually_info": "Selecciona personas que estan realmente comprometidas con esta comunidad.",
+      "manually_reward": "Define la recompensa por verificar",
+      "automatically_label": "automática",
+      "invite_label": "Invitar",
+      "invite_tooltip": "En caso de que la persona que quieres invitar no tenga una cuenta en Cambiatus, escribe su correo electrónico.",
+      "invite_email_or_username": "Correo electrónico o @usuario",
+      "verifiers": "verificadoras",
+      "usages": "{{usages}} acciones aprobadas / {{usagesLeft}} disponibles ahora",
+      "available_until": "Disponible hasta ",
+      "or": " o "
+    }
+  },
+  "profile": {
+    "title": "Mi perfil",
+    "my_transfers": "Mis Transferencias",
+    "actions": {
+      "edit": "Editar",
+      "viewPrivatekey": "Ver Llave Privada"
+    },
+    "edit": {
+      "avatar_section": "Avatar",
+      "general_section": "General",
+      "title": "Edita tu información",
+      "labels": {
+        "avatar": "Imagen",
+        "name": "Nombre",
+        "email": "Correo electrónico",
+        "localization": "Localización",
+        "interests": "Intereses",
+        "bio": "Biografia",
+        "privateKey": "Llave Privada"
+      },
+      "placeholders": {
+        "name": "tu nombre",
+        "email": "tu correo electrónico",
+        "localization": "en donde vives?",
+        "interests": "tus intereses",
+        "bio": "¡dejanos saber mas de ti.",
+        "privateKey": "Esta es tu Llave Privada. ¡Por favor guardala con cuidado."
+      },
+      "submit": "Guardar"
+    },
+    "badge": {
+      "title": "Insignias",
+      "currencyStarter": "Currency Starter",
+      "developer": "Developer",
+      "seedTeam": "Seed Team",
+      "mentor": "Mentor"
+    }
+  },
+  "shop": {
+    "units_label": "Cantidad en stock",
+    "title": "Tienda",
+    "all_offers": "Todas las ofertas",
+    "my_communities_offers": "Mis comunidades ofrecen",
+    "my_offers": "Mis ofertas",
+    "rate_sale": "Clasificación",
+    "messages": "Mensajes",
+    "no_answer_yet": "Sin respuesta aun",
+    "message_placeholder": "Escribe tu mensaje aqui o envia un mensaje directo usando Whatsapp o chat.",
+    "create_offer": "Crear nueva oferta",
+    "edit_offer": "Editar oferta",
+    "unauthorized": "No tienes autorización para editar esta venta",
+    "photo_label": "Subir imagen",
+    "what_label": "Que estas vendiendo?",
+    "description_label": "Describe lo que estas vendiendo",
+    "which_community_label": "En cual comunidad quieres realizar tu venta?",
+    "choose_community_label": "Escoge una comunidad",
+    "track_stock_label": "Quieres rastrear unidades?",
+    "choose_track_stock_label": "Elija entre seguimiento o no",
+    "track_stock_no": "No",
+    "track_stock_yes": "Sí",
+    "price_label": "Precio de venta",
+    "units_available": "Cantidad disponible",
+    "out_of_stock": "Agotado",
+    "offer_action": "{{accountName}} esta VENDIENDO",
+    "buy_action": "{{accountName}} está COMPRANDO",
+    "buy": "Comprar",
+    "ask": "Preguntar",
+    "transfer": {
+      "units_label": "¿Cuántas unidades quiere comprar?",
+      "quantity_label": "Valor",
+      "memo_label": "Comentarios (opcional)",
+      "default_memo": "Gracias por tu ayuda",
+      "submit": "Comprar"
+    }
+  },
+  "dashboard": {
+    "back": "Atrás",
+    "sorry": "¡Lo sentimos!",
+    "action_rejected": "Tu acción fue rechazada",
+    "please_try_again": "Por favor intenta de nuevo",
+    "oops": "¡Ops!",
+    "something_wrong": "Algo salió mal",
+    "do_you_have_qrcode": "¿Tienes un código QR?",
+    "scan": "Escanea",
+    "or_choose_list": "o escoge de la lista",
+    "choose_one_option": "Escoge una de las opciones",
+    "next": "Siguiente",
+    "your_action": "Tu acción:",
+    "add_comment": "Agrega un comentario",
+    "claim": "Reclamar",
+    "wait_verification": "Espera tu verificación",
+    "you_won": "¡Buenas noticias! Acabas de ganar:",
+    "you_rejected": "Rechazaste la acción",
+    "thank_you": "¡Gracias por la ayuda!",
+    "take_reward": "Toma esta recompensa por el trabajo",
+    "verification": "Verificación",
+    "your_reward": "Tu recompensa",
+    "action": "Acción",
+    "reject": "Rechazar",
+    "verify": "Verificar",
+    "closed": "cerrado",
+    "activities": {
+      "title": "Actividades para su analisis",
+      "no_activities_yet": "Aún no hay actividades."
+    }
+  }
+}

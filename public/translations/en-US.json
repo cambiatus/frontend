@@ -1,0 +1,380 @@
+{
+  "bespiral": "Cambiatus",
+  "menu": {
+    "title": "Menu",
+    "my_communities": "My Communities",
+    "dashboard": "Dashboard",
+    "news": "News",
+    "learn": "Learn",
+    "shop": "Shop",
+    "faq": "FAQ",
+    "profile": "Profile",
+    "invite": "Invite",
+    "notifications": "Notifications",
+    "new_notifications": "New notifications",
+    "previous_notifications": "Previous notifications",
+    "no_notification": "No notification",
+    "chat_message_notification": "New message from: {{username}}",
+    "view_all": "View All",
+    "more": "More",
+    "logout": "Logout",
+    "explore": "Explore",
+    "explore_communities": "Explore Communities",
+    "welcome_message": "Hello {{user_name}} ",
+    "back_to_dashboard": "Back to Dashboard",
+    "edit": "Edit",
+    "cancel": "Cancel",
+    "save": "Save",
+    "create": "Create",
+    "send": "Send",
+    "add": "Add",
+    "close": "Close",
+    "loading": "Loading...",
+    "try_again": "Try again",
+    "coming_soon": "Coming Soon"
+  },
+  "error": {
+    "validator": {
+      "number": {
+        "positive": "The number must be positive",
+        "negative": "The number must be negative",
+        "greater_than": "The number must be greater than {{base}}",
+        "greater_than_or_equal": "The number must be greater than or equal to {{base}}",
+        "lower_than": "The number must be lower than {{base}}",
+        "lower_than_or_equal": "The number must be lower than or equal to {{base}}"
+      },
+      "text": {
+        "only_numbers": "Only numbers are allowed",
+        "only_letters": "Only letters are allowed",
+        "exactly": "Text must have exactly {{base}} characters",
+        "longer_than": "Text must have more than {{base}} characters",
+        "shorter_than": "Text must have less than {{base}} characters"
+      },
+      "enum": {
+        "one_of": "Text must be one of: [{{base}}]",
+        "none_of": "Text must be none of: [{{base}}]"
+      }
+    },
+    "objective": {
+         "invalid_id": "Invalid objective id "
+    },
+    "pageNotFound": "Page not found",
+    "required": "It looks like you forgot to fill this one out.",
+    "tooShort": "Too short. Must be at least {{minLength}} characters.",
+    "tooLong": "Too long. Must be at most {{maxLength}} characters.",
+    "invalidChar": "Invalid character {{invalidChar}}.",
+    "alreadyTaken": "This one is already taken. Please, Try another.",
+    "notMember": "This user is not a member.",
+    "chooseOrUploadLogo": "Choose or upload a logo.",
+    "invalidSymbol": "Invalid symbol.",
+    "unknown": "Uoh. Something wrong happened."
+  },
+  "auth": {
+    "title": "Use your private key and PIN or log in by",
+    "verifyingScatter": "Verifying Scatter Availability",
+    "loginScatter": "Login with Scatter",
+    "scatterUnavailable": "Scatter Unavailable",
+    "loginPin": "Welcome {{accountName}}, use your security PIN to login",
+    "chooseAccount": "Choose an Account",
+    "required": "Authentication required for this action",
+    "pin_instr": "6 numbers",
+    "login": {
+      "loginTab": "Login",
+      "registerTab": "Create your account",
+      "scatter_prompt": "Login using",
+      "privateKeyMode": {
+        "input": {
+          "label": "Private key (you saved when creating your account)",
+          "tooltip": "You can use your 12 WORDS too",
+          "toggle": "I want to use the 12 words"
+        }
+      },
+      "wordsMode": {
+        "input": {
+          "label": "Your 12 words (you saved when creating your account)",
+          "tooltip": "You can use your PRIVATE KEY too",
+          "toggle": "I want to use the Private Key"
+        }
+      },
+      "submit": "Log in",
+      "register": "Don't have an account yet? ",
+      "registerLink": "Create now"
+    },
+    "pin": {
+      "label": "Security PIN (only numbers)",
+      "tooltip": "The PIN must contain 6 numbers, for your security, enter the PIN you created each time we request it"
+    },
+    "pinConfirmation": {
+      "label": "Type the PIN again",
+      "tooltip": ""
+    }
+  },
+  "register": {
+    "registerTab": "Create your account",
+    "loginTab": "Login",
+    "form": {
+      "title": "Create your Bespiral account and enjoy our platform",
+      "name": {
+        "label": "Full name",
+        "tooltip": "",
+        "placeholder": ""
+      },
+      "email": {
+          "label": "Email",
+          "tooltip": "",
+          "placeholder": ""
+      },
+      "account": {
+          "label": "Create an username with exactly 12 characters",
+          "tooltip": "The username will be as you will be known on the platform by the other participants, it must have exact 12 characters.",
+          "placeholder": "Only letters from a-z and numbers from 1-5"
+      },
+      "accountCharError": "Invalid character found. Use only letters and numbers between 1-5",
+      "pin": "PIN",
+      "confirmPin": "Confirm PIN",
+      "pinCharError": "Your PIN must use only numbers",
+      "pinConfirmError": "Please enter the same PIN as above",
+      "checkingAvailability": "Checking availability of that account",
+      "button": "Create"
+    },
+    "login": "Already have an account? ",
+    "authLink": "Login",
+    "account_error": {
+      "title": "Uoh. Something went wrong while creating your account"
+    },
+    "account_created": {
+        "congrats": "Congrats",
+        "account": "Your account was",
+        "created": "created ;)",
+        "welcome_message": "Welcome {{username}}, you will always be able to access Cambiatus with this device in a simple and safe manner, but if you want to use a different computer, smartphone or tablet you will need to have the following information at hand:",
+        "twelve_words": "Your 12 words",
+        "private_key": "Your private key",
+        "recommendation": "We recommend you to save this information by clicking the button below, if you lose it you won't be able to login to your account again",
+        "download": "Save private key and 12 words",
+        "instructions": "You will save the private key and the 12 words on your computer in PDF format."
+    }
+  },
+  "account": {
+    "my_wallet": {
+      "title": "My Wallet",
+      "my_transfers": "My Transfers",
+      "transaction_sent": "Your transaction was sent successfully to the blockchain.",
+      "your_current_balance": "Your Current Balance: {{balance}}",
+      "balances": {
+        "current": "Current Balance",
+        "subtitle": "View community",
+        "button": "Transfer"
+      },
+      "transfer": {
+        "title": "Sending {{symbol}}",
+        "send_to": "Send to:",
+        "send_to_placeholder": "Friend account",
+        "amount": "Amount:",
+        "amount_placeholder": "0.00",
+        "memo": "Memo:",
+        "memo_placeholder": "Thanks for the help",
+        "submit": "Transfer"
+      }
+    }
+  },
+  "transfer": {
+    "last_title": "Last Transfers",
+    "loading_error": "Something went wrong while fetching transfers.",
+    "no_transfers_yet": "No transfers yet.",
+    "info": "{{from}} transfered {{value}} to {{to}}",
+    "you": "you"
+  },
+  "community": {
+    "title": "Community",
+    "create_button": "Create Community",
+    "create": {
+      "title": "Create community",
+      "labels": {
+        "title": "Title",
+        "symbol": "Symbol",
+        "description": "Description",
+        "max_supply": "Maximum supply",
+        "min_balance": "Minimum balance",
+        "inviter_reward": "Inviter Reward",
+        "invited_reward": "Invited Reward",
+        "currency_name": "Currency name",
+        "currency_symbol": "Symbol",
+        "upload_icon": "Upload your icon"
+      },
+      "tooltips": {
+        "description": "Tell us about your community and what problem it is facing.",
+        "currency_name": "A community currency name must be something short, catchy and easy to remember. look for something related with the problem you want to solve.",
+        "currency_symbol": "A symbol is composed by 3 capital letters to identify your currency."
+      },
+      "cancel": "Cancel",
+      "submit": "Create"
+    },
+    "edit": {
+      "title": "Edit community",
+      "unauthorized": "You are not authorized to edit this community",
+      "submit": "Save"
+    },
+    "index": {
+      "created_by": "Created by {{account_name}}",
+      "members": "{{quantity}} Members",
+      "transfers": "{{quantity}} Transfers"
+    },
+    "invite": {
+      "title": "Invite your friends",
+      "subtitle": "Invite your friends to {{community_title}} community",
+      "labels": {
+        "emails": "Emails, separeted by comma"
+      },
+      "placeholders": {
+        "emails": "Fill your friends email separating them by comma"
+      },
+      "submit": "Send invitations",
+      "succeed": "Invitation succeed",
+      "failed": "Invitation failed"
+    },
+    "details": {
+      "creator": "Creator",
+      "supply": "Supply",
+      "max_supply": "Maximum supply"
+    },
+    "objectives": {
+      "title": "Objective",
+      "title_plural": "Objectives",
+      "new": "New objective",
+      "description_label": "What is your objective?",
+      "description_placeholder": "Set a goal that helps resolve the community problem."
+    },
+    "actions": {
+      "title": "Action",
+      "last_title": "Last Actions",
+      "loading_error": "Something went wrong while fetching actions.",
+      "no_actions_yet": "No actions yet.",
+      "reward": "Reward",
+      "manually_verified_by": "Manually verified by",
+      "aumatically_verified_by": "Automatically verified by",
+      "validation_reward": "Validation reward",
+      "validation_reward_none": "None",
+      "new": "Create new action",
+      "description_label": "What actions need to be taken to achieve this goal?",
+      "reward_label": "The user will earn this reward by completing the action.",
+      "verification_label": "How this action will be verified?",
+      "manually_label": "Manually",
+      "manually_info": "Select people who are really committed to the community.",
+      "manually_reward": "Set the reward for verifying",
+      "automatically_label": "Automatic",
+      "invite_label": "Invite",
+      "invite_tooltip": "In case the person you wish to invite does not have a Cambiatus account, type his/her email.",
+      "invite_email_or_username": "Email or @username",
+      "verifiers": "verifiers",
+      "usages": "{{usages}} approved actions/ {{usagesLeft}} availables now",
+      "available_until": "available until ",
+      "or": " or "
+    }
+  },
+  "profile": {
+    "title": "My profile",
+    "my_transfers": "My Transfers",
+    "actions": {
+      "edit": "Edit",
+      "viewPrivatekey": "View Private Key"
+    },
+    "edit": {
+      "avatar_section": "Avatar",
+      "general_section": "General",
+      "title": "Edit your info",
+      "labels": {
+        "avatar": "Image",
+        "name": "Name",
+        "email": "Email",
+        "localization": "Localization",
+        "interests": "Interests",
+        "bio": "Biography",
+        "privateKey": "Private Key"
+      },
+      "placeholders": {
+        "name": "your name",
+        "email": "your email",
+        "localization": "where you live",
+        "interests": "your interests",
+        "bio": "let others know more about yourself.",
+        "privateKey": "This is your private key. Please, keep it safe."
+      },
+      "submit": "Save"
+    },
+    "badge": {
+      "title": "Badges",
+      "currencyStarter": "Currency Starter",
+      "developer": "Developer",
+      "seedTeam": "Seed Team",
+      "mentor": "Mentor"
+    }
+  },
+  "shop": {
+    "units_label": "Quantity in stock",
+    "title": "Shop",
+    "all_offers": "All offers",
+    "my_communities_offers": "My communities offers",
+    "my_offers": "My offers",
+    "rate_sale": "Rating",
+    "messages": "Messages",
+    "no_answer_yet": "No answer yet",
+    "message_placeholder": "Type your message here or send a direct message through whatsapp or chat.",
+    "create_offer": "Create new offer",
+    "edit_offer": "Edit offer",
+    "unauthorized": "You are not authorized to edit this sale",
+    "photo_label": "Upload image",
+    "what_label": "What are you selling?",
+    "description_label": "Describe what are you selling",
+    "which_community_label": "In which community do you want to sell it?",
+    "choose_community_label": "Choose a community",
+    "track_stock_label": "Do you want to track units?",
+    "choose_track_stock_label": "Choose between tracking or not",
+    "track_stock_no": "No",
+    "track_stock_yes": "Yes",
+    "price_label": "Sale price",
+    "units_available": "Available Quantity",
+    "out_of_stock": "Out of Stock",
+    "offer_action": "{{accountName}} is BUYING",
+    "buy_action": "{{accountName}} is SELLING",
+    "buy": "Buy",
+    "ask": "Ask",
+    "transfer": {
+      "units_label": "How many units do you want?",
+      "quantity_label": "Value",
+      "memo_label": "Comments (optional)",
+      "default_memo": "Thanks for the help!",
+      "submit": "Buy"
+    }
+  },
+  "dashboard": {
+    "back": "Back",
+    "sorry": "Sorry!",
+    "action_rejected": "Your action was rejected",
+    "please_try_again": "Please try again",
+    "oops": "Ops!",
+    "something_wrong": "Something went wrong",
+    "do_you_have_qrcode": "Do you have a QR code?",
+    "scan": "Scan",
+    "or_choose_list": "Or choose from the list",
+    "choose_one_option": "Choose one of the options",
+    "next": "Next",
+    "your_action": "Your Action:",
+    "add_comment": "Add a comment",
+    "claim": "Claim",
+    "wait_verification": "Wait for your verification",
+    "you_won": "Good news! You just won:",
+    "you_rejected": "You rejected the action",
+    "thank_you": "Thank you for the help!",
+    "take_reward": "Take this reward for the job",
+    "verification": "Verification",
+    "your_reward": "Your Reward",
+    "action": "Action",
+    "reject": "Reject",
+    "verify": "Verify",
+    "closed": "closed",
+    "activities": {
+      "title": "Activities for your analysis",
+      "no_activities_yet": "No activities yet."
+    }
+  }
+}

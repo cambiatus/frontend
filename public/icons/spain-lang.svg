@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="17px" height="17px" viewBox="0 0 17 17" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+    <!-- Generator: Sketch 53.2 (72643) - https://sketchapp.com -->
+    <title>spain</title>
+    <desc>Created with Sketch.</desc>
+    <g id="----Login-e-Criar-conta" stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
+        <g id="INICIAL-&gt;-Language" transform="translate(-1280.000000, -133.000000)" fill-rule="nonzero">
+            <g id="Group-4" transform="translate(1263.000000, 17.000000)">
+                <g id="spain" transform="translate(17.000000, 116.000000)">
+                    <path d="M0,8.5 C0,9.54790352 0.187033203,10.551701 0.528693359,11.4797686 L8.5,12.2247191 L16.4713066,11.4797686 C16.8129668,10.551701 17,9.54790352 17,8.5 C17,7.45209648 16.8129668,6.448299 16.4713066,5.52023141 L8.5,4.7752809 L0.528693359,5.52023141 C0.187033203,6.448299 0,7.45209648 0,8.5 Z" id="Path" fill="#FFDA44"></path>
+                    <g id="Group" transform="translate(0.573034, 0.000000)" fill="#D80027">
+                        <path d="M16.0142188,5.54349414 C14.8101489,2.3067207 11.6865445,0 8.02247191,0 C4.35839927,0 1.23479491,2.3067207 0.0307250688,5.54349414 L16.0142188,5.54349414 Z" id="Path"></path>
+                        <path d="M0.0307250688,11.4565059 C1.23479491,14.6932793 4.35839927,17 8.02247191,17 C11.6865445,17 14.8101489,14.6932793 16.0142188,11.4565059 L0.0307250688,11.4565059 Z" id="Path"></path>
+                    </g>
+                </g>
+            </g>
+        </g>
+    </g>
+</svg>

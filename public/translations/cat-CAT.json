@@ -1,0 +1,381 @@
+{
+  "bespiral": "Cambiatus",
+  "menu": {
+    "title": "Menú",
+    "my_communities": "Les meves comunitats",
+    "dashboard": "Inici",
+    "news": "Notícies",
+    "learn": "Aprendre",
+    "shop": "Botiga",
+    "faq": "Preguntes freqüents ",
+    "profile": "Perfil",
+    "invite": "Invitacions",
+    "notifications": "Notificacions",
+    "new_notifications": "Notificacions noves",
+    "previous_notifications": "Notificacions anteriors",
+    "no_notification": "Sense notificacions",
+    "chat_message_notification": "Nou missatge de: {{username}}",
+    "view_all": "Veure-ho tot",
+    "more": "Més",
+    "logout": "Sortir",
+    "explore": "Explorar",
+    "explore_communities": "Explorar comunitats",
+    "welcome_message": "Hola {{user_name}} ",
+    "back_to_dashboard": "Anar a l’inici",
+    "edit": "Editar",
+    "cancel": "Cancel·lar",
+    "save": "Guardar",
+    "create": "Crear",
+    "send": "Enviar",
+    "add": "Afegir",
+    "close": "Tancar",
+    "loading": "Carregant...",
+    "try_again": "Intenta de nou",
+    "coming_soon": "Pròximament"
+  },
+  "error": {
+    "validator": {
+      "number": {
+        "positive": "El nombre ha de ser positiu",
+        "negative": "El nombre ha de ser negatiu",
+        "greater_than": "El nombre ha de ser superior a {{base}}",
+        "greater_than_or_equal": "El nombre ha de ser major o igual a {{base}}",
+        "lower_than": "El nombre ha de ser inferior a {{base}}",
+        "lower_than_or_equal": "El nombre ha de ser inferior o igual a {{base}}"
+      },
+      "text": {
+        "only_numbers": "Només es permeten números",
+        "only_letters": "Només es permeten lletres",
+        "exactly": "El text ha de tenir exactament {{base}} caràcters",
+        "longer_than": "El text ha de tenir més de {{base}} caràcters",
+        "shorter_than": "El text ha de tenir menys de {{base}} caràcters"
+      },
+      "enum": {
+        "one_of": "El text ha de ser: [{{base}}]",
+        "none_of": "El text no ha de ser: [{{base}}]"
+      }
+    },
+    "objective": {
+         "invalid_id": "Identificador d'objectius no vàlid "
+     },
+    "pageNotFound": "Pàgina no trobada!",
+    "required": "Sembla que t’has oblidat de completar això.",
+    "tooShort": "Molt curta. Has d’emprar com a mínim {{minLength}} caràcters.",
+    "tooLong": "Molt llarga. Has d’emprar com a màxim {{maxLength}} caràcters.",
+    "invalidChar": "Caràcter invàlid {{invalidChar}}.",
+    "alreadyTaken": "Ja està en ús. Si et plau, intenta-ho de nou.",
+    "notMember": "Aquest usuari no és membre.",
+    "chooseOrUploadLogo": "Escull o puja el teu propi logotip.",
+    "invalidSymbol": "Símbol invàlid.",
+    "unknown": "Oh oh. Alguna cosa ha anat malament."
+  },
+  "auth": {
+    "title": "Utilitzeu la vostra clau privada i el PIN o connecteu-vos per",
+    "verifyingScatter": "Verificant disponibilitat de Scatter",
+    "loginScatter": "Inicia sessió amb Scatter",
+    "scatterUnavailable": "Scatter no està disponible",
+    "loginPin": "Benvingut {{accountName}}, utilitzeu el vostre PIN d'inici de sessió per",
+    "chooseAccount": "Escull un compte",
+    "required": "Autenticació requerida per a aquesta acció",
+    "pin_instr": "6 números",
+    "login": {
+      "loginTab": "Inicieu la sessió",
+      "registerTab": "Crea el teu compte",
+      "scatter_prompt": "Inicieu la sessió mitjançant",
+      "privateKeyMode": {
+        "input": {
+          "label": "Clau privada (heu desat en crear el vostre compte)",
+          "tooltip": "També podeu utilitzar les vostres 12 PARAULES",
+          "toggle": "Vull utilitzar les 12 paraules"
+        }
+      },
+      "wordsMode": {
+        "input": {
+          "label": "Les vostres 12 paraules (heu desat en crear el vostre compte)",
+          "tooltip": "També podeu fer servir la tecla PRIVADA",
+          "toggle": "Vull utilitzar la clau privada"
+        }
+      },
+      "submit": "Inicieu la sessió",
+      "register": "Encara no teniu cap compte? ",
+      "registerLink": "Crea ara"
+    },
+    "pin": {
+      "label": "PIN de seguretat (només números)",
+      "tooltip": "El PIN ha de contenir 6 números, per a la vostra seguretat, introduïu el PIN que creeu cada vegada que el sol·licitem"
+    },
+    "pinConfirmation": {
+      "label": "Torneu a escriure el PIN",
+      "tooltip": ""
+    }
+  },
+  "register": {
+    "registerTab": "Crea el teu compte",
+    "loginTab": "Inicieu la sessió",
+    "form": {
+      "title": "Crea el teu compte Bespiral i gaudeix de la nostra plataforma",
+      "name": {
+        "label": "Nom complet",
+        "tooltip": "",
+        "placeholder": ""
+      },
+      "email": {
+        "label": "Email",
+        "tooltip": "",
+        "placeholder": ""
+      },
+      "account": {
+        "label": "Creeu un nom d’usuari amb exactament 12 caràcters",
+        "tooltip": "El nom d'usuari serà tal com els altres participants el coneixeran a la plataforma, ha de tenir 12 caràcters exactes.",
+        "placeholder": "Només lletres de la a-z i números de la 1-5"
+      },
+      "accountCharError": "Hem trobat un caràcter invàlid. Utilitza solament lletres i números de 1-5",
+      "pin": "PIN",
+      "confirmPin": "Confirma el teu PIN",
+      "pinCharError": "El teu PIN tan sols ha de contenir números",
+      "pinConfirmError": "Si et plau introdueix el mateix PIN que abans",
+      "checkingAvailability": "Comprovant disponibilitat del compte",
+      "button": "Crea"
+    },
+    "login": "Ja tens un compte? ",
+    "authLink": "Inici de sessió",
+    "account_error": {
+      "title": "Oh-oh. Alguna cosa ha sortit malament mentre creàvem el teu compte"
+    },
+    "account_created": {
+        "congrats": "Felicitats",
+        "account": "El vostre compte ha estat",
+        "created": "creat ;)",
+        "welcome_message": "Benvingut {{username}}, sempre podreu accedir a Cambiatus amb aquest dispositiu de manera senzilla i segura, però si voleu utilitzar un ordinador, smartphone o tauleta diferent, haureu de tenir la informació següent:",
+        "twelve_words": "Les vostres 12 paraules",
+        "private_key": "La vostra clau privada",
+        "recommendation": "Us recomanem que deseu aquesta informació fent clic al botó següent, si la perds, no podreu tornar a iniciar la sessió al vostre compte",
+        "download": "Desa la clau privada i 12 paraules",
+        "instructions": "Desa la clau privada i les 12 paraules a l’ordinador en format PDF."
+
+    }
+  },
+  "account": {
+    "my_wallet": {
+      "title": "La meva carters",
+      "my_transfers": "Les meves transferències",
+      "transaction_sent": "La teva transacció ha estat enviada amb èxit a la blockchain!",
+      "your_current_balance": "El vostre saldo actual: {{balance}}",
+      "balances": {
+        "current": "Balanç actual",
+        "subtitle": "Veure comunitat",
+        "button": "Enviar"
+      },
+      "transfer": {
+        "title": "Enviant {{symbol}}",
+        "send_to": "Enviar a:",
+        "send_to_placeholder": "Compte a enviar",
+        "amount": "Import:",
+        "amount_placeholder": "0.00",
+        "memo": "Memo:",
+        "memo_placeholder": "Gràcies pel teu ajut ",
+        "submit": "Enviar"
+      }
+    }
+  },
+  "transfer": {
+    "last_title": "Darreres transferències ",
+    "loading_error": "Alguna cosa ha sortit malament mentre recuperàvem les transferències.",
+    "no_transfers_yet": "Encara no hi ha transferències.",
+    "info": "{{from}} ha transferit {{value}} a {{to}}",
+    "you": "tu"
+  },
+  "community": {
+    "title": "Comunitat",
+    "create_button": "Crear comunitat",
+    "create": {
+      "title": "Crear comunitat",
+      "labels": {
+        "title": "Nom",
+        "symbol": "Símbol",
+        "description": "Descripció",
+        "max_supply": "Monedes emeses",
+        "min_balance": "Mínim balanç de monedes",
+        "inviter_reward": "Recompensa per a qui envia invitació ",
+        "invited_reward": "Recompensa per a qui rep invitació ",
+        "currency_name": "Nom de la moneda",
+        "currency_symbol": "Símbol",
+        "upload_icon": "Puja la teva icona "
+      },
+      "tooltips": {
+        "description": "Explica’ns sobre la teva comunitat i sobre el problema que vols resoldre.",
+        "currency_name": "El nom de la moneda de la teva comunitat ha de ser curt, atractiu i fàcil de recordar! Pensa en quelcom relacionat amb el problema que vols resoldre.",
+        "currency_symbol": "El símbol està compost per 3 lletres majúscules que identifiquen la moneda de la teva comunitat."
+      },
+      "cancel": "Cancel·lar",
+      "submit": "Crear"
+    },
+    "edit": {
+      "title": "Editar comunitat",
+      "unauthorized": "No tens autorització per a editar aquesta comunitat",
+      "submit": "Guardar"
+    },
+    "index": {
+      "created_by": "Creada per {{account_name}}",
+      "members": "{{quantity}} Afiliació",
+      "transfers": "{{quantity}} Transferències"
+    },
+    "invite": {
+      "title": "Convida als teus amics",
+      "subtitle": "Convida als teus amics a la comunitat {{community_title}}",
+      "labels": {
+        "emails": "Correus electrònics, separats per comes"
+      },
+      "placeholders": {
+        "emails": "Introdueix els correus electrònics separats per comes"
+      },
+      "submit": "Enviar invitacions",
+      "succeed": "Invitació exitosa",
+      "failed": "Invitació fallida"
+    },
+    "details": {
+      "creator": "Creador",
+      "supply": "Monedes emeses",
+      "max_supply": "Emissió màxima de monedes"
+    },
+    "objectives": {
+      "title": "Objectiu",
+      "title_plural": "Objectius",
+      "new": "Nou objectiu",
+      "description_label": "Quin és el teu objectiu?",
+      "description_placeholder": "Defineix un objectiu que resolgui el problema al que s’enfronta la teva comunitat."
+    },
+    "actions": {
+      "title": "Acció",
+      "last_title": "Darreres accions",
+      "loading_error": "Alguna cosa ha sortit malament mentre recuperàvem les accions.",
+      "no_actions_yet": "Encara no hi ha accions.",
+      "reward": "Recompensa",
+      "manually_verified_by": "Manualment verificada per",
+      "aumatically_verified_by": "Automàticament verificada per",
+      "validation_reward": "Recompensa de validació",
+      "validation_reward_none": "Cap",
+      "new": "Crear una acció nova",
+      "description_label": "Quines accions has de promoure per a aconseguir aquest objectiu?",
+      "reward_label": "Els usuaris guanyaran aquesta recompensa en completar l’acció.",
+      "verification_label": "Com serà verificada aquesta acció?",
+      "manually_label": "Manualment",
+      "manually_info": "Selecciona persones que estiguin realment compromeses amb aquestes comunitat.",
+      "manually_reward": "Defineix la recompensa per a verificar",
+      "automatically_label": "automàtica",
+      "invite_label": "Convidar",
+      "invite_tooltip": "En cas que la persona que vols convidar no tingui un compte a Cambiatus, escriu el seu correu electrònic.",
+      "invite_email_or_username": "Correu electrònic o @usuari",
+      "verifiers": "verificadors",
+      "usages": "{{usages}} accions aprovades / {{usagesLeft}} disponibles ara",
+      "available_until": "disponible fins ",
+      "or" : " o "
+    }
+  },
+  "profile": {
+    "title": "El meu perfil",
+    "my_transfers": "Les meves transferències",
+    "actions": {
+      "edit": "Editar",
+      "viewPrivatekey": "Veure clau privada"
+    },
+    "edit": {
+      "avatar_section": "Avatar",
+      "general_section": "General",
+      "title": "Edita la teva informació",
+      "labels": {
+        "avatar": "Imatge",
+        "name": "Nom",
+        "email": "Correu electrònic",
+        "localization": "Localització",
+        "interests": "Interessos",
+        "bio": "Biografia",
+        "privateKey": "Clau privada"
+      },
+      "placeholders": {
+        "name": "el teu nom",
+        "email": "el teu correu electrònic",
+        "localization": "on vius?",
+        "interests": "els teus interessos",
+        "bio": "explica’ns més sobre tu!",
+        "privateKey": "Aquesta és la teva clau privada. Si et plau guarda-la bé!"
+      },
+      "submit": "Guardar"
+    },
+    "badge": {
+      "title": "Insígnies",
+      "currencyStarter": "Currency Starter",
+      "developer": "Developer",
+      "seedTeam": "Seed Team",
+      "mentor": "Mentor"
+    }
+  },
+  "shop": {
+    "units_label": "Quantitat en estoc",
+    "title": "Botiga",
+    "all_offers": "Totes les ofertes",
+    "my_communities_offers": "La meva comunitat ofereix",
+    "my_offers": "Les meves ofertes",
+    "rate_sale": "Valoració",
+    "messages": "Missatges",
+    "no_answer_yet": "Encara sense resposta",
+    "message_placeholder": "Escriu el teu missatge aquí o envia un missatge directe emprant Whatsapp o xat.",
+    "create_offer": "Crear nova oferta",
+    "edit_offer": "Editar oferta",
+    "unauthorized": "No tens autorització per a editar aquesta venda",
+    "photo_label": "Pujar imatge",
+    "what_label": "Què estàs venent?",
+    "description_label": "Descriu el que estàs venent",
+    "which_community_label": "En quina comunitat vols fer la venda?",
+    "choose_community_label": "Escull una comunitat",
+    "track_stock_label": "Voleu fer un seguiment de les unitats?",
+    "choose_track_stock_label": "Trieu entre fer un seguiment o no",
+    "track_stock_no": "No",
+    "track_stock_yes": "Sí",
+    "price_label": "Preu de venda",
+    "units_available": "Quantitat disponible",
+    "out_of_stock": "Fora d'estoc",
+    "offer_action": "{{accountName}} està VENENT",
+    "buy_action": "{{accountName}} està COMPRANT",
+    "buy": "Comprar",
+    "ask": "Preguntar",
+    "transfer": {
+      "units_label": "Quantes unitats vol comprar?",
+      "quantity_label": "Valor",
+      "memo_label": "Comentaris (opcional)",
+      "default_memo": "Gràcies per la teva ajuda",
+      "submit": "Compra ara"
+    }
+  },
+  "dashboard": {
+    "back": "Tornar",
+    "sorry": "ho sentim!",
+    "action_rejected": "S'ha rebutjat la teva acció",
+    "please_try_again": "Si us plau intenta-de nou",
+    "oops": "Ops!",
+    "something_wrong": "Alguna cosa ha anat malament",
+    "do_you_have_qrcode": "tens un codi QR?",
+    "scan": "Escanejar",
+    "or_choose_list": "O escull de la llista",
+    "choose_one_option": "tria una de les opcions",
+    "next": "Pròxim",
+    "your_action": "La teva acció:",
+    "add_comment": "Afegeix un comentari",
+    "claim": "Reclamar",
+    "wait_verification": "Espera per la teva verificació",
+    "you_won": "Bones notícies! Vas guanyar:",
+    "you_rejected": "Tu refusar l'acció",
+    "thank_you": "Gràcies per la teva ajuda!",
+    "take_reward": "pren aquesta recompensa per la teva feina",
+    "verification": "verificació",
+    "your_reward": "la teva recompensa",
+    "action": "Acció",
+    "reject": "Rebutjar",
+    "verify": "Verificar",
+    "closed": "tancat",
+    "activities": {
+      "title": "Activitats per a la vostra anàlisi",
+      "no_activities_yet": "Encara no hi ha activitats.."
+    }
+  }
+}

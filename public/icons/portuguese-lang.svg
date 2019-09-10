@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="17px" height="17px" viewBox="0 0 17 17" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+    <!-- Generator: Sketch 53.2 (72643) - https://sketchapp.com -->
+    <title>brazil</title>
+    <desc>Created with Sketch.</desc>
+    <g id="----Login-e-Criar-conta" stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
+        <g id="INICIAL-&gt;-Language" transform="translate(-1279.000000, -34.000000)" fill-rule="nonzero">
+            <g id="Group-4" transform="translate(1263.000000, 17.000000)">
+                <g id="brazil" transform="translate(16.000000, 17.000000)">
+                    <circle id="Oval" fill="#6DA544" cx="8.5" cy="8.5" r="8.5"></circle>
+                    <polygon id="Path" fill="#FFDA44" points="8.80357143 3.64285714 15.7857143 8.80357143 8.80357143 13.9642857 1.82142857 8.80357143"></polygon>
+                    <circle id="Oval" fill="#F0F0F0" cx="8.5" cy="8.5" r="3.03571429"></circle>
+                    <g id="Group" transform="translate(5.464286, 5.464286)" fill="#0052B4">
+                        <path d="M1.53398016,2.84800595 C1.01170238,2.84800595 0.507672619,2.92744048 0.0332242063,3.07484127 C0.0542380952,4.71547619 1.3900873,6.03918254 3.03571429,6.03918254 C4.05328571,6.03918254 4.95199206,5.53265675 5.49528373,4.75851587 C4.56578175,3.59492659 3.13558929,2.84800595 1.53398016,2.84800595 Z" id="Path"></path>
+                        <path d="M5.98349405,3.61115079 C6.01965278,3.4248254 6.03918254,3.23259722 6.03918254,3.03571429 C6.03918254,1.37693254 4.69449603,0.0322797619 3.03574802,0.0322797619 C1.79805357,0.0322797619 0.735553571,0.781123016 0.275744048,1.85030159 C0.68219246,1.76607738 1.10300992,1.72172222 1.53404762,1.72172222 C3.27847024,1.72168849 4.85656944,2.44681944 5.98349405,3.61115079 Z" id="Path"></path>
+                    </g>
+                </g>
+            </g>
+        </g>
+    </g>
+</svg>
