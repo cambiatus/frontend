@@ -28,7 +28,7 @@ body,
 
 body {
     background-color: var(--white);
-    font-family: 'Roboto', 'open-sans', sans-serif;
+    font-family: 'Roboto', 'Lato', 'San Fransico', 'Helvetica', 'Verdana', sans-serif;
     color: var(--black);
 }
 
