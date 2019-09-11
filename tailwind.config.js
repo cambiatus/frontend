@@ -15,9 +15,18 @@ module.exports = {
     colors: {
       'black': '#000000',
       'white': '#FFFFFF',
-      'gray': {
+      gray: {
+        // '100': '#f5f5f5', // Tailwind original gray-100
         '100': '#F8F8F8',
+        '200': '#eeeeee',
+        '300': '#e0e0e0',
+        '400': '#bdbdbd',
         '500': '#E7E7E7',
+        // '500': '#9e9e9e', // Tailwind original gray-500
+        '600': '#757575',
+        '700': '#616161',
+        '800': '#424242',
+        // '900': '#212121' // Tailwind original gray-900
         '900': '#999999'
       },
       'red': '#DB1B1B',
