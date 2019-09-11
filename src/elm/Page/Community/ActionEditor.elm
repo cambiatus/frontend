@@ -214,7 +214,7 @@ view loggedIn model =
         InvalidObjective badId ->
             defaultContainer
                 [ Page.viewTitle (t "error.objective.invalid_id")
-                , p [] [ text badId ]
+                , span [] [ text badId ]
                 ]
 
         LoadingFailed err ->
