@@ -111,7 +111,7 @@ view loggedIn model =
             Page.mainContentContainer
                 [ Page.viewTitle (t "menu.my_communities")
                 , Page.viewButtonNew (t "community.create_button") Route.NewCommunity
-                , viewGrid loggedIn communities
+                , viewBalances loggedIn communities
                 , viewActivities loggedIn.shared model
                 , viewSections loggedIn model
                 ]
@@ -295,9 +295,9 @@ viewSections loggedIn model =
 -- VIEW GRID
 
 
-viewGrid : LoggedIn.Model -> List DashCommunity.Model -> Html Msg
-viewGrid loggedIn communities =
-    div [ class "card-grid" ]
+viewBalances : LoggedIn.Model -> List DashCommunity.Model -> Html Msg
+viewBalances loggedIn communities =
+    div [ class "flex flex-wrap" ]
         (List.indexedMap
             (\i c ->
                 DashCommunity.viewCard loggedIn i c

@@ -178,46 +178,34 @@ viewCardBalance loggedIn ({ balance } as model) =
                 Nothing ->
                     ""
     in
-    div
-        [ class "card__community" ]
-        [ div [ class "card__community__top" ]
-            [ div
-                [ class "card__community__image"
-                , Community.logoBackground ipfsUrl (Just logo)
-                ]
-                []
-            , div [ class "card__community__details" ]
-                [ span [ class "card__community__title" ]
-                    [ text title ]
-                , div [ class "card__community__balance" ]
-                    [ div [ class "card__community__balance__text" ]
-                        [ p [ class "card__community__balance__amount" ]
-                            [ text balanceText ]
-                        , p [ class "card__community__balance__symbol" ]
-                            [ text symbolText ]
-                        ]
-                    , span [ class "card__community__subtitle" ]
-                        [ text_ "account.my_wallet.balances.current" ]
+    div [ class "w-full sm:w-1/2 md:w-1/3 xl:w-1/4 py-2 sm:px-1" ]
+        [ div [ class "flex flex-wrap px-3 pt-5 pb-2 rounded shadow bg-white" ]
+            [ div [ class "w-1/3" ] [ img [ class "object-scale-down h-20", src (ipfsUrl ++ "/" ++ logo) ] [] ]
+            , div [ class "w-2/3 pl-4" ]
+                [ p [ class "font-medium leading-none font-sans" ] [ text title ]
+                , div [ class "flex" ]
+                    [ div [ class "text-3xl text-orange-100" ] [ text balanceText ]
+                    , div [ class "uppercase text-sm font-thin mt-3 ml-2 text-orange-100 font-sans" ] [ text symbolText ]
                     ]
+                , p [ class "text-xs text-gray-600 leading-none font-sans tracking-wide" ] [ text_ "account.my_wallet.balances.current" ]
                 ]
-            , div [ class "card__community__explore" ]
+            , div [ class "w-1/4 hidden" ]
                 [ a
-                    [ class "btn "
+                    [ class "bg-transparent text-orange-100 uppercase rounded-lg border border-orange-100 text-sm py-2 px-3"
                     , Route.href (Route.Community balance.asset.symbol)
                     ]
                     [ text_ "menu.explore" ]
                 ]
-            ]
-        , div [ class "card__community__bottom" ]
-            [ button
-                [ class "btn btn--primary"
+            , div [ class "w-full flex bg-white border-t border-gray-300 mt-2 py-3" ]
+                [ button
+                    [ class "button button-primary button-medium w-1/2 md:px-0 lg:mx-1" ]
+                    [ text (t loggedIn.shared.translations "community.actions.title") ]
+                , button
+                    [ class "button button-primary button-medium w-1/2 md:px-0 lg:mx-1"
+                    , onClick ClickedTransfer
+                    ]
+                    [ text (t loggedIn.shared.translations "account.my_wallet.balances.button") ]
                 ]
-                [ text (t loggedIn.shared.translations "community.actions.title") ]
-            , button
-                [ class "btn btn--primary"
-                , onClick ClickedTransfer
-                ]
-                [ text (t loggedIn.shared.translations "account.my_wallet.balances.button") ]
             ]
         ]
 
