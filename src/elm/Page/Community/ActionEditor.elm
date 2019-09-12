@@ -371,6 +371,20 @@ viewForm shared community model =
 
         dateOptions =
             MaskedDate.defaultOptions EnteredDeadline DeadlineChanged
+
+        usageColor =
+            if model.hasMaxUsage then
+                " text-green"
+
+            else
+                " text-black"
+
+        deadlineColor =
+            if model.hasDeadline then
+                " text-green"
+
+            else
+                " text-black"
     in
     [ div [ class "bg-white rounded-lg sm:w-form mx-auto" ]
         [ div [ class "px-4 py-6 border-b border-gray-500" ]
@@ -390,7 +404,7 @@ viewForm shared community model =
                 [ text_ "community.actions.form.reward_label" ]
             , div [ class "flex flex-row sm:w-1/4 mb-10" ]
                 [ input
-                    [ class "form-input block w-4/5 border-t border-b border-l border-gray-500 text-grey-900 rounded-l"
+                    [ class "font-sans form-input block w-4/5 border-t border-b border-l border-gray-500 text-grey-900 rounded-l"
                     , type_ "number"
                     , placeholder "0.00"
                     , onInput EnteredReward
@@ -429,7 +443,7 @@ viewForm shared community model =
                             , onCheck ToggleDeadline
                             ]
                             []
-                        , label [ for "date", class "capitalize font-sans" ]
+                        , label [ for "date", class ("font-sans capitalize" ++ deadlineColor) ]
                             [ text_ "community.actions.form.date_validity" ]
                         ]
                     , span [ class "w-full font-sans text-caption text-green leading-caption uppercase" ]
@@ -454,7 +468,7 @@ viewForm shared community model =
                             , onCheck ToggleMaxUsage
                             ]
                             []
-                        , label [ for "quantity", class "capitalize font-sans" ]
+                        , label [ for "quantity", class ("capitalize font-sans" ++ usageColor) ]
                             [ text_ "community.actions.form.quantity_validity" ]
                         ]
                     , span [ class "font-sans text-caption text-green leading-caption uppercase" ]
