@@ -100,15 +100,15 @@
 
 /* Tooltip Showing and hiding */
 
-.tooltip-container span {
+.tooltip-container p {
     visibility: hidden;
 }
 
-.tooltip-container:hover span {
+.tooltip-container:hover p {
     visibility: visible;
 }
 
-.tooltip-container span::after {
+.tooltip-container p::after {
     content: " ";
     position: absolute;
     bottom: 100%;
