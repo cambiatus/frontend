@@ -324,7 +324,7 @@ update msg model loggedIn =
                         |> UR.init
 
                 Err errors ->
-                    { model | problems = model.problems ++ errors }
+                    { model | problems = errors }
                         |> UR.init
 
 
