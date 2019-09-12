@@ -13,7 +13,7 @@
     "notifications": "Notificações",
     "new_notifications": "Novas notificações",
     "previous_notifications": "Notificações antigas",
-    "no_notification": "Nenhuma notificacao",
+    "no_notification": "Nenhuma notificação",
     "chat_message_notification": "Nova mensagem de: {{username}}",
     "view_all": "Ver Tudo",
     "more": "Mais",
@@ -58,29 +58,29 @@
     "objective": {
         "invalid_id": "ID do objetivo inválido "
     },
-    "pageNotFound": "Pagina nao encontrada",
+    "pageNotFound": "Pagina não encontrada",
     "required": "Parece que voce esqueceu de preencher esse.",
     "tooShort": "Muito curto. Deve ter pelo menos {{minLength}} caracteres.",
     "tooLong": "Muito longo. Deve ter no maximo {{maxLength}} caracteres.",
     "invalidChar": "Caractere invalido: '{{invalidChar}}'.",
     "alreadyTaken": "Esse ja esta em uso. Por favor, tente outro.",
-    "notMember": "Esse usuario nao e membro",
+    "notMember": "Esse usuario não é membro",
     "chooseOrUploadLogo": "Escolha ou envie um logo.",
-    "invalidSymbol": "Simbolo invalido.",
+    "invalidSymbol": "Simbolo inválido.",
     "unknown": "Opa. Algo de errado aconteceu =(."
   },
   "auth": {
     "title": "Use sua chave privada e PIN ou faça o login",
     "verifyingScatter": "Verificando Disponibilidade do Scatter",
     "loginScatter": "Entrar com Scatter",
-    "scatterUnavailable": "Scatter Indisponivel",
+    "scatterUnavailable": "Scatter Indisponível",
     "loginPrivatekey": "Entrar com chave privada ou 12 palavras",
     "loginPrivatekeyPlaceholder": "Chave privada ou 12 palavras",
     "usePin": "Usar PIN",
     "pinPlaceholder": "Insira seu PIN",
     "loginPin": "Bem-vindo {{accountName}}, use seu login de PIN por",
     "chooseAccount": "Escolha uma conta",
-    "required": "Autenticacao necessaria para essa acao",
+    "required": "Autenticação necessária para essa ação",
     "account_instr": "Apenas letras de a-z e números de 1-5",
     "pin_instr": "6 números",
     "login": {
@@ -162,10 +162,10 @@
   "account": {
     "my_wallet": {
       "title": "Minha Carteira",
-      "transaction_sent": "Sua transacao foi enviada com sucesso para a blockchain.",
+      "transaction_sent": "Sua transação foi enviada com sucesso para a blockchain.",
       "your_current_balance": "Seu saldo atual: {{balance}}",
       "balances": {
-        "current": "Balanco",
+        "current": "Balanço atual",
         "subtitle": "Ver comunidades",
         "button": "Transferir"
       },
@@ -175,7 +175,7 @@
         "send_to_placeholder": "Conta do seu amigo",
         "amount": "Quantidade:",
         "amount_placeholder": "0.00",
-        "memo": "Observacao:",
+        "memo": "Observação:",
         "memo_placeholder": "Obrigado pela ajuda",
         "submit": "Transferir"
       }
@@ -198,7 +198,7 @@
         "symbol": "Simbolo",
         "description": "Descricao",
         "max_supply": "Maxima emissao de moedas",
-        "min_balance": "Balanco minimo",
+        "min_balance": "Balanço mínimo",
         "inviter_reward": "Recompensa para quem convidar",
         "invited_reward": "Recompensa para quem for convidado",
         "currency_name": "Nome da moeda",
@@ -215,7 +215,7 @@
     },
     "edit": {
       "title": "Editar comunidade",
-      "unauthorized": "Voce nao tem autorizacao para editar essa comunidade",
+      "unauthorized": "Você não tem autorização para editar essa comunidade",
       "submit": "Salvar"
     },
     "index": {
@@ -249,10 +249,10 @@
       "description_placeholder": "Defina uma meta que ajude a resolver o problema da comunidade."
     },
     "actions": {
-      "title": "Acao",
+      "title": "Ação",
       "last_title": "Últimas Ações",
       "loading_error": "Alguma coisa deu errado ao carregar as ações.",
-      "no_actions_yet": "Nenhuma acao.",
+      "no_actions_yet": "Nenhuma ação.",
       "reward": "Recompensa",
       "manually_verified_by": "Manualmente verificado por",
       "aumatically_verified_by": "Automaticamente verificado por",
@@ -260,14 +260,14 @@
       "validation_reward_none": "Nada",
       "new": "Criar nova ação",
       "description_label": "Quais ações precisam ser feitas para alcancar essa meta?",
-      "reward_label": "O usuario vai ganhar essa recompensa por completar a acao.",
-      "verification_label": "Como essa acao sera verificada?",
+      "reward_label": "O usuario vai ganhar essa recompensa por completar a ação.",
+      "verification_label": "Como essa ação sera verificada?",
       "manually_label": "Manualmente",
       "manually_info": "Selecione pessoas comprometidas com a comunidade.",
       "manually_reward": "Define a recompensa por verificar",
       "automatically_label": "automática",
       "invite_label": "Convidar",
-      "invite_tooltip": "No caso da pessoa que deseja convidar nao tenha uma conta Cambiatus, digite o email.",
+      "invite_tooltip": "No caso da pessoa que deseja convidar não tenha uma conta Cambiatus, digite o email.",
       "invite_email_or_username": "Email ou @usuario",
       "verifiers": "verificadores",
       "usages": "{{usages}} ações aprovadas / {{usagesLeft}} disponíveis agora",
@@ -290,7 +290,7 @@
         "avatar": "Imagem",
         "name": "Nome",
         "email": "Email",
-        "localization": "Localizacao",
+        "localization": "Localização",
         "interests": "Interesses",
         "bio": "Biografia",
         "privateKey": "Chave Privada"
@@ -325,7 +325,7 @@
     "message_placeholder": "Digite sua mensagem aqui ou envie diretamente por Whatsapp ou chat.",
     "create_offer": "Criar nova oferta",
     "edit_offer": "Editar oferta",
-    "unauthorized": "Voce nao tem autorizacao para editar essa venda",
+    "unauthorized": "Você não tem autorização para editar essa venda",
     "photo_label": "Enviar imagem",
     "what_label": "O que voce esta vendendo?",
     "description_label": "Descreva o que esta vendendo",

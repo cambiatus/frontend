@@ -61,10 +61,42 @@
 /* Typography */
 
 .heading-bold {
-    @apply font-medium font-sans text-black text-heading my-3
+    @apply font-medium font-sans text-black text-heading my-3;
 }
 
 /* End of Typography */
+
+/* Button */
+
+.button {
+    @apply uppercase font-sans text-sm leading-none;
+}
+
+.button-primary {
+    @apply bg-orange-300 text-white rounded-full border;
+}
+
+.button-primary:hover {
+    @apply bg-orange-100;
+}
+
+.button-secondary {
+    @apply bg-white text-orange-500 rounded-full border;
+}
+
+.button-small {
+    @apply py-1 px-6;
+}
+
+.button-medium {
+    @apply py-2 px-6;
+}
+
+.button-large {
+    @apply py-3 px-6;
+}
+
+/* End of Button */
 
 /* Tooltip Showing and hiding */
 

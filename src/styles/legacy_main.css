@@ -1452,13 +1452,6 @@ svg.main-header__info-arrow--up {
     justify-content: space-between;
 }
 
-.card-grid {
-    display: grid;
-    grid-gap: 30px;
-    grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
-    margin-bottom: 40px;
-}
-
 .card__link {
     text-decoration: none;
     color: unset;
@@ -2894,13 +2887,6 @@ textarea.form-input {
     display: none;
 }
 
-/*.rating > label:before {
-  margin: 5px;
-  font-size: 1.25em;
-  font-family: FontAwesome;
-  display: inline-block;
-  content: "☆";
-}*/
 .rating>label svg {
     float: right;
     fill: #ddd;
@@ -3833,11 +3819,6 @@ textarea.form-input {
 
 /* Media queries */
 
-/*@media (max-width:950px) {
-  .main-content__title-icons {
-    display: none;
-  }
-}*/
 @media (max-width:900px) {
     .shop-filter {
         margin: 1em 0;

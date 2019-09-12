@@ -1,6 +1,6 @@
 {
   "name": "frontend",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "private": true,
   "engines": {
     "node": "11.15.0"
@@ -76,7 +76,7 @@
     "babel-runtime": "^6.26.0",
     "bip39": "^2.5.0",
     "copy-webpack-plugin": "^5.0.3",
-    "create-elm-app": "^3.0.8",
+    "create-elm-app": "^3.2.1",
     "elm": "^0.19.0-no-deps",
     "elm-format": "^0.8.1",
     "eosjs": "^16.0.9",
