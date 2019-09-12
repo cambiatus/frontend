@@ -21,6 +21,7 @@ import Session.Shared exposing (Shared)
 import Simple.Fuzzy
 import Time exposing (Posix)
 import UpdateResult as UR
+import Validate exposing (Validator, ifBlank, ifFalse, validate)
 
 
 
@@ -55,6 +56,7 @@ initNew loggedIn symbol objId =
       , community = Nothing
       , multiSelectState = Select.newState ""
       , selectedVerifiers = []
+      , problems = []
       }
     , Api.Graphql.query shared (Community.communityQuery symbol) CompletedCommunityLoad
     )
@@ -82,6 +84,7 @@ type alias Model =
     , hasMaxUsage : Bool
     , hasVerification : Bool
     , form : Form
+    , problems : List Problem
 
     -- verifiers
     , multiSelectState : Select.State
@@ -95,7 +98,7 @@ type
     = InvalidObjective String
     | LoadingCommunity
     | LoadingFailed (Graphql.Http.Error (Maybe Community))
-    | EditingNew (List Problem)
+    | EditingNew
 
 
 
@@ -142,7 +145,7 @@ update msg model loggedIn =
             case comm of
                 Just c ->
                     { model
-                        | status = EditingNew []
+                        | status = EditingNew
                         , community = Just c
                     }
                         |> UR.init
@@ -315,8 +318,14 @@ update msg model loggedIn =
                 |> UR.init
 
         ClickedCreateAction ->
-            model
-                |> UR.init
+            case validate formValidator model of
+                Ok _ ->
+                    model
+                        |> UR.init
+
+                Err errors ->
+                    { model | problems = model.problems ++ errors }
+                        |> UR.init
 
 
 
@@ -349,7 +358,7 @@ view loggedIn model =
             defaultContainer
                 [ Page.fullPageLoading ]
 
-        EditingNew problems ->
+        EditingNew ->
             case model.community of
                 Nothing ->
                     defaultContainer
@@ -667,10 +676,87 @@ type Problem
 type ValidatedField
     = Description
     | Reward
+    | Validity
     | Deadline
     | MaxUsage
     | Verifiers
     | MinVotes
+
+
+formValidator : Validator Problem Model
+formValidator =
+    Validate.all
+        [ ifBlank (\m -> m.form.description) (InvalidEntry Description "Please enter a description")
+        , ifFalse (\m -> m.form.reward >= 0) (InvalidEntry Reward "The reward needs to be greater than or equal to 0")
+        , ifFalse (\m -> validValidity m) (InvalidEntry Validity "At least one validity is required if")
+        , ifFalse (\m -> validMaxUsage m) (InvalidEntry MaxUsage "Max usage has to be atleast 1")
+        , ifFalse (\m -> validVerifiers m) (InvalidEntry Verifiers "You need more verifiers for enough minimun votes")
+        , ifFalse (\m -> m.form.minVotes >= 0) (InvalidEntry MinVotes "You need at least vote for verification")
+        ]
+
+
+
+-- Validators
+
+
+validValidity : Model -> Bool
+validValidity model =
+    let
+        hasValidity =
+            model.hasValidity
+
+        validityValid =
+            if not hasValidity then
+                True
+
+            else if hasValidity then
+                model.hasDeadline || model.hasMaxUsage
+
+            else
+                False
+    in
+    validityValid
+
+
+validMaxUsage : Model -> Bool
+validMaxUsage model =
+    let
+        hasMaxUsage =
+            model.hasMaxUsage
+
+        validMax =
+            if not hasMaxUsage then
+                True
+
+            else if hasMaxUsage then
+                model.form.maxUsage > 0
+
+            else
+                False
+    in
+    validMax
+
+
+validVerifiers : Model -> Bool
+validVerifiers model =
+    let
+        hasVerifiers =
+            model.hasVerification
+
+        selectedV =
+            model.selectedVerifiers
+
+        validVer =
+            if not hasVerifiers then
+                True
+
+            else if hasVerifiers then
+                not (List.isEmpty selectedV) || not (List.length selectedV >= model.form.minVotes)
+
+            else
+                False
+    in
+    validVer
 
 
 type alias Form =
