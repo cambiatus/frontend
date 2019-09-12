@@ -10,7 +10,7 @@ import Eos.Account as Eos
 import Graphql.Http
 import Html exposing (..)
 import Html.Attributes exposing (..)
-import Html.Events exposing (on, onClick, targetValue)
+import Html.Events exposing (on, onCheck, onClick, targetValue)
 import I18Next exposing (t)
 import Json.Decode as Json
 import Page
@@ -113,6 +113,8 @@ type Msg
     | OnSelectVerifier (Maybe Profile)
     | OnRemoveVerifier Profile
     | SelectMsg (Select.Msg Profile)
+    | ToggleDeadline Bool
+    | ToggleMaxUsage Bool
 
 
 update : Msg -> Model -> LoggedIn.Model -> UpdateResult
@@ -192,6 +194,14 @@ update msg model loggedIn =
             { model | multiSelectState = updated }
                 |> UR.init
                 |> UR.addCmd cmd
+
+        ToggleDeadline bool ->
+            { model | hasDeadline = bool }
+                |> UR.init
+
+        ToggleMaxUsage bool ->
+            { model | hasMaxUsage = bool }
+                |> UR.init
 
 
 
@@ -287,8 +297,16 @@ viewForm shared community model =
             , if model.hasValidity then
                 div [ class "mb-10 sm:w-select" ]
                     [ div [ class "mb-6 flex flex-row text-body items-bottom" ]
-                        [ input [ id "date", type_ "checkbox", class "form-checkbox mr-2 p-1 border-gray-500 " ] []
-                        , label [ for "date", class "capitalize font-sans" ] [ text_ "community.actions.form.date_validity" ]
+                        [ input
+                            [ id "date"
+                            , type_ "checkbox"
+                            , class "form-checkbox mr-2 p-1 border-gray-500"
+                            , checked model.hasDeadline
+                            , onCheck ToggleDeadline
+                            ]
+                            []
+                        , label [ for "date", class "capitalize font-sans" ]
+                            [ text_ "community.actions.form.date_validity" ]
                         ]
                     , span [ class "w-full font-sans text-caption text-green leading-caption uppercase" ]
                         [ text_ "community.actions.form.date_label" ]
@@ -296,17 +314,27 @@ viewForm shared community model =
                         [ type_ "text"
                         , class "mb-10 w-full font-sans border border-gray-500 rounded form-input bg-gray-500 text-black placeholder-black"
                         , placeholder "dd/mm/yyyy"
+                        , disabled (not model.hasDeadline)
                         ]
                         []
                     , div [ class "mb-6 flex flex-row text-body items-bottom" ]
-                        [ input [ id "quantity", type_ "checkbox", class "form-checkbox mr-2" ] []
-                        , label [ for "quantity", class "capitalize font-sans" ] [ text_ "community.actions.form.quantity_validity" ]
+                        [ input
+                            [ id "quantity"
+                            , type_ "checkbox"
+                            , class "form-checkbox mr-2"
+                            , checked model.hasMaxUsage
+                            , onCheck ToggleMaxUsage
+                            ]
+                            []
+                        , label [ for "quantity", class "capitalize font-sans" ]
+                            [ text_ "community.actions.form.quantity_validity" ]
                         ]
                     , span [ class "font-sans text-caption text-green leading-caption uppercase" ]
                         [ text_ "community.actions.form.quantity_label" ]
                     , input
                         [ type_ "number"
                         , class "w-full font-sans border border-gray-500 rounded form-input"
+                        , disabled (not model.hasMaxUsage)
                         ]
                         []
                     ]
@@ -538,3 +566,9 @@ msgToString msg =
 
         SelectMsg _ ->
             [ "SelectMsg" ]
+
+        ToggleMaxUsage _ ->
+            [ "ToggleMaxUsage" ]
+
+        ToggleDeadline _ ->
+            [ "ToggleDeadline" ]
