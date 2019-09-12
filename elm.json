@@ -8,6 +8,7 @@
         "direct": {
             "NoRedInk/elm-json-decode-pipeline": "1.0.0",
             "NoRedInk/elm-simple-fuzzy": "1.0.3",
+            "abadi199/elm-input-extra": "5.2.2",
             "dillonkearns/elm-graphql": "4.2.0",
             "elm/browser": "1.0.1",
             "elm/core": "1.0.2",
