@@ -10,9 +10,10 @@ import Eos.Account as Eos
 import Graphql.Http
 import Html exposing (..)
 import Html.Attributes exposing (..)
-import Html.Events exposing (on, onCheck, onClick, targetValue)
+import Html.Events exposing (on, onCheck, onClick, onInput, targetValue)
 import I18Next exposing (t)
 import Json.Decode as Json
+import MaskedInput.Text as MaskedDate
 import Page
 import Select
 import Session.LoggedIn as LoggedIn exposing (External(..))
@@ -115,6 +116,13 @@ type Msg
     | SelectMsg (Select.Msg Profile)
     | ToggleDeadline Bool
     | ToggleMaxUsage Bool
+    | EnteredDescription String
+    | EnteredReward String
+    | EnteredDeadline String
+    | DeadlineChanged MaskedDate.State
+    | EnteredUsages String
+    | EnteredVerifierReward String
+    | EnteredMinVotes String
 
 
 update : Msg -> Model -> LoggedIn.Model -> UpdateResult
@@ -163,8 +171,17 @@ update msg model loggedIn =
 
                     else
                         False
+
+                currentForm =
+                    model.form
+
+                updatedForm =
+                    { currentForm | verificationType = VerificationType.Claimable }
             in
-            { model | hasVerification = ver }
+            { model
+                | hasVerification = ver
+                , form = updatedForm
+            }
                 |> UR.init
 
         OnSelectVerifier maybeProfile ->
@@ -201,6 +218,99 @@ update msg model loggedIn =
 
         ToggleMaxUsage bool ->
             { model | hasMaxUsage = bool }
+                |> UR.init
+
+        EnteredDescription desc ->
+            let
+                currentForm =
+                    model.form
+
+                updatedForm =
+                    { currentForm | description = desc }
+            in
+            { model | form = updatedForm }
+                |> UR.init
+
+        EnteredReward rew ->
+            let
+                numberReward =
+                    String.toFloat rew
+                        |> Maybe.withDefault 1.0
+
+                currentForm =
+                    model.form
+
+                updatedForm =
+                    { currentForm | reward = numberReward }
+            in
+            { model | form = updatedForm }
+                |> UR.init
+
+        EnteredDeadline dead ->
+            let
+                currentForm =
+                    model.form
+
+                updatedForm =
+                    { currentForm | deadline = dead }
+            in
+            { model | form = updatedForm }
+                |> UR.init
+
+        DeadlineChanged state ->
+            let
+                currentForm =
+                    model.form
+
+                updatedForm =
+                    { currentForm | deadlineState = state }
+            in
+            { model | form = updatedForm }
+                |> UR.init
+
+        EnteredUsages maxString ->
+            let
+                maxInt =
+                    String.toInt maxString
+                        |> Maybe.withDefault 1
+
+                currentForm =
+                    model.form
+
+                updatedForm =
+                    { currentForm | maxUsage = maxInt }
+            in
+            { model | form = updatedForm }
+                |> UR.init
+
+        EnteredVerifierReward vRew ->
+            let
+                numRew =
+                    String.toFloat vRew
+                        |> Maybe.withDefault 1.0
+
+                currentForm =
+                    model.form
+
+                updatedForm =
+                    { currentForm | verifierReward = numRew }
+            in
+            { model | form = updatedForm }
+                |> UR.init
+
+        EnteredMinVotes vots ->
+            let
+                numVotes =
+                    String.toInt vots
+                        |> Maybe.withDefault 1
+
+                currentForm =
+                    model.form
+
+                updatedForm =
+                    { currentForm | minVotes = numVotes }
+            in
+            { model | form = updatedForm }
                 |> UR.init
 
 
@@ -258,6 +368,9 @@ viewForm shared community model =
 
         text_ s =
             text (t shared.translations s)
+
+        dateOptions =
+            MaskedDate.defaultOptions EnteredDeadline DeadlineChanged
     in
     [ div [ class "bg-white rounded-lg sm:w-form mx-auto" ]
         [ div [ class "px-4 py-6 border-b border-gray-500" ]
@@ -267,11 +380,22 @@ viewForm shared community model =
         , div [ class "py-6 px-4" ]
             [ span [ class "font-sans text-caption text-green leading-caption uppercase" ]
                 [ text_ "community.actions.form.description_label" ]
-            , textarea [ class "form-textarea block w-full rounded border border-gray-500 mb-10 text-gray-900", rows 5 ] []
+            , textarea
+                [ class "form-textarea block w-full rounded border border-gray-500 mb-10 text-gray-900"
+                , rows 5
+                , onInput EnteredDescription
+                ]
+                []
             , span [ class "font-sans text-caption text-green leading-caption uppercase" ]
                 [ text_ "community.actions.form.reward_label" ]
             , div [ class "flex flex-row sm:w-1/4 mb-10" ]
-                [ input [ class "form-input block w-4/5 border-t border-b border-l border-gray-500 text-grey-900 rounded-l" ] []
+                [ input
+                    [ class "form-input block w-4/5 border-t border-b border-l border-gray-500 text-grey-900 rounded-l"
+                    , type_ "number"
+                    , placeholder "0.00"
+                    , onInput EnteredReward
+                    ]
+                    []
                 , span
                     [ class "border-r border-b border-t border-gray-500 text-white font-sans items-center justify-center bg-indigo-500 text-body w-1/5 flex rounded-r" ]
                     [ text (Eos.symbolToString community.symbol) ]
@@ -310,13 +434,17 @@ viewForm shared community model =
                         ]
                     , span [ class "w-full font-sans text-caption text-green leading-caption uppercase" ]
                         [ text_ "community.actions.form.date_label" ]
-                    , input
-                        [ type_ "text"
-                        , class "mb-10 w-full font-sans border border-gray-500 rounded form-input bg-gray-500 text-black placeholder-black"
+                    , MaskedDate.input
+                        { dateOptions
+                            | pattern = "##/##/####"
+                            , inputCharacter = '#'
+                        }
+                        [ class "mb-10 w-full font-sans border border-gray-500 rounded form-input bg-gray-500 text-black placeholder-black"
                         , placeholder "dd/mm/yyyy"
                         , disabled (not model.hasDeadline)
                         ]
-                        []
+                        model.form.deadlineState
+                        model.form.deadline
                     , div [ class "mb-6 flex flex-row text-body items-bottom" ]
                         [ input
                             [ id "quantity"
@@ -335,6 +463,7 @@ viewForm shared community model =
                         [ type_ "number"
                         , class "w-full font-sans border border-gray-500 rounded form-input"
                         , disabled (not model.hasMaxUsage)
+                        , onInput EnteredUsages
                         ]
                         []
                     ]
@@ -370,7 +499,11 @@ viewForm shared community model =
                             [ text_ "community.actions.form.verifiers_label" ]
                         , div [ class "flex flex-row mb-10" ]
                             [ input
-                                [ class "form-input block w-4/5 border-t border-b border-l border-gray-500 text-grey-900 rounded-l" ]
+                                [ class "form-input block w-4/5 border-t border-b border-l border-gray-500 text-grey-900 rounded-l"
+                                , type_ "number"
+                                , placeholder "0.00"
+                                , onInput EnteredVerifierReward
+                                ]
                                 []
                             , span
                                 [ class "border-r border-b border-t border-gray-500 text-white font-sans items-center justify-center bg-indigo-500 text-body w-1/5 flex rounded-r" ]
@@ -385,7 +518,11 @@ viewForm shared community model =
                                     [ text_ "community.actions.form.votes_tooltip" ]
                                 ]
                             ]
-                        , input [ class "w-full form-input border border-gray-500 rounded text-gray-900 placeholder-gray-900" ]
+                        , input
+                            [ class "w-full form-input border border-gray-500 rounded text-gray-900 placeholder-gray-900"
+                            , onInput EnteredMinVotes
+                            , type_ "number"
+                            ]
                             []
                         ]
 
@@ -513,14 +650,15 @@ type ValidatedField
 type alias Form =
     { description : String
     , symbol : String
-    , reward : Int
-    , deadline : Maybe Posix
-    , maxUsage : Maybe Int
+    , reward : Float
+    , deadline : String
+    , maxUsage : Int
     , verificationType : VerificationType
     , verifiers : Maybe (List Profile)
-    , verifierReward : Int
+    , verifierReward : Float
     , minVotes : Int
     , objective : Int
+    , deadlineState : MaskedDate.State
     }
 
 
@@ -529,13 +667,14 @@ newForm sym =
     { description = ""
     , symbol = sym
     , reward = 0
-    , deadline = Nothing
-    , maxUsage = Nothing
+    , deadline = ""
+    , maxUsage = 0
     , verificationType = VerificationType.Automatic
     , verifiers = Nothing
     , verifierReward = 0
     , minVotes = 0
     , objective = 0
+    , deadlineState = MaskedDate.initialState
     }
 
 
@@ -572,3 +711,24 @@ msgToString msg =
 
         ToggleDeadline _ ->
             [ "ToggleDeadline" ]
+
+        EnteredDescription val ->
+            [ "EnteredDescription", val ]
+
+        EnteredReward val ->
+            [ "EnteredReward", val ]
+
+        EnteredDeadline val ->
+            [ "EnteredDeadline", val ]
+
+        DeadlineChanged _ ->
+            [ "DeadlineChanged" ]
+
+        EnteredUsages val ->
+            [ "EnteredUsages", val ]
+
+        EnteredVerifierReward val ->
+            [ "EnteredVerifierReward", val ]
+
+        EnteredMinVotes val ->
+            [ "EnteredMinVotes", val ]
