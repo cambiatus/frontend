@@ -245,6 +245,9 @@ viewForm shared community model =
 
         logoLink =
             Community.logoUrl ipfsUrl (Just community.logo)
+
+        text_ s =
+            text (t shared.translations s)
     in
     [ div [ class "bg-white rounded-lg" ]
         [ div [ class "px-4 py-6 border-b border-gray-500" ]
@@ -253,10 +256,10 @@ viewForm shared community model =
             ]
         , div [ class "py-6 px-4" ]
             [ span [ class "font-sans text-caption text-green leading-caption uppercase" ]
-                [ text "Activity Description" ]
+                [ text_ "community.actions.form.description_label" ]
             , textarea [ class "form-textarea block w-full rounded border border-gray-500 mb-10 text-gray-900", rows 5 ] []
             , span [ class "font-sans text-caption text-green leading-caption uppercase" ]
-                [ text "Reward" ]
+                [ text_ "community.actions.form.reward_label" ]
             , div [ class "flex flex-row sm:w-1/4 mb-10" ]
                 [ input [ class "form-input block w-4/5 border-t border-b border-l border-gray-500 text-grey-900 rounded-l" ] []
                 , span
@@ -266,29 +269,29 @@ viewForm shared community model =
             , div [ class "sm:w-select" ]
                 [ div [ class "flex flex-row justify-between" ]
                     [ p [ class "font-sans text-caption text-green leading-caption uppercase" ]
-                        [ text "Does it have validity?" ]
+                        [ text_ "community.actions.form.validity_label" ]
                     , div [ class "text-orange-300 relative mb-1 text-caption leading-caption uppercase tooltip-container" ]
-                        [ text "What is it?"
-                        , span [ class "bg-black text-white absolute z-10 py-3 px-4 top-1 w-select right-0 rounded" ]
-                            [ text " I Is the tooltip text" ]
+                        [ text_ "community.actions.form.tooltip_label"
+                        , span [ class "bg-black text-white absolute z-10 py-3 px-4 top-1 w-select right-0 rounded whitespace-pre-line" ]
+                            [ text_ "community.actions.form.validity_tooltip" ]
                         ]
                     ]
                 , select
                     [ class "form-select block w-full border border-gray-500 rounded mb-10 text-gray-900"
                     , on "change" (Json.map SetValidity targetValue)
                     ]
-                    [ option [ value "no" ] [ span [ class "capitalize" ] [ text "No" ] ]
-                    , option [ value "yes" ] [ span [ class "capitalize" ] [ text "Yes" ] ]
+                    [ option [ value "no" ] [ span [ class "capitalize" ] [ text_ "community.actions.form.no" ] ]
+                    , option [ value "yes" ] [ span [ class "capitalize" ] [ text_ "community.actions.form.yes" ] ]
                     ]
                 ]
             , if model.hasValidity then
                 div [ class "mb-10 sm:w-select" ]
                     [ div [ class "mb-6 flex flex-row text-body items-bottom" ]
                         [ input [ id "date", type_ "checkbox", class "form-checkbox mr-2 p-1 border-gray-500 " ] []
-                        , label [ for "date", class "capitalize font-sans" ] [ text "validity by date" ]
+                        , label [ for "date", class "capitalize font-sans" ] [ text_ "community.actions.form.date_validity" ]
                         ]
                     , span [ class "w-full font-sans text-caption text-green leading-caption uppercase" ]
-                        [ text "Choose Date" ]
+                        [ text_ "community.actions.form.date_label" ]
                     , input
                         [ type_ "text"
                         , class "mb-10 w-full font-sans border border-gray-500 rounded form-input bg-gray-500 text-black placeholder-black"
@@ -297,10 +300,10 @@ viewForm shared community model =
                         []
                     , div [ class "mb-6 flex flex-row text-body items-bottom" ]
                         [ input [ id "quantity", type_ "checkbox", class "form-checkbox mr-2" ] []
-                        , label [ for "quantity", class "capitalize font-sans" ] [ text "validity by quantity" ]
+                        , label [ for "quantity", class "capitalize font-sans" ] [ text_ "community.actions.form.quantity_validity" ]
                         ]
                     , span [ class "font-sans text-caption text-green leading-caption uppercase" ]
-                        [ text "choose quantity" ]
+                        [ text_ "community.actions.form.quantity_label" ]
                     , input
                         [ type_ "number"
                         , class "w-full font-sans border border-gray-500 rounded form-input"
@@ -313,30 +316,30 @@ viewForm shared community model =
             , div [ class "sm:w-select mb-10" ]
                 [ div [ class "flex flex-row justify-between font-sans leading-caption uppercase text-caption" ]
                     [ p [ class "text-green" ]
-                        [ text "Does it need verification?" ]
+                        [ text_ "community.actions.form.verification_label" ]
                     , div [ class "text-orange-300 relative mb-1 tooltip-container" ]
-                        [ text "What is it?"
-                        , span [ class "bg-black text-white absolute z-10 py-3 px-4 top-1 w-select right-0 rounded" ]
-                            [ text " I Is the tooltip text" ]
+                        [ text_ "community.actions.form.tooltip_label"
+                        , span [ class "bg-black text-white absolute z-10 py-3 px-4 top-1 w-select right-0 rounded whitespace-pre-line" ]
+                            [ text_ "community.actions.form.verification_tooltip" ]
                         ]
                     ]
                 , select
                     [ on "change" (Json.map SetVerification targetValue)
                     , class "form-select block w-full border border-gray-500 rounded mb-10 text-gray-900"
                     ]
-                    [ option [ value "no" ] [ text "No, it is automatically" ]
-                    , option [ value "yes" ] [ text " Yes" ]
+                    [ option [ value "no" ] [ text_ "community.actions.form.auto_no" ]
+                    , option [ value "yes" ] [ text_ "community.actions.form.manual_yes" ]
                     ]
                 , if model.hasVerification then
                     div []
                         [ span [ class "font-sans text-caption text-green leading-caption uppercase" ]
-                            [ text "choose the verifiers" ]
+                            [ text_ "community.actions.form.verifiers_label" ]
                         , div [ class "mb-10" ]
                             [ viewVerifierSelect shared model False
                             , viewSelectedVerifiers shared model
                             ]
                         , span [ class "font-sans text-caption text-green leading-caption uppercase" ]
-                            [ text "Reward for verifiers" ]
+                            [ text_ "community.actions.form.verifiers_label" ]
                         , div [ class "flex flex-row mb-10" ]
                             [ input
                                 [ class "form-input block w-4/5 border-t border-b border-l border-gray-500 text-grey-900 rounded-l" ]
@@ -347,11 +350,11 @@ viewForm shared community model =
                             ]
                         , div [ class "flex flex-row justify-between font-sans text-caption leading-caption uppercase" ]
                             [ p [ class "text-green" ]
-                                [ text "Minimum number of votes" ]
+                                [ text_ "community.actions.form.votes_label" ]
                             , div [ class "text-orange-300 relative mb-1 tooltip-container" ]
-                                [ text "What is it?"
-                                , span [ class "bg-black text-white absolute z-10 py-3 px-4 top-1 w-select right-0 rounded" ]
-                                    [ text " I Is the tooltip text" ]
+                                [ text_ "community.actions.form.tooltip_label"
+                                , span [ class "bg-black text-white absolute z-10 py-3 px-4 top-1 w-select right-0 roundedwhitespace-pre-line" ]
+                                    [ text_ "community.actions.form.votes_tooltip" ]
                                 ]
                             ]
                         , input [ class "w-full form-input border border-gray-500 rounded text-gray-900 placeholder-gray-900" ]
@@ -364,7 +367,7 @@ viewForm shared community model =
             , div [ class "flex align-center justify-center" ]
                 [ button
                     [ class "uppercase font-sans text-white text-body bg-orange-300 rounded-super w-40 h-10" ]
-                    [ text "Create" ]
+                    [ text_ "menu.create" ]
                 ]
             ]
         ]
@@ -377,6 +380,9 @@ viewSelectedVerifiers shared model =
         ipfsUrl =
             shared.endpoints.ipfs
 
+        text_ s =
+            text (t shared.translations s)
+
         verifiers =
             model.selectedVerifiers
                 |> List.map
@@ -387,7 +393,7 @@ viewSelectedVerifiers shared model =
                             ]
                             [ Avatar.view ipfsUrl p.avatar "h-7 w-7"
                             , span [ class "mt-1 text-red font-sans text-caption uppercase leading-caption" ]
-                                [ text "Remove" ]
+                                [ text_ "community.actions.form.remove_verifier" ]
                             ]
                     )
     in
@@ -425,7 +431,7 @@ selectConfig shared isDisabled =
         |> Select.withNotFoundStyles [ ( "padding", "0 2rem" ) ]
         |> Select.withDisabled isDisabled
         |> Select.withHighlightedItemClass "autocomplete-item-highlight"
-        |> Select.withPrompt (t shared.translations "account.my_wallet.transfer.send_to_placeholder")
+        |> Select.withPrompt (t shared.translations "community.actions.form.verifier_placeholder")
         |> Select.withItemHtml (viewAutoCompleteItem shared)
 
 
