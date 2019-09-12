@@ -268,7 +268,30 @@
       "verifiers": "verifiers",
       "usages": "{{usages}} approved actions/ {{usagesLeft}} availables now",
       "available_until": "available until ",
-      "or": " or "
+      "or": " or ",
+      "form": {
+        "description_label": "Activity Description",
+        "reward_label": "Reward",
+        "validity_label": "Does it have validity?",
+        "verification_label": "Does it need verification?",
+        "verifiers_label": "Choose the verifiers",
+        "remove_verifier": "Remove",
+        "verifiers_reward_label": "Reward for verifiers",
+        "votes_label": "Minimum number of votes",
+        "tooltip_label": "What is it?",
+        "validity_tooltip": "You can set a validity for the activity. \\n By the date, the activity will be available until a certain date. \\n By quantity, the activity will be available until it is performed a number of times.",
+        "votes_tooltip": "Choose how many votes the activity needs to receive to be considered approved (in the event of a tie, the activity will be approved).",
+        "verification_tooltip": "You can define how an activity will be validated. \\n Automatically, as soon as the activity is performed it will be automatically approved. \\n Manually, you define the people who will review the activities and they can approve or disapprove the accomplishment.",
+        "date_validity": "Validity by date",
+        "quantity_validity": "Validity by quantity",
+        "no": "No",
+        "yes": "Yes",
+        "auto_no": "No, it is automatic",
+        "manual_yes": "Yes, manually by people",
+        "verifier_placeholder": "Type the username",
+        "date_label": "Choose date",
+        "quantity_label": "Choose quantity"
+      }
     }
   },
   "profile": {

@@ -269,7 +269,30 @@
       "verifiers": "verificadors",
       "usages": "{{usages}} accions aprovades / {{usagesLeft}} disponibles ara",
       "available_until": "disponible fins ",
-      "or" : " o "
+      "or" : " o ",
+      "form": {
+        "description_label": "Descripció de l’activitat",
+        "reward_label": "Recompensa",
+        "validity_label": "Té validesa?",
+        "verification_label": "Necessita verificació?",
+        "verifiers_label": "Trieu els verificadors",
+        "remove_verifier": "Elimina",
+        "verifiers_reward_label": "Recompensa per als verificadors",
+        "votes_label": "Nombre mínim de vots",
+        "tooltip_label": "Què es?",
+        "validity_tooltip": "Podeu definir una validesa per a l’activitat. \\n Per data, l’activitat estarà disponible fins a una data determinada. \\n Per quantitat, l’activitat estarà disponible fins que es realitzi diverses vegades.",
+        "votes_tooltip": "Trieu quants vots ha de rebre l'activitat per considerar-se aprovats (en cas d'empat, s'aprovarà l'activitat).",
+        "verification_tooltip": "Podeu definir com s’avaluarà una activitat. \\n De forma automàtica, tan aviat com es realitzi l’activitat, s’aprovarà automàticament. \\n Definiu manualment les persones que revisaran les activitats i poden aprovar o desaprovar la realització.",
+        "date_validity": "Validesa per data",
+        "quantity_validity": "Validesa per quantitat",
+        "no": "No",
+        "yes": "Sí",
+        "auto_no": "No, és automàtic",
+        "manual_yes": "Sí, manualment per gent",
+        "verifier_placeholder": "Escriviu el nom d’usuari",
+       	"date_label": "Tria la data",
+        "quantity_label": "Tria la quantitat" 
+      }
     }
   },
   "profile": {
