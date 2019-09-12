@@ -123,6 +123,7 @@ type Msg
     | EnteredUsages String
     | EnteredVerifierReward String
     | EnteredMinVotes String
+    | ClickedCreateAction
 
 
 update : Msg -> Model -> LoggedIn.Model -> UpdateResult
@@ -313,6 +314,10 @@ update msg model loggedIn =
             { model | form = updatedForm }
                 |> UR.init
 
+        ClickedCreateAction ->
+            model
+                |> UR.init
+
 
 
 -- VIEW
@@ -402,16 +407,16 @@ viewForm shared community model =
                 []
             , span [ class "font-sans text-caption text-green leading-caption uppercase" ]
                 [ text_ "community.actions.form.reward_label" ]
-            , div [ class "flex flex-row sm:w-1/4 mb-10" ]
+            , div [ class "flex flex-row sm:w-1/4 mb-10 border border-gray-500 rounded" ]
                 [ input
-                    [ class "font-sans form-input block w-4/5 border-t border-b border-l border-gray-500 text-grey-900 rounded-l"
+                    [ class "font-sans form-input block w-4/5 border-none text-gray-900 placeholder-gray-900"
                     , type_ "number"
                     , placeholder "0.00"
                     , onInput EnteredReward
                     ]
                     []
                 , span
-                    [ class "border-r border-b border-t border-gray-500 text-white font-sans items-center justify-center bg-indigo-500 text-body w-1/5 flex rounded-r" ]
+                    [ class "text-white font-sans items-center justify-center bg-indigo-500 text-body w-1/5 flex rounded-r" ]
                     [ text (Eos.symbolToString community.symbol) ]
                 ]
             , div [ class "sm:w-select" ]
@@ -511,16 +516,16 @@ viewForm shared community model =
                             ]
                         , span [ class "font-sans text-caption text-green leading-caption uppercase" ]
                             [ text_ "community.actions.form.verifiers_label" ]
-                        , div [ class "flex flex-row mb-10" ]
+                        , div [ class "flex flex-row mb-10 border border-gray-500 rounded" ]
                             [ input
-                                [ class "form-input block w-4/5 border-t border-b border-l border-gray-500 text-grey-900 rounded-l"
+                                [ class "form-input block w-4/5 border-none text-gray-900 placeholder-gray-900 font-sans"
                                 , type_ "number"
                                 , placeholder "0.00"
                                 , onInput EnteredVerifierReward
                                 ]
                                 []
                             , span
-                                [ class "border-r border-b border-t border-gray-500 text-white font-sans items-center justify-center bg-indigo-500 text-body w-1/5 flex rounded-r" ]
+                                [ class "text-white font-sans items-center justify-center bg-indigo-500 text-body w-1/5 flex rounded-r" ]
                                 [ text (Eos.symbolToString community.symbol) ]
                             ]
                         , div [ class "flex flex-row justify-between font-sans text-caption leading-caption uppercase" ]
@@ -545,7 +550,9 @@ viewForm shared community model =
                 ]
             , div [ class "flex align-center justify-center" ]
                 [ button
-                    [ class "uppercase font-sans text-white text-body bg-orange-300 rounded-super w-40 h-10" ]
+                    [ class "uppercase font-sans text-white text-body bg-orange-300 rounded-super w-40 h-10"
+                    , onClick ClickedCreateAction
+                    ]
                     [ text_ "menu.create" ]
                 ]
             ]
@@ -606,12 +613,13 @@ selectConfig shared isDisabled =
         |> Select.withClear False
         |> Select.withMultiInputItemContainerClass "hidden h-0"
         |> Select.withNotFound "No matches"
-        |> Select.withNotFoundClass "text-red"
+        |> Select.withNotFoundClass "text-red  border-solid border-gray-100 border rounded z-10 bg-white w-select"
         |> Select.withNotFoundStyles [ ( "padding", "0 2rem" ) ]
         |> Select.withDisabled isDisabled
         |> Select.withHighlightedItemClass "autocomplete-item-highlight"
         |> Select.withPrompt (t shared.translations "community.actions.form.verifier_placeholder")
         |> Select.withItemHtml (viewAutoCompleteItem shared)
+        |> Select.withMenuClass "border-t-none border-solid border-gray-100 border rounded-b z-10 bg-white"
 
 
 viewAutoCompleteItem : Shared -> Profile -> Html Never
@@ -620,16 +628,20 @@ viewAutoCompleteItem shared profile =
         ipfsUrl =
             shared.endpoints.ipfs
     in
-    div [ class "autocomplete-item" ]
-        [ Avatar.view ipfsUrl profile.avatar "profile-img-avatar-select"
-        , text (Eos.nameToString profile.accountName)
-        , text " "
-        , case profile.userName of
-            Just name ->
-                text ("(" ++ name ++ ")")
+    div [ class "p-3 flex flex-row items-center w-select" ]
+        [ div [ class "pr-3" ] [ Avatar.view ipfsUrl profile.avatar "h-7 w-7" ]
+        , div [ class "flex flex-col font-sans" ]
+            [ span [ class "text-black text-body leading-loose" ]
+                [ text (Eos.nameToString profile.accountName) ]
+            , span [ class "leading-caption uppercase text-green text-caption" ]
+                [ case profile.userName of
+                    Just name ->
+                        text name
 
-            Nothing ->
-                text ""
+                    Nothing ->
+                        text ""
+                ]
+            ]
         ]
 
 
@@ -746,3 +758,6 @@ msgToString msg =
 
         EnteredMinVotes val ->
             [ "EnteredMinVotes", val ]
+
+        ClickedCreateAction ->
+            [ "ClickedCreateAction" ]
