@@ -249,7 +249,7 @@ viewForm shared community model =
         text_ s =
             text (t shared.translations s)
     in
-    [ div [ class "bg-white rounded-lg" ]
+    [ div [ class "bg-white rounded-lg sm:w-form mx-auto" ]
         [ div [ class "px-4 py-6 border-b border-gray-500" ]
             [ img [ src logoLink, class "w-16 h-16 mr-4 inline" ] []
             , span [ class "font-sans text-heading font-medium" ] [ text community.title ]
@@ -272,7 +272,7 @@ viewForm shared community model =
                         [ text_ "community.actions.form.validity_label" ]
                     , div [ class "text-orange-300 relative mb-1 text-caption leading-caption uppercase tooltip-container" ]
                         [ text_ "community.actions.form.tooltip_label"
-                        , span [ class "bg-black text-white absolute z-10 py-3 px-4 top-1 w-select right-0 rounded whitespace-pre-line" ]
+                        , p [ class "bg-black text-white absolute z-10 py-3 px-4 top-1 w-select right-0 rounded whitespace-pre-line leading-normal font-sans normal-case text-body" ]
                             [ text_ "community.actions.form.validity_tooltip" ]
                         ]
                     ]
@@ -319,7 +319,7 @@ viewForm shared community model =
                         [ text_ "community.actions.form.verification_label" ]
                     , div [ class "text-orange-300 relative mb-1 tooltip-container" ]
                         [ text_ "community.actions.form.tooltip_label"
-                        , span [ class "bg-black text-white absolute z-10 py-3 px-4 top-1 w-select right-0 rounded whitespace-pre-line" ]
+                        , p [ class "bg-black text-white absolute z-10 py-3 px-4 top-1 w-select right-0 rounded whitespace-pre-line leading-normal normal-case text-body" ]
                             [ text_ "community.actions.form.verification_tooltip" ]
                         ]
                     ]
@@ -351,9 +351,9 @@ viewForm shared community model =
                         , div [ class "flex flex-row justify-between font-sans text-caption leading-caption uppercase" ]
                             [ p [ class "text-green" ]
                                 [ text_ "community.actions.form.votes_label" ]
-                            , div [ class "text-orange-300 relative mb-1 tooltip-container" ]
+                            , div [ class "text-orange-300 relative mb-1 tooltip-container font-sans" ]
                                 [ text_ "community.actions.form.tooltip_label"
-                                , span [ class "bg-black text-white absolute z-10 py-3 px-4 top-1 w-select right-0 roundedwhitespace-pre-line" ]
+                                , p [ class "bg-black text-white absolute z-10 py-3 px-4 top-1 w-select right-0 rounded whitespace-pre-line leading-normal text-body font-sans normal-case" ]
                                     [ text_ "community.actions.form.votes_tooltip" ]
                                 ]
                             ]
