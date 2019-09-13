@@ -23,7 +23,7 @@ import Simple.Fuzzy
 import Time exposing (Posix)
 import UpdateResult as UR
 import Utils
-import Validate exposing (Validator, ifBlank, ifFalse, validate)
+import Validate exposing (Validator, ifBlank, ifFalse, ifTrue, validate)
 
 
 
@@ -215,7 +215,7 @@ update msg model loggedIn =
         SelectMsg subMsg ->
             let
                 ( updated, cmd ) =
-                    Select.update (selectConfig loggedIn.shared False) subMsg model.multiSelectState
+                    Select.update (selectConfig loggedIn.shared False model.problems) subMsg model.multiSelectState
             in
             { model | multiSelectState = updated }
                 |> UR.init
@@ -352,14 +352,14 @@ update msg model loggedIn =
             case validate formValidator model of
                 Ok _ ->
                     if model.hasDeadline then
-                        update ValidateDeadline model loggedIn
+                        update ValidateDeadline { model | problems = [] } loggedIn
 
                     else
                         let
                             upMsg =
                                 UploadAction (Ok "")
                         in
-                        update upMsg model loggedIn
+                        update upMsg { model | problems = [] } loggedIn
 
                 Err errors ->
                     { model | problems = errors }
@@ -467,6 +467,14 @@ viewForm shared community model =
 
             else
                 " text-black"
+
+        borderColor : ValidatedField -> String
+        borderColor vfield =
+            if hasError vfield model.problems then
+                " border-red"
+
+            else
+                " border-gray-500"
     in
     [ div [ class "bg-white rounded-lg sm:w-form mx-auto" ]
         [ div [ class "px-4 py-6 border-b border-gray-500" ]
@@ -476,27 +484,33 @@ viewForm shared community model =
         , div [ class "py-6 px-4" ]
             [ span [ class "font-sans text-caption text-green leading-caption uppercase" ]
                 [ text_ "community.actions.form.description_label" ]
-            , textarea
-                [ class "form-textarea block w-full rounded border border-gray-500 mb-10 text-gray-900"
-                , rows 5
-                , onInput EnteredDescription
-                ]
-                []
-            , span [ class "font-sans text-caption text-green leading-caption uppercase" ]
-                [ text_ "community.actions.form.reward_label" ]
-            , div [ class "flex flex-row sm:w-1/4 mb-10 border border-gray-500 rounded" ]
-                [ input
-                    [ class "font-sans form-input block w-4/5 border-none text-gray-900 placeholder-gray-900"
-                    , type_ "number"
-                    , placeholder "0.00"
-                    , onInput EnteredReward
+            , div [ class "mb-10" ]
+                [ textarea
+                    [ class ("form-textarea block w-full rounded border text-gray-900" ++ borderColor Description)
+                    , rows 5
+                    , onInput EnteredDescription
                     ]
                     []
-                , span
-                    [ class "text-white font-sans items-center justify-center bg-indigo-500 text-body w-1/5 flex rounded-r" ]
-                    [ text (Eos.symbolToString community.symbol) ]
+                , viewFieldErrors shared Description model.problems
                 ]
-            , div [ class "sm:w-select" ]
+            , span [ class "font-sans text-caption text-green leading-caption uppercase" ]
+                [ text_ "community.actions.form.reward_label" ]
+            , div [ class "mb-10" ]
+                [ div [ class ("flex flex-row sm:w-1/4 border rounded" ++ borderColor Reward) ]
+                    [ input
+                        [ class "font-sans form-input block w-4/5 border-none text-gray-900 placeholder-gray-900"
+                        , type_ "number"
+                        , placeholder "0.00"
+                        , onInput EnteredReward
+                        ]
+                        []
+                    , span
+                        [ class "text-white font-sans items-center justify-center bg-indigo-500 text-body w-1/5 flex rounded-r" ]
+                        [ text (Eos.symbolToString community.symbol) ]
+                    ]
+                , viewFieldErrors shared Reward model.problems
+                ]
+            , div [ class "sm:w-select mb-10" ]
                 [ div [ class "flex flex-row justify-between" ]
                     [ p [ class "font-sans text-caption text-green leading-caption uppercase" ]
                         [ text_ "community.actions.form.validity_label" ]
@@ -507,20 +521,21 @@ viewForm shared community model =
                         ]
                     ]
                 , select
-                    [ class "form-select block w-full border border-gray-500 rounded mb-10 text-gray-900"
+                    [ class ("form-select block w-full border rounded" ++ borderColor Validity)
                     , on "change" (Json.map SetValidity targetValue)
                     ]
                     [ option [ value "no" ] [ span [ class "capitalize" ] [ text_ "community.actions.form.no" ] ]
                     , option [ value "yes" ] [ span [ class "capitalize" ] [ text_ "community.actions.form.yes" ] ]
                     ]
+                , viewFieldErrors shared Validity model.problems
                 ]
             , if model.hasValidity then
-                div [ class "mb-10 sm:w-select" ]
-                    [ div [ class "mb-6 flex flex-row text-body items-bottom" ]
+                div [ class "sm:w-select" ]
+                    [ div [ class "mb-3 flex flex-row text-body items-bottom" ]
                         [ input
                             [ id "date"
                             , type_ "checkbox"
-                            , class "form-checkbox mr-2 p-1 border-gray-500"
+                            , class "form-checkbox mr-2 p-1"
                             , checked model.hasDeadline
                             , onCheck ToggleDeadline
                             ]
@@ -530,17 +545,20 @@ viewForm shared community model =
                         ]
                     , span [ class "w-full font-sans text-caption text-green leading-caption uppercase" ]
                         [ text_ "community.actions.form.date_label" ]
-                    , MaskedDate.input
-                        { dateOptions
-                            | pattern = "##/##/####"
-                            , inputCharacter = '#'
-                        }
-                        [ class "mb-10 w-full font-sans border border-gray-500 rounded form-input bg-gray-500 text-black placeholder-black"
-                        , placeholder "dd/mm/yyyy"
-                        , disabled (not model.hasDeadline)
+                    , div [ class "mb-6" ]
+                        [ MaskedDate.input
+                            { dateOptions
+                                | pattern = "##/##/####"
+                                , inputCharacter = '#'
+                            }
+                            [ class ("w-full font-sans borde rounded form-input bg-gray-500 text-black placeholder-black" ++ borderColor Deadline)
+                            , placeholder "dd/mm/yyyy"
+                            , disabled (not model.hasDeadline)
+                            ]
+                            model.form.deadlineState
+                            model.form.deadline
+                        , viewFieldErrors shared Deadline model.problems
                         ]
-                        model.form.deadlineState
-                        model.form.deadline
                     , div [ class "mb-6 flex flex-row text-body items-bottom" ]
                         [ input
                             [ id "quantity"
@@ -555,13 +573,16 @@ viewForm shared community model =
                         ]
                     , span [ class "font-sans text-caption text-green leading-caption uppercase" ]
                         [ text_ "community.actions.form.quantity_label" ]
-                    , input
-                        [ type_ "number"
-                        , class "w-full font-sans border border-gray-500 rounded form-input"
-                        , disabled (not model.hasMaxUsage)
-                        , onInput EnteredUsages
+                    , div [ class "mb-10" ]
+                        [ input
+                            [ type_ "number"
+                            , class ("w-full font-sans border rounded form-input" ++ borderColor MaxUsage)
+                            , disabled (not model.hasMaxUsage)
+                            , onInput EnteredUsages
+                            ]
+                            []
+                        , viewFieldErrors shared MaxUsage model.problems
                         ]
-                        []
                     ]
 
               else
@@ -587,23 +608,26 @@ viewForm shared community model =
                     div []
                         [ span [ class "font-sans text-caption text-green leading-caption uppercase" ]
                             [ text_ "community.actions.form.verifiers_label" ]
-                        , div [ class "mb-10" ]
+                        , div []
                             [ viewVerifierSelect shared model False
                             , viewSelectedVerifiers shared model
                             ]
                         , span [ class "font-sans text-caption text-green leading-caption uppercase" ]
                             [ text_ "community.actions.form.verifiers_label" ]
-                        , div [ class "flex flex-row mb-10 border border-gray-500 rounded" ]
-                            [ input
-                                [ class "form-input block w-4/5 border-none text-gray-900 placeholder-gray-900 font-sans"
-                                , type_ "number"
-                                , placeholder "0.00"
-                                , onInput EnteredVerifierReward
+                        , div [ class "mb-10" ]
+                            [ div [ class ("flex flex-row border rounded" ++ borderColor VerifierReward) ]
+                                [ input
+                                    [ class "form-input block w-4/5 border-none text-gray-900 placeholder-gray-900 font-sans"
+                                    , type_ "number"
+                                    , placeholder "0.00"
+                                    , onInput EnteredVerifierReward
+                                    ]
+                                    []
+                                , span
+                                    [ class "text-white font-sans items-center justify-center bg-indigo-500 text-body w-1/5 flex rounded-r" ]
+                                    [ text (Eos.symbolToString community.symbol) ]
                                 ]
-                                []
-                            , span
-                                [ class "text-white font-sans items-center justify-center bg-indigo-500 text-body w-1/5 flex rounded-r" ]
-                                [ text (Eos.symbolToString community.symbol) ]
+                            , viewFieldErrors shared VerifierReward model.problems
                             ]
                         , div [ class "flex flex-row justify-between font-sans text-caption leading-caption uppercase" ]
                             [ p [ class "text-green" ]
@@ -614,12 +638,15 @@ viewForm shared community model =
                                     [ text_ "community.actions.form.votes_tooltip" ]
                                 ]
                             ]
-                        , input
-                            [ class "w-full form-input border border-gray-500 rounded text-gray-900 placeholder-gray-900"
-                            , onInput EnteredMinVotes
-                            , type_ "number"
+                        , div []
+                            [ input
+                                [ class ("w-full form-input border rounded text-gray-900 placeholder-gray-900" ++ borderColor MinVotes)
+                                , onInput EnteredMinVotes
+                                , type_ "number"
+                                ]
+                                []
+                            , viewFieldErrors shared MinVotes model.problems
                             ]
-                            []
                         ]
 
                   else
@@ -663,6 +690,37 @@ viewSelectedVerifiers shared model =
     div [ class "flex flex-row mt-heading flex-wrap" ] verifiers
 
 
+viewFieldErrors : Shared -> ValidatedField -> List Problem -> Html Msg
+viewFieldErrors shared field problems =
+    let
+        fieldErrors =
+            List.filter
+                (\p ->
+                    case p of
+                        InvalidEntry f _ ->
+                            f == field
+
+                        _ ->
+                            False
+                )
+                problems
+
+        msgs =
+            List.map
+                (\p ->
+                    case p of
+                        InvalidEntry _ m ->
+                            span [ class "font-sans text-caption leading-caption text-red uppercase" ] [ text m ]
+
+                        _ ->
+                            text ""
+                )
+                fieldErrors
+    in
+    div []
+        msgs
+
+
 
 -- Configure Select
 
@@ -678,15 +736,24 @@ filter minChars toLabel query items =
             |> Just
 
 
-selectConfig : Shared -> Bool -> Select.Config Msg Profile
-selectConfig shared isDisabled =
+selectConfig : Shared -> Bool -> List Problem -> Select.Config Msg Profile
+selectConfig shared isDisabled problems =
+    let
+        borderColor : ValidatedField -> String
+        borderColor vfield =
+            if hasError vfield problems then
+                " border-red"
+
+            else
+                " border-gray-500"
+    in
     Select.newConfig
         { onSelect = OnSelectVerifier
         , toLabel = \p -> Eos.nameToString p.accountName
         , filter = filter 2 (\p -> Eos.nameToString p.accountName)
         }
         |> Select.withMultiSelection True
-        |> Select.withInputClass "form-input w-full text-gray-900 placeholder-gray-900"
+        |> Select.withInputClass ("form-input w-full text-gray-900 placeholder-gray-900" ++ borderColor Verifiers)
         |> Select.withClear False
         |> Select.withMultiInputItemContainerClass "hidden h-0"
         |> Select.withNotFound "No matches"
@@ -729,7 +796,15 @@ viewVerifierSelect shared model isDisabled =
             Maybe.map .members model.community
                 |> Maybe.withDefault []
     in
-    Html.map SelectMsg (Select.view (selectConfig shared isDisabled) model.multiSelectState users model.selectedVerifiers)
+    div [ class "mb-10" ]
+        [ Html.map SelectMsg
+            (Select.view (selectConfig shared isDisabled model.problems)
+                model.multiSelectState
+                users
+                model.selectedVerifiers
+            )
+        , viewFieldErrors shared Verifiers model.problems
+        ]
 
 
 
@@ -747,6 +822,7 @@ type ValidatedField
     | Validity
     | Deadline
     | MaxUsage
+    | VerifierReward
     | Verifiers
     | MinVotes
 
@@ -758,9 +834,34 @@ formValidator =
         , ifFalse (\m -> m.form.reward >= 0) (InvalidEntry Reward "The reward needs to be greater than or equal to 0")
         , ifFalse (\m -> validValidity m) (InvalidEntry Validity "At least one validity is required if")
         , ifFalse (\m -> validMaxUsage m) (InvalidEntry MaxUsage "Max usage has to be atleast 1")
-        , ifFalse (\m -> validVerifiers m) (InvalidEntry Verifiers "You need more verifiers for enough minimun votes")
-        , ifFalse (\m -> m.form.minVotes >= 0) (InvalidEntry MinVotes "You need at least vote for verification")
+        , ifFalse (\m -> validVerifiers m) (InvalidEntry Verifiers "for enough minimun votes")
+        , ifTrue (\m -> m.form.minVotes > List.length m.selectedVerifiers) (InvalidEntry Verifiers "more verifiers")
+        , ifFalse (\m -> validMinVotes m) (InvalidEntry MinVotes "You need at least vote for verification")
+        , ifFalse (\m -> m.form.verifierReward >= 0) (InvalidEntry VerifierReward "Verifier reward needs to be 0")
         ]
+
+
+hasError : ValidatedField -> List Problem -> Bool
+hasError field problems =
+    let
+        fieldErrors =
+            List.filter
+                (\p ->
+                    case p of
+                        InvalidEntry f _ ->
+                            f == field
+
+                        _ ->
+                            False
+                )
+                problems
+    in
+    case fieldErrors of
+        [] ->
+            False
+
+        _ ->
+            True
 
 
 
@@ -819,12 +920,28 @@ validVerifiers model =
                 True
 
             else if hasVerifiers then
-                not (List.isEmpty selectedV) || not (List.length selectedV >= model.form.minVotes)
+                not (List.isEmpty selectedV)
 
             else
                 False
     in
     validVer
+
+
+validMinVotes : Model -> Bool
+validMinVotes model =
+    let
+        hasVerifiers =
+            model.hasVerification
+
+        validMin =
+            if not hasVerifiers then
+                True
+
+            else
+                model.form.minVotes >= 1
+    in
+    validMin
 
 
 type alias Form =
