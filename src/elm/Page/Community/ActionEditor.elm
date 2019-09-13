@@ -504,7 +504,9 @@ view loggedIn model =
 
                 Just comm ->
                     defaultContainer
-                        ([ div [ class "h-10 bg-green" ] [ text "community.actions.form.success" ] ]
+                        ([ div [ class "-mx-10 h-10 bg-green flex flex-col items-center font-sans text-white" ]
+                            [ span [ class "my-auto" ] [ text "community.actions.form.success" ] ]
+                         ]
                             ++ [ Page.viewTitle (t "community.actions.new") ]
                             ++ viewForm loggedIn.shared comm model
                         )
@@ -517,7 +519,9 @@ view loggedIn model =
 
                 Just comm ->
                     defaultContainer
-                        ([ div [ class "h-10 bg-red" ] [ text "community.actions.form.fail" ] ]
+                        ([ div [ class "-mx-10 h-10 bg-red flex flex-col items-center font-sans text-white" ]
+                            [ text "community.actions.form.fail" ]
+                         ]
                             ++ [ Page.viewTitle (t "community.actions.new") ]
                             ++ viewForm loggedIn.shared comm model
                         )
