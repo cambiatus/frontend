@@ -294,7 +294,17 @@
         "manual_yes": "Sim, manualmente por pessoas",
         "verifier_placeholder": "Digite o nome de usuário",
         "date_label": "Escolha a data",
-        "quantity_label": "Escolha a quantidade"
+        "quantity_label": "Escolha a quantidade",
+        "errors": {
+          "description": "A descrição não pode estar vazia",
+          "reward": "A recompensa precisa ser maior que 0",
+          "validity": "Pelo menos uma validade é necessária se estiver usando validade",
+          "usage": "Quantidade precisa ser pelo menos 1",
+          "empty_verifiers": "Você precisa de pelo menos um verificador se estiver usando verificadores",
+          "less_verifiers": "Você precisa de mais verificadores para obter votos suficientes",
+          "minvotes": "Você precisa de pelo menos 1 voto mínimo se estiver usando verificadores",
+          "verifier_reward": "A recompensa do verificador precisa ser pelo menos 0"
+        }
       }
     }
   },

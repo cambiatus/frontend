@@ -291,7 +291,17 @@
         "manual_yes": "Sí, manualment per gent",
         "verifier_placeholder": "Escriviu el nom d’usuari",
        	"date_label": "Tria la data",
-        "quantity_label": "Tria la quantitat" 
+        "quantity_label": "Tria la quantitat",
+        "errors" : {
+           "description": "La descripció no pot estar buida",
+           "reward": "La recompensa ha de ser superior a 0",
+           "validity": "Cal utilitzar almenys una validesa si es fa servir la validesa",
+           "usage": "La quantitat ha de tenir com a mínim 1",
+           "empty_verifiers": "Necessiteu almenys un verificador si feu servir verificadors",
+           "less_verifiers": "Necessiteu més verificadors per vots suficients",
+           "minvotes": "Cal utilitzar almenys un vot mínim si es fa servir verificadors",
+           "verifier_reward": "La recompensa del verificador ha de tenir com a mínim 0"
+        } 
       }
     }
   },

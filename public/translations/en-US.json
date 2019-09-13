@@ -290,7 +290,17 @@
         "manual_yes": "Yes, manually by people",
         "verifier_placeholder": "Type the username",
         "date_label": "Choose date",
-        "quantity_label": "Choose quantity"
+        "quantity_label": "Choose quantity",
+				"errors" :{
+					"description": "Description cannot be empty",
+          "reward": "The reward needs to be more than 0",
+          "validity": "At least one validity is required if using validity",
+          "usage": "Quantity needs to be atleast 1",
+          "empty_verifiers": " You need at least one verifier if using verifiers",
+          "less_verifiers": "You need more verifiers for enough votes",
+          "minvotes": "You need to at least 1 minimum vote if using verifiers",
+          "verifier_reward": "Verifier reward needs to be atleast 0"
+				}
       }
     }
   },

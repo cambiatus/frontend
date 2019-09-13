@@ -290,7 +290,17 @@
         "manual_yes": "Si, manualmente por personas",
         "verifier_placeholder": "Escribe el nombre de usuario",
         "date_label": "Elige fecha", 
-        "quantity_label": "Elige cantidad"
+        "quantity_label": "Elige cantidad",
+        "errors": {
+          "description": "La descripción no puede estar vacía",
+          "reward": "La recompensa debe ser más de 0",
+          "validity": "Se requiere al menos una validez si se usa validez",
+          "usage": "La cantidad debe ser al menos 1",
+          "empty_verifiers": "Necesita al menos un verificador si usa verificadores",
+          "less_verifiers": "Necesitas más verificadores para suficientes votos.",
+          "minvotes": "Necesita al menos 1 voto mínimo si usa verificadores",
+          "verifier_reward": "La recompensa del verificador debe ser al menos 0"
+        }
       }
     }
   },
