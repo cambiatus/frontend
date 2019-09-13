@@ -1,4 +1,4 @@
-module Community exposing (Action, Balance, Community, CreateCommunityData, DashboardInfo, Metadata, Objective, ObjectiveId, Transaction, Validator, Verification(..), Verifiers, WithObjectives, communitiesQuery, communityQuery, createCommunityData, decodeBalance, decodeObjectiveId, decodeTransaction, encodeCreateActionAction, encodeCreateCommunityData, encodeCreateObjectiveAction, encodeObjectiveId, encodeUpdateLogoData, logoBackground, logoTitleQuery, logoUrl)
+module Community exposing (Action, Balance, Community, CreateCommunityData, DashboardInfo, Metadata, Objective, ObjectiveId(..), Transaction, Validator, Verification(..), Verifiers, WithObjectives, communitiesQuery, communityQuery, createCommunityData, decodeBalance, decodeObjectiveId, decodeTransaction, encodeCreateActionAction, encodeCreateCommunityData, encodeCreateObjectiveAction, encodeObjectiveId, encodeUpdateLogoData, logoBackground, logoTitleQuery, logoUrl)
 
 import Account exposing (Profile, accountSelectionSet)
 import Api.Relay exposing (MetadataConnection, PaginationArgs)
@@ -293,6 +293,11 @@ type alias CreateActionAction =
     , reward : String
     , verifier_reward : String
     , creator : Eos.Name
+    , deadline : Int
+    , usages : Int
+    , verifications : Int
+    , verification_type : String
+    , validators_str : String
     }
 
 
@@ -304,6 +309,11 @@ encodeCreateActionAction c =
         , ( "reward", Encode.string c.reward )
         , ( "verifier_reward", Encode.string c.verifier_reward )
         , ( "creator", Eos.encodeName c.creator )
+        , ( "deadline", Encode.int c.deadline )
+        , ( "usages", Encode.int c.usages )
+        , ( "verifications", Encode.int c.verifications )
+        , ( "verification_type", Encode.string c.verification_type )
+        , ( "validators_str", Encode.string c.validators_str )
         ]
 
 
