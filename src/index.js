@@ -753,6 +753,30 @@ async function handleJavascriptPort (arg) {
       app.ports.javascriptInPort.send(response)
       break
     }
+    case 'validateDeadline': {
+      devLog('=============================', 'validatingDate')
+
+      const parsedDate = new Date(arg.data.deadline)
+
+      if (parsedDate === 'Invalid Date') {
+        const response = {
+          address: arg.responseAddress,
+          addressData: arg.responseData,
+          error: parsedDate
+        }
+        app.ports.javascriptInPort.send(response)
+      } else {
+        const isoDate = parsedDate.toISOString()
+
+        const response = {
+          address: arg.responseAddress,
+          addressData: arg.responseData,
+          date: isoDate
+        }
+        app.ports.javascriptInPort.send(response)
+      }
+      break
+    }
     case 'hideFooter': {
       devLog('======================', 'hideFooter')
       document.getElementById('guest-footer').className += ' guest__footer'
