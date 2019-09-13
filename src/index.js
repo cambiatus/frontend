@@ -758,13 +758,15 @@ async function handleJavascriptPort (arg) {
 
       const parsedDate = new Date(arg.data.deadline)
 
-      if (parsedDate === 'Invalid Date') {
+      console.log('p', parsedDate)
+      if (parsedDate.toString() === ('Invalid Date')) {
         const response = {
           address: arg.responseAddress,
           addressData: arg.responseData,
           error: parsedDate
         }
         app.ports.javascriptInPort.send(response)
+        break
       } else {
         const isoDate = parsedDate.toISOString()
 
@@ -774,8 +776,8 @@ async function handleJavascriptPort (arg) {
           date: isoDate
         }
         app.ports.javascriptInPort.send(response)
+        break
       }
-      break
     }
     case 'hideFooter': {
       devLog('======================', 'hideFooter')

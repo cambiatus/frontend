@@ -3,7 +3,7 @@ module Page.Community.ActionEditor exposing (Model, Msg, initNew, jsAddressToMsg
 import Account exposing (Profile)
 import Api.Graphql
 import Avatar exposing (Avatar)
-import Bespiral.Enum.VerificationType as VerificationType exposing (VerificationType)
+import Bespiral.Scalar exposing (DateTime(..))
 import Community exposing (Community)
 import Eos exposing (Symbol)
 import Eos.Account as Eos
@@ -22,6 +22,7 @@ import Session.Shared exposing (Shared)
 import Simple.Fuzzy
 import Time exposing (Posix)
 import UpdateResult as UR
+import Utils
 import Validate exposing (Validator, ifBlank, ifFalse, validate)
 
 
@@ -184,7 +185,7 @@ update msg model loggedIn =
                     model.form
 
                 updatedForm =
-                    { currentForm | verificationType = VerificationType.Claimable }
+                    { currentForm | verificationType = "claimable" }
             in
             { model
                 | hasVerification = ver
@@ -378,6 +379,16 @@ update msg model loggedIn =
         UploadAction isoDate ->
             case isoDate of
                 Ok date ->
+                    let
+                        dateInt =
+                            if String.length date == 0 then
+                                0
+
+                            else
+                                Just (DateTime date)
+                                    |> Utils.posixDateTime
+                                    |> Time.posixToMillis
+                    in
                     model
                         |> UR.init
 
@@ -822,7 +833,7 @@ type alias Form =
     , reward : Float
     , deadline : String
     , maxUsage : Int
-    , verificationType : VerificationType
+    , verificationType : String
     , verifiers : Maybe (List Profile)
     , verifierReward : Float
     , minVotes : Int
@@ -838,7 +849,7 @@ newForm sym =
     , reward = 0
     , deadline = ""
     , maxUsage = 0
-    , verificationType = VerificationType.Automatic
+    , verificationType = "automatic"
     , verifiers = Nothing
     , verifierReward = 0
     , minVotes = 0
