@@ -69,11 +69,11 @@
 /* Button */
 
 .button {
-    @apply uppercase font-sans text-sm leading-none;
+    @apply uppercase font-sans text-sm leading-none py-2 px-6 w-40 h-10;
 }
 
 .button-primary {
-    @apply bg-orange-300 text-white rounded-full border;
+    @apply bg-orange-300 text-white text-body rounded-super;
 }
 
 .button-primary:hover {
@@ -85,20 +85,41 @@
 }
 
 .button-small {
-    @apply py-1 px-6;
-}
-
-.button-medium {
-    @apply py-2 px-6;
+    @apply py-1 px-6 h-8;
 }
 
 .button-large {
-    @apply py-3 px-6;
+    @apply py-3 px-6 h-12;
 }
 
 /* End of Button */
 
-/* Tooltip Showing and hiding */
+/* Input */
+
+.input {
+    /* Form input comes from tailwind/custom-forms */
+    @apply form-input font-sans h-12;
+}
+
+.input-label {
+    @apply text-green text-caption uppercase font-sans
+}
+
+.input-token {
+    @apply text-white font-sans items-center justify-center bg-indigo-500 px-4 py-3 text-body rounded-r
+}
+
+/* End of Input */
+
+/* Select */
+
+.select {
+    @apply h-12 block border font-sans border-gray-500 rounded
+}
+
+/* End of Select */
+
+/* Tooltip */
 
 .tooltip-container p {
     visibility: hidden;
@@ -119,7 +140,7 @@
     border-color: transparent transparent black transparent;
 }
 
-/* End of tooltip styles */
+/* End of Tooltip */
 
 /* https://tailwindcss.com/docs/extracting-components#extracting-css-components-with-apply */
 @tailwind utilities;

@@ -507,7 +507,7 @@ view loggedIn model =
 
                 Just comm ->
                     defaultContainer
-                        ([ div [ class "-mx-10 h-10 bg-green flex flex-col items-center font-sans text-white" ]
+                        ([ div [ class "mx-10 h-10 bg-green flex flex-col items-center font-sans text-white" ]
                             [ span [ class "my-auto" ] [ text_ "community.actions.form.success" ] ]
                          ]
                             ++ [ Page.viewTitle (t "community.actions.new") ]
@@ -522,7 +522,7 @@ view loggedIn model =
 
                 Just comm ->
                     defaultContainer
-                        ([ div [ class "-mx-10 h-10 bg-red flex flex-col items-center font-sans text-white" ]
+                        ([ div [ class "mx-10 h-10 bg-red flex flex-col items-center font-sans text-white" ]
                             [ text_ "community.actions.form.fail" ]
                          ]
                             ++ [ Page.viewTitle (t "community.actions.new") ]
@@ -573,46 +573,46 @@ viewForm shared community model =
             , span [ class "font-sans text-heading font-medium" ] [ text community.title ]
             ]
         , div [ class "py-6 px-4" ]
-            [ span [ class "font-sans text-caption text-green leading-caption uppercase" ]
-                [ text_ "community.actions.form.description_label" ]
-            , div [ class "mb-10" ]
-                [ textarea
-                    [ class ("form-textarea block w-full rounded border text-gray-900" ++ borderColor Description)
+            [ div [ class "mb-10" ]
+                [ span [ class "input-label" ]
+                    [ text_ "community.actions.form.description_label" ]
+                , textarea
+                    [ class ("form-textarea font-sans block w-full rounded border " ++ borderColor Description)
                     , rows 5
                     , onInput EnteredDescription
                     ]
                     []
                 , viewFieldErrors Description model.problems
                 ]
-            , span [ class "font-sans text-caption text-green leading-caption uppercase" ]
-                [ text_ "community.actions.form.reward_label" ]
             , div [ class "mb-10" ]
-                [ div [ class ("flex flex-row sm:w-1/4 border rounded" ++ borderColor Reward) ]
+                [ span [ class "input-label" ]
+                    [ text_ "community.actions.form.reward_label" ]
+                , div [ class ("flex flex-row sm:w-1/4 border rounded" ++ borderColor Reward) ]
                     [ input
-                        [ class "font-sans form-input block w-4/5 border-none text-gray-900 placeholder-gray-900"
+                        [ class "input block w-4/5 border-none"
                         , type_ "number"
                         , placeholder "0.00"
                         , onInput EnteredReward
                         ]
                         []
                     , span
-                        [ class "text-white font-sans items-center justify-center bg-indigo-500 text-body w-1/5 flex rounded-r" ]
+                        [ class "w-2/5 flex input-token" ]
                         [ text (Eos.symbolToString community.symbol) ]
                     ]
                 , viewFieldErrors Reward model.problems
                 ]
             , div [ class "sm:w-select mb-10" ]
                 [ div [ class "flex flex-row justify-between" ]
-                    [ p [ class "font-sans text-caption text-green leading-caption uppercase" ]
+                    [ p [ class "input-label" ]
                         [ text_ "community.actions.form.validity_label" ]
-                    , div [ class "text-orange-300 relative mb-1 text-caption leading-caption uppercase tooltip-container" ]
+                    , div [ class "input-label text-orange-300 relative mb-1 uppercase tooltip-container" ]
                         [ text_ "community.actions.form.tooltip_label"
                         , p [ class "bg-black text-white absolute z-10 py-3 px-4 top-1 w-select right-0 rounded whitespace-pre-line leading-normal font-sans normal-case text-body" ]
                             [ text_ "community.actions.form.validity_tooltip" ]
                         ]
                     ]
                 , select
-                    [ class ("form-select block w-full border rounded" ++ borderColor Validity)
+                    [ class ("form-select w-full select" ++ borderColor Validity)
                     , on "change" (Json.map SetValidity targetValue)
                     ]
                     [ option [ value "no" ] [ span [ class "capitalize" ] [ text_ "community.actions.form.no" ] ]
@@ -634,15 +634,15 @@ viewForm shared community model =
                         , label [ for "date", class ("font-sans capitalize" ++ deadlineColor) ]
                             [ text_ "community.actions.form.date_validity" ]
                         ]
-                    , span [ class "w-full font-sans text-caption text-green leading-caption uppercase" ]
+                    , span [ class "input-label" ]
                         [ text_ "community.actions.form.date_label" ]
-                    , div [ class "mb-6" ]
+                    , div [ class "mb-10" ]
                         [ MaskedDate.input
                             { dateOptions
                                 | pattern = "##/##/####"
                                 , inputCharacter = '#'
                             }
-                            [ class ("w-full font-sans borde rounded form-input bg-gray-500 text-black placeholder-black" ++ borderColor Deadline)
+                            [ class ("w-full h-12 font-sans borde rounded form-input bg-gray-500 text-black placeholder-black" ++ borderColor Deadline)
                             , placeholder "dd/mm/yyyy"
                             , disabled (not model.hasDeadline)
                             ]
@@ -662,12 +662,12 @@ viewForm shared community model =
                         , label [ for "quantity", class ("capitalize font-sans" ++ usageColor) ]
                             [ text_ "community.actions.form.quantity_validity" ]
                         ]
-                    , span [ class "font-sans text-caption text-green leading-caption uppercase" ]
+                    , span [ class "input-label" ]
                         [ text_ "community.actions.form.quantity_label" ]
                     , div [ class "mb-10" ]
                         [ input
                             [ type_ "number"
-                            , class ("w-full font-sans border rounded form-input" ++ borderColor MaxUsage)
+                            , class ("w-full input border rounded" ++ borderColor MaxUsage)
                             , disabled (not model.hasMaxUsage)
                             , onInput EnteredUsages
                             ]
@@ -679,10 +679,10 @@ viewForm shared community model =
               else
                 text ""
             , div [ class "sm:w-select mb-10" ]
-                [ div [ class "flex flex-row justify-between font-sans leading-caption uppercase text-caption" ]
-                    [ p [ class "text-green" ]
+                [ div [ class "flex flex-row justify-between" ]
+                    [ p [ class "input-label" ]
                         [ text_ "community.actions.form.verification_label" ]
-                    , div [ class "text-orange-300 relative mb-1 tooltip-container" ]
+                    , div [ class "input-label text-orange-300 relative mb-1 tooltip-container" ]
                         [ text_ "community.actions.form.tooltip_label"
                         , p [ class "bg-black text-white absolute z-10 py-3 px-4 top-1 w-select right-0 rounded whitespace-pre-line leading-normal normal-case text-body" ]
                             [ text_ "community.actions.form.verification_tooltip" ]
@@ -690,40 +690,40 @@ viewForm shared community model =
                     ]
                 , select
                     [ on "change" (Json.map SetVerification targetValue)
-                    , class "form-select block w-full border border-gray-500 rounded mb-10 text-gray-900"
+                    , class "w-full mb-10 form-select select"
                     ]
                     [ option [ value "no" ] [ text_ "community.actions.form.auto_no" ]
                     , option [ value "yes" ] [ text_ "community.actions.form.manual_yes" ]
                     ]
                 , if model.hasVerification then
                     div []
-                        [ span [ class "font-sans text-caption text-green leading-caption uppercase" ]
+                        [ span [ class "input-label" ]
                             [ text_ "community.actions.form.verifiers_label" ]
                         , div []
                             [ viewVerifierSelect shared model False
                             , viewSelectedVerifiers shared model
                             ]
-                        , span [ class "font-sans text-caption text-green leading-caption uppercase" ]
-                            [ text_ "community.actions.form.verifiers_label" ]
+                        , span [ class "input-label" ]
+                            [ text_ "community.actions.form.verifiers_reward_label" ]
                         , div [ class "mb-10" ]
                             [ div [ class ("flex flex-row border rounded" ++ borderColor VerifierReward) ]
                                 [ input
-                                    [ class "form-input block w-4/5 border-none text-gray-900 placeholder-gray-900 font-sans"
+                                    [ class "input block w-4/5 border-none"
                                     , type_ "number"
                                     , placeholder "0.00"
                                     , onInput EnteredVerifierReward
                                     ]
                                     []
                                 , span
-                                    [ class "text-white font-sans items-center justify-center bg-indigo-500 text-body w-1/5 flex rounded-r" ]
+                                    [ class "w-1/5 flex input-token" ]
                                     [ text (Eos.symbolToString community.symbol) ]
                                 ]
                             , viewFieldErrors VerifierReward model.problems
                             ]
-                        , div [ class "flex flex-row justify-between font-sans text-caption leading-caption uppercase" ]
-                            [ p [ class "text-green" ]
+                        , div [ class "flex flex-row justify-between" ]
+                            [ p [ class "input-label" ]
                                 [ text_ "community.actions.form.votes_label" ]
-                            , div [ class "text-orange-300 relative mb-1 tooltip-container font-sans" ]
+                            , div [ class "input-label text-orange-300 relative mb-1 tooltip-container" ]
                                 [ text_ "community.actions.form.tooltip_label"
                                 , p [ class "bg-black text-white absolute z-10 py-3 px-4 top-1 w-select right-0 rounded whitespace-pre-line leading-normal text-body font-sans normal-case" ]
                                     [ text_ "community.actions.form.votes_tooltip" ]
@@ -731,7 +731,7 @@ viewForm shared community model =
                             ]
                         , div []
                             [ input
-                                [ class ("w-full form-input border rounded text-gray-900 placeholder-gray-900" ++ borderColor MinVotes)
+                                [ class ("w-full input border rounded" ++ borderColor MinVotes)
                                 , onInput EnteredMinVotes
                                 , type_ "number"
                                 ]
@@ -745,7 +745,7 @@ viewForm shared community model =
                 ]
             , div [ class "flex align-center justify-center" ]
                 [ button
-                    [ class "uppercase font-sans text-white text-body bg-orange-300 rounded-super w-40 h-10"
+                    [ class "button button-primary"
                     , onClick SubmittedData
                     ]
                     [ text_ "menu.create" ]
@@ -778,7 +778,7 @@ viewSelectedVerifiers shared model =
                             ]
                     )
     in
-    div [ class "flex flex-row mt-heading flex-wrap" ] verifiers
+    div [ class "flex flex-row mt-3 mb-10 flex-wrap" ] verifiers
 
 
 viewFieldErrors : ValidatedField -> List Problem -> Html Msg
@@ -844,7 +844,7 @@ selectConfig shared isDisabled problems =
         , filter = filter 2 (\p -> Eos.nameToString p.accountName)
         }
         |> Select.withMultiSelection True
-        |> Select.withInputClass ("form-input w-full text-gray-900 placeholder-gray-900" ++ borderColor Verifiers)
+        |> Select.withInputClass ("form-input h-12 w-full font-sans placeholder-gray-900" ++ borderColor Verifiers)
         |> Select.withClear False
         |> Select.withMultiInputItemContainerClass "hidden h-0"
         |> Select.withNotFound "No matches"
@@ -887,7 +887,7 @@ viewVerifierSelect shared model isDisabled =
             Maybe.map .members model.community
                 |> Maybe.withDefault []
     in
-    div [ class "mb-10" ]
+    div []
         [ Html.map SelectMsg
             (Select.view (selectConfig shared isDisabled model.problems)
                 model.multiSelectState
