@@ -275,7 +275,7 @@
         "validity_label": "¿Tiene validez?",
         "verification_label": "¿Necesita verificación?",
         "verifiers_label": "Elige los verificadores",
-        "remove_verifiers": "retirar",
+        "remove_verifier": "retirar",
         "verifiers_reward_label": "Recompensa por verificadores",
         "votes_label": "Numero minimo de votos",
         "tooltip_label": "¿Qué es?",
@@ -289,7 +289,7 @@
         "auto_no": "No, es automático",
         "manual_yes": "Si, manualmente por personas",
         "verifier_placeholder": "Escribe el nombre de usuario",
-        "date_label": "Elige fecha", 
+        "date_label": "Elige fecha",
         "quantity_label": "Elige cantidad",
         "errors": {
           "description": "La descripción no puede estar vacía",
