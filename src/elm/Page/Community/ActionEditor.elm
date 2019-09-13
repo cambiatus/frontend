@@ -101,6 +101,8 @@ type
     | LoadingCommunity
     | LoadingFailed (Graphql.Http.Error (Maybe Community))
     | EditingNew
+    | ActionSaved
+    | ActionSaveFailed Value
 
 
 
@@ -132,10 +134,15 @@ type Msg
     | ValidateDeadline
     | InvalidDate
     | UploadAction (Result Value String)
+    | GotSaveAction (Result Value String)
 
 
 update : Msg -> Model -> LoggedIn.Model -> UpdateResult
 update msg model loggedIn =
+    let
+        shared =
+            loggedIn.shared
+    in
     case msg of
         Ignored ->
             model
@@ -349,7 +356,7 @@ update msg model loggedIn =
                 |> UR.init
 
         SubmittedData ->
-            case validate formValidator model of
+            case validate (formValidator shared) model of
                 Ok _ ->
                     if model.hasDeadline then
                         update ValidateDeadline { model | problems = [] } loggedIn
@@ -388,12 +395,58 @@ update msg model loggedIn =
                                 Just (DateTime date)
                                     |> Utils.posixDateTime
                                     |> Time.posixToMillis
+
+                        validatorsStr =
+                            model.selectedVerifiers
+                                |> List.map (\v -> Eos.nameToString v.accountName)
+                                |> String.join "-"
                     in
                     model
                         |> UR.init
+                        |> UR.addPort
+                            { responseAddress = UploadAction isoDate
+                            , responseData = Encode.null
+                            , data =
+                                Eos.encodeTransaction
+                                    { actions =
+                                        [ { accountName = "bes.cmm"
+                                          , name = "newaction"
+                                          , authorization =
+                                                { actor = loggedIn.accountName
+                                                , permissionName = Eos.samplePermission
+                                                }
+                                          , data =
+                                                { objective_id = Community.ObjectiveId model.form.objective
+                                                , description = model.form.description
+                                                , reward = String.fromFloat model.form.reward ++ " " ++ model.form.symbol
+                                                , verifier_reward = String.fromFloat model.form.verifierReward ++ " " ++ model.form.symbol
+                                                , deadline = dateInt
+                                                , usages = model.form.maxUsage
+                                                , verifications = model.form.minVotes
+                                                , verification_type = model.form.verificationType
+                                                , creator = loggedIn.accountName
+                                                , validators_str = validatorsStr
+                                                }
+                                                    |> Community.encodeCreateActionAction
+                                          }
+                                        ]
+                                    }
+                            }
+                        |> UR.addExt
+                            (Just (UploadAction isoDate)
+                                |> RequiredAuthentication
+                            )
 
                 Err _ ->
                     update InvalidDate model loggedIn
+
+        GotSaveAction (Ok tId) ->
+            { model | status = ActionSaved }
+                |> UR.init
+
+        GotSaveAction (Err val) ->
+            { model | status = ActionSaveFailed val }
+                |> UR.init
 
 
 
@@ -435,6 +488,32 @@ view loggedIn model =
                 Just comm ->
                     defaultContainer
                         ([ Page.viewTitle (t "community.actions.new") ]
+                            ++ viewForm loggedIn.shared comm model
+                        )
+
+        ActionSaved ->
+            case model.community of
+                Nothing ->
+                    defaultContainer
+                        [ Page.fullPageLoading ]
+
+                Just comm ->
+                    defaultContainer
+                        ([ div [ class "h-10 bg-green" ] [ text "community.actions.form.success" ] ]
+                            ++ [ Page.viewTitle (t "community.actions.new") ]
+                            ++ viewForm loggedIn.shared comm model
+                        )
+
+        ActionSaveFailed _ ->
+            case model.community of
+                Nothing ->
+                    defaultContainer
+                        [ Page.fullPageLoading ]
+
+                Just comm ->
+                    defaultContainer
+                        ([ div [ class "h-10 bg-red" ] [ text "community.actions.form.fail" ] ]
+                            ++ [ Page.viewTitle (t "community.actions.new") ]
                             ++ viewForm loggedIn.shared comm model
                         )
 
@@ -491,7 +570,7 @@ viewForm shared community model =
                     , onInput EnteredDescription
                     ]
                     []
-                , viewFieldErrors shared Description model.problems
+                , viewFieldErrors Description model.problems
                 ]
             , span [ class "font-sans text-caption text-green leading-caption uppercase" ]
                 [ text_ "community.actions.form.reward_label" ]
@@ -508,7 +587,7 @@ viewForm shared community model =
                         [ class "text-white font-sans items-center justify-center bg-indigo-500 text-body w-1/5 flex rounded-r" ]
                         [ text (Eos.symbolToString community.symbol) ]
                     ]
-                , viewFieldErrors shared Reward model.problems
+                , viewFieldErrors Reward model.problems
                 ]
             , div [ class "sm:w-select mb-10" ]
                 [ div [ class "flex flex-row justify-between" ]
@@ -527,7 +606,7 @@ viewForm shared community model =
                     [ option [ value "no" ] [ span [ class "capitalize" ] [ text_ "community.actions.form.no" ] ]
                     , option [ value "yes" ] [ span [ class "capitalize" ] [ text_ "community.actions.form.yes" ] ]
                     ]
-                , viewFieldErrors shared Validity model.problems
+                , viewFieldErrors Validity model.problems
                 ]
             , if model.hasValidity then
                 div [ class "sm:w-select" ]
@@ -557,7 +636,7 @@ viewForm shared community model =
                             ]
                             model.form.deadlineState
                             model.form.deadline
-                        , viewFieldErrors shared Deadline model.problems
+                        , viewFieldErrors Deadline model.problems
                         ]
                     , div [ class "mb-6 flex flex-row text-body items-bottom" ]
                         [ input
@@ -581,7 +660,7 @@ viewForm shared community model =
                             , onInput EnteredUsages
                             ]
                             []
-                        , viewFieldErrors shared MaxUsage model.problems
+                        , viewFieldErrors MaxUsage model.problems
                         ]
                     ]
 
@@ -627,7 +706,7 @@ viewForm shared community model =
                                     [ class "text-white font-sans items-center justify-center bg-indigo-500 text-body w-1/5 flex rounded-r" ]
                                     [ text (Eos.symbolToString community.symbol) ]
                                 ]
-                            , viewFieldErrors shared VerifierReward model.problems
+                            , viewFieldErrors VerifierReward model.problems
                             ]
                         , div [ class "flex flex-row justify-between font-sans text-caption leading-caption uppercase" ]
                             [ p [ class "text-green" ]
@@ -645,7 +724,7 @@ viewForm shared community model =
                                 , type_ "number"
                                 ]
                                 []
-                            , viewFieldErrors shared MinVotes model.problems
+                            , viewFieldErrors MinVotes model.problems
                             ]
                         ]
 
@@ -690,8 +769,8 @@ viewSelectedVerifiers shared model =
     div [ class "flex flex-row mt-heading flex-wrap" ] verifiers
 
 
-viewFieldErrors : Shared -> ValidatedField -> List Problem -> Html Msg
-viewFieldErrors shared field problems =
+viewFieldErrors : ValidatedField -> List Problem -> Html Msg
+viewFieldErrors field problems =
     let
         fieldErrors =
             List.filter
@@ -803,7 +882,7 @@ viewVerifierSelect shared model isDisabled =
                 users
                 model.selectedVerifiers
             )
-        , viewFieldErrors shared Verifiers model.problems
+        , viewFieldErrors Verifiers model.problems
         ]
 
 
@@ -827,17 +906,21 @@ type ValidatedField
     | MinVotes
 
 
-formValidator : Validator Problem Model
-formValidator =
+formValidator : Shared -> Validator Problem Model
+formValidator shared =
+    let
+        translations =
+            shared.translations
+    in
     Validate.all
-        [ ifBlank (\m -> m.form.description) (InvalidEntry Description "Please enter a description")
-        , ifFalse (\m -> m.form.reward >= 0) (InvalidEntry Reward "The reward needs to be greater than or equal to 0")
-        , ifFalse (\m -> validValidity m) (InvalidEntry Validity "At least one validity is required if")
-        , ifFalse (\m -> validMaxUsage m) (InvalidEntry MaxUsage "Max usage has to be atleast 1")
-        , ifFalse (\m -> validVerifiers m) (InvalidEntry Verifiers "for enough minimun votes")
-        , ifTrue (\m -> m.form.minVotes > List.length m.selectedVerifiers) (InvalidEntry Verifiers "more verifiers")
-        , ifFalse (\m -> validMinVotes m) (InvalidEntry MinVotes "You need at least vote for verification")
-        , ifFalse (\m -> m.form.verifierReward >= 0) (InvalidEntry VerifierReward "Verifier reward needs to be 0")
+        [ ifBlank (\m -> m.form.description) (InvalidEntry Description (t translations "community.actions.form.errors.description"))
+        , ifFalse (\m -> m.form.reward >= 0) (InvalidEntry Reward (t translations "community.actions.form.errors.reward"))
+        , ifFalse (\m -> validValidity m) (InvalidEntry Validity (t translations "community.actions.form.errors.validity"))
+        , ifFalse (\m -> validMaxUsage m) (InvalidEntry MaxUsage (t translations "community.actions.form.errors.usage"))
+        , ifFalse (\m -> validVerifiers m) (InvalidEntry Verifiers (t translations "community.actions.form.errors.empty_verifiers"))
+        , ifTrue (\m -> m.form.minVotes > List.length m.selectedVerifiers) (InvalidEntry Verifiers (t translations "community.actions.form.errors.less_verifiers"))
+        , ifFalse (\m -> validMinVotes m) (InvalidEntry MinVotes (t translations "community.actions.form.errors.minvotes"))
+        , ifFalse (\m -> m.form.verifierReward >= 0) (InvalidEntry VerifierReward (t translations "community.actions.form.errors.verifier_reward"))
         ]
 
 
@@ -994,6 +1077,18 @@ jsAddressToMsg addr val =
                 |> Result.map (Just << UploadAction)
                 |> Result.withDefault (Just InvalidDate)
 
+        "UploadAction" :: _ ->
+            Json.decodeValue
+                (Json.oneOf
+                    [ Json.field "transactionId" Json.string
+                        |> Json.map Ok
+                    , Json.succeed (Err val)
+                    ]
+                )
+                val
+                |> Result.map (Just << GotSaveAction)
+                |> Result.withDefault Nothing
+
         _ ->
             Nothing
 
@@ -1060,3 +1155,6 @@ msgToString msg =
 
         InvalidDate ->
             [ "InvalidDate" ]
+
+        GotSaveAction _ ->
+            [ "GotSaveAction" ]
