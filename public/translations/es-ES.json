@@ -1,4 +1,4 @@
-{
+       {
   "bespiral": "Cambiatus",
   "menu": {
     "title": "Menu",
@@ -300,7 +300,9 @@
           "less_verifiers": "Necesitas más verificadores para suficientes votos.",
           "minvotes": "Necesita al menos 1 voto mínimo si usa verificadores",
           "verifier_reward": "La recompensa del verificador debe ser al menos 0"
-        }
+        },
+        "error": "La actividad no se puede crear. Intenta más tarde",
+        "success": "La actividad se creó con éxito."
       }
     }
   },

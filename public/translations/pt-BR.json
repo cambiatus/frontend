@@ -304,7 +304,9 @@
           "less_verifiers": "Você precisa de mais verificadores para obter votos suficientes",
           "minvotes": "Você precisa de pelo menos 1 voto mínimo se estiver usando verificadores",
           "verifier_reward": "A recompensa do verificador precisa ser pelo menos 0"
-        }
+        },
+        "success": "A atividade foi criada com sucesso",
+        "error": "A atividade não pode ser criada. Tente depois"
       }
     }
   },

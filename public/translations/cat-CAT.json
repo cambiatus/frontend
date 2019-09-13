@@ -301,7 +301,9 @@
            "less_verifiers": "Necessiteu més verificadors per vots suficients",
            "minvotes": "Cal utilitzar almenys un vot mínim si es fa servir verificadors",
            "verifier_reward": "La recompensa del verificador ha de tenir com a mínim 0"
-        } 
+        },
+       "success": "L’activitat s’ha creat correctament.",
+       "error": "L'activitat no es pot crear. Proveu més endavant" 
       }
     }
   },
