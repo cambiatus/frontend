@@ -446,7 +446,7 @@ viewFooter shared =
     footer [ class "main-footer" ]
         [ img
             [ class "main-footer__logo"
-            , src "images/logo-cambiatus-incolor.svg"
+            , src "/images/logo-cambiatus-incolor.svg"
             ]
             []
         , p [ class "main-footer__text" ]
