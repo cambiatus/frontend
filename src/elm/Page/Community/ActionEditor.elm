@@ -469,6 +469,9 @@ view loggedIn model =
 
         t s =
             I18Next.t shared.translations s
+
+        text_ s =
+            text (t s)
     in
     case model.status of
         InvalidObjective badId ->
@@ -505,7 +508,7 @@ view loggedIn model =
                 Just comm ->
                     defaultContainer
                         ([ div [ class "-mx-10 h-10 bg-green flex flex-col items-center font-sans text-white" ]
-                            [ span [ class "my-auto" ] [ text "community.actions.form.success" ] ]
+                            [ span [ class "my-auto" ] [ text_ "community.actions.form.success" ] ]
                          ]
                             ++ [ Page.viewTitle (t "community.actions.new") ]
                             ++ viewForm loggedIn.shared comm model
@@ -520,7 +523,7 @@ view loggedIn model =
                 Just comm ->
                     defaultContainer
                         ([ div [ class "-mx-10 h-10 bg-red flex flex-col items-center font-sans text-white" ]
-                            [ text "community.actions.form.fail" ]
+                            [ text_ "community.actions.form.fail" ]
                          ]
                             ++ [ Page.viewTitle (t "community.actions.new") ]
                             ++ viewForm loggedIn.shared comm model
