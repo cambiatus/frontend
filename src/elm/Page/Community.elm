@@ -370,6 +370,11 @@ viewObjective loggedIn model editStatus metadata index objective =
             else
                 " "
 
+        objIdStr : String
+        objIdStr =
+            Community.unwrapObjectiveId objective.id
+                |> String.fromInt
+
         actsNButton : List (Html Msg)
         actsNButton =
             List.map (viewAction loggedIn metadata model.date) objective.actions
@@ -378,7 +383,9 @@ viewObjective loggedIn model editStatus metadata index objective =
                         if canEdit then
                             acts
                                 ++ [ button
-                                        [ class "border border-dashed border-button-orange mt-6 w-full flex flex-row content-start px-4 py-2" ]
+                                        [ class "border border-dashed border-button-orange mt-6 w-full flex flex-row content-start px-4 py-2"
+                                        , onClick (CreateAction metadata.symbol objIdStr)
+                                        ]
                                         [ span [ class "px-2 text-button-orange font-medium" ] [ text "+" ]
                                         , span [ class "text-button-orange font-medium" ] [ text_ "community.actions.new" ]
                                         ]
@@ -851,6 +858,8 @@ type Msg
     | ClickedCloseObjective
     | ClickedEditObjective Int Community.Objective
     | ClickedEditCancel
+      -- Action
+    | CreateAction Symbol String
 
 
 update : Msg -> Model -> LoggedIn.Model -> UpdateResult
@@ -1061,6 +1070,11 @@ update msg model loggedIn =
             { model | openObjective = Nothing }
                 |> UR.init
 
+        CreateAction sym id ->
+            model
+                |> UR.init
+                |> UR.addCmd (Route.replaceUrl loggedIn.shared.navKey (Route.NewAction sym id))
+
 
 updateCommunity : Model -> LoadStatus -> Model
 updateCommunity model c =
@@ -1182,3 +1196,6 @@ msgToString msg =
 
         ClickedEditCancel ->
             [ "ClickedEditCancel" ]
+
+        CreateAction _ _ ->
+            [ "CreateAction" ]

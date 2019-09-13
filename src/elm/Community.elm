@@ -1,4 +1,4 @@
-module Community exposing (Action, Balance, Community, CreateCommunityData, DashboardInfo, Metadata, Objective, ObjectiveId(..), Transaction, Validator, Verification(..), Verifiers, WithObjectives, communitiesQuery, communityQuery, createCommunityData, decodeBalance, decodeObjectiveId, decodeTransaction, encodeCreateActionAction, encodeCreateCommunityData, encodeCreateObjectiveAction, encodeObjectiveId, encodeUpdateLogoData, logoBackground, logoTitleQuery, logoUrl)
+module Community exposing (Action, Balance, Community, CreateCommunityData, DashboardInfo, Metadata, Objective, ObjectiveId(..), Transaction, Validator, Verification(..), Verifiers, WithObjectives, communitiesQuery, communityQuery, createCommunityData, decodeBalance, decodeObjectiveId, decodeTransaction, encodeCreateActionAction, encodeCreateCommunityData, encodeCreateObjectiveAction, encodeObjectiveId, encodeUpdateLogoData, logoBackground, logoTitleQuery, logoUrl, unwrapObjectiveId)
 
 import Account exposing (Profile, accountSelectionSet)
 import Api.Relay exposing (MetadataConnection, PaginationArgs)
