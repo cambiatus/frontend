@@ -401,41 +401,46 @@ update msg model loggedIn =
                                 |> List.map (\v -> Eos.nameToString v.accountName)
                                 |> String.join "-"
                     in
-                    model
-                        |> UR.init
-                        |> UR.addPort
-                            { responseAddress = UploadAction isoDate
-                            , responseData = Encode.null
-                            , data =
-                                Eos.encodeTransaction
-                                    { actions =
-                                        [ { accountName = "bes.cmm"
-                                          , name = "newaction"
-                                          , authorization =
-                                                { actor = loggedIn.accountName
-                                                , permissionName = Eos.samplePermission
-                                                }
-                                          , data =
-                                                { objective_id = Community.ObjectiveId model.form.objective
-                                                , description = model.form.description
-                                                , reward = String.fromFloat model.form.reward ++ " " ++ model.form.symbol
-                                                , verifier_reward = String.fromFloat model.form.verifierReward ++ " " ++ model.form.symbol
-                                                , deadline = dateInt
-                                                , usages = model.form.maxUsage
-                                                , verifications = model.form.minVotes
-                                                , verification_type = model.form.verificationType
-                                                , creator = loggedIn.accountName
-                                                , validators_str = validatorsStr
-                                                }
-                                                    |> Community.encodeCreateActionAction
-                                          }
-                                        ]
-                                    }
-                            }
-                        |> UR.addExt
-                            (Just (UploadAction isoDate)
-                                |> RequiredAuthentication
-                            )
+                    if LoggedIn.isAuth loggedIn then
+                        model
+                            |> UR.init
+                            |> UR.addPort
+                                { responseAddress = UploadAction isoDate
+                                , responseData = Encode.null
+                                , data =
+                                    Eos.encodeTransaction
+                                        { actions =
+                                            [ { accountName = "bes.cmm"
+                                              , name = "newaction"
+                                              , authorization =
+                                                    { actor = loggedIn.accountName
+                                                    , permissionName = Eos.samplePermission
+                                                    }
+                                              , data =
+                                                    { objective_id = Community.ObjectiveId model.form.objective
+                                                    , description = model.form.description
+                                                    , reward = String.fromFloat model.form.reward ++ " " ++ model.form.symbol
+                                                    , verifier_reward = String.fromFloat model.form.verifierReward ++ " " ++ model.form.symbol
+                                                    , deadline = dateInt
+                                                    , usages = model.form.maxUsage
+                                                    , verifications = model.form.minVotes
+                                                    , verification_type = model.form.verificationType
+                                                    , creator = loggedIn.accountName
+                                                    , validators_str = validatorsStr
+                                                    }
+                                                        |> Community.encodeCreateActionAction
+                                              }
+                                            ]
+                                        }
+                                }
+
+                    else
+                        model
+                            |> UR.init
+                            |> UR.addExt
+                                (Just (UploadAction isoDate)
+                                    |> RequiredAuthentication
+                                )
 
                 Err _ ->
                     update InvalidDate model loggedIn
