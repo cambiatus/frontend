@@ -1,4 +1,4 @@
-module Page.Community.ActionEditor exposing (Model, Msg, initNew, msgToString, update, view)
+module Page.Community.ActionEditor exposing (Model, Msg, initNew, jsAddressToMsg, msgToString, update, view)
 
 import Account exposing (Profile)
 import Api.Graphql
@@ -12,7 +12,8 @@ import Html exposing (..)
 import Html.Attributes exposing (..)
 import Html.Events exposing (on, onCheck, onClick, onInput, targetValue)
 import I18Next exposing (t)
-import Json.Decode as Json
+import Json.Decode as Json exposing (Value)
+import Json.Encode as Encode
 import MaskedInput.Text as MaskedDate
 import Page
 import Select
@@ -126,7 +127,10 @@ type Msg
     | EnteredUsages String
     | EnteredVerifierReward String
     | EnteredMinVotes String
-    | ClickedCreateAction
+    | SubmittedData
+    | ValidateDeadline
+    | InvalidDate
+    | UploadAction (Result Value String)
 
 
 update : Msg -> Model -> LoggedIn.Model -> UpdateResult
@@ -250,16 +254,42 @@ update msg model loggedIn =
             { model | form = updatedForm }
                 |> UR.init
 
-        EnteredDeadline dead ->
+        EnteredDeadline deadlineStr ->
             let
                 currentForm =
                     model.form
 
                 updatedForm =
-                    { currentForm | deadline = dead }
+                    { currentForm | deadline = deadlineStr }
             in
             { model | form = updatedForm }
                 |> UR.init
+
+        ValidateDeadline ->
+            let
+                day =
+                    String.slice 0 2 model.form.deadline
+
+                month =
+                    String.slice 2 4 model.form.deadline
+
+                year =
+                    String.slice 4 8 model.form.deadline
+
+                dateStr =
+                    String.join "/" [ day, month, year ]
+            in
+            model
+                |> UR.init
+                |> UR.addPort
+                    { responseAddress = ValidateDeadline
+                    , responseData = Encode.null
+                    , data =
+                        Encode.object
+                            [ ( "name", Encode.string "validateDeadline" )
+                            , ( "deadline", Encode.string dateStr )
+                            ]
+                    }
 
         DeadlineChanged state ->
             let
@@ -317,15 +347,42 @@ update msg model loggedIn =
             { model | form = updatedForm }
                 |> UR.init
 
-        ClickedCreateAction ->
+        SubmittedData ->
             case validate formValidator model of
                 Ok _ ->
-                    model
-                        |> UR.init
+                    if model.hasDeadline then
+                        update ValidateDeadline model loggedIn
+
+                    else
+                        let
+                            upMsg =
+                                UploadAction (Ok "")
+                        in
+                        update upMsg model loggedIn
 
                 Err errors ->
                     { model | problems = errors }
                         |> UR.init
+
+        InvalidDate ->
+            let
+                problems =
+                    model.problems
+
+                newProblems =
+                    problems ++ [ InvalidEntry Deadline "Please enter a valid date for the deadline" ]
+            in
+            { model | problems = newProblems }
+                |> UR.init
+
+        UploadAction isoDate ->
+            case isoDate of
+                Ok date ->
+                    model
+                        |> UR.init
+
+                Err _ ->
+                    update InvalidDate model loggedIn
 
 
 
@@ -560,7 +617,7 @@ viewForm shared community model =
             , div [ class "flex align-center justify-center" ]
                 [ button
                     [ class "uppercase font-sans text-white text-body bg-orange-300 rounded-super w-40 h-10"
-                    , onClick ClickedCreateAction
+                    , onClick SubmittedData
                     ]
                     [ text_ "menu.create" ]
                 ]
@@ -637,9 +694,9 @@ viewAutoCompleteItem shared profile =
         ipfsUrl =
             shared.endpoints.ipfs
     in
-    div [ class "p-3 flex flex-row items-center w-select" ]
+    div [ class "pt-3 pl-3 flex flex-row items-center w-select" ]
         [ div [ class "pr-3" ] [ Avatar.view ipfsUrl profile.avatar "h-7 w-7" ]
-        , div [ class "flex flex-col font-sans" ]
+        , div [ class "flex flex-col font-sans border-b border-gray-500 pb-3 w-full" ]
             [ span [ class "text-black text-body leading-loose" ]
                 [ text (Eos.nameToString profile.accountName) ]
             , span [ class "leading-caption uppercase text-green text-caption" ]
@@ -794,6 +851,25 @@ newForm sym =
 -- UTILS
 
 
+jsAddressToMsg : List String -> Value -> Maybe Msg
+jsAddressToMsg addr val =
+    case addr of
+        "ValidateDeadline" :: _ ->
+            Json.decodeValue
+                (Json.oneOf
+                    [ Json.field "date" Json.string
+                        |> Json.map Ok
+                    , Json.succeed (Err val)
+                    ]
+                )
+                val
+                |> Result.map (Just << UploadAction)
+                |> Result.withDefault (Just InvalidDate)
+
+        _ ->
+            Nothing
+
+
 msgToString : Msg -> List String
 msgToString msg =
     case msg of
@@ -845,5 +921,14 @@ msgToString msg =
         EnteredMinVotes val ->
             [ "EnteredMinVotes", val ]
 
-        ClickedCreateAction ->
-            [ "ClickedCreateAction" ]
+        SubmittedData ->
+            [ "SubmittedData" ]
+
+        ValidateDeadline ->
+            [ "ValidateDeadline" ]
+
+        UploadAction _ ->
+            [ "UploadAction" ]
+
+        InvalidDate ->
+            [ "InvalidDate" ]
