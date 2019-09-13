@@ -707,7 +707,7 @@ viewAction loggedIn metadata maybeDate action =
             [ if canEdit then
                 button
                     [ class "bg-white rounded-lg uppercase w-4/5 h-10 text-button-orange border border-button-orange border-solid" ]
-                    [ text "menu.edit" ]
+                    [ text_ "menu.edit" ]
 
               else
                 text ""
