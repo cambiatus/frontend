@@ -417,7 +417,7 @@ update msg model loggedIn =
                                                     , permissionName = Eos.samplePermission
                                                     }
                                               , data =
-                                                    { objective_id = Community.ObjectiveId model.form.objective
+                                                    { objective_id = Community.ObjectiveId model.objective
                                                     , description = model.form.description
                                                     , reward = String.fromFloat model.form.reward ++ " " ++ model.form.symbol
                                                     , verifier_reward = String.fromFloat model.form.verifierReward ++ " " ++ model.form.symbol
