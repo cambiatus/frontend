@@ -272,7 +272,42 @@
       "verifiers": "verificadores",
       "usages": "{{usages}} ações aprovadas / {{usagesLeft}} disponíveis agora",
       "available_until": "disponível até ",
-      "or": " ou "
+      "or": " ou ",
+      "form": {
+        "description_label": "Descrição de Atividade",
+        "reward_label": "Recompensa",
+        "validity_label": "Tem validade?",
+        "verification_label": "Precisa de verificação?",
+        "verifiers_label": "Escolha os verificadores",
+        "remove_verifier": "Remover",
+        "verifiers_reward_label": "Recompensa para verificadores",
+        "votes_label": "Número mínimo de votos",
+        "tooltip_label": "O que é isso?",
+        "validity_tooltip": "Você pode definir uma validade para a atividade. \n Por data, a atividade estará disponível até uma determinada data. \n Por quantidade, a atividade estará disponível até ser executada várias vezes.",
+        "votes_tooltip": "Escolha quantos votos a atividade precisa receber para ser considerada aprovada (em caso de empate, a atividade será aprovada).",
+        "verification_tooltip": "Você pode definir como uma atividade será avaliada. \n Automaticamente, assim que a atividade for executada, ela será automaticamente aprovada. \n Manualmente, você define pessoas que revisarão as atividades e poderão aprovar ou desaprovar a realização.",
+        "date_validity": "Validade por data",
+        "quantity_validity": "Validade por quantidade de usos",
+        "no": "Não",
+        "yes": "Sim",
+        "auto_no": "Não, é automático",
+        "manual_yes": "Sim, manualmente por pessoas",
+        "verifier_placeholder": "Digite o nome de usuário",
+        "date_label": "Escolha a data",
+        "quantity_label": "Escolha a quantidade de usos",
+        "errors": {
+          "description": "A descrição não pode estar vazia",
+          "reward": "A recompensa precisa ser maior que 0",
+          "validity": "Pelo menos uma validade é necessária se estiver usando validade",
+          "usage": "Quantidade precisa ser pelo menos 1",
+          "empty_verifiers": "Você precisa de pelo menos um verificador se estiver usando verificadores",
+          "less_verifiers": "Você precisa de mais verificadores para obter votos suficientes",
+          "minvotes": "Você precisa de pelo menos 1 voto mínimo se estiver usando verificadores",
+          "verifier_reward": "A recompensa do verificador precisa ser pelo menos 0"
+        },
+        "success": "A atividade foi criada com sucesso",
+        "error": "A atividade não pode ser criada. Tente depois"
+      }
     }
   },
   "profile": {

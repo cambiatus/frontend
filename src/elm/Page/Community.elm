@@ -370,6 +370,11 @@ viewObjective loggedIn model editStatus metadata index objective =
             else
                 " "
 
+        objIdStr : String
+        objIdStr =
+            Community.unwrapObjectiveId objective.id
+                |> String.fromInt
+
         actsNButton : List (Html Msg)
         actsNButton =
             List.map (viewAction loggedIn metadata model.date) objective.actions
@@ -378,7 +383,9 @@ viewObjective loggedIn model editStatus metadata index objective =
                         if canEdit then
                             acts
                                 ++ [ button
-                                        [ class "border border-dashed border-button-orange mt-6 w-full flex flex-row content-start px-4 py-2" ]
+                                        [ class "border border-dashed border-button-orange mt-6 w-full flex flex-row content-start px-4 py-2"
+                                        , onClick (CreateAction metadata.symbol objIdStr)
+                                        ]
                                         [ span [ class "px-2 text-button-orange font-medium" ] [ text "+" ]
                                         , span [ class "text-button-orange font-medium" ] [ text_ "community.actions.new" ]
                                         ]
@@ -700,7 +707,7 @@ viewAction loggedIn metadata maybeDate action =
             [ if canEdit then
                 button
                     [ class "bg-white rounded-lg uppercase w-4/5 h-10 text-button-orange border border-button-orange border-solid" ]
-                    [ text "menu.edit" ]
+                    [ text_ "menu.edit" ]
 
               else
                 text ""
@@ -709,252 +716,6 @@ viewAction loggedIn metadata maybeDate action =
                 [ text_ claimText ]
             ]
         ]
-
-
-viewActionForm : LoggedIn.Model -> List Member -> Int -> Int -> ActionForm -> Html Msg
-viewActionForm loggedIn members objIndex actionIndex action =
-    let
-        t s =
-            I18Next.t loggedIn.shared.translations s
-
-        uniqueId s =
-            s ++ String.fromInt objIndex ++ String.fromInt actionIndex
-
-        isDisabled =
-            action.save == Saving
-    in
-    Html.form
-        [ class "form-field form-field--secondary"
-        , onSubmit ClickedSaveAction
-        ]
-        [ h4 [ class "form-title" ]
-            [ text (t "community.actions.title" ++ " " ++ indexToString actionIndex) ]
-        , viewActionFieldDescription loggedIn isDisabled (uniqueId "comm-action-") action
-        , viewFieldReward loggedIn isDisabled (uniqueId "comm-reward-") action
-        , viewFieldVerification loggedIn isDisabled (uniqueId "comm-verif-") action
-        , viewFieldInvite loggedIn members isDisabled (uniqueId "comm-invite-") action
-        , viewFieldVerificationReward loggedIn isDisabled (uniqueId "comm-verif-reward-") action
-        , div [ class "btn-row" ]
-            [ button
-                [ classList
-                    [ ( "btn", True )
-                    , ( "btn--primary", True )
-                    , ( "btn--outline", True )
-                    ]
-                , disabled isDisabled
-                , type_ "button"
-                , onClick ClickedEditCancel
-                ]
-                [ text (t "menu.cancel") ]
-            , button
-                [ classList
-                    [ ( "btn", True )
-                    , ( "btn--primary", True )
-                    ]
-                , disabled isDisabled
-                ]
-                [ text (t "menu.save") ]
-            ]
-        ]
-
-
-viewActionFieldDescription : LoggedIn.Model -> Bool -> String -> ActionForm -> Html Msg
-viewActionFieldDescription loggedIn isDisabled id_ action =
-    let
-        t s =
-            I18Next.t loggedIn.shared.translations s
-    in
-    formField
-        [ label [ for id_ ]
-            [ text (t "community.actions.description_label") ]
-        , input
-            [ id id_
-            , type_ "text"
-            , class "input"
-            , value action.description
-            , onInput EnteredActionDescription
-            , disabled isDisabled
-            ]
-            []
-        , viewFieldError loggedIn.shared id_ action.save
-        ]
-
-
-viewFieldReward : LoggedIn.Model -> Bool -> String -> ActionForm -> Html Msg
-viewFieldReward loggedIn isDisabled id_ action =
-    let
-        t s =
-            I18Next.t loggedIn.shared.translations s
-    in
-    formField
-        [ Page.labelWithTooltip id_ (t "community.actions.reward") (t "community.actions.reward_label")
-        , input
-            [ id id_
-            , type_ "number"
-            , class "input"
-            , value action.reward
-            , Html.Attributes.min "0"
-            , onInput EnteredReward
-            , disabled isDisabled
-            ]
-            []
-        , viewFieldError loggedIn.shared id_ action.save
-        ]
-
-
-viewFieldVerification : LoggedIn.Model -> Bool -> String -> ActionForm -> Html Msg
-viewFieldVerification loggedIn isDisabled id_ action =
-    let
-        t s =
-            I18Next.t loggedIn.shared.translations s
-    in
-    formField
-        [ label [ for id_ ]
-            [ text (t "community.actions.verification_label") ]
-        , select
-            [ id id_
-            , class "input"
-            , Html.Events.on "change"
-                (Decode.map
-                    (\s ->
-                        if s == t "community.actions.manually_label" then
-                            EnteredVerification Manually
-
-                        else
-                            EnteredVerification Automatically
-                    )
-                    targetValue
-                )
-            , disabled True
-            ]
-            [ option
-                [ selected (action.verification == Manually) ]
-                [ text (t "community.actions.manually_label") ]
-            , option
-                [ selected (action.verification == Automatically) ]
-                [ text (t "community.actions.automatically_label") ]
-            ]
-        , span [ class "form-field-description" ] [ text (t "community.actions.manually_info") ]
-        ]
-
-
-viewFieldInvite : LoggedIn.Model -> List Member -> Bool -> String -> ActionForm -> Html Msg
-viewFieldInvite loggedIn members isDisabled id_ action =
-    let
-        t s =
-            I18Next.t loggedIn.shared.translations s
-    in
-    formField
-        [ Page.labelWithTooltip id_ (t "community.actions.invite_label") (t "community.actions.invite_tooltip")
-        , Html.form
-            [ onSubmit AddInvite
-            , class "input-group"
-            ]
-            [ input
-                [ id id_
-                , type_ "text"
-                , class "input flex100"
-                , onInput EnteredInvite
-                , placeholder (t "community.actions.invite_email_or_username")
-                , value action.invite
-                , disabled isDisabled
-                , required True
-                , list (id_ ++ "-list")
-                ]
-                []
-            , Html.Lazy.lazy3 viewInviteDatalist id_ members action.invites
-            , button
-                [ class "btn btn--outline flex000"
-                , disabled isDisabled
-                ]
-                [ text (t "community.actions.invite_label") ]
-            ]
-        , viewFieldError loggedIn.shared id_ action.save
-        , div [ class "form-tags" ]
-            (List.indexedMap
-                (\i s ->
-                    div []
-                        [ span [] [ text s ]
-                        , button
-                            [ onClick (RemoveInvite i)
-                            , disabled isDisabled
-                            , type_ "button"
-                            ]
-                            [ Icon.close "" ]
-                        ]
-                )
-                action.invites
-            )
-        ]
-
-
-viewInviteDatalist : String -> List Member -> List String -> Html Msg
-viewInviteDatalist id_ members invites =
-    datalist [ id (id_ ++ "-list") ]
-        (List.map
-            (\m ->
-                if List.member m.nameWithAt invites then
-                    text ""
-
-                else
-                    option [ value m.nameWithAt ] []
-            )
-            members
-        )
-
-
-viewFieldVerificationReward : LoggedIn.Model -> Bool -> String -> ActionForm -> Html Msg
-viewFieldVerificationReward loggedIn isDisabled id_ action =
-    let
-        t s =
-            I18Next.t loggedIn.shared.translations s
-    in
-    formField
-        [ label [ for id_ ]
-            [ text (t "community.actions.manually_reward") ]
-        , input
-            [ id id_
-            , type_ "number"
-            , class "input"
-            , onInput EnteredVerificationReward
-            , value action.verificationReward
-            , Html.Attributes.min "0"
-            , disabled isDisabled
-            ]
-            []
-        , viewFieldError loggedIn.shared id_ action.save
-        ]
-
-
-viewActionNew : LoggedIn.Model -> List Member -> EditStatus -> Int -> Int -> Html Msg
-viewActionNew loggedIn members editStatus objIndex index =
-    let
-        t s =
-            I18Next.t loggedIn.shared.translations s
-
-        viewButton =
-            button
-                [ classList
-                    [ ( "card__full-button", True )
-                    , ( "hidden", editStatus /= NoEdit )
-                    ]
-                , onClick (ClickedNewAction objIndex)
-                , disabled (editStatus /= NoEdit)
-                ]
-                [ span [ class "card__plus-symbol" ] [ text "+" ]
-                , span [] [ text (t "community.actions.new") ]
-                ]
-    in
-    case editStatus of
-        NewAction objIndex_ actionForm ->
-            if objIndex == objIndex_ then
-                viewActionForm loggedIn members objIndex_ index actionForm
-
-            else
-                viewButton
-
-        _ ->
-            viewButton
 
 
 
@@ -1097,18 +858,8 @@ type Msg
     | ClickedCloseObjective
     | ClickedEditObjective Int Community.Objective
     | ClickedEditCancel
-      -- Action Msgs
-    | ClickedEditAction Int Int Community.Action
-    | EnteredActionDescription String
-    | EnteredReward String
-    | EnteredVerification Verification
-    | EnteredInvite String
-    | AddInvite
-    | RemoveInvite Int
-    | EnteredVerificationReward String
-    | ClickedNewAction Int
-    | ClickedSaveAction
-    | GotSaveActionResponse (Result Value String)
+      -- Action
+    | CreateAction Symbol String
 
 
 update : Msg -> Model -> LoggedIn.Model -> UpdateResult
@@ -1319,216 +1070,10 @@ update msg model loggedIn =
             { model | openObjective = Nothing }
                 |> UR.init
 
-        -- Action Msgs
-        ClickedEditAction commIndex index action ->
-            case model.community of
-                Loaded community NoEdit ->
-                    { emptyActionForm
-                        | description = action.description
-                        , reward = String.fromFloat action.reward
-                    }
-                        |> EditAction commIndex index
-                        |> Loaded community
-                        |> updateCommunity model
-                        |> UR.init
-
-                _ ->
-                    UR.init model
-                        |> UR.logImpossible msg []
-
-        EnteredActionDescription s ->
-            UR.init model
-                |> updateAction msg (\a -> { a | description = s })
-
-        EnteredReward s ->
-            UR.init model
-                |> updateAction msg (\a -> { a | reward = s })
-
-        EnteredVerification v ->
-            UR.init model
-                |> updateAction msg (\a -> { a | verification = v })
-
-        EnteredInvite s ->
-            UR.init model
-                |> updateAction msg (\a -> { a | invite = s })
-
-        AddInvite ->
-            UR.init model
-                |> updateAction msg
-                    (\a ->
-                        if not (String.startsWith "@" a.invite) || List.any (\m -> a.invite == m.nameWithAt) model.members then
-                            { a
-                                | invite = ""
-                                , invites =
-                                    a.invites
-                                        ++ (String.split "," a.invite
-                                                |> List.map String.trim
-                                           )
-                                , save = NotAsked
-                            }
-
-                        else
-                            { a | save = SaveFailed (Dict.singleton "comm-invite-00" NotMember) }
-                     -- TODO: validar email e quando tiver objectiveId, usar ao invés do "comm-invite-00" hardcoded.
-                    )
-
-        RemoveInvite index ->
-            UR.init model
-                |> updateAction msg
-                    (\a ->
-                        { a
-                            | invites =
-                                List.indexedMap
-                                    (\i inv ->
-                                        if i == index then
-                                            Nothing
-
-                                        else
-                                            Just inv
-                                    )
-                                    a.invites
-                                    |> List.filterMap identity
-                        }
-                    )
-
-        EnteredVerificationReward s ->
-            UR.init model
-                |> updateAction msg (\a -> { a | verificationReward = s })
-
-        ClickedNewAction objIndex ->
-            case model.community of
-                Loaded community NoEdit ->
-                    NewAction objIndex emptyActionForm
-                        |> Loaded community
-                        |> updateCommunity model
-                        |> UR.init
-
-                _ ->
-                    UR.init model
-                        |> UR.logImpossible msg []
-
-        ClickedSaveAction ->
-            let
-                toPort comm obj a =
-                    { responseAddress = ClickedSaveAction
-                    , responseData = Encode.null
-                    , data =
-                        Eos.encodeTransaction
-                            { actions =
-                                [ { accountName = "bes.cmm"
-                                  , name = "newaction"
-                                  , authorization =
-                                        { actor = loggedIn.accountName
-                                        , permissionName = Eos.samplePermission
-                                        }
-                                  , data =
-                                        { objective_id = obj.id
-                                        , description = a.description
-                                        , reward = a.reward ++ " " ++ Eos.symbolToString comm.symbol
-                                        , verifier_reward = a.verificationReward ++ " " ++ Eos.symbolToString comm.symbol
-                                        , creator = loggedIn.accountName
-                                        }
-                                            |> Community.encodeCreateActionAction
-                                  }
-                                ]
-                            }
-                    }
-
-                saveAction a objIndex comm toModel =
-                    case List.head (List.drop objIndex comm.objectives) of
-                        Just obj ->
-                            toModel { a | save = Saving }
-                                |> Loaded comm
-                                |> updateCommunity model
-                                |> UR.init
-                                |> UR.addPort (toPort comm obj a)
-
-                        Nothing ->
-                            UR.init model
-                                |> UR.logImpossible msg []
-            in
-            case ( model.community, LoggedIn.isAuth loggedIn ) of
-                ( _, False ) ->
-                    UR.init model
-                        |> UR.addExt
-                            (Just ClickedSaveAction
-                                |> RequiredAuthentication
-                            )
-
-                ( Loaded community (NewAction objIndex action), True ) ->
-                    saveAction action objIndex community (NewAction objIndex)
-
-                ( Loaded community (EditAction objIndex index action), True ) ->
-                    saveAction action objIndex community (EditAction objIndex index)
-
-                _ ->
-                    UR.init model
-                        |> UR.logImpossible msg []
-
-        GotSaveActionResponse (Ok txId) ->
-            let
-                updateObjectiveAction comm objIndex fn =
-                    { comm
-                        | objectives =
-                            List.indexedMap
-                                (\i obj ->
-                                    if i == objIndex then
-                                        fn obj
-
-                                    else
-                                        obj
-                                )
-                                comm.objectives
-                    }
-            in
-            case model.community of
-                Loaded community (NewAction objIndex action) ->
-                    Loaded
-                        (updateObjectiveAction community
-                            objIndex
-                            (\obj ->
-                                { obj
-                                    | actions =
-                                        obj.actions
-                                            ++ [ actionFormToAction loggedIn action ]
-                                }
-                            )
-                        )
-                        NoEdit
-                        |> updateCommunity model
-                        |> UR.init
-
-                Loaded community (EditAction objIndex index action) ->
-                    Loaded
-                        (updateObjectiveAction community
-                            objIndex
-                            (\obj ->
-                                { obj
-                                    | actions =
-                                        List.indexedMap
-                                            (\i a ->
-                                                if i == index then
-                                                    actionFormToAction loggedIn action
-
-                                                else
-                                                    a
-                                            )
-                                            obj.actions
-                                }
-                            )
-                        )
-                        NoEdit
-                        |> updateCommunity model
-                        |> UR.init
-
-                _ ->
-                    UR.init model
-                        |> UR.logImpossible msg []
-
-        GotSaveActionResponse (Err v) ->
-            UR.init model
-                |> UR.logDebugValue msg v
-                |> updateAction msg (\a -> { a | save = SaveFailed Dict.empty })
+        CreateAction sym id ->
+            model
+                |> UR.init
+                |> UR.addCmd (Route.replaceUrl loggedIn.shared.navKey (Route.NewAction sym id))
 
 
 updateCommunity : Model -> LoadStatus -> Model
@@ -1603,18 +1148,6 @@ jsAddressToMsg addr val =
                 |> Result.map (Just << GotSaveObjectiveResponse)
                 |> Result.withDefault Nothing
 
-        "ClickedSaveAction" :: [] ->
-            Decode.decodeValue
-                (Decode.oneOf
-                    [ Decode.field "transactionId" Decode.string
-                        |> Decode.map Ok
-                    , Decode.succeed (Err val)
-                    ]
-                )
-                val
-                |> Result.map (Just << GotSaveActionResponse)
-                |> Result.withDefault Nothing
-
         _ ->
             Nothing
 
@@ -1664,35 +1197,5 @@ msgToString msg =
         ClickedEditCancel ->
             [ "ClickedEditCancel" ]
 
-        ClickedEditAction _ _ _ ->
-            [ "ClickedEditAction" ]
-
-        EnteredActionDescription _ ->
-            [ "EnteredActionDescription" ]
-
-        EnteredReward _ ->
-            [ "EnteredReward" ]
-
-        EnteredVerification _ ->
-            [ "EnteredVerification" ]
-
-        EnteredInvite _ ->
-            [ "EnteredInvite" ]
-
-        AddInvite ->
-            [ "AddInvite" ]
-
-        RemoveInvite _ ->
-            [ "RemoveInvite" ]
-
-        EnteredVerificationReward _ ->
-            [ "EnteredVerificationReward" ]
-
-        ClickedNewAction _ ->
-            [ "ClickedNewAction" ]
-
-        ClickedSaveAction ->
-            [ "ClickedSaveAction" ]
-
-        GotSaveActionResponse r ->
-            [ "SavedAction", UR.resultToString r ]
+        CreateAction _ _ ->
+            [ "CreateAction" ]

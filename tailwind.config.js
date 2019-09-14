@@ -110,6 +110,9 @@ module.exports = {
       },
       inset: {
         '1': '1rem'
+      },
+      width: {
+        'form': '45.625rem'
       }
     }
   },

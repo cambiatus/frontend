@@ -19,7 +19,7 @@ const local = {
     graphql: 'http://localhost:8080/v1alpha1/graphql',
     ipfs: 'http://ipfs.bespiral.local/ipfs'
   },
-  logo: 'images/logo-cambiatus.svg',
+  logo: '/images/logo-cambiatus.svg',
   bespiralAccount: 'bespiral',
   communityContract: 'bes.cmm',
   tokenContract: 'bes.token',
@@ -52,7 +52,7 @@ const dev = {
     // ipfs: 'http://ipfs.bespiral.local/ipfs',
     ipfs: 'https://ipfs.bespiral.io/ipfs'
   },
-  logo: 'images/logo-cambiatus.svg',
+  logo: '/images/logo-cambiatus.svg',
   bespiralAccount: 'bespiral',
   communityContract: 'bes.cmm',
   tokenContract: 'bes.token',
