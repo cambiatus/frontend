@@ -643,7 +643,7 @@ viewForm shared community model =
                                 , inputCharacter = '#'
                             }
                             [ class ("w-full h-12 font-sans borde rounded form-input bg-gray-500 text-black placeholder-black" ++ borderColor Deadline)
-                            , placeholder "dd/mm/yyyy"
+                            , placeholder "mm/dd/yyyy"
                             , disabled (not model.hasDeadline)
                             ]
                             model.form.deadlineState
