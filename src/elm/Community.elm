@@ -240,7 +240,7 @@ type alias Action =
     , validators : List Validator
     , usages : Int
     , usagesLeft : Int
-    , deadline : DateTime
+    , deadline : Maybe DateTime
     , verificationType : VerificationType
     }
 

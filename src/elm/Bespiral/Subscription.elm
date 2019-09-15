@@ -2,7 +2,7 @@
 -- https://github.com/dillonkearns/elm-graphql
 
 
-module Bespiral.Subscription exposing (saleHistoryOperation, salesOperation, transfers)
+module Bespiral.Subscription exposing (..)
 
 import Bespiral.InputObject
 import Bespiral.Interface

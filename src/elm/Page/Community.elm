@@ -852,7 +852,6 @@ type Msg
     | EnteredObjectiveDescription String
     | ClickedSaveObjective
     | GotSaveObjectiveResponse (Result Value String)
-    | CompletedLastObjectiveId (Result Http.Error ObjectiveId)
     | ClickedNewObjective
     | ClickedOpenObjective Int
     | ClickedCloseObjective
