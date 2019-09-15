@@ -180,7 +180,6 @@ symbolToString (Symbol symbol) =
 
 symbolFromString : String -> Maybe Symbol
 symbolFromString str =
-    -- TODO: Complete symbol validation logic
     if String.length str == 3 then
         Just (Symbol (String.toUpper str))
 

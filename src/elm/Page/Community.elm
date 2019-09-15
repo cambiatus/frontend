@@ -18,6 +18,7 @@ import Html.Events exposing (onClick, onInput, onSubmit, targetValue)
 import Html.Lazy
 import Http
 import I18Next exposing (Translations)
+import Icons exposing (..)
 import Json.Decode as Decode exposing (Decoder)
 import Json.Encode as Encode exposing (Value)
 import Page
@@ -208,6 +209,7 @@ actionFormToAction loggedIn action =
     , usagesLeft = 0
     , deadline = Just (DateTime "")
     , verificationType = VerificationType.Automatic
+    , id = 0
     }
 
 
@@ -246,7 +248,8 @@ view loggedIn model =
                     LoggedIn.isAccount community.creator loggedIn
             in
             div [ class "main-content__container create-community" ]
-                [ Page.viewTitle (Eos.symbolToString community.symbol ++ " - " ++ community.title)
+                [ claimModalView
+                , Page.viewTitle (Eos.symbolToString community.symbol ++ " - " ++ community.title)
                 , div [ class "card card--community-view" ]
                     [ div [ class "card-community-view" ]
                         [ h3 [ class "card-community-view__description-title" ]
@@ -729,8 +732,33 @@ viewAction loggedIn metadata maybeDate action =
               else
                 text ""
             , button
-                [ class ("h-10 uppercase rounded-lg ml-1" ++ claimColors ++ claimSize) ]
+                [ class ("h-10 uppercase rounded-lg ml-1" ++ claimColors ++ claimSize)
+                , onClick (OpenClaimConfirmation action.id)
+                ]
                 [ text_ claimText ]
+            ]
+        ]
+
+
+claimModalView : Html msg
+claimModalView =
+    div [ class "z-50 inset-x-0 bottom-0 fixed flex w-full h-64 md:w-3/4 md:inset-auto md:ml-16" ]
+        [ div [ class "mx-4 bg-white w-full rounded-lg p-4 md:relative" ]
+            [ div [ class "w-full" ]
+                [ p [ class "font-sans w-full font-bold font-heading text-2xl mb-4" ] [ text "Claim" ]
+                , Icons.close "absolute fill-current text-gray-400 top-0 right-0 mx-8 my-4"
+                , p [ class "font-body w-full font-sans mb-10" ] [ text "Do you really want to approve this activity?" ]
+                ]
+            , div [ class "w-full md:bg-gray-100 md:flex md:absolute md:rounded-b-lg md:inset-x-0 md:bottom-0 md:p-4" ]
+                [ div [ class "flex-1" ] []
+                , button [ class "flex-1 block button button-secondary mb-4 button-large w-full md:w-40 md:mb-0" ]
+                    [ text "no, cancel" ]
+                , div [ class "flex-1" ] []
+                , button
+                    [ class "flex-1 block button button-primary button-large w-full md:w-40" ]
+                    [ text "yes, claim" ]
+                , div [ class "flex-1" ] []
+                ]
             ]
         ]
 
@@ -876,6 +904,7 @@ type Msg
     | ClickedEditCancel
       -- Action
     | CreateAction Symbol String
+    | OpenClaimConfirmation Int
 
 
 update : Msg -> Model -> LoggedIn.Model -> UpdateResult
@@ -1060,6 +1089,11 @@ update msg model loggedIn =
                 |> UR.init
                 |> UR.addCmd (Route.replaceUrl loggedIn.shared.navKey (Route.NewAction sym id))
 
+        OpenClaimConfirmation actionId ->
+            model
+                -- TODO: Add dim screen and change the status of the model to show the modal
+                |> UR.init
+
 
 updateCommunity : Model -> LoadStatus -> Model
 updateCommunity model c =
@@ -1181,3 +1215,6 @@ msgToString msg =
 
         CreateAction _ _ ->
             [ "CreateAction" ]
+
+        OpenClaimConfirmation _ ->
+            [ "OpenClaimConfirmation" ]

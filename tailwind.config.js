@@ -44,6 +44,14 @@ module.exports = {
       },
       'purple': '#9B4198'
     },
+    // Customizing BorderRadius sizes
+    borderRadius: {
+      'none': '0',
+      'sm': '.125rem',
+      default: '.25rem',
+      'lg': '1.25rem',
+      'full': '9999px'
+    },
     // Overwriting since the current font family only have these weights
     fontWeight: {
       'light': 300,

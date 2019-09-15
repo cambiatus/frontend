@@ -94,6 +94,7 @@ type alias Model =
     , searchText : String
     , showNotificationModal : Bool
     , showMainNav : Bool
+    , dimScreen : Bool
     , notification : Notification.Model
     , showAuthModal : Bool
     , collapseMainNav : Bool
@@ -112,6 +113,7 @@ initModel shared authModel accountName =
     , showLanguageItems = False
     , searchText = ""
     , showNotificationModal = False
+    , dimScreen = False
     , showMainNav = False
     , notification = Notification.init
     , showAuthModal = False
@@ -286,10 +288,8 @@ viewHelper thisMsg page profile_ ({ shared } as model) content =
             [ classList
                 [ ( "content-screen", True )
                 , ( "content-screen--dark"
-                  , model.showUserNav || model.showNotificationModal
+                  , model.showUserNav || model.showNotificationModal || model.dimScreen
                   )
-
-                --, ( "content-screen--full", model.showAuthModal )
                 ]
             , onClickCloseAny
             ]
