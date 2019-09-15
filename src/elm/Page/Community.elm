@@ -710,9 +710,13 @@ viewAction loggedIn metadata maybeDate action =
 
                       else
                         text ""
-                    , button
-                        [ class ("h-10 uppercase rounded-lg ml-1" ++ claimColors ++ claimSize) ]
-                        [ text_ claimText ]
+                    , if validationType == "CLAIMABLE" then
+                        button
+                            [ class ("h-10 uppercase rounded-lg ml-1" ++ claimColors ++ claimSize) ]
+                            [ text_ claimText ]
+
+                      else
+                        text ""
                     ]
                 ]
             ]
