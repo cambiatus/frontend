@@ -178,8 +178,6 @@ type ValidationError
 
 type CardState
     = ViewingCard
-    | EditingTransfer
-    | SendingTransfer
 
 
 
@@ -268,7 +266,7 @@ viewShopFilter session maybeFilter =
 
 viewGrid : Session -> List Card -> Model -> Html Msg
 viewGrid session cards model =
-    div [ class "card-grid card-grid--shop" ]
+    div [ class "flex flex-wrap -mx-2" ]
         (List.indexedMap
             (\index card ->
                 let
@@ -278,12 +276,6 @@ viewGrid session cards model =
                 case card.state of
                     ViewingCard ->
                         v_ viewCard
-
-                    EditingTransfer ->
-                        v_ (viewCardTransfer False)
-
-                    SendingTransfer ->
-                        v_ (viewCardTransfer True)
             )
             cards
         )
@@ -343,7 +335,6 @@ viewCard model session index card =
             div [ class "card__button-row" ]
                 [ button
                     [ class "btn btn--primary"
-                    , onClick (ClickedTransfer index)
                     ]
                     [ text_ "shop.transfer.submit" ]
                 , button
@@ -358,7 +349,7 @@ viewCard model session index card =
 viewCardWithHeader : Model -> Session -> Card -> List (Html Msg) -> Html Msg
 viewCardWithHeader model session card content =
     a
-        [ class "card__link"
+        [ class "w-full sm:w-1/2 lg:w-1/2 xl:w-1/3 py-2 px-2 "
         , Route.href (Route.ViewSale (String.fromInt card.sale.id))
         ]
         [ div
@@ -648,7 +639,6 @@ type Msg
     = Ignored
     | GotTime Posix
     | CompletedSalesLoad (Result (Graphql.Http.Error (List Sale)) (List Sale))
-    | ClickedTransfer Int
     | ClickedSendTransfer Card Int
     | ClickedCancelTransfer Int
     | ClickedMessages Int Eos.Name
@@ -681,10 +671,6 @@ update msg model loggedIn =
         CompletedSalesLoad (Err err) ->
             UR.init { model | cards = LoadingFailed err }
                 |> UR.logGraphqlError msg err
-
-        ClickedTransfer cardIndex ->
-            UR.init model
-                |> updateCardState msg cardIndex EditingTransfer
 
         ClickedSendTransfer card cardIndex ->
             let
@@ -957,9 +943,6 @@ msgToString msg =
 
         CompletedSalesLoad r ->
             [ "CompletedSalesLoad", UR.resultToString r ]
-
-        ClickedTransfer _ ->
-            [ "ClickedTransfer" ]
 
         ClickedSendTransfer _ _ ->
             [ "ClickedSendTransfer" ]
