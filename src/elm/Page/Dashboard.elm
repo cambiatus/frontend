@@ -297,7 +297,7 @@ viewSections loggedIn model =
 
 viewBalances : LoggedIn.Model -> List DashCommunity.Model -> Html Msg
 viewBalances loggedIn communities =
-    div [ class "flex flex-wrap" ]
+    div [ class "flex flex-wrap -mx-2" ]
         (List.indexedMap
             (\i c ->
                 DashCommunity.viewCard loggedIn i c
