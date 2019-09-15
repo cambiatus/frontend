@@ -338,7 +338,7 @@ viewMainMenu page profile_ model =
         iconClass =
             "w-6 h-6 fill-current hover:text-indigo-500 mr-5"
     in
-    nav [ class "fixed z-10 bg-white h-16 w-full mt-24 flex overflow-x-scroll" ]
+    nav [ class "fixed z-10 bg-white h-16 w-full mt-24 flex overflow-x-auto" ]
         [ a
             [ classList
                 [ ( menuItemClass, True )
