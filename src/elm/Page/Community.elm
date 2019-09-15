@@ -203,12 +203,10 @@ actionFormToAction loggedIn action =
     , reward = String.toFloat action.reward |> Maybe.withDefault 0
     , verificationReward = String.toFloat action.verificationReward |> Maybe.withDefault 0
     , creator = loggedIn.accountName
-
-    -- Find the validators
     , validators = []
     , usages = 0
     , usagesLeft = 0
-    , deadline = DateTime ""
+    , deadline = Just (DateTime "")
     , verificationType = VerificationType.Automatic
     }
 
@@ -551,7 +549,6 @@ viewAction loggedIn metadata maybeDate action =
         posixDeadline : Posix
         posixDeadline =
             action.deadline
-                |> Just
                 |> Utils.posixDateTime
 
         deadlineStr : String
@@ -561,16 +558,21 @@ viewAction loggedIn metadata maybeDate action =
 
         pastDeadline : Bool
         pastDeadline =
-            case maybeDate of
-                Just today ->
-                    posixToMillis today > posixToMillis posixDeadline
+            case action.deadline of
+                Just deadline ->
+                    case maybeDate of
+                        Just today ->
+                            posixToMillis today > posixToMillis posixDeadline
+
+                        Nothing ->
+                            False
 
                 Nothing ->
                     False
 
         rewardStrike : String
         rewardStrike =
-            if pastDeadline || action.usagesLeft < 1 then
+            if pastDeadline || (action.usagesLeft < 1 && action.usages > 0) then
                 " line-through"
 
             else
@@ -587,14 +589,14 @@ viewAction loggedIn metadata maybeDate action =
 
         usagesColor : String
         usagesColor =
-            if action.usagesLeft >= 1 then
+            if action.usagesLeft >= 1 || action.usages == 0 then
                 " text-date-purple"
 
             else
                 " text-date-red"
 
         ( claimColors, claimText ) =
-            if pastDeadline || action.usagesLeft < 1 then
+            if pastDeadline || (action.usagesLeft < 1 && action.usages > 0) then
                 ( " text-text-grey bg-grey cursor-not-allowed", "dashboard.closed" )
 
             else
@@ -663,11 +665,22 @@ viewAction loggedIn metadata maybeDate action =
                 [ text action.description ]
             , div [ class "flex flex-col sm:flex-row sm:items-center sm:justify-between" ]
                 [ div [ class "text-xs mt-5 sm:w-1/3" ]
-                    [ span [ class "capitalize text-text-grey" ] [ text_ "community.actions.available_until" ]
-                    , span [ class dateColor ] [ text deadlineStr ]
-                    , span [] [ text_ "community.actions.or" ]
-                    , p [ class usagesColor ]
-                        [ text (tr "community.actions.usages" [ ( "usages", usages ), ( "usagesLeft", usagesLeft ) ]) ]
+                    [ case action.deadline of
+                        Just deadline ->
+                            div []
+                                [ span [ class "capitalize text-text-grey" ] [ text_ "community.actions.available_until" ]
+                                , span [ class dateColor ] [ text deadlineStr ]
+                                , span [] [ text_ "community.actions.or" ]
+                                ]
+
+                        Nothing ->
+                            text ""
+                    , if action.usages > 0 then
+                        p [ class usagesColor ]
+                            [ text (tr "community.actions.usages" [ ( "usages", usages ), ( "usagesLeft", usagesLeft ) ]) ]
+
+                      else
+                        text ""
                     ]
                 , div [ class "sm:self-end" ]
                     [ div [ class "mt-3 flex flex-row items-center" ]
@@ -960,8 +973,6 @@ update msg model loggedIn =
             case model.community of
                 Loaded community (NewObjective objective) ->
                     UR.init model
-                        |> UR.addCmd
-                            (fetchLastObjectiveId loggedIn CompletedLastObjectiveId)
 
                 Loaded community (EditObjective index objective) ->
                     { model
@@ -991,35 +1002,6 @@ update msg model loggedIn =
             UR.init model
                 |> updateObjective msg (\o -> { o | save = SaveFailed Dict.empty })
                 |> UR.logDebugValue msg v
-
-        CompletedLastObjectiveId (Ok objId) ->
-            case model.community of
-                Loaded community (NewObjective objective) ->
-                    { model
-                        | community =
-                            Loaded
-                                { community
-                                    | objectives =
-                                        community.objectives
-                                            ++ [ { id = objId
-                                                 , description = objective.description
-                                                 , creator = loggedIn.accountName
-                                                 , actions = []
-                                                 }
-                                               ]
-                                }
-                                NoEdit
-                    }
-                        |> UR.init
-
-                _ ->
-                    UR.init model
-                        |> UR.logImpossible msg []
-
-        CompletedLastObjectiveId (Err err) ->
-            UR.init model
-                |> updateObjective msg (\o -> { o | save = SaveFailed Dict.empty })
-                |> UR.logHttpError msg err
 
         ClickedNewObjective ->
             case model.community of
@@ -1177,9 +1159,6 @@ msgToString msg =
 
         GotSaveObjectiveResponse r ->
             [ "GotSaveObjectiveResponse", UR.resultToString r ]
-
-        CompletedLastObjectiveId r ->
-            [ "CompletedLastObjectiveId", UR.resultToString r ]
 
         ClickedNewObjective ->
             [ "ClickedNewObjective" ]
