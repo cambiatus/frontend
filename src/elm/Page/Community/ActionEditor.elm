@@ -278,14 +278,25 @@ update msg model loggedIn =
                 day =
                     String.slice 0 2 model.form.deadline
 
+                {- Javascript dates are numbered from 0 to 11
+                   hence when a user submits 05 as a month where they mean May JS will recieve June.
+                   So the solution here is to take the given month subtract 1 from it then hand it
+                   over to JS
+                -}
                 month =
                     String.slice 2 4 model.form.deadline
+                        |> String.toInt
+                        |> Maybe.withDefault 1
+                        -- subtract 1 from date
+                        |> (+) -1
+                        |> String.fromInt
 
                 year =
                     String.slice 4 8 model.form.deadline
 
+                -- Hand date over as mm/dd/yyyy
                 dateStr =
-                    String.join "/" [ day, month, year ]
+                    String.join "/" [ month, day, year ]
             in
             model
                 |> UR.init
@@ -358,7 +369,11 @@ update msg model loggedIn =
         SubmittedData ->
             case validate (formValidator shared) model of
                 Ok _ ->
-                    if model.hasDeadline then
+                    -- check if the deadline is filled correctly
+                    if model.hasDeadline && String.length model.form.deadline < 8 then
+                        update InvalidDate { model | problems = [] } loggedIn
+
+                    else if model.hasDeadline then
                         update ValidateDeadline { model | problems = [] } loggedIn
 
                     else
