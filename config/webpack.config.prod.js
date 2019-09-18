@@ -301,9 +301,12 @@ module.exports = {
       fileName: 'asset-manifest.json',
       publicPath: publicPath
     }),
+		new webpack.LoaderOptionsPlugin({
+			debug: true
+		}),
     // Copy our service worker file to the ROOT of the build folder
     new CopyWebpackPlugin([
-      { from: 'public/service-worker.js', to: '' }
+      { from: 'public/service-worker.js', to: 'sw.js' }
     ])
   ],
   // Some libraries import Node modules but don't use them in the browser.
