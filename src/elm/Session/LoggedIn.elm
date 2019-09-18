@@ -1,4 +1,4 @@
-module Session.LoggedIn exposing (External(..), ExternalMsg(..), Model, Msg(..), Page(..), ProfileStatus, addNotification, askedAuthentication, init, initLogin, isAccount, isActive, isAuth, jsAddressToMsg, mapExternal, maybePrivateKey, msgToString, profile, readAllNotifications, subscriptions, update, view)
+module Session.LoggedIn exposing (External(..), ExternalMsg(..), Model, Msg(..), Page(..), ProfileStatus, addNotification, askedAuthentication, init, initLogin, isAccount, isActive, isAuth, jsAddressToMsg, mapExternal, maybePrivateKey, msgToString, profile, readAllNotifications, subscriptions, turnLights, update, view)
 
 import Account exposing (Profile, profileQuery)
 import Api
@@ -94,7 +94,7 @@ type alias Model =
     , searchText : String
     , showNotificationModal : Bool
     , showMainNav : Bool
-    , dimScreen : Bool
+    , lights : Bool
     , notification : Notification.Model
     , showAuthModal : Bool
     , collapseMainNav : Bool
@@ -113,7 +113,7 @@ initModel shared authModel accountName =
     , showLanguageItems = False
     , searchText = ""
     , showNotificationModal = False
-    , dimScreen = False
+    , lights = False
     , showMainNav = False
     , notification = Notification.init
     , showAuthModal = False
@@ -288,7 +288,7 @@ viewHelper thisMsg page profile_ ({ shared } as model) content =
             [ classList
                 [ ( "content-screen", True )
                 , ( "content-screen--dark"
-                  , model.showUserNav || model.showNotificationModal || model.dimScreen
+                  , model.showUserNav || model.showNotificationModal || model.lights
                   )
                 ]
             , onClickCloseAny
@@ -570,6 +570,7 @@ type External msg
     = UpdatedLoggedIn Model
     | RequiredAuthentication (Maybe msg)
     | UpdateBalances
+    | TurnLights Bool
 
 
 mapExternal : (msg -> msg2) -> External msg -> External msg2
@@ -583,6 +584,9 @@ mapExternal transform ext =
 
         UpdateBalances ->
             UpdateBalances
+
+        TurnLights b ->
+            TurnLights b
 
 
 type alias UpdateResult =
@@ -829,6 +833,11 @@ closeModal ({ model } as uResult) =
                 , showAuthModal = False
             }
     }
+
+
+turnLights : Model -> Bool -> Model
+turnLights model b =
+    { model | lights = b }
 
 
 askedAuthentication : Model -> Model

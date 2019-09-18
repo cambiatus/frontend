@@ -83,6 +83,7 @@ type alias Model =
     , invite : String
     , inviteStatus : InviteStatus
     , openObjective : Maybe Int
+    , modalStatus : ModalStatus
     }
 
 
@@ -94,6 +95,7 @@ initModel loggedIn =
     , invite = ""
     , inviteStatus = Editing
     , openObjective = Nothing
+    , modalStatus = Closed
     }
 
 
@@ -124,6 +126,11 @@ type InviteStatus
     | Sending
     | SendingFailed Http.Error
     | SendingSucceed
+
+
+type ModalStatus
+    = Opened Int -- Action id
+    | Closed
 
 
 type alias ObjectiveForm =
@@ -248,7 +255,7 @@ view loggedIn model =
                     LoggedIn.isAccount community.creator loggedIn
             in
             div [ class "main-content__container create-community" ]
-                [ claimModalView
+                [ viewClaimModal model
                 , Page.viewTitle (Eos.symbolToString community.symbol ++ " - " ++ community.title)
                 , div [ class "card card--community-view" ]
                     [ div [ class "card-community-view" ]
@@ -715,7 +722,9 @@ viewAction loggedIn metadata maybeDate action =
                         text ""
                     , if validationType == "CLAIMABLE" then
                         button
-                            [ class ("h-10 uppercase rounded-lg ml-1" ++ claimColors ++ claimSize) ]
+                            [ class ("h-10 uppercase rounded-lg ml-1" ++ claimColors ++ claimSize)
+                            , onClick (OpenClaimConfirmation action.id)
+                            ]
                             [ text_ claimText ]
 
                       else
@@ -733,34 +742,43 @@ viewAction loggedIn metadata maybeDate action =
                 text ""
             , button
                 [ class ("h-10 uppercase rounded-lg ml-1" ++ claimColors ++ claimSize)
-                , onClick (OpenClaimConfirmation action.id)
                 ]
                 [ text_ claimText ]
             ]
         ]
 
 
-claimModalView : Html msg
-claimModalView =
-    div [ class "z-50 inset-x-0 bottom-0 fixed flex w-full h-64 md:w-3/4 md:inset-auto md:ml-16" ]
-        [ div [ class "mx-4 bg-white w-full rounded-lg p-4 md:relative" ]
-            [ div [ class "w-full" ]
-                [ p [ class "font-sans w-full font-bold font-heading text-2xl mb-4" ] [ text "Claim" ]
-                , Icons.close "absolute fill-current text-gray-400 top-0 right-0 mx-8 my-4"
-                , p [ class "font-body w-full font-sans mb-10" ] [ text "Do you really want to approve this activity?" ]
+viewClaimModal : Model -> Html Msg
+viewClaimModal model =
+    case model.modalStatus of
+        Opened actionId ->
+            div [ class "z-50 inset-x-0 bottom-0 fixed flex w-full h-64 md:w-3/4 md:inset-auto md:ml-32" ]
+                [ div [ class "mx-4 bg-white w-full rounded-lg p-4 md:relative" ]
+                    [ div [ class "w-full" ]
+                        [ p [ class "font-sans w-full font-bold font-heading text-2xl mb-4" ] [ text "Claim" ]
+                        , button [ onClick CloseClaimConfirmation ]
+                            [ Icons.close "absolute fill-current text-gray-400 top-0 right-0 mx-8 my-4"
+                            ]
+                        , p [ class "font-body w-full font-sans mb-10" ] [ text "Do you really want to approve this activity?" ]
+                        ]
+                    , div [ class "w-full md:bg-gray-100 md:flex md:absolute md:rounded-b-lg md:inset-x-0 md:bottom-0 md:p-4" ]
+                        [ div [ class "flex-1" ] []
+                        , button
+                            [ class "flex-1 block button button-secondary mb-4 button-large w-full md:w-40 md:mb-0"
+                            , onClick CloseClaimConfirmation
+                            ]
+                            [ text "no, cancel" ]
+                        , div [ class "flex-1" ] []
+                        , button
+                            [ class "flex-1 block button button-primary button-large w-full md:w-40" ]
+                            [ text "yes, claim" ]
+                        , div [ class "flex-1" ] []
+                        ]
+                    ]
                 ]
-            , div [ class "w-full md:bg-gray-100 md:flex md:absolute md:rounded-b-lg md:inset-x-0 md:bottom-0 md:p-4" ]
-                [ div [ class "flex-1" ] []
-                , button [ class "flex-1 block button button-secondary mb-4 button-large w-full md:w-40 md:mb-0" ]
-                    [ text "no, cancel" ]
-                , div [ class "flex-1" ] []
-                , button
-                    [ class "flex-1 block button button-primary button-large w-full md:w-40" ]
-                    [ text "yes, claim" ]
-                , div [ class "flex-1" ] []
-                ]
-            ]
-        ]
+
+        Closed ->
+            text ""
 
 
 
@@ -905,6 +923,7 @@ type Msg
       -- Action
     | CreateAction Symbol String
     | OpenClaimConfirmation Int
+    | CloseClaimConfirmation
 
 
 update : Msg -> Model -> LoggedIn.Model -> UpdateResult
@@ -1090,9 +1109,14 @@ update msg model loggedIn =
                 |> UR.addCmd (Route.replaceUrl loggedIn.shared.navKey (Route.NewAction sym id))
 
         OpenClaimConfirmation actionId ->
-            model
-                -- TODO: Add dim screen and change the status of the model to show the modal
+            { model | modalStatus = Opened actionId }
                 |> UR.init
+                |> UR.addExt (LoggedIn.TurnLights True)
+
+        CloseClaimConfirmation ->
+            { model | modalStatus = Closed }
+                |> UR.init
+                |> UR.addExt (LoggedIn.TurnLights False)
 
 
 updateCommunity : Model -> LoadStatus -> Model
@@ -1218,3 +1242,6 @@ msgToString msg =
 
         OpenClaimConfirmation _ ->
             [ "OpenClaimConfirmation" ]
+
+        CloseClaimConfirmation ->
+            [ "CloseClaimConfirmation" ]
