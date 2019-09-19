@@ -609,6 +609,7 @@ async function handleJavascriptPort (arg) {
     }
     case 'eosTransaction': {
       devLog('=========================', 'transaction')
+      devLog('DATA', arg.data)
       eos
         .transaction({
           actions: arg.data.actions

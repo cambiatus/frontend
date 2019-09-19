@@ -1133,7 +1133,7 @@ svg.main-header__info-arrow--up {
     display: flex;
     align-items: center;
     justify-content: center;
-    z-index: 11;
+    z-index: 60;
     pointer-events: none;
     background: rgba(0, 0, 0, 0.4);
     pointer-events: auto;
