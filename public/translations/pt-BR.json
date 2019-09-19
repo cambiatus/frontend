@@ -308,6 +308,14 @@
         "success": "A atividade foi criada com sucesso",
         "error": "A atividade não pode ser criada. Tente depois"
       }
+    },
+    "claimAction": {
+      "title": "Reinvindicar",
+      "body": "Confirmar reinvindicação de ação?",
+      "yes": "Sim, reinvindicar",
+      "no": "Não, cancelar",
+      "success": "Reinvidicação concluída, aguarde as aprovações",
+      "failure": "Algo deu errado ao tentar realizar sua reinvidicação, tente novamente mais tarde"
     }
   },
   "profile": {
@@ -399,7 +407,7 @@
     "next": "Próximo",
     "your_action": "Sua ação:",
     "add_comment": "Adicionar um comentário",
-    "claim": "Clamar",
+    "claim": "Reinvidicar",
     "wait_verification": "Espere pela verificação",
     "you_won": "Boa notícia! Você ganhou:",
     "you_rejected": "Você rejeitou a ação",

@@ -305,6 +305,14 @@
        "success": "L’activitat s’ha creat correctament.",
        "error": "L'activitat no es pot crear. Proveu més endavant"
       }
+    },
+    "claimAction": {
+      "title": "Reclamació",
+      "body": "Vols realment reclamar aquesta acció?",
+      "yes": "Sí, reclameu",
+      "no": "No, cancel·la",
+      "success": "Reclamar que tingui èxit, espereu l’aprovació",
+      "failure": "Alguna cosa no va funcionar correctament mentre intenteu processar la vostra reclamació. Torneu-ho a provar més endavant"
     }
   },
   "profile": {
