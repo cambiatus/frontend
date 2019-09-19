@@ -6,7 +6,8 @@
     "node": "11.15.0"
   },
   "scripts": {
-    "build": "yarn transform && npx elm-app build",
+    "build": "yarn transform && yarn bundle",
+    "bundle": "NODE_ENV=production yarn webpack --color --mode=production --config config/webpack.config.prod.js",
     "transform": "postcss src/styles/main.css -o src/styles/processed.css",
     "start": "yarn transform && standard && npx elm-app start",
     "make": "elm make",
@@ -44,7 +45,7 @@
     "dotenv": "^5.0.0",
     "elm-hot-webpack-loader": "^1.0.2",
     "elm-test": "^0.19.0-rev5",
-    "elm-webpack-loader": "^5.0.0",
+    "elm-webpack-loader": "^6.0.0",
     "eslint": "5.16.0",
     "eslint-plugin-html": "5.0.5",
     "file-loader": "^1.1.6",
@@ -63,7 +64,7 @@
     "sw-precache-webpack-plugin": "^0.11.5",
     "uglifyjs-webpack-plugin": "^1.2.4",
     "url-loader": "^1.0.1",
-    "webpack": "^4.2.0",
+    "webpack": "^4.40.2",
     "webpack-dev-server": "^3.1.1",
     "webpack-manifest-plugin": "^2.0.3",
     "whatwg-fetch": "2.0.4"
@@ -91,6 +92,7 @@
     "sjcl": "^1.0.8",
     "sw-precache": "^5.2.1",
     "tailwindcss": "^1.1.2",
-    "tailwindcss-transforms": "^2.2.0"
+    "tailwindcss-transforms": "^2.2.0",
+    "webpack-cli": "^3.3.9"
   }
 }
