@@ -2,7 +2,7 @@
 -- https://github.com/dillonkearns/elm-graphql
 
 
-module Bespiral.Union exposing (placeholder)
+module Bespiral.Union exposing (..)
 
 
 placeholder : String

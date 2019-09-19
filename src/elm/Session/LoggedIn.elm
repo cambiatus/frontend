@@ -1,4 +1,4 @@
-module Session.LoggedIn exposing (External(..), ExternalMsg(..), Model, Msg(..), Page(..), ProfileStatus, addNotification, askedAuthentication, init, initLogin, isAccount, isActive, isAuth, jsAddressToMsg, mapExternal, maybePrivateKey, msgToString, profile, readAllNotifications, subscriptions, update, view)
+module Session.LoggedIn exposing (External(..), ExternalMsg(..), Model, Msg(..), Page(..), ProfileStatus, addNotification, askedAuthentication, init, initLogin, isAccount, isActive, isAuth, jsAddressToMsg, mapExternal, maybePrivateKey, msgToString, profile, readAllNotifications, subscriptions, turnLights, update, view)
 
 import Account exposing (Profile, profileQuery)
 import Api
@@ -17,6 +17,7 @@ import Html.Attributes exposing (..)
 import Html.Events exposing (onClick, onFocus, onInput, onSubmit, stopPropagationOn)
 import Http
 import I18Next exposing (Delims(..), Translations, t, tr)
+import Icons
 import Json.Decode as Decode exposing (Value)
 import Json.Encode as Encode exposing (Value)
 import Log
@@ -93,6 +94,7 @@ type alias Model =
     , searchText : String
     , showNotificationModal : Bool
     , showMainNav : Bool
+    , lights : Bool
     , notification : Notification.Model
     , showAuthModal : Bool
     , collapseMainNav : Bool
@@ -111,6 +113,7 @@ initModel shared authModel accountName =
     , showLanguageItems = False
     , searchText = ""
     , showNotificationModal = False
+    , lights = False
     , showMainNav = False
     , notification = Notification.init
     , showAuthModal = False
@@ -148,6 +151,7 @@ maybePrivateKey model =
 type Page
     = Other
     | Dashboard
+    | Communities
     | News
     | Learn
     | Shop
@@ -233,8 +237,6 @@ viewHelper thisMsg page profile_ ({ shared } as model) content =
                     []
                 , button
                     [ class "btn"
-
-                    -- TODO: ver no mobile isso aqui
                     , onClick FocusedSearchInput
                     ]
                     [ Icon.magnify ""
@@ -243,8 +245,6 @@ viewHelper thisMsg page profile_ ({ shared } as model) content =
             , button
                 [ class "btn main-header__notification"
                 , onClick (ShowNotificationModal (not model.showNotificationModal))
-
-                --, disabled (not model.notification.hasUnread)
                 ]
                 [ Icon.bell ""
                 , div
@@ -274,7 +274,7 @@ viewHelper thisMsg page profile_ ({ shared } as model) content =
                 ]
             ]
             |> Html.map thisMsg
-        , viewMainNav page profile_ model
+        , viewMainMenu page profile_ model
             |> Html.map thisMsg
         , main_
             [ id "main-content"
@@ -288,10 +288,8 @@ viewHelper thisMsg page profile_ ({ shared } as model) content =
             [ classList
                 [ ( "content-screen", True )
                 , ( "content-screen--dark"
-                  , model.showUserNav || model.showNotificationModal
+                  , model.showUserNav || model.showNotificationModal || model.lights
                   )
-
-                --, ( "content-screen--full", model.showAuthModal )
                 ]
             , onClickCloseAny
             ]
@@ -300,8 +298,6 @@ viewHelper thisMsg page profile_ ({ shared } as model) content =
         , viewUserNav page profile_ model
             |> Html.map thisMsg
         , viewNotification model
-            |> Html.map thisMsg
-        , viewMobileMainNav page model
             |> Html.map thisMsg
         , if model.showAuthModal then
             div
@@ -327,96 +323,53 @@ viewHelper thisMsg page profile_ ({ shared } as model) content =
         ]
 
 
-viewMainNav : Page -> Profile -> Model -> Html Msg
-viewMainNav page profile_ model =
+viewMainMenu : Page -> Profile -> Model -> Html Msg
+viewMainMenu page profile_ model =
     let
         ipfsUrl =
             model.shared.endpoints.ipfs
+
+        menuItemClass =
+            "mx-4 w-48 font-sans uppercase flex items-center justify-center leading-tight text-xs text-gray-600 hover:text-indigo-500"
+
+        activeClass =
+            "border-orange-100 border-b-2 text-indigo-500"
+
+        iconClass =
+            "w-6 h-6 fill-current hover:text-indigo-500 mr-5"
     in
-    nav [ class "main-nav main-nav--desktop" ]
-        ([ div [ class "main-nav__mobile" ]
-            [ button
-                [ class "hamburger-menu-button circle-background"
-                , onClick (ShowMainNav (not model.showMainNav))
+    nav [ class "fixed z-10 bg-white h-16 w-full mt-24 flex overflow-x-auto" ]
+        [ a
+            [ classList
+                [ ( menuItemClass, True )
+                , ( activeClass, isActive page Route.Dashboard )
                 ]
-                [ span
-                    [ classList
-                        [ ( "hamburger-menu-button-open", True )
-                        , ( "hamburger-menu-button-close", model.showMainNav )
-                        ]
-                    ]
-                    [ text (t model.shared.translations "menu.title") ]
-                ]
-            , button
-                [ class "main-nav__mobile-open-user-nav"
-                , onClick (ShowUserNav (not model.showUserNav))
-                ]
-                [ span [] [ text (Account.username profile_) ]
-                , Avatar.view ipfsUrl profile_.avatar "main-nav__mobile-user-img"
-                , Icon.arrow "user-nav__arrow"
-                ]
+            , Route.href Route.Dashboard
             ]
-         , button
-            [ class "main-nav__collapse-button"
-            , type_ "button"
-            , onClick (CollapseMainNav (not model.collapseMainNav))
+            [ Icons.dashboard iconClass
+            , text (t model.shared.translations "menu.dashboard")
             ]
-            [ Icon.arrow "" ]
-         ]
-            ++ viewMainNavItems model.shared model.profile page
-        )
-
-
-viewMobileMainNav : Page -> Model -> Html Msg
-viewMobileMainNav page model =
-    nav
-        [ id "mobile-main-nav"
-        , classList
-            [ ( "mobile-main-nav", True )
-            , ( "mobile-main-nav--show", model.showMainNav )
+        , a
+            [ classList
+                [ ( menuItemClass, True )
+                , ( activeClass, isActive page Route.Communities )
+                ]
+            , Route.href Route.Communities
             ]
-        , tabindex -1
+            [ Icons.communities iconClass
+            , text (t model.shared.translations "menu.explore_communities")
+            ]
+        , a
+            [ classList
+                [ ( menuItemClass, True )
+                , ( activeClass, isActive page (Route.Shop (Just Shop.MyCommunities)) )
+                ]
+            , Route.href (Route.Shop (Just Shop.MyCommunities))
+            ]
+            [ Icons.shop iconClass
+            , text (t model.shared.translations "menu.shop")
+            ]
         ]
-        (viewMainNavItems model.shared model.profile page)
-
-
-viewMainNavItems : Shared -> ProfileStatus -> Page -> List (Html Msg)
-viewMainNavItems shared profileStatus page =
-    [ viewMainNavItem page
-        (t shared.translations "menu.dashboard")
-        Route.Dashboard
-        [ Icon.dashboard "" ]
-    , viewMainNavItem page
-        (t shared.translations "menu.shop")
-        (Route.Shop (Just Shop.MyCommunities))
-        [ Icon.currency "" ]
-    , viewMainNavItem page
-        (t shared.translations "menu.news")
-        Route.ComingSoon
-        [ Icon.file "" ]
-    , viewMainNavItem page
-        (t shared.translations "menu.learn")
-        Route.ComingSoon
-        [ Icon.library "" ]
-    , viewMainNavItem page
-        (t shared.translations "menu.faq")
-        Route.ComingSoon
-        [ Icon.help "" ]
-    ]
-
-
-viewMainNavItem : Page -> String -> Route -> List (Html Msg) -> Html Msg
-viewMainNavItem page tooltip route contents =
-    a
-        [ classList
-            [ ( "main-nav__item", True )
-            , ( "main-nav__item--active", isActive page route )
-            ]
-        , Route.href route
-        , onClick (ShowMainNav False)
-        , attribute "menu-tooltip" tooltip
-        ]
-        (contents ++ [ span [] [ text tooltip ] ])
 
 
 isActive : Page -> Route -> Bool
@@ -425,7 +378,7 @@ isActive page route =
         ( Dashboard, Route.Dashboard ) ->
             True
 
-        ( Profile, Route.Profile ) ->
+        ( Communities, Route.Communities ) ->
             True
 
         ( Shop, Route.Shop _ ) ->
@@ -617,6 +570,7 @@ type External msg
     = UpdatedLoggedIn Model
     | RequiredAuthentication (Maybe msg)
     | UpdateBalances
+    | TurnLights Bool
 
 
 mapExternal : (msg -> msg2) -> External msg -> External msg2
@@ -630,6 +584,9 @@ mapExternal transform ext =
 
         UpdateBalances ->
             UpdateBalances
+
+        TurnLights b ->
+            TurnLights b
 
 
 type alias UpdateResult =
@@ -876,6 +833,11 @@ closeModal ({ model } as uResult) =
                 , showAuthModal = False
             }
     }
+
+
+turnLights : Model -> Bool -> Model
+turnLights model b =
+    { model | lights = b }
 
 
 askedAuthentication : Model -> Model

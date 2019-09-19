@@ -275,18 +275,8 @@ update msg model loggedIn =
 
         ValidateDeadline ->
             let
-                {- Javascript dates are numbered from 0 to 11
-                   hence when a user submits 05 as a month where they mean May JS will recieve June.
-                   So the solution here is to take the given month subtract 1 from it then hand it
-                   over to JS
-                -}
                 month =
                     String.slice 0 2 model.form.deadline
-                        |> String.toInt
-                        |> Maybe.withDefault 1
-                        -- subtract 1 from date
-                        |> (+) -1
-                        |> String.fromInt
 
                 day =
                     String.slice 2 4 model.form.deadline

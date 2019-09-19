@@ -18,6 +18,7 @@ import Html.Events exposing (onClick, onInput, onSubmit, targetValue)
 import Html.Lazy
 import Http
 import I18Next exposing (Translations)
+import Icons exposing (..)
 import Json.Decode as Decode exposing (Decoder)
 import Json.Encode as Encode exposing (Value)
 import Page
@@ -79,9 +80,9 @@ type alias Model =
     { date : Maybe Posix
     , community : LoadStatus
     , members : List Member
-    , invite : String
-    , inviteStatus : InviteStatus
     , openObjective : Maybe Int
+    , modalStatus : ModalStatus
+    , messageStatus : MessageStatus
     }
 
 
@@ -90,9 +91,9 @@ initModel loggedIn =
     { date = Nothing
     , community = Loading
     , members = []
-    , invite = ""
-    , inviteStatus = Editing
     , openObjective = Nothing
+    , modalStatus = Closed
+    , messageStatus = None
     }
 
 
@@ -118,11 +119,15 @@ type SaveStatus
     | SaveFailed (Dict String FormError)
 
 
-type InviteStatus
-    = Editing
-    | Sending
-    | SendingFailed Http.Error
-    | SendingSucceed
+type ModalStatus
+    = Opened Bool Int -- Action id
+    | Closed
+
+
+type MessageStatus
+    = None
+    | Success String
+    | Failure String
 
 
 type alias ObjectiveForm =
@@ -142,8 +147,6 @@ type alias ActionForm =
     { description : String
     , reward : String
     , verification : Verification
-    , invite : String
-    , invites : List String
     , verificationReward : String
     , database : String
     , save : SaveStatus
@@ -156,8 +159,6 @@ emptyActionForm =
     { description = ""
     , reward = ""
     , verification = Manually
-    , invite = ""
-    , invites = []
     , verificationReward = ""
     , database = ""
     , save = NotAsked
@@ -203,13 +204,12 @@ actionFormToAction loggedIn action =
     , reward = String.toFloat action.reward |> Maybe.withDefault 0
     , verificationReward = String.toFloat action.verificationReward |> Maybe.withDefault 0
     , creator = loggedIn.accountName
-
-    -- Find the validators
     , validators = []
     , usages = 0
     , usagesLeft = 0
-    , deadline = DateTime ""
+    , deadline = Just (DateTime "")
     , verificationType = VerificationType.Automatic
+    , id = 0
     }
 
 
@@ -248,7 +248,9 @@ view loggedIn model =
                     LoggedIn.isAccount community.creator loggedIn
             in
             div [ class "main-content__container create-community" ]
-                [ Page.viewTitle (Eos.symbolToString community.symbol ++ " - " ++ community.title)
+                [ viewClaimModal loggedIn model
+                , viewMessageStatus loggedIn model
+                , Page.viewTitle (Eos.symbolToString community.symbol ++ " - " ++ community.title)
                 , div [ class "card card--community-view" ]
                     [ div [ class "card-community-view" ]
                         [ h3 [ class "card-community-view__description-title" ]
@@ -262,40 +264,6 @@ view loggedIn model =
                                 []
                             , p [ class "card-community-view__description" ] [ text community.description ]
                             ]
-                        , label [ for "community-invite" ]
-                            [ text_ "community.invite.title" ]
-                        , Html.form
-                            [ onSubmit (ClickedInviteEmail community.symbol)
-                            , class "input-group"
-                            ]
-                            [ input
-                                [ id "community-invite"
-                                , type_ "email"
-                                , class "input flex100"
-                                , onInput EnteredInviteEmail
-                                , plcH "community.invite.placeholders.emails"
-                                , disabled (model.inviteStatus == Sending)
-                                , required True
-                                ]
-                                []
-                            , button
-                                [ class "btn btn--outline"
-                                , style "flex-shrink" "0"
-                                , disabled (model.inviteStatus == Sending)
-                                ]
-                                [ text_ "community.invite.submit" ]
-                            ]
-                        , case model.inviteStatus of
-                            SendingFailed e ->
-                                span [ class "field-error" ]
-                                    [ text_ "community.invite.succeed" ]
-
-                            SendingSucceed ->
-                                span [ class "field-succeed" ]
-                                    [ text_ "community.invite.failed" ]
-
-                            _ ->
-                                text ""
                         ]
                     , if canEdit then
                         a
@@ -551,7 +519,6 @@ viewAction loggedIn metadata maybeDate action =
         posixDeadline : Posix
         posixDeadline =
             action.deadline
-                |> Just
                 |> Utils.posixDateTime
 
         deadlineStr : String
@@ -561,16 +528,21 @@ viewAction loggedIn metadata maybeDate action =
 
         pastDeadline : Bool
         pastDeadline =
-            case maybeDate of
-                Just today ->
-                    posixToMillis today > posixToMillis posixDeadline
+            case action.deadline of
+                Just deadline ->
+                    case maybeDate of
+                        Just today ->
+                            posixToMillis today > posixToMillis posixDeadline
+
+                        Nothing ->
+                            False
 
                 Nothing ->
                     False
 
         rewardStrike : String
         rewardStrike =
-            if pastDeadline || action.usagesLeft < 1 then
+            if pastDeadline || (action.usagesLeft < 1 && action.usages > 0) then
                 " line-through"
 
             else
@@ -587,14 +559,14 @@ viewAction loggedIn metadata maybeDate action =
 
         usagesColor : String
         usagesColor =
-            if action.usagesLeft >= 1 then
+            if action.usagesLeft >= 1 || action.usages == 0 then
                 " text-date-purple"
 
             else
                 " text-date-red"
 
         ( claimColors, claimText ) =
-            if pastDeadline || action.usagesLeft < 1 then
+            if pastDeadline || (action.usagesLeft < 1 && action.usages > 0) then
                 ( " text-text-grey bg-grey cursor-not-allowed", "dashboard.closed" )
 
             else
@@ -663,11 +635,22 @@ viewAction loggedIn metadata maybeDate action =
                 [ text action.description ]
             , div [ class "flex flex-col sm:flex-row sm:items-center sm:justify-between" ]
                 [ div [ class "text-xs mt-5 sm:w-1/3" ]
-                    [ span [ class "capitalize text-text-grey" ] [ text_ "community.actions.available_until" ]
-                    , span [ class dateColor ] [ text deadlineStr ]
-                    , span [] [ text_ "community.actions.or" ]
-                    , p [ class usagesColor ]
-                        [ text (tr "community.actions.usages" [ ( "usages", usages ), ( "usagesLeft", usagesLeft ) ]) ]
+                    [ case action.deadline of
+                        Just deadline ->
+                            div []
+                                [ span [ class "capitalize text-text-grey" ] [ text_ "community.actions.available_until" ]
+                                , span [ class dateColor ] [ text deadlineStr ]
+                                , span [] [ text_ "community.actions.or" ]
+                                ]
+
+                        Nothing ->
+                            text ""
+                    , if action.usages > 0 then
+                        p [ class usagesColor ]
+                            [ text (tr "community.actions.usages" [ ( "usages", usages ), ( "usagesLeft", usagesLeft ) ]) ]
+
+                      else
+                        text ""
                     ]
                 , div [ class "sm:self-end" ]
                     [ div [ class "mt-3 flex flex-row items-center" ]
@@ -697,9 +680,15 @@ viewAction loggedIn metadata maybeDate action =
 
                       else
                         text ""
-                    , button
-                        [ class ("h-10 uppercase rounded-lg ml-1" ++ claimColors ++ claimSize) ]
-                        [ text_ claimText ]
+                    , if validationType == "CLAIMABLE" then
+                        button
+                            [ class ("h-10 uppercase rounded-lg ml-1" ++ claimColors ++ claimSize)
+                            , onClick (OpenClaimConfirmation action.id)
+                            ]
+                            [ text_ claimText ]
+
+                      else
+                        text ""
                     ]
                 ]
             ]
@@ -712,10 +701,93 @@ viewAction loggedIn metadata maybeDate action =
               else
                 text ""
             , button
-                [ class ("h-10 uppercase rounded-lg ml-1" ++ claimColors ++ claimSize) ]
+                [ class ("h-10 uppercase rounded-lg ml-1" ++ claimColors ++ claimSize)
+                ]
                 [ text_ claimText ]
             ]
         ]
+
+
+viewMessageStatus : LoggedIn.Model -> Model -> Html msg
+viewMessageStatus loggedIn model =
+    let
+        t s =
+            I18Next.t loggedIn.shared.translations s
+
+        text_ s =
+            text (t s)
+    in
+    case model.messageStatus of
+        None ->
+            text ""
+
+        Success message ->
+            div [ class "z-40 bg-green fixed w-11/12 p-2" ]
+                [ p [ class "text-white font-sans font-bold" ] [ text_ message ]
+                ]
+
+        Failure message ->
+            div [ class "z-40 bg-red fixed w-11/12 p-2" ]
+                [ p [ class "text-white font-sans font-bold" ] [ text_ message ]
+                ]
+
+
+viewClaimModal : LoggedIn.Model -> Model -> Html Msg
+viewClaimModal loggedIn model =
+    case model.modalStatus of
+        Opened isLoading actionId ->
+            let
+                isDisabled =
+                    if isLoading then
+                        [ disabled True ]
+
+                    else
+                        []
+
+                t s =
+                    I18Next.t loggedIn.shared.translations s
+
+                text_ s =
+                    text (t s)
+            in
+            div [ class "z-50 inset-x-0 bottom-0 fixed flex w-full h-64 md:w-3/4 md:inset-auto md:ml-32" ]
+                [ div [ class "mx-4 bg-white w-full rounded-lg p-4 md:relative" ]
+                    [ div [ class "w-full" ]
+                        [ p [ class "font-sans w-full font-bold font-heading text-2xl mb-4" ]
+                            [ text_ "community.claimAction.title" ]
+                        , button
+                            ([ onClick CloseClaimConfirmation ]
+                                ++ isDisabled
+                            )
+                            [ Icons.close "absolute fill-current text-gray-400 top-0 right-0 mx-8 my-4"
+                            ]
+                        , p [ class "font-body w-full font-sans mb-10" ]
+                            [ text_ "community.claimAction.body" ]
+                        ]
+                    , div [ class "w-full md:bg-gray-100 md:flex md:absolute rounded-b-lg md:inset-x-0 md:bottom-0 md:p-4" ]
+                        [ div [ class "flex-1" ] []
+                        , button
+                            ([ class "flex-1 block button button-secondary mb-4 button-large w-full md:w-40 md:mb-0"
+                             , onClick CloseClaimConfirmation
+                             ]
+                                ++ isDisabled
+                            )
+                            [ text_ "community.claimAction.no" ]
+                        , div [ class "flex-1" ] []
+                        , button
+                            ([ class "flex-1 block button button-primary button-large w-full md:w-40"
+                             , onClick (ClaimAction actionId)
+                             ]
+                                ++ isDisabled
+                            )
+                            [ text_ "community.claimAction.yes" ]
+                        , div [ class "flex-1" ] []
+                        ]
+                    ]
+                ]
+
+        Closed ->
+            text ""
 
 
 
@@ -846,13 +918,10 @@ type alias UpdateResult =
 type Msg
     = GotTime Posix
     | CompletedLoadCommunity (Result (Graphql.Http.Error (Maybe Community)) (Maybe Community))
-    | EnteredInviteEmail String
-    | ClickedInviteEmail Symbol
-    | CompletedInviteEmail (Result Http.Error ())
+      -- Objective
     | EnteredObjectiveDescription String
     | ClickedSaveObjective
     | GotSaveObjectiveResponse (Result Value String)
-    | CompletedLastObjectiveId (Result Http.Error ObjectiveId)
     | ClickedNewObjective
     | ClickedOpenObjective Int
     | ClickedCloseObjective
@@ -860,6 +929,10 @@ type Msg
     | ClickedEditCancel
       -- Action
     | CreateAction Symbol String
+    | OpenClaimConfirmation Int
+    | CloseClaimConfirmation
+    | ClaimAction Int
+    | GotClaimActionResponse (Result Value String)
 
 
 update : Msg -> Model -> LoggedIn.Model -> UpdateResult
@@ -880,25 +953,6 @@ update msg model loggedIn =
             { model | community = Failed err }
                 |> UR.init
                 |> UR.logGraphqlError msg err
-
-        ClickedInviteEmail symbol ->
-            { model | inviteStatus = Sending }
-                |> UR.init
-                |> UR.addCmd
-                    (Api.communityInvite loggedIn.shared symbol loggedIn.accountName model.invite CompletedInviteEmail)
-
-        EnteredInviteEmail s ->
-            { model
-                | invite = s
-                , inviteStatus = Editing
-            }
-                |> UR.init
-
-        CompletedInviteEmail (Ok ()) ->
-            UR.init { model | inviteStatus = SendingSucceed }
-
-        CompletedInviteEmail (Err err) ->
-            UR.init { model | inviteStatus = SendingFailed err }
 
         EnteredObjectiveDescription s ->
             UR.init model
@@ -961,8 +1015,6 @@ update msg model loggedIn =
             case model.community of
                 Loaded community (NewObjective objective) ->
                     UR.init model
-                        |> UR.addCmd
-                            (fetchLastObjectiveId loggedIn CompletedLastObjectiveId)
 
                 Loaded community (EditObjective index objective) ->
                     { model
@@ -992,35 +1044,6 @@ update msg model loggedIn =
             UR.init model
                 |> updateObjective msg (\o -> { o | save = SaveFailed Dict.empty })
                 |> UR.logDebugValue msg v
-
-        CompletedLastObjectiveId (Ok objId) ->
-            case model.community of
-                Loaded community (NewObjective objective) ->
-                    { model
-                        | community =
-                            Loaded
-                                { community
-                                    | objectives =
-                                        community.objectives
-                                            ++ [ { id = objId
-                                                 , description = objective.description
-                                                 , creator = loggedIn.accountName
-                                                 , actions = []
-                                                 }
-                                               ]
-                                }
-                                NoEdit
-                    }
-                        |> UR.init
-
-                _ ->
-                    UR.init model
-                        |> UR.logImpossible msg []
-
-        CompletedLastObjectiveId (Err err) ->
-            UR.init model
-                |> updateObjective msg (\o -> { o | save = SaveFailed Dict.empty })
-                |> UR.logHttpError msg err
 
         ClickedNewObjective ->
             case model.community of
@@ -1074,6 +1097,64 @@ update msg model loggedIn =
             model
                 |> UR.init
                 |> UR.addCmd (Route.replaceUrl loggedIn.shared.navKey (Route.NewAction sym id))
+
+        OpenClaimConfirmation actionId ->
+            { model | modalStatus = Opened False actionId }
+                |> UR.init
+                |> UR.addExt (LoggedIn.TurnLights True)
+
+        CloseClaimConfirmation ->
+            { model | modalStatus = Closed }
+                |> UR.init
+                |> UR.addExt (LoggedIn.TurnLights False)
+
+        ClaimAction actionId ->
+            case LoggedIn.isAuth loggedIn of
+                True ->
+                    model
+                        |> UR.init
+                        |> UR.addPort
+                            { responseAddress = ClaimAction actionId
+                            , responseData = Encode.null
+                            , data =
+                                Eos.encodeTransaction
+                                    { actions =
+                                        [ { accountName = "bes.cmm"
+                                          , name = "claimaction"
+                                          , authorization =
+                                                { actor = loggedIn.accountName
+                                                , permissionName = Eos.samplePermission
+                                                }
+                                          , data =
+                                                { actionId = actionId
+                                                , maker = loggedIn.accountName
+                                                }
+                                                    |> Community.encodeClaimAction
+                                          }
+                                        ]
+                                    }
+                            }
+
+                False ->
+                    model
+                        |> UR.init
+                        |> UR.addExt (Just (ClaimAction actionId) |> RequiredAuthentication)
+
+        GotClaimActionResponse (Ok txId) ->
+            { model
+                | modalStatus = Closed
+                , messageStatus = Success "community.claimAction.success"
+            }
+                |> UR.init
+                |> UR.addExt (LoggedIn.TurnLights False)
+
+        GotClaimActionResponse (Err v) ->
+            { model
+                | modalStatus = Closed
+                , messageStatus = Failure "community.claimAction.failure"
+            }
+                |> UR.init
+                |> UR.addExt (LoggedIn.TurnLights False)
 
 
 updateCommunity : Model -> LoadStatus -> Model
@@ -1148,6 +1229,17 @@ jsAddressToMsg addr val =
                 |> Result.map (Just << GotSaveObjectiveResponse)
                 |> Result.withDefault Nothing
 
+        "ClaimAction" :: [] ->
+            Decode.decodeValue
+                (Decode.oneOf
+                    [ Decode.field "transactionId" Decode.string |> Decode.map Ok
+                    , Decode.succeed (Err val)
+                    ]
+                )
+                val
+                |> Result.map (Just << GotClaimActionResponse)
+                |> Result.withDefault Nothing
+
         _ ->
             Nothing
 
@@ -1161,26 +1253,14 @@ msgToString msg =
         CompletedLoadCommunity r ->
             [ "CompletedLoadCommunity", UR.resultToString r ]
 
-        EnteredInviteEmail _ ->
-            [ "EnteredInviteEmail" ]
-
-        ClickedInviteEmail _ ->
-            [ "ClickedInviteEmail" ]
-
-        CompletedInviteEmail r ->
-            [ "CompletedInviteEmail", UR.resultToString r ]
+        ClickedSaveObjective ->
+            [ "ClickedSaveObjective" ]
 
         EnteredObjectiveDescription _ ->
             [ "EnteredObjectiveDescription" ]
 
-        ClickedSaveObjective ->
-            [ "ClickedSaveObjective" ]
-
         GotSaveObjectiveResponse r ->
             [ "GotSaveObjectiveResponse", UR.resultToString r ]
-
-        CompletedLastObjectiveId r ->
-            [ "CompletedLastObjectiveId", UR.resultToString r ]
 
         ClickedNewObjective ->
             [ "ClickedNewObjective" ]
@@ -1199,3 +1279,15 @@ msgToString msg =
 
         CreateAction _ _ ->
             [ "CreateAction" ]
+
+        OpenClaimConfirmation _ ->
+            [ "OpenClaimConfirmation" ]
+
+        CloseClaimConfirmation ->
+            [ "CloseClaimConfirmation" ]
+
+        ClaimAction _ ->
+            [ "ClaimAction" ]
+
+        GotClaimActionResponse r ->
+            [ "GotClaimActionResponse", UR.resultToString r ]

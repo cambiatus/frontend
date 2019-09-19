@@ -1,4 +1,4 @@
-       {
+{
   "bespiral": "Cambiatus",
   "menu": {
     "title": "Menu",
@@ -19,7 +19,7 @@
     "more": "Mas",
     "logout": "Salir",
     "explore": "Explorar",
-    "explore_communities": "Explorar Comunidades",
+    "explore_communities": "Comunidades",
     "welcome_message": "Hola {{user_name}} ",
     "back_to_dashboard": "Ir al Inicio",
     "edit": "Editar",
@@ -304,6 +304,14 @@
         "error": "La actividad no se puede crear. Intenta más tarde",
         "success": "La actividad se creó con éxito."
       }
+    },
+    "claimAction": {
+      "title": "Reclamación",
+      "body": "¿Realmente quieres reclamar esta acción?",
+      "yes": "Sí, reclamar",
+      "no": "No, cancelar",
+      "success": "Reclamación exitosa, espere la aprobación",
+      "failure": "Se produjo un error al intentar procesar su reclamo. Vuelva a intentarlo más tarde."
     }
   },
   "profile": {

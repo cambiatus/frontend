@@ -8,7 +8,7 @@ import Eos exposing (Symbol)
 import Eos.Account as Eos
 import Graphql.Http
 import Html exposing (..)
-import Html.Attributes exposing (class, style)
+import Html.Attributes exposing (class, src, style)
 import Http
 import I18Next exposing (t)
 import Json.Decode as Decode exposing (Decoder, field, int, list, string)
@@ -79,7 +79,7 @@ view loggedIn model =
             Page.mainContentContainer
                 [ renderUserMessage model
                 , Page.viewTitle (t loggedIn.shared.translations "menu.explore_communities")
-                , div [ class "card-grid card-grid--communities" ]
+                , div [ class "flex flex-wrap -mx-2" ]
                     (viewCommunities loggedIn (String.toUpper loggedIn.searchText) communities)
                 ]
 
@@ -137,46 +137,36 @@ viewCommunity loggedIn community =
 
         maybeTransferCount =
             Transfer.getTotalCount (Just community)
-
-        cardInfo =
-            case maybeTransferCount of
-                Just transferCount ->
-                    [ div [ class "card__info__item" ]
-                        [ Icon.account ""
-                        , span [] [ text (tr "community.index.members" [ ( "quantity", String.fromInt community.memberCount ) ]) ]
-                        ]
-                    , div [ class "card__info__item" ]
-                        [ Icon.swapHorizontal ""
-                        , span [] [ text (tr "community.index.transfers" [ ( "quantity", String.fromInt transferCount ) ]) ]
-                        ]
-                    ]
-
-                Nothing ->
-                    [ div [ class "card__info__item" ]
-                        [ Icon.account ""
-                        , span [] [ text (tr "community.index.members" [ ( "quantity", String.fromInt community.memberCount ) ]) ]
-                        ]
-                    ]
     in
     a
-        [ class "card"
+        [ class "w-full sm:w-1/2 md:w-1/3 lg:w-1/3 xl:w-1/4 px-2 mb-8 h-60"
         , Route.href (Route.Community community.symbol)
         ]
-        [ span [ class "card__currency-symbol" ]
-            [ text (Eos.symbolToString community.symbol) ]
-        , div
-            [ class "card__image-background"
-            , Community.logoBackground ipfsUrl (Just community.logo)
+        [ div [ class "flex flex-wrap pt-5 pb-2 rounded-lg shadow bg-white" ]
+            [ img [ class "w-full object-center object-scale-down h-20", src (ipfsUrl ++ "/" ++ community.logo) ] []
+            , p [ class "absolute bg-gray-200 rounded-full ml-6 px-3 py-1 text-sm font-sans font-bold text-gray-700" ]
+                [ text (Eos.symbolToString community.symbol) ]
+            , div [ class "px-6 py-4" ]
+                [ div [ class "font-sans font-bold text-xl" ]
+                    [ text community.title
+                    ]
+                , p [ class "font-sans text-sm mb-2" ] [ text ("Created by " ++ Eos.nameToString community.creator) ]
+                , p [ class "text-gray-700 font-sans overflow-hidden h-12" ] [ text community.description ]
+                ]
+            , div [ class "w-full px-6 py-4" ]
+                [ p [ class "flex-1 bg-indigo-500 mt-2 rounded-full px-3 py-1 text-sm font-bold text-white mr-2" ]
+                    [ text (tr "community.index.members" [ ( "quantity", String.fromInt community.memberCount ) ])
+                    ]
+                , case maybeTransferCount of
+                    Just transferCount ->
+                        p [ class "flex-1 bg-indigo-500 mt-2 rounded-full px-3 py-1 text-sm font-bold text-white mr-2" ]
+                            [ text (tr "community.index.transfers" [ ( "quantity", String.fromInt transferCount ) ])
+                            ]
+
+                    Nothing ->
+                        text ""
+                ]
             ]
-            []
-        , span [ class "card__title card__title--community" ]
-            [ text community.title ]
-        , span [ class "card__created-by" ]
-            [ text ("Created by " ++ Eos.nameToString community.creator) ]
-        , span [ class "card__description" ]
-            [ text community.description ]
-        , div [ class "card__info" ]
-            cardInfo
         ]
 
 

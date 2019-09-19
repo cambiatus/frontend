@@ -134,7 +134,7 @@ onFileChange toMsg =
 viewMenuFilter : List (Html msg) -> Html msg
 viewMenuFilter buttons =
     div
-        [ class "menu-filter__buttons" ]
+        [ class "menu-filter__buttons sm:hidden md:flex" ]
         buttons
 
 
@@ -158,9 +158,9 @@ viewMenuFilterButton isActive text_ route =
 viewMenuFilterDropdown : (a -> msg) -> Decoder a -> List (Html msg) -> Html msg
 viewMenuFilterDropdown toMsg decoder options =
     div
-        [ class "menu-filter__dropdown" ]
+        [ class "flex flex-row justify-between" ]
         [ select
-            [ class "menu-filter__dropdown-select"
+            [ class "md:hidden form-select w-full select border-gray-500"
             , onChange toMsg decoder
             ]
             options

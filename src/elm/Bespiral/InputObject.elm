@@ -2,7 +2,7 @@
 -- https://github.com/dillonkearns/elm-graphql
 
 
-module Bespiral.InputObject exposing (ActionsInput, ActionsInputOptionalFields, ChatInput, ChatInputRequiredFields, ChatUpdateInput, ChatUpdateInputRequiredFields, ChecksInput, ChecksInputOptionalFields, ProfileInput, ProfileInputOptionalFields, ProfileUpdateInput, ProfileUpdateInputOptionalFields, ProfileUpdateInputRequiredFields, PushSubscriptionInput, PushSubscriptionInputRequiredFields, SaleInput, SaleInputRequiredFields, SalesInput, SalesInputOptionalFields, buildActionsInput, buildChatInput, buildChatUpdateInput, buildChecksInput, buildProfileInput, buildProfileUpdateInput, buildPushSubscriptionInput, buildSaleInput, buildSalesInput, encodeActionsInput, encodeChatInput, encodeChatUpdateInput, encodeChecksInput, encodeProfileInput, encodeProfileUpdateInput, encodePushSubscriptionInput, encodeSaleInput, encodeSalesInput)
+module Bespiral.InputObject exposing (..)
 
 import Bespiral.Enum.VerificationType
 import Bespiral.Interface

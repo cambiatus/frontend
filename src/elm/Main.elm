@@ -439,6 +439,15 @@ updateLoggedInUResult toStatus toMsg model uResult =
 
                         _ ->
                             ( m, cmds_ )
+
+                LoggedIn.TurnLights b ->
+                    case m.session of
+                        Page.LoggedIn loggedIn ->
+                            -- TODO: turn lights
+                            ( { m | session = Page.LoggedIn (LoggedIn.turnLights loggedIn b) }, cmds_ ++ [] )
+
+                        _ ->
+                            ( m, cmds_ )
         )
         ( { model | status = toStatus uResult.model }
         , []
@@ -855,7 +864,7 @@ view model =
             viewLoggedIn subModel LoggedIn.Other GotActionEditorMsg ActionEditor.view
 
         CommunityExplore subModel ->
-            viewLoggedIn subModel LoggedIn.Other GotCommunityExploreMsg CommunityExplore.view
+            viewLoggedIn subModel LoggedIn.Communities GotCommunityExploreMsg CommunityExplore.view
 
         Dashboard subModel ->
             viewLoggedIn subModel LoggedIn.Dashboard GotDashboardMsg Dashboard.view

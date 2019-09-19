@@ -1,4 +1,4 @@
-module Community exposing (Action, Balance, Community, CreateCommunityData, DashboardInfo, Metadata, Objective, ObjectiveId(..), Transaction, Validator, Verification(..), Verifiers, WithObjectives, communitiesQuery, communityQuery, createCommunityData, decodeBalance, decodeObjectiveId, decodeTransaction, encodeCreateActionAction, encodeCreateCommunityData, encodeCreateObjectiveAction, encodeObjectiveId, encodeUpdateLogoData, logoBackground, logoTitleQuery, logoUrl, unwrapObjectiveId)
+module Community exposing (Action, Balance, Community, CreateCommunityData, CreateTokenData, DashboardInfo, Metadata, Objective, ObjectiveId(..), Transaction, Validator, Verification(..), Verifiers, WithObjectives, communitiesQuery, communityQuery, createCommunityData, decodeBalance, decodeObjectiveId, decodeTransaction, encodeClaimAction, encodeCreateActionAction, encodeCreateCommunityData, encodeCreateObjectiveAction, encodeCreateTokenData, encodeObjectiveId, encodeUpdateLogoData, logoBackground, logoTitleQuery, logoUrl, unwrapObjectiveId)
 
 import Account exposing (Profile, accountSelectionSet)
 import Api.Relay exposing (MetadataConnection, PaginationArgs)
@@ -240,8 +240,9 @@ type alias Action =
     , validators : List Validator
     , usages : Int
     , usagesLeft : Int
-    , deadline : DateTime
+    , deadline : Maybe DateTime
     , verificationType : VerificationType
+    , id : Int
     }
 
 
@@ -264,6 +265,7 @@ actionSelectionSet =
         |> with Action.usagesLeft
         |> with Action.deadline
         |> with Action.verificationType
+        |> with Action.id
 
 
 validatorSelectionSet : SelectionSet Validator Bespiral.Object.Validator
@@ -314,6 +316,24 @@ encodeCreateActionAction c =
         , ( "verifications", Encode.int c.verifications )
         , ( "verification_type", Encode.string c.verification_type )
         , ( "validators_str", Encode.string c.validators_str )
+        ]
+
+
+
+-- Claim Action
+
+
+type alias ClaimAction =
+    { actionId : Int
+    , maker : Eos.Name
+    }
+
+
+encodeClaimAction : ClaimAction -> Value
+encodeClaimAction c =
+    Encode.object
+        [ ( "action_id", Encode.int c.actionId )
+        , ( "maker", Eos.encodeName c.maker )
         ]
 
 
@@ -406,6 +426,24 @@ encodeCreateCommunityData c =
         , ( "description", Encode.string c.description )
         , ( "inviter_reward", Eos.encodeAsset c.inviterReward )
         , ( "invited_reward", Eos.encodeAsset c.invitedReward )
+        ]
+
+
+type alias CreateTokenData =
+    { creator : Eos.Name
+    , maxSupply : Eos.Asset
+    , minBalance : Eos.Asset
+    , tokenType : String
+    }
+
+
+encodeCreateTokenData : CreateTokenData -> Value
+encodeCreateTokenData c =
+    Encode.object
+        [ ( "issuer", Eos.encodeName c.creator )
+        , ( "max_supply", Eos.encodeAsset c.maxSupply )
+        , ( "min_balance", Eos.encodeAsset c.minBalance )
+        , ( "type", Encode.string c.tokenType )
         ]
 
 

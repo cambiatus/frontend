@@ -740,6 +740,18 @@ save msg loggedIn ({ model } as uResult) =
                                                     createAction
                                                         |> Community.encodeCreateCommunityData
                                               }
+
+                                            -- , { accountName = "bes.token"
+                                            --   , name = "create"
+                                            --   , authorization = authorization
+                                            --   , data =
+                                            --         { creator = loggedIn.accountName
+                                            --         , maxSupply = Eos.Asset 21000000.0 form.symbol
+                                            --         , minBalance = Eos.Asset -1000.0 form.symbol
+                                            --         , tokenType = "mcc"
+                                            --         }
+                                            --             |> Community.encodeCreateTokenData
+                                            --   }
                                             ]
                                         }
                                 }

@@ -31,26 +31,26 @@ const dev = {
   network: {
     blockchain: 'eos',
     protocol: 'http',
-    host: 'eosio.bespiral.io',
+    host: 'eosio.cambiatus.io',
     port: 80,
     chainId: 'cf057bbfb72640471fd910bcb67639c22df9f92470936cddc1ade0e2f2e7dc4f'
   },
   eosOptions: {
     chainId: 'cf057bbfb72640471fd910bcb67639c22df9f92470936cddc1ade0e2f2e7dc4f',
     debug: false,
-    httpEndpoint: 'https://eosio.bespiral.io'
+    httpEndpoint: 'https://eosio.cambiatus.io'
   },
   endpoints: {
     // api: 'http://localhost:4000',
-    api: 'https://api.bespiral.io',
+    api: 'https://api.cambiatus.io',
     // chat: 'http://app.bespiral.local/chat',
-    chat: 'https://app.bespiral.io/chat',
+    chat: 'https://app.cambiatus.io/chat',
     // eosio: 'http://eosio.bespiral.local:8888',
-    eosio: 'https://eosio.bespiral.io',
+    eosio: 'https://eosio.cambiatus.io',
     // graphql: 'http://localhost:4000/api/graph',
-    graphql: 'https://api.bespiral.io/api/graph',
+    graphql: 'https://api.cambiatus.io/api/graph',
     // ipfs: 'http://ipfs.bespiral.local/ipfs',
-    ipfs: 'https://ipfs.bespiral.io/ipfs'
+    ipfs: 'https://ipfs.cambiatus.io/ipfs'
   },
   logo: '/images/logo-cambiatus.svg',
   bespiralAccount: 'bespiral',

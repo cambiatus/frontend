@@ -6,7 +6,7 @@
     "dashboard": "Dashboard",
     "news": "Novidades",
     "learn": "Aprender",
-    "shop": "Shop",
+    "shop": "Loja",
     "faq": "FAQ",
     "profile": "Perfil",
     "invite": "Convite",
@@ -19,7 +19,7 @@
     "more": "Mais",
     "logout": "Sair",
     "explore": "Explorar",
-    "explore_communities": "Explorar Comunidades",
+    "explore_communities": "Comunidades",
     "welcome_message": "Ola {{user_name}} ",
     "back_to_dashboard": "Voltar para Dashboard",
     "edit": "Editar",
@@ -183,7 +183,7 @@
   },
   "transfer": {
     "last_title": "Últimas Transferências",
-    "loading_error": "Algo de errado aconteceu ao carregar as transferencias.",
+    "loading_error": "Algo de errado aconteceu ao carregar as transferências.",
     "no_transfers_yet": "Nenhuma transferencia.",
     "info": "{{from}} transferiu {{value}} para {{to}}",
     "you": "voce"
@@ -221,7 +221,7 @@
     "index": {
       "created_by": "Criado por {{account_name}}",
       "members": "{{quantity}} Membros",
-      "transfers": "{{quantity}} Transferencias"
+      "transfers": "{{quantity}} Transferências"
     },
     "invite": {
       "title": "Convide seus amigos e amigas",
@@ -308,11 +308,19 @@
         "success": "A atividade foi criada com sucesso",
         "error": "A atividade não pode ser criada. Tente depois"
       }
+    },
+    "claimAction": {
+      "title": "Reinvindicar",
+      "body": "Confirmar reinvindicação de ação?",
+      "yes": "Sim, reinvindicar",
+      "no": "Não, cancelar",
+      "success": "Reinvidicação concluída, aguarde as aprovações",
+      "failure": "Algo deu errado ao tentar realizar sua reinvidicação, tente novamente mais tarde"
     }
   },
   "profile": {
     "title": "Meu perfil",
-    "my_transfers": "Minhas transferencias",
+    "my_transfers": "Minhas transferências",
     "actions": {
       "edit": "Editar",
       "viewPrivatekey": "Ver chave privada"
@@ -399,7 +407,7 @@
     "next": "Próximo",
     "your_action": "Sua ação:",
     "add_comment": "Adicionar um comentário",
-    "claim": "Clamar",
+    "claim": "Reinvidicar",
     "wait_verification": "Espere pela verificação",
     "you_won": "Boa notícia! Você ganhou:",
     "you_rejected": "Você rejeitou a ação",

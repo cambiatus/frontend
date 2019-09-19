@@ -2,7 +2,7 @@
 -- https://github.com/dillonkearns/elm-graphql
 
 
-module Bespiral.Mutation exposing (RegisterPushRequiredArguments, UpdateChatLanguageRequiredArguments, UpdateProfileRequiredArguments, registerPush, updateChatLanguage, updateProfile)
+module Bespiral.Mutation exposing (..)
 
 import Bespiral.InputObject
 import Bespiral.Interface
@@ -23,7 +23,7 @@ type alias RegisterPushRequiredArguments =
     { input : Bespiral.InputObject.PushSubscriptionInput }
 
 
-{-| Register an push subscription on Cambiatus
+{-| Register an push subscription on BeSpiral
 -}
 registerPush : RegisterPushRequiredArguments -> SelectionSet decodesTo Bespiral.Object.PushSubscription -> SelectionSet decodesTo RootMutation
 registerPush requiredArgs object_ =

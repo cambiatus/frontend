@@ -2,7 +2,7 @@
 -- https://github.com/dillonkearns/elm-graphql
 
 
-module Bespiral.Object.Action exposing (claims, createdAt, createdBlock, createdEosAccount, createdTx, creator, creatorId, deadline, description, id, isCompleted, reward, usages, usagesLeft, validators, verificationType, verifications, verifierReward)
+module Bespiral.Object.Action exposing (..)
 
 import Bespiral.Enum.VerificationType
 import Bespiral.InputObject
@@ -55,9 +55,9 @@ creatorId =
     Object.selectionForField "String" "creatorId" [] Decode.string
 
 
-deadline : SelectionSet Bespiral.ScalarCodecs.DateTime Bespiral.Object.Action
+deadline : SelectionSet (Maybe Bespiral.ScalarCodecs.DateTime) Bespiral.Object.Action
 deadline =
-    Object.selectionForField "ScalarCodecs.DateTime" "deadline" [] (Bespiral.ScalarCodecs.codecs |> Bespiral.Scalar.unwrapCodecs |> .codecDateTime |> .decoder)
+    Object.selectionForField "(Maybe ScalarCodecs.DateTime)" "deadline" [] (Bespiral.ScalarCodecs.codecs |> Bespiral.Scalar.unwrapCodecs |> .codecDateTime |> .decoder |> Decode.nullable)
 
 
 description : SelectionSet String Bespiral.Object.Action

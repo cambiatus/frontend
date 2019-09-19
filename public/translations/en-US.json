@@ -19,7 +19,7 @@
     "more": "More",
     "logout": "Logout",
     "explore": "Explore",
-    "explore_communities": "Explore Communities",
+    "explore_communities": "Communities",
     "welcome_message": "Hello {{user_name}} ",
     "back_to_dashboard": "Back to Dashboard",
     "edit": "Edit",
@@ -304,6 +304,14 @@
        "success": "The activity was successfully created.",
        "error": "The activity cannot be created. Try later"
       }
+    },
+    "claimAction": {
+      "title": "Claim",
+      "body": "Do you really want to claim this action?",
+      "yes": "Yes, claim",
+      "no": "No, cancel",
+      "success": "Claim successful, please wait for approval",
+      "failure": "Something went wrong while trying to process your claim, please try again later"
     }
   },
   "profile": {

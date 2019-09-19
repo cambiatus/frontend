@@ -2,7 +2,7 @@
 -- https://github.com/dillonkearns/elm-graphql
 
 
-module Bespiral.Query exposing (ChatPreferencesRequiredArguments, CommunityRequiredArguments, ProfileRequiredArguments, SaleRequiredArguments, SalesRequiredArguments, chatPreferences, communities, community, profile, sale, saleHistory, sales)
+module Bespiral.Query exposing (..)
 
 import Bespiral.InputObject
 import Bespiral.Interface
@@ -30,7 +30,7 @@ chatPreferences requiredArgs object_ =
     Object.selectionForCompositeField "chatPreferences" [ Argument.required "input" requiredArgs.input Bespiral.InputObject.encodeChatInput ] object_ (identity >> Decode.nullable)
 
 
-{-| A list of communities in Cambiatus
+{-| A list of communities in BeSpiral
 -}
 communities : SelectionSet decodesTo Bespiral.Object.Community -> SelectionSet (List decodesTo) RootQuery
 communities object_ =
