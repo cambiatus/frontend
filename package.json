@@ -6,7 +6,8 @@
     "node": "11.15.0"
   },
   "scripts": {
-    "build": "yarn transform && npx elm-app build",
+    "build": "yarn transform && yarn bundle",
+    "bundle": "NODE_ENV=production yarn webpack --color --mode=production --config config/webpack.config.prod.js",
     "transform": "postcss src/styles/main.css -o src/styles/processed.css",
     "start": "yarn transform && standard && npx elm-app start",
     "make": "elm make",
