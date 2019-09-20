@@ -121,7 +121,7 @@ view { accountName, shared } { claimId, status } =
             case maybeVerification of
                 Just verification ->
                     div
-                        []
+                        [ class "" ]
                         [ viewModal shared.translations modalStatus verification
                         , div
                             [ class "m-4 mt-0 md:mt-10 pb-4 md:pb-10 bg-white rounded-lg font-sans" ]
@@ -150,17 +150,21 @@ viewModal translations modalStatus verification =
     case modalStatus of
         Opened vote ->
             let
-                primaryText =
+                ( message, primaryText ) =
                     if vote == Disapproved then
-                        "verify_claim.modal.primary_disapprove"
+                        ( "verify_claim.modal.message_disapprove"
+                        , "verify_claim.modal.primary_disapprove"
+                        )
 
                     else
-                        "verify_claim.modal.primary_approve"
+                        ( "verify_claim.modal.message_approve"
+                        , "verify_claim.modal.primary_approve"
+                        )
             in
             div
                 [ class "z-50 bottom-0 md:inset-center fixed md:absolute w-full md:w-1/3 md:h-auto" ]
                 [ div
-                    [ class "relative rounded-t-lg md:rounded-lg mx-4 md:mx-0 bg-white" ]
+                    [ class "relative rounded-t-lg md:rounded-lg bg-white" ]
                     [ div
                         [ class "px-4 pt-4 md:px-6 md:pt-6" ]
                         [ div
@@ -176,7 +180,7 @@ viewModal translations modalStatus verification =
                             ]
                         , p
                             [ class "text-body pt-4 md:pt-6" ]
-                            [ text (t "verify_claim.modal.message") ]
+                            [ text (t message) ]
                         ]
                     , div
                         [ class "flex flex-col md:flex-row md:justify-center md:rounded-b-lg px-4 pt-20 pb-4 md:mt-28 md:px-0 md:py-4 md:bg-gray-100" ]
@@ -304,7 +308,7 @@ viewStatus translations symbol verifierReward verificationStatus =
         ]
         [ info.icon "w-8 h-8 fill-current"
         , p
-            [ class "pt-8" ]
+            [ class "pt-8 font-medium" ]
             [ text info.status ]
         , case info.sub of
             Just subText ->
@@ -363,7 +367,7 @@ viewInfo translations verification =
                     [ class "pt-6" ]
                     [ p
                         [ class "text-caption uppercase text-green" ]
-                        [ text (t "claimer_reward") ]
+                        [ text (t "verify_claim.claimer_reward") ]
                     , p
                         [ class "pt-2 text-body text-black" ]
                         [ text (String.fromFloat verification.claimerReward ++ " " ++ verification.symbol) ]
@@ -384,7 +388,7 @@ viewInfo translations verification =
                     [ class "pt-6" ]
                     [ p
                         [ class "text-caption uppercase text-green" ]
-                        [ text (t "you_reward") ]
+                        [ text (t "verify_claim.your_reward") ]
                     , p
                         [ class "pt-2 text-body text-black" ]
                         [ text (String.fromFloat verification.verifierReward ++ " " ++ verification.symbol) ]
@@ -424,7 +428,7 @@ viewInfo translations verification =
                 []
                 [ p
                     [ class "text-caption uppercase text-green" ]
-                    [ text (t "verify_claim.you_reward") ]
+                    [ text (t "verify_claim.your_reward") ]
                 , p
                     [ class "pt-2 text-body text-black" ]
                     [ text (String.fromFloat verification.verifierReward ++ " " ++ verification.symbol) ]
@@ -444,12 +448,12 @@ viewAction translations verification =
         div
             [ class "flex flex-col md:flex-row justify-center mt-16 md:mt-24 px-4 md:px-0" ]
             [ button
-                [ class "button button-secondary button-medium w-full md:w-1/4"
+                [ class "button button-secondary uppercase button-medium w-full md:w-1/4"
                 , onClick (ClickedDisapprove verification)
                 ]
                 [ text (t "verify_claim.disapprove") ]
             , button
-                [ class "button button-primary button-medium w-full md:w-1/4 mt-4 md:mt-0 md:ml-6"
+                [ class "button button-primary button-medium uppercase w-full md:w-1/4 mt-4 md:mt-0 md:ml-6"
                 , onClick (ClickedApproved verification)
                 ]
                 [ text (t "verify_claim.approve") ]
