@@ -37,8 +37,18 @@ init { accountName, shared } claimId =
             { symbol = "PUL"
             , logo = ""
             , name = "Pulpes"
-            , objectiveDescription = "objective description"
-            , actionDescription = "action description"
+            , objectiveDescription =
+                """
+                Mussum Ipsum, cacilds vidis litro abertis.
+                Não sou faixa preta cumpadi, sou preto inteiris, inteiris.
+                Diuretics paradis num copo é motivis de denguis.
+                """
+            , actionDescription =
+                """
+                Cevadis im ampola pa arma uma pindureta.
+                Delegadis gente finis, bibendum egestas augue arcu ut est.
+                Si num tem leite então bota uma pinga aí cumpadi!
+                """
             , claimerReward = 10
             , verifierReward = 100
             , claimer = "alisson"
@@ -124,10 +134,10 @@ view { accountName, shared } { claimId, status } =
             case maybeVerification of
                 Just verification ->
                     div
-                        [ class "" ]
+                        [ class "font-sans" ]
                         [ viewModal shared.translations modalStatus verification
                         , div
-                            [ class "mx-4 md:mx-auto mt-0 md:mt-10 pb-4 md:pb-10 bg-white max-w-4xl rounded-lg font-sans" ]
+                            [ class "mx-4 md:mx-auto mt-0 md:mt-10 pb-4 md:pb-10 bg-white max-w-4xl rounded-lg" ]
                             [ viewHeader shared.endpoints.ipfs verification.logo verification.name
                             , viewStatus shared.translations verification.symbol verification.verifierReward verification.status
                             , viewInfo shared.translations verification
