@@ -101,6 +101,9 @@ module.exports = {
         'title-h1': '3rem',
         'hero': '3.375rem'
       },
+      margin: {
+        '28': '7rem'
+      },
       screens: {
         xs: '450px'
       },
@@ -138,7 +141,7 @@ module.exports = {
     // Not including them may break the current behaviour, because 'variants' key overwrites the current tailwind behaviour
     // See an example below of how add a varian to 'last':
     // backgroundColor: ['hover', 'focus', 'last']
-    borderRadius: ['first-hover', 'last-hover'],
+    borderRadius: ['responsive', 'first-hover', 'last-hover'],
     borderWidth: ['last']
   },
   plugins: [
@@ -161,6 +164,18 @@ module.exports = {
           return `.${e(`last-hover${separator}${className}`)}:last-child:hover`
         })
       })
+    },
+    // Utility class to support translation
+    function ({ addUtilities }) {
+      const newUtilities = {
+        '.inset-center': {
+          top: '50%',
+          left: '50%',
+          transform: 'translate(-50%, -50%)'
+        }
+      }
+
+      addUtilities(newUtilities, ['responsive'])
     }
   ]
 }
