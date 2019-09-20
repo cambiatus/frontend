@@ -321,9 +321,9 @@ viewInfo translations verification =
             I18Next.t translations
     in
     div
-        [ class "px-4 pt-4" ]
+        [ class "px-6 pt-6" ]
         [ p
-            [ class "pt-6 text-caption uppercase text-green" ]
+            [ class "text-caption uppercase text-green" ]
             [ text (t "verify_claim.objective") ]
         , p
             [ class "pt-2 text-body text-black" ]
@@ -335,11 +335,11 @@ viewInfo translations verification =
             [ class "pt-2 text-body text-black" ]
             [ text verification.actionDescription ]
         , div
-            [ class "md:hidden flex flex-col pt-6" ]
+            [ class "md:hidden flex justify-between pt-6" ]
             [ div
-                [ class "flex flex-wrap justify-start" ]
+                [ class "inline-flex flex-col justify-start" ]
                 [ div
-                    [ class "w-1/3" ]
+                    [ class "" ]
                     [ p
                         [ class "text-caption uppercase text-green" ]
                         [ text (t "verify_claim.claimer") ]
@@ -348,22 +348,7 @@ viewInfo translations verification =
                         [ text verification.claimer ]
                     ]
                 , div
-                    [ class "w-1/3" ]
-                    []
-                , div
-                    [ class "w-1/3" ]
-                    [ p
-                        [ class "text-caption uppercase text-green" ]
-                        [ text (t "verify_claim.date") ]
-                    , p
-                        [ class "pt-2 text-body text-black" ]
-                        [ text "any date" ]
-                    ]
-                ]
-            , div
-                [ class "flex flex-wrap justify-start pt-6" ]
-                [ div
-                    [ class "w-1/3" ]
+                    [ class "pt-6" ]
                     [ p
                         [ class "text-caption uppercase text-green" ]
                         [ text (t "claimer_reward") ]
@@ -371,11 +356,20 @@ viewInfo translations verification =
                         [ class "pt-2 text-body text-black" ]
                         [ text (String.fromFloat verification.claimerReward ++ " " ++ verification.symbol) ]
                     ]
+                ]
+            , div
+                [ class "inline-flex flex-col justify-start" ]
+                [ div
+                    [ class "" ]
+                    [ p
+                        [ class "text-caption uppercase text-green" ]
+                        [ text (t "verify_claim.date") ]
+                    , p
+                        [ class "pt-2 text-body text-black" ]
+                        [ text "any date" ]
+                    ]
                 , div
-                    [ class "w-1/3" ]
-                    []
-                , div
-                    [ class "w-1/3" ]
+                    [ class "pt-6" ]
                     [ p
                         [ class "text-caption uppercase text-green" ]
                         [ text (t "you_reward") ]
