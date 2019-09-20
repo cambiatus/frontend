@@ -1,6 +1,8 @@
 module Page.Community.VerifyClaim exposing (..)
 
 import Asset.Icon
+import Bespiral.Scalar exposing (DateTime(..))
+import DateFormat
 import Eos
 import Eos.Account as Eos
 import Graphql.Http
@@ -13,8 +15,9 @@ import Page
 import Route
 import Session.LoggedIn as LoggedIn exposing (External)
 import Session.Shared exposing (Shared)
-import Time exposing (Posix)
+import Time
 import UpdateResult as UR
+import Utils
 import View.Icon as Icon
 
 
@@ -39,7 +42,7 @@ init { accountName, shared } claimId =
             , claimerReward = 10
             , verifierReward = 100
             , claimer = "alisson"
-            , createdAt = Time.millisToPosix 1568810656
+            , createdAt = DateTime "2019-09-20T16:00:00Z"
             , status = PENDING
             }
     in
@@ -89,7 +92,7 @@ type alias Verification =
     , claimerReward : Float
     , verifierReward : Float
     , claimer : String
-    , createdAt : Posix
+    , createdAt : DateTime
     , status : VerificationStatus
     }
 
@@ -335,6 +338,13 @@ viewInfo translations verification =
         t : String -> String
         t =
             I18Next.t translations
+
+        date : String
+        date =
+            verification.createdAt
+                |> Just
+                |> Utils.posixDateTime
+                |> dateFormatter zoneFormatter
     in
     div
         [ class "px-6 pt-6" ]
@@ -382,7 +392,7 @@ viewInfo translations verification =
                         [ text (t "verify_claim.date") ]
                     , p
                         [ class "pt-2 text-body text-black" ]
-                        [ text "any date" ]
+                        [ text date ]
                     ]
                 , div
                     [ class "pt-6" ]
@@ -413,7 +423,7 @@ viewInfo translations verification =
                     [ text (t "verify_claim.date") ]
                 , p
                     [ class "pt-2 text-body text-black" ]
-                    [ text "any date" ]
+                    [ text date ]
                 ]
             , div
                 []
@@ -574,6 +584,26 @@ encodeVerification claimId validator vote =
         , ( "verifier", encodedVerifier )
         , ( "vote", encodedVote )
         ]
+
+
+
+-- HELPERS
+
+
+dateFormatter : Time.Zone -> Time.Posix -> String
+dateFormatter =
+    DateFormat.format
+        [ DateFormat.dayOfMonthNumber
+        , DateFormat.text " "
+        , DateFormat.monthNameAbbreviated
+        , DateFormat.text " "
+        , DateFormat.yearNumber
+        ]
+
+
+zoneFormatter : Time.Zone
+zoneFormatter =
+    Time.utc
 
 
 msgToString : Msg -> List String
