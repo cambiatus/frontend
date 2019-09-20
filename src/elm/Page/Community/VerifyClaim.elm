@@ -322,7 +322,7 @@ viewStatus translations symbol verifierReward verificationStatus =
         ]
         [ info.icon "w-8 h-8 fill-current"
         , p
-            [ class "pt-8 font-medium" ]
+            [ class "pt-6 font-medium" ]
             [ text info.status ]
         , case info.sub of
             Just subText ->
