@@ -656,10 +656,10 @@ changeRouteTo maybeRoute model =
                 >> updateStatusWith ActionEditor GotActionEditorMsg model
                 |> withLoggedIn (Route.NewAction symbol objectiveId)
 
-        Just (Route.VerifyClaim objectiveId actionId claimId) ->
+        Just (Route.VerifyClaim communityId objectiveId actionId claimId) ->
             (\l -> VerifyClaim.init l claimId)
                 >> updateStatusWith VerifyClaim GotVerifyClaimMsg model
-                |> withLoggedIn (Route.VerifyClaim objectiveId actionId claimId)
+                |> withLoggedIn (Route.VerifyClaim communityId objectiveId actionId claimId)
 
         Just Route.Communities ->
             CommunityExplore.init

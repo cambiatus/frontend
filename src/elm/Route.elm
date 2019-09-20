@@ -25,7 +25,7 @@ type Route
     | NewCommunity
     | EditCommunity Symbol
     | NewAction Symbol String
-    | VerifyClaim String String String
+    | VerifyClaim String String String String
     | Shop (Maybe Shop.Filter)
     | NewSale
     | EditSale String
@@ -70,7 +70,7 @@ parser url =
         , Url.map NewCommunity (s "community" </> s "new")
         , Url.map EditCommunity (s "community" </> s "edit" </> Eos.symbolUrlParser)
         , Url.map NewAction (s "new" </> s "action" </> Eos.symbolUrlParser </> string)
-        , Url.map VerifyClaim (s "objective" </> string </> s "action" </> string </> s "claim" </> string </> s "verification")
+        , Url.map VerifyClaim (s "community" </> string </> s "objective" </> string </> s "action" </> string </> s "claim" </> string </> s "verification")
         , Url.map Communities (s "communities")
         , Url.map Shop
             (s "shop"
@@ -239,8 +239,8 @@ routeToString route =
                 NewAction symbol objectiveId ->
                     ( [ "new", "action", Eos.symbolToString symbol, objectiveId ], [] )
 
-                VerifyClaim objectiveId actionId claimId ->
-                    ( [ "objective", objectiveId, "action", actionId, "claim", claimId, "verification" ]
+                VerifyClaim communityId objectiveId actionId claimId ->
+                    ( [ "community", communityId, "objective", objectiveId, "action", actionId, "claim", claimId, "verification" ]
                     , []
                     )
 

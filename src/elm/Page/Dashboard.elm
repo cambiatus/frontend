@@ -177,7 +177,7 @@ viewActivity url activity =
     in
     a
         [ class "border-b last:border-b-0 border-gainsboro flex items-start lg:items-center hover:bg-white-smoke first-hover:rounded-t-lg last-hover:rounded-b-lg p-4"
-        , Route.href (Route.VerifyClaim "" "" "")
+        , Route.href (Route.VerifyClaim "" "" "" "")
         ]
         [ div
             [ class "flex-none" ]
