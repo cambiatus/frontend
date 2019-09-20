@@ -419,5 +419,29 @@
       "title": "Actividades para su analisis",
       "no_activities_yet": "Aún no hay actividades."
     }
+  },
+  "verify_claim": {
+    "pending": "Pendiente",
+    "disapproved": "Rechazado",
+    "approved": "Aprobado",
+    "reward": "Ganaste: {{value}}",
+    "sub_wait_1": "Debe esperar, este reclamo está siendo revisado por otros usuarios.",
+    "sub_wait_2": "Cuando termine, recibirá su recompensa.",
+    "objective": "Objetivo",
+    "action": "Acción",
+    "claimer": "Reclamado por",
+    "date": "Fecha",
+    "claimer_reward": "Recompensa del usuario",
+    "your_reward": "Su recompensa",
+    "disapprove": "Desaprobar",
+    "approve": "Aprobar",
+    "modal": {
+      "title": "Reclamación",
+      "message_disapprove": "Realmente quiere desaprobar este reclamo?",
+      "message_approve": "Realmente desea aprobar este reclamo?",
+      "primary_disapprove": "sí, desaprobar",
+      "primary_approve": "sí, aprobar",
+      "secondary": "no, cancelar"
+    }
   }
 }

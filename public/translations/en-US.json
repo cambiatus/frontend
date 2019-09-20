@@ -419,5 +419,29 @@
       "title": "Activities for your analysis",
       "no_activities_yet": "No activities yet."
     }
+  },
+  "verify_claim": {
+    "pending": "Pending",
+    "disapproved": "Disapproved",
+    "approved": "Approved",
+    "reward": "You won: {{value}}",
+    "sub_wait_1": "You must wait, this claim is under review by other users.",
+    "sub_wait_2": "When finished, you will receive your reward.",
+    "objective": "Objective",
+    "action": "Action",
+    "claimer": "Claimed by",
+    "date": "Date",
+    "claimer_reward": "User reward",
+    "your_reward": "Your reward",
+    "disapprove": "Disapprove",
+    "approve": "Approve",
+    "modal": {
+      "title": "Claim",
+      "message_disapprove": "Do you really want to disapprove this claim?",
+      "message_approve": "Do you really want to approve this claim?",
+      "primary_disapprove": "yes, disapprove",
+      "primary_approve": "yes, approve",
+      "secondary": "no, cancel"
+    }
   }
 }
