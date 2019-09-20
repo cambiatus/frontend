@@ -742,6 +742,10 @@ jsAddressToMsg address val =
             Maybe.map GotActionEditorMsg
                 (ActionEditor.jsAddressToMsg rAddress val)
 
+        "GotVerifyClaimMsg" :: rAddress ->
+            Maybe.map GotVerifyClaimMsg
+                (VerifyClaim.jsAddressToMsg rAddress val)
+
         _ ->
             Nothing
 

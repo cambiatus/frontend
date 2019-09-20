@@ -10,6 +10,7 @@ import Html exposing (Html, button, div, p, text)
 import Html.Attributes exposing (class)
 import Html.Events exposing (onClick)
 import I18Next exposing (Delims, Replacements, Translations)
+import Json.Decode as Decode
 import Json.Encode as Encode
 import Page
 import Route
@@ -530,6 +531,7 @@ update msg model { accountName, shared } =
         ClickedConfirm verification vote ->
             { model | status = LoadVerification Closed (Just verification) }
                 |> UR.init
+                |> UR.addExt (LoggedIn.TurnLights False)
                 |> UR.addPort
                     { responseAddress = msg
                     , responseData = Encode.null
@@ -614,6 +616,25 @@ dateFormatter =
 zoneFormatter : Time.Zone
 zoneFormatter =
     Time.utc
+
+
+jsAddressToMsg : List String -> Encode.Value -> Maybe Msg
+jsAddressToMsg addr val =
+    case addr of
+        "ClickedConfirm" :: [] ->
+            Decode.decodeValue
+                (Decode.oneOf
+                    [ Decode.field "transactionId" Decode.string
+                        |> Decode.map Ok
+                    , Decode.succeed (Err Encode.null)
+                    ]
+                )
+                val
+                |> Result.map (Just << GotVerificationResponse)
+                |> Result.withDefault Nothing
+
+        _ ->
+            Nothing
 
 
 msgToString : Msg -> List String
