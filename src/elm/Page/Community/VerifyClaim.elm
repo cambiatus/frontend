@@ -148,7 +148,15 @@ viewModal translations modalStatus verification =
             I18Next.t translations
     in
     case modalStatus of
-        Opened check ->
+        Opened vote ->
+            let
+                primaryText =
+                    if vote == Disapproved then
+                        "verify_claim.modal.primary_disapprove"
+
+                    else
+                        "verify_claim.modal.primary_approve"
+            in
             div
                 [ class "z-50 bottom-0 md:inset-center fixed md:absolute rounded-t-lg md:rounded-lg w-full md:w-1/3 md:h-auto bg-white" ]
                 [ div
@@ -157,7 +165,7 @@ viewModal translations modalStatus verification =
                         [ class "flex justify-between items-center" ]
                         [ p
                             [ class "text-heading font-bold" ]
-                            [ text "verify_claim.modal_title" ]
+                            [ text (t "verify_claim.modal.title") ]
                         , button
                             [ class "w-8 h-8"
                             , onClick (ClickedClose verification)
@@ -166,20 +174,21 @@ viewModal translations modalStatus verification =
                         ]
                     , p
                         [ class "text-body pt-4 md:pt-6" ]
-                        [ text "verify_claim.modal_message" ]
+                        [ text (t "verify_claim.modal.message") ]
                     ]
                 , div
                     [ class "flex flex-col md:flex-row md:justify-center md:rounded-b-lg px-4 pt-20 pb-4 md:mt-28 md:px-0 md:py-4 md:bg-gray-100" ]
                     [ button
-                        [ class "button button-secondary button-medium w-full md:w-1/3"
+                        [ class "button button-secondary uppercase button-medium w-full md:w-1/3"
                         , onClick (ClickedClose verification)
                         ]
-                        [ text (t "verify_claim.modal_secondary") ]
+                        [ text (t "verify_claim.modal.secondary") ]
                     , button
-                        [ class "button button-primary button-medium w-full md:w-1/3 mt-4 md:mt-0 md:ml-6"
-                        , onClick (ClickedConfirm verification check)
+                        [ class "button button-primary uppercase button-medium w-full md:w-1/3 mt-4 md:mt-0 md:ml-6"
+                        , onClick (ClickedConfirm verification vote)
                         ]
-                        [ text (t "verify_claim.modal_primary") ]
+                        [ text (t primaryText)
+                        ]
                     ]
                 ]
 
