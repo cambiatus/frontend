@@ -124,7 +124,7 @@ view { accountName, shared } { claimId, status } =
                         [ class "" ]
                         [ viewModal shared.translations modalStatus verification
                         , div
-                            [ class "m-4 mt-0 md:mt-10 pb-4 md:pb-10 bg-white rounded-lg font-sans" ]
+                            [ class "mx-4 md:mx-auto mt-0 md:mt-10 pb-4 md:pb-10 bg-white max-w-4xl rounded-lg font-sans" ]
                             [ viewHeader shared.endpoints.ipfs verification.logo verification.name
                             , viewStatus shared.translations verification.symbol verification.verifierReward verification.status
                             , viewInfo shared.translations verification
