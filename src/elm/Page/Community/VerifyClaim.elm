@@ -1,6 +1,5 @@
 module Page.Community.VerifyClaim exposing (..)
 
-import Asset.Icon
 import Bespiral.Scalar exposing (DateTime(..))
 import DateFormat
 import Eos
@@ -10,6 +9,7 @@ import Html exposing (Html, button, div, p, text)
 import Html.Attributes exposing (class)
 import Html.Events exposing (onClick)
 import I18Next exposing (Delims, Replacements, Translations)
+import Icons
 import Json.Decode as Decode
 import Json.Encode as Encode
 import Page
@@ -148,7 +148,9 @@ view { accountName, shared } { claimId, status } =
 
                 Nothing ->
                     -- TODO: add screen case verification does not exist
-                    Debug.todo ""
+                    div
+                        []
+                        []
 
         LoadVerificationFailed err ->
             Page.fullPageGraphQLError (t "verification.title") err
@@ -176,38 +178,41 @@ viewModal translations modalStatus verification =
                         )
             in
             div
-                [ class "z-50 bottom-0 md:bottom-auto md:inset-center fixed w-full md:w-1/2 md:h-auto md:max-w-xl" ]
+                [ class "z-50 flex justify-center left-0 fixed w-full" ]
                 [ div
-                    [ class "relative rounded-t-lg md:rounded-lg bg-white" ]
+                    [ class "bottom-0 md:bottom-auto fixed w-full md:w-3/5 md:max-w-xl md:mt-8" ]
                     [ div
-                        [ class "px-4 pt-4 md:px-6 md:pt-6" ]
+                        [ class "relative rounded-t-lg md:rounded-lg bg-white" ]
                         [ div
-                            [ class "flex justify-between items-center" ]
-                            [ p
-                                [ class "text-heading font-bold" ]
-                                [ text (t "verify_claim.modal.title") ]
-                            , button
-                                [ class "w-8 h-8"
+                            [ class "px-4 pt-4 md:px-6 md:pt-6" ]
+                            [ div
+                                [ class "flex justify-between items-center" ]
+                                [ p
+                                    [ class "text-heading font-bold" ]
+                                    [ text (t "verify_claim.modal.title") ]
+                                , button
+                                    [ class "w-8 h-8"
+                                    , onClick (ClickedClose verification)
+                                    ]
+                                    [ Icons.close "text-gray-900 fill-current" ]
+                                ]
+                            , p
+                                [ class "text-body pt-4 md:pt-6" ]
+                                [ text (t message) ]
+                            ]
+                        , div
+                            [ class "flex flex-col md:flex-row md:justify-center md:rounded-b-lg px-4 pt-20 pb-4 md:mt-24 md:px-0 md:py-4 md:bg-gray-100" ]
+                            [ button
+                                [ class "button button-secondary uppercase button-medium w-full md:w-1/3"
                                 , onClick (ClickedClose verification)
                                 ]
-                                [ Asset.Icon.close "text-gray-900 fill-current" ]
-                            ]
-                        , p
-                            [ class "text-body pt-4 md:pt-6" ]
-                            [ text (t message) ]
-                        ]
-                    , div
-                        [ class "flex flex-col md:flex-row md:justify-center md:rounded-b-lg px-4 pt-20 pb-4 md:mt-28 md:px-0 md:py-4 md:bg-gray-100" ]
-                        [ button
-                            [ class "button button-secondary uppercase button-medium w-full md:w-1/3"
-                            , onClick (ClickedClose verification)
-                            ]
-                            [ text (t "verify_claim.modal.secondary") ]
-                        , button
-                            [ class "button button-primary uppercase button-medium w-full md:w-1/3 mt-4 md:mt-0 md:ml-6"
-                            , onClick (ClickedConfirm verification vote)
-                            ]
-                            [ text (t primaryText)
+                                [ text (t "verify_claim.modal.secondary") ]
+                            , button
+                                [ class "button button-primary uppercase button-medium w-full md:w-1/3 mt-4 md:mt-0 md:ml-6"
+                                , onClick (ClickedConfirm verification vote)
+                                ]
+                                [ text (t primaryText)
+                                ]
                             ]
                         ]
                     ]
@@ -261,7 +266,7 @@ viewStatus translations symbol verifierReward verificationStatus =
                 PENDING ->
                     { bgColor = " bg-gray-100"
                     , textColor = " text-black"
-                    , icon = Asset.Icon.alert
+                    , icon = Icons.alert
                     , status = t "verify_claim.pending"
                     , sub = Nothing
                     , aux = Nothing
@@ -270,7 +275,7 @@ viewStatus translations symbol verifierReward verificationStatus =
                 DISAPPROVED_AND_UNDER_REVIEW ->
                     { bgColor = " bg-red"
                     , textColor = " text-white"
-                    , icon = Asset.Icon.fail
+                    , icon = Icons.close
                     , status = t "verify_claim.disapproved"
                     , sub = Just (t "verify_claim.sub_wait_1")
                     , aux = Just (t "verify_claim.sub_wait_2")
@@ -279,7 +284,7 @@ viewStatus translations symbol verifierReward verificationStatus =
                 APPROVED_AND_UNDER_REVIEW ->
                     { bgColor = " bg-green"
                     , textColor = " text-white"
-                    , icon = Asset.Icon.success
+                    , icon = Icons.success
                     , status = t "verify_claim.approved"
                     , sub = Just (t "verify_claim.sub_wait_1")
                     , aux = Just (t "verify_claim.sub_wait_2")
@@ -288,7 +293,7 @@ viewStatus translations symbol verifierReward verificationStatus =
                 DISAPPROVED ->
                     { bgColor = " bg-red"
                     , textColor = " text-white"
-                    , icon = Asset.Icon.fail
+                    , icon = Icons.close
                     , status = t "verify_claim.disapproved"
                     , sub =
                         Just
@@ -304,7 +309,7 @@ viewStatus translations symbol verifierReward verificationStatus =
                 APPROVED ->
                     { bgColor = " bg-green"
                     , textColor = " text-white"
-                    , icon = Asset.Icon.success
+                    , icon = Icons.success
                     , status = t "verify_claim.approved"
                     , sub =
                         Just
@@ -502,7 +507,7 @@ type Msg
 
 
 update : Msg -> Model -> LoggedIn.Model -> UpdateResult
-update msg model { accountName, shared } =
+update msg model ({ accountName, shared } as loggedIn) =
     case msg of
         CompletedVerificationLoad (Ok maybeVerification) ->
             { model | status = LoadVerification Closed maybeVerification }
@@ -529,26 +534,33 @@ update msg model { accountName, shared } =
                 |> UR.addExt (LoggedIn.TurnLights False)
 
         ClickedConfirm verification vote ->
-            { model | status = LoadVerification Closed (Just verification) }
-                |> UR.init
-                |> UR.addExt (LoggedIn.TurnLights False)
-                |> UR.addPort
-                    { responseAddress = msg
-                    , responseData = Encode.null
-                    , data =
-                        Eos.encodeTransaction
-                            { actions =
-                                [ { accountName = "bes.cmm"
-                                  , name = "verifyclaim"
-                                  , authorization =
-                                        { actor = accountName
-                                        , permissionName = Eos.samplePermission
-                                        }
-                                  , data = encodeVerification model.claimId accountName vote
-                                  }
-                                ]
+            case LoggedIn.isAuth loggedIn of
+                True ->
+                    { model | status = LoadVerification Closed (Just verification) }
+                        |> UR.init
+                        |> UR.addExt (LoggedIn.TurnLights False)
+                        |> UR.addPort
+                            { responseAddress = msg
+                            , responseData = Encode.null
+                            , data =
+                                Eos.encodeTransaction
+                                    { actions =
+                                        [ { accountName = "bes.cmm"
+                                          , name = "verifyclaim"
+                                          , authorization =
+                                                { actor = accountName
+                                                , permissionName = Eos.samplePermission
+                                                }
+                                          , data = encodeVerification model.claimId accountName vote
+                                          }
+                                        ]
+                                    }
                             }
-                    }
+
+                False ->
+                    model
+                        |> UR.init
+                        |> UR.addExt (Just (ClickedConfirm verification vote) |> LoggedIn.RequiredAuthentication)
 
         GotVerificationResponse (Ok _) ->
             model
