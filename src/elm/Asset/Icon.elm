@@ -1,8 +1,8 @@
-module Asset.Icon exposing (account, accountCircle, addPhoto, alert, arrow, back, bell, brightness7, chartBubble, chat, clock, close, currency, dashboard, dead, dislike, edit, fail, file, flag, grain, help, helpCircle, imageMultiple, invite, key, language, library, like, location, logout, magnify, menu, refresh, sad, star, starOutline, store, success, swapHorizontal, upload, viewGrid, viewList, whatsapp)
+module Asset.Icon exposing (account, accountCircle, addPhoto, arrow, back, bell, brightness7, chartBubble, chat, clock, close, currency, dashboard, dead, dislike, edit, file, flag, grain, help, helpCircle, imageMultiple, invite, key, language, library, like, location, logout, magnify, menu, refresh, sad, star, starOutline, store, swapHorizontal, upload, viewGrid, viewList, whatsapp)
 
 import Html exposing (Html)
 import Svg exposing (path, svg)
-import Svg.Attributes exposing (class, clipRule, d, fillRule, viewBox)
+import Svg.Attributes exposing (d, viewBox)
 
 
 key : String -> Html msg
@@ -193,63 +193,6 @@ viewGrid =
 close : String -> Html msg
 close =
     base24 "M19,6.41L17.59,5L12,10.59L6.41,5L5,6.41L10.59,12L5,17.59L6.41,19L12,13.41L17.59,19L19,17.59L13.41,12L19,6.41Z"
-
-
-fail : String -> Html msg
-fail classes =
-    svg
-        [ viewBox "0 0 32 32"
-        , class classes
-        ]
-        [ path
-            [ fillRule "evenodd"
-            , clipRule "evenodd"
-            , d "M18.1732 16.0323L29.6439 4.33552C30.1374 3.79716 30.1154 2.96452 29.5941 2.45299C29.0728 1.94147 28.24 1.93516 27.711 2.43874L16.2584 14.1174L4.33608 2.42068C3.99476 2.06215 3.48507 1.91832 3.00668 2.04554C2.52829 2.17275 2.15736 2.55075 2.0392 3.03147C1.92104 3.51218 2.07445 4.01907 2.43935 4.35358L14.3436 16.0323L2.43935 27.711C1.93578 28.2399 1.94208 29.0728 2.4536 29.5941C2.96511 30.1154 3.79774 30.1374 4.33608 29.6439L16.2584 17.9471L27.711 29.6258C28.24 30.1294 29.0728 30.1231 29.5941 29.6116C30.1154 29.1 30.1374 28.2674 29.6439 27.729L18.1732 16.0323Z"
-            ]
-            []
-        ]
-
-
-alert : String -> Html msg
-alert classes =
-    svg
-        [ viewBox "0 0 32 32"
-        , class classes
-        ]
-        [ path
-            [ fillRule "evenodd"
-            , clipRule "evenodd"
-            , d "M16 2C8.26801 2 2 8.26801 2 16C2 23.732 8.26801 30 16 30C23.732 30 30 23.732 30 16C30 8.26801 23.732 2 16 2ZM16 28C9.37258 28 4 22.6274 4 16C4 9.37258 9.37258 4 16 4C22.6274 4 28 9.37258 28 16C28 22.6274 22.6274 28 16 28Z"
-            ]
-            []
-        , path
-            [ fillRule "evenodd"
-            , clipRule "evenodd"
-            , d "M16.3333 7.66666C15.781 7.66666 15.3333 8.11438 15.3333 8.66666V18C15.3333 18.5523 15.781 19 16.3333 19C16.8856 19 17.3333 18.5523 17.3333 18V8.66666C17.3333 8.11438 16.8856 7.66666 16.3333 7.66666Z"
-            ]
-            []
-        , path
-            [ fillRule "evenodd"
-            , clipRule "evenodd"
-            , d "M16.3333 22.6667C16.8856 22.6667 17.3333 22.219 17.3333 21.6667C17.3333 21.1144 16.8856 20.6667 16.3333 20.6667C15.781 20.6667 15.3333 21.1144 15.3333 21.6667C15.3333 22.219 15.781 22.6667 16.3333 22.6667Z"
-            ]
-            []
-        ]
-
-
-success : String -> Html msg
-success classes =
-    svg
-        [ viewBox "0 0 32 32"
-        , class classes
-        ]
-        [ path
-            [ fillRule "evenodd"
-            , clipRule "evenodd"
-            , d "M13.3238 25C12.7916 24.9995 12.2815 24.7955 11.9054 24.4328L2.5387 15.4087C1.80178 14.6467 1.82353 13.4594 2.58788 12.723C3.35224 11.9866 4.58463 11.9657 5.37547 12.6756L13.3238 20.3332L26.6245 7.519C27.4154 6.80903 28.6478 6.82998 29.4121 7.56638C30.1765 8.30278 30.1982 9.4901 29.4613 10.252L14.7422 24.4328C14.3661 24.7955 13.8559 24.9995 13.3238 25Z"
-            ]
-            []
-        ]
 
 
 swapHorizontal : String -> Html msg
