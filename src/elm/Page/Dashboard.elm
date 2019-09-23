@@ -174,10 +174,18 @@ viewActivity url activity =
 
         status =
             activity.status
+
+        route =
+            case Eos.symbolFromString "" of
+                Just symbol ->
+                    Route.VerifyClaim symbol "" "" ""
+
+                Nothing ->
+                    Route.ComingSoon
     in
     a
         [ class "border-b last:border-b-0 border-gainsboro flex items-start lg:items-center hover:bg-white-smoke first-hover:rounded-t-lg last-hover:rounded-b-lg p-4"
-        , Route.href (Route.VerifyClaim "" "" "" "")
+        , Route.href route
         ]
         [ div
             [ class "flex-none" ]
