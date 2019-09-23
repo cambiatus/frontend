@@ -176,7 +176,7 @@ viewModal translations modalStatus verification =
                         )
             in
             div
-                [ class "z-50 bottom-0 md:inset-center fixed md:absolute w-full md:w-1/3 md:h-auto" ]
+                [ class "z-50 bottom-0 md:bottom-auto md:inset-center fixed w-full md:w-1/2 md:h-auto md:max-w-xl" ]
                 [ div
                     [ class "relative rounded-t-lg md:rounded-lg bg-white" ]
                     [ div
