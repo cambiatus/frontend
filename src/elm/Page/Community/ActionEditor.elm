@@ -781,7 +781,7 @@ viewSelectedVerifiers shared model =
                                     [ onClick (OnRemoveVerifier p)
                                     , class "absolute top-0 right-0 z-10 bg-red rounded-full h-6 w-6 flex items-center"
                                     ]
-                                    [ span [ class "text-white text-body font-sans p-2" ]
+                                    [ span [ class "text-white text-body font-normal font-sans p-2" ]
                                         [ text "x" ]
                                     ]
                                 ]
