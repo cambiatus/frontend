@@ -12,6 +12,7 @@ import Html exposing (..)
 import Html.Attributes exposing (..)
 import Html.Events exposing (on, onCheck, onClick, onInput, targetValue)
 import I18Next exposing (t)
+import Icons 
 import Json.Decode as Json exposing (Value)
 import Json.Encode as Encode
 import MaskedInput.Text as MaskedDate
@@ -781,9 +782,7 @@ viewSelectedVerifiers shared model =
                                     [ onClick (OnRemoveVerifier p)
                                     , class "absolute top-0 right-0 z-10 rounded-full h-6 w-6 flex items-center"
                                     ]
-                                    [ img [ src "/icons/remove.svg" ]
-                                        []
-                                    ]
+                                    [ Icons.remove ""]
                                 ]
                             , span [ class "mt-2 text-black font-sans text-body leading-normal" ]
                                 [ text (Eos.nameToString p.accountName) ]
