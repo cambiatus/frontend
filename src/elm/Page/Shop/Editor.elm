@@ -252,8 +252,7 @@ viewForm shared balances imageStatus isEdit isDisabled form =
                 ( t "menu.create", t "shop.create_offer" )
     in
     div
-        [ class "main-content__container"
-        ]
+        []
         [ Page.viewTitle (t "shop.title")
         , div
             [ class "card card--form shop-editor" ]

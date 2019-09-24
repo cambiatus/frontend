@@ -97,7 +97,6 @@ type alias Model =
     , lights : Bool
     , notification : Notification.Model
     , showAuthModal : Bool
-    , collapseMainNav : Bool
     , auth : Auth.Model
     , balances : List Balance
     }
@@ -117,7 +116,6 @@ initModel shared authModel accountName =
     , showMainNav = False
     , notification = Notification.init
     , showAuthModal = False
-    , collapseMainNav = False
     , auth = authModel
     , balances = []
     }
@@ -209,11 +207,7 @@ viewHelper thisMsg page profile_ ({ shared } as model) content =
                 style "" ""
     in
     div
-        [ classList
-            [ ( "main-grid", True )
-            , ( "main-grid--collapsed", model.collapseMainNav )
-            ]
-        ]
+        []
         [ header [ class "main-header" ]
             [ a
                 [ class "main-header__logo"
@@ -276,23 +270,11 @@ viewHelper thisMsg page profile_ ({ shared } as model) content =
             |> Html.map thisMsg
         , viewMainMenu page profile_ model
             |> Html.map thisMsg
-        , main_
-            [ id "main-content"
-            , class "main-content"
-            , tabindex -1
-            ]
-            [ content
-            , viewFooter shared
-            ]
         , div
-            [ classList
-                [ ( "content-screen", True )
-                , ( "content-screen--dark"
-                  , model.showUserNav || model.showNotificationModal || model.lights
-                  )
-                ]
-            , onClickCloseAny
-            ]
+            [ class "container mx-auto" ]
+            [ content, viewFooter shared ]
+        , div
+            [ onClickCloseAny ]
             []
             |> Html.map thisMsg
         , viewUserNav page profile_ model
@@ -302,7 +284,7 @@ viewHelper thisMsg page profile_ ({ shared } as model) content =
         , if model.showAuthModal then
             div
                 [ classList
-                    [ ( "modal", True )
+                    [ ( "modal-old", True )
                     , ( "fade-in", True )
                     ]
                 , onClickCloseAny

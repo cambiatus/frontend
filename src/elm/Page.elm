@@ -260,13 +260,13 @@ viewDateDistance date maybeNow =
 
 fullPageLoading : Html msg
 fullPageLoading =
-    div [ class "main-content__container full-spinner-container" ]
+    div [ class "full-spinner-container" ]
         [ div [ class "spinner spinner--delay" ] [] ]
 
 
 mainContentContainer : List (Html msg) -> Html msg
 mainContentContainer =
-    div [ class "main-content__container" ]
+    div [ class "" ]
 
 
 fullPageError : String -> Http.Error -> Html msg
