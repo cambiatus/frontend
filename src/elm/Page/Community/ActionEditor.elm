@@ -775,7 +775,7 @@ viewSelectedVerifiers shared model =
                     (\p ->
                         div
                             [ class "flex flex-col m-3 items-center" ]
-                            [ div [ class "relative h-10 w-12" ]
+                            [ div [ class "relative h-10 w-12 ml-2" ]
                                 [ Avatar.view ipfsUrl p.avatar "h-10 w-10"
                                 , div
                                     [ onClick (OnRemoveVerifier p)
