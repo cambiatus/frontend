@@ -1102,12 +1102,10 @@ update msg model loggedIn =
         OpenClaimConfirmation actionId ->
             { model | modalStatus = Opened False actionId }
                 |> UR.init
-                |> UR.addExt (LoggedIn.TurnLights True)
 
         CloseClaimConfirmation ->
             { model | modalStatus = Closed }
                 |> UR.init
-                |> UR.addExt (LoggedIn.TurnLights False)
 
         ClaimAction actionId ->
             case LoggedIn.isAuth loggedIn of
@@ -1147,7 +1145,6 @@ update msg model loggedIn =
                 , messageStatus = Success "community.claimAction.success"
             }
                 |> UR.init
-                |> UR.addExt (LoggedIn.TurnLights False)
 
         GotClaimActionResponse (Err v) ->
             { model
@@ -1155,7 +1152,6 @@ update msg model loggedIn =
                 , messageStatus = Failure "community.claimAction.failure"
             }
                 |> UR.init
-                |> UR.addExt (LoggedIn.TurnLights False)
 
 
 updateCommunity : Model -> LoadStatus -> Model

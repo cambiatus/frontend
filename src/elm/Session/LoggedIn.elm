@@ -1,4 +1,4 @@
-module Session.LoggedIn exposing (External(..), ExternalMsg(..), Model, Msg(..), Page(..), ProfileStatus, addNotification, askedAuthentication, init, initLogin, isAccount, isActive, isAuth, jsAddressToMsg, mapExternal, maybePrivateKey, msgToString, profile, readAllNotifications, subscriptions, turnLights, update, view)
+module Session.LoggedIn exposing (External(..), ExternalMsg(..), Model, Msg(..), Page(..), ProfileStatus, addNotification, askedAuthentication, init, initLogin, isAccount, isActive, isAuth, jsAddressToMsg, mapExternal, maybePrivateKey, msgToString, profile, readAllNotifications, subscriptions, update, view)
 
 import Account exposing (Profile, profileQuery)
 import Api
@@ -94,7 +94,6 @@ type alias Model =
     , searchText : String
     , showNotificationModal : Bool
     , showMainNav : Bool
-    , lights : Bool
     , notification : Notification.Model
     , showAuthModal : Bool
     , auth : Auth.Model
@@ -112,7 +111,6 @@ initModel shared authModel accountName =
     , showLanguageItems = False
     , searchText = ""
     , showNotificationModal = False
-    , lights = False
     , showMainNav = False
     , notification = Notification.init
     , showAuthModal = False
@@ -552,7 +550,6 @@ type External msg
     = UpdatedLoggedIn Model
     | RequiredAuthentication (Maybe msg)
     | UpdateBalances
-    | TurnLights Bool
 
 
 mapExternal : (msg -> msg2) -> External msg -> External msg2
@@ -566,9 +563,6 @@ mapExternal transform ext =
 
         UpdateBalances ->
             UpdateBalances
-
-        TurnLights b ->
-            TurnLights b
 
 
 type alias UpdateResult =
@@ -592,7 +586,6 @@ type Msg
     | ShowNotificationModal Bool
     | ShowUserNav Bool
     | ShowMainNav Bool
-    | CollapseMainNav Bool
     | FocusedSearchInput
     | ToggleLanguageItems
     | ClickedLanguage String
@@ -728,9 +721,6 @@ update msg model =
             UR.init { closeAllModals | showMainNav = b }
                 |> UR.addCmd (focusMainContent (not b) "mobile-main-nav")
 
-        CollapseMainNav b ->
-            UR.init { model | collapseMainNav = b }
-
         FocusedSearchInput ->
             UR.init model
                 |> UR.addCmd (Route.pushUrl shared.navKey Route.Communities)
@@ -815,11 +805,6 @@ closeModal ({ model } as uResult) =
                 , showAuthModal = False
             }
     }
-
-
-turnLights : Model -> Bool -> Model
-turnLights model b =
-    { model | lights = b }
 
 
 askedAuthentication : Model -> Model
@@ -920,9 +905,6 @@ msgToString msg =
 
         ShowMainNav _ ->
             [ "ShowMainNav" ]
-
-        CollapseMainNav _ ->
-            [ "CollapseMainNav" ]
 
         FocusedSearchInput ->
             [ "FocusedSearchInput" ]
