@@ -779,10 +779,10 @@ viewSelectedVerifiers shared model =
                                 [ Avatar.view ipfsUrl p.avatar "h-10 w-10"
                                 , div
                                     [ onClick (OnRemoveVerifier p)
-                                    , class "absolute top-0 right-0 z-10 bg-red rounded-full h-6 w-6 flex items-center"
+                                    , class "absolute top-0 right-0 z-10 rounded-full h-6 w-6 flex items-center"
                                     ]
-                                    [ span [ class "text-white text-body font-normal font-sans p-2" ]
-                                        [ text "x" ]
+                                    [ img [ src "/icons/remove.svg" ]
+                                        []
                                     ]
                                 ]
                             , span [ class "mt-2 text-black font-sans text-body leading-normal" ]
