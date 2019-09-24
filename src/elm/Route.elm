@@ -66,12 +66,12 @@ parser url =
         , Url.map Logout (s "logout")
         , Url.map Profile (s "profile")
         , Url.map Dashboard (s "dashboard")
-        , Url.map Community (s "community" </> s "view" </> Eos.symbolUrlParser)
+        , Url.map Communities (s "community")
+        , Url.map Community (s "community" </> Eos.symbolUrlParser)
         , Url.map NewCommunity (s "community" </> s "new")
-        , Url.map EditCommunity (s "community" </> s "edit" </> Eos.symbolUrlParser)
-        , Url.map NewAction (s "new" </> s "action" </> Eos.symbolUrlParser </> string)
+        , Url.map EditCommunity (s "community" </> Eos.symbolUrlParser </> s "edit")
+        , Url.map NewAction (s "community" </> Eos.symbolUrlParser </> s "objective" </> string </> s "action" </> s "new")
         , Url.map VerifyClaim (s "community" </> Eos.symbolUrlParser </> s "objective" </> string </> s "action" </> string </> s "claim" </> string </> s "verification")
-        , Url.map Communities (s "communities")
         , Url.map Shop
             (s "shop"
                 <?> Query.map
@@ -93,8 +93,8 @@ parser url =
                         (Query.string "filter")
             )
         , Url.map NewSale (s "shop" </> s "new" </> s "sell")
-        , Url.map EditSale (s "shop" </> s "edit" </> string)
-        , Url.map ViewSale (s "shop" </> s "view" </> string)
+        , Url.map ViewSale (s "shop" </> string)
+        , Url.map EditSale (s "shop" </> string </> s "edit")
         ]
 
 
@@ -226,18 +226,18 @@ routeToString route =
                     ( [ "dashboard" ], [] )
 
                 Community symbol ->
-                    ( [ "community", "view", Eos.symbolToString symbol ], [] )
+                    ( [ "community", Eos.symbolToString symbol ], [] )
 
                 NewCommunity ->
                     ( [ "community", "new" ], [] )
 
                 EditCommunity symbol ->
-                    ( [ "community", "edit", Eos.symbolToString symbol ]
-                    , []
-                    )
+                    ( [ "community", Eos.symbolToString symbol, "edit" ], [] )
 
                 NewAction symbol objectiveId ->
-                    ( [ "new", "action", Eos.symbolToString symbol, objectiveId ], [] )
+                    ( [ "community", Eos.symbolToString symbol, "objective", objectiveId, "action", "new" ]
+                    , []
+                    )
 
                 VerifyClaim communityId objectiveId actionId claimId ->
                     ( [ "community", Eos.symbolToString communityId, "objective", objectiveId, "action", actionId, "claim", claimId, "verification" ]
@@ -245,7 +245,7 @@ routeToString route =
                     )
 
                 Communities ->
-                    ( [ "communities" ], [] )
+                    ( [ "community" ], [] )
 
                 Shop maybeFilter ->
                     ( [ "shop" ]
@@ -256,9 +256,9 @@ routeToString route =
                     ( [ "shop", "new", "sell" ], [] )
 
                 EditSale saleId ->
-                    ( [ "shop", "edit", saleId ], [] )
+                    ( [ "shop", saleId, "edit" ], [] )
 
                 ViewSale saleId ->
-                    ( [ "shop", "view", saleId ], [] )
+                    ( [ "shop", saleId ], [] )
     in
     Url.Builder.absolute paths queries
