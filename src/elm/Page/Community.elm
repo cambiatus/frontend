@@ -750,8 +750,9 @@ viewClaimModal loggedIn model =
                 text_ s =
                     text (t s)
             in
-            div [ class "z-50 inset-x-0 bottom-0 fixed flex w-full h-64 md:w-3/4 md:inset-auto md:ml-32" ]
-                [ div [ class "mx-4 bg-white w-full rounded-lg p-4 md:relative" ]
+            div [ class "modal container" ]
+                [ div [ class "modal-bg", onClick CloseClaimConfirmation ] []
+                , div [ class "modal-content" ]
                     [ div [ class "w-full" ]
                         [ p [ class "font-sans w-full font-bold font-heading text-2xl mb-4" ]
                             [ text_ "community.claimAction.title" ]

@@ -142,6 +142,30 @@
 
 /* End of Tooltip */
 
+/* Modal */
+
+.modal {
+    @apply z-50 fixed;
+}
+
+.modal-bg {
+    @apply bg-black w-full h-full fixed bottom-0 left-0 top-0 right-0 opacity-25;
+}
+
+.modal-content {
+    @apply bg-white bottom-0 right-0 left-0 fixed rounded-lg p-4;
+}
+
+@screen md {
+    .modal-content {
+        @apply max-w-3xl mx-4 mx-auto bottom-auto right-auto left-auto relative h-64;
+    }
+}
+
+
+/* End of Modal */
+
+
 /* https://tailwindcss.com/docs/extracting-components#extracting-css-components-with-apply */
 @tailwind utilities;
 
