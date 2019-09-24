@@ -1015,6 +1015,7 @@ update msg model loggedIn =
             case model.community of
                 Loaded community (NewObjective objective) ->
                     UR.init model
+                        |> UR.addCmd (Route.replaceUrl loggedIn.shared.navKey (Route.Community community.symbol))
 
                 Loaded community (EditObjective index objective) ->
                     { model
