@@ -35,27 +35,77 @@ init { accountName, shared } claimId =
 
         verification : Verification
         verification =
-            { symbol = "PUL"
-            , logo = ""
-            , name = "Pulpes"
-            , objectiveDescription =
-                """
-                Mussum Ipsum, cacilds vidis litro abertis.
-                Não sou faixa preta cumpadi, sou preto inteiris, inteiris.
-                Diuretics paradis num copo é motivis de denguis.
-                """
-            , actionDescription =
-                """
-                Cevadis im ampola pa arma uma pindureta.
-                Delegadis gente finis, bibendum egestas augue arcu ut est.
-                Si num tem leite então bota uma pinga aí cumpadi!
-                """
-            , claimerReward = 10
-            , verifierReward = 100
-            , claimer = "alisson"
-            , createdAt = DateTime "2019-09-20T16:00:00Z"
-            , status = PENDING
-            }
+            case claimId of
+                "1" ->
+                    { symbol = "PUL"
+                    , logo = ""
+                    , name = "Pulpes"
+                    , objectiveDescription =
+                        """
+                        Mussum Ipsum, cacilds vidis litro abertis.
+                        Não sou faixa preta cumpadi, sou preto inteiris, inteiris.
+                        Diuretics paradis num copo é motivis de denguis.
+                        """
+                    , actionDescription =
+                        """
+                        Cevadis im ampola pa arma uma pindureta.
+                        Delegadis gente finis, bibendum egestas augue arcu ut est.
+                        Si num tem leite então bota uma pinga aí cumpadi!
+                        """
+                    , claimerReward = 10
+                    , verifierReward = 11
+                    , claimer = "alisson"
+                    , createdAt = DateTime "2019-09-20T16:00:00Z"
+                    , status = PENDING
+                    }
+
+                "2" ->
+                    { symbol = "PUL"
+                    , logo = ""
+                    , name = "Pulpes"
+                    , objectiveDescription =
+                        """
+                        Mussum Ipsum, cacilds vidis litro abertis.
+                        Não sou faixa preta cumpadi, sou preto inteiris, inteiris.
+                        Diuretics paradis num copo é motivis de denguis.
+                        """
+                    , actionDescription =
+                        """
+                        Cevadis im ampola pa arma uma pindureta.
+                        Delegadis gente finis, bibendum egestas augue arcu ut est.
+                        Si num tem leite então bota uma pinga aí cumpadi!
+                        """
+                    , claimerReward = 10
+                    , verifierReward = 11
+                    , claimer = "alisson"
+                    , createdAt = DateTime "2019-09-20T16:00:00Z"
+                    , status = DISAPPROVED_AND_UNDER_REVIEW
+                    }
+
+                _ ->
+                    { symbol = "PUL"
+                    , logo = ""
+                    , name = "Pulpes"
+                    , objectiveDescription =
+                        """
+                        Mussum Ipsum, cacilds vidis litro abertis.
+                        Não sou faixa preta cumpadi, sou preto inteiris, inteiris.
+                        Diuretics paradis num copo é motivis de denguis.
+                        """
+                    , actionDescription =
+                        """
+                        Cevadis im ampola pa arma uma pindureta.
+                        Delegadis gente finis, bibendum egestas augue arcu ut est.
+                        Si num tem leite então bota uma pinga aí cumpadi!
+                        """
+                    , claimerReward = 10
+                    , verifierReward = 11
+                    , claimer = "alisson"
+                    , createdAt = DateTime "2019-09-20T16:00:00Z"
+                    , status = APPROVED
+                    }
+
+
     in
     -- TODO: use LoadingVerification as first status and add API query
     ( { claimId = claimId, status = LoadVerification Closed (Just verification) }

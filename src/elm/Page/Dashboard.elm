@@ -3,8 +3,9 @@ module Page.Dashboard exposing (Model, Msg, init, jsAddressToMsg, msgToString, s
 import Activity exposing (ActivitiesResponse, Activity)
 import Api
 import Api.Graphql
+import Bespiral.Scalar exposing (DateTime(..))
 import Community exposing (Balance, Metadata, Transaction)
-import Eos as Eos
+import Eos as Eos exposing (Symbol)
 import Eos.Account as Eos
 import Graphql.Http
 import Graphql.OptionalArgument exposing (OptionalArgument(..))
@@ -38,8 +39,7 @@ init : LoggedIn.Model -> ( Model, Cmd Msg )
 init { shared, accountName } =
     ( initModel
     , Cmd.batch
-        [ fetchActivities shared accountName
-        , fetchBalance shared accountName
+        [ fetchBalance shared accountName
         , fetchTransfers shared accountName
         , Task.perform GotTime Time.now
         ]
@@ -64,17 +64,68 @@ type alias Model =
     , communities : Status (List DashCommunity.Model)
     , lastSocket : String
     , transfers : GraphqlStatus (Maybe QueryTransfers) (List Transfer)
-    , activities : GraphqlStatus ActivitiesResponse (List Activity)
+    , verifications : GraphqlStatus ActivitiesResponse (List Verification)
+    }
+
+
+type alias Verification =
+    { symbol : Maybe Symbol
+    , logo : String
+    , objectiveId : Int
+    , actionId : Int
+    , claimId : Int
+    , description : String
+    , createdAt : DateTime
+    , status : Tag.TagStatus
     }
 
 
 initModel : Model
 initModel =
+    let
+        pending_verification =
+            { symbol = Eos.symbolFromString "PUL"
+            , logo = ""
+            , objectiveId = 1
+            , actionId = 1
+            , claimId = 1
+            , description = "Cevadis im ampola pa arma uma pindureta."
+            , createdAt = DateTime "2019-09-20T16:00:00Z"
+            , status = Tag.PENDING
+            }
+
+        disapproved_verification =
+            { symbol = Eos.symbolFromString "PUL"
+            , logo = ""
+            , objectiveId = 1
+            , actionId = 1
+            , claimId = 2
+            , description = "Delegadis gente finis, bibendum egestas augue arcu ut est."
+            , createdAt = DateTime "2019-09-20T16:00:00Z"
+            , status = Tag.DISAPPROVED
+            }
+
+        approved_verification =
+            { symbol = Eos.symbolFromString "PUL"
+            , logo = ""
+            , objectiveId = 1
+            , actionId = 1
+            , claimId = 3
+            , description = "Si num tem leite então bota uma pinga aí cumpadi!"
+            , createdAt = DateTime "2019-09-20T16:00:00Z"
+            , status = Tag.APPROVED
+            }
+    in
     { date = Nothing
     , communities = Loading
     , lastSocket = ""
     , transfers = LoadingGraphql
-    , activities = LoadingGraphql
+    , verifications =
+        LoadedGraphql
+            [ pending_verification
+            , disapproved_verification
+            , approved_verification
+            ]
     }
 
 
@@ -112,79 +163,83 @@ view loggedIn model =
                 [ Page.viewTitle (t "menu.my_communities")
                 , Page.viewButtonNew (t "community.create_button") Route.NewCommunity
                 , viewBalances loggedIn communities
-                , viewActivities loggedIn.shared model
+                , viewVerifications loggedIn.shared model
                 , viewSections loggedIn model
                 ]
 
 
-viewActivities : Shared -> Model -> Html Msg
-viewActivities shared model =
+viewVerifications : Shared -> Model -> Html Msg
+viewVerifications shared model =
     let
         t =
             I18Next.t shared.translations
 
-        toView activities =
+        toView verifications =
             List.map
-                (viewActivity shared.endpoints.ipfs)
-                activities
+                (viewVerification shared.endpoints.ipfs)
+                verifications
     in
     div
         []
         [ Page.viewTitle (t "dashboard.activities.title")
-        , case model.activities of
+        , case model.verifications of
             LoadingGraphql ->
-                viewNoActivity
-                    [ Loading.view "text-nobel" ]
+                viewNoVerification
+                    [ Loading.view "text-gray-900" ]
 
             FailedGraphql err ->
-                viewNoActivity
+                viewNoVerification
                     [ p
-                        [ class "font-sans text-nobel text-sm" ]
+                        [ class "font-sans text-gray-900 text-sm" ]
                         [ text (Page.errorToString err) ]
                     ]
 
-            LoadedGraphql activities ->
-                if List.isEmpty activities then
-                    viewNoActivity
+            LoadedGraphql verifications ->
+                if List.isEmpty verifications then
+                    viewNoVerification
                         [ p
-                            [ class "font-sans text-nobel text-sm" ]
+                            [ class "font-sans text-gray-900 text-sm" ]
                             [ text (t "dashboard.activities.no_activities_yet") ]
                         ]
 
                 else
                     div
                         [ class "shadow-md rounded-lg bg-white mt-5" ]
-                        (toView activities)
+                        (toView verifications)
         ]
 
 
-viewActivity : String -> Activity -> Html Msg
-viewActivity url activity =
+viewVerification : String -> Verification -> Html Msg
+viewVerification url verification =
     let
         maybeHash =
-            Just activity.communityLogo
+            Just verification.logo
 
         description =
-            activity.actionDescription
+            verification.description
 
         date =
-            Just activity.claimCreatedAt
+            Just verification.createdAt
                 |> Utils.posixDateTime
                 |> Strftime.format "%d %b %Y" Time.utc
 
         status =
-            activity.status
+            verification.status
 
         route =
-            case Eos.symbolFromString "" of
+            case verification.symbol of
                 Just symbol ->
-                    Route.VerifyClaim symbol "" "" ""
+                    Route.VerifyClaim
+                        symbol
+                        (String.fromInt verification.objectiveId)
+                        (String.fromInt verification.actionId)
+                        (String.fromInt verification.claimId)
 
                 Nothing ->
                     Route.ComingSoon
     in
     a
-        [ class "border-b last:border-b-0 border-gainsboro flex items-start lg:items-center hover:bg-white-smoke first-hover:rounded-t-lg last-hover:rounded-b-lg p-4"
+        [ class "border-b last:border-b-0 border-gray-500 flex items-start lg:items-center hover:bg-gray-100 first-hover:rounded-t-lg last-hover:rounded-b-lg p-4"
         , Route.href route
         ]
         [ div
@@ -196,7 +251,7 @@ viewActivity url activity =
                 [ class "font-sans text-black text-sm leading-relaxed" ]
                 [ text description ]
             , p
-                [ class "font-normal font-sans text-nobel text-caption uppercase" ]
+                [ class "font-normal font-sans text-gray-900 text-caption uppercase" ]
                 [ text date ]
             , div
                 [ class "lg:hidden mt-4" ]
@@ -208,8 +263,8 @@ viewActivity url activity =
         ]
 
 
-viewNoActivity : List (Html Msg) -> Html Msg
-viewNoActivity elements =
+viewNoVerification : List (Html Msg) -> Html Msg
+viewNoVerification elements =
     div
         [ class "shadow-md rounded-lg bg-white mt-5 p-4" ]
         [ div
@@ -376,11 +431,11 @@ update msg model loggedIn =
                 |> UR.logGraphqlError msg err
 
         CompletedLoadActivities (Ok result) ->
-            { model | activities = LoadedGraphql (Activity.mapToActivity result) }
+            { model | verifications = LoadedGraphql [] }
                 |> UR.init
 
         CompletedLoadActivities (Err err) ->
-            { model | activities = FailedGraphql err }
+            { model | verifications = FailedGraphql err }
                 |> UR.init
                 |> UR.logGraphqlError msg err
 
