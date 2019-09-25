@@ -97,7 +97,7 @@ const prod = {
     ipfs: ipfsUrl
   },
   logo: appLogo,
-  appLogoMobile: appLogoMobile,
+  logoMobile: appLogoMobile,
   bespiralAccount: 'bespiral',
   communityContract: 'bes.cmm',
   tokenContract: 'bes.token',

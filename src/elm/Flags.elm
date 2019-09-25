@@ -62,11 +62,11 @@ type alias Endpoints =
 
 defaultEndpoints : Endpoints
 defaultEndpoints =
-    { eosio = "https://eosio.bespiral.io"
-    , api = "https://api.bespiral.io"
-    , chat = "https://app.bespiral.io/chat"
-    , graphql = "https://api.bespiral.io/api/graph"
-    , ipfs = "https://ipfs.bespiral.io/ipfs"
+    { eosio = "https://eosio.cambiatus.io"
+    , api = "https://api.cambiatus.io"
+    , chat = "https://app.cambiatus.io/chat"
+    , graphql = "https://api.cambiatus.io/api/graph"
+    , ipfs = "https://ipfs.cambiatus.io/ipfs"
     }
 
 
