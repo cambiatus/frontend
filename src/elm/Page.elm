@@ -266,7 +266,7 @@ fullPageLoading =
 
 mainContentContainer : List (Html msg) -> Html msg
 mainContentContainer =
-    div [ class "" ]
+    div []
 
 
 fullPageError : String -> Http.Error -> Html msg
