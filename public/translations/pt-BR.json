@@ -21,7 +21,7 @@
     "search": "Procurar comunidades, amigos ...",
     "explore": "Explorar",
     "communities": "Comunidades",
-    "welcome_message": "Ola {{user_name}} ",
+    "welcome_message": "Olá, {{user_name}} ",
     "back_to_dashboard": "Voltar para Dashboard",
     "edit": "Editar",
     "cancel": "Cancelar",
@@ -32,7 +32,8 @@
     "close": "Fechar",
     "loading": "Carregando...",
     "try_again": "Tente novamente",
-    "coming_soon": "Em Breve"
+    "coming_soon": "Em Breve",
+    "my_account": "Minha conta"
   },
   "error": {
     "validator": {

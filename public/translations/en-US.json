@@ -21,7 +21,7 @@
     "search": "Search communities, friends ...",
     "explore": "Explore",
     "communities": "Communities",
-    "welcome_message": "Hello {{user_name}} ",
+    "welcome_message": "Hello, {{user_name}} ",
     "back_to_dashboard": "Back to Dashboard",
     "edit": "Edit",
     "cancel": "Cancel",
@@ -32,7 +32,8 @@
     "close": "Close",
     "loading": "Loading...",
     "try_again": "Try again",
-    "coming_soon": "Coming Soon"
+    "coming_soon": "Coming Soon",
+    "my_account": "My account"
   },
   "error": {
     "validator": {

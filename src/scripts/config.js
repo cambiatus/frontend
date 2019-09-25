@@ -20,6 +20,7 @@ const local = {
     ipfs: 'http://ipfs.bespiral.local/ipfs'
   },
   logo: '/images/logo-cambiatus.svg',
+  logoMobile: '/images/logo-cambiatus-mobile.svg',
   bespiralAccount: 'bespiral',
   communityContract: 'bes.cmm',
   tokenContract: 'bes.token',
@@ -53,6 +54,7 @@ const dev = {
     ipfs: 'https://ipfs.cambiatus.io/ipfs'
   },
   logo: '/images/logo-cambiatus.svg',
+  logoMobile: '/images/logo-cambiatus-mobile.svg',
   bespiralAccount: 'bespiral',
   communityContract: 'bes.cmm',
   tokenContract: 'bes.token',
@@ -72,6 +74,7 @@ const ipfsUrl = isLocal ? dev.endpoints.ipfs : _env_.IPFS_URL
 const httpEndpoint = isLocal ? dev.eosOptions.httpEndpoint : `${chainUrl}:${chainPort}`
 const pKey = isLocal ? dev.pushKey : _env_.PUSH_KEY
 const appLogo = isLocal ? dev.logo : _env_.LOGO
+const appLogoMobile = isLocal ? dev.logoMobile : _env_.LOGO_MOBILE
 
 const prod = {
   network: {
@@ -94,6 +97,7 @@ const prod = {
     ipfs: ipfsUrl
   },
   logo: appLogo,
+  appLogoMobile: appLogoMobile,
   bespiralAccount: 'bespiral',
   communityContract: 'bes.cmm',
   tokenContract: 'bes.token',

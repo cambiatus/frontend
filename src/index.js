@@ -49,6 +49,7 @@ function flags () {
     isPinAvailable: !!(user && user.encryptedKey),
     authPreference: window.localStorage.getItem(AUTH_PREF_KEY),
     logo: config.logo,
+    logoMobile: config.logoMobile,
     now: Date.now()
   }
   devLog('flags', flags_)

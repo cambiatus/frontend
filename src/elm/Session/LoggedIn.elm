@@ -247,45 +247,59 @@ viewHelper thisMsg page profile_ ({ shared } as model) content =
 
 viewHeader : Model -> Profile -> Html Msg
 viewHeader ({ shared } as model) profile_ =
-    div [ class "w-full h-32 md:h-24 bg-white flex flex-wrap p-6 relative" ]
-        [ a [ Route.href Route.Dashboard, class "h-12 w-2/3 lg:w-1/4 flex items-center " ]
-            [ Icons.logo "md:invisible"
+    let
+        tr str values =
+            I18Next.tr shared.translations I18Next.Curly str values
+    in
+    div [ class "w-full bg-white pr-4 pl-4 pt-6 pb-4 flex flex-wrap" ]
+        [ a [ Route.href Route.Dashboard, class "h-12 w-2/3 lg:w-1/4 flex lg:items-center" ]
+            [ img [ class "lg:hidden", src shared.logoMobile ] []
             , img
-                [ class "h-5 invisible md:visible object-none object-scale-down", src shared.logo ]
+                [ class "h-5 hidden lg:block lg:visible object-none object-scale-down", src shared.logo ]
                 []
             ]
-        , Html.form
-            [ class "h-12 bg-gray-200 w-full lg:w-1/2 rounded-full flex items-center p-4"
-            , onSubmit SubmitedSearch
-            ]
-            [ Icons.search ""
-            , input
-                [ class "bg-gray-200 w-full font-sans outline-none pl-3"
-                , placeholder (t shared.translations "menu.search")
-                , type_ "text"
-                , value model.searchText
-                , onFocus FocusedSearchInput
-                , onInput EnteredSearch
-                , required True
-                ]
-                []
-            ]
-        , div
-            [ class "w-1/4 flex justify-end z-20" ]
-            [ button [ class "outline-none", onClick (ShowNotificationModal (not model.showNotificationModal)) ]
-                [ Icons.notification "" ]
+        , div [ class "hidden lg:block lg:visible w-1/2" ] [ searchBar model ]
+        , div [ class "w-1/3 h-10 flex z-20 lg:w-1/4" ]
+            [ button [ class "w-1/2 outline-none", onClick (ShowNotificationModal (not model.showNotificationModal)) ]
+                [ Icons.notification "mx-auto lg:mr-1 xl:mx-auto" ]
             , button
-                [ class "h-12 bg-gray-200 rounded-lg flex py-2 px-3"
+                [ class "w-1/2 xl:hidden"
+                , onClick (ShowUserNav (not model.showUserNav))
+                ]
+                [ Avatar.view shared.endpoints.ipfs profile_.avatar "h-7 w-7 float-right" ]
+            , button
+                [ class "h-12 bg-gray-200 rounded-lg flex py-2 px-3 hidden xl:visible xl:flex"
                 , onClick (ShowUserNav (not model.showUserNav))
                 ]
                 [ Avatar.view shared.endpoints.ipfs profile_.avatar "h-7 w-7 mr-2"
                 , div []
-                    [ p [ class "font-sans uppercase text-gray-900 text-xs" ] [ text "hello Helton" ]
-                    , p [ class "font-sans text-indigo-500 text-sm" ] [ text "my account moc" ]
+                    [ p [ class "font-sans uppercase text-gray-900 text-xs" ] [ text (tr "menu.welcome_message" [ ( "user_name", Eos.nameToString profile_.accountName ) ]) ]
+                    , p [ class "font-sans text-indigo-500 text-sm" ] [ text (t shared.translations "menu.my_account") ]
                     ]
                 , Icons.arrowDown ""
                 ]
             ]
+        , div [ class "w-full mt-2 lg:hidden" ] [ searchBar model ]
+        ]
+
+
+searchBar : Model -> Html Msg
+searchBar ({ shared } as model) =
+    Html.form
+        [ class "h-12 bg-gray-200 rounded-full flex items-center p-4"
+        , onSubmit SubmitedSearch
+        ]
+        [ Icons.search ""
+        , input
+            [ class "bg-gray-200 w-full font-sans outline-none pl-3"
+            , placeholder (t shared.translations "menu.search")
+            , type_ "text"
+            , value model.searchText
+            , onFocus FocusedSearchInput
+            , onInput EnteredSearch
+            , required True
+            ]
+            []
         ]
 
 

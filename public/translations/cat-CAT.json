@@ -32,7 +32,8 @@
     "close": "Tancar",
     "loading": "Carregant...",
     "try_again": "Intenta de nou",
-    "coming_soon": "Pròximament"
+    "coming_soon": "Pròximament",
+    "my_account": "Meu compte"
   },
   "error": {
     "validator": {
