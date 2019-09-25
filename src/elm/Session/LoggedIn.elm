@@ -206,65 +206,7 @@ viewHelper thisMsg page profile_ ({ shared } as model) content =
     in
     div
         []
-        [ header [ class "main-header" ]
-            [ a
-                [ class "main-header__logo"
-                , Route.href Route.Dashboard
-                , onClickCloseAny
-                ]
-                [ img [ src shared.logo ] [] ]
-            , Html.form
-                [ class "main-header__search"
-                , onSubmit SubmitedSearch
-                , onClickCloseAny
-                ]
-                [ input
-                    [ placeholder (t shared.translations "menu.explore_communities")
-                    , type_ "text"
-                    , value model.searchText
-                    , onFocus FocusedSearchInput
-                    , onInput EnteredSearch
-                    , required True
-                    ]
-                    []
-                , button
-                    [ class "btn"
-                    , onClick FocusedSearchInput
-                    ]
-                    [ Icon.magnify ""
-                    ]
-                ]
-            , button
-                [ class "btn main-header__notification"
-                , onClick (ShowNotificationModal (not model.showNotificationModal))
-                ]
-                [ Icon.bell ""
-                , div
-                    [ classList
-                        [ ( "main-header__notification-circle", True )
-                        , ( "main-header__notification-circle--show", model.notification.hasUnread )
-                        ]
-                    ]
-                    []
-                ]
-            , button
-                [ class "btn main-header__info"
-                , onClick (ShowUserNav (not model.showUserNav))
-                ]
-                [ span [ class "main-header__info-name" ]
-                    [ text (Account.username profile_) ]
-                , Avatar.view ipfsUrl
-                    profile_.avatar
-                    "main-header__info-image"
-                , Icon.arrow
-                    (if model.showUserNav then
-                        "main-header__info-arrow main-header__info-arrow--up"
-
-                     else
-                        "main-header__info-arrow"
-                    )
-                ]
-            ]
+        [ viewHeader model profile_
             |> Html.map thisMsg
         , viewMainMenu page profile_ model
             |> Html.map thisMsg
@@ -303,6 +245,50 @@ viewHelper thisMsg page profile_ ({ shared } as model) content =
         ]
 
 
+viewHeader : Model -> Profile -> Html Msg
+viewHeader ({ shared } as model) profile_ =
+    div [ class "w-full h-32 md:h-24 bg-white flex flex-wrap p-6 relative" ]
+        [ a [ Route.href Route.Dashboard, class "h-12 w-2/3 lg:w-1/4 flex items-center " ]
+            [ Icons.logo "md:invisible"
+            , img
+                [ class "h-5 invisible md:visible object-none object-scale-down", src shared.logo ]
+                []
+            ]
+        , Html.form
+            [ class "h-12 bg-gray-200 w-full lg:w-1/2 rounded-full flex items-center p-4"
+            , onSubmit SubmitedSearch
+            ]
+            [ Icons.search ""
+            , input
+                [ class "bg-gray-200 w-full font-sans outline-none pl-3"
+                , placeholder (t shared.translations "menu.search")
+                , type_ "text"
+                , value model.searchText
+                , onFocus FocusedSearchInput
+                , onInput EnteredSearch
+                , required True
+                ]
+                []
+            ]
+        , div
+            [ class "w-1/4 flex justify-end z-20" ]
+            [ button [ class "outline-none", onClick (ShowNotificationModal (not model.showNotificationModal)) ]
+                [ Icons.notification "" ]
+            , button
+                [ class "h-12 bg-gray-200 rounded-lg flex py-2 px-3"
+                , onClick (ShowUserNav (not model.showUserNav))
+                ]
+                [ Avatar.view shared.endpoints.ipfs profile_.avatar "h-7 w-7 mr-2"
+                , div []
+                    [ p [ class "font-sans uppercase text-gray-900 text-xs" ] [ text "hello Helton" ]
+                    , p [ class "font-sans text-indigo-500 text-sm" ] [ text "my account moc" ]
+                    ]
+                , Icons.arrowDown ""
+                ]
+            ]
+        ]
+
+
 viewMainMenu : Page -> Profile -> Model -> Html Msg
 viewMainMenu page profile_ model =
     let
@@ -337,7 +323,7 @@ viewMainMenu page profile_ model =
             , Route.href Route.Communities
             ]
             [ Icons.communities iconClass
-            , text (t model.shared.translations "menu.explore_communities")
+            , text (t model.shared.translations "menu.communities")
             ]
         , a
             [ classList

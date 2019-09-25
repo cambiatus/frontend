@@ -28,7 +28,7 @@ body,
 
 body {
     background-color: var(--white);
-    font-family: 'Roboto', 'Lato', 'San Fransico', 'Helvetica', 'Verdana', sans-serif;
+    font-family: 'Gotham Rounded', 'Lato', 'San Fransico', 'Helvetica', 'Verdana', sans-serif;
     color: var(--black);
 }
 
@@ -842,8 +842,8 @@ svg.main-header__info-arrow--up {
 .notifications-modal,
 .user-nav {
     position: fixed;
-    z-index: 11;
-    top: 156px;
+    z-index: 10;
+    top: 71px;
     right: 0;
     width: 225px;
     background-color: #fff;

@@ -73,12 +73,12 @@ view loggedIn model =
             Page.fullPageLoading
 
         LoadingFailed e ->
-            Page.fullPageGraphQLError (t loggedIn.shared.translations "menu.explore_communities") e
+            Page.fullPageGraphQLError (t loggedIn.shared.translations "menu.communities") e
 
         Loaded communities ->
             Page.mainContentContainer
                 [ renderUserMessage model
-                , Page.viewTitle (t loggedIn.shared.translations "menu.explore_communities")
+                , Page.viewTitle (t loggedIn.shared.translations "menu.communities")
                 , div [ class "flex flex-wrap -mx-2" ]
                     (viewCommunities loggedIn (String.toUpper loggedIn.searchText) communities)
                 ]
