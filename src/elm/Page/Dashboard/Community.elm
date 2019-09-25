@@ -178,7 +178,7 @@ viewCardBalance loggedIn ({ balance } as model) =
                 Nothing ->
                     ""
     in
-    div [ class "w-full sm:w-1/2 md:w-1/3 lg:w-1/3 xl:w-1/4 px-2 mb-8" ]
+    div [ class "w-full sm:w-1/2 lg:w-1/3 xl:w-1/4 px-2 mb-8" ]
         [ div [ class "flex flex-wrap px-3 pt-5 pb-2 rounded-lg shadow bg-white" ]
             [ div [ class "w-1/3" ] [ img [ class "object-none object-scale-down h-20", src (ipfsUrl ++ "/" ++ logo) ] [] ]
             , div [ class "w-1/3 pl-4 overflow-x-hidden" ]

@@ -28,14 +28,8 @@ body,
 
 body {
     background-color: var(--white);
-    font-family: 'Roboto', 'Lato', 'San Fransico', 'Helvetica', 'Verdana', sans-serif;
+    font-family: 'Gotham Rounded', 'Lato', 'San Fransico', 'Helvetica', 'Verdana', sans-serif;
     color: var(--black);
-}
-
-html,
-body,
-.main-grid {
-    overflow: hidden;
 }
 
 svg {
@@ -387,27 +381,7 @@ textarea.input {
 
 /* Main Grid */
 
-.main-grid {
-    display: grid;
-    grid-template-areas:
-        "main-header main-header"
-        "main-nav main-content"
-    ;
-    grid-template-columns: 0px minmax(1px, 1fr);
-    grid-template-rows: 75px minmax(1px, 1fr);
-}
 
-.main-grid--collapsed {
-    grid-template-columns: 97px minmax(1px, 1fr);
-}
-
-.main-grid--guest {
-    grid-template-areas:
-        "main-header"
-        "main-content"
-    ;
-    grid-template-columns: minmax(1px, 1fr);
-}
 
 .main__register__details {
    background: #FFFFFF;
@@ -704,18 +678,6 @@ svg.main-header__info-arrow--up {
 
 /* Main Content */
 
-.main-content {
-    grid-area: main-content;
-    overflow-y: auto;
-    overflow-x: hidden;
-    display: flex;
-    margin-top: 60px;
-    flex-direction: column;
-    padding: 16px 16px;
-    outline: none;
-    position: relative;
-}
-
 .main-content__guest {
     background-repeat: no-repeat;
     background-size: cover;
@@ -735,12 +697,6 @@ svg.main-header__info-arrow--up {
     100% {
         background-position: 0% center;
     }
-}
-
-.main-content__container {
-    flex-grow: 1;
-    padding: 16px;
-    flex-shrink: 0;
 }
 
 .guest__footer {
@@ -851,7 +807,6 @@ svg.main-header__info-arrow--up {
     border: none;
     padding: 0 6px;
     font-size: 16px;
-    cursor: pointer;
     transition: background .1s ease;
     outline: none;
     padding: 0 12px !important;
@@ -884,49 +839,17 @@ svg.main-header__info-arrow--up {
 
 /* User Nav */
 
-.content-screen {
-    position: fixed;
-    width: 100%;
-    height: 100%;
-    padding-top: 96px;
-    opacity: 0;
-    z-index: 5;
-    pointer-events: none;
-    background: #000;
-    transition: opacity .3s cubic-bezier(0, 0, .3, 1);
-}
-
-.content-screen--dark {
-    pointer-events: auto;
-    opacity: .4;
-}
-
-.content-screen--full {
-    z-index: 10;
-    padding-top: 0;
-}
-
-.full-screen {
-    position: fixed;
-    width: 100%;
-    height: 100%;
-    opacity: 0;
-    z-index: 10;
-    pointer-events: none;
-}
-
 .notifications-modal,
 .user-nav {
     position: fixed;
-    z-index: 11;
-    top: 156px;
+    z-index: 10;
+    top: 71px;
     right: 0;
     width: 225px;
     background-color: #fff;
     opacity: 0;
     transition: opacity .3s cubic-bezier(0, 0, .3, 1), transform .2s cubic-bezier(0, 0, .2, 1);
     transform: translateY(-102%);
-    pointer-events: none;
     overflow-y: auto;
     max-height: calc(100vh - 75px);
     overflow-y: auto;
@@ -945,13 +868,11 @@ svg.main-header__info-arrow--up {
 .notifications-modal--show,
 .user-nav--show {
     opacity: 1;
-    pointer-events: auto;
     transform: translateY(0);
  }
 
 .guest-nav--show {
     opacity: 1;
-    pointer-events: auto;
     transform: translateY(0);
     width: 151px;
     margin-right: 26px;
@@ -1002,7 +923,6 @@ svg.main-header__info-arrow--up {
     outline: none;
     background-color: #fff;
     border: none;
-    cursor: pointer;
 }
 
 .user-nav__item svg {
@@ -1124,7 +1044,7 @@ svg.main-header__info-arrow--up {
 
 /* Modal */
 
-.modal {
+.modal-old {
     position: fixed;
     top: 0;
     right: 0;
@@ -1134,9 +1054,7 @@ svg.main-header__info-arrow--up {
     align-items: center;
     justify-content: center;
     z-index: 60;
-    pointer-events: none;
     background: rgba(0, 0, 0, 0.4);
-    pointer-events: auto;
 }
 
 .card--modal {
@@ -1445,16 +1363,6 @@ svg.main-header__info-arrow--up {
     background-color: #FFFFFF;
 }
 
-.card--empty:hover,
-.card--empty:focus,
-.card--empty:active,
-.card__full-button:hover,
-.card__full-button:focus,
-.card__full-button:active {
-    color: #9a4ea1;
-    background-color: #fafafa;
-}
-
 .card>hr {
     width: 100%;
     height: 1px;
@@ -1475,12 +1383,6 @@ svg.main-header__info-arrow--up {
     color: #fff;
 }
 
-.card__full-button:hover .card__plus-symbol,
-.card__full-button:focus .card__plus-symbol,
-.card--empty:hover .card__plus-symbol,
-.card--empty:focus .card__plus-symbol {
-    background: var(--hover-color);
-}
 
 .card__full-button:active .card__plus-symbol,
 .card--empty:active .card__plus-symbol {
@@ -1602,7 +1504,6 @@ svg.main-header__info-arrow--up {
     width: 40px;
     height: 40px;
     color: #888888;
-    cursor: pointer;
 }
 
 .row__close-btn svg,
@@ -1945,13 +1846,6 @@ svg.main-header__info-arrow--up {
 /* Login */
 
 .main-login-grid {
-    display: grid;
-    grid-template-areas:
-        "main-header"
-        "main-content"
-    ;
-    grid-template-columns: minmax(1px, 1fr);
-    grid-template-rows: 75px minmax(1px, 1fr);
 }
 
 .main-header__space {
@@ -2001,8 +1895,6 @@ button.main-header__language {
 }
 
 .main-login-grid .main-content__container {
-    display: flex;
-    justify-content: center;
 }
 
 .main-login-grid .main-footer {
@@ -2103,9 +1995,6 @@ svg.main-header__icon {
     fill: #fff;
 }
 
-.main-content__container--register {
-    align-items: center;
-}
 
 .card--register {
     max-width: 532px;
@@ -2279,7 +2168,6 @@ textarea.form-input {
     border-radius: 8px;
     border: solid 1px transparent;
     transition: box-shadow .1s ease, border .1s ease;
-    cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -2667,7 +2555,6 @@ textarea.form-input {
 [tooltip]::after {
     opacity: 0;
     transition: opacity .1s ease;
-    pointer-events: none;
 }
 
 [tooltip]::before {
@@ -3187,7 +3074,6 @@ textarea.form-input {
     padding: 0 0.5em;
     background: white;
     cursor: pointer;
-    pointer-events: none;
     -webkit-transition: .25s all ease;
     -o-transition: .25s all ease;
     transition: .25s all ease;
@@ -3652,14 +3538,6 @@ textarea.form-input {
 
 @media (max-width:800px) {
     .main-grid {
-        display: grid;
-        grid-template-areas:
-            "main-header"
-            "main-nav"
-            "main-content"
-        ;
-        grid-template-columns: minmax(1px, 1fr);
-        grid-template-rows: 75px 44px minmax(1px, 1fr);
     }
 
     .main-header__search input,
@@ -3682,7 +3560,6 @@ textarea.form-input {
     }
 
     .main-header__search button:hover svg,
-    .main-header__search button:focus svg,
     .main-header__search button:active svg {
         fill: #fff;
     }
@@ -3695,14 +3572,6 @@ textarea.form-input {
 
     .main-header__notification-circle {
         right: 7px;
-    }
-
-    .main-content {
-        padding: 0;
-    }
-
-    .main-content__container {
-        padding: 16px 9px;
     }
 
     .main-login-grid .main-content {

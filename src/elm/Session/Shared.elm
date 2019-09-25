@@ -27,6 +27,7 @@ type alias Shared =
     , authPreference : Maybe AuthPreference
     , endpoints : Endpoints
     , logo : String
+    , logoMobile : String
     , now : Posix
     }
 
@@ -43,6 +44,7 @@ init ({ environment, maybeAccount, authPreference, endpoints } as flags) navKey 
     , authPreference = authPreference
     , endpoints = endpoints
     , logo = flags.logo
+    , logoMobile = flags.logoMobile
     , now = Time.millisToPosix flags.now
     }
 
