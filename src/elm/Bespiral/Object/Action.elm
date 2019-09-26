@@ -75,6 +75,11 @@ isCompleted =
     Object.selectionForField "Bool" "isCompleted" [] Decode.bool
 
 
+objective : SelectionSet decodesTo Bespiral.Object.Objective -> SelectionSet decodesTo Bespiral.Object.Action
+objective object_ =
+    Object.selectionForCompositeField "objective" [] object_ identity
+
+
 reward : SelectionSet Float Bespiral.Object.Action
 reward =
     Object.selectionForField "Float" "reward" [] Decode.float
@@ -90,9 +95,9 @@ usagesLeft =
     Object.selectionForField "Int" "usagesLeft" [] Decode.int
 
 
-validators : SelectionSet decodesTo Bespiral.Object.Validator -> SelectionSet (Maybe (List decodesTo)) Bespiral.Object.Action
+validators : SelectionSet decodesTo Bespiral.Object.Validator -> SelectionSet (List decodesTo) Bespiral.Object.Action
 validators object_ =
-    Object.selectionForCompositeField "validators" [] object_ (identity >> Decode.list >> Decode.nullable)
+    Object.selectionForCompositeField "validators" [] object_ (identity >> Decode.list)
 
 
 verificationType : SelectionSet Bespiral.Enum.VerificationType.VerificationType Bespiral.Object.Action

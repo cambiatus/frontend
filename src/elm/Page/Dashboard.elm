@@ -1,13 +1,22 @@
 module Page.Dashboard exposing (Model, Msg, init, jsAddressToMsg, msgToString, subscriptions, update, view)
 
-import Activity exposing (ActivitiesResponse, Activity)
 import Api
 import Api.Graphql
+import Bespiral.Object
+import Bespiral.Object.Action as Action
+import Bespiral.Object.Check as Check
+import Bespiral.Object.Claim as Claim exposing (ChecksOptionalArguments)
+import Bespiral.Object.Community as Community
+import Bespiral.Object.Objective as Objective
+import Bespiral.Query exposing (ClaimsRequiredArguments)
+import Bespiral.Scalar exposing (DateTime(..))
 import Community exposing (Balance, Metadata, Transaction)
-import Eos as Eos
+import Eos as Eos exposing (Symbol)
 import Eos.Account as Eos
 import Graphql.Http
+import Graphql.Operation exposing (RootQuery)
 import Graphql.OptionalArgument exposing (OptionalArgument(..))
+import Graphql.SelectionSet as SelectionSet exposing (SelectionSet, with)
 import Html exposing (..)
 import Html.Attributes exposing (class, value)
 import Http
@@ -38,7 +47,7 @@ init : LoggedIn.Model -> ( Model, Cmd Msg )
 init { shared, accountName } =
     ( initModel
     , Cmd.batch
-        [ fetchActivities shared accountName
+        [ fetchVerifications shared accountName
         , fetchBalance shared accountName
         , fetchTransfers shared accountName
         , Task.perform GotTime Time.now
@@ -64,7 +73,19 @@ type alias Model =
     , communities : Status (List DashCommunity.Model)
     , lastSocket : String
     , transfers : GraphqlStatus (Maybe QueryTransfers) (List Transfer)
-    , activities : GraphqlStatus ActivitiesResponse (List Activity)
+    , verifications : GraphqlStatus VerificationHistoryResponse (List Verification)
+    }
+
+
+type alias Verification =
+    { symbol : Maybe Symbol
+    , logo : String
+    , objectiveId : Int
+    , actionId : Int
+    , claimId : Int
+    , description : String
+    , createdAt : DateTime
+    , status : Tag.TagStatus
     }
 
 
@@ -74,7 +95,7 @@ initModel =
     , communities = Loading
     , lastSocket = ""
     , transfers = LoadingGraphql
-    , activities = LoadingGraphql
+    , verifications = LoadingGraphql
     }
 
 
@@ -112,72 +133,84 @@ view loggedIn model =
                 [ Page.viewTitle (t "menu.my_communities")
                 , Page.viewButtonNew (t "community.create_button") Route.NewCommunity
                 , viewBalances loggedIn communities
-                , viewActivities loggedIn.shared model
+                , viewVerifications loggedIn.shared model
                 , viewSections loggedIn model
                 ]
 
 
-viewActivities : Shared -> Model -> Html Msg
-viewActivities shared model =
+viewVerifications : Shared -> Model -> Html Msg
+viewVerifications shared model =
     let
         t =
             I18Next.t shared.translations
 
-        toView activities =
+        toView verifications =
             List.map
-                (viewActivity shared.endpoints.ipfs)
-                activities
+                (viewVerification shared.endpoints.ipfs)
+                verifications
     in
     div
         []
         [ Page.viewTitle (t "dashboard.activities.title")
-        , case model.activities of
+        , case model.verifications of
             LoadingGraphql ->
-                viewNoActivity
-                    [ Loading.view "text-nobel" ]
+                viewNoVerification
+                    [ Loading.view "text-gray-900" ]
 
             FailedGraphql err ->
-                viewNoActivity
+                viewNoVerification
                     [ p
-                        [ class "font-sans text-nobel text-sm" ]
+                        [ class "font-sans text-gray-900 text-sm" ]
                         [ text (Page.errorToString err) ]
                     ]
 
-            LoadedGraphql activities ->
-                if List.isEmpty activities then
-                    viewNoActivity
+            LoadedGraphql verifications ->
+                if List.isEmpty verifications then
+                    viewNoVerification
                         [ p
-                            [ class "font-sans text-nobel text-sm" ]
+                            [ class "font-sans text-gray-900 text-sm" ]
                             [ text (t "dashboard.activities.no_activities_yet") ]
                         ]
 
                 else
                     div
                         [ class "shadow-md rounded-lg bg-white mt-5" ]
-                        (toView activities)
+                        (toView verifications)
         ]
 
 
-viewActivity : String -> Activity -> Html Msg
-viewActivity url activity =
+viewVerification : String -> Verification -> Html Msg
+viewVerification url verification =
     let
         maybeHash =
-            Just activity.communityLogo
+            Just verification.logo
 
         description =
-            activity.actionDescription
+            verification.description
 
         date =
-            Just activity.claimCreatedAt
+            Just verification.createdAt
                 |> Utils.posixDateTime
                 |> Strftime.format "%d %b %Y" Time.utc
 
         status =
-            activity.status
+            verification.status
+
+        route =
+            case verification.symbol of
+                Just symbol ->
+                    Route.VerifyClaim
+                        symbol
+                        (String.fromInt verification.objectiveId)
+                        (String.fromInt verification.actionId)
+                        (String.fromInt verification.claimId)
+
+                Nothing ->
+                    Route.ComingSoon
     in
     a
-        [ class "border-b last:border-b-0 border-gainsboro flex items-start lg:items-center hover:bg-white-smoke first-hover:rounded-t-lg last-hover:rounded-b-lg p-4"
-        , Route.href Route.ComingSoon
+        [ class "border-b last:border-b-0 border-gray-500 flex items-start lg:items-center hover:bg-gray-100 first-hover:rounded-t-lg last-hover:rounded-b-lg p-4"
+        , Route.href route
         ]
         [ div
             [ class "flex-none" ]
@@ -188,7 +221,7 @@ viewActivity url activity =
                 [ class "font-sans text-black text-sm leading-relaxed" ]
                 [ text description ]
             , p
-                [ class "font-normal font-sans text-nobel text-caption uppercase" ]
+                [ class "font-normal font-sans text-gray-900 text-caption uppercase" ]
                 [ text date ]
             , div
                 [ class "lg:hidden mt-4" ]
@@ -200,8 +233,8 @@ viewActivity url activity =
         ]
 
 
-viewNoActivity : List (Html Msg) -> Html Msg
-viewNoActivity elements =
+viewNoVerification : List (Html Msg) -> Html Msg
+viewNoVerification elements =
     div
         [ class "shadow-md rounded-lg bg-white mt-5 p-4" ]
         [ div
@@ -320,7 +353,7 @@ type Msg
     | CompletedLoadBalances (Result Http.Error (List Balance))
     | GotDashCommunityMsg Int DashCommunity.Msg
     | CompletedLoadUserTransfers (Result (Graphql.Http.Error (Maybe QueryTransfers)) (Maybe QueryTransfers))
-    | CompletedLoadActivities (Result (Graphql.Http.Error ActivitiesResponse) ActivitiesResponse)
+    | CompletedLoadVerifications (Result (Graphql.Http.Error VerificationHistoryResponse) VerificationHistoryResponse)
 
 
 update : Msg -> Model -> LoggedIn.Model -> UpdateResult
@@ -367,12 +400,12 @@ update msg model loggedIn =
                 |> UR.init
                 |> UR.logGraphqlError msg err
 
-        CompletedLoadActivities (Ok result) ->
-            { model | activities = LoadedGraphql (Activity.mapToActivity result) }
+        CompletedLoadVerifications (Ok result) ->
+            { model | verifications = LoadedGraphql (toVerifications result) }
                 |> UR.init
 
-        CompletedLoadActivities (Err err) ->
-            { model | activities = FailedGraphql err }
+        CompletedLoadVerifications (Err err) ->
+            { model | verifications = FailedGraphql err }
                 |> UR.init
                 |> UR.logGraphqlError msg err
 
@@ -416,19 +449,154 @@ updateDashCommunityUpdateResult index uResult commUResult =
 -- HELPERS
 
 
-fetchActivities : Shared -> Eos.Name -> Cmd Msg
-fetchActivities shared accountName =
+type alias VerificationHistoryResponse =
+    { claims : List ClaimResponse
+    }
+
+
+type alias ClaimResponse =
+    { id : Int
+    , createdAt : DateTime
+    , checks : List CheckResponse
+    , action : ActionResponse
+    }
+
+
+type alias CheckResponse =
+    { isVerified : Bool
+    }
+
+
+type alias ActionResponse =
+    { id : Int
+    , description : String
+    , objective : ObjectiveResponse
+    }
+
+
+type alias ObjectiveResponse =
+    { id : Int
+    , community : CommunityResponse
+    }
+
+
+type alias CommunityResponse =
+    { symbol : String
+    , logo : String
+    }
+
+
+fetchVerifications : Shared -> Eos.Name -> Cmd Msg
+fetchVerifications shared accountName =
     let
-        account =
+        validator : String
+        validator =
             Eos.nameToString accountName
 
+        selectionSet : SelectionSet VerificationHistoryResponse RootQuery
         selectionSet =
-            Activity.activitiesSelectionSet account
+            verificationHistorySelectionSet validator
     in
     Api.Graphql.query
         shared
         selectionSet
-        CompletedLoadActivities
+        CompletedLoadVerifications
+
+
+verificationHistorySelectionSet : String -> SelectionSet VerificationHistoryResponse RootQuery
+verificationHistorySelectionSet validator =
+    let
+        claimsInput : ClaimsRequiredArguments
+        claimsInput =
+            { input = { validator = validator }
+            }
+
+        selectionSet : SelectionSet ClaimResponse Bespiral.Object.Claim
+        selectionSet =
+            claimSelectionSet validator
+    in
+    SelectionSet.succeed VerificationHistoryResponse
+        |> with (Bespiral.Query.claims claimsInput selectionSet)
+
+
+claimSelectionSet : String -> SelectionSet ClaimResponse Bespiral.Object.Claim
+claimSelectionSet validator =
+    let
+        checksArg : ChecksOptionalArguments -> ChecksOptionalArguments
+        checksArg _ =
+            { input = Present { validator = Present validator }
+            }
+    in
+    SelectionSet.succeed ClaimResponse
+        |> with Claim.id
+        |> with Claim.createdAt
+        |> with (Claim.checks checksArg checkSelectionSet)
+        |> with (Claim.action actionSelectionSet)
+
+
+checkSelectionSet : SelectionSet CheckResponse Bespiral.Object.Check
+checkSelectionSet =
+    SelectionSet.succeed CheckResponse
+        |> with Check.isVerified
+
+
+actionSelectionSet : SelectionSet ActionResponse Bespiral.Object.Action
+actionSelectionSet =
+    SelectionSet.succeed ActionResponse
+        |> with Action.id
+        |> with Action.description
+        |> with (Action.objective objectiveSelectionSet)
+
+
+objectiveSelectionSet : SelectionSet ObjectiveResponse Bespiral.Object.Objective
+objectiveSelectionSet =
+    SelectionSet.succeed ObjectiveResponse
+        |> with Objective.id
+        |> with (Objective.community communitySelectionSet)
+
+
+communitySelectionSet : SelectionSet CommunityResponse Bespiral.Object.Community
+communitySelectionSet =
+    SelectionSet.succeed CommunityResponse
+        |> with Community.symbol
+        |> with Community.logo
+
+
+toVerifications : VerificationHistoryResponse -> List Verification
+toVerifications verificationHistoryResponse =
+    let
+        claimsResponse : List ClaimResponse
+        claimsResponse =
+            verificationHistoryResponse.claims
+
+        toStatus : List CheckResponse -> Tag.TagStatus
+        toStatus checks =
+            case List.head checks of
+                Just check ->
+                    if check.isVerified == True then
+                        Tag.APPROVED
+
+                    else
+                        Tag.DISAPPROVED
+
+                Nothing ->
+                    Tag.PENDING
+
+        toVerification : ClaimResponse -> Verification
+        toVerification claimResponse =
+            { symbol = Eos.symbolFromString claimResponse.action.objective.community.symbol
+            , logo = claimResponse.action.objective.community.logo
+            , objectiveId = claimResponse.action.objective.id
+            , actionId = claimResponse.action.id
+            , claimId = claimResponse.id
+            , description = claimResponse.action.description
+            , createdAt = claimResponse.createdAt
+            , status = toStatus claimResponse.checks
+            }
+    in
+    List.map
+        toVerification
+        claimsResponse
 
 
 fetchBalance : Shared -> Eos.Name -> Cmd Msg
@@ -493,7 +661,7 @@ msgToString msg =
         CompletedLoadUserTransfers result ->
             resultToString [ "CompletedLoadUserTransfers" ] result
 
-        CompletedLoadActivities result ->
+        CompletedLoadVerifications result ->
             resultToString [ "CompletedLoadActivities" ] result
 
 

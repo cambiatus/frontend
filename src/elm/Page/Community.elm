@@ -754,7 +754,7 @@ viewClaimModal loggedIn model =
                 [ div [ class "modal-bg", onClick CloseClaimConfirmation ] []
                 , div [ class "modal-content" ]
                     [ div [ class "w-full" ]
-                        [ p [ class "font-sans w-full font-bold font-heading text-2xl mb-4" ]
+                        [ p [ class "font-sans w-full font-bold text-heading text-2xl mb-4" ]
                             [ text_ "community.claimAction.title" ]
                         , button
                             ([ onClick CloseClaimConfirmation ]
@@ -762,7 +762,7 @@ viewClaimModal loggedIn model =
                             )
                             [ Icons.close "absolute fill-current text-gray-400 top-0 right-0 mx-8 my-4"
                             ]
-                        , p [ class "font-body w-full font-sans mb-10" ]
+                        , p [ class "text-body w-full font-sans mb-10" ]
                             [ text_ "community.claimAction.body" ]
                         ]
                     , div [ class "w-full md:bg-gray-100 md:flex md:absolute rounded-b-lg md:inset-x-0 md:bottom-0 md:p-4" ]

@@ -425,5 +425,30 @@
       "title": "Atividades para sua análise",
       "no_activities_yet": "Nenhuma atividade."
     }
+  },
+  "verify_claim": {
+    "pending": "Pendente",
+    "disapproved": "Reprovado",
+    "approved": "Aprovado",
+    "reward": "Você ganhou: {{value}}",
+    "sub_wait_1": "Aguarde, esta reivindicação está sendo analisada por outros usuários.",
+    "sub_wait_2": "Quando terminar, você receberá sua recompensa.",
+    "objective": "Objetivo",
+    "action": "Ação",
+    "claimer": "Reivindicado por",
+    "date": "Data",
+    "claimer_reward": "Recompensa do usuário",
+    "your_reward": "Sua recompensa",
+    "disapprove": "Reprovar",
+    "approve": "Aprovar",
+    "no_results_found": "Nenhum resultado encontrado",
+    "modal": {
+      "title": "Reivindicação",
+      "message_disapprove": "Você realmente deseja reprovar esta reivindicação?",
+      "message_approve": "Você realmente deseja aprovar esta reivindicação?",
+      "primary_disapprove": "sim, reprovar",
+      "primary_approve": "sim, aprovar",
+      "secondary": "não, cancelar"
+    }
   }
 }
