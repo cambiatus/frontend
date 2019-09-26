@@ -162,7 +162,7 @@ viewLanguageItems shared toMsg =
                 , onClick (toMsg lang)
                 ]
                 [ langFlag lang
-                , span [ class "lang__item__text" ] [ text (String.toUpper lang) ]
+                , span [ class "lang__item__text border-t border-gray-500 w-full text-left" ] [ text (String.toUpper lang) ]
                 ]
         )
         [ "en", "pt-br", "es", "cat" ]
