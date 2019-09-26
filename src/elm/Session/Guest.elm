@@ -115,7 +115,7 @@ view thisMsg page ({ shared } as model) content =
                         "/icons/en-lang.svg"
             in
             div
-                [ class "main-login-grid w-screen h-screen"
+                [ class "main-login-grid min-h-screen"
                 ]
                 [ header
                     [ class "main-header" ]
@@ -144,7 +144,7 @@ view thisMsg page ({ shared } as model) content =
                     |> Html.map thisMsg
                 , main_
                     [ id "main-content"
-                    , class "w-full h-full flex-wrap flex items-center justify-center outline-none"
+                    , class "min-h-screen main-content__guest flex-wrap flex items-center justify-center outline-none bg-local"
                     , if Time.toHour Time.utc shared.now >= 6 && Time.toHour Time.utc shared.now <= 18 then
                         style "background-image" "url('/images/login-bg-day.png')"
 
