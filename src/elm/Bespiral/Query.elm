@@ -30,6 +30,28 @@ chatPreferences requiredArgs object_ =
     Object.selectionForCompositeField "chatPreferences" [ Argument.required "input" requiredArgs.input Bespiral.InputObject.encodeChatInput ] object_ (identity >> Decode.nullable)
 
 
+type alias ClaimRequiredArguments =
+    { input : Bespiral.InputObject.ClaimInput }
+
+
+{-| A single claim
+-}
+claim : ClaimRequiredArguments -> SelectionSet decodesTo Bespiral.Object.Claim -> SelectionSet decodesTo RootQuery
+claim requiredArgs object_ =
+    Object.selectionForCompositeField "claim" [ Argument.required "input" requiredArgs.input Bespiral.InputObject.encodeClaimInput ] object_ identity
+
+
+type alias ClaimsRequiredArguments =
+    { input : Bespiral.InputObject.ClaimsInput }
+
+
+{-| A list of claims
+-}
+claims : ClaimsRequiredArguments -> SelectionSet decodesTo Bespiral.Object.Claim -> SelectionSet (List decodesTo) RootQuery
+claims requiredArgs object_ =
+    Object.selectionForCompositeField "claims" [ Argument.required "input" requiredArgs.input Bespiral.InputObject.encodeClaimsInput ] object_ (identity >> Decode.list)
+
+
 {-| A list of communities in BeSpiral
 -}
 communities : SelectionSet decodesTo Bespiral.Object.Community -> SelectionSet (List decodesTo) RootQuery

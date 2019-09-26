@@ -36,6 +36,11 @@ actions fillInOptionals object_ =
     Object.selectionForCompositeField "actions" optionalArgs object_ (identity >> Decode.list)
 
 
+community : SelectionSet decodesTo Bespiral.Object.Community -> SelectionSet decodesTo Bespiral.Object.Objective
+community object_ =
+    Object.selectionForCompositeField "community" [] object_ identity
+
+
 createdAt : SelectionSet Bespiral.ScalarCodecs.DateTime Bespiral.Object.Objective
 createdAt =
     Object.selectionForField "ScalarCodecs.DateTime" "createdAt" [] (Bespiral.ScalarCodecs.codecs |> Bespiral.Scalar.unwrapCodecs |> .codecDateTime |> .decoder)

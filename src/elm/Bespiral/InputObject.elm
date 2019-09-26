@@ -136,6 +136,52 @@ encodeChecksInput input =
         [ ( "validator", Encode.string |> Encode.optional input.validator ) ]
 
 
+buildClaimInput : ClaimInputRequiredFields -> ClaimInput
+buildClaimInput required =
+    { id = required.id }
+
+
+type alias ClaimInputRequiredFields =
+    { id : Int }
+
+
+{-| Type for the ClaimInput input object.
+-}
+type alias ClaimInput =
+    { id : Int }
+
+
+{-| Encode a ClaimInput into a value that can be used as an argument.
+-}
+encodeClaimInput : ClaimInput -> Value
+encodeClaimInput input =
+    Encode.maybeObject
+        [ ( "id", Encode.int input.id |> Just ) ]
+
+
+buildClaimsInput : ClaimsInputRequiredFields -> ClaimsInput
+buildClaimsInput required =
+    { validator = required.validator }
+
+
+type alias ClaimsInputRequiredFields =
+    { validator : String }
+
+
+{-| Type for the ClaimsInput input object.
+-}
+type alias ClaimsInput =
+    { validator : String }
+
+
+{-| Encode a ClaimsInput into a value that can be used as an argument.
+-}
+encodeClaimsInput : ClaimsInput -> Value
+encodeClaimsInput input =
+    Encode.maybeObject
+        [ ( "validator", Encode.string input.validator |> Just ) ]
+
+
 buildProfileInput : (ProfileInputOptionalFields -> ProfileInputOptionalFields) -> ProfileInput
 buildProfileInput fillOptionals =
     let
