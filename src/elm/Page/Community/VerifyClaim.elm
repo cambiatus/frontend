@@ -41,13 +41,8 @@ import View.Icon as Icon
 
 init : LoggedIn.Model -> ClaimId -> ( Model, Cmd Msg )
 init { accountName, shared } claimId =
-    let
-        validator : String
-        validator =
-            Eos.nameToString accountName
-    in
     ( { claimId = claimId, status = LoadingVerification }
-    , fetchVerification claimId validator shared
+    , fetchVerification claimId accountName shared
     )
 
 
@@ -664,12 +659,17 @@ type CheckStatus
     | POSITIVE
 
 
-fetchVerification : ClaimId -> String -> Shared -> Cmd Msg
-fetchVerification claimId validator shared =
+fetchVerification : ClaimId -> Eos.Name -> Shared -> Cmd Msg
+fetchVerification claimId accountName shared =
     let
+        id : Int
         id =
             String.toInt claimId
                 |> Maybe.withDefault -1
+
+        validator : String
+        validator =
+            Eos.nameToString accountName
     in
     Api.Graphql.query
         shared

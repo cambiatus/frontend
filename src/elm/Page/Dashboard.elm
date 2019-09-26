@@ -91,50 +91,11 @@ type alias Verification =
 
 initModel : Model
 initModel =
-    let
-        pending_verification =
-            { symbol = Eos.symbolFromString "PUL"
-            , logo = ""
-            , objectiveId = 1
-            , actionId = 1
-            , claimId = 1
-            , description = "Cevadis im ampola pa arma uma pindureta."
-            , createdAt = DateTime "2019-09-20T16:00:00Z"
-            , status = Tag.PENDING
-            }
-
-        disapproved_verification =
-            { symbol = Eos.symbolFromString "PUL"
-            , logo = ""
-            , objectiveId = 1
-            , actionId = 1
-            , claimId = 2
-            , description = "Delegadis gente finis, bibendum egestas augue arcu ut est."
-            , createdAt = DateTime "2019-09-20T16:00:00Z"
-            , status = Tag.DISAPPROVED
-            }
-
-        approved_verification =
-            { symbol = Eos.symbolFromString "PUL"
-            , logo = ""
-            , objectiveId = 1
-            , actionId = 1
-            , claimId = 3
-            , description = "Si num tem leite então bota uma pinga aí cumpadi!"
-            , createdAt = DateTime "2019-09-20T16:00:00Z"
-            , status = Tag.APPROVED
-            }
-    in
     { date = Nothing
     , communities = Loading
     , lastSocket = ""
     , transfers = LoadingGraphql
-    , verifications =
-        LoadedGraphql
-            [ pending_verification
-            , disapproved_verification
-            , approved_verification
-            ]
+    , verifications = LoadingGraphql
     }
 
 
