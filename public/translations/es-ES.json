@@ -435,6 +435,7 @@
     "your_reward": "Su recompensa",
     "disapprove": "Desaprobar",
     "approve": "Aprobar",
+    "no_results_found": "No se han encontrado resultados",
     "modal": {
       "title": "Reclamación",
       "message_disapprove": "Realmente quiere desaprobar este reclamo?",

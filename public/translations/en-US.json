@@ -435,6 +435,7 @@
     "your_reward": "Your reward",
     "disapprove": "Disapprove",
     "approve": "Approve",
+    "no_results_found": "No results found",
     "modal": {
       "title": "Claim",
       "message_disapprove": "Do you really want to disapprove this claim?",

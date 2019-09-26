@@ -129,10 +129,12 @@ view { accountName, shared } { claimId, status } =
                         ]
 
                 Nothing ->
-                    -- TODO: add screen case verification does not exist
                     div
-                        []
-                        []
+                        [ class "flex justify-center items-center md:w-full mx-4 md:mx-auto mt-0 md:mt-10 bg-white max-w-4xl rounded-lg" ]
+                        [ p
+                            [ class "font-sans text-body text-black text-center p-8" ]
+                            [ text (t "verify_claim.no_results_found") ]
+                        ]
 
         LoadVerificationFailed err ->
             Page.fullPageGraphQLError (t "verification.title") err
