@@ -143,7 +143,6 @@ view thisMsg page ({ shared } as model) content =
                         [ img [ src langIconPath, class "main__header__language" ] []
                         , span [ class "main-header__info-name" ]
                             [ text shared.language ]
-                        , img [ src "/icons/arrow.svg", class arrowClass ] []
                         , Icons.arrowDown arrowClass
                         ]
                     ]
