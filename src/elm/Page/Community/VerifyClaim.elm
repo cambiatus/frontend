@@ -1,10 +1,23 @@
-module Page.Community.VerifyClaim exposing (..)
+module Page.Community.VerifyClaim exposing (Model, Msg, init, jsAddressToMsg, msgToString, update, view)
 
+import Api.Graphql
+import Bespiral.Object exposing (Claim, Profile)
+import Bespiral.Object.Action as Action
+import Bespiral.Object.Check as Check
+import Bespiral.Object.Claim as Claim exposing (ChecksOptionalArguments)
+import Bespiral.Object.Community as Community
+import Bespiral.Object.Objective as Objective
+import Bespiral.Object.Profile as Profile
+import Bespiral.Object.Validator as Validator
+import Bespiral.Query exposing (ClaimRequiredArguments, ClaimsRequiredArguments)
 import Bespiral.Scalar exposing (DateTime(..))
 import DateFormat
 import Eos
 import Eos.Account as Eos
 import Graphql.Http
+import Graphql.Operation exposing (RootQuery)
+import Graphql.OptionalArgument exposing (OptionalArgument(..))
+import Graphql.SelectionSet as SelectionSet exposing (SelectionSet, with)
 import Html exposing (Html, button, div, p, text)
 import Html.Attributes exposing (class)
 import Html.Events exposing (onClick)
@@ -32,85 +45,9 @@ init { accountName, shared } claimId =
         validator : String
         validator =
             Eos.nameToString accountName
-
-        verification : Verification
-        verification =
-            case claimId of
-                "1" ->
-                    { symbol = "PUL"
-                    , logo = ""
-                    , name = "Pulpes"
-                    , objectiveDescription =
-                        """
-                        Mussum Ipsum, cacilds vidis litro abertis.
-                        Não sou faixa preta cumpadi, sou preto inteiris, inteiris.
-                        Diuretics paradis num copo é motivis de denguis.
-                        """
-                    , actionDescription =
-                        """
-                        Cevadis im ampola pa arma uma pindureta.
-                        Delegadis gente finis, bibendum egestas augue arcu ut est.
-                        Si num tem leite então bota uma pinga aí cumpadi!
-                        """
-                    , claimerReward = 10
-                    , verifierReward = 11
-                    , claimer = "alisson"
-                    , createdAt = DateTime "2019-09-20T16:00:00Z"
-                    , status = PENDING
-                    }
-
-                "2" ->
-                    { symbol = "PUL"
-                    , logo = ""
-                    , name = "Pulpes"
-                    , objectiveDescription =
-                        """
-                        Mussum Ipsum, cacilds vidis litro abertis.
-                        Não sou faixa preta cumpadi, sou preto inteiris, inteiris.
-                        Diuretics paradis num copo é motivis de denguis.
-                        """
-                    , actionDescription =
-                        """
-                        Cevadis im ampola pa arma uma pindureta.
-                        Delegadis gente finis, bibendum egestas augue arcu ut est.
-                        Si num tem leite então bota uma pinga aí cumpadi!
-                        """
-                    , claimerReward = 10
-                    , verifierReward = 11
-                    , claimer = "alisson"
-                    , createdAt = DateTime "2019-09-20T16:00:00Z"
-                    , status = DISAPPROVED_AND_UNDER_REVIEW
-                    }
-
-                _ ->
-                    { symbol = "PUL"
-                    , logo = ""
-                    , name = "Pulpes"
-                    , objectiveDescription =
-                        """
-                        Mussum Ipsum, cacilds vidis litro abertis.
-                        Não sou faixa preta cumpadi, sou preto inteiris, inteiris.
-                        Diuretics paradis num copo é motivis de denguis.
-                        """
-                    , actionDescription =
-                        """
-                        Cevadis im ampola pa arma uma pindureta.
-                        Delegadis gente finis, bibendum egestas augue arcu ut est.
-                        Si num tem leite então bota uma pinga aí cumpadi!
-                        """
-                    , claimerReward = 10
-                    , verifierReward = 11
-                    , claimer = "alisson"
-                    , createdAt = DateTime "2019-09-20T16:00:00Z"
-                    , status = APPROVED
-                    }
-
-
     in
-    -- TODO: use LoadingVerification as first status and add API query
-    ( { claimId = claimId, status = LoadVerification Closed (Just verification) }
-      --    ( { claimId = claimId, status = LoadingVerification }
-    , Cmd.none
+    ( { claimId = claimId, status = LoadingVerification }
+    , fetchVerification claimId validator shared
     )
 
 
@@ -127,7 +64,7 @@ type alias Model =
 type Status
     = LoadingVerification
     | LoadVerification ModalStatus (Maybe Verification)
-    | LoadVerificationFailed (Graphql.Http.Error (Maybe Verification))
+    | LoadVerificationFailed (Graphql.Http.Error VerificationResponse)
 
 
 type ModalStatus
@@ -548,7 +485,7 @@ type alias UpdateResult =
 
 
 type Msg
-    = CompletedVerificationLoad (Result (Graphql.Http.Error (Maybe Verification)) (Maybe Verification))
+    = CompletedVerificationLoad (Result (Graphql.Http.Error VerificationResponse) VerificationResponse)
     | ClickedDisapprove Verification
     | ClickedApproved Verification
     | ClickedClose Verification
@@ -559,7 +496,13 @@ type Msg
 update : Msg -> Model -> LoggedIn.Model -> UpdateResult
 update msg model ({ accountName, shared } as loggedIn) =
     case msg of
-        CompletedVerificationLoad (Ok maybeVerification) ->
+        CompletedVerificationLoad (Ok response) ->
+            let
+                maybeVerification =
+                    toMaybeVerification
+                        (Eos.nameToString accountName)
+                        response
+            in
             { model | status = LoadVerification Closed maybeVerification }
                 |> UR.init
 
@@ -662,6 +605,239 @@ encodeVerification claimId validator vote =
 
 
 -- HELPERS
+
+
+type alias VerificationResponse =
+    { claim : ClaimResponse
+    }
+
+
+type alias ClaimResponse =
+    { createdAt : DateTime
+    , isVerified : Bool
+    , checks : List CheckResponse
+    , claimer : ProfileResponse
+    , action : ActionResponse
+    }
+
+
+type alias CheckResponse =
+    { isVerified : Bool
+    }
+
+
+type alias ProfileResponse =
+    { account : String
+    }
+
+
+type alias ActionResponse =
+    { description : String
+    , reward : Float
+    , verifierReward : Float
+    , objective : ObjectiveResponse
+    , validators : List ValidatorResponse
+    }
+
+
+type alias ObjectiveResponse =
+    { description : String
+    , community : CommunityResponse
+    }
+
+
+type alias CommunityResponse =
+    { symbol : String
+    , logo : String
+    , name : String
+    }
+
+
+type alias ValidatorResponse =
+    { validator : ProfileResponse
+    }
+
+
+type CheckStatus
+    = BLANK
+    | NEGATIVE
+    | POSITIVE
+
+
+fetchVerification : ClaimId -> String -> Shared -> Cmd Msg
+fetchVerification claimId validator shared =
+    let
+        id =
+            String.toInt claimId
+                |> Maybe.withDefault -1
+    in
+    Api.Graphql.query
+        shared
+        (verificationSelectionSet id validator)
+        CompletedVerificationLoad
+
+
+verificationSelectionSet : Int -> String -> SelectionSet VerificationResponse RootQuery
+verificationSelectionSet id validator =
+    let
+        claimInput : ClaimRequiredArguments
+        claimInput =
+            { input = { id = id }
+            }
+
+        selectionSet : SelectionSet ClaimResponse Bespiral.Object.Claim
+        selectionSet =
+            claimSelectionSet validator
+    in
+    SelectionSet.succeed VerificationResponse
+        |> with (Bespiral.Query.claim claimInput selectionSet)
+
+
+claimSelectionSet : String -> SelectionSet ClaimResponse Bespiral.Object.Claim
+claimSelectionSet validator =
+    let
+        checksArg : ChecksOptionalArguments -> ChecksOptionalArguments
+        checksArg _ =
+            { input = Present { validator = Present validator }
+            }
+    in
+    SelectionSet.succeed ClaimResponse
+        |> with Claim.createdAt
+        |> with Claim.isVerified
+        |> with (Claim.checks checksArg checkSelectionSet)
+        |> with (Claim.claimer profileSelectionSet)
+        |> with (Claim.action actionSelectionSet)
+
+
+checkSelectionSet : SelectionSet CheckResponse Bespiral.Object.Check
+checkSelectionSet =
+    SelectionSet.succeed CheckResponse
+        |> with Check.isVerified
+
+
+profileSelectionSet : SelectionSet ProfileResponse Bespiral.Object.Profile
+profileSelectionSet =
+    SelectionSet.succeed ProfileResponse
+        |> with Profile.account
+
+
+actionSelectionSet : SelectionSet ActionResponse Bespiral.Object.Action
+actionSelectionSet =
+    SelectionSet.succeed ActionResponse
+        |> with Action.description
+        |> with Action.reward
+        |> with Action.verifierReward
+        |> with (Action.objective objectiveSelectionSet)
+        |> with (Action.validators validatorsSelectionSet)
+
+
+objectiveSelectionSet : SelectionSet ObjectiveResponse Bespiral.Object.Objective
+objectiveSelectionSet =
+    SelectionSet.succeed ObjectiveResponse
+        |> with Objective.description
+        |> with (Objective.community communitySelectionSet)
+
+
+communitySelectionSet : SelectionSet CommunityResponse Bespiral.Object.Community
+communitySelectionSet =
+    SelectionSet.succeed CommunityResponse
+        |> with Community.symbol
+        |> with Community.logo
+        |> with Community.name
+
+
+validatorsSelectionSet : SelectionSet ValidatorResponse Bespiral.Object.Validator
+validatorsSelectionSet =
+    SelectionSet.succeed ValidatorResponse
+        |> with (Validator.validator profileSelectionSet)
+
+
+toMaybeVerification : String -> VerificationResponse -> Maybe Verification
+toMaybeVerification validator verificationResponse =
+    let
+        claimResponse : ClaimResponse
+        claimResponse =
+            verificationResponse.claim
+
+        checksResponse : List CheckResponse
+        checksResponse =
+            claimResponse.checks
+
+        claimerResponse : ProfileResponse
+        claimerResponse =
+            claimResponse.claimer
+
+        actionResponse : ActionResponse
+        actionResponse =
+            claimResponse.action
+
+        objectiveResponse : ObjectiveResponse
+        objectiveResponse =
+            actionResponse.objective
+
+        communityResponse : CommunityResponse
+        communityResponse =
+            objectiveResponse.community
+
+        validatorsResponse : List ProfileResponse
+        validatorsResponse =
+            List.map
+                (\v -> v.validator)
+                actionResponse.validators
+
+        validatorVote : CheckStatus
+        validatorVote =
+            case List.head checksResponse of
+                Just check ->
+                    if check.isVerified then
+                        POSITIVE
+
+                    else
+                        NEGATIVE
+
+                Nothing ->
+                    BLANK
+
+        isValidVerifier : Bool
+        isValidVerifier =
+            not (claimResponse.isVerified == True && validatorVote == BLANK)
+
+        isValidValidator : Bool
+        isValidValidator =
+            List.any
+                (\v -> v.account == validator)
+                validatorsResponse
+    in
+    if isValidValidator && isValidVerifier then
+        Just
+            { symbol = communityResponse.symbol
+            , logo = communityResponse.logo
+            , name = communityResponse.name
+            , objectiveDescription = objectiveResponse.description
+            , actionDescription = actionResponse.description
+            , claimerReward = actionResponse.reward
+            , verifierReward = actionResponse.verifierReward
+            , claimer = claimerResponse.account
+            , createdAt = claimResponse.createdAt
+            , status =
+                if claimResponse.isVerified == False && validatorVote == BLANK then
+                    PENDING
+
+                else if claimResponse.isVerified == False && validatorVote == NEGATIVE then
+                    DISAPPROVED_AND_UNDER_REVIEW
+
+                else if claimResponse.isVerified == False && validatorVote == POSITIVE then
+                    APPROVED_AND_UNDER_REVIEW
+
+                else if claimResponse.isVerified == True && validatorVote == NEGATIVE then
+                    DISAPPROVED
+
+                else
+                    APPROVED
+            }
+
+    else
+        Nothing
 
 
 dateFormatter : Time.Zone -> Time.Posix -> String
