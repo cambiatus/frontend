@@ -385,8 +385,6 @@ textarea.input {
 
 .main__register__details {
    background: #FFFFFF;
-   margin: -16px -32px;
-   height: 200vh;
 }
 
 
@@ -918,7 +916,7 @@ svg.main-header__info-arrow--up {
     display: flex;
     align-items: center;
     text-decoration: none;
-    padding: 0 26px 0 32px;
+    padding: 0 0px 0 32px;
     transition: background-color .1s ease;
     outline: none;
     background-color: #fff;
@@ -3574,10 +3572,6 @@ textarea.form-input {
         right: 7px;
     }
 
-    .main-login-grid .main-content {
-        padding: 16px 32px;
-    }
-
    .section-grid {
         margin-bottom: 20px;
     }
@@ -3966,4 +3960,11 @@ p.card-community-view__description {
 
 .key-button {
     right: 45px;
+}
+
+/* Webkit browsers like Safari and Chrome */
+input[type=number]::-webkit-inner-spin-button,
+input[type=number]::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
 }
