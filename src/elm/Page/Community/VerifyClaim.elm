@@ -511,24 +511,20 @@ update msg model ({ accountName, shared } as loggedIn) =
         ClickedDisapprove verification ->
             { model | status = LoadVerification (Opened Disapproved) (Just verification) }
                 |> UR.init
-                |> UR.addExt (LoggedIn.TurnLights True)
 
         ClickedApproved verification ->
             { model | status = LoadVerification (Opened Approved) (Just verification) }
                 |> UR.init
-                |> UR.addExt (LoggedIn.TurnLights True)
 
         ClickedClose verification ->
             { model | status = LoadVerification Closed (Just verification) }
                 |> UR.init
-                |> UR.addExt (LoggedIn.TurnLights False)
 
         ClickedConfirm verification vote ->
             case LoggedIn.isAuth loggedIn of
                 True ->
                     { model | status = LoadVerification Closed (Just verification) }
                         |> UR.init
-                        |> UR.addExt (LoggedIn.TurnLights False)
                         |> UR.addPort
                             { responseAddress = msg
                             , responseData = Encode.null
