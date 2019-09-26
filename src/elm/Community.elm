@@ -257,10 +257,7 @@ actionSelectionSet =
         |> with Action.reward
         |> with Action.verifierReward
         |> with (Eos.nameSelectionSet Action.creatorId)
-        |> with
-            (Action.validators validatorSelectionSet
-                |> SelectionSet.map (Maybe.withDefault [])
-            )
+        |> with (Action.validators validatorSelectionSet)
         |> with Action.usages
         |> with Action.usagesLeft
         |> with Action.deadline

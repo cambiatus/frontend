@@ -422,5 +422,30 @@
       "title": "Activitats per a la vostra anàlisi",
       "no_activities_yet": "Encara no hi ha activitats.."
     }
+  },
+  "verify_claim": {
+    "pending": "Pendent",
+    "disapproved": "Desaprovat",
+    "approved": "Aprovat",
+    "reward": "Has guanyat: {{value}}",
+    "sub_wait_1": "Heu d'esperar, aquesta reclamació està sota revisió d'altres usuaris.",
+    "sub_wait_2": "En acabar, rebràs la teva recompensa.",
+    "objective": "Objectiu",
+    "action": "Acció",
+    "claimer": "Reclamat per",
+    "date": "Data",
+    "claimer_reward": "Recompensa per l'usuari",
+    "your_reward": "La teva recompensa",
+    "disapprove": "Desaprovar",
+    "approve": "Aprovar",
+    "no_results_found": "Sense resultats",
+    "modal": {
+      "title": "Reclamació",
+      "message_disapprove": "Realment voleu rebutjar aquesta reclamació?",
+      "message_approve": "Realment voleu aprovar aquesta reclamació?",
+      "primary_disapprove": "sí, desaproveu",
+      "primary_approve": "sí, aprova",
+      "secondary": "no, cancel·la"
+    }
   }
 }

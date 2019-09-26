@@ -22,6 +22,7 @@
             "elm-community/list-extra": "8.1.0",
             "rtfeldman/elm-iso8601-date-strings": "1.1.2",
             "rtfeldman/elm-validate": "4.0.1",
+            "ryannhg/date-format": "2.3.0",
             "thaterikperson/elm-strftime": "2.0.2"
         },
         "indirect": {

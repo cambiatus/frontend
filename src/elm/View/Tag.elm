@@ -13,20 +13,20 @@ type TagStatus
 view : TagStatus -> Html msg
 view status =
     let
-        ( msg, color ) =
+        ( msg, textColor ) =
             case status of
                 PENDING ->
                     ( "pending", "text-black" )
 
                 DISAPPROVED ->
-                    ( "disapproval", "text-de-york" )
+                    ( "disapproval", "text-red" )
 
                 APPROVED ->
-                    ( "approval", "text-fire-engine-red" )
+                    ( "approval", "text-green" )
     in
     div
-        [ class "bg-white-smoke flex items-center justify-center h-6 w-32" ]
+        [ class "bg-gray-100 flex items-center justify-center h-6 w-32" ]
         [ p
-            [ class ("font-sans text-caption uppercase " ++ color) ]
+            [ class ("font-sans text-caption uppercase " ++ textColor) ]
             [ text msg ]
         ]

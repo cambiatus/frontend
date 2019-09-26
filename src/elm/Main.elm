@@ -17,6 +17,7 @@ import Page.Community as Community
 import Page.Community.ActionEditor as ActionEditor
 import Page.Community.Editor as CommunityEditor
 import Page.Community.Explore as CommunityExplore
+import Page.Community.VerifyClaim as VerifyClaim
 import Page.Dashboard as Dashboard
 import Page.Login as Login
 import Page.NotFound as NotFound
@@ -150,6 +151,7 @@ type Status
     | Community Community.Model
     | CommunityEditor CommunityEditor.Model
     | ActionEditor ActionEditor.Model
+    | VerifyClaim VerifyClaim.Model
     | CommunityExplore CommunityExplore.Model
     | Dashboard Dashboard.Model
     | Login Login.Model
@@ -174,6 +176,7 @@ type Msg
     | GotCommunityMsg Community.Msg
     | GotCommunityEditorMsg CommunityEditor.Msg
     | GotActionEditorMsg ActionEditor.Msg
+    | GotVerifyClaimMsg VerifyClaim.Msg
     | GotCommunityExploreMsg CommunityExplore.Msg
     | GotDashboardMsg Dashboard.Msg
     | GotLoginMsg Login.Msg
@@ -353,6 +356,11 @@ update msg model =
         ( GotActionEditorMsg subMsg, ActionEditor subModel ) ->
             ActionEditor.update subMsg subModel
                 >> updateLoggedInUResult ActionEditor GotActionEditorMsg model
+                |> withLoggedIn
+
+        ( GotVerifyClaimMsg subMsg, VerifyClaim subModel ) ->
+            VerifyClaim.update subMsg subModel
+                >> updateLoggedInUResult VerifyClaim GotVerifyClaimMsg model
                 |> withLoggedIn
 
         ( _, _ ) ->
@@ -639,6 +647,11 @@ changeRouteTo maybeRoute model =
                 >> updateStatusWith ActionEditor GotActionEditorMsg model
                 |> withLoggedIn (Route.NewAction symbol objectiveId)
 
+        Just (Route.VerifyClaim communityId objectiveId actionId claimId) ->
+            (\l -> VerifyClaim.init l claimId)
+                >> updateStatusWith VerifyClaim GotVerifyClaimMsg model
+                |> withLoggedIn (Route.VerifyClaim communityId objectiveId actionId claimId)
+
         Just Route.Communities ->
             CommunityExplore.init
                 >> updateStatusWith CommunityExplore GotCommunityExploreMsg model
@@ -720,6 +733,10 @@ jsAddressToMsg address val =
             Maybe.map GotActionEditorMsg
                 (ActionEditor.jsAddressToMsg rAddress val)
 
+        "GotVerifyClaimMsg" :: rAddress ->
+            Maybe.map GotVerifyClaimMsg
+                (VerifyClaim.jsAddressToMsg rAddress val)
+
         _ ->
             Nothing
 
@@ -753,6 +770,9 @@ msgToString msg =
 
         GotActionEditorMsg subMsg ->
             "GotActionEditor" :: ActionEditor.msgToString subMsg
+
+        GotVerifyClaimMsg subMsg ->
+            "GotVerifyClaimMsg" :: VerifyClaim.msgToString subMsg
 
         GotCommunityExploreMsg subMsg ->
             "GotCommunityExploreMsg" :: CommunityExplore.msgToString subMsg
@@ -853,6 +873,9 @@ view model =
 
         ActionEditor subModel ->
             viewLoggedIn subModel LoggedIn.Other GotActionEditorMsg ActionEditor.view
+
+        VerifyClaim subModel ->
+            viewLoggedIn subModel LoggedIn.Other GotVerifyClaimMsg VerifyClaim.view
 
         CommunityExplore subModel ->
             viewLoggedIn subModel LoggedIn.Communities GotCommunityExploreMsg CommunityExplore.view
