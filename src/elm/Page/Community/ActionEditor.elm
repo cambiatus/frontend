@@ -12,6 +12,7 @@ import Html exposing (..)
 import Html.Attributes exposing (..)
 import Html.Events exposing (on, onCheck, onClick, onInput, targetValue)
 import I18Next exposing (t)
+import Icons 
 import Json.Decode as Json exposing (Value)
 import Json.Encode as Encode
 import MaskedInput.Text as MaskedDate
@@ -774,12 +775,17 @@ viewSelectedVerifiers shared model =
                 |> List.map
                     (\p ->
                         div
-                            [ onClick (OnRemoveVerifier p)
-                            , class "flex flex-col m-2 items-center"
-                            ]
-                            [ Avatar.view ipfsUrl p.avatar "h-7 w-7"
-                            , span [ class "mt-1 text-red font-sans text-caption uppercase leading-caption" ]
-                                [ text_ "community.actions.form.remove_verifier" ]
+                            [ class "flex flex-col m-3 items-center" ]
+                            [ div [ class "relative h-10 w-12 ml-2" ]
+                                [ Avatar.view ipfsUrl p.avatar "h-10 w-10"
+                                , div
+                                    [ onClick (OnRemoveVerifier p)
+                                    , class "absolute top-0 right-0 z-10 rounded-full h-6 w-6 flex items-center"
+                                    ]
+                                    [ Icons.remove ""]
+                                ]
+                            , span [ class "mt-2 text-black font-sans text-body leading-normal" ]
+                                [ text (Eos.nameToString p.accountName) ]
                             ]
                     )
     in
@@ -853,13 +859,13 @@ selectConfig shared isDisabled problems =
         |> Select.withClear False
         |> Select.withMultiInputItemContainerClass "hidden h-0"
         |> Select.withNotFound "No matches"
-        |> Select.withNotFoundClass "text-red  border-solid border-gray-100 border rounded z-10 bg-white w-select"
+        |> Select.withNotFoundClass "text-red  border-solid border-gray-100 border rounded z-30 bg-white w-select"
         |> Select.withNotFoundStyles [ ( "padding", "0 2rem" ) ]
         |> Select.withDisabled isDisabled
         |> Select.withHighlightedItemClass "autocomplete-item-highlight"
         |> Select.withPrompt (t shared.translations "community.actions.form.verifier_placeholder")
         |> Select.withItemHtml (viewAutoCompleteItem shared)
-        |> Select.withMenuClass "border-t-none border-solid border-gray-100 border rounded-b z-10 bg-white"
+        |> Select.withMenuClass "border-t-none border-solid border-gray-100 border rounded-b z-30 bg-white"
 
 
 viewAutoCompleteItem : Shared -> Profile -> Html Never
@@ -868,7 +874,7 @@ viewAutoCompleteItem shared profile =
         ipfsUrl =
             shared.endpoints.ipfs
     in
-    div [ class "pt-3 pl-3 flex flex-row items-center w-select" ]
+    div [ class "pt-3 pl-3 flex flex-row items-center w-select z-30" ]
         [ div [ class "pr-3" ] [ Avatar.view ipfsUrl profile.avatar "h-7 w-7" ]
         , div [ class "flex flex-col font-sans border-b border-gray-500 pb-3 w-full" ]
             [ span [ class "text-black text-body leading-loose" ]
