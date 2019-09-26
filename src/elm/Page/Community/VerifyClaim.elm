@@ -162,42 +162,41 @@ viewModal translations modalStatus verification =
                         )
             in
             div
-                [ class "z-50 flex justify-center left-0 fixed w-full" ]
+                [ class "container modal" ]
                 [ div
-                    [ class "bottom-0 md:bottom-auto fixed w-full md:w-3/5 md:max-w-xl md:mt-8" ]
+                    [ class "modal-bg"
+                    , onClick (ClickedClose verification)
+                    ]
+                    []
+                , div
+                    [ class "modal-content" ]
                     [ div
-                        [ class "relative rounded-t-lg md:rounded-lg bg-white" ]
-                        [ div
-                            [ class "px-4 pt-4 md:px-6 md:pt-6" ]
-                            [ div
-                                [ class "flex justify-between items-center" ]
-                                [ p
-                                    [ class "text-heading font-bold" ]
-                                    [ text (t "verify_claim.modal.title") ]
-                                , button
-                                    [ class "w-8 h-8"
-                                    , onClick (ClickedClose verification)
-                                    ]
-                                    [ Icons.close "text-gray-900 fill-current" ]
-                                ]
-                            , p
-                                [ class "text-body pt-4 md:pt-6" ]
-                                [ text (t message) ]
+                        [ class "w-full" ]
+                        [ p
+                            [ class "font-sans w-full font-bold text-heading text-2xl mb-4" ]
+                            [ text (t "verify_claim.modal.title") ]
+                        , button
+                            [ onClick (ClickedClose verification)
                             ]
-                        , div
-                            [ class "flex flex-col md:flex-row md:justify-center md:rounded-b-lg px-4 pt-20 pb-4 md:mt-24 md:px-0 md:py-4 md:bg-gray-100" ]
-                            [ button
-                                [ class "button button-secondary uppercase button-medium w-full md:w-1/3"
-                                , onClick (ClickedClose verification)
-                                ]
-                                [ text (t "verify_claim.modal.secondary") ]
-                            , button
-                                [ class "button button-primary uppercase button-medium w-full md:w-1/3 mt-4 md:mt-0 md:ml-6"
-                                , onClick (ClickedConfirm verification vote)
-                                ]
-                                [ text (t primaryText)
-                                ]
+                            [ Icons.close "absolute fill-current text-gray-400 top-0 right-0 mx-8 my-4"
                             ]
+                        , p [ class "text-body w-full font-sans mb-10" ]
+                            [ text (t message) ]
+                        ]
+                    , div [ class "w-full md:bg-gray-100 md:flex md:absolute rounded-b-lg md:inset-x-0 md:bottom-0 md:p-4" ]
+                        [ div [ class "flex-1" ] []
+                        , button
+                            [ class "flex-1 block button button-secondary mb-4 button-large w-full md:w-40 md:mb-0"
+                            , onClick (ClickedClose verification)
+                            ]
+                            [ text (t "verify_claim.modal.secondary") ]
+                        , div [ class "flex-1" ] []
+                        , button
+                            [ class "flex-1 block button button-primary button-large w-full md:w-40"
+                            , onClick (ClickedConfirm verification vote)
+                            ]
+                            [ text (t primaryText) ]
+                        , div [ class "flex-1" ] []
                         ]
                     ]
                 ]
