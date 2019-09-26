@@ -443,7 +443,7 @@ viewLoginPinForm model shared =
 
 toggleViewPin : Model -> Html Msg
 toggleViewPin model =
-    button [ class "btn toggle-visibility", onClick TogglePinVisibility ]
+    button [ class "", onClick TogglePinVisibility ]
         [ if model.pinVisibility then
             img [ src "icons/eye-show.svg" ] []
 
