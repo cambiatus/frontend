@@ -25,7 +25,7 @@ default =
     , maybeAccount = Nothing
     , authPreference = Nothing
     , endpoints = defaultEndpoints
-    , logo = "/images/logo-cambiatus.svg"
+    , logo = "/images/logo-cambiatus.png"
     , logoMobile = "/images/logo-cambiatus-mobile.svg"
     , now = 0
     }

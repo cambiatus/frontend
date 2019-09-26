@@ -124,7 +124,13 @@ view thisMsg page ({ shared } as model) content =
                         , Route.href (Route.Login Nothing)
                         , onClickCloseLanguageNav
                         ]
-                        [ img [ src shared.logo ] [] ]
+                        [ img
+                            [ class "lg:hidden left-0 absolute ml-4", src shared.logoMobile ]
+                            []
+                        , img
+                            [ class "hidden lg:block lg:visible object-none object-scale-down", src shared.logo ]
+                            []
+                        ]
                     , div
                         [ class "main-header__space"
                         , onClickCloseLanguageNav

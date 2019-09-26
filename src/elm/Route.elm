@@ -67,8 +67,8 @@ parser url =
         , Url.map Profile (s "profile")
         , Url.map Dashboard (s "dashboard")
         , Url.map Communities (s "community")
-        , Url.map Community (s "community" </> Eos.symbolUrlParser)
         , Url.map NewCommunity (s "community" </> s "new")
+        , Url.map Community (s "community" </> Eos.symbolUrlParser)
         , Url.map EditCommunity (s "community" </> Eos.symbolUrlParser </> s "edit")
         , Url.map NewAction (s "community" </> Eos.symbolUrlParser </> s "objective" </> string </> s "action" </> s "new")
         , Url.map Shop

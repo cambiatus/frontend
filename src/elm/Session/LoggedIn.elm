@@ -253,9 +253,15 @@ viewHeader ({ shared } as model) profile_ =
     in
     div [ class "w-full bg-white pr-4 pl-4 pt-6 pb-4 flex flex-wrap" ]
         [ a [ Route.href Route.Dashboard, class "h-12 w-2/3 lg:w-1/4 flex lg:items-center" ]
-            [ img [ class "lg:hidden", src shared.logoMobile ] []
+            [ img
+                [ class "lg:hidden"
+                , src shared.logoMobile
+                ]
+                []
             , img
-                [ class "h-5 hidden lg:block lg:visible object-none object-scale-down", src shared.logo ]
+                [ class "hidden lg:block lg:visible object-none object-scale-down w-1/2"
+                , src shared.logo
+                ]
                 []
             ]
         , div [ class "hidden lg:block lg:visible w-1/2" ] [ searchBar model ]
