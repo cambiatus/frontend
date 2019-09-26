@@ -120,7 +120,7 @@ view { accountName, shared } { claimId, status } =
                         [ class "font-sans" ]
                         [ viewModal shared.translations modalStatus verification
                         , div
-                            [ class "mx-4 md:mx-auto mt-0 md:mt-10 pb-4 md:pb-10 bg-white max-w-4xl rounded-lg" ]
+                            [ class "mx-4 mt-4 md:mt-10 md:mx-8 lg:mx-auto pb-4 md:pb-10 bg-white max-w-4xl rounded-lg" ]
                             [ viewHeader shared.endpoints.ipfs verification.logo verification.name
                             , viewStatus shared.translations verification.symbol verification.verifierReward verification.status
                             , viewInfo shared.translations verification
@@ -130,7 +130,7 @@ view { accountName, shared } { claimId, status } =
 
                 Nothing ->
                     div
-                        [ class "flex justify-center items-center md:w-full mx-4 md:mx-auto mt-0 md:mt-10 bg-white max-w-4xl rounded-lg" ]
+                        [ class "flex justify-center items-center md:w-full mx-4 mt-4 md:mx-auto md:mt-10 bg-white max-w-4xl rounded-lg" ]
                         [ p
                             [ class "font-sans text-body text-black text-center p-8" ]
                             [ text (t "verify_claim.no_results_found") ]
