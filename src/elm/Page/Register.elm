@@ -209,8 +209,7 @@ view guest model =
 
         False ->
             Html.form
-                [ class "main-content__container"
-                , onSubmit ValidateForm
+                [ onSubmit ValidateForm
                 ]
                 [ div [ class "card card--register" ]
                     (viewAuthTabs shared

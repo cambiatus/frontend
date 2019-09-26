@@ -18,8 +18,9 @@
     "view_all": "Veure-ho tot",
     "more": "Més",
     "logout": "Sortir",
+    "search": "Busqueu comunitats i amics",
     "explore": "Explorar",
-    "explore_communities": "Comunitats",
+    "communities": "Comunitats",
     "welcome_message": "Hola {{user_name}} ",
     "back_to_dashboard": "Anar a l’inici",
     "edit": "Editar",
@@ -31,7 +32,8 @@
     "close": "Tancar",
     "loading": "Carregant...",
     "try_again": "Intenta de nou",
-    "coming_soon": "Pròximament"
+    "coming_soon": "Pròximament",
+    "my_account": "Meu compte"
   },
   "error": {
     "validator": {

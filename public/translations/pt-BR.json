@@ -18,9 +18,10 @@
     "view_all": "Ver Tudo",
     "more": "Mais",
     "logout": "Sair",
+    "search": "Procurar comunidades, amigos ...",
     "explore": "Explorar",
-    "explore_communities": "Comunidades",
-    "welcome_message": "Ola {{user_name}} ",
+    "communities": "Comunidades",
+    "welcome_message": "Olá, {{user_name}} ",
     "back_to_dashboard": "Voltar para Dashboard",
     "edit": "Editar",
     "cancel": "Cancelar",
@@ -31,7 +32,8 @@
     "close": "Fechar",
     "loading": "Carregando...",
     "try_again": "Tente novamente",
-    "coming_soon": "Em Breve"
+    "coming_soon": "Em Breve",
+    "my_account": "Minha conta"
   },
   "error": {
     "validator": {

@@ -166,7 +166,7 @@ menuClass =
 
 visibleMenuStyles : List ( String, String )
 visibleMenuStyles =
-    [ ( "position", "absolute" ), ( "z-index", "1" ) ]
+    [ ( "position", "absolute" ) ]
 
 
 hiddenMenuStyles : List ( String, String )

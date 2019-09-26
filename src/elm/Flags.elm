@@ -13,6 +13,7 @@ type alias Flags =
     , authPreference : Maybe AuthPreference
     , endpoints : Endpoints
     , logo : String
+    , logoMobile : String
     , now : Int
     }
 
@@ -25,6 +26,7 @@ default =
     , authPreference = Nothing
     , endpoints = defaultEndpoints
     , logo = "/images/logo-cambiatus.svg"
+    , logoMobile = "/images/logo-cambiatus-mobile.svg"
     , now = 0
     }
 
@@ -45,6 +47,7 @@ decode =
         |> optional "authPreference" decodeAuthPreference Nothing
         |> required "endpoints" decodeEndpoints
         |> required "logo" Decode.string
+        |> required "logoMobile" Decode.string
         |> required "now" Decode.int
 
 

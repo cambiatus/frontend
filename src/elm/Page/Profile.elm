@@ -276,8 +276,7 @@ viewForm loggedIn isDisabled profile avatarS form =
             placeholder (t loggedIn.shared.translations s)
     in
     Html.form
-        [ class "main-content__container"
-        , onSubmit ClickedSave
+        [ onSubmit ClickedSave
         ]
         [ Page.viewTitle (t loggedIn.shared.translations "profile.title")
         , div

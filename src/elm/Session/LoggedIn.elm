@@ -1,4 +1,4 @@
-module Session.LoggedIn exposing (External(..), ExternalMsg(..), Model, Msg(..), Page(..), ProfileStatus, addNotification, askedAuthentication, init, initLogin, isAccount, isActive, isAuth, jsAddressToMsg, mapExternal, maybePrivateKey, msgToString, profile, readAllNotifications, subscriptions, turnLights, update, view)
+module Session.LoggedIn exposing (External(..), ExternalMsg(..), Model, Msg(..), Page(..), ProfileStatus, addNotification, askedAuthentication, init, initLogin, isAccount, isActive, isAuth, jsAddressToMsg, mapExternal, maybePrivateKey, msgToString, profile, readAllNotifications, subscriptions, update, view)
 
 import Account exposing (Profile, profileQuery)
 import Api
@@ -94,10 +94,8 @@ type alias Model =
     , searchText : String
     , showNotificationModal : Bool
     , showMainNav : Bool
-    , lights : Bool
     , notification : Notification.Model
     , showAuthModal : Bool
-    , collapseMainNav : Bool
     , auth : Auth.Model
     , balances : List Balance
     }
@@ -113,11 +111,9 @@ initModel shared authModel accountName =
     , showLanguageItems = False
     , searchText = ""
     , showNotificationModal = False
-    , lights = False
     , showMainNav = False
     , notification = Notification.init
     , showAuthModal = False
-    , collapseMainNav = False
     , auth = authModel
     , balances = []
     }
@@ -209,90 +205,16 @@ viewHelper thisMsg page profile_ ({ shared } as model) content =
                 style "" ""
     in
     div
-        [ classList
-            [ ( "main-grid", True )
-            , ( "main-grid--collapsed", model.collapseMainNav )
-            ]
-        ]
-        [ header [ class "main-header" ]
-            [ a
-                [ class "main-header__logo"
-                , Route.href Route.Dashboard
-                , onClickCloseAny
-                ]
-                [ img [ src shared.logo ] [] ]
-            , Html.form
-                [ class "main-header__search"
-                , onSubmit SubmitedSearch
-                , onClickCloseAny
-                ]
-                [ input
-                    [ placeholder (t shared.translations "menu.explore_communities")
-                    , type_ "text"
-                    , value model.searchText
-                    , onFocus FocusedSearchInput
-                    , onInput EnteredSearch
-                    , required True
-                    ]
-                    []
-                , button
-                    [ class "btn"
-                    , onClick FocusedSearchInput
-                    ]
-                    [ Icon.magnify ""
-                    ]
-                ]
-            , button
-                [ class "btn main-header__notification"
-                , onClick (ShowNotificationModal (not model.showNotificationModal))
-                ]
-                [ Icon.bell ""
-                , div
-                    [ classList
-                        [ ( "main-header__notification-circle", True )
-                        , ( "main-header__notification-circle--show", model.notification.hasUnread )
-                        ]
-                    ]
-                    []
-                ]
-            , button
-                [ class "btn main-header__info"
-                , onClick (ShowUserNav (not model.showUserNav))
-                ]
-                [ span [ class "main-header__info-name" ]
-                    [ text (Account.username profile_) ]
-                , Avatar.view ipfsUrl
-                    profile_.avatar
-                    "main-header__info-image"
-                , Icon.arrow
-                    (if model.showUserNav then
-                        "main-header__info-arrow main-header__info-arrow--up"
-
-                     else
-                        "main-header__info-arrow"
-                    )
-                ]
-            ]
+        []
+        [ viewHeader model profile_
             |> Html.map thisMsg
         , viewMainMenu page profile_ model
             |> Html.map thisMsg
-        , main_
-            [ id "main-content"
-            , class "main-content"
-            , tabindex -1
-            ]
-            [ content
-            , viewFooter shared
-            ]
         , div
-            [ classList
-                [ ( "content-screen", True )
-                , ( "content-screen--dark"
-                  , model.showUserNav || model.showNotificationModal || model.lights
-                  )
-                ]
-            , onClickCloseAny
-            ]
+            [ class "container mx-auto" ]
+            [ content, viewFooter shared ]
+        , div
+            [ onClickCloseAny ]
             []
             |> Html.map thisMsg
         , viewUserNav page profile_ model
@@ -302,7 +224,7 @@ viewHelper thisMsg page profile_ ({ shared } as model) content =
         , if model.showAuthModal then
             div
                 [ classList
-                    [ ( "modal", True )
+                    [ ( "modal-old", True )
                     , ( "fade-in", True )
                     ]
                 , onClickCloseAny
@@ -323,6 +245,64 @@ viewHelper thisMsg page profile_ ({ shared } as model) content =
         ]
 
 
+viewHeader : Model -> Profile -> Html Msg
+viewHeader ({ shared } as model) profile_ =
+    let
+        tr str values =
+            I18Next.tr shared.translations I18Next.Curly str values
+    in
+    div [ class "w-full bg-white pr-4 pl-4 pt-6 pb-4 flex flex-wrap" ]
+        [ a [ Route.href Route.Dashboard, class "h-12 w-2/3 lg:w-1/4 flex lg:items-center" ]
+            [ img [ class "lg:hidden", src shared.logoMobile ] []
+            , img
+                [ class "h-5 hidden lg:block lg:visible object-none object-scale-down", src shared.logo ]
+                []
+            ]
+        , div [ class "hidden lg:block lg:visible w-1/2" ] [ searchBar model ]
+        , div [ class "w-1/3 h-10 flex z-20 lg:w-1/4" ]
+            [ button [ class "w-1/2 outline-none", onClick (ShowNotificationModal (not model.showNotificationModal)) ]
+                [ Icons.notification "mx-auto lg:mr-1 xl:mx-auto" ]
+            , button
+                [ class "w-1/2 xl:hidden"
+                , onClick (ShowUserNav (not model.showUserNav))
+                ]
+                [ Avatar.view shared.endpoints.ipfs profile_.avatar "h-7 w-7 float-right" ]
+            , button
+                [ class "h-12 bg-gray-200 rounded-lg flex py-2 px-3 hidden xl:visible xl:flex"
+                , onClick (ShowUserNav (not model.showUserNav))
+                ]
+                [ Avatar.view shared.endpoints.ipfs profile_.avatar "h-7 w-7 mr-2"
+                , div []
+                    [ p [ class "font-sans uppercase text-gray-900 text-xs" ] [ text (tr "menu.welcome_message" [ ( "user_name", Eos.nameToString profile_.accountName ) ]) ]
+                    , p [ class "font-sans text-indigo-500 text-sm" ] [ text (t shared.translations "menu.my_account") ]
+                    ]
+                , Icons.arrowDown ""
+                ]
+            ]
+        , div [ class "w-full mt-2 lg:hidden" ] [ searchBar model ]
+        ]
+
+
+searchBar : Model -> Html Msg
+searchBar ({ shared } as model) =
+    Html.form
+        [ class "h-12 bg-gray-200 rounded-full flex items-center p-4"
+        , onSubmit SubmitedSearch
+        ]
+        [ Icons.search ""
+        , input
+            [ class "bg-gray-200 w-full font-sans outline-none pl-3"
+            , placeholder (t shared.translations "menu.search")
+            , type_ "text"
+            , value model.searchText
+            , onFocus FocusedSearchInput
+            , onInput EnteredSearch
+            , required True
+            ]
+            []
+        ]
+
+
 viewMainMenu : Page -> Profile -> Model -> Html Msg
 viewMainMenu page profile_ model =
     let
@@ -338,7 +318,7 @@ viewMainMenu page profile_ model =
         iconClass =
             "w-6 h-6 fill-current hover:text-indigo-500 mr-5"
     in
-    nav [ class "fixed z-10 bg-white h-16 w-full mt-24 flex overflow-x-auto" ]
+    nav [ class "z-10 bg-white h-16 w-full flex overflow-x-auto" ]
         [ a
             [ classList
                 [ ( menuItemClass, True )
@@ -357,7 +337,7 @@ viewMainMenu page profile_ model =
             , Route.href Route.Communities
             ]
             [ Icons.communities iconClass
-            , text (t model.shared.translations "menu.explore_communities")
+            , text (t model.shared.translations "menu.communities")
             ]
         , a
             [ classList
@@ -570,7 +550,6 @@ type External msg
     = UpdatedLoggedIn Model
     | RequiredAuthentication (Maybe msg)
     | UpdateBalances
-    | TurnLights Bool
 
 
 mapExternal : (msg -> msg2) -> External msg -> External msg2
@@ -584,9 +563,6 @@ mapExternal transform ext =
 
         UpdateBalances ->
             UpdateBalances
-
-        TurnLights b ->
-            TurnLights b
 
 
 type alias UpdateResult =
@@ -610,7 +586,6 @@ type Msg
     | ShowNotificationModal Bool
     | ShowUserNav Bool
     | ShowMainNav Bool
-    | CollapseMainNav Bool
     | FocusedSearchInput
     | ToggleLanguageItems
     | ClickedLanguage String
@@ -746,9 +721,6 @@ update msg model =
             UR.init { closeAllModals | showMainNav = b }
                 |> UR.addCmd (focusMainContent (not b) "mobile-main-nav")
 
-        CollapseMainNav b ->
-            UR.init { model | collapseMainNav = b }
-
         FocusedSearchInput ->
             UR.init model
                 |> UR.addCmd (Route.pushUrl shared.navKey Route.Communities)
@@ -833,11 +805,6 @@ closeModal ({ model } as uResult) =
                 , showAuthModal = False
             }
     }
-
-
-turnLights : Model -> Bool -> Model
-turnLights model b =
-    { model | lights = b }
 
 
 askedAuthentication : Model -> Model
@@ -938,9 +905,6 @@ msgToString msg =
 
         ShowMainNav _ ->
             [ "ShowMainNav" ]
-
-        CollapseMainNav _ ->
-            [ "CollapseMainNav" ]
 
         FocusedSearchInput ->
             [ "FocusedSearchInput" ]
