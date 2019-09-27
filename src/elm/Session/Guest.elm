@@ -8,6 +8,7 @@ import Html.Attributes exposing (..)
 import Html.Events exposing (onClick, onFocus, onInput, onSubmit)
 import Http
 import I18Next exposing (Delims(..), Translations, t, tr)
+import Icons
 import Log
 import Ports
 import Route exposing (Route)
@@ -114,11 +115,7 @@ view thisMsg page ({ shared } as model) content =
                         "/icons/en-lang.svg"
             in
             div
-                [ if page == Other then
-                    class "main-login-grid"
-
-                  else
-                    class "main-grid main-grid--guest"
+                [ class "main-login-grid min-h-screen"
                 ]
                 [ header
                     [ class "main-header" ]
@@ -127,26 +124,32 @@ view thisMsg page ({ shared } as model) content =
                         , Route.href (Route.Login Nothing)
                         , onClickCloseLanguageNav
                         ]
-                        [ img [ src shared.logo ] [] ]
+                        [ img
+                            [ class "lg:hidden left-0 absolute ml-4", src shared.logoMobile ]
+                            []
+                        , img
+                            [ class "hidden lg:block lg:visible object-none object-scale-down", src shared.logo ]
+                            []
+                        ]
                     , div
                         [ class "main-header__space"
                         , onClickCloseLanguageNav
                         ]
                         []
                     , button
-                        [ class "btn main-header__language"
+                        [ class "btn main-header__language z-40"
                         , onClick (ShowLanguageNav (not model.showLanguageNav))
                         ]
                         [ img [ src langIconPath, class "main__header__language" ] []
                         , span [ class "main-header__info-name" ]
                             [ text shared.language ]
-                        , img [ src "/icons/arrow.svg", class arrowClass ] []
+                        , Icons.arrowDown arrowClass
                         ]
                     ]
                     |> Html.map thisMsg
                 , main_
                     [ id "main-content"
-                    , class "main-content main-content__guest"
+                    , class "min-h-screen main-content__guest flex-wrap flex items-center justify-center outline-none bg-local"
                     , if Time.toHour Time.utc shared.now >= 6 && Time.toHour Time.utc shared.now <= 18 then
                         style "background-image" "url('/images/login-bg-day.png')"
 
@@ -155,7 +158,7 @@ view thisMsg page ({ shared } as model) content =
                     , tabindex -1
                     ]
                     [ content
-                    , footer [ class "main-footer", id "guest-footer" ]
+                    , footer [ class "main-footer w-full", id "guest-footer" ]
                         [ p [ class "main-footer__text main-footer__text--login" ]
                             [ text ("Copyrights © " ++ currentYear ++ " • Cambiatus") ]
                         ]
@@ -172,7 +175,7 @@ view thisMsg page ({ shared } as model) content =
                 , nav
                     [ classList
                         [ ( "user-nav", True )
-                        , ( "guest-nav--show", model.showLanguageNav )
+                        , ( "guest-nav--show shadow-lg rounded", model.showLanguageNav )
                         ]
                     ]
                     (Shared.viewLanguageItems shared ClickedLanguage)

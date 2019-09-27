@@ -723,7 +723,7 @@ viewMessageStatus loggedIn model =
 
         Success message ->
             div [ class "z-40 bg-green fixed w-11/12 p-2" ]
-                [ p [ class "text-white font-sans font-bold" ] [ text_ message ]
+                [ p [ class "text-white font-sans" ] [ text_ message ]
                 ]
 
         Failure message ->

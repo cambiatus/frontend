@@ -12,11 +12,12 @@ import Html exposing (..)
 import Html.Attributes exposing (..)
 import Html.Events exposing (on, onCheck, onClick, onInput, targetValue)
 import I18Next exposing (t)
-import Icons 
+import Icons
 import Json.Decode as Json exposing (Value)
 import Json.Encode as Encode
 import MaskedInput.Text as MaskedDate
 import Page
+import Route
 import Select
 import Session.LoggedIn as LoggedIn exposing (External(..))
 import Session.Shared exposing (Shared)
@@ -452,8 +453,22 @@ update msg model loggedIn =
                     update InvalidDate model loggedIn
 
         GotSaveAction (Ok tId) ->
-            { model | status = ActionSaved }
-                |> UR.init
+            let
+                sym =
+                    model.form.symbol
+                        |> Eos.symbolFromString
+            in
+            case sym of
+                Just s ->
+                    { model | status = ActionSaved }
+                        |> UR.init
+                        |> UR.addCmd
+                            (Route.replaceUrl loggedIn.shared.navKey (Route.Community s))
+
+                Nothing ->
+                    model
+                        |> UR.init
+                        |> UR.logImpossible msg []
 
         GotSaveAction (Err val) ->
             { model | status = ActionSaveFailed val }
@@ -782,7 +797,7 @@ viewSelectedVerifiers shared model =
                                     [ onClick (OnRemoveVerifier p)
                                     , class "absolute top-0 right-0 z-10 rounded-full h-6 w-6 flex items-center"
                                     ]
-                                    [ Icons.remove ""]
+                                    [ Icons.remove "" ]
                                 ]
                             , span [ class "mt-2 text-black font-sans text-body leading-normal" ]
                                 [ text (Eos.nameToString p.accountName) ]

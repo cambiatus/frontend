@@ -4,7 +4,7 @@ import Api
 import Api.Graphql
 import Asset.Icon as Icon
 import Community exposing (Balance)
-import DataValidator exposing (Validator, getInput, greaterThanOrEqual, hasErrors, listErrors, longerThan, newValidator, oneOf, positive, updateInput, validate)
+import DataValidator exposing (Validator, getInput, greaterThanOrEqual, hasErrors, listErrors, longerThan, newValidator, oneOf, updateInput, validate)
 import Eos exposing (Symbol)
 import Eos.Account as Eos
 import File exposing (File)
@@ -139,7 +139,7 @@ initForm balanceOptions =
 
         units =
             []
-                |> positive
+                |> greaterThanOrEqual 0
                 |> newValidator "0" (\v -> Just v) False
 
         price =

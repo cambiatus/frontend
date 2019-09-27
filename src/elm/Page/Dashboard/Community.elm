@@ -181,7 +181,7 @@ viewCardBalance loggedIn ({ balance } as model) =
     div [ class "w-full sm:w-1/2 lg:w-1/3 xl:w-1/4 px-2 mb-8" ]
         [ div [ class "flex flex-wrap px-3 pt-5 pb-2 rounded-lg shadow bg-white" ]
             [ div [ class "w-1/3" ] [ img [ class "object-none object-scale-down h-20", src (ipfsUrl ++ "/" ++ logo) ] [] ]
-            , div [ class "w-1/3 pl-4 overflow-x-hidden" ]
+            , div [ class "w-1/3 pl-4 overflow-x-hidden overflow-y-hidden" ]
                 [ p [ class "font-medium leading-none font-sans" ] [ text title ]
                 , div [ class "flex" ]
                     [ div [ class "text-3xl text-orange-100" ] [ text balanceText ]

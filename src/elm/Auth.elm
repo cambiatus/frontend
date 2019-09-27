@@ -443,7 +443,7 @@ viewLoginPinForm model shared =
 
 toggleViewPin : Model -> Html Msg
 toggleViewPin model =
-    button [ class "btn toggle-visibility", onClick TogglePinVisibility ]
+    button [ class "", onClick TogglePinVisibility ]
         [ if model.pinVisibility then
             img [ src "icons/eye-show.svg" ] []
 
@@ -480,7 +480,7 @@ digitInput position { form, pinVisibility } =
                 ]
     in
     input
-        ([ class "card__auth__pin__input"
+        ([ class "card__auth__pin__input appearance-none"
          , id ("pin_input_" ++ String.fromInt position)
          , pattern "[0-9]*"
          , maxlength 1
@@ -807,8 +807,9 @@ update msg shared model =
             {- 96 to 105 is 0-9 from numerical keyboard.
                48 to 57 is 0-9 from the regular number keyboard.
                8 is backspace
+               229 is the only keycode some chinese devices use
             -}
-            if (data >= 96 && data <= 105) || (data >= 48 && data <= 57) || data == 8 then
+            if (data >= 96 && data <= 105) || (data >= 48 && data <= 57) || data == 8 || data == 229 then
                 let
                     currentForm =
                         model.form
