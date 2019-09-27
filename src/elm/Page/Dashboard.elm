@@ -18,7 +18,7 @@ import Graphql.Operation exposing (RootQuery)
 import Graphql.OptionalArgument exposing (OptionalArgument(..))
 import Graphql.SelectionSet as SelectionSet exposing (SelectionSet, with)
 import Html exposing (..)
-import Html.Attributes exposing (class, value)
+import Html.Attributes exposing (class, src, value)
 import Http
 import I18Next exposing (Delims(..), t)
 import Json.Decode exposing (Decoder, Value)
@@ -34,7 +34,6 @@ import Time exposing (Posix)
 import Transfer exposing (QueryTransfers, Transfer, userFilter)
 import UpdateResult as UR
 import Utils
-import View.Icon as Icon
 import View.Loading as Loading
 import View.Tag as Tag
 
@@ -182,8 +181,12 @@ viewVerifications shared model =
 viewVerification : String -> Verification -> Html Msg
 viewVerification url verification =
     let
-        maybeHash =
-            Just verification.logo
+        maybeLogo =
+            if String.isEmpty verification.logo then
+                Nothing
+
+            else
+                Just (url ++ "/" ++ verification.logo)
 
         description =
             verification.description
@@ -214,7 +217,19 @@ viewVerification url verification =
         ]
         [ div
             [ class "flex-none" ]
-            [ Icon.smallView url maybeHash "" ]
+            [ case maybeLogo of
+                Just logoUrl ->
+                    img
+                        [ class "w-12 h-12"
+                        , src logoUrl
+                        ]
+                        []
+
+                Nothing ->
+                    div
+                        [ class "w-12 h-12"]
+                        []
+            ]
         , div
             [ class "flex-col flex-grow-1 pl-4" ]
             [ p
