@@ -18,8 +18,8 @@ import Graphql.Http
 import Graphql.Operation exposing (RootQuery)
 import Graphql.OptionalArgument exposing (OptionalArgument(..))
 import Graphql.SelectionSet as SelectionSet exposing (SelectionSet, with)
-import Html exposing (Html, button, div, p, text)
-import Html.Attributes exposing (class)
+import Html exposing (Html, button, div, img, p, text)
+import Html.Attributes exposing (class, src)
 import Html.Events exposing (onClick)
 import I18Next exposing (Delims, Replacements, Translations)
 import Icons
@@ -32,7 +32,6 @@ import Session.Shared exposing (Shared)
 import Time
 import UpdateResult as UR
 import Utils
-import View.Icon as Icon
 
 
 
@@ -214,11 +213,22 @@ viewHeader ipfsUrl logo name =
                 Nothing
 
             else
-                Just logo
+                Just (ipfsUrl ++ "/" ++ logo)
     in
     div
         [ class "p-6 flex items-center" ]
-        [ Icon.mediumView ipfsUrl maybeLogo ""
+        [ case maybeLogo of
+            Just logoUrl ->
+                img
+                    [ class "w-14 h-14"
+                    , src logoUrl
+                    ]
+                    []
+
+            Nothing ->
+                div
+                    [ class "w-16 h-16"]
+                    []
         , p
             [ class "pl-6 text-heading text-black font-medium" ]
             [ text name ]
