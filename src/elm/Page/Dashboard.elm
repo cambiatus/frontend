@@ -220,14 +220,14 @@ viewVerification url verification =
             [ case maybeLogo of
                 Just logoUrl ->
                     img
-                        [ class "w-12 h-12"
+                        [ class "w-10 h-10"
                         , src logoUrl
                         ]
                         []
 
                 Nothing ->
                     div
-                        [ class "w-12 h-12"]
+                        [ class "w-10 h-10"]
                         []
             ]
         , div
