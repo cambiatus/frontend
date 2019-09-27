@@ -19,7 +19,7 @@ const local = {
     graphql: 'http://localhost:8080/v1alpha1/graphql',
     ipfs: 'http://ipfs.bespiral.local/ipfs'
   },
-  logo: '/images/logo-cambiatus.svg',
+  logo: '/images/logo-cambiatus.png',
   logoMobile: '/images/logo-cambiatus-mobile.svg',
   bespiralAccount: 'bespiral',
   communityContract: 'bes.cmm',
@@ -53,7 +53,7 @@ const dev = {
     // ipfs: 'http://ipfs.bespiral.local/ipfs',
     ipfs: 'https://ipfs.cambiatus.io/ipfs'
   },
-  logo: '/images/logo-cambiatus.svg',
+  logo: '/images/logo-cambiatus.png',
   logoMobile: '/images/logo-cambiatus-mobile.svg',
   bespiralAccount: 'bespiral',
   communityContract: 'bes.cmm',
@@ -97,7 +97,7 @@ const prod = {
     ipfs: ipfsUrl
   },
   logo: appLogo,
-  appLogoMobile: appLogoMobile,
+  logoMobile: appLogoMobile,
   bespiralAccount: 'bespiral',
   communityContract: 'bes.cmm',
   tokenContract: 'bes.token',
