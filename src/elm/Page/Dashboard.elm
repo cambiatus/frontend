@@ -287,24 +287,7 @@ viewSections loggedIn model =
                 Page.viewCardEmpty [ text (t "community.actions.no_actions_yet") ]
 
             LoadedGraphql transfers ->
-                Page.viewCardList
-                    (List.map
-                        (\transfer ->
-                            ( [ text (transferInfo transfer.from transfer.value transfer.to)
-                              , case transfer.memo of
-                                    Nothing ->
-                                        text ""
-
-                                    Just mem ->
-                                        p [ class "card__list-memo" ]
-                                            [ text mem ]
-                              ]
-                            , Utils.posixDateTime (Just transfer.blockTime)
-                            , model.date
-                            )
-                        )
-                        transfers
-                    )
+                Page.viewCardEmpty [ text (t "community.actions.no_actions_yet") ]
         ]
         [ Page.viewTitle (t "transfer.last_title")
         , case model.transfers of
