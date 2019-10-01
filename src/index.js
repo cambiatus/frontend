@@ -632,6 +632,12 @@ async function handleJavascriptPort (arg) {
             error: error
           }
           devLog('eos.transaction.failed', errorResponse)
+          // Send to sentry
+          Sentry.configureScope(scope => {
+            scope.setTag('type', 'eos-transaction')
+            scope.setExtra('data', arg.data)
+            Sentry.captureMessage('EOS Error')
+          })
           app.ports.javascriptInPort.send(errorResponse)
         })
       break
