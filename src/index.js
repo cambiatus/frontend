@@ -636,6 +636,8 @@ async function handleJavascriptPort (arg) {
           Sentry.configureScope(scope => {
             scope.setTag('type', 'eos-transaction')
             scope.setExtra('data', arg.data)
+            Sentry.setExtra('response', errorResponse)
+            Sentry.setExtra('error', errorResponse.error)
             Sentry.captureMessage('EOS Error')
           })
           app.ports.javascriptInPort.send(errorResponse)
