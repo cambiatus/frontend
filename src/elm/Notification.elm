@@ -1,4 +1,14 @@
-module Notification exposing (Model, Notification, addNotification, init, readAll)
+module Notification exposing (History, Model, Notification, addNotification, init, notificationHistoryQuery, readAll)
+
+import Bespiral.Object.NotificationHistory as NotificationHistory
+import Bespiral.Query as Query
+import Bespiral.Scalar exposing (DateTime(..))
+import Eos.Account as Eos
+import Graphql.Operation exposing (RootQuery)
+import Graphql.OptionalArgument exposing (OptionalArgument(..))
+import Graphql.SelectionSet as SelectionSet exposing (SelectionSet, with)
+
+
 
 -- INIT
 
@@ -31,26 +41,13 @@ type alias Notification =
     }
 
 
-
--- UPDATE
---type Msg
---    = Add Notification
---    | ReadAll
---update : Msg -> Model -> ( Model, Cmd msg )
---update msg model =
---    case msg of
---        Add notification ->
---            ( addNotification notification model
---            , Cmd.none
---            )
---        ReadAll ->
---            ( { model
---                | hasUnread = False
---                , unreadNotifications = []
---                , readNotifications = model.readNotifications ++ model.unreadNotifications
---              }
---            , Cmd.none
---            )
+type alias History =
+    { recipient : Eos.Name
+    , type_ : String
+    , isRead : Bool
+    , payload : String
+    , insertedAt : DateTime
+    }
 
 
 addNotification : Notification -> Model -> Model
@@ -68,3 +65,19 @@ readAll model =
         , unreadNotifications = []
         , readNotifications = model.readNotifications ++ model.unreadNotifications
     }
+
+
+notificationHistoryQuery : Eos.Name -> SelectionSet (List History) RootQuery
+notificationHistoryQuery account =
+    Query.notificationHistory
+        { account = Eos.nameToString account }
+        notificationHistorySelectionSet
+
+
+notificationHistorySelectionSet =
+    SelectionSet.succeed History
+        |> with (Eos.nameSelectionSet NotificationHistory.recipientId)
+        |> with NotificationHistory.type_
+        |> with NotificationHistory.isRead
+        |> with NotificationHistory.payload
+        |> with NotificationHistory.insertedAt

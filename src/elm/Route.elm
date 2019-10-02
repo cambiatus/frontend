@@ -18,6 +18,7 @@ type Route
     | Login (Maybe Route)
     | LoginWithPrivateKey (Maybe Route)
     | Logout
+    | Notification
     | Profile
     | Dashboard
     | Community Symbol
@@ -65,6 +66,7 @@ parser url =
             )
         , Url.map Logout (s "logout")
         , Url.map Profile (s "profile")
+        , Url.map Notification (s "notification")
         , Url.map Dashboard (s "dashboard")
         , Url.map Communities (s "community")
         , Url.map NewCommunity (s "community" </> s "new")
@@ -218,6 +220,9 @@ routeToString route =
 
                 Logout ->
                     ( [ "logout" ], [] )
+
+                Notification ->
+                    ( [ "notification" ], [] )
 
                 Profile ->
                     ( [ "profile" ], [] )

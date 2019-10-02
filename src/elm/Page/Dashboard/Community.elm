@@ -197,8 +197,10 @@ viewCardBalance loggedIn ({ balance } as model) =
                     [ text_ "menu.explore" ]
                 ]
             , div [ class "w-full flex bg-white border-t border-gray-300 mt-2 py-3" ]
-                [ button
-                    [ class "button button-primary button-medium w-1/2 md:px-0 lg:mx-1" ]
+                [ a
+                    [ class "button button-primary button-medium w-1/2 md:px-0 lg:mx-1 pt-3"
+                    , Route.href (Route.Community balance.asset.symbol)
+                    ]
                     [ text (t loggedIn.shared.translations "community.actions.title") ]
                 , button
                     [ class "button button-primary button-medium w-1/2 md:px-0 lg:mx-1"

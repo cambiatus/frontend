@@ -70,6 +70,15 @@ community requiredArgs object_ =
     Object.selectionForCompositeField "community" [ Argument.required "symbol" requiredArgs.symbol Encode.string ] object_ (identity >> Decode.nullable)
 
 
+type alias NotificationHistoryRequiredArguments =
+    { account : String }
+
+
+notificationHistory : NotificationHistoryRequiredArguments -> SelectionSet decodesTo Bespiral.Object.NotificationHistory -> SelectionSet (List decodesTo) RootQuery
+notificationHistory requiredArgs object_ =
+    Object.selectionForCompositeField "notificationHistory" [ Argument.required "account" requiredArgs.account Encode.string ] object_ (identity >> Decode.list)
+
+
 type alias ProfileRequiredArguments =
     { input : Bespiral.InputObject.ProfileInput }
 

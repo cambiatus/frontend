@@ -462,8 +462,7 @@ update msg model loggedIn =
                 Just s ->
                     { model | status = ActionSaved }
                         |> UR.init
-                        |> UR.addCmd
-                            (Route.replaceUrl loggedIn.shared.navKey (Route.Community s))
+                        |> UR.addCmd (Route.replaceUrl loggedIn.shared.navKey (Route.Community s))
 
                 Nothing ->
                     model

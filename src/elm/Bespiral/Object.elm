@@ -29,6 +29,10 @@ type Network
     = Network
 
 
+type NotificationHistory
+    = NotificationHistory
+
+
 type Objective
     = Objective
 
