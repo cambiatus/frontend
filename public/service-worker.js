@@ -1,4 +1,4 @@
-ar CACHE_NAME = 'bes-site-cache-v1'
+var CACHE_NAME = 'bes-site-cache-v1'
 var urlsToCache = [
   '/'
 ]
@@ -30,10 +30,9 @@ self.addEventListener('fetch', function (event) {
 // Configure push eventListener to handle C2DM messages
 self.addEventListener('push', function (event) {
   const payload = event.data.json()
-
-    body = payload.body ? payload.body : "Huh! You shouldn't be getting this"
-    title = payload.title ? "Broken notification"
-	interaction = title === "Broken notification" ? false : true
+  const body = payload.body ? payload.body : 'Huh! You should npt be getting this'
+  const title = payload.title ? payload.title : 'Broken notification'
+  const interaction = title === 'Broken notification'
 
   const options = {
     body: body,
