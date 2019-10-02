@@ -1,4 +1,4 @@
-var CACHE_NAME = 'bes-site-cache-v1'
+ar CACHE_NAME = 'bes-site-cache-v1'
 var urlsToCache = [
   '/'
 ]
@@ -31,24 +31,9 @@ self.addEventListener('fetch', function (event) {
 self.addEventListener('push', function (event) {
   const payload = event.data.json()
 
-  console.log('payload', payload)
-  let title
-  let body
-  let interaction
-
-  try {
-    title = payload.title
-    body = payload.title
-    interaction = true
-  } catch (e) {
-    // TODO find a way of reporting error without sentry
-
-    // Set interaction to none if the notificatiion is bungled
-    interaction = false
-  } finally {
-    body = body === undefined ? "Huh! You shouldn't be getting this" : body
-    title = title === undefined ? '' : title
-  }
+    body = payload.body ? payload.body : "Huh! You shouldn't be getting this"
+    title = payload.title ? "Broken notification"
+	interaction = title === "Broken notification" ? false : true
 
   const options = {
     body: body,
