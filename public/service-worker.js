@@ -34,7 +34,7 @@ self.addEventListener('push', function (event) {
   let payload
 
   try {
-    const payload = event.data.json()
+    payload = event.data.json()
     title = payload.title
     body = payload.title
   } catch (e) {
