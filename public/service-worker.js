@@ -29,24 +29,25 @@ self.addEventListener('fetch', function (event) {
 
 // Configure push eventListener to handle C2DM messages
 self.addEventListener('push', function (event) {
-  const msg = event.data.json()
+  var payload = {}
 
-  let payload = {}
-  let body = ''
-  let title = ''
-  try {
-    // try
-  } catch (e) {
-    // TODO : LOG ERROR TO SENTRY
-  } finally {
-    body = payload.body ? payload.body : msg.body
-    title = payload.title ? payload.title : msg.title
+  if (event.data) {
+    payload = event.data.json()
+  }
+
+  var body = payload.body || 'Huh! You should npt be getting this'
+  var title = payload.title || 'Broken notification'
+  var interaction
+  if (title === 'Broken notification') {
+    interaction = false
+  } else {
+    interaction = true
   }
 
   const options = {
     body: body,
-    icon: '/images/logo-bespiral.svg',
-    requireInteraction: true,
+    icon: 'images/logo-cambiatus.svg',
+    requireInteraction: interaction,
     vibrate: [200, 100, 200, 100, 200, 100, 400],
     tag: title
   }
