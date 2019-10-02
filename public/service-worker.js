@@ -29,15 +29,20 @@ self.addEventListener('fetch', function (event) {
 
 // Configure push eventListener to handle C2DM messages
 self.addEventListener('push', function (event) {
-  let payload = {}
+  var payload = {}
 
   if (event.data) {
     payload = event.data.json()
   }
 
-  const body = payload.body || 'Huh! You should npt be getting this'
-  const title = payload.title || 'Broken notification'
-  const interaction = title !== 'Broken notification'
+  var body = payload.body || 'Huh! You should npt be getting this'
+  var title = payload.title || 'Broken notification'
+  var interaction
+  if (title === 'Broken notification') {
+    interaction = false
+  } else {
+    interaction = true
+  }
 
   const options = {
     body: body,
