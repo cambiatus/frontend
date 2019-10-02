@@ -29,25 +29,31 @@ self.addEventListener('fetch', function (event) {
 
 // Configure push eventListener to handle C2DM messages
 self.addEventListener('push', function (event) {
-  let title = null
-  let body = null
-  let payload
+  const payload = event.data.json()
+
+  console.log('payload', payload)
+  let title
+  let body
+  let interaction
 
   try {
-    payload = event.data.json()
     title = payload.title
     body = payload.title
+    interaction = true
   } catch (e) {
     // TODO find a way of reporting error without sentry
+
+    // Set interaction to none if the notificatiion is bungled
+    interaction = false
   } finally {
-    body = body === null ? payload.body : body
-    title = title === null ? payload.title : title
+    body = body === undefined ? "Huh! You shouldn't be getting this" : body
+    title = title === undefined ? '' : title
   }
 
   const options = {
     body: body,
     icon: '/images/logo-cambiatus.svg',
-    requireInteraction: true,
+    requireInteraction: interaction,
     vibrate: [200, 100, 200, 100, 200, 100, 400],
     tag: title
   }
