@@ -1,5 +1,3 @@
-import * as Sentry from '@sentry/browser'
-
 var CACHE_NAME = 'bes-site-cache-v1'
 var urlsToCache = [
   '/'
@@ -40,7 +38,7 @@ self.addEventListener('push', function (event) {
     title = payload.title
     body = payload.title
   } catch (e) {
-    sentryReporter('Error when parsing notification', e)
+    // TODO find a way of reporting error without sentry
   } finally {
     body = body === null ? payload.body : body
     title = title === null ? payload.title : title
@@ -67,19 +65,3 @@ self.addEventListener('notificationclick', function (event) {
 
   // TODO Navigate user to specific notification page
 })
-
-// Handle exceptions
-// Init Sentry
-Sentry.init({
-  dsn: 'https://535b151f7b8c48f8a7307b9bc83ebeba@sentry.io/1480468'
-})
-
-// Sentry Reporter
-function sentryReporter (msg, exception) {
-  Sentry.withScope(scope => {
-    scope.setExtra(msg)
-    scope.setTag('event', msg)
-    scope.setLevel('error')
-    Sentry.captureException(exception)
-  })
-}
