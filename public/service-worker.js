@@ -1,3 +1,5 @@
+import * as Sentry from '@sentry/browser'
+
 var CACHE_NAME = 'bes-site-cache-v1'
 var urlsToCache = [
   '/'
@@ -29,23 +31,24 @@ self.addEventListener('fetch', function (event) {
 
 // Configure push eventListener to handle C2DM messages
 self.addEventListener('push', function (event) {
-  const msg = event.data.json()
+  let title = null
+  let body = null
+  let payload
 
-  let payload = {}
-  let body = ''
-  let title = ''
   try {
-    // try
+    const payload = event.data.json()
+    title = payload.title
+    body = payload.title
   } catch (e) {
-    // TODO : LOG ERROR TO SENTRY
+    sentryReporter('Error when parsing notification', e)
   } finally {
-    body = payload.body ? payload.body : msg.body
-    title = payload.title ? payload.title : msg.title
+    body = body === null ? payload.body : body
+    title = title === null ? payload.title : title
   }
 
   const options = {
     body: body,
-    icon: '/images/logo-bespiral.svg',
+    icon: '/images/logo-cambiatus.svg',
     requireInteraction: true,
     vibrate: [200, 100, 200, 100, 200, 100, 400],
     tag: title
@@ -64,3 +67,19 @@ self.addEventListener('notificationclick', function (event) {
 
   // TODO Navigate user to specific notification page
 })
+
+// Handle exceptions
+// Init Sentry
+Sentry.init({
+  dsn: 'https://535b151f7b8c48f8a7307b9bc83ebeba@sentry.io/1480468'
+})
+
+// Sentry Reporter
+function sentryReporter (msg, exception) {
+  Sentry.withScope(scope => {
+    scope.setExtra(msg)
+    scope.setTag('event', msg)
+    scope.setLevel('error')
+    Sentry.captureException(exception)
+  })
+}
