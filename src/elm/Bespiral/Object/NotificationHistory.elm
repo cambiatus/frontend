@@ -29,9 +29,9 @@ isRead =
     Object.selectionForField "Bool" "isRead" [] Decode.bool
 
 
-payload : SelectionSet String Bespiral.Object.NotificationHistory
-payload =
-    Object.selectionForField "String" "payload" [] Decode.string
+payload : SelectionSet decodesTo Bespiral.Union.NotificationType -> SelectionSet decodesTo Bespiral.Object.NotificationHistory
+payload object_ =
+    Object.selectionForCompositeField "payload" [] object_ identity
 
 
 recipient : SelectionSet decodesTo Bespiral.Object.Profile -> SelectionSet decodesTo Bespiral.Object.NotificationHistory

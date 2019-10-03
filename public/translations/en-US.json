@@ -186,6 +186,14 @@
     "info": "{{from}} transfered {{value}} to {{to}}",
     "you": "you"
   },
+  "notifications": {
+    "title": "Notifications",
+    "empty": "You still don't have any notifications",
+    "saleHistory": {
+      "buy": "You bought {{sale}} from {{user}}",
+      "sell": "🎉 {{user}} bought {{sale}}"
+    }
+  },
   "community": {
     "title": "Community",
     "create_button": "Create Community",

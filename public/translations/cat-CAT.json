@@ -187,6 +187,14 @@
     "info": "{{from}} ha transferit {{value}} a {{to}}",
     "you": "tu"
   },
+  "notifications": {
+    "title": "Notificacions",
+    "empty": "Encara no teniu cap notificació",
+    "saleHistory": {
+      "buy": "Vas comprar {{sale}} al {{user}}",
+      "sell": "🎉 {{user}} comprar {{sale}}"
+    }
+  },
   "community": {
     "title": "Comunitat",
     "create_button": "Crear comunitat",

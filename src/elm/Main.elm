@@ -294,6 +294,11 @@ update msg model =
                 >> updateGuestUResult Login GotLoginMsg model
                 |> withGuest
 
+        ( GotNotificationMsg subMsg, Notification subModel ) ->
+            Notification.update subMsg subModel
+                >> updateLoggedInUResult Notification GotNotificationMsg model
+                |> withLoggedIn
+
         ( GotCommunityMsg subMsg, Community subModel ) ->
             Community.update subMsg subModel
                 >> updateLoggedInUResult Community GotCommunityMsg model
