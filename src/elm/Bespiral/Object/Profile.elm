@@ -2,7 +2,7 @@
 -- https://github.com/dillonkearns/elm-graphql
 
 
-module Bespiral.Object.Profile exposing (..)
+module Bespiral.Object.Profile exposing (TransfersOptionalArguments, account, avatar, bio, chatToken, chatUserId, communities, createdAt, createdBlock, createdEosAccount, email, interests, invitations, location, name, network, transfers)
 
 import Bespiral.InputObject
 import Bespiral.Interface

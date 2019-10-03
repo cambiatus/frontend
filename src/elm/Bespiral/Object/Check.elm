@@ -2,7 +2,7 @@
 -- https://github.com/dillonkearns/elm-graphql
 
 
-module Bespiral.Object.Check exposing (..)
+module Bespiral.Object.Check exposing (claim, createdAt, createdBlock, createdEosAccount, createdTx, isVerified, validator)
 
 import Bespiral.InputObject
 import Bespiral.Interface

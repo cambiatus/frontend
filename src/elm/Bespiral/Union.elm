@@ -2,7 +2,7 @@
 -- https://github.com/dillonkearns/elm-graphql
 
 
-module Bespiral.Union exposing (..)
+module Bespiral.Union exposing (NotificationType(..))
 
 
 type NotificationType

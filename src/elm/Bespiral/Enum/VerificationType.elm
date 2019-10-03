@@ -2,7 +2,7 @@
 -- https://github.com/dillonkearns/elm-graphql
 
 
-module Bespiral.Enum.VerificationType exposing (..)
+module Bespiral.Enum.VerificationType exposing (VerificationType(..), decoder, fromString, list, toString)
 
 import Json.Decode as Decode exposing (Decoder)
 

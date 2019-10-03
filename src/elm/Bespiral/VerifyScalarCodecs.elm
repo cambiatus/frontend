@@ -2,7 +2,7 @@
 -- https://github.com/dillonkearns/elm-graphql
 
 
-module Bespiral.VerifyScalarCodecs exposing (..)
+module Bespiral.VerifyScalarCodecs exposing (placeholder)
 
 
 placeholder : String

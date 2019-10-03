@@ -2,7 +2,7 @@
 -- https://github.com/dillonkearns/elm-graphql
 
 
-module Bespiral.Object.Action exposing (..)
+module Bespiral.Object.Action exposing (claims, createdAt, createdBlock, createdEosAccount, createdTx, creator, creatorId, deadline, description, id, isCompleted, objective, reward, usages, usagesLeft, validators, verificationType, verifications, verifierReward)
 
 import Bespiral.Enum.VerificationType
 import Bespiral.InputObject
