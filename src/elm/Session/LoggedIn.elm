@@ -266,9 +266,12 @@ viewHeader ({ shared } as model) profile_ =
             ]
         , div [ class "hidden lg:block lg:visible w-1/2" ] [ searchBar model ]
         , div [ class "w-1/3 h-10 flex z-20 lg:w-1/4" ]
-            [ a [ class "w-1/2 outline-none", Route.href Route.Notification ]
-                -- , button [ class "w-1/2 outline-none", onClick (ShowNotificationModal (not model.showNotificationModal)) ]
-                [ Icons.notification "mx-auto lg:mr-1 xl:mx-auto" ]
+            [ div [ class "flex flex-row mx-auto" ]
+                [ button [ class "outline-none", onClick (ShowNotificationModal (not model.showNotificationModal)) ]
+                    [ Icons.notification "mx-auto lg:mr-1 xl:mx-auto" ]
+                , div [ class "bg-orange-100 text-white p-1 rounded-full h-4 w-4 text-menu flex flex-col justify-center" ]
+                    [ text "2" ]
+                ]
             , button
                 [ class "w-1/2 xl:hidden"
                 , onClick (ShowUserNav (not model.showUserNav))
