@@ -445,10 +445,10 @@ toggleViewPin : Model -> Html Msg
 toggleViewPin model =
     button [ class "", onClick TogglePinVisibility ]
         [ if model.pinVisibility then
-            img [ src "icons/eye-show.svg" ] []
+            img [ src "/icons/eye-show.svg" ] []
 
           else
-            img [ src "icons/eye-close.svg" ] []
+            img [ src "/icons/eye-close.svg" ] []
         ]
 
 
