@@ -7,11 +7,16 @@ import Api.Graphql
 import Asset.Icon as Icon
 import Auth
 import Avatar
+import Bespiral.Object
+import Bespiral.Object.UnreadNotifications
+import Bespiral.Query
 import Browser.Dom as Dom
 import Community exposing (Balance)
 import Eos
 import Eos.Account as Eos
 import Graphql.Http
+import Graphql.Operation exposing (RootQuery)
+import Graphql.SelectionSet as SelectionSet exposing (SelectionSet, with)
 import Html exposing (..)
 import Html.Attributes exposing (..)
 import Html.Events exposing (onClick, onFocus, onInput, onSubmit, stopPropagationOn)
@@ -46,6 +51,7 @@ init shared accountName =
     , Cmd.batch
         [ Api.Graphql.query shared (profileQuery accountName) CompletedLoadProfile
         , Api.getBalances shared accountName CompletedLoadBalances
+        , Api.Graphql.query shared (unreadQuery accountName) CompletedLoadUnread
         ]
     )
 
@@ -95,6 +101,7 @@ type alias Model =
     , showNotificationModal : Bool
     , showMainNav : Bool
     , notification : Notification.Model
+    , unreadCount : Int
     , showAuthModal : Bool
     , auth : Auth.Model
     , balances : List Balance
@@ -113,6 +120,7 @@ initModel shared authModel accountName =
     , showNotificationModal = False
     , showMainNav = False
     , notification = Notification.init
+    , unreadCount = 0
     , showAuthModal = False
     , auth = authModel
     , balances = []
@@ -138,6 +146,34 @@ isAuth model =
 maybePrivateKey : Model -> Maybe String
 maybePrivateKey model =
     Auth.maybePrivateKey model.auth
+
+
+
+-- NOTIFICATION COUNTS
+
+
+type alias UnreadMeta =
+    { count : Int }
+
+
+unreadSelection : SelectionSet UnreadMeta Bespiral.Object.UnreadNotifications
+unreadSelection =
+    SelectionSet.succeed UnreadMeta
+        |> with Bespiral.Object.UnreadNotifications.count
+
+
+unreadQuery : Eos.Name -> SelectionSet UnreadMeta RootQuery
+unreadQuery accName =
+    let
+        accString =
+            Eos.nameToString accName
+
+        args =
+            { input = { account = accString } }
+    in
+    Bespiral.Query.unreadNotifications
+        args
+        unreadSelection
 
 
 
@@ -269,8 +305,12 @@ viewHeader ({ shared } as model) profile_ =
             [ div [ class "flex flex-row mx-auto" ]
                 [ button [ class "outline-none", onClick (ShowNotificationModal (not model.showNotificationModal)) ]
                     [ Icons.notification "mx-auto lg:mr-1 xl:mx-auto" ]
-                , div [ class "bg-orange-100 text-white p-1 rounded-full h-4 w-4 text-menu flex flex-col justify-center" ]
-                    [ text "2" ]
+                , if model.unreadCount == 0 then
+                    text ""
+
+                  else
+                    div [ class "bg-orange-100 text-white p-1 rounded-full h-4 w-4 text-menu flex flex-col justify-center" ]
+                        [ text (String.fromInt model.unreadCount) ]
                 ]
             , button
                 [ class "w-1/2 xl:hidden"
@@ -605,6 +645,7 @@ type Msg
     | GotAuthMsg Auth.Msg
     | ReceivedNotification String
     | CompletedLoadBalances (Result Http.Error (List Balance))
+    | CompletedLoadUnread (Result (Graphql.Http.Error UnreadMeta) UnreadMeta)
 
 
 update : Msg -> Model -> UpdateResult
@@ -794,6 +835,16 @@ update msg model =
                     model
                         |> UR.init
 
+        CompletedLoadUnread res ->
+            case res of
+                Ok { count } ->
+                    { model | unreadCount = count }
+                        |> UR.init
+
+                Err err ->
+                    model
+                        |> UR.init
+
 
 chatNotification : Model -> String -> Notification
 chatNotification model from =
@@ -940,3 +991,6 @@ msgToString msg =
 
         CompletedLoadBalances _ ->
             [ "CompletedLoadBalances" ]
+
+        CompletedLoadUnread _ ->
+            [ "CompletedLoadUnread" ]
