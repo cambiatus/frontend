@@ -190,6 +190,14 @@
     "info": "{{from}} transferiu {{value}} para {{to}}",
     "you": "voce"
   },
+  "notifications": {
+    "title": "Notificações",
+    "empty": "Você ainda não possui notificações",
+    "saleHistory": {
+      "buy": "Você comprou {{sale}} de {{user}}",
+      "sell": "🎉 {{user}} comprou {{sale}}"
+    }
+  },
   "community": {
     "title": "Comunidades",
     "create_button": "Criar uma comunidade",

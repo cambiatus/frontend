@@ -266,7 +266,8 @@ viewHeader ({ shared } as model) profile_ =
             ]
         , div [ class "hidden lg:block lg:visible w-1/2" ] [ searchBar model ]
         , div [ class "w-1/3 h-10 flex z-20 lg:w-1/4" ]
-            [ button [ class "w-1/2 outline-none", onClick (ShowNotificationModal (not model.showNotificationModal)) ]
+            [ a [ class "w-1/2 outline-none", Route.href Route.Notification ]
+                -- , button [ class "w-1/2 outline-none", onClick (ShowNotificationModal (not model.showNotificationModal)) ]
                 [ Icons.notification "mx-auto lg:mr-1 xl:mx-auto" ]
             , button
                 [ class "w-1/2 xl:hidden"
@@ -511,7 +512,8 @@ viewNotification model =
         [ id "notifications-modal"
         , classList
             [ ( "notifications-modal", True )
-            , ( "notifications-modal--show", model.showNotificationModal )
+
+            -- , ( "notifications-modal--show", model.showNotificationModal )
             ]
         , tabindex -1
         ]

@@ -21,6 +21,7 @@ import Page.Community.VerifyClaim as VerifyClaim
 import Page.Dashboard as Dashboard
 import Page.Login as Login
 import Page.NotFound as NotFound
+import Page.Notification as Notification
 import Page.Profile as Profile
 import Page.Register as Register
 import Page.Shop as Shop
@@ -46,8 +47,6 @@ main =
                 { title = "Cambiatus"
                 , body =
                     [ view model
-
-                    -- , viewChat -- TODO: remove this (chat container)
                     ]
                 }
         , onUrlRequest = ClickedLink
@@ -153,6 +152,7 @@ type Status
     | ActionEditor ActionEditor.Model
     | VerifyClaim VerifyClaim.Model
     | CommunityExplore CommunityExplore.Model
+    | Notification Notification.Model
     | Dashboard Dashboard.Model
     | Login Login.Model
     | Profile Profile.Model
@@ -173,6 +173,7 @@ type Msg
     | ClickedLink Browser.UrlRequest
     | GotJavascriptData Value
     | GotPageMsg Page.Msg
+    | GotNotificationMsg Notification.Msg
     | GotCommunityMsg Community.Msg
     | GotCommunityEditorMsg CommunityEditor.Msg
     | GotActionEditorMsg ActionEditor.Msg
@@ -292,6 +293,11 @@ update msg model =
             Login.update subMsg subModel
                 >> updateGuestUResult Login GotLoginMsg model
                 |> withGuest
+
+        ( GotNotificationMsg subMsg, Notification subModel ) ->
+            Notification.update subMsg subModel
+                >> updateLoggedInUResult Notification GotNotificationMsg model
+                |> withLoggedIn
 
         ( GotCommunityMsg subMsg, Community subModel ) ->
             Community.update subMsg subModel
@@ -617,6 +623,11 @@ changeRouteTo maybeRoute model =
                 >> updateSessionWith GotPageMsg model
                 |> withLoggedIn Route.Dashboard
 
+        Just Route.Notification ->
+            Notification.init
+                >> updateStatusWith Notification GotNotificationMsg model
+                |> withLoggedIn Route.Notification
+
         Just Route.Profile ->
             Profile.init
                 >> updateStatusWith Profile GotProfileMsg model
@@ -777,6 +788,9 @@ msgToString msg =
         GotCommunityExploreMsg subMsg ->
             "GotCommunityExploreMsg" :: CommunityExplore.msgToString subMsg
 
+        GotNotificationMsg subMsg ->
+            "GotNotificationMsg" :: Notification.msgToString subMsg
+
         GotDashboardMsg subMsg ->
             "GotDashboardMsg" :: Dashboard.msgToString subMsg
 
@@ -864,6 +878,9 @@ view model =
 
         Login subModel ->
             viewGuest subModel Guest.Other GotLoginMsg Login.view
+
+        Notification subModel ->
+            viewLoggedIn subModel LoggedIn.Other GotNotificationMsg Notification.view
 
         Community subModel ->
             viewLoggedIn subModel LoggedIn.Other GotCommunityMsg Community.view
