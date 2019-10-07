@@ -317,17 +317,21 @@ viewCard model session index card =
                         ]
                     ]
                 ]
-            , div [ class "sale__quantity" ]
-                [ p [ class "sale__quantity__title" ]
-                    [ text_ "shop.units_available" ]
-                , p [ class "sale__quantity__text" ]
-                    [ text (String.fromInt card.sale.units) ]
-                ]
+            , if card.sale.trackStock then
+                div [ class "sale__quantity" ]
+                    [ p [ class "sale__quantity__title" ]
+                        [ text_ "shop.units_available" ]
+                    , p [ class "sale__quantity__text" ]
+                        [ text (String.fromInt card.sale.units) ]
+                    ]
+
+              else
+                text ""
             ]
         , if Eos.nameToString card.sale.creatorId == account then
             text ""
 
-          else if card.sale.units <= 0 then
+          else if card.sale.units <= 0 && card.sale.trackStock then
             div [ class "sale__out__of__stock" ]
                 [ p [] [ text_ "shop.out_of_stock" ] ]
 
