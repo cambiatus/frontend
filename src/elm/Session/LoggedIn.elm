@@ -266,7 +266,7 @@ viewHeader ({ shared } as model) profile_ =
             ]
         , div [ class "hidden lg:block lg:visible w-1/2" ] [ searchBar model ]
         , div [ class "w-1/3 h-10 flex z-20 lg:w-1/4" ]
-            [ a [ class "w-1/2 outline-none", Route.href Route.Notification ]
+            [ a [ class "w-1/3 outline-none", Route.href Route.Notification ]
                 -- , button [ class "w-1/2 outline-none", onClick (ShowNotificationModal (not model.showNotificationModal)) ]
                 [ Icons.notification "mx-auto lg:mr-1 xl:mx-auto" ]
             , button
@@ -275,15 +275,15 @@ viewHeader ({ shared } as model) profile_ =
                 ]
                 [ Avatar.view shared.endpoints.ipfs profile_.avatar "h-7 w-7 float-right" ]
             , button
-                [ class "h-12 bg-gray-200 rounded-lg flex py-2 px-3 hidden xl:visible xl:flex"
+                [ class "h-12 bg-gray-200 rounded-lg flex py-2 px-3 hidden xl:visible xl:flex w-2/3"
                 , onClick (ShowUserNav (not model.showUserNav))
                 ]
-                [ Avatar.view shared.endpoints.ipfs profile_.avatar "h-7 w-7 mr-2"
-                , div []
-                    [ p [ class "font-sans uppercase text-gray-900 text-xs" ] [ text (tr "menu.welcome_message" [ ( "user_name", Eos.nameToString profile_.accountName ) ]) ]
-                    , p [ class "font-sans text-indigo-500 text-sm" ] [ text (t shared.translations "menu.my_account") ]
+                [ Avatar.view shared.endpoints.ipfs profile_.avatar "h-8 w-8 mr-2"
+                , div [ class "flex flex-wrap text-left pl-2" ]
+                    [ p [ class "w-full font-sans uppercase text-gray-900 text-xs" ] [ text (tr "menu.welcome_message" [ ( "user_name", Eos.nameToString profile_.accountName ) ]) ]
+                    , p [ class "w-full font-sans text-indigo-500 text-sm" ] [ text (t shared.translations "menu.my_account") ]
                     ]
-                , Icons.arrowDown ""
+                , Icons.arrowDown "float-right"
                 ]
             ]
         , div [ class "w-full mt-2 lg:hidden" ] [ searchBar model ]

@@ -513,11 +513,12 @@ viewCard session card model =
                     , onClick (ClickedBuy card.sale)
                     ]
                     [ text_ "shop.buy" ]
-                , button
-                    [ class "btn btn--primary"
-                    , onClick (ClickedAsk card.sale)
-                    ]
-                    [ text_ "shop.ask" ]
+
+                -- , button
+                --     [ class "btn btn--primary"
+                --     , onClick (ClickedAsk card.sale)
+                --     ]
+                --     [ text_ "shop.ask" ]
                 ]
         ]
 
