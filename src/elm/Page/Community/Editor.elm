@@ -356,11 +356,11 @@ viewFieldCurrencySymbol shared isDisabled defVal errors =
             , id fieldSymbolId
             , value defVal
             , minlength 3
-            , maxlength 3
+            , maxlength 4
             , required True
             , onInput EnteredSymbol
             , disabled isDisabled
-            , placeholder "___"
+            , placeholder "____"
             ]
             []
         , viewFieldError shared fieldSymbolId errors
