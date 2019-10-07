@@ -424,7 +424,7 @@ viewUserNav page profile_ ({ shared } as model) =
             , text_ "menu.profile"
             ]
         , viewUserNavItem page
-            Route.Communities
+            Route.Notification
             [ Icon.bell ""
             , text_ "menu.notifications"
             ]
