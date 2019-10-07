@@ -343,10 +343,18 @@ viewCard model session index card =
                 , Icons.thumbDown ""
                 , p [ class "pl-2 pr-6 text-sm" ] [ text "0" ]
                 ]
-            , div [ class "border-t border-gray-300 flex flex-none w-full px-6 pb-2" ]
-                [ p [ class "text-green text-3xl" ] [ text card.sale.price ]
-                , div [ class "uppercase text-xs font-thin mt-3 ml-2 font-sans text-green" ] [ text (Eos.symbolToString card.sale.symbol) ]
-                ]
+            , if card.sale.units == 0 && card.sale.trackStock then
+                div [ class "border-t border-gray-300 flex flex-none w-full px-6 pb-2" ]
+                    [ p [ class "text-3xl text-red" ]
+                        [ text (t shared.translations "shop.out_of_stock")
+                        ]
+                    ]
+
+              else
+                div [ class "border-t border-gray-300 flex flex-none w-full px-6 pb-2" ]
+                    [ p [ class "text-green text-3xl" ] [ text card.sale.price ]
+                    , div [ class "uppercase text-xs font-thin mt-3 ml-2 font-sans text-green" ] [ text (Eos.symbolToString card.sale.symbol) ]
+                    ]
             , div [ class "w-full px-6 pb-6" ]
                 [ div [ class "bg-gray-100 flex items-center justify-left text-xs" ]
                     [ text (tr "account.my_wallet.your_current_balance" [ ( "balance", currBalance ) ]) ]

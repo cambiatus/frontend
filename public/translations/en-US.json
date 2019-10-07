@@ -386,7 +386,7 @@
     "track_stock_yes": "Yes",
     "price_label": "Sale price",
     "units_available": "Available Quantity",
-    "out_of_stock": "Out of Stock",
+    "out_of_stock": "out of stock",
     "offer_action": "{{accountName}} is BUYING",
     "buy_action": "{{accountName}} is SELLING",
     "buy": "Buy",

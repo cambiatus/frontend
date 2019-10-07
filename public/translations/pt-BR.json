@@ -390,7 +390,7 @@
     "track_stock_yes": "Sim",
     "price_label": "Preço de venda",
     "units_available": "Quantidade disponível",
-    "out_of_stock": "Fora de estoque",
+    "out_of_stock": "fora de estoque",
     "offer_action": "{{accountName}} está VENDENDO",
     "buy_action": "{{accountName}} COMPRANDO",
     "buy": "Comprar",

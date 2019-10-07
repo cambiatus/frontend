@@ -386,7 +386,7 @@
     "track_stock_yes": "Sí",
     "price_label": "Precio de venta",
     "units_available": "Cantidad disponible",
-    "out_of_stock": "Agotado",
+    "out_of_stock": "agotado",
     "offer_action": "{{accountName}} esta VENDIENDO",
     "buy_action": "{{accountName}} está COMPRANDO",
     "buy": "Comprar",
