@@ -2,7 +2,7 @@
 -- https://github.com/dillonkearns/elm-graphql
 
 
-module Bespiral.Mutation exposing (ReadNotificationRequiredArguments, RegisterPushRequiredArguments, UpdateChatLanguageRequiredArguments, UpdateProfileRequiredArguments, readNotification, registerPush, updateChatLanguage, updateProfile)
+module Bespiral.Mutation exposing (..)
 
 import Bespiral.InputObject
 import Bespiral.Interface

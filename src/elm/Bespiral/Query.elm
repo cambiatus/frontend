@@ -2,7 +2,7 @@
 -- https://github.com/dillonkearns/elm-graphql
 
 
-module Bespiral.Query exposing (ChatPreferencesRequiredArguments, ClaimRequiredArguments, ClaimsRequiredArguments, CommunityRequiredArguments, NotificationHistoryRequiredArguments, ProfileRequiredArguments, SaleRequiredArguments, SalesRequiredArguments, UnreadNotificationsRequiredArguments, chatPreferences, claim, claims, communities, community, notificationHistory, profile, sale, saleHistory, sales, unreadNotifications)
+module Bespiral.Query exposing (..)
 
 import Bespiral.InputObject
 import Bespiral.Interface

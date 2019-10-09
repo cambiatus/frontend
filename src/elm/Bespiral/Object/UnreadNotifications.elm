@@ -2,7 +2,7 @@
 -- https://github.com/dillonkearns/elm-graphql
 
 
-module Bespiral.Object.UnreadNotifications exposing (count)
+module Bespiral.Object.UnreadNotifications exposing (..)
 
 import Bespiral.InputObject
 import Bespiral.Interface

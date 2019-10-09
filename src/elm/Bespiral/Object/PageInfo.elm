@@ -2,7 +2,7 @@
 -- https://github.com/dillonkearns/elm-graphql
 
 
-module Bespiral.Object.PageInfo exposing (endCursor, hasNextPage, hasPreviousPage, startCursor)
+module Bespiral.Object.PageInfo exposing (..)
 
 import Bespiral.InputObject
 import Bespiral.Interface

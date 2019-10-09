@@ -2,7 +2,7 @@
 -- https://github.com/dillonkearns/elm-graphql
 
 
-module Bespiral.InputObject exposing (ActionsInput, ActionsInputOptionalFields, ChatInput, ChatInputRequiredFields, ChatUpdateInput, ChatUpdateInputRequiredFields, ChecksInput, ChecksInputOptionalFields, ClaimInput, ClaimInputRequiredFields, ClaimsInput, ClaimsInputRequiredFields, ProfileInput, ProfileInputOptionalFields, ProfileUpdateInput, ProfileUpdateInputOptionalFields, ProfileUpdateInputRequiredFields, PushSubscriptionInput, PushSubscriptionInputRequiredFields, ReadNotificationInput, ReadNotificationInputRequiredFields, SaleInput, SaleInputRequiredFields, SalesInput, SalesInputOptionalFields, UnreadNotificationsInput, UnreadNotificationsInputRequiredFields, buildActionsInput, buildChatInput, buildChatUpdateInput, buildChecksInput, buildClaimInput, buildClaimsInput, buildProfileInput, buildProfileUpdateInput, buildPushSubscriptionInput, buildReadNotificationInput, buildSaleInput, buildSalesInput, buildUnreadNotificationsInput, encodeActionsInput, encodeChatInput, encodeChatUpdateInput, encodeChecksInput, encodeClaimInput, encodeClaimsInput, encodeProfileInput, encodeProfileUpdateInput, encodePushSubscriptionInput, encodeReadNotificationInput, encodeSaleInput, encodeSalesInput, encodeUnreadNotificationsInput)
+module Bespiral.InputObject exposing (..)
 
 import Bespiral.Enum.VerificationType
 import Bespiral.Interface
@@ -159,19 +159,28 @@ encodeClaimInput input =
         [ ( "id", Encode.int input.id |> Just ) ]
 
 
-buildClaimsInput : ClaimsInputRequiredFields -> ClaimsInput
-buildClaimsInput required =
-    { validator = required.validator }
+buildClaimsInput : (ClaimsInputOptionalFields -> ClaimsInputOptionalFields) -> ClaimsInput
+buildClaimsInput fillOptionals =
+    let
+        optionals =
+            fillOptionals
+                { claimer = Absent, validator = Absent }
+    in
+    { claimer = optionals.claimer, validator = optionals.validator }
 
 
-type alias ClaimsInputRequiredFields =
-    { validator : String }
+type alias ClaimsInputOptionalFields =
+    { claimer : OptionalArgument String
+    , validator : OptionalArgument String
+    }
 
 
 {-| Type for the ClaimsInput input object.
 -}
 type alias ClaimsInput =
-    { validator : String }
+    { claimer : OptionalArgument String
+    , validator : OptionalArgument String
+    }
 
 
 {-| Encode a ClaimsInput into a value that can be used as an argument.
@@ -179,7 +188,7 @@ type alias ClaimsInput =
 encodeClaimsInput : ClaimsInput -> Value
 encodeClaimsInput input =
     Encode.maybeObject
-        [ ( "validator", Encode.string input.validator |> Just ) ]
+        [ ( "claimer", Encode.string |> Encode.optional input.claimer ), ( "validator", Encode.string |> Encode.optional input.validator ) ]
 
 
 buildProfileInput : (ProfileInputOptionalFields -> ProfileInputOptionalFields) -> ProfileInput

@@ -2,7 +2,7 @@
 -- https://github.com/dillonkearns/elm-graphql
 
 
-module Bespiral.Object.Community exposing (TransfersOptionalArguments, createdAt, createdBlock, createdEosAccount, createdTx, creator, description, invitedReward, inviterReward, issuer, logo, maxSupply, memberCount, members, minBalance, name, objectives, supply, symbol, transfers, type_)
+module Bespiral.Object.Community exposing (..)
 
 import Bespiral.InputObject
 import Bespiral.Interface

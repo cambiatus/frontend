@@ -2,7 +2,7 @@
 -- https://github.com/dillonkearns/elm-graphql
 
 
-module Bespiral.Object.Validator exposing (createdAt, createdBlock, createdEosAccount, createdTx, validator)
+module Bespiral.Object.Validator exposing (..)
 
 import Bespiral.InputObject
 import Bespiral.Interface
