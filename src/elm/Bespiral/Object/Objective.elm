@@ -2,7 +2,7 @@
 -- https://github.com/dillonkearns/elm-graphql
 
 
-module Bespiral.Object.Objective exposing (..)
+module Bespiral.Object.Objective exposing (ActionsOptionalArguments, actions, community, createdAt, createdBlock, createdEosAccount, createdTx, creator, creatorId, description, id)
 
 import Bespiral.InputObject
 import Bespiral.Interface

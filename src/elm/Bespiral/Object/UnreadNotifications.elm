@@ -2,7 +2,7 @@
 -- https://github.com/dillonkearns/elm-graphql
 
 
-module Bespiral.Object.ChatPreferences exposing (language, userId)
+module Bespiral.Object.UnreadNotifications exposing (count)
 
 import Bespiral.InputObject
 import Bespiral.Interface
@@ -19,11 +19,6 @@ import Graphql.SelectionSet exposing (SelectionSet)
 import Json.Decode as Decode
 
 
-language : SelectionSet String Bespiral.Object.ChatPreferences
-language =
-    Object.selectionForField "String" "language" [] Decode.string
-
-
-userId : SelectionSet String Bespiral.Object.ChatPreferences
-userId =
-    Object.selectionForField "String" "userId" [] Decode.string
+count : SelectionSet Int Bespiral.Object.UnreadNotifications
+count =
+    Object.selectionForField "Int" "count" [] Decode.int

@@ -2,7 +2,7 @@
 -- https://github.com/dillonkearns/elm-graphql
 
 
-module Bespiral.Object.NotificationHistory exposing (..)
+module Bespiral.Object.NotificationHistory exposing (id, insertedAt, isRead, payload, recipient, recipientId, type_, updatedAt)
 
 import Bespiral.InputObject
 import Bespiral.Interface
@@ -17,6 +17,11 @@ import Graphql.Operation exposing (RootMutation, RootQuery, RootSubscription)
 import Graphql.OptionalArgument exposing (OptionalArgument(..))
 import Graphql.SelectionSet exposing (SelectionSet)
 import Json.Decode as Decode
+
+
+id : SelectionSet Int Bespiral.Object.NotificationHistory
+id =
+    Object.selectionForField "Int" "id" [] Decode.int
 
 
 insertedAt : SelectionSet Bespiral.ScalarCodecs.DateTime Bespiral.Object.NotificationHistory

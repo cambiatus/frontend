@@ -2,7 +2,7 @@
 -- https://github.com/dillonkearns/elm-graphql
 
 
-module Bespiral.Object.PushSubscription exposing (..)
+module Bespiral.Object.PushSubscription exposing (accountId, id)
 
 import Bespiral.InputObject
 import Bespiral.Interface
