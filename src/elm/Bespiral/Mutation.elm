@@ -2,7 +2,7 @@
 -- https://github.com/dillonkearns/elm-graphql
 
 
-module Bespiral.Mutation exposing (..)
+module Bespiral.Mutation exposing (ReadNotificationRequiredArguments, RegisterPushRequiredArguments, UpdateChatLanguageRequiredArguments, UpdateProfileRequiredArguments, readNotification, registerPush, updateChatLanguage, updateProfile)
 
 import Bespiral.InputObject
 import Bespiral.Interface
@@ -17,6 +17,17 @@ import Graphql.Operation exposing (RootMutation, RootQuery, RootSubscription)
 import Graphql.OptionalArgument exposing (OptionalArgument(..))
 import Graphql.SelectionSet exposing (SelectionSet)
 import Json.Decode as Decode exposing (Decoder)
+
+
+type alias ReadNotificationRequiredArguments =
+    { input : Bespiral.InputObject.ReadNotificationInput }
+
+
+{-| Mark a notification history as read
+-}
+readNotification : ReadNotificationRequiredArguments -> SelectionSet decodesTo Bespiral.Object.NotificationHistory -> SelectionSet decodesTo RootMutation
+readNotification requiredArgs object_ =
+    Object.selectionForCompositeField "readNotification" [ Argument.required "input" requiredArgs.input Bespiral.InputObject.encodeReadNotificationInput ] object_ identity
 
 
 type alias RegisterPushRequiredArguments =

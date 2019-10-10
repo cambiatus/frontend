@@ -60,8 +60,18 @@ self.addEventListener('push', function (event) {
 // Handle Notification Clicks
 self.addEventListener('notificationclick', function (event) {
   const notification = event.notification
-
   notification.close()
 
-  // TODO Navigate user to specific notification page
+  // Open the notifications page
+  event.waitUntil(self.clients.matchAll({
+    type: 'window'
+  }).then(function (clientList) {
+    for (var i = 0; i < clientList.length; i++) {
+      var client = clientList[i]
+      // If notifications page is open and focused do nothing
+      if (client.url === '/notifications' && 'focus' in client) { return client.focus() }
+    }
+    // Otherwise open the client on the notifications page
+    if (self.clients.openWindow) { return self.clients.openWindow('/notifications') }
+  }))
 })

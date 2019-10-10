@@ -2,7 +2,7 @@
 -- https://github.com/dillonkearns/elm-graphql
 
 
-module Bespiral.Query exposing (..)
+module Bespiral.Query exposing (ChatPreferencesRequiredArguments, ClaimRequiredArguments, ClaimsRequiredArguments, CommunityRequiredArguments, NotificationHistoryRequiredArguments, ProfileRequiredArguments, SaleRequiredArguments, SalesRequiredArguments, UnreadNotificationsRequiredArguments, chatPreferences, claim, claims, communities, community, notificationHistory, profile, sale, saleHistory, sales, unreadNotifications)
 
 import Bespiral.InputObject
 import Bespiral.Interface
@@ -117,3 +117,12 @@ type alias SalesRequiredArguments =
 sales : SalesRequiredArguments -> SelectionSet decodesTo Bespiral.Object.Sale -> SelectionSet (List decodesTo) RootQuery
 sales requiredArgs object_ =
     Object.selectionForCompositeField "sales" [ Argument.required "input" requiredArgs.input Bespiral.InputObject.encodeSalesInput ] object_ (identity >> Decode.list)
+
+
+type alias UnreadNotificationsRequiredArguments =
+    { input : Bespiral.InputObject.UnreadNotificationsInput }
+
+
+unreadNotifications : UnreadNotificationsRequiredArguments -> SelectionSet decodesTo Bespiral.Object.UnreadNotifications -> SelectionSet decodesTo RootQuery
+unreadNotifications requiredArgs object_ =
+    Object.selectionForCompositeField "unreadNotifications" [ Argument.required "input" requiredArgs.input Bespiral.InputObject.encodeUnreadNotificationsInput ] object_ identity

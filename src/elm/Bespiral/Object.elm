@@ -2,7 +2,7 @@
 -- https://github.com/dillonkearns/elm-graphql
 
 
-module Bespiral.Object exposing (..)
+module Bespiral.Object exposing (Action(..), ChatPreferences(..), Check(..), Claim(..), Community(..), Network(..), NotificationHistory(..), Objective(..), PageInfo(..), Profile(..), PushSubscription(..), Sale(..), SaleHistory(..), Transfer(..), TransferConnection(..), TransferEdge(..), UnreadNotifications(..), Validator(..))
 
 
 type Action
@@ -67,6 +67,10 @@ type TransferConnection
 
 type TransferEdge
     = TransferEdge
+
+
+type UnreadNotifications
+    = UnreadNotifications
 
 
 type Validator

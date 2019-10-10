@@ -2,7 +2,7 @@
 -- https://github.com/dillonkearns/elm-graphql
 
 
-module Bespiral.Object.Transfer exposing (..)
+module Bespiral.Object.Transfer exposing (amount, communityId, createdAt, createdBlock, createdEosAccount, createdTx, fromId, memo, toId)
 
 import Bespiral.InputObject
 import Bespiral.Interface
