@@ -21,7 +21,7 @@
     "search": "Busca comunidades y amigos",
     "explore": "Explorar",
     "communities": "Comunidades",
-    "welcome_message": "Hola, {{user_name}} ",
+    "welcome_message": "Hola {{user_name}}",
     "back_to_dashboard": "Ir al Inicio",
     "edit": "Editar",
     "cancel": "Cancelar",
