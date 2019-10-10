@@ -444,15 +444,23 @@ encodeCreateTokenData c =
         ]
 
 
-type alias UpdateLogoData =
+type alias UpdateCommunityData =
     { asset : Eos.Asset
-    , logoHash : String
+    , logo : String
+    , name : String
+    , description : String
+    , inviterReward : Eos.Asset
+    , invitedReward : Eos.Asset
     }
 
 
-encodeUpdateLogoData : UpdateLogoData -> Value
+encodeUpdateLogoData : UpdateCommunityData -> Value
 encodeUpdateLogoData c =
     Encode.object
-        [ ( "logo", Encode.string c.logoHash )
+        [ ( "logo", Encode.string c.logo )
         , ( "cmm_asset", Eos.encodeAsset c.asset )
+        , ( "name", Encode.string c.name )
+        , ( "description", Encode.string c.description )
+        , ( "inviter_reward", Eos.encodeAsset c.inviterReward )
+        , ( "invited_reward", Eos.encodeAsset c.invitedReward )
         ]

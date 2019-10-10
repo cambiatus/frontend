@@ -289,7 +289,7 @@ async function handleJavascriptPort (arg) {
       }
       ScatterJS.scatter
         .connect(
-          'bespiral',
+          'cambiatus',
           {
             initTimeout: 2500
           }
@@ -533,13 +533,25 @@ async function handleJavascriptPort (arg) {
     }
     case 'loginWithPrivateKeyAccount': {
       devLog('========================', 'loginWithPrivateKeyAccount')
-      const accountName = arg.data.accountName
       var loginForm = arg.data.form
+      const accountName = arg.data.accountName
+
+      // check if it is actually 12 words and convert it
+      privateKey =
+        loginForm.privateKey.split(' ').length === 12
+          ? ecc.seedPrivate(mnemonic.toSeedHex(loginForm.privateKey))
+          : loginForm.privateKey
+
+      privateKey = loginForm.privateKey
+      if (loginForm.privateKey.split(' ').length > 1) {
+        privateKey = ecc.seedPrivate(mnemonic.toSeedHex(loginForm.privateKey))
+      }
+
       if (loginForm.usePin) {
         storePin(
           {
             accountName: accountName,
-            privateKey: loginForm.privateKey
+            privateKey: privateKey
           },
           loginForm.usePin
         )
@@ -550,7 +562,7 @@ async function handleJavascriptPort (arg) {
       }
       eos = Eos(
         Object.assign(config.eosOptions, {
-          keyProvider: loginForm.privateKey
+          keyProvider: privateKey
         })
       )
       isAuthenticated = true

@@ -222,23 +222,23 @@ viewOptions isModal shared model =
     in
     [ div [ class "card__login-header" ]
         [ viewAuthTabs shared
-        , case model.scatterError of
-            Nothing ->
-                text ""
 
-            Just err ->
-                p [ class "scatter__error" ]
-                    [ text err ]
-        , p [ class "card__auth__title" ]
-            [ span [ class "auth__text" ] [ text_ "auth.title" ]
-            , span [] [ text " " ]
-            , span
-                [ class "scatter__link"
-                , onClick ClickedLoginWithScatter
-                ]
-                [ text "Scatter" ]
-            ]
-        , viewAuthError shared model.loginError
+        -- , case model.scatterError of
+        --     Nothing ->
+        --         text ""
+        --     Just err ->
+        --         p [ class "scatter__error" ]
+        --             [ text err ]
+        -- , p [ class "card__auth__title" ]
+        --     [ span [ class "auth__text" ] [ text_ "auth.title" ]
+        --     , span [] [ text " " ]
+        --     , span
+        --         [ class "scatter__link"
+        --         , onClick ClickedLoginWithScatter
+        --         ]
+        --         [ text "Scatter" ]
+        --     ]
+        -- , viewAuthError shared model.loginError
         ]
     , div [ class "card__auth__input" ]
         [ viewFieldLabel shared "auth.login.wordsMode.input" "privateKey" Nothing
