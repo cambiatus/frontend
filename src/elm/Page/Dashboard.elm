@@ -271,7 +271,7 @@ viewSections loggedIn model =
 
         transferInfo from value to =
             [ ( "from", viewAccountName from )
-            , ( "value", value )
+            , ( "value", String.fromFloat value )
             , ( "to", viewAccountName to )
             ]
                 |> I18Next.tr loggedIn.shared.translations I18Next.Curly "transfer.info"

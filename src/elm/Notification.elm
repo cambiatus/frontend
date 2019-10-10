@@ -62,10 +62,12 @@ type alias History =
 
 
 type alias TransferData =
-    { amount : String
+    { amount : Float
     , fromId : String
     , toId : String
     , memo : Maybe String
+    , symbol : String
+    , community : Community
     }
 
 
@@ -84,7 +86,10 @@ type alias Community =
 
 
 type alias Sale =
-    { title : String }
+    { id : Int
+    , title : String
+    , image : Maybe String
+    }
 
 
 type NotificationType
@@ -140,6 +145,8 @@ transferSelectionSet =
         |> with Transfer.fromId
         |> with Transfer.toId
         |> with Transfer.memo
+        |> with Transfer.communityId
+        |> with (Transfer.community logoSelectionSet)
 
 
 saleHistorySelectionSet =
@@ -149,7 +156,14 @@ saleHistorySelectionSet =
         |> with (Eos.nameSelectionSet SaleHistory.fromId)
         |> with (Eos.nameSelectionSet SaleHistory.toId)
         |> with SaleHistory.communityId
-        |> with (SaleHistory.sale (SelectionSet.succeed Sale |> with Sale.title))
+        |> with
+            (SaleHistory.sale
+                (SelectionSet.succeed Sale
+                    |> with Sale.id
+                    |> with Sale.title
+                    |> with Sale.image
+                )
+            )
 
 
 logoSelectionSet =

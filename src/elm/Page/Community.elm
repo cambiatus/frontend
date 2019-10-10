@@ -876,8 +876,12 @@ viewSections loggedIn model allTransfers =
             Eos.nameToString accountName
 
         transferInfo from value to =
+            let
+                val =
+                    String.fromFloat value
+            in
             [ ( "from", viewAccountName from )
-            , ( "value", value )
+            , ( "value", val )
             , ( "to", viewAccountName to )
             ]
                 |> I18Next.tr loggedIn.shared.translations I18Next.Curly "transfer.info"

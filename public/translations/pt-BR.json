@@ -196,6 +196,10 @@
     "saleHistory": {
       "buy": "Você comprou {{sale}} de {{user}}",
       "sell": "🎉 {{user}} comprou {{sale}}"
+    },
+    "transfer": {
+      "receive": "Você recebeu {{amount}} do usuário {{user}}",
+      "sent": "Você enviou {{amount}} para {{user}}"
     }
   },
   "community": {

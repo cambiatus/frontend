@@ -47,7 +47,7 @@ type alias CommunityArgs =
 type alias Transfer =
     { to : Eos.Name
     , from : Eos.Name
-    , value : String
+    , value : Float
     , memo : Maybe String
     , symbol : Symbol
     , blockTime : DateTime
