@@ -2,7 +2,7 @@
 -- https://github.com/dillonkearns/elm-graphql
 
 
-module Bespiral.Interface exposing (placeholder)
+module Bespiral.Interface exposing (..)
 
 
 placeholder : String

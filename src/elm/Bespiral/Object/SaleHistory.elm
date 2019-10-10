@@ -2,7 +2,7 @@
 -- https://github.com/dillonkearns/elm-graphql
 
 
-module Bespiral.Object.SaleHistory exposing (amount, community, communityId, from, fromId, id, sale, saleId, to, toId, units)
+module Bespiral.Object.SaleHistory exposing (..)
 
 import Bespiral.InputObject
 import Bespiral.Interface
@@ -19,9 +19,9 @@ import Graphql.SelectionSet exposing (SelectionSet)
 import Json.Decode as Decode
 
 
-amount : SelectionSet Float Bespiral.Object.SaleHistory
+amount : SelectionSet (Maybe Float) Bespiral.Object.SaleHistory
 amount =
-    Object.selectionForField "Float" "amount" [] Decode.float
+    Object.selectionForField "(Maybe Float)" "amount" [] (Decode.float |> Decode.nullable)
 
 
 community : SelectionSet decodesTo Bespiral.Object.Community -> SelectionSet decodesTo Bespiral.Object.SaleHistory

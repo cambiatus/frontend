@@ -2,7 +2,7 @@
 -- https://github.com/dillonkearns/elm-graphql
 
 
-module Bespiral.ScalarCodecs exposing (DateTime, Id, codecs)
+module Bespiral.ScalarCodecs exposing (..)
 
 import Bespiral.Scalar exposing (defaultCodecs)
 import Json.Decode as Decode exposing (Decoder)

@@ -2,7 +2,7 @@
 -- https://github.com/dillonkearns/elm-graphql
 
 
-module Bespiral.Object.ChatPreferences exposing (language, userId)
+module Bespiral.Object.ChatPreferences exposing (..)
 
 import Bespiral.InputObject
 import Bespiral.Interface

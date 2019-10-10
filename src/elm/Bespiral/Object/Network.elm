@@ -2,7 +2,7 @@
 -- https://github.com/dillonkearns/elm-graphql
 
 
-module Bespiral.Object.Network exposing (account, community, createdAt, createdBlock, createdEosAccount, createdTx, invitedBy)
+module Bespiral.Object.Network exposing (..)
 
 import Bespiral.InputObject
 import Bespiral.Interface
