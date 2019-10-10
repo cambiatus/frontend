@@ -539,8 +539,8 @@ async function handleJavascriptPort (arg) {
       // check if it is actually 12 words and convert it
       privateKey =
         loginForm.privateKey.split(' ').length === 12
-        ? ecc.seedPrivate(mnemonic.toSeedHex(loginForm.privateKey))
-        : loginForm.privateKey
+          ? ecc.seedPrivate(mnemonic.toSeedHex(loginForm.privateKey))
+          : loginForm.privateKey
 
       privateKey = loginForm.privateKey
       if (loginForm.privateKey.split(' ').length > 1) {
@@ -548,7 +548,7 @@ async function handleJavascriptPort (arg) {
       }
 
       if (loginForm.usePin) {
-              storePin(
+        storePin(
           {
             accountName: accountName,
             privateKey: privateKey
