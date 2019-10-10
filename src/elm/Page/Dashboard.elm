@@ -73,6 +73,7 @@ type alias Model =
     , lastSocket : String
     , transfers : GraphqlStatus (Maybe QueryTransfers) (List Transfer)
     , verifications : GraphqlStatus VerificationHistoryResponse (List Verification)
+    , claims : GraphqlStatus VerificationHistoryResponse (List Verification)
     }
 
 
@@ -95,6 +96,7 @@ initModel =
     , lastSocket = ""
     , transfers = LoadingGraphql
     , verifications = LoadingGraphql
+    , claims = LoadingGraphql
     }
 
 
@@ -352,6 +354,7 @@ type Msg
     | GotDashCommunityMsg Int DashCommunity.Msg
     | CompletedLoadUserTransfers (Result (Graphql.Http.Error (Maybe QueryTransfers)) (Maybe QueryTransfers))
     | CompletedLoadVerifications (Result (Graphql.Http.Error VerificationHistoryResponse) VerificationHistoryResponse)
+    | CompletedLoadClaims (Result (Graphql.Http.Error VerificationHistoryResponse) VerificationHistoryResponse)
 
 
 update : Msg -> Model -> LoggedIn.Model -> UpdateResult
@@ -404,6 +407,15 @@ update msg model loggedIn =
 
         CompletedLoadVerifications (Err err) ->
             { model | verifications = FailedGraphql err }
+                |> UR.init
+                |> UR.logGraphqlError msg err
+
+        CompletedLoadClaims (Ok result) ->
+            { model | claims = LoadedGraphql (toVerifications result) }
+                |> UR.init
+
+        CompletedLoadClaims (Err err) ->
+            { model | claims = FailedGraphql err }
                 |> UR.init
                 |> UR.logGraphqlError msg err
 
@@ -484,6 +496,23 @@ type alias CommunityResponse =
     }
 
 
+fetchClaims : Shared -> Eos.Name -> Cmd Msg
+fetchClaims shared accountName =
+    let
+        claimer : String
+        claimer =
+            Eos.nameToString accountName
+
+        selectionSet : SelectionSet VerificationHistoryResponse RootQuery
+        selectionSet =
+            verificationHistorySelectionSet False claimer
+    in
+    Api.Graphql.query
+        shared
+        selectionSet
+        CompletedLoadClaims
+
+
 fetchVerifications : Shared -> Eos.Name -> Cmd Msg
 fetchVerifications shared accountName =
     let
@@ -493,7 +522,7 @@ fetchVerifications shared accountName =
 
         selectionSet : SelectionSet VerificationHistoryResponse RootQuery
         selectionSet =
-            verificationHistorySelectionSet validator
+            verificationHistorySelectionSet True validator
     in
     Api.Graphql.query
         shared
@@ -501,20 +530,25 @@ fetchVerifications shared accountName =
         CompletedLoadVerifications
 
 
-verificationHistorySelectionSet : String -> SelectionSet VerificationHistoryResponse RootQuery
-verificationHistorySelectionSet validator =
+verificationHistorySelectionSet : Bool -> String -> SelectionSet VerificationHistoryResponse RootQuery
+verificationHistorySelectionSet forValidator accName =
     let
-        claimsInput : ClaimsRequiredArguments
-        claimsInput =
-            { input = { validator = validator }
-            }
+        qInput : ClaimsRequiredArguments
+        qInput =
+            if forValidator then
+                { input = { validator = Present accName, claimer = Absent }
+                }
+
+            else
+                { input = { claimer = Present accName, validator = Absent }
+                }
 
         selectionSet : SelectionSet ClaimResponse Bespiral.Object.Claim
         selectionSet =
-            claimSelectionSet validator
+            claimSelectionSet accName
     in
     SelectionSet.succeed VerificationHistoryResponse
-        |> with (Bespiral.Query.claims claimsInput selectionSet)
+        |> with (Bespiral.Query.claims qInput selectionSet)
 
 
 claimSelectionSet : String -> SelectionSet ClaimResponse Bespiral.Object.Claim
@@ -661,6 +695,9 @@ msgToString msg =
 
         CompletedLoadVerifications result ->
             resultToString [ "CompletedLoadActivities" ] result
+
+        CompletedLoadClaims result ->
+            resultToString [ "CompletedLoadClaims" ] result
 
 
 jsAddressToMsg : List String -> Value -> Maybe Msg
