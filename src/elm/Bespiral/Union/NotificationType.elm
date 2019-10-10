@@ -2,7 +2,7 @@
 -- https://github.com/dillonkearns/elm-graphql
 
 
-module Bespiral.Union.NotificationType exposing (Fragments, fragments, maybeFragments)
+module Bespiral.Union.NotificationType exposing (..)
 
 import Bespiral.InputObject
 import Bespiral.Interface

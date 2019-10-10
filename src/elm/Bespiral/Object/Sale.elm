@@ -2,7 +2,7 @@
 -- https://github.com/dillonkearns/elm-graphql
 
 
-module Bespiral.Object.Sale exposing (communityId, createdAt, createdBlock, createdEosAccount, createdTx, creator, creatorId, description, id, image, price, title, trackStock, units)
+module Bespiral.Object.Sale exposing (..)
 
 import Bespiral.InputObject
 import Bespiral.Interface

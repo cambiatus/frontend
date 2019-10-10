@@ -2,7 +2,7 @@
 -- https://github.com/dillonkearns/elm-graphql
 
 
-module Bespiral.Object.SaleHistory exposing (amount, community, communityId, from, fromId, id, sale, saleId, to, toId, units)
+module Bespiral.Object.SaleHistory exposing (..)
 
 import Bespiral.InputObject
 import Bespiral.Interface

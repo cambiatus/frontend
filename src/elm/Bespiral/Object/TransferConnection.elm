@@ -2,7 +2,7 @@
 -- https://github.com/dillonkearns/elm-graphql
 
 
-module Bespiral.Object.TransferConnection exposing (edges, fetchedCount, pageInfo, totalCount)
+module Bespiral.Object.TransferConnection exposing (..)
 
 import Bespiral.InputObject
 import Bespiral.Interface

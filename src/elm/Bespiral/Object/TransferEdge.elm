@@ -2,7 +2,7 @@
 -- https://github.com/dillonkearns/elm-graphql
 
 
-module Bespiral.Object.TransferEdge exposing (cursor, node)
+module Bespiral.Object.TransferEdge exposing (..)
 
 import Bespiral.InputObject
 import Bespiral.Interface

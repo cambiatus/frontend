@@ -2,7 +2,7 @@
 -- https://github.com/dillonkearns/elm-graphql
 
 
-module Bespiral.Object.NotificationHistory exposing (id, insertedAt, isRead, payload, recipient, recipientId, type_, updatedAt)
+module Bespiral.Object.NotificationHistory exposing (..)
 
 import Bespiral.InputObject
 import Bespiral.Interface

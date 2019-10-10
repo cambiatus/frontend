@@ -302,8 +302,18 @@ viewHeader ({ shared } as model) profile_ =
             ]
         , div [ class "hidden lg:block lg:visible w-1/2" ] [ searchBar model ]
         , div [ class "w-1/3 h-10 flex z-20 lg:w-1/4" ]
+            -- <<<<<<< HEAD
+            --             [ a [ class "w-1/3 outline-none", Route.href Route.Notification ]
+            --                 -- , button [ class "w-1/2 outline-none", onClick (ShowNotificationModal (not model.showNotificationModal)) ]
+            --                 [ Icons.notification "mx-auto lg:mr-1 xl:mx-auto" ]
+            -- =======
             [ div [ class "flex flex-row mx-auto" ]
-                [ button [ class "outline-none", onClick (ShowNotificationModal (not model.showNotificationModal)) ]
+                [ a
+                    [ class "outline-none"
+                    , Route.href Route.Notification
+
+                    -- , onClick (ShowNotificationModal (not model.showNotificationModal))
+                    ]
                     [ Icons.notification "mx-auto lg:mr-1 xl:mx-auto" ]
                 , if model.unreadCount == 0 then
                     text ""
@@ -312,21 +322,23 @@ viewHeader ({ shared } as model) profile_ =
                     div [ class "bg-orange-100 text-white p-1 rounded-full h-4 w-4 text-menu flex flex-col justify-center" ]
                         [ text (String.fromInt model.unreadCount) ]
                 ]
+
+            -- >>>>>>> c38c05dd6ea69f3e6200024c885caf15db6fc265
             , button
                 [ class "w-1/2 xl:hidden"
                 , onClick (ShowUserNav (not model.showUserNav))
                 ]
                 [ Avatar.view shared.endpoints.ipfs profile_.avatar "h-7 w-7 float-right" ]
             , button
-                [ class "h-12 bg-gray-200 rounded-lg flex py-2 px-3 hidden xl:visible xl:flex"
+                [ class "h-12 bg-gray-200 rounded-lg flex py-2 px-3 hidden xl:visible xl:flex w-2/3"
                 , onClick (ShowUserNav (not model.showUserNav))
                 ]
-                [ Avatar.view shared.endpoints.ipfs profile_.avatar "h-7 w-7 mr-2"
-                , div []
-                    [ p [ class "font-sans uppercase text-gray-900 text-xs" ] [ text (tr "menu.welcome_message" [ ( "user_name", Eos.nameToString profile_.accountName ) ]) ]
-                    , p [ class "font-sans text-indigo-500 text-sm" ] [ text (t shared.translations "menu.my_account") ]
+                [ Avatar.view shared.endpoints.ipfs profile_.avatar "h-8"
+                , div [ class "flex flex-wrap text-left pl-2" ]
+                    [ p [ class "w-full font-sans uppercase text-gray-900 text-xs overflow-x-hidden" ] [ text (tr "menu.welcome_message" [ ( "user_name", Eos.nameToString profile_.accountName ) ]) ]
+                    , p [ class "w-full font-sans text-indigo-500 text-sm" ] [ text (t shared.translations "menu.my_account") ]
                     ]
-                , Icons.arrowDown ""
+                , Icons.arrowDown "float-right"
                 ]
             ]
         , div [ class "w-full mt-2 lg:hidden" ] [ searchBar model ]
@@ -467,7 +479,7 @@ viewUserNav page profile_ ({ shared } as model) =
             , text_ "menu.profile"
             ]
         , viewUserNavItem page
-            Route.Communities
+            Route.Notification
             [ Icon.bell ""
             , text_ "menu.notifications"
             ]

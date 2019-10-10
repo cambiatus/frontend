@@ -16,6 +16,7 @@ import Html.Events exposing (on, onClick, onInput, onSubmit, targetValue)
 import Html.Lazy as Lazy
 import Http
 import I18Next exposing (t)
+import Icons
 import Json.Decode as Decode exposing (Decoder, Value)
 import Json.Encode as Encode
 import List.Extra as LE
@@ -266,16 +267,16 @@ viewShopFilter session maybeFilter =
 
 viewGrid : Session -> List Card -> Model -> Html Msg
 viewGrid session cards model =
+    let
+        v_ viewFn index card =
+            viewFn model session index card
+    in
     div [ class "flex flex-wrap -mx-2" ]
         (List.indexedMap
             (\index card ->
-                let
-                    v_ viewFn =
-                        viewFn model session index card
-                in
                 case card.state of
                     ViewingCard ->
-                        v_ viewCard
+                        v_ viewCard index card
             )
             cards
         )
@@ -284,72 +285,88 @@ viewGrid session cards model =
 viewCard : Model -> Session -> Int -> Card -> Html Msg
 viewCard model session index card =
     let
-        account =
-            case session of
-                LoggedIn m ->
-                    Eos.nameToString m.accountName
+        image =
+            Maybe.withDefault "" card.sale.image
 
-                _ ->
-                    ""
+        imageUrl =
+            getIpfsUrl session ++ "/" ++ image
+
+        maybeBal =
+            LE.find (\bal -> bal.asset.symbol == card.sale.symbol) model.balances
+
+        symbolBalance =
+            case maybeBal of
+                Just b ->
+                    b.asset.amount
+
+                Nothing ->
+                    0.0
+
+        currBalance =
+            String.fromFloat symbolBalance ++ " " ++ Eos.symbolToString card.sale.symbol
 
         shared =
-            Page.toShared session
+            case session of
+                LoggedIn a ->
+                    a.shared
 
-        text_ str =
-            text (t shared.translations str)
+                Guest a ->
+                    a.shared
+
+        tr r_id replaces =
+            I18Next.tr shared.translations I18Next.Curly r_id replaces
+
+        title =
+            if String.length card.sale.title > 17 then
+                String.slice 0 17 card.sale.title ++ " ..."
+
+            else
+                card.sale.title
     in
-    viewCardWithHeader
-        model
-        session
-        card
-        [ div [ class "sale__info" ]
-            [ div [ class "sale__rating" ]
-                [ p [ class "sale__rating__title" ]
-                    [ text_ "shop.rate_sale" ]
-                , div [ class "sale__rating__icons" ]
-                    [ div [ class "sale__like" ]
-                        [ Icon.like "sale__like__icon"
-                        , span [ class "sale__like__text" ] [ text "0" ]
-                        ]
-                    , div [ class "sale__dislike" ]
-                        [ Icon.dislike "sale__dislike__icon"
-                        , span [ class "sale__like__text" ] [ text "0" ]
+    a
+        [ class "w-full sm:w-1/2 lg:w-1/3 xl:w-1/4 px-2 mb-8"
+        , Route.href (Route.ViewSale (String.fromInt card.sale.id))
+        ]
+        [ div
+            [ class "flex flex-wrap rounded-lg shadow bg-white overflow-hidden"
+            ]
+            [ div [ class "w-full relative" ]
+                [ img [ class "w-full h-48 object-cover bg-gray-500", src imageUrl ] []
+                , Avatar.view (getIpfsUrl session) card.sale.creator.avatar "absolute right-1 bottom-1 h-10 w-10 shop__avatar"
+                ]
+            , div [ class "w-full px-6 pt-4" ]
+                [ p [ class "text-xl" ] [ text title ]
+                ]
+            , div [ class "flex flex-none pt-3 px-6 pb-4" ]
+                [ Icons.thumbUp "text-indigo-500"
+                , p [ class "pl-2 pr-6 text-sm" ] [ text "0" ]
+                , Icons.thumbDown ""
+                , p [ class "pl-2 pr-6 text-sm" ] [ text "0" ]
+                ]
+            , if card.sale.units == 0 && card.sale.trackStock then
+                div [ class "border-t border-gray-300 flex flex-none w-full px-6 pb-2" ]
+                    [ p [ class "text-3xl text-red" ]
+                        [ text (t shared.translations "shop.out_of_stock")
                         ]
                     ]
-                ]
-            , div [ class "sale__quantity" ]
-                [ p [ class "sale__quantity__title" ]
-                    [ text_ "shop.units_available" ]
-                , p [ class "sale__quantity__text" ]
-                    [ text (String.fromInt card.sale.units) ]
+
+              else
+                div [ class "border-t border-gray-300 flex flex-none w-full px-6 pb-2" ]
+                    [ p [ class "text-green text-3xl" ] [ text card.sale.price ]
+                    , div [ class "uppercase text-xs font-thin mt-3 ml-2 font-sans text-green" ] [ text (Eos.symbolToString card.sale.symbol) ]
+                    ]
+            , div [ class "w-full px-6 pb-6" ]
+                [ div [ class "bg-gray-100 flex items-center justify-left text-xs" ]
+                    [ text (tr "account.my_wallet.your_current_balance" [ ( "balance", currBalance ) ]) ]
                 ]
             ]
-        , if Eos.nameToString card.sale.creatorId == account then
-            text ""
-
-          else if card.sale.units <= 0 then
-            div [ class "sale__out__of__stock" ]
-                [ p [] [ text_ "shop.out_of_stock" ] ]
-
-          else
-            div [ class "card__button-row" ]
-                [ button
-                    [ class "btn btn--primary"
-                    ]
-                    [ text_ "shop.transfer.submit" ]
-                , button
-                    [ class "btn btn--primary"
-                    , onClick (ClickedMessages index card.sale.creatorId)
-                    ]
-                    [ text_ "shop.ask" ]
-                ]
         ]
 
 
 viewCardWithHeader : Model -> Session -> Card -> List (Html Msg) -> Html Msg
 viewCardWithHeader model session card content =
     a
-        [ class "w-full sm:w-1/2 lg:w-1/2 xl:w-1/3 py-2 px-2 "
+        [ class "w-full sm:w-1/2 lg:w-1/2 xl:w-1/3 py-2 px-2"
         , Route.href (Route.ViewSale (String.fromInt card.sale.id))
         ]
         [ div
@@ -387,7 +404,11 @@ viewHeaderBackground session card =
     in
     div
         [ class "shop__background"
-        , style "background-image" ("url(" ++ Maybe.withDefault "/temp/44884525495_2e5c792dd2_z.jpg" (Maybe.map (\img -> ipfsUrl ++ "/" ++ img) card.sale.image) ++ ")")
+        , style "background-image"
+            ("url("
+                ++ Maybe.withDefault "/temp/44884525495_2e5c792dd2_z.jpg" (Maybe.map (\img -> ipfsUrl ++ "/" ++ img) card.sale.image)
+                ++ ")"
+            )
         ]
         [ span
             [ class "sale__more__details"
