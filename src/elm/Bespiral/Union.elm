@@ -5,6 +5,5 @@
 module Bespiral.Union exposing (..)
 
 
-placeholder : String
-placeholder =
-    ""
+type NotificationType
+    = NotificationType

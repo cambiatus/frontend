@@ -19,6 +19,17 @@ import Graphql.SelectionSet exposing (SelectionSet)
 import Json.Decode as Decode exposing (Decoder)
 
 
+type alias ReadNotificationRequiredArguments =
+    { input : Bespiral.InputObject.ReadNotificationInput }
+
+
+{-| Mark a notification history as read
+-}
+readNotification : ReadNotificationRequiredArguments -> SelectionSet decodesTo Bespiral.Object.NotificationHistory -> SelectionSet decodesTo RootMutation
+readNotification requiredArgs object_ =
+    Object.selectionForCompositeField "readNotification" [ Argument.required "input" requiredArgs.input Bespiral.InputObject.encodeReadNotificationInput ] object_ identity
+
+
 type alias RegisterPushRequiredArguments =
     { input : Bespiral.InputObject.PushSubscriptionInput }
 
