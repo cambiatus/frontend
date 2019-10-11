@@ -49,6 +49,7 @@ init { shared, accountName } =
         [ fetchVerifications shared accountName
         , fetchBalance shared accountName
         , fetchTransfers shared accountName
+        , fetchClaims shared accountName
         , Task.perform GotTime Time.now
         ]
     )
@@ -275,21 +276,38 @@ viewSections loggedIn model =
             , ( "to", viewAccountName to )
             ]
                 |> I18Next.tr loggedIn.shared.translations I18Next.Curly "transfer.info"
+
+        toView claims =
+            List.map
+                (viewVerification loggedIn.shared.endpoints.ipfs)
+                claims
     in
     Page.viewMaxTwoColumn
         [ Page.viewTitle (t "community.actions.last_title")
-        , case model.transfers of
+        , case model.claims of
             LoadingGraphql ->
-                Page.viewCardEmpty [ text (t "menu.loading") ]
+                viewNoVerification
+                    [ Loading.view "text-gray-900" ]
 
-            FailedGraphql _ ->
-                Page.viewCardEmpty [ text (t "community.actions.loading_error") ]
+            FailedGraphql err ->
+                viewNoVerification
+                    [ p
+                        [ class "font-sans text-gray-900 text-sm" ]
+                        [ text (Page.errorToString err) ]
+                    ]
 
-            LoadedGraphql [] ->
-                Page.viewCardEmpty [ text (t "community.actions.no_actions_yet") ]
+            LoadedGraphql claims ->
+                if List.isEmpty claims then
+                    viewNoVerification
+                        [ p
+                            [ class "font-sans text-gray-900 text-sm" ]
+                            [ text (t "dashboard.activities.no_actions_yet") ]
+                        ]
 
-            LoadedGraphql transfers ->
-                Page.viewCardEmpty [ text (t "community.actions.no_actions_yet") ]
+                else
+                    div
+                        [ class "shadow-md rounded-lg bg-white " ]
+                        (toView claims)
         ]
         [ Page.viewTitle (t "transfer.last_title")
         , case model.transfers of
