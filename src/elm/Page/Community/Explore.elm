@@ -76,7 +76,7 @@ view loggedIn model =
             Page.fullPageGraphQLError (t loggedIn.shared.translations "menu.communities") e
 
         Loaded communities ->
-            Page.mainContentContainer
+            div [ class "container mx-auto px-4" ]
                 [ renderUserMessage model
                 , Page.viewTitle (t loggedIn.shared.translations "menu.communities")
                 , div [ class "flex flex-wrap -mx-2" ]
@@ -139,7 +139,7 @@ viewCommunity loggedIn community =
             Transfer.getTotalCount (Just community)
     in
     a
-        [ class "w-full sm:w-1/2 md:w-1/3 lg:w-1/3 xl:w-1/4 px-2 mb-8 h-60"
+        [ class "w-full sm:w-1/2 md:w-1/3 lg:w-1/3 xl:w-1/4 px-2 mb-6 h-60"
         , Route.href (Route.Community community.symbol)
         ]
         [ div [ class "flex flex-wrap pt-5 pb-2 rounded-lg shadow bg-white" ]

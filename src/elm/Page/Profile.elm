@@ -118,7 +118,7 @@ view_ loggedIn profile model =
                 False ->
                     "Enable Push Notifications"
     in
-    Page.mainContentContainer
+    div [ class "container mx-auto px-4" ]
         [ Page.viewTitle (t loggedIn.shared.translations "profile.title")
         , div [ class "card profile-card" ]
             [ div [ class "profile-info" ]

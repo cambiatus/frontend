@@ -264,14 +264,9 @@ fullPageLoading =
         [ div [ class "spinner spinner--delay" ] [] ]
 
 
-mainContentContainer : List (Html msg) -> Html msg
-mainContentContainer =
-    div []
-
-
 fullPageError : String -> Http.Error -> Html msg
 fullPageError title_ e =
-    mainContentContainer
+    div []
         [ viewTitle title_
         , div [ class "card" ] [ text "Something wrong happened." ]
         ]

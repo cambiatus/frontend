@@ -377,13 +377,13 @@ view session model =
     in
     case model.status of
         LoadingSale id ->
-            Page.mainContentContainer
+            div []
                 [ Lazy.lazy viewHeader session
                 , Page.fullPageLoading
                 ]
 
         InvalidId invalidId ->
-            Page.mainContentContainer
+            div [ class "container mx-auto px-4" ]
                 [ Lazy.lazy viewHeader session
                 , div []
                     [ text (invalidId ++ " is not a valid Sale Id") ]

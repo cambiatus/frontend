@@ -130,7 +130,7 @@ view loggedIn model =
             Page.fullPageError (t "menu.my_communities") e
 
         Loaded communities ->
-            Page.mainContentContainer
+            div [ class "mx-auto container px-4" ]
                 [ Page.viewTitle (t "menu.my_communities")
                 , Page.viewButtonNew (t "community.create_button") Route.NewCommunity
                 , viewBalances loggedIn communities

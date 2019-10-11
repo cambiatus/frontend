@@ -193,19 +193,22 @@ view session maybeFilter model =
     in
     case model.cards of
         Loading ->
-            Page.mainContentContainer
+            div []
                 [ Lazy.lazy viewHeader session
-                , Page.fullPageLoading
+                , div [ class "container mx-auto px-4" ]
+                    [ Page.fullPageLoading ]
                 ]
 
         LoadingFailed e ->
             Page.fullPageGraphQLError (t shared.translations "shop.title") e
 
         Loaded cards ->
-            Page.mainContentContainer
+            div []
                 [ Lazy.lazy viewHeader session
-                , viewShopFilter session maybeFilter
-                , viewGrid session cards model
+                , div [ class "container mx-auto px-4" ]
+                    [ viewShopFilter session maybeFilter
+                    , viewGrid session cards model
+                    ]
                 ]
 
 

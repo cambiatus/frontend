@@ -68,7 +68,7 @@ view loggedIn model =
             Page.fullPageGraphQLError (t "notifications.title") e
 
         Loaded notifications ->
-            div []
+            div [ class "container mx-auto px-4 mb-6" ]
                 [ Page.viewTitle (t "notifications.title")
                 , if notifications == [] then
                     viewEmptyNotifications loggedIn.shared

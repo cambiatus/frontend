@@ -247,7 +247,7 @@ view loggedIn model =
                 canEdit =
                     LoggedIn.isAccount community.creator loggedIn
             in
-            div [ class "create-community" ]
+            div [ class "container mx-auto px-4" ]
                 [ viewClaimModal loggedIn model
                 , viewMessageStatus loggedIn model
                 , Page.viewTitle (Eos.symbolToString community.symbol ++ " - " ++ community.title)
