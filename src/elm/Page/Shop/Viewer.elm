@@ -14,6 +14,7 @@ import Html.Attributes exposing (..)
 import Html.Events exposing (on, onClick, onInput, onSubmit, targetValue)
 import Html.Lazy as Lazy
 import I18Next exposing (Translations, t)
+import Icons
 import Json.Encode as Encode
 import List.Extra as LE
 import Page exposing (Session(..))
@@ -417,18 +418,15 @@ viewHeader session =
         shared =
             Page.toShared session
     in
-    Page.viewTitle (t shared.translations "shop.title")
-
-
-viewBackLink : Session -> Html Msg
-viewBackLink session =
-    let
-        shared =
-            Page.toShared session
-    in
-    div [ class "large__back " ]
-        [ p [ onClick GoBack ]
-            [ text "BACK TO SHOP" ]
+    -- Page.viewTitle (t shared.translations "shop.title")
+    div [ class "h-16 w-full bg-indigo-500 mb-4 flex px-4" ]
+        [ a
+            [ class "items-center flex"
+            , Route.href (Route.Shop (Just Shop.MyCommunities))
+            ]
+            [ Icons.back ""
+            , p [ class "text-white text-sm ml-2" ] [ text (t shared.translations "dashboard.back") ]
+            ]
         ]
 
 
