@@ -368,6 +368,7 @@
     }
   },
   "shop": {
+    "filter": "Filtre",
     "units_label": "Quantitat en estoc",
     "title": "Botiga",
     "all_offers": "Totes les ofertes",
@@ -377,7 +378,7 @@
     "messages": "Missatges",
     "no_answer_yet": "Encara sense resposta",
     "message_placeholder": "Escriu el teu missatge aquí o envia un missatge directe emprant Whatsapp o xat.",
-    "create_offer": "Crear nova oferta",
+    "create_offer": "Crear oferta",
     "edit_offer": "Editar oferta",
     "unauthorized": "No tens autorització per a editar aquesta venda",
     "photo_label": "Pujar imatge",

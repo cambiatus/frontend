@@ -367,6 +367,7 @@
     }
   },
   "shop": {
+    "filter": "Filtro",
     "units_label": "Cantidad en stock",
     "title": "Tienda",
     "all_offers": "Todas las ofertas",
@@ -376,7 +377,7 @@
     "messages": "Mensajes",
     "no_answer_yet": "Sin respuesta aun",
     "message_placeholder": "Escribe tu mensaje aqui o envia un mensaje directo usando Whatsapp o chat.",
-    "create_offer": "Crear nueva oferta",
+    "create_offer": "Crear oferta",
     "edit_offer": "Editar oferta",
     "unauthorized": "No tienes autorización para editar esta venta",
     "photo_label": "Subir imagen",

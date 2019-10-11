@@ -161,7 +161,7 @@
       "title": "My Wallet",
       "my_transfers": "My Transfers",
       "transaction_sent": "Your transaction was sent successfully to the blockchain.",
-      "your_current_balance": "Your Current Balance: {{balance}}",
+      "your_current_balance": "You have {{balance}}",
       "balances": {
         "current": "Current Balance",
         "subtitle": "View community",
@@ -367,6 +367,7 @@
     }
   },
   "shop": {
+    "filter": "Filter",
     "units_label": "Quantity in stock",
     "title": "Shop",
     "all_offers": "All offers",
@@ -376,7 +377,7 @@
     "messages": "Messages",
     "no_answer_yet": "No answer yet",
     "message_placeholder": "Type your message here or send a direct message through whatsapp or chat.",
-    "create_offer": "Create new offer",
+    "create_offer": "Create offer",
     "edit_offer": "Edit offer",
     "unauthorized": "You are not authorized to edit this sale",
     "photo_label": "Upload image",
