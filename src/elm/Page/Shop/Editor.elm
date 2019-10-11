@@ -379,7 +379,7 @@ viewForm shared balances imageStatus isEdit isDisabled form =
                         [ class "input"
                         , id (fieldId "trackStock")
                         , required True
-                        , disabled (isEdit || isDisabled)
+                        , disabled isDisabled
                         , Html.Events.on "change"
                             (Decode.map
                                 (\stock ->
@@ -1176,6 +1176,17 @@ encodeUpdateForm sale form =
                 Just asset ->
                     Eos.encodeAsset asset
 
+        trackStock =
+            if getInput form.trackStock == Just trackYes then
+                True
+                    |> Eos.boolToEosBool
+                    |> Eos.encodeEosBool
+
+            else
+                False
+                    |> Eos.boolToEosBool
+                    |> Eos.encodeEosBool
+
         units =
             case String.toInt (getInput form.units) of
                 Nothing ->
@@ -1190,6 +1201,7 @@ encodeUpdateForm sale form =
         , ( "description", description )
         , ( "quantity", quantity )
         , ( "image", image )
+        , ( "track_stock", trackStock )
         , ( "units", units )
         ]
 
