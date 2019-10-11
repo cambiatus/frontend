@@ -399,14 +399,13 @@ view session model =
                         cardData =
                             cardFromSale sale
                     in
-                    Page.mainContentContainer
+                    div [ class "" ]
                         [ Lazy.lazy viewHeader session
                         , viewCard session cardData model
-                        , viewBackLink session
                         ]
 
                 Nothing ->
-                    Page.mainContentContainer
+                    div [ class "container mx-auto px-4" ]
                         [ div []
                             [ text "Could not load the sale" ]
                         ]
@@ -451,25 +450,29 @@ viewCard session card model =
         card
         [ div [ class "sale__info" ]
             [ div [ class "large__sale__rating" ]
-                [ p [ class "sale__rating__title" ]
-                    [ text_ "shop.rate_sale" ]
-                , div [ class "sale__rating__icons" ]
-                    [ div [ class "sale__like" ]
-                        [ Icon.like "sale__like__icon"
-                        , span [ class "sale__like__text" ] [ text "0" ]
-                        ]
-                    , div [ class "sale__dislike" ]
-                        [ Icon.dislike "sale__dislike__icon"
-                        , span [ class "sale__like__text" ] [ text "0" ]
-                        ]
+                [-- p [ class "sale__rating__title" ]
+                 --   [ text_ "shop.rate_sale" ]
+                 -- , div [ class "sale__rating__icons" ]
+                 --     [ div [ class "sale__like" ]
+                 --         [ Icon.like "sale__like__icon"
+                 --         , span [ class "sale__like__text" ] [ text "0" ]
+                 --         ]
+                 --     , div [ class "sale__dislike" ]
+                 --         [ Icon.dislike "sale__dislike__icon"
+                 --         , span [ class "sale__like__text" ] [ text "0" ]
+                 --         ]
+                 --     ]
+                ]
+            , if card.sale.trackStock then
+                div [ class "large__sale__quantity" ]
+                    [ p [ class "sale__quantity__title" ]
+                        [ text_ "shop.units_available" ]
+                    , p [ class "sale__quantity__text" ]
+                        [ text (String.fromInt card.sale.units) ]
                     ]
-                ]
-            , div [ class "large__sale__quantity" ]
-                [ p [ class "sale__quantity__title" ]
-                    [ text_ "shop.units_available" ]
-                , p [ class "sale__quantity__text" ]
-                    [ text (String.fromInt card.sale.units) ]
-                ]
+
+              else
+                text ""
             ]
         , if model.viewing == ViewingCard then
             div [ class "large__card__description" ]
@@ -491,7 +494,7 @@ viewCard session card model =
                     [ text "Edit" ]
                 ]
 
-          else if card.sale.units <= 0 then
+          else if card.sale.units <= 0 && card.sale.trackStock == True then
             div [ class "sale__out__of__stock" ]
                 [ p [] [ text_ "shop.out_of_stock" ] ]
 
@@ -800,10 +803,10 @@ validateForm sale form =
             else
                 case String.toInt form.units of
                     Just units ->
-                        if units > sale.units then
+                        if units > sale.units && sale.trackStock then
                             Invalid UnitTooHigh
 
-                        else if units <= 0 then
+                        else if units <= 0 && sale.trackStock then
                             Invalid UnitTooLow
 
                         else
