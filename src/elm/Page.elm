@@ -1,4 +1,4 @@
-module Page exposing (ExternalMsg(..), Msg, Session(..), errorToString, fullPageError, fullPageGraphQLError, fullPageLoading, init, isLoggedIn, jsAddressToMsg, labelWithTooltip, loading, login, logout, mainContentContainer, msgToString, onFileChange, subscriptions, toShared, update, viewButtonNew, viewCardEmpty, viewCardList, viewDateDistance, viewGuest, viewLoggedIn, viewMaxTwoColumn, viewMenuFilter, viewMenuFilterButton, viewMenuFilterDropdown, viewMenuFilterDropdownOption, viewTitle)
+module Page exposing (ExternalMsg(..), Msg, Session(..), errorToString, fullPageError, fullPageGraphQLError, fullPageLoading, init, isLoggedIn, jsAddressToMsg, labelWithTooltip, loading, login, logout, msgToString, onFileChange, subscriptions, toShared, update, viewButtonNew, viewCardEmpty, viewCardList, viewDateDistance, viewGuest, viewLoggedIn, viewMaxTwoColumn, viewMenuFilter, viewMenuFilterButton, viewMenuFilterDropdown, viewMenuFilterDropdownOption, viewTitle)
 
 import Account exposing (Profile)
 import Asset.Icon as Icon
@@ -160,7 +160,7 @@ viewMenuFilterDropdown toMsg decoder options =
     div
         [ class "flex flex-row justify-between" ]
         [ select
-            [ class "md:hidden form-select w-full select border-gray-500"
+            [ class "form-select sm:w-full md:w-64 select border-gray-500"
             , onChange toMsg decoder
             ]
             options
@@ -274,7 +274,7 @@ fullPageError title_ e =
 
 fullPageGraphQLError : String -> Graphql.Http.Error a -> Html msg
 fullPageGraphQLError title_ e =
-    mainContentContainer
+    div []
         [ viewTitle title_
         , div [ class "card" ]
             [ p [] [ text "Something wrong happened." ]
