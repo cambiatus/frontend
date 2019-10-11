@@ -707,6 +707,7 @@ viewTransferForm session card errors model =
                     , id fieldId.price
                     , value form.price
                     , required True
+                    , disabled True
                     , Html.Attributes.min "0"
                     ]
                     []
