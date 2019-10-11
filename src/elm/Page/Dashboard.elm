@@ -49,6 +49,7 @@ init { shared, accountName } =
         [ fetchVerifications shared accountName
         , fetchBalance shared accountName
         , fetchTransfers shared accountName
+        , fetchClaims shared accountName
         , Task.perform GotTime Time.now
         ]
     )
@@ -73,6 +74,7 @@ type alias Model =
     , lastSocket : String
     , transfers : GraphqlStatus (Maybe QueryTransfers) (List Transfer)
     , verifications : GraphqlStatus VerificationHistoryResponse (List Verification)
+    , claims : GraphqlStatus VerificationHistoryResponse (List Verification)
     }
 
 
@@ -95,6 +97,7 @@ initModel =
     , lastSocket = ""
     , transfers = LoadingGraphql
     , verifications = LoadingGraphql
+    , claims = LoadingGraphql
     }
 
 
@@ -273,21 +276,38 @@ viewSections loggedIn model =
             , ( "to", viewAccountName to )
             ]
                 |> I18Next.tr loggedIn.shared.translations I18Next.Curly "transfer.info"
+
+        toView claims =
+            List.map
+                (viewVerification loggedIn.shared.endpoints.ipfs)
+                claims
     in
     Page.viewMaxTwoColumn
         [ Page.viewTitle (t "community.actions.last_title")
-        , case model.transfers of
+        , case model.claims of
             LoadingGraphql ->
-                Page.viewCardEmpty [ text (t "menu.loading") ]
+                viewNoVerification
+                    [ Loading.view "text-gray-900" ]
 
-            FailedGraphql _ ->
-                Page.viewCardEmpty [ text (t "community.actions.loading_error") ]
+            FailedGraphql err ->
+                viewNoVerification
+                    [ p
+                        [ class "font-sans text-gray-900 text-sm" ]
+                        [ text (Page.errorToString err) ]
+                    ]
 
-            LoadedGraphql [] ->
-                Page.viewCardEmpty [ text (t "community.actions.no_actions_yet") ]
+            LoadedGraphql claims ->
+                if List.isEmpty claims then
+                    viewNoVerification
+                        [ p
+                            [ class "font-sans text-gray-900 text-sm" ]
+                            [ text (t "dashboard.activities.no_actions_yet") ]
+                        ]
 
-            LoadedGraphql transfers ->
-                Page.viewCardEmpty [ text (t "community.actions.no_actions_yet") ]
+                else
+                    div
+                        [ class "shadow-md rounded-lg bg-white " ]
+                        (toView claims)
         ]
         [ Page.viewTitle (t "transfer.last_title")
         , case model.transfers of
@@ -352,6 +372,7 @@ type Msg
     | GotDashCommunityMsg Int DashCommunity.Msg
     | CompletedLoadUserTransfers (Result (Graphql.Http.Error (Maybe QueryTransfers)) (Maybe QueryTransfers))
     | CompletedLoadVerifications (Result (Graphql.Http.Error VerificationHistoryResponse) VerificationHistoryResponse)
+    | CompletedLoadClaims (Result (Graphql.Http.Error VerificationHistoryResponse) VerificationHistoryResponse)
 
 
 update : Msg -> Model -> LoggedIn.Model -> UpdateResult
@@ -404,6 +425,15 @@ update msg model loggedIn =
 
         CompletedLoadVerifications (Err err) ->
             { model | verifications = FailedGraphql err }
+                |> UR.init
+                |> UR.logGraphqlError msg err
+
+        CompletedLoadClaims (Ok result) ->
+            { model | claims = LoadedGraphql (toVerifications result) }
+                |> UR.init
+
+        CompletedLoadClaims (Err err) ->
+            { model | claims = FailedGraphql err }
                 |> UR.init
                 |> UR.logGraphqlError msg err
 
@@ -484,6 +514,23 @@ type alias CommunityResponse =
     }
 
 
+fetchClaims : Shared -> Eos.Name -> Cmd Msg
+fetchClaims shared accountName =
+    let
+        claimer : String
+        claimer =
+            Eos.nameToString accountName
+
+        selectionSet : SelectionSet VerificationHistoryResponse RootQuery
+        selectionSet =
+            verificationHistorySelectionSet False claimer
+    in
+    Api.Graphql.query
+        shared
+        selectionSet
+        CompletedLoadClaims
+
+
 fetchVerifications : Shared -> Eos.Name -> Cmd Msg
 fetchVerifications shared accountName =
     let
@@ -493,7 +540,7 @@ fetchVerifications shared accountName =
 
         selectionSet : SelectionSet VerificationHistoryResponse RootQuery
         selectionSet =
-            verificationHistorySelectionSet validator
+            verificationHistorySelectionSet True validator
     in
     Api.Graphql.query
         shared
@@ -501,20 +548,25 @@ fetchVerifications shared accountName =
         CompletedLoadVerifications
 
 
-verificationHistorySelectionSet : String -> SelectionSet VerificationHistoryResponse RootQuery
-verificationHistorySelectionSet validator =
+verificationHistorySelectionSet : Bool -> String -> SelectionSet VerificationHistoryResponse RootQuery
+verificationHistorySelectionSet forValidator accName =
     let
-        claimsInput : ClaimsRequiredArguments
-        claimsInput =
-            { input = { validator = validator }
-            }
+        qInput : ClaimsRequiredArguments
+        qInput =
+            if forValidator then
+                { input = { validator = Present accName, claimer = Absent }
+                }
+
+            else
+                { input = { claimer = Present accName, validator = Absent }
+                }
 
         selectionSet : SelectionSet ClaimResponse Bespiral.Object.Claim
         selectionSet =
-            claimSelectionSet validator
+            claimSelectionSet accName
     in
     SelectionSet.succeed VerificationHistoryResponse
-        |> with (Bespiral.Query.claims claimsInput selectionSet)
+        |> with (Bespiral.Query.claims qInput selectionSet)
 
 
 claimSelectionSet : String -> SelectionSet ClaimResponse Bespiral.Object.Claim
@@ -661,6 +713,9 @@ msgToString msg =
 
         CompletedLoadVerifications result ->
             resultToString [ "CompletedLoadActivities" ] result
+
+        CompletedLoadClaims result ->
+            resultToString [ "CompletedLoadClaims" ] result
 
 
 jsAddressToMsg : List String -> Value -> Maybe Msg
