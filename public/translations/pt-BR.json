@@ -186,7 +186,7 @@
   "transfer": {
     "last_title": "Últimas Transferências",
     "loading_error": "Algo de errado aconteceu ao carregar as transferências.",
-    "no_transfers_yet": "Nenhuma transferencia.",
+    "no_transfers_yet": "Nenhuma transferência.",
     "info": "{{from}} transferiu {{value}} para {{to}}",
     "you": "voce"
   },
@@ -357,15 +357,16 @@
         "email": "seu email",
         "localization": "onde voce vive",
         "interests": "seus interesses",
-        "bio": "Conte-nos mais sobre voce.",
+        "bio": "Conte-nos mais sobre você! Onde você vive? Quais são seus interesses?",
         "privateKey": "Essa e sua chave privada. Por favor, mantenha-a segura."
       },
+      "push_notifications": "Habilitar notificações",
       "submit": "Salvar"
     },
     "badge": {
       "title": "Conquistas",
       "currencyStarter": " Criador de Moeda",
-      "developer": "Desenvolvedor",
+      "developer": "Developer",
       "seedTeam": "Time Seed",
       "mentor": "Mentor"
     }

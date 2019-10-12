@@ -356,6 +356,7 @@
         "bio": "let others know more about yourself.",
         "privateKey": "This is your private key. Please, keep it safe."
       },
+      "push_notifications": "Enable push notifications",
       "submit": "Save"
     },
     "badge": {
@@ -370,8 +371,10 @@
     "filter": "Filter",
     "units_label": "Quantity in stock",
     "title": "Shop",
+    "subtitle": "Buy and sell in your community",
+    "description": "Here you can use your coins to buy products and services, or earn coins selling your products and services",
     "all_offers": "All offers",
-    "my_communities_offers": "My communities offers",
+    "my_communities_offers": "My communities’ offers",
     "my_offers": "My offers",
     "rate_sale": "Rating",
     "messages": "Messages",

@@ -357,6 +357,7 @@
         "bio": "explica’ns més sobre tu!",
         "privateKey": "Aquesta és la teva clau privada. Si et plau guarda-la bé!"
       },
+      "push_notifications": "Activeu les notificacions",
       "submit": "Guardar"
     },
     "badge": {

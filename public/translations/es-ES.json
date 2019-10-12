@@ -182,7 +182,7 @@
   "transfer": {
     "last_title": "Últimas transferencias",
     "loading_error": "Algo salió mal mientras recuperabamos las transferencias.",
-    "no_transfers_yet": "Aun no hay transferencias.",
+    "no_transfers_yet": "Aún no hay transferencias",
     "info": "{{from}} transfirió {{value}} a {{to}}",
     "you": "tu"
   },
@@ -230,7 +230,7 @@
     },
     "index": {
       "created_by": "Creada por {{account_name}}",
-      "members": "{{quantity}} Membresia",
+      "members": "{{quantity}} Membresía",
       "transfers": "{{quantity}} Transferencias"
     },
     "invite": {
@@ -262,7 +262,7 @@
       "title": "Acción",
       "last_title": "Últimas acciones",
       "loading_error": "Algo salió mal mientras recuperabamos las acciones.",
-      "no_actions_yet": "Aun no hay acciones.",
+      "no_actions_yet": "Aún no hay acciones",
       "reward": "Recompensa",
       "manually_verified_by": "Manualmente verificada por",
       "aumatically_verified_by": "Automaticamente verificada por",
@@ -353,9 +353,10 @@
         "email": "tu correo electrónico",
         "localization": "en donde vives?",
         "interests": "tus intereses",
-        "bio": "¡dejanos saber mas de ti.",
+        "bio": "¡Déjanos saber más de ti!  ¿En dónde vives?  ¿Cuáles son tus intereses?",
         "privateKey": "Esta es tu Llave Privada. ¡Por favor guardala con cuidado."
       },
+      "push_notifications": "Activar notificaciones",
       "submit": "Guardar"
     },
     "badge": {
@@ -431,7 +432,7 @@
     "verify": "Verificar",
     "closed": "cerrado",
     "activities": {
-      "title": "Actividades para su analisis",
+      "title": "Actividades para su análisis",
       "no_activities_yet": "Aún no hay actividades."
     }
   },

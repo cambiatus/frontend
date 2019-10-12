@@ -150,13 +150,13 @@ viewCommunity loggedIn community =
                 [ div [ class "font-sans font-bold text-xl" ]
                     [ text community.title
                     ]
-                , p [ class "font-sans text-sm mb-2" ] [ text ("Created by " ++ Eos.nameToString community.creator) ]
+                , p [ class "font-sans text-sm mb-2" ]
+                    [ text (tr "community.index.created_by" [ ( "account_name", Eos.nameToString community.creator ) ]) ]
                 , p [ class "text-gray-700 font-sans overflow-hidden h-12" ] [ text community.description ]
                 ]
             , div [ class "w-full px-6 py-4" ]
                 [ p [ class "flex-1 bg-indigo-500 mt-2 rounded-full px-3 py-1 text-sm font-bold text-white mr-2" ]
-                    [ text (tr "community.index.members" [ ( "quantity", String.fromInt community.memberCount ) ])
-                    ]
+                    [ text (tr "community.index.members" [ ( "quantity", String.fromInt community.memberCount ) ]) ]
                 , case maybeTransferCount of
                     Just transferCount ->
                         p [ class "flex-1 bg-indigo-500 mt-2 rounded-full px-3 py-1 text-sm font-bold text-white mr-2" ]
