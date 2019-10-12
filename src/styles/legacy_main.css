@@ -3135,7 +3135,7 @@ textarea.form-input {
 .shop__avatar {
     width: 91px;
     height: 91px;
-    border: 6px solid #fff;
+    border: 1px solid #fff;
     flex-shrink: 0;
     margin-right: 6px;
     background-color: #fff;

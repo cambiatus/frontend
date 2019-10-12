@@ -218,18 +218,23 @@ viewHeader session =
         shared =
             Page.toShared session
     in
-    div [ class "w-full flex flex-wrap bg-indigo-500 p-4" ]
-        [ p [ class "text-white w-full text-xl font-medium mb-4" ] [ text (t shared.translations "shop.title") ]
-        , case session of
-            Page.LoggedIn _ ->
-                a
-                    [ Route.href Route.NewSale
-                    , class "button button-primary button-small w-full"
-                    ]
-                    [ text (t shared.translations "shop.create_offer") ]
-
-            _ ->
-                text ""
+    div [ class "w-full flex flex-wrap bg-indigo-500 p-4 lg:container lg:mx-auto lg:py-16" ]
+        [ div [ class "w-full lg:w-1/2" ]
+            [ p [ class "text-white w-full text-xl font-medium mb-4 lg:mx-8 lg:text-sm lg:font-light lg:mb-2" ]
+                [ text (t shared.translations "shop.title") ]
+            , p [ class "hidden lg:visible lg:flex text-white text-3xl lg:mx-8 lg:mb-4" ]
+                [ text (t shared.translations "shop.subtitle") ]
+            , p [ class "hidden lg:visible lg:flex text-white lg:mx-8 font-light" ]
+                [ text (t shared.translations "shop.description") ]
+            , a
+                [ Route.href Route.NewSale
+                , class "button button-primary button-small w-full lg:w-64 lg:mx-8 lg:mt-6 lg:button-medium"
+                ]
+                [ text (t shared.translations "shop.create_offer") ]
+            ]
+        , div [ class "hidden lg:visible lg:flex lg:absolute lg:w-1/2 lg:right-0" ]
+            [ img [ src "/images/shop.svg" ] []
+            ]
         ]
 
 
@@ -353,7 +358,7 @@ viewCard model session index card =
                 ]
             ]
         , div
-            [ class "hidden md:visible md:flex md:flex-wrap rounded-lg shadow bg-white overflow-hidden"
+            [ class "hidden md:visible md:flex md:flex-wrap rounded-lg hover:shadow-lg bg-white overflow-hidden"
             ]
             [ div [ class "w-full relative bg-gray-500" ]
                 [ img [ class "w-full h-48 object-cover", src imageUrl ] []
@@ -362,7 +367,7 @@ viewCard model session index card =
             , div [ class "w-full px-6 pt-4" ]
                 [ p [ class "text-xl" ] [ text title ]
                 ]
-            , div [ class "flex flex-none pt-3 px-6 pb-4" ]
+            , div [ class "flex flex-none items-center pt-3 px-6 pb-4" ]
                 [ Icons.thumbUp "text-indigo-500"
                 , p [ class "pl-2 pr-6 text-sm" ] [ text "0" ]
                 , Icons.thumbDown ""
