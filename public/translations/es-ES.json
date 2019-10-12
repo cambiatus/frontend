@@ -371,6 +371,8 @@
     "filter": "Filtro",
     "units_label": "Cantidad en stock",
     "title": "Tienda",
+    "subtitle": "Compra y vende en tu comunidad",
+    "description": "Aquí puede usar sus monedas para comprar productos y servicios, o ganar monedas vendiendo sus productos y servicios",
     "all_offers": "Todas las ofertas",
     "my_communities_offers": "Mis comunidades ofrecen",
     "my_offers": "Mis ofertas",

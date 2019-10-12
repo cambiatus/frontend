@@ -375,6 +375,8 @@
     "filter": "Filtro",
     "units_label": "Quantidade em estoque",
     "title": "Shop",
+    "subtitle": "Compre e vende em sua comunidade",
+    "description": "Aqui você pode usar suas moedas para comprar serviços e produtos ou receber vendendo seus próprios produtos e serviços",
     "all_offers": "Todas as ofertas",
     "my_communities_offers": "Ofertas de minhas comunidades",
     "my_offers": "Minhas ofertas",

@@ -372,6 +372,8 @@
     "filter": "Filtre",
     "units_label": "Quantitat en estoc",
     "title": "Botiga",
+    "subtitle": "Compra i ven a la teva comunitat",
+    "description": "Aquí podeu utilitzar les vostres monedes per comprar productes i serveis, o guanyar monedes venent els vostres productes i serveis",
     "all_offers": "Totes les ofertes",
     "my_communities_offers": "La meva comunitat ofereix",
     "my_offers": "Les meves ofertes",
