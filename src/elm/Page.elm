@@ -260,7 +260,7 @@ viewDateDistance date maybeNow =
 
 fullPageLoading : Html msg
 fullPageLoading =
-    div [ class "full-spinner-container" ]
+    div [ class "full-spinner-container h-full" ]
         [ div [ class "spinner spinner--delay" ] [] ]
 
 

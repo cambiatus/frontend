@@ -142,7 +142,7 @@ viewCommunity loggedIn community =
         [ class "w-full sm:w-1/2 md:w-1/3 lg:w-1/3 xl:w-1/4 px-2 mb-6 h-60"
         , Route.href (Route.Community community.symbol)
         ]
-        [ div [ class "flex flex-wrap pt-5 pb-2 rounded-lg shadow bg-white" ]
+        [ div [ class "flex flex-wrap pt-5 pb-2 rounded-lg hover:shadow-lg bg-white" ]
             [ img [ class "w-full object-center object-scale-down h-20", src (ipfsUrl ++ "/" ++ community.logo) ] []
             , p [ class "absolute bg-gray-200 rounded-full ml-6 px-3 py-1 text-sm font-sans font-bold text-gray-700" ]
                 [ text (Eos.symbolToString community.symbol) ]

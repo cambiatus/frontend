@@ -50,7 +50,8 @@ function flags () {
     authPreference: window.localStorage.getItem(AUTH_PREF_KEY),
     logo: config.logo,
     logoMobile: config.logoMobile,
-    now: Date.now()
+    now: Date.now(),
+    allowCommunityCreation: config.allowCommunityCreation
   }
   devLog('flags', flags_)
   return flags_

@@ -220,7 +220,7 @@ viewHeader session =
     in
     div [ class "w-full flex flex-wrap bg-indigo-500 p-4 lg:container lg:mx-auto lg:py-16" ]
         [ div [ class "w-full lg:w-1/2" ]
-            [ p [ class "text-white w-full text-xl font-medium mb-4 lg:mx-8 lg:text-sm lg:font-light lg:mb-2" ]
+            [ p [ class "text-white w-full text-xl font-medium mb-4 lg:mx-8 lg:text-sm lg:font-light lg:mb-2 lg:uppercase" ]
                 [ text (t shared.translations "shop.title") ]
             , p [ class "hidden lg:visible lg:flex text-white text-3xl lg:mx-8 lg:mb-4" ]
                 [ text (t shared.translations "shop.subtitle") ]

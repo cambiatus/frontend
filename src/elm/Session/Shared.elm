@@ -29,11 +29,12 @@ type alias Shared =
     , logo : String
     , logoMobile : String
     , now : Posix
+    , allowCommunityCreation : Bool
     }
 
 
 init : Flags -> Nav.Key -> Shared
-init ({ environment, maybeAccount, authPreference, endpoints } as flags) navKey =
+init ({ environment, maybeAccount, authPreference, endpoints, allowCommunityCreation } as flags) navKey =
     { navKey = navKey
     , language = flags.language
     , translations = initialTranslations
@@ -46,6 +47,7 @@ init ({ environment, maybeAccount, authPreference, endpoints } as flags) navKey 
     , logo = flags.logo
     , logoMobile = flags.logoMobile
     , now = Time.millisToPosix flags.now
+    , allowCommunityCreation = allowCommunityCreation
     }
 
 

@@ -306,15 +306,13 @@ viewHeader ({ shared } as model) profile_ =
                 [ a
                     [ class "outline-none"
                     , Route.href Route.Notification
-
-                    -- , onClick (ShowNotificationModal (not model.showNotificationModal))
                     ]
                     [ Icons.notification "mx-auto lg:mr-1 xl:mx-auto" ]
                 , if model.unreadCount == 0 then
                     text ""
 
                   else
-                    div [ class "bg-indigo-100 text-menu text-white p-1 rounded-full h-4 w-4 flex flex-col justify-center" ]
+                    div [ class "bg-orange-100 text-menu text-white p-1 rounded-full h-4 flex flex-col justify-center" ]
                         [ text (String.fromInt model.unreadCount) ]
                 ]
             , button

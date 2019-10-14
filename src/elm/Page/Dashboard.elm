@@ -132,7 +132,11 @@ view loggedIn model =
         Loaded communities ->
             div [ class "mx-auto container px-4" ]
                 [ Page.viewTitle (t "menu.my_communities")
-                , Page.viewButtonNew (t "community.create_button") Route.NewCommunity
+                , if loggedIn.shared.allowCommunityCreation then
+                    Page.viewButtonNew (t "community.create_button") Route.NewCommunity
+
+                  else
+                    text ""
                 , viewBalances loggedIn communities
                 , viewVerifications loggedIn.shared model
                 , viewSections loggedIn model

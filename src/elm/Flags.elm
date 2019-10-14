@@ -15,6 +15,7 @@ type alias Flags =
     , logo : String
     , logoMobile : String
     , now : Int
+    , allowCommunityCreation : Bool
     }
 
 
@@ -28,6 +29,7 @@ default =
     , logo = "/images/logo-cambiatus.png"
     , logoMobile = "/images/logo-cambiatus-mobile.svg"
     , now = 0
+    , allowCommunityCreation = True
     }
 
 
@@ -49,6 +51,7 @@ decode =
         |> required "logo" Decode.string
         |> required "logoMobile" Decode.string
         |> required "now" Decode.int
+        |> required "allowCommunityCreation" Decode.bool
 
 
 type alias Endpoints =
