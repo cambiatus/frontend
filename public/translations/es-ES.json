@@ -69,7 +69,8 @@
     "notMember": "Este usuario no es miembro.",
     "chooseOrUploadLogo": "Escoje o sube tu propio logo.",
     "invalidSymbol": "Simbolo invalido.",
-    "unknown": "Oh oh. Algo salió mal."
+    "unknown": "Oh oh. Algo salió mal.",
+    "accountNotFound": "Cuenta no encontrada. ¿Estás seguro de haber creado tu cuenta?"
   },
   "auth": {
     "title": "Use su clave privada y PIN o inicie sesión por",

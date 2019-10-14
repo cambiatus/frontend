@@ -480,7 +480,7 @@ async function handleJavascriptPort (arg) {
           const response = {
             address: arg.responseAddress,
             addressData: arg.responseData,
-            error: 'No account found'
+            error: 'error.accountNotFound'
           }
           devLog('response', response)
           app.ports.javascriptInPort.send(response)
