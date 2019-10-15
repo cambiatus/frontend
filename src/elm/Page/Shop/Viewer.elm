@@ -449,20 +449,7 @@ viewCard session card model =
     viewCardWithHeader session
         card
         [ div [ class "sale__info" ]
-            [ div [ class "large__sale__rating" ]
-                [-- p [ class "sale__rating__title" ]
-                 --   [ text_ "shop.rate_sale" ]
-                 -- , div [ class "sale__rating__icons" ]
-                 --     [ div [ class "sale__like" ]
-                 --         [ Icon.like "sale__like__icon"
-                 --         , span [ class "sale__like__text" ] [ text "0" ]
-                 --         ]
-                 --     , div [ class "sale__dislike" ]
-                 --         [ Icon.dislike "sale__dislike__icon"
-                 --         , span [ class "sale__like__text" ] [ text "0" ]
-                 --         ]
-                 --     ]
-                ]
+            [ div [ class "large__sale__rating" ] []
             , if card.sale.trackStock then
                 div [ class "large__sale__quantity" ]
                     [ p [ class "sale__quantity__title" ]
