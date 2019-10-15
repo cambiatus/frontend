@@ -69,9 +69,9 @@ self.addEventListener('notificationclick', function (event) {
     for (var i = 0; i < clientList.length; i++) {
       var client = clientList[i]
       // If notifications page is open and focused do nothing
-      if (client.url === '/notifications' && 'focus' in client) { return client.focus() }
+      if (client.url === '/notification' && 'focus' in client) { return client.focus() }
     }
     // Otherwise open the client on the notifications page
-    if (self.clients.openWindow) { return self.clients.openWindow('/notifications') }
+    if (self.clients.openWindow) { return self.clients.openWindow('/notification') }
   }))
 })
