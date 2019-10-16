@@ -257,7 +257,10 @@
       "title_plural": "Objectives",
       "new": "New objective",
       "description_label": "What is your objective?",
-      "description_placeholder": "Set a goal that helps resolve the community problem."
+      "description_placeholder": "Set a goal that helps resolve the community problem.",
+      "editor": {
+        "back": "Back"
+      }
     },
     "actions": {
       "title": "Action",

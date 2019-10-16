@@ -17,6 +17,7 @@ import Page.Community as Community
 import Page.Community.ActionEditor as ActionEditor
 import Page.Community.Editor as CommunityEditor
 import Page.Community.Explore as CommunityExplore
+import Page.Community.ObjectiveEditor as ObjectiveEditor
 import Page.Community.VerifyClaim as VerifyClaim
 import Page.Dashboard as Dashboard
 import Page.Login as Login
@@ -150,6 +151,7 @@ type Status
     | ComingSoon
     | Community Community.Model
     | CommunityEditor CommunityEditor.Model
+    | ObjectiveEditor ObjectiveEditor.Model
     | ActionEditor ActionEditor.Model
     | VerifyClaim VerifyClaim.Model
     | CommunityExplore CommunityExplore.Model
@@ -178,6 +180,7 @@ type Msg
     | GotCommunityMsg Community.Msg
     | GotCommunityEditorMsg CommunityEditor.Msg
     | GotActionEditorMsg ActionEditor.Msg
+    | GotObjectiveEditorMsg ObjectiveEditor.Msg
     | GotVerifyClaimMsg VerifyClaim.Msg
     | GotCommunityExploreMsg CommunityExplore.Msg
     | GotDashboardMsg Dashboard.Msg
@@ -654,6 +657,16 @@ changeRouteTo maybeRoute model =
                 >> updateStatusWith CommunityEditor GotCommunityEditorMsg model
                 |> withLoggedIn (Route.EditCommunity symbol)
 
+        Just (Route.NewObjective symbol) ->
+            (\l -> ObjectiveEditor.initNew l symbol)
+                >> updateStatusWith ObjectiveEditor GotObjectiveEditorMsg model
+                |> withLoggedIn (Route.NewObjective symbol)
+
+        Just (Route.EditObjective symbol objectiveId) ->
+            (\l -> ObjectiveEditor.initEdit l symbol objectiveId)
+                >> updateStatusWith ObjectiveEditor GotObjectiveEditorMsg model
+                |> withLoggedIn (Route.EditObjective symbol objectiveId)
+
         Just (Route.NewAction symbol objectiveId) ->
             (\l -> ActionEditor.initNew l symbol objectiveId)
                 >> updateStatusWith ActionEditor GotActionEditorMsg model
@@ -780,6 +793,9 @@ msgToString msg =
         GotCommunityEditorMsg subMsg ->
             "GotCommunityEditorMsg" :: CommunityEditor.msgToString subMsg
 
+        GotObjectiveEditorMsg subMsg ->
+            "GotObjectiveEditorMsg" :: ObjectiveEditor.msgToString subMsg
+
         GotActionEditorMsg subMsg ->
             "GotActionEditor" :: ActionEditor.msgToString subMsg
 
@@ -888,6 +904,9 @@ view model =
 
         CommunityEditor subModel ->
             viewLoggedIn subModel LoggedIn.Other GotCommunityEditorMsg CommunityEditor.view
+
+        ObjectiveEditor subModel ->
+            viewLoggedIn subModel LoggedIn.Other GotObjectiveEditorMsg ObjectiveEditor.view
 
         ActionEditor subModel ->
             viewLoggedIn subModel LoggedIn.Other GotActionEditorMsg ActionEditor.view

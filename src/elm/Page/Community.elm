@@ -366,25 +366,37 @@ viewObjective loggedIn model editStatus metadata index objective =
     div [ class "my-2" ]
         [ div
             [ class "px-3 py-4 bg-body-blue flex flex-col sm:flex-row sm:items-center sm:h-10"
-            , if isOpen then
-                onClick ClickedCloseObjective
-
-              else
-                onClick (ClickedOpenObjective index)
             ]
             [ div [ class "sm:flex-grow-7 sm:w-5/12" ]
                 [ div
-                    [ class "truncate overflow-hidden whitespace-no-wrap text-white font-medium text-sm overflow-hidden sm:flex-grow-8 sm:leading-normal sm:text-lg" ]
+                    [ class "truncate overflow-hidden whitespace-no-wrap text-white font-medium text-sm overflow-hidden sm:flex-grow-8 sm:leading-normal sm:text-lg"
+                    , if isOpen then
+                        onClick ClickedCloseObjective
+
+                      else
+                        onClick (ClickedOpenObjective index)
+                    ]
                     [ text objective.description ]
                 ]
             , div [ class ("flex flex-row justify-between mt-5 sm:mt-0" ++ arrowStyle) ]
                 [ if canEdit then
-                    span [ class "text-white font-medium underline text-xs uppercase sm:text-sm" ] [ text_ "menu.edit" ]
+                    a
+                        [ class "text-white font-medium underline text-xs uppercase sm:text-sm"
+                        , Route.href (Route.EditObjective metadata.symbol (Community.unwrapObjectiveId objective.id))
+                        ]
+                        [ text_ "menu.edit" ]
 
                   else
                     text ""
                 , if isOpen then
-                    button [ class "align-middle" ]
+                    button
+                        [ class "align-middle"
+                        , if isOpen then
+                            onClick ClickedCloseObjective
+
+                          else
+                            onClick (ClickedOpenObjective index)
+                        ]
                         [ img
                             [ class "rotate-180 fill-current text-white h-2 w-4 stroke-current"
                             , src "/icons/objective_arrow.svg"
@@ -393,7 +405,14 @@ viewObjective loggedIn model editStatus metadata index objective =
                         ]
 
                   else
-                    button [ class "align-middle" ]
+                    button
+                        [ class "align-middle"
+                        , if isOpen then
+                            onClick ClickedCloseObjective
+
+                          else
+                            onClick (ClickedOpenObjective index)
+                        ]
                         [ img
                             [ class "h-2 w-4 self-end stroke-current"
                             , src "/icons/objective_arrow.svg"
@@ -514,7 +533,8 @@ viewAction loggedIn metadata maybeDate action =
             text (t s)
 
         canEdit =
-            LoggedIn.isAccount metadata.creator loggedIn
+            -- LoggedIn.isAccount metadata.creator loggedIn
+            False
 
         posixDeadline : Posix
         posixDeadline =

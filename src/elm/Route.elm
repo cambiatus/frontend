@@ -7,7 +7,7 @@ import Html.Attributes as Attr
 import Shop
 import Url exposing (Url)
 import Url.Builder exposing (QueryParameter)
-import Url.Parser as Url exposing ((</>), (<?>), Parser, oneOf, s, string, top)
+import Url.Parser as Url exposing ((</>), (<?>), Parser, int, oneOf, s, string, top)
 import Url.Parser.Query as Query
 
 
@@ -25,6 +25,8 @@ type Route
     | Communities
     | NewCommunity
     | EditCommunity Symbol
+    | NewObjective Symbol
+    | EditObjective Symbol Int
     | NewAction Symbol String
     | VerifyClaim Symbol String String String
     | Shop (Maybe Shop.Filter)
@@ -72,6 +74,8 @@ parser url =
         , Url.map NewCommunity (s "community" </> s "new")
         , Url.map Community (s "community" </> Eos.symbolUrlParser)
         , Url.map EditCommunity (s "community" </> Eos.symbolUrlParser </> s "edit")
+        , Url.map NewObjective (s "community" </> Eos.symbolUrlParser </> s "objective" </> s "new")
+        , Url.map EditObjective (s "community" </> Eos.symbolUrlParser </> s "objective" </> int </> s "edit")
         , Url.map NewAction (s "community" </> Eos.symbolUrlParser </> s "objective" </> string </> s "action" </> s "new")
         , Url.map VerifyClaim (s "community" </> Eos.symbolUrlParser </> s "objective" </> string </> s "action" </> string </> s "claim" </> string </> s "verification")
         , Url.map Shop
@@ -238,6 +242,12 @@ routeToString route =
 
                 EditCommunity symbol ->
                     ( [ "community", Eos.symbolToString symbol, "edit" ], [] )
+
+                NewObjective symbol ->
+                    ( [ "community", Eos.symbolToString symbol, "objective", "new" ], [] )
+
+                EditObjective symbol objectiveId ->
+                    ( [ "community", Eos.symbolToString symbol, "objective", String.fromInt objectiveId, "edit" ], [] )
 
                 NewAction symbol objectiveId ->
                     ( [ "community", Eos.symbolToString symbol, "objective", objectiveId, "action", "new" ]
