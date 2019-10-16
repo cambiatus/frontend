@@ -220,14 +220,14 @@ viewHeader ipfsUrl logo name =
         [ case maybeLogo of
             Just logoUrl ->
                 img
-                    [ class "w-14 h-14"
+                    [ class "h-14"
                     , src logoUrl
                     ]
                     []
 
             Nothing ->
                 div
-                    [ class "w-16 h-16"]
+                    [ class "w-16 h-16" ]
                     []
         , p
             [ class "pl-6 text-heading text-black font-medium" ]

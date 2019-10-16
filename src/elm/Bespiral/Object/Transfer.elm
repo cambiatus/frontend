@@ -19,9 +19,14 @@ import Graphql.SelectionSet exposing (SelectionSet)
 import Json.Decode as Decode
 
 
-amount : SelectionSet String Bespiral.Object.Transfer
+amount : SelectionSet Float Bespiral.Object.Transfer
 amount =
-    Object.selectionForField "String" "amount" [] Decode.string
+    Object.selectionForField "Float" "amount" [] Decode.float
+
+
+community : SelectionSet decodesTo Bespiral.Object.Community -> SelectionSet decodesTo Bespiral.Object.Transfer
+community object_ =
+    Object.selectionForCompositeField "community" [] object_ identity
 
 
 communityId : SelectionSet String Bespiral.Object.Transfer

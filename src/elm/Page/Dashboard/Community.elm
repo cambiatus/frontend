@@ -178,8 +178,8 @@ viewCardBalance loggedIn ({ balance } as model) =
                 Nothing ->
                     ""
     in
-    div [ class "w-full sm:w-1/2 lg:w-1/3 xl:w-1/4 px-2 mb-8" ]
-        [ div [ class "flex flex-wrap px-3 pt-5 pb-2 rounded-lg shadow bg-white" ]
+    div [ class "w-full sm:w-1/2 lg:w-1/3 xl:w-1/4 px-2 mb-6" ]
+        [ div [ class "flex flex-wrap px-3 pt-5 pb-2 rounded-lg hover:shadow-lg bg-white" ]
             [ div [ class "w-1/3" ] [ img [ class "object-none object-scale-down h-20", src (ipfsUrl ++ "/" ++ logo) ] [] ]
             , div [ class "w-2/3 pl-4 overflow-x-hidden overflow-y-hidden" ]
                 [ p [ class "font-medium leading-none font-sans" ] [ text title ]
@@ -198,12 +198,12 @@ viewCardBalance loggedIn ({ balance } as model) =
                 ]
             , div [ class "w-full flex bg-white border-t border-gray-300 mt-2 py-3" ]
                 [ a
-                    [ class "button button-primary button-medium w-1/2 md:px-0 lg:mx-1 pt-3"
+                    [ class "button button-primary button-small w-1/2 md:px-0 lg:mx-1"
                     , Route.href (Route.Community balance.asset.symbol)
                     ]
                     [ text (t loggedIn.shared.translations "community.actions.title") ]
                 , button
-                    [ class "button button-primary button-medium w-1/2 md:px-0 lg:mx-1"
+                    [ class "button button-primary button-small w-1/2 md:px-0 lg:mx-1"
                     , onClick ClickedTransfer
                     ]
                     [ text (t loggedIn.shared.translations "account.my_wallet.balances.button") ]

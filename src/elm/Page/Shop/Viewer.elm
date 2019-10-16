@@ -14,6 +14,7 @@ import Html.Attributes exposing (..)
 import Html.Events exposing (on, onClick, onInput, onSubmit, targetValue)
 import Html.Lazy as Lazy
 import I18Next exposing (Translations, t)
+import Icons
 import Json.Encode as Encode
 import List.Extra as LE
 import Page exposing (Session(..))
@@ -376,13 +377,13 @@ view session model =
     in
     case model.status of
         LoadingSale id ->
-            Page.mainContentContainer
+            div []
                 [ Lazy.lazy viewHeader session
                 , Page.fullPageLoading
                 ]
 
         InvalidId invalidId ->
-            Page.mainContentContainer
+            div [ class "container mx-auto px-4" ]
                 [ Lazy.lazy viewHeader session
                 , div []
                     [ text (invalidId ++ " is not a valid Sale Id") ]
@@ -398,14 +399,13 @@ view session model =
                         cardData =
                             cardFromSale sale
                     in
-                    Page.mainContentContainer
+                    div [ class "" ]
                         [ Lazy.lazy viewHeader session
                         , viewCard session cardData model
-                        , viewBackLink session
                         ]
 
                 Nothing ->
-                    Page.mainContentContainer
+                    div [ class "container mx-auto px-4" ]
                         [ div []
                             [ text "Could not load the sale" ]
                         ]
@@ -417,18 +417,15 @@ viewHeader session =
         shared =
             Page.toShared session
     in
-    Page.viewTitle (t shared.translations "shop.title")
-
-
-viewBackLink : Session -> Html Msg
-viewBackLink session =
-    let
-        shared =
-            Page.toShared session
-    in
-    div [ class "large__back " ]
-        [ p [ onClick GoBack ]
-            [ text "BACK TO SHOP" ]
+    -- Page.viewTitle (t shared.translations "shop.title")
+    div [ class "h-16 w-full bg-indigo-500 mb-4 flex px-4" ]
+        [ a
+            [ class "items-center flex"
+            , Route.href (Route.Shop (Just Shop.MyCommunities))
+            ]
+            [ Icons.back ""
+            , p [ class "text-white text-sm ml-2" ] [ text (t shared.translations "dashboard.back") ]
+            ]
         ]
 
 
@@ -452,26 +449,17 @@ viewCard session card model =
     viewCardWithHeader session
         card
         [ div [ class "sale__info" ]
-            [ div [ class "large__sale__rating" ]
-                [ p [ class "sale__rating__title" ]
-                    [ text_ "shop.rate_sale" ]
-                , div [ class "sale__rating__icons" ]
-                    [ div [ class "sale__like" ]
-                        [ Icon.like "sale__like__icon"
-                        , span [ class "sale__like__text" ] [ text "0" ]
-                        ]
-                    , div [ class "sale__dislike" ]
-                        [ Icon.dislike "sale__dislike__icon"
-                        , span [ class "sale__like__text" ] [ text "0" ]
-                        ]
+            [ div [ class "large__sale__rating" ] []
+            , if card.sale.trackStock then
+                div [ class "large__sale__quantity" ]
+                    [ p [ class "sale__quantity__title" ]
+                        [ text_ "shop.units_available" ]
+                    , p [ class "sale__quantity__text" ]
+                        [ text (String.fromInt card.sale.units) ]
                     ]
-                ]
-            , div [ class "large__sale__quantity" ]
-                [ p [ class "sale__quantity__title" ]
-                    [ text_ "shop.units_available" ]
-                , p [ class "sale__quantity__text" ]
-                    [ text (String.fromInt card.sale.units) ]
-                ]
+
+              else
+                text ""
             ]
         , if model.viewing == ViewingCard then
             div [ class "large__card__description" ]
@@ -493,7 +481,7 @@ viewCard session card model =
                     [ text "Edit" ]
                 ]
 
-          else if card.sale.units <= 0 then
+          else if card.sale.units <= 0 && card.sale.trackStock == True then
             div [ class "sale__out__of__stock" ]
                 [ p [] [ text_ "shop.out_of_stock" ] ]
 
@@ -706,6 +694,7 @@ viewTransferForm session card errors model =
                     , id fieldId.price
                     , value form.price
                     , required True
+                    , disabled True
                     , Html.Attributes.min "0"
                     ]
                     []
@@ -802,10 +791,10 @@ validateForm sale form =
             else
                 case String.toInt form.units of
                     Just units ->
-                        if units > sale.units then
+                        if units > sale.units && sale.trackStock then
                             Invalid UnitTooHigh
 
-                        else if units <= 0 then
+                        else if units <= 0 && sale.trackStock then
                             Invalid UnitTooLow
 
                         else

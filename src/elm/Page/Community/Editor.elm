@@ -207,7 +207,7 @@ view : LoggedIn.Model -> Model -> Html Msg
 view loggedIn model =
     let
         defaultContainer =
-            div [ class "create-community" ]
+            div [ class "container mx-auto px-4" ]
 
         shared =
             loggedIn.shared
@@ -265,7 +265,7 @@ viewForm shared isEdit isDisabled errors form =
                 ( t "community.create.title", t "community.create.submit" )
     in
     Html.form
-        [ class "create-community"
+        [ class "container mx-auto px-4"
         , onSubmit ClickedSave
         ]
         [ Page.viewTitle titleText

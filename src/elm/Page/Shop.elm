@@ -193,19 +193,22 @@ view session maybeFilter model =
     in
     case model.cards of
         Loading ->
-            Page.mainContentContainer
+            div []
                 [ Lazy.lazy viewHeader session
-                , Page.fullPageLoading
+                , div [ class "container mx-auto px-4" ]
+                    [ Page.fullPageLoading ]
                 ]
 
         LoadingFailed e ->
             Page.fullPageGraphQLError (t shared.translations "shop.title") e
 
         Loaded cards ->
-            Page.mainContentContainer
+            div []
                 [ Lazy.lazy viewHeader session
-                , viewShopFilter session maybeFilter
-                , viewGrid session cards model
+                , div [ class "container mx-auto px-4" ]
+                    [ viewShopFilter session maybeFilter
+                    , viewGrid session cards model
+                    ]
                 ]
 
 
@@ -215,16 +218,23 @@ viewHeader session =
         shared =
             Page.toShared session
     in
-    div []
-        [ Page.viewTitle (t shared.translations "shop.title")
-        , case session of
-            Page.LoggedIn _ ->
-                Page.viewButtonNew
-                    (t shared.translations "shop.create_offer")
-                    Route.NewSale
-
-            _ ->
-                text ""
+    div [ class "w-full flex flex-wrap bg-indigo-500 p-4 lg:container lg:mx-auto lg:py-16" ]
+        [ div [ class "w-full lg:w-1/2" ]
+            [ p [ class "text-white w-full text-xl font-medium mb-4 lg:mx-8 lg:text-sm lg:font-light lg:mb-2 lg:uppercase" ]
+                [ text (t shared.translations "shop.title") ]
+            , p [ class "hidden lg:visible lg:flex text-white text-3xl lg:mx-8 lg:mb-4" ]
+                [ text (t shared.translations "shop.subtitle") ]
+            , p [ class "hidden lg:visible lg:flex text-white lg:mx-8 font-light" ]
+                [ text (t shared.translations "shop.description") ]
+            , a
+                [ Route.href Route.NewSale
+                , class "button button-primary button-small w-full lg:w-64 lg:mx-8 lg:mt-6 lg:button-medium"
+                ]
+                [ text (t shared.translations "shop.create_offer") ]
+            ]
+        , div [ class "hidden lg:visible lg:flex lg:absolute lg:w-1/2 lg:right-0" ]
+            [ img [ src "/images/shop.svg" ] []
+            ]
         ]
 
 
@@ -242,15 +252,9 @@ viewShopFilter session maybeFilter =
     in
     case session of
         Page.LoggedIn loggedIn ->
-            div [ class "shop-filter" ]
-                [ viewShopFilterButtons
-                    translations
-                    ( Route.Shop (Just Shop.MyCommunities)
-                    , Route.Shop (Just Shop.All)
-                    , Route.Shop (Just Shop.UserSales)
-                    )
-                    maybeFilter
-                    loggedIn
+            div [ class "w-full mt-4 mb-6" ]
+                [ span [ class "input-label" ]
+                    [ text (t shared.translations "shop.filter") ]
                 , viewShopFilterDropdown
                     translations
                     maybeFilter
@@ -324,20 +328,46 @@ viewCard model session index card =
                 card.sale.title
     in
     a
-        [ class "w-full sm:w-1/2 lg:w-1/3 xl:w-1/4 px-2 mb-8"
+        [ class "w-full sm:w-full md:w-1/2 lg:w-1/3 xl:w-1/4 px-2 mb-6"
         , Route.href (Route.ViewSale (String.fromInt card.sale.id))
         ]
-        [ div
-            [ class "flex flex-wrap rounded-lg shadow bg-white overflow-hidden"
+        [ div [ class "md:hidden rounded-lg bg-white h-32 flex" ]
+            [ div [ class "w-1/4" ]
+                [ img [ class "rounded-l-lg object-cover h-32 w-full", src imageUrl ] []
+                ]
+            , div [ class "px-4 pb-2 flex flex-wrap w-3/4" ]
+                [ p [ class "font-medium pt-2 w-full h-12" ] [ text card.sale.title ]
+                , div [ class "h-16 w-full flex flex-wrap items-end" ]
+                    [ if card.sale.units == 0 && card.sale.trackStock then
+                        div [ class "w-full" ]
+                            [ p [ class "text-3xl text-red" ]
+                                [ text (t shared.translations "shop.out_of_stock")
+                                ]
+                            ]
+
+                      else
+                        div [ class "flex flex-none w-full items-center" ]
+                            [ p [ class "text-green text-2xl font-medium" ] [ text card.sale.price ]
+                            , div [ class "uppercase text-xs ml-2 font-thin font-sans text-green" ] [ text (Eos.symbolToString card.sale.symbol) ]
+                            ]
+                    , div [ class "w-full h-4" ]
+                        [ div [ class "bg-gray-100 absolute uppercase text-xs px-2" ]
+                            [ text (tr "account.my_wallet.your_current_balance" [ ( "balance", currBalance ) ]) ]
+                        ]
+                    ]
+                ]
             ]
-            [ div [ class "w-full relative" ]
-                [ img [ class "w-full h-48 object-cover bg-gray-500", src imageUrl ] []
+        , div
+            [ class "hidden md:visible md:flex md:flex-wrap rounded-lg hover:shadow-lg bg-white overflow-hidden"
+            ]
+            [ div [ class "w-full relative bg-gray-500" ]
+                [ img [ class "w-full h-48 object-cover", src imageUrl ] []
                 , Avatar.view (getIpfsUrl session) card.sale.creator.avatar "absolute right-1 bottom-1 h-10 w-10 shop__avatar"
                 ]
             , div [ class "w-full px-6 pt-4" ]
                 [ p [ class "text-xl" ] [ text title ]
                 ]
-            , div [ class "flex flex-none pt-3 px-6 pb-4" ]
+            , div [ class "flex flex-none items-center pt-3 px-6 pb-4" ]
                 [ Icons.thumbUp "text-indigo-500"
                 , p [ class "pl-2 pr-6 text-sm" ] [ text "0" ]
                 , Icons.thumbDown ""
@@ -355,8 +385,8 @@ viewCard model session index card =
                     [ p [ class "text-green text-3xl" ] [ text card.sale.price ]
                     , div [ class "uppercase text-xs font-thin mt-3 ml-2 font-sans text-green" ] [ text (Eos.symbolToString card.sale.symbol) ]
                     ]
-            , div [ class "w-full px-6 pb-6" ]
-                [ div [ class "bg-gray-100 flex items-center justify-left text-xs" ]
+            , div [ class "px-6 pb-6" ]
+                [ div [ class "bg-gray-200 flex items-center justify-left text-xs px-4" ]
                     [ text (tr "account.my_wallet.your_current_balance" [ ( "balance", currBalance ) ]) ]
                 ]
             ]

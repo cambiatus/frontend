@@ -247,7 +247,7 @@ viewHelper thisMsg page profile_ ({ shared } as model) content =
         , viewMainMenu page profile_ model
             |> Html.map thisMsg
         , div
-            [ class "container mx-auto" ]
+            [ class "mx-auto" ]
             [ content, viewFooter shared ]
         , div
             [ onClickCloseAny ]
@@ -302,28 +302,19 @@ viewHeader ({ shared } as model) profile_ =
             ]
         , div [ class "hidden lg:block lg:visible w-1/2" ] [ searchBar model ]
         , div [ class "w-1/3 h-10 flex z-20 lg:w-1/4" ]
-            -- <<<<<<< HEAD
-            --             [ a [ class "w-1/3 outline-none", Route.href Route.Notification ]
-            --                 -- , button [ class "w-1/2 outline-none", onClick (ShowNotificationModal (not model.showNotificationModal)) ]
-            --                 [ Icons.notification "mx-auto lg:mr-1 xl:mx-auto" ]
-            -- =======
             [ div [ class "flex flex-row mx-auto" ]
                 [ a
                     [ class "outline-none"
                     , Route.href Route.Notification
-
-                    -- , onClick (ShowNotificationModal (not model.showNotificationModal))
                     ]
                     [ Icons.notification "mx-auto lg:mr-1 xl:mx-auto" ]
                 , if model.unreadCount == 0 then
                     text ""
 
                   else
-                    div [ class "bg-orange-100 text-white p-1 rounded-full h-4 w-4 text-menu flex flex-col justify-center" ]
+                    div [ class "bg-orange-100 text-menu text-white p-1 rounded-full h-4 flex flex-col justify-center" ]
                         [ text (String.fromInt model.unreadCount) ]
                 ]
-
-            -- >>>>>>> c38c05dd6ea69f3e6200024c885caf15db6fc265
             , button
                 [ class "w-1/2 xl:hidden"
                 , onClick (ShowUserNav (not model.showUserNav))
@@ -432,20 +423,17 @@ isActive page route =
 
 viewFooter : Shared -> Html msg
 viewFooter shared =
-    let
-        currentYear : String
-        currentYear =
-            Time.toYear Time.utc shared.now
-                |> String.fromInt
-    in
-    footer [ class "main-footer" ]
-        [ img
-            [ class "main-footer__logo"
-            , src "/images/logo-cambiatus-incolor.svg"
+    footer [ class "bg-white w-full flex flex-wrap mx-auto border-t border-grey p-4 pt-6 h-40 bottom-0" ]
+        [ p [ class "text-sm flex w-full justify-center items-center" ]
+            [ text "Created with"
+            , Icons.heart
+            , text "by Satisfied Vagabonds"
+            ]
+        , img
+            [ class "h-24 w-full"
+            , src "/images/satisfied-vagabonds.svg"
             ]
             []
-        , p [ class "main-footer__text" ]
-            [ text ("Copyrights © " ++ currentYear ++ " • Cambiatus") ]
         ]
 
 

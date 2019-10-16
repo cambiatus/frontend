@@ -131,9 +131,13 @@ view loggedIn model =
             Page.fullPageError (t "menu.my_communities") e
 
         Loaded communities ->
-            Page.mainContentContainer
+            div [ class "mx-auto container px-4" ]
                 [ Page.viewTitle (t "menu.my_communities")
-                , Page.viewButtonNew (t "community.create_button") Route.NewCommunity
+                , if loggedIn.shared.allowCommunityCreation then
+                    Page.viewButtonNew (t "community.create_button") Route.NewCommunity
+
+                  else
+                    text ""
                 , viewBalances loggedIn communities
                 , viewVerifications loggedIn.shared model
                 , viewSections loggedIn model
@@ -272,7 +276,7 @@ viewSections loggedIn model =
 
         transferInfo from value to =
             [ ( "from", viewAccountName from )
-            , ( "value", value )
+            , ( "value", String.fromFloat value )
             , ( "to", viewAccountName to )
             ]
                 |> I18Next.tr loggedIn.shared.translations I18Next.Curly "transfer.info"

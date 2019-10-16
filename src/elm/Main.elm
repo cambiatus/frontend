@@ -47,6 +47,7 @@ main =
                 { title = "Cambiatus"
                 , body =
                     [ view model
+                    , viewChat
                     ]
                 }
         , onUrlRequest = ClickedLink
@@ -822,7 +823,7 @@ msgToString msg =
 
 viewChat : Html Msg
 viewChat =
-    div [ id "chat-container" ]
+    div [ id "chat-container", style "display" "none" ]
         [ iframe
             [ id "chat-manager"
             , style "height" "0%"

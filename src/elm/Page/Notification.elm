@@ -10,6 +10,7 @@ import Html.Attributes exposing (class, src)
 import I18Next exposing (Delims(..), t)
 import Notification exposing (History, NotificationType(..), SaleHistoryData, TransferData)
 import Page
+import Route exposing (Route)
 import Session.LoggedIn as LoggedIn exposing (External(..))
 import Session.Shared as Shared exposing (Shared)
 import Strftime
@@ -67,7 +68,7 @@ view loggedIn model =
             Page.fullPageGraphQLError (t "notifications.title") e
 
         Loaded notifications ->
-            div []
+            div [ class "container mx-auto px-4 mb-6" ]
                 [ Page.viewTitle (t "notifications.title")
                 , if notifications == [] then
                     viewEmptyNotifications loggedIn.shared
@@ -87,17 +88,78 @@ viewNotification : LoggedIn.Model -> History -> Html msg
 viewNotification loggedIn notification =
     case notification.payload of
         Transfer data ->
-            viewNotificationTransfer loggedIn.shared data
+            div [ class "border-b last:border-b-0 border-gray-500 hover:bg-gray-100 first-hover:rounded-t-lg last-hover:rounded-b-lg" ]
+                [ viewNotificationTransfer loggedIn.shared notification data ]
 
         SaleHistory data ->
-            a [ class "border-b last:border-b-0 border-gray-500 hover:bg-gray-100 first-hover:rounded-t-lg last-hover:rounded-b-lg" ]
+            div [ class "border-b last:border-b-0 border-gray-500 hover:bg-gray-100 first-hover:rounded-t-lg last-hover:rounded-b-lg" ]
                 [ viewNotificationSaleHistory loggedIn notification data ]
 
 
-viewNotificationTransfer : Shared -> TransferData -> Html msg
-viewNotificationTransfer shared notification =
-    div []
-        []
+viewNotificationTransfer : Shared -> History -> TransferData -> Html msg
+viewNotificationTransfer shared history notification =
+    let
+        isReceive =
+            Eos.nameToString history.recipientId /= notification.fromId
+
+        amount =
+            if isReceive then
+                notification.amount
+
+            else
+                notification.amount * -1
+
+        maybeLogo =
+            if String.isEmpty notification.community.logo then
+                Nothing
+
+            else
+                Just (shared.endpoints.ipfs ++ "/" ++ notification.community.logo)
+
+        date =
+            Just history.insertedAt
+                |> Utils.posixDateTime
+                |> Strftime.format "%d %b %Y" Time.utc
+
+        description =
+            if isReceive then
+                [ ( "user", notification.fromId )
+                , ( "amount", String.fromFloat notification.amount )
+                ]
+                    |> I18Next.tr shared.translations I18Next.Curly "notifications.transfer.receive"
+
+            else
+                [ ( "user", notification.toId )
+                , ( "amount", String.fromFloat notification.amount )
+                ]
+                    |> I18Next.tr shared.translations I18Next.Curly "notifications.transfer.sent"
+    in
+    div [ class "flex items-start lg:items-center p-4" ]
+        [ div [ class "flex-none" ]
+            [ case maybeLogo of
+                Just logoUrl ->
+                    img
+                        [ class "w-10 h-10 object-scale-down"
+                        , src logoUrl
+                        ]
+                        []
+
+                Nothing ->
+                    div
+                        [ class "w-10 h-10 object-scale-down" ]
+                        []
+            ]
+        , div [ class "flex-col flex-grow-1 pl-4" ]
+            [ p
+                [ class "font-sans text-black text-sm leading-relaxed" ]
+                [ text description ]
+            , p
+                [ class "font-normal font-sans text-gray-900 text-caption uppercase" ]
+                [ text date ]
+            ]
+        , div [ class "flex flex-none pl-4" ]
+            (viewAmount amount notification.symbol)
+        ]
 
 
 viewNotificationSaleHistory : LoggedIn.Model -> History -> SaleHistoryData -> Html msg
@@ -115,7 +177,10 @@ viewNotificationSaleHistory ({ shared } as loggedIn) notification sale =
                 |> Utils.posixDateTime
                 |> Strftime.format "%d %b %Y" Time.utc
     in
-    div [ class "flex items-start lg:items-center p-4" ]
+    a
+        [ class "flex items-start lg:items-center p-4"
+        , Route.href (Route.ViewSale (String.fromInt sale.sale.id))
+        ]
         ([ div
             [ class "flex-none" ]
             [ case maybeLogo of
@@ -137,7 +202,7 @@ viewNotificationSaleHistory ({ shared } as loggedIn) notification sale =
 
 
 viewNotificationSaleHistoryDetail : LoggedIn.Model -> SaleHistoryData -> String -> List (Html msg)
-viewNotificationSaleHistoryDetail loggedIn sale date =
+viewNotificationSaleHistoryDetail ({ shared } as loggedIn) sale date =
     let
         isBuy =
             loggedIn.accountName == sale.fromId
@@ -147,13 +212,13 @@ viewNotificationSaleHistoryDetail loggedIn sale date =
                 [ ( "user", Eos.nameToString sale.toId )
                 , ( "sale", sale.sale.title )
                 ]
-                    |> I18Next.tr loggedIn.shared.translations I18Next.Curly "notifications.saleHistory.buy"
+                    |> I18Next.tr shared.translations I18Next.Curly "notifications.saleHistory.buy"
 
             else
                 [ ( "user", Eos.nameToString sale.fromId )
                 , ( "sale", sale.sale.title )
                 ]
-                    |> I18Next.tr loggedIn.shared.translations I18Next.Curly "notifications.saleHistory.sell"
+                    |> I18Next.tr shared.translations I18Next.Curly "notifications.saleHistory.sell"
 
         amount =
             if isBuy then
@@ -171,7 +236,12 @@ viewNotificationSaleHistoryDetail loggedIn sale date =
             [ text date ]
         ]
     , div [ class "flex flex-none pl-4" ]
-        (viewAmount amount sale.communityId)
+        [ img
+            [ src (shared.endpoints.ipfs ++ "/" ++ Maybe.withDefault "" sale.sale.image)
+            , class "object-scale-down rounded-full h-10"
+            ]
+            []
+        ]
     ]
 
 

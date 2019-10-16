@@ -69,7 +69,8 @@
     "notMember": "This user is not a member.",
     "chooseOrUploadLogo": "Choose or upload a logo.",
     "invalidSymbol": "Invalid symbol.",
-    "unknown": "Uoh. Something wrong happened."
+    "unknown": "Uoh. Something wrong happened.",
+    "accountNotFound": "Account not found. Are you sure you created your account?"
   },
   "auth": {
     "title": "Use your private key and PIN or log in by",
@@ -161,7 +162,7 @@
       "title": "My Wallet",
       "my_transfers": "My Transfers",
       "transaction_sent": "Your transaction was sent successfully to the blockchain.",
-      "your_current_balance": "Your Current Balance: {{balance}}",
+      "your_current_balance": "You have {{balance}}",
       "balances": {
         "current": "Current Balance",
         "subtitle": "View community",
@@ -192,6 +193,10 @@
     "saleHistory": {
       "buy": "You bought {{sale}} from {{user}}",
       "sell": "🎉 {{user}} bought {{sale}}"
+    },
+    "transfer": {
+      "receive": "You received {{amount}} from user {{user}}",
+      "sent": "You've sent {{amount}} to {{user}}"
     }
   },
   "community": {
@@ -352,6 +357,7 @@
         "bio": "let others know more about yourself.",
         "privateKey": "This is your private key. Please, keep it safe."
       },
+      "push_notifications": "Enable push notifications",
       "submit": "Save"
     },
     "badge": {
@@ -363,16 +369,19 @@
     }
   },
   "shop": {
+    "filter": "Filter",
     "units_label": "Quantity in stock",
     "title": "Shop",
+    "subtitle": "Buy and sell in your community",
+    "description": "Here you can use your coins to buy products and services, or earn coins selling your products and services",
     "all_offers": "All offers",
-    "my_communities_offers": "My communities offers",
+    "my_communities_offers": "My communities’ offers",
     "my_offers": "My offers",
     "rate_sale": "Rating",
     "messages": "Messages",
     "no_answer_yet": "No answer yet",
     "message_placeholder": "Type your message here or send a direct message through whatsapp or chat.",
-    "create_offer": "Create new offer",
+    "create_offer": "Create offer",
     "edit_offer": "Edit offer",
     "unauthorized": "You are not authorized to edit this sale",
     "photo_label": "Upload image",
