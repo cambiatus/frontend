@@ -241,14 +241,15 @@ viewHelper thisMsg page profile_ ({ shared } as model) content =
                 style "" ""
     in
     div
-        []
+        [ class "min-h-screen flex flex-col" ]
         [ viewHeader model profile_
             |> Html.map thisMsg
         , viewMainMenu page profile_ model
             |> Html.map thisMsg
         , div
-            [ class "mx-auto" ]
-            [ content, viewFooter shared ]
+            [ class "flex-grow" ]
+            [ content ]
+        , viewFooter shared
         , div
             [ onClickCloseAny ]
             []
