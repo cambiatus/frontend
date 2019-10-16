@@ -220,24 +220,8 @@ viewOptions isModal shared model =
         text_ s =
             Html.text (t shared.translations s)
     in
-    [ div [ class "card__login-header" ]
+    [ div [ class "" ]
         [ viewAuthTabs shared
-        , case model.scatterError of
-            Nothing ->
-                text ""
-
-            Just err ->
-                p [ class "scatter__error" ]
-                    [ text err ]
-        , p [ class "card__auth__title" ]
-            [ span [ class "auth__text" ] [ text_ "auth.title" ]
-            , span [] [ text " " ]
-            , span
-                [ class "scatter__link"
-                , onClick ClickedLoginWithScatter
-                ]
-                [ text "Scatter" ]
-            ]
         , viewAuthError shared model.loginError
         ]
     , div [ class "card__auth__input" ]
@@ -424,8 +408,9 @@ viewAuthError shared maybeLoginError =
             text ""
 
         Just error ->
-            p [ class "text-red" ]
-                [ text error ]
+            div [ class "bg-red border-lg rounded p-4 mt-2" ]
+                [ p [ class "text-white" ] [ text (t shared.translations "error.accountNotFound") ]
+                ]
 
 
 viewLoginPinForm : Model -> Shared -> Html Msg
@@ -445,10 +430,10 @@ toggleViewPin : Model -> Html Msg
 toggleViewPin model =
     button [ class "", onClick TogglePinVisibility ]
         [ if model.pinVisibility then
-            img [ src "icons/eye-show.svg" ] []
+            img [ src "/icons/eye-show.svg" ] []
 
           else
-            img [ src "icons/eye-close.svg" ] []
+            img [ src "/icons/eye-close.svg" ] []
         ]
 
 

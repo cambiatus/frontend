@@ -65,8 +65,8 @@ view guest model =
             Auth.view False guest.shared model.auth
                 |> List.map (Html.map GotAuthMsg)
     in
-    Page.mainContentContainer
-        [ div [ class "card card--register overflow-y-scroll" ]
+    div [ class "container mx-auto px-4" ]
+        [ div [ class "card card--register" ]
             authView
         ]
 

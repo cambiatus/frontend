@@ -29,24 +29,25 @@ self.addEventListener('fetch', function (event) {
 
 // Configure push eventListener to handle C2DM messages
 self.addEventListener('push', function (event) {
-  const msg = event.data.json()
+  var payload = {}
 
-  let payload = {}
-  let body = ''
-  let title = ''
-  try {
-    // try
-  } catch (e) {
-    // TODO : LOG ERROR TO SENTRY
-  } finally {
-    body = payload.body ? payload.body : msg.body
-    title = payload.title ? payload.title : msg.title
+  if (event.data) {
+    payload = event.data.json()
+  }
+
+  var body = payload.body || 'Huh! You should npt be getting this'
+  var title = payload.title || 'Broken notification'
+  var interaction
+  if (title === 'Broken notification') {
+    interaction = false
+  } else {
+    interaction = true
   }
 
   const options = {
     body: body,
-    icon: '/images/logo-bespiral.svg',
-    requireInteraction: true,
+    icon: 'images/logo-cambiatus.svg',
+    requireInteraction: interaction,
     vibrate: [200, 100, 200, 100, 200, 100, 400],
     tag: title
   }
@@ -59,8 +60,18 @@ self.addEventListener('push', function (event) {
 // Handle Notification Clicks
 self.addEventListener('notificationclick', function (event) {
   const notification = event.notification
-
   notification.close()
 
-  // TODO Navigate user to specific notification page
+  // Open the notifications page
+  event.waitUntil(self.clients.matchAll({
+    type: 'window'
+  }).then(function (clientList) {
+    for (var i = 0; i < clientList.length; i++) {
+      var client = clientList[i]
+      // If notifications page is open and focused do nothing
+      if (client.url === '/notification' && 'focus' in client) { return client.focus() }
+    }
+    // Otherwise open the client on the notifications page
+    if (self.clients.openWindow) { return self.clients.openWindow('/notification') }
+  }))
 })

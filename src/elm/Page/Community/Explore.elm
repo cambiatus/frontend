@@ -76,7 +76,7 @@ view loggedIn model =
             Page.fullPageGraphQLError (t loggedIn.shared.translations "menu.communities") e
 
         Loaded communities ->
-            Page.mainContentContainer
+            div [ class "container mx-auto px-4" ]
                 [ renderUserMessage model
                 , Page.viewTitle (t loggedIn.shared.translations "menu.communities")
                 , div [ class "flex flex-wrap -mx-2" ]
@@ -139,10 +139,10 @@ viewCommunity loggedIn community =
             Transfer.getTotalCount (Just community)
     in
     a
-        [ class "w-full sm:w-1/2 md:w-1/3 lg:w-1/3 xl:w-1/4 px-2 mb-8 h-60"
+        [ class "w-full sm:w-1/2 md:w-1/3 lg:w-1/3 xl:w-1/4 px-2 mb-6 h-60"
         , Route.href (Route.Community community.symbol)
         ]
-        [ div [ class "flex flex-wrap pt-5 pb-2 rounded-lg shadow bg-white" ]
+        [ div [ class "flex flex-wrap pt-5 pb-2 rounded-lg hover:shadow-lg bg-white" ]
             [ img [ class "w-full object-center object-scale-down h-20", src (ipfsUrl ++ "/" ++ community.logo) ] []
             , p [ class "absolute bg-gray-200 rounded-full ml-6 px-3 py-1 text-sm font-sans font-bold text-gray-700" ]
                 [ text (Eos.symbolToString community.symbol) ]
@@ -150,13 +150,13 @@ viewCommunity loggedIn community =
                 [ div [ class "font-sans font-bold text-xl" ]
                     [ text community.title
                     ]
-                , p [ class "font-sans text-sm mb-2" ] [ text ("Created by " ++ Eos.nameToString community.creator) ]
+                , p [ class "font-sans text-sm mb-2" ]
+                    [ text (tr "community.index.created_by" [ ( "account_name", Eos.nameToString community.creator ) ]) ]
                 , p [ class "text-gray-700 font-sans overflow-hidden h-12" ] [ text community.description ]
                 ]
             , div [ class "w-full px-6 py-4" ]
                 [ p [ class "flex-1 bg-indigo-500 mt-2 rounded-full px-3 py-1 text-sm font-bold text-white mr-2" ]
-                    [ text (tr "community.index.members" [ ( "quantity", String.fromInt community.memberCount ) ])
-                    ]
+                    [ text (tr "community.index.members" [ ( "quantity", String.fromInt community.memberCount ) ]) ]
                 , case maybeTransferCount of
                     Just transferCount ->
                         p [ class "flex-1 bg-indigo-500 mt-2 rounded-full px-3 py-1 text-sm font-bold text-white mr-2" ]

@@ -159,19 +159,28 @@ encodeClaimInput input =
         [ ( "id", Encode.int input.id |> Just ) ]
 
 
-buildClaimsInput : ClaimsInputRequiredFields -> ClaimsInput
-buildClaimsInput required =
-    { validator = required.validator }
+buildClaimsInput : (ClaimsInputOptionalFields -> ClaimsInputOptionalFields) -> ClaimsInput
+buildClaimsInput fillOptionals =
+    let
+        optionals =
+            fillOptionals
+                { claimer = Absent, validator = Absent }
+    in
+    { claimer = optionals.claimer, validator = optionals.validator }
 
 
-type alias ClaimsInputRequiredFields =
-    { validator : String }
+type alias ClaimsInputOptionalFields =
+    { claimer : OptionalArgument String
+    , validator : OptionalArgument String
+    }
 
 
 {-| Type for the ClaimsInput input object.
 -}
 type alias ClaimsInput =
-    { validator : String }
+    { claimer : OptionalArgument String
+    , validator : OptionalArgument String
+    }
 
 
 {-| Encode a ClaimsInput into a value that can be used as an argument.
@@ -179,7 +188,7 @@ type alias ClaimsInput =
 encodeClaimsInput : ClaimsInput -> Value
 encodeClaimsInput input =
     Encode.maybeObject
-        [ ( "validator", Encode.string input.validator |> Just ) ]
+        [ ( "claimer", Encode.string |> Encode.optional input.claimer ), ( "validator", Encode.string |> Encode.optional input.validator ) ]
 
 
 buildProfileInput : (ProfileInputOptionalFields -> ProfileInputOptionalFields) -> ProfileInput
@@ -286,6 +295,29 @@ encodePushSubscriptionInput input =
         [ ( "account", Encode.string input.account |> Just ), ( "authKey", Encode.string input.authKey |> Just ), ( "endpoint", Encode.string input.endpoint |> Just ), ( "pKey", Encode.string input.pKey |> Just ) ]
 
 
+buildReadNotificationInput : ReadNotificationInputRequiredFields -> ReadNotificationInput
+buildReadNotificationInput required =
+    { id = required.id }
+
+
+type alias ReadNotificationInputRequiredFields =
+    { id : Int }
+
+
+{-| Type for the ReadNotificationInput input object.
+-}
+type alias ReadNotificationInput =
+    { id : Int }
+
+
+{-| Encode a ReadNotificationInput into a value that can be used as an argument.
+-}
+encodeReadNotificationInput : ReadNotificationInput -> Value
+encodeReadNotificationInput input =
+    Encode.maybeObject
+        [ ( "id", Encode.int input.id |> Just ) ]
+
+
 buildSaleInput : SaleInputRequiredFields -> SaleInput
 buildSaleInput required =
     { id = required.id }
@@ -341,3 +373,26 @@ encodeSalesInput : SalesInput -> Value
 encodeSalesInput input =
     Encode.maybeObject
         [ ( "account", Encode.string |> Encode.optional input.account ), ( "all", Encode.string |> Encode.optional input.all ), ( "communities", Encode.string |> Encode.optional input.communities ) ]
+
+
+buildUnreadNotificationsInput : UnreadNotificationsInputRequiredFields -> UnreadNotificationsInput
+buildUnreadNotificationsInput required =
+    { account = required.account }
+
+
+type alias UnreadNotificationsInputRequiredFields =
+    { account : String }
+
+
+{-| Type for the UnreadNotificationsInput input object.
+-}
+type alias UnreadNotificationsInput =
+    { account : String }
+
+
+{-| Encode a UnreadNotificationsInput into a value that can be used as an argument.
+-}
+encodeUnreadNotificationsInput : UnreadNotificationsInput -> Value
+encodeUnreadNotificationsInput input =
+    Encode.maybeObject
+        [ ( "account", Encode.string input.account |> Just ) ]

@@ -21,7 +21,7 @@
     "search": "Busqueu comunitats i amics",
     "explore": "Explorar",
     "communities": "Comunitats",
-    "welcome_message": "Hola {{user_name}} ",
+    "welcome_message": "Hola {{user_name}}",
     "back_to_dashboard": "Anar a l’inici",
     "edit": "Editar",
     "cancel": "Cancel·lar",
@@ -69,7 +69,8 @@
     "notMember": "Aquest usuari no és membre.",
     "chooseOrUploadLogo": "Escull o puja el teu propi logotip.",
     "invalidSymbol": "Símbol invàlid.",
-    "unknown": "Oh oh. Alguna cosa ha anat malament."
+    "unknown": "Oh oh. Alguna cosa ha anat malament.",
+    "accountNotFound": "Compte no trobat. Esteu segur que heu creat el vostre compte?"
   },
   "auth": {
     "title": "Utilitzeu la vostra clau privada i el PIN o connecteu-vos per",
@@ -186,6 +187,18 @@
     "no_transfers_yet": "Encara no hi ha transferències.",
     "info": "{{from}} ha transferit {{value}} a {{to}}",
     "you": "tu"
+  },
+  "notifications": {
+    "title": "Notificacions",
+    "empty": "Encara no teniu cap notificació",
+    "saleHistory": {
+      "buy": "Vas comprar {{sale}} al {{user}}",
+      "sell": "🎉 {{user}} comprar {{sale}}"
+    },
+    "transfer": {
+      "receive": "Heu rebut {{amount}} de l'usuari {{user}}",
+      "sent": "Heu enviat {{amount}} a {{user}}"
+    }
   },
   "community": {
     "title": "Comunitat",
@@ -345,6 +358,7 @@
         "bio": "explica’ns més sobre tu!",
         "privateKey": "Aquesta és la teva clau privada. Si et plau guarda-la bé!"
       },
+      "push_notifications": "Activeu les notificacions",
       "submit": "Guardar"
     },
     "badge": {
@@ -356,8 +370,11 @@
     }
   },
   "shop": {
+    "filter": "Filtre",
     "units_label": "Quantitat en estoc",
     "title": "Botiga",
+    "subtitle": "Compra i ven a la teva comunitat",
+    "description": "Aquí podeu utilitzar les vostres monedes per comprar productes i serveis, o guanyar monedes venent els vostres productes i serveis",
     "all_offers": "Totes les ofertes",
     "my_communities_offers": "La meva comunitat ofereix",
     "my_offers": "Les meves ofertes",
@@ -365,7 +382,7 @@
     "messages": "Missatges",
     "no_answer_yet": "Encara sense resposta",
     "message_placeholder": "Escriu el teu missatge aquí o envia un missatge directe emprant Whatsapp o xat.",
-    "create_offer": "Crear nova oferta",
+    "create_offer": "Crear oferta",
     "edit_offer": "Editar oferta",
     "unauthorized": "No tens autorització per a editar aquesta venda",
     "photo_label": "Pujar imatge",
@@ -379,7 +396,7 @@
     "track_stock_yes": "Sí",
     "price_label": "Preu de venda",
     "units_available": "Quantitat disponible",
-    "out_of_stock": "Fora d'estoc",
+    "out_of_stock": "fora d'estoc",
     "offer_action": "{{accountName}} està VENENT",
     "buy_action": "{{accountName}} està COMPRANT",
     "buy": "Comprar",

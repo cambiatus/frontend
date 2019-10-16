@@ -4,6 +4,7 @@ import Avatar exposing (Avatar)
 import Bespiral.Object
 import Bespiral.Object.Profile as Creator
 import Bespiral.Object.Sale
+import Bespiral.Object.SaleHistory
 import Bespiral.Query
 import Eos exposing (Symbol)
 import Eos.Account as Eos

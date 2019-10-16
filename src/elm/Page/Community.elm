@@ -247,7 +247,7 @@ view loggedIn model =
                 canEdit =
                     LoggedIn.isAccount community.creator loggedIn
             in
-            div [ class "create-community" ]
+            div [ class "container mx-auto px-4" ]
                 [ viewClaimModal loggedIn model
                 , viewMessageStatus loggedIn model
                 , Page.viewTitle (Eos.symbolToString community.symbol ++ " - " ++ community.title)
@@ -700,10 +700,15 @@ viewAction loggedIn metadata maybeDate action =
 
               else
                 text ""
-            , button
-                [ class ("h-10 uppercase rounded-lg ml-1" ++ claimColors ++ claimSize)
-                ]
-                [ text_ claimText ]
+            , if validationType == "CLAIMABLE" then
+                button
+                    [ class ("h-10 uppercase rounded-lg ml-1" ++ claimColors ++ claimSize)
+                    , onClick (OpenClaimConfirmation action.id)
+                    ]
+                    [ text_ claimText ]
+
+              else
+                text ""
             ]
         ]
 
@@ -871,8 +876,12 @@ viewSections loggedIn model allTransfers =
             Eos.nameToString accountName
 
         transferInfo from value to =
+            let
+                val =
+                    String.fromFloat value
+            in
             [ ( "from", viewAccountName from )
-            , ( "value", value )
+            , ( "value", val )
             , ( "to", viewAccountName to )
             ]
                 |> I18Next.tr loggedIn.shared.translations I18Next.Curly "transfer.info"

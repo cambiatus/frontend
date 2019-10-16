@@ -24,6 +24,7 @@ const local = {
   bespiralAccount: 'bespiral',
   communityContract: 'bes.cmm',
   tokenContract: 'bes.token',
+  allowCommunityCreation: true,
   pushKey:
     'BDzXEdCCYafisu3jmYxBGDboAfwfIHYzM9BbT2DmL8VzIqSWu5BnW6lC-xEoXExQUS81vwOSPF9w8kpcINWCvUM'
 }
@@ -58,6 +59,7 @@ const dev = {
   bespiralAccount: 'bespiral',
   communityContract: 'bes.cmm',
   tokenContract: 'bes.token',
+  allowCommunityCreation: true,
   pushKey:
     'BDzXEdCCYafisu3jmYxBGDboAfwfIHYzM9BbT2DmL8VzIqSWu5BnW6lC-xEoXExQUS81vwOSPF9w8kpcINWCvUM'
 }
@@ -75,6 +77,7 @@ const httpEndpoint = isLocal ? dev.eosOptions.httpEndpoint : `${chainUrl}:${chai
 const pKey = isLocal ? dev.pushKey : _env_.PUSH_KEY
 const appLogo = isLocal ? dev.logo : _env_.LOGO
 const appLogoMobile = isLocal ? dev.logoMobile : _env_.LOGO_MOBILE
+const allowCommunityCreation = isLocal ? dev.allowCommunityCreation : (_env_.ALLOW_COMMUNITY_CREATION === 'true')
 
 const prod = {
   network: {
@@ -101,6 +104,7 @@ const prod = {
   bespiralAccount: 'bespiral',
   communityContract: 'bes.cmm',
   tokenContract: 'bes.token',
+  allowCommunityCreation: allowCommunityCreation,
   pushKey: pKey
 }
 

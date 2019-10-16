@@ -7,11 +7,16 @@ import Api.Graphql
 import Asset.Icon as Icon
 import Auth
 import Avatar
+import Bespiral.Object
+import Bespiral.Object.UnreadNotifications
+import Bespiral.Query
 import Browser.Dom as Dom
 import Community exposing (Balance)
 import Eos
 import Eos.Account as Eos
 import Graphql.Http
+import Graphql.Operation exposing (RootQuery)
+import Graphql.SelectionSet as SelectionSet exposing (SelectionSet, with)
 import Html exposing (..)
 import Html.Attributes exposing (..)
 import Html.Events exposing (onClick, onFocus, onInput, onSubmit, stopPropagationOn)
@@ -46,6 +51,7 @@ init shared accountName =
     , Cmd.batch
         [ Api.Graphql.query shared (profileQuery accountName) CompletedLoadProfile
         , Api.getBalances shared accountName CompletedLoadBalances
+        , Api.Graphql.query shared (unreadQuery accountName) CompletedLoadUnread
         ]
     )
 
@@ -95,6 +101,7 @@ type alias Model =
     , showNotificationModal : Bool
     , showMainNav : Bool
     , notification : Notification.Model
+    , unreadCount : Int
     , showAuthModal : Bool
     , auth : Auth.Model
     , balances : List Balance
@@ -113,6 +120,7 @@ initModel shared authModel accountName =
     , showNotificationModal = False
     , showMainNav = False
     , notification = Notification.init
+    , unreadCount = 0
     , showAuthModal = False
     , auth = authModel
     , balances = []
@@ -138,6 +146,34 @@ isAuth model =
 maybePrivateKey : Model -> Maybe String
 maybePrivateKey model =
     Auth.maybePrivateKey model.auth
+
+
+
+-- NOTIFICATION COUNTS
+
+
+type alias UnreadMeta =
+    { count : Int }
+
+
+unreadSelection : SelectionSet UnreadMeta Bespiral.Object.UnreadNotifications
+unreadSelection =
+    SelectionSet.succeed UnreadMeta
+        |> with Bespiral.Object.UnreadNotifications.count
+
+
+unreadQuery : Eos.Name -> SelectionSet UnreadMeta RootQuery
+unreadQuery accName =
+    let
+        accString =
+            Eos.nameToString accName
+
+        args =
+            { input = { account = accString } }
+    in
+    Bespiral.Query.unreadNotifications
+        args
+        unreadSelection
 
 
 
@@ -211,7 +247,7 @@ viewHelper thisMsg page profile_ ({ shared } as model) content =
         , viewMainMenu page profile_ model
             |> Html.map thisMsg
         , div
-            [ class "container mx-auto" ]
+            [ class "mx-auto" ]
             [ content, viewFooter shared ]
         , div
             [ onClickCloseAny ]
@@ -266,23 +302,34 @@ viewHeader ({ shared } as model) profile_ =
             ]
         , div [ class "hidden lg:block lg:visible w-1/2" ] [ searchBar model ]
         , div [ class "w-1/3 h-10 flex z-20 lg:w-1/4" ]
-            [ button [ class "w-1/2 outline-none", onClick (ShowNotificationModal (not model.showNotificationModal)) ]
-                [ Icons.notification "mx-auto lg:mr-1 xl:mx-auto" ]
+            [ div [ class "flex flex-row mx-auto" ]
+                [ a
+                    [ class "outline-none"
+                    , Route.href Route.Notification
+                    ]
+                    [ Icons.notification "mx-auto lg:mr-1 xl:mx-auto" ]
+                , if model.unreadCount == 0 then
+                    text ""
+
+                  else
+                    div [ class "bg-orange-100 text-menu text-white p-1 rounded-full h-4 flex flex-col justify-center" ]
+                        [ text (String.fromInt model.unreadCount) ]
+                ]
             , button
                 [ class "w-1/2 xl:hidden"
                 , onClick (ShowUserNav (not model.showUserNav))
                 ]
                 [ Avatar.view shared.endpoints.ipfs profile_.avatar "h-7 w-7 float-right" ]
             , button
-                [ class "h-12 bg-gray-200 rounded-lg flex py-2 px-3 hidden xl:visible xl:flex"
+                [ class "h-12 bg-gray-200 rounded-lg flex py-2 px-3 hidden xl:visible xl:flex w-2/3"
                 , onClick (ShowUserNav (not model.showUserNav))
                 ]
-                [ Avatar.view shared.endpoints.ipfs profile_.avatar "h-7 w-7 mr-2"
-                , div []
-                    [ p [ class "font-sans uppercase text-gray-900 text-xs" ] [ text (tr "menu.welcome_message" [ ( "user_name", Eos.nameToString profile_.accountName ) ]) ]
-                    , p [ class "font-sans text-indigo-500 text-sm" ] [ text (t shared.translations "menu.my_account") ]
+                [ Avatar.view shared.endpoints.ipfs profile_.avatar "h-8"
+                , div [ class "flex flex-wrap text-left pl-2" ]
+                    [ p [ class "w-full font-sans uppercase text-gray-900 text-xs overflow-x-hidden" ] [ text (tr "menu.welcome_message" [ ( "user_name", Eos.nameToString profile_.accountName ) ]) ]
+                    , p [ class "w-full font-sans text-indigo-500 text-sm" ] [ text (t shared.translations "menu.my_account") ]
                     ]
-                , Icons.arrowDown ""
+                , Icons.arrowDown "float-right"
                 ]
             ]
         , div [ class "w-full mt-2 lg:hidden" ] [ searchBar model ]
@@ -376,20 +423,17 @@ isActive page route =
 
 viewFooter : Shared -> Html msg
 viewFooter shared =
-    let
-        currentYear : String
-        currentYear =
-            Time.toYear Time.utc shared.now
-                |> String.fromInt
-    in
-    footer [ class "main-footer" ]
-        [ img
-            [ class "main-footer__logo"
-            , src "/images/logo-cambiatus-incolor.svg"
+    footer [ class "bg-white w-full flex flex-wrap mx-auto border-t border-grey p-4 pt-6 h-40 bottom-0" ]
+        [ p [ class "text-sm flex w-full justify-center items-center" ]
+            [ text "Created with"
+            , Icons.heart
+            , text "by Satisfied Vagabonds"
+            ]
+        , img
+            [ class "h-24 w-full"
+            , src "/images/satisfied-vagabonds.svg"
             ]
             []
-        , p [ class "main-footer__text" ]
-            [ text ("Copyrights © " ++ currentYear ++ " • Cambiatus") ]
         ]
 
 
@@ -423,7 +467,7 @@ viewUserNav page profile_ ({ shared } as model) =
             , text_ "menu.profile"
             ]
         , viewUserNavItem page
-            Route.Communities
+            Route.Notification
             [ Icon.bell ""
             , text_ "menu.notifications"
             ]
@@ -511,7 +555,8 @@ viewNotification model =
         [ id "notifications-modal"
         , classList
             [ ( "notifications-modal", True )
-            , ( "notifications-modal--show", model.showNotificationModal )
+
+            -- , ( "notifications-modal--show", model.showNotificationModal )
             ]
         , tabindex -1
         ]
@@ -600,6 +645,7 @@ type Msg
     | GotAuthMsg Auth.Msg
     | ReceivedNotification String
     | CompletedLoadBalances (Result Http.Error (List Balance))
+    | CompletedLoadUnread (Result (Graphql.Http.Error UnreadMeta) UnreadMeta)
 
 
 update : Msg -> Model -> UpdateResult
@@ -789,6 +835,16 @@ update msg model =
                     model
                         |> UR.init
 
+        CompletedLoadUnread res ->
+            case res of
+                Ok { count } ->
+                    { model | unreadCount = count }
+                        |> UR.init
+
+                Err err ->
+                    model
+                        |> UR.init
+
 
 chatNotification : Model -> String -> Notification
 chatNotification model from =
@@ -935,3 +991,6 @@ msgToString msg =
 
         CompletedLoadBalances _ ->
             [ "CompletedLoadBalances" ]
+
+        CompletedLoadUnread _ ->
+            [ "CompletedLoadUnread" ]

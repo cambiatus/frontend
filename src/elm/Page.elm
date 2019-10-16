@@ -1,4 +1,4 @@
-module Page exposing (ExternalMsg(..), Msg, Session(..), errorToString, fullPageError, fullPageGraphQLError, fullPageLoading, init, isLoggedIn, jsAddressToMsg, labelWithTooltip, loading, login, logout, mainContentContainer, msgToString, onFileChange, subscriptions, toShared, update, viewButtonNew, viewCardEmpty, viewCardList, viewDateDistance, viewGuest, viewLoggedIn, viewMaxTwoColumn, viewMenuFilter, viewMenuFilterButton, viewMenuFilterDropdown, viewMenuFilterDropdownOption, viewTitle)
+module Page exposing (ExternalMsg(..), Msg, Session(..), errorToString, fullPageError, fullPageGraphQLError, fullPageLoading, init, isLoggedIn, jsAddressToMsg, labelWithTooltip, loading, login, logout, msgToString, onFileChange, subscriptions, toShared, update, viewButtonNew, viewCardEmpty, viewCardList, viewDateDistance, viewGuest, viewLoggedIn, viewMaxTwoColumn, viewMenuFilter, viewMenuFilterButton, viewMenuFilterDropdown, viewMenuFilterDropdownOption, viewTitle)
 
 import Account exposing (Profile)
 import Asset.Icon as Icon
@@ -160,7 +160,7 @@ viewMenuFilterDropdown toMsg decoder options =
     div
         [ class "flex flex-row justify-between" ]
         [ select
-            [ class "md:hidden form-select w-full select border-gray-500"
+            [ class "form-select sm:w-full md:w-64 select border-gray-500"
             , onChange toMsg decoder
             ]
             options
@@ -190,8 +190,8 @@ viewCardList items =
                 )
                 items
     in
-    div [ class "card" ]
-        [ ul [ class "card__list" ] items_
+    div [ class "shadow-md rounded-lg bg-white" ]
+        [ ul [] items_
         , div [ class "card__button-row" ]
             [ button [ class "btn btn--primary" ]
                 [ text "See More" ]
@@ -201,8 +201,8 @@ viewCardList items =
 
 viewCardEmpty : List (Html msg) -> Html msg
 viewCardEmpty content =
-    div [ class "card" ]
-        [ div [ class "card__list-empty" ] [ span [] content ] ]
+    div [ class "shadow-md rounded-lg bg-white p-4" ]
+        [ span [] content ]
 
 
 viewTitle : String -> Html msg
@@ -260,18 +260,13 @@ viewDateDistance date maybeNow =
 
 fullPageLoading : Html msg
 fullPageLoading =
-    div [ class "full-spinner-container" ]
+    div [ class "full-spinner-container h-full" ]
         [ div [ class "spinner spinner--delay" ] [] ]
-
-
-mainContentContainer : List (Html msg) -> Html msg
-mainContentContainer =
-    div []
 
 
 fullPageError : String -> Http.Error -> Html msg
 fullPageError title_ e =
-    mainContentContainer
+    div []
         [ viewTitle title_
         , div [ class "card" ] [ text "Something wrong happened." ]
         ]
@@ -279,7 +274,7 @@ fullPageError title_ e =
 
 fullPageGraphQLError : String -> Graphql.Http.Error a -> Html msg
 fullPageGraphQLError title_ e =
-    mainContentContainer
+    div []
         [ viewTitle title_
         , div [ class "card" ]
             [ p [] [ text "Something wrong happened." ]

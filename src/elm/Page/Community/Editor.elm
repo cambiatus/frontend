@@ -87,6 +87,8 @@ type alias Form =
     , symbol : String
     , logoSelected : Int
     , logoList : List LogoStatus
+    , inviterReward : Int
+    , invitedReward : Int
     }
 
 
@@ -97,6 +99,8 @@ newForm =
     , symbol = ""
     , logoSelected = 0
     , logoList = defaultLogos
+    , inviterReward = 0
+    , invitedReward = 0
     }
 
 
@@ -120,6 +124,8 @@ editForm community =
     , symbol = Eos.symbolToString community.symbol
     , logoSelected = logoSelected
     , logoList = logoList
+    , inviterReward = 0
+    , invitedReward = 0
     }
 
 
@@ -201,7 +207,7 @@ view : LoggedIn.Model -> Model -> Html Msg
 view loggedIn model =
     let
         defaultContainer =
-            div [ class "create-community" ]
+            div [ class "container mx-auto px-4" ]
 
         shared =
             loggedIn.shared
@@ -259,14 +265,14 @@ viewForm shared isEdit isDisabled errors form =
                 ( t "community.create.title", t "community.create.submit" )
     in
     Html.form
-        [ class "create-community"
+        [ class "container mx-auto px-4"
         , onSubmit ClickedSave
         ]
         [ Page.viewTitle titleText
         , div [ class "card card--form" ]
             [ viewFieldDescription shared isDisabled form.description errors
             , div [ class "create-community-two-column" ]
-                [ viewFieldCurrencyName shared (isEdit || isDisabled) form.name errors
+                [ viewFieldCurrencyName shared isDisabled form.name errors
                 , viewFieldCurrencySymbol shared (isEdit || isDisabled) form.symbol errors
                 ]
             , viewFieldLogo shared isDisabled form.logoSelected form.logoList errors
@@ -350,11 +356,11 @@ viewFieldCurrencySymbol shared isDisabled defVal errors =
             , id fieldSymbolId
             , value defVal
             , minlength 3
-            , maxlength 3
+            , maxlength 4
             , required True
             , onInput EnteredSymbol
             , disabled isDisabled
-            , placeholder "___"
+            , placeholder "____"
             ]
             []
         , viewFieldError shared fieldSymbolId errors
@@ -719,7 +725,11 @@ save msg loggedIn ({ model } as uResult) =
                                               , authorization = authorization
                                               , data =
                                                     { asset = createAction.cmmAsset
-                                                    , logoHash = createAction.logoHash
+                                                    , logo = createAction.logoHash
+                                                    , name = createAction.name
+                                                    , description = createAction.description
+                                                    , inviterReward = createAction.inviterReward
+                                                    , invitedReward = createAction.invitedReward
                                                     }
                                                         |> Community.encodeUpdateLogoData
                                               }

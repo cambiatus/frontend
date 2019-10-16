@@ -11,7 +11,7 @@ view session =
         shared =
             Page.toShared session
     in
-    Page.mainContentContainer
+    div []
         [ Page.viewTitle (t shared.translations "error.pageNotFound")
         , text (t shared.translations "error.pageNotFound")
         ]

@@ -69,7 +69,8 @@
     "notMember": "Esse usuario não é membro",
     "chooseOrUploadLogo": "Escolha ou envie um logo.",
     "invalidSymbol": "Simbolo inválido.",
-    "unknown": "Opa. Algo de errado aconteceu =(."
+    "unknown": "Opa. Algo de errado aconteceu =(.",
+    "accountNotFound": "Conta não encontrada. Tem certeza que criou uma conta com essa chave?"
   },
   "auth": {
     "title": "Use sua chave privada e PIN ou faça o login",
@@ -186,9 +187,21 @@
   "transfer": {
     "last_title": "Últimas Transferências",
     "loading_error": "Algo de errado aconteceu ao carregar as transferências.",
-    "no_transfers_yet": "Nenhuma transferencia.",
+    "no_transfers_yet": "Nenhuma transferência.",
     "info": "{{from}} transferiu {{value}} para {{to}}",
     "you": "voce"
+  },
+  "notifications": {
+    "title": "Notificações",
+    "empty": "Você ainda não possui notificações",
+    "saleHistory": {
+      "buy": "Você comprou {{sale}} de {{user}}",
+      "sell": "🎉 {{user}} comprou {{sale}}"
+    },
+    "transfer": {
+      "receive": "Você recebeu {{amount}} do usuário {{user}}",
+      "sent": "Você enviou {{amount}} para {{user}}"
+    }
   },
   "community": {
     "title": "Comunidades",
@@ -345,22 +358,26 @@
         "email": "seu email",
         "localization": "onde voce vive",
         "interests": "seus interesses",
-        "bio": "Conte-nos mais sobre voce.",
+        "bio": "Conte-nos mais sobre você! Onde você vive? Quais são seus interesses?",
         "privateKey": "Essa e sua chave privada. Por favor, mantenha-a segura."
       },
+      "push_notifications": "Habilitar notificações",
       "submit": "Salvar"
     },
     "badge": {
       "title": "Conquistas",
       "currencyStarter": " Criador de Moeda",
-      "developer": "Desenvolvedor",
+      "developer": "Developer",
       "seedTeam": "Time Seed",
       "mentor": "Mentor"
     }
   },
   "shop": {
+    "filter": "Filtro",
     "units_label": "Quantidade em estoque",
     "title": "Shop",
+    "subtitle": "Compre e vende em sua comunidade",
+    "description": "Aqui você pode usar suas moedas para comprar serviços e produtos ou receber vendendo seus próprios produtos e serviços",
     "all_offers": "Todas as ofertas",
     "my_communities_offers": "Ofertas de minhas comunidades",
     "my_offers": "Minhas ofertas",
@@ -368,7 +385,7 @@
     "messages": "Mensagens",
     "no_answer_yet": "Sem resposta",
     "message_placeholder": "Digite sua mensagem aqui ou envie diretamente por Whatsapp ou chat.",
-    "create_offer": "Criar nova oferta",
+    "create_offer": "Criar oferta",
     "edit_offer": "Editar oferta",
     "unauthorized": "Você não tem autorização para editar essa venda",
     "photo_label": "Enviar imagem",
@@ -382,7 +399,7 @@
     "track_stock_yes": "Sim",
     "price_label": "Preço de venda",
     "units_available": "Quantidade disponível",
-    "out_of_stock": "Fora de estoque",
+    "out_of_stock": "fora de estoque",
     "offer_action": "{{accountName}} está VENDENDO",
     "buy_action": "{{accountName}} COMPRANDO",
     "buy": "Comprar",

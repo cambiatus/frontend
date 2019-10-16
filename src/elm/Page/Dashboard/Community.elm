@@ -178,10 +178,10 @@ viewCardBalance loggedIn ({ balance } as model) =
                 Nothing ->
                     ""
     in
-    div [ class "w-full sm:w-1/2 lg:w-1/3 xl:w-1/4 px-2 mb-8" ]
-        [ div [ class "flex flex-wrap px-3 pt-5 pb-2 rounded-lg shadow bg-white" ]
+    div [ class "w-full sm:w-1/2 lg:w-1/3 xl:w-1/4 px-2 mb-6" ]
+        [ div [ class "flex flex-wrap px-3 pt-5 pb-2 rounded-lg hover:shadow-lg bg-white" ]
             [ div [ class "w-1/3" ] [ img [ class "object-none object-scale-down h-20", src (ipfsUrl ++ "/" ++ logo) ] [] ]
-            , div [ class "w-1/3 pl-4 overflow-x-hidden overflow-y-hidden" ]
+            , div [ class "w-2/3 pl-4 overflow-x-hidden overflow-y-hidden" ]
                 [ p [ class "font-medium leading-none font-sans" ] [ text title ]
                 , div [ class "flex" ]
                     [ div [ class "text-3xl text-orange-100" ] [ text balanceText ]
@@ -189,7 +189,7 @@ viewCardBalance loggedIn ({ balance } as model) =
                     ]
                 , p [ class "text-xs text-gray-600 leading-none font-sans tracking-wide" ] [ text_ "account.my_wallet.balances.current" ]
                 ]
-            , div [ class "w-1/3 flex-shrink" ]
+            , div [ class "w-full flex-shrink" ]
                 [ a
                     [ class "float-right button button-secondary button-small w-20 px-1 py-2 text-xs"
                     , Route.href (Route.Community balance.asset.symbol)
@@ -197,11 +197,13 @@ viewCardBalance loggedIn ({ balance } as model) =
                     [ text_ "menu.explore" ]
                 ]
             , div [ class "w-full flex bg-white border-t border-gray-300 mt-2 py-3" ]
-                [ button
-                    [ class "button button-primary button-medium w-1/2 md:px-0 lg:mx-1" ]
+                [ a
+                    [ class "button button-primary button-small w-1/2 md:px-0 lg:mx-1"
+                    , Route.href (Route.Community balance.asset.symbol)
+                    ]
                     [ text (t loggedIn.shared.translations "community.actions.title") ]
                 , button
-                    [ class "button button-primary button-medium w-1/2 md:px-0 lg:mx-1"
+                    [ class "button button-primary button-small w-1/2 md:px-0 lg:mx-1"
                     , onClick ClickedTransfer
                     ]
                     [ text (t loggedIn.shared.translations "account.my_wallet.balances.button") ]

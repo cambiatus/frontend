@@ -29,6 +29,10 @@ type Network
     = Network
 
 
+type NotificationHistory
+    = NotificationHistory
+
+
 type Objective
     = Objective
 
@@ -63,6 +67,10 @@ type TransferConnection
 
 type TransferEdge
     = TransferEdge
+
+
+type UnreadNotifications
+    = UnreadNotifications
 
 
 type Validator

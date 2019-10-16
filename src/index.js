@@ -50,7 +50,8 @@ function flags () {
     authPreference: window.localStorage.getItem(AUTH_PREF_KEY),
     logo: config.logo,
     logoMobile: config.logoMobile,
-    now: Date.now()
+    now: Date.now(),
+    allowCommunityCreation: config.allowCommunityCreation
   }
   devLog('flags', flags_)
   return flags_
@@ -289,7 +290,7 @@ async function handleJavascriptPort (arg) {
       }
       ScatterJS.scatter
         .connect(
-          'bespiral',
+          'cambiatus',
           {
             initTimeout: 2500
           }
@@ -480,7 +481,7 @@ async function handleJavascriptPort (arg) {
           const response = {
             address: arg.responseAddress,
             addressData: arg.responseData,
-            error: 'No account found'
+            error: 'error.accountNotFound'
           }
           devLog('response', response)
           app.ports.javascriptInPort.send(response)
@@ -533,13 +534,25 @@ async function handleJavascriptPort (arg) {
     }
     case 'loginWithPrivateKeyAccount': {
       devLog('========================', 'loginWithPrivateKeyAccount')
-      const accountName = arg.data.accountName
       var loginForm = arg.data.form
+      const accountName = arg.data.accountName
+
+      // check if it is actually 12 words and convert it
+      privateKey =
+        loginForm.privateKey.split(' ').length === 12
+          ? ecc.seedPrivate(mnemonic.toSeedHex(loginForm.privateKey))
+          : loginForm.privateKey
+
+      privateKey = loginForm.privateKey
+      if (loginForm.privateKey.split(' ').length > 1) {
+        privateKey = ecc.seedPrivate(mnemonic.toSeedHex(loginForm.privateKey))
+      }
+
       if (loginForm.usePin) {
         storePin(
           {
             accountName: accountName,
-            privateKey: loginForm.privateKey
+            privateKey: privateKey
           },
           loginForm.usePin
         )
@@ -550,7 +563,7 @@ async function handleJavascriptPort (arg) {
       }
       eos = Eos(
         Object.assign(config.eosOptions, {
-          keyProvider: loginForm.privateKey
+          keyProvider: privateKey
         })
       )
       isAuthenticated = true
@@ -632,6 +645,14 @@ async function handleJavascriptPort (arg) {
             error: error
           }
           devLog('eos.transaction.failed', errorResponse)
+          // Send to sentry
+          Sentry.configureScope(scope => {
+            scope.setTag('type', 'eos-transaction')
+            scope.setExtra('data', arg.data)
+            Sentry.setExtra('response', errorResponse)
+            Sentry.setExtra('error', errorResponse.error)
+            Sentry.captureMessage('EOS Error')
+          })
           app.ports.javascriptInPort.send(errorResponse)
         })
       break

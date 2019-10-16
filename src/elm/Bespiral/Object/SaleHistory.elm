@@ -19,9 +19,9 @@ import Graphql.SelectionSet exposing (SelectionSet)
 import Json.Decode as Decode
 
 
-amount : SelectionSet (Maybe Float) Bespiral.Object.SaleHistory
+amount : SelectionSet Float Bespiral.Object.SaleHistory
 amount =
-    Object.selectionForField "(Maybe Float)" "amount" [] (Decode.float |> Decode.nullable)
+    Object.selectionForField "Float" "amount" [] Decode.float
 
 
 community : SelectionSet decodesTo Bespiral.Object.Community -> SelectionSet decodesTo Bespiral.Object.SaleHistory

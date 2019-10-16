@@ -462,8 +462,7 @@ update msg model loggedIn =
                 Just s ->
                     { model | status = ActionSaved }
                         |> UR.init
-                        |> UR.addCmd
-                            (Route.replaceUrl loggedIn.shared.navKey (Route.Community s))
+                        |> UR.addCmd (Route.replaceUrl loggedIn.shared.navKey (Route.Community s))
 
                 Nothing ->
                     model
@@ -590,7 +589,7 @@ viewForm shared community model =
     in
     [ div [ class "bg-white rounded-lg sm:w-form mx-auto" ]
         [ div [ class "px-4 py-6 border-b border-gray-500" ]
-            [ img [ src logoLink, class "w-16 h-16 mr-4 inline" ] []
+            [ img [ src logoLink, class "w-16 h-16 mr-4 inline object-scale-down" ] []
             , span [ class "font-sans text-heading font-medium" ] [ text community.title ]
             ]
         , div [ class "py-6 px-4" ]

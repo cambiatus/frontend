@@ -116,9 +116,9 @@ view_ loggedIn profile model =
                     "Disable Push Notifications"
 
                 False ->
-                    "Enable Push Notifications"
+                    "profile.edit.push_notifications"
     in
-    Page.mainContentContainer
+    div [ class "container mx-auto px-4" ]
         [ Page.viewTitle (t loggedIn.shared.translations "profile.title")
         , div [ class "card profile-card" ]
             [ div [ class "profile-info" ]
@@ -182,7 +182,7 @@ view_ loggedIn profile model =
             , viewBadges loggedIn model
             , div [ class "notification-settings-card", onClick RequestPush ]
                 [ button [ class "btn btn--primary" ]
-                    [ text notification_prompt ]
+                    [ text_ notification_prompt ]
                 ]
             , case LoggedIn.maybePrivateKey loggedIn of
                 Nothing ->
