@@ -13,6 +13,8 @@ import Bespiral.Scalar exposing (DateTime(..))
 import Community exposing (Balance, Metadata, Transaction)
 import Eos as Eos exposing (Symbol)
 import Eos.Account as Eos
+import FormatNumber exposing (format)
+import FormatNumber.Locales exposing (usLocale)
 import Graphql.Http
 import Graphql.Operation exposing (RootQuery)
 import Graphql.OptionalArgument exposing (OptionalArgument(..))
@@ -325,25 +327,67 @@ viewSections loggedIn model =
                 Page.viewCardEmpty [ text (t "transfer.no_transfers_yet") ]
 
             LoadedGraphql transfers ->
-                Page.viewCardList
-                    (List.map
-                        (\transfer ->
-                            ( [ text (transferInfo transfer.from transfer.value transfer.to)
-                              , case transfer.memo of
-                                    Nothing ->
-                                        text ""
-
-                                    Just mem ->
-                                        p [ class "card__list-memo" ]
-                                            [ text mem ]
-                              ]
-                            , Utils.posixDateTime (Just transfer.blockTime)
-                            , model.date
-                            )
-                        )
-                        transfers
-                    )
+                div [ class "shadow-md rounded-lg bg-white" ]
+                    (List.map (\transfer -> viewTransfer loggedIn transfer) transfers)
         ]
+
+
+viewTransfer : LoggedIn.Model -> Transfer -> Html msg
+viewTransfer ({ shared } as loggedIn) transfer =
+    let
+        isReceive =
+            loggedIn.accountName == transfer.to
+
+        amount =
+            if isReceive then
+                transfer.value
+
+            else
+                transfer.value * -1
+
+        description =
+            if isReceive then
+                [ ( "user", Eos.nameToString transfer.from )
+                , ( "amount", String.fromFloat transfer.value )
+                ]
+                    |> I18Next.tr shared.translations I18Next.Curly "notifications.transfer.receive"
+
+            else
+                [ ( "user", Eos.nameToString transfer.to )
+                , ( "amount", String.fromFloat transfer.value )
+                ]
+                    |> I18Next.tr shared.translations I18Next.Curly "notifications.transfer.sent"
+    in
+    div [ class "flex items-start lg:items-center p-4" ]
+        [ div [ class "flex-col flex-grow-1 pl-4" ]
+            [ p
+                [ class "font-sans text-black text-sm leading-relaxed" ]
+                [ text description ]
+            , p
+                [ class "font-normal font-sans text-gray-900 text-caption uppercase" ]
+                [ text (Maybe.withDefault "" transfer.memo) ]
+            ]
+        , div [ class "flex flex-none pl-4" ]
+            (viewAmount amount (Eos.symbolToString transfer.symbol))
+        ]
+
+
+viewAmount : Float -> String -> List (Html msg)
+viewAmount amount symbol =
+    let
+        amountText =
+            FormatNumber.format usLocale amount
+
+        color =
+            if amount > 0 then
+                "text-green"
+
+            else
+                "text-red"
+    in
+    [ div [ class "text-2xl", class color ] [ text amountText ]
+    , div [ class "uppercase text-sm font-thin mt-3 ml-2 font-sans", class color ] [ text symbol ]
+    ]
 
 
 
