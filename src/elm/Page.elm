@@ -190,8 +190,8 @@ viewCardList items =
                 )
                 items
     in
-    div [ class "card" ]
-        [ ul [ class "card__list" ] items_
+    div [ class "shadow-md rounded-lg bg-white" ]
+        [ ul [] items_
         , div [ class "card__button-row" ]
             [ button [ class "btn btn--primary" ]
                 [ text "See More" ]
@@ -201,8 +201,8 @@ viewCardList items =
 
 viewCardEmpty : List (Html msg) -> Html msg
 viewCardEmpty content =
-    div [ class "card" ]
-        [ div [ class "card__list-empty" ] [ span [] content ] ]
+    div [ class "shadow-md rounded-lg bg-white p-4" ]
+        [ span [] content ]
 
 
 viewTitle : String -> Html msg
