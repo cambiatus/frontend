@@ -2,6 +2,18 @@
 # yarn lockfile v1
 
 
+"@absinthe/socket@^0.2.1":
+  version "0.2.1"
+  resolved "https://registry.yarnpkg.com/@absinthe/socket/-/socket-0.2.1.tgz#dd0d7bfc8e149f8376429c7fc2e87ac958578b91"
+  integrity sha512-rCuMRG4WndooGR+QfU5v+xL6U8YKEXFyvjqYt0qTHupAh+k+tpD6a5dlxcLO0g38p/hb1I12OzKvl+0G1XYCkA==
+  dependencies:
+    "@babel/runtime" "7.2.0"
+    "@jumpn/utils-array" "0.3.4"
+    "@jumpn/utils-composite" "0.7.0"
+    "@jumpn/utils-graphql" "0.6.0"
+    core-js "2.6.0"
+    zen-observable "0.8.11"
+
 "@babel/cli@7.2.3":
   version "7.2.3"
   resolved "https://registry.yarnpkg.com/@babel/cli/-/cli-7.2.3.tgz#1b262e42a3e959d28ab3d205ba2718e1923cfee6"
@@ -595,6 +607,13 @@
     js-levenshtein "^1.1.3"
     semver "^5.3.0"
 
+"@babel/runtime@7.2.0":
+  version "7.2.0"
+  resolved "https://registry.yarnpkg.com/@babel/runtime/-/runtime-7.2.0.tgz#b03e42eeddf5898e00646e4c840fa07ba8dcad7f"
+  integrity sha512-oouEibCbHMVdZSDlJBO6bZmID/zA/G/Qx3H1d3rSNPTD+L8UNKvCat7aKWSJ74zYbm5zWGh0GQN0hKj8zYFTCg==
+  dependencies:
+    regenerator-runtime "^0.12.0"
+
 "@babel/runtime@7.3.4":
   version "7.3.4"
   resolved "https://registry.yarnpkg.com/@babel/runtime/-/runtime-7.3.4.tgz#73d12ba819e365fcf7fd152aed56d6df97d21c83"
@@ -659,6 +678,7 @@
     graphql-request "^1.8.2"
     request "^2.88.0"
 
+<<<<<<< HEAD
 "@hapi/address@2.x.x":
   version "2.1.2"
   resolved "https://registry.yarnpkg.com/@hapi/address/-/address-2.1.2.tgz#1c794cd6dbf2354d1eb1ef10e0303f573e1c7222"
@@ -690,6 +710,36 @@
   integrity sha512-tAag0jEcjwH+P2quUfipd7liWCNX2F8NvYjQp2wtInsZxnMlypdw0FtAOLxtvvkO+GSRRbmNi8m/5y42PQJYCQ==
   dependencies:
     "@hapi/hoek" "^8.3.0"
+=======
+"@jumpn/utils-array@0.3.4":
+  version "0.3.4"
+  resolved "https://registry.yarnpkg.com/@jumpn/utils-array/-/utils-array-0.3.4.tgz#fb4310120108f659dab54075ef93abc56137de5e"
+  integrity sha1-+0MQEgEI9lnatUB175OrxWE33l4=
+  dependencies:
+    babel-polyfill "6.26.0"
+    babel-runtime "6.26.0"
+    flow-static-land "0.2.7"
+
+"@jumpn/utils-composite@0.7.0":
+  version "0.7.0"
+  resolved "https://registry.yarnpkg.com/@jumpn/utils-composite/-/utils-composite-0.7.0.tgz#1979db00dd9465ebc33826adab17f1dd48e6fd0c"
+  integrity sha512-kamRVYJLNvjMrnKKeu2RSFQHLUO/IYFo05gLI7GQcCk063mJzsjCCfRycCievIBI+5Sg8C7A5gwRYxkBA5jY8w==
+  dependencies:
+    "@jumpn/utils-array" "0.3.4"
+    babel-polyfill "6.26.0"
+    babel-runtime "6.26.0"
+    fast-deep-equal "1.0.0"
+    flow-static-land "0.2.8"
+
+"@jumpn/utils-graphql@0.6.0":
+  version "0.6.0"
+  resolved "https://registry.yarnpkg.com/@jumpn/utils-graphql/-/utils-graphql-0.6.0.tgz#9afd384c14e3f4caf68fa3ebeb3270218b18e931"
+  integrity sha512-I5OSEh8Ed4FdLIcUTYzWdpO9noQOoWptdgF8yOZ0xhDD7h7E9IgPYxfy36qbC6v9xlpGTwQMu3Wn8ulkinG/MQ==
+  dependencies:
+    "@babel/runtime" "7.2.0"
+    core-js "2.6.0"
+    graphql "14.0.2"
+>>>>>>> c861ac3... Add subscription packages and bump version for new feature
 
 "@mrmlnc/readdir-enhanced@^2.2.1":
   version "2.2.1"
@@ -1381,6 +1431,7 @@ babel-loader@8.0.4:
     mkdirp "^0.5.1"
     util.promisify "^1.0.0"
 
+<<<<<<< HEAD
 babel-plugin-dynamic-import-node@^2.3.0:
   version "2.3.0"
   resolved "https://registry.yarnpkg.com/babel-plugin-dynamic-import-node/-/babel-plugin-dynamic-import-node-2.3.0.tgz#f00f507bdaa3c3e3ff6e7e5e98d90a7acab96f7f"
@@ -1400,6 +1451,16 @@ babel-plugin-transform-object-rest-spread@^6.26.0:
   dependencies:
     babel-plugin-syntax-object-rest-spread "^6.8.0"
     babel-runtime "^6.26.0"
+=======
+babel-polyfill@6.26.0:
+  version "6.26.0"
+  resolved "https://registry.yarnpkg.com/babel-polyfill/-/babel-polyfill-6.26.0.tgz#379937abc67d7895970adc621f284cd966cf2153"
+  integrity sha1-N5k3q8Z9eJWXCtxiHyhM2WbPIVM=
+  dependencies:
+    babel-runtime "^6.26.0"
+    core-js "^2.5.0"
+    regenerator-runtime "^0.10.5"
+>>>>>>> c861ac3... Add subscription packages and bump version for new feature
 
 babel-runtime@6.26.0, babel-runtime@^6.26.0:
   version "6.26.0"
@@ -2461,7 +2522,17 @@ copy-webpack-plugin@^5.0.4:
     serialize-javascript "^1.7.0"
     webpack-log "^2.0.0"
 
+core-js@2.6.0:
+  version "2.6.0"
+  resolved "https://registry.yarnpkg.com/core-js/-/core-js-2.6.0.tgz#1e30793e9ee5782b307e37ffa22da0eacddd84d4"
+  integrity sha512-kLRC6ncVpuEW/1kwrOXYX6KQASCVtrh1gQr/UiaVgFlf9WE5Vp+lNe5+h3LuMr5PAucWnnEXwH0nQHRH/gpGtw==
+
 core-js@^2.4.0:
+  version "2.6.10"
+  resolved "https://registry.yarnpkg.com/core-js/-/core-js-2.6.10.tgz#8a5b8391f8cc7013da703411ce5b585706300d7f"
+  integrity sha512-I39t74+4t+zau64EN1fE5v2W31Adtc/REhzWN+gWRRXg6WH5qAsZm62DHpQ1+Yhe4047T55jvzz7MUqF/dBBlA==
+
+core-js@^2.5.0:
   version "2.6.10"
   resolved "https://registry.yarnpkg.com/core-js/-/core-js-2.6.10.tgz#8a5b8391f8cc7013da703411ce5b585706300d7f"
   integrity sha512-I39t74+4t+zau64EN1fE5v2W31Adtc/REhzWN+gWRRXg6WH5qAsZm62DHpQ1+Yhe4047T55jvzz7MUqF/dBBlA==
@@ -3406,6 +3477,7 @@ elm-test@^0.19.1, elm-test@latest-0.19.1:
     which "2.0.1"
     xmlbuilder "^13.0.2"
 
+<<<<<<< HEAD
 elm-webpack-loader@6.0.0:
   version "6.0.0"
   resolved "https://registry.yarnpkg.com/elm-webpack-loader/-/elm-webpack-loader-6.0.0.tgz#a281a3b391003b409509259cca8a3accdb88754e"
@@ -3420,6 +3492,11 @@ elm-webpack-loader@^6.0.1:
   version "6.0.1"
   resolved "https://registry.yarnpkg.com/elm-webpack-loader/-/elm-webpack-loader-6.0.1.tgz#45db22979385f114cd56530700cef5b7f33cc9cb"
   integrity sha512-SkltiDAbegaiPxsQq7sxqTyRUXzD4n6UaT9JTZXIYoAjAEi/ogaIbYLQD6Ne5ZaSW3JOo6S/vb+VO5v0qDdirw==
+=======
+elm-webpack-loader@^6.0.0, "elm-webpack-loader@github:halfzebra/elm-webpack-loader#updated-elm-compiler":
+  version "6.0.0"
+  resolved "https://codeload.github.com/halfzebra/elm-webpack-loader/tar.gz/9ca0812c4885985ada19c28c27b841eb0e75c2d6"
+>>>>>>> c861ac3... Add subscription packages and bump version for new feature
   dependencies:
     glob "^7.1.1"
     loader-utils "^1.0.2"
@@ -4080,6 +4157,11 @@ eyes@0.1.x:
   resolved "https://registry.yarnpkg.com/eyes/-/eyes-0.1.8.tgz#62cf120234c683785d902348a800ef3e0cc20bc0"
   integrity sha1-Ys8SAjTGg3hdkCNIqADvPgzCC8A=
 
+fast-deep-equal@1.0.0:
+  version "1.0.0"
+  resolved "https://registry.yarnpkg.com/fast-deep-equal/-/fast-deep-equal-1.0.0.tgz#96256a3bc975595eb36d82e9929d060d893439ff"
+  integrity sha1-liVqO8l1WV6zbYLpkp0GDYk0Of8=
+
 fast-deep-equal@^2.0.1:
   version "2.0.1"
   resolved "https://registry.yarnpkg.com/fast-deep-equal/-/fast-deep-equal-2.0.1.tgz#7b05218ddf9667bf7f370bf7fdb2cb15fdd0aa49"
@@ -4331,6 +4413,16 @@ flatten@^1.0.2:
   version "1.0.3"
   resolved "https://registry.yarnpkg.com/flatten/-/flatten-1.0.3.tgz#c1283ac9f27b368abc1e36d1ff7b04501a30356b"
   integrity sha512-dVsPA/UwQ8+2uoFe5GHtiBMu48dWLTdsuEd7CKGlZlD78r1TTWBvDuFaFGKCo/ZfEr95Uk56vZoX86OsHkUeIg==
+
+flow-static-land@0.2.7:
+  version "0.2.7"
+  resolved "https://registry.yarnpkg.com/flow-static-land/-/flow-static-land-0.2.7.tgz#937f9dcb2780889a609155e5d1a55a993bc2ffb3"
+  integrity sha1-k3+dyyeAiJpgkVXl0aVamTvC/7M=
+
+flow-static-land@0.2.8:
+  version "0.2.8"
+  resolved "https://registry.yarnpkg.com/flow-static-land/-/flow-static-land-0.2.8.tgz#49617e531396928bae6eb5d8ba32e7071637e5b9"
+  integrity sha512-pOZFExu2rbscCgcEo7nL7FNhBubMi18dn1Un4lm8LOmQkYhgsHLsrBGMWmuJXRWcYMrOC7I/bPsiqqVjdD3K1g==
 
 flush-write-stream@^1.0.0:
   version "1.1.1"
@@ -4754,6 +4846,13 @@ graphql-request@^1.8.2:
   integrity sha512-dDX2M+VMsxXFCmUX0Vo0TopIZIX4ggzOtiCsThgtrKR4niiaagsGTDIHj3fsOMFETpa064vzovI+4YV4QnMbcg==
   dependencies:
     cross-fetch "2.2.2"
+
+graphql@14.0.2:
+  version "14.0.2"
+  resolved "https://registry.yarnpkg.com/graphql/-/graphql-14.0.2.tgz#7dded337a4c3fd2d075692323384034b357f5650"
+  integrity sha512-gUC4YYsaiSJT1h40krG3J+USGlwhzNTXSb4IOZljn9ag5Tj+RkoXrWp+Kh7WyE3t1NCfab5kzCuxBIvOMERMXw==
+  dependencies:
+    iterall "^1.2.2"
 
 gzip-size@5.0.0:
   version "5.0.0"
@@ -5767,6 +5866,11 @@ isstream@0.1.x, isstream@~0.1.2:
   version "0.1.2"
   resolved "https://registry.yarnpkg.com/isstream/-/isstream-0.1.2.tgz#47e63f7af55afa6f92e1500e690eb8b8529c099a"
   integrity sha1-R+Y/evVa+m+S4VAOaQ64uFKcCZo=
+
+iterall@^1.2.2:
+  version "1.2.2"
+  resolved "https://registry.yarnpkg.com/iterall/-/iterall-1.2.2.tgz#92d70deb8028e0c39ff3164fdbf4d8b088130cd7"
+  integrity sha512-yynBb1g+RFUPY64fTrFv7nsjRrENBQJaX2UL+2Szc9REFrSNm1rpSXHGzhmAy7a9uv3vlvgBlXnf9RqmPH1/DA==
 
 js-base64@^2.1.9:
   version "2.5.1"
@@ -7312,10 +7416,17 @@ performance-now@^2.1.0:
   resolved "https://registry.yarnpkg.com/performance-now/-/performance-now-2.1.0.tgz#6309f4e0e5fa913ec1c69307ae364b4b377c9e7b"
   integrity sha1-Ywn04OX6kT7BxpMHrjZLSzd8nns=
 
+<<<<<<< HEAD
 picomatch@^2.0.4, picomatch@^2.0.5:
   version "2.1.0"
   resolved "https://registry.yarnpkg.com/picomatch/-/picomatch-2.1.0.tgz#0fd042f568d08b1ad9ff2d3ec0f0bfb3cb80e177"
   integrity sha512-uhnEDzAbrcJ8R3g2fANnSuXZMBtkpSjxTTgn2LeSiQlfmq72enQJWdQllXW24MBLYnA1SBD2vfvx2o0Zw3Ielw==
+=======
+phoenix@^1.4.10:
+  version "1.4.10"
+  resolved "https://registry.yarnpkg.com/phoenix/-/phoenix-1.4.10.tgz#02ebd5bf57bdbeb3ff43d8de6d44a8af7968991b"
+  integrity sha512-apWRDNUj3c//fwh7F7ixh90qejE2j9FFw+e0qSDzYKzszByGrrv9uSmsqol/7x2E+r0GbkXKaeH93eXTQbhJ1A==
+>>>>>>> c861ac3... Add subscription packages and bump version for new feature
 
 pify@^2.0.0, pify@^2.3.0:
   version "2.3.0"
@@ -8580,6 +8691,11 @@ regenerate@^1.2.1, regenerate@^1.4.0:
   version "1.4.0"
   resolved "https://registry.yarnpkg.com/regenerate/-/regenerate-1.4.0.tgz#4a856ec4b56e4077c557589cae85e7a4c8869a11"
   integrity sha512-1G6jJVDWrt0rK99kBjvEtziZNCICAuvIPkSiUFIQxVP06RCVpq3dmDo2oi6ABpYaDYaTRr67BEhL8r1wgEZZKg==
+
+regenerator-runtime@^0.10.5:
+  version "0.10.5"
+  resolved "https://registry.yarnpkg.com/regenerator-runtime/-/regenerator-runtime-0.10.5.tgz#336c3efc1220adcedda2c9fab67b5a7955a33658"
+  integrity sha1-M2w+/BIgrc7dosn6tntaeVWjNlg=
 
 regenerator-runtime@^0.11.0:
   version "0.11.1"
@@ -10898,3 +11014,8 @@ yargs@^6.5.0:
     which-module "^1.0.0"
     y18n "^3.2.1"
     yargs-parser "^4.2.0"
+
+zen-observable@0.8.11:
+  version "0.8.11"
+  resolved "https://registry.yarnpkg.com/zen-observable/-/zen-observable-0.8.11.tgz#d3415885eeeb42ee5abb9821c95bb518fcd6d199"
+  integrity sha512-N3xXQVr4L61rZvGMpWe8XoCGX8vhU35dPyQ4fm5CY/KDlG0F75un14hjbckPXTDuKUY6V0dqR2giT6xN8Y4GEQ==
