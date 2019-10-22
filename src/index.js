@@ -12,6 +12,8 @@ import registerServiceWorker from './scripts/registerServiceWorker'
 import * as pushSub from './scripts/pushNotifications'
 import { Elm } from './elm/Main.elm'
 import * as Sentry from '@sentry/browser'
+import * as AbsintheSocket from '@absinthe/socket'
+const { Socket: PhoenixSocket } = require('phoenix')
 
 // =========================================
 // App startup
@@ -805,6 +807,59 @@ async function handleJavascriptPort (arg) {
     case 'hideFooter': {
       devLog('======================', 'hideFooter')
       document.getElementById('guest-footer').className += ' guest__footer'
+      break
+    }
+    case 'subscribeToNewCommunity': {
+      devLog('=====================', 'newCommunitySubscriptin')
+      let notifiers = []
+
+      // Open a socket connection
+      const socketConn = new PhoenixSocket('wss://api.cambiatus.io/socket', {})
+
+      // Build a graphql Socket
+      const abSocket = AbsintheSocket.create(socketConn)
+
+      // Remove existing notifiers if any
+      notifiers.map(notifier => AbsintheSocket.cancel(abSocket, notifier))
+
+      // Create new notifiers
+      notifiers = [arg.data.subscription].map(operation =>
+        AbsintheSocket.send(abSocket, {
+          operation,
+          variables: {}
+        })
+      )
+
+      let onStart = (data) => {
+        devLog('==========================', 'starting community subscription')
+      }
+
+      let onAbort = (data) => {
+        devLog('===========================', 'aborting community subscription')
+      }
+
+      let onCancel = (data) => {
+        devLog('===========================', 'cancellling community subscription ')
+      }
+
+      let onError = (data) => {
+        devLog('===========================', 'community subscription errored out')
+      }
+
+      let onResult = (data) => {
+        devLog('===========================', 'community subscription results')
+        // Send port message to app
+      }
+
+      notifiers.map(notifier => {
+        AbsintheSocket.observe(abSocket, notifier, {
+          onAbort,
+          onError,
+          onCancel,
+          onStart,
+          onResult
+        })
+      })
       break
     }
     default: {
