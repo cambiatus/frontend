@@ -1,5 +1,6 @@
 {
   "bespiral": "Cambiatus",
+  "back": "Torna",
   "menu": {
     "title": "Menú",
     "my_communities": "Les meves comunitats",
@@ -257,8 +258,13 @@
       "title": "Objectiu",
       "title_plural": "Objectius",
       "new": "Nou objectiu",
-      "description_label": "Quin és el teu objectiu?",
-      "description_placeholder": "Defineix un objectiu que resolgui el problema al que s’enfronta la teva comunitat."
+      "editor": {
+        "not_found": "No trobat",
+        "error": "Ui! Quelcom ha fallat",
+        "description_label": "Quin és el teu objectiu?",
+        "description_placeholder": "Defineix un objectiu que resolgui el problema al que s’enfronta la teva comunitat.",
+        "submit": "Guardar"
+      }
     },
     "actions": {
       "title": "Acció",

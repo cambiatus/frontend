@@ -10,8 +10,8 @@ view session =
     let
         shared =
             Page.toShared session
+
+        text_ =
+            t shared.translations
     in
-    div []
-        [ Page.viewTitle (t shared.translations "error.pageNotFound")
-        , text (t shared.translations "error.pageNotFound")
-        ]
+    Page.fullPageNotFound (text_ "error.pageNotFound") ""

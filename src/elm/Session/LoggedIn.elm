@@ -303,7 +303,7 @@ viewHeader ({ shared } as model) profile_ =
             ]
         , div [ class "hidden lg:block lg:visible w-1/2" ] [ searchBar model ]
         , div [ class "w-1/3 h-10 flex z-20 lg:w-1/4" ]
-            [ div [ class "flex flex-row mx-auto" ]
+            [ div [ class "relative mx-auto overflow-visible" ]
                 [ a
                     [ class "outline-none"
                     , Route.href Route.Notification
@@ -313,7 +313,7 @@ viewHeader ({ shared } as model) profile_ =
                     text ""
 
                   else
-                    div [ class "bg-orange-100 text-menu text-white p-1 rounded-full h-4 flex flex-col justify-center" ]
+                    div [ class "absolute top-0 right-0 -mt-4 -mr-4 px-2 py-1 bg-orange-100 text-xs rounded-full" ]
                         [ text (String.fromInt model.unreadCount) ]
                 ]
             , button

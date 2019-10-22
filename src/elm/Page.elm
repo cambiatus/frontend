@@ -1,4 +1,4 @@
-module Page exposing (ExternalMsg(..), Msg, Session(..), errorToString, fullPageError, fullPageGraphQLError, fullPageLoading, init, isLoggedIn, jsAddressToMsg, labelWithTooltip, loading, login, logout, msgToString, onFileChange, subscriptions, toShared, update, viewButtonNew, viewCardEmpty, viewCardList, viewDateDistance, viewGuest, viewLoggedIn, viewMaxTwoColumn, viewMenuFilter, viewMenuFilterButton, viewMenuFilterDropdown, viewMenuFilterDropdownOption, viewTitle)
+module Page exposing (ExternalMsg(..), Msg, Session(..), errorToString, fullPageError, fullPageGraphQLError, fullPageLoading, fullPageNotFound, init, isLoggedIn, jsAddressToMsg, labelWithTooltip, loading, login, logout, msgToString, onFileChange, subscriptions, toShared, update, viewButtonNew, viewCardEmpty, viewCardList, viewDateDistance, viewGuest, viewLoggedIn, viewMaxTwoColumn, viewMenuFilter, viewMenuFilterButton, viewMenuFilterDropdown, viewMenuFilterDropdownOption, viewTitle)
 
 import Account exposing (Profile)
 import Asset.Icon as Icon
@@ -274,12 +274,23 @@ fullPageError title_ e =
 
 fullPageGraphQLError : String -> Graphql.Http.Error a -> Html msg
 fullPageGraphQLError title_ e =
-    div []
-        [ viewTitle title_
-        , div [ class "card" ]
-            [ p [] [ text "Something wrong happened." ]
-            , p [] [ text (errorToString e) ]
+    div [ class "mx-auto container p-24 flex flex-wrap" ]
+        [ div [ class "w-full" ]
+            [ p [ class "text-2xl font-bold text-center" ] [ text title_ ]
+            , p [ class "text-center" ] [ text (errorToString e) ]
             ]
+        , img [ class "w-full", src "/images/error.svg" ] []
+        ]
+
+
+fullPageNotFound : String -> String -> Html msg
+fullPageNotFound title subTitle =
+    div [ class "mx-auto container p-24 flex flex-wrap" ]
+        [ div [ class "w-full" ]
+            [ p [ class "text-2xl font-bold text-center" ] [ text title ]
+            , p [ class "text-center" ] [ text subTitle ]
+            ]
+        , img [ class "w-full", src "/images/not_found.svg" ] []
         ]
 
 

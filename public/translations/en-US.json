@@ -1,5 +1,6 @@
 {
   "bespiral": "Cambiatus",
+  "back": "Back",
   "menu": {
     "title": "Menu",
     "my_communities": "My Communities",
@@ -256,10 +257,12 @@
       "title": "Objective",
       "title_plural": "Objectives",
       "new": "New objective",
-      "description_label": "What is your objective?",
-      "description_placeholder": "Set a goal that helps resolve the community problem.",
       "editor": {
-        "back": "Back"
+        "not_found": "Not Found",
+        "error": "Ops something went wrong!",
+        "description_label": "What is your objective?",
+        "description_placeholder": "Set a goal that helps resolve the community problem.",
+        "submit": "Save"
       }
     },
     "actions": {

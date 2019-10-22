@@ -313,6 +313,11 @@ update msg model =
                 >> updateLoggedInUResult CommunityEditor GotCommunityEditorMsg model
                 |> withLoggedIn
 
+        ( GotObjectiveEditorMsg subMsg, ObjectiveEditor subModel ) ->
+            ObjectiveEditor.update subMsg subModel
+                >> updateLoggedInUResult ObjectiveEditor GotObjectiveEditorMsg model
+                |> withLoggedIn
+
         ( GotCommunityExploreMsg subMsg, CommunityExplore subModel ) ->
             CommunityExplore.update subMsg subModel
                 >> updateLoggedInUResult CommunityExplore GotCommunityExploreMsg model

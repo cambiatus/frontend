@@ -423,7 +423,8 @@ viewHeader session =
             , Route.href (Route.Shop (Just Shop.MyCommunities))
             ]
             [ Icons.back ""
-            , p [ class "text-white text-sm ml-2" ] [ text (t shared.translations "dashboard.back") ]
+            , p [ class "text-white text-sm ml-2" ]
+                [ text (t shared.translations "back") ]
             ]
         ]
 

@@ -17,7 +17,7 @@ import Html.Attributes exposing (..)
 import Html.Events exposing (onClick, onInput, onSubmit, targetValue)
 import Html.Lazy
 import Http
-import I18Next exposing (Translations)
+import I18Next exposing (Translations, t)
 import Icons exposing (..)
 import Json.Decode as Decode exposing (Decoder)
 import Json.Encode as Encode exposing (Value)
@@ -143,29 +143,6 @@ emptyObjectiveForm =
     }
 
 
-type alias ActionForm =
-    { description : String
-    , reward : String
-    , verification : Verification
-    , verificationReward : String
-    , database : String
-    , save : SaveStatus
-    , validators : List String
-    }
-
-
-emptyActionForm : ActionForm
-emptyActionForm =
-    { description = ""
-    , reward = ""
-    , verification = Manually
-    , verificationReward = ""
-    , database = ""
-    , save = NotAsked
-    , validators = []
-    }
-
-
 type Verification
     = Manually
     | Automatically
@@ -247,58 +224,44 @@ view loggedIn model =
                 canEdit =
                     LoggedIn.isAccount community.creator loggedIn
             in
-            div [ class "container mx-auto px-4" ]
-                [ viewClaimModal loggedIn model
-                , viewMessageStatus loggedIn model
-                , Page.viewTitle (Eos.symbolToString community.symbol ++ " - " ++ community.title)
-                , div [ class "card card--community-view" ]
-                    [ div [ class "card-community-view" ]
-                        [ h3 [ class "card-community-view__description-title" ]
-                            [ text_ "community.create.labels.description" ]
-                        , div [ class "card-community-view__description-container" ]
-                            [ div
-                                [ class "card__image-background"
-                                , Community.logoBackground ipfsUrl
-                                    (Just community.logo)
+            div [ class "" ]
+                [ viewHeader loggedIn community
+                , div [ class "bg-white p-20" ]
+                    [ div [ class "flex flex-wrap w-full items-center" ]
+                        [ p [ class "text-4xl font-bold" ]
+                            [ text community.title ]
+                        , if canEdit then
+                            a
+                                [ classList
+                                    [ ( "hidden", editStatus /= NoEdit )
+                                    ]
+                                , class "button button-secondary button-small w-16 ml-4"
+                                , Route.href (Route.EditCommunity community.symbol)
                                 ]
-                                []
-                            , p [ class "card-community-view__description" ] [ text community.description ]
-                            ]
+                                [ text "edit" ]
+
+                          else
+                            text ""
                         ]
-                    , if canEdit then
-                        a
-                            [ classList
-                                [ ( "edit-button", True )
-                                , ( "circle-background", True )
-                                , ( "circle-background--primary", True )
-                                , ( "hidden", editStatus /= NoEdit )
-                                ]
-                            , Route.href (Route.EditCommunity community.symbol)
-                            ]
-                            [ Icon.edit "" ]
-
-                      else
-                        text ""
+                    , p [ class "text-grey-200 text-sm" ] [ text community.description ]
                     ]
-                , div [ class "bg-white py-6 sm:py-8 px-3 sm:px-6 rounded-lg sm:rounded" ]
-                    ([ Page.viewTitle (t "community.objectives.title_plural") ]
-                        ++ List.indexedMap (viewObjective loggedIn model editStatus community)
-                            community.objectives
-                        ++ [ if canEdit then
-                                viewObjectiveNew loggedIn (List.length community.objectives) editStatus
+                , div [ class "container mx-auto px-4" ]
+                    [ viewClaimModal loggedIn model
+                    , viewMessageStatus loggedIn model
+                    , div [ class "bg-white py-6 sm:py-8 px-3 sm:px-6 rounded-lg sm:rounded mt-4" ]
+                        ([ Page.viewTitle (t "community.objectives.title_plural") ]
+                            ++ List.indexedMap (viewObjective loggedIn model editStatus community)
+                                community.objectives
+                            ++ [ if canEdit then
+                                    viewObjectiveNew loggedIn (List.length community.objectives) editStatus
 
-                             else
-                                text ""
-                           ]
-                    )
-                , Transfer.getTransfers (Just community)
-                    |> viewSections loggedIn model
-                , a
-                    [ class "btn btn--outline btn--big"
-                    , style "margin-top" "2rem"
-                    , Route.href Route.Dashboard
+                                 else
+                                    text ""
+                               ]
+                        )
+                    , Transfer.getTransfers (Just community)
+                        |> viewSections loggedIn model
                     ]
-                    [ text_ "menu.back_to_dashboard" ]
                 ]
 
 
@@ -733,6 +696,33 @@ viewAction loggedIn metadata maybeDate action =
         ]
 
 
+viewHeader : LoggedIn.Model -> Community -> Html Msg
+viewHeader ({ shared } as loggedIn) community =
+    div []
+        [ div [ class "h-16 w-full bg-indigo-500 flex px-4 items-center" ]
+            [ a
+                [ class "items-center flex absolute"
+                , Route.href Route.Communities
+                ]
+                [ Icons.back ""
+                , p [ class "text-white text-sm ml-2" ]
+                    [ text (t shared.translations "back")
+                    ]
+                ]
+            , p [ class "text-white mx-auto" ] [ text community.title ]
+            ]
+        , div [ class "h-24 lg:h-56 bg-indigo-500 flex flex-wrap content-end" ]
+            [ div [ class "h-24 w-24 h-24 w-24 rounded-full mx-auto pt-12" ]
+                [ img
+                    [ src (shared.endpoints.ipfs ++ "/" ++ community.logo)
+                    , class "object-scale-down "
+                    ]
+                    []
+                ]
+            ]
+        ]
+
+
 viewMessageStatus : LoggedIn.Model -> Model -> Html msg
 viewMessageStatus loggedIn model =
     let
@@ -913,7 +903,7 @@ viewSections loggedIn model allTransfers =
         [ Page.viewTitle (t "transfer.last_title")
         , case allTransfers of
             [] ->
-                Page.viewCardEmpty [ text (t "community.actions.no_transfers_yet") ]
+                Page.viewCardEmpty [ text (t "transfer.no_transfers_yet") ]
 
             transfers ->
                 Page.viewCardList
