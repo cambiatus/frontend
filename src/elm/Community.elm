@@ -12,9 +12,10 @@ import Bespiral.Object.Objective as Objective
 import Bespiral.Object.Validator
 import Bespiral.Query as Query
 import Bespiral.Scalar exposing (DateTime(..))
+import Bespiral.Subscription as Subscription
 import Eos exposing (EosBool(..), Symbol, symbolToString)
 import Eos.Account as Eos
-import Graphql.Operation exposing (RootQuery)
+import Graphql.Operation exposing (RootQuery, RootSubscription)
 import Graphql.OptionalArgument exposing (OptionalArgument(..))
 import Graphql.SelectionSet as SelectionSet exposing (SelectionSet, with)
 import Html exposing (Html)
@@ -129,6 +130,18 @@ communitiesQuery =
             { args | first = Present 0 }
         )
         |> Query.communities
+
+
+newCommunitySubscription : Symbol -> SelectionSet (Maybe DashboardInfo) RootSubscription
+newCommunitySubscription symbol =
+    let
+        stringSymbol =
+            symbolToString symbol
+
+        args =
+            { input = { symbol = Present stringSymbol } }
+    in
+    Subscription.newCommunity args dashboardSelectionSet
 
 
 logoTitleQuery : Symbol -> SelectionSet (Maybe DashboardInfo) RootQuery
