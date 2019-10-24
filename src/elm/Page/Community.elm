@@ -107,10 +107,6 @@ type LoadStatus
 type EditStatus
     = NoEdit
     | OpenObjective Int
-    | NewObjective ObjectiveForm
-    | EditObjective Int ObjectiveForm
-    | NewAction Int ActionForm
-    | EditAction Int Int ActionForm
 
 
 type SaveStatus
@@ -173,21 +169,6 @@ decodeMembers =
             (Decode.field "account" Decode.string)
         )
         |> Decode.field "data"
-
-
-actionFormToAction : LoggedIn.Model -> ActionForm -> Community.Action
-actionFormToAction loggedIn action =
-    { description = action.description
-    , reward = String.toFloat action.reward |> Maybe.withDefault 0
-    , verificationReward = String.toFloat action.verificationReward |> Maybe.withDefault 0
-    , creator = loggedIn.accountName
-    , validators = []
-    , usages = 0
-    , usagesLeft = 0
-    , deadline = Just (DateTime "")
-    , verificationType = VerificationType.Automatic
-    , id = 0
-    }
 
 
 
@@ -253,7 +234,7 @@ view loggedIn model =
                             ++ List.indexedMap (viewObjective loggedIn model editStatus community)
                                 community.objectives
                             ++ [ if canEdit then
-                                    viewObjectiveNew loggedIn (List.length community.objectives) editStatus
+                                    viewObjectiveNew loggedIn (List.length community.objectives) editStatus community.symbol
 
                                  else
                                     text ""
@@ -393,93 +374,20 @@ viewObjective loggedIn model editStatus metadata index objective =
         ]
 
 
-viewObjectiveForm : LoggedIn.Model -> Int -> ObjectiveForm -> Html Msg
-viewObjectiveForm loggedIn index objective =
-    let
-        text_ s =
-            text (I18Next.t loggedIn.shared.translations s)
-
-        isDisabled =
-            objective.save == Saving
-    in
-    Html.form [ onSubmit ClickedSaveObjective ]
-        [ viewObjectiveFieldDescription loggedIn isDisabled ("comm-obj-desc-" ++ String.fromInt index) objective
-        , div [ class "btn-row" ]
-            [ button
-                [ classList
-                    [ ( "btn", True )
-                    , ( "btn--primary", True )
-                    , ( "btn--outline", True )
-                    ]
-                , disabled isDisabled
-                , type_ "button"
-                , onClick ClickedEditCancel
-                ]
-                [ text_ "menu.cancel" ]
-            , button
-                [ classList
-                    [ ( "btn", True )
-                    , ( "btn--primary", True )
-                    ]
-                , disabled isDisabled
-                ]
-                [ text_ "menu.save" ]
-            ]
-        ]
-
-
-viewObjectiveFieldDescription : LoggedIn.Model -> Bool -> String -> ObjectiveForm -> Html Msg
-viewObjectiveFieldDescription loggedIn isDisabled id_ objective =
+viewObjectiveNew : LoggedIn.Model -> Int -> EditStatus -> Symbol -> Html Msg
+viewObjectiveNew loggedIn index edit communityId =
     let
         t s =
             I18Next.t loggedIn.shared.translations s
     in
-    formField
-        [ label [ for id_ ] [ text (t "community.objectives.description_label") ]
-        , textarea
-            [ id id_
-            , class "input"
-            , onInput EnteredObjectiveDescription
-            , placeholder (t "community.objectives.description_placeholder")
-            , value objective.description
-            , disabled isDisabled
-            , required True
-            , maxlength 254
-            ]
-            []
-        , viewFieldError loggedIn.shared id_ objective.save
+    a
+        [ class "border border-dashed border-button-orange mt-6 w-full flex flex-row content-start px-4 py-2"
+        , Route.href (Route.NewObjective communityId)
+        , disabled (edit /= NoEdit)
         ]
-
-
-viewObjectiveNew : LoggedIn.Model -> Int -> EditStatus -> Html Msg
-viewObjectiveNew loggedIn index edit =
-    let
-        t s =
-            I18Next.t loggedIn.shared.translations s
-    in
-    case edit of
-        NewObjective objForm ->
-            div
-                [ classList
-                    [ ( "card", True )
-                    , ( "card--form", True )
-                    ]
-                , style "margin-bottom" "3rem"
-                ]
-                [ h3 [ class "form-title form-title--with-button" ]
-                    [ span [] [ text (t "community.objectives.title" ++ " " ++ indexToString index) ] ]
-                , viewObjectiveForm loggedIn index objForm
-                ]
-
-        _ ->
-            button
-                [ class "border border-dashed border-button-orange mt-6 w-full flex flex-row content-start px-4 py-2"
-                , onClick ClickedNewObjective
-                , disabled (edit /= NoEdit)
-                ]
-                [ span [ class "px-2 text-button-orange font-medium" ] [ text "+" ]
-                , span [ class "text-button-orange font-medium" ] [ text (t "community.objectives.new") ]
-                ]
+        [ span [ class "px-2 text-button-orange font-medium" ] [ text "+" ]
+        , span [ class "text-button-orange font-medium" ] [ text (t "community.objectives.new") ]
+        ]
 
 
 
@@ -939,14 +847,8 @@ type Msg
     = GotTime Posix
     | CompletedLoadCommunity (Result (Graphql.Http.Error (Maybe Community)) (Maybe Community))
       -- Objective
-    | EnteredObjectiveDescription String
-    | ClickedSaveObjective
-    | GotSaveObjectiveResponse (Result Value String)
-    | ClickedNewObjective
     | ClickedOpenObjective Int
     | ClickedCloseObjective
-    | ClickedEditObjective Int Community.Objective
-    | ClickedEditCancel
       -- Action
     | CreateAction Symbol String
     | OpenClaimConfirmation Int
@@ -973,138 +875,6 @@ update msg model loggedIn =
             { model | community = Failed err }
                 |> UR.init
                 |> UR.logGraphqlError msg err
-
-        EnteredObjectiveDescription s ->
-            UR.init model
-                |> updateObjective msg (\o -> { o | description = s })
-
-        ClickedSaveObjective ->
-            let
-                saveObjective obj comm toModel =
-                    toModel { obj | save = Saving }
-                        |> updateCommunity model
-                        |> UR.init
-                        |> UR.addPort
-                            { responseAddress = ClickedSaveObjective
-                            , responseData = Encode.null
-                            , data =
-                                Eos.encodeTransaction
-                                    { actions =
-                                        [ { accountName = "bes.cmm"
-                                          , name = "newobjective"
-                                          , authorization =
-                                                { actor = loggedIn.accountName
-                                                , permissionName = Eos.samplePermission
-                                                }
-                                          , data =
-                                                { symbol = comm.symbol
-                                                , description = obj.description
-                                                , creator = loggedIn.accountName
-                                                }
-                                                    |> Community.encodeCreateObjectiveAction
-                                          }
-                                        ]
-                                    }
-                            }
-            in
-            case ( model.community, LoggedIn.isAuth loggedIn ) of
-                ( _, False ) ->
-                    UR.init model
-                        |> UR.addExt
-                            (Just ClickedSaveObjective
-                                |> RequiredAuthentication
-                            )
-
-                ( Loaded community (NewObjective objective), True ) ->
-                    saveObjective
-                        objective
-                        community
-                        (Loaded community << NewObjective)
-
-                ( Loaded community (EditObjective index objective), True ) ->
-                    saveObjective
-                        objective
-                        community
-                        (Loaded community << EditObjective index)
-
-                _ ->
-                    UR.init model
-                        |> UR.logImpossible msg []
-
-        GotSaveObjectiveResponse (Ok txId) ->
-            case model.community of
-                Loaded community (NewObjective objective) ->
-                    UR.init model
-                        |> UR.addCmd (Route.replaceUrl loggedIn.shared.navKey (Route.Community community.symbol))
-
-                Loaded community (EditObjective index objective) ->
-                    { model
-                        | community =
-                            Loaded
-                                { community
-                                    | objectives =
-                                        List.indexedMap
-                                            (\i o ->
-                                                if i == index then
-                                                    { o | description = objective.description }
-
-                                                else
-                                                    o
-                                            )
-                                            community.objectives
-                                }
-                                NoEdit
-                    }
-                        |> UR.init
-
-                _ ->
-                    UR.init model
-                        |> UR.logImpossible msg []
-
-        GotSaveObjectiveResponse (Err v) ->
-            UR.init model
-                |> updateObjective msg (\o -> { o | save = SaveFailed Dict.empty })
-                |> UR.logDebugValue msg v
-
-        ClickedNewObjective ->
-            case model.community of
-                Loaded community NoEdit ->
-                    { model
-                        | community =
-                            NewObjective emptyObjectiveForm
-                                |> Loaded community
-                    }
-                        |> UR.init
-
-                _ ->
-                    UR.init model
-                        |> UR.logImpossible msg []
-
-        ClickedEditObjective index objective ->
-            case model.community of
-                Loaded community NoEdit ->
-                    { model
-                        | community =
-                            { emptyObjectiveForm
-                                | description = objective.description
-                            }
-                                |> EditObjective index
-                                |> Loaded community
-                    }
-                        |> UR.init
-
-                _ ->
-                    UR.init model
-                        |> UR.logImpossible msg []
-
-        ClickedEditCancel ->
-            case model.community of
-                Loaded community _ ->
-                    UR.init { model | community = Loaded community NoEdit }
-
-                _ ->
-                    UR.init model
-                        |> UR.logImpossible msg []
 
         ClickedOpenObjective index ->
             { model | openObjective = Just index }
@@ -1179,73 +949,9 @@ updateCommunity model c =
     { model | community = c }
 
 
-updateObjective : Msg -> (ObjectiveForm -> ObjectiveForm) -> UpdateResult -> UpdateResult
-updateObjective msg fn uResult =
-    case uResult.model.community of
-        Loaded community (NewObjective objective) ->
-            UR.mapModel
-                (\m ->
-                    { m
-                        | community =
-                            Loaded community (NewObjective (fn objective))
-                    }
-                )
-                uResult
-
-        Loaded community (EditObjective index objective) ->
-            UR.mapModel
-                (\m ->
-                    { m
-                        | community =
-                            Loaded community (EditObjective index (fn objective))
-                    }
-                )
-                uResult
-
-        _ ->
-            uResult
-                |> UR.logImpossible msg []
-
-
-updateAction : Msg -> (ActionForm -> ActionForm) -> UpdateResult -> UpdateResult
-updateAction msg fn uResult =
-    case uResult.model.community of
-        Loaded community (NewAction objIndex action) ->
-            UR.mapModel
-                (\m ->
-                    Loaded community (NewAction objIndex (fn action))
-                        |> updateCommunity m
-                )
-                uResult
-
-        Loaded community (EditAction objIndex index action) ->
-            UR.mapModel
-                (\m ->
-                    Loaded community (EditAction objIndex index (fn action))
-                        |> updateCommunity m
-                )
-                uResult
-
-        _ ->
-            uResult
-                |> UR.logImpossible msg []
-
-
 jsAddressToMsg : List String -> Value -> Maybe Msg
 jsAddressToMsg addr val =
     case addr of
-        "ClickedSaveObjective" :: [] ->
-            Decode.decodeValue
-                (Decode.oneOf
-                    [ Decode.field "transactionId" Decode.string
-                        |> Decode.map Ok
-                    , Decode.succeed (Err val)
-                    ]
-                )
-                val
-                |> Result.map (Just << GotSaveObjectiveResponse)
-                |> Result.withDefault Nothing
-
         "ClaimAction" :: [] ->
             Decode.decodeValue
                 (Decode.oneOf
@@ -1270,29 +976,11 @@ msgToString msg =
         CompletedLoadCommunity r ->
             [ "CompletedLoadCommunity", UR.resultToString r ]
 
-        ClickedSaveObjective ->
-            [ "ClickedSaveObjective" ]
-
-        EnteredObjectiveDescription _ ->
-            [ "EnteredObjectiveDescription" ]
-
-        GotSaveObjectiveResponse r ->
-            [ "GotSaveObjectiveResponse", UR.resultToString r ]
-
-        ClickedNewObjective ->
-            [ "ClickedNewObjective" ]
-
         ClickedOpenObjective _ ->
             [ "ClickedOpenObjective" ]
 
         ClickedCloseObjective ->
             [ "ClickedCloseObjective" ]
-
-        ClickedEditObjective _ _ ->
-            [ "ClickedEditObjective" ]
-
-        ClickedEditCancel ->
-            [ "ClickedEditCancel" ]
 
         CreateAction _ _ ->
             [ "CreateAction" ]
