@@ -1,10 +1,15 @@
 module Page.Community.ObjectiveEditor exposing (Model, Msg, initEdit, initNew, jsAddressToMsg, msgToString, update, view)
 
 import Api.Graphql
-import Community exposing (Community)
-import Eos as Eos exposing (Symbol)
+import Bespiral.Object
+import Bespiral.Object.Community as Community
+import Bespiral.Object.Objective as Objective
+import Bespiral.Query as Query
+import Eos as Eos exposing (Symbol, symbolToString)
 import Eos.Account as Eos
 import Graphql.Http
+import Graphql.Operation exposing (RootQuery)
+import Graphql.SelectionSet as SelectionSet exposing (SelectionSet, with)
 import Html exposing (..)
 import Html.Attributes exposing (..)
 import Html.Events exposing (..)
@@ -23,16 +28,23 @@ import UpdateResult as UR
 
 initNew : LoggedIn.Model -> Symbol -> ( Model, Cmd Msg )
 initNew ({ shared } as loggedIn) communityId =
-    ( { status = LoadingNew communityId }
-    , Api.Graphql.query shared (Community.communityQuery communityId) CompletedCommunityLoad
+    ( { status = Loading communityId, objectiveId = Nothing }
+    , Api.Graphql.query shared (communityQuery communityId) CompletedCommunityLoad
     )
 
 
 initEdit : LoggedIn.Model -> Symbol -> Int -> ( Model, Cmd Msg )
 initEdit loggedIn communityId objectiveId =
-    ( { status = LoadingEdit communityId objectiveId }
+    ( { status = Loading communityId, objectiveId = Just objectiveId }
     , Cmd.none
     )
+
+
+emptyObjectiveForm : ObjectiveForm
+emptyObjectiveForm =
+    { description = ""
+    , save = NotAsked
+    }
 
 
 
@@ -41,6 +53,7 @@ initEdit loggedIn communityId objectiveId =
 
 type alias Model =
     { status : Status
+    , objectiveId : Maybe Int
     }
 
 
@@ -70,6 +83,28 @@ type alias ObjectiveForm =
     }
 
 
+type alias Community =
+    { symbol : Symbol
+    , creator : Eos.Name
+    , objectives : List Objective
+    }
+
+
+type alias Objective =
+    { id : Int
+    , description : String
+    }
+
+
+type alias UpdateResult =
+    UR.UpdateResult Model Msg (External Msg)
+
+
+type Msg
+    = CompletedCommunityLoad (Result (Graphql.Http.Error (Maybe Community)) (Maybe Community))
+    | ClickedSaveObjective Symbol
+
+
 initObjectiveForm =
     { description = ""
     , save = NotAsked
@@ -83,7 +118,7 @@ initObjectiveForm =
 view : LoggedIn.Model -> Model -> Html Msg
 view ({ shared } as loggedIn) model =
     case model.status of
-        LoadingNew _ ->
+        Loading _ ->
             Page.fullPageLoading
 
         NotFound ->
@@ -95,19 +130,11 @@ view ({ shared } as loggedIn) model =
         Unauthorized ->
             text "not allowed to edit"
 
-        Creating symbol ->
+        Loaded ({ symbol } as community) editStatus ->
             div []
                 [ viewHeader loggedIn model symbol
-                , viewForm loggedIn model False
-                ]
 
-        LoadingEdit symbol objectiveId ->
-            div [] []
-
-        Saving symbol ->
-            div []
-                [ viewHeader loggedIn model symbol
-                , viewForm loggedIn model True
+                -- , viewForm loggedIn model False
                 ]
 
 
@@ -127,36 +154,42 @@ viewHeader ({ shared } as loggedIn) model symbol =
         ]
 
 
-viewForm : LoggedIn.Model -> Model -> Bool -> Html Msg
-viewForm ({ shared } as loggedIn) model isDisabled =
-    div [ class "bg-white w-full p-10" ]
-        [ div [ class "w-form mx-auto" ]
-            [ Html.form [ class "mb-10", onSubmit ClickedSaveObjective ]
-                [ span [ class "input-label" ] [ text (t shared.translations "community.objectives.editor.description_label") ]
-                , textarea
-                    [ class "form-textarea block w-full rounded border"
-                    , rows 5
-                    , disabled isDisabled
-                    , placeholder (t shared.translations "community.objectives.editor.description_placeholder")
-                    ]
-                    []
-                ]
-            , button [ class "button button-primary", disabled isDisabled ] [ text (t shared.translations "community.objectives.editor.submit") ]
-            ]
-        ]
 
-
-
+-- viewForm : LoggedIn.Model -> Model -> Bool -> Html Msg
+-- viewForm ({ shared } as loggedIn) model isDisabled =
+--     div [ class "bg-white w-full p-10" ]
+--         [ div [ class "w-form mx-auto" ]
+--             [ Html.form [ class "mb-10", onSubmit ClickedSaveObjective ]
+--                 [ span [ class "input-label" ] [ text (t shared.translations "community.objectives.editor.description_label") ]
+--                 , textarea
+--                     [ class "form-textarea block w-full rounded border"
+--                     , rows 5
+--                     , disabled isDisabled
+--                     , placeholder (t shared.translations "community.objectives.editor.description_placeholder")
+--                     ]
+--                     []
+--                 ]
+--             , button [ class "button button-primary", disabled isDisabled ] [ text (t shared.translations "community.objectives.editor.submit") ]
+--             ]
+--         ]
 -- UPDATE
 
 
-type alias UpdateResult =
-    UR.UpdateResult Model Msg (External Msg)
+communityQuery : Symbol -> SelectionSet (Maybe Community) RootQuery
+communityQuery symbol =
+    Query.community { symbol = symbolToString symbol } <|
+        (SelectionSet.succeed Community
+            |> with (Eos.symbolSelectionSet Community.symbol)
+            |> with (Eos.nameSelectionSet Community.creator)
+            |> with (Community.objectives objectiveSelectionSet)
+        )
 
 
-type Msg
-    = CompletedCommunityLoad (Result (Graphql.Http.Error (Maybe Community)) (Maybe Community))
-    | ClickedSaveObjective Symbol
+objectiveSelectionSet : SelectionSet Objective Bespiral.Object.Objective
+objectiveSelectionSet =
+    SelectionSet.succeed Objective
+        |> with Objective.id
+        |> with Objective.description
 
 
 update : Msg -> Model -> LoggedIn.Model -> UpdateResult
@@ -166,8 +199,14 @@ update msg model loggedIn =
             case community of
                 Just cmm ->
                     if cmm.creator == loggedIn.accountName then
-                        { model | status = Creating cmm.symbol }
-                            |> UR.init
+                        case model.objectiveId of
+                            Just objectiveId ->
+                                { model | status = Loaded cmm (EditObjective objectiveId initObjectiveForm) }
+                                    |> UR.init
+
+                            Nothing ->
+                                { model | status = Loaded cmm (NewObjective initObjectiveForm) }
+                                    |> UR.init
 
                     else
                         { model | status = Unauthorized }
@@ -183,7 +222,8 @@ update msg model loggedIn =
 
         ClickedSaveObjective symbol ->
             if LoggedIn.isAuth loggedIn then
-                { model | status = Saving symbol }
+                model
+                    -- { model | status = Saving symbol }
                     |> UR.init
                 -- |> UR.addPort
                 -- { responseAddress = ClickedSaveObjective
@@ -210,11 +250,11 @@ update msg model loggedIn =
             else
                 model
                     |> UR.init
-                    |> UR.addExt
-                        (Just ClickedSaveObjective |> RequiredAuthentication)
 
 
 
+-- |> UR.addExt
+-- (Just ClickedSaveObjective |> RequiredAuthentication)
 -- UTILS
 
 
@@ -230,3 +270,6 @@ msgToString msg =
     case msg of
         CompletedCommunityLoad _ ->
             [ "CompletedCommunityLoad" ]
+
+        ClickedSaveObjective _ ->
+            [ "ClickedSaveObjective" ]
