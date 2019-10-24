@@ -100,7 +100,7 @@ newForm =
     , logoSelected = 0
     , logoList = defaultLogos
     , inviterReward = 0
-    , invitedReward = 0
+    , invitedReward = 10
     }
 
 
