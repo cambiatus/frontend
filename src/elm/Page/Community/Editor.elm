@@ -9,6 +9,7 @@ import Dict exposing (Dict)
 import Eos as Eos exposing (Symbol)
 import Eos.Account as Eos
 import File exposing (File)
+import Graphql.Document
 import Graphql.Http
 import Html exposing (..)
 import Html.Attributes exposing (..)
@@ -619,11 +620,22 @@ update msg model loggedIn =
                     uResult
 
         GotSaveResponse (Ok symbol) ->
-            UR.init model
-                |> UR.addCmd
-                    (Route.Community symbol
-                        |> Route.replaceUrl loggedIn.shared.navKey
-                    )
+            let
+                subscriptionDoc =
+                    Community.newCommunitySubscription symbol
+                        |> Graphql.Document.serializeSubscription
+            in
+            model
+                |> UR.init
+                |> UR.addPort
+                    { responseAddress = GotSaveResponse (Ok symbol)
+                    , responseData = Encode.null
+                    , data =
+                        Encode.object
+                            [ ( "name", Encode.string "subscribeToNewCommunity" )
+                            , ( "subscription", Encode.string subscriptionDoc )
+                            ]
+                    }
 
         GotSaveResponse (Err val) ->
             let
