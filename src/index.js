@@ -810,7 +810,7 @@ async function handleJavascriptPort (arg) {
       break
     }
     case 'subscribeToNewCommunity': {
-      devLog('=====================', 'newCommunitySubscriptin')
+      devLog('=====================', 'newCommunitySubscription')
       let notifiers = []
 
       // Open a socket connection
