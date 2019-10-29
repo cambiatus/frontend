@@ -1,4 +1,4 @@
-module Community exposing (Action, Balance, Community, CreateCommunityData, CreateTokenData, DashboardInfo, Metadata, Objective, ObjectiveId(..), Transaction, Validator, Verification(..), Verifiers, WithObjectives, communitiesQuery, communityQuery, createCommunityData, decodeBalance, decodeObjectiveId, decodeTransaction, encodeClaimAction, encodeCreateActionAction, encodeCreateCommunityData, encodeCreateObjectiveAction, encodeCreateTokenData, encodeObjectiveId, encodeUpdateLogoData, logoBackground, logoTitleQuery, logoUrl, unwrapObjectiveId)
+module Community exposing (Action, Balance, Community, CreateCommunityData, CreateTokenData, DashboardInfo, Metadata, Objective, ObjectiveId(..), Transaction, Validator, Verification(..), Verifiers, WithObjectives, communitiesQuery, communityQuery, createCommunityData, decodeBalance, decodeObjectiveId, decodeTransaction, encodeClaimAction, encodeCreateActionAction, encodeCreateCommunityData, encodeCreateObjectiveAction, encodeCreateTokenData, encodeObjectiveId, encodeUpdateLogoData, encodeUpdateObjectiveAction, logoBackground, logoTitleQuery, logoUrl, unwrapObjectiveId)
 
 import Account exposing (Profile, accountSelectionSet)
 import Api.Relay exposing (MetadataConnection, PaginationArgs)
@@ -225,6 +225,22 @@ encodeCreateObjectiveAction c =
         [ ( "cmm_asset", Encode.string ("0 " ++ Eos.symbolToString c.symbol) )
         , ( "description", Encode.string c.description )
         , ( "creator", Eos.encodeName c.creator )
+        ]
+
+
+type alias UpdateObjectiveAction =
+    { objectiveId : Int
+    , description : String
+    , editor : Eos.Name
+    }
+
+
+encodeUpdateObjectiveAction : UpdateObjectiveAction -> Value
+encodeUpdateObjectiveAction c =
+    Encode.object
+        [ ( "objective_id", Encode.int c.objectiveId )
+        , ( "description", Encode.string c.description )
+        , ( "editor", Eos.encodeName c.editor )
         ]
 
 

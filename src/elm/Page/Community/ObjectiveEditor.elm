@@ -5,6 +5,7 @@ import Bespiral.Object
 import Bespiral.Object.Community as Community
 import Bespiral.Object.Objective as Objective
 import Bespiral.Query as Query
+import Community
 import Eos as Eos exposing (Symbol, symbolToString)
 import Eos.Account as Eos
 import Graphql.Http
@@ -15,7 +16,8 @@ import Html.Attributes exposing (..)
 import Html.Events exposing (..)
 import I18Next exposing (Translations, t)
 import Icons
-import Json.Decode as Json exposing (Value)
+import Json.Decode as Decode exposing (Decoder)
+import Json.Encode as Encode exposing (Value)
 import Page
 import Route
 import Session.LoggedIn as LoggedIn exposing (External(..))
@@ -28,15 +30,15 @@ import UpdateResult as UR
 
 initNew : LoggedIn.Model -> Symbol -> ( Model, Cmd Msg )
 initNew ({ shared } as loggedIn) communityId =
-    ( { status = Loading communityId, objectiveId = Nothing }
+    ( { status = Loading, community = communityId, objectiveId = Nothing }
     , Api.Graphql.query shared (communityQuery communityId) CompletedCommunityLoad
     )
 
 
 initEdit : LoggedIn.Model -> Symbol -> Int -> ( Model, Cmd Msg )
-initEdit loggedIn communityId objectiveId =
-    ( { status = Loading communityId, objectiveId = Just objectiveId }
-    , Cmd.none
+initEdit ({ shared } as loggedIn) communityId objectiveId =
+    ( { status = Loading, community = communityId, objectiveId = Just objectiveId }
+    , Api.Graphql.query shared (communityQuery communityId) CompletedCommunityLoad
     )
 
 
@@ -53,12 +55,13 @@ emptyObjectiveForm =
 
 type alias Model =
     { status : Status
+    , community : Symbol
     , objectiveId : Maybe Int
     }
 
 
 type Status
-    = Loading Symbol
+    = Loading
     | Loaded Community EditStatus
       -- Errors
     | LoadCommunityFailed (Graphql.Http.Error (Maybe Community))
@@ -74,6 +77,7 @@ type EditStatus
 type SaveStatus
     = NotAsked
     | Saving
+    | Saved
     | SaveFailed
 
 
@@ -102,7 +106,9 @@ type alias UpdateResult =
 
 type Msg
     = CompletedCommunityLoad (Result (Graphql.Http.Error (Maybe Community)) (Maybe Community))
-    | ClickedSaveObjective Symbol
+    | EnteredDescription String
+    | ClickedSaveObjective ObjectiveForm
+    | GotSaveObjectiveResponse (Result Value String)
 
 
 initObjectiveForm =
@@ -118,7 +124,7 @@ initObjectiveForm =
 view : LoggedIn.Model -> Model -> Html Msg
 view ({ shared } as loggedIn) model =
     case model.status of
-        Loading _ ->
+        Loading ->
             Page.fullPageLoading
 
         NotFound ->
@@ -133,8 +139,12 @@ view ({ shared } as loggedIn) model =
         Loaded ({ symbol } as community) editStatus ->
             div []
                 [ viewHeader loggedIn model symbol
+                , case editStatus of
+                    NewObjective objForm ->
+                        viewForm loggedIn objForm
 
-                -- , viewForm loggedIn model False
+                    EditObjective objectiveId objForm ->
+                        viewForm loggedIn objForm
                 ]
 
 
@@ -154,24 +164,43 @@ viewHeader ({ shared } as loggedIn) model symbol =
         ]
 
 
+viewForm : LoggedIn.Model -> ObjectiveForm -> Html Msg
+viewForm ({ shared } as loggedIn) objForm =
+    let
+        isDisabled =
+            objForm.save == Saving
+    in
+    div [ class "bg-white w-full p-10" ]
+        [ div [ class "w-form mx-auto" ]
+            [ Html.form
+                [ class "mb-10"
+                ]
+                [ span [ class "input-label" ]
+                    [ text (t shared.translations "community.objectives.editor.description_label") ]
+                , textarea
+                    [ class "form-textarea block w-full rounded border"
+                    , rows 5
+                    , disabled isDisabled
+                    , onInput EnteredDescription
+                    , value objForm.description
+                    , required True
+                    , maxlength 254
+                    , placeholder (t shared.translations "community.objectives.editor.description_placeholder")
+                    ]
+                    []
+                ]
+            , button
+                [ class "button button-primary"
+                , type_ "submit"
+                , onClick (ClickedSaveObjective objForm)
+                , disabled isDisabled
+                ]
+                [ text (t shared.translations "community.objectives.editor.submit") ]
+            ]
+        ]
 
--- viewForm : LoggedIn.Model -> Model -> Bool -> Html Msg
--- viewForm ({ shared } as loggedIn) model isDisabled =
---     div [ class "bg-white w-full p-10" ]
---         [ div [ class "w-form mx-auto" ]
---             [ Html.form [ class "mb-10", onSubmit ClickedSaveObjective ]
---                 [ span [ class "input-label" ] [ text (t shared.translations "community.objectives.editor.description_label") ]
---                 , textarea
---                     [ class "form-textarea block w-full rounded border"
---                     , rows 5
---                     , disabled isDisabled
---                     , placeholder (t shared.translations "community.objectives.editor.description_placeholder")
---                     ]
---                     []
---                 ]
---             , button [ class "button button-primary", disabled isDisabled ] [ text (t shared.translations "community.objectives.editor.submit") ]
---             ]
---         ]
+
+
 -- UPDATE
 
 
@@ -192,6 +221,55 @@ objectiveSelectionSet =
         |> with Objective.description
 
 
+loadObjectiveForm : Community -> Int -> ObjectiveForm
+loadObjectiveForm community objectiveId =
+    let
+        maybeObjective =
+            List.filterMap
+                (\o ->
+                    if o.id == objectiveId then
+                        Just (ObjectiveForm o.description NotAsked)
+
+                    else
+                        Nothing
+                )
+                community.objectives
+    in
+    case maybeObjective of
+        [ x ] ->
+            x
+
+        _ ->
+            initObjectiveForm
+
+
+updateObjective : Msg -> (ObjectiveForm -> ObjectiveForm) -> UpdateResult -> UpdateResult
+updateObjective msg fn uResult =
+    case uResult.model.status of
+        Loaded community (NewObjective objForm) ->
+            UR.mapModel
+                (\m ->
+                    { m
+                        | status =
+                            Loaded community (NewObjective (fn objForm))
+                    }
+                )
+                uResult
+
+        Loaded community (EditObjective objId objForm) ->
+            UR.mapModel
+                (\m ->
+                    { m
+                        | status = Loaded community (EditObjective objId (fn objForm))
+                    }
+                )
+                uResult
+
+        _ ->
+            uResult
+                |> UR.logImpossible msg []
+
+
 update : Msg -> Model -> LoggedIn.Model -> UpdateResult
 update msg model loggedIn =
     case msg of
@@ -201,8 +279,21 @@ update msg model loggedIn =
                     if cmm.creator == loggedIn.accountName then
                         case model.objectiveId of
                             Just objectiveId ->
-                                { model | status = Loaded cmm (EditObjective objectiveId initObjectiveForm) }
-                                    |> UR.init
+                                if List.any (\o -> o.id == objectiveId) cmm.objectives then
+                                    { model
+                                        | status =
+                                            Loaded
+                                                cmm
+                                                (EditObjective
+                                                    objectiveId
+                                                    (loadObjectiveForm cmm objectiveId)
+                                                )
+                                    }
+                                        |> UR.init
+
+                                else
+                                    { model | status = NotFound }
+                                        |> UR.init
 
                             Nothing ->
                                 { model | status = Loaded cmm (NewObjective initObjectiveForm) }
@@ -220,47 +311,118 @@ update msg model loggedIn =
             { model | status = LoadCommunityFailed err }
                 |> UR.init
 
-        ClickedSaveObjective symbol ->
+        EnteredDescription val ->
+            UR.init model
+                |> updateObjective msg (\o -> { o | description = val })
+
+        ClickedSaveObjective obj ->
+            let
+                newModel =
+                    UR.init model
+                        |> updateObjective msg (\o -> { o | save = Saving })
+
+                save form isEdit =
+                    case isEdit of
+                        Just objectiveId ->
+                            newModel
+                                |> UR.addPort
+                                    { responseAddress = ClickedSaveObjective obj
+                                    , responseData = Encode.null
+                                    , data =
+                                        Eos.encodeTransaction
+                                            { actions =
+                                                [ { accountName = "bes.cmm"
+                                                  , name = "updobjective"
+                                                  , authorization =
+                                                        { actor = loggedIn.accountName
+                                                        , permissionName = Eos.samplePermission
+                                                        }
+                                                  , data =
+                                                        { objectiveId = objectiveId
+                                                        , description = form.description
+                                                        , editor = loggedIn.accountName
+                                                        }
+                                                            |> Community.encodeUpdateObjectiveAction
+                                                  }
+                                                ]
+                                            }
+                                    }
+
+                        Nothing ->
+                            newModel
+                                |> UR.addPort
+                                    { responseAddress = ClickedSaveObjective obj
+                                    , responseData = Encode.null
+                                    , data =
+                                        Eos.encodeTransaction
+                                            { actions =
+                                                [ { accountName = "bes.cmm"
+                                                  , name = "newobjective"
+                                                  , authorization =
+                                                        { actor = loggedIn.accountName
+                                                        , permissionName = Eos.samplePermission
+                                                        }
+                                                  , data =
+                                                        { symbol = model.community
+                                                        , description = obj.description
+                                                        , creator = loggedIn.accountName
+                                                        }
+                                                            |> Community.encodeCreateObjectiveAction
+                                                  }
+                                                ]
+                                            }
+                                    }
+            in
             if LoggedIn.isAuth loggedIn then
-                model
-                    -- { model | status = Saving symbol }
-                    |> UR.init
-                -- |> UR.addPort
-                -- { responseAddress = ClickedSaveObjective
-                -- , responseData = Encode.null
-                -- , data =
-                -- Eos.encodeTransaction
-                -- { actions =
-                -- [ { accountName = "bes.cmm"
-                -- , name = "newobjective"
-                -- , authorization =
-                --       { actor = loggedIn.accountName
-                --       , permissionName = Eos.samplePermission
-                --       }
-                -- , data =
-                --       { symbol = comm.symbol
-                --       , description = obj.description
-                --       , creator = loggedIn.accountName
-                --       }
-                -- |> Community.encodeCreateObjectiveAction
-                -- }
-                -- ]
-                -- }
+                case model.status of
+                    Loaded cmm (NewObjective objForm) ->
+                        save objForm Nothing
+
+                    Loaded cmm (EditObjective objectiveId objForm) ->
+                        save objForm (Just objectiveId)
+
+                    _ ->
+                        newModel
+                            |> UR.logImpossible msg []
 
             else
-                model
-                    |> UR.init
+                newModel
+                    |> UR.addExt
+                        (Just (ClickedSaveObjective obj) |> RequiredAuthentication)
+
+        GotSaveObjectiveResponse (Ok txId) ->
+            UR.init model
+                |> updateObjective msg (\o -> { o | save = Saved })
+                |> UR.addCmd
+                    (Route.replaceUrl loggedIn.shared.navKey
+                        (Route.Community model.community)
+                    )
+
+        GotSaveObjectiveResponse (Err v) ->
+            UR.init model
+                |> updateObjective msg (\o -> { o | save = SaveFailed })
+                |> UR.logDebugValue msg v
 
 
 
--- |> UR.addExt
--- (Just ClickedSaveObjective |> RequiredAuthentication)
 -- UTILS
 
 
 jsAddressToMsg : List String -> Value -> Maybe Msg
 jsAddressToMsg addr val =
     case addr of
+        "ClickedSaveObjective" :: [] ->
+            Decode.decodeValue
+                (Decode.oneOf
+                    [ Decode.field "transactionId" Decode.string
+                        |> Decode.map Ok
+                    , Decode.succeed (Err val)
+                    ]
+                )
+                val
+                |> Result.map (Just << GotSaveObjectiveResponse)
+                |> Result.withDefault Nothing
+
         _ ->
             Nothing
 
@@ -271,5 +433,11 @@ msgToString msg =
         CompletedCommunityLoad _ ->
             [ "CompletedCommunityLoad" ]
 
+        EnteredDescription _ ->
+            [ "EnteredDescription" ]
+
         ClickedSaveObjective _ ->
             [ "ClickedSaveObjective" ]
+
+        GotSaveObjectiveResponse r ->
+            [ "GotSaveObjectiveResponse", UR.resultToString r ]
