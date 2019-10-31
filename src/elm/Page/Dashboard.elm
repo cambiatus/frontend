@@ -349,10 +349,10 @@ viewTransfer ({ shared } as loggedIn) transfer =
     div [ class "flex items-start lg:items-center p-4" ]
         [ div [ class "flex-col flex-grow-1 pl-4" ]
             [ p
-                [ class "font-sans text-black text-sm leading-relaxed" ]
+                [ class "text-black text-sm leading-relaxed" ]
                 [ text description ]
             , p
-                [ class "font-normal font-sans text-gray-900 text-caption uppercase" ]
+                [ class "text-gray-900 text-caption uppercase" ]
                 [ text (Maybe.withDefault "" transfer.memo) ]
             ]
         , div [ class "flex flex-none pl-4" ]

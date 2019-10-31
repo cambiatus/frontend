@@ -202,7 +202,7 @@ viewCardList items =
 
 viewCardEmpty : List (Html msg) -> Html msg
 viewCardEmpty content =
-    div [ class "shadow-md rounded-lg bg-white p-4" ]
+    div [ class "rounded-lg bg-white p-4" ]
         [ span [] content ]
 
 

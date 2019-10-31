@@ -912,17 +912,6 @@ viewSections loggedIn model allTransfers =
         viewAccountName accountName =
             Eos.nameToString accountName
 
-        transferInfo from value to =
-            let
-                val =
-                    String.fromFloat value
-            in
-            [ ( "from", viewAccountName from )
-            , ( "value", val )
-            , ( "to", viewAccountName to )
-            ]
-                |> I18Next.tr loggedIn.shared.translations I18Next.Curly "transfer.info"
-
         toView verifications =
             List.map
                 (viewVerification loggedIn.shared.endpoints.ipfs)
@@ -937,38 +926,65 @@ viewSections loggedIn model allTransfers =
             Just resp ->
                 div []
                     [ if List.isEmpty resp.claims then
-                        Page.viewCardEmpty [ text (t "community.actions.no_actions_yet") ]
+                        div [ class "mt-5" ]
+                            [ Page.viewCardEmpty
+                                [ text (t "community.actions.no_actions_yet") ]
+                            ]
 
                       else
                         div
-                            [ class "shadow-md rounded-lg bg-white mt-5" ]
+                            [ class "rounded-lg bg-white mt-5" ]
                             (toView (Community.toVerifications resp))
                     ]
         ]
         [ Page.viewTitle (t "transfer.last_title")
         , case allTransfers of
             [] ->
-                Page.viewCardEmpty [ text (t "transfer.no_transfers_yet") ]
+                div [ class "mt-5" ]
+                    [ Page.viewCardEmpty [ text (t "transfer.no_transfers_yet") ]
+                    ]
 
             transfers ->
-                Page.viewCardList
+                div [ class "rounded-lg bg-white mt-5" ]
                     (List.map
                         (\transfer ->
-                            ( [ text (transferInfo transfer.from transfer.value transfer.to)
-                              , case transfer.memo of
-                                    Nothing ->
-                                        text ""
-
-                                    Just mem ->
-                                        p [ class "card__list-memo" ]
-                                            [ text mem ]
-                              ]
-                            , Utils.posixDateTime (Just transfer.blockTime)
-                            , model.date
-                            )
+                            viewTransfer loggedIn model transfer
                         )
                         transfers
                     )
+        ]
+
+
+viewTransfer : LoggedIn.Model -> Model -> Transfer -> Html msg
+viewTransfer loggedIn model transfer =
+    let
+        transferInfo from value to =
+            let
+                val =
+                    String.fromFloat value
+            in
+            [ ( "from", Eos.nameToString from )
+            , ( "value", val )
+            , ( "to", Eos.nameToString to )
+            ]
+                |> I18Next.tr loggedIn.shared.translations I18Next.Curly "transfer.info"
+    in
+    div [ class "border-b last:border-b-0 border-gray-500 flex flex-wrap items-start p-4" ]
+        [ p [ class "w-3/4" ] [ text (transferInfo transfer.from transfer.value transfer.to) ]
+        , p [ class "w-1/4 text-sm text-orange-500" ]
+            (Page.viewDateDistance
+                (Utils.posixDateTime (Just transfer.blockTime))
+                model.date
+            )
+        , div [ class "w-full" ]
+            [ case transfer.memo of
+                Nothing ->
+                    text ""
+
+                Just mem ->
+                    p [ class "flex-1 text-xs text-gray-700" ]
+                        [ text mem ]
+            ]
         ]
 
 
@@ -1011,6 +1027,15 @@ update msg model loggedIn =
 
         CompletedLoadCommunity (Err err) ->
             { model | community = Failed err }
+                |> UR.init
+                |> UR.logGraphqlError msg err
+
+        CompletedLoadActions (Ok resp) ->
+            { model | actions = Just resp }
+                |> UR.init
+
+        CompletedLoadActions (Err err) ->
+            model
                 |> UR.init
                 |> UR.logGraphqlError msg err
 
