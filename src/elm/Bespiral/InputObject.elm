@@ -164,13 +164,14 @@ buildClaimsInput fillOptionals =
     let
         optionals =
             fillOptionals
-                { claimer = Absent, validator = Absent }
+                { claimer = Absent, symbol = Absent, validator = Absent }
     in
-    { claimer = optionals.claimer, validator = optionals.validator }
+    { claimer = optionals.claimer, symbol = optionals.symbol, validator = optionals.validator }
 
 
 type alias ClaimsInputOptionalFields =
     { claimer : OptionalArgument String
+    , symbol : OptionalArgument String
     , validator : OptionalArgument String
     }
 
@@ -179,6 +180,7 @@ type alias ClaimsInputOptionalFields =
 -}
 type alias ClaimsInput =
     { claimer : OptionalArgument String
+    , symbol : OptionalArgument String
     , validator : OptionalArgument String
     }
 
@@ -188,7 +190,35 @@ type alias ClaimsInput =
 encodeClaimsInput : ClaimsInput -> Value
 encodeClaimsInput input =
     Encode.maybeObject
-        [ ( "claimer", Encode.string |> Encode.optional input.claimer ), ( "validator", Encode.string |> Encode.optional input.validator ) ]
+        [ ( "claimer", Encode.string |> Encode.optional input.claimer ), ( "symbol", Encode.string |> Encode.optional input.symbol ), ( "validator", Encode.string |> Encode.optional input.validator ) ]
+
+
+buildNewCommunityInput : (NewCommunityInputOptionalFields -> NewCommunityInputOptionalFields) -> NewCommunityInput
+buildNewCommunityInput fillOptionals =
+    let
+        optionals =
+            fillOptionals
+                { symbol = Absent }
+    in
+    { symbol = optionals.symbol }
+
+
+type alias NewCommunityInputOptionalFields =
+    { symbol : OptionalArgument String }
+
+
+{-| Type for the NewCommunityInput input object.
+-}
+type alias NewCommunityInput =
+    { symbol : OptionalArgument String }
+
+
+{-| Encode a NewCommunityInput into a value that can be used as an argument.
+-}
+encodeNewCommunityInput : NewCommunityInput -> Value
+encodeNewCommunityInput input =
+    Encode.maybeObject
+        [ ( "symbol", Encode.string |> Encode.optional input.symbol ) ]
 
 
 buildProfileInput : (ProfileInputOptionalFields -> ProfileInputOptionalFields) -> ProfileInput
