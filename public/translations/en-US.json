@@ -264,6 +264,7 @@
       "last_title": "Last Actions",
       "loading_error": "Something went wrong while fetching actions.",
       "no_actions_yet": "No actions yet.",
+      "no_transfers_yet": "No transfers yet.",
       "reward": "Reward",
       "manually_verified_by": "Manually verified by",
       "aumatically_verified_by": "Automatically verified by",
