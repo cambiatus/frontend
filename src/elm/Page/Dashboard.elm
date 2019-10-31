@@ -10,7 +10,7 @@ import Bespiral.Object.Community as Community
 import Bespiral.Object.Objective as Objective
 import Bespiral.Query exposing (ClaimsRequiredArguments)
 import Bespiral.Scalar exposing (DateTime(..))
-import Community exposing (ActionVerificationsResponse, Balance, ClaimResponse, Metadata, Transaction)
+import Community exposing (ActionVerification, ActionVerificationsResponse, Balance, ClaimResponse, Metadata, Transaction)
 import Eos as Eos exposing (Symbol)
 import Eos.Account as Eos
 import Graphql.Http
@@ -73,20 +73,8 @@ type alias Model =
     , communities : Status (List DashCommunity.Model)
     , lastSocket : String
     , transfers : GraphqlStatus (Maybe QueryTransfers) (List Transfer)
-    , verifications : GraphqlStatus ActionVerificationsResponse (List Verification)
-    , claims : GraphqlStatus ActionVerificationsResponse (List Verification)
-    }
-
-
-type alias Verification =
-    { symbol : Maybe Symbol
-    , logo : String
-    , objectiveId : Int
-    , actionId : Int
-    , claimId : Int
-    , description : String
-    , createdAt : DateTime
-    , status : Tag.TagStatus
+    , verifications : GraphqlStatus ActionVerificationsResponse (List ActionVerification)
+    , claims : GraphqlStatus ActionVerificationsResponse (List ActionVerification)
     }
 
 
@@ -185,7 +173,7 @@ viewVerifications shared model =
         ]
 
 
-viewVerification : String -> Verification -> Html Msg
+viewVerification : String -> ActionVerification -> Html Msg
 viewVerification url verification =
     let
         maybeLogo =
