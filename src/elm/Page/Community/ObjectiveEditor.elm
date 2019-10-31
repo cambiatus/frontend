@@ -107,7 +107,7 @@ type alias UpdateResult =
 type Msg
     = CompletedCommunityLoad (Result (Graphql.Http.Error (Maybe Community)) (Maybe Community))
     | EnteredDescription String
-    | ClickedSaveObjective ObjectiveForm
+    | ClickedSaveObjective
     | GotSaveObjectiveResponse (Result Value String)
 
 
@@ -192,7 +192,7 @@ viewForm ({ shared } as loggedIn) objForm =
             , button
                 [ class "button button-primary"
                 , type_ "submit"
-                , onClick (ClickedSaveObjective objForm)
+                , onClick ClickedSaveObjective
                 , disabled isDisabled
                 ]
                 [ text (t shared.translations "community.objectives.editor.submit") ]
@@ -315,7 +315,7 @@ update msg model loggedIn =
             UR.init model
                 |> updateObjective msg (\o -> { o | description = val })
 
-        ClickedSaveObjective obj ->
+        ClickedSaveObjective ->
             let
                 newModel =
                     UR.init model
@@ -326,7 +326,7 @@ update msg model loggedIn =
                         Just objectiveId ->
                             newModel
                                 |> UR.addPort
-                                    { responseAddress = ClickedSaveObjective obj
+                                    { responseAddress = ClickedSaveObjective
                                     , responseData = Encode.null
                                     , data =
                                         Eos.encodeTransaction
@@ -351,7 +351,7 @@ update msg model loggedIn =
                         Nothing ->
                             newModel
                                 |> UR.addPort
-                                    { responseAddress = ClickedSaveObjective obj
+                                    { responseAddress = ClickedSaveObjective
                                     , responseData = Encode.null
                                     , data =
                                         Eos.encodeTransaction
@@ -364,7 +364,7 @@ update msg model loggedIn =
                                                         }
                                                   , data =
                                                         { symbol = model.community
-                                                        , description = obj.description
+                                                        , description = form.description
                                                         , creator = loggedIn.accountName
                                                         }
                                                             |> Community.encodeCreateObjectiveAction
@@ -388,9 +388,9 @@ update msg model loggedIn =
             else
                 newModel
                     |> UR.addExt
-                        (Just (ClickedSaveObjective obj) |> RequiredAuthentication)
+                        (Just ClickedSaveObjective |> RequiredAuthentication)
 
-        GotSaveObjectiveResponse (Ok txId) ->
+        GotSaveObjectiveResponse (Ok _) ->
             UR.init model
                 |> updateObjective msg (\o -> { o | save = Saved })
                 |> UR.addCmd
@@ -436,7 +436,7 @@ msgToString msg =
         EnteredDescription _ ->
             [ "EnteredDescription" ]
 
-        ClickedSaveObjective _ ->
+        ClickedSaveObjective ->
             [ "ClickedSaveObjective" ]
 
         GotSaveObjectiveResponse r ->
