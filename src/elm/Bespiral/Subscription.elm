@@ -19,6 +19,17 @@ import Graphql.SelectionSet exposing (SelectionSet)
 import Json.Decode as Decode exposing (Decoder)
 
 
+type alias NewCommunityRequiredArguments =
+    { input : Bespiral.InputObject.NewCommunityInput }
+
+
+{-| A subscription for new community addition
+-}
+newCommunity : NewCommunityRequiredArguments -> SelectionSet decodesTo Bespiral.Object.Community -> SelectionSet (Maybe decodesTo) RootSubscription
+newCommunity requiredArgs object_ =
+    Object.selectionForCompositeField "newCommunity" [ Argument.required "input" requiredArgs.input Bespiral.InputObject.encodeNewCommunityInput ] object_ (identity >> Decode.nullable)
+
+
 {-| A subscription for sale history
 -}
 saleHistoryOperation : SelectionSet decodesTo Bespiral.Object.SaleHistory -> SelectionSet (Maybe decodesTo) RootSubscription

@@ -6,12 +6,17 @@ import Api.Graphql
 import Asset.Icon as Icon
 import Avatar exposing (Avatar)
 import Bespiral.Enum.VerificationType as VerificationType exposing (VerificationType)
+import Bespiral.Object
+import Bespiral.Query exposing (ClaimsRequiredArguments)
 import Bespiral.Scalar exposing (DateTime(..))
-import Community exposing (Community, ObjectiveId, Validator)
+import Community exposing (ActionVerification, ActionVerificationsResponse, ClaimResponse, Community, ObjectiveId, Validator)
 import Dict exposing (Dict)
 import Eos exposing (Symbol)
 import Eos.Account as Eos
 import Graphql.Http
+import Graphql.Operation exposing (RootQuery)
+import Graphql.OptionalArgument exposing (OptionalArgument(..))
+import Graphql.SelectionSet as SelectionSet exposing (SelectionSet, with)
 import Html exposing (..)
 import Html.Attributes exposing (..)
 import Html.Events exposing (onClick, onInput, onSubmit, targetValue)
@@ -32,6 +37,7 @@ import Time exposing (Posix, posixToMillis)
 import Transfer exposing (Transfer)
 import UpdateResult as UR
 import Utils
+import View.Tag as Tag
 
 
 
@@ -43,6 +49,7 @@ init ({ shared } as loggedIn) symbol =
     ( initModel loggedIn
     , Cmd.batch
         [ Api.Graphql.query shared (Community.communityQuery symbol) CompletedLoadCommunity
+        , fetchCommunityActions shared symbol
         , Task.perform GotTime Time.now
         ]
     )
@@ -61,6 +68,42 @@ fetchLastObjectiveId { shared, accountName } toMsg =
                     )
     in
     Api.getTableRows shared (Eos.encodeName accountName) "objectiveidx" 5 expect toMsg
+
+
+fetchCommunityActions : Shared -> Symbol -> Cmd Msg
+fetchCommunityActions shared sym =
+    let
+        stringSymbol : String
+        stringSymbol =
+            Eos.symbolToString sym
+
+        selectionSet : SelectionSet ActionVerificationsResponse RootQuery
+        selectionSet =
+            verificationHistorySelectionSet stringSymbol
+    in
+    Api.Graphql.query
+        shared
+        selectionSet
+        CompletedLoadActions
+
+
+
+-- Actions SelectionSet
+
+
+verificationHistorySelectionSet : String -> SelectionSet ActionVerificationsResponse RootQuery
+verificationHistorySelectionSet stringSym =
+    let
+        vInput : ClaimsRequiredArguments
+        vInput =
+            { input = { validator = Absent, claimer = Absent, symbol = Present stringSym } }
+
+        selectionSet : SelectionSet ClaimResponse Bespiral.Object.Claim
+        selectionSet =
+            Community.claimSelectionSet stringSym
+    in
+    SelectionSet.succeed ActionVerificationsResponse
+        |> with (Bespiral.Query.claims vInput selectionSet)
 
 
 
@@ -83,6 +126,7 @@ type alias Model =
     , openObjective : Maybe Int
     , modalStatus : ModalStatus
     , messageStatus : MessageStatus
+    , actions : Maybe ActionVerificationsResponse
     }
 
 
@@ -94,6 +138,7 @@ initModel loggedIn =
     , openObjective = Nothing
     , modalStatus = Closed
     , messageStatus = None
+    , actions = Nothing
     }
 
 
@@ -300,6 +345,80 @@ view loggedIn model =
                     ]
                     [ text_ "menu.back_to_dashboard" ]
                 ]
+
+
+
+-- VIEW VERIFICATIONS
+
+
+viewVerification : String -> ActionVerification -> Html Msg
+viewVerification url verification =
+    let
+        maybeLogo =
+            if String.isEmpty verification.logo then
+                Nothing
+
+            else
+                Just (url ++ "/" ++ verification.logo)
+
+        description =
+            verification.description
+
+        date =
+            Just verification.createdAt
+                |> Utils.posixDateTime
+                |> Strftime.format "%d %b %Y" Time.utc
+
+        status =
+            verification.status
+
+        route =
+            case verification.symbol of
+                Just symbol ->
+                    Route.VerifyClaim
+                        symbol
+                        (String.fromInt verification.objectiveId)
+                        (String.fromInt verification.actionId)
+                        (String.fromInt verification.claimId)
+
+                Nothing ->
+                    Route.ComingSoon
+    in
+    a
+        [ class "border-b last:border-b-0 border-gray-500 flex items-start lg:items-center hover:bg-gray-100 first-hover:rounded-t-lg last-hover:rounded-b-lg p-4"
+        , Route.href route
+        ]
+        [ div
+            [ class "flex-none" ]
+            [ case maybeLogo of
+                Just logoUrl ->
+                    img
+                        [ class "w-10 h-10 object-scale-down"
+                        , src logoUrl
+                        ]
+                        []
+
+                Nothing ->
+                    div
+                        [ class "w-10 h-10 object-scale-down" ]
+                        []
+            ]
+        , div
+            [ class "flex-col flex-grow-1 pl-4" ]
+            [ p
+                [ class "font-sans text-black text-sm leading-relaxed" ]
+                [ text description ]
+            , p
+                [ class "font-normal font-sans text-gray-900 text-caption uppercase" ]
+                [ text date ]
+            , div
+                [ class "lg:hidden mt-4" ]
+                [ Tag.view status ]
+            ]
+        , div
+            [ class "hidden lg:visible lg:flex lg:flex-none pl-4" ]
+            [ Tag.view status ]
+        ]
 
 
 
@@ -885,10 +1004,28 @@ viewSections loggedIn model allTransfers =
             , ( "to", viewAccountName to )
             ]
                 |> I18Next.tr loggedIn.shared.translations I18Next.Curly "transfer.info"
+
+        toView verifications =
+            List.map
+                (viewVerification loggedIn.shared.endpoints.ipfs)
+                verifications
     in
     Page.viewMaxTwoColumn
         [ Page.viewTitle (t "community.actions.last_title")
-        , Page.viewCardEmpty [ text (t "community.actions.no_actions_yet") ]
+        , case model.actions of
+            Nothing ->
+                Page.viewCardEmpty [ text (t "community.actions.no_actions_yet") ]
+
+            Just resp ->
+                div []
+                    [ if List.isEmpty resp.claims then
+                        Page.viewCardEmpty [ text (t "community.actions.no_actions_yet") ]
+
+                      else
+                        div
+                            [ class "shadow-md rounded-lg bg-white mt-5" ]
+                            (toView (Community.toVerifications resp))
+                    ]
         ]
         [ Page.viewTitle (t "transfer.last_title")
         , case allTransfers of
@@ -943,6 +1080,7 @@ type Msg
     | CloseClaimConfirmation
     | ClaimAction Int
     | GotClaimActionResponse (Result Value String)
+    | CompletedLoadActions (Result (Graphql.Http.Error ActionVerificationsResponse) ActionVerificationsResponse)
 
 
 update : Msg -> Model -> LoggedIn.Model -> UpdateResult
@@ -961,6 +1099,15 @@ update msg model loggedIn =
 
         CompletedLoadCommunity (Err err) ->
             { model | community = Failed err }
+                |> UR.init
+                |> UR.logGraphqlError msg err
+
+        CompletedLoadActions (Ok resp) ->
+            { model | actions = Just resp }
+                |> UR.init
+
+        CompletedLoadActions (Err err) ->
+            model
                 |> UR.init
                 |> UR.logGraphqlError msg err
 
@@ -1298,3 +1445,6 @@ msgToString msg =
 
         GotClaimActionResponse r ->
             [ "GotClaimActionResponse", UR.resultToString r ]
+
+        CompletedLoadActions _ ->
+            [ "CompletedLoadActions" ]

@@ -10,7 +10,7 @@ import Bespiral.Object.Community as Community
 import Bespiral.Object.Objective as Objective
 import Bespiral.Query exposing (ClaimsRequiredArguments)
 import Bespiral.Scalar exposing (DateTime(..))
-import Community exposing (Balance, Metadata, Transaction)
+import Community exposing (ActionVerification, ActionVerificationsResponse, Balance, ClaimResponse, Metadata, Transaction)
 import Eos as Eos exposing (Symbol)
 import Eos.Account as Eos
 import Graphql.Http
@@ -73,20 +73,8 @@ type alias Model =
     , communities : Status (List DashCommunity.Model)
     , lastSocket : String
     , transfers : GraphqlStatus (Maybe QueryTransfers) (List Transfer)
-    , verifications : GraphqlStatus VerificationHistoryResponse (List Verification)
-    , claims : GraphqlStatus VerificationHistoryResponse (List Verification)
-    }
-
-
-type alias Verification =
-    { symbol : Maybe Symbol
-    , logo : String
-    , objectiveId : Int
-    , actionId : Int
-    , claimId : Int
-    , description : String
-    , createdAt : DateTime
-    , status : Tag.TagStatus
+    , verifications : GraphqlStatus ActionVerificationsResponse (List ActionVerification)
+    , claims : GraphqlStatus ActionVerificationsResponse (List ActionVerification)
     }
 
 
@@ -185,7 +173,7 @@ viewVerifications shared model =
         ]
 
 
-viewVerification : String -> Verification -> Html Msg
+viewVerification : String -> ActionVerification -> Html Msg
 viewVerification url verification =
     let
         maybeLogo =
@@ -375,8 +363,8 @@ type Msg
     | CompletedLoadBalances (Result Http.Error (List Balance))
     | GotDashCommunityMsg Int DashCommunity.Msg
     | CompletedLoadUserTransfers (Result (Graphql.Http.Error (Maybe QueryTransfers)) (Maybe QueryTransfers))
-    | CompletedLoadVerifications (Result (Graphql.Http.Error VerificationHistoryResponse) VerificationHistoryResponse)
-    | CompletedLoadClaims (Result (Graphql.Http.Error VerificationHistoryResponse) VerificationHistoryResponse)
+    | CompletedLoadVerifications (Result (Graphql.Http.Error ActionVerificationsResponse) ActionVerificationsResponse)
+    | CompletedLoadClaims (Result (Graphql.Http.Error ActionVerificationsResponse) ActionVerificationsResponse)
 
 
 update : Msg -> Model -> LoggedIn.Model -> UpdateResult
@@ -424,7 +412,7 @@ update msg model loggedIn =
                 |> UR.logGraphqlError msg err
 
         CompletedLoadVerifications (Ok result) ->
-            { model | verifications = LoadedGraphql (toVerifications result) }
+            { model | verifications = LoadedGraphql (Community.toVerifications result) }
                 |> UR.init
 
         CompletedLoadVerifications (Err err) ->
@@ -433,7 +421,7 @@ update msg model loggedIn =
                 |> UR.logGraphqlError msg err
 
         CompletedLoadClaims (Ok result) ->
-            { model | claims = LoadedGraphql (toVerifications result) }
+            { model | claims = LoadedGraphql (Community.toVerifications result) }
                 |> UR.init
 
         CompletedLoadClaims (Err err) ->
@@ -481,43 +469,6 @@ updateDashCommunityUpdateResult index uResult commUResult =
 -- HELPERS
 
 
-type alias VerificationHistoryResponse =
-    { claims : List ClaimResponse
-    }
-
-
-type alias ClaimResponse =
-    { id : Int
-    , createdAt : DateTime
-    , checks : List CheckResponse
-    , action : ActionResponse
-    }
-
-
-type alias CheckResponse =
-    { isVerified : Bool
-    }
-
-
-type alias ActionResponse =
-    { id : Int
-    , description : String
-    , objective : ObjectiveResponse
-    }
-
-
-type alias ObjectiveResponse =
-    { id : Int
-    , community : CommunityResponse
-    }
-
-
-type alias CommunityResponse =
-    { symbol : String
-    , logo : String
-    }
-
-
 fetchClaims : Shared -> Eos.Name -> Cmd Msg
 fetchClaims shared accountName =
     let
@@ -525,7 +476,7 @@ fetchClaims shared accountName =
         claimer =
             Eos.nameToString accountName
 
-        selectionSet : SelectionSet VerificationHistoryResponse RootQuery
+        selectionSet : SelectionSet ActionVerificationsResponse RootQuery
         selectionSet =
             verificationHistorySelectionSet False claimer
     in
@@ -542,7 +493,7 @@ fetchVerifications shared accountName =
         validator =
             Eos.nameToString accountName
 
-        selectionSet : SelectionSet VerificationHistoryResponse RootQuery
+        selectionSet : SelectionSet ActionVerificationsResponse RootQuery
         selectionSet =
             verificationHistorySelectionSet True validator
     in
@@ -552,105 +503,25 @@ fetchVerifications shared accountName =
         CompletedLoadVerifications
 
 
-verificationHistorySelectionSet : Bool -> String -> SelectionSet VerificationHistoryResponse RootQuery
+verificationHistorySelectionSet : Bool -> String -> SelectionSet ActionVerificationsResponse RootQuery
 verificationHistorySelectionSet forValidator accName =
     let
         qInput : ClaimsRequiredArguments
         qInput =
             if forValidator then
-                { input = { validator = Present accName, claimer = Absent }
+                { input = { validator = Present accName, claimer = Absent, symbol = Absent }
                 }
 
             else
-                { input = { claimer = Present accName, validator = Absent }
+                { input = { claimer = Present accName, validator = Absent, symbol = Absent }
                 }
 
         selectionSet : SelectionSet ClaimResponse Bespiral.Object.Claim
         selectionSet =
-            claimSelectionSet accName
+            Community.claimSelectionSet accName
     in
-    SelectionSet.succeed VerificationHistoryResponse
+    SelectionSet.succeed ActionVerificationsResponse
         |> with (Bespiral.Query.claims qInput selectionSet)
-
-
-claimSelectionSet : String -> SelectionSet ClaimResponse Bespiral.Object.Claim
-claimSelectionSet validator =
-    let
-        checksArg : ChecksOptionalArguments -> ChecksOptionalArguments
-        checksArg _ =
-            { input = Present { validator = Present validator }
-            }
-    in
-    SelectionSet.succeed ClaimResponse
-        |> with Claim.id
-        |> with Claim.createdAt
-        |> with (Claim.checks checksArg checkSelectionSet)
-        |> with (Claim.action actionSelectionSet)
-
-
-checkSelectionSet : SelectionSet CheckResponse Bespiral.Object.Check
-checkSelectionSet =
-    SelectionSet.succeed CheckResponse
-        |> with Check.isVerified
-
-
-actionSelectionSet : SelectionSet ActionResponse Bespiral.Object.Action
-actionSelectionSet =
-    SelectionSet.succeed ActionResponse
-        |> with Action.id
-        |> with Action.description
-        |> with (Action.objective objectiveSelectionSet)
-
-
-objectiveSelectionSet : SelectionSet ObjectiveResponse Bespiral.Object.Objective
-objectiveSelectionSet =
-    SelectionSet.succeed ObjectiveResponse
-        |> with Objective.id
-        |> with (Objective.community communitySelectionSet)
-
-
-communitySelectionSet : SelectionSet CommunityResponse Bespiral.Object.Community
-communitySelectionSet =
-    SelectionSet.succeed CommunityResponse
-        |> with Community.symbol
-        |> with Community.logo
-
-
-toVerifications : VerificationHistoryResponse -> List Verification
-toVerifications verificationHistoryResponse =
-    let
-        claimsResponse : List ClaimResponse
-        claimsResponse =
-            verificationHistoryResponse.claims
-
-        toStatus : List CheckResponse -> Tag.TagStatus
-        toStatus checks =
-            case List.head checks of
-                Just check ->
-                    if check.isVerified == True then
-                        Tag.APPROVED
-
-                    else
-                        Tag.DISAPPROVED
-
-                Nothing ->
-                    Tag.PENDING
-
-        toVerification : ClaimResponse -> Verification
-        toVerification claimResponse =
-            { symbol = Eos.symbolFromString claimResponse.action.objective.community.symbol
-            , logo = claimResponse.action.objective.community.logo
-            , objectiveId = claimResponse.action.objective.id
-            , actionId = claimResponse.action.id
-            , claimId = claimResponse.id
-            , description = claimResponse.action.description
-            , createdAt = claimResponse.createdAt
-            , status = toStatus claimResponse.checks
-            }
-    in
-    List.map
-        toVerification
-        claimsResponse
 
 
 fetchBalance : Shared -> Eos.Name -> Cmd Msg

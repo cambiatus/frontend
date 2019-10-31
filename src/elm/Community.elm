@@ -1,10 +1,12 @@
-module Community exposing (Action, Balance, Community, CreateCommunityData, CreateTokenData, DashboardInfo, Metadata, Objective, ObjectiveId(..), Transaction, Validator, Verification(..), Verifiers, WithObjectives, communitiesQuery, communityQuery, createCommunityData, decodeBalance, decodeObjectiveId, decodeTransaction, encodeClaimAction, encodeCreateActionAction, encodeCreateCommunityData, encodeCreateObjectiveAction, encodeCreateTokenData, encodeObjectiveId, encodeUpdateLogoData, logoBackground, logoTitleQuery, logoUrl, unwrapObjectiveId)
+module Community exposing (Action, ActionVerification, ActionVerificationsResponse, Balance, ClaimResponse, Community, CreateCommunityData, CreateTokenData, DashboardInfo, Metadata, Objective, ObjectiveId(..), Transaction, Validator, Verification(..), Verifiers, WithObjectives, claimSelectionSet, communitiesQuery, communityQuery, createCommunityData, decodeBalance, decodeObjectiveId, decodeTransaction, encodeClaimAction, encodeCreateActionAction, encodeCreateCommunityData, encodeCreateObjectiveAction, encodeCreateTokenData, encodeObjectiveId, encodeUpdateLogoData, logoBackground, logoTitleQuery, logoUrl, toVerifications, unwrapObjectiveId)
 
 import Account exposing (Profile, accountSelectionSet)
 import Api.Relay exposing (MetadataConnection, PaginationArgs)
 import Bespiral.Enum.VerificationType exposing (VerificationType(..))
 import Bespiral.Object
 import Bespiral.Object.Action as Action
+import Bespiral.Object.Check as Check
+import Bespiral.Object.Claim as Claim exposing (ChecksOptionalArguments)
 import Bespiral.Object.Community as Community
 import Bespiral.Object.Objective as Objective
 import Bespiral.Object.Validator
@@ -23,6 +25,7 @@ import Json.Encode as Encode exposing (Value)
 import Time exposing (Posix)
 import Transfer exposing (ConnectionTransfer, Transfer, metadataConnectionSelectionSet, transferConnectionSelectionSet)
 import Utils
+import View.Tag as Tag
 
 
 
@@ -50,6 +53,10 @@ type alias Metadata =
     , transfers : Maybe MetadataConnection
     , memberCount : Int
     }
+
+
+
+-- Community Data
 
 
 type alias Community =
@@ -464,3 +471,143 @@ encodeUpdateLogoData c =
         , ( "inviter_reward", Eos.encodeAsset c.inviterReward )
         , ( "invited_reward", Eos.encodeAsset c.invitedReward )
         ]
+
+
+
+-- Action Verification
+
+
+type alias ActionVerification =
+    { symbol : Maybe Symbol
+    , logo : String
+    , objectiveId : Int
+    , actionId : Int
+    , claimId : Int
+    , description : String
+    , createdAt : DateTime
+    , status : Tag.TagStatus
+    }
+
+
+type alias ActionVerificationsResponse =
+    { claims : List ClaimResponse }
+
+
+type alias ClaimResponse =
+    { id : Int
+    , createdAt : DateTime
+    , checks : List CheckResponse
+    , action : ActionResponse
+    }
+
+
+type alias CheckResponse =
+    { isVerified : Bool
+    }
+
+
+type alias ActionResponse =
+    { id : Int
+    , description : String
+    , objective : ObjectiveResponse
+    }
+
+
+type alias ObjectiveResponse =
+    { id : Int
+    , community : CommunityResponse
+    }
+
+
+type alias CommunityResponse =
+    { symbol : String
+    , logo : String
+    }
+
+
+
+-- Verifications SelectionSets
+
+
+claimSelectionSet : String -> SelectionSet ClaimResponse Bespiral.Object.Claim
+claimSelectionSet validator =
+    let
+        checksArg : ChecksOptionalArguments -> ChecksOptionalArguments
+        checksArg _ =
+            { input = Present { validator = Present validator }
+            }
+    in
+    SelectionSet.succeed ClaimResponse
+        |> with Claim.id
+        |> with Claim.createdAt
+        |> with (Claim.checks checksArg checkSelectionSet)
+        |> with (Claim.action verificationActionSelectionSet)
+
+
+checkSelectionSet : SelectionSet CheckResponse Bespiral.Object.Check
+checkSelectionSet =
+    SelectionSet.succeed CheckResponse
+        |> with Check.isVerified
+
+
+verificationActionSelectionSet : SelectionSet ActionResponse Bespiral.Object.Action
+verificationActionSelectionSet =
+    SelectionSet.succeed ActionResponse
+        |> with Action.id
+        |> with Action.description
+        |> with (Action.objective verificationObjectiveSelectionSet)
+
+
+verificationObjectiveSelectionSet : SelectionSet ObjectiveResponse Bespiral.Object.Objective
+verificationObjectiveSelectionSet =
+    SelectionSet.succeed ObjectiveResponse
+        |> with Objective.id
+        |> with (Objective.community verificationCommunitySelectionSet)
+
+
+verificationCommunitySelectionSet : SelectionSet CommunityResponse Bespiral.Object.Community
+verificationCommunitySelectionSet =
+    SelectionSet.succeed CommunityResponse
+        |> with Community.symbol
+        |> with Community.logo
+
+
+
+-- convert claims response to verification
+
+
+toVerifications : ActionVerificationsResponse -> List ActionVerification
+toVerifications actionVerificationResponse =
+    let
+        claimsResponse : List ClaimResponse
+        claimsResponse =
+            actionVerificationResponse.claims
+
+        toStatus : List CheckResponse -> Tag.TagStatus
+        toStatus checks =
+            case List.head checks of
+                Just check ->
+                    if check.isVerified == True then
+                        Tag.APPROVED
+
+                    else
+                        Tag.DISAPPROVED
+
+                Nothing ->
+                    Tag.PENDING
+
+        toVerification : ClaimResponse -> ActionVerification
+        toVerification claimResponse =
+            { symbol = Eos.symbolFromString claimResponse.action.objective.community.symbol
+            , logo = claimResponse.action.objective.community.logo
+            , objectiveId = claimResponse.action.objective.id
+            , actionId = claimResponse.action.id
+            , claimId = claimResponse.id
+            , description = claimResponse.action.description
+            , createdAt = claimResponse.createdAt
+            , status = toStatus claimResponse.checks
+            }
+    in
+    List.map
+        toVerification
+        claimsResponse
