@@ -4,6 +4,7 @@ import Account exposing (Profile)
 import Asset.Icon as Icon
 import Auth
 import Browser.Navigation as Nav
+import Community exposing (ActionVerification)
 import DateDistance
 import File exposing (File)
 import Flags exposing (Flags)
