@@ -377,6 +377,7 @@ digitInput position inputType { form } =
         , onKeyUp msg
         , required True
         , autocomplete False
+        , attribute "inputmode" "numeric"
         ]
         []
 
