@@ -132,16 +132,16 @@ communitiesQuery =
         |> Query.communities
 
 
-newCommunitySubscription : Symbol -> SelectionSet (Maybe DashboardInfo) RootSubscription
+newCommunitySubscription : Symbol -> SelectionSet DashboardInfo RootSubscription
 newCommunitySubscription symbol =
     let
         stringSymbol =
             symbolToString symbol
 
         args =
-            { input = { symbol = Present stringSymbol } }
+            { input = { symbol = stringSymbol } }
     in
-    Subscription.newCommunity args dashboardSelectionSet
+    Subscription.newcommunity args dashboardSelectionSet
 
 
 logoTitleQuery : Symbol -> SelectionSet (Maybe DashboardInfo) RootQuery
