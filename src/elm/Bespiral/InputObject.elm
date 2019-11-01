@@ -221,24 +221,19 @@ encodeNewCommunityInput input =
         [ ( "symbol", Encode.string |> Encode.optional input.symbol ) ]
 
 
-buildNewCommunityInput : (NewCommunityInputOptionalFields -> NewCommunityInputOptionalFields) -> NewCommunityInput
-buildNewCommunityInput fillOptionals =
-    let
-        optionals =
-            fillOptionals
-                { symbol = Absent }
-    in
-    { symbol = optionals.symbol }
+buildNewCommunityInput : NewCommunityInputRequiredFields -> NewCommunityInput
+buildNewCommunityInput required =
+    { symbol = required.symbol }
 
 
-type alias NewCommunityInputOptionalFields =
-    { symbol : OptionalArgument String }
+type alias NewCommunityInputRequiredFields =
+    { symbol : String }
 
 
 {-| Type for the NewCommunityInput input object.
 -}
 type alias NewCommunityInput =
-    { symbol : OptionalArgument String }
+    { symbol : String }
 
 
 {-| Encode a NewCommunityInput into a value that can be used as an argument.
@@ -246,7 +241,7 @@ type alias NewCommunityInput =
 encodeNewCommunityInput : NewCommunityInput -> Value
 encodeNewCommunityInput input =
     Encode.maybeObject
-        [ ( "symbol", Encode.string |> Encode.optional input.symbol ) ]
+        [ ( "symbol", Encode.string input.symbol |> Just ) ]
 
 
 buildProfileInput : (ProfileInputOptionalFields -> ProfileInputOptionalFields) -> ProfileInput
