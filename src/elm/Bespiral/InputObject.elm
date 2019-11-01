@@ -193,34 +193,6 @@ encodeClaimsInput input =
         [ ( "claimer", Encode.string |> Encode.optional input.claimer ), ( "symbol", Encode.string |> Encode.optional input.symbol ), ( "validator", Encode.string |> Encode.optional input.validator ) ]
 
 
-buildNewCommunityInput : (NewCommunityInputOptionalFields -> NewCommunityInputOptionalFields) -> NewCommunityInput
-buildNewCommunityInput fillOptionals =
-    let
-        optionals =
-            fillOptionals
-                { symbol = Absent }
-    in
-    { symbol = optionals.symbol }
-
-
-type alias NewCommunityInputOptionalFields =
-    { symbol : OptionalArgument String }
-
-
-{-| Type for the NewCommunityInput input object.
--}
-type alias NewCommunityInput =
-    { symbol : OptionalArgument String }
-
-
-{-| Encode a NewCommunityInput into a value that can be used as an argument.
--}
-encodeNewCommunityInput : NewCommunityInput -> Value
-encodeNewCommunityInput input =
-    Encode.maybeObject
-        [ ( "symbol", Encode.string |> Encode.optional input.symbol ) ]
-
-
 buildNewCommunityInput : NewCommunityInputRequiredFields -> NewCommunityInput
 buildNewCommunityInput required =
     { symbol = required.symbol }
