@@ -577,7 +577,7 @@ viewNotificationItem : Translations -> Notification -> Html msg
 viewNotificationItem translations notification =
     let
         text_ str username =
-            text (tr translations Curly str [ ( "username", username ) ])
+            text (I18Next.tr translations Curly str [ ( "username", username ) ])
     in
     case ( notification.class, notification.link ) of
         ( "chat-notification", Just link ) ->
