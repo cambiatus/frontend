@@ -810,11 +810,11 @@ async function handleJavascriptPort (arg) {
       break
     }
     case 'subscribeToNewCommunity': {
-      devLog('=====================', 'newCommunitySubscription')
+      devLog('=======================', 'newCommunitySubscription')
       let notifiers = []
 
       // Open a socket connection
-      const socketConn = new PhoenixSocket('wss://api.cambiatus.io/socket', {})
+      const socketConn = new PhoenixSocket('wss://api.cambiatus.io/socket')
 
       // Build a graphql Socket
       const abSocket = AbsintheSocket.create(socketConn)
@@ -822,6 +822,7 @@ async function handleJavascriptPort (arg) {
       // Remove existing notifiers if any
       notifiers.map(notifier => AbsintheSocket.cancel(abSocket, notifier))
 
+      devLog('subscription doc', arg.data.subscription)
       // Create new notifiers
       notifiers = [arg.data.subscription].map(operation =>
         AbsintheSocket.send(abSocket, {
@@ -831,7 +832,8 @@ async function handleJavascriptPort (arg) {
       )
 
       let onStart = (data) => {
-        devLog('==========================', 'starting community subscription')
+        const payload = { dta: data, msg: 'starting community subscription' }
+        devLog('==========================', payload)
       }
 
       let onAbort = (data) => {
@@ -843,7 +845,7 @@ async function handleJavascriptPort (arg) {
       }
 
       let onError = (data) => {
-        devLog('===========================', 'community subscription errored out')
+        devLog('community subscrition error', data)
       }
 
       let onResult = (data) => {
