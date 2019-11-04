@@ -15,7 +15,6 @@ import * as Sentry from '@sentry/browser'
 import * as AbsintheSocket from '@absinthe/socket'
 const { Socket: PhoenixSocket } = require('phoenix')
 
-
 // =========================================
 // App startup
 // =========================================

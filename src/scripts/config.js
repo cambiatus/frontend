@@ -95,7 +95,7 @@ const prod = {
     chat: chatUrl,
     eosio: httpEndpoint,
     graphql: graphqlUrl,
-    ipfs: ipfsUrl
+    ipfs: ipfsUrl,
     socket: socketUrl
   },
   logo: appLogo,
