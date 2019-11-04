@@ -131,17 +131,27 @@ communitiesQuery =
         )
         |> Query.communities
 
+-- NEW COMMUNITY NAME 
+type alias NewCommunity =
+  { title : String }
 
-newCommunitySubscription : Symbol -> SelectionSet DashboardInfo RootSubscription
+newCommunitySubscription : Symbol -> SelectionSet NewCommunity RootSubscription
 newCommunitySubscription symbol =
     let
         stringSymbol =
             symbolToString symbol
+            |> String.toUpper
+  
+        
+        
+        selectionSet =
+          SelectionSet.succeed NewCommunity
+            |> with Community.name 
 
         args =
             { input = { symbol = stringSymbol } }
     in
-    Subscription.newcommunity args dashboardSelectionSet
+    Subscription.newcommunity args selectionSet
 
 
 logoTitleQuery : Symbol -> SelectionSet (Maybe DashboardInfo) RootQuery
