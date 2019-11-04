@@ -814,7 +814,7 @@ async function handleJavascriptPort (arg) {
       let notifiers = []
 
       // Open a socket connection
-      const socketConn = new PhoenixSocket(configuration.endpoints.socket)
+      const socketConn = new PhoenixSocket(config.endpoints.socket)
 
       // Build a graphql Socket
       const abSocket = AbsintheSocket.create(socketConn)

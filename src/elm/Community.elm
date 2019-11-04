@@ -141,9 +141,7 @@ newCommunitySubscription symbol =
         stringSymbol =
             symbolToString symbol
             |> String.toUpper
-  
-        
-        
+   
         selectionSet =
           SelectionSet.succeed NewCommunity
             |> with Community.name 
