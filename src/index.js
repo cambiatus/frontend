@@ -15,6 +15,7 @@ import * as Sentry from '@sentry/browser'
 import * as AbsintheSocket from '@absinthe/socket'
 const { Socket: PhoenixSocket } = require('phoenix')
 
+
 // =========================================
 // App startup
 // =========================================
@@ -814,7 +815,7 @@ async function handleJavascriptPort (arg) {
       let notifiers = []
 
       // Open a socket connection
-      const socketConn = new PhoenixSocket('wss://api.cambiatus.io/socket')
+      const socketConn = new PhoenixSocket(configuration.endpoints.socket)
 
       // Build a graphql Socket
       const abSocket = AbsintheSocket.create(socketConn)
