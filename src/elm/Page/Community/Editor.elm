@@ -234,26 +234,26 @@ view loggedIn model =
                 ]
 
         Editing _ problems form ->
-            viewForm shared True False problems form
+            viewForm shared True False problems form model
 
         WaitingEditLogoUpload _ form ->
-            viewForm shared True True Dict.empty form
+            viewForm shared True True Dict.empty form model
 
         Saving _ form ->
-            viewForm shared True True Dict.empty form
+            viewForm shared True True Dict.empty form model
 
         EditingNew problems form ->
-            viewForm shared False False problems form
+            viewForm shared False False problems form model
 
         WaitingNewLogoUpload form ->
-            viewForm shared False True Dict.empty form
+            viewForm shared False True Dict.empty form model
 
         Creating form ->
-            viewForm shared False True Dict.empty form
+            viewForm shared False True Dict.empty form model
 
 
-viewForm : Shared -> Bool -> Bool -> Dict String FormError -> Form -> Html Msg
-viewForm shared isEdit isDisabled errors form =
+viewForm : Shared -> Bool -> Bool -> Dict String FormError -> Form -> Model -> Html Msg
+viewForm shared isEdit isDisabled errors form model =
     let
         t =
             I18Next.t shared.translations
@@ -264,10 +264,18 @@ viewForm shared isEdit isDisabled errors form =
 
             else
                 ( t "community.create.title", t "community.create.submit" )
+
+        cmd =
+            case model.status of
+                EditingNew _ _ ->
+                    NewCommunitySubscription form.symbol
+
+                _ ->
+                    ClickedSave
     in
     Html.form
         [ class "container mx-auto px-4"
-        , onSubmit ClickedSave
+        , onSubmit cmd
         ]
         [ Page.viewTitle titleText
         , div [ class "card card--form" ]
@@ -520,6 +528,9 @@ type Msg
     | CompletedLogoUpload Int (Result Http.Error String)
     | ClickedSave
     | GotSaveResponse (Result Value Symbol)
+      -- New Community
+    | NewCommunitySubscription String
+    | Redirect
 
 
 update : Msg -> Model -> LoggedIn.Model -> UpdateResult
@@ -561,6 +572,30 @@ update msg model loggedIn =
         ClickedLogo index ->
             UR.init model
                 |> updateForm (\form -> { form | logoSelected = index })
+
+        NewCommunitySubscription stringSymbol ->
+            case Eos.symbolFromString stringSymbol of
+                Nothing ->
+                    model
+                        |> UR.init
+
+                Just s ->
+                    let
+                        subscriptionDoc =
+                            Community.newCommunitySubscription s
+                                |> Graphql.Document.serializeSubscription
+                    in
+                    model
+                        |> UR.init
+                        |> UR.addPort
+                            { responseAddress = NewCommunitySubscription stringSymbol
+                            , responseData = Encode.null
+                            , data =
+                                Encode.object
+                                    [ ( "name", Encode.string "subscribeToNewCommunity" )
+                                    , ( "subscription", Encode.string subscriptionDoc )
+                                    ]
+                            }
 
         ClickedSave ->
             if LoggedIn.isAuth loggedIn then
@@ -620,22 +655,18 @@ update msg model loggedIn =
                     uResult
 
         GotSaveResponse (Ok symbol) ->
-            let
-                subscriptionDoc =
-                    Community.newCommunitySubscription symbol
-                        |> Graphql.Document.serializeSubscription
-            in
-            model
-                |> UR.init
-                |> UR.addPort
-                    { responseAddress = GotSaveResponse (Ok symbol)
-                    , responseData = Encode.null
-                    , data =
-                        Encode.object
-                            [ ( "name", Encode.string "subscribeToNewCommunity" )
-                            , ( "subscription", Encode.string subscriptionDoc )
-                            ]
-                    }
+            case model.status of
+                Saving _ _ ->
+                    model
+                        |> UR.init
+                        |> UR.addCmd
+                            (Route.Community symbol
+                                |> Route.replaceUrl loggedIn.shared.navKey
+                            )
+
+                _ ->
+                    model
+                        |> UR.init
 
         GotSaveResponse (Err val) ->
             let
@@ -657,6 +688,32 @@ update msg model loggedIn =
                     UR.init model
                         |> UR.logImpossible msg []
                         |> UR.logDebugValue msg val
+
+        Redirect ->
+            case model.status of
+                Creating form ->
+                    let
+                        sym =
+                            Eos.symbolFromString form.symbol
+                    in
+                    case sym of
+                        Just s ->
+                            model
+                                |> UR.init
+                                |> UR.addCmd
+                                    (Route.Community s
+                                        |> Route.replaceUrl loggedIn.shared.navKey
+                                    )
+
+                        Nothing ->
+                            model
+                                |> UR.init
+                                |> UR.logImpossible msg []
+
+                _ ->
+                    model
+                        |> UR.init
+                        |> UR.logImpossible msg []
 
 
 updateStatus : Model -> Status -> Model
@@ -822,6 +879,25 @@ jsAddressToMsg addr val =
                 |> Result.map (Just << GotSaveResponse)
                 |> Result.withDefault Nothing
 
+        "NewCommunitySubscription" :: [] ->
+            let
+                resp =
+                    Decode.decodeValue
+                        (Decode.field "state" Decode.string)
+                        val
+                        |> Result.withDefault ""
+            in
+            case resp of
+                "starting" ->
+                    ClickedSave
+                        |> Just
+
+                "responded" ->
+                    Nothing
+
+                _ ->
+                    Nothing
+
         _ ->
             Nothing
 
@@ -850,8 +926,14 @@ msgToString msg =
         CompletedLogoUpload _ r ->
             [ "CompletedLogoUpload", UR.resultToString r ]
 
+        NewCommunitySubscription _ ->
+            [ "NewCommunitySubscription" ]
+
         ClickedSave ->
             [ "ClickedSave" ]
 
         GotSaveResponse r ->
             [ "GotSaveResponse", UR.resultToString r ]
+
+        Redirect ->
+            [ "Redirect" ]
