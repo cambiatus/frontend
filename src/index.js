@@ -834,6 +834,12 @@ async function handleJavascriptPort (arg) {
       let onStart = (data) => {
         const payload = { dta: data, msg: 'starting community subscription' }
         devLog('==========================', payload)
+        const response = {
+          address: arg.responseAddress,
+          addressData: arg.responseData,
+          state: 'starting'
+        }
+        app.ports.javascriptInPort.send(response)
       }
 
       let onAbort = (data) => {
@@ -850,7 +856,12 @@ async function handleJavascriptPort (arg) {
 
       let onResult = (data) => {
         devLog('===========================', 'community subscription results')
-        // Send port message to app
+        const response = {
+          address: arg.responseAddress,
+          addressData: arg.responseData,
+          state: 'responded'
+        }
+        app.ports.javascriptInPort.send(response)
       }
 
       notifiers.map(notifier => {
