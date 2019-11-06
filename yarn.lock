@@ -1504,17 +1504,6 @@ binaryen@^37.0.0:
   resolved "https://registry.yarnpkg.com/binaryen/-/binaryen-37.0.0.tgz#c392bc784b6d46da8fc918b1a4ed8257a0cd8b08"
   integrity sha512-ACBhSXtQvZvJZ8LNM5R/8HTk57Nr4J+HIrGfIfbIM9OpyaMePsXMgzVt+cMcCgX+sm4bmq5ed0kGgxd9RZ3Kkw==
 
-binwrap@0.2.0:
-  version "0.2.0"
-  resolved "https://registry.yarnpkg.com/binwrap/-/binwrap-0.2.0.tgz#572d0f48c4e767d72d622f0b805ed7ce1db16f9a"
-  integrity sha512-HUspivC8zPE37KJQ0S4zsNHUpymzQBinmpdMoa+JwmB6Mi+p30ywVZJcillYpbQmiX2wLykaaDJxXmwZkbaZGA==
-  dependencies:
-    mustache "^2.3.0"
-    request "^2.87.0"
-    request-promise "^4.2.0"
-    tar "^2.2.1"
-    unzip-stream "^0.3.0"
-
 binwrap@0.2.2, binwrap@^0.2.2:
   version "0.2.2"
   resolved "https://registry.yarnpkg.com/binwrap/-/binwrap-0.2.2.tgz#7d1ea74b28332f18dfdc75548aef993041ffafc9"
@@ -1536,13 +1525,6 @@ bip39@^2.5.0:
     randombytes "^2.0.1"
     safe-buffer "^5.0.1"
     unorm "^1.3.3"
-
-block-stream@*:
-  version "0.0.9"
-  resolved "https://registry.yarnpkg.com/block-stream/-/block-stream-0.0.9.tgz#13ebfe778a03205cfe03751481ebb4b3300c126a"
-  integrity sha1-E+v+d4oDIFz+A3UUgeu0szAMEmo=
-  dependencies:
-    inherits "~2.0.0"
 
 bluebird@^3.5.0, bluebird@^3.5.1, bluebird@^3.5.5:
   version "3.7.1"
@@ -2520,10 +2502,10 @@ create-ecdh@^4.0.0:
     bn.js "^4.1.0"
     elliptic "^6.0.0"
 
-create-elm-app@^3.2.1:
-  version "3.2.2"
-  resolved "https://registry.yarnpkg.com/create-elm-app/-/create-elm-app-3.2.2.tgz#b5dd2cb7565bfbf54e6d3f8efad59f7c6347ba45"
-  integrity sha512-1WJje8We+/p18IZpvuVKm5T/KxP/8mS3TipZu/MPweP9LfLT5wxAWeJpKtCvnXCUTSI7W3HRqx26RHaf+P+h5A==
+create-elm-app@^4.0.0:
+  version "4.1.0"
+  resolved "https://registry.yarnpkg.com/create-elm-app/-/create-elm-app-4.1.0.tgz#de7459011ce00ec2dba01e0f810e4068cfaf27e8"
+  integrity sha512-Fz7jjuOCE+fqJO39sXxKBD3/36z8n4jOYNpnLZq4YY9jwP4AsUztdFf5bu185jfXtWgXhLirSNnNbb9ayaMDqA==
   dependencies:
     "@babel/cli" "7.2.3"
     "@babel/core" "7.3.4"
@@ -2543,10 +2525,10 @@ create-elm-app@^3.2.1:
     cross-spawn "^6.0.5"
     css-loader "^3.2.0"
     dotenv "^5.0.0"
-    elm "0.19.0-bugfix6"
-    elm-hot-webpack-loader "^1.0.2"
-    elm-test "^0.19.0-rev5"
-    elm-webpack-loader "github:halfzebra/elm-webpack-loader#updated-elm-compiler"
+    elm latest-0.19.1
+    elm-hot-webpack-loader "^1.1.5"
+    elm-test latest-0.19.1
+    elm-webpack-loader "6.0.0"
     file-loader "^1.1.6"
     fs-extra "^6.0.1"
     html-webpack-plugin "^4.0.0-alpha.2"
@@ -3384,12 +3366,24 @@ elm-hot-webpack-loader@^1.0.2:
   dependencies:
     elm-hot "^1.1.2"
 
+elm-hot-webpack-loader@^1.1.5:
+  version "1.1.5"
+  resolved "https://registry.yarnpkg.com/elm-hot-webpack-loader/-/elm-hot-webpack-loader-1.1.5.tgz#363f0a3353c396b0e57d3168e08356ecdc4e7ac1"
+  integrity sha512-BrmLFx0L5cdOXBuDHwl7Mjmd631JUabrV7EboyFeJQhO3tW5ZKjA3C8RRZZjTPjG1DFWM+OQskw2hh0/zN5uhg==
+  dependencies:
+    elm-hot "^1.1.3"
+
 elm-hot@^1.1.2:
   version "1.1.2"
   resolved "https://registry.yarnpkg.com/elm-hot/-/elm-hot-1.1.2.tgz#306da61ba97c12518957bacb87473f364b0e2509"
   integrity sha512-rz0xMz71NTkDMPMepelg67kvs/5CnrE2dDzJJC0TpSgyEU/mjdUL8x1qewJGzTGXwHyg3Trt1CHPiTR9nImmJA==
 
-elm-test@^0.19.0-rev5, elm-test@^0.19.1:
+elm-hot@^1.1.3:
+  version "1.1.3"
+  resolved "https://registry.yarnpkg.com/elm-hot/-/elm-hot-1.1.3.tgz#8f921ad44afc969933847376262f209e6330b3e2"
+  integrity sha512-d2TvJ/jgtYI4z0PmjDinjojJh+i//yJkCeLbC0Ik1UAKl474RV8vEHHC6Wy0DNrvwOIneikutyuGIppeMxeIWA==
+
+elm-test@^0.19.1, elm-test@latest-0.19.1:
   version "0.19.1"
   resolved "https://registry.yarnpkg.com/elm-test/-/elm-test-0.19.1.tgz#1507b7aa8f6605f04b474bf9d765f187d24ec5da"
   integrity sha512-SyZgZ/hxq62budS3k0M1Qj1E8fIRvldSxFSm4XfzE6qRRuHAT2a82fxprZRZl1yG2GwnImGmhuKH5hSyjPpzjA==
@@ -3412,7 +3406,17 @@ elm-test@^0.19.0-rev5, elm-test@^0.19.1:
     which "2.0.1"
     xmlbuilder "^13.0.2"
 
-elm-webpack-loader@^6.0.0:
+elm-webpack-loader@6.0.0:
+  version "6.0.0"
+  resolved "https://registry.yarnpkg.com/elm-webpack-loader/-/elm-webpack-loader-6.0.0.tgz#a281a3b391003b409509259cca8a3accdb88754e"
+  integrity sha512-g5eKUo/F8ixHtXU4hf9mTtA4IzJ9yOHfwH1/C9Mo3mfkiz23UFaXtbGvEILa+8jLGFRTp8wuVtKcC5fuhCnSMA==
+  dependencies:
+    glob "^7.1.1"
+    loader-utils "^1.0.2"
+    node-elm-compiler "^5.0.0"
+    yargs "^6.5.0"
+
+elm-webpack-loader@^6.0.1:
   version "6.0.1"
   resolved "https://registry.yarnpkg.com/elm-webpack-loader/-/elm-webpack-loader-6.0.1.tgz#45db22979385f114cd56530700cef5b7f33cc9cb"
   integrity sha512-SkltiDAbegaiPxsQq7sxqTyRUXzD4n6UaT9JTZXIYoAjAEi/ogaIbYLQD6Ne5ZaSW3JOo6S/vb+VO5v0qDdirw==
@@ -3422,29 +3426,7 @@ elm-webpack-loader@^6.0.0:
     node-elm-compiler "^5.0.0"
     yargs "^6.5.0"
 
-"elm-webpack-loader@github:halfzebra/elm-webpack-loader#updated-elm-compiler":
-  version "6.0.0"
-  resolved "https://codeload.github.com/halfzebra/elm-webpack-loader/tar.gz/9ca0812c4885985ada19c28c27b841eb0e75c2d6"
-  dependencies:
-    elm "0.19.0-no-deps"
-    glob "^7.1.1"
-    loader-utils "^1.0.2"
-    node-elm-compiler "^5.0.0"
-    yargs "^6.5.0"
-
-elm@0.19.0-bugfix6:
-  version "0.19.0-bugfix6"
-  resolved "https://registry.yarnpkg.com/elm/-/elm-0.19.0-bugfix6.tgz#ebba8a9a57346b0abf96f36231df51999d9ecc53"
-  integrity sha512-nD/oK/nG26ULh94GREsILA9aQa3Gon+KKBmS0Z0MstywLWwrhuWKba8gfiIWLdnpQWHFIf+UsThk6Z71UWi6TQ==
-  dependencies:
-    binwrap "0.2.0"
-
-elm@0.19.0-no-deps:
-  version "0.19.0-no-deps"
-  resolved "https://registry.yarnpkg.com/elm/-/elm-0.19.0-no-deps.tgz#4754b658c424771823ee91bd5bf6387647954add"
-  integrity sha512-tOlSeo5Bt0Rkrt/aBjL+/a+TmAFdfeqjrOlThrhgKOoGeHt1hU7/hJ+HFMlHiODf09AQh7Anl64o7V6thzmRHw==
-
-elm@^0.19.1-3:
+elm@^0.19.1-3, elm@latest-0.19.1:
   version "0.19.1-3"
   resolved "https://registry.yarnpkg.com/elm/-/elm-0.19.1-3.tgz#2382aa1943bc79974b5d95b0a6acbe010ee16909"
   integrity sha512-6y36ewCcVmTOx8lj7cKJs3bhI5qMfoVEigePZ9PhEUNKpwjjML/pU2u2YSpHVAznuCcojoF6KIsrS1Ci7GtVaQ==
@@ -4499,16 +4481,6 @@ fsevents@~2.1.0:
   resolved "https://registry.yarnpkg.com/fsevents/-/fsevents-2.1.1.tgz#74c64e21df71721845d0c44fe54b7f56b82995a9"
   integrity sha512-4FRPXWETxtigtJW/gxzEDsX1LVbPAM93VleB83kZB+ellqbHMkyt2aJfuzNLRvFPnGi6bcE5SvfxgbXPeKteJw==
 
-fstream@^1.0.12:
-  version "1.0.12"
-  resolved "https://registry.yarnpkg.com/fstream/-/fstream-1.0.12.tgz#4e8ba8ee2d48be4f7d0de505455548eae5932045"
-  integrity sha512-WvJ193OHa0GHPEL+AycEJgxvBEwyfRkN1vhjca23OaPVMCaLCXTd5qAu82AjTcgP1UJmytkOKb63Ypde7raDIg==
-  dependencies:
-    graceful-fs "^4.1.2"
-    inherits "~2.0.0"
-    mkdirp ">=0.5 0"
-    rimraf "2"
-
 function-bind@^1.1.1:
   version "1.1.1"
   resolved "https://registry.yarnpkg.com/function-bind/-/function-bind-1.1.1.tgz#a56899d3ea3c9bab874bb9773b7c5ede92f4895d"
@@ -5236,7 +5208,7 @@ inflight@^1.0.4:
     once "^1.3.0"
     wrappy "1"
 
-inherits@2, inherits@2.0.4, inherits@^2.0.1, inherits@^2.0.3, inherits@~2.0.0, inherits@~2.0.1, inherits@~2.0.3:
+inherits@2, inherits@2.0.4, inherits@^2.0.1, inherits@^2.0.3, inherits@~2.0.1, inherits@~2.0.3:
   version "2.0.4"
   resolved "https://registry.yarnpkg.com/inherits/-/inherits-2.0.4.tgz#0fa2c64f932917c3433a0ded55363aae37416b7c"
   integrity sha512-k/vGaX4/Yla3WzyMCvTQOXYeIHvqOKtnqBduzTHpzpQZzAskKMhZ2K+EnBiSM9zGSoIFeMpXKxa4dYeZIQqewQ==
@@ -6534,7 +6506,7 @@ mixin-deep@^1.2.0:
     for-in "^1.0.2"
     is-extendable "^1.0.1"
 
-mkdirp@0.x.x, "mkdirp@>=0.5 0", mkdirp@^0.5.0, mkdirp@^0.5.1, mkdirp@~0.5.1:
+mkdirp@0.x.x, mkdirp@^0.5.0, mkdirp@^0.5.1, mkdirp@~0.5.1:
   version "0.5.1"
   resolved "https://registry.yarnpkg.com/mkdirp/-/mkdirp-0.5.1.tgz#30057438eac6cf7f8c4767f38648d6697d75c903"
   integrity sha1-MAV0OOrGz3+MR2fzhkjWaX11yQM=
@@ -6585,11 +6557,6 @@ murmur-hash-js@1.0.0:
   version "1.0.0"
   resolved "https://registry.yarnpkg.com/murmur-hash-js/-/murmur-hash-js-1.0.0.tgz#5041049269c96633c866386960b2f4289e75e5b0"
   integrity sha1-UEEEkmnJZjPIZjhpYLL0KJ515bA=
-
-mustache@^2.3.0:
-  version "2.3.2"
-  resolved "https://registry.yarnpkg.com/mustache/-/mustache-2.3.2.tgz#a6d4d9c3f91d13359ab889a812954f9230a3d0c5"
-  integrity sha512-KpMNwdQsYz3O/SBS1qJ/o3sqUJ5wSb8gb0pul8CO0S56b9Y2ALm8zCfsjPXsqGFfoNBkDwZuZIAjhsZI03gYVQ==
 
 mustache@^3.0.1:
   version "3.1.0"
@@ -8768,7 +8735,7 @@ request-promise-core@1.1.2:
   dependencies:
     lodash "^4.17.11"
 
-request-promise@^4.2.0, request-promise@^4.2.4:
+request-promise@^4.2.4:
   version "4.2.4"
   resolved "https://registry.yarnpkg.com/request-promise/-/request-promise-4.2.4.tgz#1c5ed0d71441e38ad58c7ce4ea4ea5b06d54b310"
   integrity sha512-8wgMrvE546PzbR5WbYxUQogUnUDfM0S7QIFZMID+J73vdFARkFy+HElj4T+MWYhpXwlLp0EQ8Zoj8xUA0he4Vg==
@@ -8778,7 +8745,7 @@ request-promise@^4.2.0, request-promise@^4.2.4:
     stealthy-require "^1.1.1"
     tough-cookie "^2.3.3"
 
-request@^2.55.0, request@^2.87.0, request@^2.88.0:
+request@^2.55.0, request@^2.88.0:
   version "2.88.0"
   resolved "https://registry.yarnpkg.com/request/-/request-2.88.0.tgz#9c2fca4f7d35b592efe57c7f0a55e81052124fef"
   integrity sha512-NAqBSrijGLZdM0WZNsInLJpkJokL72XYjUpnB0iwsRgxh7dB6COrHnTBNwN0E+lHDAJzu7kLAkDeY08z2/A0hg==
@@ -8917,17 +8884,17 @@ rgbcolor@^1.0.1:
   resolved "https://registry.yarnpkg.com/rgbcolor/-/rgbcolor-1.0.1.tgz#d6505ecdb304a6595da26fa4b43307306775945d"
   integrity sha1-1lBezbMEplldom+ktDMHMGd1lF0=
 
-rimraf@2, rimraf@2.x.x, rimraf@^2.2.8, rimraf@^2.5.4, rimraf@^2.6.1, rimraf@^2.6.2, rimraf@^2.6.3:
-  version "2.7.1"
-  resolved "https://registry.yarnpkg.com/rimraf/-/rimraf-2.7.1.tgz#35797f13a7fdadc566142c29d4f07ccad483e3ec"
-  integrity sha512-uWjbaKIK3T1OSVptzX7Nl6PvQ3qAGtKEtVRjRuazjfL3Bx5eI409VZSqgND+4UNnmzLVdPj9FqFJNPqBZFve4w==
-  dependencies:
-    glob "^7.1.3"
-
 rimraf@2.6.3, rimraf@~2.6.2:
   version "2.6.3"
   resolved "https://registry.yarnpkg.com/rimraf/-/rimraf-2.6.3.tgz#b2d104fe0d8fb27cf9e0a1cda8262dd3833c6cab"
   integrity sha512-mwqeW5XsA2qAejG46gYdENaxXjx9onRNCfn7L0duuP4hCuTIi/QO7PDK07KJfp1d+izWPrzEJDcSqBa0OZQriA==
+  dependencies:
+    glob "^7.1.3"
+
+rimraf@2.x.x, rimraf@^2.2.8, rimraf@^2.5.4, rimraf@^2.6.1, rimraf@^2.6.2, rimraf@^2.6.3:
+  version "2.7.1"
+  resolved "https://registry.yarnpkg.com/rimraf/-/rimraf-2.7.1.tgz#35797f13a7fdadc566142c29d4f07ccad483e3ec"
+  integrity sha512-uWjbaKIK3T1OSVptzX7Nl6PvQ3qAGtKEtVRjRuazjfL3Bx5eI409VZSqgND+4UNnmzLVdPj9FqFJNPqBZFve4w==
   dependencies:
     glob "^7.1.3"
 
@@ -9843,15 +9810,6 @@ tapable@^1.0.0, tapable@^1.1.3:
   version "1.1.3"
   resolved "https://registry.yarnpkg.com/tapable/-/tapable-1.1.3.tgz#a1fccc06b58db61fd7a45da2da44f5f3a3e67ba2"
   integrity sha512-4WK/bYZmj8xLr+HUCODHGF1ZFzsYffasLUgEiMBY4fgtltdO6B4WJtlSbPaDTLpYTcGVwM2qLnFTICEcNxs3kA==
-
-tar@^2.2.1:
-  version "2.2.2"
-  resolved "https://registry.yarnpkg.com/tar/-/tar-2.2.2.tgz#0ca8848562c7299b8b446ff6a4d60cdbb23edc40"
-  integrity sha512-FCEhQ/4rE1zYv9rYXJw/msRqsnmlje5jHP6huWeBZ704jUTy02c5AZyWujpMR1ax6mVw9NyJMfuK2CMDWVIfgA==
-  dependencies:
-    block-stream "*"
-    fstream "^1.0.12"
-    inherits "2"
 
 tar@^4, tar@^4.4.10:
   version "4.4.13"
