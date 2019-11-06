@@ -233,11 +233,7 @@ view_ loggedIn profile model =
 
             Just pk ->
                 div
-                    [ classList
-                        [ ( "modal", True )
-                        , ( "fade-in", True )
-                        ]
-                    , onClick ClickedClosePrivateKey
+                    [ onClick ClickedClosePrivateKey
                     ]
                     [ div
                         [ class "card card--modal"

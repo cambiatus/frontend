@@ -1,5 +1,6 @@
 {
   "bespiral": "Cambiatus",
+  "back": "Voltar",
   "menu": {
     "title": "Menu",
     "my_communities": "Minhas Comunidades",
@@ -121,7 +122,7 @@
     "registerTab": "Crie sua conta",
     "loginTab": "Entrar",
     "form": {
-      "title": "Crie sua conta no Bespiral e aproveite nossa plataforma",
+      "title": "Crie sua conta no Cambiatus e aproveite nossa plataforma",
       "name": {
         "label": "Nome completo",
         "tooltip": "",
@@ -260,8 +261,13 @@
       "title": "Objetivo",
       "title_plural": "Objetivos",
       "new": "Novo objetivo",
-      "description_label": "Qual o seu objetivo?",
-      "description_placeholder": "Defina uma meta que ajude a resolver o problema da comunidade."
+      "editor": {
+        "not_found": "Não encontrado",
+        "error": "Ops algo deu errado!",
+        "description_label": "Qual o seu objetivo?",
+        "description_placeholder": "Defina uma meta que ajude a resolver o problema da comunidade.",
+        "submit": "Salvar"
+      }
     },
     "actions": {
       "title": "Ação",

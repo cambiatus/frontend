@@ -218,7 +218,7 @@ viewHeader session =
         shared =
             Page.toShared session
     in
-    div [ class "w-full flex flex-wrap bg-indigo-500 p-4 lg:container lg:mx-auto lg:py-16" ]
+    div [ class "w-full flex flex-wrap bg-indigo-500 p-4 lg:container lg:mx-auto lg:py-12" ]
         [ div [ class "w-full lg:w-1/2" ]
             [ p [ class "text-white w-full text-xl font-medium mb-4 lg:mx-8 lg:text-sm lg:font-light lg:mb-2 lg:uppercase" ]
                 [ text (t shared.translations "shop.title") ]

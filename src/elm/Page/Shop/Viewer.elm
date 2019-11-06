@@ -417,14 +417,14 @@ viewHeader session =
         shared =
             Page.toShared session
     in
-    -- Page.viewTitle (t shared.translations "shop.title")
     div [ class "h-16 w-full bg-indigo-500 mb-4 flex px-4" ]
         [ a
             [ class "items-center flex"
             , Route.href (Route.Shop (Just Shop.MyCommunities))
             ]
             [ Icons.back ""
-            , p [ class "text-white text-sm ml-2" ] [ text (t shared.translations "dashboard.back") ]
+            , p [ class "text-white text-sm ml-2" ]
+                [ text (t shared.translations "back") ]
             ]
         ]
 

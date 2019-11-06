@@ -22,7 +22,7 @@ import Html.Attributes exposing (..)
 import Html.Events exposing (onClick, onInput, onSubmit, targetValue)
 import Html.Lazy
 import Http
-import I18Next exposing (Translations)
+import I18Next exposing (Translations, t)
 import Icons exposing (..)
 import Json.Decode as Decode exposing (Decoder)
 import Json.Encode as Encode exposing (Value)
@@ -152,10 +152,6 @@ type LoadStatus
 type EditStatus
     = NoEdit
     | OpenObjective Int
-    | NewObjective ObjectiveForm
-    | EditObjective Int ObjectiveForm
-    | NewAction Int ActionForm
-    | EditAction Int Int ActionForm
 
 
 type SaveStatus
@@ -185,29 +181,6 @@ emptyObjectiveForm : ObjectiveForm
 emptyObjectiveForm =
     { description = ""
     , save = NotAsked
-    }
-
-
-type alias ActionForm =
-    { description : String
-    , reward : String
-    , verification : Verification
-    , verificationReward : String
-    , database : String
-    , save : SaveStatus
-    , validators : List String
-    }
-
-
-emptyActionForm : ActionForm
-emptyActionForm =
-    { description = ""
-    , reward = ""
-    , verification = Manually
-    , verificationReward = ""
-    , database = ""
-    , save = NotAsked
-    , validators = []
     }
 
 
@@ -241,21 +214,6 @@ decodeMembers =
             (Decode.field "account" Decode.string)
         )
         |> Decode.field "data"
-
-
-actionFormToAction : LoggedIn.Model -> ActionForm -> Community.Action
-actionFormToAction loggedIn action =
-    { description = action.description
-    , reward = String.toFloat action.reward |> Maybe.withDefault 0
-    , verificationReward = String.toFloat action.verificationReward |> Maybe.withDefault 0
-    , creator = loggedIn.accountName
-    , validators = []
-    , usages = 0
-    , usagesLeft = 0
-    , deadline = Just (DateTime "")
-    , verificationType = VerificationType.Automatic
-    , id = 0
-    }
 
 
 
@@ -292,58 +250,44 @@ view loggedIn model =
                 canEdit =
                     LoggedIn.isAccount community.creator loggedIn
             in
-            div [ class "container mx-auto px-4" ]
-                [ viewClaimModal loggedIn model
-                , viewMessageStatus loggedIn model
-                , Page.viewTitle (Eos.symbolToString community.symbol ++ " - " ++ community.title)
-                , div [ class "card card--community-view" ]
-                    [ div [ class "card-community-view" ]
-                        [ h3 [ class "card-community-view__description-title" ]
-                            [ text_ "community.create.labels.description" ]
-                        , div [ class "card-community-view__description-container" ]
-                            [ div
-                                [ class "card__image-background"
-                                , Community.logoBackground ipfsUrl
-                                    (Just community.logo)
+            div [ class "" ]
+                [ viewHeader loggedIn community
+                , div [ class "bg-white p-20" ]
+                    [ div [ class "flex flex-wrap w-full items-center" ]
+                        [ p [ class "text-4xl font-bold" ]
+                            [ text community.title ]
+                        , if canEdit then
+                            a
+                                [ classList
+                                    [ ( "hidden", editStatus /= NoEdit )
+                                    ]
+                                , class "button button-secondary button-small w-16 ml-4"
+                                , Route.href (Route.EditCommunity community.symbol)
                                 ]
-                                []
-                            , p [ class "card-community-view__description" ] [ text community.description ]
-                            ]
+                                [ text "edit" ]
+
+                          else
+                            text ""
                         ]
-                    , if canEdit then
-                        a
-                            [ classList
-                                [ ( "edit-button", True )
-                                , ( "circle-background", True )
-                                , ( "circle-background--primary", True )
-                                , ( "hidden", editStatus /= NoEdit )
-                                ]
-                            , Route.href (Route.EditCommunity community.symbol)
-                            ]
-                            [ Icon.edit "" ]
-
-                      else
-                        text ""
+                    , p [ class "text-grey-200 text-sm" ] [ text community.description ]
                     ]
-                , div [ class "bg-white py-6 sm:py-8 px-3 sm:px-6 rounded-lg sm:rounded" ]
-                    ([ Page.viewTitle (t "community.objectives.title_plural") ]
-                        ++ List.indexedMap (viewObjective loggedIn model editStatus community)
-                            community.objectives
-                        ++ [ if canEdit then
-                                viewObjectiveNew loggedIn (List.length community.objectives) editStatus
+                , div [ class "container mx-auto px-4" ]
+                    [ viewClaimModal loggedIn model
+                    , viewMessageStatus loggedIn model
+                    , div [ class "bg-white py-6 sm:py-8 px-3 sm:px-6 rounded-lg sm:rounded mt-4" ]
+                        ([ Page.viewTitle (t "community.objectives.title_plural") ]
+                            ++ List.indexedMap (viewObjective loggedIn model editStatus community)
+                                community.objectives
+                            ++ [ if canEdit then
+                                    viewObjectiveNew loggedIn (List.length community.objectives) editStatus community.symbol
 
-                             else
-                                text ""
-                           ]
-                    )
-                , Transfer.getTransfers (Just community)
-                    |> viewSections loggedIn model
-                , a
-                    [ class "btn btn--outline btn--big"
-                    , style "margin-top" "2rem"
-                    , Route.href Route.Dashboard
+                                 else
+                                    text ""
+                               ]
+                        )
+                    , Transfer.getTransfers (Just community)
+                        |> viewSections loggedIn model
                     ]
-                    [ text_ "menu.back_to_dashboard" ]
                 ]
 
 
@@ -485,25 +429,37 @@ viewObjective loggedIn model editStatus metadata index objective =
     div [ class "my-2" ]
         [ div
             [ class "px-3 py-4 bg-body-blue flex flex-col sm:flex-row sm:items-center sm:h-10"
-            , if isOpen then
-                onClick ClickedCloseObjective
-
-              else
-                onClick (ClickedOpenObjective index)
             ]
             [ div [ class "sm:flex-grow-7 sm:w-5/12" ]
                 [ div
-                    [ class "truncate overflow-hidden whitespace-no-wrap text-white font-medium text-sm overflow-hidden sm:flex-grow-8 sm:leading-normal sm:text-lg" ]
+                    [ class "truncate overflow-hidden whitespace-no-wrap text-white font-medium text-sm overflow-hidden sm:flex-grow-8 sm:leading-normal sm:text-lg"
+                    , if isOpen then
+                        onClick ClickedCloseObjective
+
+                      else
+                        onClick (ClickedOpenObjective index)
+                    ]
                     [ text objective.description ]
                 ]
             , div [ class ("flex flex-row justify-between mt-5 sm:mt-0" ++ arrowStyle) ]
                 [ if canEdit then
-                    span [ class "text-white font-medium underline text-xs uppercase sm:text-sm" ] [ text_ "menu.edit" ]
+                    a
+                        [ class "text-white font-medium underline text-xs uppercase sm:text-sm"
+                        , Route.href (Route.EditObjective metadata.symbol (Community.unwrapObjectiveId objective.id))
+                        ]
+                        [ text_ "menu.edit" ]
 
                   else
                     text ""
                 , if isOpen then
-                    button [ class "align-middle" ]
+                    button
+                        [ class "align-middle"
+                        , if isOpen then
+                            onClick ClickedCloseObjective
+
+                          else
+                            onClick (ClickedOpenObjective index)
+                        ]
                         [ img
                             [ class "rotate-180 fill-current text-white h-2 w-4 stroke-current"
                             , src "/icons/objective_arrow.svg"
@@ -512,7 +468,14 @@ viewObjective loggedIn model editStatus metadata index objective =
                         ]
 
                   else
-                    button [ class "align-middle" ]
+                    button
+                        [ class "align-middle"
+                        , if isOpen then
+                            onClick ClickedCloseObjective
+
+                          else
+                            onClick (ClickedOpenObjective index)
+                        ]
                         [ img
                             [ class "h-2 w-4 self-end stroke-current"
                             , src "/icons/objective_arrow.svg"
@@ -530,93 +493,20 @@ viewObjective loggedIn model editStatus metadata index objective =
         ]
 
 
-viewObjectiveForm : LoggedIn.Model -> Int -> ObjectiveForm -> Html Msg
-viewObjectiveForm loggedIn index objective =
-    let
-        text_ s =
-            text (I18Next.t loggedIn.shared.translations s)
-
-        isDisabled =
-            objective.save == Saving
-    in
-    Html.form [ onSubmit ClickedSaveObjective ]
-        [ viewObjectiveFieldDescription loggedIn isDisabled ("comm-obj-desc-" ++ String.fromInt index) objective
-        , div [ class "btn-row" ]
-            [ button
-                [ classList
-                    [ ( "btn", True )
-                    , ( "btn--primary", True )
-                    , ( "btn--outline", True )
-                    ]
-                , disabled isDisabled
-                , type_ "button"
-                , onClick ClickedEditCancel
-                ]
-                [ text_ "menu.cancel" ]
-            , button
-                [ classList
-                    [ ( "btn", True )
-                    , ( "btn--primary", True )
-                    ]
-                , disabled isDisabled
-                ]
-                [ text_ "menu.save" ]
-            ]
-        ]
-
-
-viewObjectiveFieldDescription : LoggedIn.Model -> Bool -> String -> ObjectiveForm -> Html Msg
-viewObjectiveFieldDescription loggedIn isDisabled id_ objective =
+viewObjectiveNew : LoggedIn.Model -> Int -> EditStatus -> Symbol -> Html Msg
+viewObjectiveNew loggedIn index edit communityId =
     let
         t s =
             I18Next.t loggedIn.shared.translations s
     in
-    formField
-        [ label [ for id_ ] [ text (t "community.objectives.description_label") ]
-        , textarea
-            [ id id_
-            , class "input"
-            , onInput EnteredObjectiveDescription
-            , placeholder (t "community.objectives.description_placeholder")
-            , value objective.description
-            , disabled isDisabled
-            , required True
-            , maxlength 254
-            ]
-            []
-        , viewFieldError loggedIn.shared id_ objective.save
+    a
+        [ class "border border-dashed border-button-orange mt-6 w-full flex flex-row content-start px-4 py-2"
+        , Route.href (Route.NewObjective communityId)
+        , disabled (edit /= NoEdit)
         ]
-
-
-viewObjectiveNew : LoggedIn.Model -> Int -> EditStatus -> Html Msg
-viewObjectiveNew loggedIn index edit =
-    let
-        t s =
-            I18Next.t loggedIn.shared.translations s
-    in
-    case edit of
-        NewObjective objForm ->
-            div
-                [ classList
-                    [ ( "card", True )
-                    , ( "card--form", True )
-                    ]
-                , style "margin-bottom" "3rem"
-                ]
-                [ h3 [ class "form-title form-title--with-button" ]
-                    [ span [] [ text (t "community.objectives.title" ++ " " ++ indexToString index) ] ]
-                , viewObjectiveForm loggedIn index objForm
-                ]
-
-        _ ->
-            button
-                [ class "border border-dashed border-button-orange mt-6 w-full flex flex-row content-start px-4 py-2"
-                , onClick ClickedNewObjective
-                , disabled (edit /= NoEdit)
-                ]
-                [ span [ class "px-2 text-button-orange font-medium" ] [ text "+" ]
-                , span [ class "text-button-orange font-medium" ] [ text (t "community.objectives.new") ]
-                ]
+        [ span [ class "px-2 text-button-orange font-medium" ] [ text "+" ]
+        , span [ class "text-button-orange font-medium" ] [ text (t "community.objectives.new") ]
+        ]
 
 
 
@@ -633,7 +523,8 @@ viewAction loggedIn metadata maybeDate action =
             text (t s)
 
         canEdit =
-            LoggedIn.isAccount metadata.creator loggedIn
+            -- LoggedIn.isAccount metadata.creator loggedIn
+            False
 
         posixDeadline : Posix
         posixDeadline =
@@ -832,6 +723,33 @@ viewAction loggedIn metadata maybeDate action =
         ]
 
 
+viewHeader : LoggedIn.Model -> Community -> Html Msg
+viewHeader ({ shared } as loggedIn) community =
+    div []
+        [ div [ class "h-16 w-full bg-indigo-500 flex px-4 items-center" ]
+            [ a
+                [ class "items-center flex absolute"
+                , Route.href Route.Communities
+                ]
+                [ Icons.back ""
+                , p [ class "text-white text-sm ml-2" ]
+                    [ text (t shared.translations "back")
+                    ]
+                ]
+            , p [ class "text-white mx-auto" ] [ text community.title ]
+            ]
+        , div [ class "h-24 lg:h-56 bg-indigo-500 flex flex-wrap content-end" ]
+            [ div [ class "h-24 w-24 h-24 w-24 rounded-full mx-auto pt-12" ]
+                [ img
+                    [ src (shared.endpoints.ipfs ++ "/" ++ community.logo)
+                    , class "object-scale-down "
+                    ]
+                    []
+                ]
+            ]
+        ]
+
+
 viewMessageStatus : LoggedIn.Model -> Model -> Html msg
 viewMessageStatus loggedIn model =
     let
@@ -994,17 +912,6 @@ viewSections loggedIn model allTransfers =
         viewAccountName accountName =
             Eos.nameToString accountName
 
-        transferInfo from value to =
-            let
-                val =
-                    String.fromFloat value
-            in
-            [ ( "from", viewAccountName from )
-            , ( "value", val )
-            , ( "to", viewAccountName to )
-            ]
-                |> I18Next.tr loggedIn.shared.translations I18Next.Curly "transfer.info"
-
         toView verifications =
             List.map
                 (viewVerification loggedIn.shared.endpoints.ipfs)
@@ -1019,38 +926,65 @@ viewSections loggedIn model allTransfers =
             Just resp ->
                 div []
                     [ if List.isEmpty resp.claims then
-                        Page.viewCardEmpty [ text (t "community.actions.no_actions_yet") ]
+                        div [ class "mt-5" ]
+                            [ Page.viewCardEmpty
+                                [ text (t "community.actions.no_actions_yet") ]
+                            ]
 
                       else
                         div
-                            [ class "shadow-md rounded-lg bg-white mt-5" ]
+                            [ class "rounded-lg bg-white mt-5" ]
                             (toView (Community.toVerifications resp))
                     ]
         ]
         [ Page.viewTitle (t "transfer.last_title")
         , case allTransfers of
             [] ->
-                Page.viewCardEmpty [ text (t "community.actions.no_transfers_yet") ]
+                div [ class "mt-5" ]
+                    [ Page.viewCardEmpty [ text (t "transfer.no_transfers_yet") ]
+                    ]
 
             transfers ->
-                Page.viewCardList
+                div [ class "rounded-lg bg-white mt-5" ]
                     (List.map
                         (\transfer ->
-                            ( [ text (transferInfo transfer.from transfer.value transfer.to)
-                              , case transfer.memo of
-                                    Nothing ->
-                                        text ""
-
-                                    Just mem ->
-                                        p [ class "card__list-memo" ]
-                                            [ text mem ]
-                              ]
-                            , Utils.posixDateTime (Just transfer.blockTime)
-                            , model.date
-                            )
+                            viewTransfer loggedIn model transfer
                         )
                         transfers
                     )
+        ]
+
+
+viewTransfer : LoggedIn.Model -> Model -> Transfer -> Html msg
+viewTransfer loggedIn model transfer =
+    let
+        transferInfo from value to =
+            let
+                val =
+                    String.fromFloat value
+            in
+            [ ( "from", Eos.nameToString from )
+            , ( "value", val )
+            , ( "to", Eos.nameToString to )
+            ]
+                |> I18Next.tr loggedIn.shared.translations I18Next.Curly "transfer.info"
+    in
+    div [ class "border-b last:border-b-0 border-gray-500 flex flex-wrap items-start p-4" ]
+        [ p [ class "w-3/4" ] [ text (transferInfo transfer.from transfer.value transfer.to) ]
+        , p [ class "w-1/4 text-sm text-orange-500" ]
+            (Page.viewDateDistance
+                (Utils.posixDateTime (Just transfer.blockTime))
+                model.date
+            )
+        , div [ class "w-full" ]
+            [ case transfer.memo of
+                Nothing ->
+                    text ""
+
+                Just mem ->
+                    p [ class "flex-1 text-xs text-gray-700" ]
+                        [ text mem ]
+            ]
         ]
 
 
@@ -1066,14 +1000,8 @@ type Msg
     = GotTime Posix
     | CompletedLoadCommunity (Result (Graphql.Http.Error (Maybe Community)) (Maybe Community))
       -- Objective
-    | EnteredObjectiveDescription String
-    | ClickedSaveObjective
-    | GotSaveObjectiveResponse (Result Value String)
-    | ClickedNewObjective
     | ClickedOpenObjective Int
     | ClickedCloseObjective
-    | ClickedEditObjective Int Community.Objective
-    | ClickedEditCancel
       -- Action
     | CreateAction Symbol String
     | OpenClaimConfirmation Int
@@ -1110,138 +1038,6 @@ update msg model loggedIn =
             model
                 |> UR.init
                 |> UR.logGraphqlError msg err
-
-        EnteredObjectiveDescription s ->
-            UR.init model
-                |> updateObjective msg (\o -> { o | description = s })
-
-        ClickedSaveObjective ->
-            let
-                saveObjective obj comm toModel =
-                    toModel { obj | save = Saving }
-                        |> updateCommunity model
-                        |> UR.init
-                        |> UR.addPort
-                            { responseAddress = ClickedSaveObjective
-                            , responseData = Encode.null
-                            , data =
-                                Eos.encodeTransaction
-                                    { actions =
-                                        [ { accountName = "bes.cmm"
-                                          , name = "newobjective"
-                                          , authorization =
-                                                { actor = loggedIn.accountName
-                                                , permissionName = Eos.samplePermission
-                                                }
-                                          , data =
-                                                { symbol = comm.symbol
-                                                , description = obj.description
-                                                , creator = loggedIn.accountName
-                                                }
-                                                    |> Community.encodeCreateObjectiveAction
-                                          }
-                                        ]
-                                    }
-                            }
-            in
-            case ( model.community, LoggedIn.isAuth loggedIn ) of
-                ( _, False ) ->
-                    UR.init model
-                        |> UR.addExt
-                            (Just ClickedSaveObjective
-                                |> RequiredAuthentication
-                            )
-
-                ( Loaded community (NewObjective objective), True ) ->
-                    saveObjective
-                        objective
-                        community
-                        (Loaded community << NewObjective)
-
-                ( Loaded community (EditObjective index objective), True ) ->
-                    saveObjective
-                        objective
-                        community
-                        (Loaded community << EditObjective index)
-
-                _ ->
-                    UR.init model
-                        |> UR.logImpossible msg []
-
-        GotSaveObjectiveResponse (Ok txId) ->
-            case model.community of
-                Loaded community (NewObjective objective) ->
-                    UR.init model
-                        |> UR.addCmd (Route.replaceUrl loggedIn.shared.navKey (Route.Community community.symbol))
-
-                Loaded community (EditObjective index objective) ->
-                    { model
-                        | community =
-                            Loaded
-                                { community
-                                    | objectives =
-                                        List.indexedMap
-                                            (\i o ->
-                                                if i == index then
-                                                    { o | description = objective.description }
-
-                                                else
-                                                    o
-                                            )
-                                            community.objectives
-                                }
-                                NoEdit
-                    }
-                        |> UR.init
-
-                _ ->
-                    UR.init model
-                        |> UR.logImpossible msg []
-
-        GotSaveObjectiveResponse (Err v) ->
-            UR.init model
-                |> updateObjective msg (\o -> { o | save = SaveFailed Dict.empty })
-                |> UR.logDebugValue msg v
-
-        ClickedNewObjective ->
-            case model.community of
-                Loaded community NoEdit ->
-                    { model
-                        | community =
-                            NewObjective emptyObjectiveForm
-                                |> Loaded community
-                    }
-                        |> UR.init
-
-                _ ->
-                    UR.init model
-                        |> UR.logImpossible msg []
-
-        ClickedEditObjective index objective ->
-            case model.community of
-                Loaded community NoEdit ->
-                    { model
-                        | community =
-                            { emptyObjectiveForm
-                                | description = objective.description
-                            }
-                                |> EditObjective index
-                                |> Loaded community
-                    }
-                        |> UR.init
-
-                _ ->
-                    UR.init model
-                        |> UR.logImpossible msg []
-
-        ClickedEditCancel ->
-            case model.community of
-                Loaded community _ ->
-                    UR.init { model | community = Loaded community NoEdit }
-
-                _ ->
-                    UR.init model
-                        |> UR.logImpossible msg []
 
         ClickedOpenObjective index ->
             { model | openObjective = Just index }
@@ -1316,73 +1112,9 @@ updateCommunity model c =
     { model | community = c }
 
 
-updateObjective : Msg -> (ObjectiveForm -> ObjectiveForm) -> UpdateResult -> UpdateResult
-updateObjective msg fn uResult =
-    case uResult.model.community of
-        Loaded community (NewObjective objective) ->
-            UR.mapModel
-                (\m ->
-                    { m
-                        | community =
-                            Loaded community (NewObjective (fn objective))
-                    }
-                )
-                uResult
-
-        Loaded community (EditObjective index objective) ->
-            UR.mapModel
-                (\m ->
-                    { m
-                        | community =
-                            Loaded community (EditObjective index (fn objective))
-                    }
-                )
-                uResult
-
-        _ ->
-            uResult
-                |> UR.logImpossible msg []
-
-
-updateAction : Msg -> (ActionForm -> ActionForm) -> UpdateResult -> UpdateResult
-updateAction msg fn uResult =
-    case uResult.model.community of
-        Loaded community (NewAction objIndex action) ->
-            UR.mapModel
-                (\m ->
-                    Loaded community (NewAction objIndex (fn action))
-                        |> updateCommunity m
-                )
-                uResult
-
-        Loaded community (EditAction objIndex index action) ->
-            UR.mapModel
-                (\m ->
-                    Loaded community (EditAction objIndex index (fn action))
-                        |> updateCommunity m
-                )
-                uResult
-
-        _ ->
-            uResult
-                |> UR.logImpossible msg []
-
-
 jsAddressToMsg : List String -> Value -> Maybe Msg
 jsAddressToMsg addr val =
     case addr of
-        "ClickedSaveObjective" :: [] ->
-            Decode.decodeValue
-                (Decode.oneOf
-                    [ Decode.field "transactionId" Decode.string
-                        |> Decode.map Ok
-                    , Decode.succeed (Err val)
-                    ]
-                )
-                val
-                |> Result.map (Just << GotSaveObjectiveResponse)
-                |> Result.withDefault Nothing
-
         "ClaimAction" :: [] ->
             Decode.decodeValue
                 (Decode.oneOf
@@ -1407,29 +1139,11 @@ msgToString msg =
         CompletedLoadCommunity r ->
             [ "CompletedLoadCommunity", UR.resultToString r ]
 
-        ClickedSaveObjective ->
-            [ "ClickedSaveObjective" ]
-
-        EnteredObjectiveDescription _ ->
-            [ "EnteredObjectiveDescription" ]
-
-        GotSaveObjectiveResponse r ->
-            [ "GotSaveObjectiveResponse", UR.resultToString r ]
-
-        ClickedNewObjective ->
-            [ "ClickedNewObjective" ]
-
         ClickedOpenObjective _ ->
             [ "ClickedOpenObjective" ]
 
         ClickedCloseObjective ->
             [ "ClickedCloseObjective" ]
-
-        ClickedEditObjective _ _ ->
-            [ "ClickedEditObjective" ]
-
-        ClickedEditCancel ->
-            [ "ClickedEditCancel" ]
 
         CreateAction _ _ ->
             [ "CreateAction" ]
