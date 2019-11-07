@@ -278,7 +278,11 @@ view loggedIn model =
                 , div [ class "container mx-auto px-4" ]
                     [ viewClaimModal loggedIn model
                     , viewMessageStatus loggedIn model
-                    , viewInvitation loggedIn model
+                    , if loggedIn.accountName == community.creator then
+                        viewInvitation loggedIn model
+
+                      else
+                        div [] []
                     , div [ class "bg-white py-6 sm:py-8 px-3 sm:px-6 rounded-lg mt-4" ]
                         ([ Page.viewTitle (t "community.objectives.title_plural") ]
                             ++ List.indexedMap (viewObjective loggedIn model editStatus community)
@@ -849,9 +853,9 @@ viewInvitation loggedIn model =
     in
     div [ class "bg-white py-6 px-3 sm:px-6 rounded-lg mt-4 flex flex-wrap" ]
         [ p [ class "w-full font-medium text-heading mb-4" ] [ text_ "community.invite.title" ]
-        , label [ class "input-label" ] [ text_ "community.invite.labels.emails" ]
+        , label [ class "input-label w-full" ] [ text_ "community.invite.labels.emails" ]
         , input
-            [ class "input block w-4/5 "
+            [ class "input block w-4/5"
             , placeholder (t "community.invite.placeholders.emails")
             , onInput EnteredEmail
             ]
