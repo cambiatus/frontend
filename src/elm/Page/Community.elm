@@ -46,7 +46,7 @@ import View.Tag as Tag
 
 init : LoggedIn.Model -> Symbol -> ( Model, Cmd Msg )
 init ({ shared } as loggedIn) symbol =
-    ( initModel loggedIn
+    ( initModel loggedIn symbol
     , Cmd.batch
         [ Api.Graphql.query shared (Community.communityQuery symbol) CompletedLoadCommunity
         , fetchCommunityActions shared symbol
@@ -127,11 +127,13 @@ type alias Model =
     , modalStatus : ModalStatus
     , messageStatus : MessageStatus
     , actions : Maybe ActionVerificationsResponse
+    , invitations : String
+    , symbol : Symbol
     }
 
 
-initModel : LoggedIn.Model -> Model
-initModel loggedIn =
+initModel : LoggedIn.Model -> Symbol -> Model
+initModel loggedIn symbol =
     { date = Nothing
     , community = Loading
     , members = []
@@ -139,6 +141,8 @@ initModel loggedIn =
     , modalStatus = Closed
     , messageStatus = None
     , actions = Nothing
+    , invitations = ""
+    , symbol = symbol
     }
 
 
@@ -274,7 +278,8 @@ view loggedIn model =
                 , div [ class "container mx-auto px-4" ]
                     [ viewClaimModal loggedIn model
                     , viewMessageStatus loggedIn model
-                    , div [ class "bg-white py-6 sm:py-8 px-3 sm:px-6 rounded-lg sm:rounded mt-4" ]
+                    , viewInvitation loggedIn model
+                    , div [ class "bg-white py-6 sm:py-8 px-3 sm:px-6 rounded-lg mt-4" ]
                         ([ Page.viewTitle (t "community.objectives.title_plural") ]
                             ++ List.indexedMap (viewObjective loggedIn model editStatus community)
                                 community.objectives
@@ -764,12 +769,12 @@ viewMessageStatus loggedIn model =
             text ""
 
         Success message ->
-            div [ class "z-40 bg-green fixed w-11/12 p-2" ]
+            div [ class "z-40 bg-green w-full my-2 p-2 rounded-lg text-center" ]
                 [ p [ class "text-white font-sans" ] [ text_ message ]
                 ]
 
         Failure message ->
-            div [ class "z-40 bg-red fixed w-11/12 p-2" ]
+            div [ class "z-40 bg-red w-full my-2 rounded-lg p-2 text-center" ]
                 [ p [ class "text-white font-sans font-bold" ] [ text_ message ]
                 ]
 
@@ -831,6 +836,32 @@ viewClaimModal loggedIn model =
 
         Closed ->
             text ""
+
+
+viewInvitation : LoggedIn.Model -> Model -> Html Msg
+viewInvitation loggedIn model =
+    let
+        t s =
+            I18Next.t loggedIn.shared.translations s
+
+        text_ s =
+            text (t s)
+    in
+    div [ class "bg-white py-6 px-3 sm:px-6 rounded-lg mt-4 flex flex-wrap" ]
+        [ p [ class "w-full font-medium text-heading mb-4" ] [ text_ "community.invite.title" ]
+        , label [ class "input-label" ] [ text_ "community.invite.labels.emails" ]
+        , input
+            [ class "input block w-4/5 "
+            , placeholder (t "community.invite.placeholders.emails")
+            , onInput EnteredEmail
+            ]
+            []
+        , button
+            [ class "button button-secondary button-sm w-2/5 mt-2"
+            , onClick SubmitInvitation
+            ]
+            [ text_ "community.invite.submit" ]
+        ]
 
 
 
@@ -1009,6 +1040,9 @@ type Msg
     | ClaimAction Int
     | GotClaimActionResponse (Result Value String)
     | CompletedLoadActions (Result (Graphql.Http.Error ActionVerificationsResponse) ActionVerificationsResponse)
+    | EnteredEmail String
+    | SubmitInvitation
+    | CompletedSendInvite (Result Http.Error ())
 
 
 update : Msg -> Model -> LoggedIn.Model -> UpdateResult
@@ -1106,6 +1140,43 @@ update msg model loggedIn =
             }
                 |> UR.init
 
+        EnteredEmail val ->
+            { model
+                | invitations = val
+            }
+                |> UR.init
+
+        SubmitInvitation ->
+            model
+                |> UR.init
+                |> UR.addCmd
+                    (CompletedSendInvite
+                        |> Api.communityInvite loggedIn.shared model.symbol loggedIn.accountName model.invitations
+                    )
+
+        CompletedSendInvite (Ok ()) ->
+            UR.init
+                { model
+                    | messageStatus =
+                        Success
+                            (I18Next.t
+                                loggedIn.shared.translations
+                                "community.invite.succeed"
+                            )
+                }
+
+        CompletedSendInvite (Err httpError) ->
+            UR.init
+                { model
+                    | messageStatus =
+                        Failure
+                            (I18Next.t
+                                loggedIn.shared.translations
+                                "community.invite.failed"
+                            )
+                }
+                |> UR.logHttpError msg httpError
+
 
 updateCommunity : Model -> LoadStatus -> Model
 updateCommunity model c =
@@ -1162,3 +1233,12 @@ msgToString msg =
 
         CompletedLoadActions _ ->
             [ "CompletedLoadActions" ]
+
+        EnteredEmail _ ->
+            [ "EnteredEmail" ]
+
+        SubmitInvitation ->
+            [ "SubmitInvitation" ]
+
+        CompletedSendInvite _ ->
+            [ "CompletedSendInvite" ]
