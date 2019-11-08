@@ -889,11 +889,10 @@ jsAddressToMsg addr val =
             in
             case resp of
                 "starting" ->
-                    ClickedSave
-                        |> Just
+                    Just ClickedSave
 
                 "responded" ->
-                    Nothing
+                    Just Redirect
 
                 _ ->
                     Nothing
