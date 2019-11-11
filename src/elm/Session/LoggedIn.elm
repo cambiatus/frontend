@@ -10,12 +10,14 @@ import Avatar
 import Bespiral.Object
 import Bespiral.Object.UnreadNotifications
 import Bespiral.Query
+import Bespiral.Subscription as Subscription
 import Browser.Dom as Dom
 import Community exposing (Balance)
 import Eos
 import Eos.Account as Eos
+import Graphql.Document
 import Graphql.Http
-import Graphql.Operation exposing (RootQuery)
+import Graphql.Operation exposing (RootQuery, RootSubscription)
 import Graphql.SelectionSet as SelectionSet exposing (SelectionSet, with)
 import Html exposing (..)
 import Html.Attributes exposing (..)
@@ -23,7 +25,7 @@ import Html.Events exposing (onClick, onFocus, onInput, onSubmit, stopPropagatio
 import Http
 import I18Next exposing (Delims(..), Translations, t, tr)
 import Icons
-import Json.Decode as Decode exposing (Value)
+import Json.Decode as Decode exposing (Decoder, Value)
 import Json.Encode as Encode exposing (Value)
 import Log
 import Notification exposing (Notification)
@@ -51,7 +53,6 @@ init shared accountName =
     , Cmd.batch
         [ Api.Graphql.query shared (profileQuery accountName) CompletedLoadProfile
         , Api.getBalances shared accountName CompletedLoadBalances
-        , Api.Graphql.query shared (unreadQuery accountName) CompletedLoadUnread
         ]
     )
 
@@ -148,32 +149,6 @@ maybePrivateKey model =
     Auth.maybePrivateKey model.auth
 
 
-
--- NOTIFICATION COUNTS
-
-
-type alias UnreadMeta =
-    { count : Int }
-
-
-unreadSelection : SelectionSet UnreadMeta Bespiral.Object.UnreadNotifications
-unreadSelection =
-    SelectionSet.succeed UnreadMeta
-        |> with Bespiral.Object.UnreadNotifications.count
-
-
-unreadQuery : Eos.Name -> SelectionSet UnreadMeta RootQuery
-unreadQuery accName =
-    let
-        accString =
-            Eos.nameToString accName
-
-        args =
-            { input = { account = accString } }
-    in
-    Bespiral.Query.unreadNotifications
-        args
-        unreadSelection
 
 
 
@@ -646,7 +621,7 @@ type Msg
     | GotAuthMsg Auth.Msg
     | ReceivedNotification String
     | CompletedLoadBalances (Result Http.Error (List Balance))
-    | CompletedLoadUnread (Result (Graphql.Http.Error UnreadMeta) UnreadMeta)
+    | CompletedLoadUnread Value
 
 
 update : Msg -> Model -> UpdateResult
@@ -677,11 +652,12 @@ update msg model =
             UR.init model
 
         CompletedLoadTranslation lang (Ok transl) ->
-            case model.profile of
+                      case model.profile of
                 Loaded profile_ ->
                     UR.init { model | shared = Shared.loadTranslation (Ok ( lang, transl )) shared }
                         |> UR.addCmd (Chat.updateChatLanguage shared profile_ lang CompletedChatTranslation)
                         |> UR.addCmd (Ports.storeLanguage lang)
+                                                
 
                 _ ->
                     UR.init model
@@ -695,7 +671,12 @@ update msg model =
                 |> UR.addCmd (fetchTranslations (Shared.language shared) shared)
 
         CompletedLoadProfile (Ok profile_) ->
-            case profile_ of
+          let 
+              subscriptionDoc =
+                unreadCountSubscription model.accountName
+                  |> Graphql.Document.serializeSubscription
+          in
+              case profile_ of
                 Just p ->
                     UR.init { model | profile = Loaded p }
                         |> UR.addCmd (Chat.updateChatLanguage shared p shared.language CompletedChatTranslation)
@@ -712,6 +693,16 @@ update msg model =
                                       )
                                     ]
                             }
+                        |> UR.addPort 
+                            { responseAddress = CompletedLoadUnread (Encode.string "")
+                            , responseData = Encode.null
+                            , data = 
+                                Encode.object 
+                                    [ ("name", Encode.string "subscribeToUnreadCount" )
+                                    , ("subscription", Encode.string subscriptionDoc)
+                                    ]
+                            }
+
 
                 Nothing ->
                     UR.init model
@@ -836,15 +827,18 @@ update msg model =
                     model
                         |> UR.init
 
-        CompletedLoadUnread res ->
-            case res of
-                Ok { count } ->
-                    { model | unreadCount = count }
-                        |> UR.init
+        CompletedLoadUnread payload ->
+          case Decode.decodeValue ((unreadCountSubscription model.accountName) |> Graphql.Document.decoder) payload of 
+            Ok res ->
+              { model | unreadCount = res.unreads }
+              |> UR.init
 
-                Err err ->
-                    model
-                        |> UR.init
+            
+            Err e ->
+              model
+              |> UR.init
+              |> UR.logImpossible msg []
+
 
 
 chatNotification : Model -> String -> Notification
@@ -915,6 +909,30 @@ isAccount accountName model =
     Maybe.map .accountName (profile model) == Just accountName
 
 
+-- UNREAD NOTIFICATIONS 
+type alias UnreadMeta =
+    { unreads : Int }
+
+
+unreadSelection : SelectionSet UnreadMeta Bespiral.Object.UnreadNotifications
+unreadSelection =
+    SelectionSet.succeed UnreadMeta
+        |> with Bespiral.Object.UnreadNotifications.unreads
+
+
+unreadCountSubscription : Eos.Name -> SelectionSet UnreadMeta RootSubscription
+unreadCountSubscription name =
+  let 
+      stringName =
+        name 
+        |> Eos.nameToString
+
+      args =
+        { input = { account = stringName } }
+  in
+      Subscription.unreads args unreadSelection
+
+
 jsAddressToMsg : List String -> Value -> Maybe Msg
 jsAddressToMsg addr val =
     case addr of
@@ -929,6 +947,11 @@ jsAddressToMsg addr val =
                 |> Result.map ReceivedNotification
                 |> Result.toMaybe
 
+        "CompletedLoadUnread" :: [] ->
+                Decode.decodeValue (Decode.field "meta" Decode.value) val
+                  |> Result.map CompletedLoadUnread 
+                  |> Result.toMaybe
+         
         _ ->
             Nothing
 

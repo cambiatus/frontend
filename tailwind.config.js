@@ -138,7 +138,7 @@ module.exports = {
     // Not including them may break the current behaviour, because 'variants' key overwrites the current tailwind behaviour
     // See an example below of how add a varian to 'last':
     // backgroundColor: ['hover', 'focus', 'last']
-    borderRadius: ['responsive', 'first-hover', 'last-hover'],
+    borderRadius: ['responsive', 'first-hover', 'last-hover', 'last', 'first'],
     borderWidth: ['last']
   },
   plugins: [

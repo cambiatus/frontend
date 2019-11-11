@@ -49,3 +49,14 @@ salesOperation object_ =
 transfers : SelectionSet decodesTo Bespiral.Object.Transfer -> SelectionSet (Maybe decodesTo) RootSubscription
 transfers object_ =
     Object.selectionForCompositeField "transfers" [] object_ (identity >> Decode.nullable)
+
+
+type alias UnreadsRequiredArguments =
+    { input : Bespiral.InputObject.UnreadNotificationsSubscriptionInput }
+
+
+{-| A subscription for the number of unread notifications
+-}
+unreads : UnreadsRequiredArguments -> SelectionSet decodesTo Bespiral.Object.UnreadNotifications -> SelectionSet decodesTo RootSubscription
+unreads requiredArgs object_ =
+    Object.selectionForCompositeField "unreads" [ Argument.required "input" requiredArgs.input Bespiral.InputObject.encodeUnreadNotificationsSubscriptionInput ] object_ identity
