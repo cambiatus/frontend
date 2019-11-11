@@ -19,6 +19,6 @@ import Graphql.SelectionSet exposing (SelectionSet)
 import Json.Decode as Decode
 
 
-count : SelectionSet Int Bespiral.Object.UnreadNotifications
-count =
-    Object.selectionForField "Int" "count" [] Decode.int
+unreads : SelectionSet Int Bespiral.Object.UnreadNotifications
+unreads =
+    Object.selectionForField "Int" "unreads" [] Decode.int

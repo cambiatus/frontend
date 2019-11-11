@@ -216,6 +216,29 @@ encodeNewCommunityInput input =
         [ ( "symbol", Encode.string input.symbol |> Just ) ]
 
 
+buildObjectiveInput : ObjectiveInputRequiredFields -> ObjectiveInput
+buildObjectiveInput required =
+    { id = required.id }
+
+
+type alias ObjectiveInputRequiredFields =
+    { id : Int }
+
+
+{-| Type for the ObjectiveInput input object.
+-}
+type alias ObjectiveInput =
+    { id : Int }
+
+
+{-| Encode a ObjectiveInput into a value that can be used as an argument.
+-}
+encodeObjectiveInput : ObjectiveInput -> Value
+encodeObjectiveInput input =
+    Encode.maybeObject
+        [ ( "id", Encode.int input.id |> Just ) ]
+
+
 buildProfileInput : (ProfileInputOptionalFields -> ProfileInputOptionalFields) -> ProfileInput
 buildProfileInput fillOptionals =
     let
@@ -400,24 +423,24 @@ encodeSalesInput input =
         [ ( "account", Encode.string |> Encode.optional input.account ), ( "all", Encode.string |> Encode.optional input.all ), ( "communities", Encode.string |> Encode.optional input.communities ) ]
 
 
-buildUnreadNotificationsInput : UnreadNotificationsInputRequiredFields -> UnreadNotificationsInput
-buildUnreadNotificationsInput required =
+buildUnreadNotificationsSubscriptionInput : UnreadNotificationsSubscriptionInputRequiredFields -> UnreadNotificationsSubscriptionInput
+buildUnreadNotificationsSubscriptionInput required =
     { account = required.account }
 
 
-type alias UnreadNotificationsInputRequiredFields =
+type alias UnreadNotificationsSubscriptionInputRequiredFields =
     { account : String }
 
 
-{-| Type for the UnreadNotificationsInput input object.
+{-| Type for the UnreadNotificationsSubscriptionInput input object.
 -}
-type alias UnreadNotificationsInput =
+type alias UnreadNotificationsSubscriptionInput =
     { account : String }
 
 
-{-| Encode a UnreadNotificationsInput into a value that can be used as an argument.
+{-| Encode a UnreadNotificationsSubscriptionInput into a value that can be used as an argument.
 -}
-encodeUnreadNotificationsInput : UnreadNotificationsInput -> Value
-encodeUnreadNotificationsInput input =
+encodeUnreadNotificationsSubscriptionInput : UnreadNotificationsSubscriptionInput -> Value
+encodeUnreadNotificationsSubscriptionInput input =
     Encode.maybeObject
         [ ( "account", Encode.string input.account |> Just ) ]
