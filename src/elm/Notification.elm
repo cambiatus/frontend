@@ -1,4 +1,4 @@
-module Notification exposing (History, Model, Notification, NotificationType(..), SaleHistoryData, TransferData, addNotification, init, notificationHistoryQuery, readAll)
+module Notification exposing (History, Model, Notification, NotificationType(..), SaleHistoryData, TransferData, addNotification, init, markAsReadMutation, notificationHistoryQuery, readAll)
 
 import Account exposing (Profile)
 import Bespiral.Object
@@ -8,13 +8,14 @@ import Bespiral.Object.Sale as Sale
 import Bespiral.Object.SaleHistory as SaleHistory
 import Bespiral.Object.Transfer as Transfer
 import Bespiral.Query as Query
+import Bespiral.Mutation as Mutation
 import Bespiral.Scalar exposing (DateTime(..))
 import Bespiral.Union
 import Bespiral.Union.NotificationType
 import Community exposing (Balance, Community)
 import Eos exposing (Symbol)
 import Eos.Account as Eos
-import Graphql.Operation exposing (RootQuery)
+import Graphql.Operation exposing (RootQuery, RootMutation)
 import Graphql.OptionalArgument exposing (OptionalArgument(..))
 import Graphql.SelectionSet as SelectionSet exposing (SelectionSet, with)
 import Transfer exposing (transferItemSelectionSet)
@@ -53,7 +54,8 @@ type alias Notification =
 
 
 type alias History =
-    { type_ : String
+    { id : Int
+    , type_ : String
     , isRead : Bool
     , payload : NotificationType
     , insertedAt : DateTime
@@ -113,6 +115,14 @@ readAll model =
         , readNotifications = model.readNotifications ++ model.unreadNotifications
     }
 
+markAsReadMutation : Int -> SelectionSet History RootMutation 
+markAsReadMutation id =
+  Mutation.readNotification 
+    { input = { id = id } }
+    notificationHistorySelectionSet
+
+  
+
 
 notificationHistoryQuery : Eos.Name -> SelectionSet (List History) RootQuery
 notificationHistoryQuery account =
@@ -123,6 +133,7 @@ notificationHistoryQuery account =
 
 notificationHistorySelectionSet =
     SelectionSet.succeed History
+        |> with NotificationHistory.id
         |> with NotificationHistory.type_
         |> with NotificationHistory.isRead
         |> with (NotificationHistory.payload typeUnionSelectionSet)
