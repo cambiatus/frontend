@@ -12,6 +12,8 @@ import registerServiceWorker from './scripts/registerServiceWorker'
 import * as pushSub from './scripts/pushNotifications'
 import { Elm } from './elm/Main.elm'
 import * as Sentry from '@sentry/browser'
+import * as AbsintheSocket from '@absinthe/socket'
+const { Socket: PhoenixSocket } = require('phoenix')
 
 // =========================================
 // App startup
@@ -805,6 +807,132 @@ async function handleJavascriptPort (arg) {
     case 'hideFooter': {
       devLog('======================', 'hideFooter')
       document.getElementById('guest-footer').className += ' guest__footer'
+      break
+    }
+    case 'subscribeToNewCommunity': {
+      devLog('=======================', 'newCommunitySubscription')
+      let notifiers = []
+
+      // Open a socket connection
+      const socketConn = new PhoenixSocket(config.endpoints.socket)
+
+      // Build a graphql Socket
+      const abSocket = AbsintheSocket.create(socketConn)
+
+      // Remove existing notifiers if any
+      notifiers.map(notifier => AbsintheSocket.cancel(abSocket, notifier))
+
+      devLog('subscription doc', arg.data.subscription)
+      // Create new notifiers
+      notifiers = [arg.data.subscription].map(operation =>
+        AbsintheSocket.send(abSocket, {
+          operation,
+          variables: {}
+        })
+      )
+
+      let onStart = (data) => {
+        const payload = { dta: data, msg: 'starting community subscription' }
+        devLog('==========================', payload)
+        const response = {
+          address: arg.responseAddress,
+          addressData: arg.responseData,
+          state: 'starting'
+        }
+        app.ports.javascriptInPort.send(response)
+      }
+
+      let onAbort = (data) => {
+        devLog('===========================', 'aborting community subscription')
+      }
+
+      let onCancel = (data) => {
+        devLog('===========================', 'cancellling community subscription ')
+      }
+
+      let onError = (data) => {
+        devLog('community subscrition error', data)
+      }
+
+      let onResult = (data) => {
+        devLog('===========================', 'community subscription results')
+        const response = {
+          address: arg.responseAddress,
+          addressData: arg.responseData,
+          state: 'responded'
+        }
+        app.ports.javascriptInPort.send(response)
+      }
+
+      notifiers.map(notifier => {
+        AbsintheSocket.observe(abSocket, notifier, {
+          onAbort,
+          onError,
+          onCancel,
+          onStart,
+          onResult
+        })
+      })
+      break
+    }
+    case 'subscribeToUnreadCount': {
+      devLog('=======================', 'unreadCountSubscription')
+      let notifiers = []
+
+      // Open a socket connection
+      const socketConn = new PhoenixSocket(config.endpoints.socket)
+
+      // Build a graphql Socket
+      const abSocket = AbsintheSocket.create(socketConn)
+
+      // Remove existing notifiers if any
+      notifiers.map(notifier => AbsintheSocket.cancel(abSocket, notifier))
+
+      devLog('subscription doc', arg.data.subscription)
+      // Create new notifiers
+      notifiers = [arg.data.subscription].map(operation =>
+        AbsintheSocket.send(abSocket, {
+          operation,
+          variables: {}
+        })
+      )
+
+      let onStart = (data) => {
+        const payload = { dta: data, msg: 'starting unread countsubscription' }
+        devLog('==========================', payload)
+      }
+
+      let onAbort = (data) => {
+        devLog('===========================', 'aborting unread count subscription')
+      }
+
+      let onCancel = (data) => {
+        devLog('===========================', 'cancelling unread count subscription ')
+      }
+
+      let onError = (data) => {
+        devLog('community subscrition error', data)
+      }
+
+      let onResult = (data) => {
+        devLog('===========================', 'unread count subscription results')
+        const response = {
+          address: arg.responseAddress,
+          addressData: arg.responseData,
+          meta: data
+        }
+        app.ports.javascriptInPort.send(response)
+      }
+
+      notifiers.map(notifier => {
+        AbsintheSocket.observe(abSocket, notifier, {
+          onAbort,
+          onError,
+          onCancel,
+          onStart,
+          onResult
+        })
+      })
       break
     }
     default: {

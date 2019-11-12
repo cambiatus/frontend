@@ -193,24 +193,19 @@ encodeClaimsInput input =
         [ ( "claimer", Encode.string |> Encode.optional input.claimer ), ( "symbol", Encode.string |> Encode.optional input.symbol ), ( "validator", Encode.string |> Encode.optional input.validator ) ]
 
 
-buildNewCommunityInput : (NewCommunityInputOptionalFields -> NewCommunityInputOptionalFields) -> NewCommunityInput
-buildNewCommunityInput fillOptionals =
-    let
-        optionals =
-            fillOptionals
-                { symbol = Absent }
-    in
-    { symbol = optionals.symbol }
+buildNewCommunityInput : NewCommunityInputRequiredFields -> NewCommunityInput
+buildNewCommunityInput required =
+    { symbol = required.symbol }
 
 
-type alias NewCommunityInputOptionalFields =
-    { symbol : OptionalArgument String }
+type alias NewCommunityInputRequiredFields =
+    { symbol : String }
 
 
 {-| Type for the NewCommunityInput input object.
 -}
 type alias NewCommunityInput =
-    { symbol : OptionalArgument String }
+    { symbol : String }
 
 
 {-| Encode a NewCommunityInput into a value that can be used as an argument.
@@ -218,7 +213,30 @@ type alias NewCommunityInput =
 encodeNewCommunityInput : NewCommunityInput -> Value
 encodeNewCommunityInput input =
     Encode.maybeObject
-        [ ( "symbol", Encode.string |> Encode.optional input.symbol ) ]
+        [ ( "symbol", Encode.string input.symbol |> Just ) ]
+
+
+buildObjectiveInput : ObjectiveInputRequiredFields -> ObjectiveInput
+buildObjectiveInput required =
+    { id = required.id }
+
+
+type alias ObjectiveInputRequiredFields =
+    { id : Int }
+
+
+{-| Type for the ObjectiveInput input object.
+-}
+type alias ObjectiveInput =
+    { id : Int }
+
+
+{-| Encode a ObjectiveInput into a value that can be used as an argument.
+-}
+encodeObjectiveInput : ObjectiveInput -> Value
+encodeObjectiveInput input =
+    Encode.maybeObject
+        [ ( "id", Encode.int input.id |> Just ) ]
 
 
 buildProfileInput : (ProfileInputOptionalFields -> ProfileInputOptionalFields) -> ProfileInput
@@ -405,24 +423,24 @@ encodeSalesInput input =
         [ ( "account", Encode.string |> Encode.optional input.account ), ( "all", Encode.string |> Encode.optional input.all ), ( "communities", Encode.string |> Encode.optional input.communities ) ]
 
 
-buildUnreadNotificationsInput : UnreadNotificationsInputRequiredFields -> UnreadNotificationsInput
-buildUnreadNotificationsInput required =
+buildUnreadNotificationsSubscriptionInput : UnreadNotificationsSubscriptionInputRequiredFields -> UnreadNotificationsSubscriptionInput
+buildUnreadNotificationsSubscriptionInput required =
     { account = required.account }
 
 
-type alias UnreadNotificationsInputRequiredFields =
+type alias UnreadNotificationsSubscriptionInputRequiredFields =
     { account : String }
 
 
-{-| Type for the UnreadNotificationsInput input object.
+{-| Type for the UnreadNotificationsSubscriptionInput input object.
 -}
-type alias UnreadNotificationsInput =
+type alias UnreadNotificationsSubscriptionInput =
     { account : String }
 
 
-{-| Encode a UnreadNotificationsInput into a value that can be used as an argument.
+{-| Encode a UnreadNotificationsSubscriptionInput into a value that can be used as an argument.
 -}
-encodeUnreadNotificationsInput : UnreadNotificationsInput -> Value
-encodeUnreadNotificationsInput input =
+encodeUnreadNotificationsSubscriptionInput : UnreadNotificationsSubscriptionInput -> Value
+encodeUnreadNotificationsSubscriptionInput input =
     Encode.maybeObject
         [ ( "account", Encode.string input.account |> Just ) ]

@@ -7,6 +7,7 @@ import FormatNumber.Locales exposing (usLocale)
 import Graphql.Http
 import Html exposing (..)
 import Html.Attributes exposing (class, src)
+import Html.Events exposing (onClick)
 import I18Next exposing (Delims(..), t)
 import Notification exposing (History, NotificationType(..), SaleHistoryData, TransferData)
 import Page
@@ -50,6 +51,11 @@ type Status
     | Loaded (List History)
 
 
+type Payload
+    = T TransferData
+    | S SaleHistoryData
+
+
 
 -- VIEW
 
@@ -78,25 +84,33 @@ view loggedIn model =
                 ]
 
 
-viewNotifications : LoggedIn.Model -> List History -> Html msg
+viewNotifications : LoggedIn.Model -> List History -> Html Msg
 viewNotifications loggedIn notifications =
     div [ class "shadow-md rounded-lg bg-white mt-5" ]
         (List.map (viewNotification loggedIn) notifications)
 
 
-viewNotification : LoggedIn.Model -> History -> Html msg
+viewNotification : LoggedIn.Model -> History -> Html Msg
 viewNotification loggedIn notification =
+    let
+        isReadIndicator =
+            if notification.isRead then
+                ""
+
+            else
+                " bg-orange-100 first:rounded-t-lg last:rounded-b-lg"
+    in
     case notification.payload of
         Transfer data ->
-            div [ class "border-b last:border-b-0 border-gray-500 hover:bg-gray-100 first-hover:rounded-t-lg last-hover:rounded-b-lg" ]
+            div [ class ("border-b last:border-b-0 border-gray-500 hover:bg-gray-100 first-hover:rounded-t-lg last-hover:rounded-b-lg" ++ isReadIndicator) ]
                 [ viewNotificationTransfer loggedIn.shared notification data ]
 
         SaleHistory data ->
-            div [ class "border-b last:border-b-0 border-gray-500 hover:bg-gray-100 first-hover:rounded-t-lg last-hover:rounded-b-lg" ]
+            div [ class ("border-b last:border-b-0 border-gray-500 hover:bg-gray-100 first-hover:rounded-t-lg last-hover:rounded-b-lg" ++ isReadIndicator) ]
                 [ viewNotificationSaleHistory loggedIn notification data ]
 
 
-viewNotificationTransfer : Shared -> History -> TransferData -> Html msg
+viewNotificationTransfer : Shared -> History -> TransferData -> Html Msg
 viewNotificationTransfer shared history notification =
     let
         isReceive =
@@ -134,7 +148,10 @@ viewNotificationTransfer shared history notification =
                 ]
                     |> I18Next.tr shared.translations I18Next.Curly "notifications.transfer.sent"
     in
-    div [ class "flex items-start lg:items-center p-4" ]
+    div
+        [ class "flex items-start lg:items-center p-4"
+        , onClick (MarkAsRead history.id (T notification))
+        ]
         [ div [ class "flex-none" ]
             [ case maybeLogo of
                 Just logoUrl ->
@@ -162,7 +179,7 @@ viewNotificationTransfer shared history notification =
         ]
 
 
-viewNotificationSaleHistory : LoggedIn.Model -> History -> SaleHistoryData -> Html msg
+viewNotificationSaleHistory : LoggedIn.Model -> History -> SaleHistoryData -> Html Msg
 viewNotificationSaleHistory ({ shared } as loggedIn) notification sale =
     let
         maybeLogo =
@@ -177,9 +194,9 @@ viewNotificationSaleHistory ({ shared } as loggedIn) notification sale =
                 |> Utils.posixDateTime
                 |> Strftime.format "%d %b %Y" Time.utc
     in
-    a
+    div
         [ class "flex items-start lg:items-center p-4"
-        , Route.href (Route.ViewSale (String.fromInt sale.sale.id))
+        , onClick (MarkAsRead notification.id (S sale))
         ]
         ([ div
             [ class "flex-none" ]
@@ -285,6 +302,8 @@ type alias UpdateResult =
 
 type Msg
     = CompletedLoadNotificationHistory (Result (Graphql.Http.Error (List History)) (List History))
+    | MarkAsRead Int Payload
+    | CompletedReading (Result (Graphql.Http.Error History) History)
 
 
 update : Msg -> Model -> LoggedIn.Model -> UpdateResult
@@ -298,9 +317,65 @@ update msg model loggedIn =
             UR.init model
                 |> UR.logGraphqlError msg err
 
+        MarkAsRead notificationId data ->
+            let
+                cmd =
+                    Api.Graphql.mutation loggedIn.shared
+                        (Notification.markAsReadMutation notificationId)
+                        CompletedReading
+            in
+            case data of
+                T _ ->
+                    model
+                        |> UR.init
+                        |> UR.addCmd cmd
+
+                S sale ->
+                    model
+                        |> UR.init
+                        |> UR.addCmd cmd
+                        |> UR.addCmd
+                            (Route.ViewSale (String.fromInt sale.sale.id)
+                                |> Route.replaceUrl loggedIn.shared.navKey
+                            )
+
+        CompletedReading (Ok hist) ->
+            case model.status of
+                Loaded histories ->
+                    let
+                        updatedHistories =
+                            List.map
+                                (\h ->
+                                    if h.id == hist.id then
+                                        { h | isRead = True }
+
+                                    else
+                                        h
+                                )
+                                histories
+                    in
+                    { model | status = Loaded updatedHistories }
+                        |> UR.init
+
+                _ ->
+                    model
+                        |> UR.init
+                        |> UR.logImpossible msg []
+
+        CompletedReading (Err e) ->
+            model
+                |> UR.init
+                |> UR.logGraphqlError msg e
+
 
 msgToString : Msg -> List String
 msgToString msg =
     case msg of
         CompletedLoadNotificationHistory r ->
             [ "CompletedLoadNotificationHistory", UR.resultToString r ]
+
+        MarkAsRead _ _ ->
+            [ "MarkAsRead" ]
+
+        CompletedReading r ->
+            [ "CompletedReading", UR.resultToString r ]

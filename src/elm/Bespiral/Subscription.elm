@@ -19,15 +19,15 @@ import Graphql.SelectionSet exposing (SelectionSet)
 import Json.Decode as Decode exposing (Decoder)
 
 
-type alias NewCommunityRequiredArguments =
+type alias NewcommunityRequiredArguments =
     { input : Bespiral.InputObject.NewCommunityInput }
 
 
 {-| A subscription for new community addition
 -}
-newCommunity : NewCommunityRequiredArguments -> SelectionSet decodesTo Bespiral.Object.Community -> SelectionSet (Maybe decodesTo) RootSubscription
-newCommunity requiredArgs object_ =
-    Object.selectionForCompositeField "newCommunity" [ Argument.required "input" requiredArgs.input Bespiral.InputObject.encodeNewCommunityInput ] object_ (identity >> Decode.nullable)
+newcommunity : NewcommunityRequiredArguments -> SelectionSet decodesTo Bespiral.Object.Community -> SelectionSet decodesTo RootSubscription
+newcommunity requiredArgs object_ =
+    Object.selectionForCompositeField "newcommunity" [ Argument.required "input" requiredArgs.input Bespiral.InputObject.encodeNewCommunityInput ] object_ identity
 
 
 {-| A subscription for sale history
@@ -49,3 +49,14 @@ salesOperation object_ =
 transfers : SelectionSet decodesTo Bespiral.Object.Transfer -> SelectionSet (Maybe decodesTo) RootSubscription
 transfers object_ =
     Object.selectionForCompositeField "transfers" [] object_ (identity >> Decode.nullable)
+
+
+type alias UnreadsRequiredArguments =
+    { input : Bespiral.InputObject.UnreadNotificationsSubscriptionInput }
+
+
+{-| A subscription for the number of unread notifications
+-}
+unreads : UnreadsRequiredArguments -> SelectionSet decodesTo Bespiral.Object.UnreadNotifications -> SelectionSet decodesTo RootSubscription
+unreads requiredArgs object_ =
+    Object.selectionForCompositeField "unreads" [ Argument.required "input" requiredArgs.input Bespiral.InputObject.encodeUnreadNotificationsSubscriptionInput ] object_ identity

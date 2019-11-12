@@ -1,4 +1,4 @@
-module Community exposing (Action, ActionVerification, ActionVerificationsResponse, Balance, ClaimResponse, Community, CreateCommunityData, CreateTokenData, DashboardInfo, Metadata, Objective, ObjectiveId(..), Transaction, Validator, Verification(..), Verifiers, WithObjectives, claimSelectionSet, communitiesQuery, communityQuery, createCommunityData, decodeBalance, decodeObjectiveId, decodeTransaction, encodeClaimAction, encodeCreateActionAction, encodeCreateCommunityData, encodeCreateObjectiveAction, encodeCreateTokenData, encodeObjectiveId, encodeUpdateLogoData, encodeUpdateObjectiveAction, logoBackground, logoTitleQuery, logoUrl, toVerifications, unwrapObjectiveId)
+module Community exposing (Action, ActionVerification, ActionVerificationsResponse, Balance, ClaimResponse, Community, CreateCommunityData, CreateTokenData, DashboardInfo, Metadata, Objective, ObjectiveId(..), Transaction, Validator, Verification(..), Verifiers, WithObjectives, claimSelectionSet, communitiesQuery, communityQuery, createCommunityData, decodeBalance, decodeObjectiveId, decodeTransaction, encodeClaimAction, encodeCreateActionAction, encodeCreateCommunityData, encodeCreateObjectiveAction, encodeCreateTokenData, encodeObjectiveId, encodeUpdateLogoData, encodeUpdateObjectiveAction, logoBackground, logoTitleQuery, logoUrl, newCommunitySubscription, toVerifications, unwrapObjectiveId)
 
 import Account exposing (Profile, accountSelectionSet)
 import Api.Relay exposing (MetadataConnection, PaginationArgs)
@@ -12,9 +12,10 @@ import Bespiral.Object.Objective as Objective
 import Bespiral.Object.Validator
 import Bespiral.Query as Query
 import Bespiral.Scalar exposing (DateTime(..))
+import Bespiral.Subscription as Subscription
 import Eos exposing (EosBool(..), Symbol, symbolToString)
 import Eos.Account as Eos
-import Graphql.Operation exposing (RootQuery)
+import Graphql.Operation exposing (RootQuery, RootSubscription)
 import Graphql.OptionalArgument exposing (OptionalArgument(..))
 import Graphql.SelectionSet as SelectionSet exposing (SelectionSet, with)
 import Html exposing (Html)
@@ -129,6 +130,26 @@ communitiesQuery =
             { args | first = Present 0 }
         )
         |> Query.communities
+
+-- NEW COMMUNITY NAME 
+type alias NewCommunity =
+  { title : String }
+
+newCommunitySubscription : Symbol -> SelectionSet NewCommunity RootSubscription
+newCommunitySubscription symbol =
+    let
+        stringSymbol =
+            symbolToString symbol
+            |> String.toUpper
+   
+        selectionSet =
+          SelectionSet.succeed NewCommunity
+            |> with Community.name 
+
+        args =
+            { input = { symbol = stringSymbol } }
+    in
+    Subscription.newcommunity args selectionSet
 
 
 logoTitleQuery : Symbol -> SelectionSet (Maybe DashboardInfo) RootQuery

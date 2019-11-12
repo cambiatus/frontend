@@ -79,6 +79,17 @@ notificationHistory requiredArgs object_ =
     Object.selectionForCompositeField "notificationHistory" [ Argument.required "account" requiredArgs.account Encode.string ] object_ (identity >> Decode.list)
 
 
+type alias ObjectiveRequiredArguments =
+    { input : Bespiral.InputObject.ObjectiveInput }
+
+
+{-| A single objective
+-}
+objective : ObjectiveRequiredArguments -> SelectionSet decodesTo Bespiral.Object.Objective -> SelectionSet (Maybe decodesTo) RootQuery
+objective requiredArgs object_ =
+    Object.selectionForCompositeField "objective" [ Argument.required "input" requiredArgs.input Bespiral.InputObject.encodeObjectiveInput ] object_ (identity >> Decode.nullable)
+
+
 type alias ProfileRequiredArguments =
     { input : Bespiral.InputObject.ProfileInput }
 
@@ -117,12 +128,3 @@ type alias SalesRequiredArguments =
 sales : SalesRequiredArguments -> SelectionSet decodesTo Bespiral.Object.Sale -> SelectionSet (List decodesTo) RootQuery
 sales requiredArgs object_ =
     Object.selectionForCompositeField "sales" [ Argument.required "input" requiredArgs.input Bespiral.InputObject.encodeSalesInput ] object_ (identity >> Decode.list)
-
-
-type alias UnreadNotificationsRequiredArguments =
-    { input : Bespiral.InputObject.UnreadNotificationsInput }
-
-
-unreadNotifications : UnreadNotificationsRequiredArguments -> SelectionSet decodesTo Bespiral.Object.UnreadNotifications -> SelectionSet decodesTo RootQuery
-unreadNotifications requiredArgs object_ =
-    Object.selectionForCompositeField "unreadNotifications" [ Argument.required "input" requiredArgs.input Bespiral.InputObject.encodeUnreadNotificationsInput ] object_ identity
