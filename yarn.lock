@@ -3400,7 +3400,7 @@ elliptic@^6.0.0:
     minimalistic-assert "^1.0.0"
     minimalistic-crypto-utils "^1.0.0"
 
-elm-asset-webpack-loader@1.1.1:
+elm-asset-webpack-loader@^1.1.1:
   version "1.1.1"
   resolved "https://registry.yarnpkg.com/elm-asset-webpack-loader/-/elm-asset-webpack-loader-1.1.1.tgz#9e8fc05ea89794006c9f873165200f65c6d8ccc0"
   integrity sha512-J+YKLGNCMLSNhxXfQxaJhQzIiTiKQGo8YlZEntTpZjWy3kTqSF/2qAvnRonM2VvfhbKuhg0cKRKVrt9+cC8bmw==

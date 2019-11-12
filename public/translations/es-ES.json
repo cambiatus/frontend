@@ -232,7 +232,7 @@
     },
     "index": {
       "created_by": "Creada por {{account_name}}",
-      "members": "{{quantity}} Membresía",
+      "members": "{{quantity}} miembros",
       "transfers": "{{quantity}} Transferencias"
     },
     "invite": {
