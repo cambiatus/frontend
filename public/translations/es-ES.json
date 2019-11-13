@@ -198,6 +198,9 @@
     "transfer": {
       "receive": "Recibió {{amount}} del usuário {{user}}",
       "sent": "Enviaste {{amount}} a {{user}}"
+    },
+    "issue": {
+      "receive": "{{amount}}{{symbol}} ha sido emitido a su cuenta"
     }
   },
   "community": {
