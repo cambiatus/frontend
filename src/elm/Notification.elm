@@ -1,4 +1,4 @@
-module Notification exposing (History, Model, Notification, NotificationType(..), SaleHistoryData, TransferData, addNotification, init, markAsReadMutation, notificationHistoryQuery, readAll)
+module Notification exposing (History, Model, Notification, NotificationType(..), MintData, SaleHistoryData, TransferData, addNotification, init, markAsReadMutation, notificationHistoryQuery, readAll)
 
 import Account exposing (Profile)
 import Bespiral.Object
@@ -7,6 +7,7 @@ import Bespiral.Object.NotificationHistory as NotificationHistory
 import Bespiral.Object.Sale as Sale
 import Bespiral.Object.SaleHistory as SaleHistory
 import Bespiral.Object.Transfer as Transfer
+import Bespiral.Object.Mint as Mint
 import Bespiral.Query as Query
 import Bespiral.Mutation as Mutation
 import Bespiral.Scalar exposing (DateTime(..))
@@ -82,9 +83,16 @@ type alias SaleHistoryData =
     , sale : Sale
     }
 
+type alias MintData =
+  { quantity : Float
+  , memo : Maybe String
+  , community : Community
+  }
 
 type alias Community =
-    { logo : String }
+    { logo : String
+    , symbol : String
+    }
 
 
 type alias Sale =
@@ -97,6 +105,7 @@ type alias Sale =
 type NotificationType
     = Transfer TransferData
     | SaleHistory SaleHistoryData
+    | Mint MintData
 
 
 addNotification : Notification -> Model -> Model
@@ -115,13 +124,13 @@ readAll model =
         , readNotifications = model.readNotifications ++ model.unreadNotifications
     }
 
-markAsReadMutation : Int -> SelectionSet History RootMutation 
+markAsReadMutation : Int -> SelectionSet History RootMutation
 markAsReadMutation id =
-  Mutation.readNotification 
+  Mutation.readNotification
     { input = { id = id } }
     notificationHistorySelectionSet
 
-  
+
 
 
 notificationHistoryQuery : Eos.Name -> SelectionSet (List History) RootQuery
@@ -146,7 +155,15 @@ typeUnionSelectionSet =
     Bespiral.Union.NotificationType.fragments
         { onTransfer = SelectionSet.map Transfer transferSelectionSet
         , onSaleHistory = SelectionSet.map SaleHistory saleHistorySelectionSet
+        , onMint = SelectionSet.map Mint mintSelectionSet
         }
+
+mintSelectionSet : SelectionSet MintData Bespiral.Object.Mint
+mintSelectionSet =
+    SelectionSet.succeed MintData
+        |> with Mint.quantity
+        |> with Mint.memo
+        |> with (Mint.community logoSelectionSet)
 
 
 transferSelectionSet : SelectionSet TransferData Bespiral.Object.Transfer
@@ -180,3 +197,4 @@ saleHistorySelectionSet =
 logoSelectionSet =
     SelectionSet.succeed Community
         |> with Community.logo
+        |> with Community.symbol
