@@ -25,6 +25,10 @@ type Community
     = Community
 
 
+type Mint
+    = Mint
+
+
 type Network
     = Network
 

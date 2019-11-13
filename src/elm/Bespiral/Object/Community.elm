@@ -89,6 +89,11 @@ minBalance =
     Object.selectionForField "(Maybe Float)" "minBalance" [] (Decode.float |> Decode.nullable)
 
 
+mints : SelectionSet decodesTo Bespiral.Object.Mint -> SelectionSet (List decodesTo) Bespiral.Object.Community
+mints object_ =
+    Object.selectionForCompositeField "mints" [] object_ (identity >> Decode.list)
+
+
 name : SelectionSet String Bespiral.Object.Community
 name =
     Object.selectionForField "String" "name" [] Decode.string
