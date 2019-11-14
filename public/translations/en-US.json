@@ -198,6 +198,9 @@
     "transfer": {
       "receive": "You received {{amount}} from user {{user}}",
       "sent": "You've sent {{amount}} to {{user}}"
+    },
+    "issue": {
+      "receive": "{{amount}}{{symbol}} has been issued to your account"
     }
   },
   "community": {

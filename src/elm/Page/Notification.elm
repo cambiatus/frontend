@@ -1,6 +1,7 @@
 module Page.Notification exposing (..)
 
 import Api.Graphql
+import Eos
 import Eos.Account as Eos
 import FormatNumber exposing (format)
 import FormatNumber.Locales exposing (usLocale)
@@ -9,7 +10,7 @@ import Html exposing (..)
 import Html.Attributes exposing (class, src)
 import Html.Events exposing (onClick)
 import I18Next exposing (Delims(..), t)
-import Notification exposing (History, NotificationType(..), SaleHistoryData, TransferData)
+import Notification exposing (History, NotificationType(..), MintData, SaleHistoryData, TransferData)
 import Page
 import Route exposing (Route)
 import Session.LoggedIn as LoggedIn exposing (External(..))
@@ -54,6 +55,7 @@ type Status
 type Payload
     = T TransferData
     | S SaleHistoryData
+    | M MintData
 
 
 
@@ -104,6 +106,10 @@ viewNotification loggedIn notification =
         Transfer data ->
             div [ class ("border-b last:border-b-0 border-gray-500 hover:bg-gray-100 first-hover:rounded-t-lg last-hover:rounded-b-lg" ++ isReadIndicator) ]
                 [ viewNotificationTransfer loggedIn.shared notification data ]
+
+        Mint data ->
+            div [ class ("border-b last:border-b-0 border-gray-500 hover:bg-gray-100 first-hover:rounded-t-lg last-hover:rounded-b-lg" ++ isReadIndicator) ]
+                [ viewNotificationMint loggedIn.shared notification data ]
 
         SaleHistory data ->
             div [ class ("border-b last:border-b-0 border-gray-500 hover:bg-gray-100 first-hover:rounded-t-lg last-hover:rounded-b-lg" ++ isReadIndicator) ]
@@ -177,6 +183,59 @@ viewNotificationTransfer shared history notification =
         , div [ class "flex flex-none pl-4" ]
             (viewAmount amount notification.symbol)
         ]
+
+viewNotificationMint : Shared -> History -> MintData -> Html Msg
+viewNotificationMint shared history notification =
+    let
+        maybeLogo =
+            if String.isEmpty notification.community.logo then
+                Nothing
+
+            else
+                Just (shared.endpoints.ipfs ++ "/" ++ notification.community.logo)
+
+        date =
+            Just history.insertedAt
+                |> Utils.posixDateTime
+                |> Strftime.format "%d %b %Y" Time.utc
+
+        description =
+                [ ( "amount", String.fromFloat notification.quantity)
+                , ( "symbol", notification.community.symbol )
+                ]
+                    |> I18Next.tr shared.translations I18Next.Curly "notifications.issue.receive"
+
+    in
+    div
+        [ class "flex items-start lg:items-center p-4"
+        , onClick (MarkAsRead history.id (M notification))
+        ]
+        [ div [ class "flex-none" ]
+            [ case maybeLogo of
+                Just logoUrl ->
+                    img
+                        [ class "w-10 h-10 object-scale-down"
+                        , src logoUrl
+                        ]
+                        []
+
+                Nothing ->
+                    div
+                        [ class "w-10 h-10 object-scale-down" ]
+                        []
+            ]
+        , div [ class "flex-col flex-grow-1 pl-4" ]
+            [ p
+                [ class "font-sans text-black text-sm leading-relaxed" ]
+                [ text description ]
+            , p
+                [ class "font-normal font-sans text-gray-900 text-caption uppercase" ]
+                [ text date ]
+            ]
+        , div [ class "flex flex-none pl-4" ]
+            (viewAmount notification.quantity notification.community.symbol)
+        ]
+
 
 
 viewNotificationSaleHistory : LoggedIn.Model -> History -> SaleHistoryData -> Html Msg
@@ -329,6 +388,11 @@ update msg model loggedIn =
                     model
                         |> UR.init
                         |> UR.addCmd cmd
+
+                M _ ->
+                  model
+                      |> UR.init
+                      |> UR.addCmd cmd
 
                 S sale ->
                     model

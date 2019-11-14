@@ -131,7 +131,7 @@ communitiesQuery =
         )
         |> Query.communities
 
--- NEW COMMUNITY NAME 
+-- NEW COMMUNITY NAME
 type alias NewCommunity =
   { title : String }
 
@@ -141,10 +141,10 @@ newCommunitySubscription symbol =
         stringSymbol =
             symbolToString symbol
             |> String.toUpper
-   
+
         selectionSet =
           SelectionSet.succeed NewCommunity
-            |> with Community.name 
+            |> with Community.name
 
         args =
             { input = { symbol = stringSymbol } }

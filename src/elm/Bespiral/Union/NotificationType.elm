@@ -22,6 +22,7 @@ import Json.Decode as Decode
 type alias Fragments decodesTo =
     { onTransfer : SelectionSet decodesTo Bespiral.Object.Transfer
     , onSaleHistory : SelectionSet decodesTo Bespiral.Object.SaleHistory
+    , onMint : SelectionSet decodesTo Bespiral.Object.Mint
     }
 
 
@@ -34,6 +35,7 @@ fragments selections =
     Object.exhuastiveFragmentSelection
         [ Object.buildFragment "Transfer" selections.onTransfer
         , Object.buildFragment "SaleHistory" selections.onSaleHistory
+        , Object.buildFragment "Mint" selections.onMint
         ]
 
 
@@ -44,4 +46,5 @@ maybeFragments : Fragments (Maybe decodesTo)
 maybeFragments =
     { onTransfer = Graphql.SelectionSet.empty |> Graphql.SelectionSet.map (\_ -> Nothing)
     , onSaleHistory = Graphql.SelectionSet.empty |> Graphql.SelectionSet.map (\_ -> Nothing)
+    , onMint = Graphql.SelectionSet.empty |> Graphql.SelectionSet.map (\_ -> Nothing)
     }

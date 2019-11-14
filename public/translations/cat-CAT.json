@@ -199,6 +199,9 @@
     "transfer": {
       "receive": "Heu rebut {{amount}} de l'usuari {{user}}",
       "sent": "Heu enviat {{amount}} a {{user}}"
+    },
+    "issue": {
+      "receive": "{{amount}}{{symbol}} s'ha publicat al vostre compte"
     }
   },
   "community": {
