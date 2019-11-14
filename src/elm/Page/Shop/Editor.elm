@@ -1110,10 +1110,6 @@ encodeCreateForm loggedIn form =
                     Encode.string ""
 
                 Just asset ->
-                    let
-                        _ =
-                            Debug.log "logged_asset" asset
-                    in
                     Eos.encodeAsset asset
 
         trackStock =
