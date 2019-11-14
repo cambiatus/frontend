@@ -347,7 +347,7 @@ viewCard model session index card =
 
                       else
                         div [ class "flex flex-none w-full items-center" ]
-                            [ p [ class "text-green text-2xl font-medium" ] [ text card.sale.price ]
+                            [ p [ class "text-green text-2xl font-medium" ] [ text (String.fromFloat card.sale.price) ]
                             , div [ class "uppercase text-xs ml-2 font-thin font-sans text-green" ] [ text (Eos.symbolToString card.sale.symbol) ]
                             ]
                     , div [ class "w-full h-4" ]
@@ -382,7 +382,7 @@ viewCard model session index card =
 
               else
                 div [ class "border-t border-gray-300 flex flex-none w-full px-6 pb-2" ]
-                    [ p [ class "text-green text-3xl" ] [ text card.sale.price ]
+                    [ p [ class "text-green text-3xl" ] [ text (String.fromFloat card.sale.price) ]
                     , div [ class "uppercase text-xs font-thin mt-3 ml-2 font-sans text-green" ] [ text (Eos.symbolToString card.sale.symbol) ]
                     ]
             , div [ class "px-6 pb-6" ]
@@ -493,7 +493,7 @@ viewHeaderAvatarTitle model session { sale } =
         , div [ class "shop__title-text" ]
             [ h3 [ class "shop__title" ] [ text sale.title ]
             , div [ class "shop__sale__price" ]
-                [ p [ class "sale__amount" ] [ text sale.price ]
+                [ p [ class "sale__amount" ] [ text (String.fromFloat sale.price) ]
                 , p [ class "sale__symbol" ] [ text saleSymbol ]
                 ]
             , p [ class "shop__balance" ]
@@ -711,13 +711,7 @@ update msg model loggedIn =
             UR.init { model | date = Just date }
 
         CompletedSalesLoad (Ok sales) ->
-            let
-                sales_ =
-                    List.map
-                        Shop.salePriceToInT
-                        sales
-            in
-            UR.init { model | cards = Loaded (List.map cardFromSale sales_) }
+            UR.init { model | cards = Loaded (List.map cardFromSale sales) }
 
         CompletedSalesLoad (Err err) ->
             UR.init { model | cards = LoadingFailed err }
@@ -737,14 +731,6 @@ update msg model loggedIn =
                                 , permissionName = Eos.samplePermission
                                 }
 
-                            price =
-                                case String.toFloat card.sale.price of
-                                    Just priceInt ->
-                                        priceInt
-
-                                    Nothing ->
-                                        1.0
-
                             wantedUnits =
                                 case String.toInt card.form.unit of
                                     Just quantityInt ->
@@ -755,7 +741,7 @@ update msg model loggedIn =
                                         1
 
                             tAmount =
-                                price * toFloat wantedUnits
+                                card.sale.price * toFloat wantedUnits
 
                             quantity =
                                 { amount = tAmount

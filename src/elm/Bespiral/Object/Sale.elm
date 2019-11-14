@@ -69,9 +69,9 @@ image =
     Object.selectionForField "(Maybe String)" "image" [] (Decode.string |> Decode.nullable)
 
 
-price : SelectionSet String Bespiral.Object.Sale
+price : SelectionSet Float Bespiral.Object.Sale
 price =
-    Object.selectionForField "String" "price" [] Decode.string
+    Object.selectionForField "Float" "price" [] Decode.float
 
 
 title : SelectionSet String Bespiral.Object.Sale
