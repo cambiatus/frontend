@@ -1,4 +1,4 @@
-module Shop exposing (Filter(..), Sale, SaleId, decodeTargetValueToFilter, encodeTransferSale, salePriceToInT, saleQuery, salesQuery)
+module Shop exposing (Filter(..), Sale, SaleId, decodeTargetValueToFilter, encodeTransferSale, saleQuery, salesQuery)
 
 import Avatar exposing (Avatar)
 import Bespiral.Object
@@ -26,7 +26,7 @@ type alias Sale =
     , description : String
     , creatorId : Eos.Name
     , createdEosAccount : Eos.Name
-    , price : String
+    , price : Float
     , symbol : Symbol
     , rateCount : Maybe Int
     , image : Maybe String
@@ -171,18 +171,3 @@ salesQuery filter accName =
                 salesSelection
 
 
-salePriceToInT : Sale -> Sale
-salePriceToInT sale =
-    let
-        words =
-            String.split "." sale.price
-
-        price =
-            case List.head words of
-                Just number ->
-                    number
-
-                Nothing ->
-                    ""
-    in
-    { sale | price = price }
