@@ -160,13 +160,7 @@ update : Msg -> Model -> LoggedIn.Model -> UpdateResult
 update msg model user =
     case msg of
         CompletedSaleLoad (Ok maybeSale) ->
-            let
-                mSale =
-                    Maybe.map
-                        Shop.salePriceToInT
-                        maybeSale
-            in
-            { model | status = LoadedSale mSale }
+            { model | status = LoadedSale maybeSale }
                 |> UR.init
 
         CompletedSaleLoad (Err err) ->
@@ -234,14 +228,6 @@ update msg model user =
                                 , permissionName = Eos.samplePermission
                                 }
 
-                            price =
-                                case String.toFloat sale.price of
-                                    Just pF ->
-                                        pF
-
-                                    Nothing ->
-                                        1
-
                             requiredUnits =
                                 case String.toInt model.form.units of
                                     Just rU ->
@@ -251,12 +237,12 @@ update msg model user =
                                         1
 
                             value =
-                                { amount = price * toFloat requiredUnits
+                                { amount = sale.price * toFloat requiredUnits
                                 , symbol = sale.symbol
                                 }
 
                             unitPrice =
-                                { amount = price
+                                { amount = sale.price
                                 , symbol = sale.symbol
                                 }
                         in
@@ -309,19 +295,10 @@ update msg model user =
             case model.status of
                 LoadedSale (Just saleItem) ->
                     let
-                        salePrice =
-                            case String.toFloat saleItem.price of
-                                Just price ->
-                                    price
-
-                                -- Impossible State
-                                Nothing ->
-                                    0
-
                         newPrice =
                             case String.toFloat u of
                                 Just uF ->
-                                    String.fromFloat (uF * salePrice)
+                                    String.fromFloat (uF * saleItem.price)
 
                                 Nothing ->
                                     "Invalid Units"
@@ -599,7 +576,7 @@ viewHeaderAvatarTitle session { sale } =
         , div [ class "shop__title-text" ]
             [ h3 [ class "shop__title" ] [ text sale.title ]
             , div [ class "shop__sale__price" ]
-                [ p [ class "sale__amount" ] [ text sale.price ]
+                [ p [ class "sale__amount" ] [ text (String.fromFloat sale.price) ]
                 , p [ class "sale__symbol" ] [ text saleSymbol ]
                 ]
             , if Eos.nameToString sale.creatorId == account then

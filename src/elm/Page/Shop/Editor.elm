@@ -595,7 +595,7 @@ update msg model loggedIn =
                                     , symbol = updateInput (Just sale.symbol) form.symbol
                                     , trackStock = updateInput (Just trackStock) form.trackStock
                                     , units = updateInput (String.fromInt sale.units) form.units
-                                    , price = updateInput sale.price form.price
+                                    , price = updateInput (String.fromFloat sale.price) form.price
                                 }
                             )
                         |> UR.init
@@ -1110,6 +1110,10 @@ encodeCreateForm loggedIn form =
                     Encode.string ""
 
                 Just asset ->
+                    let
+                        _ =
+                            Debug.log "logged_asset" asset
+                    in
                     Eos.encodeAsset asset
 
         trackStock =
