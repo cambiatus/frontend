@@ -175,7 +175,7 @@ communityInvite shared symbol inviter email toMsg =
         , body =
             Encode.object
                 [ ( "inviter", Eos.encodeName inviter )
-                , ( "invites", Encode.list Encode.string [ email ] )
+                , ( "invites", Encode.string email )
                 ]
                 |> Http.jsonBody
         , expect = Http.expectWhatever toMsg
