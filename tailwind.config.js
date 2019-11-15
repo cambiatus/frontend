@@ -117,7 +117,8 @@ module.exports = {
         'super': '2.5rem'
       },
       inset: {
-        '1': '1rem'
+        '1': '1rem',
+        '1/2': '50%'
       },
       width: {
         'form': '45.625rem'

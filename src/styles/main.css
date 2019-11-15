@@ -145,7 +145,7 @@
 /* Modal */
 
 .modal {
-    @apply z-50 fixed;
+    @apply z-50 fixed top-1/2;
 }
 
 .modal-bg {
