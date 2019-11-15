@@ -125,8 +125,7 @@ module.exports = {
       },
       inset: {
         '1': '1rem',
-        '1/2': '50%',
-        'modal': '10rem'
+        '1/2': '50%'
       },
       width: {
         'form': '45.625rem'
