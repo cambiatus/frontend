@@ -150,8 +150,6 @@ maybePrivateKey model =
 
 
 
-
-
 -- VIEW
 
 
@@ -271,7 +269,7 @@ viewHeader ({ shared } as model) profile_ =
                 ]
                 []
             , img
-                [ class "hidden lg:block lg:visible object-none object-scale-down w-1/2"
+                [ class "hidden lg:block lg:visible object-scale-down h-8 w-64"
                 , src shared.logo
                 ]
                 []
@@ -297,13 +295,15 @@ viewHeader ({ shared } as model) profile_ =
                 ]
                 [ Avatar.view shared.endpoints.ipfs profile_.avatar "h-7 w-7 float-right" ]
             , button
-                [ class "h-12 bg-gray-200 rounded-lg flex py-2 px-3 hidden xl:visible xl:flex w-2/3"
+                [ class "h-12 bg-gray-200 rounded-lg flex py-2 px-3 hidden xl:visible xl:flex"
                 , onClick (ShowUserNav (not model.showUserNav))
                 ]
                 [ Avatar.view shared.endpoints.ipfs profile_.avatar "h-8 w-8"
                 , div [ class "flex flex-wrap text-left pl-2" ]
-                    [ p [ class "w-full font-sans uppercase text-gray-900 text-xs overflow-x-hidden" ] [ text (tr "menu.welcome_message" [ ( "user_name", Eos.nameToString profile_.accountName ) ]) ]
-                    , p [ class "w-full font-sans text-indigo-500 text-sm" ] [ text (t shared.translations "menu.my_account") ]
+                    [ p [ class "w-full font-sans uppercase text-gray-900 text-xs overflow-x-hidden" ]
+                        [ text (tr "menu.welcome_message" [ ( "user_name", Eos.nameToString profile_.accountName ) ]) ]
+                    , p [ class "w-full font-sans text-indigo-500 text-sm" ]
+                        [ text (t shared.translations "menu.my_account") ]
                     ]
                 , Icons.arrowDown "float-right"
                 ]
@@ -652,12 +652,11 @@ update msg model =
             UR.init model
 
         CompletedLoadTranslation lang (Ok transl) ->
-                      case model.profile of
+            case model.profile of
                 Loaded profile_ ->
                     UR.init { model | shared = Shared.loadTranslation (Ok ( lang, transl )) shared }
                         |> UR.addCmd (Chat.updateChatLanguage shared profile_ lang CompletedChatTranslation)
                         |> UR.addCmd (Ports.storeLanguage lang)
-                                                
 
                 _ ->
                     UR.init model
@@ -671,12 +670,12 @@ update msg model =
                 |> UR.addCmd (fetchTranslations (Shared.language shared) shared)
 
         CompletedLoadProfile (Ok profile_) ->
-          let 
-              subscriptionDoc =
-                unreadCountSubscription model.accountName
-                  |> Graphql.Document.serializeSubscription
-          in
-              case profile_ of
+            let
+                subscriptionDoc =
+                    unreadCountSubscription model.accountName
+                        |> Graphql.Document.serializeSubscription
+            in
+            case profile_ of
                 Just p ->
                     UR.init { model | profile = Loaded p }
                         |> UR.addCmd (Chat.updateChatLanguage shared p shared.language CompletedChatTranslation)
@@ -693,16 +692,15 @@ update msg model =
                                       )
                                     ]
                             }
-                        |> UR.addPort 
+                        |> UR.addPort
                             { responseAddress = CompletedLoadUnread (Encode.string "")
                             , responseData = Encode.null
-                            , data = 
-                                Encode.object 
-                                    [ ("name", Encode.string "subscribeToUnreadCount" )
-                                    , ("subscription", Encode.string subscriptionDoc)
+                            , data =
+                                Encode.object
+                                    [ ( "name", Encode.string "subscribeToUnreadCount" )
+                                    , ( "subscription", Encode.string subscriptionDoc )
                                     ]
                             }
-
 
                 Nothing ->
                     UR.init model
@@ -828,17 +826,15 @@ update msg model =
                         |> UR.init
 
         CompletedLoadUnread payload ->
-          case Decode.decodeValue ((unreadCountSubscription model.accountName) |> Graphql.Document.decoder) payload of 
-            Ok res ->
-              { model | unreadCount = res.unreads }
-              |> UR.init
+            case Decode.decodeValue (unreadCountSubscription model.accountName |> Graphql.Document.decoder) payload of
+                Ok res ->
+                    { model | unreadCount = res.unreads }
+                        |> UR.init
 
-            
-            Err e ->
-              model
-              |> UR.init
-              |> UR.logImpossible msg []
-
+                Err e ->
+                    model
+                        |> UR.init
+                        |> UR.logImpossible msg []
 
 
 chatNotification : Model -> String -> Notification
@@ -909,7 +905,10 @@ isAccount accountName model =
     Maybe.map .accountName (profile model) == Just accountName
 
 
--- UNREAD NOTIFICATIONS 
+
+-- UNREAD NOTIFICATIONS
+
+
 type alias UnreadMeta =
     { unreads : Int }
 
@@ -922,15 +921,15 @@ unreadSelection =
 
 unreadCountSubscription : Eos.Name -> SelectionSet UnreadMeta RootSubscription
 unreadCountSubscription name =
-  let 
-      stringName =
-        name 
-        |> Eos.nameToString
+    let
+        stringName =
+            name
+                |> Eos.nameToString
 
-      args =
-        { input = { account = stringName } }
-  in
-      Subscription.unreads args unreadSelection
+        args =
+            { input = { account = stringName } }
+    in
+    Subscription.unreads args unreadSelection
 
 
 jsAddressToMsg : List String -> Value -> Maybe Msg
@@ -948,10 +947,10 @@ jsAddressToMsg addr val =
                 |> Result.toMaybe
 
         "CompletedLoadUnread" :: [] ->
-                Decode.decodeValue (Decode.field "meta" Decode.value) val
-                  |> Result.map CompletedLoadUnread 
-                  |> Result.toMaybe
-         
+            Decode.decodeValue (Decode.field "meta" Decode.value) val
+                |> Result.map CompletedLoadUnread
+                |> Result.toMaybe
+
         _ ->
             Nothing
 

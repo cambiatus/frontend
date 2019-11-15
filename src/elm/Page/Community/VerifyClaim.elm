@@ -136,7 +136,7 @@ view { accountName, shared } { claimId, status } =
                         ]
 
         LoadVerificationFailed err ->
-            Page.fullPageGraphQLError (t "verification.title") err
+            Page.fullPageGraphQLError (t "error.unknown") err
 
 
 viewModal : Translations -> ModalStatus -> Verification -> Html Msg

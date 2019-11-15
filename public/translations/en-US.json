@@ -59,7 +59,7 @@
       }
     },
     "objective": {
-         "invalid_id": "Invalid objective id "
+      "invalid_id": "Invalid objective id "
     },
     "pageNotFound": "Page not found",
     "required": "It looks like you forgot to fill this one out.",
