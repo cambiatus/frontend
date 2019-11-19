@@ -88,8 +88,8 @@ type alias Form =
     , symbol : String
     , logoSelected : Int
     , logoList : List LogoStatus
-    , inviterReward : Int
-    , invitedReward : Int
+    , inviterReward : Float
+    , invitedReward : Float
     }
 
 
@@ -125,8 +125,8 @@ editForm community =
     , symbol = Eos.symbolToString community.symbol
     , logoSelected = logoSelected
     , logoList = logoList
-    , inviterReward = 0
-    , invitedReward = 0
+    , inviterReward = community.inviterReward
+    , invitedReward = community.invitedReward
     }
 
 
@@ -195,6 +195,8 @@ encodeFormHelper logoHash { shared, accountName } form =
             , logoHash = logoHash
             , name = form.name
             , description = form.description
+            , inviterReward = form.inviterReward
+            , invitedReward = form.invitedReward
             }
                 |> Community.createCommunityData
                 |> Valid
@@ -447,8 +449,8 @@ viewFieldLogo shared isDisabled selected logos errors =
         )
 
 
-viewFieldInviterReward : Shared -> Bool -> Int -> Dict String FormError -> Html Msg
-viewFieldInviterReward shared isDisabled defVal errors = 
+viewFieldInviterReward : Shared -> Bool -> Float -> Dict String FormError -> Html Msg
+viewFieldInviterReward shared isDisabled defVal errors =
     let
         id_ =
             "comm-inviter-reward"
@@ -463,7 +465,7 @@ viewFieldInviterReward shared isDisabled defVal errors =
         , input
             [ class "input"
             , id id_
-            , value <| String.fromInt defVal
+            , value <| String.fromFloat defVal
             , maxlength 255
             , required True
             , onInput EnteredInviterReward
@@ -473,7 +475,8 @@ viewFieldInviterReward shared isDisabled defVal errors =
         , viewFieldError shared id_ errors
         ]
 
-viewFieldInvitedReward : Shared -> Bool -> Int -> Dict String FormError -> Html Msg
+
+viewFieldInvitedReward : Shared -> Bool -> Float -> Dict String FormError -> Html Msg
 viewFieldInvitedReward shared isDisabled defVal errors =
     let
         id_ =
@@ -489,7 +492,7 @@ viewFieldInvitedReward shared isDisabled defVal errors =
         , input
             [ class "input"
             , id id_
-            , value <| String.fromInt defVal
+            , value <| String.fromFloat defVal
             , maxlength 255
             , required True
             , onInput EnteredInvitedReward
@@ -623,12 +626,12 @@ update msg model loggedIn =
                 |> updateForm (\form -> { form | description = input })
 
         EnteredInviterReward input ->
-            UR.init model 
-                |> updateForm (\form -> { form | inviterReward = Maybe.withDefault form.inviterReward <| String.toInt input })
-        
-        EnteredInvitedReward input -> 
-            UR.init model 
-                |> updateForm (\form -> { form | invitedReward = Maybe.withDefault form.invitedReward <| String.toInt input })
+            UR.init model
+                |> updateForm (\form -> { form | inviterReward = Maybe.withDefault form.inviterReward <| String.toFloat input })
+
+        EnteredInvitedReward input ->
+            UR.init model
+                |> updateForm (\form -> { form | invitedReward = Maybe.withDefault form.invitedReward <| String.toFloat input })
 
         EnteredSymbol input ->
             UR.init model
@@ -983,7 +986,7 @@ msgToString msg =
 
         EnteredInvitedReward _ ->
             [ "EnteredInvitedReward" ]
-        
+
         EnteredInviterReward _ ->
             [ "EnteredInviterReward" ]
 
