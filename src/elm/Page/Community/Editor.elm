@@ -456,7 +456,7 @@ viewFieldLogo shared isDisabled selected logos errors =
         )
 
 
-viewFieldInviterReward : Shared -> Bool -> Float -> Dict String FormError -> Html Msg
+viewFieldInviterReward : Shared -> Bool -> Int -> Dict String FormError -> Html Msg
 viewFieldInviterReward shared isDisabled defVal errors =
     let
         id_ =
@@ -472,7 +472,7 @@ viewFieldInviterReward shared isDisabled defVal errors =
         , input
             [ class "input"
             , id id_
-            , value <| String.fromFloat defVal
+            , value <| String.fromInt defVal
             , maxlength 255
             , required True
             , onInput EnteredInviterReward
@@ -483,7 +483,7 @@ viewFieldInviterReward shared isDisabled defVal errors =
         ]
 
 
-viewFieldInvitedReward : Shared -> Bool -> Float -> Dict String FormError -> Html Msg
+viewFieldInvitedReward : Shared -> Bool -> Int -> Dict String FormError -> Html Msg
 viewFieldInvitedReward shared isDisabled defVal errors =
     let
         id_ =
@@ -499,7 +499,7 @@ viewFieldInvitedReward shared isDisabled defVal errors =
         , input
             [ class "input"
             , id id_
-            , value <| String.fromFloat defVal
+            , value <| String.fromInt defVal
             , maxlength 255
             , required True
             , onInput EnteredInvitedReward
@@ -634,11 +634,11 @@ update msg model loggedIn =
 
         EnteredInviterReward input ->
             UR.init model
-                |> updateForm (\form -> { form | inviterReward = Maybe.withDefault form.inviterReward <| String.toFloat input })
+                |> updateForm (\form -> { form | inviterReward = Maybe.withDefault form.inviterReward <| String.toInt input })
 
         EnteredInvitedReward input ->
             UR.init model
-                |> updateForm (\form -> { form | invitedReward = Maybe.withDefault form.invitedReward <| String.toFloat input })
+                |> updateForm (\form -> { form | invitedReward = Maybe.withDefault form.invitedReward <| String.toInt input })
 
         EnteredSymbol input ->
             UR.init model
