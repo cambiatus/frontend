@@ -223,7 +223,9 @@
       "tooltips": {
         "description": "Dinos sobre tu comunidad y cual problema esta enfrentando.",
         "currency_name": "¡El nombre de la moneda de tu comunidad debe ser corto, atractivo y facil de recordar. Piensa en algo relacionado con el problema que quieres resolver.",
-        "currency_symbol": "El simbolo esta compuesto por 3 letras mayusculas que identifican la moneda de tu comunidad."
+        "currency_symbol": "El simbolo esta compuesto por 3 letras mayusculas que identifican la moneda de tu comunidad.",
+        "invited_reward": "Esta es la cantidad de token que recibe un usuario cuando se une al sistema",
+        "inviter_reward": "Esta es la cantidad de tokens recibidos por invitar a otro usuario"
       },
       "cancel": "Cancelar",
       "submit": "Crear"

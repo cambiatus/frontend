@@ -88,8 +88,8 @@ type alias Form =
     , symbol : String
     , logoSelected : Int
     , logoList : List LogoStatus
-    , inviterReward : Int
-    , invitedReward : Int
+    , inviterReward : Float
+    , invitedReward : Float
     }
 
 
@@ -125,8 +125,8 @@ editForm community =
     , symbol = Eos.symbolToString community.symbol
     , logoSelected = logoSelected
     , logoList = logoList
-    , inviterReward = 0
-    , invitedReward = 0
+    , inviterReward = community.inviterReward
+    , invitedReward = community.invitedReward
     }
 
 
@@ -195,6 +195,8 @@ encodeFormHelper logoHash { shared, accountName } form =
             , logoHash = logoHash
             , name = form.name
             , description = form.description
+            , inviterReward = form.inviterReward
+            , invitedReward = form.invitedReward
             }
                 |> Community.createCommunityData
                 |> Valid
@@ -283,6 +285,8 @@ viewForm shared isEdit isDisabled errors form model =
             , div [ class "create-community-two-column" ]
                 [ viewFieldCurrencyName shared isDisabled form.name errors
                 , viewFieldCurrencySymbol shared (isEdit || isDisabled) form.symbol errors
+                , viewFieldInviterReward shared isDisabled form.inviterReward errors
+                , viewFieldInvitedReward shared isDisabled form.invitedReward errors
                 ]
             , viewFieldLogo shared isDisabled form.logoSelected form.logoList errors
             , viewFieldError shared "form" errors
@@ -445,6 +449,60 @@ viewFieldLogo shared isDisabled selected logos errors =
         )
 
 
+viewFieldInviterReward : Shared -> Bool -> Float -> Dict String FormError -> Html Msg
+viewFieldInviterReward shared isDisabled defVal errors =
+    let
+        id_ =
+            "comm-inviter-reward"
+
+        t =
+            I18Next.t shared.translations
+    in
+    formField
+        [ Page.labelWithTooltip id_
+            (t "community.create.labels.inviter_reward")
+            (t "community.create.tooltips.inviter_reward")
+        , input
+            [ class "input"
+            , id id_
+            , value <| String.fromFloat defVal
+            , maxlength 255
+            , required True
+            , onInput EnteredInviterReward
+            , disabled isDisabled
+            ]
+            []
+        , viewFieldError shared id_ errors
+        ]
+
+
+viewFieldInvitedReward : Shared -> Bool -> Float -> Dict String FormError -> Html Msg
+viewFieldInvitedReward shared isDisabled defVal errors =
+    let
+        id_ =
+            "comm-invited-reward"
+
+        t =
+            I18Next.t shared.translations
+    in
+    formField
+        [ Page.labelWithTooltip id_
+            (t "community.create.labels.invited_reward")
+            (t "community.create.tooltips.invited_reward")
+        , input
+            [ class "input"
+            , id id_
+            , value <| String.fromFloat defVal
+            , maxlength 255
+            , required True
+            , onInput EnteredInvitedReward
+            , disabled isDisabled
+            ]
+            []
+        , viewFieldError shared id_ errors
+        ]
+
+
 fieldLogoId : String
 fieldLogoId =
     "community-editor-logo-upload"
@@ -523,6 +581,8 @@ type Msg
     | EnteredTitle String
     | EnteredDescription String
     | EnteredSymbol String
+    | EnteredInviterReward String
+    | EnteredInvitedReward String
     | ClickedLogo Int
     | EnteredLogo Int (List File)
     | CompletedLogoUpload Int (Result Http.Error String)
@@ -564,6 +624,14 @@ update msg model loggedIn =
         EnteredDescription input ->
             UR.init model
                 |> updateForm (\form -> { form | description = input })
+
+        EnteredInviterReward input ->
+            UR.init model
+                |> updateForm (\form -> { form | inviterReward = Maybe.withDefault form.inviterReward <| String.toFloat input })
+
+        EnteredInvitedReward input ->
+            UR.init model
+                |> updateForm (\form -> { form | invitedReward = Maybe.withDefault form.invitedReward <| String.toFloat input })
 
         EnteredSymbol input ->
             UR.init model
@@ -915,6 +983,12 @@ msgToString msg =
 
         EnteredSymbol _ ->
             [ "EnteredSymbol" ]
+
+        EnteredInvitedReward _ ->
+            [ "EnteredInvitedReward" ]
+
+        EnteredInviterReward _ ->
+            [ "EnteredInviterReward" ]
 
         ClickedLogo _ ->
             [ "ClickedLogo" ]

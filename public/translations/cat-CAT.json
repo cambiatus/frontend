@@ -224,7 +224,9 @@
       "tooltips": {
         "description": "Explica’ns sobre la teva comunitat i sobre el problema que vols resoldre.",
         "currency_name": "El nom de la moneda de la teva comunitat ha de ser curt, atractiu i fàcil de recordar! Pensa en quelcom relacionat amb el problema que vols resoldre.",
-        "currency_symbol": "El símbol està compost per 3 lletres majúscules que identifiquen la moneda de la teva comunitat."
+        "currency_symbol": "El símbol està compost per 3 lletres majúscules que identifiquen la moneda de la teva comunitat.",
+        "invited_reward": "Aquesta és la quantitat de testimoni que rep un usuari quan s’uneix al sistema",
+        "inviter_reward": "Aquesta és la quantitat de fitxes rebudes per convidar un altre usuari"
       },
       "cancel": "Cancel·lar",
       "submit": "Crear"

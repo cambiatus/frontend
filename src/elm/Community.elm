@@ -66,6 +66,8 @@ type alias Community =
     , symbol : Symbol
     , logo : String
     , creator : Eos.Name
+    , inviterReward : Float
+    , invitedReward : Float
     , memberCount : Int
     , members : List Profile
     , transfers : Maybe ConnectionTransfer
@@ -109,6 +111,8 @@ communitySelectionSet paginateArgs =
         |> with (Eos.symbolSelectionSet Community.symbol)
         |> with Community.logo
         |> with (Eos.nameSelectionSet Community.creator)
+        |> with Community.inviterReward
+        |> with Community.invitedReward
         |> with Community.memberCount
         |> with (Community.members accountSelectionSet)
         |> with
@@ -131,20 +135,25 @@ communitiesQuery =
         )
         |> Query.communities
 
+
+
 -- NEW COMMUNITY NAME
+
+
 type alias NewCommunity =
-  { title : String }
+    { title : String }
+
 
 newCommunitySubscription : Symbol -> SelectionSet NewCommunity RootSubscription
 newCommunitySubscription symbol =
     let
         stringSymbol =
             symbolToString symbol
-            |> String.toUpper
+                |> String.toUpper
 
         selectionSet =
-          SelectionSet.succeed NewCommunity
-            |> with Community.name
+            SelectionSet.succeed NewCommunity
+                |> with Community.name
 
         args =
             { input = { symbol = stringSymbol } }
@@ -435,6 +444,8 @@ createCommunityData :
     , logoHash : String
     , name : String
     , description : String
+    , inviterReward : Float
+    , invitedReward : Float
     }
     -> CreateCommunityData
 createCommunityData params =
@@ -447,11 +458,11 @@ createCommunityData params =
     , name = params.name
     , description = params.description
     , inviterReward =
-        { amount = 0
+        { amount = params.inviterReward
         , symbol = params.symbol
         }
     , invitedReward =
-        { amount = 0
+        { amount = params.invitedReward
         , symbol = params.symbol
         }
     }
