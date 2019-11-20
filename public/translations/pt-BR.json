@@ -227,7 +227,9 @@
       "tooltips": {
         "description": "Nos conte sobre sua comunidade e quais problemas vem enfrentando.",
         "currency_name": "O nome da moeda da comunidade deve ser algo curto e facil de lembrar. Observe alguma coisa relacionada com o problema que quer resolver.",
-        "currency_symbol": "Um simbolo deve ser composto por 3 letras maiusculas para identificar sua moeda."
+        "currency_symbol": "Um simbolo deve ser composto por 3 letras maiusculas para identificar sua moeda.",
+        "invited_reward": "Essa é a quantidade de token que um usuário recebe quando ingressa no sistema",
+        "inviter_reward": "Essa é a quantidade de tokens recebidos para convidar outro usuário"
       },
       "cancel": "Cancelar",
       "submit": "Criar"

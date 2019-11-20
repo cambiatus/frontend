@@ -223,7 +223,9 @@
       "tooltips": {
         "description": "Tell us about your community and what problem it is facing.",
         "currency_name": "A community currency name must be something short, catchy and easy to remember. look for something related with the problem you want to solve.",
-        "currency_symbol": "A symbol is composed by 3 capital letters to identify your currency."
+        "currency_symbol": "A symbol is composed by 3 capital letters to identify your currency.",
+        "invited_reward": "This is the amount of token a user receives when they join the system",
+        "inviter_reward": "This is the amount of tokens on receives for inviting another user"
       },
       "cancel": "Cancel",
       "submit": "Create"
