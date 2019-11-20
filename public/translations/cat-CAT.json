@@ -338,6 +338,9 @@
       "no": "No, cancel·la",
       "success": "Reclamar que tingui èxit, espereu l’aprovació",
       "failure": "Alguna cosa no va funcionar correctament mentre intenteu processar la vostra reclamació. Torneu-ho a provar més endavant"
+    },
+    "verifyClaim": {
+      "error": "S'ha produït un error en intentar processar la convalidació. Torneu-ho a provar més endavant"
     }
   },
   "profile": {

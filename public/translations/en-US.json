@@ -337,6 +337,9 @@
       "no": "No, cancel",
       "success": "Claim successful, please wait for approval",
       "failure": "Something went wrong while trying to process your claim, please try again later"
+    },
+    "verifyClaim": {
+      "error": "Something went wrong while trying to process your validation, please try again later"
     }
   },
   "profile": {

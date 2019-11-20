@@ -341,6 +341,9 @@
       "no": "Não, cancelar",
       "success": "Reinvidicação concluída, aguarde as aprovações",
       "failure": "Algo deu errado ao tentar realizar sua reinvidicação, tente novamente mais tarde"
+    },
+    "verifyClaim": {
+      "error": "Ocorreu um erro ao tentar processar sua validação. Tente novamente mais tarde"
     }
   },
   "profile": {

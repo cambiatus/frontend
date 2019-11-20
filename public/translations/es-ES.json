@@ -337,7 +337,10 @@
       "no": "No, cancelar",
       "success": "Reclamación exitosa, espere la aprobación",
       "failure": "Se produjo un error al intentar procesar su reclamo. Vuelva a intentarlo más tarde."
-    }
+    },
+    "verifyClaim": {
+      "error": "Se produjo un error al intentar procesar la validación. Vuelve a intentarlo más tarde."
+     }
   },
   "profile": {
     "title": "Mi perfil",
