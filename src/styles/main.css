@@ -158,7 +158,7 @@
 
 @screen md {
     .modal-content {
-        @apply max-w-3xl mx-4 mx-auto bottom-auto right-auto left-auto relative h-64;
+        @apply max-w-3xl mx-4 ml-auto bottom-auto right-auto left-auto relative h-64;
     }
 }
 
