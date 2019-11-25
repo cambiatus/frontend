@@ -304,15 +304,15 @@ view loggedIn model =
 -- VIEW VERIFICATIONS
 
 
-viewVerification : String -> ActionVerification -> Html Msg
-viewVerification url verification =
+viewVerification : Shared -> ActionVerification -> Html Msg
+viewVerification shared verification =
     let
         maybeLogo =
             if String.isEmpty verification.logo then
                 Nothing
 
             else
-                Just (url ++ "/" ++ verification.logo)
+                Just (shared.endpoints.ipfs ++ "/" ++ verification.logo)
 
         description =
             verification.description
@@ -366,11 +366,11 @@ viewVerification url verification =
                 [ text date ]
             , div
                 [ class "lg:hidden mt-4" ]
-                [ Tag.view status ]
+                [ Tag.view status shared.translations ]
             ]
         , div
             [ class "hidden lg:visible lg:flex lg:flex-none pl-4" ]
-            [ Tag.view status ]
+            [ Tag.view status shared.translations ]
         ]
 
 
@@ -949,7 +949,7 @@ viewSections loggedIn model allTransfers =
 
         toView verifications =
             List.map
-                (viewVerification loggedIn.shared.endpoints.ipfs)
+                (viewVerification loggedIn.shared)
                 verifications
     in
     Page.viewMaxTwoColumn
