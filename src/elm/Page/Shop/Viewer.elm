@@ -394,7 +394,7 @@ viewHeader session =
         shared =
             Page.toShared session
     in
-    div [ class "h-16 w-full bg-indigo-500 mb-4 flex px-4" ]
+    div [ class "h-16 w-full bg-indigo-500 flex px-4" ]
         [ a
             [ class "items-center flex"
             , Route.href (Route.Shop (Just Shop.MyCommunities))
@@ -420,71 +420,111 @@ viewCard session card model =
         shared =
             Page.toShared session
 
+        balances =
+            case session of
+                LoggedIn s ->
+                    s.balances
+
+                Guest s ->
+                    []
+
+        cmmBalance =
+            LE.find (\bal -> bal.asset.symbol == card.sale.symbol) balances
+
+        balance =
+            case cmmBalance of
+                Just b ->
+                    b.asset.amount
+
+                Nothing ->
+                    0.0
+
+        currBalance =
+            String.fromFloat balance ++ " " ++ Eos.symbolToString card.sale.symbol
+
         text_ str =
             text (t shared.translations str)
+
+        tr r_id replaces =
+            I18Next.tr shared.translations I18Next.Curly r_id replaces
     in
-    viewCardWithHeader session
-        card
-        [ div [ class "sale__info" ]
-            [ div [ class "large__sale__rating" ] []
-            , if card.sale.trackStock then
-                div [ class "large__sale__quantity" ]
-                    [ p [ class "sale__quantity__title" ]
-                        [ text_ "shop.units_available" ]
-                    , p [ class "sale__quantity__text" ]
-                        [ text (String.fromInt card.sale.units) ]
-                    ]
-
-              else
-                text ""
+    div [ class "flex flex-wrap" ]
+        [ div [ class "w-full md:w-1/2 p-4 flex justify-center" ]
+            [ img
+                [ src (getIpfsUrl session ++ "/" ++ Maybe.withDefault "" card.sale.image)
+                , class "object-scale-down max-h-10"
+                ]
+                []
             ]
-        , if model.viewing == ViewingCard then
-            div [ class "large__card__description" ]
-                [ p [] [ text card.sale.description ] ]
+        , div [ class "w-full md:w-1/2 flex flex-wrap bg-white p-4" ]
+            [ div [ class "font-medium text-3xl w-full" ] [ text card.sale.title ]
+            , div [ class "text-gray w-full md:text-sm" ] [ text card.sale.description ]
+            , div [ class "flex flex-wrap w-full" ]
+                [ div [ class "w-full md:w-1/4" ]
+                    [ div [ class "flex items-center" ]
+                        [ div [ class "text-2xl text-green font-medium" ] [ text (String.fromFloat card.sale.price) ]
+                        , div [ class "uppercase text-sm font-thin ml-2 text-green" ] [ text (Eos.symbolToString card.sale.symbol) ]
+                        ]
+                    , div [ class "flex" ]
+                        [ div [ class "bg-gray-100 uppercase text-xs px-2" ]
+                            [ text (tr "account.my_wallet.your_current_balance" [ ( "balance", currBalance ) ]) ]
+                        ]
+                    ]
+                , div [ class "w-full md:w-3/4 mt-6 md:mt-0" ]
+                    [ if Eos.nameToString card.sale.creatorId == account then
+                        div [ class "flex md:justify-end" ]
+                            [ button
+                                [ class "button button-secondary"
+                                , onClick (ClickedQuestions card.sale)
+                                ]
+                                [ text "See Questions" ]
+                            , button
+                                [ class "button button-secondary"
+                                , onClick (ClickedEdit card.sale)
+                                ]
+                                [ text "Edit" ]
+                            ]
 
-          else
-            viewTransferForm session card Dict.empty model
-        , if Eos.nameToString card.sale.creatorId == account then
-            div [ class "card__button-row" ]
-                [ button
-                    [ class "btn btn--primary"
-                    , onClick (ClickedQuestions card.sale)
+                      else if card.sale.units <= 0 && card.sale.trackStock == True then
+                        div [ class "" ]
+                            [ button [ disabled True, class "text-red button button-disabled" ] [ text_ "shop.out_of_stock" ] ]
+
+                      else if model.viewing == EditingTransfer then
+                        div [ class "flex md:justify-end" ]
+                            [ button
+                                [ class "button button-primary"
+                                , onClick (ClickedTransfer card.sale)
+                                ]
+                                [ text_ "shop.transfer.submit" ]
+                            ]
+
+                      else
+                        div [ class "flex -mx-2" ]
+                            [ button
+                                [ class "button button-secondary w-1/5 mx-2"
+                                , onClick (ClickedAsk card.sale)
+                                ]
+                                [ Avatar.view (getIpfsUrl session) card.sale.creator.avatar "h-6 w-6 mr-2"
+                                , text_ "shop.ask"
+                                ]
+                            , button
+                                [ class "button button-primary w-4/5 mx-2"
+                                , onClick (ClickedBuy card.sale)
+                                ]
+                                [ text_ "shop.buy" ]
+                            ]
                     ]
-                    [ text "See Questions" ]
-                , button
-                    [ class "btn btn--primary"
-                    , onClick (ClickedEdit card.sale)
-                    ]
-                    [ text "Edit" ]
                 ]
+            , div
+                [ class "w-full flex" ]
+                [ if model.viewing == ViewingCard then
+                    div []
+                        []
 
-          else if card.sale.units <= 0 && card.sale.trackStock == True then
-            div [ class "sale__out__of__stock" ]
-                [ p [] [ text_ "shop.out_of_stock" ] ]
-
-          else if model.viewing == EditingTransfer then
-            div [ class "card__button-row" ]
-                [ button
-                    [ class "btn btn--primary"
-                    , onClick (ClickedTransfer card.sale)
-                    ]
-                    [ text_ "shop.transfer.submit" ]
+                  else
+                    viewTransferForm session card Dict.empty model
                 ]
-
-          else
-            div [ class "card__button-row" ]
-                [ button
-                    [ class "btn btn--primary"
-                    , onClick (ClickedBuy card.sale)
-                    ]
-                    [ text_ "shop.buy" ]
-
-                -- , button
-                --     [ class "btn btn--primary"
-                --     , onClick (ClickedAsk card.sale)
-                --     ]
-                --     [ text_ "shop.ask" ]
-                ]
+            ]
         ]
 
 
