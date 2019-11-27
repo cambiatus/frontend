@@ -355,13 +355,13 @@ view session model =
     case model.status of
         LoadingSale id ->
             div []
-                [ Lazy.lazy viewHeader session
+                [ viewHeader session ""
                 , Page.fullPageLoading
                 ]
 
         InvalidId invalidId ->
             div [ class "container mx-auto px-4" ]
-                [ Lazy.lazy viewHeader session
+                [ viewHeader session ""
                 , div []
                     [ text (invalidId ++ " is not a valid Sale Id") ]
                 ]
@@ -377,7 +377,7 @@ view session model =
                             cardFromSale sale
                     in
                     div [ class "" ]
-                        [ Lazy.lazy viewHeader session
+                        [ viewHeader session cardData.sale.title
                         , viewCard session cardData model
                         ]
 
@@ -388,13 +388,13 @@ view session model =
                         ]
 
 
-viewHeader : Session -> Html msg
-viewHeader session =
+viewHeader : Session -> String -> Html msg
+viewHeader session title =
     let
         shared =
             Page.toShared session
     in
-    div [ class "h-16 w-full bg-indigo-500 flex px-4" ]
+    div [ class "h-16 w-full bg-indigo-500 flex px-4 items-center" ]
         [ a
             [ class "items-center flex"
             , Route.href (Route.Shop (Just Shop.MyCommunities))
@@ -403,6 +403,7 @@ viewHeader session =
             , p [ class "text-white text-sm ml-2" ]
                 [ text (t shared.translations "back") ]
             ]
+        , p [ class "text-white mx-auto" ] [ text title ]
         ]
 
 
@@ -452,7 +453,7 @@ viewCard session card model =
         [ div [ class "w-full md:w-1/2 p-4 flex justify-center" ]
             [ img
                 [ src (getIpfsUrl session ++ "/" ++ Maybe.withDefault "" card.sale.image)
-                , class "object-scale-down max-h-10"
+                , class "object-scale-down w-full h-64"
                 ]
                 []
             ]
@@ -474,20 +475,27 @@ viewCard session card model =
                     [ if Eos.nameToString card.sale.creatorId == account then
                         div [ class "flex md:justify-end" ]
                             [ button
-                                [ class "button button-secondary"
-                                , onClick (ClickedQuestions card.sale)
-                                ]
-                                [ text "See Questions" ]
-                            , button
-                                [ class "button button-secondary"
+                                [ class "button button-primary w-full"
                                 , onClick (ClickedEdit card.sale)
                                 ]
-                                [ text "Edit" ]
+                                [ text_ "shop.edit" ]
                             ]
 
                       else if card.sale.units <= 0 && card.sale.trackStock == True then
-                        div [ class "" ]
-                            [ button [ disabled True, class "text-red button button-disabled" ] [ text_ "shop.out_of_stock" ] ]
+                        div [ class "flex -mx-2 md:justify-end" ]
+                            [ button
+                                [ class "button button-secondary w-1/5 mx-2"
+                                , onClick (ClickedAsk card.sale)
+                                ]
+                                [ Avatar.view (getIpfsUrl session) card.sale.creator.avatar "h-6 w-6 mr-2"
+                                , text_ "shop.ask"
+                                ]
+                            , button
+                                [ disabled True
+                                , class "button button-disabled w-4/5 mx-2 md:w-2/5"
+                                ]
+                                [ text_ "shop.out_of_stock" ]
+                            ]
 
                       else if model.viewing == EditingTransfer then
                         div [ class "flex md:justify-end" ]
@@ -499,7 +507,7 @@ viewCard session card model =
                             ]
 
                       else
-                        div [ class "flex -mx-2" ]
+                        div [ class "flex -mx-2 md:justify-end" ]
                             [ button
                                 [ class "button button-secondary w-1/5 mx-2"
                                 , onClick (ClickedAsk card.sale)
@@ -508,7 +516,7 @@ viewCard session card model =
                                 , text_ "shop.ask"
                                 ]
                             , button
-                                [ class "button button-primary w-4/5 mx-2"
+                                [ class "button button-primary w-4/5 mx-2 md:w-2/5"
                                 , onClick (ClickedBuy card.sale)
                                 ]
                                 [ text_ "shop.buy" ]
