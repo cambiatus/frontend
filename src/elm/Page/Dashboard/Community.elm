@@ -426,14 +426,16 @@ viewAutoCompleteItem shared profile =
     in
     div [ class "autocomplete-item" ]
         [ Avatar.view ipfsUrl profile.avatar "profile-img-avatar-select"
-        , text (Eos.nameToString profile.accountName)
-        , text " "
-        , case profile.userName of
-            Just name ->
-                text ("(" ++ name ++ ")")
+        , p [ class "whitespace-no-wrap overflow-hidden" ]
+            [ text (Eos.nameToString profile.accountName)
+            , text " "
+            , case profile.userName of
+                Just name ->
+                    text ("(" ++ name ++ ")")
 
-            Nothing ->
-                text ""
+                Nothing ->
+                    text ""
+            ]
         ]
 
 
