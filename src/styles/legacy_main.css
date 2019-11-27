@@ -317,6 +317,7 @@ textarea.input {
     border: 1px solid #979797;
     border-radius: 8px;
     background-color: #FFFFFF;
+    right: -0.9rem;
 }
 
 /* Loading */
