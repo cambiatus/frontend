@@ -425,15 +425,17 @@ viewAutoCompleteItem shared profile =
             shared.endpoints.ipfs
     in
     div [ class "autocomplete-item" ]
-        [ Avatar.view ipfsUrl profile.avatar "profile-img-avatar-select"
-        , text (Eos.nameToString profile.accountName)
-        , text " "
-        , case profile.userName of
-            Just name ->
-                text ("(" ++ name ++ ")")
+        [ div [ class "flex-grow-3" ] [ Avatar.view ipfsUrl profile.avatar "profile-img-avatar-select" ]
+        , div [ class "flex-grow-7" ]
+            [ text (Eos.nameToString profile.accountName)
+            , text " "
+            , case profile.userName of
+                Just name ->
+                    text ("(" ++ name ++ ")")
 
-            Nothing ->
-                text ""
+                Nothing ->
+                    text ""
+            ]
         ]
 
 
