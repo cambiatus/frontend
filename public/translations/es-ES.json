@@ -415,6 +415,7 @@
     "buy_action": "{{accountName}} está COMPRANDO",
     "buy": "Comprar",
     "ask": "Preguntar",
+    "edit": "Editar mi oferta",
     "transfer": {
       "units_label": "¿Cuántas unidades quiere comprar?",
       "quantity_label": "Valor",

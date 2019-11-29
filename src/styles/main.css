@@ -92,6 +92,10 @@
     @apply py-3 px-6 h-12;
 }
 
+.button-disabled {
+    @apply bg-gray-500 text-red rounded-super text-body;
+}
+
 /* End of Button */
 
 /* Input */
