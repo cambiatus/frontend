@@ -791,10 +791,12 @@ update msg shared model =
         EnteredPinDigit pos data ->
             {- 96 to 105 is 0-9 from numerical keyboard.
                48 to 57 is 0-9 from the regular number keyboard.
+               7 to 16 is 0-9 in some android devices
                8 is backspace
                229 is the only keycode some chinese devices use
+               At this point we are really trying hn
             -}
-            if (data >= 96 && data <= 105) || (data >= 48 && data <= 57) || data == 8 || data == 229 then
+            if (data >= 96 && data <= 105) || (data >= 48 && data <= 57) || (data >= 7 && data <= 16) || data == 8 || data == 229 then
                 let
                     currentForm =
                         model.form
