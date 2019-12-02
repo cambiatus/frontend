@@ -85,7 +85,8 @@ subscriptions : Session -> Sub Msg
 subscriptions session =
     case session of
         Guest guest ->
-            Sub.none
+            Guest.subscriptions guest
+                |> Sub.map GotGuestMsg
 
         LoggedIn loggedIn ->
             LoggedIn.subscriptions loggedIn

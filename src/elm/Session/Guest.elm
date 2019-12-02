@@ -1,14 +1,16 @@
-module Session.Guest exposing (External(..), Model, Msg(..), Page(..), addAfterLoginRedirect, init, initModel, msgToString, update, view)
+module Session.Guest exposing (External(..), Model, Msg(..), Page(..), addAfterLoginRedirect, init, initModel, msgToString, subscriptions, update, view)
 
 import Account exposing (Profile)
 import Api
 import Asset.Icon as Icon
+import Browser.Events
 import Html exposing (..)
 import Html.Attributes exposing (..)
 import Html.Events exposing (onClick, onFocus, onInput, onSubmit)
 import Http
 import I18Next exposing (Delims(..), Translations, t, tr)
 import Icons
+import Json.Decode as Decode
 import Log
 import Ports
 import Route exposing (Route)
@@ -54,6 +56,15 @@ initModel shared =
     , afterLoginRedirect = Nothing
     , profile = Nothing
     }
+
+
+
+-- SUBSCRIPTIONS
+
+
+subscriptions : Model -> Sub Msg
+subscriptions model =
+    Sub.map KeyDown (Browser.Events.onKeyDown (Decode.field "key" Decode.string))
 
 
 
