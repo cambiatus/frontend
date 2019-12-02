@@ -92,7 +92,7 @@ view thisMsg page ({ shared } as model) content =
         _ ->
             let
                 onClickCloseLanguageNav =
-                    if model.showLanguageNav then
+                    if not model.showLanguageNav then
                         onClick (ShowLanguageNav False)
 
                     else
@@ -102,59 +102,63 @@ view thisMsg page ({ shared } as model) content =
                 currentYear =
                     Time.toYear Time.utc shared.now
                         |> String.fromInt
-
-                arrowClass : String
-                arrowClass =
-                    if model.showLanguageNav then
-                        "main-header__info-arrow main-header__info-arrow--up"
-
-                    else
-                        "main-header__info-arrow"
-
-                langIconPath : String
-                langIconPath =
-                    if String.startsWith "pt" shared.language then
-                        "/icons/portuguese-lang.svg"
-
-                    else if String.startsWith "cat" shared.language then
-                        "/icons/cat-lang.svg"
-
-                    else if String.startsWith "es" shared.language then
-                        "/icons/spain-lang.svg"
-
-                    else
-                        "/icons/en-lang.svg"
             in
             div
                 [ class "main-login-grid min-h-screen"
                 ]
                 [ header
-                    [ class "main-header" ]
-                    [ a
-                        [ class "main-header__logo"
-                        , Route.href (Route.Login Nothing)
-                        , onClickCloseLanguageNav
-                        ]
+                    [ class "flex items-center justify-between px-4 py-3 bg-white" ]
+                    [ div []
                         [ img
-                            [ class "lg:hidden left-0 absolute ml-4", src shared.logoMobile ]
+                            [ class "lg:hidden h-8"
+                            , src shared.logoMobile
+                            , alt "Cambiatus"
+                            ]
                             []
                         , img
-                            [ class "hidden lg:block lg:visible object-none object-scale-down", src shared.logo ]
+                            [ class "hidden lg:block lg:visible h-6"
+                            , src shared.logo
+                            , alt "Cambiatus"
+                            ]
                             []
                         ]
-                    , div
-                        [ class "main-header__space"
-                        , onClickCloseLanguageNav
-                        ]
-                        []
-                    , button
-                        [ class "btn main-header__language z-40"
-                        , onClick (ShowLanguageNav (not model.showLanguageNav))
-                        ]
-                        [ img [ src langIconPath, class "main__header__language" ] []
-                        , span [ class "main-header__info-name" ]
-                            [ text shared.language ]
-                        , Icons.arrowDown arrowClass
+                    , div [ class "relative z-10" ]
+                        [ button
+                            [ type_ "button"
+                            , tabindex -1
+                            , class "flex block relative z-10  w-32 items-center px-4 py-2 bg-white text-xs focus:outline-none"
+                            , classList
+                                [ ( "rounded-tr-lg rounded-tl-lg  justify-between"
+                                  , model.showLanguageNav
+                                  )
+                                ]
+                            , onClick (ShowLanguageNav (not model.showLanguageNav))
+                            ]
+                            [ Shared.langFlag shared.language
+                            , if model.showLanguageNav then
+                                div [ class "flex-grow" ]
+                                    [ text (String.toUpper model.shared.language) ]
+
+                              else
+                                text ""
+                            , Icons.arrowDown "flex-none"
+                            ]
+                        , if model.showLanguageNav then
+                            button
+                                [ class "fixed h-full w-full inset-0 bg-black opacity-50 cursor-default"
+                                , onClick (ShowLanguageNav False)
+                                ]
+                                []
+
+                          else
+                            text ""
+                        , div
+                            [ class "absolute right-0 w-32 py-2 bg-white border-t rounded-br-lg rounded-bl-lg shadow-lg"
+                            , classList
+                                [ ( "hidden", not model.showLanguageNav )
+                                ]
+                            ]
+                            (Shared.viewLanguageItems shared ClickedLanguage)
                         ]
                     ]
                     |> Html.map thisMsg
@@ -174,23 +178,6 @@ view thisMsg page ({ shared } as model) content =
                             [ text ("Copyrights © " ++ currentYear ++ " • Cambiatus") ]
                         ]
                     ]
-                , div
-                    [ classList
-                        [ ( "content-screen", True )
-                        , ( "content-screen--dark", model.showLanguageNav )
-                        ]
-                    , onClick (ShowLanguageNav False)
-                    ]
-                    []
-                    |> Html.map thisMsg
-                , nav
-                    [ classList
-                        [ ( "user-nav", True )
-                        , ( "guest-nav--show shadow-lg rounded", model.showLanguageNav )
-                        ]
-                    ]
-                    (Shared.viewLanguageItems shared ClickedLanguage)
-                    |> Html.map thisMsg
                 ]
 
 
@@ -211,6 +198,7 @@ type Msg
     | ClickedTryAgainTranslation
     | ShowLanguageNav Bool
     | ClickedLanguage String
+    | KeyDown String
 
 
 update : Msg -> Model -> UpdateResult
@@ -242,6 +230,15 @@ update msg ({ shared } as model) =
                 |> UR.init
                 |> UR.addCmd (fetchTranslations lang shared)
 
+        KeyDown key ->
+            if key == "Esc" || key == "Escape" then
+                { model | showLanguageNav = False }
+                    |> UR.init
+
+            else
+                model
+                    |> UR.init
+
 
 
 -- TRANSFORM
@@ -266,3 +263,6 @@ msgToString msg =
 
         ClickedLanguage _ ->
             [ "ClickedLanguage" ]
+
+        KeyDown _ ->
+            [ "KeyDown" ]
