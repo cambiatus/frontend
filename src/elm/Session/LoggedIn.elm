@@ -215,18 +215,11 @@ viewHelper thisMsg page profile_ ({ shared } as model) content =
     in
     div
         [ class "min-h-screen flex flex-col" ]
-        [ viewHeader model profile_
-            |> Html.map thisMsg
-        , viewMainMenu page profile_ model
-            |> Html.map thisMsg
-        , div
-            [ class "flex-grow" ]
-            [ content ]
+        [ viewHeader model profile_ |> Html.map thisMsg
+        , viewMainMenu page profile_ model |> Html.map thisMsg
+        , div [ class "flex-grow" ] [ content ]
         , viewFooter shared
-        , div
-            [ onClickCloseAny ]
-            []
-            |> Html.map thisMsg
+        , div [ onClickCloseAny ] [] |> Html.map thisMsg
         , viewUserNav page profile_ model
             |> Html.map thisMsg
         , viewNotification model
@@ -263,13 +256,9 @@ viewHeader ({ shared } as model) profile_ =
     in
     div [ class "w-full bg-white pr-4 pl-4 pt-6 pb-4 flex flex-wrap" ]
         [ a [ Route.href Route.Dashboard, class "h-12 w-2/3 lg:w-1/4 flex lg:items-center" ]
-            [ img
-                [ class "lg:hidden"
-                , src shared.logoMobile
-                ]
-                []
+            [ img [ class "lg:hidden h-8", src shared.logoMobile ] []
             , img
-                [ class "hidden lg:block lg:visible object-scale-down h-8 w-64"
+                [ class "hidden lg:block lg:visible h-6"
                 , src shared.logo
                 ]
                 []
