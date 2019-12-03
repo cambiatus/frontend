@@ -34,7 +34,8 @@
     "loading": "Carregant...",
     "try_again": "Intenta de nou",
     "coming_soon": "Pròximament",
-    "my_account": "Meu compte"
+    "my_account": "Meu compte",
+    "languages": "Idiomes"
   },
   "error": {
     "validator": {

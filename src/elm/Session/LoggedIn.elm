@@ -12,6 +12,7 @@ import Bespiral.Object.UnreadNotifications
 import Bespiral.Query
 import Bespiral.Subscription as Subscription
 import Browser.Dom as Dom
+import Browser.Events
 import Community exposing (Balance)
 import Eos
 import Eos.Account as Eos
@@ -21,7 +22,7 @@ import Graphql.Operation exposing (RootQuery, RootSubscription)
 import Graphql.SelectionSet as SelectionSet exposing (SelectionSet, with)
 import Html exposing (..)
 import Html.Attributes exposing (..)
-import Html.Events exposing (onClick, onFocus, onInput, onSubmit, stopPropagationOn)
+import Html.Events exposing (onClick, onFocus, onInput, onMouseEnter, onSubmit, stopPropagationOn)
 import Http
 import I18Next exposing (Delims(..), Translations, t, tr)
 import Icons
@@ -84,6 +85,7 @@ subscriptions : Model -> Sub Msg
 subscriptions model =
     Sub.batch
         [ Sub.map GotAuthMsg (Auth.subscriptions model.auth)
+        , Sub.map KeyDown (Browser.Events.onKeyDown (Decode.field "key" Decode.string))
         ]
 
 
@@ -215,22 +217,11 @@ viewHelper thisMsg page profile_ ({ shared } as model) content =
     in
     div
         [ class "min-h-screen flex flex-col" ]
-        [ viewHeader model profile_
-            |> Html.map thisMsg
-        , viewMainMenu page profile_ model
-            |> Html.map thisMsg
-        , div
-            [ class "flex-grow" ]
-            [ content ]
+        [ viewHeader model page profile_ |> Html.map thisMsg
+        , viewMainMenu page profile_ model |> Html.map thisMsg
+        , div [ class "flex-grow" ] [ content ]
         , viewFooter shared
-        , div
-            [ onClickCloseAny ]
-            []
-            |> Html.map thisMsg
-        , viewUserNav page profile_ model
-            |> Html.map thisMsg
-        , viewNotification model
-            |> Html.map thisMsg
+        , div [ onClickCloseAny ] [] |> Html.map thisMsg
         , if model.showAuthModal then
             div
                 [ classList
@@ -255,57 +246,109 @@ viewHelper thisMsg page profile_ ({ shared } as model) content =
         ]
 
 
-viewHeader : Model -> Profile -> Html Msg
-viewHeader ({ shared } as model) profile_ =
+viewHeader : Model -> Page -> Profile -> Html Msg
+viewHeader ({ shared } as model) page profile_ =
     let
+        text_ str =
+            text (t shared.translations str)
+
         tr str values =
             I18Next.tr shared.translations I18Next.Curly str values
     in
-    div [ class "w-full bg-white pr-4 pl-4 pt-6 pb-4 flex flex-wrap" ]
-        [ a [ Route.href Route.Dashboard, class "h-12 w-2/3 lg:w-1/4 flex lg:items-center" ]
-            [ img
-                [ class "lg:hidden"
-                , src shared.logoMobile
-                ]
-                []
+    div [ class "flex flex-wrap items-center justify-between bg-white px-4 pt-6 pb-4" ]
+        [ a [ Route.href Route.Dashboard ]
+            [ img [ class "lg:hidden h-8", src shared.logoMobile ] []
             , img
-                [ class "hidden lg:block lg:visible object-scale-down h-8 w-64"
+                [ class "hidden lg:block lg:visible h-6"
                 , src shared.logo
                 ]
                 []
             ]
-        , div [ class "hidden lg:block lg:visible w-1/2" ] [ searchBar model ]
-        , div [ class "w-1/3 h-10 flex z-20 lg:w-1/4" ]
-            [ div [ class "relative mx-auto overflow-visible" ]
-                [ a
-                    [ class "outline-none"
-                    , Route.href Route.Notification
-                    ]
-                    [ Icons.notification "mx-auto lg:mr-1 xl:mx-auto" ]
-                , if model.unreadCount == 0 then
-                    text ""
-
-                  else
+        , div [ class "hidden lg:block lg:visible lg:w-1/3" ] [ searchBar model ]
+        , div [ class "flex items-center justify-between float-right" ]
+            [ a
+                [ class "outline-none relative mx-6"
+                , Route.href Route.Notification
+                ]
+                [ Icons.notification ""
+                , if model.unreadCount > 0 then
                     div [ class "absolute top-0 right-0 -mt-4 -mr-4 px-2 py-1 bg-orange-100 text-xs rounded-full" ]
                         [ text (String.fromInt model.unreadCount) ]
+
+                  else
+                    text ""
                 ]
-            , button
-                [ class "w-1/2 xl:hidden"
-                , onClick (ShowUserNav (not model.showUserNav))
-                ]
-                [ Avatar.view shared.endpoints.ipfs profile_.avatar "h-7 w-7 float-right" ]
-            , button
-                [ class "h-12 bg-gray-200 rounded-lg flex py-2 px-3 hidden xl:visible xl:flex"
-                , onClick (ShowUserNav (not model.showUserNav))
-                ]
-                [ Avatar.view shared.endpoints.ipfs profile_.avatar "h-8 w-8"
-                , div [ class "flex flex-wrap text-left pl-2" ]
-                    [ p [ class "w-full font-sans uppercase text-gray-900 text-xs overflow-x-hidden" ]
-                        [ text (tr "menu.welcome_message" [ ( "user_name", Eos.nameToString profile_.accountName ) ]) ]
-                    , p [ class "w-full font-sans text-indigo-500 text-sm" ]
-                        [ text (t shared.translations "menu.my_account") ]
+            , div [ class "relative z-10" ]
+                [ button
+                    [ class "w-full h-12 z-10 bg-gray-200 py-2 px-3 flex block relative"
+                    , classList [ ( "rounded-tr-lg rounded-tl-lg", model.showUserNav ) ]
+                    , classList [ ( "rounded-lg", not model.showUserNav ) ]
+                    , type_ "button"
+                    , onClick (ShowUserNav (not model.showUserNav))
+                    , onMouseEnter (ShowUserNav True)
                     ]
-                , Icons.arrowDown "float-right"
+                    [ Avatar.view shared.endpoints.ipfs profile_.avatar "h-8 w-8"
+                    , div [ class "flex flex-wrap text-left pl-2" ]
+                        [ p [ class "w-full font-sans uppercase text-gray-900 text-xs overflow-x-hidden" ]
+                            [ text (tr "menu.welcome_message" [ ( "user_name", Eos.nameToString profile_.accountName ) ]) ]
+                        , p [ class "w-full font-sans text-indigo-500 text-sm" ]
+                            [ text (t shared.translations "menu.my_account") ]
+                        ]
+                    , Icons.arrowDown "float-right"
+                    ]
+
+                -- Invisible button to hide menu when clicking outside
+                , if model.showUserNav then
+                    button
+                        [ class "fixed h-full w-full inset-0 bg-black opacity-50 cursor-default"
+                        , onClick (ShowUserNav False)
+                        , onMouseEnter (ShowUserNav False)
+                        ]
+                        []
+
+                  else
+                    text ""
+                , nav
+                    [ class "absolute w-full right-0 py-2 px-4 shadow-lg bg-white rounded-br-lg rounded-bl-lg"
+                    , classList
+                        [ ( "hidden", not model.showUserNav )
+                        ]
+                    ]
+                    [ a
+                        [ class "flex block w-full px-4 py-4 justify-start items-center text-sm"
+                        , Route.href Route.Profile
+                        , onClick (ShowUserNav False)
+                        ]
+                        [ Icons.profile "mr-4"
+                        , text_ "menu.profile"
+                        ]
+                    , button
+                        [ class "flex block w-full px-4 py-4 justify-start items-center text-sm border-t"
+                        , onClick ToggleLanguageItems
+                        ]
+                        [ Icons.languages "mr-4"
+                        , text_ "menu.languages"
+                        ]
+                    , if model.showLanguageItems then
+                        div [ class "ml-10 mb-2" ]
+                            ([ button
+                                [ class "flex block px-4 py-2 text-gray justify-between items-center text-indigo-500 font-bold text-xs"
+                                ]
+                                [ Shared.langFlag shared.language, text (String.toUpper shared.language) ]
+                             ]
+                                ++ Shared.viewLanguageItems shared ClickedLanguage
+                            )
+
+                      else
+                        text ""
+                    , button
+                        [ class "flex block w-full px-4 py-4 justify-start items-center text-sm border-t"
+                        , onClick ClickedLogout
+                        ]
+                        [ Icons.close "fill-current text-red mr-4"
+                        , text_ "menu.logout"
+                        ]
+                    ]
                 ]
             ]
         , div [ class "w-full mt-2 lg:hidden" ] [ searchBar model ]
@@ -347,7 +390,7 @@ viewMainMenu page profile_ model =
         iconClass =
             "w-6 h-6 fill-current hover:text-indigo-500 mr-5"
     in
-    nav [ class "z-10 bg-white h-16 w-full flex overflow-x-auto" ]
+    nav [ class "bg-white h-16 w-full flex overflow-x-auto" ]
         [ a
             [ classList
                 [ ( menuItemClass, True )
@@ -414,162 +457,6 @@ viewFooter shared =
 
 
 
--- VIEW >> USERNAV
-
-
-viewUserNav : Page -> Profile -> Model -> Html Msg
-viewUserNav page profile_ ({ shared } as model) =
-    let
-        text_ str =
-            text (t shared.translations str)
-    in
-    nav
-        [ id "user-nav"
-        , classList
-            [ ( "user-nav", True )
-            , ( "user-nav--show", model.showUserNav )
-            ]
-        , tabindex -1
-        ]
-        [ div [ class "user-nav__user-info" ]
-            [ span [ class "user-nav__user-info__name" ]
-                [ text (Account.username profile_) ]
-            , span [ class "user-nav__user-info__email" ]
-                [ text (Maybe.withDefault "" profile_.email) ]
-            ]
-        , viewUserNavItem page
-            Route.Profile
-            [ Icon.accountCircle ""
-            , text_ "menu.profile"
-            ]
-        , viewUserNavItem page
-            Route.Notification
-            [ Icon.bell ""
-            , text_ "menu.notifications"
-            ]
-        , button
-            [ class "user-nav__item"
-            , onClick ToggleLanguageItems
-            ]
-            [ Icon.language ""
-            , span [ class "user-nav__item-text" ] [ text "Language" ]
-            , Icon.arrow
-                (if model.showLanguageItems then
-                    "user-nav__arrow user-nav__arrow--up"
-
-                 else
-                    "user-nav__arrow"
-                )
-            ]
-        , if model.showLanguageItems then
-            div [ class "user-nav__sub-itens" ]
-                (Shared.viewLanguageItems shared ClickedLanguage)
-
-          else
-            text ""
-        , div [ class "user-nav__separator" ]
-            []
-        , button
-            [ classList [ ( "user-nav__item", True ) ]
-            , onClick ClickedLogout
-            ]
-            [ Icon.logout ""
-            , text_ "menu.logout"
-            ]
-        ]
-
-
-viewUserNavItem : Page -> Route -> List (Html Msg) -> Html Msg
-viewUserNavItem page route =
-    a
-        [ classList
-            [ ( "user-nav__item", True )
-            , ( "user-nav__item--active", isActive page route )
-            ]
-        , Route.href route
-        , onClick (ShowUserNav False)
-        ]
-
-
-
--- VIEW >> NOTIFICATION
-
-
-viewNotification : Model -> Html msg
-viewNotification model =
-    let
-        text_ str =
-            text (t model.shared.translations str)
-
-        hasUnread =
-            not (List.isEmpty model.notification.unreadNotifications)
-
-        viewUnread =
-            if hasUnread then
-                [ h2 [ class "notifications-modal__title" ]
-                    [ text_ "menu.new_notifications" ]
-                , ul [] (List.map (viewNotificationItem model.shared.translations) model.notification.unreadNotifications)
-                ]
-
-            else
-                []
-
-        hasRead =
-            not (List.isEmpty model.notification.readNotifications)
-
-        viewRead =
-            if hasRead then
-                [ h2 [ class "notifications-modal__title" ]
-                    [ text_ "menu.previous_notifications" ]
-                , ul [] (List.map (viewNotificationItem model.shared.translations) model.notification.readNotifications)
-                ]
-
-            else
-                []
-    in
-    div
-        [ id "notifications-modal"
-        , classList
-            [ ( "notifications-modal", True )
-
-            -- , ( "notifications-modal--show", model.showNotificationModal )
-            ]
-        , tabindex -1
-        ]
-        (if hasRead || hasUnread then
-            viewUnread
-                ++ viewRead
-                ++ [ button [ class "btn btn--primary btn--big" ]
-                        [ text_ "menu.view_all" ]
-                   ]
-
-         else
-            [ span [] [ text_ "menu.no_notification" ] ]
-        )
-
-
-viewNotificationItem : Translations -> Notification -> Html msg
-viewNotificationItem translations notification =
-    let
-        text_ str username =
-            text (I18Next.tr translations Curly str [ ( "username", username ) ])
-    in
-    case ( notification.class, notification.link ) of
-        ( "chat-notification", Just link ) ->
-            li
-                []
-                [ a
-                    [ href link
-                    , target "_blank"
-                    ]
-                    [ text_ notification.title notification.description ]
-                ]
-
-        ( _, _ ) ->
-            li [] []
-
-
-
 -- UPDATE
 
 
@@ -622,6 +509,7 @@ type Msg
     | ReceivedNotification String
     | CompletedLoadBalances (Result Http.Error (List Balance))
     | CompletedLoadUnread Value
+    | KeyDown String
 
 
 update : Msg -> Model -> UpdateResult
@@ -836,6 +724,14 @@ update msg model =
                         |> UR.init
                         |> UR.logImpossible msg []
 
+        KeyDown key ->
+            if key == "Esc" || key == "Escape" then
+                UR.init { closeAllModals | showUserNav = False }
+
+            else
+                model
+                    |> UR.init
+
 
 chatNotification : Model -> String -> Notification
 chatNotification model from =
@@ -1017,3 +913,6 @@ msgToString msg =
 
         CompletedLoadUnread _ ->
             [ "CompletedLoadUnread" ]
+
+        KeyDown _ ->
+            [ "KeyDown" ]

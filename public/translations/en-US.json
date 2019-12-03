@@ -34,7 +34,8 @@
     "loading": "Loading...",
     "try_again": "Try again",
     "coming_soon": "Coming Soon",
-    "my_account": "My account"
+    "my_account": "My account",
+    "languages": "Languages"
   },
   "error": {
     "validator": {

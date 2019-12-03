@@ -439,7 +439,7 @@ viewForm shared balances imageStatus isEdit isDisabled form =
                         [ class "input"
                         , id (fieldId "price")
                         , value (getInput form.price)
-                        , onKeyDown EnteredPrice
+                        , onInput EnteredPrice
                         , required True
                         , disabled isDisabled
                         , Html.Attributes.min "0"
@@ -515,7 +515,7 @@ type Msg
     | EnteredSymbol (Maybe String)
     | EnteredTrackStock String
     | EnteredUnits String
-    | EnteredPrice Int
+    | EnteredPrice String
     | ClickedSave
     | ClickedDelete
     | GotSaveResponse (Result Value String)
@@ -728,51 +728,13 @@ update msg model loggedIn =
                     )
                 |> UR.init
 
-        EnteredPrice key ->
-            {- 96 to 105 is 0-9 from numerical keyboard.
-               48 to 57 is 0-9 from the regular number keyboard.
-               8 is backspace
-            -}
-            if key == 8 then
-                let
-                    removeLastChar : Form -> String
-                    removeLastChar form =
-                        String.slice
-                            0
-                            (String.length (getInput form.price) - 1)
-                            (getInput form.price)
-                in
-                model
-                    |> updateForm
-                        (\form ->
-                            { form | price = updateInput (removeLastChar form) form.price }
-                        )
-                    |> UR.init
-
-            else if (key >= 48 && key <= 57) || (key >= 96 && key <= 105) then
-                let
-                    value : Int
-                    value =
-                        if key <= 57 then
-                            key - 48
-
-                        else
-                            key - 96
-
-                    lastChar : Form -> String
-                    lastChar form =
-                        getInput form.price ++ String.fromInt value
-                in
-                model
-                    |> updateForm
-                        (\form ->
-                            { form | price = updateInput (lastChar form) form.price }
-                        )
-                    |> UR.init
-
-            else
-                model
-                    |> UR.init
+        EnteredPrice value ->
+            model
+                |> updateForm
+                    (\form ->
+                        { form | price = updateInput value form.price }
+                    )
+                |> UR.init
 
         ClickedSave ->
             if LoggedIn.isAuth loggedIn then
