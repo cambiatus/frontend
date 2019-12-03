@@ -28,6 +28,7 @@ import Page.Register as Register
 import Page.Shop as Shop
 import Page.Shop.Editor as ShopEditor
 import Page.Shop.Viewer as ShopViewer
+import Page.Shop.TransferScreen as TransferScreen
 import Ports
 import Route exposing (Route)
 import Session.Guest as Guest
@@ -163,6 +164,7 @@ type Status
     | Shop (Maybe Shop.Filter) Shop.Model
     | ShopEditor (Maybe String) ShopEditor.Model
     | ShopViewer String ShopViewer.Model
+    | TransferScreen String TransferScreen.Model
 
 
 
@@ -191,6 +193,7 @@ type Msg
     | GotShopEditorMsg ShopEditor.Msg
     | GotUpdatedBalances (Result Http.Error (List Community.Balance))
     | GotShopViewerMsg ShopViewer.Msg
+    | GotTransferScreenMsg TransferScreen.Msg
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -376,6 +379,11 @@ update msg model =
         ( GotVerifyClaimMsg subMsg, VerifyClaim subModel ) ->
             VerifyClaim.update subMsg subModel
                 >> updateLoggedInUResult VerifyClaim GotVerifyClaimMsg model
+                |> withLoggedIn
+
+        ( GotTransferScreenMsg subMsg, TransferScreen transferId subModel) ->
+            TransferScreen.update subMsg subModel
+                >> updateLoggedInUResult (TransferScreen transferId) GotTransferScreenMsg model
                 |> withLoggedIn
 
         ( _, _ ) ->
@@ -719,6 +727,10 @@ changeRouteTo maybeRoute model =
                 >> updateStatusWith (ShopViewer saleId) GotShopViewerMsg model
                 |> withLoggedIn (Route.ViewSale saleId)
 
+        Just (Route.TransferScreen transferId) ->
+            (\l -> TransferScreen.init l transferId)
+                >> updateStatusWith (TransferScreen transferId) GotTransferScreenMsg model
+                |> withLoggedIn (Route.TransferScreen transferId)
 
 jsAddressToMsg : List String -> Value -> Maybe Msg
 jsAddressToMsg address val =
@@ -841,6 +853,9 @@ msgToString msg =
         GotShopViewerMsg subMsg ->
             "GotShopViewerMsg" :: ShopViewer.msgToString subMsg
 
+        GotTransferScreenMsg subMsg ->
+            "GotTransferScreenMsg" :: TransferScreen.msgToString subMsg
+
 
 
 -- VIEW
@@ -942,3 +957,6 @@ view model =
         ShopViewer _ subModel ->
             ShopViewer.view model.session subModel
                 |> viewPage Guest.Shop LoggedIn.Shop GotShopViewerMsg
+
+        TransferScreen _ subModel ->
+            viewLoggedIn subModel LoggedIn.Other GotTransferScreenMsg TransferScreen.view
