@@ -148,6 +148,7 @@ view thisMsg page ({ shared } as model) content =
                             button
                                 [ class "fixed h-full w-full inset-0 bg-black opacity-50 cursor-default"
                                 , onClick (ShowLanguageNav False)
+                                , onMouseEnter (ShowLanguageNav False)
                                 ]
                                 []
 

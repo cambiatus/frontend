@@ -302,6 +302,7 @@ viewHeader ({ shared } as model) page profile_ =
                     button
                         [ class "fixed h-full w-full inset-0 bg-black opacity-50 cursor-default"
                         , onClick (ShowUserNav False)
+                        , onMouseEnter (ShowUserNav False)
                         ]
                         []
 
