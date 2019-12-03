@@ -126,9 +126,9 @@ view thisMsg page ({ shared } as model) content =
                         [ button
                             [ type_ "button"
                             , tabindex -1
-                            , class "flex block relative z-10  w-32 items-center px-4 py-2 bg-white text-xs focus:outline-none"
+                            , class "flex block relative z-10 w-32 items-center px-4 py-2 bg-white text-xs focus:outline-none"
                             , classList
-                                [ ( "rounded-tr-lg rounded-tl-lg  justify-between"
+                                [ ( "rounded-tr-lg rounded-tl-lg justify-between"
                                   , model.showLanguageNav
                                   )
                                 ]
