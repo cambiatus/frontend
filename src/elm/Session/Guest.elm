@@ -6,7 +6,7 @@ import Asset.Icon as Icon
 import Browser.Events
 import Html exposing (..)
 import Html.Attributes exposing (..)
-import Html.Events exposing (onClick, onFocus, onInput, onSubmit)
+import Html.Events exposing (onClick, onFocus, onInput, onMouseEnter, onSubmit)
 import Http
 import I18Next exposing (Delims(..), Translations, t, tr)
 import Icons
@@ -133,6 +133,7 @@ view thisMsg page ({ shared } as model) content =
                                   )
                                 ]
                             , onClick (ShowLanguageNav (not model.showLanguageNav))
+                            , onMouseEnter (ShowLanguageNav True)
                             ]
                             [ Shared.langFlag shared.language
                             , if model.showLanguageNav then

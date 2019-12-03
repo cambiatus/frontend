@@ -22,7 +22,7 @@ import Graphql.Operation exposing (RootQuery, RootSubscription)
 import Graphql.SelectionSet as SelectionSet exposing (SelectionSet, with)
 import Html exposing (..)
 import Html.Attributes exposing (..)
-import Html.Events exposing (onClick, onFocus, onInput, onSubmit, stopPropagationOn)
+import Html.Events exposing (onClick, onFocus, onInput, onMouseEnter, onSubmit, stopPropagationOn)
 import Http
 import I18Next exposing (Delims(..), Translations, t, tr)
 import Icons
@@ -285,6 +285,7 @@ viewHeader ({ shared } as model) page profile_ =
                     , classList [ ( "rounded-lg", not model.showUserNav ) ]
                     , type_ "button"
                     , onClick (ShowUserNav (not model.showUserNav))
+                    , onMouseEnter (ShowUserNav True)
                     ]
                     [ Avatar.view shared.endpoints.ipfs profile_.avatar "h-8 w-8"
                     , div [ class "flex flex-wrap text-left pl-2" ]
