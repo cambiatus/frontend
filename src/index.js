@@ -768,7 +768,7 @@ async function handleJavascriptPort (arg) {
       doc.text(words, 20, 30)
       doc.text('Your Key', 20, 40)
       doc.text(pkey, 20, 50)
-      window.open(doc.save(filename))
+      doc.save(filename)
 
       const response = {
         address: arg.responseAddress,
