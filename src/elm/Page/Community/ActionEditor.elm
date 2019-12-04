@@ -597,7 +597,7 @@ viewForm shared community model =
                 [ span [ class "input-label" ]
                     [ text_ "community.actions.form.description_label" ]
                 , textarea
-                    [ class ("form-textarea font-sans block w-full rounded border " ++ borderColor Description)
+                    [ class ("form-textarea block w-full rounded border " ++ borderColor Description)
                     , rows 5
                     , onInput EnteredDescription
                     ]
