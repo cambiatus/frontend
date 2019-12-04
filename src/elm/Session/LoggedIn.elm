@@ -1,4 +1,4 @@
-module Session.LoggedIn exposing (External(..), ExternalMsg(..), Model, Msg(..), Page(..), ProfileStatus, addNotification, askedAuthentication, init, initLogin, isAccount, isActive, isAuth, jsAddressToMsg, mapExternal, maybePrivateKey, msgToString, profile, readAllNotifications, subscriptions, update, view)
+module Session.LoggedIn exposing (External(..), ExternalMsg(..), Model, Msg(..), Page(..), ProfileStatus(..), addNotification, askedAuthentication, init, initLogin, isAccount, isActive, isAuth, jsAddressToMsg, mapExternal, maybePrivateKey, msgToString, profile, readAllNotifications, subscriptions, update, view)
 
 import Account exposing (Profile, profileQuery)
 import Api
@@ -395,7 +395,7 @@ viewMainMenu page profile_ model =
             "mx-4 w-48 font-sans uppercase flex items-center justify-center leading-tight text-xs text-gray-600 hover:text-indigo-500"
 
         activeClass =
-            "border-orange-100 border-b-2 text-indigo-500"
+            "border-orange-100 border-b-2 text-indigo-500 font-medium"
 
         iconClass =
             "w-6 h-6 fill-current hover:text-indigo-500 mr-5"

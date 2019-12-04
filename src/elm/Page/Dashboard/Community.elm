@@ -180,31 +180,25 @@ viewCardBalance loggedIn ({ balance } as model) =
                     ""
     in
     div [ class "w-full sm:w-1/2 lg:w-1/3 xl:w-1/4 px-2 mb-6" ]
-        [ div [ class "flex flex-wrap px-3 pt-5 pb-2 rounded-lg hover:shadow-lg bg-white" ]
-            [ div [ class "w-1/3" ] [ img [ class "object-none object-scale-down h-20", src (ipfsUrl ++ "/" ++ logo) ] [] ]
-            , div [ class "w-2/3 pl-4 overflow-x-hidden overflow-y-hidden" ]
-                [ p [ class "font-medium leading-none font-sans" ] [ text title ]
-                , div [ class "flex" ]
-                    [ div [ class "text-3xl text-orange-100" ] [ text balanceText ]
-                    , div [ class "uppercase text-sm font-thin mt-3 ml-2 text-orange-100 font-sans" ] [ text symbolText ]
-                    ]
-                , p [ class "text-xs text-gray-600 leading-none font-sans tracking-wide" ] [ text_ "account.my_wallet.balances.current" ]
+        [ div [ class "flex flex-col items-center justify-center px-3 pt-5 pb-2 rounded-lg hover:shadow-lg bg-white" ]
+            [ div [ class "" ] [ img [ class "object-none object-scale-down h-20 mb-2", src (ipfsUrl ++ "/" ++ logo) ] [] ]
+            , div [ class "" ] [ p [ class "leading-none text-menu" ] [ text title ] ]
+            , div [ class "flex items-center justify-center" ]
+                [ div [ class "text-indigo-500 font-bold text-3xl" ]
+                    [ text balanceText ]
+                , div [ class "text-indigo-500 ml-2" ]
+                    [ text symbolText ]
                 ]
-            , div [ class "w-full flex-shrink" ]
+            , div [ class "input-label mb-4" ]
+                [ text_ "account.my_wallet.balances.current" ]
+            , div [ class "flex flex-col py-3 w-full" ]
                 [ a
-                    [ class "float-right button button-secondary button-small w-20 px-1 py-2 text-xs"
+                    [ class "button button-secondary button-small text-xs font-medium w-full mb-4"
                     , Route.href (Route.Community balance.asset.symbol)
                     ]
                     [ text_ "menu.explore" ]
-                ]
-            , div [ class "w-full flex bg-white border-t border-gray-300 mt-2 py-3" ]
-                [ a
-                    [ class "button button-primary button-small w-1/2 md:px-0 lg:mx-1"
-                    , Route.href (Route.Community balance.asset.symbol)
-                    ]
-                    [ text (t loggedIn.shared.translations "community.actions.title") ]
                 , button
-                    [ class "button button-primary button-small w-1/2 md:px-0 lg:mx-1"
+                    [ class "button button-primary button-small text-xs w-full"
                     , onClick ClickedTransfer
                     ]
                     [ text (t loggedIn.shared.translations "account.my_wallet.balances.button") ]
