@@ -26,7 +26,7 @@ view status translations =
                     ( t "verify_claim.disapproved", "text-red" )
 
                 APPROVED ->
-                    ( t "verify_claim.approval", "text-green" )
+                    ( t "verify_claim.approved", "text-green" )
     in
     div
         [ class "bg-gray-100 flex items-center justify-center h-6 w-32" ]
