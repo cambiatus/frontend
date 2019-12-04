@@ -4,7 +4,7 @@
   "menu": {
     "title": "Menu",
     "my_communities": "Minhas Comunidades",
-    "dashboard": "Dashboard",
+    "dashboard": "Painel",
     "news": "Novidades",
     "learn": "Aprender",
     "shop": "Loja",
@@ -23,7 +23,7 @@
     "explore": "Explorar",
     "communities": "Comunidades",
     "welcome_message": "Olá, {{user_name}} ",
-    "back_to_dashboard": "Voltar para Dashboard",
+    "back_to_dashboard": "Voltar para o painel",
     "edit": "Editar",
     "cancel": "Cancelar",
     "save": "Salvar",
