@@ -392,7 +392,7 @@ viewMainMenu page profile_ model =
             model.shared.endpoints.ipfs
 
         menuItemClass =
-            "mx-4 w-48 font-sans uppercase flex items-center justify-center leading-tight text-xs text-gray-600 hover:text-indigo-500"
+            "mx-4 w-48 font-sans uppercase flex items-center justify-center leading-tight text-xs text-gray-700 hover:text-indigo-500"
 
         activeClass =
             "border-orange-100 border-b-2 text-indigo-500 font-medium"

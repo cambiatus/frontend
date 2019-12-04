@@ -226,7 +226,7 @@ viewButtonNew title_ route =
 
 viewMaxTwoColumn : List (Html msg) -> List (Html msg) -> Html msg
 viewMaxTwoColumn firstColContent secColContent =
-    div [ class "section-grid" ]
+    div [ class "section-grid mt-4" ]
         [ div [ class "section-grid__section" ] firstColContent
         , div [ class "section-grid__section" ] secColContent
         ]
