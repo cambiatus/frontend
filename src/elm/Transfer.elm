@@ -1,4 +1,4 @@
-module Transfer exposing (ConnectionTransfer, QueryTransfers, Transfer, communityFilter, encodeEosActionData, getTotalCount, getTransfers, metadataConnectionSelectionSet, transferConnectionSelectionSet, transferItemSelectionSet, transfersQuery, userFilter)
+module Transfer exposing (ConnectionTransfer, QueryTransfers, Transfer, communityFilter, encodeEosActionData, getTotalCount, getTransfers, metadataConnectionSelectionSet, transferConnectionSelectionSet, transferItemSelectionSet, transferQuery, transfersQuery, userFilter)
 
 import Api.Relay exposing (Edge, MetadataConnection, PageConnection, PageInfo, PaginationArgs, pageInfoSelectionSet)
 import Bespiral.Object
@@ -227,3 +227,12 @@ getTotalCount maybeObj =
     maybeObj
         |> toMaybeConn
         |> toMaybeTotal
+
+
+transferQuery : Int -> SelectionSet (Maybe Transfer) RootQuery
+transferQuery tID =
+    let
+        args =
+            { input = { id = tID } }
+    in
+    Bespiral.Query.transfer args transferItemSelectionSet
