@@ -1005,12 +1005,14 @@ viewTransfer loggedIn model transfer =
                 |> I18Next.tr loggedIn.shared.translations I18Next.Curly "transfer.info"
     in
     div [ class "border-b last:border-b-0 border-gray-500 flex flex-wrap items-start p-4" ]
-        [ p [ class "w-3/4" ] [ text (transferInfo transfer.from transfer.value transfer.to) ]
-        , p [ class "w-1/4 text-sm text-orange-500" ]
-            (Page.viewDateDistance
-                (Utils.posixDateTime (Just transfer.blockTime))
-                model.date
-            )
+        [ div [ class "flex justify-between w-full" ]
+            [ p [] [ text (transferInfo transfer.from transfer.value transfer.to) ]
+            , p [ class "text-sm text-orange-500" ]
+                (Page.viewDateDistance
+                    (Utils.posixDateTime (Just transfer.blockTime))
+                    model.date
+                )
+            ]
         , div [ class "w-full" ]
             [ case transfer.memo of
                 Nothing ->
