@@ -59,6 +59,11 @@ fromId =
     Object.selectionForField "String" "fromId" [] Decode.string
 
 
+id : SelectionSet Int Bespiral.Object.Transfer
+id =
+    Object.selectionForField "Int" "id" [] Decode.int
+
+
 memo : SelectionSet (Maybe String) Bespiral.Object.Transfer
 memo =
     Object.selectionForField "(Maybe String)" "memo" [] (Decode.string |> Decode.nullable)
