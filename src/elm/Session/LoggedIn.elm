@@ -265,7 +265,7 @@ viewHeader ({ shared } as model) page profile_ =
                 []
             ]
         , div [ class "hidden lg:block lg:visible lg:w-1/3" ] [ searchBar model ]
-        , div [ class "flex items-center justify-between float-right" ]
+        , div [ class "flex items-center float-right" ]
             [ a
                 [ class "outline-none relative mx-6"
                 , Route.href Route.Notification
@@ -280,7 +280,7 @@ viewHeader ({ shared } as model) page profile_ =
                 ]
             , div [ class "relative z-10" ]
                 [ button
-                    [ class "w-full h-12 z-10 bg-gray-200 py-2 px-3 flex block relative"
+                    [ class "h-12 z-10 bg-gray-200 py-2 px-3 relative hidden lg:visible lg:flex"
                     , classList [ ( "rounded-tr-lg rounded-tl-lg", model.showUserNav ) ]
                     , classList [ ( "rounded-lg", not model.showUserNav ) ]
                     , type_ "button"
@@ -296,6 +296,16 @@ viewHeader ({ shared } as model) page profile_ =
                         ]
                     , Icons.arrowDown "float-right"
                     ]
+                , button
+                    [ class "h-12 z-10 py-2 px-3 flex relative lg:hidden"
+                    , classList [ ( "rounded-tr-lg rounded-tl-lg", model.showUserNav ) ]
+                    , classList [ ( "rounded-lg", not model.showUserNav ) ]
+                    , type_ "button"
+                    , onClick (ShowUserNav (not model.showUserNav))
+                    , onMouseEnter (ShowUserNav True)
+                    ]
+                    [ Avatar.view shared.endpoints.ipfs profile_.avatar "h-8 w-8"
+                    ]
 
                 -- Invisible button to hide menu when clicking outside
                 , if model.showUserNav then
@@ -309,7 +319,7 @@ viewHeader ({ shared } as model) page profile_ =
                   else
                     text ""
                 , nav
-                    [ class "absolute w-full right-0 py-2 px-4 shadow-lg bg-white rounded-br-lg rounded-bl-lg"
+                    [ class "absolute right-0 lg:w-full py-2 px-4 shadow-lg bg-white rounded-t-lg rounded-b-lg lg:rounded-t-none"
                     , classList
                         [ ( "hidden", not model.showUserNav )
                         ]
