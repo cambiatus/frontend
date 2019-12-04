@@ -102,7 +102,7 @@ parser url =
         , Url.map NewSale (s "shop" </> s "new" </> s "sell")
         , Url.map ViewSale (s "shop" </> string)
         , Url.map EditSale (s "shop" </> string </> s "edit")
-        , Url.map TransferScreen (s "transfer" </> string)
+        , Url.map TransferScreen (s "dashboard" </> s "transfer" </> string)
         ]
 
 

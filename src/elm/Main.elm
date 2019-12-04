@@ -20,6 +20,7 @@ import Page.Community.Explore as CommunityExplore
 import Page.Community.ObjectiveEditor as ObjectiveEditor
 import Page.Community.VerifyClaim as VerifyClaim
 import Page.Dashboard as Dashboard
+import Page.Dashboard.TransferScreen as TransferScreen
 import Page.Login as Login
 import Page.NotFound as NotFound
 import Page.Notification as Notification
@@ -28,7 +29,6 @@ import Page.Register as Register
 import Page.Shop as Shop
 import Page.Shop.Editor as ShopEditor
 import Page.Shop.Viewer as ShopViewer
-import Page.Shop.TransferScreen as TransferScreen
 import Ports
 import Route exposing (Route)
 import Session.Guest as Guest
@@ -381,7 +381,7 @@ update msg model =
                 >> updateLoggedInUResult VerifyClaim GotVerifyClaimMsg model
                 |> withLoggedIn
 
-        ( GotTransferScreenMsg subMsg, TransferScreen transferId subModel) ->
+        ( GotTransferScreenMsg subMsg, TransferScreen transferId subModel ) ->
             TransferScreen.update subMsg subModel
                 >> updateLoggedInUResult (TransferScreen transferId) GotTransferScreenMsg model
                 |> withLoggedIn
@@ -731,6 +731,7 @@ changeRouteTo maybeRoute model =
             (\l -> TransferScreen.init l transferId)
                 >> updateStatusWith (TransferScreen transferId) GotTransferScreenMsg model
                 |> withLoggedIn (Route.TransferScreen transferId)
+
 
 jsAddressToMsg : List String -> Value -> Maybe Msg
 jsAddressToMsg address val =
