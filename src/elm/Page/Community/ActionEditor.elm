@@ -590,14 +590,14 @@ viewForm shared community model =
     [ div [ class "bg-white rounded-lg sm:w-form mx-auto" ]
         [ div [ class "px-4 py-6 border-b border-gray-500" ]
             [ img [ src logoLink, class "w-16 h-16 mr-4 inline object-scale-down" ] []
-            , span [ class "font-sans text-heading font-medium" ] [ text community.title ]
+            , span [ class "text-heading font-medium" ] [ text community.title ]
             ]
         , div [ class "py-6 px-4" ]
             [ div [ class "mb-10" ]
                 [ span [ class "input-label" ]
                     [ text_ "community.actions.form.description_label" ]
                 , textarea
-                    [ class ("form-textarea font-sans block w-full rounded border " ++ borderColor Description)
+                    [ class ("form-textarea block w-full rounded border " ++ borderColor Description)
                     , rows 5
                     , onInput EnteredDescription
                     ]
