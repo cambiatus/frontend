@@ -244,7 +244,7 @@ viewAmount { shared } transfer state =
         t =
             I18Next.t shared.translations
     in
-    div [ class "flex flex-row top-1/2" ]
+    div [ class "flex flex-row mt-5" ]
         [ div [ class "px-4 py-2 m-2 " ]
             [ hr [ class "h-0 border border-dashed border-green" ]
                 []
