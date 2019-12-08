@@ -484,6 +484,9 @@
     "message": "Message",
     "community": "Community",
     "received": "Received",
-    "tranferred": "Transferred"
+    "tranferred": "Transferred",
+    "error": {
+      "invalid_id": " is not a valid Transfer Id"
+    }
   }
 }

@@ -107,7 +107,7 @@ view loggedIn model =
             div [class "container mx-auto px-4"]
                 [ Lazy.lazy viewHeader loggedIn
                 , div []
-                    [ text (invalidId ++ " is not a valid Sale Id") ]
+                    [ text (invalidId ++ (t "transferscreen.errors.invalid_id")) ]
                 ]
 
         LoadFailed error ->
