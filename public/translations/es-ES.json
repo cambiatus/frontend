@@ -475,5 +475,15 @@
       "primary_approve": "sí, aprobar",
       "secondary": "no, cancelar"
     }
+  },
+  "tranferscreen": {
+    "title": "Transferida",
+    "tranfer_success": "Hola, esta transferencia se realizó con éxito.",
+    "receive_success": "Hola, este recibo se realizó con éxito",
+    "date": "Fecha",
+    "message": "Mensaje",
+    "community": "Comunidad",
+    "received": "Recibida",
+    "tranferred": "Transferida"
   }
 }

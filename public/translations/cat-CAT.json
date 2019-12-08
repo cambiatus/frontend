@@ -476,5 +476,15 @@
       "primary_approve": "sí, aprova",
       "secondary": "no, cancel·la"
     }
+  },
+  "tranferscreen": {
+    "title": "Traspassat",
+    "tranfer_success": "Ei, aquesta transferència es va fer amb èxit",
+    "receive_success": "Ei, aquest rebut va tenir èxit",
+    "date": "Data",
+    "message": "Missatge",
+    "community": "Comunitat",
+    "received": "Rebut",
+    "tranferred": "Traspassat"
   }
 }
