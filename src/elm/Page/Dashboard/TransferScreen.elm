@@ -9,9 +9,9 @@ import Eos.Account as Eos
 import Graphql.Http
 import Html exposing (..)
 import Html.Attributes exposing (..)
+import Html.Lazy as Lazy
 import I18Next
 import Icons
-import Html.Lazy as Lazy
 import Page
 import Route
 import Session.Guest as Guest
@@ -104,10 +104,10 @@ view loggedIn model =
             Page.fullPageLoading
 
         InvalidId invalidId ->
-            div [class "container mx-auto px-4"]
+            div [ class "container mx-auto px-4" ]
                 [ Lazy.lazy viewHeader loggedIn
                 , div []
-                    [ text (invalidId ++ (t "transferscreen.errors.invalid_id")) ]
+                    [ text (invalidId ++ t "transferscreen.errors.invalid_id") ]
                 ]
 
         LoadFailed error ->
@@ -196,7 +196,7 @@ viewTransferCard loggedIn transfer state =
                 Nothing ->
                     Avatar.empty
     in
-    div [ class "flex flex-row max-w-sm w-auto inline-block rounded overflow-auto bg-gray-100" ]
+    div [ class "flex flex-row max-w-sm sm:w-auto lg:w-auto xl:w-auto inline-block rounded overflow-auto bg-gray-100" ]
         [ div [ class "px-4 py-2 m-2" ]
             [ div [ class "h-8 w-8 rounded-full mx-auto" ]
                 [ Avatar.view "" avatar ""
@@ -243,12 +243,33 @@ viewAmount { shared } transfer state =
     let
         t =
             I18Next.t shared.translations
+
+        head =
+            case state of
+                Received ->
+                    div [ class "px-4 py-2 m-2 " ]
+                        [ i [ class "mt-5 left" ]
+                            []
+                        ]
+
+                _ ->
+                    div [ class "px-4 py-2 m-2 " ]
+                        []
+
+        tail =
+            case state of
+                Received ->
+                    div [ class "px-4 py-2 m-2 " ]
+                        []
+
+                _ ->
+                    div [ class "px-4 py-2 m-2 " ]
+                        [ i [ class "mt-5 right" ]
+                            []
+                        ]
     in
     div [ class "flex flex-row mt-5" ]
-        [ div [ class "px-4 py-2 m-2 " ]
-            [ hr [ class "h-0 border border-dashed border-green" ]
-                []
-            ]
+        [ head
         , div [ class "px-4 py-2 m-2" ]
             [ div [ class "border border-solid rounded border-green bg-white" ]
                 [ p [ class "text-xs text-gray-900" ]
@@ -280,6 +301,7 @@ viewAmount { shared } transfer state =
                     ]
                 ]
             ]
+        , tail
         ]
 
 
