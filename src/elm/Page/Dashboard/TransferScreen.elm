@@ -163,8 +163,8 @@ viewDoggo loggedIn transfer state =
             [ div [ class "flex-row" ]
                 [ div [ class "px-4 py-2 m-2" ]
                     [ img [ class "ml-32", src "%PUBLIC_URL%/images/transfer-doggo.svg" ] [] ]
-                , div [ class "px-4 py-2 m-2" ]
-                    [ p [ class "font-medium font-sans text-white not-italic max-w-sm" ]
+                , div [ class "flex-row" ]
+                    [ p [ class "align-text-top tranfer-text items-center font-medium font-sans text-white not-italic" ]
                         [ text <|
                             case state of
                                 Transferred ->
@@ -216,7 +216,7 @@ viewTransferCard loggedIn transfer state =
                 ]
             ]
         , div [] [ viewAmount loggedIn transfer state ]
-        , div [ class "px-4 py-2 m-2" ]
+        , div [ class "-ml-8 px-4 py-2 m-2" ]
             [ div [ class "h-8 w-8 rounded-full mx-auto" ]
                 [ Avatar.view "" avatar ""
                 ]
@@ -253,14 +253,14 @@ viewAmount { shared } transfer state =
                         ]
 
                 _ ->
-                    div [ class "px-4 py-2 m-2 " ]
-                        []
+                    div [ class "px-4 py-2 m-2" ]
+                        [ hr [ class "hl" ] []]
 
         tail =
             case state of
                 Received ->
-                    div [ class "px-4 py-2 m-2 " ]
-                        []
+                    div [ class "px-4 py-2 m-2 hl" ]
+                        [ hr [ class "hl" ] [] ]
 
                 _ ->
                     div [ class "px-4 py-2 m-2 " ]
@@ -268,7 +268,7 @@ viewAmount { shared } transfer state =
                             []
                         ]
     in
-    div [ class "flex flex-row mt-5" ]
+    div [ class "-ml-16 flex flex-row mt-5" ]
         [ head
         , div [ class "px-4 py-2 m-2" ]
             [ div [ class "border border-solid rounded border-green bg-white" ]

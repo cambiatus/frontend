@@ -3966,7 +3966,7 @@ input[type=number]::-webkit-outer-spin-button {
 /* transfer arrow */
 
 i {
-    border: dashed #8ACC9E;
+    border: dotted #8ACC9E;
     border-width: 0 3px 3px 0;
     display: inline-block;
     padding: 3px;
@@ -3982,3 +3982,19 @@ i {
     transform: rotate(135deg);
     -webkit-transform: rotate(135deg);
   }
+
+/* dotted line */
+
+.hl {
+    border-top: 1px dotted 8ACC9E;
+    width: 10%;
+
+}
+
+.transfer-text {
+    text-align: center;
+    /* vertical-align: ; */
+    line-height: 90px; 
+
+}
+
