@@ -11,6 +11,7 @@ import Html exposing (..)
 import Html.Attributes exposing (..)
 import I18Next
 import Icons
+import Html.Lazy as Lazy
 import Page
 import Route
 import Session.Guest as Guest
@@ -26,24 +27,35 @@ import UpdateResult as UR
 
 
 init : LoggedIn.Model -> String -> ( Model, Cmd Msg )
-init ({ shared } as loggedIn) transferId =
+init { shared } transferId =
     let
-        modelCmd =
-            case maybeTransferID of
-                Just transferID ->
-                    ( { status = Loading }
-                    , Api.Graphql.query loggedIn.shared (transferQuery transferID) CompletedTransferLoad
-                    )
+        currentStatus =
+            initStatus transferId
 
-                Nothing ->
-                    ( { status = InvalidId transferId }
-                    , Cmd.none
-                    )
-
-        maybeTransferID =
-            String.toInt transferId
+        model =
+            { status = currentStatus }
     in
-    modelCmd
+    ( model, initCmd shared currentStatus )
+
+
+initStatus : String -> Status
+initStatus transferId =
+    case String.toInt transferId of
+        Just tID ->
+            Loading tID
+
+        Nothing ->
+            InvalidId transferId
+
+
+initCmd : Shared -> Status -> Cmd Msg
+initCmd shared status =
+    case status of
+        Loading transferId ->
+            Api.Graphql.query shared (transferQuery transferId) CompletedTransferLoad
+
+        _ ->
+            Cmd.none
 
 
 
@@ -71,7 +83,7 @@ type State
 
 
 type Status
-    = Loading
+    = Loading Int
     | InvalidId String
     | LoadFailed (Graphql.Http.Error (Maybe Transfer))
     | Loaded (Maybe Transfer) State
@@ -88,19 +100,20 @@ view loggedIn model =
             I18Next.t loggedIn.shared.translations
     in
     case model.status of
-        Loading ->
+        Loading _ ->
             Page.fullPageLoading
 
-        InvalidId _ ->
-            div []
-                [ viewHeader loggedIn
-                , Page.fullPageLoading
+        InvalidId invalidId ->
+            div [class "container mx-auto px-4"]
+                [ Lazy.lazy viewHeader loggedIn
+                , div []
+                    [ text (invalidId ++ " is not a valid Sale Id") ]
                 ]
 
         LoadFailed error ->
             div []
                 [ viewHeader loggedIn
-                , Page.fullPageGraphQLError (t "transfer.title") error
+                , Page.fullPageGraphQLError (t "transferscreen.title") error
                 ]
 
         Loaded maybeTransfer state ->
@@ -109,7 +122,7 @@ view loggedIn model =
                     div []
                         [ viewHeader loggedIn
                         , viewDoggo loggedIn transfer state
-                        , viewCommunity transfer
+                        , viewCommunity loggedIn transfer
                         ]
 
                 Nothing ->
@@ -121,6 +134,10 @@ view loggedIn model =
 
 viewHeader : LoggedIn.Model -> Html Msg
 viewHeader ({ shared } as loggedIn) =
+    let
+        t =
+            I18Next.t loggedIn.shared.translations
+    in
     div [ class "h-16 w-full bg-indigo-500 flex px-4 items-center" ]
         [ a
             [ class "items-center flex absolute"
@@ -131,29 +148,33 @@ viewHeader ({ shared } as loggedIn) =
                 [ text (I18Next.t shared.translations "back")
                 ]
             ]
-        , p [ class "text-white mx-auto" ] [ text (I18Next.t shared.translations "transfer.title") ]
+        , p [ class "text-white mx-auto" ] [ text (t "transferscreen.title") ]
         ]
 
 
 viewDoggo : LoggedIn.Model -> Transfer -> State -> Html Msg
 viewDoggo loggedIn transfer state =
+    let
+        t =
+            I18Next.t loggedIn.shared.translations
+    in
     div [ class "static flex" ]
         [ div [ class "w-full bg-green h-50" ]
             [ div [ class "flex-row" ]
                 [ div [ class "px-4 py-2 m-2" ]
                     [ img [ class "ml-32", src "%PUBLIC_URL%/images/transfer-doggo.svg" ] [] ]
                 , div [ class "px-4 py-2 m-2" ]
-                    [ p [class "-mr-1 font-medium font-sans text-white not-italic max-w-sm" ]
+                    [ p [ class "font-medium font-sans text-white not-italic max-w-sm" ]
                         [ text <|
                             case state of
                                 Transferred ->
-                                    "Hey, this transfer was successfully made"
+                                    t "transferscreen.transfer_success"
 
                                 Received ->
-                                    "Hey, this receipt was successfully made"
+                                    t "transferscreen.receive_success"
 
                                 NotInvolved ->
-                                    "Hey, this transfer was successfully made"
+                                    t "transferscreen.transfer_success"
                         ]
                     ]
                 , div [ class "ml-84 absolute items-center -mt-8 h-30" ]
@@ -194,7 +215,7 @@ viewTransferCard loggedIn transfer state =
                     ]
                 ]
             ]
-        , div [] [ viewAmount transfer state ]
+        , div [] [ viewAmount loggedIn transfer state ]
         , div [ class "px-4 py-2 m-2" ]
             [ div [ class "h-8 w-8 rounded-full mx-auto" ]
                 [ Avatar.view "" avatar ""
@@ -217,29 +238,33 @@ viewTransferCard loggedIn transfer state =
         ]
 
 
-viewAmount : Transfer -> State -> Html Msg
-viewAmount transfer state =
+viewAmount : LoggedIn.Model -> Transfer -> State -> Html Msg
+viewAmount { shared } transfer state =
+    let
+        t =
+            I18Next.t shared.translations
+    in
     div [ class "flex flex-row top-1/2" ]
-        [ div [class "px-4 py-2 m-2 "]
+        [ div [ class "px-4 py-2 m-2 " ]
             [ hr [ class "h-0 border border-dashed border-green" ]
                 []
             ]
-        , div [class "px-4 py-2 m-2"]
-            [ div [ class "border border-dashed border-green bg-white" ]
-                [ p [ class "leading-none text-gray-900" ]
+        , div [ class "px-4 py-2 m-2" ]
+            [ div [ class "border border-solid rounded border-green bg-white" ]
+                [ p [ class "text-xs text-gray-900" ]
                     [ text <|
                         case state of
                             Received ->
-                                "RECEIVED"
+                                String.toUpper (t "transferscreen.received")
 
                             Transferred ->
-                                "TRANSFERRED"
+                                String.toUpper (t "transferscreen.transferred")
 
                             NotInvolved ->
-                                "TRANSFERRED"
+                                String.toUpper (t "transferscreen.transferred")
                     ]
                 , div [ class "flex flex-row" ]
-                    [ p [ class "font-medium text-green" ]
+                    [ p [ class "mt-1 font-medium text-green" ]
                         [ text <|
                             (\str ->
                                 if String.contains str "." then
@@ -251,28 +276,33 @@ viewAmount transfer state =
                             <|
                                 String.fromFloat transfer.value
                         ]
-                    , span [ class "text-green font-thin" ] [ text <| "   " ++ Eos.symbolToString transfer.symbol ]
+                    , span [ class "ml-2 text-sm text-green mt-1 font-thin" ] [ text <| Eos.symbolToString transfer.symbol ]
                     ]
                 ]
             ]
         ]
 
 
-viewCommunity : Transfer -> Html Msg
-viewCommunity transfer =
-    div [ class "flex mb-4" ]
-        [ div [ class "w-full bg-white h-50" ]
-            [ viewRest "COMMUNITY" <| Eos.symbolToString transfer.symbol
-            , viewRest "DATE" <| dateTimeToString transfer.blockTime
-            , viewRest "MESSAGE" <| Maybe.withDefault "" transfer.memo
+viewCommunity : LoggedIn.Model -> Transfer -> Html Msg
+viewCommunity { shared } transfer =
+    let
+        t str =
+            I18Next.t shared.translations str
+                |> String.toUpper
+    in
+    div [ class "flex mb-4 bg-white" ]
+        [ div [ class "w-full h-50 mt-20 mb-10" ]
+            [ viewRest (t "transferscreen.community") <| Eos.symbolToString transfer.symbol
+            , viewRest (t "transferscreen.date") <| dateTimeToString transfer.blockTime
+            , viewRest (t "transferscreen.message") <| Maybe.withDefault "" transfer.memo
             ]
         ]
 
 
 viewRest : String -> String -> Html Msg
 viewRest title content =
-    div [ class "mt-auto" ]
-        [ h5 [ class "leading-tight text-reward-green" ]
+    div [ class "mt-5 ml-16" ]
+        [ h5 [ class "leading-tight text-xs mb-1 text-reward-green" ]
             [ text title ]
         , p [ class "text-lg font-sans not-italic" ]
             [ text content ]
