@@ -3983,17 +3983,3 @@ i {
     -webkit-transform: rotate(135deg);
   }
 
-/* dotted line */
-
-.hl {
-    border-top: 1px dotted 8ACC9E;
-    width: 10%;
-
-}
-
-.transfer__dog-background {
-    background: url(../../public/images/transfer-doggo.svg);
-    background-repeat: no-repeat;
-    background-attachment: auto;
-}
-
