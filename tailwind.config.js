@@ -122,9 +122,6 @@ module.exports = {
       },
       width: {
         'form': '45.625rem'
-      },
-      margin: {
-        '84': '24rem'
       }
     }
   },
