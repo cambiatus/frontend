@@ -17,9 +17,11 @@ import Route
 import Session.Guest as Guest
 import Session.LoggedIn as LoggedIn exposing (External(..))
 import Session.Shared exposing (Shared)
+import Strftime
 import Time
 import Transfer exposing (Transfer, transferQuery)
 import UpdateResult as UR
+import Utils
 
 
 
@@ -175,7 +177,7 @@ viewDoggo loggedIn transfer state =
                                     t "transfer_result.transfer_success"
                         ]
                     ]
-                , div [class "bg-no-repeat bg-auto h-64 ml-32 -mt-5 px-4 py-2 m-2", style "background-image" "url(/images/transfer-doggo.svg)" ]
+                , div [ class "bg-no-repeat bg-auto h-64 ml-32 -mt-5 px-4 py-2 m-2", style "background-image" "url(/images/transfer-doggo.svg)" ]
                     []
                 , div [ class "flex-2 self-center ml-64 w-2/5 px-4 py-2 m-2 absolute -mt-8 h-30" ]
                     [ viewTransferCard loggedIn transfer state
@@ -254,7 +256,7 @@ viewAmount { shared } transfer state =
 
                 _ ->
                     div [ class "px-4 py-2 m-2" ]
-                        [ hr [ class "hl" ] []]
+                        [ hr [ class "hl" ] [] ]
 
         tail =
             case state of
@@ -311,11 +313,16 @@ viewCommunity { shared } transfer =
         t str =
             I18Next.t shared.translations str
                 |> String.toUpper
+
+        date =
+            Just transfer.blockTime
+                |> Utils.posixDateTime
+                |> Strftime.format "%d %b %Y" Time.utc
     in
     div [ class "flex mb-4 bg-white" ]
         [ div [ class "w-full h-50 mt-20 mb-10" ]
             [ viewRest (t "transfer_result.community") <| Eos.symbolToString transfer.symbol
-            , viewRest (t "transfer_result.date") <| dateTimeToString transfer.blockTime
+            , viewRest (t "transfer_result.date") date
             , viewRest (t "transfer_result.message") <| Maybe.withDefault "" transfer.memo
             ]
         ]
@@ -390,7 +397,3 @@ msgToString msg =
         CompletedTransferLoad r ->
             [ "CompletedTransferLoad", UR.resultToString r ]
 
-
-dateTimeToString : DateTime -> String
-dateTimeToString (DateTime dt) =
-    dt
