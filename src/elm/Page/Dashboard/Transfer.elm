@@ -107,13 +107,13 @@ view loggedIn model =
             div [ class "container mx-auto px-4" ]
                 [ Lazy.lazy viewHeader loggedIn
                 , div []
-                    [ text (invalidId ++ t "transfer.errors.invalid_id") ]
+                    [ text (invalidId ++ t "transfer_result.errors.invalid_id") ]
                 ]
 
         LoadFailed error ->
             div []
                 [ viewHeader loggedIn
-                , Page.fullPageGraphQLError (t "transfer.title") error
+                , Page.fullPageGraphQLError (t "transfer_result.title") error
                 ]
 
         Loaded maybeTransfer state ->
@@ -148,7 +148,7 @@ viewHeader ({ shared } as loggedIn) =
                 [ text (I18Next.t shared.translations "back")
                 ]
             ]
-        , p [ class "text-white mx-auto" ] [ text (t "transfer.title") ]
+        , p [ class "text-white mx-auto" ] [ text (t "transfer_result.title") ]
         ]
 
 
@@ -162,20 +162,20 @@ viewDoggo loggedIn transfer state =
         [ div [ class "w-full bg-green h-50" ]
             [ div [ class "flex-row" ]
                 [ div [ class "px-4 py-2 m-2" ]
-                    [ h3 [ class "text-center mt-8 font-medium font-sans text-white not-italic" ]
+                    [ h2 [ class "text-center mt-8 font-medium font-sans text-white not-italic" ]
                         [ text <|
                             case state of
                                 Transferred ->
-                                    t "transfer.transfer_success"
+                                    t "transfer_result.transfer_success"
 
                                 Received ->
-                                    t "transfer.receive_success"
+                                    t "transfer_result.receive_success"
 
                                 NotInvolved ->
-                                    t "transfer.transfer_success"
+                                    t "transfer_result.transfer_success"
                         ]
                     ]
-                , div [ class "h-64 ml-32 -mt-5 px-4 py-2 m-2 transfer__dog-background" ]
+                , div [class "bg-no-repeat bg-auto h-64 ml-32 -mt-5 px-4 py-2 m-2", style "background-image" "url(/images/transfer-doggo.svg)" ]
                     []
                 , div [ class "flex-2 self-center ml-64 w-2/5 px-4 py-2 m-2 absolute -mt-8 h-30" ]
                     [ viewTransferCard loggedIn transfer state
@@ -202,7 +202,7 @@ viewTransferCard loggedIn transfer state =
                 [ Avatar.view "" avatar ""
                 ]
             , div [ class "px-6 py-4" ]
-                [ span [ class "text-base inline-block bg-black rounded-full px-3 py-1 text-sm font-semibold text-white -mr-3" ]
+                [ span [ class "text-base inline-block bg-black rounded-full px-3 py-1 text-sm font-semibold text-white" ]
                     [ case state of
                         Received ->
                             text "You"
@@ -221,7 +221,7 @@ viewTransferCard loggedIn transfer state =
                 [ Avatar.view "" avatar ""
                 ]
             , div [ class "px-6 py-4" ]
-                [ span [ class "inline-block bg-black rounded-full px-3 py-1 text-sm font-semibold text-white mr-2" ]
+                [ span [ class "inline-block bg-black rounded-full px-3 py-1 text-sm font-semibold text-white" ]
                     [ Eos.viewName <|
                         case state of
                             Received ->
@@ -253,17 +253,17 @@ viewAmount { shared } transfer state =
                         ]
 
                 _ ->
-                    div [ class "px-4 py-2 m-2 -ml-5" ]
+                    div [ class "px-4 py-2 m-2" ]
                         [ hr [ class "hl" ] []]
 
         tail =
             case state of
                 Received ->
-                    div [ class "px-4 py-2 m-2 -ml-5" ]
+                    div [ class "px-4 py-2 m-2" ]
                         [ hr [ class "hl" ] [] ]
 
                 _ ->
-                    div [ class "px-4 py-2 m-2 -ml-5" ]
+                    div [ class "px-4 py-2 m-2" ]
                         [ i [ class "mt-5 right" ]
                             []
                         ]
@@ -276,13 +276,13 @@ viewAmount { shared } transfer state =
                     [ text <|
                         case state of
                             Received ->
-                                String.toUpper (t "transfer.received")
+                                String.toUpper (t "transfer_result.received")
 
                             Transferred ->
-                                String.toUpper (t "transfer.transferred")
+                                String.toUpper (t "transfer_result.transferred")
 
                             NotInvolved ->
-                                String.toUpper (t "transfer.transferred")
+                                String.toUpper (t "transfer_result.transferred")
                     ]
                 , div [ class "flex flex-row" ]
                     [ p [ class "mt-1 font-medium text-green" ]
@@ -314,9 +314,9 @@ viewCommunity { shared } transfer =
     in
     div [ class "flex mb-4 bg-white" ]
         [ div [ class "w-full h-50 mt-20 mb-10" ]
-            [ viewRest (t "transfer.community") <| Eos.symbolToString transfer.symbol
-            , viewRest (t "transfer.date") <| dateTimeToString transfer.blockTime
-            , viewRest (t "transfer.message") <| Maybe.withDefault "" transfer.memo
+            [ viewRest (t "transfer_result.community") <| Eos.symbolToString transfer.symbol
+            , viewRest (t "transfer_result.date") <| dateTimeToString transfer.blockTime
+            , viewRest (t "transfer_result.message") <| Maybe.withDefault "" transfer.memo
             ]
         ]
 
