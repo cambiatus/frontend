@@ -3991,10 +3991,9 @@ i {
 
 }
 
-.transfer-text {
-    text-align: center;
-    /* vertical-align: ; */
-    line-height: 90px; 
-
+.transfer__dog-background {
+    background: url(../../public/images/transfer-doggo.svg);
+    background-repeat: no-repeat;
+    background-attachment: auto;
 }
 
