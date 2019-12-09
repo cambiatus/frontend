@@ -476,7 +476,7 @@
       "secondary": "no, cancel"
     }
   },
-  "tranferscreen": {
+  "tranfer": {
     "title": "Tranferred",
     "tranfer_success": "Hey, this transfer was successfully made",
     "receive_success": " Hey, this receipt was successful made",

@@ -480,7 +480,7 @@
       "secondary": "não, cancelar"
     }
   },
-  "tranferscreen": {
+  "tranfer": {
     "title": "Transferido",
     "tranfer_success": "Ei, essa transferência foi feita com sucesso",
     "receive_success": "Ei, este recibo foi feito com sucesso",

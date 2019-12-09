@@ -476,7 +476,7 @@
       "secondary": "no, cancelar"
     }
   },
-  "tranferscreen": {
+  "tranfer": {
     "title": "Transferida",
     "tranfer_success": "Hola, esta transferencia se realizó con éxito.",
     "receive_success": "Hola, este recibo se realizó con éxito",

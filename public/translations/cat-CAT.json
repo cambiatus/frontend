@@ -477,7 +477,7 @@
       "secondary": "no, cancel·la"
     }
   },
-  "tranferscreen": {
+  "tranfer": {
     "title": "Traspassat",
     "tranfer_success": "Ei, aquesta transferència es va fer amb èxit",
     "receive_success": "Ei, aquest rebut va tenir èxit",
