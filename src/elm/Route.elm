@@ -33,7 +33,7 @@ type Route
     | NewSale
     | EditSale String
     | ViewSale String
-    | TransferScreen String
+    | Transfer String
 
 
 parser : Url -> Parser (Route -> a) a
@@ -102,7 +102,7 @@ parser url =
         , Url.map NewSale (s "shop" </> s "new" </> s "sell")
         , Url.map ViewSale (s "shop" </> string)
         , Url.map EditSale (s "shop" </> string </> s "edit")
-        , Url.map TransferScreen (s "dashboard" </> s "transfer" </> string)
+        , Url.map Transfer (s "dashboard" </> s "transfer" </> string)
         ]
 
 
@@ -278,7 +278,7 @@ routeToString route =
                 ViewSale saleId ->
                     ( [ "shop", saleId ], [] )
 
-                TransferScreen transferId -> 
+                Transfer transferId -> 
                     ([ "transfer", transferId ], [])
     in
     Url.Builder.absolute paths queries

@@ -1,4 +1,4 @@
-module Page.Dashboard.TransferScreen exposing (Model, Msg, init, msgToString, subscriptions, update, view)
+module Page.Dashboard.Transfer exposing (Model, Msg, init, msgToString, subscriptions, update, view)
 
 import Api
 import Api.Graphql
@@ -107,13 +107,13 @@ view loggedIn model =
             div [ class "container mx-auto px-4" ]
                 [ Lazy.lazy viewHeader loggedIn
                 , div []
-                    [ text (invalidId ++ t "transferscreen.errors.invalid_id") ]
+                    [ text (invalidId ++ t "transfer.errors.invalid_id") ]
                 ]
 
         LoadFailed error ->
             div []
                 [ viewHeader loggedIn
-                , Page.fullPageGraphQLError (t "transferscreen.title") error
+                , Page.fullPageGraphQLError (t "transfer.title") error
                 ]
 
         Loaded maybeTransfer state ->
@@ -148,7 +148,7 @@ viewHeader ({ shared } as loggedIn) =
                 [ text (I18Next.t shared.translations "back")
                 ]
             ]
-        , p [ class "text-white mx-auto" ] [ text (t "transferscreen.title") ]
+        , p [ class "text-white mx-auto" ] [ text (t "transfer.title") ]
         ]
 
 
@@ -162,22 +162,22 @@ viewDoggo loggedIn transfer state =
         [ div [ class "w-full bg-green h-50" ]
             [ div [ class "flex-row" ]
                 [ div [ class "px-4 py-2 m-2" ]
-                    [ img [ class "ml-32", src "%PUBLIC_URL%/images/transfer-doggo.svg" ] [] ]
-                , div [ class "flex-row" ]
-                    [ p [ class "align-text-top tranfer-text items-center font-medium font-sans text-white not-italic" ]
+                    [ h3 [ class "text-center mt-8 font-medium font-sans text-white not-italic" ]
                         [ text <|
                             case state of
                                 Transferred ->
-                                    t "transferscreen.transfer_success"
+                                    t "transfer.transfer_success"
 
                                 Received ->
-                                    t "transferscreen.receive_success"
+                                    t "transfer.receive_success"
 
                                 NotInvolved ->
-                                    t "transferscreen.transfer_success"
+                                    t "transfer.transfer_success"
                         ]
                     ]
-                , div [ class "ml-84 absolute items-center -mt-8 h-30" ]
+                , div [ class "h-64 ml-32 -mt-5 px-4 py-2 m-2 transfer__dog-background" ]
+                    []
+                , div [ class "flex-2 self-center ml-64 w-2/5 px-4 py-2 m-2 absolute -mt-8 h-30" ]
                     [ viewTransferCard loggedIn transfer state
                     ]
                 ]
@@ -196,13 +196,13 @@ viewTransferCard loggedIn transfer state =
                 Nothing ->
                     Avatar.empty
     in
-    div [ class "flex flex-row max-w-sm sm:w-auto lg:w-auto xl:w-auto inline-block rounded overflow-auto bg-gray-100" ]
+    div [ class "flex flex-row inline-block rounded overflow-auto bg-gray-100" ]
         [ div [ class "px-4 py-2 m-2" ]
             [ div [ class "h-8 w-8 rounded-full mx-auto" ]
                 [ Avatar.view "" avatar ""
                 ]
             , div [ class "px-6 py-4" ]
-                [ span [ class "text-base inline-block bg-black rounded-full px-3 py-1 text-sm font-semibold text-white mr-2" ]
+                [ span [ class "text-base inline-block bg-black rounded-full px-3 py-1 text-sm font-semibold text-white -mr-3" ]
                     [ case state of
                         Received ->
                             text "You"
@@ -253,17 +253,17 @@ viewAmount { shared } transfer state =
                         ]
 
                 _ ->
-                    div [ class "px-4 py-2 m-2" ]
+                    div [ class "px-4 py-2 m-2 -ml-5" ]
                         [ hr [ class "hl" ] []]
 
         tail =
             case state of
                 Received ->
-                    div [ class "px-4 py-2 m-2 hl" ]
+                    div [ class "px-4 py-2 m-2 -ml-5" ]
                         [ hr [ class "hl" ] [] ]
 
                 _ ->
-                    div [ class "px-4 py-2 m-2 " ]
+                    div [ class "px-4 py-2 m-2 -ml-5" ]
                         [ i [ class "mt-5 right" ]
                             []
                         ]
@@ -276,13 +276,13 @@ viewAmount { shared } transfer state =
                     [ text <|
                         case state of
                             Received ->
-                                String.toUpper (t "transferscreen.received")
+                                String.toUpper (t "transfer.received")
 
                             Transferred ->
-                                String.toUpper (t "transferscreen.transferred")
+                                String.toUpper (t "transfer.transferred")
 
                             NotInvolved ->
-                                String.toUpper (t "transferscreen.transferred")
+                                String.toUpper (t "transfer.transferred")
                     ]
                 , div [ class "flex flex-row" ]
                     [ p [ class "mt-1 font-medium text-green" ]
@@ -314,9 +314,9 @@ viewCommunity { shared } transfer =
     in
     div [ class "flex mb-4 bg-white" ]
         [ div [ class "w-full h-50 mt-20 mb-10" ]
-            [ viewRest (t "transferscreen.community") <| Eos.symbolToString transfer.symbol
-            , viewRest (t "transferscreen.date") <| dateTimeToString transfer.blockTime
-            , viewRest (t "transferscreen.message") <| Maybe.withDefault "" transfer.memo
+            [ viewRest (t "transfer.community") <| Eos.symbolToString transfer.symbol
+            , viewRest (t "transfer.date") <| dateTimeToString transfer.blockTime
+            , viewRest (t "transfer.message") <| Maybe.withDefault "" transfer.memo
             ]
         ]
 

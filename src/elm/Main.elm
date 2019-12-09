@@ -20,7 +20,7 @@ import Page.Community.Explore as CommunityExplore
 import Page.Community.ObjectiveEditor as ObjectiveEditor
 import Page.Community.VerifyClaim as VerifyClaim
 import Page.Dashboard as Dashboard
-import Page.Dashboard.TransferScreen as TransferScreen
+import Page.Dashboard.Transfer as Transfer
 import Page.Login as Login
 import Page.NotFound as NotFound
 import Page.Notification as Notification
@@ -164,7 +164,7 @@ type Status
     | Shop (Maybe Shop.Filter) Shop.Model
     | ShopEditor (Maybe String) ShopEditor.Model
     | ShopViewer String ShopViewer.Model
-    | TransferScreen String TransferScreen.Model
+    | Transfer String Transfer.Model
 
 
 
@@ -193,7 +193,7 @@ type Msg
     | GotShopEditorMsg ShopEditor.Msg
     | GotUpdatedBalances (Result Http.Error (List Community.Balance))
     | GotShopViewerMsg ShopViewer.Msg
-    | GotTransferScreenMsg TransferScreen.Msg
+    | GotTransferScreenMsg Transfer.Msg
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -381,9 +381,9 @@ update msg model =
                 >> updateLoggedInUResult VerifyClaim GotVerifyClaimMsg model
                 |> withLoggedIn
 
-        ( GotTransferScreenMsg subMsg, TransferScreen transferId subModel ) ->
-            TransferScreen.update subMsg subModel
-                >> updateLoggedInUResult (TransferScreen transferId) GotTransferScreenMsg model
+        ( GotTransferScreenMsg subMsg, Transfer transferId subModel ) ->
+            Transfer.update subMsg subModel
+                >> updateLoggedInUResult (Transfer transferId) GotTransferScreenMsg model
                 |> withLoggedIn
 
         ( _, _ ) ->
@@ -727,10 +727,10 @@ changeRouteTo maybeRoute model =
                 >> updateStatusWith (ShopViewer saleId) GotShopViewerMsg model
                 |> withLoggedIn (Route.ViewSale saleId)
 
-        Just (Route.TransferScreen transferId) ->
-            (\l -> TransferScreen.init l transferId)
-                >> updateStatusWith (TransferScreen transferId) GotTransferScreenMsg model
-                |> withLoggedIn (Route.TransferScreen transferId)
+        Just (Route.Transfer transferId) ->
+            (\l -> Transfer.init l transferId)
+                >> updateStatusWith (Transfer transferId) GotTransferScreenMsg model
+                |> withLoggedIn (Route.Transfer transferId)
 
 
 jsAddressToMsg : List String -> Value -> Maybe Msg
@@ -855,7 +855,7 @@ msgToString msg =
             "GotShopViewerMsg" :: ShopViewer.msgToString subMsg
 
         GotTransferScreenMsg subMsg ->
-            "GotTransferScreenMsg" :: TransferScreen.msgToString subMsg
+            "GotTransferScreenMsg" :: Transfer.msgToString subMsg
 
 
 
@@ -959,5 +959,5 @@ view model =
             ShopViewer.view model.session subModel
                 |> viewPage Guest.Shop LoggedIn.Shop GotShopViewerMsg
 
-        TransferScreen _ subModel ->
-            viewLoggedIn subModel LoggedIn.Other GotTransferScreenMsg TransferScreen.view
+        Transfer _ subModel ->
+            viewLoggedIn subModel LoggedIn.Other GotTransferScreenMsg Transfer.view
