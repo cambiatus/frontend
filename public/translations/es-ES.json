@@ -476,15 +476,15 @@
       "secondary": "no, cancelar"
     }
   },
-  "tranfer": {
+  "transfer_result": {
     "title": "Transferida",
-    "tranfer_success": "Hola, esta transferencia se realizó con éxito.",
+    "transfer_success": "Hola, esta transferencia se realizó con éxito.",
     "receive_success": "Hola, este recibo se realizó con éxito",
     "date": "Fecha",
     "message": "Mensaje",
     "community": "Comunidad",
     "received": "Recibida",
-    "tranferred": "Transferida",
+    "transferred": "Transferida",
     "error": {
       "invalid_id": " no es un ID de transferencia válido"
     }

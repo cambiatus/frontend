@@ -476,15 +476,15 @@
       "secondary": "no, cancel"
     }
   },
-  "tranfer": {
-    "title": "Tranferred",
-    "tranfer_success": "Hey, this transfer was successfully made",
+  "transfer_result": {
+    "title": "Transferred",
+    "transfer_success": "Hey, this transfer was successfully made",
     "receive_success": " Hey, this receipt was successful made",
     "date": "Date",
     "message": "Message",
     "community": "Community",
     "received": "Received",
-    "tranferred": "Transferred",
+    "transferred": "Transferred",
     "error": {
       "invalid_id": " is not a valid Transfer Id"
     }
