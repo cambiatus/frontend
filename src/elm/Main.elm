@@ -292,8 +292,13 @@ update msg model =
                     msgToString
 
         ( GotRegisterMsg subMsg, Register maybeInvitation subModel ) ->
+            -- Will return  a function expecting a Guest Model
             Register.update maybeInvitation subMsg subModel
+                -- will return a function expecting an UpdateResult
+                -- The composition operator will take the result of the above function and use as 
+                -- an input for the below function
                 >> updateGuestUResult (Register maybeInvitation) GotRegisterMsg model
+                -- provides the above composed function with the initial guest input
                 |> withGuest
 
         ( GotLoginMsg subMsg, Login subModel ) ->
@@ -302,8 +307,13 @@ update msg model =
                 |> withGuest
 
         ( GotNotificationMsg subMsg, Notification subModel ) ->
+         -- Will return afunction expecting a LoggedIn Model
             Notification.update subMsg subModel
+                -- will return a function expecting an UpdateResult
+                -- The composition operator will take the result of the above function and use as 
+                -- an input for the below function
                 >> updateLoggedInUResult Notification GotNotificationMsg model
+                -- provides the above composed function with the LoggedInModel
                 |> withLoggedIn
 
         ( GotCommunityMsg subMsg, Community subModel ) ->
