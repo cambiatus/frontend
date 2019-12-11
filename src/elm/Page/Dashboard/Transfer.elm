@@ -179,7 +179,7 @@ viewDoggo loggedIn transfer state =
                     ]
                 , div [ class "bg-no-repeat bg-auto h-64 ml-32 -mt-5 px-4 py-2 m-2", style "background-image" "url(/images/transfer-doggo.svg)" ]
                     []
-                , div [ class "flex-2 self-center ml-64 w-2/5 px-4 py-2 m-2 absolute -mt-8 h-30" ]
+                , div [ class  "flex justify-center items-center -mt-16 absolute md:w-full mx-4 md:mx-auto"]
                     [ viewTransferCard loggedIn transfer state
                     ]
                 ]
@@ -190,18 +190,24 @@ viewDoggo loggedIn transfer state =
 viewTransferCard : LoggedIn.Model -> Transfer -> State -> Html Msg
 viewTransferCard loggedIn transfer state =
     let
-        avatar =
-            case LoggedIn.profile loggedIn of
-                Just profile ->
-                    profile.avatar
-
-                Nothing ->
-                    Avatar.empty
+        ipfsUrl =
+            loggedIn.shared.endpoints.ipfs
     in
     div [ class "flex flex-row inline-block rounded overflow-auto bg-gray-100" ]
         [ div [ class "px-4 py-2 m-2" ]
-            [ div [ class "h-8 w-8 rounded-full mx-auto" ]
-                [ Avatar.view "" avatar ""
+            [ div [ class "h-8 w-8 rounded-full mx-auto mt-5" ]
+                [ Avatar.view ipfsUrl
+                    (case state of
+                        Received ->
+                            transfer.from.avatar
+
+                        Transferred ->
+                            transfer.to.avatar
+
+                        NotInvolved ->
+                            transfer.from.avatar
+                    )
+                    "h-10 w-10"
                 ]
             , div [ class "px-6 py-4" ]
                 [ span [ class "text-base inline-block bg-black rounded-full px-3 py-1 text-sm font-semibold text-white" ]
@@ -213,27 +219,38 @@ viewTransferCard loggedIn transfer state =
                             text "You"
 
                         NotInvolved ->
-                            Eos.viewName transfer.from
+                            Eos.viewName transfer.fromId
                     ]
                 ]
             ]
-        , div [] [ viewAmount loggedIn transfer state ]
+        , div [ class "mt-5" ] [ viewAmount loggedIn transfer state ]
         , div [ class "-ml-8 px-4 py-2 m-2" ]
-            [ div [ class "h-8 w-8 rounded-full mx-auto" ]
-                [ Avatar.view "" avatar ""
+            [ div [ class "h-8 w-8 rounded-full mx-auto mt-5" ]
+                [ Avatar.view ipfsUrl
+                    (case state of
+                        Received ->
+                            transfer.from.avatar
+
+                        Transferred ->
+                            transfer.to.avatar
+
+                        NotInvolved ->
+                            transfer.to.avatar
+                    )
+                    "h-10 w-10"
                 ]
             , div [ class "px-6 py-4" ]
                 [ span [ class "inline-block bg-black rounded-full px-3 py-1 text-sm font-semibold text-white" ]
                     [ Eos.viewName <|
                         case state of
                             Received ->
-                                transfer.from
+                                transfer.fromId
 
                             Transferred ->
-                                transfer.to
+                                transfer.toId
 
                             NotInvolved ->
-                                transfer.to
+                                transfer.toId
                     ]
                 ]
             ]
@@ -274,32 +291,35 @@ viewAmount { shared } transfer state =
         [ head
         , div [ class "px-4 py-2 m-2" ]
             [ div [ class "border border-solid rounded border-green bg-white" ]
-                [ p [ class "text-xs text-gray-900" ]
-                    [ text <|
-                        case state of
-                            Received ->
-                                String.toUpper (t "transfer_result.received")
-
-                            Transferred ->
-                                String.toUpper (t "transfer_result.transferred")
-
-                            NotInvolved ->
-                                String.toUpper (t "transfer_result.transferred")
-                    ]
-                , div [ class "flex flex-row" ]
-                    [ p [ class "mt-1 font-medium text-green" ]
+                [ div [ class "ml-1" ]
+                    [ p [ class "mt-2 text-caption font-hairline text-gray-900" ]
                         [ text <|
-                            (\str ->
-                                if String.contains str "." then
-                                    str
+                            case state of
+                                Received ->
+                                    String.toUpper (t "transfer_result.received")
 
-                                else
-                                    str ++ ".000"
-                            )
-                            <|
-                                String.fromFloat transfer.value
+                                Transferred ->
+                                    String.toUpper (t "transfer_result.transferred")
+
+                                NotInvolved ->
+                                    String.toUpper (t "transfer_result.transferred")
                         ]
-                    , span [ class "ml-2 text-sm text-green mt-1 font-thin" ] [ text <| Eos.symbolToString transfer.symbol ]
+                    , div [ class "flex flex-row" ]
+                        [ p [ class "font-medium text-green" ]
+                            [ text <|
+                                (\str ->
+                                    if String.contains str "." then
+                                        str
+
+                                    else
+                                        str ++ ".000"
+                                )
+                                <|
+                                    String.fromFloat transfer.value
+                            ]
+                        , span [ class "ml-2 text-sm text-green mt-1 mb-1 font-thin mr-5" ]
+                            [ text <| Eos.symbolToString transfer.symbol ]
+                        ]
                     ]
                 ]
             ]
@@ -354,10 +374,10 @@ findState : Maybe Transfer -> LoggedIn.Model -> State
 findState maybeTransfer { accountName } =
     case maybeTransfer of
         Just transfer ->
-            if transfer.from == accountName then
+            if transfer.fromId == accountName then
                 Transferred
 
-            else if transfer.to == accountName then
+            else if transfer.toId == accountName then
                 Received
 
             else
@@ -396,4 +416,3 @@ msgToString msg =
     case msg of
         CompletedTransferLoad r ->
             [ "CompletedTransferLoad", UR.resultToString r ]
-
