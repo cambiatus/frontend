@@ -179,7 +179,7 @@ viewDoggo loggedIn transfer state =
                     ]
                 , div [ class "bg-no-repeat bg-auto h-64 ml-32 -mt-5 px-4 py-2 m-2", style "background-image" "url(/images/transfer-doggo.svg)" ]
                     []
-                , div [ class  "flex justify-center items-center -mt-16 absolute md:w-full mx-4 md:mx-auto"]
+                , div [ class "flex justify-center items-center -mt-16 absolute md:w-full mx-4 md:mx-auto" ]
                     [ viewTransferCard loggedIn transfer state
                     ]
                 ]
@@ -224,7 +224,7 @@ viewTransferCard loggedIn transfer state =
                 ]
             ]
         , div [ class "mt-5" ] [ viewAmount loggedIn transfer state ]
-        , div [ class "-ml-8 px-4 py-2 m-2" ]
+        , div [ class "-ml-20 px-4 py-2 m-2" ]
             [ div [ class "h-8 w-8 rounded-full mx-auto mt-5" ]
                 [ Avatar.view ipfsUrl
                     (case state of
@@ -273,24 +273,26 @@ viewAmount { shared } transfer state =
 
                 _ ->
                     div [ class "px-4 py-2 m-2" ]
-                        [ hr [ class "hl" ] [] ]
+                        [ hr [ class "ml-5 border border-dashed border-green w-8 mt-6 m-auto mb-6" ] [] ]
 
         tail =
             case state of
                 Received ->
                     div [ class "px-4 py-2 m-2" ]
-                        [ hr [ class "hl" ] [] ]
+                        [ hr [ class "ml-5 border border-dashed border-green w-8 mt-6 m-auto mb-6" ] [] ]
 
                 _ ->
-                    div [ class "px-4 py-2 m-2" ]
-                        [ i [ class "mt-5 right" ]
-                            []
+                    div [ class "flex flex row" ]
+                        [ div [ class "px-4 py-2 m-2" ]
+                            [ hr [ class "-ml-8 border border-dashed border-green w-6 mt-6 m-auto mb-6" ] [] ]
+                        , div [ class "px-4 py-2 m-2" ]
+                            [ i [ class "-ml-12 mt-5 right" ] [] ]
                         ]
     in
     div [ class "-ml-16 flex flex-row mt-5" ]
         [ head
         , div [ class "px-4 py-2 m-2" ]
-            [ div [ class "border border-solid rounded border-green bg-white" ]
+            [ div [ class "-ml-10 border border-solid rounded border-green bg-white" ]
                 [ div [ class "ml-1" ]
                     [ p [ class "mt-2 text-caption font-hairline text-gray-900" ]
                         [ text <|
