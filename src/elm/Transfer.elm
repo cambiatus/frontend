@@ -1,6 +1,7 @@
 module Transfer exposing (ConnectionTransfer, QueryTransfers, Transfer, communityFilter, encodeEosActionData, getTotalCount, getTransfers, metadataConnectionSelectionSet, transferConnectionSelectionSet, transferItemSelectionSet, transferQuery, transfersQuery, userFilter)
 
 import Api.Relay exposing (Edge, MetadataConnection, PageConnection, PageInfo, PaginationArgs, pageInfoSelectionSet)
+import Avatar exposing (Avatar)
 import Bespiral.Object
 import Bespiral.Object.Community
 import Bespiral.Object.Profile
@@ -45,13 +46,20 @@ type alias CommunityArgs =
 
 
 type alias Transfer =
-    { to : Eos.Name
-    , from : Eos.Name
+    { toId : Eos.Name
+    , fromId : Eos.Name
+    , to :
+        { avatar : Avatar }
+    , from :
+        { avatar : Avatar }
     , value : Float
     , memo : Maybe String
     , symbol : Symbol
     , blockTime : DateTime
     }
+
+type alias TransferAvatar = 
+    {avatar : Avatar}
 
 
 type alias EdgeTransfer =
@@ -94,6 +102,18 @@ transferItemSelectionSet =
     SelectionSet.succeed Transfer
         |> with (Eos.nameSelectionSet Bespiral.Object.Transfer.toId)
         |> with (Eos.nameSelectionSet Bespiral.Object.Transfer.fromId)
+        |> with
+            (Bespiral.Object.Transfer.to
+                (SelectionSet.succeed TransferAvatar
+                    |> with (Avatar.selectionSet Bespiral.Object.Profile.avatar)
+                )
+            )
+        |> with
+            (Bespiral.Object.Transfer.from
+                (SelectionSet.succeed TransferAvatar
+                    |> with (Avatar.selectionSet Bespiral.Object.Profile.avatar)
+                )
+            )
         |> with Bespiral.Object.Transfer.amount
         |> with Bespiral.Object.Transfer.memo
         |> with (Eos.symbolSelectionSet Bespiral.Object.Transfer.communityId)
