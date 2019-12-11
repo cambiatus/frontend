@@ -54,6 +54,11 @@ createdTx =
     Object.selectionForField "String" "createdTx" [] Decode.string
 
 
+from : SelectionSet decodesTo Bespiral.Object.Profile -> SelectionSet decodesTo Bespiral.Object.Transfer
+from object_ =
+    Object.selectionForCompositeField "from" [] object_ identity
+
+
 fromId : SelectionSet String Bespiral.Object.Transfer
 fromId =
     Object.selectionForField "String" "fromId" [] Decode.string
@@ -67,6 +72,11 @@ id =
 memo : SelectionSet (Maybe String) Bespiral.Object.Transfer
 memo =
     Object.selectionForField "(Maybe String)" "memo" [] (Decode.string |> Decode.nullable)
+
+
+to : SelectionSet decodesTo Bespiral.Object.Profile -> SelectionSet decodesTo Bespiral.Object.Transfer
+to object_ =
+    Object.selectionForCompositeField "to" [] object_ identity
 
 
 toId : SelectionSet String Bespiral.Object.Transfer
