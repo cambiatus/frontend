@@ -21,7 +21,7 @@ import Json.Decode as Decode exposing (Decoder, Value)
 import Json.Encode as Encode
 import List.Extra as LE
 import Log
-import Page exposing (Session(..), viewMenuFilter, viewMenuFilterButton, viewMenuFilterDropdown, viewMenuFilterDropdownOption)
+import Page exposing (Session(..), viewMenuFilter, viewMenuFilterButton, viewMenuFilterDropdown, viewMenuFilterDropdownOption, viewMenuTab, viewMenuFilterTabButton)
 import Route exposing (Route)
 import Session.Guest as Guest
 import Session.LoggedIn as LoggedIn exposing (External(..))
@@ -255,7 +255,7 @@ viewShopFilter session maybeFilter =
             div [ class "w-full mt-4 mb-6" ]
                 [ span [ class "input-label" ]
                     [ text (t shared.translations "shop.filter") ]
-                , viewShopFilterDropdown
+                , viewShopFilterTab
                     translations
                     maybeFilter
                     loggedIn
@@ -551,6 +551,30 @@ viewShopFilterDropdown translations maybeFilter loggedIn =
             ]
     in
     viewMenuFilterDropdown ClickedFilter decoder options
+
+
+viewShopFilterTab :  ( String, String, String ) -> Maybe Filter -> LoggedIn.Model -> Html Msg
+viewShopFilterTab translations maybeFilter loggedIn =
+    let
+        ( communities, all, user ) =
+            translations
+
+        decoder =
+            decodeTargetValueToFilter translations
+
+        buttons =
+            [ viewMenuFilterTabButton
+                (maybeFilter == Just Shop.MyCommunities)
+                communities
+            , viewMenuFilterTabButton
+                (maybeFilter == Just Shop.All)
+                all
+            , viewMenuFilterTabButton
+                (maybeFilter == Just Shop.UserSales)
+                user
+            ]
+    in
+    viewMenuTab ClickedFilter decoder buttons
 
 
 viewCardTransfer : Bool -> Model -> Session -> Int -> Card -> Html Msg

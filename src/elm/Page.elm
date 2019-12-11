@@ -1,4 +1,4 @@
-module Page exposing (ExternalMsg(..), Msg, Session(..), errorToString, fullPageError, fullPageGraphQLError, fullPageLoading, fullPageNotFound, init, isLoggedIn, jsAddressToMsg, labelWithTooltip, loading, login, logout, msgToString, onFileChange, subscriptions, toShared, update, viewButtonNew, viewCardEmpty, viewCardList, viewDateDistance, viewGuest, viewLoggedIn, viewMaxTwoColumn, viewMenuFilter, viewMenuFilterButton, viewMenuFilterDropdown, viewMenuFilterDropdownOption, viewTitle)
+module Page exposing (ExternalMsg(..), Msg, Session(..), errorToString, fullPageError, fullPageGraphQLError, fullPageLoading, fullPageNotFound, init, isLoggedIn, jsAddressToMsg, labelWithTooltip, loading, login, logout, msgToString, onFileChange, subscriptions, toShared, update, viewButtonNew, viewCardEmpty, viewCardList, viewDateDistance, viewGuest, viewLoggedIn, viewMaxTwoColumn, viewMenuFilter, viewMenuFilterButton, viewMenuFilterDropdown, viewMenuFilterDropdownOption, viewTitle, viewMenuTab, viewMenuFilterTabButton)
 
 import Account exposing (Profile)
 import Asset.Icon as Icon
@@ -168,6 +168,26 @@ viewMenuFilterDropdown toMsg decoder options =
             options
         ]
 
+
+viewMenuTab : (a -> msg) -> Decoder a -> List (Html msg) -> Html msg
+viewMenuTab toMsg decoder options =
+    div
+        [ class "flex flex-row justify-between"
+        , onChange toMsg decoder 
+        ]
+        options
+
+
+viewMenuFilterTabButton : Bool -> String -> Html msg
+viewMenuFilterTabButton isSelected text_ =
+    case isSelected of
+        True ->
+            button [ class "menu-filter__button menu-filter__button-active" ]
+                [ text text_ ]
+
+        False ->
+            button [ class "menu-filter__button" ]
+                [ text text_ ]
 
 viewMenuFilterDropdownOption : Bool -> String -> Html msg
 viewMenuFilterDropdownOption isSelected text_ =
