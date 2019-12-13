@@ -301,8 +301,6 @@ textarea.input {
 
 .autocomplete-item {
     display: flex;
-    height: 29px;
-    width: 290px;
     padding-left: 8px;
     padding-top: 3px;
     padding-bottom: 2px;
@@ -317,6 +315,7 @@ textarea.input {
     border: 1px solid #979797;
     border-radius: 8px;
     background-color: #FFFFFF;
+    right: -0.9rem;
 }
 
 /* Loading */

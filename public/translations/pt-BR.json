@@ -3,8 +3,8 @@
   "back": "Voltar",
   "menu": {
     "title": "Menu",
-    "my_communities": "Minhas Comunidades",
-    "dashboard": "Dashboard",
+    "my_communities": "Bem vindo de volta, ",
+    "dashboard": "Painel",
     "news": "Novidades",
     "learn": "Aprender",
     "shop": "Loja",
@@ -23,7 +23,7 @@
     "explore": "Explorar",
     "communities": "Comunidades",
     "welcome_message": "Olá, {{user_name}} ",
-    "back_to_dashboard": "Voltar para Dashboard",
+    "back_to_dashboard": "Voltar para o painel",
     "edit": "Editar",
     "cancel": "Cancelar",
     "save": "Salvar",
@@ -34,7 +34,8 @@
     "loading": "Carregando...",
     "try_again": "Tente novamente",
     "coming_soon": "Em Breve",
-    "my_account": "Minha conta"
+    "my_account": "Minha conta",
+    "languages": "Linguagens"
   },
   "error": {
     "validator": {
@@ -343,6 +344,9 @@
       "no": "Não, cancelar",
       "success": "Reinvidicação concluída, aguarde as aprovações",
       "failure": "Algo deu errado ao tentar realizar sua reinvidicação, tente novamente mais tarde"
+    },
+    "verifyClaim": {
+      "error": "Ocorreu um erro ao tentar processar sua validação. Tente novamente mais tarde"
     }
   },
   "profile": {
@@ -416,6 +420,7 @@
     "buy_action": "{{accountName}} COMPRANDO",
     "buy": "Comprar",
     "ask": "Perguntar",
+    "edit": "Editar minha oferta",
     "transfer": {
       "units_label": "Quantas unidades você quer?",
       "quantity_label": "Valor",

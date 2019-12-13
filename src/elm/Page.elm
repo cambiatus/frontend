@@ -85,7 +85,8 @@ subscriptions : Session -> Sub Msg
 subscriptions session =
     case session of
         Guest guest ->
-            Sub.none
+            Guest.subscriptions guest
+                |> Sub.map GotGuestMsg
 
         LoggedIn loggedIn ->
             LoggedIn.subscriptions loggedIn
@@ -225,7 +226,7 @@ viewButtonNew title_ route =
 
 viewMaxTwoColumn : List (Html msg) -> List (Html msg) -> Html msg
 viewMaxTwoColumn firstColContent secColContent =
-    div [ class "section-grid" ]
+    div [ class "section-grid mt-4" ]
         [ div [ class "section-grid__section" ] firstColContent
         , div [ class "section-grid__section" ] secColContent
         ]

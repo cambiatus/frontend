@@ -98,7 +98,7 @@ type Status
 type alias PrivateKeyLogin =
     { privateKey : String
     , usePin : Maybe String
-    , enteredPin : List (Maybe Int)
+    , enteredPin : List (Maybe String)
     }
 
 
@@ -448,7 +448,7 @@ digitInput position { form, pinVisibility } =
         val =
             case itemVal of
                 Just dig ->
-                    String.fromInt dig
+                    dig
 
                 Nothing ->
                     ""
@@ -470,7 +470,7 @@ digitInput position { form, pinVisibility } =
          , pattern "[0-9]*"
          , maxlength 1
          , value val
-         , onKeyDown (EnteredPinDigit position)
+         , onInput (EnteredPinDigit position)
          , required True
          , autocomplete False
          ]
@@ -537,7 +537,7 @@ type Msg
     | GotPinLogin (Result String ( Eos.Name, String ))
     | CompletedLoadProfile Status Eos.Name (Result Http.Error Profile)
     | CompletedCreateProfile Status Eos.Name (Result Http.Error Profile)
-    | EnteredPinDigit Int Int
+    | EnteredPinDigit Int String
     | TogglePinVisibility
 
 
@@ -632,8 +632,7 @@ update msg shared model =
                 let
                     pinString =
                         form.enteredPin
-                            |> List.map (\a -> Maybe.withDefault 0 a)
-                            |> List.map (\a -> String.fromInt a)
+                            |> List.map (\a -> Maybe.withDefault "" a)
                             |> List.foldl (\a b -> a ++ b) ""
 
                     newForm =
@@ -715,8 +714,7 @@ update msg shared model =
                     let
                         pinString =
                             model.form.enteredPin
-                                |> List.map (\a -> Maybe.withDefault 0 a)
-                                |> List.map (\a -> String.fromInt a)
+                                |> List.map (\a -> Maybe.withDefault "" a)
                                 |> List.foldl (\a b -> a ++ b) ""
                     in
                     UR.init { model | status = LoggingInWithPin }
@@ -789,64 +787,38 @@ update msg shared model =
             loginFailed err model
 
         EnteredPinDigit pos data ->
-            {- 96 to 105 is 0-9 from numerical keyboard.
-               48 to 57 is 0-9 from the regular number keyboard.
-               8 is backspace
-               229 is the only keycode some chinese devices use
-            -}
-            if (data >= 96 && data <= 105) || (data >= 48 && data <= 57) || data == 8 || data == 229 then
-                let
-                    currentForm =
-                        model.form
+            let
+                currentForm =
+                    model.form
 
-                    newPin =
-                        if data == 8 then
-                            LE.setAt pos Nothing model.form.enteredPin
+                newPin =
+                    if data == "" then
+                        LE.setAt pos Nothing model.form.enteredPin
 
-                        else if data < 58 then
-                            LE.setAt pos (Just (data - 48)) model.form.enteredPin
+                    else
+                        LE.setAt pos (Just data) model.form.enteredPin
 
-                        else
-                            LE.setAt pos (Just (data - 96)) model.form.enteredPin
+                nextFocusPosition : Int
+                nextFocusPosition =
+                    if data == "" then
+                        pos - 1
 
-                    nextFocusPosition : Int
-                    nextFocusPosition =
-                        if data == 8 then
-                            pos - 1
-
-                        else
-                            pos + 1
-                in
-                { model | form = { currentForm | enteredPin = newPin } }
-                    |> UR.init
-                    |> UR.addPort
-                        { responseAddress = Ignored
-                        , responseData = Encode.null
-                        , data =
-                            Encode.object
-                                [ ( "pos", Encode.int pos )
-                                , ( "data", Encode.int data )
-                                , ( "iswithinif", Encode.bool True )
-                                ]
-                        }
-                    |> UR.addCmd (Task.attempt (\_ -> Ignored) (Dom.focus ("pin_input_" ++ String.fromInt nextFocusPosition)))
-
-            else if data == 13 then
-                -- 13 is enter, to mimic a submit
-                update (SubmittedLoginPrivateKey model.form) shared model
-
-            else
-                UR.init model
-                    |> UR.addPort
-                        { responseAddress = Ignored
-                        , responseData = Encode.null
-                        , data =
-                            Encode.object
-                                [ ( "pos", Encode.int pos )
-                                , ( "data", Encode.int data )
-                                , ( "iswithinif", Encode.bool False )
-                                ]
-                        }
+                    else
+                        pos + 1
+            in
+            { model | form = { currentForm | enteredPin = newPin } }
+                |> UR.init
+                |> UR.addPort
+                    { responseAddress = Ignored
+                    , responseData = Encode.null
+                    , data =
+                        Encode.object
+                            [ ( "pos", Encode.int pos )
+                            , ( "data", Encode.string data )
+                            , ( "iswithinif", Encode.bool True )
+                            ]
+                    }
+                |> UR.addCmd (Task.attempt (\_ -> Ignored) (Dom.focus ("pin_input_" ++ String.fromInt nextFocusPosition)))
 
         TogglePinVisibility ->
             { model | pinVisibility = not model.pinVisibility } |> UR.init

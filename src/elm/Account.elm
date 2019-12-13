@@ -73,7 +73,7 @@ decodeProfile =
         |> optional "bio" (nullable string) Nothing
         |> optional "localization" (nullable string) Nothing
         |> required "account" Eos.nameDecoder
-        |> optional "avatar_hash" Avatar.decode Avatar.empty
+        |> optional "avatar" Avatar.decode Avatar.empty
         |> optional "interests" decodeInterests []
         |> optional "chat_user_id" (nullable string) Nothing
         |> optional "chat_token" (nullable string) Nothing

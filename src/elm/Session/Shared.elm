@@ -1,4 +1,4 @@
-module Session.Shared exposing (ScatterAvailability(..), Shared, TranslationStatus(..), bespiralSymbol, gotScatterAvailability, init, language, loadTranslation, toLoadingTranslation, translationStatus, verifyingScatterAvailability, viewFullError, viewFullGraphqlError, viewFullLoading, viewLanguageItems)
+module Session.Shared exposing (ScatterAvailability(..), Shared, TranslationStatus(..), bespiralSymbol, gotScatterAvailability, init, langFlag, language, loadTranslation, toLoadingTranslation, translationStatus, verifyingScatterAvailability, viewFullError, viewFullGraphqlError, viewFullLoading, viewLanguageItems)
 
 import Account
 import Asset.Icon as Icon
@@ -152,22 +152,19 @@ verifyingScatterAvailability shared =
 
 viewLanguageItems : Shared -> (String -> msg) -> List (Html msg)
 viewLanguageItems shared toMsg =
-    List.map
-        (\lang ->
-            button
-                [ classList
-                    [ ( "user-nav__item", True )
-                    , ( "user-nav__item--active"
-                      , String.startsWith lang shared.language
-                      )
+    [ "en", "pt-br", "es", "cat" ]
+        |> List.filter (\l -> not (String.startsWith l shared.language))
+        |> List.sort
+        |> List.map
+            (\lang ->
+                button
+                    [ class "flex block px-4 py-2 text-gray justify-between items-center text-xs"
+                    , onClick (toMsg lang)
                     ]
-                , onClick (toMsg lang)
-                ]
-                [ langFlag lang
-                , span [ class "lang__item__text border-t border-gray-500 w-full text-left" ] [ text (String.toUpper lang) ]
-                ]
-        )
-        [ "en", "pt-br", "es", "cat" ]
+                    [ langFlag lang
+                    , text (String.toUpper lang)
+                    ]
+            )
 
 
 langFlag : String -> Html msg
@@ -186,7 +183,7 @@ langFlag st =
             else
                 "/icons/en-lang.svg"
     in
-    img [ src iconLink, class "main__header__language" ] []
+    img [ src iconLink, class "object-cover w-6 h-6 mr-4" ] []
 
 
 viewFullLoading : Html msg

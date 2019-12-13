@@ -28,7 +28,7 @@ import List.Extra as List
 import Page
 import Page.Dashboard.Community as DashCommunity
 import Route
-import Session.LoggedIn as LoggedIn exposing (External(..))
+import Session.LoggedIn as LoggedIn exposing (External(..), ProfileStatus)
 import Session.Shared as Shared exposing (Shared)
 import Strftime
 import Task
@@ -113,25 +113,26 @@ view loggedIn model =
         t s =
             I18Next.t loggedIn.shared.translations s
     in
-    case model.communities of
-        Loading ->
+    case ( model.communities, loggedIn.profile ) of
+        ( Loading, _ ) ->
             Page.fullPageLoading
 
-        Failed e ->
+        ( Failed e, _ ) ->
             Page.fullPageError (t "menu.my_communities") e
 
-        Loaded communities ->
+        ( Loaded communities, LoggedIn.Loaded profile ) ->
             div [ class "mx-auto container px-4" ]
-                [ Page.viewTitle (t "menu.my_communities")
-                , if loggedIn.shared.allowCommunityCreation then
-                    Page.viewButtonNew (t "community.create_button") Route.NewCommunity
-
-                  else
-                    text ""
+                [ div [ class "text-gray-600 text-2xl font-light flex mt-6 mb-4" ]
+                    [ text (t "menu.my_communities")
+                    , div [ class "text-indigo-500 ml-2 font-medium" ] [ text (profile.userName |> Maybe.withDefault "") ]
+                    ]
                 , viewBalances loggedIn communities
                 , viewVerifications loggedIn.shared model
                 , viewSections loggedIn model
                 ]
+
+        ( _, _ ) ->
+            Page.fullPageNotFound (t "menu.my_communities") ""
 
 
 viewVerifications : Shared -> Model -> Html Msg
@@ -142,7 +143,7 @@ viewVerifications shared model =
 
         toView verifications =
             List.map
-                (viewVerification shared.endpoints.ipfs)
+                (viewVerification shared)
                 verifications
     in
     div
@@ -175,15 +176,15 @@ viewVerifications shared model =
         ]
 
 
-viewVerification : String -> ActionVerification -> Html Msg
-viewVerification url verification =
+viewVerification : Shared -> ActionVerification -> Html Msg
+viewVerification shared verification =
     let
         maybeLogo =
             if String.isEmpty verification.logo then
                 Nothing
 
             else
-                Just (url ++ "/" ++ verification.logo)
+                Just (shared.endpoints.ipfs ++ "/" ++ verification.logo)
 
         description =
             verification.description
@@ -237,11 +238,11 @@ viewVerification url verification =
                 [ text date ]
             , div
                 [ class "lg:hidden mt-4" ]
-                [ Tag.view status ]
+                [ Tag.view status shared.translations ]
             ]
         , div
             [ class "hidden lg:visible lg:flex lg:flex-none pl-4" ]
-            [ Tag.view status ]
+            [ Tag.view status shared.translations ]
         ]
 
 
@@ -273,7 +274,7 @@ viewSections loggedIn model =
 
         toView claims =
             List.map
-                (viewVerification loggedIn.shared.endpoints.ipfs)
+                (viewVerification loggedIn.shared)
                 claims
     in
     Page.viewMaxTwoColumn

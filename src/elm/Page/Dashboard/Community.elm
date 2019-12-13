@@ -10,10 +10,11 @@ import Eos
 import Eos.Account as Eos
 import Graphql.Http
 import Html exposing (..)
-import Html.Attributes as HtmlAttr exposing (class, classList, colspan, disabled, for, href, id, maxlength, minlength, placeholder, required, selected, src, style, target, type_, value)
+import Html.Attributes as HtmlAttr exposing (class, classList, colspan, disabled, for, href, id, maxlength, minlength, placeholder, required, rows, selected, src, style, target, type_, value)
 import Html.Events exposing (onClick, onInput, onSubmit, targetValue)
 import Http
 import I18Next exposing (Delims(..), t, tr)
+import Icons
 import Json.Decode as Decode exposing (Decoder, Value)
 import Json.Encode as Encode exposing (Value)
 import List.Extra as List
@@ -179,31 +180,25 @@ viewCardBalance loggedIn ({ balance } as model) =
                     ""
     in
     div [ class "w-full sm:w-1/2 lg:w-1/3 xl:w-1/4 px-2 mb-6" ]
-        [ div [ class "flex flex-wrap px-3 pt-5 pb-2 rounded-lg hover:shadow-lg bg-white" ]
-            [ div [ class "w-1/3" ] [ img [ class "object-none object-scale-down h-20", src (ipfsUrl ++ "/" ++ logo) ] [] ]
-            , div [ class "w-2/3 pl-4 overflow-x-hidden overflow-y-hidden" ]
-                [ p [ class "font-medium leading-none font-sans" ] [ text title ]
-                , div [ class "flex" ]
-                    [ div [ class "text-3xl text-orange-100" ] [ text balanceText ]
-                    , div [ class "uppercase text-sm font-thin mt-3 ml-2 text-orange-100 font-sans" ] [ text symbolText ]
-                    ]
-                , p [ class "text-xs text-gray-600 leading-none font-sans tracking-wide" ] [ text_ "account.my_wallet.balances.current" ]
+        [ div [ class "flex flex-col items-center justify-center px-3 pt-5 pb-2 rounded-lg hover:shadow-lg bg-white" ]
+            [ div [ class "" ] [ img [ class "object-none object-scale-down h-20 mb-2", src (ipfsUrl ++ "/" ++ logo) ] [] ]
+            , div [ class "" ] [ p [ class "leading-none text-menu" ] [ text title ] ]
+            , div [ class "flex items-center justify-center" ]
+                [ div [ class "text-indigo-500 font-bold text-3xl" ]
+                    [ text balanceText ]
+                , div [ class "text-indigo-500 ml-2" ]
+                    [ text symbolText ]
                 ]
-            , div [ class "w-full flex-shrink" ]
+            , div [ class "input-label mb-4" ]
+                [ text_ "account.my_wallet.balances.current" ]
+            , div [ class "flex flex-col py-3 w-full" ]
                 [ a
-                    [ class "float-right button button-secondary button-small w-20 px-1 py-2 text-xs"
+                    [ class "button button-secondary button-small text-xs font-medium w-full mb-4"
                     , Route.href (Route.Community balance.asset.symbol)
                     ]
                     [ text_ "menu.explore" ]
-                ]
-            , div [ class "w-full flex bg-white border-t border-gray-300 mt-2 py-3" ]
-                [ a
-                    [ class "button button-primary button-small w-1/2 md:px-0 lg:mx-1"
-                    , Route.href (Route.Community balance.asset.symbol)
-                    ]
-                    [ text (t loggedIn.shared.translations "community.actions.title") ]
                 , button
-                    [ class "button button-primary button-small w-1/2 md:px-0 lg:mx-1"
+                    [ class "button button-primary button-small text-xs w-full"
                     , onClick ClickedTransfer
                     ]
                     [ text (t loggedIn.shared.translations "account.my_wallet.balances.button") ]
@@ -222,24 +217,38 @@ viewCardTransfer loggedIn ({ balance } as model) index f isDisabled =
             text (t loggedIn.shared.translations s)
     in
     form
-        [ class "card card--transfer"
+        [ class "w-full sm:w-1/2 lg:w-1/3 xl:w-1/4 px-2 mb-6 px-4 py-2 bg-white rounded-lg shadow-lg relative"
         , onSubmit ClickedSendTransfer
         ]
-        [ div [ class "card__balance" ]
-            [ span [ class "card__sub-title" ]
+        [ div [ class "flex flex-col justify-center items-center" ]
+            [ div [ class "flex items-center" ]
+                [ div [ class "text-indigo-500 font-bold text-3xl" ]
+                    [ text (String.fromFloat b.asset.amount) ]
+                , div [ class "text-indigo-500 ml-2" ]
+                    [ text (Eos.symbolToString b.asset.symbol) ]
+                ]
+            , div [ class "input-label" ]
                 [ text_ "account.my_wallet.balances.current" ]
-            , span [ class "card__balance-text" ]
-                [ text (String.fromFloat b.asset.amount ++ " " ++ Eos.symbolToString b.asset.symbol) ]
             ]
-        , div [ class "card__form" ]
-            [ label [] [ text_ "account.my_wallet.transfer.send_to" ]
-            , div [] [ autoCompleteAccount loggedIn.shared model f isDisabled ]
-            , label []
-                [ text (I18Next.tr loggedIn.shared.translations Curly "account.my_wallet.transfer.amount" [ ( "symbol", Eos.symbolToString b.asset.symbol ) ]) ]
-            , div [] [ viewInputAmount loggedIn.shared f isDisabled ]
-            , label []
-                [ text_ "account.my_wallet.transfer.memo" ]
-            , div [] [ viewInputMemo loggedIn.shared f isDisabled ]
+        , div [ class "" ]
+            [ div [ class "mb-2" ]
+                [ span [ class "input-label" ]
+                    [ text_ "account.my_wallet.transfer.send_to" ]
+                , div [ class "flex flex-row border rounded" ]
+                    [ autoCompleteAccount loggedIn.shared model f isDisabled ]
+                ]
+            , div [ class "mb-2" ]
+                [ span [ class "input-label" ]
+                    [ text (I18Next.tr loggedIn.shared.translations Curly "account.my_wallet.transfer.amount" [ ( "symbol", Eos.symbolToString b.asset.symbol ) ]) ]
+                , div [ class "flex flex-row border rounded" ]
+                    [ viewInputAmount loggedIn.shared f isDisabled ]
+                ]
+            , div [ class "mb-2" ]
+                [ span [ class "input-label" ]
+                    [ text_ "account.my_wallet.transfer.memo" ]
+                , div [ class "flex flex-row border rounded" ]
+                    [ viewInputMemo loggedIn.shared f isDisabled ]
+                ]
             ]
         , div [ class "card__button-row" ]
             [ button
@@ -249,12 +258,12 @@ viewCardTransfer loggedIn ({ balance } as model) index f isDisabled =
                 [ text_ "account.my_wallet.transfer.submit" ]
             ]
         , button
-            [ class "card__close-btn"
-            , onClick ClickedCancelTransfer
-            , type_ "button"
+            [ onClick ClickedCancelTransfer
             , disabled isDisabled
+            , class "absolute flex top-0 right-0 rounded-full h-10 w-10 justify-center"
             ]
-            [ Icon.close "" ]
+            [ Icons.close "fill-current text-gray-400"
+            ]
         ]
 
 
@@ -392,7 +401,7 @@ viewTableRowTransfer loggedIn ({ balance } as model) f isDisabled =
 viewInputAmount : Shared -> TransferForm -> Bool -> Html Msg
 viewInputAmount shared f isDisabled =
     input
-        [ class "input input--amount"
+        [ class "input block border-none"
         , type_ "number"
         , placeholder (t shared.translations "account.my_wallet.transfer.amount_placeholder")
         , value f.amount
@@ -407,7 +416,7 @@ viewInputAmount shared f isDisabled =
 viewInputMemo : Shared -> TransferForm -> Bool -> Html Msg
 viewInputMemo shared f isDisabled =
     input
-        [ class "input"
+        [ class "input block border-none"
         , placeholder (t shared.translations "account.my_wallet.transfer.memo_placeholder")
         , type_ "text"
         , value f.memo
@@ -424,16 +433,21 @@ viewAutoCompleteItem shared profile =
         ipfsUrl =
             shared.endpoints.ipfs
     in
-    div [ class "autocomplete-item" ]
-        [ Avatar.view ipfsUrl profile.avatar "profile-img-avatar-select"
-        , text (Eos.nameToString profile.accountName)
-        , text " "
-        , case profile.userName of
-            Just name ->
-                text ("(" ++ name ++ ")")
+    div [ class "pt-3 pl-3 flex flex-row items-center w-select z-30" ]
+        [ div [ class "pr-3" ]
+            [ Avatar.view ipfsUrl profile.avatar "h-7 w-7" ]
+        , div [ class "flex flex-col font-sans border-b border-gray-500 pb-3 w-full" ]
+            [ span [ class "text-black text-body leading-loose" ]
+                [ text (Eos.nameToString profile.accountName) ]
+            , span [ class "leading-caption uppercase text-green text-caption" ]
+                [ case profile.userName of
+                    Just name ->
+                        text name
 
-            Nothing ->
-                text ""
+                    Nothing ->
+                        text ""
+                ]
+            ]
         ]
 
 
@@ -469,11 +483,11 @@ selectConfig shared isDisabled =
         , toLabel = \p -> Eos.nameToString p.accountName
         , filter = filter 2 (\p -> Eos.nameToString p.accountName)
         }
-        |> Select.withInputClass "input"
-        |> Select.withInputId "input-id"
-        |> Select.withMenuClass "autocomplete-items"
+        |> Select.withInputClass "input h-12 w-full border-none placeholder-gray-900"
+        |> Select.withClear False
+        |> Select.withMenuClass "border-t-none border-solid border-gray-100 border rounded-b z-30 bg-white"
         |> Select.withNotFound "No matches"
-        |> Select.withNotFoundClass "text-red"
+        |> Select.withNotFoundClass "text-red border-solid border-gray-100 border rounded z-30 bg-white w-select"
         |> Select.withNotFoundStyles [ ( "padding", "0 2rem" ) ]
         |> Select.withDisabled isDisabled
         |> Select.withHighlightedItemClass "autocomplete-item-highlight"
