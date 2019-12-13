@@ -120,7 +120,7 @@ view loggedIn model =
                 Nothing ->
                     div [ class "container mx-auto px-4" ]
                         [ div []
-                            [ text "Could not load the sale" ]
+                            [ text "Could not load the transfer" ]
                         ]
 
 
