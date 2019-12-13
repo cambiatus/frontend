@@ -347,7 +347,10 @@ viewTransfer ({ shared } as loggedIn) transfer =
                 ]
                     |> I18Next.tr shared.translations I18Next.Curly "notifications.transfer.sent"
     in
-    div [ class "flex items-start lg:items-center p-4 border-b last:border-b-0" ]
+    a
+        [ class "flex items-start lg:items-center p-4 border-b last:border-b-0"
+        , Route.href (Route.Transfer transfer.id)
+        ]
         [ div [ class "flex-col flex-grow-1 pl-4" ]
             [ p
                 [ class "text-black text-sm leading-relaxed" ]
