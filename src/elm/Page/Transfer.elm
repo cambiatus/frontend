@@ -1,4 +1,4 @@
-module Page.Dashboard.Transfer exposing (Model, Msg, init, msgToString, subscriptions, update, view)
+module Page.Transfer exposing (Model, Msg, init, msgToString, subscriptions, update, view)
 
 import Api
 import Api.Graphql
@@ -28,26 +28,16 @@ import Utils
 -- INIT
 
 
-init : LoggedIn.Model -> String -> ( Model, Cmd Msg )
+init : LoggedIn.Model -> Int -> ( Model, Cmd Msg )
 init { shared } transferId =
     let
         currentStatus =
-            initStatus transferId
+            Loading transferId
 
         model =
             { status = currentStatus }
     in
     ( model, initCmd shared currentStatus )
-
-
-initStatus : String -> Status
-initStatus transferId =
-    case String.toInt transferId of
-        Just tID ->
-            Loading tID
-
-        Nothing ->
-            InvalidId transferId
 
 
 initCmd : Shared -> Status -> Cmd Msg
@@ -202,7 +192,7 @@ viewTransferCard loggedIn transfer state =
                             transfer.from.avatar
 
                         Transferred ->
-                            transfer.to.avatar
+                            transfer.from.avatar
 
                         NotInvolved ->
                             transfer.from.avatar
@@ -309,15 +299,7 @@ viewAmount { shared } transfer state =
                     , div [ class "flex flex-row" ]
                         [ p [ class "font-medium text-green" ]
                             [ text <|
-                                (\str ->
-                                    if String.contains str "." then
-                                        str
-
-                                    else
-                                        str ++ ".000"
-                                )
-                                <|
-                                    String.fromFloat transfer.value
+                                String.fromFloat transfer.value
                             ]
                         , span [ class "ml-2 text-sm text-green mt-1 mb-1 font-thin mr-5" ]
                             [ text <| Eos.symbolToString transfer.symbol ]
