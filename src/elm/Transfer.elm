@@ -46,20 +46,20 @@ type alias CommunityArgs =
 
 
 type alias Transfer =
-    { toId : Eos.Name
+    { id : Int
+    , toId : Eos.Name
     , fromId : Eos.Name
-    , to :
-        { avatar : Avatar }
-    , from :
-        { avatar : Avatar }
+    , to : { avatar : Avatar }
+    , from : { avatar : Avatar }
     , value : Float
     , memo : Maybe String
     , symbol : Symbol
     , blockTime : DateTime
     }
 
-type alias TransferAvatar = 
-    {avatar : Avatar}
+
+type alias TransferAvatar =
+    { avatar : Avatar }
 
 
 type alias EdgeTransfer =
@@ -100,6 +100,7 @@ encodeEosActionData data =
 transferItemSelectionSet : SelectionSet Transfer Bespiral.Object.Transfer
 transferItemSelectionSet =
     SelectionSet.succeed Transfer
+        |> with Bespiral.Object.Transfer.id
         |> with (Eos.nameSelectionSet Bespiral.Object.Transfer.toId)
         |> with (Eos.nameSelectionSet Bespiral.Object.Transfer.fromId)
         |> with

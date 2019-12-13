@@ -20,7 +20,6 @@ import Page.Community.Explore as CommunityExplore
 import Page.Community.ObjectiveEditor as ObjectiveEditor
 import Page.Community.VerifyClaim as VerifyClaim
 import Page.Dashboard as Dashboard
-import Page.Dashboard.Transfer as Transfer
 import Page.Login as Login
 import Page.NotFound as NotFound
 import Page.Notification as Notification
@@ -29,6 +28,7 @@ import Page.Register as Register
 import Page.Shop as Shop
 import Page.Shop.Editor as ShopEditor
 import Page.Shop.Viewer as ShopViewer
+import Page.Transfer as Transfer
 import Ports
 import Route exposing (Route)
 import Session.Guest as Guest
@@ -164,7 +164,7 @@ type Status
     | Shop (Maybe Shop.Filter) Shop.Model
     | ShopEditor (Maybe String) ShopEditor.Model
     | ShopViewer String ShopViewer.Model
-    | Transfer String Transfer.Model
+    | Transfer Int Transfer.Model
 
 
 
