@@ -124,6 +124,9 @@ onChange : (a -> msg) -> Decoder a -> Html.Attribute msg
 onChange toMsg decoder =
     on "change" (Decode.map toMsg decoder)
 
+onClick : (a -> msg) -> Decoder a -> Html.Attribute msg
+onClick toMsg decoder =
+    on "click" (Decode.map toMsg decoder)
 
 onFileChange : (List File -> msg) -> Attribute msg
 onFileChange toMsg =
@@ -169,24 +172,22 @@ viewMenuFilterDropdown toMsg decoder options =
         ]
 
 
-viewMenuTab : (a -> msg) -> Decoder a -> List (Html msg) -> Html msg
-viewMenuTab toMsg decoder options =
+viewMenuTab : List (Html msg) -> Html msg
+viewMenuTab buttons =
     div
-        [ class "flex flex-row justify-between"
-        , onChange toMsg decoder 
-        ]
-        options
+        [ class "flex flex-row justify-between" ]
+        buttons
 
 
-viewMenuFilterTabButton : Bool -> String -> Html msg
-viewMenuFilterTabButton isSelected text_ =
-    case isSelected of
+viewMenuFilterTabButton : Bool -> (a -> msg) -> Decoder a -> String -> Html msg
+viewMenuFilterTabButton isActive toMsg decoder text_ =
+    case isActive of
         True ->
-            button [ class "menu-filter__button menu-filter__button-active" ]
+            button [ class "menu-filter__button menu-filter__button-active", onClick toMsg decoder ]
                 [ text text_ ]
 
         False ->
-            button [ class "menu-filter__button" ]
+            button [ class "menu-filter__button", onClick toMsg decoder ]
                 [ text text_ ]
 
 viewMenuFilterDropdownOption : Bool -> String -> Html msg
