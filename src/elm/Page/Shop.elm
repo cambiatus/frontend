@@ -565,16 +565,22 @@ viewShopFilterTab translations maybeFilter loggedIn =
         buttons =
             [ viewMenuFilterTabButton
                 (maybeFilter == Just Shop.MyCommunities)
+                ClickedFilter
+                decoder
                 communities
             , viewMenuFilterTabButton
                 (maybeFilter == Just Shop.All)
+                ClickedFilter
+                decoder
                 all
             , viewMenuFilterTabButton
                 (maybeFilter == Just Shop.UserSales)
+                ClickedFilter
+                decoder
                 user
             ]
     in
-    viewMenuTab ClickedFilter decoder buttons
+    viewMenuTab buttons
 
 
 viewCardTransfer : Bool -> Model -> Session -> Int -> Card -> Html Msg
