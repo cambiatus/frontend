@@ -142,7 +142,6 @@ type Validation
 
 type Msg
     = CompletedSaleLoad (Result (Graphql.Http.Error (Maybe Sale)) (Maybe Sale))
-    | ClickedAsk Sale
     | ClickedBuy Sale
     | ClickedEdit Sale
     | ClickedQuestions Sale
@@ -173,19 +172,6 @@ update msg model user =
                 |> UR.init
                 |> UR.addCmd
                     (Nav.back user.shared.navKey 1)
-
-        ClickedAsk sale ->
-            model
-                |> UR.init
-                |> UR.addPort
-                    { responseAddress = ClickedAsk sale
-                    , responseData = Encode.null
-                    , data =
-                        Encode.object
-                            [ ( "name", Encode.string "openChat" )
-                            , ( "username", Encode.string (Eos.nameToString sale.creatorId) )
-                            ]
-                    }
 
         ClickedQuestions sale ->
             model
@@ -854,9 +840,6 @@ msgToString msg =
     case msg of
         CompletedSaleLoad r ->
             "CompletedSaleLoad" :: []
-
-        ClickedAsk _ ->
-            [ "ClickedAsk" ]
 
         ClickedBuy _ ->
             [ "ClickedBuy" ]
