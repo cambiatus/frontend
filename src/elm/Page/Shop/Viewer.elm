@@ -471,7 +471,7 @@ viewCard session card model =
                         div [ class "flex -mx-2 md:justify-end" ]
                             [ button
                                 [ disabled True
-                                , class "button button-disabled w-4/5 mx-2 md:w-2/5"
+                                , class "button button-disabled w-4/5 mx-2 md:w-2/5 sm:mx-auto"
                                 ]
                                 [ text_ "shop.out_of_stock" ]
                             ]
@@ -488,7 +488,7 @@ viewCard session card model =
                       else
                         div [ class "flex -mx-2 md:justify-end" ]
                             [ button
-                                [ class "button button-primary w-4/5 mx-2 md:w-2/5"
+                                [ class "button button-primary w-4/5 mx-2 md:w-2/5 sm:mx-auto"
                                 , onClick (ClickedBuy card.sale)
                                 ]
                                 [ text_ "shop.buy" ]
