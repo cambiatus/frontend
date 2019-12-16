@@ -167,9 +167,9 @@ viewDoggo loggedIn transfer state =
                                     t "transfer_result.transfer_success"
                         ]
                     ]
-                , div [ class "bg-no-repeat bg-auto h-64 ml-32 -mt-5 px-4 py-2 m-2", style "background-image" "url(/images/transfer-doggo.svg)" ]
+                , div [ class "bg-no-repeat bg-auto h-64 ml-32 -mt-5 px-4 py-2 m-2 items-center mt-5 justify-center", style "background-image" "url(/images/transfer-doggo.svg)" ]
                     []
-                , div [ class "flex justify-center items-center -mt-16 absolute md:w-full mx-4 md:mx-auto" ]
+                , div [ class "flex sm:justify-center sm:items-center -mt-16 absolute md:w-full md:mx-auto  sm:right-0" ]
                     [ viewTransferCard loggedIn transfer state
                     ]
                 ]
@@ -183,13 +183,13 @@ viewTransferCard loggedIn transfer state =
         ipfsUrl =
             loggedIn.shared.endpoints.ipfs
     in
-    div [ class "flex flex-row inline-block rounded overflow-auto bg-gray-100" ]
+    div [ class "flex flex-row inline-block rounded sm:overflow-auto bg-gray-100" ]
         [ div [ class "px-4 py-2 m-2" ]
             [ div [ class "h-8 w-8 rounded-full mx-auto mt-5" ]
                 [ Avatar.view ipfsUrl
                     (case state of
                         Received ->
-                            transfer.from.avatar
+                            transfer.to.avatar
 
                         Transferred ->
                             transfer.from.avatar
@@ -256,27 +256,35 @@ viewAmount { shared } transfer state =
         head =
             case state of
                 Received ->
-                    div [ class "px-4 py-2 m-2 " ]
-                        [ i [ class "mt-5 left" ]
-                            []
+                    div [ class "flex flex-row" ]
+                        [ div [ class "pr-0 pl-1 py-2 m-2 " ]
+                            [ i [ class "ml-5 mt-5 left p-1" ]
+                                []
+                            ]
+                        , div [ class "pl-3 pr-3 py-2 m-2" ]
+                            [ hr [ class "-ml-6 items-center border border-dashed border-green m-auto w-6 mt-6" ] [] ]
                         ]
 
                 _ ->
-                    div [ class "px-4 py-2 m-2" ]
-                        [ hr [ class "ml-5 border border-dashed border-green w-8 mt-6 m-auto mb-6" ] [] ]
+                    div [ class "flex flex-row" ]
+                        [ div [ class "px-4 py-2 m-2" ]
+                            [ hr [ class "ml-5 border border-dashed border-green w-8 mt-6 m-auto mb-6" ] [] ]
+                        ]
 
         tail =
             case state of
                 Received ->
-                    div [ class "px-4 py-2 m-2" ]
-                        [ hr [ class "ml-5 border border-dashed border-green w-8 mt-6 m-auto mb-6" ] [] ]
+                    div [ class "flex flex-row" ]
+                        [ div [ class "pl-2 pr-10 py-2 m-2" ]
+                            [ hr [ class "-ml-8 border border-dashed border-green w-8 mt-6 m-auto mb-6" ] [] ]
+                        ]
 
                 _ ->
-                    div [ class "flex flex row" ]
-                        [ div [ class "px-4 py-2 m-2" ]
-                            [ hr [ class "-ml-8 border border-dashed border-green w-6 mt-6 m-auto mb-6" ] [] ]
+                    div [ class "flex flex-row" ]
+                        [ div [ class "pl-2 pr-2 py-2 m-2" ]
+                            [ hr [ class "-ml-8 items-center border border-dashed border-green w-6 mt-6 m-auto mb-6" ] [] ]
                         , div [ class "px-4 py-2 m-2" ]
-                            [ i [ class "-ml-12 mt-5 right" ] [] ]
+                            [ i [ class "-ml-12 mt-5 right p-1" ] [] ]
                         ]
     in
     div [ class "-ml-16 flex flex-row mt-5" ]
@@ -284,7 +292,7 @@ viewAmount { shared } transfer state =
         , div [ class "px-4 py-2 m-2" ]
             [ div [ class "-ml-10 border border-solid rounded border-green bg-white" ]
                 [ div [ class "ml-1" ]
-                    [ p [ class "mt-2 text-caption font-hairline text-gray-900" ]
+                    [ p [ class "pt-1 text-caption font-hairline text-gray-900 pl-1" ]
                         [ text <|
                             case state of
                                 Received ->
@@ -297,11 +305,11 @@ viewAmount { shared } transfer state =
                                     String.toUpper (t "transfer_result.transferred")
                         ]
                     , div [ class "flex flex-row" ]
-                        [ p [ class "font-medium text-green" ]
+                        [ p [ class "pl-1 pr-5 font-medium text-green" ]
                             [ text <|
                                 String.fromFloat transfer.value
                             ]
-                        , span [ class "ml-2 text-sm text-green mt-1 mb-1 font-thin mr-5" ]
+                        , span [ class "ml-2 text-caption text-green mt-1 mb-1 font-thin pr-3 pl-3" ]
                             [ text <| Eos.symbolToString transfer.symbol ]
                         ]
                     ]
