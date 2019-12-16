@@ -484,13 +484,6 @@ viewCard session card model =
                       else if card.sale.units <= 0 && card.sale.trackStock == True then
                         div [ class "flex -mx-2 md:justify-end" ]
                             [ button
-                                [ class "button button-secondary w-1/5 mx-2"
-                                , onClick (ClickedAsk card.sale)
-                                ]
-                                [ Avatar.view (getIpfsUrl session) card.sale.creator.avatar "h-6 w-6 mr-2"
-                                , text_ "shop.ask"
-                                ]
-                            , button
                                 [ disabled True
                                 , class "button button-disabled w-4/5 mx-2 md:w-2/5"
                                 ]
@@ -509,13 +502,6 @@ viewCard session card model =
                       else
                         div [ class "flex -mx-2 md:justify-end" ]
                             [ button
-                                [ class "button button-secondary w-1/5 mx-2"
-                                , onClick (ClickedAsk card.sale)
-                                ]
-                                [ Avatar.view (getIpfsUrl session) card.sale.creator.avatar "h-6 w-6 mr-2"
-                                , text_ "shop.ask"
-                                ]
-                            , button
                                 [ class "button button-primary w-4/5 mx-2 md:w-2/5"
                                 , onClick (ClickedBuy card.sale)
                                 ]

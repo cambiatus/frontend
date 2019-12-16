@@ -416,7 +416,6 @@
     "offer_action": "{{accountName}} està VENENT",
     "buy_action": "{{accountName}} està COMPRANT",
     "buy": "Comprar",
-    "ask": "Preguntar",
     "edit": "Edita la meva oferta",
     "transfer": {
       "units_label": "Quantes unitats vol comprar?",
