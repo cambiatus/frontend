@@ -3961,3 +3961,60 @@ input[type=number]::-webkit-outer-spin-button {
     -webkit-appearance: none;
     margin: 0;
 }
+
+/* FILTER TABS */
+.filter-tab {
+    margin-left: 32%;
+}
+
+.filter-tab--button {
+    width: 203px;
+    height: 40px;
+    border: 1px solid #45469B;
+    border-radius: 4px 4px 4px 4px;
+    color: #999999;
+}
+
+.filter-tab--button__active {
+    background-color: #45469B;
+    color: #FFFFFF;
+}
+
+@media screen and (max-width: 1000px) {
+    .filter-tab {
+        margin-left: 25%;
+    }
+}
+
+
+@media screen and (max-width: 800px) {
+    .filter-tab {
+        margin-left: 25%;
+    }
+    
+    .filter-tab--button {
+        width: 160px;
+        height: 40px;
+        border: 1px solid #45469B;
+        color: #999999;
+    }
+
+    .filter-tab__rounded-left-edge {
+        border-radius: 4px 0px 0px 4px;
+    }
+
+    .filter-tab__rounded-right-edge {
+        border-radius: 0px 4px 4px 0px;
+    }
+    
+    .filter-tab--button__active {
+        background-color: #45469B;
+        color: #FFFFFF;
+    }
+}
+
+@media screen and (max-width: 650px) {
+    .filter-tab {
+        margin-left: 15%;
+    }
+}

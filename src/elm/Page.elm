@@ -147,7 +147,13 @@ viewMenuFilterButton : Bool -> String -> Route -> Html msg
 viewMenuFilterButton isActive text_ route =
     a
         [ classList
-            [ ]
+            [ ( "menu-filter__button"
+              , True
+              )
+            , ( "menu-filter__button-active"
+              , isActive
+              )
+            ]
         , Route.href route
         , title text_
         ]
@@ -169,7 +175,7 @@ viewMenuFilterDropdown toMsg decoder options =
 viewMenuTab : List (Html msg) -> Html msg
 viewMenuTab buttons =
     div
-        [ ]
+        [ class "filter-tab" ]
         buttons
 
 
@@ -177,11 +183,11 @@ viewMenuFilterTabButton : Bool -> (a -> msg) -> Decoder a -> String -> Html msg
 viewMenuFilterTabButton isActive toMsg decoder text_ =
     case isActive of
         True ->
-            button [ class "menu-filter__button menu-filter__button-active", value text_, onClick toMsg decoder ]
+            button [ class "filter-tab--button filter-tab--button__active", value text_, onClick toMsg decoder ]
                 [ text text_ ]
 
         False ->
-            button [ class "menu-filter__button", value text_, onClick toMsg decoder ]
+            button [ class "filter-tab--button", value text_, onClick toMsg decoder ]
                 [ text text_ ]
 
 viewMenuFilterDropdownOption : Bool -> String -> Html msg
