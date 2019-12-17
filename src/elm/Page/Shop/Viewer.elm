@@ -280,7 +280,7 @@ update msg model user =
                                             ]
                                         }
                                 }
-                            |> UR.addCmd (Route.replaceUrl user.shared.navKey (Route.Shop (Just Shop.MyCommunities)))
+                            |> UR.addCmd (Route.replaceUrl user.shared.navKey (Route.Shop Shop.MyCommunities))
 
                     False ->
                         model
@@ -397,7 +397,7 @@ viewHeader session title =
     div [ class "h-16 w-full bg-indigo-500 flex px-4 items-center" ]
         [ a
             [ class "items-center flex"
-            , Route.href (Route.Shop (Just Shop.MyCommunities))
+            , Route.href (Route.Shop Shop.MyCommunities)
             ]
             [ Icons.back ""
             , p [ class "text-white text-sm ml-2" ]

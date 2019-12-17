@@ -160,7 +160,7 @@ type Status
     | Login Login.Model
     | Profile Profile.Model
     | Register (Maybe String) Register.Model
-    | Shop (Maybe Shop.Filter) Shop.Model
+    | Shop Shop.Filter Shop.Model
     | ShopEditor (Maybe String) ShopEditor.Model
     | ShopViewer String ShopViewer.Model
 
@@ -689,10 +689,9 @@ changeRouteTo maybeRoute model =
 
         Just (Route.Shop maybeFilter) ->
             case ( session, maybeFilter ) of
-                ( Page.LoggedIn _, Nothing ) ->
+                ( Page.LoggedIn _, Shop.All ) ->
                     ( model
                     , Shop.UserSales
-                        |> Just
                         |> Route.Shop
                         |> Route.replaceUrl shared.navKey
                     )
