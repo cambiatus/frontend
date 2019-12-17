@@ -37,18 +37,18 @@ import UpdateResult as UR
 -- INIT
 
 
-init : Session -> Maybe Filter -> ( Model, Cmd Msg )
-init session maybeFilter =
+init : Session -> Filter -> ( Model, Cmd Msg )
+init session filter =
     case session of
         Page.Guest guest ->
-            initGuest guest maybeFilter
+            initGuest guest filter
 
         Page.LoggedIn loggedIn ->
-            initLoggedIn loggedIn maybeFilter
+            initLoggedIn loggedIn filter
 
 
-initGuest : Guest.Model -> Maybe Filter -> ( Model, Cmd Msg )
-initGuest guest maybeFilter =
+initGuest : Guest.Model -> Filter -> ( Model, Cmd Msg )
+initGuest guest filter =
     let
         model =
             initGuestModel guest
@@ -59,7 +59,7 @@ initGuest guest maybeFilter =
     ( model
     , Cmd.batch
         [ Api.Graphql.query guest.shared
-            (Shop.salesQuery (Maybe.withDefault Shop.All maybeFilter) name)
+            (Shop.salesQuery Shop.All name)
             CompletedSalesLoad
         , Task.perform GotTime Time.now
         , Dom.focus "main-content"
@@ -68,8 +68,8 @@ initGuest guest maybeFilter =
     )
 
 
-initLoggedIn : LoggedIn.Model -> Maybe Filter -> ( Model, Cmd Msg )
-initLoggedIn loggedIn maybeFilter =
+initLoggedIn : LoggedIn.Model -> Filter -> ( Model, Cmd Msg )
+initLoggedIn loggedIn filter =
     let
         model =
             initLoggedInModel loggedIn
@@ -77,7 +77,7 @@ initLoggedIn loggedIn maybeFilter =
     ( model
     , Cmd.batch
         [ Api.Graphql.query loggedIn.shared
-            (Shop.salesQuery (Maybe.withDefault Shop.All maybeFilter) loggedIn.accountName)
+            (Shop.salesQuery Shop.All loggedIn.accountName)
             CompletedSalesLoad
         , Api.getBalances loggedIn.shared loggedIn.accountName CompletedLoadBalances
         , Task.perform GotTime Time.now
@@ -185,8 +185,8 @@ type CardState
 -- VIEW
 
 
-view : Session -> Maybe Filter -> Model -> Html Msg
-view session maybeFilter model =
+view : Session -> Filter -> Model -> Html Msg
+view session filter model =
     let
         shared =
             Page.toShared session
@@ -206,7 +206,7 @@ view session maybeFilter model =
             div []
                 [ Lazy.lazy viewHeader session
                 , div [ class "container mx-auto px-4" ]
-                    [ viewShopFilter session maybeFilter
+                    [ viewShopFilter session filter
                     , viewGrid session cards model
                     ]
                 ]
@@ -238,8 +238,8 @@ viewHeader session =
         ]
 
 
-viewShopFilter : Session -> Maybe Filter -> Html Msg
-viewShopFilter session maybeFilter =
+viewShopFilter : Session -> Filter -> Html Msg
+viewShopFilter session filter =
     let
         shared =
             Page.toShared session
@@ -257,7 +257,7 @@ viewShopFilter session maybeFilter =
                     [ text (t shared.translations "shop.filter") ]
                 , viewShopFilterTab
                     translations
-                    maybeFilter
+                    filter
                     loggedIn
                 ]
 
@@ -503,7 +503,7 @@ viewHeaderAvatarTitle model session { sale } =
 
 
 viewShopFilterButtons : ( String, String, String ) -> ( Route, Route, Route ) -> Maybe Filter -> LoggedIn.Model -> Html Msg
-viewShopFilterButtons translations routes maybeFilter loggedIn =
+viewShopFilterButtons translations routes filter loggedIn =
     let
         ( communities, all, user ) =
             translations
@@ -513,15 +513,15 @@ viewShopFilterButtons translations routes maybeFilter loggedIn =
 
         buttons =
             [ viewMenuFilterButton
-                (maybeFilter == Just Shop.MyCommunities)
+                (filter == Just Shop.MyCommunities)
                 communities
                 rCommunities
             , viewMenuFilterButton
-                (maybeFilter == Just Shop.All)
+                (filter == Just Shop.All)
                 all
                 rAll
             , viewMenuFilterButton
-                (maybeFilter == Just Shop.UserSales)
+                (filter == Just Shop.UserSales)
                 user
                 rUser
             ]
@@ -530,7 +530,7 @@ viewShopFilterButtons translations routes maybeFilter loggedIn =
 
 
 viewShopFilterDropdown : ( String, String, String ) -> Maybe Filter -> LoggedIn.Model -> Html Msg
-viewShopFilterDropdown translations maybeFilter loggedIn =
+viewShopFilterDropdown translations filter loggedIn =
     let
         ( communities, all, user ) =
             translations
@@ -540,21 +540,21 @@ viewShopFilterDropdown translations maybeFilter loggedIn =
 
         options =
             [ viewMenuFilterDropdownOption
-                (maybeFilter == Just Shop.MyCommunities)
+                (filter == Just Shop.MyCommunities)
                 communities
             , viewMenuFilterDropdownOption
-                (maybeFilter == Just Shop.All)
+                (filter == Just Shop.All)
                 all
             , viewMenuFilterDropdownOption
-                (maybeFilter == Just Shop.UserSales)
+                (filter == Just Shop.UserSales)
                 user
             ]
     in
     viewMenuFilterDropdown ClickedFilter decoder options
 
 
-viewShopFilterTab :  ( String, String, String ) -> Maybe Filter -> LoggedIn.Model -> Html Msg
-viewShopFilterTab translations maybeFilter loggedIn =
+viewShopFilterTab :  ( String, String, String ) -> Filter -> LoggedIn.Model -> Html Msg
+viewShopFilterTab translations filter loggedIn =
     let
         ( communities, all, user ) =
             translations
@@ -564,17 +564,12 @@ viewShopFilterTab translations maybeFilter loggedIn =
 
         buttons =
             [ viewMenuFilterTabButton
-                (maybeFilter == Just Shop.MyCommunities)
-                ClickedFilter
-                decoder
-                communities
-            , viewMenuFilterTabButton
-                (maybeFilter == Just Shop.All)
+                (filter == Shop.All)
                 ClickedFilter
                 decoder
                 all
             , viewMenuFilterTabButton
-                (maybeFilter == Just Shop.UserSales)
+                (filter == Shop.UserSales)
                 ClickedFilter
                 decoder
                 user
@@ -855,7 +850,7 @@ update msg model loggedIn =
                     loggedIn.shared.navKey
 
                 route =
-                    Route.Shop (Just filter)
+                    Route.Shop filter
             in
             UR.init model
                 |> UR.addCmd (Route.pushUrl navKey route)
