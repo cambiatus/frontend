@@ -142,7 +142,6 @@ type Validation
 
 type Msg
     = CompletedSaleLoad (Result (Graphql.Http.Error (Maybe Sale)) (Maybe Sale))
-    | ClickedAsk Sale
     | ClickedBuy Sale
     | ClickedEdit Sale
     | ClickedQuestions Sale
@@ -173,19 +172,6 @@ update msg model user =
                 |> UR.init
                 |> UR.addCmd
                     (Nav.back user.shared.navKey 1)
-
-        ClickedAsk sale ->
-            model
-                |> UR.init
-                |> UR.addPort
-                    { responseAddress = ClickedAsk sale
-                    , responseData = Encode.null
-                    , data =
-                        Encode.object
-                            [ ( "name", Encode.string "openChat" )
-                            , ( "username", Encode.string (Eos.nameToString sale.creatorId) )
-                            ]
-                    }
 
         ClickedQuestions sale ->
             model
@@ -484,15 +470,8 @@ viewCard session card model =
                       else if card.sale.units <= 0 && card.sale.trackStock == True then
                         div [ class "flex -mx-2 md:justify-end" ]
                             [ button
-                                [ class "button button-secondary w-1/5 mx-2"
-                                , onClick (ClickedAsk card.sale)
-                                ]
-                                [ Avatar.view (getIpfsUrl session) card.sale.creator.avatar "h-6 w-6 mr-2"
-                                , text_ "shop.ask"
-                                ]
-                            , button
                                 [ disabled True
-                                , class "button button-disabled w-4/5 mx-2 md:w-2/5"
+                                , class "button button-disabled mx-auto"
                                 ]
                                 [ text_ "shop.out_of_stock" ]
                             ]
@@ -509,14 +488,7 @@ viewCard session card model =
                       else
                         div [ class "flex -mx-2 md:justify-end" ]
                             [ button
-                                [ class "button button-secondary w-1/5 mx-2"
-                                , onClick (ClickedAsk card.sale)
-                                ]
-                                [ Avatar.view (getIpfsUrl session) card.sale.creator.avatar "h-6 w-6 mr-2"
-                                , text_ "shop.ask"
-                                ]
-                            , button
-                                [ class "button button-primary w-4/5 mx-2 md:w-2/5"
+                                [ class "button button-primary mx-auto"
                                 , onClick (ClickedBuy card.sale)
                                 ]
                                 [ text_ "shop.buy" ]
@@ -868,9 +840,6 @@ msgToString msg =
     case msg of
         CompletedSaleLoad r ->
             "CompletedSaleLoad" :: []
-
-        ClickedAsk _ ->
-            [ "ClickedAsk" ]
 
         ClickedBuy _ ->
             [ "ClickedBuy" ]
