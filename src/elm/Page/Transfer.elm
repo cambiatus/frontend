@@ -55,7 +55,7 @@ initCmd shared status =
 
 
 subscriptions : Model -> Sub Msg
-subscriptions model =
+subscriptions _ =
     Sub.none
 
 
@@ -112,9 +112,11 @@ view loggedIn model =
             case maybeTransfer of
                 Just transfer ->
                     div []
-                        [ viewHeader loggedIn
-                        , viewDoggo loggedIn transfer state
-                        , viewCommunity loggedIn transfer
+                        [ Lazy.lazy viewHeader loggedIn
+                        , div [ class "container" ]
+                            [ viewDoggo loggedIn transfer state
+                            , viewCommunity loggedIn transfer
+                            ]
                         ]
 
                 Nothing ->
@@ -183,8 +185,8 @@ viewTransferCard loggedIn transfer state =
         ipfsUrl =
             loggedIn.shared.endpoints.ipfs
     in
-    div [ class "flex flex-row inline-block rounded sm:overflow-auto bg-gray-100" ]
-        [ div [ class "px-4 py-2 m-2" ]
+    div [ class "flex flex-row block rounded overflow-x-scroll sm:overflow-hidden bg-gray-100" ]
+        [ div [ class "sm:px-4 sm:py-2 sm:m-2 p-0" ]
             [ div [ class "h-8 w-8 rounded-full mx-auto mt-5" ]
                 [ Avatar.view ipfsUrl
                     (case state of
@@ -214,7 +216,7 @@ viewTransferCard loggedIn transfer state =
                 ]
             ]
         , div [ class "mt-5" ] [ viewAmount loggedIn transfer state ]
-        , div [ class "-ml-20 px-4 py-2 m-2" ]
+        , div [ class "-ml-20 sm:px-4 sm:py-2 m-2" ]
             [ div [ class "h-8 w-8 rounded-full mx-auto mt-5" ]
                 [ Avatar.view ipfsUrl
                     (case state of
@@ -258,11 +260,11 @@ viewAmount { shared } transfer state =
                 Received ->
                     div [ class "flex flex-row" ]
                         [ div [ class "pr-0 pl-1 py-2 m-2 " ]
-                            [ i [ class "ml-5 mt-5 left p-1" ]
+                            [ div [ class "border border-solid border-green border-t-0 border-r-3 border-b-3 border-l-0 inline-block p-1 sm:ml-5 ml-10 mt-5 rotate-135" ]
                                 []
                             ]
                         , div [ class "pl-3 pr-3 py-2 m-2" ]
-                            [ hr [ class "-ml-6 items-center border border-dashed border-green m-auto w-6 mt-6" ] [] ]
+                            [ hr [ class "sm:-ml-6 -ml-5 items-center border border-dashed border-green m-auto w-6 mt-6" ] [] ]
                         ]
 
                 _ ->
@@ -276,7 +278,7 @@ viewAmount { shared } transfer state =
                 Received ->
                     div [ class "flex flex-row" ]
                         [ div [ class "pl-2 pr-10 py-2 m-2" ]
-                            [ hr [ class "-ml-8 border border-dashed border-green w-8 mt-6 m-auto mb-6" ] [] ]
+                            [ hr [ class "sm:-ml-8 -ml-10 border border-dashed border-green sm:w-8 w-6 mt-6 m-auto mb-6" ] [] ]
                         ]
 
                 _ ->
@@ -284,7 +286,9 @@ viewAmount { shared } transfer state =
                         [ div [ class "pl-2 pr-2 py-2 m-2" ]
                             [ hr [ class "-ml-8 items-center border border-dashed border-green w-6 mt-6 m-auto mb-6" ] [] ]
                         , div [ class "px-4 py-2 m-2" ]
-                            [ i [ class "-ml-12 mt-5 right p-1" ] [] ]
+                            [ div [ class "border border-solid border-green border-t-0 border-r-3 border-b-3 border-l-0 inline-block p-1 -rotate-45 -ml-12 mt-5" ]
+                                []
+                            ]
                         ]
     in
     div [ class "-ml-16 flex flex-row mt-5" ]
