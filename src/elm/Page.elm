@@ -1,4 +1,4 @@
-module Page exposing (ExternalMsg(..), Msg, Session(..), errorToString, fullPageError, fullPageGraphQLError, fullPageLoading, fullPageNotFound, init, isLoggedIn, jsAddressToMsg, labelWithTooltip, loading, login, logout, msgToString, onFileChange, subscriptions, toShared, update, viewButtonNew, viewCardEmpty, viewCardList, viewDateDistance, viewGuest, viewLoggedIn, viewMaxTwoColumn, viewMenuFilter, viewMenuFilterButton, viewMenuFilterDropdown, viewMenuFilterDropdownOption, viewTitle, viewMenuTab, viewMenuFilterTabButton)
+module Page exposing (ExternalMsg(..), Msg, Session(..), errorToString, fullPageError, fullPageGraphQLError, fullPageLoading, fullPageNotFound, init, isLoggedIn, jsAddressToMsg, labelWithTooltip, loading, login, logout, msgToString, onFileChange, subscriptions, toShared, update, viewButtonNew, viewCardEmpty, viewCardList, viewDateDistance, viewGuest, viewLoggedIn, viewMaxTwoColumn, viewMenuFilter, viewMenuFilterButton, viewMenuFilterDropdown, viewMenuFilterDropdownOption, viewMenuFilterTabButton, viewMenuTab, viewTitle)
 
 import Account exposing (Profile)
 import Asset.Icon as Icon
@@ -124,9 +124,11 @@ onChange : (a -> msg) -> Decoder a -> Html.Attribute msg
 onChange toMsg decoder =
     on "change" (Decode.map toMsg decoder)
 
+
 onClick : (a -> msg) -> Decoder a -> Html.Attribute msg
 onClick toMsg decoder =
     on "click" (Decode.map toMsg decoder)
+
 
 onFileChange : (List File -> msg) -> Attribute msg
 onFileChange toMsg =
@@ -175,7 +177,7 @@ viewMenuFilterDropdown toMsg decoder options =
 viewMenuTab : List (Html msg) -> Html msg
 viewMenuTab buttons =
     div
-        [ class "filter-tab" ]
+        [ class "flex justify-center" ]
         buttons
 
 
@@ -183,12 +185,23 @@ viewMenuFilterTabButton : Bool -> (a -> msg) -> Decoder a -> String -> Html msg
 viewMenuFilterTabButton isActive toMsg decoder text_ =
     case isActive of
         True ->
-            button [ class "filter-tab--button filter-tab--button__active", value text_, onClick toMsg decoder ]
-                [ text text_ ]
+            if String.startsWith "All offers" text_ then
+                button [ class "bg-purple-500 border border-purple-500 rounded-l px-12 py-2", value text_, onClick toMsg decoder ]
+                    [ text text_ ]
+
+            else
+                button [ class "bg-purple-500 border border-purple-500 rounded-r px-12 py-2", value text_, onClick toMsg decoder ]
+                    [ text text_ ]
 
         False ->
-            button [ class "filter-tab--button", value text_, onClick toMsg decoder ]
-                [ text text_ ]
+            if String.startsWith "All offers" text_ then
+                button [ class "border border-purple-500 rounded-l px-16 py-2", value text_, onClick toMsg decoder ]
+                    [ text text_ ]
+
+            else
+                button [ class "border border-purple-500 rounded-r px-16 py-2", value text_, onClick toMsg decoder ]
+                    [ text text_ ]
+
 
 viewMenuFilterDropdownOption : Bool -> String -> Html msg
 viewMenuFilterDropdownOption isSelected text_ =
