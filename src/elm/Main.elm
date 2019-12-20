@@ -689,13 +689,6 @@ changeRouteTo maybeRoute model =
 
         Just (Route.Shop maybeFilter) ->
             case ( session, maybeFilter ) of
-                ( Page.LoggedIn _, Shop.All ) ->
-                    ( model
-                    , Shop.UserSales
-                        |> Route.Shop
-                        |> Route.replaceUrl shared.navKey
-                    )
-
                 _ ->
                     (\_ ->
                         Shop.init session maybeFilter
