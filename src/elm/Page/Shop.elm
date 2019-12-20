@@ -326,6 +326,8 @@ viewCard model session index card =
 
             else
                 card.sale.title
+
+        creatorId = Eos.nameToString card.sale.creatorId
     in
     a
         [ class "w-full sm:w-full md:w-1/2 lg:w-1/3 xl:w-1/4 px-2 mb-6"
@@ -366,6 +368,7 @@ viewCard model session index card =
                 ]
             , div [ class "w-full px-6 pt-4" ]
                 [ p [ class "text-xl" ] [ text title ]
+                , p [ class "text-xs px-4"] [text creatorId]
                 ]
             , div [ class "flex flex-none items-center pt-3 px-6 pb-4" ]
                 [ Icons.thumbUp "text-indigo-500"
