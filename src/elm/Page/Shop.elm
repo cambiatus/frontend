@@ -21,7 +21,7 @@ import Json.Decode as Decode exposing (Decoder, Value)
 import Json.Encode as Encode
 import List.Extra as LE
 import Log
-import Page exposing (Session(..), viewMenuFilter, viewMenuFilterButton, viewMenuFilterDropdown, viewMenuFilterDropdownOption, viewMenuFilterTabButton, viewMenuTab)
+import Page exposing (Session(..), viewMenuFilter, viewMenuFilterButton, viewMenuFilterTabButton, viewMenuTab)
 import Route exposing (Route)
 import Session.Guest as Guest
 import Session.LoggedIn as LoggedIn exposing (External(..))
@@ -525,30 +525,6 @@ viewShopFilterButtons translations routes filter loggedIn =
             ]
     in
     viewMenuFilter buttons
-
-
-viewShopFilterDropdown : ( String, String, String ) -> Maybe Filter -> LoggedIn.Model -> Html Msg
-viewShopFilterDropdown translations filter loggedIn =
-    let
-        ( communities, all, user ) =
-            translations
-
-        decoder =
-            decodeTargetValueToFilter translations
-
-        options =
-            [ viewMenuFilterDropdownOption
-                (filter == Just Shop.MyCommunities)
-                communities
-            , viewMenuFilterDropdownOption
-                (filter == Just Shop.All)
-                all
-            , viewMenuFilterDropdownOption
-                (filter == Just Shop.UserSales)
-                user
-            ]
-    in
-    viewMenuFilterDropdown ClickedFilter decoder options
 
 
 viewShopFilterTab : ( String, String, String ) -> Filter -> LoggedIn.Model -> Html Msg

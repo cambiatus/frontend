@@ -1,4 +1,4 @@
-module Page exposing (ExternalMsg(..), Msg, Session(..), errorToString, fullPageError, fullPageGraphQLError, fullPageLoading, fullPageNotFound, init, isLoggedIn, jsAddressToMsg, labelWithTooltip, loading, login, logout, msgToString, onFileChange, subscriptions, toShared, update, viewButtonNew, viewCardEmpty, viewCardList, viewDateDistance, viewGuest, viewLoggedIn, viewMaxTwoColumn, viewMenuFilter, viewMenuFilterButton, viewMenuFilterDropdown, viewMenuFilterDropdownOption, viewMenuFilterTabButton, viewMenuTab, viewTitle)
+module Page exposing (ExternalMsg(..), Msg, Session(..), errorToString, fullPageError, fullPageGraphQLError, fullPageLoading, fullPageNotFound, init, isLoggedIn, jsAddressToMsg, labelWithTooltip, loading, login, logout, msgToString, onFileChange, subscriptions, toShared, update, viewButtonNew, viewCardEmpty, viewCardList, viewDateDistance, viewGuest, viewLoggedIn, viewMaxTwoColumn, viewMenuFilter, viewMenuFilterButton, viewMenuFilterTabButton, viewMenuTab, viewTitle)
 
 import Account exposing (Profile)
 import Asset.Icon as Icon
@@ -120,11 +120,6 @@ viewLoggedIn thisMsg page model content =
 -- VIEW >> HELPERS
 
 
-onChange : (a -> msg) -> Decoder a -> Html.Attribute msg
-onChange toMsg decoder =
-    on "change" (Decode.map toMsg decoder)
-
-
 onClick : (a -> msg) -> Decoder a -> Html.Attribute msg
 onClick toMsg decoder =
     on "click" (Decode.map toMsg decoder)
@@ -162,18 +157,6 @@ viewMenuFilterButton isActive text_ route =
         [ text text_ ]
 
 
-viewMenuFilterDropdown : (a -> msg) -> Decoder a -> List (Html msg) -> Html msg
-viewMenuFilterDropdown toMsg decoder options =
-    div
-        [ class "flex flex-row justify-between" ]
-        [ select
-            [ class "form-select sm:w-full md:w-64 select border-gray-500"
-            , onChange toMsg decoder
-            ]
-            options
-        ]
-
-
 viewMenuTab : List (Html msg) -> Html msg
 viewMenuTab buttons =
     div
@@ -201,15 +184,6 @@ viewMenuFilterTabButton isActive toMsg decoder text_ =
             else
                 button [ class "border border-purple-500 rounded-r px-16 py-2", value text_, onClick toMsg decoder ]
                     [ text text_ ]
-
-
-viewMenuFilterDropdownOption : Bool -> String -> Html msg
-viewMenuFilterDropdownOption isSelected text_ =
-    option
-        [ class "menu-filter__dropdown-option"
-        , selected isSelected
-        ]
-        [ text text_ ]
 
 
 viewCardList : List ( List (Html msg), Posix, Maybe Posix ) -> Html msg

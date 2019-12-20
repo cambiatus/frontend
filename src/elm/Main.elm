@@ -688,13 +688,11 @@ changeRouteTo maybeRoute model =
                 |> withLoggedIn Route.Communities
 
         Just (Route.Shop maybeFilter) ->
-            case ( session, maybeFilter ) of
-                _ ->
-                    (\_ ->
-                        Shop.init session maybeFilter
-                            |> updateStatusWith (Shop maybeFilter) GotShopMsg model
-                    )
-                        |> withLoggedIn (Route.Shop maybeFilter)
+            (\_ ->
+                Shop.init session maybeFilter
+                    |> updateStatusWith (Shop maybeFilter) GotShopMsg model
+            )
+                |> withLoggedIn (Route.Shop maybeFilter)
 
         Just Route.NewSale ->
             ShopEditor.initCreate
