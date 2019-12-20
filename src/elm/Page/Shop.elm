@@ -21,7 +21,7 @@ import Json.Decode as Decode exposing (Decoder, Value)
 import Json.Encode as Encode
 import List.Extra as LE
 import Log
-import Page exposing (Session(..), viewMenuFilter, viewMenuFilterButton, viewMenuFilterDropdown, viewMenuFilterDropdownOption, viewMenuTab, viewMenuFilterTabButton)
+import Page exposing (Session(..), viewMenuFilter, viewMenuFilterButton, viewMenuFilterDropdown, viewMenuFilterDropdownOption, viewMenuFilterTabButton, viewMenuTab)
 import Route exposing (Route)
 import Session.Guest as Guest
 import Session.LoggedIn as LoggedIn exposing (External(..))
@@ -207,7 +207,7 @@ view session filter model =
                 [ Lazy.lazy viewHeader session
                 , div [ class "container mx-auto px-4" ]
                     [ viewShopFilter session filter
-                    , viewGrid session cards model
+                    , Lazy.lazy3 viewGrid session cards model
                     ]
                 ]
 
@@ -553,7 +553,7 @@ viewShopFilterDropdown translations filter loggedIn =
     viewMenuFilterDropdown ClickedFilter decoder options
 
 
-viewShopFilterTab :  ( String, String, String ) -> Filter -> LoggedIn.Model -> Html Msg
+viewShopFilterTab : ( String, String, String ) -> Filter -> LoggedIn.Model -> Html Msg
 viewShopFilterTab translations filter loggedIn =
     let
         ( communities, all, user ) =
