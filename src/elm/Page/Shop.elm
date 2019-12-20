@@ -253,9 +253,7 @@ viewShopFilter session filter =
     case session of
         Page.LoggedIn loggedIn ->
             div [ class "w-full mt-4 mb-6" ]
-                [ span [ class "input-label" ]
-                    [ text (t shared.translations "shop.filter") ]
-                , viewShopFilterTab
+                [ viewShopFilterTab
                     translations
                     filter
                     loggedIn
