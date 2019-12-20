@@ -435,7 +435,7 @@ viewCard session card model =
         tr r_id replaces =
             I18Next.tr shared.translations I18Next.Curly r_id replaces
 
-        creatorId = Eos.nameToString card.sale.creator.avatar
+        creatorId = Eos.nameToString card.sale.creatorId
     in
     div [ class "flex flex-wrap" ]
         [ div [ class "w-full md:w-1/2 p-4 flex justify-center" ]
