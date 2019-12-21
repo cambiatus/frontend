@@ -49,8 +49,14 @@ type alias Transfer =
     { id : Int
     , toId : Eos.Name
     , fromId : Eos.Name
-    , to : { avatar : Avatar }
-    , from : { avatar : Avatar }
+    , to :
+        { avatar : Avatar
+        , userName : Maybe String
+        }
+    , from :
+        { avatar : Avatar
+        , userName : Maybe String
+        }
     , value : Float
     , memo : Maybe String
     , symbol : Symbol
@@ -59,7 +65,9 @@ type alias Transfer =
 
 
 type alias TransferAvatar =
-    { avatar : Avatar }
+    { avatar : Avatar
+    , userName : Maybe String
+    }
 
 
 type alias EdgeTransfer =
@@ -97,6 +105,11 @@ encodeEosActionData data =
 -- GRAPHQL API
 
 
+profileNameSelectionSet : SelectionSet (Maybe String) typeLock -> SelectionSet (Maybe String) typeLock
+profileNameSelectionSet =
+    SelectionSet.map (\t -> t)
+
+
 transferItemSelectionSet : SelectionSet Transfer Bespiral.Object.Transfer
 transferItemSelectionSet =
     SelectionSet.succeed Transfer
@@ -107,12 +120,14 @@ transferItemSelectionSet =
             (Bespiral.Object.Transfer.to
                 (SelectionSet.succeed TransferAvatar
                     |> with (Avatar.selectionSet Bespiral.Object.Profile.avatar)
+                    |> with (profileNameSelectionSet Bespiral.Object.Profile.name)
                 )
             )
         |> with
             (Bespiral.Object.Transfer.from
                 (SelectionSet.succeed TransferAvatar
                     |> with (Avatar.selectionSet Bespiral.Object.Profile.avatar)
+                    |> with (profileNameSelectionSet Bespiral.Object.Profile.name)
                 )
             )
         |> with Bespiral.Object.Transfer.amount
