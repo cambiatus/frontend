@@ -483,8 +483,8 @@
   },
   "transfer_result": {
     "title": "Transferred",
-    "transfer_success": "Hey, this transfer was successfully made",
-    "receive_success": " Hey, this receipt was successful made",
+    "transfer_success": "Transfer completed successfully!",
+    "receive_success": "Successfully received!",
     "date": "Date",
     "message": "Message",
     "community": "Community",

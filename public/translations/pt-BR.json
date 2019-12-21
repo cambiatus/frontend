@@ -487,8 +487,8 @@
   },
   "transfer_result": {
     "title": "Transferido",
-    "transfer_success": "Ei, essa transferência foi feita com sucesso",
-    "receive_success": "Ei, este recibo foi feito com sucesso",
+    "transfer_success": "Transferência realizada com sucesso!",
+    "receive_success": "Recebido com sucesso!",
     "date": "Data",
     "message": "mensagem",
     "community": "Comunidade",
