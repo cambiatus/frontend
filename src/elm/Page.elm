@@ -169,20 +169,20 @@ viewMenuFilterTabButton isActive toMsg decoder text_ =
     case isActive of
         True ->
             if String.startsWith "All offers" text_ then
-                button [ class "bg-purple-500 border border-purple-500 rounded-l px-12 py-2", value text_, onClick toMsg decoder ]
+                button [ class "bg-purple-500 border border-purple-500 rounded-l px-12 py-2 text-white", value text_, onClick toMsg decoder ]
                     [ text text_ ]
 
             else
-                button [ class "bg-purple-500 border border-purple-500 rounded-r px-12 py-2", value text_, onClick toMsg decoder ]
+                button [ class "bg-purple-500 border border-purple-500 rounded-r px-12 py-2 text-white", value text_, onClick toMsg decoder ]
                     [ text text_ ]
 
         False ->
             if String.startsWith "All offers" text_ then
-                button [ class "border border-purple-500 rounded-l px-16 py-2", value text_, onClick toMsg decoder ]
+                button [ class "border border-purple-500 rounded-l px-16 py-2 text-gray", value text_, onClick toMsg decoder ]
                     [ text text_ ]
 
             else
-                button [ class "border border-purple-500 rounded-r px-16 py-2", value text_, onClick toMsg decoder ]
+                button [ class "border border-purple-500 rounded-r px-16 py-2 text-gray", value text_, onClick toMsg decoder ]
                     [ text text_ ]
 
 
