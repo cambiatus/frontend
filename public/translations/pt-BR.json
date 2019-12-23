@@ -494,6 +494,7 @@
     "community": "Comunidade",
     "received": "Recebida",
     "transferred": "Transferido",
+    "you": "Você",
     "error": {
       "invalid_id": " não é um ID de transferência válido"
     }

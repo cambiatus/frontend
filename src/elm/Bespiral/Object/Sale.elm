@@ -19,6 +19,11 @@ import Graphql.SelectionSet exposing (SelectionSet)
 import Json.Decode as Decode
 
 
+community : SelectionSet decodesTo Bespiral.Object.Community -> SelectionSet decodesTo Bespiral.Object.Sale
+community object_ =
+    Object.selectionForCompositeField "community" [] object_ identity
+
+
 communityId : SelectionSet String Bespiral.Object.Sale
 communityId =
     Object.selectionForField "String" "communityId" [] Decode.string

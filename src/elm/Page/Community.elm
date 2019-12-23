@@ -1009,7 +1009,7 @@ viewTransfer loggedIn model transfer =
         , Route.href (Route.Transfer transfer.id)
         ]
         [ div [ class "flex justify-between w-full" ]
-            [ p [] [ text (transferInfo transfer.fromId transfer.value transfer.toId) ]
+            [ p [] [ text (transferInfo transfer.from.account transfer.value transfer.to.account) ]
             , p [ class "text-sm text-orange-500" ]
                 (Page.viewDateDistance
                     (Utils.posixDateTime (Just transfer.blockTime))
