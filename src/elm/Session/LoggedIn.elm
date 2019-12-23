@@ -424,9 +424,9 @@ viewMainMenu page profile_ model =
         , a
             [ classList
                 [ ( menuItemClass, True )
-                , ( activeClass, isActive page (Route.Shop (Just Shop.MyCommunities)) )
+                , ( activeClass, isActive page (Route.Shop Shop.All) )
                 ]
-            , Route.href (Route.Shop (Just Shop.MyCommunities))
+            , Route.href (Route.Shop Shop.All)
             ]
             [ Icons.shop iconClass
             , text (t model.shared.translations "menu.shop")
