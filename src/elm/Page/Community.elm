@@ -55,19 +55,6 @@ init ({ shared } as loggedIn) symbol =
     )
 
 
-fetchLastObjectiveId : LoggedIn.Model -> (Result Http.Error ObjectiveId -> msg) -> Cmd msg
-fetchLastObjectiveId { shared, accountName } toMsg =
-    let
-        expect =
-            Decode.field "rows" (Decode.list (Decode.field "objective_id" Community.decodeObjectiveId))
-                |> Decode.andThen
-                    (\ns ->
-                        List.head ns
-                            |> Maybe.map Decode.succeed
-                            |> Maybe.withDefault (Decode.fail "No objective.")
-                    )
-    in
-    Api.getTableRows shared (Eos.encodeName accountName) "objectiveidx" 5 expect toMsg
 
 
 fetchCommunityActions : Shared -> Symbol -> Cmd Msg
@@ -181,11 +168,6 @@ type alias ObjectiveForm =
     }
 
 
-emptyObjectiveForm : ObjectiveForm
-emptyObjectiveForm =
-    { description = ""
-    , save = NotAsked
-    }
 
 
 type Verification
@@ -209,15 +191,6 @@ type alias Member =
     }
 
 
-decodeMembers : Decoder (List Member)
-decodeMembers =
-    Decode.list
-        (Decode.map2
-            (\id_ acc -> Member id_ acc ("@" ++ acc))
-            (Decode.field "_id" Decode.string)
-            (Decode.field "account" Decode.string)
-        )
-        |> Decode.field "data"
 
 
 
@@ -872,66 +845,12 @@ viewInvitation loggedIn model =
 -- HELPERS
 
 
-formField : List (Html msg) -> Html msg
-formField =
-    div [ class "form-field" ]
 
 
-indexToString : Int -> String
-indexToString index =
-    let
-        rawString =
-            String.fromInt (index + 1)
-    in
-    if String.length rawString == 1 then
-        "0" ++ rawString
-
-    else
-        rawString
 
 
-viewFieldError : Shared -> String -> SaveStatus -> Html msg
-viewFieldError shared fieldId save =
-    case save of
-        SaveFailed errors ->
-            case Dict.get fieldId errors of
-                Just e ->
-                    span [ class "field-error" ] [ text (errorToString shared e) ]
-
-                Nothing ->
-                    text ""
-
-        _ ->
-            text ""
 
 
-errorToString : Shared -> FormError -> String
-errorToString shared v =
-    let
-        t s =
-            I18Next.t shared.translations s
-
-        tr str values =
-            I18Next.tr shared.translations I18Next.Curly str values
-    in
-    case v of
-        Required ->
-            t "error.required"
-
-        TooShort i ->
-            tr "error.tooShort" [ ( "minLength", String.fromInt i ) ]
-
-        TooLong i ->
-            tr "error.tooLong" [ ( "maxLength", String.fromInt i ) ]
-
-        InvalidChar c ->
-            tr "error.invalidChar" [ ( "invalidChar", String.fromChar c ) ]
-
-        AlreadyTaken ->
-            t "error.alreadyTaken"
-
-        NotMember ->
-            t "error.notMember"
 
 
 
@@ -1184,9 +1103,6 @@ update msg model loggedIn =
                 |> UR.logHttpError msg httpError
 
 
-updateCommunity : Model -> LoadStatus -> Model
-updateCommunity model c =
-    { model | community = c }
 
 
 jsAddressToMsg : List String -> Value -> Maybe Msg

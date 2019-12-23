@@ -508,105 +508,12 @@ viewCard session card model =
         ]
 
 
-viewCardWithHeader : Session -> Card -> List (Html Msg) -> Html Msg
-viewCardWithHeader session card content =
-    div [ class "large__card__container" ]
-        [ div
-            [ class "large__card" ]
-            ([ viewHeaderBackground session card
-             , viewHeaderAvatarTitle session card
-             ]
-                ++ content
-            )
-        ]
 
 
-viewHeaderBackground : Session -> Card -> Html Msg
-viewHeaderBackground session card =
-    let
-        ipfsUrl =
-            getIpfsUrl session
-
-        shared =
-            case session of
-                LoggedIn a ->
-                    a.shared
-
-                Guest a ->
-                    a.shared
-
-        tr r_id replaces =
-            I18Next.tr shared.translations I18Next.Curly r_id replaces
-    in
-    div
-        [ class "shop__background"
-        , style "background-image" ("url(" ++ Maybe.withDefault "/temp/44884525495_2e5c792dd2_z.jpg" (Maybe.map (\img -> ipfsUrl ++ "/" ++ img) card.sale.image) ++ ")")
-        ]
-        []
 
 
-viewHeaderAvatarTitle : Session -> Card -> Html Msg
-viewHeaderAvatarTitle session { sale } =
-    let
-        ipfsUrl =
-            getIpfsUrl session
 
-        saleSymbol =
-            Eos.symbolToString sale.symbol
 
-        balances =
-            case session of
-                LoggedIn sesh ->
-                    sesh.balances
-
-                Guest sesh ->
-                    []
-
-        maybeBal =
-            LE.find (\bal -> bal.asset.symbol == sale.symbol) balances
-
-        symbolBalance =
-            case maybeBal of
-                Just b ->
-                    b.asset.amount
-
-                Nothing ->
-                    0.0
-
-        balanceString =
-            let
-                currBalance =
-                    String.fromFloat symbolBalance ++ " " ++ saleSymbol
-            in
-            currBalance
-
-        ( shared, account ) =
-            case session of
-                LoggedIn a ->
-                    ( a.shared, Eos.nameToString a.accountName )
-
-                Guest a ->
-                    ( a.shared, "" )
-
-        tr r_id replaces =
-            I18Next.tr shared.translations I18Next.Curly r_id replaces
-    in
-    div [ class "shop__header" ]
-        [ Avatar.view ipfsUrl sale.creator.avatar "shop__avatar"
-        , div [ class "shop__title-text" ]
-            [ h3 [ class "shop__title" ] [ text sale.title ]
-            , div [ class "shop__sale__price" ]
-                [ p [ class "sale__amount" ] [ text (String.fromFloat sale.price) ]
-                , p [ class "sale__symbol" ] [ text saleSymbol ]
-                ]
-            , if Eos.nameToString sale.creatorId == account then
-                text ""
-
-              else
-                p [ class "shop__balance" ]
-                    [ text (tr "account.my_wallet.your_current_balance" [ ( "balance", balanceString ) ]) ]
-            ]
-        ]
 
 
 viewTransferForm : Session -> Card -> Dict String FormError -> Model -> Html Msg

@@ -104,10 +104,6 @@ viewCard loggedIn index model =
             viewCardFailure loggedIn
 
 
-viewCardLoading : Html msg
-viewCardLoading =
-    div [ class "card card--full-spinner" ]
-        [ div [ class "spinner spinner--delay" ] [] ]
 
 
 viewCardFailure : LoggedIn.Model -> Html Msg

@@ -5,7 +5,6 @@ import Html exposing (Html)
 import Html.Attributes exposing (autocomplete, maxlength, minlength, pattern, spellcheck, title, type_)
 import Json.Decode as Decode exposing (Decoder)
 import Json.Encode as Encode exposing (Value)
-import Url.Parser
 
 
 
@@ -56,11 +55,6 @@ viewName (Name name) =
 nameToString : Name -> String
 nameToString (Name name) =
     name
-
-
-nameUrlParser : Url.Parser.Parser (Name -> a) a
-nameUrlParser =
-    Url.Parser.custom "NAME" (Just << Name)
 
 
 nameQueryUrlParser : String -> Name
