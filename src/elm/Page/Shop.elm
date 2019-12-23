@@ -339,6 +339,10 @@ viewCard model session index card =
                 ]
             , div [ class "px-4 pb-2 flex flex-wrap w-3/4" ]
                 [ p [ class "font-medium pt-2 w-full h-12" ] [ text card.sale.title ]
+                , div [ class "w-full"] 
+                      [ span [class "bg-black text-white text-xs uppercase px-1 py-1 rounded"] 
+                             [text creatorId]
+                      ]
                 , div [ class "h-16 w-full flex flex-wrap items-end" ]
                     [ if card.sale.units == 0 && card.sale.trackStock then
                         div [ class "w-full" ]
@@ -368,7 +372,9 @@ viewCard model session index card =
                 ]
             , div [ class "w-full px-6 pt-4" ]
                 [ p [ class "text-xl" ] [ text title ]
-                , p [ class "text-xs px-4"] [text creatorId]
+                ]
+            , div [class "w-full"] [
+                span [class "bg-black text-white text-sm uppercase px-1 py-1 rounded"] [text creatorId]
                 ]
             , div [ class "flex flex-none items-center pt-3 px-6 pb-4" ]
                 [ Icons.thumbUp "text-indigo-500"
