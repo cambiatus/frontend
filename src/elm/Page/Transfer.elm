@@ -19,7 +19,7 @@ import Session.LoggedIn as LoggedIn exposing (External(..))
 import Session.Shared exposing (Shared)
 import Strftime
 import Time
-import Transfer exposing (Transfer, transferQuery)
+import Transfer exposing (Transfer, TransferUser, transferQuery)
 import UpdateResult as UR
 import Utils
 
@@ -114,7 +114,7 @@ view loggedIn model =
                         [ Lazy.lazy viewHeader loggedIn
                         , div []
                             [ viewTransfer loggedIn transfer state
-                            , viewDetails loggedIn transfer
+                            , viewDetails loggedIn transfer state
                             ]
                         ]
 
@@ -151,24 +151,22 @@ viewTransfer loggedIn transfer state =
         t =
             I18Next.t loggedIn.shared.translations
     in
-    div [ class "flex" ]
-        [ div [ class "w-full bg-green h-50" ]
-            [ div [ class "flex-row" ]
-                [ div [ class "px-4 py-2 m-2" ]
-                    [ h2 [ class "text-center mt-8 font-medium font-sans text-white not-italic" ]
-                        [ text <|
-                            case state of
-                                Transferred ->
-                                    t "transfer_result.transfer_success"
-
-                                Received ->
-                                    t "transfer_result.receive_success"
-                        ]
+    div [ class "flex w-full justify-center bg-green py-8" ]
+        [ div [ class "flex-row w-full lg:w-2/3" ]
+            [ div [ class "flex flex-wrap justify-center" ]
+                [ img
+                    [ class "h-64 w-full lg:w-1/3"
+                    , src "/images/transfer-doggo.svg"
                     ]
-                , div [ class "bg-no-repeat bg-auto h-64 ml-32 -mt-5 px-4 py-2 m-2 items-center mt-5 justify-center", style "background-image" "url(/images/transfer-doggo.svg)" ]
                     []
-                , div [ class "flex sm:justify-center sm:items-center -mt-16 absolute md:w-full md:mx-auto  sm:right-0" ]
-                    [ viewTransferCard loggedIn transfer state
+                , h2 [ class "w-full lg:w-2/3 mt-8 mb-20 lg:px-8 text-center lg:text-left text-3xl font-medium font-sans text-white" ]
+                    [ text <|
+                        case state of
+                            Transferred ->
+                                t "transfer_result.transfer_success"
+
+                            Received ->
+                                t "transfer_result.receive_success"
                     ]
                 ]
             ]
@@ -180,72 +178,48 @@ viewTransferCard loggedIn transfer state =
     let
         ipfsUrl =
             loggedIn.shared.endpoints.ipfs
+
+        originUser =
+            case state of
+                Received ->
+                    transfer.to
+
+                Transferred ->
+                    transfer.from
+
+        destinationUser =
+            case state of
+                Received ->
+                    transfer.from
+
+                Transferred ->
+                    transfer.to
     in
-    div [ class "flex flex-row block rounded overflow-x-scroll sm:overflow-hidden bg-gray-100" ]
-        [ div [ class "sm:px-4 sm:py-2 sm:m-2 p-0" ]
-            [ div [ class "h-8 w-8 rounded-full mx-auto mt-5" ]
-                [ Avatar.view ipfsUrl
-                    (case state of
-                        Received ->
-                            transfer.to.avatar
+    div [ class "flex flex-row w-full justify-center items-center py-5 rounded bg-gray-100" ]
+        [ viewTransferAvatar loggedIn originUser
+        , viewAmount loggedIn transfer state
+        , viewTransferAvatar loggedIn destinationUser
+        ]
 
-                        Transferred ->
-                            transfer.from.avatar
-                    )
-                    "h-10 w-10"
-                ]
-            , div [ class "px-6 py-4" ]
-                [ span [ class "inline-block bg-black rounded px-3 py-1 text-sm font-semibold text-white" ]
-                    [ case state of
-                        Received ->
-                            text "You"
 
-                        Transferred ->
-                            if transfer.fromId == loggedIn.accountName then
-                                text "You"
-
-                            else
-                                case transfer.from.userName of
-                                    Just username ->
-                                        text username
-
-                                    Nothing ->
-                                        Eos.viewName transfer.fromId
-                    ]
-                ]
+viewTransferAvatar : LoggedIn.Model -> TransferUser -> Html Msg
+viewTransferAvatar loggedIn user =
+    div []
+        [ div [ class "w-8 h-8 rounded-full mx-auto" ]
+            [ Avatar.view loggedIn.shared.endpoints.ipfs user.avatar "w-10 h-10"
             ]
-        , div [ class "mt-5" ] [ viewAmount loggedIn transfer state ]
-        , div [ class "-ml-20 sm:px-4 sm:py-2 m-2" ]
-            [ div [ class "h-8 w-8 rounded-full mx-auto mt-5" ]
-                [ Avatar.view ipfsUrl
-                    (case state of
-                        Received ->
-                            transfer.from.avatar
+        , div [ class "px-6 py-4" ]
+            [ div [ class "inline-block bg-black rounded px-3 py-1 text-xs uppercase font-medium text-white" ]
+                [ if user.account == loggedIn.accountName then
+                    text (I18Next.t loggedIn.shared.translations "transfer_result.you")
 
-                        Transferred ->
-                            transfer.to.avatar
-                    )
-                    "h-10 w-10"
-                ]
-            , div [ class "px-6 py-4" ]
-                [ span [ class "inline-block bg-black rounded px-3 py-1 text-sm font-semibold text-white" ]
-                    [   case state of
-                            Received ->
-                                case transfer.from.userName of
-                                    Just username ->
-                                        text username
+                  else
+                    case user.userName of
+                        Just username ->
+                            text username
 
-                                    Nothing ->
-                                        Eos.viewName transfer.fromId
-
-                            Transferred ->
-                                case transfer.to.userName of
-                                    Just username ->
-                                        text username
-
-                                    Nothing ->
-                                        Eos.viewName transfer.toId
-                    ]
+                        Nothing ->
+                            Eos.viewName user.account
                 ]
             ]
         ]
@@ -293,7 +267,7 @@ viewAmount { shared } transfer state =
                             ]
                         ]
     in
-    div [ class "-ml-16 flex flex-row mt-5" ]
+    div [ class "flex flex-row" ]
         [ head
         , div [ class "px-4 py-2 m-2" ]
             [ div [ class "-ml-10 border border-solid rounded border-green bg-white" ]
@@ -322,8 +296,8 @@ viewAmount { shared } transfer state =
         ]
 
 
-viewDetails : LoggedIn.Model -> Transfer -> Html Msg
-viewDetails { shared } transfer =
+viewDetails : LoggedIn.Model -> Transfer -> State -> Html Msg
+viewDetails ({ shared } as loggedIn) transfer state =
     let
         t str =
             I18Next.t shared.translations str
@@ -334,9 +308,12 @@ viewDetails { shared } transfer =
                 |> Utils.posixDateTime
                 |> Strftime.format "%d %b %Y" Time.utc
     in
-    div [ class "flex mb-4 bg-white" ]
-        [ div [ class "w-full h-50 mt-20 mb-10" ]
-            [ viewDetail (t "transfer_result.community") <| Eos.symbolToString transfer.symbol
+    div [ class "flex flex-wrap mb-4 bg-white" ]
+        [ div [ class "flex w-full lg:w-2/3 m-4 lg:mx-auto lg:-mt-20" ]
+            [ viewTransferCard loggedIn transfer state
+            ]
+        , div [ class "w-full mb-10" ]
+            [ viewDetail (t "transfer_result.community") transfer.community.name
             , viewDetail (t "transfer_result.date") date
             , viewDetail (t "transfer_result.message") <| Maybe.withDefault "" transfer.memo
             ]
@@ -345,7 +322,7 @@ viewDetails { shared } transfer =
 
 viewDetail : String -> String -> Html Msg
 viewDetail title content =
-    div [ class "mt-5 ml-16" ]
+    div [ class "m-4" ]
         [ h5 [ class "leading-tight text-xs mb-1 text-reward-green" ]
             [ text title ]
         , p [ class "text-lg font-sans not-italic" ]
@@ -369,10 +346,10 @@ findState : Maybe Transfer -> LoggedIn.Model -> State
 findState maybeTransfer { accountName } =
     case maybeTransfer of
         Just transfer ->
-            if transfer.fromId == accountName then
+            if transfer.from.account == accountName then
                 Transferred
 
-            else if transfer.toId == accountName then
+            else if transfer.to.account == accountName then
                 Received
 
             else
