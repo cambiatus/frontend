@@ -496,6 +496,7 @@
     "transferred": "Transferido",
     "error": {
       "invalid_id": " não é um ID de transferência válido"
-    }
+    },
+    "you": "você"
   }
 }

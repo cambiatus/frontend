@@ -493,6 +493,7 @@
     "transferred": "Traspassat",
     "error": {
       "invalid_id": " no és un ID de transferència vàlid"
-    }
+    },
+    "you": "vostè"
   }
 }
