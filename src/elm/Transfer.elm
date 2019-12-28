@@ -1,4 +1,4 @@
-module Transfer exposing (ConnectionTransfer, QueryTransfers, Transfer, communityFilter, encodeEosActionData, getTotalCount, getTransfers, metadataConnectionSelectionSet, transferConnectionSelectionSet, transferItemSelectionSet, transferQuery, transfersQuery, userFilter)
+module Transfer exposing (ConnectionTransfer, QueryTransfers, Transfer, TransferUser, communityFilter, encodeEosActionData, getTotalCount, getTransfers, metadataConnectionSelectionSet, transferConnectionSelectionSet, transferItemSelectionSet, transferQuery, transfersQuery, userFilter)
 
 import Api.Relay exposing (Edge, MetadataConnection, PageConnection, PageInfo, PaginationArgs, pageInfoSelectionSet)
 import Avatar exposing (Avatar)
@@ -47,26 +47,23 @@ type alias CommunityArgs =
 
 type alias Transfer =
     { id : Int
-    , toId : Eos.Name
-    , fromId : Eos.Name
-    , to :
-        { avatar : Avatar
-        , userName : Maybe String
-        }
-    , from :
-        { avatar : Avatar
-        , userName : Maybe String
-        }
+    , to : TransferUser
+    , from : TransferUser
     , value : Float
     , memo : Maybe String
     , symbol : Symbol
+    , community : Cmm
     , blockTime : DateTime
     }
 
+type alias Cmm =
+    { name : String
+    }
 
-type alias TransferAvatar =
+type alias TransferUser =
     { avatar : Avatar
     , userName : Maybe String
+    , account : Eos.Name
     }
 
 
@@ -114,25 +111,31 @@ transferItemSelectionSet : SelectionSet Transfer Bespiral.Object.Transfer
 transferItemSelectionSet =
     SelectionSet.succeed Transfer
         |> with Bespiral.Object.Transfer.id
-        |> with (Eos.nameSelectionSet Bespiral.Object.Transfer.toId)
-        |> with (Eos.nameSelectionSet Bespiral.Object.Transfer.fromId)
         |> with
             (Bespiral.Object.Transfer.to
-                (SelectionSet.succeed TransferAvatar
+                (SelectionSet.succeed TransferUser
                     |> with (Avatar.selectionSet Bespiral.Object.Profile.avatar)
                     |> with (profileNameSelectionSet Bespiral.Object.Profile.name)
+                    |> with (Eos.nameSelectionSet Bespiral.Object.Profile.account)
                 )
             )
         |> with
             (Bespiral.Object.Transfer.from
-                (SelectionSet.succeed TransferAvatar
+                (SelectionSet.succeed TransferUser
                     |> with (Avatar.selectionSet Bespiral.Object.Profile.avatar)
                     |> with (profileNameSelectionSet Bespiral.Object.Profile.name)
+                    |> with (Eos.nameSelectionSet Bespiral.Object.Profile.account)
                 )
             )
         |> with Bespiral.Object.Transfer.amount
         |> with Bespiral.Object.Transfer.memo
         |> with (Eos.symbolSelectionSet Bespiral.Object.Transfer.communityId)
+        |> with
+           (Bespiral.Object.Transfer.community
+                (SelectionSet.succeed Cmm
+                    |> with Bespiral.Object.Community.name
+                )
+           )
         |> with Bespiral.Object.Transfer.createdAt
 
 
