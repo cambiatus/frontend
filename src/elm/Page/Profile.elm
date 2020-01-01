@@ -796,9 +796,7 @@ update msg model loggedIn =
                     }
 
 
-updateStatus : Model -> Status -> Model
-updateStatus model c =
-    { model | status = c }
+
 
 
 updateForm : (ProfileForm -> ProfileForm) -> UpdateResult -> UpdateResult

@@ -42,12 +42,6 @@ initEdit ({ shared } as loggedIn) communityId objectiveId =
     )
 
 
-emptyObjectiveForm : ObjectiveForm
-emptyObjectiveForm =
-    { description = ""
-    , save = NotAsked
-    }
-
 
 
 -- MODEL

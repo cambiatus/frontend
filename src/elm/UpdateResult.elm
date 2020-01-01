@@ -30,17 +30,7 @@ map toModel toMsg handleExtMsg updateResult =
         updateResult.exts
 
 
-mapConcat : (subModel -> model) -> (subMsg -> msg) -> (subExtMsg -> UpdateResult model msg extMsg -> UpdateResult model msg extMsg) -> UpdateResult subModel subMsg subExtMsg -> UpdateResult model msg extMsg -> UpdateResult model msg extMsg
-mapConcat toModel toMsg handleExtMsg subResult uResult =
-    List.foldl
-        handleExtMsg
-        { model = toModel subResult.model
-        , cmds = uResult.cmds ++ [ Cmd.map toMsg (Cmd.batch subResult.cmds) ]
-        , exts = uResult.exts
-        , ports = uResult.ports ++ List.map (Ports.mapAddress toMsg) subResult.ports
-        , logs = uResult.logs ++ List.map (Log.map toMsg) subResult.logs
-        }
-        subResult.exts
+
 
 
 mapModel : (m -> m2) -> UpdateResult m msg eMsg -> UpdateResult m2 msg eMsg

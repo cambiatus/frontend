@@ -479,9 +479,6 @@ digitInput position { form, pinVisibility } =
         []
 
 
-onKeyDown : (Int -> msg) -> Attribute msg
-onKeyDown tagger =
-    on "keydown" (Decode.map tagger keyCode)
 
 
 viewFieldLabel : Shared -> String -> String -> Maybe (Html msg) -> Html msg
