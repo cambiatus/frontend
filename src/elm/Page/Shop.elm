@@ -208,7 +208,7 @@ viewShopFilter loggedIn filter =
         buttonClass =
             "w-1/2 lg:w-56 border border-purple-500 first:rounded-l last:rounded-r px-12 py-2 text-sm font-light text-gray"
     in
-    div [ class "flex my-8 lg:my-16 lg:mx-auto lg:w-1/2" ]
+    div [ class "flex my-8 lg:my-16 lg:mx-auto lg:w-1/2 justify-center" ]
         [ button
             [ class buttonClass
             , classList [ ( "bg-purple-500 text-white", filter == Shop.All ) ]
