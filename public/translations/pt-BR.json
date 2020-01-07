@@ -419,7 +419,6 @@
     "offer_action": "{{accountName}} está VENDENDO",
     "buy_action": "{{accountName}} COMPRANDO",
     "buy": "Comprar",
-    "ask": "Perguntar",
     "edit": "Editar minha oferta",
     "transfer": {
       "units_label": "Quantas unidades você quer?",

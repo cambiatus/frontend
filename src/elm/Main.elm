@@ -161,7 +161,7 @@ type Status
     | Login Login.Model
     | Profile Profile.Model
     | Register (Maybe String) Register.Model
-    | Shop (Maybe Shop.Filter) Shop.Model
+    | Shop Shop.Filter Shop.Model
     | ShopEditor (Maybe String) ShopEditor.Model
     | ShopViewer String ShopViewer.Model
     | Transfer Int Transfer.Model
@@ -696,21 +696,11 @@ changeRouteTo maybeRoute model =
                 |> withLoggedIn Route.Communities
 
         Just (Route.Shop maybeFilter) ->
-            case ( session, maybeFilter ) of
-                ( Page.LoggedIn _, Nothing ) ->
-                    ( model
-                    , Shop.UserSales
-                        |> Just
-                        |> Route.Shop
-                        |> Route.replaceUrl shared.navKey
-                    )
-
-                _ ->
-                    (\_ ->
-                        Shop.init session maybeFilter
-                            |> updateStatusWith (Shop maybeFilter) GotShopMsg model
-                    )
-                        |> withLoggedIn (Route.Shop maybeFilter)
+            (\_ ->
+                Shop.init session maybeFilter
+                    |> updateStatusWith (Shop maybeFilter) GotShopMsg model
+            )
+                |> withLoggedIn (Route.Shop maybeFilter)
 
         Just Route.NewSale ->
             ShopEditor.initCreate

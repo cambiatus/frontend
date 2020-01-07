@@ -29,7 +29,7 @@ type Route
     | EditObjective Symbol Int
     | NewAction Symbol String
     | VerifyClaim Symbol String String String
-    | Shop (Maybe Shop.Filter)
+    | Shop Shop.Filter
     | NewSale
     | EditSale String
     | ViewSale String
@@ -82,22 +82,17 @@ parser url =
         , Url.map Shop
             (s "shop"
                 <?> Query.map
-                        (\maybeF ->
-                            case maybeF of
-                                Nothing ->
-                                    Nothing
+                        (\filter ->
+                            if String.startsWith "my-communities" filter then
+                                Shop.MyCommunities
 
-                                Just query ->
-                                    if String.startsWith "my-communities" query then
-                                        Just Shop.MyCommunities
+                            else if String.startsWith "user" filter then
+                                Shop.UserSales
 
-                                    else if String.startsWith "user" query then
-                                        Just Shop.UserSales
-
-                                    else
-                                        Just Shop.All
+                            else
+                                Shop.All
                         )
-                        (Query.string "filter")
+                        (Query.map (Maybe.withDefault "") (Query.string "filter"))
             )
         , Url.map NewSale (s "shop" </> s "new" </> s "sell")
         , Url.map ViewSale (s "shop" </> string)
@@ -266,7 +261,7 @@ routeToString route =
 
                 Shop maybeFilter ->
                     ( [ "shop" ]
-                    , queryBuilder shopFilterToString maybeFilter "filter"
+                    , queryBuilder shopFilterToString (Just maybeFilter) "filter"
                     )
 
                 NewSale ->

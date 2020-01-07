@@ -32,6 +32,10 @@ module.exports = {
         // '900': '#212121' // Tailwind original gray-900
         '900': '#999999'
       },
+      purple: {
+        '100': '#9B4198',
+        '500': '#45469B'
+      },
       'red': '#DB1B1B',
       'yellow': '#FFD200',
       'green': '#8ACC9E',
@@ -44,8 +48,7 @@ module.exports = {
       'indigo': {
         '100': '#6A6CAA',
         '500': '#45469B'
-      },
-      'purple': '#9B4198'
+      }
     },
     // Customizing BorderRadius sizes
     borderRadius: {

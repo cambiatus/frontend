@@ -415,7 +415,6 @@
     "offer_action": "{{accountName}} is BUYING",
     "buy_action": "{{accountName}} is SELLING",
     "buy": "Buy",
-    "ask": "Ask",
     "edit": "Edit my offer",
     "transfer": {
       "units_label": "How many units do you want?",

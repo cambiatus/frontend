@@ -861,7 +861,7 @@ update msg model loggedIn =
         GotSaveResponse (Ok _) ->
             UR.init model
                 |> UR.addCmd
-                    (Route.replaceUrl loggedIn.shared.navKey (Route.Shop Nothing))
+                    (Route.replaceUrl loggedIn.shared.navKey (Route.Shop Shop.All))
 
         GotSaveResponse (Err error) ->
             let
@@ -902,7 +902,7 @@ update msg model loggedIn =
             model
                 |> UR.init
                 |> UR.addCmd
-                    (Route.replaceUrl loggedIn.shared.navKey (Route.Shop Nothing))
+                    (Route.replaceUrl loggedIn.shared.navKey (Route.Shop Shop.All))
 
         GotDeleteResponse (Err error) ->
             let

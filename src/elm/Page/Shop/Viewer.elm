@@ -142,7 +142,6 @@ type Validation
 
 type Msg
     = CompletedSaleLoad (Result (Graphql.Http.Error (Maybe Sale)) (Maybe Sale))
-    | ClickedAsk Sale
     | ClickedBuy Sale
     | ClickedEdit Sale
     | ClickedQuestions Sale
@@ -173,19 +172,6 @@ update msg model user =
                 |> UR.init
                 |> UR.addCmd
                     (Nav.back user.shared.navKey 1)
-
-        ClickedAsk sale ->
-            model
-                |> UR.init
-                |> UR.addPort
-                    { responseAddress = ClickedAsk sale
-                    , responseData = Encode.null
-                    , data =
-                        Encode.object
-                            [ ( "name", Encode.string "openChat" )
-                            , ( "username", Encode.string (Eos.nameToString sale.creatorId) )
-                            ]
-                    }
 
         ClickedQuestions sale ->
             model
@@ -280,7 +266,7 @@ update msg model user =
                                             ]
                                         }
                                 }
-                            |> UR.addCmd (Route.replaceUrl user.shared.navKey (Route.Shop (Just Shop.MyCommunities)))
+                            |> UR.addCmd (Route.replaceUrl user.shared.navKey (Route.Shop Shop.MyCommunities))
 
                     False ->
                         model
@@ -397,7 +383,7 @@ viewHeader session title =
     div [ class "h-16 w-full bg-indigo-500 flex px-4 items-center" ]
         [ a
             [ class "items-center flex"
-            , Route.href (Route.Shop (Just Shop.MyCommunities))
+            , Route.href (Route.Shop Shop.MyCommunities)
             ]
             [ Icons.back ""
             , p [ class "text-white text-sm ml-2" ]
@@ -448,6 +434,8 @@ viewCard session card model =
 
         tr r_id replaces =
             I18Next.tr shared.translations I18Next.Curly r_id replaces
+
+        creatorId = Eos.nameToString card.sale.creatorId
     in
     div [ class "flex flex-wrap" ]
         [ div [ class "w-full md:w-1/2 p-4 flex justify-center" ]
@@ -460,6 +448,10 @@ viewCard session card model =
         , div [ class "w-full md:w-1/2 flex flex-wrap bg-white p-4" ]
             [ div [ class "font-medium text-3xl w-full" ] [ text card.sale.title ]
             , div [ class "text-gray w-full md:text-sm" ] [ text card.sale.description ]
+            , div [ class "w-full"] 
+                      [ span [class "bg-black text-white text-xs uppercase px-1 py-1 rounded"] 
+                             [text creatorId]
+                      ]
             , div [ class "flex flex-wrap w-full" ]
                 [ div [ class "w-full md:w-1/4" ]
                     [ div [ class "flex items-center" ]
@@ -484,15 +476,8 @@ viewCard session card model =
                       else if card.sale.units <= 0 && card.sale.trackStock == True then
                         div [ class "flex -mx-2 md:justify-end" ]
                             [ button
-                                [ class "button button-secondary w-1/5 mx-2"
-                                , onClick (ClickedAsk card.sale)
-                                ]
-                                [ Avatar.view (getIpfsUrl session) card.sale.creator.avatar "h-6 w-6 mr-2"
-                                , text_ "shop.ask"
-                                ]
-                            , button
                                 [ disabled True
-                                , class "button button-disabled w-4/5 mx-2 md:w-2/5"
+                                , class "button button-disabled mx-auto"
                                 ]
                                 [ text_ "shop.out_of_stock" ]
                             ]
@@ -509,14 +494,7 @@ viewCard session card model =
                       else
                         div [ class "flex -mx-2 md:justify-end" ]
                             [ button
-                                [ class "button button-secondary w-1/5 mx-2"
-                                , onClick (ClickedAsk card.sale)
-                                ]
-                                [ Avatar.view (getIpfsUrl session) card.sale.creator.avatar "h-6 w-6 mr-2"
-                                , text_ "shop.ask"
-                                ]
-                            , button
-                                [ class "button button-primary w-4/5 mx-2 md:w-2/5"
+                                [ class "button button-primary mx-auto"
                                 , onClick (ClickedBuy card.sale)
                                 ]
                                 [ text_ "shop.buy" ]
@@ -868,9 +846,6 @@ msgToString msg =
     case msg of
         CompletedSaleLoad r ->
             "CompletedSaleLoad" :: []
-
-        ClickedAsk _ ->
-            [ "ClickedAsk" ]
 
         ClickedBuy _ ->
             [ "ClickedBuy" ]
