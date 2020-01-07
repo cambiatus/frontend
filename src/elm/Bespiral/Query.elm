@@ -128,3 +128,14 @@ type alias SalesRequiredArguments =
 sales : SalesRequiredArguments -> SelectionSet decodesTo Bespiral.Object.Sale -> SelectionSet (List decodesTo) RootQuery
 sales requiredArgs object_ =
     Object.selectionForCompositeField "sales" [ Argument.required "input" requiredArgs.input Bespiral.InputObject.encodeSalesInput ] object_ (identity >> Decode.list)
+
+
+type alias TransferRequiredArguments =
+    { input : Bespiral.InputObject.TransferInput }
+
+
+{-| A single Transfer
+-}
+transfer : TransferRequiredArguments -> SelectionSet decodesTo Bespiral.Object.Transfer -> SelectionSet (Maybe decodesTo) RootQuery
+transfer requiredArgs object_ =
+    Object.selectionForCompositeField "transfer" [ Argument.required "input" requiredArgs.input Bespiral.InputObject.encodeTransferInput ] object_ (identity >> Decode.nullable)

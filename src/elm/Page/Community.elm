@@ -923,9 +923,12 @@ viewTransfer loggedIn model transfer =
             ]
                 |> I18Next.tr loggedIn.shared.translations I18Next.Curly "transfer.info"
     in
-    div [ class "border-b last:border-b-0 border-gray-500 flex flex-wrap items-start p-4" ]
+    a
+        [ class "border-b last:border-b-0 border-gray-500 flex flex-wrap items-start p-4"
+        , Route.href (Route.Transfer transfer.id)
+        ]
         [ div [ class "flex justify-between w-full" ]
-            [ p [] [ text (transferInfo transfer.from transfer.value transfer.to) ]
+            [ p [] [ text (transferInfo transfer.from.account transfer.value transfer.to.account) ]
             , p [ class "text-sm text-orange-500" ]
                 (Page.viewDateDistance
                     (Utils.posixDateTime (Just transfer.blockTime))

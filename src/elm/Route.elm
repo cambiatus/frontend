@@ -33,6 +33,7 @@ type Route
     | NewSale
     | EditSale String
     | ViewSale String
+    | Transfer Int
 
 
 parser : Url -> Parser (Route -> a) a
@@ -96,6 +97,7 @@ parser url =
         , Url.map NewSale (s "shop" </> s "new" </> s "sell")
         , Url.map ViewSale (s "shop" </> string)
         , Url.map EditSale (s "shop" </> string </> s "edit")
+        , Url.map Transfer (s "transfer" </> int)
         ]
 
 
@@ -270,5 +272,8 @@ routeToString route =
 
                 ViewSale saleId ->
                     ( [ "shop", saleId ], [] )
+
+                Transfer transferId ->
+                    ( [ "transfer", String.fromInt transferId ], [] )
     in
     Url.Builder.absolute paths queries

@@ -483,5 +483,19 @@
       "primary_approve": "sim, aprovar",
       "secondary": "não, cancelar"
     }
+  },
+  "transfer_result": {
+    "title": "Transferido",
+    "transfer_success": "Transferência realizada com sucesso!",
+    "receive_success": "Recebido com sucesso!",
+    "date": "Data",
+    "message": "mensagem",
+    "community": "Comunidade",
+    "received": "Recebida",
+    "transferred": "Transferido",
+    "error": {
+      "invalid_id": " não é um ID de transferência válido"
+    },
+    "you": "você"
   }
 }

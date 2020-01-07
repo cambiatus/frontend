@@ -325,7 +325,7 @@ viewTransfer : LoggedIn.Model -> Transfer -> Html msg
 viewTransfer ({ shared } as loggedIn) transfer =
     let
         isReceive =
-            loggedIn.accountName == transfer.to
+            loggedIn.accountName == transfer.to.account
 
         amount =
             if isReceive then
@@ -336,18 +336,21 @@ viewTransfer ({ shared } as loggedIn) transfer =
 
         description =
             if isReceive then
-                [ ( "user", Eos.nameToString transfer.from )
+                [ ( "user", Eos.nameToString transfer.from.account )
                 , ( "amount", String.fromFloat transfer.value )
                 ]
                     |> I18Next.tr shared.translations I18Next.Curly "notifications.transfer.receive"
 
             else
-                [ ( "user", Eos.nameToString transfer.to )
+                [ ( "user", Eos.nameToString transfer.to.account )
                 , ( "amount", String.fromFloat transfer.value )
                 ]
                     |> I18Next.tr shared.translations I18Next.Curly "notifications.transfer.sent"
     in
-    div [ class "flex items-start lg:items-center p-4 border-b last:border-b-0" ]
+    a
+        [ class "flex items-start lg:items-center p-4 border-b last:border-b-0"
+        , Route.href (Route.Transfer transfer.id)
+        ]
         [ div [ class "flex-col flex-grow-1 pl-4" ]
             [ p
                 [ class "text-black text-sm leading-relaxed" ]

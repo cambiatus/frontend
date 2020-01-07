@@ -28,6 +28,7 @@ import Page.Register as Register
 import Page.Shop as Shop
 import Page.Shop.Editor as ShopEditor
 import Page.Shop.Viewer as ShopViewer
+import Page.Transfer as Transfer
 import Ports
 import Route exposing (Route)
 import Session.Guest as Guest
@@ -163,6 +164,7 @@ type Status
     | Shop Shop.Filter Shop.Model
     | ShopEditor (Maybe String) ShopEditor.Model
     | ShopViewer String ShopViewer.Model
+    | Transfer Int Transfer.Model
 
 
 
@@ -191,6 +193,7 @@ type Msg
     | GotShopEditorMsg ShopEditor.Msg
     | GotUpdatedBalances (Result Http.Error (List Community.Balance))
     | GotShopViewerMsg ShopViewer.Msg
+    | GotTransferScreenMsg Transfer.Msg
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -376,6 +379,11 @@ update msg model =
         ( GotVerifyClaimMsg subMsg, VerifyClaim subModel ) ->
             VerifyClaim.update subMsg subModel
                 >> updateLoggedInUResult VerifyClaim GotVerifyClaimMsg model
+                |> withLoggedIn
+
+        ( GotTransferScreenMsg subMsg, Transfer transferId subModel ) ->
+            Transfer.update subMsg subModel
+                >> updateLoggedInUResult (Transfer transferId) GotTransferScreenMsg model
                 |> withLoggedIn
 
         ( _, _ ) ->
@@ -709,6 +717,11 @@ changeRouteTo maybeRoute model =
                 >> updateStatusWith (ShopViewer saleId) GotShopViewerMsg model
                 |> withLoggedIn (Route.ViewSale saleId)
 
+        Just (Route.Transfer transferId) ->
+            (\l -> Transfer.init l transferId)
+                >> updateStatusWith (Transfer transferId) GotTransferScreenMsg model
+                |> withLoggedIn (Route.Transfer transferId)
+
 
 jsAddressToMsg : List String -> Value -> Maybe Msg
 jsAddressToMsg address val =
@@ -831,6 +844,9 @@ msgToString msg =
         GotShopViewerMsg subMsg ->
             "GotShopViewerMsg" :: ShopViewer.msgToString subMsg
 
+        GotTransferScreenMsg subMsg ->
+            "GotTransferScreenMsg" :: Transfer.msgToString subMsg
+
 
 
 -- VIEW
@@ -932,3 +948,6 @@ view model =
         ShopViewer _ subModel ->
             ShopViewer.view model.session subModel
                 |> viewPage Guest.Shop LoggedIn.Shop GotShopViewerMsg
+
+        Transfer _ subModel ->
+            viewLoggedIn subModel LoggedIn.Other GotTransferScreenMsg Transfer.view

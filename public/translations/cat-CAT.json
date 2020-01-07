@@ -480,5 +480,19 @@
       "primary_approve": "sí, aprova",
       "secondary": "no, cancel·la"
     }
+  },
+  "transfer_result": {
+    "title": "Traspassat",
+    "transfer_success": "Ei, aquesta transferència es va fer amb èxit",
+    "receive_success": "Ei, aquest rebut va tenir èxit",
+    "date": "Data",
+    "message": "Missatge",
+    "community": "Comunitat",
+    "received": "Rebut",
+    "transferred": "Traspassat",
+    "error": {
+      "invalid_id": " no és un ID de transferència vàlid"
+    },
+    "you": "vostè"
   }
 }
