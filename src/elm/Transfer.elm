@@ -58,11 +58,6 @@ type alias Transfer =
     }
 
 
-type alias Cmm =
-    { name : String
-    }
-
-
 type alias TransferUser =
     { avatar : Avatar
     , userName : Maybe String

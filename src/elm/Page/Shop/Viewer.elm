@@ -484,7 +484,7 @@ viewCard ({ shared } as loggedIn) card model =
                         []
 
                   else
-                    viewTransferForm session card Dict.empty model
+                    viewTransferForm loggedIn card Dict.empty model
                 ]
             ]
         ]
