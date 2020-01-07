@@ -31,53 +31,23 @@ import Task
 import Time exposing (Posix)
 import Transfer exposing (Transfer)
 import UpdateResult as UR
+import User exposing (viewName)
 
 
 
 -- INIT
 
 
-init : Session -> Filter -> ( Model, Cmd Msg )
-init session filter =
-    case session of
-        Page.Guest guest ->
-            initGuest guest filter
-
-        Page.LoggedIn loggedIn ->
-            initLoggedIn loggedIn filter
-
-
-initGuest : Guest.Model -> Filter -> ( Model, Cmd Msg )
-initGuest guest filter =
+init : LoggedIn.Model -> Filter -> ( Model, Cmd Msg )
+init loggedIn filter =
     let
         model =
-            initGuestModel guest
-
-        name =
-            Eos.nameQueryUrlParser "bespiral"
-    in
-    ( model
-    , Cmd.batch
-        [ Api.Graphql.query guest.shared
-            (Shop.salesQuery Shop.All name)
-            CompletedSalesLoad
-        , Task.perform GotTime Time.now
-        , Dom.focus "main-content"
-            |> Task.attempt (\_ -> Ignored)
-        ]
-    )
-
-
-initLoggedIn : LoggedIn.Model -> Filter -> ( Model, Cmd Msg )
-initLoggedIn loggedIn filter =
-    let
-        model =
-            initLoggedInModel loggedIn
+            initModel loggedIn filter
     in
     ( model
     , Cmd.batch
         [ Api.Graphql.query loggedIn.shared
-            (Shop.salesQuery Shop.All loggedIn.accountName)
+            (Shop.salesQuery filter loggedIn.accountName)
             CompletedSalesLoad
         , Api.getBalances loggedIn.shared loggedIn.accountName CompletedLoadBalances
         , Task.perform GotTime Time.now
@@ -104,22 +74,16 @@ type alias Model =
     { date : Maybe Posix
     , cards : Status
     , balances : List Balance
+    , filter : Filter
     }
 
 
-initGuestModel : Guest.Model -> Model
-initGuestModel guest =
+initModel : LoggedIn.Model -> Filter -> Model
+initModel loggedIn filter =
     { date = Nothing
     , cards = Loading
     , balances = []
-    }
-
-
-initLoggedInModel : LoggedIn.Model -> Model
-initLoggedInModel loggedIn =
-    { date = Nothing
-    , cards = Loading
-    , balances = []
+    , filter = filter
     }
 
 
@@ -185,52 +149,44 @@ type CardState
 -- VIEW
 
 
-view : Session -> Filter -> Model -> Html Msg
-view session filter model =
-    let
-        shared =
-            Page.toShared session
-    in
+view : LoggedIn.Model -> Model -> Html Msg
+view loggedIn model =
     case model.cards of
         Loading ->
             div []
-                [ Lazy.lazy viewHeader session
+                [ Lazy.lazy viewHeader loggedIn
                 , div [ class "container mx-auto px-4" ]
                     [ Page.fullPageLoading ]
                 ]
 
         LoadingFailed e ->
-            Page.fullPageGraphQLError (t shared.translations "shop.title") e
+            Page.fullPageGraphQLError (t loggedIn.shared.translations "shop.title") e
 
         Loaded cards ->
             div []
-                [ Lazy.lazy viewHeader session
+                [ Lazy.lazy viewHeader loggedIn
                 , div [ class "justify-center px-4" ]
-                    [ viewShopFilter session filter
-                    , Lazy.lazy3 viewGrid session cards model
+                    [ viewShopFilter loggedIn model.filter
+                    , Lazy.lazy3 viewGrid loggedIn cards model
                     ]
                 ]
 
 
-viewHeader : Session -> Html Msg
-viewHeader session =
-    let
-        shared =
-            Page.toShared session
-    in
+viewHeader : LoggedIn.Model -> Html Msg
+viewHeader loggedIn =
     div [ class "w-full flex flex-wrap relative bg-indigo-500 p-4 lg:container lg:mx-auto lg:py-12" ]
         [ div [ class "w-full lg:w-1/2" ]
             [ p [ class "text-white w-full text-xl font-medium mb-4 lg:mx-8 lg:text-xs lg:font-light lg:mb-2 lg:uppercase" ]
-                [ text (t shared.translations "shop.title") ]
+                [ text (t loggedIn.shared.translations "shop.title") ]
             , p [ class "hidden lg:visible lg:flex text-white text-3xl lg:mx-8 lg:mb-4 font-medium" ]
-                [ text (t shared.translations "shop.subtitle") ]
+                [ text (t loggedIn.shared.translations "shop.subtitle") ]
             , p [ class "hidden lg:visible lg:flex text-white lg:mx-8 font-light text-sm" ]
-                [ text (t shared.translations "shop.description") ]
+                [ text (t loggedIn.shared.translations "shop.description") ]
             , a
                 [ Route.href Route.NewSale
                 , class "button button-primary button-small w-full lg:w-64 lg:mx-8 lg:mt-6 lg:button-medium font-medium"
                 ]
-                [ text (t shared.translations "shop.create_offer") ]
+                [ text (t loggedIn.shared.translations "shop.create_offer") ]
             ]
         , div [ class "hidden lg:visible lg:flex lg:absolute lg:w-1/2 lg:right-0 lg:bottom-0" ]
             [ img [ src "/images/shop.svg" ] []
@@ -238,16 +194,13 @@ viewHeader session =
         ]
 
 
-viewShopFilter : Session -> Filter -> Html Msg
-viewShopFilter session filter =
+viewShopFilter : LoggedIn.Model -> Filter -> Html Msg
+viewShopFilter loggedIn filter =
     let
-        shared =
-            Page.toShared session
-
         translations =
-            ( t shared.translations "shop.my_communities_offers"
-            , t shared.translations "shop.all_offers"
-            , t shared.translations "shop.my_offers"
+            ( t loggedIn.shared.translations "shop.my_communities_offers"
+            , t loggedIn.shared.translations "shop.all_offers"
+            , t loggedIn.shared.translations "shop.my_offers"
             )
 
         decoder =
@@ -256,38 +209,33 @@ viewShopFilter session filter =
         buttonClass =
             "w-1/2 lg:w-56 border border-purple-500 first:rounded-l last:rounded-r px-12 py-2 text-sm font-light text-gray"
     in
-    case session of
-        Page.LoggedIn loggedIn ->
-            div [ class "flex my-8 lg:my-16 lg:mx-auto lg:w-1/2" ]
-                [ button
-                    [ class buttonClass
-                    , classList [ ( "bg-purple-500 text-white", filter == Shop.All ) ]
-                    , value (t shared.translations "shop.all_offers")
-                    , onClick (ClickedFilter Shop.All)
-                    ]
-                    [ text (t shared.translations "shop.all_offers") ]
-                , button
-                    [ class buttonClass
-                    , classList [ ( "bg-purple-500 text-white", filter == Shop.UserSales ) ]
-                    , value (t shared.translations "shop.my_offers")
-                    , onClick (ClickedFilter Shop.UserSales)
-                    ]
-                    [ text (t shared.translations "shop.my_offers") ]
-                ]
-
-        _ ->
-            text ""
+    div [ class "flex my-8 lg:my-16 lg:mx-auto lg:w-1/2" ]
+        [ button
+            [ class buttonClass
+            , classList [ ( "bg-purple-500 text-white", filter == Shop.All ) ]
+            , value (t loggedIn.shared.translations "shop.all_offers")
+            , onClick (ClickedFilter Shop.All)
+            ]
+            [ text (t loggedIn.shared.translations "shop.all_offers") ]
+        , button
+            [ class buttonClass
+            , classList [ ( "bg-purple-500 text-white", filter == Shop.UserSales ) ]
+            , value (t loggedIn.shared.translations "shop.my_offers")
+            , onClick (ClickedFilter Shop.UserSales)
+            ]
+            [ text (t loggedIn.shared.translations "shop.my_offers") ]
+        ]
 
 
 
 -- VIEW GRID
 
 
-viewGrid : Session -> List Card -> Model -> Html Msg
-viewGrid session cards model =
+viewGrid : LoggedIn.Model -> List Card -> Model -> Html Msg
+viewGrid loggedIn cards model =
     let
         v_ viewFn index card =
-            viewFn model session index card
+            viewFn model loggedIn index card
     in
     div [ class "flex flex-wrap -mx-2" ]
         (List.indexedMap
@@ -300,14 +248,14 @@ viewGrid session cards model =
         )
 
 
-viewCard : Model -> Session -> Int -> Card -> Html Msg
-viewCard model session index card =
+viewCard : Model -> LoggedIn.Model -> Int -> Card -> Html Msg
+viewCard model loggedIn index card =
     let
         image =
             Maybe.withDefault "" card.sale.image
 
         imageUrl =
-            getIpfsUrl session ++ "/" ++ image
+            loggedIn.shared.endpoints.ipfs ++ "/" ++ image
 
         maybeBal =
             LE.find (\bal -> bal.asset.symbol == card.sale.symbol) model.balances
@@ -323,16 +271,8 @@ viewCard model session index card =
         currBalance =
             String.fromFloat symbolBalance ++ " " ++ Eos.symbolToString card.sale.symbol
 
-        shared =
-            case session of
-                LoggedIn a ->
-                    a.shared
-
-                Guest a ->
-                    a.shared
-
         tr r_id replaces =
-            I18Next.tr shared.translations I18Next.Curly r_id replaces
+            I18Next.tr loggedIn.shared.translations I18Next.Curly r_id replaces
 
         title =
             if String.length card.sale.title > 17 then
@@ -354,6 +294,8 @@ viewCard model session index card =
                 ]
             , div [ class "px-4 pb-2 flex flex-wrap w-3/4" ]
                 [ p [ class "font-medium pt-2 w-full h-12" ] [ text card.sale.title ]
+
+                -- , viewName loggedIn.accountName shared.translations card.sale.creator
                 , div [ class "w-full" ]
                     [ span [ class "bg-black text-white text-xs uppercase px-1 py-1 rounded" ]
                         [ text creatorId ]
@@ -362,7 +304,7 @@ viewCard model session index card =
                     [ if card.sale.units == 0 && card.sale.trackStock then
                         div [ class "w-full" ]
                             [ p [ class "text-3xl text-red" ]
-                                [ text (t shared.translations "shop.out_of_stock")
+                                [ text (t loggedIn.shared.translations "shop.out_of_stock")
                                 ]
                             ]
 
@@ -383,7 +325,7 @@ viewCard model session index card =
             ]
             [ div [ class "w-full relative bg-gray-500" ]
                 [ img [ class "w-full h-48 object-cover", src imageUrl ] []
-                , Avatar.view (getIpfsUrl session) card.sale.creator.avatar "absolute right-1 bottom-1 h-10 w-10 shop__avatar"
+                , Avatar.view loggedIn.shared.endpoints.ipfs card.sale.creator.avatar "absolute right-1 bottom-1 h-10 w-10 shop__avatar"
                 ]
             , div [ class "w-full px-6 pt-4" ]
                 [ p [ class "text-xl" ] [ text title ]
@@ -400,7 +342,7 @@ viewCard model session index card =
             , if card.sale.units == 0 && card.sale.trackStock then
                 div [ class "border-t border-gray-300 flex flex-none w-full px-6 pb-2" ]
                     [ p [ class "text-3xl text-red" ]
-                        [ text (t shared.translations "shop.out_of_stock")
+                        [ text (t loggedIn.shared.translations "shop.out_of_stock")
                         ]
                     ]
 

@@ -696,10 +696,8 @@ changeRouteTo maybeRoute model =
                 |> withLoggedIn Route.Communities
 
         Just (Route.Shop maybeFilter) ->
-            (\_ ->
-                Shop.init session maybeFilter
-                    |> updateStatusWith (Shop maybeFilter) GotShopMsg model
-            )
+            (\l -> Shop.init l maybeFilter)
+                >> updateStatusWith (Shop maybeFilter) GotShopMsg model
                 |> withLoggedIn (Route.Shop maybeFilter)
 
         Just Route.NewSale ->
@@ -939,8 +937,7 @@ view model =
             viewLoggedIn subModel LoggedIn.Profile GotProfileMsg Profile.view
 
         Shop maybeFilter subModel ->
-            Shop.view model.session maybeFilter subModel
-                |> viewPage Guest.Shop LoggedIn.Shop GotShopMsg
+            viewLoggedIn subModel LoggedIn.Shop GotShopMsg Shop.view
 
         ShopEditor _ subModel ->
             viewLoggedIn subModel LoggedIn.Other GotShopEditorMsg ShopEditor.view
