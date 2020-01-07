@@ -27,27 +27,28 @@ selectionSet =
 
 view : String -> Eos.Name -> Translations -> User -> Html msg
 view ipfsUrl loggedInAccount translations user =
-    div []
-        [ div [ class "w-8 h-8 rounded-full mx-auto" ]
+    div [ class "flex flex-col items-center" ]
+        [ div [ class "w-10 h-10 rounded-full" ]
             [ Avatar.view ipfsUrl user.avatar "w-10 h-10"
             ]
-        , div [ class "px-6 py-4" ]
-            [ viewName loggedInAccount translations user
-            ]
+        , div [ class "mt-2" ]
+            [ viewName loggedInAccount translations user ]
         ]
 
 
 viewName : Eos.Name -> Translations -> User -> Html msg
 viewName loggedInAccount translations user =
-    div [ class "inline-block bg-black rounded px-3 py-1 text-xs uppercase font-medium text-white" ]
-        [ if user.account == loggedInAccount then
-            text (I18Next.t translations "transfer_result.you")
+    div [ class "flex items-center bg-black rounded p-1" ]
+        [ p [ class "mx-2 pt-caption uppercase font-medium text-white text-caption" ]
+            [ if user.account == loggedInAccount then
+                text (I18Next.t translations "transfer_result.you")
 
-          else
-            case user.userName of
-                Just username ->
-                    text username
+              else
+                case user.userName of
+                    Just username ->
+                        text username
 
-                Nothing ->
-                    Eos.viewName user.account
+                    Nothing ->
+                        Eos.viewName user.account
+            ]
         ]

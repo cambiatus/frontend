@@ -198,8 +198,7 @@ viewShopFilter : LoggedIn.Model -> Filter -> Html Msg
 viewShopFilter loggedIn filter =
     let
         translations =
-            ( t loggedIn.shared.translations "shop.my_communities_offers"
-            , t loggedIn.shared.translations "shop.all_offers"
+            ( t loggedIn.shared.translations "shop.all_offers"
             , t loggedIn.shared.translations "shop.my_offers"
             )
 
@@ -249,13 +248,13 @@ viewGrid loggedIn cards model =
 
 
 viewCard : Model -> LoggedIn.Model -> Int -> Card -> Html Msg
-viewCard model loggedIn index card =
+viewCard model ({ shared } as loggedIn) index card =
     let
         image =
             Maybe.withDefault "" card.sale.image
 
         imageUrl =
-            loggedIn.shared.endpoints.ipfs ++ "/" ++ image
+            shared.endpoints.ipfs ++ "/" ++ image
 
         maybeBal =
             LE.find (\bal -> bal.asset.symbol == card.sale.symbol) model.balances
@@ -272,7 +271,7 @@ viewCard model loggedIn index card =
             String.fromFloat symbolBalance ++ " " ++ Eos.symbolToString card.sale.symbol
 
         tr r_id replaces =
-            I18Next.tr loggedIn.shared.translations I18Next.Curly r_id replaces
+            I18Next.tr shared.translations I18Next.Curly r_id replaces
 
         title =
             if String.length card.sale.title > 17 then
@@ -292,19 +291,14 @@ viewCard model loggedIn index card =
             [ div [ class "w-1/4" ]
                 [ img [ class "rounded-l-lg object-cover h-32 w-full", src imageUrl ] []
                 ]
-            , div [ class "px-4 pb-2 flex flex-wrap w-3/4" ]
-                [ p [ class "font-medium pt-2 w-full h-12" ] [ text card.sale.title ]
-
-                -- , viewName loggedIn.accountName shared.translations card.sale.creator
-                , div [ class "w-full" ]
-                    [ span [ class "bg-black text-white text-xs uppercase px-1 py-1 rounded" ]
-                        [ text creatorId ]
-                    ]
+            , div [ class "px-4 pb-2 flex flex-wrap" ]
+                [ p [ class "font-medium pt-2 w-full" ] [ text card.sale.title ]
+                , viewName loggedIn.accountName shared.translations card.sale.creator
                 , div [ class "h-16 w-full flex flex-wrap items-end" ]
                     [ if card.sale.units == 0 && card.sale.trackStock then
                         div [ class "w-full" ]
                             [ p [ class "text-3xl text-red" ]
-                                [ text (t loggedIn.shared.translations "shop.out_of_stock")
+                                [ text (t shared.translations "shop.out_of_stock")
                                 ]
                             ]
 
@@ -325,13 +319,10 @@ viewCard model loggedIn index card =
             ]
             [ div [ class "w-full relative bg-gray-500" ]
                 [ img [ class "w-full h-48 object-cover", src imageUrl ] []
-                , Avatar.view loggedIn.shared.endpoints.ipfs card.sale.creator.avatar "absolute right-1 bottom-1 h-10 w-10 shop__avatar"
+                , div [ class "absolute right-1 bottom-1 " ] [ User.view shared.endpoints.ipfs loggedIn.accountName shared.translations card.sale.creator ]
                 ]
             , div [ class "w-full px-6 pt-4" ]
                 [ p [ class "text-xl" ] [ text title ]
-                ]
-            , div [ class "w-full" ]
-                [ span [ class "bg-black text-white text-sm uppercase px-1 py-1 rounded" ] [ text creatorId ]
                 ]
             , div [ class "flex flex-none items-center pt-3 px-6 pb-4" ]
                 [ Icons.thumbUp "text-indigo-500"
@@ -356,28 +347,6 @@ viewCard model loggedIn index card =
                     [ text (tr "account.my_wallet.your_current_balance" [ ( "balance", currBalance ) ]) ]
                 ]
             ]
-        ]
-
-
-viewCardWithHeader : Model -> Session -> Card -> List (Html Msg) -> Html Msg
-viewCardWithHeader model session card content =
-    a
-        [ class "w-full sm:w-1/2 lg:w-1/2 xl:w-1/3 py-2 px-2"
-        , Route.href (Route.ViewSale (String.fromInt card.sale.id))
-        ]
-        [ div
-            [ classList
-                [ ( "card", True )
-                , ( "card--shop", True )
-                ]
-            ]
-            ([ div [ class "card__header__mobile" ]
-                [ viewHeaderBackground session card
-                , viewHeaderAvatarTitle model session card
-                ]
-             ]
-                ++ content
-            )
         ]
 
 
@@ -410,149 +379,6 @@ viewHeaderBackground session card =
             [ class "sale__more__details"
             ]
             [ text "MORE DETAILS" ]
-        ]
-
-
-viewHeaderAvatarTitle : Model -> Session -> Card -> Html Msg
-viewHeaderAvatarTitle model session { sale } =
-    let
-        ipfsUrl =
-            getIpfsUrl session
-
-        saleSymbol =
-            Eos.symbolToString sale.symbol
-
-        balances =
-            model.balances
-
-        maybeBal =
-            LE.find (\bal -> bal.asset.symbol == sale.symbol) balances
-
-        symbolBalance =
-            case maybeBal of
-                Just b ->
-                    b.asset.amount
-
-                Nothing ->
-                    0.0
-
-        balanceString =
-            let
-                currBalance =
-                    String.fromFloat symbolBalance ++ " " ++ saleSymbol
-            in
-            currBalance
-
-        shared =
-            case session of
-                LoggedIn a ->
-                    a.shared
-
-                Guest a ->
-                    a.shared
-
-        tr r_id replaces =
-            I18Next.tr shared.translations I18Next.Curly r_id replaces
-    in
-    div [ class "shop__header" ]
-        [ Avatar.view ipfsUrl sale.creator.avatar "shop__avatar"
-        , div [ class "shop__title-text" ]
-            [ h3 [ class "shop__title" ] [ text sale.title ]
-            , div [ class "shop__sale__price" ]
-                [ p [ class "sale__amount" ] [ text (String.fromFloat sale.price) ]
-                , p [ class "sale__symbol" ] [ text saleSymbol ]
-                ]
-            , p [ class "shop__balance" ]
-                [ text (tr "account.my_wallet.your_current_balance" [ ( "balance", balanceString ) ]) ]
-            ]
-        ]
-
-
-viewCardTransfer : Bool -> Model -> Session -> Int -> Card -> Html Msg
-viewCardTransfer isDisabled model session cardIndex card =
-    let
-        shared =
-            Page.toShared session
-
-        text_ str =
-            text (t shared.translations str)
-
-        plchdr str =
-            placeholder (t shared.translations str)
-
-        quantInputId =
-            "shop-quantity-input-" ++ String.fromInt cardIndex
-
-        memoInputId =
-            "shop-memo-input-" ++ String.fromInt cardIndex
-    in
-    Html.form
-        [ classList
-            [ ( "card", True )
-            , ( "card--shop", True )
-            , ( "card--shop--transfer", True )
-            ]
-        , onSubmit (ClickedSendTransfer card cardIndex)
-        ]
-        [ viewHeaderBackground session card
-        , viewHeaderAvatarTitle model session card
-        , div [ class "form-field" ]
-            [ label [ for quantInputId ] [ text_ "shop.units_label" ]
-            , input
-                [ id quantInputId
-                , class "input input--quantity"
-                , type_ "number"
-                , Html.Attributes.pattern "[0-9]*"
-                , value card.form.unit
-                , onInput (EnteredQuantity cardIndex)
-                , Html.Attributes.min "0"
-                , Html.Attributes.max (String.fromInt card.sale.units)
-                , required True
-                , disabled isDisabled
-                , plchdr "account.my_wallet.transfer.amount_placeholder"
-                ]
-                []
-            , if card.form.unitValidation == Valid then
-                text ""
-
-              else
-                span [ class "field-error" ]
-                    [ text (getValidationMessage card.form.unitValidation) ]
-            ]
-        , div [ class "form-field" ]
-            [ label [ for memoInputId ] [ text_ "account.my_wallet.transfer.memo" ]
-            , input
-                [ id memoInputId
-                , class "input"
-                , type_ "text"
-                , plchdr "account.my_wallet.transfer.memo_placeholder"
-                , value card.form.memo
-                , onInput (EnteredMemo cardIndex)
-                , required True
-                , disabled isDisabled
-                ]
-                []
-            , if card.form.memoValidation == Valid then
-                text ""
-
-              else
-                span [ class "field-error" ]
-                    [ text (getValidationMessage card.form.memoValidation) ]
-            ]
-        , div [ class "card__button-row" ]
-            [ button
-                [ class "btn btn--outline btn--primary"
-                , onClick (ClickedCancelTransfer cardIndex)
-                , disabled isDisabled
-                , type_ "button"
-                ]
-                [ text_ "menu.cancel" ]
-            , button
-                [ class "btn btn--primary"
-                , disabled isDisabled
-                ]
-                [ text_ "account.my_wallet.transfer.submit" ]
-            ]
         ]
 
 

@@ -83,10 +83,7 @@ parser url =
             (s "shop"
                 <?> Query.map
                         (\filter ->
-                            if String.startsWith "my-communities" filter then
-                                Shop.MyCommunities
-
-                            else if String.startsWith "user" filter then
+                            if String.startsWith "user" filter then
                                 Shop.UserSales
 
                             else
@@ -170,9 +167,6 @@ parseRedirect url maybeQuery =
 shopFilterToString : Shop.Filter -> String
 shopFilterToString filter =
     case filter of
-        Shop.MyCommunities ->
-            "my-communities"
-
         Shop.All ->
             "all"
 

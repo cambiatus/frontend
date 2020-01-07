@@ -47,7 +47,6 @@ type alias SaleId =
 
 type Filter
     = UserSales
-    | MyCommunities
     | All
 
 
@@ -75,14 +74,11 @@ encodeTransferSale t =
         ]
 
 
-decodeTargetValueToFilter : ( String, String, String ) -> Decoder Filter
-decodeTargetValueToFilter ( communities, all, user ) =
+decodeTargetValueToFilter : ( String, String ) -> Decoder Filter
+decodeTargetValueToFilter ( all, user ) =
     let
         transform val =
-            if val == communities then
-                Decode.succeed MyCommunities
-
-            else if val == all then
+            if val == all then
                 Decode.succeed All
 
             else if val == user then
@@ -136,18 +132,6 @@ salesQuery filter accName =
 
                 args =
                     { input = { account = Present accString, all = Absent, communities = Absent } }
-            in
-            Bespiral.Query.sales
-                args
-                salesSelection
-
-        MyCommunities ->
-            let
-                accString =
-                    Eos.nameToString accName
-
-                args =
-                    { input = { account = Absent, all = Absent, communities = Present accString } }
             in
             Bespiral.Query.sales
                 args

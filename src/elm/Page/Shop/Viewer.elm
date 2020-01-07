@@ -266,7 +266,7 @@ update msg model user =
                                             ]
                                         }
                                 }
-                            |> UR.addCmd (Route.replaceUrl user.shared.navKey (Route.Shop Shop.MyCommunities))
+                            |> UR.addCmd (Route.replaceUrl user.shared.navKey (Route.Shop Shop.All))
 
                     False ->
                         model
@@ -383,7 +383,7 @@ viewHeader session title =
     div [ class "h-16 w-full bg-indigo-500 flex px-4 items-center" ]
         [ a
             [ class "items-center flex"
-            , Route.href (Route.Shop Shop.MyCommunities)
+            , Route.href (Route.Shop Shop.All)
             ]
             [ Icons.back ""
             , p [ class "text-white text-sm ml-2" ]
@@ -435,7 +435,8 @@ viewCard session card model =
         tr r_id replaces =
             I18Next.tr shared.translations I18Next.Curly r_id replaces
 
-        creatorId = Eos.nameToString card.sale.creatorId
+        creatorId =
+            Eos.nameToString card.sale.creatorId
     in
     div [ class "flex flex-wrap" ]
         [ div [ class "w-full md:w-1/2 p-4 flex justify-center" ]
@@ -448,10 +449,10 @@ viewCard session card model =
         , div [ class "w-full md:w-1/2 flex flex-wrap bg-white p-4" ]
             [ div [ class "font-medium text-3xl w-full" ] [ text card.sale.title ]
             , div [ class "text-gray w-full md:text-sm" ] [ text card.sale.description ]
-            , div [ class "w-full"] 
-                      [ span [class "bg-black text-white text-xs uppercase px-1 py-1 rounded"] 
-                             [text creatorId]
-                      ]
+            , div [ class "w-full" ]
+                [ span [ class "bg-black text-white text-xs uppercase px-1 py-1 rounded" ]
+                    [ text creatorId ]
+                ]
             , div [ class "flex flex-wrap w-full" ]
                 [ div [ class "w-full md:w-1/4" ]
                     [ div [ class "flex items-center" ]
@@ -598,7 +599,7 @@ viewHeaderAvatarTitle session { sale } =
             I18Next.tr shared.translations I18Next.Curly r_id replaces
     in
     div [ class "shop__header" ]
-        [ Avatar.view ipfsUrl sale.creator.avatar "shop__avatar"
+        [ Avatar.view ipfsUrl sale.creator.avatar ""
         , div [ class "shop__title-text" ]
             [ h3 [ class "shop__title" ] [ text sale.title ]
             , div [ class "shop__sale__price" ]
