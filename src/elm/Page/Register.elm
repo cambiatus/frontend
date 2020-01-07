@@ -382,9 +382,6 @@ digitInput position inputType { form } =
         []
 
 
-onKeyUp : (Int -> msg) -> Attribute msg
-onKeyUp tagger =
-    on "keyup" (Decode.map tagger keyCode)
 
 
 type alias Field =

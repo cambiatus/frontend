@@ -63,6 +63,18 @@ type alias Cmm =
     }
 
 
+type alias TransferUser =
+    { avatar : Avatar
+    , userName : Maybe String
+    , account : Eos.Name
+    }
+
+
+type alias Cmm =
+    { name : String
+    }
+
+
 type alias EdgeTransfer =
     Edge Transfer
 
@@ -96,6 +108,11 @@ encodeEosActionData data =
 
 
 -- GRAPHQL API
+
+
+profileNameSelectionSet : SelectionSet (Maybe String) typeLock -> SelectionSet (Maybe String) typeLock
+profileNameSelectionSet =
+    SelectionSet.map (\t -> t)
 
 
 transferItemSelectionSet : SelectionSet Transfer Bespiral.Object.Transfer
