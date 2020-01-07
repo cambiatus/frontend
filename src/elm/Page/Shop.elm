@@ -205,7 +205,7 @@ view session filter model =
         Loaded cards ->
             div []
                 [ Lazy.lazy viewHeader session
-                , div [ class "container mx-auto px-4" ]
+                , div [ class "justify-center px-4" ]
                     [ viewShopFilter session filter
                     , Lazy.lazy3 viewGrid session cards model
                     ]
@@ -220,15 +220,15 @@ viewHeader session =
     in
     div [ class "w-full flex flex-wrap relative bg-indigo-500 p-4 lg:container lg:mx-auto lg:py-12" ]
         [ div [ class "w-full lg:w-1/2" ]
-            [ p [ class "text-white w-full text-xl font-medium mb-4 lg:mx-8 lg:text-sm lg:font-light lg:mb-2 lg:uppercase" ]
+            [ p [ class "text-white w-full text-xl font-medium mb-4 lg:mx-8 lg:text-xs lg:font-light lg:mb-2 lg:uppercase" ]
                 [ text (t shared.translations "shop.title") ]
-            , p [ class "hidden lg:visible lg:flex text-white text-3xl lg:mx-8 lg:mb-4" ]
+            , p [ class "hidden lg:visible lg:flex text-white text-3xl lg:mx-8 lg:mb-4 font-medium" ]
                 [ text (t shared.translations "shop.subtitle") ]
-            , p [ class "hidden lg:visible lg:flex text-white lg:mx-8 font-light" ]
+            , p [ class "hidden lg:visible lg:flex text-white lg:mx-8 font-light text-sm" ]
                 [ text (t shared.translations "shop.description") ]
             , a
                 [ Route.href Route.NewSale
-                , class "button button-primary button-small w-full lg:w-64 lg:mx-8 lg:mt-6 lg:button-medium"
+                , class "button button-primary button-small w-full lg:w-64 lg:mx-8 lg:mt-6 lg:button-medium font-medium"
                 ]
                 [ text (t shared.translations "shop.create_offer") ]
             ]
@@ -249,14 +249,30 @@ viewShopFilter session filter =
             , t shared.translations "shop.all_offers"
             , t shared.translations "shop.my_offers"
             )
+
+        decoder =
+            decodeTargetValueToFilter translations
+
+        buttonClass =
+            "w-1/2 lg:w-56 border border-purple-500 first:rounded-l last:rounded-r px-12 py-2 text-sm font-light text-gray"
     in
     case session of
         Page.LoggedIn loggedIn ->
-            div [ class "w-full mt-4 mb-6" ]
-                [ viewShopFilterTab
-                    translations
-                    filter
-                    loggedIn
+            div [ class "flex my-8 lg:my-16 lg:mx-auto lg:w-1/2" ]
+                [ button
+                    [ class buttonClass
+                    , classList [ ( "bg-purple-500 text-white", filter == Shop.All ) ]
+                    , value (t shared.translations "shop.all_offers")
+                    , onClick (ClickedFilter Shop.All)
+                    ]
+                    [ text (t shared.translations "shop.all_offers") ]
+                , button
+                    [ class buttonClass
+                    , classList [ ( "bg-purple-500 text-white", filter == Shop.UserSales ) ]
+                    , value (t shared.translations "shop.my_offers")
+                    , onClick (ClickedFilter Shop.UserSales)
+                    ]
+                    [ text (t shared.translations "shop.my_offers") ]
                 ]
 
         _ ->
@@ -325,7 +341,8 @@ viewCard model session index card =
             else
                 card.sale.title
 
-        creatorId = Eos.nameToString card.sale.creatorId
+        creatorId =
+            Eos.nameToString card.sale.creatorId
     in
     a
         [ class "w-full sm:w-full md:w-1/2 lg:w-1/3 xl:w-1/4 px-2 mb-6"
@@ -337,10 +354,10 @@ viewCard model session index card =
                 ]
             , div [ class "px-4 pb-2 flex flex-wrap w-3/4" ]
                 [ p [ class "font-medium pt-2 w-full h-12" ] [ text card.sale.title ]
-                , div [ class "w-full"] 
-                      [ span [class "bg-black text-white text-xs uppercase px-1 py-1 rounded"] 
-                             [text creatorId]
-                      ]
+                , div [ class "w-full" ]
+                    [ span [ class "bg-black text-white text-xs uppercase px-1 py-1 rounded" ]
+                        [ text creatorId ]
+                    ]
                 , div [ class "h-16 w-full flex flex-wrap items-end" ]
                     [ if card.sale.units == 0 && card.sale.trackStock then
                         div [ class "w-full" ]
@@ -371,8 +388,8 @@ viewCard model session index card =
             , div [ class "w-full px-6 pt-4" ]
                 [ p [ class "text-xl" ] [ text title ]
                 ]
-            , div [class "w-full"] [
-                span [class "bg-black text-white text-sm uppercase px-1 py-1 rounded"] [text creatorId]
+            , div [ class "w-full" ]
+                [ span [ class "bg-black text-white text-sm uppercase px-1 py-1 rounded" ] [ text creatorId ]
                 ]
             , div [ class "flex flex-none items-center pt-3 px-6 pb-4" ]
                 [ Icons.thumbUp "text-indigo-500"
@@ -507,58 +524,6 @@ viewHeaderAvatarTitle model session { sale } =
                 [ text (tr "account.my_wallet.your_current_balance" [ ( "balance", balanceString ) ]) ]
             ]
         ]
-
-
-viewShopFilterButtons : ( String, String, String ) -> ( Route, Route, Route ) -> Maybe Filter -> LoggedIn.Model -> Html Msg
-viewShopFilterButtons translations routes filter loggedIn =
-    let
-        ( communities, all, user ) =
-            translations
-
-        ( rCommunities, rAll, rUser ) =
-            routes
-
-        buttons =
-            [ viewMenuFilterButton
-                (filter == Just Shop.MyCommunities)
-                communities
-                rCommunities
-            , viewMenuFilterButton
-                (filter == Just Shop.All)
-                all
-                rAll
-            , viewMenuFilterButton
-                (filter == Just Shop.UserSales)
-                user
-                rUser
-            ]
-    in
-    viewMenuFilter buttons
-
-
-viewShopFilterTab : ( String, String, String ) -> Filter -> LoggedIn.Model -> Html Msg
-viewShopFilterTab translations filter loggedIn =
-    let
-        ( communities, all, user ) =
-            translations
-
-        decoder =
-            decodeTargetValueToFilter translations
-
-        buttons =
-            [ viewMenuFilterTabButton
-                (filter == Shop.All)
-                ClickedFilter
-                decoder
-                all
-            , viewMenuFilterTabButton
-                (filter == Shop.UserSales)
-                ClickedFilter
-                decoder
-                user
-            ]
-    in
-    viewMenuTab buttons
 
 
 viewCardTransfer : Bool -> Model -> Session -> Int -> Card -> Html Msg
