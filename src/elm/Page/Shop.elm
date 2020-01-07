@@ -31,7 +31,7 @@ import Task
 import Time exposing (Posix)
 import Transfer exposing (Transfer)
 import UpdateResult as UR
-import User exposing (viewName)
+import User exposing (viewNameTag)
 
 
 
@@ -293,7 +293,7 @@ viewCard model ({ shared } as loggedIn) index card =
                 ]
             , div [ class "px-4 pb-2 flex flex-wrap" ]
                 [ p [ class "font-medium pt-2 w-full" ] [ text card.sale.title ]
-                , viewName loggedIn.accountName shared.translations card.sale.creator
+                , viewNameTag loggedIn.accountName card.sale.creator shared.translations
                 , div [ class "h-16 w-full flex flex-wrap items-end" ]
                     [ if card.sale.units == 0 && card.sale.trackStock then
                         div [ class "w-full" ]

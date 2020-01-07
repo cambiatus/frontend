@@ -1,4 +1,4 @@
-module User exposing (User, selectionSet, view, viewName)
+module User exposing (User, selectionSet, view, viewName, viewNameTag)
 
 import Avatar exposing (Avatar)
 import Bespiral.Object
@@ -32,23 +32,27 @@ view ipfsUrl loggedInAccount translations user =
             [ Avatar.view ipfsUrl user.avatar "w-10 h-10"
             ]
         , div [ class "mt-2" ]
-            [ viewName loggedInAccount translations user ]
+            [ viewNameTag loggedInAccount user translations ]
         ]
 
 
-viewName : Eos.Name -> Translations -> User -> Html msg
-viewName loggedInAccount translations user =
+viewNameTag : Eos.Name -> User -> Translations -> Html msg
+viewNameTag loggedInAccount user translations =
     div [ class "flex items-center bg-black rounded p-1" ]
         [ p [ class "mx-2 pt-caption uppercase font-medium text-white text-caption" ]
-            [ if user.account == loggedInAccount then
-                text (I18Next.t translations "transfer_result.you")
-
-              else
-                case user.userName of
-                    Just username ->
-                        text username
-
-                    Nothing ->
-                        Eos.viewName user.account
-            ]
+            [ viewName loggedInAccount user translations ]
         ]
+
+
+viewName : Eos.Name -> User -> Translations -> Html msg
+viewName loggedInAccount user translations =
+    if user.account == loggedInAccount then
+        text (I18Next.t translations "transfer_result.you")
+
+    else
+        case user.userName of
+            Just username ->
+                text username
+
+            Nothing ->
+                Eos.viewName user.account

@@ -943,8 +943,7 @@ view model =
             viewLoggedIn subModel LoggedIn.Other GotShopEditorMsg ShopEditor.view
 
         ShopViewer _ subModel ->
-            ShopViewer.view model.session subModel
-                |> viewPage Guest.Shop LoggedIn.Shop GotShopViewerMsg
+            viewLoggedIn subModel LoggedIn.Shop GotShopViewerMsg ShopViewer.view
 
         Transfer _ subModel ->
             viewLoggedIn subModel LoggedIn.Other GotTransferScreenMsg Transfer.view

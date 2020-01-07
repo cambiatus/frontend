@@ -417,6 +417,7 @@
     "buy_action": "{{accountName}} està COMPRANT",
     "buy": "Comprar",
     "edit": "Edita la meva oferta",
+    "sold_by": "Venut per",
     "transfer": {
       "units_label": "Quantes unitats vol comprar?",
       "quantity_label": "Valor",
