@@ -25,6 +25,7 @@ import Session.Shared exposing (Shared)
 import Shop exposing (Sale)
 import Transfer
 import UpdateResult as UR
+import User
 
 
 
@@ -142,7 +143,6 @@ type Validation
 
 type Msg
     = CompletedSaleLoad (Result (Graphql.Http.Error (Maybe Sale)) (Maybe Sale))
-    | ClickedAsk Sale
     | ClickedBuy Sale
     | ClickedEdit Sale
     | ClickedQuestions Sale
@@ -173,19 +173,6 @@ update msg model user =
                 |> UR.init
                 |> UR.addCmd
                     (Nav.back user.shared.navKey 1)
-
-        ClickedAsk sale ->
-            model
-                |> UR.init
-                |> UR.addPort
-                    { responseAddress = ClickedAsk sale
-                    , responseData = Encode.null
-                    , data =
-                        Encode.object
-                            [ ( "name", Encode.string "openChat" )
-                            , ( "username", Encode.string (Eos.nameToString sale.creatorId) )
-                            ]
-                    }
 
         ClickedQuestions sale ->
             model
@@ -280,7 +267,7 @@ update msg model user =
                                             ]
                                         }
                                 }
-                            |> UR.addCmd (Route.replaceUrl user.shared.navKey (Route.Shop (Just Shop.MyCommunities)))
+                            |> UR.addCmd (Route.replaceUrl user.shared.navKey (Route.Shop Shop.All))
 
                     False ->
                         model
@@ -346,28 +333,24 @@ cardFromSale sale =
     }
 
 
-view : Session -> Model -> Html Msg
-view session model =
-    let
-        shared =
-            Page.toShared session
-    in
+view : LoggedIn.Model -> Model -> Html Msg
+view loggedIn model =
     case model.status of
         LoadingSale id ->
             div []
-                [ Lazy.lazy viewHeader session
+                [ viewHeader loggedIn ""
                 , Page.fullPageLoading
                 ]
 
         InvalidId invalidId ->
             div [ class "container mx-auto px-4" ]
-                [ Lazy.lazy viewHeader session
+                [ viewHeader loggedIn ""
                 , div []
                     [ text (invalidId ++ " is not a valid Sale Id") ]
                 ]
 
         LoadingFailed e ->
-            Page.fullPageGraphQLError (t shared.translations "shop.title") e
+            Page.fullPageGraphQLError (t loggedIn.shared.translations "shop.title") e
 
         LoadedSale maybeSale ->
             case maybeSale of
@@ -377,8 +360,8 @@ view session model =
                             cardFromSale sale
                     in
                     div [ class "" ]
-                        [ Lazy.lazy viewHeader session
-                        , viewCard session cardData model
+                        [ viewHeader loggedIn cardData.sale.title
+                        , viewCard loggedIn cardData model
                         ]
 
                 Nothing ->
@@ -388,209 +371,127 @@ view session model =
                         ]
 
 
-viewHeader : Session -> Html msg
-viewHeader session =
-    let
-        shared =
-            Page.toShared session
-    in
-    div [ class "h-16 w-full bg-indigo-500 mb-4 flex px-4" ]
+viewHeader : LoggedIn.Model -> String -> Html msg
+viewHeader loggedIn title =
+    div [ class "h-16 w-full bg-indigo-500 flex px-4 items-center" ]
         [ a
             [ class "items-center flex"
-            , Route.href (Route.Shop (Just Shop.MyCommunities))
+            , Route.href (Route.Shop Shop.All)
             ]
             [ Icons.back ""
             , p [ class "text-white text-sm ml-2" ]
-                [ text (t shared.translations "back") ]
+                [ text (t loggedIn.shared.translations "back") ]
             ]
+        , p [ class "text-white mx-auto" ] [ text title ]
         ]
 
 
-viewCard : Session -> Card -> Model -> Html Msg
-viewCard session card model =
+viewCard : LoggedIn.Model -> Card -> Model -> Html Msg
+viewCard ({ shared } as loggedIn) card model =
     let
-        account =
-            case session of
-                LoggedIn data ->
-                    Eos.nameToString data.accountName
+        cmmBalance =
+            LE.find (\bal -> bal.asset.symbol == card.sale.symbol) loggedIn.balances
 
-                _ ->
-                    ""
-
-        shared =
-            Page.toShared session
-
-        text_ str =
-            text (t shared.translations str)
-    in
-    viewCardWithHeader session
-        card
-        [ div [ class "sale__info" ]
-            [ div [ class "large__sale__rating" ] []
-            , if card.sale.trackStock then
-                div [ class "large__sale__quantity" ]
-                    [ p [ class "sale__quantity__title" ]
-                        [ text_ "shop.units_available" ]
-                    , p [ class "sale__quantity__text" ]
-                        [ text (String.fromInt card.sale.units) ]
-                    ]
-
-              else
-                text ""
-            ]
-        , if model.viewing == ViewingCard then
-            div [ class "large__card__description" ]
-                [ p [] [ text card.sale.description ] ]
-
-          else
-            viewTransferForm session card Dict.empty model
-        , if Eos.nameToString card.sale.creatorId == account then
-            div [ class "card__button-row" ]
-                [ button
-                    [ class "btn btn--primary"
-                    , onClick (ClickedQuestions card.sale)
-                    ]
-                    [ text "See Questions" ]
-                , button
-                    [ class "btn btn--primary"
-                    , onClick (ClickedEdit card.sale)
-                    ]
-                    [ text "Edit" ]
-                ]
-
-          else if card.sale.units <= 0 && card.sale.trackStock == True then
-            div [ class "sale__out__of__stock" ]
-                [ p [] [ text_ "shop.out_of_stock" ] ]
-
-          else if model.viewing == EditingTransfer then
-            div [ class "card__button-row" ]
-                [ button
-                    [ class "btn btn--primary"
-                    , onClick (ClickedTransfer card.sale)
-                    ]
-                    [ text_ "shop.transfer.submit" ]
-                ]
-
-          else
-            div [ class "card__button-row" ]
-                [ button
-                    [ class "btn btn--primary"
-                    , onClick (ClickedBuy card.sale)
-                    ]
-                    [ text_ "shop.buy" ]
-
-                -- , button
-                --     [ class "btn btn--primary"
-                --     , onClick (ClickedAsk card.sale)
-                --     ]
-                --     [ text_ "shop.ask" ]
-                ]
-        ]
-
-
-viewCardWithHeader : Session -> Card -> List (Html Msg) -> Html Msg
-viewCardWithHeader session card content =
-    div [ class "large__card__container" ]
-        [ div
-            [ class "large__card" ]
-            ([ viewHeaderBackground session card
-             , viewHeaderAvatarTitle session card
-             ]
-                ++ content
-            )
-        ]
-
-
-viewHeaderBackground : Session -> Card -> Html Msg
-viewHeaderBackground session card =
-    let
-        ipfsUrl =
-            getIpfsUrl session
-
-        shared =
-            case session of
-                LoggedIn a ->
-                    a.shared
-
-                Guest a ->
-                    a.shared
-
-        tr r_id replaces =
-            I18Next.tr shared.translations I18Next.Curly r_id replaces
-    in
-    div
-        [ class "shop__background"
-        , style "background-image" ("url(" ++ Maybe.withDefault "/temp/44884525495_2e5c792dd2_z.jpg" (Maybe.map (\img -> ipfsUrl ++ "/" ++ img) card.sale.image) ++ ")")
-        ]
-        []
-
-
-viewHeaderAvatarTitle : Session -> Card -> Html Msg
-viewHeaderAvatarTitle session { sale } =
-    let
-        ipfsUrl =
-            getIpfsUrl session
-
-        saleSymbol =
-            Eos.symbolToString sale.symbol
-
-        balances =
-            case session of
-                LoggedIn sesh ->
-                    sesh.balances
-
-                Guest sesh ->
-                    []
-
-        maybeBal =
-            LE.find (\bal -> bal.asset.symbol == sale.symbol) balances
-
-        symbolBalance =
-            case maybeBal of
+        balance =
+            case cmmBalance of
                 Just b ->
                     b.asset.amount
 
                 Nothing ->
                     0.0
 
-        balanceString =
-            let
-                currBalance =
-                    String.fromFloat symbolBalance ++ " " ++ saleSymbol
-            in
-            currBalance
+        currBalance =
+            String.fromFloat balance ++ " " ++ Eos.symbolToString card.sale.symbol
 
-        ( shared, account ) =
-            case session of
-                LoggedIn a ->
-                    ( a.shared, Eos.nameToString a.accountName )
-
-                Guest a ->
-                    ( a.shared, "" )
+        text_ str =
+            text (t shared.translations str)
 
         tr r_id replaces =
             I18Next.tr shared.translations I18Next.Curly r_id replaces
-    in
-    div [ class "shop__header" ]
-        [ Avatar.view ipfsUrl sale.creator.avatar "shop__avatar"
-        , div [ class "shop__title-text" ]
-            [ h3 [ class "shop__title" ] [ text sale.title ]
-            , div [ class "shop__sale__price" ]
-                [ p [ class "sale__amount" ] [ text (String.fromFloat sale.price) ]
-                , p [ class "sale__symbol" ] [ text saleSymbol ]
-                ]
-            , if Eos.nameToString sale.creatorId == account then
-                text ""
 
-              else
-                p [ class "shop__balance" ]
-                    [ text (tr "account.my_wallet.your_current_balance" [ ( "balance", balanceString ) ]) ]
+        creatorId =
+            Eos.nameToString card.sale.creatorId
+    in
+    div [ class "flex flex-wrap" ]
+        [ div [ class "w-full md:w-1/2 p-4 flex justify-center" ]
+            [ img
+                [ src (shared.endpoints.ipfs ++ "/" ++ Maybe.withDefault "" card.sale.image)
+                , class "object-scale-down w-full h-64"
+                ]
+                []
+            ]
+        , div [ class "w-full md:w-1/2 flex flex-wrap bg-white p-4" ]
+            [ div [ class "font-medium text-3xl w-full" ] [ text card.sale.title ]
+            , div [ class "text-gray w-full md:text-sm" ] [ text card.sale.description ]
+            , div [ class "w-full flex items-center text-sm" ]
+                [ div [ class "mr-4" ] [ Avatar.view shared.endpoints.ipfs card.sale.creator.avatar "h-10 w-10" ]
+                , text_ "shop.sold_by"
+                , p [ class "font-bold ml-1" ] [ User.viewName loggedIn.accountName card.sale.creator shared.translations ]
+                ]
+            , div [ class "flex flex-wrap w-full justify-between items-center" ]
+                [ div [ class "" ]
+                    [ div [ class "flex items-center" ]
+                        [ div [ class "text-2xl text-green font-medium" ] [ text (String.fromFloat card.sale.price) ]
+                        , div [ class "uppercase text-sm font-thin ml-2 text-green" ] [ text (Eos.symbolToString card.sale.symbol) ]
+                        ]
+                    , div [ class "flex" ]
+                        [ div [ class "bg-gray-100 uppercase text-xs px-2" ]
+                            [ text (tr "account.my_wallet.your_current_balance" [ ( "balance", currBalance ) ]) ]
+                        ]
+                    ]
+                , div [ class " mt-6 md:mt-0" ]
+                    [ if card.sale.creatorId == loggedIn.accountName then
+                        div [ class "flex md:justify-end" ]
+                            [ button
+                                [ class "button button-primary w-full"
+                                , onClick (ClickedEdit card.sale)
+                                ]
+                                [ text_ "shop.edit" ]
+                            ]
+
+                      else if card.sale.units <= 0 && card.sale.trackStock == True then
+                        div [ class "flex -mx-2 md:justify-end" ]
+                            [ button
+                                [ disabled True
+                                , class "button button-disabled mx-auto"
+                                ]
+                                [ text_ "shop.out_of_stock" ]
+                            ]
+
+                      else if model.viewing == EditingTransfer then
+                        div [ class "flex md:justify-end" ]
+                            [ button
+                                [ class "button button-primary"
+                                , onClick (ClickedTransfer card.sale)
+                                ]
+                                [ text_ "shop.transfer.submit" ]
+                            ]
+
+                      else
+                        div [ class "flex -mx-2 md:justify-end" ]
+                            [ button
+                                [ class "button button-primary mx-auto"
+                                , onClick (ClickedBuy card.sale)
+                                ]
+                                [ text_ "shop.buy" ]
+                            ]
+                    ]
+                ]
+            , div
+                [ class "w-full flex" ]
+                [ if model.viewing == ViewingCard then
+                    div []
+                        []
+
+                  else
+                    viewTransferForm loggedIn card Dict.empty model
+                ]
             ]
         ]
 
 
-viewTransferForm : Session -> Card -> Dict String FormError -> Model -> Html Msg
-viewTransferForm session card errors model =
+viewTransferForm : LoggedIn.Model -> Card -> Dict String FormError -> Model -> Html Msg
+viewTransferForm ({ shared } as loggedIn) card errors model =
     let
         accountName =
             Eos.nameToString card.sale.creatorId
@@ -598,25 +499,14 @@ viewTransferForm session card errors model =
         form =
             model.form
 
-        shared =
-            Page.toShared session
-
         t =
             I18Next.t shared.translations
 
         saleSymbol =
             Eos.symbolToString card.sale.symbol
 
-        balances =
-            case session of
-                LoggedIn sesh ->
-                    sesh.balances
-
-                Guest sesh ->
-                    []
-
         maybeBal =
-            LE.find (\bal -> bal.asset.symbol == card.sale.symbol) balances
+            LE.find (\bal -> bal.asset.symbol == card.sale.symbol) loggedIn.balances
 
         symbolBalance =
             case maybeBal of
@@ -820,9 +710,6 @@ msgToString msg =
     case msg of
         CompletedSaleLoad r ->
             "CompletedSaleLoad" :: []
-
-        ClickedAsk _ ->
-            [ "ClickedAsk" ]
 
         ClickedBuy _ ->
             [ "ClickedBuy" ]

@@ -59,6 +59,7 @@ type Status
     = LoadingVerification
     | LoadVerification ModalStatus (Maybe Verification)
     | LoadVerificationFailed (Graphql.Http.Error VerificationResponse)
+    | VotingFailed (Maybe Verification)
 
 
 type ModalStatus
@@ -138,6 +139,30 @@ view { accountName, shared } { claimId, status } =
         LoadVerificationFailed err ->
             Page.fullPageGraphQLError (t "error.unknown") err
 
+        VotingFailed maybeVerification ->
+            case maybeVerification of
+                Just verification ->
+                    div
+                        [ class "font-sans" ]
+                        [ viewModal shared.translations Closed verification
+                        , div
+                            [ class "mx-4 mt-4 md:mt-10 md:mx-8 lg:mx-auto pb-4 md:pb-10 bg-white max-w-4xl rounded-lg" ]
+                            [ viewError (t "community.verifyClaim.error")
+                            , viewHeader shared.endpoints.ipfs verification.logo verification.name
+                            , viewStatus shared.translations verification.symbol verification.verifierReward verification.status
+                            , viewInfo shared.translations verification
+                            , viewAction shared.translations verification
+                            ]
+                        ]
+
+                Nothing ->
+                    div
+                        [ class "flex justify-center items-center md:w-full mx-4 mt-4 md:mx-auto md:mt-10 bg-white max-w-4xl rounded-lg" ]
+                        [ p
+                            [ class "font-sans text-body text-black text-center p-8" ]
+                            [ text (t "verify_claim.no_results_found") ]
+                        ]
+
 
 viewModal : Translations -> ModalStatus -> Verification -> Html Msg
 viewModal translations modalStatus verification =
@@ -202,6 +227,12 @@ viewModal translations modalStatus verification =
 
         Closed ->
             text ""
+
+
+viewError : String -> Html Msg
+viewError err =
+    div [ class "bg-red h-10 text-white text-center flex flex-col items-center" ]
+        [ p [ class "my-auto" ] [ text err ] ]
 
 
 viewHeader : String -> String -> String -> Html Msg
@@ -564,9 +595,17 @@ update msg model ({ accountName, shared } as loggedIn) =
                     (Route.replaceUrl shared.navKey Route.Dashboard)
 
         GotVerificationResponse (Err err) ->
-            model
-                |> UR.init
-                |> UR.logDebugValue msg err
+            case model.status of
+                LoadVerification _ maybeVerification ->
+                    { model | status = VotingFailed maybeVerification }
+                        |> UR.init
+                        |> UR.logDebugValue msg err
+
+                _ ->
+                    model
+                        |> UR.init
+                        |> UR.logDebugValue msg err
+                        |> UR.logImpossible msg []
 
 
 encodeVerification : ClaimId -> Eos.Name -> Vote -> Encode.Value

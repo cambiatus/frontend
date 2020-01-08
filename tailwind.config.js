@@ -1,3 +1,5 @@
+const _ = require('lodash')
+
 module.exports = {
   // There are a two different ways of changing tailwind behaviour:
   // 1) Overwriting the default behaviour (this is what 'fontWeight' is doing)
@@ -23,11 +25,16 @@ module.exports = {
         '400': '#bdbdbd',
         '500': '#E7E7E7',
         // '500': '#9e9e9e', // Tailwind original gray-500
-        '600': '#757575',
+        // '600': '#757575',
+        '600': '#9e9e9e', // Tailwind original gray-500
         '700': '#616161',
         '800': '#424242',
         // '900': '#212121' // Tailwind original gray-900
         '900': '#999999'
+      },
+      purple: {
+        '100': '#9B4198',
+        '500': '#45469B'
       },
       'red': '#DB1B1B',
       'yellow': '#FFD200',
@@ -41,14 +48,13 @@ module.exports = {
       'indigo': {
         '100': '#6A6CAA',
         '500': '#45469B'
-      },
-      'purple': '#9B4198'
+      }
     },
     // Customizing BorderRadius sizes
     borderRadius: {
       'none': '0',
       'sm': '.125rem',
-      default: '.25rem',
+      default: '.4rem',
       'lg': '1.25rem',
       'full': '9999px'
     },
@@ -61,6 +67,8 @@ module.exports = {
     },
     // transform keys
     rotate: {
+      '-45': '-45deg',
+      '135': '135deg',
       '180': '180deg'
     },
     extend: {
@@ -162,6 +170,19 @@ module.exports = {
           return `.${e(`last-hover${separator}${className}`)}:last-child:hover`
         })
       })
+    },
+    // class support for rotation
+    function ({ addUtilities, config }) {
+      const rotateUtilities = _.map(config('theme.rotate'), (value, key) => {
+        return {
+          [`.${`rotate-${key}`}`]: {
+            transform: `rotate(${value})`,
+            '-webkit-transform': `rotate(${value})`
+          }
+        }
+      })
+
+      addUtilities(rotateUtilities)
     }
   ]
 }

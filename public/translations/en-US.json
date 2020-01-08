@@ -3,7 +3,7 @@
   "back": "Back",
   "menu": {
     "title": "Menu",
-    "my_communities": "My Communities",
+    "my_communities": "Welcome back,",
     "dashboard": "Dashboard",
     "news": "News",
     "learn": "Learn",
@@ -34,7 +34,8 @@
     "loading": "Loading...",
     "try_again": "Try again",
     "coming_soon": "Coming Soon",
-    "my_account": "My account"
+    "my_account": "My account",
+    "languages": "Languages"
   },
   "error": {
     "validator": {
@@ -339,6 +340,9 @@
       "no": "No, cancel",
       "success": "Claim successful, please wait for approval",
       "failure": "Something went wrong while trying to process your claim, please try again later"
+    },
+    "verifyClaim": {
+      "error": "Something went wrong while trying to process your validation, please try again later"
     }
   },
   "profile": {
@@ -411,7 +415,8 @@
     "offer_action": "{{accountName}} is BUYING",
     "buy_action": "{{accountName}} is SELLING",
     "buy": "Buy",
-    "ask": "Ask",
+    "edit": "Edit my offer",
+    "sold_by": "Sold by",
     "transfer": {
       "units_label": "How many units do you want?",
       "quantity_label": "Value",
@@ -475,5 +480,19 @@
       "primary_approve": "yes, approve",
       "secondary": "no, cancel"
     }
+  },
+  "transfer_result": {
+    "title": "Transferred",
+    "transfer_success": "Transfer completed successfully!",
+    "receive_success": "Successfully received!",
+    "date": "Date",
+    "message": "Message",
+    "community": "Community",
+    "received": "Received",
+    "transferred": "Transferred",
+    "error": {
+      "invalid_id": " is not a valid Transfer Id"
+    },
+    "you": "You"
   }
 }

@@ -28,6 +28,7 @@ import Page.Register as Register
 import Page.Shop as Shop
 import Page.Shop.Editor as ShopEditor
 import Page.Shop.Viewer as ShopViewer
+import Page.Transfer as Transfer
 import Ports
 import Route exposing (Route)
 import Session.Guest as Guest
@@ -160,9 +161,10 @@ type Status
     | Login Login.Model
     | Profile Profile.Model
     | Register (Maybe String) Register.Model
-    | Shop (Maybe Shop.Filter) Shop.Model
+    | Shop Shop.Filter Shop.Model
     | ShopEditor (Maybe String) ShopEditor.Model
     | ShopViewer String ShopViewer.Model
+    | Transfer Int Transfer.Model
 
 
 
@@ -191,6 +193,7 @@ type Msg
     | GotShopEditorMsg ShopEditor.Msg
     | GotUpdatedBalances (Result Http.Error (List Community.Balance))
     | GotShopViewerMsg ShopViewer.Msg
+    | GotTransferScreenMsg Transfer.Msg
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -376,6 +379,11 @@ update msg model =
         ( GotVerifyClaimMsg subMsg, VerifyClaim subModel ) ->
             VerifyClaim.update subMsg subModel
                 >> updateLoggedInUResult VerifyClaim GotVerifyClaimMsg model
+                |> withLoggedIn
+
+        ( GotTransferScreenMsg subMsg, Transfer transferId subModel ) ->
+            Transfer.update subMsg subModel
+                >> updateLoggedInUResult (Transfer transferId) GotTransferScreenMsg model
                 |> withLoggedIn
 
         ( _, _ ) ->
@@ -688,21 +696,9 @@ changeRouteTo maybeRoute model =
                 |> withLoggedIn Route.Communities
 
         Just (Route.Shop maybeFilter) ->
-            case ( session, maybeFilter ) of
-                ( Page.LoggedIn _, Nothing ) ->
-                    ( model
-                    , Shop.UserSales
-                        |> Just
-                        |> Route.Shop
-                        |> Route.replaceUrl shared.navKey
-                    )
-
-                _ ->
-                    (\_ ->
-                        Shop.init session maybeFilter
-                            |> updateStatusWith (Shop maybeFilter) GotShopMsg model
-                    )
-                        |> withLoggedIn (Route.Shop maybeFilter)
+            (\l -> Shop.init l maybeFilter)
+                >> updateStatusWith (Shop maybeFilter) GotShopMsg model
+                |> withLoggedIn (Route.Shop maybeFilter)
 
         Just Route.NewSale ->
             ShopEditor.initCreate
@@ -718,6 +714,11 @@ changeRouteTo maybeRoute model =
             (\l -> ShopViewer.init l saleId)
                 >> updateStatusWith (ShopViewer saleId) GotShopViewerMsg model
                 |> withLoggedIn (Route.ViewSale saleId)
+
+        Just (Route.Transfer transferId) ->
+            (\l -> Transfer.init l transferId)
+                >> updateStatusWith (Transfer transferId) GotTransferScreenMsg model
+                |> withLoggedIn (Route.Transfer transferId)
 
 
 jsAddressToMsg : List String -> Value -> Maybe Msg
@@ -841,6 +842,9 @@ msgToString msg =
         GotShopViewerMsg subMsg ->
             "GotShopViewerMsg" :: ShopViewer.msgToString subMsg
 
+        GotTransferScreenMsg subMsg ->
+            "GotTransferScreenMsg" :: Transfer.msgToString subMsg
+
 
 
 -- VIEW
@@ -933,12 +937,13 @@ view model =
             viewLoggedIn subModel LoggedIn.Profile GotProfileMsg Profile.view
 
         Shop maybeFilter subModel ->
-            Shop.view model.session maybeFilter subModel
-                |> viewPage Guest.Shop LoggedIn.Shop GotShopMsg
+            viewLoggedIn subModel LoggedIn.Shop GotShopMsg Shop.view
 
         ShopEditor _ subModel ->
             viewLoggedIn subModel LoggedIn.Other GotShopEditorMsg ShopEditor.view
 
         ShopViewer _ subModel ->
-            ShopViewer.view model.session subModel
-                |> viewPage Guest.Shop LoggedIn.Shop GotShopViewerMsg
+            viewLoggedIn subModel LoggedIn.Shop GotShopViewerMsg ShopViewer.view
+
+        Transfer _ subModel ->
+            viewLoggedIn subModel LoggedIn.Other GotTransferScreenMsg Transfer.view

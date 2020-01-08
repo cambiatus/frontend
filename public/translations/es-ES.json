@@ -3,7 +3,7 @@
   "back": "Volver",
   "menu": {
     "title": "Menu",
-    "my_communities": "Mis Comunidades",
+    "my_communities": "Bienvenido de nuevo, ",
     "dashboard": "Inicio",
     "news": "Noticias",
     "learn": "Aprende",
@@ -34,7 +34,8 @@
     "loading": "Cargando...",
     "try_again": "Intenta de nuevo",
     "coming_soon": "Próximamente",
-    "my_account": "Mi cuenta"
+    "my_account": "Mi cuenta",
+    "languages": "Idiomas"
   },
   "error": {
     "validator": {
@@ -339,7 +340,10 @@
       "no": "No, cancelar",
       "success": "Reclamación exitosa, espere la aprobación",
       "failure": "Se produjo un error al intentar procesar su reclamo. Vuelva a intentarlo más tarde."
-    }
+    },
+    "verifyClaim": {
+      "error": "Se produjo un error al intentar procesar la validación. Vuelve a intentarlo más tarde."
+     }
   },
   "profile": {
     "title": "Mi perfil",
@@ -411,7 +415,8 @@
     "offer_action": "{{accountName}} esta VENDIENDO",
     "buy_action": "{{accountName}} está COMPRANDO",
     "buy": "Comprar",
-    "ask": "Preguntar",
+    "edit": "Editar mi oferta",
+    "sold_by": "Vendido por",
     "transfer": {
       "units_label": "¿Cuántas unidades quiere comprar?",
       "quantity_label": "Valor",
@@ -475,5 +480,19 @@
       "primary_approve": "sí, aprobar",
       "secondary": "no, cancelar"
     }
+  },
+  "transfer_result": {
+    "title": "Transferida",
+    "transfer_success": "Transferencia exitosa!",
+    "receive_success": "Recibido con éxito!",
+    "date": "Fecha",
+    "message": "Mensaje",
+    "community": "Comunidad",
+    "received": "Recibida",
+    "transferred": "Transferida",
+    "error": {
+      "invalid_id": " no es un ID de transferencia válido"
+    },
+    "you": "tú"
   }
 }

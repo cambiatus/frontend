@@ -3,8 +3,8 @@
   "back": "Voltar",
   "menu": {
     "title": "Menu",
-    "my_communities": "Minhas Comunidades",
-    "dashboard": "Dashboard",
+    "my_communities": "Bem vindo de volta, ",
+    "dashboard": "Painel",
     "news": "Novidades",
     "learn": "Aprender",
     "shop": "Loja",
@@ -23,7 +23,7 @@
     "explore": "Explorar",
     "communities": "Comunidades",
     "welcome_message": "Olá, {{user_name}} ",
-    "back_to_dashboard": "Voltar para Dashboard",
+    "back_to_dashboard": "Voltar para o painel",
     "edit": "Editar",
     "cancel": "Cancelar",
     "save": "Salvar",
@@ -34,7 +34,8 @@
     "loading": "Carregando...",
     "try_again": "Tente novamente",
     "coming_soon": "Em Breve",
-    "my_account": "Minha conta"
+    "my_account": "Minha conta",
+    "languages": "Linguagens"
   },
   "error": {
     "validator": {
@@ -343,6 +344,9 @@
       "no": "Não, cancelar",
       "success": "Reinvidicação concluída, aguarde as aprovações",
       "failure": "Algo deu errado ao tentar realizar sua reinvidicação, tente novamente mais tarde"
+    },
+    "verifyClaim": {
+      "error": "Ocorreu um erro ao tentar processar sua validação. Tente novamente mais tarde"
     }
   },
   "profile": {
@@ -415,7 +419,8 @@
     "offer_action": "{{accountName}} está VENDENDO",
     "buy_action": "{{accountName}} COMPRANDO",
     "buy": "Comprar",
-    "ask": "Perguntar",
+    "edit": "Editar minha oferta",
+    "sold_by": "Vendido por",
     "transfer": {
       "units_label": "Quantas unidades você quer?",
       "quantity_label": "Valor",
@@ -479,5 +484,19 @@
       "primary_approve": "sim, aprovar",
       "secondary": "não, cancelar"
     }
+  },
+  "transfer_result": {
+    "title": "Transferido",
+    "transfer_success": "Transferência realizada com sucesso!",
+    "receive_success": "Recebido com sucesso!",
+    "date": "Data",
+    "message": "mensagem",
+    "community": "Comunidade",
+    "received": "Recebida",
+    "transferred": "Transferido",
+    "error": {
+      "invalid_id": " não é um ID de transferência válido"
+    },
+    "you": "você"
   }
 }

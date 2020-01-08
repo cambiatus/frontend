@@ -1,4 +1,4 @@
-module Page exposing (ExternalMsg(..), Msg, Session(..), errorToString, fullPageError, fullPageGraphQLError, fullPageLoading, fullPageNotFound, init, isLoggedIn, jsAddressToMsg, labelWithTooltip, loading, login, logout, msgToString, onFileChange, subscriptions, toShared, update, viewButtonNew, viewCardEmpty, viewCardList, viewDateDistance, viewGuest, viewLoggedIn, viewMaxTwoColumn, viewMenuFilter, viewMenuFilterButton, viewMenuFilterDropdown, viewMenuFilterDropdownOption, viewTitle)
+module Page exposing (ExternalMsg(..), Msg, Session(..), errorToString, fullPageError, fullPageGraphQLError, fullPageLoading, fullPageNotFound, init, isLoggedIn, jsAddressToMsg, labelWithTooltip, loading, login, logout, msgToString, onFileChange, subscriptions, toShared, update, viewButtonNew, viewCardEmpty, viewCardList, viewDateDistance, viewGuest, viewLoggedIn, viewMaxTwoColumn, viewMenuFilter, viewMenuFilterButton, viewMenuFilterTabButton, viewMenuTab, viewTitle)
 
 import Account exposing (Profile)
 import Asset.Icon as Icon
@@ -85,7 +85,8 @@ subscriptions : Session -> Sub Msg
 subscriptions session =
     case session of
         Guest guest ->
-            Sub.none
+            Guest.subscriptions guest
+                |> Sub.map GotGuestMsg
 
         LoggedIn loggedIn ->
             LoggedIn.subscriptions loggedIn
@@ -119,9 +120,9 @@ viewLoggedIn thisMsg page model content =
 -- VIEW >> HELPERS
 
 
-onChange : (a -> msg) -> Decoder a -> Html.Attribute msg
-onChange toMsg decoder =
-    on "change" (Decode.map toMsg decoder)
+onClick : (a -> msg) -> Decoder a -> Html.Attribute msg
+onClick toMsg decoder =
+    on "click" (Decode.map toMsg decoder)
 
 
 onFileChange : (List File -> msg) -> Attribute msg
@@ -156,25 +157,33 @@ viewMenuFilterButton isActive text_ route =
         [ text text_ ]
 
 
-viewMenuFilterDropdown : (a -> msg) -> Decoder a -> List (Html msg) -> Html msg
-viewMenuFilterDropdown toMsg decoder options =
+viewMenuTab : List (Html msg) -> Html msg
+viewMenuTab buttons =
     div
-        [ class "flex flex-row justify-between" ]
-        [ select
-            [ class "form-select sm:w-full md:w-64 select border-gray-500"
-            , onChange toMsg decoder
-            ]
-            options
-        ]
+        [ class "flex justify-center" ]
+        buttons
 
 
-viewMenuFilterDropdownOption : Bool -> String -> Html msg
-viewMenuFilterDropdownOption isSelected text_ =
-    option
-        [ class "menu-filter__dropdown-option"
-        , selected isSelected
-        ]
-        [ text text_ ]
+viewMenuFilterTabButton : Bool -> (a -> msg) -> Decoder a -> String -> Html msg
+viewMenuFilterTabButton isActive toMsg decoder text_ =
+    case isActive of
+        True ->
+            if String.startsWith "All offers" text_ then
+                button [ class "bg-purple-500 border border-purple-500 rounded-l px-12 py-2 text-white", value text_, onClick toMsg decoder ]
+                    [ text text_ ]
+
+            else
+                button [ class "bg-purple-500 border border-purple-500 rounded-r px-12 py-2 text-white", value text_, onClick toMsg decoder ]
+                    [ text text_ ]
+
+        False ->
+            if String.startsWith "All offers" text_ then
+                button [ class "border border-purple-500 rounded-l px-16 py-2 text-gray", value text_, onClick toMsg decoder ]
+                    [ text text_ ]
+
+            else
+                button [ class "border border-purple-500 rounded-r px-16 py-2 text-gray", value text_, onClick toMsg decoder ]
+                    [ text text_ ]
 
 
 viewCardList : List ( List (Html msg), Posix, Maybe Posix ) -> Html msg
@@ -225,7 +234,7 @@ viewButtonNew title_ route =
 
 viewMaxTwoColumn : List (Html msg) -> List (Html msg) -> Html msg
 viewMaxTwoColumn firstColContent secColContent =
-    div [ class "section-grid" ]
+    div [ class "section-grid mt-4" ]
         [ div [ class "section-grid__section" ] firstColContent
         , div [ class "section-grid__section" ] secColContent
         ]

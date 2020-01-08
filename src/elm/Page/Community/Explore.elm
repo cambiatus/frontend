@@ -79,6 +79,11 @@ view loggedIn model =
             div [ class "container mx-auto px-4" ]
                 [ renderUserMessage model
                 , Page.viewTitle (t loggedIn.shared.translations "menu.communities")
+                , if loggedIn.shared.allowCommunityCreation then
+                    Page.viewButtonNew (I18Next.t loggedIn.shared.translations "community.create_button") Route.NewCommunity
+
+                  else
+                    text ""
                 , div [ class "flex flex-wrap -mx-2" ]
                     (viewCommunities loggedIn (String.toUpper loggedIn.searchText) communities)
                 ]

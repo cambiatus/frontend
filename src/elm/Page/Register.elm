@@ -80,8 +80,8 @@ type alias Form =
     , account : String
     , pin : String
     , pinConfirm : String
-    , enteredPin : List (Maybe Int)
-    , enteredPinConf : List (Maybe Int)
+    , enteredPin : List (Maybe String)
+    , enteredPinConf : List (Maybe String)
     }
 
 
@@ -343,7 +343,7 @@ digitInput position inputType { form } =
                             ""
 
                         Just dig ->
-                            String.fromInt dig
+                            dig
 
                 PinConfInput ->
                     case getVal form.enteredPinConf of
@@ -351,7 +351,7 @@ digitInput position inputType { form } =
                             ""
 
                         Just dig ->
-                            String.fromInt dig
+                            dig
 
         msg =
             case inputType of
@@ -374,7 +374,7 @@ digitInput position inputType { form } =
         , id inputId
         , maxlength 1
         , value val
-        , onKeyUp msg
+        , onInput msg
         , required True
         , autocomplete False
         , attribute "inputmode" "numeric"
@@ -382,9 +382,6 @@ digitInput position inputType { form } =
         []
 
 
-onKeyUp : (Int -> msg) -> Attribute msg
-onKeyUp tagger =
-    on "keyup" (Decode.map tagger keyCode)
 
 
 type alias Field =
@@ -535,8 +532,8 @@ type Msg
     | CompletedCreateProfile AccountKeys (Result Http.Error Profile)
     | CompletedLoadProfile AccountKeys (Result Http.Error Profile)
     | CompletedChatTranslation (Result (Graphql.Http.Error (Maybe ChatPreferences)) (Maybe ChatPreferences))
-    | EnteredPin Int Int
-    | EnteredPinConf Int Int
+    | EnteredPin Int String
+    | EnteredPinConf Int String
     | DownloadPdf
     | PdfDownloaded
 
@@ -724,170 +721,120 @@ update maybeInvitation msg model guest =
             UR.init model
 
         EnteredPin pos data ->
-            {- 96 to 105 is 0-9 from numerical keyboard.
-               48 to 57 is 0-9 from the regular number keyboard.
-               8 is backspace
-            -}
-            if (data >= 96 && data <= 105) || (data >= 48 && data <= 57) || data == 8 then
-                let
-                    otherProblems =
-                        model.problems
-                            |> List.filter
-                                (\p ->
-                                    case p of
-                                        InvalidEntry Pin _ ->
-                                            False
+            let
+                otherProblems =
+                    model.problems
+                        |> List.filter
+                            (\p ->
+                                case p of
+                                    InvalidEntry Pin _ ->
+                                        False
 
-                                        _ ->
-                                            True
-                                )
+                                    _ ->
+                                        True
+                            )
 
-                    currentForm =
-                        model.form
+                currentForm =
+                    model.form
 
-                    newPin =
-                        if data == 8 then
-                            LE.setAt pos Nothing model.form.enteredPin
+                newPin =
+                    if data == "" then
+                        LE.setAt pos Nothing model.form.enteredPin
 
-                        else if data < 58 then
-                            LE.setAt pos (Just (data - 48)) model.form.enteredPin
+                    else
+                        LE.setAt pos (Just data) model.form.enteredPin
 
-                        else
-                            LE.setAt pos (Just (data - 96)) model.form.enteredPin
+                pinErrors =
+                    case List.any (\a -> a == Nothing) newPin of
+                        True ->
+                            [ InvalidEntry Pin (validationErrorToString shared PinTooShort) ]
 
-                    pinErrors =
-                        case List.any (\a -> a == Nothing) newPin of
-                            True ->
-                                [ InvalidEntry Pin (validationErrorToString shared PinTooShort) ]
+                        False ->
+                            []
 
-                            False ->
-                                []
+                nextFocusPosition : Int
+                nextFocusPosition =
+                    if data == "" then
+                        pos - 1
 
-                    nextFocusPosition : Int
-                    nextFocusPosition =
-                        if data == 8 then
-                            pos - 1
-
-                        else
-                            pos + 1
-                in
-                { model
-                    | form = { currentForm | enteredPin = newPin }
-                    , problems = otherProblems ++ pinErrors
-                }
-                    |> UR.init
-                    |> UR.addPort
-                        { responseAddress = Ignored
-                        , responseData = Encode.null
-                        , data =
-                            Encode.object
-                                [ ( "pos", Encode.int pos )
-                                , ( "data", Encode.int data )
-                                , ( "isWithinif", Encode.bool True )
-                                ]
-                        }
-                    |> UR.addCmd
-                        (Task.attempt (\_ -> Ignored) (Dom.focus ("pin_input_" ++ String.fromInt nextFocusPosition)))
-
-            else if data == 13 then
-                update maybeInvitation ValidateForm model guest
-
-            else
-                model
-                    |> UR.init
-                    |> UR.addPort
-                        { responseAddress = Ignored
-                        , responseData = Encode.null
-                        , data =
-                            Encode.object
-                                [ ( "pos", Encode.int pos )
-                                , ( "data", Encode.int data )
-                                , ( "isWithinif", Encode.bool False )
-                                ]
-                        }
+                    else
+                        pos + 1
+            in
+            { model
+                | form = { currentForm | enteredPin = newPin }
+                , problems = otherProblems ++ pinErrors
+            }
+                |> UR.init
+                |> UR.addPort
+                    { responseAddress = Ignored
+                    , responseData = Encode.null
+                    , data =
+                        Encode.object
+                            [ ( "pos", Encode.int pos )
+                            , ( "data", Encode.string data )
+                            , ( "isWithinif", Encode.bool True )
+                            ]
+                    }
+                |> UR.addCmd
+                    (Task.attempt (\_ -> Ignored) (Dom.focus ("pin_input_" ++ String.fromInt nextFocusPosition)))
 
         EnteredPinConf pos data ->
-            {- 96 to 105 is 0-9 from numerical keyboard.
-               48 to 57 is 0-9 from the regular number keyboard.
-               8 is backspace
-            -}
-            if (data >= 96 && data <= 105) || (data >= 48 && data <= 57) || data == 8 then
-                let
-                    otherProblems =
-                        model.problems
-                            |> List.filter
-                                (\p ->
-                                    case p of
-                                        InvalidEntry PinConfirmation _ ->
-                                            False
+            let
+                otherProblems =
+                    model.problems
+                        |> List.filter
+                            (\p ->
+                                case p of
+                                    InvalidEntry PinConfirmation _ ->
+                                        False
 
-                                        _ ->
-                                            True
-                                )
+                                    _ ->
+                                        True
+                            )
 
-                    currentForm =
-                        model.form
+                currentForm =
+                    model.form
 
-                    newPin =
-                        if data == 8 then
-                            LE.setAt pos Nothing model.form.enteredPinConf
+                newPin =
+                    if data == "" then
+                        LE.setAt pos Nothing model.form.enteredPinConf
 
-                        else if data < 58 then
-                            LE.setAt pos (Just (data - 48)) model.form.enteredPinConf
+                    else
+                        LE.setAt pos (Just data) model.form.enteredPinConf
 
-                        else
-                            LE.setAt pos (Just (data - 96)) model.form.enteredPinConf
+                pinConfProbs =
+                    case List.any (\a -> a == Nothing) newPin of
+                        True ->
+                            [ InvalidEntry PinConfirmation (validationErrorToString shared PinTooShort) ]
 
-                    pinConfProbs =
-                        case List.any (\a -> a == Nothing) newPin of
-                            True ->
-                                [ InvalidEntry PinConfirmation (validationErrorToString shared PinTooShort) ]
+                        False ->
+                            []
 
-                            False ->
-                                []
+                nextFocusPosition : Int
+                nextFocusPosition =
+                    if data == "" then
+                        pos - 1
 
-                    nextFocusPosition : Int
-                    nextFocusPosition =
-                        if data == 8 then
-                            pos - 1
-
-                        else
-                            pos + 1
-                in
-                { model
-                    | form = { currentForm | enteredPinConf = newPin }
-                    , problems = pinConfProbs ++ otherProblems
-                }
-                    |> UR.init
-                    |> UR.addPort
-                        { responseAddress = Ignored
-                        , responseData = Encode.null
-                        , data =
-                            Encode.object
-                                [ ( "pos", Encode.int pos )
-                                , ( "data", Encode.int data )
-                                , ( "isWithinif", Encode.bool True )
-                                ]
-                        }
-                    |> UR.addCmd
-                        (Task.attempt (\_ -> Ignored) (Dom.focus ("pin_conf_input_" ++ String.fromInt nextFocusPosition)))
-
-            else if data == 13 then
-                update maybeInvitation ValidateForm model guest
-
-            else
-                model
-                    |> UR.init
-                    |> UR.addPort
-                        { responseAddress = Ignored
-                        , responseData = Encode.null
-                        , data =
-                            Encode.object
-                                [ ( "pos", Encode.int pos )
-                                , ( "data", Encode.int data )
-                                , ( "isWithinif", Encode.bool False )
-                                ]
-                        }
+                    else
+                        pos + 1
+            in
+            { model
+                | form = { currentForm | enteredPinConf = newPin }
+                , problems = pinConfProbs ++ otherProblems
+            }
+                |> UR.init
+                |> UR.addPort
+                    { responseAddress = Ignored
+                    , responseData = Encode.null
+                    , data =
+                        Encode.object
+                            [ ( "pos", Encode.int pos )
+                            , ( "data", Encode.string data )
+                            , ( "isWithinif", Encode.bool True )
+                            ]
+                    }
+                |> UR.addCmd
+                    (Task.attempt (\_ -> Ignored) (Dom.focus ("pin_conf_input_" ++ String.fromInt nextFocusPosition)))
 
         DownloadPdf ->
             model
@@ -1044,11 +991,10 @@ updateForm msg shared ({ form } as model) =
             }
 
 
-asPinString : List (Maybe Int) -> String
+asPinString : List (Maybe String) -> String
 asPinString entered =
     entered
-        |> List.map (\a -> Maybe.withDefault 0 a)
-        |> List.map (\a -> String.fromInt a)
+        |> List.map (\a -> Maybe.withDefault "" a)
         |> List.foldl (\a b -> a ++ b) ""
 
 

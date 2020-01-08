@@ -29,10 +29,11 @@ type Route
     | EditObjective Symbol Int
     | NewAction Symbol String
     | VerifyClaim Symbol String String String
-    | Shop (Maybe Shop.Filter)
+    | Shop Shop.Filter
     | NewSale
     | EditSale String
     | ViewSale String
+    | Transfer Int
 
 
 parser : Url -> Parser (Route -> a) a
@@ -81,26 +82,19 @@ parser url =
         , Url.map Shop
             (s "shop"
                 <?> Query.map
-                        (\maybeF ->
-                            case maybeF of
-                                Nothing ->
-                                    Nothing
+                        (\filter ->
+                            if String.startsWith "user" filter then
+                                Shop.UserSales
 
-                                Just query ->
-                                    if String.startsWith "my-communities" query then
-                                        Just Shop.MyCommunities
-
-                                    else if String.startsWith "user" query then
-                                        Just Shop.UserSales
-
-                                    else
-                                        Just Shop.All
+                            else
+                                Shop.All
                         )
-                        (Query.string "filter")
+                        (Query.map (Maybe.withDefault "") (Query.string "filter"))
             )
         , Url.map NewSale (s "shop" </> s "new" </> s "sell")
         , Url.map ViewSale (s "shop" </> string)
         , Url.map EditSale (s "shop" </> string </> s "edit")
+        , Url.map Transfer (s "transfer" </> int)
         ]
 
 
@@ -173,9 +167,6 @@ parseRedirect url maybeQuery =
 shopFilterToString : Shop.Filter -> String
 shopFilterToString filter =
     case filter of
-        Shop.MyCommunities ->
-            "my-communities"
-
         Shop.All ->
             "all"
 
@@ -264,7 +255,7 @@ routeToString route =
 
                 Shop maybeFilter ->
                     ( [ "shop" ]
-                    , queryBuilder shopFilterToString maybeFilter "filter"
+                    , queryBuilder shopFilterToString (Just maybeFilter) "filter"
                     )
 
                 NewSale ->
@@ -275,5 +266,8 @@ routeToString route =
 
                 ViewSale saleId ->
                     ( [ "shop", saleId ], [] )
+
+                Transfer transferId ->
+                    ( [ "transfer", String.fromInt transferId ], [] )
     in
     Url.Builder.absolute paths queries

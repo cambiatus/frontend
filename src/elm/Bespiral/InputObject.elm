@@ -423,6 +423,29 @@ encodeSalesInput input =
         [ ( "account", Encode.string |> Encode.optional input.account ), ( "all", Encode.string |> Encode.optional input.all ), ( "communities", Encode.string |> Encode.optional input.communities ) ]
 
 
+buildTransferInput : TransferInputRequiredFields -> TransferInput
+buildTransferInput required =
+    { id = required.id }
+
+
+type alias TransferInputRequiredFields =
+    { id : Int }
+
+
+{-| Type for the TransferInput input object.
+-}
+type alias TransferInput =
+    { id : Int }
+
+
+{-| Encode a TransferInput into a value that can be used as an argument.
+-}
+encodeTransferInput : TransferInput -> Value
+encodeTransferInput input =
+    Encode.maybeObject
+        [ ( "id", Encode.int input.id |> Just ) ]
+
+
 buildUnreadNotificationsSubscriptionInput : UnreadNotificationsSubscriptionInputRequiredFields -> UnreadNotificationsSubscriptionInput
 buildUnreadNotificationsSubscriptionInput required =
     { account = required.account }

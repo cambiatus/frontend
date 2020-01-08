@@ -135,7 +135,7 @@ initForm balanceOptions =
         trackStock =
             []
                 |> oneOf [ trackYes, trackNo ]
-                |> newValidator Nothing identity True
+                |> newValidator (Just trackNo) identity True
 
         units =
             []
@@ -252,15 +252,11 @@ viewForm shared balances imageStatus isEdit isDisabled form =
                 ( t "menu.create", t "shop.create_offer" )
     in
     div
-        [ class "container mx-auto px-4" ]
-        [ Page.viewTitle (t "shop.title")
-        , div
-            [ class "card card--form shop-editor" ]
-            [ div
-                [ class "card__title-container" ]
-                [ h3
-                    [ class "card__title" ]
-                    [ text pageTitle ]
+        [ class "container mx-auto px-4 py-2" ]
+        [ div
+            [ class "bg-white rounded-lg" ]
+            [ div [ class "px-4 py-6 border-b border-gray-500" ]
+                [ div [ class "text-heading font-medium" ] [ text pageTitle ]
                 , case isEdit of
                     True ->
                         button
@@ -274,7 +270,7 @@ viewForm shared balances imageStatus isEdit isDisabled form =
                         text ""
                 ]
             , div
-                [ class "shop-editor__image-upload" ]
+                [ class "shop-editor__image-upload w-full " ]
                 [ input
                     [ id (fieldId "image")
                     , class "hidden-img-input"
@@ -291,180 +287,164 @@ viewForm shared balances imageStatus isEdit isDisabled form =
                     ]
                     imageView
                 ]
-            , formField
-                [ label
-                    [ for (fieldId "title") ]
-                    [ text (t "shop.what_label") ]
-                , viewFieldErrors (listErrors shared.translations form.title)
-                , input
-                    [ class "input"
-                    , type_ "text"
-                    , id (fieldId "title")
-                    , value (getInput form.title)
-                    , maxlength 255
-                    , onInput EnteredTitle
-                    , required True
-                    , disabled isDisabled
-                    ]
-                    []
-                ]
-            , formField
-                [ label
-                    [ for (fieldId "description") ]
-                    [ text (t "shop.description_label") ]
-                , viewFieldErrors (listErrors shared.translations form.description)
-                , textarea
-                    [ class "input"
-                    , id (fieldId "description")
-                    , value (getInput form.description)
-                    , maxlength 255
-                    , onInput EnteredDescription
-                    , required True
-                    , disabled isDisabled
-                    ]
-                    []
-                ]
-            , formField
-                [ label
-                    [ for (fieldId "symbol") ]
-                    [ text (t "shop.which_community_label") ]
-                , viewFieldErrors (listErrors shared.translations form.symbol)
-                , select
-                    [ class "input"
-                    , id (fieldId "symbol")
-                    , required True
-                    , disabled (isEdit || isDisabled)
-                    , Html.Events.on "change"
-                        (Decode.map
-                            (\symbolStr ->
-                                if String.isEmpty symbolStr then
-                                    EnteredSymbol Nothing
-
-                                else
-                                    EnteredSymbol (Just symbolStr)
-                            )
-                            Html.Events.targetValue
-                        )
-                    ]
-                    (option
-                        [ hidden True
-                        , attribute "value" ""
-                        , selected (symbol == Nothing)
-                        ]
-                        [ text (t "shop.choose_community_label") ]
-                        :: List.map
-                            (\b ->
-                                option
-                                    [ value (Eos.symbolToString b.asset.symbol)
-                                    , selected (symbol == Just b.asset.symbol)
-                                    ]
-                                    [ text (Eos.symbolToString b.asset.symbol) ]
-                            )
-                            balances
-                    )
-                ]
-            , div
-                [ if trackStock == Just trackYes then
-                    class "form-field--row"
-
-                  else
-                    class "form-field--half"
-                ]
+            , div [ class "px-4 py-6 flex flex-col" ]
                 [ formField
-                    [ label
-                        [ for (fieldId "trackStock") ]
-                        [ text (t "shop.track_stock_label") ]
-                    , viewFieldErrors (listErrors shared.translations form.trackStock)
-                    , select
-                        [ class "input"
-                        , id (fieldId "trackStock")
+                    [ div
+                        [ class "input-label" ]
+                        [ text (t "shop.what_label") ]
+                    , viewFieldErrors (listErrors shared.translations form.title)
+                    , input
+                        [ class "input w-full"
+                        , type_ "text"
+                        , id (fieldId "title")
+                        , value (getInput form.title)
+                        , maxlength 255
+                        , onInput EnteredTitle
                         , required True
                         , disabled isDisabled
-                        , Html.Events.on "change"
-                            (Decode.map
-                                (\stock ->
-                                    EnteredTrackStock stock
+                        ]
+                        []
+                    ]
+                , formField
+                    [ div
+                        [ class "input-label" ]
+                        [ text (t "shop.description_label") ]
+                    , viewFieldErrors (listErrors shared.translations form.description)
+                    , textarea
+                        [ class "input w-full"
+                        , id (fieldId "description")
+                        , value (getInput form.description)
+                        , maxlength 255
+                        , onInput EnteredDescription
+                        , required True
+                        , disabled isDisabled
+                        ]
+                        []
+                    ]
+                , div [ class "mt-2" ]
+                    [ formField
+                        [ label
+                            [ class "input-label" ]
+                            [ text (t "shop.which_community_label") ]
+                        , viewFieldErrors (listErrors shared.translations form.symbol)
+                        , select
+                            [ class "input w-full mb-2 form-select select"
+                            , id (fieldId "symbol")
+                            , required True
+                            , disabled (isEdit || isDisabled)
+                            , Html.Events.on "change"
+                                (Decode.map
+                                    (\symbolStr ->
+                                        if String.isEmpty symbolStr then
+                                            EnteredSymbol Nothing
+
+                                        else
+                                            EnteredSymbol (Just symbolStr)
+                                    )
+                                    Html.Events.targetValue
                                 )
-                                Html.Events.targetValue
+                            ]
+                            (option
+                                [ hidden True
+                                , attribute "value" ""
+                                , selected (symbol == Nothing)
+                                ]
+                                [ text (t "shop.choose_community_label") ]
+                                :: List.map
+                                    (\b ->
+                                        option
+                                            [ value (Eos.symbolToString b.asset.symbol)
+                                            , selected (symbol == Just b.asset.symbol)
+                                            ]
+                                            [ text (Eos.symbolToString b.asset.symbol) ]
+                                    )
+                                    balances
                             )
                         ]
-                        [ option
-                            [ hidden True
-                            , selected (trackStock == Nothing)
-                            , value ""
-                            ]
-                            [ text (t "shop.choose_track_stock_label") ]
-                        , option
-                            [ value trackYes
-                            , selected (trackStock == Just trackYes)
-                            ]
-                            [ text (t "shop.track_stock_yes") ]
-                        , option
-                            [ value trackNo
-                            , selected (trackStock == Just trackNo)
-                            ]
-                            [ text (t "shop.track_stock_no") ]
-                        ]
                     ]
-                , if trackStock == Just trackYes then
-                    formField
-                        [ label
-                            [ for (fieldId "units") ]
-                            [ text (t "shop.units_label") ]
-                        , viewFieldErrors (listErrors shared.translations form.units)
+                , div [ class "mt-2" ]
+                    [ formField
+                        [ div
+                            [ class "input-label" ]
+                            [ text (t "shop.track_stock_label") ]
+                        , viewFieldErrors (listErrors shared.translations form.trackStock)
+                        , select
+                            [ class "form-select select w-1/2"
+                            , id (fieldId "trackStock")
+                            , required True
+                            , disabled isDisabled
+                            , on "change"
+                                (Decode.map EnteredTrackStock Html.Events.targetValue)
+                            ]
+                            [ option
+                                [ value trackYes
+                                , selected (trackStock == Just trackYes)
+                                ]
+                                [ text (t "shop.track_stock_yes") ]
+                            , option
+                                [ value trackNo
+                                , selected (trackStock == Just trackNo)
+                                ]
+                                [ text (t "shop.track_stock_no") ]
+                            ]
+                        ]
+                    , if trackStock == Just trackYes then
+                        formField
+                            [ div
+                                [ class "input-label" ]
+                                [ text (t "shop.units_label") ]
+                            , viewFieldErrors (listErrors shared.translations form.units)
+                            , input
+                                [ class "input w-full"
+                                , type_ "number"
+                                , id (fieldId "units")
+                                , value (getInput form.units)
+                                , onInput EnteredUnits
+                                , required True
+                                , disabled isDisabled
+                                , Html.Attributes.min "0"
+                                ]
+                                []
+                            ]
+
+                      else
+                        text ""
+                    ]
+                , div
+                    [ class "mt-2" ]
+                    [ formField
+                        [ span
+                            [ class "input-label" ]
+                            [ text (t "shop.price_label") ]
+                        , viewFieldErrors (listErrors shared.translations form.price)
                         , input
-                            [ class "input"
-                            , type_ "number"
-                            , id (fieldId "units")
-                            , value (getInput form.units)
-                            , onInput EnteredUnits
+                            [ class "input w-full"
+                            , id (fieldId "price")
+                            , value (getInput form.price)
+                            , onInput EnteredPrice
                             , required True
                             , disabled isDisabled
                             , Html.Attributes.min "0"
                             ]
                             []
                         ]
+                    ]
+                , case form.error of
+                    Nothing ->
+                        text ""
 
-                  else
-                    text ""
-                ]
-            , div
-                [ class "form-field--half" ]
-                [ formField
-                    [ label
-                        [ for (fieldId "price") ]
-                        [ text (t "shop.price_label") ]
-                    , viewFieldErrors (listErrors shared.translations form.price)
-                    , input
-                        [ class "input"
-                        , id (fieldId "price")
-                        , value (getInput form.price)
-                        , onKeyDown EnteredPrice
-                        , required True
-                        , disabled isDisabled
-                        , Html.Attributes.min "0"
+                    Just err ->
+                        viewFieldErrors [ err ]
+                , div
+                    [ class "flex align-center justify-center mt-6"
+                    , disabled (isDisabled || imageStatus == Uploading)
+                    ]
+                    [ button
+                        [ class "button button-primary"
+                        , onClick ClickedSave
                         ]
-                        []
+                        [ text actionText ]
                     ]
-                ]
-            , case form.error of
-                Nothing ->
-                    text ""
-
-                Just err ->
-                    viewFieldErrors [ err ]
-            , div
-                [ class "divider--horizontal" ]
-                []
-            , div
-                [ class "btn-row"
-                , disabled (isDisabled || imageStatus == Uploading)
-                ]
-                [ button
-                    [ class "btn btn--primary btn--big"
-                    , onClick ClickedSave
-                    ]
-                    [ text actionText ]
                 ]
             ]
         ]
@@ -472,7 +452,7 @@ viewForm shared balances imageStatus isEdit isDisabled form =
 
 formField : List (Html msg) -> Html msg
 formField =
-    div [ class "form-field" ]
+    div [ class "mb-2" ]
 
 
 viewFieldErrors : List String -> Html msg
@@ -515,7 +495,7 @@ type Msg
     | EnteredSymbol (Maybe String)
     | EnteredTrackStock String
     | EnteredUnits String
-    | EnteredPrice Int
+    | EnteredPrice String
     | ClickedSave
     | ClickedDelete
     | GotSaveResponse (Result Value String)
@@ -728,51 +708,13 @@ update msg model loggedIn =
                     )
                 |> UR.init
 
-        EnteredPrice key ->
-            {- 96 to 105 is 0-9 from numerical keyboard.
-               48 to 57 is 0-9 from the regular number keyboard.
-               8 is backspace
-            -}
-            if key == 8 then
-                let
-                    removeLastChar : Form -> String
-                    removeLastChar form =
-                        String.slice
-                            0
-                            (String.length (getInput form.price) - 1)
-                            (getInput form.price)
-                in
-                model
-                    |> updateForm
-                        (\form ->
-                            { form | price = updateInput (removeLastChar form) form.price }
-                        )
-                    |> UR.init
-
-            else if (key >= 48 && key <= 57) || (key >= 96 && key <= 105) then
-                let
-                    value : Int
-                    value =
-                        if key <= 57 then
-                            key - 48
-
-                        else
-                            key - 96
-
-                    lastChar : Form -> String
-                    lastChar form =
-                        getInput form.price ++ String.fromInt value
-                in
-                model
-                    |> updateForm
-                        (\form ->
-                            { form | price = updateInput (lastChar form) form.price }
-                        )
-                    |> UR.init
-
-            else
-                model
-                    |> UR.init
+        EnteredPrice value ->
+            model
+                |> updateForm
+                    (\form ->
+                        { form | price = updateInput value form.price }
+                    )
+                |> UR.init
 
         ClickedSave ->
             if LoggedIn.isAuth loggedIn then
@@ -919,7 +861,7 @@ update msg model loggedIn =
         GotSaveResponse (Ok _) ->
             UR.init model
                 |> UR.addCmd
-                    (Route.replaceUrl loggedIn.shared.navKey (Route.Shop Nothing))
+                    (Route.replaceUrl loggedIn.shared.navKey (Route.Shop Shop.All))
 
         GotSaveResponse (Err error) ->
             let
@@ -960,7 +902,7 @@ update msg model loggedIn =
             model
                 |> UR.init
                 |> UR.addCmd
-                    (Route.replaceUrl loggedIn.shared.navKey (Route.Shop Nothing))
+                    (Route.replaceUrl loggedIn.shared.navKey (Route.Shop Shop.All))
 
         GotDeleteResponse (Err error) ->
             let

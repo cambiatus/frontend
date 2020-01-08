@@ -3,7 +3,7 @@
   "back": "Torna",
   "menu": {
     "title": "Menú",
-    "my_communities": "Les meves comunitats",
+    "my_communities": "Benvingut de nou, ",
     "dashboard": "Inici",
     "news": "Notícies",
     "learn": "Aprendre",
@@ -34,7 +34,8 @@
     "loading": "Carregant...",
     "try_again": "Intenta de nou",
     "coming_soon": "Pròximament",
-    "my_account": "Meu compte"
+    "my_account": "Meu compte",
+    "languages": "Idiomes"
   },
   "error": {
     "validator": {
@@ -340,6 +341,9 @@
       "no": "No, cancel·la",
       "success": "Reclamar que tingui èxit, espereu l’aprovació",
       "failure": "Alguna cosa no va funcionar correctament mentre intenteu processar la vostra reclamació. Torneu-ho a provar més endavant"
+    },
+    "verifyClaim": {
+      "error": "S'ha produït un error en intentar processar la convalidació. Torneu-ho a provar més endavant"
     }
   },
   "profile": {
@@ -412,7 +416,8 @@
     "offer_action": "{{accountName}} està VENENT",
     "buy_action": "{{accountName}} està COMPRANT",
     "buy": "Comprar",
-    "ask": "Preguntar",
+    "edit": "Edita la meva oferta",
+    "sold_by": "Venut per",
     "transfer": {
       "units_label": "Quantes unitats vol comprar?",
       "quantity_label": "Valor",
@@ -476,5 +481,19 @@
       "primary_approve": "sí, aprova",
       "secondary": "no, cancel·la"
     }
+  },
+  "transfer_result": {
+    "title": "Traspassat",
+    "transfer_success": "Ei, aquesta transferència es va fer amb èxit",
+    "receive_success": "Ei, aquest rebut va tenir èxit",
+    "date": "Data",
+    "message": "Missatge",
+    "community": "Comunitat",
+    "received": "Rebut",
+    "transferred": "Traspassat",
+    "error": {
+      "invalid_id": " no és un ID de transferència vàlid"
+    },
+    "you": "vostè"
   }
 }
