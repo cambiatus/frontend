@@ -25,6 +25,7 @@ import Session.Shared exposing (Shared)
 import Shop exposing (Sale)
 import Transfer
 import UpdateResult as UR
+import User
 
 
 
@@ -266,7 +267,7 @@ update msg model user =
                                             ]
                                         }
                                 }
-                            |> UR.addCmd (Route.replaceUrl user.shared.navKey (Route.Shop Shop.MyCommunities))
+                            |> UR.addCmd (Route.replaceUrl user.shared.navKey (Route.Shop Shop.All))
 
                     False ->
                         model
@@ -332,28 +333,24 @@ cardFromSale sale =
     }
 
 
-view : Session -> Model -> Html Msg
-view session model =
-    let
-        shared =
-            Page.toShared session
-    in
+view : LoggedIn.Model -> Model -> Html Msg
+view loggedIn model =
     case model.status of
         LoadingSale id ->
             div []
-                [ viewHeader session ""
+                [ viewHeader loggedIn ""
                 , Page.fullPageLoading
                 ]
 
         InvalidId invalidId ->
             div [ class "container mx-auto px-4" ]
-                [ viewHeader session ""
+                [ viewHeader loggedIn ""
                 , div []
                     [ text (invalidId ++ " is not a valid Sale Id") ]
                 ]
 
         LoadingFailed e ->
-            Page.fullPageGraphQLError (t shared.translations "shop.title") e
+            Page.fullPageGraphQLError (t loggedIn.shared.translations "shop.title") e
 
         LoadedSale maybeSale ->
             case maybeSale of
@@ -363,8 +360,8 @@ view session model =
                             cardFromSale sale
                     in
                     div [ class "" ]
-                        [ viewHeader session cardData.sale.title
-                        , viewCard session cardData model
+                        [ viewHeader loggedIn cardData.sale.title
+                        , viewCard loggedIn cardData model
                         ]
 
                 Nothing ->
@@ -374,49 +371,26 @@ view session model =
                         ]
 
 
-viewHeader : Session -> String -> Html msg
-viewHeader session title =
-    let
-        shared =
-            Page.toShared session
-    in
+viewHeader : LoggedIn.Model -> String -> Html msg
+viewHeader loggedIn title =
     div [ class "h-16 w-full bg-indigo-500 flex px-4 items-center" ]
         [ a
             [ class "items-center flex"
-            , Route.href (Route.Shop Shop.MyCommunities)
+            , Route.href (Route.Shop Shop.All)
             ]
             [ Icons.back ""
             , p [ class "text-white text-sm ml-2" ]
-                [ text (t shared.translations "back") ]
+                [ text (t loggedIn.shared.translations "back") ]
             ]
         , p [ class "text-white mx-auto" ] [ text title ]
         ]
 
 
-viewCard : Session -> Card -> Model -> Html Msg
-viewCard session card model =
+viewCard : LoggedIn.Model -> Card -> Model -> Html Msg
+viewCard ({ shared } as loggedIn) card model =
     let
-        account =
-            case session of
-                LoggedIn data ->
-                    Eos.nameToString data.accountName
-
-                _ ->
-                    ""
-
-        shared =
-            Page.toShared session
-
-        balances =
-            case session of
-                LoggedIn s ->
-                    s.balances
-
-                Guest s ->
-                    []
-
         cmmBalance =
-            LE.find (\bal -> bal.asset.symbol == card.sale.symbol) balances
+            LE.find (\bal -> bal.asset.symbol == card.sale.symbol) loggedIn.balances
 
         balance =
             case cmmBalance of
@@ -434,11 +408,14 @@ viewCard session card model =
 
         tr r_id replaces =
             I18Next.tr shared.translations I18Next.Curly r_id replaces
+
+        creatorId =
+            Eos.nameToString card.sale.creatorId
     in
     div [ class "flex flex-wrap" ]
         [ div [ class "w-full md:w-1/2 p-4 flex justify-center" ]
             [ img
-                [ src (getIpfsUrl session ++ "/" ++ Maybe.withDefault "" card.sale.image)
+                [ src (shared.endpoints.ipfs ++ "/" ++ Maybe.withDefault "" card.sale.image)
                 , class "object-scale-down w-full h-64"
                 ]
                 []
@@ -446,8 +423,13 @@ viewCard session card model =
         , div [ class "w-full md:w-1/2 flex flex-wrap bg-white p-4" ]
             [ div [ class "font-medium text-3xl w-full" ] [ text card.sale.title ]
             , div [ class "text-gray w-full md:text-sm" ] [ text card.sale.description ]
-            , div [ class "flex flex-wrap w-full" ]
-                [ div [ class "w-full md:w-1/4" ]
+            , div [ class "w-full flex items-center text-sm" ]
+                [ div [ class "mr-4" ] [ Avatar.view shared.endpoints.ipfs card.sale.creator.avatar "h-10 w-10" ]
+                , text_ "shop.sold_by"
+                , p [ class "font-bold ml-1" ] [ User.viewName loggedIn.accountName card.sale.creator shared.translations ]
+                ]
+            , div [ class "flex flex-wrap w-full justify-between items-center" ]
+                [ div [ class "" ]
                     [ div [ class "flex items-center" ]
                         [ div [ class "text-2xl text-green font-medium" ] [ text (String.fromFloat card.sale.price) ]
                         , div [ class "uppercase text-sm font-thin ml-2 text-green" ] [ text (Eos.symbolToString card.sale.symbol) ]
@@ -457,8 +439,8 @@ viewCard session card model =
                             [ text (tr "account.my_wallet.your_current_balance" [ ( "balance", currBalance ) ]) ]
                         ]
                     ]
-                , div [ class "w-full md:w-3/4 mt-6 md:mt-0" ]
-                    [ if Eos.nameToString card.sale.creatorId == account then
+                , div [ class " mt-6 md:mt-0" ]
+                    [ if card.sale.creatorId == loggedIn.accountName then
                         div [ class "flex md:justify-end" ]
                             [ button
                                 [ class "button button-primary w-full"
@@ -502,22 +484,14 @@ viewCard session card model =
                         []
 
                   else
-                    viewTransferForm session card Dict.empty model
+                    viewTransferForm loggedIn card Dict.empty model
                 ]
             ]
         ]
 
 
-
-
-
-
-
-
-
-
-viewTransferForm : Session -> Card -> Dict String FormError -> Model -> Html Msg
-viewTransferForm session card errors model =
+viewTransferForm : LoggedIn.Model -> Card -> Dict String FormError -> Model -> Html Msg
+viewTransferForm ({ shared } as loggedIn) card errors model =
     let
         accountName =
             Eos.nameToString card.sale.creatorId
@@ -525,25 +499,14 @@ viewTransferForm session card errors model =
         form =
             model.form
 
-        shared =
-            Page.toShared session
-
         t =
             I18Next.t shared.translations
 
         saleSymbol =
             Eos.symbolToString card.sale.symbol
 
-        balances =
-            case session of
-                LoggedIn sesh ->
-                    sesh.balances
-
-                Guest sesh ->
-                    []
-
         maybeBal =
-            LE.find (\bal -> bal.asset.symbol == card.sale.symbol) balances
+            LE.find (\bal -> bal.asset.symbol == card.sale.symbol) loggedIn.balances
 
         symbolBalance =
             case maybeBal of

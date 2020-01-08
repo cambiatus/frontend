@@ -272,7 +272,7 @@ viewHeader ({ shared } as model) page profile_ =
                 ]
                 [ Icons.notification ""
                 , if model.unreadCount > 0 then
-                    div [ class "absolute top-0 right-0 -mt-4 -mr-4 px-2 py-1 bg-orange-100 text-xs rounded-full" ]
+                    div [ class "absolute top-0 right-0 -mr-4 px-2 py-1 bg-orange-500 text-white font-medium text-xs rounded-full" ]
                         [ text (String.fromInt model.unreadCount) ]
 
                   else
@@ -373,7 +373,7 @@ searchBar ({ shared } as model) =
         ]
         [ Icons.search ""
         , input
-            [ class "bg-gray-200 w-full font-sans outline-none pl-3"
+            [ class "bg-gray-200 w-full outline-none pl-3 text-sm"
             , placeholder (t shared.translations "menu.search")
             , type_ "text"
             , value model.searchText
@@ -414,22 +414,22 @@ viewMainMenu page profile_ model =
         , a
             [ classList
                 [ ( menuItemClass, True )
-                , ( activeClass, isActive page Route.Communities )
-                ]
-            , Route.href Route.Communities
-            ]
-            [ Icons.communities iconClass
-            , text (t model.shared.translations "menu.communities")
-            ]
-        , a
-            [ classList
-                [ ( menuItemClass, True )
                 , ( activeClass, isActive page (Route.Shop Shop.All) )
                 ]
             , Route.href (Route.Shop Shop.All)
             ]
             [ Icons.shop iconClass
             , text (t model.shared.translations "menu.shop")
+            ]
+        , a
+            [ classList
+                [ ( menuItemClass, True )
+                , ( activeClass, isActive page Route.Communities )
+                ]
+            , Route.href Route.Communities
+            ]
+            [ Icons.communities iconClass
+            , text (t model.shared.translations "menu.communities")
             ]
         ]
 

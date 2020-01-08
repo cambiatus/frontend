@@ -19,8 +19,9 @@ import Session.LoggedIn as LoggedIn exposing (External(..))
 import Session.Shared exposing (Shared)
 import Strftime
 import Time
-import Transfer exposing (Transfer, TransferUser, transferQuery)
+import Transfer exposing (Transfer, transferQuery)
 import UpdateResult as UR
+import User exposing (User, view)
 import Utils
 
 
@@ -194,34 +195,14 @@ viewTransferCard loggedIn transfer state =
 
                 Transferred ->
                     transfer.to
+
+        viewUser_ =
+            User.view loggedIn.shared.endpoints.ipfs loggedIn.accountName loggedIn.shared.translations
     in
     div [ class "flex flex-row w-full justify-center items-center py-5 rounded bg-gray-100" ]
-        [ viewTransferAvatar loggedIn originUser
+        [ viewUser_ originUser
         , viewAmount loggedIn transfer state
-        , viewTransferAvatar loggedIn destinationUser
-        ]
-
-
-viewTransferAvatar : LoggedIn.Model -> TransferUser -> Html Msg
-viewTransferAvatar loggedIn user =
-    div []
-        [ div [ class "w-8 h-8 rounded-full mx-auto" ]
-            [ Avatar.view loggedIn.shared.endpoints.ipfs user.avatar "w-10 h-10"
-            ]
-        , div [ class "px-6 py-4" ]
-            [ div [ class "inline-block bg-black rounded px-3 py-1 text-xs uppercase font-medium text-white" ]
-                [ if user.account == loggedIn.accountName then
-                    text (I18Next.t loggedIn.shared.translations "transfer_result.you")
-
-                  else
-                    case user.userName of
-                        Just username ->
-                            text username
-
-                        Nothing ->
-                            Eos.viewName user.account
-                ]
-            ]
+        , viewUser_ destinationUser
         ]
 
 

@@ -1,4 +1,4 @@
-module Transfer exposing (ConnectionTransfer, QueryTransfers, Transfer, TransferUser, communityFilter, encodeEosActionData, getTotalCount, getTransfers, metadataConnectionSelectionSet, transferConnectionSelectionSet, transferItemSelectionSet, transferQuery, transfersQuery, userFilter)
+module Transfer exposing (ConnectionTransfer, QueryTransfers, Transfer, communityFilter, encodeEosActionData, getTotalCount, getTransfers, metadataConnectionSelectionSet, transferConnectionSelectionSet, transferItemSelectionSet, transferQuery, transfersQuery, userFilter)
 
 import Api.Relay exposing (Edge, MetadataConnection, PageConnection, PageInfo, PaginationArgs, pageInfoSelectionSet)
 import Avatar exposing (Avatar)
@@ -16,16 +16,17 @@ import Graphql.Operation exposing (RootQuery)
 import Graphql.OptionalArgument exposing (OptionalArgument(..))
 import Graphql.SelectionSet as SelectionSet exposing (SelectionSet, with)
 import Json.Encode as Encode exposing (Value)
+import User exposing (User)
 
 
 type TransferFilter
-    = User Eos.Name
+    = RegularUser Eos.Name
     | Community Symbol
 
 
 userFilter : Eos.Name -> TransferFilter
 userFilter name =
-    User name
+    RegularUser name
 
 
 communityFilter : Symbol -> TransferFilter
@@ -47,8 +48,8 @@ type alias CommunityArgs =
 
 type alias Transfer =
     { id : Int
-    , to : TransferUser
-    , from : TransferUser
+    , to : User
+    , from : User
     , value : Float
     , memo : Maybe String
     , symbol : Symbol
@@ -56,14 +57,16 @@ type alias Transfer =
     , blockTime : DateTime
     }
 
-type alias Cmm =
-    { name : String
-    }
 
 type alias TransferUser =
     { avatar : Avatar
     , userName : Maybe String
     , account : Eos.Name
+    }
+
+
+type alias Cmm =
+    { name : String
     }
 
 
@@ -111,31 +114,17 @@ transferItemSelectionSet : SelectionSet Transfer Bespiral.Object.Transfer
 transferItemSelectionSet =
     SelectionSet.succeed Transfer
         |> with Bespiral.Object.Transfer.id
-        |> with
-            (Bespiral.Object.Transfer.to
-                (SelectionSet.succeed TransferUser
-                    |> with (Avatar.selectionSet Bespiral.Object.Profile.avatar)
-                    |> with (profileNameSelectionSet Bespiral.Object.Profile.name)
-                    |> with (Eos.nameSelectionSet Bespiral.Object.Profile.account)
-                )
-            )
-        |> with
-            (Bespiral.Object.Transfer.from
-                (SelectionSet.succeed TransferUser
-                    |> with (Avatar.selectionSet Bespiral.Object.Profile.avatar)
-                    |> with (profileNameSelectionSet Bespiral.Object.Profile.name)
-                    |> with (Eos.nameSelectionSet Bespiral.Object.Profile.account)
-                )
-            )
+        |> with (Bespiral.Object.Transfer.to User.selectionSet)
+        |> with (Bespiral.Object.Transfer.from User.selectionSet)
         |> with Bespiral.Object.Transfer.amount
         |> with Bespiral.Object.Transfer.memo
         |> with (Eos.symbolSelectionSet Bespiral.Object.Transfer.communityId)
         |> with
-           (Bespiral.Object.Transfer.community
+            (Bespiral.Object.Transfer.community
                 (SelectionSet.succeed Cmm
                     |> with Bespiral.Object.Community.name
                 )
-           )
+            )
         |> with Bespiral.Object.Transfer.createdAt
 
 
@@ -187,7 +176,7 @@ communityTransfersSelectionSet paginateArgs =
 transfersQuery : TransferFilter -> (PaginationArgs -> PaginationArgs) -> SelectionSet (Maybe QueryTransfers) RootQuery
 transfersQuery input paginateArgs =
     case input of
-        User name ->
+        RegularUser name ->
             profileTransfersSelectionSet paginateArgs
                 |> Bespiral.Query.profile { input = { account = Present (Eos.nameToString name) } }
 

@@ -416,6 +416,7 @@
     "buy_action": "{{accountName}} is SELLING",
     "buy": "Buy",
     "edit": "Edit my offer",
+    "sold_by": "Sold by",
     "transfer": {
       "units_label": "How many units do you want?",
       "quantity_label": "Value",
@@ -492,6 +493,6 @@
     "error": {
       "invalid_id": " is not a valid Transfer Id"
     },
-      "you": "You"
+    "you": "You"
   }
 }
