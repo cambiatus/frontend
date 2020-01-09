@@ -124,7 +124,9 @@ view loggedIn model =
             div [ class "px-4" ]
                 [ div [ class "text-gray-600 text-2xl font-light flex mt-6 mb-4" ]
                     [ text (t "menu.my_communities")
-                    , div [ class "text-indigo-500 ml-2 font-medium" ] [ text (profile.userName |> Maybe.withDefault "") ]
+                    , div [ class "text-indigo-500 ml-2 font-medium" ]
+                        [ text (profile.userName |> Maybe.withDefault (Eos.nameToString profile.accountName))
+                        ]
                     ]
                 , viewBalances loggedIn communities
                 , viewVerifications loggedIn.shared model
