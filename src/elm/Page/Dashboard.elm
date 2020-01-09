@@ -173,7 +173,7 @@ viewVerifications shared model =
 
                 else
                     div
-                        [ class "shadow-md rounded-lg bg-white mt-5" ]
+                        [ class "rounded-lg bg-white mt-5" ]
                         (toView verifications)
         ]
 
@@ -251,7 +251,7 @@ viewVerification shared verification =
 viewNoVerification : List (Html Msg) -> Html Msg
 viewNoVerification elements =
     div
-        [ class "shadow-md rounded-lg bg-white mt-5 p-4" ]
+        [ class "rounded-lg bg-white mt-5 p-4" ]
         [ div
             [ class "bg-white-smoke flex items-center justify-center p-8" ]
             elements
@@ -303,7 +303,7 @@ viewSections loggedIn model =
 
                 else
                     div
-                        [ class "shadow-md rounded-lg bg-white " ]
+                        [ class "rounded-lg bg-white " ]
                         (toView claims)
         ]
         [ Page.viewTitle (t "transfer.last_title")
@@ -318,7 +318,7 @@ viewSections loggedIn model =
                 Page.viewCardEmpty [ text (t "transfer.no_transfers_yet") ]
 
             LoadedGraphql transfers ->
-                div [ class "shadow-md rounded-lg bg-white" ]
+                div [ class "rounded-lg bg-white" ]
                     (List.map (\transfer -> viewTransfer loggedIn transfer) transfers)
         ]
 
