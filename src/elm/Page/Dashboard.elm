@@ -309,10 +309,16 @@ viewSections loggedIn model =
         [ Page.viewTitle (t "transfer.last_title")
         , case model.transfers of
             LoadingGraphql ->
-                Page.viewCardEmpty [ text (t "menu.loading") ]
+                Page.viewCardEmpty
+                    [ div [ class "text-gray-900 text-sm" ]
+                        [ text (t "menu.loading") ]
+                    ]
 
             FailedGraphql _ ->
-                Page.viewCardEmpty [ text (t "transfer.loading_error") ]
+                Page.viewCardEmpty
+                    [ div [ class "text-gray-900 text-sm" ]
+                        [ text (t "transfer.loading_error") ]
+                    ]
 
             LoadedGraphql [] ->
                 Page.viewCardEmpty
