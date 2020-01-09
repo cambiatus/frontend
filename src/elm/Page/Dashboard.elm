@@ -298,7 +298,7 @@ viewSections loggedIn model =
                     viewNoVerification
                         [ p
                             [ class "font-sans text-gray-900 text-sm" ]
-                            [ text (t "dashboard.activities.no_actions_yet") ]
+                            [ text (t "dashboard.activities.no_activities_yet") ]
                         ]
 
                 else
@@ -315,7 +315,10 @@ viewSections loggedIn model =
                 Page.viewCardEmpty [ text (t "transfer.loading_error") ]
 
             LoadedGraphql [] ->
-                Page.viewCardEmpty [ text (t "transfer.no_transfers_yet") ]
+                Page.viewCardEmpty
+                    [ div [ class "text-gray-900 text-sm" ]
+                        [ text (t "transfer.no_transfers_yet") ]
+                    ]
 
             LoadedGraphql transfers ->
                 div [ class "rounded-lg bg-white" ]
