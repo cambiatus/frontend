@@ -400,7 +400,10 @@ viewMainMenu page profile_ model =
         iconClass =
             "w-6 h-6 fill-current hover:text-indigo-500 mr-5"
     in
-    nav [ class "bg-white h-16 w-full flex overflow-x-auto" ]
+    nav
+        [ class "bg-white h-16 w-full flex overflow-x-auto md:visible"
+        , classList [ ( "sm:invisible", not model.showMainNav ) ]
+        ]
         [ a
             [ classList
                 [ ( menuItemClass, True )
@@ -431,6 +434,7 @@ viewMainMenu page profile_ model =
             [ Icons.shop iconClass
             , text (t model.shared.translations "menu.shop")
             ]
+        , toggleNav model.showMainNav
         ]
 
 
@@ -464,6 +468,23 @@ viewFooter shared =
             ]
             []
         ]
+
+
+
+-- Button to show/hide navbar on small screens
+
+
+toggleNav clicked =
+    let
+        content =
+            if clicked then
+                button [ class "", onClick (ShowMainNav False) ] [ Icons.close "fill-current text-white" ]
+
+            else
+                button [ class "", onClick (ShowMainNav True) ] [ text "Menu" ]
+    in
+    div [ class "md:invisible fixed right-0 bottom-0 mb-4 mr-4 h-16 w-16 bg-purple-500 text-white rounded-full shadow p-4 align-bottom text-left" ]
+        [ content ]
 
 
 
