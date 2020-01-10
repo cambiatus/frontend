@@ -211,8 +211,11 @@ viewCardList items =
 
 viewCardEmpty : List (Html msg) -> Html msg
 viewCardEmpty content =
-    div [ class "rounded-lg bg-white p-4" ]
-        [ span [] content ]
+    div [ class "rounded-lg bg-white mt-5 p-4" ]
+        [ div
+            [ class "bg-white-smoke flex items-center justify-center p-8" ]
+            content
+        ]
 
 
 viewTitle : String -> Html msg
