@@ -392,7 +392,7 @@ viewMainMenu page profile_ model =
             model.shared.endpoints.ipfs
 
         menuItemClass =
-            "mx-4 w-48 font-sans uppercase flex items-center justify-center leading-tight text-xs text-gray-700 hover:text-indigo-500"
+            "mx-4 w-auto md:w-48 font-sans uppercase flex items-center justify-center leading-tight text-xs text-gray-700 hover:text-indigo-500"
 
         activeClass =
             "border-orange-100 border-b-2 text-indigo-500 font-medium"
@@ -400,39 +400,41 @@ viewMainMenu page profile_ model =
         iconClass =
             "w-6 h-6 fill-current hover:text-indigo-500 mr-5"
     in
-    nav
-        [ class "bg-white h-16 w-full flex overflow-x-auto md:visible"
-        , classList [ ( "sm:invisible", not model.showMainNav ) ]
-        ]
-        [ a
-            [ classList
-                [ ( menuItemClass, True )
-                , ( activeClass, isActive page Route.Dashboard )
+    div [ class "flex align-center justify-center" ]
+        [ nav
+            [ classList [ ( "invisible", not model.showMainNav ) ]
+            , class "bg-white w-64 h-56 md:h-12 md:w-1/2 md:h-16 md:w-full flex flex-col justify-around md:justify-start md:flex-row md:overflow-x-auto md:visible rounded-lg md:rounded-none fixed bottom-0 mb-24 md:static md:mb-0 shadow-md"
+            ]
+            [ a
+                [ classList
+                    [ ( menuItemClass, True )
+                    , ( activeClass, isActive page Route.Dashboard )
+                    ]
+                , Route.href Route.Dashboard
                 ]
-            , Route.href Route.Dashboard
-            ]
-            [ Icons.dashboard iconClass
-            , text (t model.shared.translations "menu.dashboard")
-            ]
-        , a
-            [ classList
-                [ ( menuItemClass, True )
-                , ( activeClass, isActive page (Route.Shop Shop.All) )
+                [ Icons.dashboard iconClass
+                , text (t model.shared.translations "menu.dashboard")
                 ]
-            , Route.href (Route.Shop Shop.All)
-            ]
-            [ Icons.shop iconClass
-            , text (t model.shared.translations "menu.shop")
-            ]
-        , a
-            [ classList
-                [ ( menuItemClass, True )
-                , ( activeClass, isActive page Route.Communities )
+            , a
+                [ classList
+                    [ ( menuItemClass, True )
+                    , ( activeClass, isActive page Route.Communities )
+                    ]
+                , Route.href Route.Communities
                 ]
-            , Route.href Route.Communities
-            ]
-            [ Icons.communities iconClass
-            , text (t model.shared.translations "menu.communities")
+                [ Icons.communities iconClass
+                , text (t model.shared.translations "menu.communities")
+                ]
+            , a
+                [ classList
+                    [ ( menuItemClass, True )
+                    , ( activeClass, isActive page (Route.Shop Shop.All) )
+                    ]
+                , Route.href (Route.Shop Shop.All)
+                ]
+                [ Icons.shop iconClass
+                , text (t model.shared.translations "menu.shop")
+                ]
             ]
         , toggleNav model.showMainNav
         ]
@@ -474,6 +476,7 @@ viewFooter shared =
 -- Button to show/hide navbar on small screens
 
 
+toggleNav : Bool -> Html Msg
 toggleNav clicked =
     let
         content =
@@ -483,7 +486,7 @@ toggleNav clicked =
             else
                 button [ class "", onClick (ShowMainNav True) ] [ text "Menu" ]
     in
-    div [ class "md:invisible fixed right-0 bottom-0 mb-4 mr-4 h-16 w-16 bg-purple-500 text-white rounded-full shadow p-4 align-bottom text-left" ]
+    div [ class "flex align-center justify-center md:invisible fixed right-0 bottom-0 mb-4 mr-4 h-16 w-16 bg-purple-500 text-white rounded-full shadow p-4 align-bottom text-left" ]
         [ content ]
 
 
