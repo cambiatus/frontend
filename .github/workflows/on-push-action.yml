@@ -1,0 +1,19 @@
+name: Build
+on:[push]
+
+
+jobs:
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v1
+
+      - name: Set Node.js 11.15.0
+      - uses: action/setup-node@v11.15.0
+
+      - name: Get deps
+      - run: npm install
+
+      - name: Build asset
+      - run: npm build
