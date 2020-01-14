@@ -17,3 +17,8 @@ jobs:
 
       - name: Build asset
         run: npm build
+
+      - name: Publish Slack Notification
+        uses: rtCamp/action-slack-notify@master
+        env:
+          SLACK_WEBHOOK: ${{ secrets.FRONT_END_WEBHOOK }}
