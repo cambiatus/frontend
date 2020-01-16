@@ -22,7 +22,7 @@ import Graphql.Operation exposing (RootQuery, RootSubscription)
 import Graphql.SelectionSet as SelectionSet exposing (SelectionSet, with)
 import Html exposing (..)
 import Html.Attributes exposing (..)
-import Html.Events exposing (onClick, onFocus, onInput, onMouseEnter, onSubmit, stopPropagationOn)
+import Html.Events exposing (on, onClick, onFocus, onInput, onMouseEnter, onSubmit, stopPropagationOn)
 import Http
 import I18Next exposing (Delims(..), Translations, t, tr)
 import Icons
@@ -103,6 +103,7 @@ type alias Model =
     , searchText : String
     , showNotificationModal : Bool
     , showMainNav : Bool
+    , showToggleMainNav : Bool
     , notification : Notification.Model
     , unreadCount : Int
     , showAuthModal : Bool
@@ -122,6 +123,7 @@ initModel shared authModel accountName =
     , searchText = ""
     , showNotificationModal = False
     , showMainNav = False
+    , showToggleMainNav = True
     , notification = Notification.init
     , unreadCount = 0
     , showAuthModal = False
@@ -191,6 +193,11 @@ view thisMsg page ({ shared } as model) content =
 
         ( _, Loaded profile_ ) ->
             viewHelper thisMsg page profile_ model content
+
+
+onScroll : msg -> Attribute msg
+onScroll message =
+    on "scroll" (Decode.succeed message)
 
 
 viewHelper : (Msg -> msg) -> Page -> Profile -> Model -> Html msg -> Html msg
@@ -399,6 +406,13 @@ viewMainMenu page profile_ model =
 
         iconClass =
             "w-6 h-6 fill-current hover:text-indigo-500 mr-5"
+
+        toggleNavAnimationClass =
+            if model.showToggleMainNav == True then
+                "animated fadeInRight"
+
+            else
+                "animated fadeOutRight"
     in
     div [ class "flex align-center justify-center" ]
         [ nav
@@ -436,7 +450,7 @@ viewMainMenu page profile_ model =
                 , text (t model.shared.translations "menu.shop")
                 ]
             ]
-        , toggleNav model.showMainNav
+        , toggleNav model.showMainNav toggleNavAnimationClass
         ]
 
 
@@ -476,17 +490,20 @@ viewFooter shared =
 -- Button to show/hide navbar on small screens
 
 
-toggleNav : Bool -> Html Msg
-toggleNav clicked =
+toggleNav : Bool -> String -> Html Msg
+toggleNav clicked animation =
     let
+        buttonStyles =
+            "flex align-center justify-center md:invisible fixed right-0 bottom-0 mb-4 mr-4 h-16 w-16 bg-purple-500 text-white rounded-full shadow p-4 align-bottom text-left "
+
         content =
             if clicked then
-                button [ class "", onClick (ShowMainNav False) ] [ Icons.close "fill-current text-white" ]
+                button [ class "", onClick (ShowMainNav False), onScroll (HideToggleNav True) ] [ Icons.close "fill-current text-white" ]
 
             else
-                button [ class "", onClick (ShowMainNav True) ] [ text "Menu" ]
+                button [ class "", onClick (ShowMainNav True), onScroll (HideToggleNav True) ] [ text "Menu" ]
     in
-    div [ class "flex align-center justify-center md:invisible fixed right-0 bottom-0 mb-4 mr-4 h-16 w-16 bg-purple-500 text-white rounded-full shadow p-4 align-bottom text-left" ]
+    div [ class (String.append buttonStyles animation) ]
         [ content ]
 
 
@@ -534,6 +551,7 @@ type Msg
     | ShowNotificationModal Bool
     | ShowUserNav Bool
     | ShowMainNav Bool
+    | HideToggleNav Bool
     | FocusedSearchInput
     | ToggleLanguageItems
     | ClickedLanguage String
@@ -683,7 +701,10 @@ update msg model =
 
         ShowMainNav b ->
             UR.init { closeAllModals | showMainNav = b }
-                |> UR.addCmd (focusMainContent (not b) "mobile-main-nav")
+                |> UR.addCmd (focusMainContent b "mobile-main-nav")
+
+        HideToggleNav b ->
+            UR.init { closeAllModals | showToggleMainNav = b }
 
         FocusedSearchInput ->
             UR.init model
@@ -920,6 +941,9 @@ msgToString msg =
 
         ShowMainNav _ ->
             [ "ShowMainNav" ]
+
+        HideToggleNav _ ->
+            [ "HideToggleNav" ]
 
         FocusedSearchInput ->
             [ "FocusedSearchInput" ]
