@@ -95,6 +95,7 @@
     "sjcl": "^1.0.8",
     "sw-precache": "^5.2.1",
     "tailwindcss": "^1.1.2",
+    "tailwindcss-animatecss": "^0.2.7",
     "tailwindcss-transforms": "^2.2.0",
     "webpack-cli": "^3.3.9"
   }

@@ -3400,7 +3400,7 @@ elliptic@^6.0.0:
     minimalistic-assert "^1.0.0"
     minimalistic-crypto-utils "^1.0.0"
 
-elm-asset-webpack-loader@^1.1.1:
+elm-asset-webpack-loader@1.1.1, elm-asset-webpack-loader@^1.1.1:
   version "1.1.1"
   resolved "https://registry.yarnpkg.com/elm-asset-webpack-loader/-/elm-asset-webpack-loader-1.1.1.tgz#9e8fc05ea89794006c9f873165200f65c6d8ccc0"
   integrity sha512-J+YKLGNCMLSNhxXfQxaJhQzIiTiKQGo8YlZEntTpZjWy3kTqSF/2qAvnRonM2VvfhbKuhg0cKRKVrt9+cC8bmw==
@@ -4216,7 +4216,7 @@ file-loader@^1.1.6:
     loader-utils "^1.0.2"
     schema-utils "^0.4.5"
 
-"file-saver@github:eligrey/FileSaver.js#1.3.8":
+file-saver@eligrey/FileSaver.js#1.3.8:
   version "1.3.8"
   resolved "https://codeload.github.com/eligrey/FileSaver.js/tar.gz/e865e37af9f9947ddcced76b549e27dc45c1cb2e"
 
@@ -9861,6 +9861,11 @@ table@^5.2.3:
     lodash "^4.17.14"
     slice-ansi "^2.1.0"
     string-width "^3.0.0"
+
+tailwindcss-animatecss@^0.2.7:
+  version "0.2.7"
+  resolved "https://registry.yarnpkg.com/tailwindcss-animatecss/-/tailwindcss-animatecss-0.2.7.tgz#cccb78fbe6a568ebf0d513751ec1714986358828"
+  integrity sha512-KDh4JbH8IepWF8ATEvgPDMJWmYH0f+fHPLU6akZy4gkGLRH8PEQqgGurhKhpf05nEXHMEJF2mRjBCppSmQk+9Q==
 
 tailwindcss-transforms@^2.2.0:
   version "2.2.0"
