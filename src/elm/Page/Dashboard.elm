@@ -124,7 +124,9 @@ view loggedIn model =
             div [ class "px-4" ]
                 [ div [ class "text-gray-600 text-2xl font-light flex mt-6 mb-4" ]
                     [ text (t "menu.my_communities")
-                    , div [ class "text-indigo-500 ml-2 font-medium" ] [ text (profile.userName |> Maybe.withDefault "") ]
+                    , div [ class "text-indigo-500 ml-2 font-medium" ]
+                        [ text (profile.userName |> Maybe.withDefault (Eos.nameToString profile.accountName))
+                        ]
                     ]
                 , viewBalances loggedIn communities
                 , viewVerifications loggedIn.shared model
@@ -171,7 +173,7 @@ viewVerifications shared model =
 
                 else
                     div
-                        [ class "shadow-md rounded-lg bg-white mt-5" ]
+                        [ class "rounded-lg bg-white mt-5" ]
                         (toView verifications)
         ]
 
@@ -249,7 +251,7 @@ viewVerification shared verification =
 viewNoVerification : List (Html Msg) -> Html Msg
 viewNoVerification elements =
     div
-        [ class "shadow-md rounded-lg bg-white mt-5 p-4" ]
+        [ class "rounded-lg bg-white mt-5 p-4" ]
         [ div
             [ class "bg-white-smoke flex items-center justify-center p-8" ]
             elements
@@ -296,27 +298,36 @@ viewSections loggedIn model =
                     viewNoVerification
                         [ p
                             [ class "font-sans text-gray-900 text-sm" ]
-                            [ text (t "dashboard.activities.no_actions_yet") ]
+                            [ text (t "dashboard.activities.no_activities_yet") ]
                         ]
 
                 else
                     div
-                        [ class "shadow-md rounded-lg bg-white " ]
+                        [ class "rounded-lg bg-white " ]
                         (toView claims)
         ]
         [ Page.viewTitle (t "transfer.last_title")
         , case model.transfers of
             LoadingGraphql ->
-                Page.viewCardEmpty [ text (t "menu.loading") ]
+                Page.viewCardEmpty
+                    [ div [ class "text-gray-900 text-sm" ]
+                        [ text (t "menu.loading") ]
+                    ]
 
             FailedGraphql _ ->
-                Page.viewCardEmpty [ text (t "transfer.loading_error") ]
+                Page.viewCardEmpty
+                    [ div [ class "text-gray-900 text-sm" ]
+                        [ text (t "transfer.loading_error") ]
+                    ]
 
             LoadedGraphql [] ->
-                Page.viewCardEmpty [ text (t "transfer.no_transfers_yet") ]
+                Page.viewCardEmpty
+                    [ div [ class "text-gray-900 text-sm" ]
+                        [ text (t "transfer.no_transfers_yet") ]
+                    ]
 
             LoadedGraphql transfers ->
-                div [ class "shadow-md rounded-lg bg-white" ]
+                div [ class "rounded-lg bg-white" ]
                     (List.map (\transfer -> viewTransfer loggedIn transfer) transfers)
         ]
 
