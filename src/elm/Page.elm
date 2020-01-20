@@ -1,4 +1,4 @@
-module Page exposing (ExternalMsg(..), Msg, Session(..), errorToString, fullPageError, fullPageGraphQLError, fullPageLoading, fullPageNotFound, init, isLoggedIn, jsAddressToMsg, labelWithTooltip, loading, login, logout, msgToString, onFileChange, subscriptions, toShared, update, viewButtonNew, viewCardEmpty, viewCardList, viewDateDistance, viewGuest, viewLoggedIn, viewMaxTwoColumn, viewMenuFilter, viewMenuFilterButton, viewMenuFilterTabButton, viewMenuTab, viewTitle)
+module Page exposing (ExternalMsg(..), Msg, Session(..), errorToString, fullPageError, fullPageGraphQLError, fullPageLoading, fullPageNotFound, init, isLoggedIn, jsAddressToMsg, labelWithTooltip, loading, login, logout, msgToString, onFileChange, subscriptions, toShared, update, viewButtonNew, viewCardEmpty, viewCardList, viewDateDistance, viewGuest, viewHeader, viewLoggedIn, viewMaxTwoColumn, viewMenuFilter, viewMenuFilterButton, viewMenuFilterTabButton, viewMenuTab, viewTitle)
 
 import Account exposing (Profile)
 import Asset.Icon as Icon
@@ -15,6 +15,7 @@ import Html.Attributes exposing (..)
 import Html.Events exposing (on)
 import Http
 import I18Next exposing (Delims(..), Translations)
+import Icons
 import Json.Decode as Decode exposing (Decoder)
 import Json.Encode as Encode exposing (Value)
 import Ports
@@ -223,6 +224,21 @@ viewTitle text_ =
     p
         [ class "heading-bold" ]
         [ text text_ ]
+
+
+viewHeader : LoggedIn.Model -> String -> Route -> Html msg
+viewHeader ({ shared } as loggedIn) title route =
+    div [ class "w-full h-16 flex px-4 items-center bg-indigo-500" ]
+        [ a
+            [ class "flex absolute items-center"
+            , Route.href route
+            ]
+            [ Icons.back ""
+            , p [ class "ml-2 text-white text-sm" ]
+                [ text (I18Next.t shared.translations "back") ]
+            ]
+        , p [ class "mx-auto text-white" ] [ text title ]
+        ]
 
 
 viewButtonNew : String -> Route -> Html msg

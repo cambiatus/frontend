@@ -43,7 +43,6 @@ initEdit ({ shared } as loggedIn) communityId objectiveId =
 
 
 
-
 -- MODEL
 
 
@@ -132,7 +131,7 @@ view ({ shared } as loggedIn) model =
 
         Loaded ({ symbol } as community) editStatus ->
             div []
-                [ viewHeader loggedIn model symbol
+                [ Page.viewHeader loggedIn (t shared.translations "community.objectives.title") (Route.Community symbol)
                 , case editStatus of
                     NewObjective objForm ->
                         viewForm loggedIn objForm
@@ -140,22 +139,6 @@ view ({ shared } as loggedIn) model =
                     EditObjective objectiveId objForm ->
                         viewForm loggedIn objForm
                 ]
-
-
-viewHeader : LoggedIn.Model -> Model -> Symbol -> Html Msg
-viewHeader ({ shared } as loggedIn) model symbol =
-    div [ class "h-16 w-full bg-indigo-500 flex px-4 items-center" ]
-        [ a
-            [ class "items-center flex absolute"
-            , Route.href (Route.Community symbol)
-            ]
-            [ Icons.back ""
-            , p [ class "text-white text-sm ml-2" ]
-                [ text (t shared.translations "back")
-                ]
-            ]
-        , p [ class "text-white mx-auto" ] [ text (t shared.translations "community.objectives.title") ]
-        ]
 
 
 viewForm : LoggedIn.Model -> ObjectiveForm -> Html Msg
