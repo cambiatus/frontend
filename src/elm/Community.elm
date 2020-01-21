@@ -351,7 +351,7 @@ type alias CreateActionAction =
     , verifications : Int
     , verificationType : String
     , validatorsStr : String
-    , isCompleted : Bool
+    , isCompleted : Int
     , creator : Eos.Name
     }
 
@@ -370,7 +370,7 @@ encodeCreateActionAction c =
         , ( "verifications", Encode.int c.verifications )
         , ( "verification_type", Encode.string c.verificationType )
         , ( "validators_str", Encode.string c.validatorsStr )
-        , ( "is_copmleted", Encode.bool c.isCompleted )
+        , ( "is_completed", Encode.int c.isCompleted )
         , ( "creator", Eos.encodeName c.creator )
         ]
 

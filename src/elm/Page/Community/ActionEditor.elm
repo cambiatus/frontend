@@ -427,7 +427,7 @@ update msg model loggedIn =
                                                     , verifications = model.form.minVotes
                                                     , verificationType = model.form.verificationType
                                                     , validatorsStr = validatorsStr
-                                                    , isCompleted = False
+                                                    , isCompleted = 0
                                                     , creator = loggedIn.accountName
                                                     }
                                                         |> Community.encodeCreateActionAction
