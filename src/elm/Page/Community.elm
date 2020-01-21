@@ -55,8 +55,6 @@ init ({ shared } as loggedIn) symbol =
     )
 
 
-
-
 fetchCommunityActions : Shared -> Symbol -> Cmd Msg
 fetchCommunityActions shared sym =
     let
@@ -168,8 +166,6 @@ type alias ObjectiveForm =
     }
 
 
-
-
 type Verification
     = Manually
     | Automatically
@@ -189,8 +185,6 @@ type alias Member =
     , accountName : String
     , nameWithAt : String
     }
-
-
 
 
 
@@ -303,9 +297,9 @@ viewVerification shared verification =
                 Just symbol ->
                     Route.VerifyClaim
                         symbol
-                        (String.fromInt verification.objectiveId)
-                        (String.fromInt verification.actionId)
-                        (String.fromInt verification.claimId)
+                        verification.objectiveId
+                        verification.actionId
+                        verification.claimId
 
                 Nothing ->
                     Route.ComingSoon
@@ -383,10 +377,9 @@ viewObjective loggedIn model editStatus metadata index objective =
             else
                 " "
 
-        objIdStr : String
+        objIdStr : Int
         objIdStr =
             Community.unwrapObjectiveId objective.id
-                |> String.fromInt
 
         actsNButton : List (Html Msg)
         actsNButton =
@@ -951,7 +944,7 @@ type Msg
     | ClickedOpenObjective Int
     | ClickedCloseObjective
       -- Action
-    | CreateAction Symbol String
+    | CreateAction Symbol Int
     | OpenClaimConfirmation Int
     | CloseClaimConfirmation
     | ClaimAction Int
@@ -1093,8 +1086,6 @@ update msg model loggedIn =
                             )
                 }
                 |> UR.logHttpError msg httpError
-
-
 
 
 jsAddressToMsg : List String -> Value -> Maybe Msg

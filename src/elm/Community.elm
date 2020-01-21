@@ -225,10 +225,7 @@ type ObjectiveId
 objectiveSelectionSet : SelectionSet Objective Bespiral.Object.Objective
 objectiveSelectionSet =
     SelectionSet.succeed Objective
-        |> with
-            (Objective.id
-                |> SelectionSet.map ObjectiveId
-            )
+        |> with (Objective.id |> SelectionSet.map ObjectiveId)
         |> with Objective.description
         |> with (Eos.nameSelectionSet Objective.creatorId)
         |> with (Objective.actions identity actionSelectionSet)

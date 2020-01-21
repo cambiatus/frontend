@@ -32,7 +32,7 @@ import Validate exposing (Validator, ifBlank, ifFalse, ifTrue, validate)
 -- INIT
 
 
-initNew : LoggedIn.Model -> Symbol -> String -> ( Model, Cmd Msg )
+initNew : LoggedIn.Model -> Symbol -> Int -> ( Model, Cmd Msg )
 initNew loggedIn symbol objId =
     let
         shared =
@@ -41,17 +41,9 @@ initNew loggedIn symbol objId =
         initialForm =
             Eos.symbolToString symbol
                 |> newForm
-
-        ( initStatus, obj ) =
-            case String.toInt objId of
-                Just id ->
-                    ( LoadingCommunity, id )
-
-                Nothing ->
-                    ( InvalidObjective objId, 0 )
     in
-    ( { status = initStatus
-      , objective = obj
+    ( { status = LoadingCommunity
+      , objective = objId
       , hasValidity = False
       , hasDeadline = False
       , hasMaxUsage = False

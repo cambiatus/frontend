@@ -73,7 +73,7 @@ type Vote
 
 
 type alias ClaimId =
-    String
+    Int
 
 
 type alias Verification =
@@ -613,12 +613,7 @@ encodeVerification claimId validator vote =
     let
         encodedClaimId : Encode.Value
         encodedClaimId =
-            case String.toInt claimId of
-                Just number ->
-                    Encode.int number
-
-                Nothing ->
-                    Encode.null
+            Encode.int claimId
 
         encodedVerifier : Encode.Value
         encodedVerifier =
@@ -710,8 +705,7 @@ fetchVerification claimId accountName shared =
     let
         id : Int
         id =
-            String.toInt claimId
-                |> Maybe.withDefault -1
+            claimId
 
         validator : String
         validator =

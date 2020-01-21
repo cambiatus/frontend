@@ -204,9 +204,9 @@ viewVerification shared verification =
                 Just symbol ->
                     Route.VerifyClaim
                         symbol
-                        (String.fromInt verification.objectiveId)
-                        (String.fromInt verification.actionId)
-                        (String.fromInt verification.claimId)
+                        verification.objectiveId
+                        verification.actionId
+                        verification.claimId
 
                 Nothing ->
                     Route.ComingSoon
