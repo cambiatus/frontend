@@ -25,6 +25,7 @@ import Json.Decode.Pipeline as Decode exposing (required)
 import Json.Encode as Encode exposing (Value)
 import Time exposing (Posix)
 import Transfer exposing (ConnectionTransfer, Transfer, metadataConnectionSelectionSet, transferConnectionSelectionSet)
+import User exposing (User, selectionSet)
 import Utils
 import View.Tag as Tag
 
@@ -293,11 +294,12 @@ type alias Action =
     , deadline : Maybe DateTime
     , verificationType : VerificationType
     , id : Int
+    , isCompleted : Bool
     }
 
 
 type alias Validator =
-    { validator : Profile }
+    { validator : User }
 
 
 actionSelectionSet : SelectionSet Action Bespiral.Object.Action
@@ -313,12 +315,13 @@ actionSelectionSet =
         |> with Action.deadline
         |> with Action.verificationType
         |> with Action.id
+        |> with Action.isCompleted
 
 
 validatorSelectionSet : SelectionSet Validator Bespiral.Object.Validator
 validatorSelectionSet =
     SelectionSet.succeed Validator
-        |> with (Bespiral.Object.Validator.validator accountSelectionSet)
+        |> with (Bespiral.Object.Validator.validator User.selectionSet)
 
 
 type Verification
@@ -337,32 +340,38 @@ type alias Verifiers =
 
 
 type alias CreateActionAction =
-    { objective_id : ObjectiveId
+    { actionId : Int
+    , objectiveId : ObjectiveId
     , description : String
     , reward : String
     , verifier_reward : String
-    , creator : Eos.Name
     , deadline : Int
     , usages : Int
+    , usagesLeft : Int
     , verifications : Int
-    , verification_type : String
-    , validators_str : String
+    , verificationType : String
+    , validatorsStr : String
+    , isCompleted : Bool
+    , creator : Eos.Name
     }
 
 
 encodeCreateActionAction : CreateActionAction -> Value
 encodeCreateActionAction c =
     Encode.object
-        [ ( "objective_id", encodeObjectiveId c.objective_id )
+        [ ( "action_id", Encode.int c.actionId )
+        , ( "objective_id", encodeObjectiveId c.objectiveId )
         , ( "description", Encode.string c.description )
         , ( "reward", Encode.string c.reward )
         , ( "verifier_reward", Encode.string c.verifier_reward )
-        , ( "creator", Eos.encodeName c.creator )
         , ( "deadline", Encode.int c.deadline )
         , ( "usages", Encode.int c.usages )
+        , ( "usages_left", Encode.int c.usagesLeft )
         , ( "verifications", Encode.int c.verifications )
-        , ( "verification_type", Encode.string c.verification_type )
-        , ( "validators_str", Encode.string c.validators_str )
+        , ( "verification_type", Encode.string c.verificationType )
+        , ( "validators_str", Encode.string c.validatorsStr )
+        , ( "is_copmleted", Encode.bool c.isCompleted )
+        , ( "creator", Eos.encodeName c.creator )
         ]
 
 

@@ -410,22 +410,25 @@ update msg model loggedIn =
                                     Eos.encodeTransaction
                                         { actions =
                                             [ { accountName = "bes.cmm"
-                                              , name = "newaction"
+                                              , name = "upsertaction"
                                               , authorization =
                                                     { actor = loggedIn.accountName
                                                     , permissionName = Eos.samplePermission
                                                     }
                                               , data =
-                                                    { objective_id = Community.ObjectiveId model.objective
+                                                    { actionId = 0
+                                                    , objectiveId = Community.ObjectiveId model.objective
                                                     , description = model.form.description
                                                     , reward = String.fromFloat model.form.reward ++ " " ++ model.form.symbol
                                                     , verifier_reward = String.fromFloat model.form.verifierReward ++ " " ++ model.form.symbol
                                                     , deadline = dateInt
                                                     , usages = model.form.maxUsage
+                                                    , usagesLeft = model.form.maxUsage
                                                     , verifications = model.form.minVotes
-                                                    , verification_type = model.form.verificationType
+                                                    , verificationType = model.form.verificationType
+                                                    , validatorsStr = validatorsStr
+                                                    , isCompleted = False
                                                     , creator = loggedIn.accountName
-                                                    , validators_str = validatorsStr
                                                     }
                                                         |> Community.encodeCreateActionAction
                                               }
@@ -579,7 +582,7 @@ viewForm shared community model =
             else
                 " border-gray-500"
     in
-    [ div [ class "bg-white rounded-lg sm:w-form mx-auto" ]
+    [ div [ class "bg-white rounded-lg" ]
         [ div [ class "px-4 py-6 border-b border-gray-500" ]
             [ img [ src logoLink, class "w-16 h-16 mr-4 inline object-scale-down" ] []
             , span [ class "text-heading font-medium" ] [ text community.title ]
