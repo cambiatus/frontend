@@ -23,5 +23,3 @@ jobs:
         env:
           SLACK_WEBHOOK: ${{ secrets.FRONT_END_WEBHOOK }}
 
-      - name: Echo some stuff
-        run: echo ${{ secrets.SOME_VARIABLE }}
