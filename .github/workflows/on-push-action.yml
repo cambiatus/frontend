@@ -23,5 +23,5 @@ jobs:
         env:
           SLACK_WEBHOOK: ${{ secrets.FRONT_END_WEBHOOK }}
 
-      - name: Build Docker Image
-        run: make build
+      - name: Echo some stuff
+        run: echo ${{ secrets.SOME_VARIABLE }}
