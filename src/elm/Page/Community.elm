@@ -22,7 +22,7 @@ import Html.Attributes exposing (..)
 import Html.Events exposing (onClick, onInput, onSubmit, targetValue)
 import Html.Lazy
 import Http
-import I18Next exposing (Translations, t)
+import I18Next exposing (Translations, t, tr)
 import Icons exposing (..)
 import Json.Decode as Decode exposing (Decoder)
 import Json.Encode as Encode exposing (Value)
@@ -200,6 +200,9 @@ view loggedIn model =
         t s =
             I18Next.t loggedIn.shared.translations s
 
+        tr r_id replaces =
+            I18Next.tr loggedIn.shared.translations I18Next.Curly r_id replaces
+
         text_ s =
             text (t s)
 
@@ -245,11 +248,33 @@ view loggedIn model =
                 , div [ class "container mx-auto px-4" ]
                     [ viewClaimModal loggedIn model
                     , viewMessageStatus loggedIn model
-                    , if loggedIn.accountName == community.creator then
+                    , if LoggedIn.isAccount community.creator loggedIn then
                         viewInvitation loggedIn model
 
                       else
                         div [] []
+                    , div [ class "flex justify-between items-center py-2 px-8 sm:px-6 bg-white rounded-lg mt-4" ]
+                        [ div []
+                            [ p [ class "font-bold" ] [ text_ "community.objectives.title_plural" ]
+                            , p [ class "text-gray-900 text-caption uppercase" ]
+                                [ text
+                                    (tr "community.objectives.subtitle"
+                                        [ ( "objectives", List.length community.objectives |> String.fromInt )
+                                        , ( "actions"
+                                          , List.map (\c -> List.length c.actions) community.objectives
+                                                |> List.foldl (+) 0
+                                                |> String.fromInt
+                                          )
+                                        ]
+                                    )
+                                ]
+                            ]
+                        , a
+                            [ class "button button-primary"
+                            , Route.href (Route.Objectives community.symbol)
+                            ]
+                            [ text_ "menu.edit" ]
+                        ]
                     , div [ class "bg-white py-6 sm:py-8 px-3 sm:px-6 rounded-lg mt-4" ]
                         ([ Page.viewTitle (t "community.objectives.title_plural") ]
                             ++ List.indexedMap (viewObjective loggedIn model editStatus community)
@@ -498,8 +523,7 @@ viewAction loggedIn metadata maybeDate action =
             text (t s)
 
         canEdit =
-            -- LoggedIn.isAccount metadata.creator loggedIn
-            False
+            LoggedIn.isAccount metadata.creator loggedIn
 
         posixDeadline : Posix
         posixDeadline =
