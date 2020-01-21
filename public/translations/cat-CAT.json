@@ -262,8 +262,10 @@
     },
     "objectives": {
       "title": "Objectiu",
-      "title_plural": "Objectius",
+      "title_plural": "Objectius i Accions",
+      "subtitle": "{{objectives}} objectius i {{actions}} accions",
       "new": "Nou objectiu",
+      "action_count": "{{actions}} accions",
       "editor": {
         "not_found": "No trobat",
         "error": "Ui! Quelcom ha fallat",
@@ -295,7 +297,7 @@
       "invite_tooltip": "En cas que la persona que vols convidar no tingui un compte a Cambiatus, escriu el seu correu electrònic.",
       "invite_email_or_username": "Correu electrònic o @usuari",
       "verifiers": "verificadors",
-      "usages": "{{usages}} accions aprovades / {{usagesLeft}} disponibles ara",
+      "usages": "{{usages}} accions ({{usagesLeft}} disponibles)",
       "available_until": "disponible fins ",
       "or" : " o ",
       "form": {

@@ -18,6 +18,7 @@ import Page.Community.ActionEditor as ActionEditor
 import Page.Community.Editor as CommunityEditor
 import Page.Community.Explore as CommunityExplore
 import Page.Community.ObjectiveEditor as ObjectiveEditor
+import Page.Community.Objectives as Objectives
 import Page.Community.VerifyClaim as VerifyClaim
 import Page.Dashboard as Dashboard
 import Page.Login as Login
@@ -152,6 +153,7 @@ type Status
     | ComingSoon
     | Community Community.Model
     | CommunityEditor CommunityEditor.Model
+    | Objectives Objectives.Model
     | ObjectiveEditor ObjectiveEditor.Model
     | ActionEditor ActionEditor.Model
     | VerifyClaim VerifyClaim.Model
@@ -181,6 +183,7 @@ type Msg
     | GotNotificationMsg Notification.Msg
     | GotCommunityMsg Community.Msg
     | GotCommunityEditorMsg CommunityEditor.Msg
+    | GotObjectivesMsg Objectives.Msg
     | GotActionEditorMsg ActionEditor.Msg
     | GotObjectiveEditorMsg ObjectiveEditor.Msg
     | GotVerifyClaimMsg VerifyClaim.Msg
@@ -295,7 +298,7 @@ update msg model =
             -- Will return  a function expecting a Guest Model
             Register.update maybeInvitation subMsg subModel
                 -- will return a function expecting an UpdateResult
-                -- The composition operator will take the result of the above function and use as 
+                -- The composition operator will take the result of the above function and use as
                 -- an input for the below function
                 >> updateGuestUResult (Register maybeInvitation) GotRegisterMsg model
                 -- provides the above composed function with the initial guest input
@@ -307,10 +310,10 @@ update msg model =
                 |> withGuest
 
         ( GotNotificationMsg subMsg, Notification subModel ) ->
-         -- Will return afunction expecting a LoggedIn Model
+            -- Will return afunction expecting a LoggedIn Model
             Notification.update subMsg subModel
                 -- will return a function expecting an UpdateResult
-                -- The composition operator will take the result of the above function and use as 
+                -- The composition operator will take the result of the above function and use as
                 -- an input for the below function
                 >> updateLoggedInUResult Notification GotNotificationMsg model
                 -- provides the above composed function with the LoggedInModel
@@ -324,6 +327,11 @@ update msg model =
         ( GotCommunityEditorMsg subMsg, CommunityEditor subModel ) ->
             CommunityEditor.update subMsg subModel
                 >> updateLoggedInUResult CommunityEditor GotCommunityEditorMsg model
+                |> withLoggedIn
+
+        ( GotObjectivesMsg subMsg, Objectives subModel ) ->
+            Objectives.update subMsg subModel
+                >> updateLoggedInUResult Objectives GotObjectivesMsg model
                 |> withLoggedIn
 
         ( GotObjectiveEditorMsg subMsg, ObjectiveEditor subModel ) ->
@@ -680,6 +688,11 @@ changeRouteTo maybeRoute model =
                 >> updateStatusWith CommunityEditor GotCommunityEditorMsg model
                 |> withLoggedIn (Route.EditCommunity symbol)
 
+        Just (Route.Objectives symbol) ->
+            (\l -> Objectives.init l symbol)
+                >> updateStatusWith Objectives GotObjectivesMsg model
+                |> withLoggedIn (Route.Objectives symbol)
+
         Just (Route.NewObjective symbol) ->
             (\l -> ObjectiveEditor.initNew l symbol)
                 >> updateStatusWith ObjectiveEditor GotObjectiveEditorMsg model
@@ -813,6 +826,9 @@ msgToString msg =
         GotCommunityEditorMsg subMsg ->
             "GotCommunityEditorMsg" :: CommunityEditor.msgToString subMsg
 
+        GotObjectivesMsg subMsg ->
+            "GotObjectives" :: Objectives.msgToString subMsg
+
         GotObjectiveEditorMsg subMsg ->
             "GotObjectiveEditorMsg" :: ObjectiveEditor.msgToString subMsg
 
@@ -927,6 +943,9 @@ view model =
 
         CommunityEditor subModel ->
             viewLoggedIn subModel LoggedIn.Other GotCommunityEditorMsg CommunityEditor.view
+
+        Objectives subModel ->
+            viewLoggedIn subModel LoggedIn.Other GotObjectivesMsg Objectives.view
 
         ObjectiveEditor subModel ->
             viewLoggedIn subModel LoggedIn.Other GotObjectiveEditorMsg ObjectiveEditor.view

@@ -261,8 +261,10 @@
     },
     "objectives": {
       "title": "Objective",
-      "title_plural": "Objectives",
+      "title_plural": "Objectives and Actions",
+      "subtitle": "{{objectives}} objetives and {{actions}} actions",
       "new": "New objective",
+      "action_count": "{{actions}} actions",
       "editor": {
         "not_found": "Not Found",
         "error": "Ops something went wrong!",
@@ -294,7 +296,7 @@
       "invite_tooltip": "In case the person you wish to invite does not have a Cambiatus account, type his/her email.",
       "invite_email_or_username": "Email or @username",
       "verifiers": "verifiers",
-      "usages": "{{usages}} approved actions/ {{usagesLeft}} availables now",
+      "usages": "{{usages}} claims ({{usagesLeft}} available)",
       "available_until": "available until ",
       "or": " or ",
       "form": {
