@@ -24,5 +24,4 @@ jobs:
           SLACK_WEBHOOK: ${{ secrets.FRONT_END_WEBHOOK }}
 
       - name: Build Docker Image
-        uses: 'docker'
         run: make build
