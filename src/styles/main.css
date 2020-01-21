@@ -84,11 +84,11 @@
     @apply bg-white text-orange-300 rounded-full border;
 }
 
-.button-small {
+.button-sm {
     @apply py-1 px-6 h-8;
 }
 
-.button-large {
+.button-lg {
     @apply py-3 px-6 h-12;
 }
 
@@ -168,6 +168,14 @@
 
 
 /* End of Modal */
+
+/* Tag */
+
+.tag {
+    @apply uppercase rounded text-caption py-1 px-5
+}
+
+/* End of Tag */
 
 
 /* https://tailwindcss.com/docs/extracting-components#extracting-css-components-with-apply */

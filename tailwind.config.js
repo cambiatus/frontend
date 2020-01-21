@@ -122,6 +122,7 @@ module.exports = {
         caption: 0.75
       },
       borderRadius: {
+        default: '0.75rem',
         'super': '2.5rem'
       },
       inset: {
