@@ -184,7 +184,7 @@ viewHeader loggedIn =
                 [ text (t loggedIn.shared.translations "shop.description") ]
             , a
                 [ Route.href Route.NewSale
-                , class "button button-primary button-small w-full lg:w-64 lg:mx-8 lg:mt-6 lg:button-medium font-medium"
+                , class "button button-primary button-sm w-full lg:w-64 lg:mx-8 lg:mt-6 lg:button-medium font-medium"
                 ]
                 [ text (t loggedIn.shared.translations "shop.create_offer") ]
             ]

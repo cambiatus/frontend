@@ -210,13 +210,13 @@ viewModal translations modalStatus verification =
                     , div [ class "w-full md:bg-gray-100 md:flex md:absolute rounded-b-lg md:inset-x-0 md:bottom-0 md:p-4" ]
                         [ div [ class "flex-1" ] []
                         , button
-                            [ class "flex-1 block button button-secondary mb-4 button-large w-full md:w-40 md:mb-0"
+                            [ class "flex-1 block button button-secondary mb-4 button-lg w-full md:w-40 md:mb-0"
                             , onClick (ClickedClose verification)
                             ]
                             [ text (t "verify_claim.modal.secondary") ]
                         , div [ class "flex-1" ] []
                         , button
-                            [ class "flex-1 block button button-primary button-large w-full md:w-40"
+                            [ class "flex-1 block button button-primary button-lg w-full md:w-40"
                             , onClick (ClickedConfirm verification vote)
                             ]
                             [ text (t primaryText) ]

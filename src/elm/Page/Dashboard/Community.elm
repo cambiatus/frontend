@@ -104,8 +104,6 @@ viewCard loggedIn index model =
             viewCardFailure loggedIn
 
 
-
-
 viewCardFailure : LoggedIn.Model -> Html Msg
 viewCardFailure loggedIn =
     let
@@ -189,12 +187,12 @@ viewCardBalance loggedIn ({ balance } as model) =
                 [ text_ "account.my_wallet.balances.current" ]
             , div [ class "flex flex-col py-3 w-full" ]
                 [ a
-                    [ class "button button-secondary button-small text-xs font-medium w-full mb-4"
+                    [ class "button button-secondary button-sm text-xs font-medium w-full mb-4"
                     , Route.href (Route.Community balance.asset.symbol)
                     ]
                     [ text_ "menu.explore" ]
                 , button
-                    [ class "button button-primary button-small text-xs w-full"
+                    [ class "button button-primary button-sm text-xs w-full"
                     , onClick ClickedTransfer
                     ]
                     [ text (t loggedIn.shared.translations "account.my_wallet.balances.button") ]

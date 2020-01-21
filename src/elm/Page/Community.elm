@@ -238,7 +238,7 @@ view loggedIn model =
                                 [ classList
                                     [ ( "hidden", editStatus /= NoEdit )
                                     ]
-                                , class "button button-secondary button-small w-16 ml-4"
+                                , class "button button-secondary button-sm w-16 ml-4"
                                 , Route.href (Route.EditCommunity community.symbol)
                                 ]
                                 [ text "edit" ]
@@ -724,7 +724,7 @@ viewHeader ({ shared } as loggedIn) community =
             [ div [ class "h-24 w-24 h-24 w-24 rounded-full mx-auto pt-12" ]
                 [ img
                     [ src (shared.endpoints.ipfs ++ "/" ++ community.logo)
-                    , class "object-scale-down "
+                    , class "object-scale-down"
                     ]
                     []
                 ]
@@ -792,7 +792,7 @@ viewClaimModal loggedIn model =
                     , div [ class "w-full md:bg-gray-100 md:flex md:absolute rounded-b-lg md:inset-x-0 md:bottom-0 md:p-4" ]
                         [ div [ class "flex-1" ] []
                         , button
-                            ([ class "flex-1 block button button-secondary mb-4 button-large w-full md:w-40 md:mb-0"
+                            ([ class "flex-1 block button button-secondary mb-4 button-lg w-full md:w-40 md:mb-0"
                              , onClick CloseClaimConfirmation
                              ]
                                 ++ isDisabled
@@ -800,7 +800,7 @@ viewClaimModal loggedIn model =
                             [ text_ "community.claimAction.no" ]
                         , div [ class "flex-1" ] []
                         , button
-                            ([ class "flex-1 block button button-primary button-large w-full md:w-40"
+                            ([ class "flex-1 block button button-primary button-lg w-full md:w-40"
                              , onClick (ClaimAction actionId)
                              ]
                                 ++ isDisabled
@@ -843,17 +843,6 @@ viewInvitation loggedIn model =
 
 
 -- HELPERS
-
-
-
-
-
-
-
-
-
-
-
 -- SECTIONS
 
 
