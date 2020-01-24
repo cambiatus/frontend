@@ -406,6 +406,13 @@ viewMainMenu page profile_ model =
 
         iconClass =
             "w-6 h-6 fill-current hover:text-indigo-500 mr-5"
+
+        toggleNavAnimationClass =
+            if model.showToggleMainNav == True then
+                "animated fadeInRight"
+
+            else
+                "animated fadeOutRight"
     in
     div [ class "flex align-center justify-center" ]
         [ nav
