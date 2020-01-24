@@ -22,7 +22,7 @@ import Graphql.Operation exposing (RootQuery, RootSubscription)
 import Graphql.SelectionSet as SelectionSet exposing (SelectionSet, with)
 import Html exposing (..)
 import Html.Attributes exposing (..)
-import Html.Events exposing (on, onClick, onFocus, onInput, onMouseEnter, onSubmit, stopPropagationOn)
+import Html.Events exposing (on, onClick, onFocus, onInput, onMouseEnter, onMouseOver, onSubmit, stopPropagationOn)
 import Http
 import I18Next exposing (Delims(..), Translations, t, tr)
 import Icons
@@ -406,13 +406,6 @@ viewMainMenu page profile_ model =
 
         iconClass =
             "w-6 h-6 fill-current hover:text-indigo-500 mr-5"
-
-        toggleNavAnimationClass =
-            if model.showToggleMainNav == True then
-                "animated fadeInRight"
-
-            else
-                "animated fadeOutRight"
     in
     div [ class "flex align-center justify-center" ]
         [ nav
@@ -450,7 +443,12 @@ viewMainMenu page profile_ model =
                 , text (t model.shared.translations "menu.shop")
                 ]
             ]
-        , toggleNav model.showMainNav toggleNavAnimationClass
+        , toggleNav model model.showMainNav
+        , button
+            [ class "fixed h-full w-full inset-0 bg-black opacity-0 cursor-default"
+            , onMouseOver MobileMenuPresent
+            ]
+            []
         ]
 
 
@@ -490,18 +488,28 @@ viewFooter shared =
 -- Button to show/hide navbar on small screens
 
 
-toggleNav : Bool -> String -> Html Msg
-toggleNav clicked animation =
+toggleNav : Model -> Bool -> Html Msg
+toggleNav model clicked =
+    {- if hide flag in model is false animate menu onto screen
+       if the hide flag is true animate menu out of screen
+    -}
     let
+        animation =
+            if model.showToggleMainNav == True then
+                "animated fadeInRight"
+
+            else
+                "animated fadeOutRight"
+
         buttonStyles =
             "flex align-center justify-center md:invisible fixed right-0 bottom-0 mb-4 mr-4 h-16 w-16 bg-purple-500 text-white rounded-full shadow p-4 align-bottom text-left "
 
         content =
             if clicked then
-                button [ class "", onClick (ShowMainNav False), onScroll (HideToggleNav True) ] [ Icons.close "fill-current text-white" ]
+                button [ onClick (ShowMainNav False) ] [ Icons.close "fill-current text-white" ]
 
             else
-                button [ class "", onClick (ShowMainNav True), onScroll (HideToggleNav True) ] [ text "Menu" ]
+                button [ onClick (ShowMainNav True) ] [ text "Menu" ]
     in
     div [ class (String.append buttonStyles animation) ]
         [ content ]
@@ -562,6 +570,8 @@ type Msg
     | CompletedLoadBalances (Result Http.Error (List Balance))
     | CompletedLoadUnread Value
     | KeyDown String
+    | MobileMenuPresent
+    | ToggleMobileMenu
 
 
 update : Msg -> Model -> UpdateResult
@@ -787,6 +797,30 @@ update msg model =
                 model
                     |> UR.init
 
+        MobileMenuPresent ->
+            model
+                |> UR.init
+                |> UR.addPort
+                    { responseAddress = ToggleMobileMenu
+                    , responseData = Encode.null
+                    , data =
+                        Encode.object
+                            [ ( "name", Encode.string "scrollListener" ) ]
+                    }
+
+        ToggleMobileMenu ->
+            {- { model | mobileMenuShow = !model.mobileMenuShown} -}
+            { model | showToggleMainNav = not model.showToggleMainNav }
+                |> UR.init
+
+
+
+{- Add logic to show and hide mobile mebu
+   Consider adding a flag to the model to hold the menu visibilty
+   Use that flag when rendering the menu to animate it out of screen
+   Or to animate it onto the screen
+-}
+
 
 chatNotification : Model -> String -> Notification
 chatNotification model from =
@@ -974,3 +1008,9 @@ msgToString msg =
 
         KeyDown _ ->
             [ "KeyDown" ]
+
+        MobileMenuPresent ->
+            [ "MobileMenuPresent" ]
+
+        ToggleMobileMenu ->
+            [ "ToggleMobileMenu" ]
