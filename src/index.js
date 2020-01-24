@@ -809,6 +809,33 @@ async function handleJavascriptPort (arg) {
       document.getElementById('guest-footer').className += ' guest__footer'
       break
     }
+    case 'scrollListener': {
+      // this means mobile menu has been shown we should listen for scrolling
+      const response = {
+        address: arg.responseAddress,
+        addressData: arg.responseData
+      }
+      var scrollStop = function (callback) {
+        var isScrolling
+        window.addEventListener('scroll', function (event) {
+          window.clearTimeout(isScrolling)
+          // when a user starts scrolling we should send a ToggleMobileMenu message
+          app.ports.javascriptInPort.send(response)
+
+          isScrolling = setTimeout(function () {
+            callback()
+          }, 150)
+        }, false)
+      }
+      scrollStop(function () {
+      // when a user stops scrolling we should send a ToggleMobileMenu message
+        console.log('Scrolling stopped!!')
+        app.ports.javascriptInPort.send(response)
+      }
+      )
+      break
+    }
+
     case 'subscribeToNewCommunity': {
       devLog('=======================', 'newCommunitySubscription')
       let notifiers = []
