@@ -453,7 +453,7 @@ viewMainMenu page profile_ model =
         , toggleNav model model.showMainNav
         , button
             [ class "fixed h-full w-full inset-0 bg-black opacity-0 cursor-default"
-            , onMouseOver MobileMenuPresent
+            , onMouseEnter MobileMenuPresent
             ]
             []
         ]
@@ -506,7 +506,7 @@ toggleNav model clicked =
                 "animated fadeInRight"
 
             else
-                "animated fadeOutRight"
+                "invisible"
 
         buttonStyles =
             "flex align-center justify-center md:invisible fixed right-0 bottom-0 mb-4 mr-4 h-16 w-16 bg-purple-500 text-white rounded-full shadow p-4 align-bottom text-left "
@@ -942,6 +942,9 @@ jsAddressToMsg addr val =
             Decode.decodeValue (Decode.field "meta" Decode.value) val
                 |> Result.map CompletedLoadUnread
                 |> Result.toMaybe
+
+        "ToggleMobileMenu" :: [] ->
+            Just ToggleMobileMenu
 
         _ ->
             Nothing
