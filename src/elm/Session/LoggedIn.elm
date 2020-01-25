@@ -399,20 +399,13 @@ viewMainMenu page profile_ model =
             model.shared.endpoints.ipfs
 
         menuItemClass =
-            "mx-4 w-auto md:w-48 font-sans uppercase flex items-center justify-center leading-tight text-xs text-gray-700 hover:text-indigo-500"
+            "mx-4 w-auto md:w-48 font-sans uppercase flex md:items-center md:justify-center leading-tight text-xs text-gray-700 hover:text-indigo-500 sm:justify-start sm:pl-3 "
 
         activeClass =
             "border-orange-100 border-b-2 text-indigo-500 font-medium"
 
         iconClass =
             "w-6 h-6 fill-current hover:text-indigo-500 mr-5"
-
-        toggleNavAnimationClass =
-            if model.showToggleMainNav == True then
-                "animated fadeInRight"
-
-            else
-                "animated fadeOutRight"
     in
     div [ class "flex align-center justify-center" ]
         [ nav
