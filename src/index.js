@@ -824,7 +824,7 @@ async function handleJavascriptPort (arg) {
 
           isScrolling = setTimeout(function () {
             callback()
-          }, 150)
+          }, 66)
         }, false)
       }
       scrollStop(function () {
