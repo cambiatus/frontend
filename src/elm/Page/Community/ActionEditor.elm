@@ -417,7 +417,7 @@ update msg model loggedIn =
                                                     }
                                               , data =
                                                     { actionId = 0
-                                                    , objectiveId = Community.ObjectiveId model.objective
+                                                    , objectiveId = model.objective
                                                     , description = model.form.description
                                                     , reward = String.fromFloat model.form.reward ++ " " ++ model.form.symbol
                                                     , verifier_reward = String.fromFloat model.form.verifierReward ++ " " ++ model.form.symbol

@@ -9,7 +9,7 @@ import Bespiral.Enum.VerificationType as VerificationType exposing (Verification
 import Bespiral.Object
 import Bespiral.Query exposing (ClaimsRequiredArguments)
 import Bespiral.Scalar exposing (DateTime(..))
-import Community exposing (ActionVerification, ActionVerificationsResponse, ClaimResponse, Community, ObjectiveId, Validator)
+import Community exposing (ActionVerification, ActionVerificationsResponse, ClaimResponse, Community, Validator)
 import Dict exposing (Dict)
 import Eos exposing (Symbol)
 import Eos.Account as Eos
@@ -402,10 +402,6 @@ viewObjective loggedIn model editStatus metadata index objective =
             else
                 " "
 
-        objIdStr : Int
-        objIdStr =
-            Community.unwrapObjectiveId objective.id
-
         actsNButton : List (Html Msg)
         actsNButton =
             List.map (viewAction loggedIn metadata model.date) objective.actions
@@ -415,7 +411,7 @@ viewObjective loggedIn model editStatus metadata index objective =
                             acts
                                 ++ [ button
                                         [ class "border border-dashed border-button-orange mt-6 w-full flex flex-row content-start px-4 py-2"
-                                        , onClick (CreateAction metadata.symbol objIdStr)
+                                        , onClick (CreateAction metadata.symbol objective.id)
                                         ]
                                         [ span [ class "px-2 text-button-orange font-medium" ] [ text "+" ]
                                         , span [ class "text-button-orange font-medium" ] [ text_ "community.actions.new" ]
@@ -445,7 +441,7 @@ viewObjective loggedIn model editStatus metadata index objective =
                 [ if canEdit then
                     a
                         [ class "text-white font-medium underline text-xs uppercase sm:text-sm"
-                        , Route.href (Route.EditObjective metadata.symbol (Community.unwrapObjectiveId objective.id))
+                        , Route.href (Route.EditObjective metadata.symbol objective.id)
                         ]
                         [ text_ "menu.edit" ]
 

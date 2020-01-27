@@ -1,4 +1,4 @@
-module Community exposing (Action, ActionVerification, ActionVerificationsResponse, Balance, ClaimResponse, Community, CreateCommunityData, CreateTokenData, DashboardInfo, Metadata, Objective, ObjectiveId(..), Transaction, Validator, Verification(..), Verifiers, WithObjectives, claimSelectionSet, communitiesQuery, communityQuery, createCommunityData, decodeBalance, decodeObjectiveId, decodeTransaction, encodeClaimAction, encodeCreateActionAction, encodeCreateCommunityData, encodeCreateObjectiveAction, encodeCreateTokenData, encodeObjectiveId, encodeUpdateLogoData, encodeUpdateObjectiveAction, logoBackground, logoTitleQuery, logoUrl, newCommunitySubscription, toVerifications, unwrapObjectiveId)
+module Community exposing (Action, ActionVerification, ActionVerificationsResponse, Balance, ClaimResponse, Community, CreateCommunityData, CreateTokenData, DashboardInfo, Metadata, Objective, Transaction, Validator, Verification(..), Verifiers, WithObjectives, claimSelectionSet, communitiesQuery, communityQuery, createCommunityData, decodeBalance, decodeTransaction, encodeClaimAction, encodeCreateActionAction, encodeCreateCommunityData, encodeCreateObjectiveAction, encodeCreateTokenData, encodeUpdateLogoData, encodeUpdateObjectiveAction, logoBackground, logoTitleQuery, logoUrl, newCommunitySubscription, toVerifications)
 
 import Account exposing (Profile, accountSelectionSet)
 import Api.Relay exposing (MetadataConnection, PaginationArgs)
@@ -212,39 +212,20 @@ logoPlaceholder ipfsUrl =
 
 
 type alias Objective =
-    { id : ObjectiveId
+    { id : Int
     , description : String
     , creator : Eos.Name
     , actions : List Action
     }
 
 
-type ObjectiveId
-    = ObjectiveId Int
-
-
 objectiveSelectionSet : SelectionSet Objective Bespiral.Object.Objective
 objectiveSelectionSet =
     SelectionSet.succeed Objective
-        |> with (Objective.id |> SelectionSet.map ObjectiveId)
+        |> with Objective.id
         |> with Objective.description
         |> with (Eos.nameSelectionSet Objective.creatorId)
         |> with (Objective.actions identity actionSelectionSet)
-
-
-decodeObjectiveId : Decoder ObjectiveId
-decodeObjectiveId =
-    Decode.map ObjectiveId Decode.int
-
-
-encodeObjectiveId : ObjectiveId -> Value
-encodeObjectiveId (ObjectiveId i) =
-    Encode.int i
-
-
-unwrapObjectiveId : ObjectiveId -> Int
-unwrapObjectiveId (ObjectiveId i) =
-    i
 
 
 type alias CreateObjectiveAction =
@@ -341,7 +322,7 @@ type alias Verifiers =
 
 type alias CreateActionAction =
     { actionId : Int
-    , objectiveId : ObjectiveId
+    , objectiveId : Int
     , description : String
     , reward : String
     , verifier_reward : String
@@ -360,7 +341,7 @@ encodeCreateActionAction : CreateActionAction -> Value
 encodeCreateActionAction c =
     Encode.object
         [ ( "action_id", Encode.int c.actionId )
-        , ( "objective_id", encodeObjectiveId c.objectiveId )
+        , ( "objective_id", Encode.int c.objectiveId )
         , ( "description", Encode.string c.description )
         , ( "reward", Encode.string c.reward )
         , ( "verifier_reward", Encode.string c.verifier_reward )

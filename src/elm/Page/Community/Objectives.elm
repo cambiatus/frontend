@@ -82,6 +82,8 @@ view ({ shared } as loggedIn) model =
                     [ div [ class "flex justify-end" ] [ viewNewObjectiveButton loggedIn community ]
                     , div []
                         (community.objectives
+                            |> List.sortBy .id
+                            |> List.reverse
                             |> List.indexedMap (viewObjective loggedIn model community)
                         )
                     ]
@@ -148,7 +150,7 @@ viewObjective ({ shared } as loggedIn) model community index objective =
                 [ a
                     [ class "w-full button button-primary button-sm mt-6 mb-8"
                     , Route.href
-                        (Route.NewAction community.symbol (Community.unwrapObjectiveId objective.id))
+                        (Route.NewAction community.symbol objective.id)
                     ]
                     [ text_ "community.actions.new" ]
                 , div []
@@ -162,7 +164,11 @@ viewObjective ({ shared } as loggedIn) model community index objective =
             text ""
         , if not isOpen then
             div [ class "flex items-center justify-end" ]
-                [ a [ class "button button-secondary button-sm" ] [ text_ "menu.edit" ]
+                [ a
+                    [ class "button button-secondary button-sm"
+                    , Route.href (Route.EditObjective model.communityId objective.id)
+                    ]
+                    [ text_ "menu.edit" ]
                 ]
 
           else
@@ -238,9 +244,18 @@ viewAction ({ shared } as loggedIn) model action =
                 [ p [ class "input-label" ]
                     [ text_ "community.actions.available_until" ]
                 , p [ class "text-body" ]
-                    [ p [ classList [ ( "text-red", action.usagesLeft == 0 ) ] ]
-                        [ text (tr "community.actions.usages" [ ( "usages", usages ), ( "usagesLeft", usagesLeft ) ]) ]
-                    , p [ classList [ ( "text-red", pastDeadline ) ] ] [ text deadlineStr ]
+                    [ if action.usages > 0 then
+                        p [ classList [ ( "text-red", action.usagesLeft == 0 ) ] ]
+                            [ text (tr "community.actions.usages" [ ( "usages", usages ), ( "usagesLeft", usagesLeft ) ]) ]
+
+                      else
+                        text ""
+                    , case action.deadline of
+                        Just d ->
+                            p [ classList [ ( "text-red", pastDeadline ) ] ] [ text deadlineStr ]
+
+                        Nothing ->
+                            text ""
                     ]
                 ]
             , div [ class "mx-2 mb-2" ]
@@ -268,7 +283,7 @@ viewAction ({ shared } as loggedIn) model action =
         , if validationType == "CLAIMABLE" then
             let
                 isDisabled =
-                    not action.isCompleted || not (pastDeadline || action.usagesLeft == 0)
+                    not action.isCompleted || not (pastDeadline || (action.usages > 0 && action.usagesLeft == 0))
             in
             div [ class "mb-4" ]
                 [ button
