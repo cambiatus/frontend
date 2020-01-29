@@ -131,7 +131,7 @@ view ({ shared } as loggedIn) model =
 
         Loaded ({ symbol } as community) editStatus ->
             div []
-                [ Page.viewHeader loggedIn (t shared.translations "community.objectives.title") (Route.Community symbol)
+                [ Page.viewHeader loggedIn (t shared.translations "community.objectives.title") (Route.Objectives symbol)
                 , case editStatus of
                     NewObjective objForm ->
                         viewForm loggedIn objForm
@@ -148,14 +148,14 @@ viewForm ({ shared } as loggedIn) objForm =
             objForm.save == Saving
     in
     div [ class "bg-white w-full p-10" ]
-        [ div [ class "w-form mx-auto" ]
+        [ div [ class "mx-auto" ]
             [ Html.form
                 [ class "mb-10"
                 ]
                 [ span [ class "input-label" ]
                     [ text (t shared.translations "community.objectives.editor.description_label") ]
                 , textarea
-                    [ class "form-textarea block w-full rounded border"
+                    [ class "form-textarea w-full rounded border"
                     , rows 5
                     , disabled isDisabled
                     , onInput EnteredDescription

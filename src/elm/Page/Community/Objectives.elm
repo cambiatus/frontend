@@ -43,13 +43,6 @@ type alias Model =
     }
 
 
-type Status
-    = Loading
-    | Loaded Community
-    | NotFound
-    | Failed (Graphql.Http.Error (Maybe Community))
-
-
 initModel : LoggedIn.Model -> Symbol -> Model
 initModel loggedIn symbol =
     { communityId = symbol
@@ -57,6 +50,13 @@ initModel loggedIn symbol =
     , openObjective = Nothing
     , date = Nothing
     }
+
+
+type Status
+    = Loading
+    | Loaded Community
+    | NotFound
+    | Failed (Graphql.Http.Error (Maybe Community))
 
 
 
@@ -79,7 +79,7 @@ view ({ shared } as loggedIn) model =
             div []
                 [ Page.viewHeader loggedIn (t shared.translations "community.objectives.title_plural") (Route.Community model.communityId)
                 , div [ class "container mx-auto px-4 my-10" ]
-                    [ div [ class "flex justify-end" ] [ viewNewObjectiveButton loggedIn community ]
+                    [ div [ class "flex justify-end mb-10" ] [ viewNewObjectiveButton loggedIn community ]
                     , div []
                         (community.objectives
                             |> List.sortBy .id
@@ -94,7 +94,7 @@ viewNewObjectiveButton : LoggedIn.Model -> Community -> Html msg
 viewNewObjectiveButton ({ shared } as loggedIn) community =
     if LoggedIn.isAccount community.creator loggedIn then
         a
-            [ class "button button-primary button-sm w-full"
+            [ class "button button-primary button-sm w-full md:w-64"
             , Route.href (Route.NewObjective community.symbol)
             ]
             [ text (t shared.translations "community.objectives.new") ]
@@ -136,13 +136,18 @@ viewObjective ({ shared } as loggedIn) model community index objective =
                     ]
                 ]
             , div [ class "flex" ]
-                [ if canEdit then
-                    -- a [ class "button button-secondary" ] [ text_ "menu.edit" ]
-                    div [] []
+                [ a
+                    [ class "w-full button button-secondary button-sm mr-10 hidden md:flex md:visible"
+                    , Route.href (Route.EditObjective model.communityId objective.id)
+                    ]
+                    [ text_ "menu.edit" ]
+                , button [ onClick (OpenObjective index) ]
+                    [ if isOpen then
+                        Icons.arrowDown "rotate-180"
 
-                  else
-                    text ""
-                , button [ onClick (OpenObjective index) ] [ Icons.arrowDown "" ]
+                      else
+                        Icons.arrowDown ""
+                    ]
                 ]
             ]
         , if isOpen then
@@ -157,15 +162,19 @@ viewObjective ({ shared } as loggedIn) model community index objective =
                     (objective.actions
                         |> List.map (viewAction loggedIn model)
                     )
-                , a [ class "w-full button button-secondary button-sm" ] [ text_ "menu.edit" ]
+                , a
+                    [ class "w-full button button-secondary button-sm"
+                    , Route.href (Route.EditObjective model.communityId objective.id)
+                    ]
+                    [ text_ "menu.edit" ]
                 ]
 
           else
             text ""
         , if not isOpen then
-            div [ class "flex items-center justify-end" ]
+            div [ class "flex items-center justify-end mt-8 md:hidden" ]
                 [ a
-                    [ class "button button-secondary button-sm"
+                    [ class "w-full button button-secondary button-sm"
                     , Route.href (Route.EditObjective model.communityId objective.id)
                     ]
                     [ text_ "menu.edit" ]
@@ -206,6 +215,9 @@ viewAction ({ shared } as loggedIn) model action =
         ( usages, usagesLeft ) =
             ( String.fromInt action.usages, String.fromInt action.usagesLeft )
 
+        isClosed =
+            pastDeadline || (action.usages > 0 && action.usagesLeft == 0)
+
         validationType =
             action.verificationType
                 |> VerificationType.toString
@@ -219,7 +231,7 @@ viewAction ({ shared } as loggedIn) model action =
     div [ class "bg-gray-100 my-8 p-4" ]
         [ Icons.flag "mx-auto mb-4"
         , p [ class "text-body" ] [ text action.description ]
-        , div [ class "flex flex-wrap my-6 -mx-2" ]
+        , div [ class "flex flex-wrap my-6 -mx-2 items-center" ]
             [ div [ class "mx-2 mb-2" ]
                 [ p [ class "input-label" ]
                     [ text_ "community.actions.reward" ]
@@ -240,29 +252,33 @@ viewAction ({ shared } as loggedIn) model action =
                         |> text
                     ]
                 ]
-            , div [ class "mx-2 mb-2" ]
-                [ p [ class "input-label" ]
-                    [ text_ "community.actions.available_until" ]
-                , p [ class "text-body" ]
-                    [ if action.usages > 0 then
-                        p [ classList [ ( "text-red", action.usagesLeft == 0 ) ] ]
-                            [ text (tr "community.actions.usages" [ ( "usages", usages ), ( "usagesLeft", usagesLeft ) ]) ]
+            , if action.deadline == Nothing && action.usages == 0 then
+                text ""
 
-                      else
-                        text ""
-                    , case action.deadline of
-                        Just d ->
-                            p [ classList [ ( "text-red", pastDeadline ) ] ] [ text deadlineStr ]
+              else
+                div [ class "mx-2 mb-2" ]
+                    [ p [ class "input-label" ]
+                        [ text_ "community.actions.available_until" ]
+                    , p [ class "text-body" ]
+                        [ if action.usages > 0 then
+                            p [ classList [ ( "text-red", action.usagesLeft == 0 ) ] ]
+                                [ text (tr "community.actions.usages" [ ( "usages", usages ), ( "usagesLeft", usagesLeft ) ]) ]
 
-                        Nothing ->
+                          else
                             text ""
+                        , case action.deadline of
+                            Just d ->
+                                p [ classList [ ( "text-red", pastDeadline ) ] ] [ text deadlineStr ]
+
+                            Nothing ->
+                                text ""
+                        ]
                     ]
-                ]
             , div [ class "mx-2 mb-2" ]
                 [ if action.isCompleted then
                     div [ class "tag bg-green" ] [ text "completed" ]
 
-                  else if pastDeadline || action.usagesLeft == 0 then
+                  else if isClosed then
                     div [ class "tag bg-gray-500 text-red" ] [ text "closed" ]
 
                   else
@@ -271,31 +287,22 @@ viewAction ({ shared } as loggedIn) model action =
             ]
         , div [ class "py-8" ]
             [ p [ class "input-label mb-4" ] [ text_ "community.actions.verifiers" ]
-            , div [ class "flex overflow-scrol -mx-2" ]
-                (List.map
-                    (\u ->
-                        div [ class "mx-2" ]
-                            [ User.view shared.endpoints.ipfs loggedIn.accountName shared.translations u.validator ]
-                    )
-                    action.validators
-                )
-            ]
-        , if validationType == "CLAIMABLE" then
-            let
-                isDisabled =
-                    not action.isCompleted || not (pastDeadline || (action.usages > 0 && action.usagesLeft == 0))
-            in
-            div [ class "mb-4" ]
-                [ button
-                    [ class "w-full button button-sm"
-                    , classList [ ( "button-disabled", isDisabled ), ( "button-primary", not isDisabled ) ]
-                    , disabled isDisabled
+            , if validationType == "AUTOMATIC" then
+                div [ class "flex items-center" ]
+                    [ p [ class "text-body" ] [ text_ "community.actions.automatic_analyzers" ]
+                    , Icons.exclamation "ml-2"
                     ]
-                    [ text "claim" ]
-                ]
 
-          else
-            text ""
+              else
+                div [ class "flex overflow-scrol -mx-2" ]
+                    (List.map
+                        (\u ->
+                            div [ class "mx-2" ]
+                                [ User.view shared.endpoints.ipfs loggedIn.accountName shared.translations u.validator ]
+                        )
+                        action.validators
+                    )
+            ]
         ]
 
 
@@ -333,8 +340,13 @@ update msg model loggedIn =
             UR.init { model | date = Just date }
 
         OpenObjective index ->
-            { model | openObjective = Just index }
-                |> UR.init
+            if model.openObjective == Just index then
+                { model | openObjective = Nothing }
+                    |> UR.init
+
+            else
+                { model | openObjective = Just index }
+                    |> UR.init
 
 
 msgToString : Msg -> List String

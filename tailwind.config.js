@@ -109,9 +109,6 @@ module.exports = {
         'title-h1': '3rem',
         'hero': '3.375rem'
       },
-      screens: {
-        xs: '450px'
-      },
       spacing: {
         '7': '1.75rem',
         'heading': '1.375rem',
@@ -128,9 +125,6 @@ module.exports = {
       inset: {
         '1': '1rem',
         '1/2': '50%'
-      },
-      width: {
-        'form': '45.625rem'
       }
     }
   },

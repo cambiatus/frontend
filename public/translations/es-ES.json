@@ -291,7 +291,7 @@
       "manually_label": "Manualmente",
       "manually_info": "Selecciona personas que estan realmente comprometidas con esta comunidad.",
       "manually_reward": "Define la recompensa por verificar",
-      "automatically_label": "automática",
+      "automatic_analyzers": "Acción automática, sin verificadores.",
       "invite_label": "Invitar",
       "invite_tooltip": "En caso de que la persona que quieres invitar no tenga una cuenta en Cambiatus, escribe su correo electrónico.",
       "invite_email_or_username": "Correo electrónico o @usuario",

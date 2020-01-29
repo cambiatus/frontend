@@ -224,7 +224,7 @@ view loggedIn model =
                 canEdit =
                     LoggedIn.isAccount community.creator loggedIn
             in
-            div [ class "" ]
+            div []
                 [ viewHeader loggedIn community
                 , div [ class "bg-white p-20" ]
                     [ div [ class "flex flex-wrap w-full items-center" ]
@@ -253,28 +253,32 @@ view loggedIn model =
 
                       else
                         div [] []
-                    , div [ class "flex justify-between items-center py-2 px-8 sm:px-6 bg-white rounded-lg mt-4" ]
-                        [ div []
-                            [ p [ class "font-bold" ] [ text_ "community.objectives.title_plural" ]
-                            , p [ class "text-gray-900 text-caption uppercase" ]
-                                [ text
-                                    (tr "community.objectives.subtitle"
-                                        [ ( "objectives", List.length community.objectives |> String.fromInt )
-                                        , ( "actions"
-                                          , List.map (\c -> List.length c.actions) community.objectives
-                                                |> List.foldl (+) 0
-                                                |> String.fromInt
-                                          )
-                                        ]
-                                    )
+                    , if canEdit then
+                        div [ class "flex justify-between items-center py-2 px-8 sm:px-6 bg-white rounded-lg mt-4" ]
+                            [ div []
+                                [ p [ class "font-bold" ] [ text_ "community.objectives.title_plural" ]
+                                , p [ class "text-gray-900 text-caption uppercase" ]
+                                    [ text
+                                        (tr "community.objectives.subtitle"
+                                            [ ( "objectives", List.length community.objectives |> String.fromInt )
+                                            , ( "actions"
+                                              , List.map (\c -> List.length c.actions) community.objectives
+                                                    |> List.foldl (+) 0
+                                                    |> String.fromInt
+                                              )
+                                            ]
+                                        )
+                                    ]
                                 ]
+                            , a
+                                [ class "button button-primary"
+                                , Route.href (Route.Objectives community.symbol)
+                                ]
+                                [ text_ "menu.edit" ]
                             ]
-                        , a
-                            [ class "button button-primary"
-                            , Route.href (Route.Objectives community.symbol)
-                            ]
-                            [ text_ "menu.edit" ]
-                        ]
+
+                      else
+                        text ""
                     , div [ class "bg-white py-6 sm:py-8 px-3 sm:px-6 rounded-lg mt-4" ]
                         ([ Page.viewTitle (t "community.objectives.title_plural") ]
                             ++ List.indexedMap (viewObjective loggedIn model editStatus community)
