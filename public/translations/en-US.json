@@ -299,7 +299,10 @@
       "usages": "{{usages}} claims ({{usagesLeft}} available)",
       "available_until": "available until ",
       "or": " or ",
+      "completed": "Completed",
+      "closed": "Closed",
       "form": {
+        "not_found": "Action not found",
         "description_label": "Activity Description",
         "reward_label": "Reward",
         "validity_label": "Does it have validity?",

@@ -300,7 +300,10 @@
       "usages": "{{usages}} accions ({{usagesLeft}} disponibles)",
       "available_until": "disponible fins ",
       "or" : " o ",
+      "completed": "Completat",
+      "closed": "Tancat",
       "form": {
+        "not_found": "Acció no trobada",
         "description_label": "Descripció de l’activitat",
         "reward_label": "Recompensa",
         "validity_label": "Té validesa?",

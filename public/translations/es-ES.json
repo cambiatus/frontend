@@ -299,7 +299,10 @@
       "usages": "{{usages}} acciones ({{usagesLeft}} disponibles)",
       "available_until": "Disponible hasta ",
       "or": " o ",
+      "completed": "Terminada",
+      "closed": "Cerrada",
       "form": {
+        "not_found": "Acción no encontrada",
         "description_label": "Descripción de la actividad",
         "reward_label": "Recompensa",
         "validity_label": "¿Tiene validez?",

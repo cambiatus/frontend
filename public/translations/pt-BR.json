@@ -303,7 +303,10 @@
       "usages": "{{usages}} usos ({{usagesLeft}} disponíveis)",
       "available_until": "disponível até ",
       "or": " ou ",
+      "completed": "Completa",
+      "closed": "Encerrada",
       "form": {
+        "not_found": "Ação não encontrada",
         "description_label": "Descrição de Atividade",
         "reward_label": "Recompensa",
         "validity_label": "Tem validade?",
