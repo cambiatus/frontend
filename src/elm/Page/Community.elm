@@ -230,18 +230,6 @@ view loggedIn model =
                     [ div [ class "flex flex-wrap w-full items-center" ]
                         [ p [ class "text-4xl font-bold" ]
                             [ text community.title ]
-                        , if canEdit then
-                            a
-                                [ classList
-                                    [ ( "hidden", editStatus /= NoEdit )
-                                    ]
-                                , class "button button-secondary button-sm w-16 ml-4"
-                                , Route.href (Route.EditCommunity community.symbol)
-                                ]
-                                [ text "edit" ]
-
-                          else
-                            text ""
                         ]
                     , p [ class "text-grey-200 text-sm" ] [ text community.description ]
                     ]
@@ -410,21 +398,6 @@ viewObjective loggedIn model editStatus metadata index objective =
         actsNButton =
             List.map (viewAction loggedIn metadata model.date) objective.actions
                 |> List.intersperse (hr [ class "bg-border-grey text-border-grey" ] [])
-                |> (\acts ->
-                        if canEdit then
-                            acts
-                                ++ [ button
-                                        [ class "border border-dashed border-button-orange mt-6 w-full flex flex-row content-start px-4 py-2"
-                                        , onClick (CreateAction metadata.symbol objective.id)
-                                        ]
-                                        [ span [ class "px-2 text-button-orange font-medium" ] [ text "+" ]
-                                        , span [ class "text-button-orange font-medium" ] [ text_ "community.actions.new" ]
-                                        ]
-                                   ]
-
-                        else
-                            acts
-                   )
     in
     div [ class "my-2" ]
         [ div
@@ -441,47 +414,22 @@ viewObjective loggedIn model editStatus metadata index objective =
                     ]
                     [ text objective.description ]
                 ]
-            , div [ class ("flex flex-row justify-between mt-5 sm:mt-0" ++ arrowStyle) ]
-                [ if canEdit then
-                    a
-                        [ class "text-white font-medium underline text-xs uppercase sm:text-sm"
-                        , Route.href (Route.EditObjective metadata.symbol objective.id)
-                        ]
-                        [ text_ "menu.edit" ]
+            , div [ class ("flex flex-row justify-end mt-5 sm:mt-0" ++ arrowStyle) ]
+                [ button
+                    [ class ""
+                    , if isOpen then
+                        onClick ClickedCloseObjective
 
-                  else
-                    text ""
-                , if isOpen then
-                    button
-                        [ class "align-middle"
-                        , if isOpen then
-                            onClick ClickedCloseObjective
-
-                          else
-                            onClick (ClickedOpenObjective index)
+                      else
+                        onClick (ClickedOpenObjective index)
+                    ]
+                    [ img
+                        [ class "fill-current text-white h-2 w-4 stroke-current"
+                        , src "/icons/objective_arrow.svg"
+                        , classList [ ( "rotate-180", isOpen ) ]
                         ]
-                        [ img
-                            [ class "rotate-180 fill-current text-white h-2 w-4 stroke-current"
-                            , src "/icons/objective_arrow.svg"
-                            ]
-                            []
-                        ]
-
-                  else
-                    button
-                        [ class "align-middle"
-                        , if isOpen then
-                            onClick ClickedCloseObjective
-
-                          else
-                            onClick (ClickedOpenObjective index)
-                        ]
-                        [ img
-                            [ class "h-2 w-4 self-end stroke-current"
-                            , src "/icons/objective_arrow.svg"
-                            ]
-                            []
-                        ]
+                        []
+                    ]
                 ]
             ]
         , if isOpen then
@@ -668,7 +616,7 @@ viewAction loggedIn metadata maybeDate action =
 
                          else
                             [ span [ class "text-date-purple uppercase text-sm mr-1" ]
-                                [ text_ "community.actions.automatically_label" ]
+                                [ text_ "community.actions.automatic_analyzers" ]
                             , img [ src "/icons/tooltip.svg" ] []
                             ]
                         )
@@ -682,14 +630,7 @@ viewAction loggedIn metadata maybeDate action =
                     , span [ class "font-medium" ] [ text rewardStr ]
                     ]
                 , div [ class "hidden sm:flex sm:visible flex-row justify-end flex-grow-1" ]
-                    [ if canEdit then
-                        button
-                            [ class "bg-white uppercase underline w-4/5 h-10 text-button-orange" ]
-                            [ text_ "menu.edit" ]
-
-                      else
-                        text ""
-                    , if validationType == "CLAIMABLE" then
+                    [ if validationType == "CLAIMABLE" then
                         button
                             [ class ("h-10 uppercase rounded-lg ml-1" ++ claimColors ++ claimSize)
                             , onClick (OpenClaimConfirmation action.id)
@@ -702,14 +643,7 @@ viewAction loggedIn metadata maybeDate action =
                 ]
             ]
         , div [ class "flex flex-row mt-8 justify-between sm:hidden" ]
-            [ if canEdit then
-                button
-                    [ class "bg-white rounded-lg uppercase w-4/5 h-10 text-button-orange border border-button-orange border-solid" ]
-                    [ text_ "menu.edit" ]
-
-              else
-                text ""
-            , if validationType == "CLAIMABLE" then
+            [ if validationType == "CLAIMABLE" then
                 button
                     [ class ("h-10 uppercase rounded-lg ml-1" ++ claimColors ++ claimSize)
                     , onClick (OpenClaimConfirmation action.id)
