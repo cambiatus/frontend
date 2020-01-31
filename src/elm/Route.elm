@@ -29,6 +29,7 @@ type Route
     | NewObjective Symbol
     | EditObjective Symbol Int
     | NewAction Symbol Int
+    | EditAction Symbol Int Int
     | VerifyClaim Symbol Int Int Int
     | Shop Shop.Filter
     | NewSale
@@ -80,6 +81,7 @@ parser url =
         , Url.map NewObjective (s "community" </> Eos.symbolUrlParser </> s "objectives" </> s "new")
         , Url.map EditObjective (s "community" </> Eos.symbolUrlParser </> s "objectives" </> int </> s "edit")
         , Url.map NewAction (s "community" </> Eos.symbolUrlParser </> s "objectives" </> int </> s "action" </> s "new")
+        , Url.map EditAction (s "community" </> Eos.symbolUrlParser </> s "objectives" </> int </> s "action" </> int </> s "edit")
         , Url.map VerifyClaim (s "community" </> Eos.symbolUrlParser </> s "objectives" </> int </> s "action" </> int </> s "claim" </> int </> s "verification")
         , Url.map Shop
             (s "shop"
@@ -247,6 +249,11 @@ routeToString route =
 
                 NewAction symbol objectiveId ->
                     ( [ "community", Eos.symbolToString symbol, "objectives", String.fromInt objectiveId, "action", "new" ]
+                    , []
+                    )
+
+                EditAction symbol objectiveId actionId ->
+                    ( [ "community", Eos.symbolToString symbol, "objectives", String.fromInt objectiveId, "action", String.fromInt actionId, "edit" ]
                     , []
                     )
 

@@ -708,6 +708,11 @@ changeRouteTo maybeRoute model =
                 >> updateStatusWith ActionEditor GotActionEditorMsg model
                 |> withLoggedIn (Route.NewAction symbol objectiveId)
 
+        Just (Route.EditAction symbol objectiveId actionId) ->
+            (\l -> ActionEditor.initEdit l symbol objectiveId actionId)
+                >> updateStatusWith ActionEditor GotActionEditorMsg model
+                |> withLoggedIn (Route.EditAction symbol objectiveId actionId)
+
         Just (Route.VerifyClaim communityId objectiveId actionId claimId) ->
             (\l -> VerifyClaim.init l claimId)
                 >> updateStatusWith VerifyClaim GotVerifyClaimMsg model

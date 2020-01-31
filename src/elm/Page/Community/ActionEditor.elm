@@ -1,10 +1,11 @@
-module Page.Community.ActionEditor exposing (Model, Msg, initNew, jsAddressToMsg, msgToString, update, view)
+module Page.Community.ActionEditor exposing (Model, Msg, initEdit, initNew, jsAddressToMsg, msgToString, update, view)
 
 import Account exposing (Profile)
 import Api.Graphql
 import Avatar exposing (Avatar)
 import Bespiral.Scalar exposing (DateTime(..))
 import Community exposing (Community)
+import DataValidator exposing (Validator, getInput, greaterThanOrEqual, hasErrors, listErrors, longerThan, newValidator, oneOf, updateInput, validate)
 import Eos exposing (Symbol)
 import Eos.Account as Eos
 import Graphql.Http
@@ -25,7 +26,6 @@ import Simple.Fuzzy
 import Time exposing (Posix)
 import UpdateResult as UR
 import Utils
-import Validate exposing (Validator, ifBlank, ifFalse, ifTrue, validate)
 
 
 
@@ -34,27 +34,27 @@ import Validate exposing (Validator, ifBlank, ifFalse, ifTrue, validate)
 
 initNew : LoggedIn.Model -> Symbol -> Int -> ( Model, Cmd Msg )
 initNew loggedIn symbol objId =
-    let
-        shared =
-            loggedIn.shared
-
-        initialForm =
-            Eos.symbolToString symbol
-                |> newForm
-    in
-    ( { status = LoadingCommunity
-      , objective = objId
-      , hasValidity = False
-      , hasDeadline = False
-      , hasMaxUsage = False
-      , hasVerification = False
-      , form = initialForm
-      , community = Nothing
+    ( { status = Loading
+      , communityId = symbol
+      , objectiveId = objId
+      , actionId = Nothing
+      , form = initForm symbol
       , multiSelectState = Select.newState ""
-      , selectedVerifiers = []
-      , problems = []
       }
-    , Api.Graphql.query shared (Community.communityQuery symbol) CompletedCommunityLoad
+    , Api.Graphql.query loggedIn.shared (Community.communityQuery symbol) CompletedCommunityLoad
+    )
+
+
+initEdit : LoggedIn.Model -> Symbol -> Int -> Int -> ( Model, Cmd Msg )
+initEdit loggedIn symbol objectiveId actionId =
+    ( { status = Loading
+      , communityId = symbol
+      , objectiveId = objectiveId
+      , actionId = Just actionId
+      , form = initForm symbol
+      , multiSelectState = Select.newState ""
+      }
+    , Api.Graphql.query loggedIn.shared (Community.communityQuery symbol) CompletedCommunityLoad
     )
 
 
@@ -73,30 +73,64 @@ subscriptions _ =
 
 type alias Model =
     { status : Status
-    , community : Maybe Community
-    , objective : Int
-    , hasValidity : Bool
-    , hasDeadline : Bool
-    , hasMaxUsage : Bool
-    , hasVerification : Bool
+    , communityId : Symbol
+    , objectiveId : Int
+    , actionId : Maybe Int
     , form : Form
-    , problems : List Problem
-
-    -- verifiers
     , multiSelectState : Select.State
-    , selectedVerifiers : List Profile
     }
 
 
-type
-    Status
-    -- New Action
-    = InvalidObjective String
-    | LoadingCommunity
-    | LoadingFailed (Graphql.Http.Error (Maybe Community))
-    | EditingNew
-    | ActionSaved
-    | ActionSaveFailed Value
+type Status
+    = Loading
+    | Loaded Community
+      -- Errors
+    | LoadFailed (Graphql.Http.Error (Maybe Community))
+    | NotFound
+    | Unauthorized
+
+
+type ActionValidation
+    = NoValidation
+    | ValidationByDate (Validator MaskedDate.State)
+    | ValidationByUsages (Validator Int)
+    | ValidationByBoth (Validator MaskedDate.State) (Validator Int)
+
+
+type Verification
+    = Automatic
+    | Manual (List Profile) (Validator (Maybe Float)) (Validator Int) -- Manual: users list, verification reward and min votes
+
+
+type SaveStatus
+    = NotAsked
+    | Saving
+    | Saved
+    | Failed
+
+
+type alias Form =
+    { description : Validator String
+    , reward : Validator Float
+    , validation : ActionValidation
+    , verification : Verification
+    , saveStatus : SaveStatus
+    }
+
+
+initForm : Symbol -> Form
+initForm sym =
+    { description = newValidator "" (\s -> Just s) True []
+    , reward = newValidator 0.0 (\s -> Just "0.0") True []
+    , validation = NoValidation
+    , verification = Automatic
+    , saveStatus = NotAsked
+    }
+
+
+editForm : Community.Action -> Form
+editForm action =
+    initForm Eos.bespiralSymbol
 
 
 
@@ -108,26 +142,21 @@ type alias UpdateResult =
 
 
 type Msg
-    = Ignored
-    | CompletedCommunityLoad (Result (Graphql.Http.Error (Maybe Community)) (Maybe Community))
-    | SetValidity String
-    | SetVerification String
+    = CompletedCommunityLoad (Result (Graphql.Http.Error (Maybe Community)) (Maybe Community))
     | OnSelectVerifier (Maybe Profile)
     | OnRemoveVerifier Profile
     | SelectMsg (Select.Msg Profile)
-    | ToggleDeadline Bool
-    | ToggleMaxUsage Bool
-    | EnteredDescription String
-    | EnteredReward String
+      -- | EnteredDescription String
+      -- | EnteredReward String
     | EnteredDeadline String
     | DeadlineChanged MaskedDate.State
-    | EnteredUsages String
-    | EnteredVerifierReward String
-    | EnteredMinVotes String
-    | SubmittedData
+      -- | EnteredUsages String
+      -- | EnteredVerifierReward String
+      -- | EnteredMinVotes String
+      -- | SubmittedData
     | ValidateDeadline
-    | InvalidDate
-    | UploadAction (Result Value String)
+    | GotInvalidDate
+    | SaveAction (Result Value String)
     | GotSaveAction (Result Value String)
 
 
@@ -138,251 +167,159 @@ update msg model loggedIn =
             loggedIn.shared
     in
     case msg of
-        Ignored ->
-            model
-                |> UR.init
-
         CompletedCommunityLoad (Err err) ->
-            { model | status = LoadingFailed err }
+            { model | status = LoadFailed err }
                 |> UR.init
                 |> UR.logGraphqlError msg err
 
-        CompletedCommunityLoad (Ok comm) ->
-            case comm of
-                Just c ->
-                    { model
-                        | status = EditingNew
-                        , community = Just c
-                    }
-                        |> UR.init
+        CompletedCommunityLoad (Ok c) ->
+            case c of
+                Just community ->
+                    if community.creator == loggedIn.accountName then
+                        -- Check the action belongs to the objective
+                        let
+                            maybeObjective =
+                                List.filterMap
+                                    (\o ->
+                                        if o.id == model.objectiveId then
+                                            Just o
+
+                                        else
+                                            Nothing
+                                    )
+                                    community.objectives
+                                    |> List.head
+                        in
+                        case maybeObjective of
+                            Just objective ->
+                                case model.actionId of
+                                    Just actionId ->
+                                        -- Edit form
+                                        let
+                                            maybeAction =
+                                                List.filterMap
+                                                    (\a ->
+                                                        if a.id == actionId then
+                                                            Just a
+
+                                                        else
+                                                            Nothing
+                                                    )
+                                                    objective.actions
+                                                    |> List.head
+                                        in
+                                        case maybeAction of
+                                            Just action ->
+                                                { model
+                                                    | status = Loaded community
+                                                    , form = editForm action
+                                                }
+                                                    |> UR.init
+
+                                            Nothing ->
+                                                { model | status = NotFound }
+                                                    |> UR.init
+
+                                    Nothing ->
+                                        -- New form
+                                        { model
+                                            | status = Loaded community
+                                            , form = initForm model.communityId
+                                        }
+                                            |> UR.init
+
+                            Nothing ->
+                                { model | status = NotFound }
+                                    |> UR.init
+
+                    else
+                        { model | status = Unauthorized }
+                            |> UR.init
 
                 Nothing ->
-                    model
+                    { model | status = NotFound }
                         |> UR.init
                         |> UR.logImpossible msg []
 
-        SetValidity validity ->
-            let
-                val =
-                    if validity == "yes" then
-                        True
-
-                    else
-                        False
-            in
-            { model | hasValidity = val }
-                |> UR.init
-
-        SetVerification verification ->
-            let
-                ver =
-                    if verification == "yes" then
-                        True
-
-                    else
-                        False
-
-                currentForm =
-                    model.form
-
-                updatedForm =
-                    { currentForm | verificationType = "claimable" }
-            in
-            { model
-                | hasVerification = ver
-                , form = updatedForm
-            }
-                |> UR.init
-
         OnSelectVerifier maybeProfile ->
-            let
-                selectedProfiles =
-                    maybeProfile
-                        |> Maybe.map (List.singleton >> List.append model.selectedVerifiers)
-                        |> Maybe.withDefault []
-            in
-            { model | selectedVerifiers = selectedProfiles }
+            -- let
+            --     selectedProfiles =
+            --         maybeProfile
+            --             |> Maybe.map (List.singleton >> List.append model.selectedVerifiers)
+            --             |> Maybe.withDefault []
+            -- in
+            -- { model | selectedVerifiers = selectedProfiles }
+            model
                 |> UR.init
 
         OnRemoveVerifier profile ->
-            let
-                selectedProfiles =
-                    List.filter (\currVerifier -> currVerifier.accountName /= profile.accountName)
-                        model.selectedVerifiers
-            in
-            { model | selectedVerifiers = selectedProfiles }
+            -- let
+            --     selectedProfiles =
+            --         List.filter (\currVerifier -> currVerifier.accountName /= profile.accountName)
+            --             model.selectedVerifiers
+            -- in
+            -- { model | selectedVerifiers = selectedProfiles }
+            model
                 |> UR.init
 
         SelectMsg subMsg ->
-            let
-                ( updated, cmd ) =
-                    Select.update (selectConfig loggedIn.shared False model.problems) subMsg model.multiSelectState
-            in
-            { model | multiSelectState = updated }
-                |> UR.init
-                |> UR.addCmd cmd
-
-        ToggleDeadline bool ->
-            { model | hasDeadline = bool }
+            -- let
+            --     ( updated, cmd ) =
+            --         Select.update (selectConfig loggedIn.shared False model.problems) subMsg model.multiSelectState
+            -- in
+            -- { model | multiSelectState = updated }
+            model
                 |> UR.init
 
-        ToggleMaxUsage bool ->
-            { model | hasMaxUsage = bool }
-                |> UR.init
-
-        EnteredDescription desc ->
-            let
-                currentForm =
-                    model.form
-
-                updatedForm =
-                    { currentForm | description = desc }
-            in
-            { model | form = updatedForm }
-                |> UR.init
-
-        EnteredReward rew ->
-            let
-                numberReward =
-                    String.toFloat rew
-                        |> Maybe.withDefault 1.0
-
-                currentForm =
-                    model.form
-
-                updatedForm =
-                    { currentForm | reward = numberReward }
-            in
-            { model | form = updatedForm }
-                |> UR.init
-
+        -- |> UR.addCmd cmd
         EnteredDeadline deadlineStr ->
-            let
-                currentForm =
-                    model.form
-
-                updatedForm =
-                    { currentForm | deadline = deadlineStr }
-            in
-            { model | form = updatedForm }
+            -- let
+            --     currentForm =
+            --         model.form
+            --     updatedForm =
+            --         { currentForm | deadline = deadlineStr }
+            -- in
+            -- { model | form = updatedForm }
+            model
                 |> UR.init
 
         ValidateDeadline ->
+            -- let
+            --     month =
+            --         String.slice 0 2 model.form.deadline
+            --     day =
+            --         String.slice 2 4 model.form.deadline
+            --     year =
+            --         String.slice 4 8 model.form.deadline
+            --     -- Hand date over as mm/dd/yyyy
+            --     dateStr =
+            --         String.join "/" [ month, day, year ]
+            -- in
+            model
+                |> UR.init
+
+        -- |> UR.addPort
+        --     { responseAddress = ValidateDeadline
+        --     , responseData = Encode.null
+        --     , data =
+        --         Encode.object
+        --             [ ( "name", Encode.string "validateDeadline" )
+        --             , ( "deadline", Encode.string dateStr )
+        --             ]
+        --     }
+        DeadlineChanged state ->
+            model
+                |> UR.init
+
+        GotInvalidDate ->
             let
-                month =
-                    String.slice 0 2 model.form.deadline
-
-                day =
-                    String.slice 2 4 model.form.deadline
-
-                year =
-                    String.slice 4 8 model.form.deadline
-
-                -- Hand date over as mm/dd/yyyy
-                dateStr =
-                    String.join "/" [ month, day, year ]
+                newProblems =
+                    [] ++ [ InvalidEntry Deadline "Please enter a valid date for the deadline" ]
             in
             model
                 |> UR.init
-                |> UR.addPort
-                    { responseAddress = ValidateDeadline
-                    , responseData = Encode.null
-                    , data =
-                        Encode.object
-                            [ ( "name", Encode.string "validateDeadline" )
-                            , ( "deadline", Encode.string dateStr )
-                            ]
-                    }
 
-        DeadlineChanged state ->
-            let
-                currentForm =
-                    model.form
-
-                updatedForm =
-                    { currentForm | deadlineState = state }
-            in
-            { model | form = updatedForm }
-                |> UR.init
-
-        EnteredUsages maxString ->
-            let
-                maxInt =
-                    String.toInt maxString
-                        |> Maybe.withDefault 1
-
-                currentForm =
-                    model.form
-
-                updatedForm =
-                    { currentForm | maxUsage = maxInt }
-            in
-            { model | form = updatedForm }
-                |> UR.init
-
-        EnteredVerifierReward vRew ->
-            let
-                numRew =
-                    String.toFloat vRew
-                        |> Maybe.withDefault 1.0
-
-                currentForm =
-                    model.form
-
-                updatedForm =
-                    { currentForm | verifierReward = numRew }
-            in
-            { model | form = updatedForm }
-                |> UR.init
-
-        EnteredMinVotes vots ->
-            let
-                numVotes =
-                    String.toInt vots
-                        |> Maybe.withDefault 1
-
-                currentForm =
-                    model.form
-
-                updatedForm =
-                    { currentForm | minVotes = numVotes }
-            in
-            { model | form = updatedForm }
-                |> UR.init
-
-        SubmittedData ->
-            case validate (formValidator shared) model of
-                Ok _ ->
-                    -- check if the deadline is filled correctly
-                    if model.hasDeadline && String.length model.form.deadline < 8 then
-                        update InvalidDate { model | problems = [] } loggedIn
-
-                    else if model.hasDeadline then
-                        update ValidateDeadline { model | problems = [] } loggedIn
-
-                    else
-                        let
-                            upMsg =
-                                UploadAction (Ok "")
-                        in
-                        update upMsg { model | problems = [] } loggedIn
-
-                Err errors ->
-                    { model | problems = errors }
-                        |> UR.init
-
-        InvalidDate ->
-            let
-                problems =
-                    model.problems
-
-                newProblems =
-                    problems ++ [ InvalidEntry Deadline "Please enter a valid date for the deadline" ]
-            in
-            { model | problems = newProblems }
-                |> UR.init
-
-        UploadAction isoDate ->
+        SaveAction isoDate ->
             case isoDate of
                 Ok date ->
                     let
@@ -396,77 +333,65 @@ update msg model loggedIn =
                                     |> Time.posixToMillis
 
                         validatorsStr =
-                            model.selectedVerifiers
+                            []
                                 |> List.map (\v -> Eos.nameToString v.accountName)
                                 |> String.join "-"
                     in
-                    if LoggedIn.isAuth loggedIn then
-                        model
-                            |> UR.init
-                            |> UR.addPort
-                                { responseAddress = UploadAction isoDate
-                                , responseData = Encode.null
-                                , data =
-                                    Eos.encodeTransaction
-                                        { actions =
-                                            [ { accountName = "bes.cmm"
-                                              , name = "upsertaction"
-                                              , authorization =
-                                                    { actor = loggedIn.accountName
-                                                    , permissionName = Eos.samplePermission
-                                                    }
-                                              , data =
-                                                    { actionId = 0
-                                                    , objectiveId = model.objective
-                                                    , description = model.form.description
-                                                    , reward = String.fromFloat model.form.reward ++ " " ++ model.form.symbol
-                                                    , verifier_reward = String.fromFloat model.form.verifierReward ++ " " ++ model.form.symbol
-                                                    , deadline = dateInt
-                                                    , usages = model.form.maxUsage
-                                                    , usagesLeft = model.form.maxUsage
-                                                    , verifications = model.form.minVotes
-                                                    , verificationType = model.form.verificationType
-                                                    , validatorsStr = validatorsStr
-                                                    , isCompleted = 0
-                                                    , creator = loggedIn.accountName
-                                                    }
-                                                        |> Community.encodeCreateActionAction
-                                              }
-                                            ]
-                                        }
-                                }
-
-                    else
-                        model
-                            |> UR.init
-                            |> UR.addExt
-                                (Just (UploadAction isoDate)
-                                    |> RequiredAuthentication
-                                )
-
-                Err _ ->
-                    update InvalidDate model loggedIn
-
-        GotSaveAction (Ok tId) ->
-            let
-                sym =
-                    model.form.symbol
-                        |> Eos.symbolFromString
-            in
-            case sym of
-                Just s ->
-                    { model | status = ActionSaved }
-                        |> UR.init
-                        |> UR.addCmd (Route.replaceUrl loggedIn.shared.navKey (Route.Community s))
-
-                Nothing ->
+                    -- if LoggedIn.isAuth loggedIn then
+                    --     model
+                    --         |> UR.init
+                    --         |> UR.addPort
+                    --             { responseAddress = SaveAction isoDate
+                    --             , responseData = Encode.null
+                    --             , data =
+                    --                 Eos.encodeTransaction
+                    --                     { actions =
+                    --                         [ { accountName = "bes.cmm"
+                    --                           , name = "upsertaction"
+                    --                           , authorization =
+                    --                                 { actor = loggedIn.accountName
+                    --                                 , permissionName = Eos.samplePermission
+                    --                                 }
+                    --                           , data =
+                    --                                 { actionId = 0
+                    --                                 , objectiveId = model.objectiveId
+                    --                                 , description = model.form.description
+                    --                                 , reward = String.fromFloat model.form.reward ++ " " ++ model.form.symbol
+                    --                                 , verifier_reward = String.fromFloat model.form.verifierReward ++ " " ++ model.form.symbol
+                    --                                 , deadline = dateInt
+                    --                                 , usages = model.form.maxUsage
+                    --                                 , usagesLeft = model.form.maxUsage
+                    --                                 , verifications = model.form.minVotes
+                    --                                 , verificationType = model.form.verificationType
+                    --                                 , validatorsStr = validatorsStr
+                    --                                 , isCompleted = 0
+                    --                                 , creator = loggedIn.accountName
+                    --                                 }
+                    --                                     |> Community.encodeCreateActionAction
+                    --                           }
+                    --                         ]
+                    --                     }
+                    --             }
+                    -- else
                     model
                         |> UR.init
-                        |> UR.logImpossible msg []
+                        |> UR.addExt
+                            (Just (SaveAction isoDate)
+                                |> RequiredAuthentication
+                            )
+
+                Err _ ->
+                    update GotInvalidDate model loggedIn
+
+        GotSaveAction (Ok tId) ->
+            model
+                |> UR.init
+                |> UR.addCmd (Route.replaceUrl loggedIn.shared.navKey (Route.Community model.communityId))
 
         GotSaveAction (Err val) ->
-            { model | status = ActionSaveFailed val }
+            model
                 |> UR.init
+                |> UR.logImpossible msg []
 
 
 
@@ -476,9 +401,6 @@ update msg model loggedIn =
 view : LoggedIn.Model -> Model -> Html Msg
 view loggedIn model =
     let
-        defaultContainer =
-            div [ class "mx-5 sm:mx-10" ]
-
         shared =
             loggedIn.shared
 
@@ -489,64 +411,77 @@ view loggedIn model =
             text (t s)
     in
     case model.status of
-        InvalidObjective badId ->
-            defaultContainer
-                [ Page.viewTitle (t "error.objective.invalid_id")
-                , span [] [ text badId ]
+        Loading ->
+            Page.fullPageLoading
+
+        Loaded community ->
+            div [ class "bg-white" ]
+                [ Page.viewHeader loggedIn (t "community.actions.title") (Route.Objectives model.communityId)
+                , viewForm loggedIn community model
                 ]
 
-        LoadingFailed err ->
+        LoadFailed err ->
             Page.fullPageGraphQLError (t "error.invalidSymbol") err
 
-        LoadingCommunity ->
-            defaultContainer
-                [ Page.fullPageLoading ]
+        NotFound ->
+            Page.fullPageNotFound (t "community.actions.form.not_found") ""
 
-        EditingNew ->
-            case model.community of
-                Nothing ->
-                    defaultContainer
-                        [ Page.fullPageLoading ]
-
-                Just comm ->
-                    defaultContainer
-                        ([ Page.viewTitle (t "community.actions.new") ]
-                            ++ viewForm loggedIn.shared comm model
-                        )
-
-        ActionSaved ->
-            case model.community of
-                Nothing ->
-                    defaultContainer
-                        [ Page.fullPageLoading ]
-
-                Just comm ->
-                    defaultContainer
-                        ([ div [ class "mx-10 h-10 bg-green flex flex-col items-center font-sans text-white" ]
-                            [ span [ class "my-auto" ] [ text_ "community.actions.form.success" ] ]
-                         ]
-                            ++ [ Page.viewTitle (t "community.actions.new") ]
-                            ++ viewForm loggedIn.shared comm model
-                        )
-
-        ActionSaveFailed _ ->
-            case model.community of
-                Nothing ->
-                    defaultContainer
-                        [ Page.fullPageLoading ]
-
-                Just comm ->
-                    defaultContainer
-                        ([ div [ class "mx-10 h-10 bg-red flex flex-col items-center font-sans text-white" ]
-                            [ text_ "community.actions.form.fail" ]
-                         ]
-                            ++ [ Page.viewTitle (t "community.actions.new") ]
-                            ++ viewForm loggedIn.shared comm model
-                        )
+        Unauthorized ->
+            Page.fullPageNotFound "not authorized" ""
 
 
-viewForm : Shared -> Community -> Model -> List (Html Msg)
-viewForm shared community model =
+
+-- case model.status of
+--     InvalidObjective badId ->
+--         defaultContainer
+--             [ Page.viewTitle (t "error.objective.invalid_id")
+--             , span [] [ text badId ]
+--             ]
+--     LoadingFailed err ->
+--         Page.fullPageGraphQLError (t "error.invalidSymbol") err
+--     LoadingCommunity ->
+--         defaultContainer
+--             [ Page.fullPageLoading ]
+--     EditingNew ->
+--         case model.community of
+--             Nothing ->
+--                 defaultContainer
+--                     [ Page.fullPageLoading ]
+--             Just comm ->
+--                 defaultContainer
+--                     ([ Page.viewTitle (t "community.actions.new") ]
+--                         ++ viewForm loggedIn.shared comm model
+--                     )
+--     ActionSaved ->
+--         case model.community of
+--             Nothing ->
+--                 defaultContainer
+--                     [ Page.fullPageLoading ]
+--             Just comm ->
+--                 defaultContainer
+--                     ([ div [ class "mx-10 h-10 bg-green flex flex-col items-center font-sans text-white" ]
+--                         [ span [ class "my-auto" ] [ text_ "community.actions.form.success" ] ]
+--                      ]
+--                         ++ [ Page.viewTitle (t "community.actions.new") ]
+--                         ++ viewForm loggedIn.shared comm model
+--                     )
+--     ActionSaveFailed _ ->
+--         case model.community of
+--             Nothing ->
+--                 defaultContainer
+--                     [ Page.fullPageLoading ]
+--             Just comm ->
+--                 defaultContainer
+--                     ([ div [ class "mx-10 h-10 bg-red flex flex-col items-center font-sans text-white" ]
+--                         [ text_ "community.actions.form.fail" ]
+--                      ]
+--                         ++ [ Page.viewTitle (t "community.actions.new") ]
+--                         ++ viewForm loggedIn.shared comm model
+--                     )
+
+
+viewForm : LoggedIn.Model -> Community -> Model -> Html Msg
+viewForm ({ shared } as loggedIn) community model =
     let
         ipfsUrl =
             shared.endpoints.ipfs
@@ -561,14 +496,14 @@ viewForm shared community model =
             MaskedDate.defaultOptions EnteredDeadline DeadlineChanged
 
         usageColor =
-            if model.hasMaxUsage then
+            if True then
                 " text-green"
 
             else
                 " text-black"
 
         deadlineColor =
-            if model.hasDeadline then
+            if True then
                 " text-green"
 
             else
@@ -576,45 +511,46 @@ viewForm shared community model =
 
         borderColor : ValidatedField -> String
         borderColor vfield =
-            if hasError vfield model.problems then
+            if True then
+                -- if hasError vfield model.problems then
                 " border-red"
 
             else
                 " border-gray-500"
     in
-    [ div [ class "bg-white rounded-lg" ]
-        [ div [ class "px-4 py-6 border-b border-gray-500" ]
-            [ img [ src logoLink, class "w-16 h-16 mr-4 inline object-scale-down" ] []
-            , span [ class "text-heading font-medium" ] [ text community.title ]
-            ]
-        , div [ class "py-6 px-4" ]
+    div [ class "container mx-auto" ]
+        [ div [ class "py-6 px-4" ]
             [ div [ class "mb-10" ]
                 [ span [ class "input-label" ]
                     [ text_ "community.actions.form.description_label" ]
                 , textarea
-                    [ class ("form-textarea block w-full rounded border " ++ borderColor Description)
+                    [ class "w-full input rounded-sm"
                     , rows 5
-                    , onInput EnteredDescription
+
+                    -- , onInput EnteredDescription
                     ]
                     []
-                , viewFieldErrors Description model.problems
+
+                -- , viewFieldErrors Description model.problems
                 ]
             , div [ class "mb-10" ]
                 [ span [ class "input-label" ]
                     [ text_ "community.actions.form.reward_label" ]
-                , div [ class ("flex flex-row sm:w-1/4 border rounded" ++ borderColor Reward) ]
+                , div [ class "flex flex-row sm:w-1/4 input border-sm" ]
                     [ input
                         [ class "input block w-4/5 border-none"
                         , type_ "number"
                         , placeholder "0.00"
-                        , onInput EnteredReward
+
+                        -- , onInput EnteredReward
                         ]
                         []
                     , span
                         [ class "w-2/5 flex input-token" ]
                         [ text (Eos.symbolToString community.symbol) ]
                     ]
-                , viewFieldErrors Reward model.problems
+
+                -- , viewFieldErrors Reward model.problems
                 ]
             , div [ class "sm:w-select mb-10" ]
                 [ div [ class "flex flex-row justify-between" ]
@@ -626,24 +562,30 @@ viewForm shared community model =
                             [ text_ "community.actions.form.validity_tooltip" ]
                         ]
                     ]
+                , div [ class "mb-10" ]
+                    [ input [ type_ "checkbox", class "form-toggle toggle" ] []
+                    ]
                 , select
                     [ class ("form-select w-full select" ++ borderColor Validity)
-                    , on "change" (Json.map SetValidity targetValue)
+
+                    -- , on "change" (Json.map SetValidity targetValue)
                     ]
                     [ option [ value "no" ] [ span [ class "capitalize" ] [ text_ "community.actions.form.no" ] ]
                     , option [ value "yes" ] [ span [ class "capitalize" ] [ text_ "community.actions.form.yes" ] ]
                     ]
-                , viewFieldErrors Validity model.problems
+
+                -- , viewFieldErrors Validity model.problems
                 ]
-            , if model.hasValidity then
+            , if True then
                 div [ class "sm:w-select" ]
                     [ div [ class "mb-3 flex flex-row text-body items-bottom" ]
                         [ input
                             [ id "date"
                             , type_ "checkbox"
                             , class "form-checkbox mr-2 p-1"
-                            , checked model.hasDeadline
-                            , onCheck ToggleDeadline
+
+                            -- , checked model.hasDeadline
+                            -- , onCheck ToggleDeadline
                             ]
                             []
                         , label [ for "date", class ("font-sans capitalize" ++ deadlineColor) ]
@@ -652,26 +594,27 @@ viewForm shared community model =
                     , span [ class "input-label" ]
                         [ text_ "community.actions.form.date_label" ]
                     , div [ class "mb-10" ]
-                        [ MaskedDate.input
-                            { dateOptions
-                                | pattern = "##/##/####"
-                                , inputCharacter = '#'
-                            }
-                            [ class ("w-full h-12 font-sans borde rounded form-input bg-gray-500 text-black placeholder-black" ++ borderColor Deadline)
-                            , placeholder "mm/dd/yyyy"
-                            , disabled (not model.hasDeadline)
-                            ]
-                            model.form.deadlineState
-                            model.form.deadline
-                        , viewFieldErrors Deadline model.problems
+                        [--  MaskedDate.input
+                         --     { dateOptions
+                         --         | pattern = "##/##/####"
+                         --         , inputCharacter = '#'
+                         --     }
+                         --     [ class ("w-full h-12 font-sans borde rounded form-input bg-gray-500 text-black placeholder-black" ++ borderColor Deadline)
+                         --     , placeholder "mm/dd/yyyy"
+                         --     , disabled (not model.hasDeadline)
+                         --     ]
+                         --     model.form.deadlineState
+                         --     model.form.deadline
+                         -- , viewFieldErrors Deadline model.problems
                         ]
                     , div [ class "mb-6 flex flex-row text-body items-bottom" ]
                         [ input
                             [ id "quantity"
                             , type_ "checkbox"
                             , class "form-checkbox mr-2"
-                            , checked model.hasMaxUsage
-                            , onCheck ToggleMaxUsage
+
+                            -- , checked model.hasMaxUsage
+                            -- , onCheck ToggleMaxUsage
                             ]
                             []
                         , label [ for "quantity", class ("capitalize font-sans" ++ usageColor) ]
@@ -683,11 +626,13 @@ viewForm shared community model =
                         [ input
                             [ type_ "number"
                             , class ("w-full input border rounded" ++ borderColor MaxUsage)
-                            , disabled (not model.hasMaxUsage)
-                            , onInput EnteredUsages
+
+                            -- , disabled (not model.hasMaxUsage)
+                            -- , onInput EnteredUsages
                             ]
                             []
-                        , viewFieldErrors MaxUsage model.problems
+
+                        -- , viewFieldErrors MaxUsage model.problems
                         ]
                     ]
 
@@ -704,13 +649,14 @@ viewForm shared community model =
                         ]
                     ]
                 , select
-                    [ on "change" (Json.map SetVerification targetValue)
-                    , class "w-full mb-10 form-select select"
+                    [ class "w-full mb-10 form-select select"
+
+                    -- , on "change" (Json.map SetVerification targetValue)
                     ]
                     [ option [ value "no" ] [ text_ "community.actions.form.auto_no" ]
                     , option [ value "yes" ] [ text_ "community.actions.form.manual_yes" ]
                     ]
-                , if model.hasVerification then
+                , if True then
                     div []
                         [ span [ class "input-label" ]
                             [ text_ "community.actions.form.verifiers_label" ]
@@ -721,19 +667,19 @@ viewForm shared community model =
                         , span [ class "input-label" ]
                             [ text_ "community.actions.form.verifiers_reward_label" ]
                         , div [ class "mb-10" ]
-                            [ div [ class ("flex flex-row border rounded" ++ borderColor VerifierReward) ]
+                            [ div [ class "flex flex-row border rounded-sm" ]
                                 [ input
-                                    [ class "input block w-4/5 border-none"
+                                    [ class "input w-4/5 border-none"
                                     , type_ "number"
                                     , placeholder "0.00"
-                                    , onInput EnteredVerifierReward
+
+                                    -- , onInput EnteredVerifierReward
                                     ]
                                     []
                                 , span
                                     [ class "w-1/5 flex input-token" ]
                                     [ text (Eos.symbolToString community.symbol) ]
                                 ]
-                            , viewFieldErrors VerifierReward model.problems
                             ]
                         , div [ class "flex flex-row justify-between" ]
                             [ p [ class "input-label" ]
@@ -747,11 +693,11 @@ viewForm shared community model =
                         , div []
                             [ input
                                 [ class ("w-full input border rounded" ++ borderColor MinVotes)
-                                , onInput EnteredMinVotes
+
+                                -- , onInput EnteredMinVotes
                                 , type_ "number"
                                 ]
                                 []
-                            , viewFieldErrors MinVotes model.problems
                             ]
                         ]
 
@@ -761,44 +707,43 @@ viewForm shared community model =
             , div [ class "flex align-center justify-center" ]
                 [ button
                     [ class "button button-primary"
-                    , onClick SubmittedData
+
+                    -- , onClick SubmittedData
                     ]
                     [ text_ "menu.create" ]
                 ]
             ]
         ]
-    ]
 
 
 viewSelectedVerifiers : Shared -> Model -> Html Msg
 viewSelectedVerifiers shared model =
-    let
-        ipfsUrl =
-            shared.endpoints.ipfs
-
-        text_ s =
-            text (t shared.translations s)
-
-        verifiers =
-            model.selectedVerifiers
-                |> List.map
-                    (\p ->
-                        div
-                            [ class "flex flex-col m-3 items-center" ]
-                            [ div [ class "relative h-10 w-12 ml-2" ]
-                                [ Avatar.view ipfsUrl p.avatar "h-10 w-10"
-                                , div
-                                    [ onClick (OnRemoveVerifier p)
-                                    , class "absolute top-0 right-0 z-10 rounded-full h-6 w-6 flex items-center"
-                                    ]
-                                    [ Icons.remove "" ]
-                                ]
-                            , span [ class "mt-2 text-black font-sans text-body leading-normal" ]
-                                [ text (Eos.nameToString p.accountName) ]
-                            ]
-                    )
-    in
-    div [ class "flex flex-row mt-3 mb-10 flex-wrap" ] verifiers
+    -- let
+    --     ipfsUrl =
+    --         shared.endpoints.ipfs
+    --     text_ s =
+    --         text (t shared.translations s)
+    --     verifiers =
+    --         model.selectedVerifiers
+    --             |> List.map
+    --                 (\p ->
+    --                     div
+    --                         [ class "flex flex-col m-3 items-center" ]
+    --                         [ div [ class "relative h-10 w-12 ml-2" ]
+    --                             [ Avatar.view ipfsUrl p.avatar "h-10 w-10"
+    --                             , div
+    --                                 [ onClick (OnRemoveVerifier p)
+    --                                 , class "absolute top-0 right-0 z-10 rounded-full h-6 w-6 flex items-center"
+    --                                 ]
+    --                                 [ Icons.remove "" ]
+    --                             ]
+    --                         , span [ class "mt-2 text-black font-sans text-body leading-normal" ]
+    --                             [ text (Eos.nameToString p.accountName) ]
+    --                         ]
+    --                 )
+    -- in
+    -- div [ class "flex flex-row mt-3 mb-10 flex-wrap" ] verifiers
+    div [] []
 
 
 viewFieldErrors : ValidatedField -> List Problem -> Html Msg
@@ -902,20 +847,21 @@ viewAutoCompleteItem shared profile =
 
 viewVerifierSelect : Shared -> Model -> Bool -> Html Msg
 viewVerifierSelect shared model isDisabled =
-    let
-        users =
-            Maybe.map .members model.community
-                |> Maybe.withDefault []
-    in
-    div []
-        [ Html.map SelectMsg
-            (Select.view (selectConfig shared isDisabled model.problems)
-                model.multiSelectState
-                users
-                model.selectedVerifiers
-            )
-        , viewFieldErrors Verifiers model.problems
-        ]
+    -- let
+    --     users =
+    --         Maybe.map .members model.community
+    --             |> Maybe.withDefault []
+    -- in
+    -- div []
+    --     [ Html.map SelectMsg
+    --         (Select.view (selectConfig shared isDisabled model.problems)
+    --             model.multiSelectState
+    --             users
+    --             model.selectedVerifiers
+    --         )
+    --     , viewFieldErrors Verifiers model.problems
+    --     ]
+    div [] []
 
 
 
@@ -938,22 +884,23 @@ type ValidatedField
     | MinVotes
 
 
-formValidator : Shared -> Validator Problem Model
-formValidator shared =
-    let
-        translations =
-            shared.translations
-    in
-    Validate.all
-        [ ifBlank (\m -> m.form.description) (InvalidEntry Description (t translations "community.actions.form.errors.description"))
-        , ifFalse (\m -> m.form.reward >= 0) (InvalidEntry Reward (t translations "community.actions.form.errors.reward"))
-        , ifFalse (\m -> validValidity m) (InvalidEntry Validity (t translations "community.actions.form.errors.validity"))
-        , ifFalse (\m -> validMaxUsage m) (InvalidEntry MaxUsage (t translations "community.actions.form.errors.usage"))
-        , ifFalse (\m -> validVerifiers m) (InvalidEntry Verifiers (t translations "community.actions.form.errors.empty_verifiers"))
-        , ifTrue (\m -> m.form.minVotes > List.length m.selectedVerifiers) (InvalidEntry Verifiers (t translations "community.actions.form.errors.less_verifiers"))
-        , ifFalse (\m -> validMinVotes m) (InvalidEntry MinVotes (t translations "community.actions.form.errors.minvotes"))
-        , ifFalse (\m -> m.form.verifierReward >= 0) (InvalidEntry VerifierReward (t translations "community.actions.form.errors.verifier_reward"))
-        ]
+
+-- formValidator : Shared -> Validator Problem Model
+-- formValidator shared =
+--     let
+--         translations =
+--             shared.translations
+--     in
+--     Validate.all
+--         [ ifBlank (\m -> m.form.description) (InvalidEntry Description (t translations "community.actions.form.errors.description"))
+--         , ifFalse (\m -> m.form.reward >= 0) (InvalidEntry Reward (t translations "community.actions.form.errors.reward"))
+--         , ifFalse (\m -> validValidity m) (InvalidEntry Validity (t translations "community.actions.form.errors.validity"))
+--         , ifFalse (\m -> validMaxUsage m) (InvalidEntry MaxUsage (t translations "community.actions.form.errors.usage"))
+--         , ifFalse (\m -> validVerifiers m) (InvalidEntry Verifiers (t translations "community.actions.form.errors.empty_verifiers"))
+--         , ifTrue (\m -> m.form.minVotes > List.length m.selectedVerifiers) (InvalidEntry Verifiers (t translations "community.actions.form.errors.less_verifiers"))
+--         , ifFalse (\m -> validMinVotes m) (InvalidEntry MinVotes (t translations "community.actions.form.errors.minvotes"))
+--         , ifFalse (\m -> m.form.verifierReward >= 0) (InvalidEntry VerifierReward (t translations "community.actions.form.errors.verifier_reward"))
+--         ]
 
 
 hasError : ValidatedField -> List Problem -> Bool
@@ -980,115 +927,6 @@ hasError field problems =
 
 
 
--- Validators
-
-
-validValidity : Model -> Bool
-validValidity model =
-    let
-        hasValidity =
-            model.hasValidity
-
-        validityValid =
-            if not hasValidity then
-                True
-
-            else if hasValidity then
-                model.hasDeadline || model.hasMaxUsage
-
-            else
-                False
-    in
-    validityValid
-
-
-validMaxUsage : Model -> Bool
-validMaxUsage model =
-    let
-        hasMaxUsage =
-            model.hasMaxUsage
-
-        validMax =
-            if not hasMaxUsage then
-                True
-
-            else if hasMaxUsage then
-                model.form.maxUsage > 0
-
-            else
-                False
-    in
-    validMax
-
-
-validVerifiers : Model -> Bool
-validVerifiers model =
-    let
-        hasVerifiers =
-            model.hasVerification
-
-        selectedV =
-            model.selectedVerifiers
-
-        validVer =
-            if not hasVerifiers then
-                True
-
-            else if hasVerifiers then
-                not (List.isEmpty selectedV)
-
-            else
-                False
-    in
-    validVer
-
-
-validMinVotes : Model -> Bool
-validMinVotes model =
-    let
-        hasVerifiers =
-            model.hasVerification
-
-        validMin =
-            if not hasVerifiers then
-                True
-
-            else
-                model.form.minVotes >= 1
-    in
-    validMin
-
-
-type alias Form =
-    { description : String
-    , symbol : String
-    , reward : Float
-    , deadline : String
-    , maxUsage : Int
-    , verificationType : String
-    , verifiers : Maybe (List Profile)
-    , verifierReward : Float
-    , minVotes : Int
-    , deadlineState : MaskedDate.State
-    }
-
-
-newForm : String -> Form
-newForm sym =
-    { description = ""
-    , symbol = sym
-    , reward = 0
-    , deadline = ""
-    , maxUsage = 0
-    , verificationType = "automatic"
-    , verifiers = Nothing
-    , verifierReward = 0
-    , minVotes = 0
-    , deadlineState = MaskedDate.initialState
-    }
-
-
-
 -- UTILS
 
 
@@ -1104,8 +942,8 @@ jsAddressToMsg addr val =
                     ]
                 )
                 val
-                |> Result.map (Just << UploadAction)
-                |> Result.withDefault (Just InvalidDate)
+                |> Result.map (Just << SaveAction)
+                |> Result.withDefault (Just GotInvalidDate)
 
         "UploadAction" :: _ ->
             Json.decodeValue
@@ -1126,17 +964,8 @@ jsAddressToMsg addr val =
 msgToString : Msg -> List String
 msgToString msg =
     case msg of
-        Ignored ->
-            [ "Ignored" ]
-
         CompletedCommunityLoad _ ->
             [ "CompletedCommunityLoad" ]
-
-        SetValidity val ->
-            [ "SetValidity", val ]
-
-        SetVerification ver ->
-            [ "SetVerification", ver ]
 
         OnSelectVerifier _ ->
             [ "OnSelectVerifier" ]
@@ -1144,47 +973,23 @@ msgToString msg =
         OnRemoveVerifier _ ->
             [ "OnRemoveVerifier" ]
 
-        SelectMsg _ ->
-            [ "SelectMsg" ]
-
-        ToggleMaxUsage _ ->
-            [ "ToggleMaxUsage" ]
-
-        ToggleDeadline _ ->
-            [ "ToggleDeadline" ]
-
-        EnteredDescription val ->
-            [ "EnteredDescription", val ]
-
-        EnteredReward val ->
-            [ "EnteredReward", val ]
-
-        EnteredDeadline val ->
-            [ "EnteredDeadline", val ]
+        EnteredDeadline _ ->
+            [ "EnteredDeadline" ]
 
         DeadlineChanged _ ->
             [ "DeadlineChanged" ]
 
-        EnteredUsages val ->
-            [ "EnteredUsages", val ]
-
-        EnteredVerifierReward val ->
-            [ "EnteredVerifierReward", val ]
-
-        EnteredMinVotes val ->
-            [ "EnteredMinVotes", val ]
-
-        SubmittedData ->
-            [ "SubmittedData" ]
+        SelectMsg _ ->
+            [ "SelectMsg" ]
 
         ValidateDeadline ->
             [ "ValidateDeadline" ]
 
-        UploadAction _ ->
-            [ "UploadAction" ]
+        SaveAction _ ->
+            [ "SaveAction" ]
 
-        InvalidDate ->
-            [ "InvalidDate" ]
+        GotInvalidDate ->
+            [ "GotInvalidDate" ]
 
         GotSaveAction _ ->
             [ "GotSaveAction" ]
