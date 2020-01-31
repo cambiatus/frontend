@@ -160,7 +160,7 @@ viewObjective ({ shared } as loggedIn) model community index objective =
                     [ text_ "community.actions.new" ]
                 , div []
                     (objective.actions
-                        |> List.map (viewAction loggedIn model)
+                        |> List.map (viewAction loggedIn model objective.id)
                     )
                 , a
                     [ class "w-full button button-secondary button-sm"
@@ -185,8 +185,8 @@ viewObjective ({ shared } as loggedIn) model community index objective =
         ]
 
 
-viewAction : LoggedIn.Model -> Model -> Community.Action -> Html Msg
-viewAction ({ shared } as loggedIn) model action =
+viewAction : LoggedIn.Model -> Model -> Int -> Community.Action -> Html Msg
+viewAction ({ shared } as loggedIn) model objectiveId action =
     let
         posixDeadline : Posix
         posixDeadline =
@@ -276,32 +276,39 @@ viewAction ({ shared } as loggedIn) model action =
                     ]
             , div [ class "mx-2 mb-2" ]
                 [ if action.isCompleted then
-                    div [ class "tag bg-green" ] [ text "completed" ]
+                    div [ class "tag bg-green" ] [ text_ "community.actions.completed" ]
 
                   else if isClosed then
-                    div [ class "tag bg-gray-500 text-red" ] [ text "closed" ]
+                    div [ class "tag bg-gray-500 text-red" ] [ text_ "community.actions.closed" ]
 
                   else
                     text ""
                 ]
             ]
-        , div [ class "py-8" ]
-            [ p [ class "input-label mb-4" ] [ text_ "community.actions.verifiers" ]
-            , if validationType == "AUTOMATIC" then
-                div [ class "flex items-center" ]
-                    [ p [ class "text-body" ] [ text_ "community.actions.automatic_analyzers" ]
-                    , Icons.exclamation "ml-2"
-                    ]
+        , div [ class "flex justify-between items-end py-8" ]
+            [ div []
+                [ p [ class "input-label mb-4" ] [ text_ "community.actions.verifiers" ]
+                , if validationType == "AUTOMATIC" then
+                    div [ class "flex items-center" ]
+                        [ p [ class "text-body" ] [ text_ "community.actions.automatic_analyzers" ]
+                        , Icons.exclamation "ml-2"
+                        ]
 
-              else
-                div [ class "flex overflow-scrol -mx-2" ]
-                    (List.map
-                        (\u ->
-                            div [ class "mx-2" ]
-                                [ User.view shared.endpoints.ipfs loggedIn.accountName shared.translations u.validator ]
+                  else
+                    div [ class "flex overflow-scroll -mx-2" ]
+                        (List.map
+                            (\u ->
+                                div [ class "mx-2" ]
+                                    [ User.view shared.endpoints.ipfs loggedIn.accountName shared.translations u.validator ]
+                            )
+                            action.validators
                         )
-                        action.validators
-                    )
+                ]
+            , a
+                [ class "button button-secondary button-sm"
+                , Route.href (Route.EditAction model.communityId objectiveId action.id)
+                ]
+                [ text_ "menu.edit" ]
             ]
         ]
 
