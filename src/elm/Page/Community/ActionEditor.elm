@@ -92,6 +92,7 @@ type Status
 
 type ActionValidation
     = NoValidation
+    | ValidationEmpty
     | ValidationByDate (Validator MaskedDate.State)
     | ValidationByUsages (Validator Int)
     | ValidationByBoth (Validator MaskedDate.State) (Validator Int)
@@ -99,7 +100,7 @@ type ActionValidation
 
 type Verification
     = Automatic
-    | Manual (List Profile) (Validator (Maybe Float)) (Validator Int) -- Manual: users list, verification reward and min votes
+    | Manual (List Profile) (Validator String) (Validator Int) -- Manual: users list, verification reward and min votes
 
 
 type SaveStatus
@@ -111,7 +112,7 @@ type SaveStatus
 
 type alias Form =
     { description : Validator String
-    , reward : Validator Float
+    , reward : Validator String
     , validation : ActionValidation
     , verification : Verification
     , saveStatus : SaveStatus
@@ -121,7 +122,7 @@ type alias Form =
 initForm : Symbol -> Form
 initForm sym =
     { description = newValidator "" (\s -> Just s) True []
-    , reward = newValidator 0.0 (\s -> Just "0.0") True []
+    , reward = newValidator "" (\s -> Just "0.0") True []
     , validation = NoValidation
     , verification = Automatic
     , saveStatus = NotAsked
@@ -146,14 +147,16 @@ type Msg
     | OnSelectVerifier (Maybe Profile)
     | OnRemoveVerifier Profile
     | SelectMsg (Select.Msg Profile)
-      -- | EnteredDescription String
-      -- | EnteredReward String
+    | EnteredDescription String
+    | EnteredReward String
     | EnteredDeadline String
     | DeadlineChanged MaskedDate.State
       -- | EnteredUsages String
       -- | EnteredVerifierReward String
       -- | EnteredMinVotes String
       -- | SubmittedData
+    | ToggleValidity Bool
+    | SetVerification String
     | ValidateDeadline
     | GotInvalidDate
     | SaveAction (Result Value String)
@@ -272,6 +275,22 @@ update msg model loggedIn =
                 |> UR.init
 
         -- |> UR.addCmd cmd
+        EnteredDescription val ->
+            let
+                oldForm =
+                    model.form
+            in
+            { model | form = { oldForm | description = updateInput val model.form.description } }
+                |> UR.init
+
+        EnteredReward val ->
+            let
+                oldForm =
+                    model.form
+            in
+            { model | form = { oldForm | reward = updateInput val model.form.reward } }
+                |> UR.init
+
         EnteredDeadline deadlineStr ->
             -- let
             --     currentForm =
@@ -309,6 +328,48 @@ update msg model loggedIn =
         --     }
         DeadlineChanged state ->
             model
+                |> UR.init
+
+        ToggleValidity bool ->
+            let
+                oldForm =
+                    model.form
+            in
+            { model
+                | form =
+                    { oldForm
+                        | validation =
+                            if bool then
+                                ValidationEmpty
+
+                            else
+                                NoValidation
+                    }
+            }
+                |> UR.init
+
+        SetVerification val ->
+            let
+                oldForm =
+                    model.form
+
+                verificationReward =
+                    newValidator "" (\s -> Just "0,0") False []
+
+                minVotes =
+                    newValidator 0 (\s -> Just "") False []
+            in
+            { model
+                | form =
+                    { oldForm
+                        | verification =
+                            if val == "automatic" then
+                                Automatic
+
+                            else
+                                Manual [] verificationReward minVotes
+                    }
+            }
                 |> UR.init
 
         GotInvalidDate ->
@@ -526,57 +587,56 @@ viewForm ({ shared } as loggedIn) community model =
                 , textarea
                     [ class "w-full input rounded-sm"
                     , rows 5
-
-                    -- , onInput EnteredDescription
+                    , onInput EnteredDescription
                     ]
                     []
-
-                -- , viewFieldErrors Description model.problems
                 ]
             , div [ class "mb-10" ]
                 [ span [ class "input-label" ]
                     [ text_ "community.actions.form.reward_label" ]
-                , div [ class "flex flex-row sm:w-1/4 input border-sm" ]
+                , div [ class "flex sm:w-2/5 h-12 rounded-sm border border-gray-500" ]
                     [ input
-                        [ class "input block w-4/5 border-none"
+                        [ class "block w-4/5 border-none px-4 py-3 outline-none"
                         , type_ "number"
                         , placeholder "0.00"
-
-                        -- , onInput EnteredReward
+                        , onInput EnteredReward
                         ]
                         []
                     , span
-                        [ class "w-2/5 flex input-token" ]
+                        [ class "w-1/5 flex text-white items-center justify-center bg-indigo-500 text-body uppercase" ]
                         [ text (Eos.symbolToString community.symbol) ]
                     ]
-
-                -- , viewFieldErrors Reward model.problems
                 ]
-            , div [ class "sm:w-select mb-10" ]
-                [ div [ class "flex flex-row justify-between" ]
-                    [ p [ class "input-label" ]
-                        [ text_ "community.actions.form.validity_label" ]
-                    , div [ class "input-label text-orange-300 relative mb-1 uppercase tooltip-container" ]
-                        [ text_ "community.actions.form.tooltip_label"
-                        , p [ class "bg-black text-white absolute z-10 py-3 px-4 top-1 w-select right-0 rounded whitespace-pre-line leading-normal font-sans normal-case text-body" ]
-                            [ text_ "community.actions.form.validity_tooltip" ]
+            , div [ class "mb-10" ]
+                [ div [ class "mb-10" ]
+                    [ p [ class "input-label mb-6" ] [ text_ "community.actions.form.validity_label" ]
+                    , div [ class "flex" ]
+                        [ div [ class "form-switch inline-block align-middle" ]
+                            [ input
+                                [ type_ "checkbox"
+                                , id "expiration-toggle"
+                                , name "expiration-toggle"
+                                , class "form-switch-checkbox"
+                                , checked (model.form.validation /= NoValidation)
+                                , onCheck ToggleValidity
+                                ]
+                                []
+                            , label [ class "form-switch-label", for "expiration-toggle" ] []
+                            ]
+                        , label [ class "flex text-body text-green", for "expiration-toggle" ]
+                            [ p [ class "font-bold mr-1" ]
+                                [ if model.form.validation == NoValidation then
+                                    text_ "community.actions.form.validation_off"
+
+                                  else
+                                    text_ "community.actions.form.validation_on"
+                                ]
+                            , text_ "community.actions.form.validation_detail"
+                            ]
                         ]
                     ]
-                , div [ class "mb-10" ]
-                    [ input [ type_ "checkbox", class "form-toggle toggle" ] []
-                    ]
-                , select
-                    [ class ("form-select w-full select" ++ borderColor Validity)
-
-                    -- , on "change" (Json.map SetValidity targetValue)
-                    ]
-                    [ option [ value "no" ] [ span [ class "capitalize" ] [ text_ "community.actions.form.no" ] ]
-                    , option [ value "yes" ] [ span [ class "capitalize" ] [ text_ "community.actions.form.yes" ] ]
-                    ]
-
-                -- , viewFieldErrors Validity model.problems
                 ]
-            , if True then
+            , if model.form.validation /= NoValidation then
                 div [ class "sm:w-select" ]
                     [ div [ class "mb-3 flex flex-row text-body items-bottom" ]
                         [ input
@@ -638,25 +698,52 @@ viewForm ({ shared } as loggedIn) community model =
 
               else
                 text ""
-            , div [ class "sm:w-select mb-10" ]
-                [ div [ class "flex flex-row justify-between" ]
+            , div [ class "mb-10" ]
+                [ div [ class "flex flex-row justify-between mb-6" ]
                     [ p [ class "input-label" ]
                         [ text_ "community.actions.form.verification_label" ]
-                    , div [ class "input-label text-orange-300 relative mb-1 tooltip-container" ]
-                        [ text_ "community.actions.form.tooltip_label"
-                        , p [ class "bg-black text-white absolute z-10 py-3 px-4 top-1 w-select right-0 rounded whitespace-pre-line leading-normal normal-case text-body" ]
-                            [ text_ "community.actions.form.verification_tooltip" ]
+                    ]
+                , div [ class "mb-6" ]
+                    [ label [ class "inline-flex items-center" ]
+                        [ input
+                            [ type_ "radio"
+                            , class "form-radio h-5 w-5 text-green"
+                            , name "verification"
+                            , value "automatic"
+                            , checked (model.form.verification == Automatic)
+                            , onClick (SetVerification "automatic")
+                            ]
+                            []
+                        , span
+                            [ class "flex ml-3 text-body"
+                            , classList [ ( "text-green", model.form.verification == Automatic ) ]
+                            ]
+                            [ p [ class "font-bold mr-1" ] [ text_ "community.actions.form.automatic" ]
+                            , text_ "community.actions.form.automatic_detail"
+                            ]
                         ]
                     ]
-                , select
-                    [ class "w-full mb-10 form-select select"
-
-                    -- , on "change" (Json.map SetVerification targetValue)
+                , div [ class "mb-6" ]
+                    [ label [ class "inline-flex items-center" ]
+                        [ input
+                            [ type_ "radio"
+                            , class "form-radio h-5 w-5 text-green"
+                            , name "verification"
+                            , value "manual"
+                            , checked (model.form.verification /= Automatic)
+                            , onClick (SetVerification "manual")
+                            ]
+                            []
+                        , span
+                            [ class "flex ml-3 text-body"
+                            , classList [ ( "text-green", model.form.verification /= Automatic ) ]
+                            ]
+                            [ p [ class "font-bold mr-1" ] [ text_ "community.actions.form.manual" ]
+                            , text_ "community.actions.form.manual_detail"
+                            ]
+                        ]
                     ]
-                    [ option [ value "no" ] [ text_ "community.actions.form.auto_no" ]
-                    , option [ value "yes" ] [ text_ "community.actions.form.manual_yes" ]
-                    ]
-                , if True then
+                , if model.form.verification /= Automatic then
                     div []
                         [ span [ class "input-label" ]
                             [ text_ "community.actions.form.verifiers_label" ]
@@ -744,37 +831,6 @@ viewSelectedVerifiers shared model =
     -- in
     -- div [ class "flex flex-row mt-3 mb-10 flex-wrap" ] verifiers
     div [] []
-
-
-viewFieldErrors : ValidatedField -> List Problem -> Html Msg
-viewFieldErrors field problems =
-    let
-        fieldErrors =
-            List.filter
-                (\p ->
-                    case p of
-                        InvalidEntry f _ ->
-                            f == field
-
-                        _ ->
-                            False
-                )
-                problems
-
-        msgs =
-            List.map
-                (\p ->
-                    case p of
-                        InvalidEntry _ m ->
-                            span [ class "font-sans text-caption leading-caption text-red uppercase" ] [ text m ]
-
-                        _ ->
-                            text ""
-                )
-                fieldErrors
-    in
-    div []
-        msgs
 
 
 
@@ -973,6 +1029,12 @@ msgToString msg =
         OnRemoveVerifier _ ->
             [ "OnRemoveVerifier" ]
 
+        EnteredDescription _ ->
+            [ "EnteredDescription" ]
+
+        EnteredReward _ ->
+            [ "EnteredReward" ]
+
         EnteredDeadline _ ->
             [ "EnteredDeadline" ]
 
@@ -981,6 +1043,12 @@ msgToString msg =
 
         SelectMsg _ ->
             [ "SelectMsg" ]
+
+        ToggleValidity _ ->
+            [ "ToggleValidity" ]
+
+        SetVerification _ ->
+            [ "SetVerification" ]
 
         ValidateDeadline ->
             [ "ValidateDeadline" ]
