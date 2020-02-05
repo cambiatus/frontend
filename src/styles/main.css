@@ -162,7 +162,7 @@
 
 @screen md {
     .modal-content {
-        @apply max-w-3xl m-auto absolute h-64;
+        @apply max-w-3xl fixed top-modal mx-auto h-64;
     }
 }
 
