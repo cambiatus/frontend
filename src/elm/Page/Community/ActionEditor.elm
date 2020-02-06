@@ -176,7 +176,7 @@ defaultUsagesValidator =
 defaultVerificationReward : Validator String
 defaultVerificationReward =
     []
-        |> greaterThanOrEqual 1.0
+        |> greaterThanOrEqual 0
         |> newValidator "" (\s -> Just s) True
 
 
@@ -804,7 +804,7 @@ upsertAction loggedIn model isoDate =
         verifierReward =
             case model.form.verification of
                 Automatic ->
-                    "0.0"
+                    "0 " ++ Eos.symbolToString model.communityId
 
                 Manual _ verificationRewardValidator _ ->
                     getInput verificationRewardValidator ++ " " ++ Eos.symbolToString model.communityId
@@ -828,8 +828,16 @@ upsertAction loggedIn model isoDate =
                 Manual _ _ minVotesValidator ->
                     getInput minVotesValidator
 
+        validators =
+            case model.form.verification of
+                Automatic ->
+                    []
+
+                Manual list _ _ ->
+                    list
+
         validatorsStr =
-            []
+            validators
                 |> List.map (\v -> Eos.nameToString v.accountName)
                 |> String.join "-"
 
@@ -839,7 +847,7 @@ upsertAction loggedIn model isoDate =
                     "automatic"
 
                 Manual _ _ _ ->
-                    "manual"
+                    "claimable"
     in
     model
         |> UR.init
@@ -918,7 +926,7 @@ viewErrors : Model -> Html Msg
 viewErrors model =
     case model.form.saveStatus of
         Failed e ->
-            div [ class "fixed w-full flex items-center z-10 h-10 bg-red" ]
+            div [ class "sticky w-full flex items-center z-10 h-10 bg-red" ]
                 [ p [ class "mx-auto text-white" ] [ text e ]
                 , button [ onClick DismissError ] [ Icons.close "fill-current text-white h-4" ]
                 ]
