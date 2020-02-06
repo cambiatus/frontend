@@ -47,6 +47,9 @@
         "lower_than": "El número debe ser inferior a {{base}}",
         "lower_than_or_equal": "El número debe ser inferior o igual a {{base}}"
       },
+      "date": {
+        "invalid": "La fecha no es válida, utilice 'mm/dd/aaaa'"
+      },
       "text": {
         "only_numbers": "Sólo se permiten números",
         "only_letters": "Sólo se permiten letras",

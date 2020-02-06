@@ -47,6 +47,9 @@
         "lower_than": "El nombre ha de ser inferior a {{base}}",
         "lower_than_or_equal": "El nombre ha de ser inferior o igual a {{base}}"
       },
+      "date": {
+        "invalid": "La data no és vàlida, fes-la servir 'mm/dd/aaaa'"
+      },
       "text": {
         "only_numbers": "Només es permeten números",
         "only_letters": "Només es permeten lletres",

@@ -1,11 +1,20 @@
-module Page.Community.ActionEditor exposing (Model, Msg, initEdit, initNew, jsAddressToMsg, msgToString, update, view)
+module Page.Community.ActionEditor exposing
+    ( Model
+    , Msg
+    , initEdit
+    , initNew
+    , jsAddressToMsg
+    , msgToString
+    , update
+    , view
+    )
 
 import Account exposing (Profile)
 import Api.Graphql
 import Avatar exposing (Avatar)
 import Bespiral.Scalar exposing (DateTime(..))
 import Community exposing (Community)
-import DataValidator exposing (Validator, getInput, greaterThan, greaterThanOrEqual, hasErrors, listErrors, longerThan, newValidator, oneOf, shorterThan, updateInput, validate)
+import DataValidator exposing (Validator, addConstraints, getInput, greaterThan, greaterThanOrEqual, hasErrors, listErrors, longerThan, newValidator, oneOf, shorterThan, updateInput, validate)
 import Eos exposing (Symbol)
 import Eos.Account as Eos
 import Graphql.Http
@@ -18,6 +27,7 @@ import Json.Decode as Json exposing (Value)
 import Json.Encode as Encode
 import MaskedInput.Text as MaskedDate
 import Page
+import Ports
 import Route
 import Select
 import Session.LoggedIn as LoggedIn exposing (External(..))
@@ -92,24 +102,24 @@ type Status
 
 type ActionValidation
     = NoValidation
-    | Validations (Maybe (Validator String)) (Maybe (Validator Int)) -- Date validation, usage validate
+    | Validations (Maybe (Validator String)) (Maybe (Validator String)) -- Date validation, usage validate
 
 
 type Verification
     = Automatic
-    | Manual (List Profile) (Validator Float) (Validator Int) -- Manual: users list, verification reward and min votes
+    | Manual (List Profile) (Validator String) (Validator String) -- Manual: users list, verification reward and min votes
 
 
 type SaveStatus
     = NotAsked
     | Saving
     | Saved
-    | Failed
+    | Failed String
 
 
 type alias Form =
     { description : Validator String
-    , reward : Validator Float
+    , reward : Validator String
     , validation : ActionValidation
     , verification : Verification
     , deadlineState : MaskedDate.State
@@ -132,7 +142,7 @@ editForm : Form -> Community.Action -> Form
 editForm form action =
     { form
         | description = updateInput action.description form.description
-        , reward = updateInput action.reward form.reward
+        , reward = updateInput (String.fromFloat action.reward) form.reward
     }
 
 
@@ -144,32 +154,37 @@ defaultDescription =
         |> newValidator "" (\v -> Just v) True
 
 
-defaultReward : Validator Float
+defaultReward : Validator String
 defaultReward =
     []
         |> greaterThanOrEqual 1.0
-        |> newValidator 0.0 (\s -> Just "0.0") True
+        |> newValidator "" (\s -> Just s) True
 
 
-defaultUsagesValidator : Validator Int
+defaultDateValidator : Validator String
+defaultDateValidator =
+    newValidator "" (\s -> Just s) True []
+
+
+defaultUsagesValidator : Validator String
 defaultUsagesValidator =
     []
         |> greaterThan 0
-        |> newValidator 0 (\s -> Just "0") True
+        |> newValidator "" (\s -> Just s) True
 
 
-defaultVerificationReward : Validator Float
+defaultVerificationReward : Validator String
 defaultVerificationReward =
     []
         |> greaterThanOrEqual 1.0
-        |> newValidator 0.0 (\s -> Just "0,0") False
+        |> newValidator "" (\s -> Just s) True
 
 
-defaultMinVotes : Validator Int
+defaultMinVotes : Validator String
 defaultMinVotes =
     []
         |> greaterThanOrEqual 2
-        |> newValidator 0 (\s -> Just "0") False
+        |> newValidator "2" (\s -> Just s) True
 
 
 validateForm : Form -> Form
@@ -230,6 +245,16 @@ hasDateValidation validation =
                     False
 
 
+getDateValidation : ActionValidation -> Maybe (Validator String)
+getDateValidation validation =
+    case validation of
+        NoValidation ->
+            Nothing
+
+        Validations maybeDate _ ->
+            maybeDate
+
+
 hasUnitValidation : ActionValidation -> Bool
 hasUnitValidation validation =
     case validation of
@@ -265,16 +290,17 @@ type Msg
     | EnteredUsages String
     | EnteredVerifierReward String
     | EnteredMinVotes String
-      -- | SubmittedData
     | ToggleValidity Bool
     | ToggleDeadline Bool
     | ToggleUsages Bool
     | SetVerification String
     | ValidateForm
     | ValidateDeadline
+    | GotValidDate (Result Value String)
     | GotInvalidDate
-    | SaveAction (Result Value String)
+    | SaveAction Int -- Send the date
     | GotSaveAction (Result Value String)
+    | DismissError
 
 
 update : Msg -> Model -> LoggedIn.Model -> UpdateResult
@@ -421,12 +447,8 @@ update msg model loggedIn =
             let
                 oldForm =
                     model.form
-
-                value =
-                    String.toFloat val
-                        |> Maybe.withDefault 0.0
             in
-            { model | form = { oldForm | reward = updateInput value model.form.reward } }
+            { model | form = { oldForm | reward = updateInput val model.form.reward } }
                 |> UR.init
 
         EnteredDeadline val ->
@@ -460,10 +482,6 @@ update msg model loggedIn =
             let
                 oldForm =
                     model.form
-
-                value =
-                    String.toInt val
-                        |> Maybe.withDefault 0
             in
             case model.form.validation of
                 NoValidation ->
@@ -477,7 +495,7 @@ update msg model loggedIn =
                             { model
                                 | form =
                                     { oldForm
-                                        | validation = Validations maybeDate (Just (updateInput value usageValidation))
+                                        | validation = Validations maybeDate (Just (updateInput val usageValidation))
                                     }
                             }
                                 |> UR.init
@@ -491,10 +509,6 @@ update msg model loggedIn =
             let
                 oldForm =
                     model.form
-
-                value =
-                    String.toFloat val
-                        |> Maybe.withDefault 0.0
             in
             case model.form.verification of
                 Automatic ->
@@ -503,17 +517,13 @@ update msg model loggedIn =
                         |> UR.logImpossible msg []
 
                 Manual listProfile verifierReward minVotes ->
-                    { model | form = { oldForm | verification = Manual listProfile (updateInput value verifierReward) minVotes } }
+                    { model | form = { oldForm | verification = Manual listProfile (updateInput val verifierReward) minVotes } }
                         |> UR.init
 
         EnteredMinVotes val ->
             let
                 oldForm =
                     model.form
-
-                value =
-                    String.toInt val
-                        |> Maybe.withDefault 0
             in
             case model.form.verification of
                 Automatic ->
@@ -522,12 +532,25 @@ update msg model loggedIn =
                         |> UR.logImpossible msg []
 
                 Manual listProfile verifierReward minVotes ->
-                    { model | form = { oldForm | verification = Manual listProfile verifierReward (updateInput value minVotes) } }
+                    { model | form = { oldForm | verification = Manual listProfile verifierReward (updateInput val minVotes) } }
                         |> UR.init
 
         ValidateForm ->
-            { model | form = validateForm model.form }
-                |> UR.init
+            let
+                newModel =
+                    { model | form = validateForm model.form }
+            in
+            if isFormValid newModel.form then
+                case getDateValidation newModel.form.validation of
+                    Just dateValidation ->
+                        update ValidateDeadline model loggedIn
+
+                    Nothing ->
+                        update (SaveAction 0) model loggedIn
+
+            else
+                newModel
+                    |> UR.init
 
         ValidateDeadline ->
             case model.form.validation of
@@ -600,7 +623,7 @@ update msg model loggedIn =
 
                 deadlineValidation =
                     if bool then
-                        Just (newValidator "" (\s -> Just "0/0/0") True [])
+                        Just defaultDateValidator
 
                     else
                         Nothing
@@ -678,10 +701,40 @@ update msg model loggedIn =
                 |> UR.init
 
         GotInvalidDate ->
-            model
+            let
+                oldForm =
+                    model.form
+
+                newForm =
+                    { oldForm
+                        | validation =
+                            case model.form.validation of
+                                NoValidation ->
+                                    NoValidation
+
+                                Validations (Just ({ constraints } as dateValidation)) usageValidation ->
+                                    Validations
+                                        (Just
+                                            (addConstraints
+                                                [ { test = \v -> False
+                                                  , defaultError = \f -> t shared.translations "error.validator.date.invalid"
+                                                  }
+                                                ]
+                                                (updateInput (getInput dateValidation) defaultDateValidator)
+                                            )
+                                        )
+                                        usageValidation
+
+                                Validations dateValidation usageValidation ->
+                                    Validations dateValidation usageValidation
+                    }
+            in
+            { model
+                | form = validateForm newForm
+            }
                 |> UR.init
 
-        SaveAction isoDate ->
+        GotValidDate isoDate ->
             case isoDate of
                 Ok date ->
                     let
@@ -693,57 +746,30 @@ update msg model loggedIn =
                                 Just (DateTime date)
                                     |> Utils.posixDateTime
                                     |> Time.posixToMillis
-
-                        validatorsStr =
-                            []
-                                |> List.map (\v -> Eos.nameToString v.accountName)
-                                |> String.join "-"
                     in
-                    -- if LoggedIn.isAuth loggedIn then
-                    --     model
-                    --         |> UR.init
-                    --         |> UR.addPort
-                    --             { responseAddress = SaveAction isoDate
-                    --             , responseData = Encode.null
-                    --             , data =
-                    --                 Eos.encodeTransaction
-                    --                     { actions =
-                    --                         [ { accountName = "bes.cmm"
-                    --                           , name = "upsertaction"
-                    --                           , authorization =
-                    --                                 { actor = loggedIn.accountName
-                    --                                 , permissionName = Eos.samplePermission
-                    --                                 }
-                    --                           , data =
-                    --                                 { actionId = 0
-                    --                                 , objectiveId = model.objectiveId
-                    --                                 , description = model.form.description
-                    --                                 , reward = String.fromFloat model.form.reward ++ " " ++ model.form.symbol
-                    --                                 , verifier_reward = String.fromFloat model.form.verifierReward ++ " " ++ model.form.symbol
-                    --                                 , deadline = dateInt
-                    --                                 , usages = model.form.maxUsage
-                    --                                 , usagesLeft = model.form.maxUsage
-                    --                                 , verifications = model.form.minVotes
-                    --                                 , verificationType = model.form.verificationType
-                    --                                 , validatorsStr = validatorsStr
-                    --                                 , isCompleted = 0
-                    --                                 , creator = loggedIn.accountName
-                    --                                 }
-                    --                                     |> Community.encodeCreateActionAction
-                    --                           }
-                    --                         ]
-                    --                     }
-                    --             }
-                    -- else
-                    model
-                        |> UR.init
-                        |> UR.addExt
-                            (Just (SaveAction isoDate)
-                                |> RequiredAuthentication
-                            )
+                    update (SaveAction dateInt) model loggedIn
 
                 Err _ ->
                     update GotInvalidDate model loggedIn
+
+        SaveAction isoDate ->
+            let
+                oldForm =
+                    model.form
+
+                newModel =
+                    { model | form = { oldForm | saveStatus = Saving } }
+            in
+            if LoggedIn.isAuth loggedIn then
+                upsertAction loggedIn newModel isoDate
+
+            else
+                newModel
+                    |> UR.init
+                    |> UR.addExt
+                        (Just (SaveAction isoDate)
+                            |> RequiredAuthentication
+                        )
 
         GotSaveAction (Ok tId) ->
             model
@@ -751,9 +777,104 @@ update msg model loggedIn =
                 |> UR.addCmd (Route.replaceUrl loggedIn.shared.navKey (Route.Community model.communityId))
 
         GotSaveAction (Err val) ->
-            model
+            let
+                oldForm =
+                    model.form
+
+                newModel =
+                    { model | form = { oldForm | saveStatus = Failed (t shared.translations "error.unknown") } }
+            in
+            newModel
                 |> UR.init
+                |> UR.logDebugValue msg val
                 |> UR.logImpossible msg []
+
+        DismissError ->
+            let
+                oldForm =
+                    model.form
+            in
+            { model | form = { oldForm | saveStatus = NotAsked } }
+                |> UR.init
+
+
+upsertAction : LoggedIn.Model -> Model -> Int -> UpdateResult
+upsertAction loggedIn model isoDate =
+    let
+        verifierReward =
+            case model.form.verification of
+                Automatic ->
+                    "0.0"
+
+                Manual _ verificationRewardValidator _ ->
+                    getInput verificationRewardValidator ++ " " ++ Eos.symbolToString model.communityId
+
+        usages =
+            case model.form.validation of
+                NoValidation ->
+                    "0"
+
+                Validations _ (Just usageValidator) ->
+                    getInput usageValidator
+
+                _ ->
+                    "0"
+
+        minVotes =
+            case model.form.verification of
+                Automatic ->
+                    "0"
+
+                Manual _ _ minVotesValidator ->
+                    getInput minVotesValidator
+
+        validatorsStr =
+            []
+                |> List.map (\v -> Eos.nameToString v.accountName)
+                |> String.join "-"
+
+        verificationType =
+            case model.form.verification of
+                Automatic ->
+                    "automatic"
+
+                Manual _ _ _ ->
+                    "manual"
+    in
+    model
+        |> UR.init
+        |> UR.addPort
+            { responseAddress = SaveAction isoDate
+            , responseData = Encode.null
+            , data =
+                Eos.encodeTransaction
+                    { actions =
+                        [ { accountName = "bes.cmm"
+                          , name = "upsertaction"
+                          , authorization =
+                                { actor = loggedIn.accountName
+                                , permissionName = Eos.samplePermission
+                                }
+                          , data =
+                                { actionId = model.actionId |> Maybe.withDefault 0
+                                , objectiveId = model.objectiveId
+                                , description = getInput model.form.description
+                                , reward = getInput model.form.reward ++ " " ++ Eos.symbolToString model.communityId
+                                , verifierReward = verifierReward
+                                , deadline = isoDate
+                                , usages = usages
+                                , usagesLeft = usages -- TODO: remove this after, proper handle usagesLeft
+                                , verifications = minVotes
+                                , verificationType = verificationType
+                                , validatorsStr = validatorsStr
+                                , isCompleted = 0
+                                , creator = loggedIn.accountName
+                                }
+                                    |> Community.encodeCreateActionAction
+                          }
+                        ]
+                    }
+            }
 
 
 
@@ -778,7 +899,8 @@ view loggedIn model =
 
         Loaded community ->
             div [ class "bg-white" ]
-                [ Page.viewHeader loggedIn (t "community.actions.title") (Route.Objectives model.communityId)
+                [ viewErrors model
+                , Page.viewHeader loggedIn (t "community.actions.title") (Route.Objectives model.communityId)
                 , viewForm loggedIn community model
                 ]
 
@@ -792,11 +914,25 @@ view loggedIn model =
             Page.fullPageNotFound "not authorized" ""
 
 
+viewErrors : Model -> Html Msg
+viewErrors model =
+    case model.form.saveStatus of
+        Failed e ->
+            div [ class "fixed w-full flex items-center z-10 h-10 bg-red" ]
+                [ p [ class "mx-auto text-white" ] [ text e ]
+                , button [ onClick DismissError ] [ Icons.close "fill-current text-white h-4" ]
+                ]
+
+        _ ->
+            text ""
+
+
 viewForm : LoggedIn.Model -> Community -> Model -> Html Msg
 viewForm ({ shared } as loggedIn) community model =
     div [ class "container mx-auto" ]
         [ div [ class "py-6 px-4" ]
-            [ viewDescription loggedIn model.form
+            [ viewLoading model
+            , viewDescription loggedIn model.form
             , viewReward loggedIn community model.form
             , viewValidations loggedIn model community
             , viewVerifications loggedIn model community
@@ -809,6 +945,20 @@ viewForm ({ shared } as loggedIn) community model =
                 ]
             ]
         ]
+
+
+viewLoading : Model -> Html msg
+viewLoading model =
+    case model.form.saveStatus of
+        Saving ->
+            div [ class "modal container" ]
+                [ div [ class "modal-bg" ] []
+                , div [ class "full-spinner-container h-full" ]
+                    [ div [ class "spinner spinner--delay" ] [] ]
+                ]
+
+        _ ->
+            text ""
 
 
 viewDescription : LoggedIn.Model -> Form -> Html Msg
@@ -848,7 +998,7 @@ viewReward ({ shared } as loggedIn) community form =
                 , type_ "number"
                 , placeholder "0.00"
                 , onInput EnteredReward
-                , value (getInput form.reward |> String.fromFloat)
+                , value (getInput form.reward)
                 ]
                 []
             , span
@@ -973,7 +1123,7 @@ viewValidations ({ shared } as loggedIn) model community =
                                     [ type_ "number"
                                     , class "input"
                                     , classList [ ( "border-red", hasErrors validation ) ]
-                                    , value (getInput validation |> String.fromInt)
+                                    , value (getInput validation)
                                     , onInput EnteredUsages
                                     ]
                                     []
@@ -1072,7 +1222,7 @@ viewManualVerificationForm ({ shared } as loggedIn) model community =
                             , type_ "number"
                             , placeholder "0.00"
                             , onInput EnteredVerifierReward
-                            , value (getInput verificationReward |> String.fromFloat)
+                            , value (getInput verificationReward)
                             ]
                             []
                         , span
@@ -1090,7 +1240,7 @@ viewManualVerificationForm ({ shared } as loggedIn) model community =
                         [ class "w-full input border rounded-sm"
                         , type_ "number"
                         , onInput EnteredMinVotes
-                        , value (getInput minVotes |> String.fromInt)
+                        , value (getInput minVotes)
                         ]
                         []
                     , viewFieldErrors (listErrors shared.translations minVotes)
@@ -1240,10 +1390,10 @@ jsAddressToMsg addr val =
                     ]
                 )
                 val
-                |> Result.map (Just << SaveAction)
+                |> Result.map (Just << GotValidDate)
                 |> Result.withDefault (Just GotInvalidDate)
 
-        "UploadAction" :: _ ->
+        "SaveAction" :: _ ->
             Json.decodeValue
                 (Json.oneOf
                     [ Json.field "transactionId" Json.string
@@ -1316,8 +1466,14 @@ msgToString msg =
         SaveAction _ ->
             [ "SaveAction" ]
 
+        GotValidDate _ ->
+            [ "GotValidDate" ]
+
         GotInvalidDate ->
             [ "GotInvalidDate" ]
 
         GotSaveAction _ ->
             [ "GotSaveAction" ]
+
+        DismissError ->
+            [ "DismissError" ]
