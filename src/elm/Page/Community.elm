@@ -1,6 +1,14 @@
-module Page.Community exposing (Model, Msg, init, jsAddressToMsg, msgToString, subscriptions, update, view)
+module Page.Community exposing
+    ( Model
+    , Msg
+    , init
+    , jsAddressToMsg
+    , msgToString
+    , subscriptions
+    , update
+    , view
+    )
 
-import Account
 import Api
 import Api.Graphql
 import Asset.Icon as Icon
@@ -9,7 +17,7 @@ import Bespiral.Enum.VerificationType as VerificationType exposing (Verification
 import Bespiral.Object
 import Bespiral.Query exposing (ClaimsRequiredArguments)
 import Bespiral.Scalar exposing (DateTime(..))
-import Community exposing (ActionVerification, ActionVerificationsResponse, ClaimResponse, Community, Validator)
+import Community exposing (ActionVerification, ActionVerificationsResponse, ClaimResponse, Community)
 import Dict exposing (Dict)
 import Eos exposing (Symbol)
 import Eos.Account as Eos

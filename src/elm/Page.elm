@@ -1,10 +1,43 @@
-module Page exposing (ExternalMsg(..), Msg, Session(..), errorToString, fullPageError, fullPageGraphQLError, fullPageLoading, fullPageNotFound, init, isLoggedIn, jsAddressToMsg, labelWithTooltip, loading, login, logout, msgToString, onFileChange, subscriptions, toShared, update, viewButtonNew, viewCardEmpty, viewCardList, viewDateDistance, viewGuest, viewHeader, viewLoggedIn, viewMaxTwoColumn, viewMenuFilter, viewMenuFilterButton, viewMenuFilterTabButton, viewMenuTab, viewTitle)
+module Page exposing
+    ( ExternalMsg(..)
+    , Msg
+    , Session(..)
+    , errorToString
+    , fullPageError
+    , fullPageGraphQLError
+    , fullPageLoading
+    , fullPageNotFound
+    , init
+    , isLoggedIn
+    , jsAddressToMsg
+    , labelWithTooltip
+    , loading
+    , login
+    , logout
+    , msgToString
+    , onFileChange
+    , subscriptions
+    , toShared
+    , update
+    , viewButtonNew
+    , viewCardEmpty
+    , viewCardList
+    , viewDateDistance
+    , viewGuest
+    , viewHeader
+    , viewLoggedIn
+    , viewMaxTwoColumn
+    , viewMenuFilter
+    , viewMenuFilterButton
+    , viewMenuFilterTabButton
+    , viewMenuTab
+    , viewTitle
+    )
 
-import Account exposing (Profile)
 import Asset.Icon as Icon
 import Auth
 import Browser.Navigation as Nav
-import Community exposing (ActionVerification)
+import Community
 import DateDistance
 import File exposing (File)
 import Flags exposing (Flags)
@@ -19,6 +52,7 @@ import Icons
 import Json.Decode as Decode exposing (Decoder)
 import Json.Encode as Encode exposing (Value)
 import Ports
+import Profile exposing (Profile)
 import Route exposing (Route)
 import Session.Guest as Guest
 import Session.LoggedIn as LoggedIn

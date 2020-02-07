@@ -18,6 +18,7 @@ import Icons
 import Json.Encode as Encode
 import List.Extra as LE
 import Page exposing (Session(..))
+import Profile
 import Route
 import Session.Guest as Guest
 import Session.LoggedIn as LoggedIn exposing (External(..))
@@ -25,7 +26,6 @@ import Session.Shared exposing (Shared)
 import Shop exposing (Sale)
 import Transfer
 import UpdateResult as UR
-import User
 
 
 
@@ -411,7 +411,8 @@ viewCard ({ shared } as loggedIn) card model =
             , div [ class "w-full flex items-center text-sm" ]
                 [ div [ class "mr-4" ] [ Avatar.view shared.endpoints.ipfs card.sale.creator.avatar "h-10 w-10" ]
                 , text_ "shop.sold_by"
-                , p [ class "font-bold ml-1" ] [ User.viewName loggedIn.accountName card.sale.creator shared.translations ]
+                , p [ class "font-bold ml-1" ]
+                    [ Profile.viewProfileName loggedIn.accountName card.sale.creator shared.translations ]
                 ]
             , div [ class "flex flex-wrap w-full justify-between items-center" ]
                 [ div [ class "" ]

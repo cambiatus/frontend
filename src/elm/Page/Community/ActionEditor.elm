@@ -9,7 +9,6 @@ module Page.Community.ActionEditor exposing
     , view
     )
 
-import Account exposing (Profile)
 import Api.Graphql
 import Avatar
 import Bespiral.Enum.VerificationType as VerificationType exposing (VerificationType)
@@ -43,6 +42,7 @@ import Json.Decode as Json exposing (Value)
 import Json.Encode as Encode
 import MaskedInput.Text as MaskedDate
 import Page
+import Profile exposing (Profile)
 import Route
 import Select
 import Session.LoggedIn as LoggedIn exposing (External(..))
@@ -177,18 +177,29 @@ editForm form action =
             else
                 NoValidation
 
+        verificators : List Profile
+        verificators =
+            if VerificationType.toString action.verificationType == "AUTOMATIC" then
+                []
+
+            else
+                action.validators
+
         verification : Verification
         verification =
             if VerificationType.toString action.verificationType == "AUTOMATIC" then
                 Automatic
 
             else
-                Manual [] defaultVerificationReward defaultMinVotes
+                Manual verificators
+                    (defaultVerificationReward |> updateInput (String.fromFloat action.verificationReward))
+                    (defaultMinVotes |> updateInput (String.fromInt action.verifications))
     in
     { form
         | description = updateInput action.description form.description
         , reward = updateInput (String.fromFloat action.reward) form.reward
         , validation = validation
+        , verification = verification
     }
 
 
@@ -467,7 +478,13 @@ update msg model loggedIn =
                             model.form.verification
 
                         Manual selectedVerifiers a b ->
-                            Manual (List.filter (\currVerifier -> currVerifier.accountName /= profile.accountName) selectedVerifiers) a b
+                            Manual
+                                (List.filter
+                                    (\currVerifier -> currVerifier.account /= profile.account)
+                                    selectedVerifiers
+                                )
+                                a
+                                b
             in
             { model | form = { oldForm | verification = verification } }
                 |> UR.init
@@ -884,7 +901,7 @@ upsertAction loggedIn model isoDate =
 
         validatorsStr =
             validators
-                |> List.map (\v -> Eos.nameToString v.accountName)
+                |> List.map (\v -> Eos.nameToString v.account)
                 |> String.join "-"
 
         verificationType =
@@ -1317,7 +1334,7 @@ viewSelectedVerifiers shared selectedVerifiers =
                                 [ Icons.remove "" ]
                             ]
                         , span [ class "mt-2 text-black font-sans text-body leading-normal" ]
-                            [ text (Eos.nameToString p.accountName) ]
+                            [ text (Eos.nameToString p.account) ]
                         ]
                 )
         )
@@ -1353,8 +1370,8 @@ selectConfig : Shared -> Bool -> Select.Config Msg Profile
 selectConfig shared isDisabled =
     Select.newConfig
         { onSelect = OnSelectVerifier
-        , toLabel = \p -> Eos.nameToString p.accountName
-        , filter = filter 2 (\p -> Eos.nameToString p.accountName)
+        , toLabel = \p -> Eos.nameToString p.account
+        , filter = filter 2 (\p -> Eos.nameToString p.account)
         }
         |> Select.withMultiSelection True
         |> Select.withInputClass "form-input h-12 w-full font-sans placeholder-gray-900"
@@ -1380,7 +1397,7 @@ viewAutoCompleteItem shared profile =
         [ div [ class "pr-3" ] [ Avatar.view ipfsUrl profile.avatar "h-7 w-7" ]
         , div [ class "flex flex-col font-sans border-b border-gray-500 pb-3 w-full" ]
             [ span [ class "text-black text-body leading-loose" ]
-                [ text (Eos.nameToString profile.accountName) ]
+                [ text (Eos.nameToString profile.account) ]
             , span [ class "leading-caption uppercase text-green text-caption" ]
                 [ case profile.userName of
                     Just name ->

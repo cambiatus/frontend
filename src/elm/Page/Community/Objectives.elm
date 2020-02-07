@@ -11,13 +11,13 @@ import Html.Events exposing (onClick)
 import I18Next exposing (Delims(..), Translations, t)
 import Icons
 import Page
+import Profile
 import Route
 import Session.LoggedIn as LoggedIn exposing (External(..))
 import Strftime
 import Task
 import Time exposing (Posix, posixToMillis)
 import UpdateResult as UR
-import User
 import Utils
 
 
@@ -303,7 +303,7 @@ viewAction ({ shared } as loggedIn) model objectiveId action =
                         (List.map
                             (\u ->
                                 div [ class "mx-2" ]
-                                    [ User.view shared.endpoints.ipfs loggedIn.accountName shared.translations u ]
+                                    [ Profile.view shared.endpoints.ipfs loggedIn.accountName shared.translations u ]
                             )
                             action.validators
                         )

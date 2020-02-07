@@ -1,6 +1,5 @@
 port module Ports exposing (JavascriptOut, JavascriptOutModel, javascriptInPort, javascriptOut, javascriptOutCmd, loginWithScatter, mapAddress, onScatterLoginSub, storeLanguage)
 
-import Account
 import Community
 import Eos exposing (Symbol)
 import Eos.Account as Eos

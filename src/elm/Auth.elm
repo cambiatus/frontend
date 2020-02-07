@@ -1,6 +1,5 @@
 module Auth exposing (ExternalMsg(..), Model, Msg, PrivateKeyLogin, init, initRegister, isAuth, jsAddressToMsg, maybePrivateKey, msgToString, subscriptions, update, view, viewFieldLabel)
 
-import Account exposing (Profile)
 import Api
 import Asset.Icon as Icon
 import Browser.Dom as Dom
@@ -16,6 +15,7 @@ import Json.Decode.Pipeline as Decode
 import Json.Encode as Encode exposing (Value)
 import List.Extra as LE
 import Log
+import Profile exposing (Profile)
 import Route
 import Session.Shared as Shared exposing (Shared)
 import Task
@@ -479,8 +479,6 @@ digitInput position { form, pinVisibility } =
         []
 
 
-
-
 viewFieldLabel : Shared -> String -> String -> Maybe (Html msg) -> Html msg
 viewFieldLabel { translations } tSuffix id_ maybeView =
     let
@@ -752,7 +750,7 @@ update msg shared model =
                         Encode.object
                             [ ( "name", Encode.string "chatCredentials" )
                             , ( "container", Encode.string "chat-manager" )
-                            , ( "credentials", Account.encodeProfileChat profile )
+                            , ( "credentials", Profile.encodeProfileChat profile )
                             , ( "notificationAddress"
                               , Encode.list Encode.string [ "GotPageMsg", "GotLoggedInMsg", "ReceivedNotification" ]
                               )
@@ -767,7 +765,7 @@ update msg shared model =
                             (Api.signUp shared
                                 { name = ""
                                 , email = ""
-                                , accountName = accountName
+                                , account = accountName
                                 , invitationId = Nothing
                                 }
                                 (CompletedCreateProfile newStatus accountName)

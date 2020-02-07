@@ -1,6 +1,39 @@
-module Community exposing (Action, ActionVerification, ActionVerificationsResponse, Balance, ClaimResponse, Community, CreateCommunityData, CreateTokenData, DashboardInfo, Metadata, Objective, Transaction, Validator, Verification(..), Verifiers, WithObjectives, claimSelectionSet, communitiesQuery, communityQuery, createCommunityData, decodeBalance, decodeTransaction, encodeClaimAction, encodeCreateActionAction, encodeCreateCommunityData, encodeCreateObjectiveAction, encodeCreateTokenData, encodeUpdateLogoData, encodeUpdateObjectiveAction, logoBackground, logoTitleQuery, logoUrl, newCommunitySubscription, toVerifications)
+module Community exposing
+    ( Action
+    , ActionVerification
+    , ActionVerificationsResponse
+    , Balance
+    , ClaimResponse
+    , Community
+    , CreateCommunityData
+    , CreateTokenData
+    , DashboardInfo
+    , Metadata
+    , Objective
+    , Transaction
+    , Verification(..)
+    , Verifiers
+    , WithObjectives
+    , claimSelectionSet
+    , communitiesQuery
+    , communityQuery
+    , createCommunityData
+    , decodeBalance
+    , decodeTransaction
+    , encodeClaimAction
+    , encodeCreateActionAction
+    , encodeCreateCommunityData
+    , encodeCreateObjectiveAction
+    , encodeCreateTokenData
+    , encodeUpdateLogoData
+    , encodeUpdateObjectiveAction
+    , logoBackground
+    , logoTitleQuery
+    , logoUrl
+    , newCommunitySubscription
+    , toVerifications
+    )
 
-import Account exposing (Profile, accountSelectionSet)
 import Api.Relay exposing (MetadataConnection, PaginationArgs)
 import Bespiral.Enum.VerificationType exposing (VerificationType(..))
 import Bespiral.Object
@@ -22,9 +55,9 @@ import Html.Attributes
 import Json.Decode as Decode exposing (Decoder, string)
 import Json.Decode.Pipeline as Decode exposing (required)
 import Json.Encode as Encode exposing (Value)
+import Profile exposing (Profile)
 import Time exposing (Posix)
 import Transfer exposing (ConnectionTransfer, metadataConnectionSelectionSet, transferConnectionSelectionSet)
-import User exposing (User, selectionSet)
 import Utils
 import View.Tag as Tag
 
@@ -100,7 +133,7 @@ dashboardSelectionSet =
     SelectionSet.succeed DashboardInfo
         |> with Community.name
         |> with Community.logo
-        |> with (Community.members accountSelectionSet)
+        |> with (Community.members Profile.selectionSet)
 
 
 communitySelectionSet : (PaginationArgs -> PaginationArgs) -> SelectionSet Community Bespiral.Object.Community
@@ -114,7 +147,7 @@ communitySelectionSet paginateArgs =
         |> with Community.inviterReward
         |> with Community.invitedReward
         |> with Community.memberCount
-        |> with (Community.members accountSelectionSet)
+        |> with (Community.members Profile.selectionSet)
         |> with
             (Community.transfers
                 paginateArgs
@@ -268,18 +301,15 @@ type alias Action =
     , reward : Float
     , verificationReward : Float
     , creator : Eos.Name
-    , validators : List User
+    , validators : List Profile
     , usages : Int
     , usagesLeft : Int
     , deadline : Maybe DateTime
     , verificationType : VerificationType
+    , verifications : Int
     , id : Int
     , isCompleted : Bool
     }
-
-
-type alias Validator =
-    { validator : User }
 
 
 actionSelectionSet : SelectionSet Action Bespiral.Object.Action
@@ -289,12 +319,13 @@ actionSelectionSet =
         |> with Action.reward
         |> with Action.verifierReward
         |> with (Eos.nameSelectionSet Action.creatorId)
-        |> with (Action.validators User.selectionSet)
+        |> with (Action.validators Profile.selectionSet)
         |> with Action.usages
         |> with Action.usagesLeft
         |> with Action.deadline
         |> with Action.verificationType
         |> with Action.id
+        |> with Action.verifications
         |> with Action.isCompleted
 
 

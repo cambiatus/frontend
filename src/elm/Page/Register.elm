@@ -1,6 +1,5 @@
 module Page.Register exposing (Model, Msg, init, jsAddressToMsg, msgToString, subscriptions, update, view)
 
-import Account exposing (Profile)
 import Api
 import Api.Chat as Chat exposing (ChatPreferences)
 import Auth exposing (viewFieldLabel)
@@ -17,6 +16,7 @@ import Json.Decode as Decode exposing (Decoder, Value)
 import Json.Decode.Pipeline as Decode
 import Json.Encode as Encode
 import List.Extra as LE
+import Profile exposing (Profile)
 import Route
 import Session.Guest as Guest exposing (External(..))
 import Session.Shared exposing (Shared)
@@ -382,8 +382,6 @@ digitInput position inputType { form } =
         []
 
 
-
-
 type alias Field =
     { translationSuffix : String
     , isDisabled : Bool
@@ -654,7 +652,7 @@ update maybeInvitation msg model guest =
                             Api.signUp guest.shared
                                 { name = model.form.username
                                 , email = model.form.email
-                                , accountName = accountKeys.accountName
+                                , account = accountKeys.accountName
                                 , invitationId = maybeInvitation
                                 }
                                 (CompletedCreateProfile accountKeys)
@@ -663,7 +661,7 @@ update maybeInvitation msg model guest =
                             Api.signUpWithInvitation guest.shared
                                 { name = model.form.username
                                 , email = model.form.email
-                                , accountName = accountKeys.accountName
+                                , account = accountKeys.accountName
                                 , invitationId = maybeInvitation
                                 }
                                 (CompletedCreateProfile accountKeys)
@@ -705,7 +703,7 @@ update maybeInvitation msg model guest =
                         Encode.object
                             [ ( "name", Encode.string "chatCredentials" )
                             , ( "container", Encode.string "chat-manager" )
-                            , ( "credentials", Account.encodeProfileChat profile )
+                            , ( "credentials", Profile.encodeProfileChat profile )
                             , ( "notificationAddress"
                               , Encode.list Encode.string [ "GotPageMsg", "GotLoggedInMsg", "ReceivedNotification" ]
                               )
