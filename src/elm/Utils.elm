@@ -1,11 +1,8 @@
 module Utils exposing (decodeDate, decodeTimestamp, posixDateTime)
 
 import Bespiral.Scalar exposing (DateTime(..))
-import Char
-import Graphql.SelectionSet as SelectionSet exposing (SelectionSet, with)
 import Iso8601
 import Json.Decode as Decode exposing (Decoder, int, nullable, string)
-import Task
 import Time exposing (Posix)
 
 

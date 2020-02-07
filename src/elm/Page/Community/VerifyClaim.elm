@@ -8,7 +8,6 @@ import Bespiral.Object.Claim as Claim exposing (ChecksOptionalArguments)
 import Bespiral.Object.Community as Community
 import Bespiral.Object.Objective as Objective
 import Bespiral.Object.Profile as Profile
-import Bespiral.Object.Validator as Validator
 import Bespiral.Query exposing (ClaimRequiredArguments, ClaimsRequiredArguments)
 import Bespiral.Scalar exposing (DateTime(..))
 import DateFormat
@@ -672,7 +671,7 @@ type alias ActionResponse =
     , reward : Float
     , verifierReward : Float
     , objective : ObjectiveResponse
-    , validators : List ValidatorResponse
+    , validators : List ProfileResponse
     }
 
 
@@ -686,11 +685,6 @@ type alias CommunityResponse =
     { symbol : String
     , logo : String
     , name : String
-    }
-
-
-type alias ValidatorResponse =
-    { validator : ProfileResponse
     }
 
 
@@ -768,7 +762,7 @@ actionSelectionSet =
         |> with Action.reward
         |> with Action.verifierReward
         |> with (Action.objective objectiveSelectionSet)
-        |> with (Action.validators validatorsSelectionSet)
+        |> with (Action.validators profileSelectionSet)
 
 
 objectiveSelectionSet : SelectionSet ObjectiveResponse Bespiral.Object.Objective
@@ -784,12 +778,6 @@ communitySelectionSet =
         |> with Community.symbol
         |> with Community.logo
         |> with Community.name
-
-
-validatorsSelectionSet : SelectionSet ValidatorResponse Bespiral.Object.Validator
-validatorsSelectionSet =
-    SelectionSet.succeed ValidatorResponse
-        |> with (Validator.validator profileSelectionSet)
 
 
 toMaybeVerification : String -> VerificationResponse -> Maybe Verification
@@ -821,9 +809,7 @@ toMaybeVerification validator verificationResponse =
 
         validatorsResponse : List ProfileResponse
         validatorsResponse =
-            List.map
-                (\v -> v.validator)
-                actionResponse.validators
+            actionResponse.validators
 
         validatorVote : CheckStatus
         validatorVote =

@@ -11,29 +11,45 @@ module Page.Community.ActionEditor exposing
 
 import Account exposing (Profile)
 import Api.Graphql
-import Avatar exposing (Avatar)
+import Avatar
+import Bespiral.Enum.VerificationType as VerificationType exposing (VerificationType)
 import Bespiral.Scalar exposing (DateTime(..))
 import Community exposing (Community)
-import DataValidator exposing (Validator, addConstraints, getInput, greaterThan, greaterThanOrEqual, hasErrors, listErrors, longerThan, newValidator, oneOf, shorterThan, updateInput, validate)
+import DataValidator
+    exposing
+        ( Validator
+        , addConstraints
+        , getInput
+        , greaterThan
+        , greaterThanOrEqual
+        , hasErrors
+        , listErrors
+        , longerThan
+        , newValidator
+        , oneOf
+        , shorterThan
+        , updateInput
+        , validate
+        )
 import Eos exposing (Symbol)
 import Eos.Account as Eos
 import Graphql.Http
-import Html exposing (..)
-import Html.Attributes exposing (..)
-import Html.Events exposing (on, onCheck, onClick, onInput, targetValue)
+import Html exposing (Html, button, div, input, label, p, span, text, textarea)
+import Html.Attributes exposing (checked, class, classList, for, id, name, placeholder, rows, type_, value)
+import Html.Events exposing (onCheck, onClick, onInput)
 import I18Next exposing (t)
 import Icons
 import Json.Decode as Json exposing (Value)
 import Json.Encode as Encode
 import MaskedInput.Text as MaskedDate
 import Page
-import Ports
 import Route
 import Select
 import Session.LoggedIn as LoggedIn exposing (External(..))
 import Session.Shared exposing (Shared)
 import Simple.Fuzzy
-import Time exposing (Posix)
+import Strftime
+import Time
 import UpdateResult as UR
 import Utils
 
@@ -66,15 +82,6 @@ initEdit loggedIn symbol objectiveId actionId =
       }
     , Api.Graphql.query loggedIn.shared (Community.communityQuery symbol) CompletedCommunityLoad
     )
-
-
-
--- SUBSCRIPTIONS
-
-
-subscriptions : Model -> Sub Msg
-subscriptions _ =
-    Sub.none
 
 
 
@@ -113,7 +120,6 @@ type Verification
 type SaveStatus
     = NotAsked
     | Saving
-    | Saved
     | Failed String
 
 
@@ -140,9 +146,49 @@ initForm =
 
 editForm : Form -> Community.Action -> Form
 editForm form action =
+    let
+        dateValidator : Maybe (Validator String)
+        dateValidator =
+            case action.deadline of
+                Just deadline ->
+                    defaultDateValidator
+                        |> updateInput
+                            (action.deadline |> Utils.posixDateTime |> Strftime.format "%m%d%Y" Time.utc)
+                        |> Just
+
+                Nothing ->
+                    Nothing
+
+        usagesValidator : Maybe (Validator String)
+        usagesValidator =
+            if action.usages > 0 then
+                defaultUsagesValidator
+                    |> updateInput (String.fromInt action.usages)
+                    |> Just
+
+            else
+                Nothing
+
+        validation : ActionValidation
+        validation =
+            if action.usages > 0 || action.deadline /= Nothing then
+                Validations dateValidator usagesValidator
+
+            else
+                NoValidation
+
+        verification : Verification
+        verification =
+            if VerificationType.toString action.verificationType == "AUTOMATIC" then
+                Automatic
+
+            else
+                Manual [] defaultVerificationReward defaultMinVotes
+    in
     { form
         | description = updateInput action.description form.description
         , reward = updateInput (String.fromFloat action.reward) form.reward
+        , validation = validation
     }
 
 
@@ -542,7 +588,7 @@ update msg model loggedIn =
             in
             if isFormValid newModel.form then
                 case getDateValidation newModel.form.validation of
-                    Just dateValidation ->
+                    Just _ ->
                         update ValidateDeadline model loggedIn
 
                     Nothing ->
@@ -596,9 +642,9 @@ update msg model loggedIn =
                         |> UR.init
                         |> UR.logImpossible msg []
 
-                Validations maybeDate usageValidation ->
+                Validations maybeDate _ ->
                     case maybeDate of
-                        Just dateValidation ->
+                        Just _ ->
                             { model
                                 | form =
                                     { oldForm
@@ -612,7 +658,7 @@ update msg model loggedIn =
                                 |> UR.init
                                 |> UR.logImpossible msg []
 
-        ToggleValidity bool ->
+        ToggleValidity _ ->
             model
                 |> UR.init
 
@@ -712,12 +758,12 @@ update msg model loggedIn =
                                 NoValidation ->
                                     NoValidation
 
-                                Validations (Just ({ constraints } as dateValidation)) usageValidation ->
+                                Validations (Just dateValidation) usageValidation ->
                                     Validations
                                         (Just
                                             (addConstraints
-                                                [ { test = \v -> False
-                                                  , defaultError = \f -> t shared.translations "error.validator.date.invalid"
+                                                [ { test = \_ -> False
+                                                  , defaultError = \_ -> t shared.translations "error.validator.date.invalid"
                                                   }
                                                 ]
                                                 (updateInput (getInput dateValidation) defaultDateValidator)
@@ -771,7 +817,7 @@ update msg model loggedIn =
                             |> RequiredAuthentication
                         )
 
-        GotSaveAction (Ok tId) ->
+        GotSaveAction (Ok _) ->
             model
                 |> UR.init
                 |> UR.addCmd (Route.replaceUrl loggedIn.shared.navKey (Route.Community model.communityId))
@@ -890,16 +936,10 @@ upsertAction loggedIn model isoDate =
 
 
 view : LoggedIn.Model -> Model -> Html Msg
-view loggedIn model =
+view ({ shared } as loggedIn) model =
     let
-        shared =
-            loggedIn.shared
-
         t s =
             I18Next.t shared.translations s
-
-        text_ s =
-            text (t s)
     in
     case model.status of
         Loading ->
@@ -942,7 +982,7 @@ viewForm ({ shared } as loggedIn) community model =
             [ viewLoading model
             , viewDescription loggedIn model.form
             , viewReward loggedIn community model.form
-            , viewValidations loggedIn model community
+            , viewValidations loggedIn model
             , viewVerifications loggedIn model community
             , div [ class "flex align-center justify-center" ]
                 [ button
@@ -970,7 +1010,7 @@ viewLoading model =
 
 
 viewDescription : LoggedIn.Model -> Form -> Html Msg
-viewDescription ({ shared } as loggedIn) form =
+viewDescription { shared } form =
     let
         text_ s =
             text (t shared.translations s)
@@ -991,7 +1031,7 @@ viewDescription ({ shared } as loggedIn) form =
 
 
 viewReward : LoggedIn.Model -> Community -> Form -> Html Msg
-viewReward ({ shared } as loggedIn) community form =
+viewReward { shared } community form =
     let
         text_ s =
             text (t shared.translations s)
@@ -1017,8 +1057,8 @@ viewReward ({ shared } as loggedIn) community form =
         ]
 
 
-viewValidations : LoggedIn.Model -> Model -> Community -> Html Msg
-viewValidations ({ shared } as loggedIn) model community =
+viewValidations : LoggedIn.Model -> Model -> Html Msg
+viewValidations { shared } model =
     let
         text_ s =
             text (t shared.translations s)
@@ -1204,7 +1244,7 @@ viewVerifications ({ shared } as loggedIn) model community =
 
 
 viewManualVerificationForm : LoggedIn.Model -> Model -> Community -> Html Msg
-viewManualVerificationForm ({ shared } as loggedIn) model community =
+viewManualVerificationForm { shared } model community =
     let
         text_ s =
             text (t shared.translations s)
@@ -1261,9 +1301,6 @@ viewSelectedVerifiers shared selectedVerifiers =
     let
         ipfsUrl =
             shared.endpoints.ipfs
-
-        text_ s =
-            text (t shared.translations s)
     in
     div [ class "flex flex-row mt-3 mb-10 flex-wrap" ]
         (selectedVerifiers

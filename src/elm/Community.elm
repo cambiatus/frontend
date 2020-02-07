@@ -9,7 +9,6 @@ import Bespiral.Object.Check as Check
 import Bespiral.Object.Claim as Claim exposing (ChecksOptionalArguments)
 import Bespiral.Object.Community as Community
 import Bespiral.Object.Objective as Objective
-import Bespiral.Object.Validator
 import Bespiral.Query as Query
 import Bespiral.Scalar exposing (DateTime(..))
 import Bespiral.Subscription as Subscription
@@ -18,13 +17,13 @@ import Eos.Account as Eos
 import Graphql.Operation exposing (RootQuery, RootSubscription)
 import Graphql.OptionalArgument exposing (OptionalArgument(..))
 import Graphql.SelectionSet as SelectionSet exposing (SelectionSet, with)
-import Html exposing (Html)
+import Html
 import Html.Attributes
 import Json.Decode as Decode exposing (Decoder, string)
 import Json.Decode.Pipeline as Decode exposing (required)
 import Json.Encode as Encode exposing (Value)
 import Time exposing (Posix)
-import Transfer exposing (ConnectionTransfer, Transfer, metadataConnectionSelectionSet, transferConnectionSelectionSet)
+import Transfer exposing (ConnectionTransfer, metadataConnectionSelectionSet, transferConnectionSelectionSet)
 import User exposing (User, selectionSet)
 import Utils
 import View.Tag as Tag
@@ -269,7 +268,7 @@ type alias Action =
     , reward : Float
     , verificationReward : Float
     , creator : Eos.Name
-    , validators : List Validator
+    , validators : List User
     , usages : Int
     , usagesLeft : Int
     , deadline : Maybe DateTime
@@ -290,19 +289,13 @@ actionSelectionSet =
         |> with Action.reward
         |> with Action.verifierReward
         |> with (Eos.nameSelectionSet Action.creatorId)
-        |> with (Action.validators validatorSelectionSet)
+        |> with (Action.validators User.selectionSet)
         |> with Action.usages
         |> with Action.usagesLeft
         |> with Action.deadline
         |> with Action.verificationType
         |> with Action.id
         |> with Action.isCompleted
-
-
-validatorSelectionSet : SelectionSet Validator Bespiral.Object.Validator
-validatorSelectionSet =
-    SelectionSet.succeed Validator
-        |> with (Bespiral.Object.Validator.validator User.selectionSet)
 
 
 type Verification

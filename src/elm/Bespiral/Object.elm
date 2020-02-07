@@ -75,7 +75,3 @@ type TransferEdge
 
 type UnreadNotifications
     = UnreadNotifications
-
-
-type Validator
-    = Validator
