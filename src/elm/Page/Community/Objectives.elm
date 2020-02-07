@@ -23,7 +23,7 @@ import Utils
 
 init : LoggedIn.Model -> Symbol -> ( Model, Cmd Msg )
 init ({ shared } as loggedIn) symbol =
-    ( initModel loggedIn symbol
+    ( initModel symbol
     , Cmd.batch
         [ Api.Graphql.query shared (Community.communityQuery symbol) CompletedLoad
         , Task.perform GotTime Time.now
@@ -43,8 +43,8 @@ type alias Model =
     }
 
 
-initModel : LoggedIn.Model -> Symbol -> Model
-initModel loggedIn symbol =
+initModel : Symbol -> Model
+initModel symbol =
     { communityId = symbol
     , status = Loading
     , openObjective = Nothing
@@ -242,16 +242,20 @@ viewAction ({ shared } as loggedIn) model objectiveId action =
                         |> text
                     ]
                 ]
-            , div [ class "mx-2 mb-2" ]
-                [ p [ class "input-label" ]
-                    [ text_ "community.actions.validation_reward" ]
-                , p [ class "uppercase text-body" ]
-                    [ String.fromFloat action.verificationReward
-                        ++ " "
-                        ++ Eos.symbolToString model.communityId
-                        |> text
+            , if validationType == "CLAIMABLE" then
+                div [ class "mx-2 mb-2" ]
+                    [ p [ class "input-label" ]
+                        [ text_ "community.actions.validation_reward" ]
+                    , p [ class "uppercase text-body" ]
+                        [ String.fromFloat action.verificationReward
+                            ++ " "
+                            ++ Eos.symbolToString model.communityId
+                            |> text
+                        ]
                     ]
-                ]
+
+              else
+                text ""
             , if action.deadline == Nothing && action.usages == 0 then
                 text ""
 
