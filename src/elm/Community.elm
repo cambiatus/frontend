@@ -297,7 +297,8 @@ encodeUpdateObjectiveAction c =
 
 
 type alias Action =
-    { description : String
+    { id : Int
+    , description : String
     , reward : Float
     , verificationReward : Float
     , creator : Eos.Name
@@ -307,7 +308,6 @@ type alias Action =
     , deadline : Maybe DateTime
     , verificationType : VerificationType
     , verifications : Int
-    , id : Int
     , isCompleted : Bool
     }
 
@@ -315,6 +315,7 @@ type alias Action =
 actionSelectionSet : SelectionSet Action Bespiral.Object.Action
 actionSelectionSet =
     SelectionSet.succeed Action
+        |> with Action.id
         |> with Action.description
         |> with Action.reward
         |> with Action.verifierReward
@@ -324,7 +325,6 @@ actionSelectionSet =
         |> with Action.usagesLeft
         |> with Action.deadline
         |> with Action.verificationType
-        |> with Action.id
         |> with Action.verifications
         |> with Action.isCompleted
 

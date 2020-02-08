@@ -331,6 +331,7 @@
         "verifier_placeholder": "Type the username",
         "date_label": "Choose date",
         "quantity_label": "Choose usages",
+        "usages_left_label": "Usages left",
 				"errors" :{
 					"description": "Description cannot be empty",
           "reward": "The reward needs to be more than 0",

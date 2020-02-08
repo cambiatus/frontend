@@ -128,6 +128,7 @@ type alias Form =
     , reward : Validator String
     , validation : ActionValidation
     , verification : Verification
+    , usagesLeft : Maybe (Validator String) -- Only available on edit
     , deadlineState : MaskedDate.State
     , saveStatus : SaveStatus
     }
@@ -139,6 +140,7 @@ initForm =
     , reward = defaultReward
     , validation = NoValidation
     , verification = Automatic
+    , usagesLeft = Nothing
     , deadlineState = MaskedDate.initialState
     , saveStatus = NotAsked
     }
@@ -149,15 +151,14 @@ editForm form action =
     let
         dateValidator : Maybe (Validator String)
         dateValidator =
-            case action.deadline of
-                Just deadline ->
-                    defaultDateValidator
-                        |> updateInput
-                            (action.deadline |> Utils.posixDateTime |> Strftime.format "%m%d%Y" Time.utc)
-                        |> Just
-
-                Nothing ->
-                    Nothing
+            action.deadline
+                |> Maybe.andThen
+                    (\d ->
+                        defaultDateValidator
+                            |> updateInput
+                                (Just d |> Utils.posixDateTime |> Strftime.format "%m%d%Y" Time.utc)
+                            |> Just
+                    )
 
         usagesValidator : Maybe (Validator String)
         usagesValidator =
@@ -200,6 +201,7 @@ editForm form action =
         , reward = updateInput (String.fromFloat action.reward) form.reward
         , validation = validation
         , verification = verification
+        , usagesLeft = Just (updateInput (String.fromInt action.usagesLeft) defaultUsagesLeftValidator)
     }
 
 
@@ -227,6 +229,13 @@ defaultUsagesValidator : Validator String
 defaultUsagesValidator =
     []
         |> greaterThan 0
+        |> newValidator "" (\s -> Just s) True
+
+
+defaultUsagesLeftValidator : Validator String
+defaultUsagesLeftValidator =
+    []
+        |> greaterThanOrEqual 0
         |> newValidator "" (\s -> Just s) True
 
 
@@ -345,6 +354,7 @@ type Msg
     | EnteredDeadline String
     | DeadlineChanged MaskedDate.State
     | EnteredUsages String
+    | EnteredUsagesLeft String
     | EnteredVerifierReward String
     | EnteredMinVotes String
     | ToggleValidity Bool
@@ -567,6 +577,20 @@ update msg model loggedIn =
                             model
                                 |> UR.init
                                 |> UR.logImpossible msg []
+
+        EnteredUsagesLeft val ->
+            let
+                oldForm =
+                    model.form
+            in
+            case model.form.usagesLeft of
+                Just validator ->
+                    { model | form = { oldForm | usagesLeft = Just (updateInput val validator) } }
+                        |> UR.init
+
+                Nothing ->
+                    model
+                        |> UR.init
 
         EnteredVerifierReward val ->
             let
@@ -883,6 +907,14 @@ upsertAction loggedIn model isoDate =
                 _ ->
                     "0"
 
+        usagesLeft =
+            case model.form.usagesLeft of
+                Just u ->
+                    getInput u
+
+                Nothing ->
+                    usages
+
         minVotes =
             case model.form.verification of
                 Automatic ->
@@ -934,7 +966,7 @@ upsertAction loggedIn model isoDate =
                                 , verifierReward = verifierReward
                                 , deadline = isoDate
                                 , usages = usages
-                                , usagesLeft = usages -- TODO: remove this after, proper handle usagesLeft
+                                , usagesLeft = usagesLeft
                                 , verifications = minVotes
                                 , verificationType = verificationType
                                 , validatorsStr = validatorsStr
@@ -1006,7 +1038,12 @@ viewForm ({ shared } as loggedIn) community model =
                     [ class "button button-primary"
                     , onClick ValidateForm
                     ]
-                    [ text (t shared.translations "menu.create") ]
+                    [ if model.actionId /= Nothing then
+                        text (t shared.translations "menu.edit")
+
+                      else
+                        text (t shared.translations "menu.create")
+                    ]
                 ]
             ]
         ]
@@ -1181,8 +1218,7 @@ viewValidations { shared } model =
                 case usagesValidation of
                     Just validation ->
                         div []
-                            [ span [ class "input-label" ]
-                                [ text_ "community.actions.form.quantity_label" ]
+                            [ span [ class "input-label" ] [ text_ "community.actions.form.quantity_label" ]
                             , div [ class "mb-10" ]
                                 [ input
                                     [ type_ "number"
@@ -1194,6 +1230,27 @@ viewValidations { shared } model =
                                     []
                                 , viewFieldErrors (listErrors shared.translations validation)
                                 ]
+                            , case model.form.usagesLeft of
+                                Just usagesLeftValidation ->
+                                    div []
+                                        [ span [ class "input-label" ]
+                                            [ text_ "community.actions.form.usages_left_label" ]
+                                        , div
+                                            [ class "mb-10" ]
+                                            [ input
+                                                [ type_ "number"
+                                                , class "input"
+                                                , classList [ ( "border-red", hasErrors usagesLeftValidation ) ]
+                                                , value (getInput usagesLeftValidation)
+                                                , onInput EnteredUsagesLeft
+                                                ]
+                                                []
+                                            , viewFieldErrors (listErrors shared.translations usagesLeftValidation)
+                                            ]
+                                        ]
+
+                                Nothing ->
+                                    text ""
                             ]
 
                     Nothing ->
@@ -1497,6 +1554,9 @@ msgToString msg =
 
         EnteredUsages _ ->
             [ "EnteredUsages" ]
+
+        EnteredUsagesLeft _ ->
+            [ "EnteredUsagesLeft" ]
 
         DeadlineChanged _ ->
             [ "DeadlineChanged" ]

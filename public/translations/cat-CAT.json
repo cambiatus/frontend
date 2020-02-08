@@ -332,6 +332,7 @@
         "verifier_placeholder": "Escriviu el nom d’usuari",
        	"date_label": "Tria la data",
         "quantity_label": "Tria la quantitat",
+        "usages_left_label": "Usos restants",
         "errors" : {
            "description": "La descripció no pot estar buida",
            "reward": "La recompensa ha de ser superior a 0",
