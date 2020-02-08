@@ -332,6 +332,7 @@
         "date_label": "Elige fecha",
         "quantity_label": "Elige cantidad",
         "usages_left_label": "Usos restantes",
+        "mark_completed": "Marcar como completado",
         "errors": {
           "description": "La descripción no puede estar vacía",
           "reward": "La recompensa debe ser más de 0",

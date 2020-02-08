@@ -129,6 +129,7 @@ type alias Form =
     , validation : ActionValidation
     , verification : Verification
     , usagesLeft : Maybe (Validator String) -- Only available on edit
+    , isCompleted : Bool
     , deadlineState : MaskedDate.State
     , saveStatus : SaveStatus
     }
@@ -141,6 +142,7 @@ initForm =
     , validation = NoValidation
     , verification = Automatic
     , usagesLeft = Nothing
+    , isCompleted = False
     , deadlineState = MaskedDate.initialState
     , saveStatus = NotAsked
     }
@@ -202,6 +204,7 @@ editForm form action =
         , validation = validation
         , verification = verification
         , usagesLeft = Just (updateInput (String.fromInt action.usagesLeft) defaultUsagesLeftValidator)
+        , isCompleted = action.isCompleted
     }
 
 
@@ -360,6 +363,7 @@ type Msg
     | ToggleValidity Bool
     | ToggleDeadline Bool
     | ToggleUsages Bool
+    | MarkAsCompleted
     | SetVerification String
     | ValidateForm
     | ValidateDeadline
@@ -787,6 +791,16 @@ update msg model loggedIn =
             }
                 |> UR.init
 
+        MarkAsCompleted ->
+            let
+                oldForm =
+                    model.form
+
+                newModel =
+                    { model | form = { oldForm | isCompleted = True } }
+            in
+            update ValidateForm newModel loggedIn
+
         GotInvalidDate ->
             let
                 oldForm =
@@ -943,6 +957,13 @@ upsertAction loggedIn model isoDate =
 
                 Manual _ _ _ ->
                     "claimable"
+
+        isCompleted =
+            if model.form.isCompleted then
+                1
+
+            else
+                0
     in
     model
         |> UR.init
@@ -970,7 +991,7 @@ upsertAction loggedIn model isoDate =
                                 , verifications = minVotes
                                 , verificationType = verificationType
                                 , validatorsStr = validatorsStr
-                                , isCompleted = 0
+                                , isCompleted = isCompleted
                                 , creator = loggedIn.accountName
                                 }
                                     |> Community.encodeCreateActionAction
@@ -1033,7 +1054,7 @@ viewForm ({ shared } as loggedIn) community model =
             , viewReward loggedIn community model.form
             , viewValidations loggedIn model
             , viewVerifications loggedIn model community
-            , div [ class "flex align-center justify-center" ]
+            , div [ class "flex align-center justify-between mt-20 mb-12" ]
                 [ button
                     [ class "button button-primary"
                     , onClick ValidateForm
@@ -1044,6 +1065,13 @@ viewForm ({ shared } as loggedIn) community model =
                       else
                         text (t shared.translations "menu.create")
                     ]
+                , case model.actionId of
+                    Just _ ->
+                        button [ class "button button-secondary", onClick MarkAsCompleted ]
+                            [ text (t shared.translations "community.actions.form.mark_completed") ]
+
+                    Nothing ->
+                        text ""
                 ]
             ]
         ]
@@ -1578,6 +1606,9 @@ msgToString msg =
 
         SetVerification _ ->
             [ "SetVerification" ]
+
+        MarkAsCompleted ->
+            [ "MarkAsCompleted" ]
 
         ValidateForm ->
             [ "ValidateDeadline" ]

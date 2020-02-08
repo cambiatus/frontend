@@ -336,6 +336,7 @@
         "date_label": "Escolha a data",
         "quantity_label": "Escolha a quantidade de usos",
         "usages_left_label": "Usos restantes",
+        "mark_completed": "Finalizar ação",
         "errors": {
           "description": "A descrição não pode estar vazia",
           "reward": "A recompensa precisa ser maior que 0",
