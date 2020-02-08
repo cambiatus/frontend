@@ -431,7 +431,7 @@ viewCard ({ shared } as loggedIn) card model =
             , div [ class "flex flex-wrap w-full justify-between items-center" ]
                 [ div [ class "" ]
                     [ div [ class "flex items-center" ]
-                        [ div [ class "text-2xl text-green font-medium" ] [ text (String.fromFloat card.sale.price) ]
+                        [ div [ class "text-2xl text-green font-medium z-0" ] [ text (String.fromFloat card.sale.price) ]
                         , div [ class "uppercase text-sm font-thin ml-2 text-green" ] [ text (Eos.symbolToString card.sale.symbol) ]
                         ]
                     , div [ class "flex" ]

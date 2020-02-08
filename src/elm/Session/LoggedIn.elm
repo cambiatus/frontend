@@ -195,9 +195,9 @@ view thisMsg page ({ shared } as model) content =
             viewHelper thisMsg page profile_ model content
 
 
-onScroll : msg -> Attribute msg
-onScroll message =
-    on "scroll" (Decode.succeed message)
+onLoad : msg -> Attribute msg
+onLoad message =
+    on "load" (Decode.succeed message)
 
 
 viewHelper : (Msg -> msg) -> Page -> Profile -> Model -> Html msg -> Html msg
@@ -399,7 +399,7 @@ viewMainMenu page profile_ model =
             model.shared.endpoints.ipfs
 
         menuItemClass =
-            "mx-4 w-auto md:w-48 font-sans uppercase flex md:items-center md:justify-center leading-tight text-xs text-gray-700 hover:text-indigo-500 sm:justify-start sm:pl-3 "
+            "mx-4 w-auto md:w-48 font-sans uppercase flex md:items-center md:justify-center leading-tight text-xs text-gray-700 hover:text-indigo-500 sm:justify-start sm:pl-3 pb-3"
 
         activeClass =
             "border-orange-100 border-b-2 text-indigo-500 font-medium"
@@ -407,7 +407,7 @@ viewMainMenu page profile_ model =
         iconClass =
             "w-6 h-6 fill-current hover:text-indigo-500 mr-5"
     in
-    div [ class "flex align-center justify-center" ]
+    div [ class "flex align-center justify-center z-10 md:z-auto" ]
         [ nav
             [ classList [ ( "invisible", not model.showMainNav ) ]
             , class "bg-white w-64 h-56 md:h-12 md:w-1/2 md:h-16 md:w-full flex flex-col justify-around md:justify-start md:flex-row md:overflow-x-auto md:visible rounded-lg md:rounded-none fixed bottom-0 mb-24 md:static md:mb-0 shadow-md"
@@ -444,6 +444,15 @@ viewMainMenu page profile_ model =
                 ]
             ]
         , toggleNav model model.showMainNav
+        , if model.showToggleMainNav then
+            img
+                [ class "z-0 fixed h-full w-full inset-0 opacity-0 cursor-default"
+                , onMouseEnter MobileMenuPresent
+                ]
+                []
+
+          else
+            text ""
         ]
 
 
