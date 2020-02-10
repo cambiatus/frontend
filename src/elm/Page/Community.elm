@@ -28,9 +28,9 @@ import Html exposing (Html, a, button, div, hr, img, input, label, p, span, text
 import Html.Attributes exposing (class, classList, disabled, placeholder, src)
 import Html.Events exposing (onClick, onInput)
 import Http
-import I18Next exposing (Translations, t, tr)
-import Icons exposing (..)
-import Json.Decode as Decode exposing (Decoder)
+import I18Next exposing (t, tr)
+import Icons
+import Json.Decode as Decode
 import Json.Encode as Encode exposing (Value)
 import Page
 import Route
@@ -717,13 +717,6 @@ viewClaimModal loggedIn model =
     case model.modalStatus of
         Opened isLoading actionId ->
             let
-                isDisabled =
-                    if isLoading then
-                        [ disabled True ]
-
-                    else
-                        []
-
                 t s =
                     I18Next.t loggedIn.shared.translations s
 
@@ -749,32 +742,30 @@ viewClaimModal loggedIn model =
                         , p [ class "text-body w-full font-sans mb-10" ]
                             [ text_ "community.claimAction.body" ]
                         ]
-                    , div [ class "w-full md:bg-gray-100 md:flex md:absolute rounded-b-lg md:inset-x-0 md:bottom-0 md:p-4" ]
-                        [ div [ class "flex-1" ] []
-                        , button
-                            ([ class "flex-1 block button button-secondary mb-4 button-lg w-full md:w-40 md:mb-0"
-                             , if not isLoading then
-                                onClick CloseClaimConfirmation
+                    , div [ class "w-full md:bg-gray-100 md:flex md:absolute rounded-b-lg md:inset-x-0 md:bottom-0 md:p-4 justify-center" ]
+                        [ div [ class "flex" ]
+                            [ button
+                                [ class "flex-1 block button button-secondary mb-4 button-lg w-full md:w-40 md:mb-0"
+                                , if not isLoading then
+                                    onClick CloseClaimConfirmation
 
-                               else
-                                onClick NoOp
-                             ]
-                                ++ isDisabled
-                            )
-                            [ text_ "community.claimAction.no" ]
-                        , div [ class "flex-1" ] []
-                        , button
-                            ([ class "flex-1 block button button-primary button-lg w-full md:w-40"
-                             , if not isLoading then
-                                onClick (ClaimAction actionId)
+                                  else
+                                    onClick NoOp
+                                , disabled isLoading
+                                ]
+                                [ text_ "community.claimAction.no" ]
+                            , div [ class "w-8" ] []
+                            , button
+                                [ class "flex-1 block button button-primary button-lg w-full md:w-40"
+                                , if not isLoading then
+                                    onClick (ClaimAction actionId)
 
-                               else
-                                onClick NoOp
-                             ]
-                                ++ isDisabled
-                            )
-                            [ text_ "community.claimAction.yes" ]
-                        , div [ class "flex-1" ] []
+                                  else
+                                    onClick NoOp
+                                , disabled isLoading
+                                ]
+                                [ text_ "community.claimAction.yes" ]
+                            ]
                         ]
                     ]
                 ]
