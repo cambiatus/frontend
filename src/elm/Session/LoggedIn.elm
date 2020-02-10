@@ -1,6 +1,5 @@
 module Session.LoggedIn exposing (External(..), ExternalMsg(..), Model, Msg(..), Page(..), ProfileStatus(..), addNotification, askedAuthentication, init, initLogin, isAccount, isActive, isAuth, jsAddressToMsg, mapExternal, maybePrivateKey, msgToString, profile, readAllNotifications, subscriptions, update, view)
 
-import Account exposing (Profile, profileQuery)
 import Api
 import Api.Chat as Chat exposing (ChatPreferences)
 import Api.Graphql
@@ -31,11 +30,11 @@ import Json.Encode as Encode exposing (Value)
 import Log
 import Notification exposing (Notification)
 import Ports
+import Profile exposing (Profile, query)
 import Route exposing (Route)
 import Session.Shared as Shared exposing (Shared)
 import Shop
-import Task exposing (Task)
-import Time
+import Task
 import Translation
 import UpdateResult as UR
 
@@ -52,14 +51,14 @@ init shared accountName =
     in
     ( initModel shared authModel accountName
     , Cmd.batch
-        [ Api.Graphql.query shared (profileQuery accountName) CompletedLoadProfile
+        [ Api.Graphql.query shared (Profile.query accountName) CompletedLoadProfile
         , Api.getBalances shared accountName CompletedLoadBalances
         ]
     )
 
 
 fetchTranslations : String -> Shared -> Cmd Msg
-fetchTranslations language shared =
+fetchTranslations language _ =
     CompletedLoadTranslation language
         |> Translation.get language
 
@@ -68,7 +67,7 @@ initLogin : Shared -> Auth.Model -> Profile -> ( Model, Cmd Msg )
 initLogin shared authModel profile_ =
     let
         model =
-            initModel shared authModel profile_.accountName
+            initModel shared authModel profile_.account
     in
     ( { model
         | profile = Loaded profile_
@@ -290,7 +289,7 @@ viewHeader ({ shared } as model) page profile_ =
                     [ Avatar.view shared.endpoints.ipfs profile_.avatar "h-8 w-8"
                     , div [ class "flex flex-wrap text-left pl-2" ]
                         [ p [ class "w-full font-sans uppercase text-gray-900 text-xs overflow-x-hidden" ]
-                            [ text (tr "menu.welcome_message" [ ( "user_name", Eos.nameToString profile_.accountName ) ]) ]
+                            [ text (tr "menu.welcome_message" [ ( "user_name", Eos.nameToString profile_.account ) ]) ]
                         , p [ class "w-full font-sans text-indigo-500 text-sm" ]
                             [ text (t shared.translations "menu.my_account") ]
                         ]
@@ -584,7 +583,7 @@ update msg model =
                                 Encode.object
                                     [ ( "name", Encode.string "chatCredentials" )
                                     , ( "container", Encode.string "chat-manager" )
-                                    , ( "credentials", Account.encodeProfileChat p )
+                                    , ( "credentials", Profile.encodeProfileChat p )
                                     , ( "notificationAddress"
                                       , Encode.list Encode.string [ "GotPageMsg", "GotLoggedInMsg", "ReceivedNotification" ]
                                       )
@@ -619,7 +618,7 @@ update msg model =
 
         ClickedTryAgainProfile accountName ->
             UR.init { model | profile = Loading accountName }
-                |> UR.addCmd (Api.Graphql.query shared (profileQuery accountName) CompletedLoadProfile)
+                |> UR.addCmd (Api.Graphql.query shared (Profile.query accountName) CompletedLoadProfile)
 
         ClickedLogout ->
             UR.init model
@@ -808,7 +807,7 @@ profile model =
 
 isAccount : Eos.Name -> Model -> Bool
 isAccount accountName model =
-    Maybe.map .accountName (profile model) == Just accountName
+    Maybe.map .account (profile model) == Just accountName
 
 
 

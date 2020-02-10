@@ -25,10 +25,12 @@ type Route
     | Communities
     | NewCommunity
     | EditCommunity Symbol
+    | Objectives Symbol
     | NewObjective Symbol
     | EditObjective Symbol Int
-    | NewAction Symbol String
-    | VerifyClaim Symbol String String String
+    | NewAction Symbol Int
+    | EditAction Symbol Int Int
+    | VerifyClaim Symbol Int Int Int
     | Shop Shop.Filter
     | NewSale
     | EditSale String
@@ -75,10 +77,12 @@ parser url =
         , Url.map NewCommunity (s "community" </> s "new")
         , Url.map Community (s "community" </> Eos.symbolUrlParser)
         , Url.map EditCommunity (s "community" </> Eos.symbolUrlParser </> s "edit")
-        , Url.map NewObjective (s "community" </> Eos.symbolUrlParser </> s "objective" </> s "new")
-        , Url.map EditObjective (s "community" </> Eos.symbolUrlParser </> s "objective" </> int </> s "edit")
-        , Url.map NewAction (s "community" </> Eos.symbolUrlParser </> s "objective" </> string </> s "action" </> s "new")
-        , Url.map VerifyClaim (s "community" </> Eos.symbolUrlParser </> s "objective" </> string </> s "action" </> string </> s "claim" </> string </> s "verification")
+        , Url.map Objectives (s "community" </> Eos.symbolUrlParser </> s "objectives")
+        , Url.map NewObjective (s "community" </> Eos.symbolUrlParser </> s "objectives" </> s "new")
+        , Url.map EditObjective (s "community" </> Eos.symbolUrlParser </> s "objectives" </> int </> s "edit")
+        , Url.map NewAction (s "community" </> Eos.symbolUrlParser </> s "objectives" </> int </> s "action" </> s "new")
+        , Url.map EditAction (s "community" </> Eos.symbolUrlParser </> s "objectives" </> int </> s "action" </> int </> s "edit")
+        , Url.map VerifyClaim (s "community" </> Eos.symbolUrlParser </> s "objectives" </> int </> s "action" </> int </> s "claim" </> int </> s "verification")
         , Url.map Shop
             (s "shop"
                 <?> Query.map
@@ -234,19 +238,36 @@ routeToString route =
                 EditCommunity symbol ->
                     ( [ "community", Eos.symbolToString symbol, "edit" ], [] )
 
+                Objectives symbol ->
+                    ( [ "community", Eos.symbolToString symbol, "objectives" ], [] )
+
                 NewObjective symbol ->
-                    ( [ "community", Eos.symbolToString symbol, "objective", "new" ], [] )
+                    ( [ "community", Eos.symbolToString symbol, "objectives", "new" ], [] )
 
                 EditObjective symbol objectiveId ->
-                    ( [ "community", Eos.symbolToString symbol, "objective", String.fromInt objectiveId, "edit" ], [] )
+                    ( [ "community", Eos.symbolToString symbol, "objectives", String.fromInt objectiveId, "edit" ], [] )
 
                 NewAction symbol objectiveId ->
-                    ( [ "community", Eos.symbolToString symbol, "objective", objectiveId, "action", "new" ]
+                    ( [ "community", Eos.symbolToString symbol, "objectives", String.fromInt objectiveId, "action", "new" ]
+                    , []
+                    )
+
+                EditAction symbol objectiveId actionId ->
+                    ( [ "community", Eos.symbolToString symbol, "objectives", String.fromInt objectiveId, "action", String.fromInt actionId, "edit" ]
                     , []
                     )
 
                 VerifyClaim communityId objectiveId actionId claimId ->
-                    ( [ "community", Eos.symbolToString communityId, "objective", objectiveId, "action", actionId, "claim", claimId, "verification" ]
+                    ( [ "community"
+                      , Eos.symbolToString communityId
+                      , "objectives"
+                      , String.fromInt objectiveId
+                      , "action"
+                      , String.fromInt actionId
+                      , "claim"
+                      , String.fromInt claimId
+                      , "verification"
+                      ]
                     , []
                     )
 

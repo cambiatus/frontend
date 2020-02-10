@@ -125,7 +125,7 @@ view loggedIn model =
                 [ div [ class "text-gray-600 text-2xl font-light flex mt-6 mb-4" ]
                     [ text (t "menu.my_communities")
                     , div [ class "text-indigo-500 ml-2 font-medium" ]
-                        [ text (profile.userName |> Maybe.withDefault (Eos.nameToString profile.accountName))
+                        [ text (profile.userName |> Maybe.withDefault (Eos.nameToString profile.account))
                         ]
                     ]
                 , viewBalances loggedIn communities
@@ -204,9 +204,9 @@ viewVerification shared verification =
                 Just symbol ->
                     Route.VerifyClaim
                         symbol
-                        (String.fromInt verification.objectiveId)
-                        (String.fromInt verification.actionId)
-                        (String.fromInt verification.claimId)
+                        verification.objectiveId
+                        verification.actionId
+                        verification.claimId
 
                 Nothing ->
                     Route.ComingSoon

@@ -95,7 +95,7 @@ usagesLeft =
     Object.selectionForField "Int" "usagesLeft" [] Decode.int
 
 
-validators : SelectionSet decodesTo Bespiral.Object.Validator -> SelectionSet (List decodesTo) Bespiral.Object.Action
+validators : SelectionSet decodesTo Bespiral.Object.Profile -> SelectionSet (List decodesTo) Bespiral.Object.Action
 validators object_ =
     Object.selectionForCompositeField "validators" [] object_ (identity >> Decode.list)
 

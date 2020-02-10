@@ -1,6 +1,5 @@
 module Api exposing (UserId, backendUrl, blockchainUrl, communityInvite, editProfile, get, getBalances, getTableRows, signIn, signUp, signUpWithInvitation, uploadAvatar, uploadImage)
 
-import Account
 import Avatar exposing (Avatar)
 import Community exposing (Balance)
 import Eos exposing (Symbol)
@@ -10,6 +9,7 @@ import Flags exposing (Endpoints)
 import Http
 import Json.Decode as Decode exposing (Decoder)
 import Json.Encode as Encode exposing (Value)
+import Profile exposing (Profile, ProfileCreate, ProfileForm)
 import Session.Shared exposing (Shared)
 import Url.Builder exposing (QueryParameter)
 
@@ -81,14 +81,14 @@ type alias UserId =
     String
 
 
-signIn : Shared -> Eos.Name -> (Result Http.Error Account.Profile -> msg) -> Cmd msg
+signIn : Shared -> Eos.Name -> (Result Http.Error Profile -> msg) -> Cmd msg
 signIn shared accountName toMsg =
     Http.post
         { url = backendUrl shared [ "auth", "sign_in" ] []
         , body =
-            Account.encodeProfileLogin accountName
+            Profile.encodeProfileLogin accountName
                 |> Http.jsonBody
-        , expect = Http.expectJson toMsg Account.decodeProfile
+        , expect = Http.expectJson toMsg Profile.decode
         }
 
 
@@ -96,31 +96,31 @@ signIn shared accountName toMsg =
 -- Profile
 
 
-editProfile : Shared -> Eos.Name -> Account.ProfileForm -> (Result Http.Error Account.Profile -> msg) -> Cmd msg
+editProfile : Shared -> Eos.Name -> ProfileForm -> (Result Http.Error Profile -> msg) -> Cmd msg
 editProfile shared accountName form toMsg =
     Http.post
         { url = backendUrl shared [ "profile", Eos.nameToString accountName ] []
         , body =
-            Account.encodeProfileForm accountName form
+            Profile.encodeProfileForm accountName form
                 |> Http.jsonBody
         , expect =
-            Account.decodeProfile
+            Profile.decode
                 |> Http.expectJson toMsg
         }
 
 
-signUp : Shared -> Account.ProfileCreate -> (Result Http.Error Account.Profile -> msg) -> Cmd msg
+signUp : Shared -> ProfileCreate -> (Result Http.Error Profile -> msg) -> Cmd msg
 signUp shared form toMsg =
     Http.post
         { url = backendUrl shared [ "auth", "sign_up" ] []
         , body =
-            Account.encodeProfileCreate form
+            Profile.encodeProfileCreate form
                 |> Http.jsonBody
-        , expect = Http.expectJson toMsg Account.decodeProfile
+        , expect = Http.expectJson toMsg Profile.decode
         }
 
 
-signUpWithInvitation : Shared -> Account.ProfileCreate -> (Result Http.Error Account.Profile -> msg) -> Cmd msg
+signUpWithInvitation : Shared -> ProfileCreate -> (Result Http.Error Profile -> msg) -> Cmd msg
 signUpWithInvitation shared form toMsg =
     signUp shared form toMsg
 

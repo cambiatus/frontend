@@ -18,6 +18,7 @@ import Icons
 import Json.Encode as Encode
 import List.Extra as LE
 import Page exposing (Session(..))
+import Profile
 import Route
 import Session.Guest as Guest
 import Session.LoggedIn as LoggedIn exposing (External(..))
@@ -25,7 +26,6 @@ import Session.Shared exposing (Shared)
 import Shop exposing (Sale)
 import Transfer
 import UpdateResult as UR
-import User
 
 
 
@@ -338,13 +338,13 @@ view loggedIn model =
     case model.status of
         LoadingSale id ->
             div []
-                [ viewHeader loggedIn ""
+                [ Page.viewHeader loggedIn "" (Route.Shop Shop.All)
                 , Page.fullPageLoading
                 ]
 
         InvalidId invalidId ->
             div [ class "container mx-auto px-4" ]
-                [ viewHeader loggedIn ""
+                [ Page.viewHeader loggedIn "" (Route.Shop Shop.All)
                 , div []
                     [ text (invalidId ++ " is not a valid Sale Id") ]
                 ]
@@ -360,7 +360,7 @@ view loggedIn model =
                             cardFromSale sale
                     in
                     div [ class "" ]
-                        [ viewHeader loggedIn cardData.sale.title
+                        [ Page.viewHeader loggedIn cardData.sale.title (Route.Shop Shop.All)
                         , viewCard loggedIn cardData model
                         ]
 
@@ -369,21 +369,6 @@ view loggedIn model =
                         [ div []
                             [ text "Could not load the sale" ]
                         ]
-
-
-viewHeader : LoggedIn.Model -> String -> Html msg
-viewHeader loggedIn title =
-    div [ class "h-16 w-full bg-indigo-500 flex px-4 items-center" ]
-        [ a
-            [ class "items-center flex"
-            , Route.href (Route.Shop Shop.All)
-            ]
-            [ Icons.back ""
-            , p [ class "text-white text-sm ml-2" ]
-                [ text (t loggedIn.shared.translations "back") ]
-            ]
-        , p [ class "text-white mx-auto" ] [ text title ]
-        ]
 
 
 viewCard : LoggedIn.Model -> Card -> Model -> Html Msg
@@ -426,7 +411,8 @@ viewCard ({ shared } as loggedIn) card model =
             , div [ class "w-full flex items-center text-sm" ]
                 [ div [ class "mr-4" ] [ Avatar.view shared.endpoints.ipfs card.sale.creator.avatar "h-10 w-10" ]
                 , text_ "shop.sold_by"
-                , p [ class "font-bold ml-1" ] [ User.viewName loggedIn.accountName card.sale.creator shared.translations ]
+                , p [ class "font-bold ml-1" ]
+                    [ Profile.viewProfileName loggedIn.accountName card.sale.creator shared.translations ]
                 ]
             , div [ class "flex flex-wrap w-full justify-between items-center" ]
                 [ div [ class "" ]

@@ -1,6 +1,5 @@
 module Page.Community.Editor exposing (Model, Msg, initEdit, initNew, jsAddressToMsg, msgToString, subscriptions, update, view)
 
-import Account
 import Api
 import Api.Graphql
 import Asset.Icon as Icon

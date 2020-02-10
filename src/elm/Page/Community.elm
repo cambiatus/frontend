@@ -1,4 +1,13 @@
-module Page.Community exposing (Model, Msg, init, jsAddressToMsg, msgToString, subscriptions, update, view)
+module Page.Community exposing
+    ( Model
+    , Msg
+    , init
+    , jsAddressToMsg
+    , msgToString
+    , subscriptions
+    , update
+    , view
+    )
 
 import Api
 import Api.Graphql
@@ -7,7 +16,7 @@ import Bespiral.Enum.VerificationType as VerificationType
 import Bespiral.Object
 import Bespiral.Query exposing (ClaimsRequiredArguments)
 import Bespiral.Scalar exposing (DateTime(..))
-import Community exposing (ActionVerification, ActionVerificationsResponse, ClaimResponse, Community, ObjectiveId, Validator)
+import Community exposing (ActionVerification, ActionVerificationsResponse, ClaimResponse, Community)
 import Dict exposing (Dict)
 import Eos exposing (Symbol)
 import Eos.Account as Eos
@@ -19,9 +28,9 @@ import Html exposing (Html, a, button, div, hr, img, input, label, p, span, text
 import Html.Attributes exposing (class, classList, disabled, placeholder, src)
 import Html.Events exposing (onClick, onInput)
 import Http
-import I18Next exposing (t)
-import Icons
-import Json.Decode as Decode
+import I18Next exposing (Translations, t, tr)
+import Icons exposing (..)
+import Json.Decode as Decode exposing (Decoder)
 import Json.Encode as Encode exposing (Value)
 import Page
 import Route
@@ -196,6 +205,9 @@ view loggedIn model =
         t s =
             I18Next.t loggedIn.shared.translations s
 
+        tr r_id replaces =
+            I18Next.tr loggedIn.shared.translations I18Next.Curly r_id replaces
+
         text_ s =
             text (t s)
 
@@ -223,29 +235,43 @@ view loggedIn model =
                     [ div [ class "flex flex-wrap w-full items-center" ]
                         [ p [ class "text-4xl font-bold" ]
                             [ text community.title ]
-                        , if canEdit then
-                            a
-                                [ classList
-                                    [ ( "hidden", editStatus /= NoEdit )
-                                    ]
-                                , class "button button-secondary button-small w-16 ml-4"
-                                , Route.href (Route.EditCommunity community.symbol)
-                                ]
-                                [ text "edit" ]
-
-                          else
-                            text ""
                         ]
                     , p [ class "text-grey-200 text-sm" ] [ text community.description ]
                     ]
                 , div [ class "container mx-auto px-4" ]
                     [ viewClaimModal loggedIn model
                     , viewMessageStatus loggedIn model
-                    , if loggedIn.accountName == community.creator then
+                    , if LoggedIn.isAccount community.creator loggedIn then
                         viewInvitation loggedIn model
 
                       else
                         div [] []
+                    , if canEdit then
+                        div [ class "flex justify-between items-center py-2 px-8 sm:px-6 bg-white rounded-lg mt-4" ]
+                            [ div []
+                                [ p [ class "font-bold" ] [ text_ "community.objectives.title_plural" ]
+                                , p [ class "text-gray-900 text-caption uppercase" ]
+                                    [ text
+                                        (tr "community.objectives.subtitle"
+                                            [ ( "objectives", List.length community.objectives |> String.fromInt )
+                                            , ( "actions"
+                                              , List.map (\c -> List.length c.actions) community.objectives
+                                                    |> List.foldl (+) 0
+                                                    |> String.fromInt
+                                              )
+                                            ]
+                                        )
+                                    ]
+                                ]
+                            , a
+                                [ class "button button-primary"
+                                , Route.href (Route.Objectives community.symbol)
+                                ]
+                                [ text_ "menu.edit" ]
+                            ]
+
+                      else
+                        text ""
                     , div [ class "bg-white py-6 sm:py-8 px-3 sm:px-6 rounded-lg mt-4" ]
                         ([ Page.viewTitle (t "community.objectives.title_plural") ]
                             ++ List.indexedMap (viewObjective loggedIn model editStatus community)
@@ -293,9 +319,9 @@ viewVerification shared verification =
                 Just symbol ->
                     Route.VerifyClaim
                         symbol
-                        (String.fromInt verification.objectiveId)
-                        (String.fromInt verification.actionId)
-                        (String.fromInt verification.claimId)
+                        verification.objectiveId
+                        verification.actionId
+                        verification.claimId
 
                 Nothing ->
                     Route.ComingSoon
@@ -373,30 +399,10 @@ viewObjective loggedIn model editStatus metadata index objective =
             else
                 " "
 
-        objIdStr : String
-        objIdStr =
-            Community.unwrapObjectiveId objective.id
-                |> String.fromInt
-
         actsNButton : List (Html Msg)
         actsNButton =
             List.map (viewAction loggedIn metadata model.date) objective.actions
                 |> List.intersperse (hr [ class "bg-border-grey text-border-grey" ] [])
-                |> (\acts ->
-                        if canEdit then
-                            acts
-                                ++ [ button
-                                        [ class "border border-dashed border-button-orange mt-6 w-full flex flex-row content-start px-4 py-2"
-                                        , onClick (CreateAction metadata.symbol objIdStr)
-                                        ]
-                                        [ span [ class "px-2 text-button-orange font-medium" ] [ text "+" ]
-                                        , span [ class "text-button-orange font-medium" ] [ text_ "community.actions.new" ]
-                                        ]
-                                   ]
-
-                        else
-                            acts
-                   )
     in
     div [ class "my-2" ]
         [ div
@@ -413,47 +419,22 @@ viewObjective loggedIn model editStatus metadata index objective =
                     ]
                     [ text objective.description ]
                 ]
-            , div [ class ("flex flex-row justify-between mt-5 sm:mt-0" ++ arrowStyle) ]
-                [ if canEdit then
-                    a
-                        [ class "text-white font-medium underline text-xs uppercase sm:text-sm"
-                        , Route.href (Route.EditObjective metadata.symbol (Community.unwrapObjectiveId objective.id))
-                        ]
-                        [ text_ "menu.edit" ]
+            , div [ class ("flex flex-row justify-end mt-5 sm:mt-0" ++ arrowStyle) ]
+                [ button
+                    [ class ""
+                    , if isOpen then
+                        onClick ClickedCloseObjective
 
-                  else
-                    text ""
-                , if isOpen then
-                    button
-                        [ class "align-middle"
-                        , if isOpen then
-                            onClick ClickedCloseObjective
-
-                          else
-                            onClick (ClickedOpenObjective index)
+                      else
+                        onClick (ClickedOpenObjective index)
+                    ]
+                    [ img
+                        [ class "fill-current text-white h-2 w-4 stroke-current"
+                        , src "/icons/objective_arrow.svg"
+                        , classList [ ( "rotate-180", isOpen ) ]
                         ]
-                        [ img
-                            [ class "rotate-180 fill-current text-white h-2 w-4 stroke-current"
-                            , src "/icons/objective_arrow.svg"
-                            ]
-                            []
-                        ]
-
-                  else
-                    button
-                        [ class "align-middle"
-                        , if isOpen then
-                            onClick ClickedCloseObjective
-
-                          else
-                            onClick (ClickedOpenObjective index)
-                        ]
-                        [ img
-                            [ class "h-2 w-4 self-end stroke-current"
-                            , src "/icons/objective_arrow.svg"
-                            ]
-                            []
-                        ]
+                        []
+                    ]
                 ]
             ]
         , if isOpen then
@@ -495,8 +476,7 @@ viewAction loggedIn metadata maybeDate action =
             text (t s)
 
         canEdit =
-            -- LoggedIn.isAccount metadata.creator loggedIn
-            False
+            LoggedIn.isAccount metadata.creator loggedIn
 
         posixDeadline : Posix
         posixDeadline =
@@ -577,7 +557,7 @@ viewAction loggedIn metadata maybeDate action =
                                     ""
                         in
                         ("h-10 w-10 border-white border-4 rounded-full bg-white" ++ margin)
-                            |> Avatar.view ipfsUrl v.validator.avatar
+                            |> Avatar.view ipfsUrl v.avatar
                     )
                 |> (\vals ->
                         let
@@ -641,7 +621,7 @@ viewAction loggedIn metadata maybeDate action =
 
                          else
                             [ span [ class "text-date-purple uppercase text-sm mr-1" ]
-                                [ text_ "community.actions.automatically_label" ]
+                                [ text_ "community.actions.automatic_analyzers" ]
                             , img [ src "/icons/tooltip.svg" ] []
                             ]
                         )
@@ -655,14 +635,7 @@ viewAction loggedIn metadata maybeDate action =
                     , span [ class "font-medium" ] [ text rewardStr ]
                     ]
                 , div [ class "hidden sm:flex sm:visible flex-row justify-end flex-grow-1" ]
-                    [ if canEdit then
-                        button
-                            [ class "bg-white uppercase underline w-4/5 h-10 text-button-orange" ]
-                            [ text_ "menu.edit" ]
-
-                      else
-                        text ""
-                    , if validationType == "CLAIMABLE" then
+                    [ if validationType == "CLAIMABLE" then
                         button
                             [ class ("h-10 uppercase rounded-lg ml-1" ++ claimColors ++ claimSize)
                             , onClick (OpenClaimConfirmation action.id)
@@ -675,14 +648,7 @@ viewAction loggedIn metadata maybeDate action =
                 ]
             ]
         , div [ class "flex flex-row mt-8 justify-between sm:hidden" ]
-            [ if canEdit then
-                button
-                    [ class "bg-white rounded-lg uppercase w-4/5 h-10 text-button-orange border border-button-orange border-solid" ]
-                    [ text_ "menu.edit" ]
-
-              else
-                text ""
-            , if validationType == "CLAIMABLE" then
+            [ if validationType == "CLAIMABLE" then
                 button
                     [ class ("h-10 uppercase rounded-lg ml-1" ++ claimColors ++ claimSize)
                     , onClick (OpenClaimConfirmation action.id)
@@ -714,7 +680,7 @@ viewHeader ({ shared } as loggedIn) community =
             [ div [ class "h-24 w-24 h-24 w-24 rounded-full mx-auto pt-12" ]
                 [ img
                     [ src (shared.endpoints.ipfs ++ "/" ++ community.logo)
-                    , class "object-scale-down "
+                    , class "object-scale-down"
                     ]
                     []
                 ]
@@ -782,7 +748,7 @@ viewClaimModal loggedIn model =
                     , div [ class "w-full md:bg-gray-100 md:flex md:absolute rounded-b-lg md:inset-x-0 md:bottom-0 md:p-4" ]
                         [ div [ class "flex-1" ] []
                         , button
-                            ([ class "flex-1 block button button-secondary mb-4 button-large w-full md:w-40 md:mb-0"
+                            ([ class "flex-1 block button button-secondary mb-4 button-lg w-full md:w-40 md:mb-0"
                              , onClick CloseClaimConfirmation
                              ]
                                 ++ isDisabled
@@ -790,7 +756,7 @@ viewClaimModal loggedIn model =
                             [ text_ "community.claimAction.no" ]
                         , div [ class "flex-1" ] []
                         , button
-                            ([ class "flex-1 block button button-primary button-large w-full md:w-40"
+                            ([ class "flex-1 block button button-primary button-lg w-full md:w-40"
                              , onClick (ClaimAction actionId)
                              ]
                                 ++ isDisabled
@@ -940,7 +906,7 @@ type Msg
     | ClickedOpenObjective Int
     | ClickedCloseObjective
       -- Action
-    | CreateAction Symbol String
+    | CreateAction Symbol Int
     | OpenClaimConfirmation Int
     | CloseClaimConfirmation
     | ClaimAction Int

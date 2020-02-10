@@ -13,6 +13,7 @@ import Html.Lazy as Lazy
 import I18Next
 import Icons
 import Page
+import Profile exposing (Profile)
 import Route
 import Session.Guest as Guest
 import Session.LoggedIn as LoggedIn exposing (External(..))
@@ -21,7 +22,6 @@ import Strftime
 import Time
 import Transfer exposing (Transfer, transferQuery)
 import UpdateResult as UR
-import User exposing (User, view)
 import Utils
 
 
@@ -197,7 +197,7 @@ viewTransferCard loggedIn transfer state =
                     transfer.to
 
         viewUser_ =
-            User.view loggedIn.shared.endpoints.ipfs loggedIn.accountName loggedIn.shared.translations
+            Profile.view loggedIn.shared.endpoints.ipfs loggedIn.accountName loggedIn.shared.translations
     in
     div [ class "flex flex-row w-full justify-center items-center py-5 rounded bg-gray-100" ]
         [ viewUser_ originUser
