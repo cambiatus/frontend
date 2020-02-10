@@ -1,11 +1,9 @@
 module Page.Community exposing (Model, Msg, init, jsAddressToMsg, msgToString, subscriptions, update, view)
 
-import Account
 import Api
 import Api.Graphql
-import Asset.Icon as Icon
-import Avatar exposing (Avatar)
-import Bespiral.Enum.VerificationType as VerificationType exposing (VerificationType)
+import Avatar
+import Bespiral.Enum.VerificationType as VerificationType
 import Bespiral.Object
 import Bespiral.Query exposing (ClaimsRequiredArguments)
 import Bespiral.Scalar exposing (DateTime(..))
@@ -17,17 +15,15 @@ import Graphql.Http
 import Graphql.Operation exposing (RootQuery)
 import Graphql.OptionalArgument exposing (OptionalArgument(..))
 import Graphql.SelectionSet as SelectionSet exposing (SelectionSet, with)
-import Html exposing (..)
-import Html.Attributes exposing (..)
-import Html.Events exposing (onClick, onInput, onSubmit, targetValue)
-import Html.Lazy
+import Html exposing (Html, a, button, div, hr, img, input, label, p, span, text)
+import Html.Attributes exposing (class, classList, disabled, placeholder, src)
+import Html.Events exposing (onClick, onInput)
 import Http
-import I18Next exposing (Translations, t)
-import Icons exposing (..)
-import Json.Decode as Decode exposing (Decoder)
+import I18Next exposing (t)
+import Icons
+import Json.Decode as Decode
 import Json.Encode as Encode exposing (Value)
 import Page
-import Ports
 import Route
 import Session.LoggedIn as LoggedIn exposing (External(..))
 import Session.Shared exposing (Shared)
@@ -53,8 +49,6 @@ init ({ shared } as loggedIn) symbol =
         , Task.perform GotTime Time.now
         ]
     )
-
-
 
 
 fetchCommunityActions : Shared -> Symbol -> Cmd Msg
@@ -168,8 +162,6 @@ type alias ObjectiveForm =
     }
 
 
-
-
 type Verification
     = Manually
     | Automatically
@@ -189,8 +181,6 @@ type alias Member =
     , accountName : String
     , nameWithAt : String
     }
-
-
 
 
 
@@ -227,7 +217,7 @@ view loggedIn model =
                 canEdit =
                     LoggedIn.isAccount community.creator loggedIn
             in
-            div [ class "" ]
+            div []
                 [ viewHeader loggedIn community
                 , div [ class "bg-white p-20" ]
                     [ div [ class "flex flex-wrap w-full items-center" ]
@@ -839,18 +829,6 @@ viewInvitation loggedIn model =
             ]
             [ text_ "community.invite.submit" ]
         ]
-
-
-
--- HELPERS
-
-
-
-
-
-
-
-
 
 
 
