@@ -11,9 +11,8 @@ module Page.Community exposing
 
 import Api
 import Api.Graphql
-import Asset.Icon as Icon
-import Avatar exposing (Avatar)
-import Bespiral.Enum.VerificationType as VerificationType exposing (VerificationType)
+import Avatar
+import Bespiral.Enum.VerificationType as VerificationType
 import Bespiral.Object
 import Bespiral.Query exposing (ClaimsRequiredArguments)
 import Bespiral.Scalar exposing (DateTime(..))
@@ -25,17 +24,15 @@ import Graphql.Http
 import Graphql.Operation exposing (RootQuery)
 import Graphql.OptionalArgument exposing (OptionalArgument(..))
 import Graphql.SelectionSet as SelectionSet exposing (SelectionSet, with)
-import Html exposing (..)
-import Html.Attributes exposing (..)
-import Html.Events exposing (onClick, onInput, onSubmit, targetValue)
-import Html.Lazy
+import Html exposing (Html, a, button, div, hr, img, input, label, p, span, text)
+import Html.Attributes exposing (class, classList, disabled, placeholder, src)
+import Html.Events exposing (onClick, onInput)
 import Http
 import I18Next exposing (Translations, t, tr)
 import Icons exposing (..)
 import Json.Decode as Decode exposing (Decoder)
 import Json.Encode as Encode exposing (Value)
 import Page
-import Ports
 import Route
 import Session.LoggedIn as LoggedIn exposing (External(..))
 import Session.Shared exposing (Shared)
@@ -740,9 +737,13 @@ viewClaimModal loggedIn model =
                         [ p [ class "font-sans w-full font-bold text-heading text-2xl mb-4" ]
                             [ text_ "community.claimAction.title" ]
                         , button
-                            ([ onClick CloseClaimConfirmation ]
-                                ++ isDisabled
-                            )
+                            [ if not isLoading then
+                                onClick CloseClaimConfirmation
+
+                              else
+                                onClick NoOp
+                            , disabled isLoading
+                            ]
                             [ Icons.close "absolute fill-current text-gray-400 top-0 right-0 mx-8 my-4"
                             ]
                         , p [ class "text-body w-full font-sans mb-10" ]
@@ -752,7 +753,11 @@ viewClaimModal loggedIn model =
                         [ div [ class "flex-1" ] []
                         , button
                             ([ class "flex-1 block button button-secondary mb-4 button-lg w-full md:w-40 md:mb-0"
-                             , onClick CloseClaimConfirmation
+                             , if not isLoading then
+                                onClick CloseClaimConfirmation
+
+                               else
+                                onClick NoOp
                              ]
                                 ++ isDisabled
                             )
@@ -760,7 +765,11 @@ viewClaimModal loggedIn model =
                         , div [ class "flex-1" ] []
                         , button
                             ([ class "flex-1 block button button-primary button-lg w-full md:w-40"
-                             , onClick (ClaimAction actionId)
+                             , if not isLoading then
+                                onClick (ClaimAction actionId)
+
+                               else
+                                onClick NoOp
                              ]
                                 ++ isDisabled
                             )
@@ -801,7 +810,6 @@ viewInvitation loggedIn model =
 
 
 
--- HELPERS
 -- SECTIONS
 
 
@@ -904,7 +912,8 @@ type alias UpdateResult =
 
 
 type Msg
-    = GotTime Posix
+    = NoOp
+    | GotTime Posix
     | CompletedLoadCommunity (Result (Graphql.Http.Error (Maybe Community)) (Maybe Community))
       -- Objective
     | ClickedOpenObjective Int
@@ -924,6 +933,9 @@ type Msg
 update : Msg -> Model -> LoggedIn.Model -> UpdateResult
 update msg model loggedIn =
     case msg of
+        NoOp ->
+            UR.init model
+
         GotTime date ->
             UR.init { model | date = Just date }
 
@@ -971,9 +983,13 @@ update msg model loggedIn =
                 |> UR.init
 
         ClaimAction actionId ->
+            let
+                newModel =
+                    { model | modalStatus = Opened True actionId }
+            in
             case LoggedIn.isAuth loggedIn of
                 True ->
-                    model
+                    newModel
                         |> UR.init
                         |> UR.addPort
                             { responseAddress = ClaimAction actionId
@@ -998,7 +1014,7 @@ update msg model loggedIn =
                             }
 
                 False ->
-                    model
+                    newModel
                         |> UR.init
                         |> UR.addExt (Just (ClaimAction actionId) |> RequiredAuthentication)
 
@@ -1075,6 +1091,9 @@ jsAddressToMsg addr val =
 msgToString : Msg -> List String
 msgToString msg =
     case msg of
+        NoOp ->
+            [ "NoOp" ]
+
         GotTime _ ->
             [ "GotTime" ]
 
