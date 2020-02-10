@@ -1,7 +1,7 @@
 #================
 # Build Stage
 #================
-FROM node:11.15-alpine as builder
+FROM node:12.0-alpine as builder
 
 ENV NODE_ENV=production
 

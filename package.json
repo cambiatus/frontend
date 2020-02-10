@@ -1,9 +1,9 @@
 {
   "name": "frontend",
-  "version": "1.7.2",
+  "version": "1.7.3",
   "private": true,
   "engines": {
-    "node": "11.15.0"
+    "node": "12.0.0"
   },
   "scripts": {
     "build": "yarn transform && yarn bundle",

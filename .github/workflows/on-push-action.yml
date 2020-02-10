@@ -1,0 +1,25 @@
+name: Build
+on: [push]
+jobs:
+  build-app:
+    name: Build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v1
+
+      - name: Set Node.js
+        uses: actions/setup-node@master
+        with:
+          version: 12.0.0
+
+      - name: Get deps
+        run: npm install
+
+      - name: Build asset
+        run: npm build
+
+      - name: Publish Slack Notification
+        uses: rtCamp/action-slack-notify@master
+        env:
+          SLACK_WEBHOOK: ${{ secrets.FRONT_END_WEBHOOK }}
+
