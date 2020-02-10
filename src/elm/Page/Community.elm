@@ -1001,9 +1001,13 @@ update msg model loggedIn =
                 |> UR.init
 
         ClaimAction actionId ->
+            let
+                newModel =
+                    { model | modalStatus = Opened True actionId }
+            in
             case LoggedIn.isAuth loggedIn of
                 True ->
-                    model
+                    newModel
                         |> UR.init
                         |> UR.addPort
                             { responseAddress = ClaimAction actionId
@@ -1028,7 +1032,7 @@ update msg model loggedIn =
                             }
 
                 False ->
-                    model
+                    newModel
                         |> UR.init
                         |> UR.addExt (Just (ClaimAction actionId) |> RequiredAuthentication)
 
@@ -1082,8 +1086,6 @@ update msg model loggedIn =
                             )
                 }
                 |> UR.logHttpError msg httpError
-
-
 
 
 jsAddressToMsg : List String -> Value -> Maybe Msg
