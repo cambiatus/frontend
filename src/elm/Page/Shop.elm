@@ -1,6 +1,5 @@
 module Page.Shop exposing (Model, Msg, init, jsAddressToMsg, msgToString, subscriptions, update, view)
 
-import Account
 import Api
 import Api.Graphql
 import Asset.Icon as Icon
@@ -22,6 +21,7 @@ import Json.Encode as Encode
 import List.Extra as LE
 import Log
 import Page exposing (Session(..), viewMenuFilter, viewMenuFilterButton, viewMenuFilterTabButton, viewMenuTab)
+import Profile exposing (viewProfileNameTag)
 import Route exposing (Route)
 import Session.Guest as Guest
 import Session.LoggedIn as LoggedIn exposing (External(..))
@@ -31,7 +31,6 @@ import Task
 import Time exposing (Posix)
 import Transfer exposing (Transfer)
 import UpdateResult as UR
-import User exposing (viewNameTag)
 
 
 
@@ -184,7 +183,7 @@ viewHeader loggedIn =
                 [ text (t loggedIn.shared.translations "shop.description") ]
             , a
                 [ Route.href Route.NewSale
-                , class "button button-primary button-small w-full lg:w-64 lg:mx-8 lg:mt-6 lg:button-medium font-medium"
+                , class "button button-primary button-sm w-full lg:w-64 lg:mx-8 lg:mt-6 lg:button-medium font-medium"
                 ]
                 [ text (t loggedIn.shared.translations "shop.create_offer") ]
             ]
@@ -293,7 +292,7 @@ viewCard model ({ shared } as loggedIn) index card =
                 ]
             , div [ class "px-4 pb-2 flex flex-wrap" ]
                 [ p [ class "font-medium pt-2 w-full" ] [ text card.sale.title ]
-                , viewNameTag loggedIn.accountName card.sale.creator shared.translations
+                , viewProfileNameTag loggedIn.accountName card.sale.creator shared.translations
                 , div [ class "h-16 w-full flex flex-wrap items-end" ]
                     [ if card.sale.units == 0 && card.sale.trackStock then
                         div [ class "w-full" ]
@@ -319,7 +318,8 @@ viewCard model ({ shared } as loggedIn) index card =
             ]
             [ div [ class "w-full relative bg-gray-500" ]
                 [ img [ class "w-full h-48 object-cover", src imageUrl ] []
-                , div [ class "absolute right-1 bottom-1 " ] [ User.view shared.endpoints.ipfs loggedIn.accountName shared.translations card.sale.creator ]
+                , div [ class "absolute right-1 bottom-1 " ]
+                    [ Profile.view shared.endpoints.ipfs loggedIn.accountName shared.translations card.sale.creator ]
                 ]
             , div [ class "w-full px-6 pt-4" ]
                 [ p [ class "text-xl" ] [ text title ]

@@ -14,7 +14,7 @@ import Graphql.SelectionSet as SelectionSet exposing (SelectionSet, with)
 import Html.Events exposing (targetValue)
 import Json.Decode as Decode exposing (Decoder)
 import Json.Encode as Encode exposing (Value)
-import User exposing (User)
+import Profile exposing (Profile)
 
 
 
@@ -33,7 +33,7 @@ type alias Sale =
     , image : Maybe String
     , units : Int
     , trackStock : Bool
-    , creator : User
+    , creator : Profile
     }
 
 
@@ -108,7 +108,7 @@ salesSelection =
         |> with Bespiral.Object.Sale.image
         |> with Bespiral.Object.Sale.units
         |> with Bespiral.Object.Sale.trackStock
-        |> with (Bespiral.Object.Sale.creator User.selectionSet)
+        |> with (Bespiral.Object.Sale.creator Profile.selectionSet)
 
 
 saleQuery : Int -> SelectionSet (Maybe Sale) RootQuery

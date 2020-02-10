@@ -1,6 +1,22 @@
-module Session.Shared exposing (ScatterAvailability(..), Shared, TranslationStatus(..), bespiralSymbol, gotScatterAvailability, init, langFlag, language, loadTranslation, toLoadingTranslation, translationStatus, verifyingScatterAvailability, viewFullError, viewFullGraphqlError, viewFullLoading, viewLanguageItems)
+module Session.Shared exposing
+    ( ScatterAvailability(..)
+    , Shared
+    , TranslationStatus(..)
+    , bespiralSymbol
+    , gotScatterAvailability
+    , init
+    , langFlag
+    , language
+    , loadTranslation
+    , toLoadingTranslation
+    , translationStatus
+    , verifyingScatterAvailability
+    , viewFullError
+    , viewFullGraphqlError
+    , viewFullLoading
+    , viewLanguageItems
+    )
 
-import Account
 import Asset.Icon as Icon
 import Browser.Navigation as Nav
 import Community

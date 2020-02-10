@@ -1,6 +1,5 @@
 module Api.Chat exposing (ChatPreferences, chatPreferencesSelectionSet, toChatFormat, updateChatLanguage, updateChatLanguageMutation)
 
-import Account exposing (Profile)
 import Api.Graphql
 import Bespiral.Mutation
 import Bespiral.Object
@@ -8,6 +7,7 @@ import Bespiral.Object.ChatPreferences as ChatPreferences
 import Graphql.Http
 import Graphql.Operation exposing (RootMutation)
 import Graphql.SelectionSet as SelectionSet exposing (SelectionSet, with)
+import Profile exposing (Profile)
 import Session.Shared exposing (Shared)
 
 
