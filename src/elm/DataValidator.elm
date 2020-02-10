@@ -1,4 +1,28 @@
-module DataValidator exposing (Validator, addConstraints, custom, exactly, getInput, greaterThan, greaterThanOrEqual, hasErrors, listErrors, longerThan, lowerThan, lowerThanOrEqual, negative, newValidator, noneOf, oneOf, onlyLetters, onlyNumbers, positive, shorterThan, toCustomResult, updateInput, validate)
+module DataValidator exposing
+    ( Validator
+    , addConstraints
+    , custom
+    , exactly
+    , getInput
+    , greaterThan
+    , greaterThanOrEqual
+    , hasErrors
+    , listErrors
+    , longerThan
+    , lowerThan
+    , lowerThanOrEqual
+    , negative
+    , newValidator
+    , noneOf
+    , oneOf
+    , onlyLetters
+    , onlyNumbers
+    , positive
+    , shorterThan
+    , toCustomResult
+    , updateInput
+    , validate
+    )
 
 import I18Next exposing (Translations)
 

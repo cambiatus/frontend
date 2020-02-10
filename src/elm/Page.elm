@@ -1,10 +1,43 @@
-module Page exposing (ExternalMsg(..), Msg, Session(..), errorToString, fullPageError, fullPageGraphQLError, fullPageLoading, fullPageNotFound, init, isLoggedIn, jsAddressToMsg, labelWithTooltip, loading, login, logout, msgToString, onFileChange, subscriptions, toShared, update, viewButtonNew, viewCardEmpty, viewCardList, viewDateDistance, viewGuest, viewLoggedIn, viewMaxTwoColumn, viewMenuFilter, viewMenuFilterButton, viewMenuFilterTabButton, viewMenuTab, viewTitle)
+module Page exposing
+    ( ExternalMsg(..)
+    , Msg
+    , Session(..)
+    , errorToString
+    , fullPageError
+    , fullPageGraphQLError
+    , fullPageLoading
+    , fullPageNotFound
+    , init
+    , isLoggedIn
+    , jsAddressToMsg
+    , labelWithTooltip
+    , loading
+    , login
+    , logout
+    , msgToString
+    , onFileChange
+    , subscriptions
+    , toShared
+    , update
+    , viewButtonNew
+    , viewCardEmpty
+    , viewCardList
+    , viewDateDistance
+    , viewGuest
+    , viewHeader
+    , viewLoggedIn
+    , viewMaxTwoColumn
+    , viewMenuFilter
+    , viewMenuFilterButton
+    , viewMenuFilterTabButton
+    , viewMenuTab
+    , viewTitle
+    )
 
-import Account exposing (Profile)
 import Asset.Icon as Icon
 import Auth
 import Browser.Navigation as Nav
-import Community exposing (ActionVerification)
+import Community
 import DateDistance
 import File exposing (File)
 import Flags exposing (Flags)
@@ -15,9 +48,11 @@ import Html.Attributes exposing (..)
 import Html.Events exposing (on)
 import Http
 import I18Next exposing (Delims(..), Translations)
+import Icons
 import Json.Decode as Decode exposing (Decoder)
 import Json.Encode as Encode exposing (Value)
 import Ports
+import Profile exposing (Profile)
 import Route exposing (Route)
 import Session.Guest as Guest
 import Session.LoggedIn as LoggedIn
@@ -223,6 +258,21 @@ viewTitle text_ =
     p
         [ class "heading-bold" ]
         [ text text_ ]
+
+
+viewHeader : LoggedIn.Model -> String -> Route -> Html msg
+viewHeader ({ shared } as loggedIn) title route =
+    div [ class "w-full h-16 flex px-4 items-center bg-indigo-500" ]
+        [ a
+            [ class "flex absolute items-center"
+            , Route.href route
+            ]
+            [ Icons.back ""
+            , p [ class "ml-2 text-white text-sm" ]
+                [ text (I18Next.t shared.translations "back") ]
+            ]
+        , p [ class "mx-auto text-white" ] [ text title ]
+        ]
 
 
 viewButtonNew : String -> Route -> Html msg

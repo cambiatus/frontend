@@ -1,24 +1,24 @@
-module Notification exposing (History, Model, Notification, NotificationType(..), MintData, SaleHistoryData, TransferData, addNotification, init, markAsReadMutation, notificationHistoryQuery, readAll)
+module Notification exposing (History, MintData, Model, Notification, NotificationType(..), SaleHistoryData, TransferData, addNotification, init, markAsReadMutation, notificationHistoryQuery, readAll)
 
-import Account exposing (Profile)
+import Bespiral.Mutation as Mutation
 import Bespiral.Object
 import Bespiral.Object.Community as Community
+import Bespiral.Object.Mint as Mint
 import Bespiral.Object.NotificationHistory as NotificationHistory
 import Bespiral.Object.Sale as Sale
 import Bespiral.Object.SaleHistory as SaleHistory
 import Bespiral.Object.Transfer as Transfer
-import Bespiral.Object.Mint as Mint
 import Bespiral.Query as Query
-import Bespiral.Mutation as Mutation
 import Bespiral.Scalar exposing (DateTime(..))
 import Bespiral.Union
 import Bespiral.Union.NotificationType
 import Community exposing (Balance, Community)
 import Eos exposing (Symbol)
 import Eos.Account as Eos
-import Graphql.Operation exposing (RootQuery, RootMutation)
+import Graphql.Operation exposing (RootMutation, RootQuery)
 import Graphql.OptionalArgument exposing (OptionalArgument(..))
 import Graphql.SelectionSet as SelectionSet exposing (SelectionSet, with)
+import Profile exposing (Profile)
 import Transfer exposing (transferItemSelectionSet)
 
 
@@ -83,11 +83,13 @@ type alias SaleHistoryData =
     , sale : Sale
     }
 
+
 type alias MintData =
-  { quantity : Float
-  , memo : Maybe String
-  , community : Community
-  }
+    { quantity : Float
+    , memo : Maybe String
+    , community : Community
+    }
+
 
 type alias Community =
     { logo : String
@@ -124,13 +126,12 @@ readAll model =
         , readNotifications = model.readNotifications ++ model.unreadNotifications
     }
 
+
 markAsReadMutation : Int -> SelectionSet History RootMutation
 markAsReadMutation id =
-  Mutation.readNotification
-    { input = { id = id } }
-    notificationHistorySelectionSet
-
-
+    Mutation.readNotification
+        { input = { id = id } }
+        notificationHistorySelectionSet
 
 
 notificationHistoryQuery : Eos.Name -> SelectionSet (List History) RootQuery
@@ -157,6 +158,7 @@ typeUnionSelectionSet =
         , onSaleHistory = SelectionSet.map SaleHistory saleHistorySelectionSet
         , onMint = SelectionSet.map Mint mintSelectionSet
         }
+
 
 mintSelectionSet : SelectionSet MintData Bespiral.Object.Mint
 mintSelectionSet =

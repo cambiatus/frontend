@@ -782,9 +782,10 @@ async function handleJavascriptPort (arg) {
       devLog('=============================', 'validatingDate')
 
       const parsedDate = new Date(arg.data.deadline)
+      const now = new Date()
 
       console.log('p', parsedDate)
-      if (parsedDate.toString() === ('Invalid Date')) {
+      if (parsedDate.toString() === ('Invalid Date') || (parsedDate < now)) {
         const response = {
           address: arg.responseAddress,
           addressData: arg.responseData,

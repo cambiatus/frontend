@@ -8,7 +8,6 @@ import Bespiral.Object.Claim as Claim exposing (ChecksOptionalArguments)
 import Bespiral.Object.Community as Community
 import Bespiral.Object.Objective as Objective
 import Bespiral.Object.Profile as Profile
-import Bespiral.Object.Validator as Validator
 import Bespiral.Query exposing (ClaimRequiredArguments, ClaimsRequiredArguments)
 import Bespiral.Scalar exposing (DateTime(..))
 import DateFormat
@@ -73,7 +72,7 @@ type Vote
 
 
 type alias ClaimId =
-    String
+    Int
 
 
 type alias Verification =
@@ -210,13 +209,13 @@ viewModal translations modalStatus verification =
                     , div [ class "w-full md:bg-gray-100 md:flex md:absolute rounded-b-lg md:inset-x-0 md:bottom-0 md:p-4" ]
                         [ div [ class "flex-1" ] []
                         , button
-                            [ class "flex-1 block button button-secondary mb-4 button-large w-full md:w-40 md:mb-0"
+                            [ class "flex-1 block button button-secondary mb-4 button-lg w-full md:w-40 md:mb-0"
                             , onClick (ClickedClose verification)
                             ]
                             [ text (t "verify_claim.modal.secondary") ]
                         , div [ class "flex-1" ] []
                         , button
-                            [ class "flex-1 block button button-primary button-large w-full md:w-40"
+                            [ class "flex-1 block button button-primary button-lg w-full md:w-40"
                             , onClick (ClickedConfirm verification vote)
                             ]
                             [ text (t primaryText) ]
@@ -613,12 +612,7 @@ encodeVerification claimId validator vote =
     let
         encodedClaimId : Encode.Value
         encodedClaimId =
-            case String.toInt claimId of
-                Just number ->
-                    Encode.int number
-
-                Nothing ->
-                    Encode.null
+            Encode.int claimId
 
         encodedVerifier : Encode.Value
         encodedVerifier =
@@ -677,7 +671,7 @@ type alias ActionResponse =
     , reward : Float
     , verifierReward : Float
     , objective : ObjectiveResponse
-    , validators : List ValidatorResponse
+    , validators : List ProfileResponse
     }
 
 
@@ -694,11 +688,6 @@ type alias CommunityResponse =
     }
 
 
-type alias ValidatorResponse =
-    { validator : ProfileResponse
-    }
-
-
 type CheckStatus
     = BLANK
     | NEGATIVE
@@ -710,8 +699,7 @@ fetchVerification claimId accountName shared =
     let
         id : Int
         id =
-            String.toInt claimId
-                |> Maybe.withDefault -1
+            claimId
 
         validator : String
         validator =
@@ -774,7 +762,7 @@ actionSelectionSet =
         |> with Action.reward
         |> with Action.verifierReward
         |> with (Action.objective objectiveSelectionSet)
-        |> with (Action.validators validatorsSelectionSet)
+        |> with (Action.validators profileSelectionSet)
 
 
 objectiveSelectionSet : SelectionSet ObjectiveResponse Bespiral.Object.Objective
@@ -790,12 +778,6 @@ communitySelectionSet =
         |> with Community.symbol
         |> with Community.logo
         |> with Community.name
-
-
-validatorsSelectionSet : SelectionSet ValidatorResponse Bespiral.Object.Validator
-validatorsSelectionSet =
-    SelectionSet.succeed ValidatorResponse
-        |> with (Validator.validator profileSelectionSet)
 
 
 toMaybeVerification : String -> VerificationResponse -> Maybe Verification
@@ -827,9 +809,7 @@ toMaybeVerification validator verificationResponse =
 
         validatorsResponse : List ProfileResponse
         validatorsResponse =
-            List.map
-                (\v -> v.validator)
-                actionResponse.validators
+            actionResponse.validators
 
         validatorVote : CheckStatus
         validatorVote =
