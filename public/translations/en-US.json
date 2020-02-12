@@ -374,7 +374,7 @@
         "avatar": "Image",
         "name": "Name",
         "email": "Email",
-        "localization": "Localization",
+        "localization": "Location",
         "interests": "Interests",
         "bio": "Biography",
         "privateKey": "Private Key"
