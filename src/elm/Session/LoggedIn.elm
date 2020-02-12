@@ -1,4 +1,27 @@
-module Session.LoggedIn exposing (External(..), ExternalMsg(..), Model, Msg(..), Page(..), ProfileStatus(..), addNotification, askedAuthentication, init, initLogin, isAccount, isActive, isAuth, jsAddressToMsg, mapExternal, maybePrivateKey, msgToString, profile, readAllNotifications, subscriptions, update, view)
+module Session.LoggedIn exposing
+    ( External(..)
+    , ExternalMsg(..)
+    , Model
+    , Msg(..)
+    , Page(..)
+    , ProfileStatus(..)
+    , addNotification
+    , askedAuthentication
+    , init
+    , initLogin
+    , isAccount
+    , isActive
+    , isAuth
+    , jsAddressToMsg
+    , mapExternal
+    , maybePrivateKey
+    , msgToString
+    , profile
+    , readAllNotifications
+    , subscriptions
+    , update
+    , view
+    )
 
 import Api
 import Api.Chat as Chat exposing (ChatPreferences)
@@ -27,7 +50,6 @@ import I18Next exposing (Delims(..), Translations, t, tr)
 import Icons
 import Json.Decode as Decode exposing (Decoder, Value)
 import Json.Encode as Encode exposing (Value)
-import Log
 import Notification exposing (Notification)
 import Ports
 import Profile exposing (Profile, query)
@@ -195,9 +217,6 @@ view thisMsg page ({ shared } as model) content =
 viewHelper : (Msg -> msg) -> Page -> Profile -> Model -> Html msg -> Html msg
 viewHelper thisMsg page profile_ ({ shared } as model) content =
     let
-        ipfsUrl =
-            shared.endpoints.ipfs
-
         onClickCloseAny =
             if model.showUserNav then
                 onClick (ShowUserNav False)
@@ -216,8 +235,12 @@ viewHelper thisMsg page profile_ ({ shared } as model) content =
     in
     div
         [ class "min-h-screen flex flex-col" ]
-        [ viewHeader model page profile_ |> Html.map thisMsg
-        , viewMainMenu page profile_ model |> Html.map thisMsg
+        [ div [ class "bg-white" ]
+            [ div [ class "container mx-auto" ]
+                [ viewHeader model page profile_ |> Html.map thisMsg
+                , viewMainMenu page profile_ model |> Html.map thisMsg
+                ]
+            ]
         , div [ class "flex-grow" ] [ content ]
         , viewFooter shared
         , div [ onClickCloseAny ] [] |> Html.map thisMsg
@@ -254,7 +277,7 @@ viewHeader ({ shared } as model) page profile_ =
         tr str values =
             I18Next.tr shared.translations I18Next.Curly str values
     in
-    div [ class "flex flex-wrap items-center justify-between bg-white px-4 pt-6 pb-4" ]
+    div [ class "flex flex-wrap items-center justify-between px-4 pt-6 pb-4" ]
         [ a [ Route.href Route.Dashboard ]
             [ img [ class "lg:hidden h-8", src shared.logoMobile ] []
             , img
@@ -399,7 +422,7 @@ viewMainMenu page profile_ model =
         iconClass =
             "w-6 h-6 fill-current hover:text-indigo-500 mr-5"
     in
-    nav [ class "bg-white h-16 w-full flex overflow-x-auto" ]
+    nav [ class "h-16 w-full flex overflow-x-auto" ]
         [ a
             [ classList
                 [ ( menuItemClass, True )
