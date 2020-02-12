@@ -167,7 +167,7 @@
       "title": "Mi Cartera",
       "my_transfers": "Mis Transferencias",
       "transaction_sent": "¡Tu transacción fue enviada con exito a blockchain.",
-      "your_current_balance": "Su saldo actual: {{balance}}",
+      "your_current_balance": "Tu saldo actual: {{balance}}",
       "balances": {
         "current": "Balance Actual",
         "subtitle": "Ver communidad",
@@ -403,7 +403,7 @@
     "units_label": "Cantidad en stock",
     "title": "Tienda",
     "subtitle": "Compra y vende en tu comunidad",
-    "description": "Aquí puede usar sus monedas para comprar productos y servicios, o ganar monedas vendiendo sus productos y servicios",
+    "description": "Aquí puedes usar tus monedas para comprar productos y servicios, o ganar monedas vendiendo tus productos y servicios",
     "all_offers": "Todas las ofertas",
     "my_communities_offers": "Mis comunidades ofrecen",
     "my_offers": "Mis ofertas",
