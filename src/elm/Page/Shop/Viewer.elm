@@ -336,7 +336,7 @@ cardFromSale sale =
 view : LoggedIn.Model -> Model -> Html Msg
 view loggedIn model =
     case model.status of
-        LoadingSale id ->
+        LoadingSale _ ->
             div []
                 [ Page.viewHeader loggedIn "" (Route.Shop Shop.All)
                 , Page.fullPageLoading
@@ -359,9 +359,9 @@ view loggedIn model =
                         cardData =
                             cardFromSale sale
                     in
-                    div [ class "" ]
+                    div []
                         [ Page.viewHeader loggedIn cardData.sale.title (Route.Shop Shop.All)
-                        , viewCard loggedIn cardData model
+                        , div [ class "container mx-auto" ] [ viewCard loggedIn cardData model ]
                         ]
 
                 Nothing ->
@@ -393,9 +393,6 @@ viewCard ({ shared } as loggedIn) card model =
 
         tr r_id replaces =
             I18Next.tr shared.translations I18Next.Curly r_id replaces
-
-        creatorId =
-            Eos.nameToString card.sale.creatorId
     in
     div [ class "flex flex-wrap" ]
         [ div [ class "w-full md:w-1/2 p-4 flex justify-center" ]
