@@ -219,7 +219,7 @@
       "labels": {
         "title": "Titulo",
         "symbol": "Simbolo",
-        "description": "Descricao",
+        "description": "Descrição",
         "max_supply": "Maxima emissao de moedas",
         "min_balance": "Balanço mínimo",
         "inviter_reward": "Recompensa para quem convidar",
