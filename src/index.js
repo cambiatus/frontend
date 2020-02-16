@@ -18,19 +18,14 @@ const { Socket: PhoenixSocket } = require('phoenix')
 // =========================================
 
 let eos = null
-var isAuthenticated = false // eslint-disable-line
 const USER_KEY = 'bespiral.user'
 const LANGUAGE_KEY = 'bespiral.language'
 const AUTH_PREF_KEY = 'bespiral.auth.pref'
-const CHAT_TOKEN_KEY = 'bespiral.chat.token'
-const CHAT_USER_ID_KEY = 'bespiral.chat.user.id'
-const CHAT_CONTAINER_KEY = 'bespiral.chat.container'
 const PUSH_PREF = 'bespiral.push.pref'
 const env = process.env.NODE_ENV || 'development'
 const config = configuration[env]
 const urlParams = new URLSearchParams(window.location.search)
 const langParam = urlParams.get('lang')
-let isTrackingChat = false
 
 function flags () {
   const user = JSON.parse(window.localStorage.getItem(USER_KEY))
@@ -126,134 +121,13 @@ function storeAccountName (accountName) {
   window.localStorage.setItem(USER_KEY, JSON.stringify(storeData))
 }
 
-// STORE CHAT USER ID
-
-function storeChatUserId (userId) {
-  window.localStorage.setItem(CHAT_USER_ID_KEY, userId)
-}
-
-// STORE CHAT TOKEN
-
-function storeChatToken (token) {
-  window.localStorage.setItem(CHAT_TOKEN_KEY, token)
-}
-
-// STORE CHAT CONTAINER
-
-function storeChatContainer (container) {
-  window.localStorage.setItem(CHAT_CONTAINER_KEY, container)
-}
-
 // STORE PUSH PREF
 
 function storePushPref (pref) {
   window.localStorage.setItem(PUSH_PREF, pref)
 }
 
-// GET CHAT TOKEN
 
-function getChatToken () {
-  return window.localStorage.getItem(CHAT_TOKEN_KEY)
-}
-
-// GET CHAT CONTAINER
-
-function getChatContainer () {
-  return window.localStorage.getItem(CHAT_CONTAINER_KEY)
-}
-
-// POST MESSAGE TO ROCKET.CHAT
-
-function sendToChat (iframeChat, message, maybeTargetOrigin) {
-  const targetOrigin = maybeTargetOrigin || '*'
-
-  iframeChat.contentWindow.postMessage(message, targetOrigin)
-}
-
-// LOGOUT FROM ROCKET.CHAT
-
-function attemptToLogout (container) {
-  const c = container || getChatContainer()
-
-  if (c) {
-    isTrackingChat = false
-    const iframeChat = document.getElementById(container)
-    const message = {
-      externalCommand: 'logout'
-    }
-    sendToChat(iframeChat, message)
-    window.removeEventListener('message', window.onchat)
-  }
-}
-
-// LOGIN INTO ROCKET.CHAT
-
-function attemptToLogin (container, token, address, addressData) {
-  const c = container || getChatContainer()
-  const t = token || getChatToken()
-
-  if (c && t) {
-    const chatUrl = config.endpoints.chat
-    const iframeChat = document.getElementById(c)
-    iframeChat.src = `${chatUrl}`
-
-    if (!isTrackingChat) {
-      isTrackingChat = true
-
-      window.onchat = function (event) {
-        if (event.data.eventName === 'startup') {
-          devLog('========================', 'onStartup:')
-          devLog('onStartup:', event.data)
-          const message = {
-            event: 'login-with-token',
-            loginToken: t
-          }
-          sendToChat(iframeChat, message)
-        } else if (
-          chatUrl.indexOf(event.origin) >= 0 &&
-          event.data.eventName === 'notification'
-        ) {
-          devLog('========================', 'onNotification')
-          devLog('onNotification', event.data)
-
-          const username =
-            event &&
-            event.data &&
-            event.data.data &&
-            event.data.data.notification &&
-            event.data.data.notification.payload &&
-            event.data.data.notification.payload.sender &&
-            event.data.data.notification.payload.sender.username
-
-          if (username) {
-            const response = {
-              address: address,
-              addressData: addressData,
-              username: username
-            }
-            app.ports.javascriptInPort.send(response)
-          } else {
-            const errorResponse = {
-              address: address,
-              addressData: addressData,
-              error: 'No username found'
-            }
-            app.ports.javascriptInPort.send(errorResponse)
-          }
-        }
-      }
-
-      window.addEventListener('message', window.onchat)
-    }
-  }
-}
-
-// CREATE CHAT INSTANCE
-
-function createChat (username) {
-  const chatUrl = config.endpoints.chat
-  window.open(`${chatUrl}/direct/${username}`)
-}
 
 // STORE PIN
 
@@ -332,7 +206,6 @@ async function handleJavascriptPort (arg) {
             arg.data.pin
           )
 
-          isAuthenticated = true
           const response = {
             address: arg.responseAddress,
             addressData: arg.responseData,
@@ -469,7 +342,6 @@ async function handleJavascriptPort (arg) {
           keyProvider: privateKey
         })
       )
-      isAuthenticated = true
       const response = {
         address: arg.responseAddress,
         addressData: arg.responseData,
@@ -494,7 +366,6 @@ async function handleJavascriptPort (arg) {
             })
           )
 
-          isAuthenticated = true
           storeAuthPreference('pin')
           const response = {
             address: arg.responseAddress,
@@ -560,33 +431,11 @@ async function handleJavascriptPort (arg) {
         })
       break
     }
-    case 'chatCredentials': {
-      devLog('=========================', 'chatCredentials')
-      storeChatUserId(arg.data.credentials.chatUserId)
-      storeChatToken(arg.data.credentials.chatToken)
-      storeChatContainer(arg.data.container)
-      attemptToLogin(
-        arg.data.container,
-        arg.data.credentials.chatToken,
-        arg.data.notificationAddress,
-        arg.responseData
-      )
-      break
-    }
-    case 'openChat': {
-      devLog('=========================', 'openChat')
-      devLog('openChat: ', arg.data)
-      createChat(arg.data.username)
-      break
-    }
     case 'logout': {
       devLog('=========================', 'logout')
       window.localStorage.removeItem(USER_KEY)
       window.localStorage.removeItem(AUTH_PREF_KEY)
-      window.localStorage.removeItem(CHAT_USER_ID_KEY)
-      window.localStorage.removeItem(CHAT_TOKEN_KEY)
       attemptToLogout(arg.data.container)
-      isAuthenticated = false
       break
     }
     case 'requestPushPermission': {
