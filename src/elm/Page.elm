@@ -37,7 +37,6 @@ module Page exposing
 import Asset.Icon as Icon
 import Auth
 import Browser.Navigation as Nav
-import Community
 import DateDistance
 import File exposing (File)
 import Flags exposing (Flags)
@@ -93,7 +92,7 @@ init flags navKey =
 
 
 fetchTranslations : Shared -> String -> Cmd Msg
-fetchTranslations shared language =
+fetchTranslations _ language =
     CompletedLoadTranslation language
         |> Translation.get language
 

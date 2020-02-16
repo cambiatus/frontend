@@ -27,7 +27,6 @@ needed.
 -}
 
 import Dict exposing (Dict)
-import Http
 import Json.Decode as Decode exposing (Decoder)
 
 

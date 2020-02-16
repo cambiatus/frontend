@@ -24,7 +24,6 @@ module Session.LoggedIn exposing
     )
 
 import Api
-import Api.Chat as Chat exposing (ChatPreferences)
 import Api.Graphql
 import Auth
 import Avatar
@@ -526,10 +525,8 @@ type Msg
     | FocusedSearchInput
     | ToggleLanguageItems
     | ClickedLanguage String
-    | CompletedChatTranslation (Result (Graphql.Http.Error (Maybe ChatPreferences)) (Maybe ChatPreferences))
     | ClosedAuthModal
     | GotAuthMsg Auth.Msg
-    | ReceivedNotification String
     | CompletedLoadBalances (Result Http.Error (List Balance))
     | CompletedLoadUnread Value
     | KeyDown String
@@ -566,7 +563,6 @@ update msg model =
             case model.profile of
                 Loaded profile_ ->
                     UR.init { model | shared = Shared.loadTranslation (Ok ( lang, transl )) shared }
-                        |> UR.addCmd (Chat.updateChatLanguage shared profile_ lang CompletedChatTranslation)
                         |> UR.addCmd (Ports.storeLanguage lang)
 
                 _ ->
@@ -589,20 +585,6 @@ update msg model =
             case profile_ of
                 Just p ->
                     UR.init { model | profile = Loaded p }
-                        |> UR.addCmd (Chat.updateChatLanguage shared p shared.language CompletedChatTranslation)
-                        |> UR.addPort
-                            { responseAddress = CompletedLoadProfile (Ok profile_)
-                            , responseData = Encode.null
-                            , data =
-                                Encode.object
-                                    [ ( "name", Encode.string "chatCredentials" )
-                                    , ( "container", Encode.string "chat-manager" )
-                                    , ( "credentials", Profile.encodeProfileChat p )
-                                    , ( "notificationAddress"
-                                      , Encode.list Encode.string [ "GotPageMsg", "GotLoggedInMsg", "ReceivedNotification" ]
-                                      )
-                                    ]
-                            }
                         |> UR.addPort
                             { responseAddress = CompletedLoadUnread (Encode.string "")
                             , responseData = Encode.null
@@ -637,15 +619,6 @@ update msg model =
         ClickedLogout ->
             UR.init model
                 |> UR.addCmd (Route.replaceUrl shared.navKey Route.Logout)
-                |> UR.addPort
-                    { responseAddress = ClickedLogout
-                    , responseData = Encode.null
-                    , data =
-                        Encode.object
-                            [ ( "name", Encode.string "logout" )
-                            , ( "container", Encode.string "chat-manager" )
-                            ]
-                    }
 
         EnteredSearch s ->
             UR.init { model | searchText = s }
@@ -689,9 +662,6 @@ update msg model =
                 }
                 |> UR.addCmd (fetchTranslations lang shared)
 
-        CompletedChatTranslation _ ->
-            UR.init model
-
         ClosedAuthModal ->
             UR.init closeAllModals
 
@@ -715,12 +685,6 @@ update msg model =
                                     (\m -> { m | shared = newShared })
                                     uResult
                     )
-
-        ReceivedNotification from ->
-            addNotification
-                (chatNotification model from)
-                model
-                |> UR.init
 
         CompletedLoadBalances res ->
             case res of
@@ -750,16 +714,6 @@ update msg model =
             else
                 model
                     |> UR.init
-
-
-chatNotification : Model -> String -> Notification
-chatNotification model from =
-    { title = "menu.chat_message_notification"
-    , description = from
-    , class = "chat-notification"
-    , unread = True
-    , link = Just (model.shared.endpoints.chat ++ "/direct/" ++ from)
-    }
 
 
 closeModal : UpdateResult -> UpdateResult
@@ -854,13 +808,6 @@ jsAddressToMsg addr val =
             Auth.jsAddressToMsg remainAddress val
                 |> Maybe.map GotAuthMsg
 
-        "ReceivedNotification" :: [] ->
-            Decode.decodeValue
-                (Decode.field "username" Decode.string)
-                val
-                |> Result.map ReceivedNotification
-                |> Result.toMaybe
-
         "CompletedLoadUnread" :: [] ->
             Decode.decodeValue (Decode.field "meta" Decode.value) val
                 |> Result.map CompletedLoadUnread
@@ -915,17 +862,11 @@ msgToString msg =
         ClickedLanguage _ ->
             [ "ClickedLanguage" ]
 
-        CompletedChatTranslation _ ->
-            [ "CompletedChatTranslation" ]
-
         ClosedAuthModal ->
             [ "ClosedAuthModal" ]
 
         GotAuthMsg subMsg ->
             "GotAuthMsg" :: Auth.msgToString subMsg
-
-        ReceivedNotification _ ->
-            [ "ReceivedNotification" ]
 
         CompletedLoadBalances _ ->
             [ "CompletedLoadBalances" ]

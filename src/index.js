@@ -658,14 +658,15 @@ async function handleJavascriptPort (arg) {
     case 'printAuthPdf': {
       devLog('=======================', 'printAuthPdf')
       const filename = '12_Words.pdf'
-      let words = document.getElementById('12__words').textContent
-      let pkey = document.getElementById('p__key').textContent
+      // let words = document.getElementById('12__words').textContent
+      // let pkey = document.getElementById('p__key').textContent
 
       var doc = new JsPdf()
-      doc.text('Your Words', 20, 20)
-      doc.text(words, 20, 30)
-      doc.text('Your Key', 20, 40)
-      doc.text(pkey, 20, 50)
+      doc.addHtml(require('./pdfTemplate.html.txt'))
+      // doc.text('Your Words', 20, 20)
+      // doc.text(words, 20, 30)
+      // doc.text('Your Key', 20, 40)
+      // doc.text(pkey, 20, 50)
       doc.save(filename)
 
       const response = {
