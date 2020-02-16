@@ -1,6 +1,5 @@
 module Page.Login exposing (Model, Msg, init, jsAddressToMsg, msgToString, subscriptions, update, view)
 
-import Api.Chat as Chat exposing (ChatPreferences)
 import Auth
 import Graphql.Http
 import Html exposing (..)
@@ -81,7 +80,6 @@ type alias UpdateResult =
 
 type Msg
     = GotAuthMsg Auth.Msg
-    | CompletedChatTranslation (Result (Graphql.Http.Error (Maybe ChatPreferences)) (Maybe ChatPreferences))
 
 
 update : Msg -> Model -> Guest.Model -> UpdateResult
@@ -106,7 +104,6 @@ update msg model guest =
 
                             Auth.CompletedAuth profile ->
                                 uResult
-                                    |> UR.addCmd (Chat.updateChatLanguage shared profile language CompletedChatTranslation)
                                     |> UR.addCmd
                                         (guest.afterLoginRedirect
                                             |> Maybe.withDefault Route.Dashboard
@@ -117,9 +114,6 @@ update msg model guest =
                             Auth.UpdatedShared newShared ->
                                 UR.addExt (UpdatedGuest { guest | shared = newShared }) uResult
                     )
-
-        CompletedChatTranslation _ ->
-            UR.init model
 
 
 jsAddressToMsg : List String -> Value -> Maybe Msg
@@ -138,6 +132,3 @@ msgToString msg =
     case msg of
         GotAuthMsg subMsg ->
             "GotAuthMsg" :: Auth.msgToString subMsg
-
-        CompletedChatTranslation _ ->
-            [ "CompletedChatTranslation" ]
