@@ -79,9 +79,6 @@
   },
   "auth": {
     "title": "Use your private key and PIN or log in by",
-    "verifyingScatter": "Verifying Scatter Availability",
-    "loginScatter": "Login with Scatter",
-    "scatterUnavailable": "Scatter Unavailable",
     "loginPin": "Welcome {{accountName}}, use your security PIN to login",
     "chooseAccount": "Choose an Account",
     "required": "Authentication required for this action",
@@ -89,7 +86,6 @@
     "login": {
       "loginTab": "Login",
       "registerTab": "Create your account",
-      "scatter_prompt": "Login using",
       "privateKeyMode": {
         "input": {
           "label": "Private key (you saved when creating your account)",

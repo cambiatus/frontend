@@ -36,7 +36,7 @@ import Html.Attributes exposing (class, maxlength, minlength, pattern, title, ty
 import I18Next exposing (Translations, t)
 import Json.Decode as Decode exposing (Decoder, list, nullable, string)
 import Json.Decode.Pipeline as Decode exposing (optional, required)
-import Json.Encode as Encode exposing (Value)
+import Json.Encode as Encode
 import Time exposing (Posix)
 
 

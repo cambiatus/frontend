@@ -79,9 +79,6 @@
   },
   "auth": {
     "title": "Utilitzeu la vostra clau privada i el PIN o connecteu-vos per",
-    "verifyingScatter": "Verificant disponibilitat de Scatter",
-    "loginScatter": "Inicia sessió amb Scatter",
-    "scatterUnavailable": "Scatter no està disponible",
     "loginPin": "Benvingut {{accountName}}, utilitzeu el vostre PIN d'inici de sessió per",
     "chooseAccount": "Escull un compte",
     "required": "Autenticació requerida per a aquesta acció",
@@ -89,7 +86,6 @@
     "login": {
       "loginTab": "Inicieu la sessió",
       "registerTab": "Crea el teu compte",
-      "scatter_prompt": "Inicieu la sessió mitjançant",
       "privateKeyMode": {
         "input": {
           "label": "Clau privada (heu desat en crear el vostre compte)",
