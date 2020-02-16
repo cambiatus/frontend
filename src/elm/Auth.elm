@@ -28,20 +28,12 @@ import UpdateResult as UR
 
 init : Shared -> Model
 init shared =
-    case shared.authPreference of
-        Nothing ->
+    case shared.maybeAccount of
+        Just ( _, True ) ->
+            { initModel | status = LoginWithPin }
+
+        _ ->
             initModel
-
-        Just Flags.Scatter ->
-            { initModel | status = LoggingInWithScatter }
-
-        Just Flags.Pin ->
-            case shared.maybeAccount of
-                Just ( _, True ) ->
-                    { initModel | status = LoginWithPin }
-
-                _ ->
-                    initModel
 
 
 initRegister : String -> Model
@@ -64,7 +56,6 @@ subscriptions _ =
 
 type alias Model =
     { status : Status
-    , scatterError : Maybe String
     , loginError : Maybe String
     , form : PrivateKeyLogin
     , pinVisibility : Bool
@@ -76,15 +67,12 @@ initModel =
     { status = Options
     , loginError = Nothing
     , form = initPrivateKeyLogin
-    , scatterError = Nothing
     , pinVisibility = True
     }
 
 
 type Status
     = Options
-    | LoggingInWithScatter
-    | LoggedInWithScatter
     | LoginWithPrivateKey PrivateKeyLogin
     | LoginWithPrivateKeyAccounts (List Eos.Name) PrivateKeyLogin
     | LoggingInWithPrivateKeyAccounts (List Eos.Name) PrivateKeyLogin
@@ -132,9 +120,6 @@ type alias PrivateKey =
 isAuth : Model -> Bool
 isAuth model =
     case model.status of
-        LoggedInWithScatter ->
-            True
-
         LoggedInWithPin _ ->
             True
 
@@ -167,12 +152,6 @@ view isModal shared model =
     case model.status of
         Options ->
             viewOptions isModal shared model
-
-        LoggingInWithScatter ->
-            viewLoginWithScatter isModal shared model
-
-        LoggedInWithScatter ->
-            viewLoginWithScatter isModal shared model
 
         LoginWithPrivateKey _ ->
             viewOptions isModal shared model
@@ -221,7 +200,11 @@ viewOptions isModal shared model =
             Html.text (t shared.translations s)
     in
     [ div [ class "" ]
-        [ viewAuthTabs shared
+        [ if not isModal then
+            viewAuthTabs shared
+
+          else
+            text ""
         , viewAuthError shared model.loginError
         ]
     , div [ class "card__auth__input" ]
@@ -246,10 +229,14 @@ viewOptions isModal shared model =
         , onClick (SubmittedLoginPrivateKey model.form)
         ]
         [ text_ "auth.login.submit" ]
-    , a [ Route.href (Route.Register Nothing Nothing), class "card__auth__prompt" ]
-        [ span [] [ text_ "auth.login.register" ]
-        , span [ class "card__auth__login__mode" ] [ text_ "auth.login.registerLink" ]
-        ]
+    , if not isModal then
+        a [ Route.href (Route.Register Nothing Nothing), class "card__auth__prompt" ]
+            [ span [] [ text_ "auth.login.register" ]
+            , span [ class "card__auth__login__mode" ] [ text_ "auth.login.registerLink" ]
+            ]
+
+      else
+        text ""
     ]
 
 
@@ -353,34 +340,6 @@ viewLoginWithPin accountName isDisabled isModal shared model =
             , disabled isDisabled
             ]
             [ text_ "auth.login.submit" ]
-        ]
-    ]
-
-
-viewLoginWithScatter : Bool -> Shared -> Model -> List (Html Msg)
-viewLoginWithScatter isModal shared model =
-    let
-        text_ s =
-            Html.text (t shared.translations s)
-    in
-    [ div [ class "flex flex-col pt-8" ]
-        [ case model.scatterError of
-            Nothing ->
-                text ""
-
-            Just err ->
-                p [ class "scatter__error" ]
-                    [ text err ]
-        , div [ class "mx-auto" ]
-            [ span [ class "text-text-grey" ] [ text_ "auth.login.scatter_prompt" ]
-            , span [] [ text " " ]
-            , span
-                [ class "text-scatter-blue underline cursor-pointer"
-                , onClick ClickedLoginWithScatter
-                ]
-                [ text "Scatter" ]
-            ]
-        , viewAuthError shared model.loginError
         ]
     ]
 
@@ -519,10 +478,6 @@ type alias UpdateResult =
 type Msg
     = Ignored
     | ClickedViewOptions
-    | ClickedCheckScatterAvailability
-    | GotScatterAvailability Bool
-    | ClickedLoginWithScatter
-    | GotScatterLogin (Result ( Bool, String ) Eos.Name)
     | EnteredPrivateKey String
     | SubmittedLoginPrivateKey PrivateKeyLogin
     | GotMultipleAccountsLogin (List Eos.Name)
@@ -554,58 +509,6 @@ update msg shared model =
                     | loginError = Nothing
                     , status = Options
                 }
-
-        ClickedCheckScatterAvailability ->
-            UR.init model
-                |> UR.addExt (UpdatedShared (Shared.verifyingScatterAvailability shared))
-                |> UR.addPort
-                    { responseAddress = ClickedCheckScatterAvailability
-                    , responseData = Encode.null
-                    , data =
-                        Encode.object
-                            [ ( "name", Encode.string "checkScatterAvailability" ) ]
-                    }
-
-        GotScatterAvailability isAvailable ->
-            UR.init model
-                |> UR.addExt
-                    (Shared.gotScatterAvailability isAvailable shared
-                        |> UpdatedShared
-                    )
-
-        ClickedLoginWithScatter ->
-            case shared.scatter of
-                Shared.ScatterAvailable ->
-                    UR.init
-                        { model
-                            | loginError = Nothing
-                        }
-                        |> UR.addPort
-                            { responseAddress = ClickedLoginWithScatter
-                            , responseData = Encode.null
-                            , data =
-                                Encode.object
-                                    [ ( "name", Encode.string "loginWithScatter" ) ]
-                            }
-
-                _ ->
-                    { model | scatterError = Just "Scatter is not available now, try again later " }
-                        |> UR.init
-
-        GotScatterLogin (Ok accountName) ->
-            UR.init model
-                |> UR.addCmd (Api.signIn shared accountName (CompletedLoadProfile LoggedInWithScatter accountName))
-
-        GotScatterLogin (Err ( isAvailable, err )) ->
-            UR.init
-                { model
-                    | loginError = Just err
-                    , status = Options
-                }
-                |> UR.addExt
-                    (Shared.gotScatterAvailability isAvailable shared
-                        |> UpdatedShared
-                    )
 
         EnteredPrivateKey s ->
             let
@@ -825,7 +728,6 @@ loginFailed httpError model =
         { model
             | loginError =
                 case httpError of
-                    -- TODO: Handle all other HTTP Error statuses
                     Http.BadStatus code ->
                         Just (String.fromInt code)
 
@@ -860,27 +762,6 @@ loginFailed httpError model =
 jsAddressToMsg : List String -> Value -> Maybe Msg
 jsAddressToMsg addr val =
     case addr of
-        "ClickedCheckScatterAvailability" :: [] ->
-            Decode.decodeValue
-                (Decode.field "isAvailable" Decode.bool)
-                val
-                |> Result.map GotScatterAvailability
-                |> Result.toMaybe
-
-        "ClickedLoginWithScatter" :: [] ->
-            Decode.decodeValue
-                (Decode.oneOf
-                    [ Decode.field "accountName" Eos.nameDecoder
-                        |> Decode.map (Ok >> GotScatterLogin)
-                    , Decode.map2 Tuple.pair
-                        (Decode.field "isAvailable" Decode.bool)
-                        (Decode.field "error" Decode.string)
-                        |> Decode.map (Err >> GotScatterLogin)
-                    ]
-                )
-                val
-                |> Result.toMaybe
-
         "SubmittedLoginPrivateKey" :: [] ->
             decodeAccountNameOrStringError GotPrivateKeyLogin val
 
@@ -920,18 +801,6 @@ msgToString msg =
 
         ClickedViewOptions ->
             [ "ClickedViewOptions" ]
-
-        ClickedCheckScatterAvailability ->
-            [ "ClickedCheckScatterAvailability" ]
-
-        GotScatterAvailability _ ->
-            [ "GotScatterAvailability" ]
-
-        ClickedLoginWithScatter ->
-            [ "ClickedLoginWithScatter" ]
-
-        GotScatterLogin r ->
-            [ "GotScatterLogin", UR.resultToString r ]
 
         EnteredPrivateKey _ ->
             [ "EnteredPrivateKey" ]

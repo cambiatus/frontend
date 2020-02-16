@@ -79,9 +79,6 @@
   },
   "auth": {
     "title": "Use su clave privada y PIN o inicie sesión por",
-    "verifyingScatter": "Verificando Disponibilidad de Scatter",
-    "loginScatter": "Inicia sesión con Scatter",
-    "scatterUnavailable": "Scatter no esta disponible",
     "loginPin": "Bienvenido {{accountName}}, use su nombre de usuario de PIN por",
     "chooseAccount": "Escoge una cuenta",
     "required": "Autenticación requerida para esta acción",
@@ -89,7 +86,6 @@
     "login": {
       "loginTab": "Iniciar sesión",
       "registerTab": "Crea tu cuenta",
-      "scatter_prompt": "Inicie sesión usando",
       "privateKeyMode": {
         "input": {
           "label": "Clave privada (guardaste al crear tu cuenta)",

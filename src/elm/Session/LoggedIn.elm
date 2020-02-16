@@ -26,12 +26,10 @@ module Session.LoggedIn exposing
 import Api
 import Api.Chat as Chat exposing (ChatPreferences)
 import Api.Graphql
-import Asset.Icon as Icon
 import Auth
 import Avatar
 import Bespiral.Object
 import Bespiral.Object.UnreadNotifications
-import Bespiral.Query
 import Bespiral.Subscription as Subscription
 import Browser.Dom as Dom
 import Browser.Events
@@ -116,7 +114,6 @@ subscriptions model =
 
 type alias Model =
     { shared : Shared
-    , isAuthenticated : Bool
     , accountName : Eos.Name
     , profile : ProfileStatus
     , showUserNav : Bool
@@ -135,7 +132,6 @@ type alias Model =
 initModel : Shared -> Auth.Model -> Eos.Name -> Model
 initModel shared authModel accountName =
     { shared = shared
-    , isAuthenticated = False
     , accountName = accountName
     , profile = Loading accountName
     , showUserNav = False
@@ -155,11 +151,6 @@ type ProfileStatus
     = Loading Eos.Name
     | LoadingFailed Eos.Name (Graphql.Http.Error (Maybe Profile))
     | Loaded Profile
-
-
-type Authentication
-    = WithPrivateKey
-    | WithScatter
 
 
 isAuth : Model -> Bool
@@ -473,7 +464,7 @@ isActive page route =
 
 
 viewFooter : Shared -> Html msg
-viewFooter shared =
+viewFooter _ =
     footer [ class "bg-white w-full flex flex-wrap mx-auto border-t border-grey p-4 pt-6 h-40 bottom-0" ]
         [ p [ class "text-sm flex w-full justify-center items-center" ]
             [ text "Created with"
@@ -715,12 +706,8 @@ update msg model =
                                 closeModal uResult
                                     |> UR.addExt AuthenticationFailed
 
-                            Auth.CompletedAuth profile_ ->
+                            Auth.CompletedAuth _ ->
                                 closeModal uResult
-                                    |> UR.mapModel
-                                        (\m ->
-                                            { m | isAuthenticated = True }
-                                        )
                                     |> UR.addExt AuthenticationSucceed
 
                             Auth.UpdatedShared newShared ->
@@ -741,7 +728,7 @@ update msg model =
                     { model | balances = bals }
                         |> UR.init
 
-                Err err ->
+                Err _ ->
                     model
                         |> UR.init
 

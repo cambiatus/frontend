@@ -1,5 +1,3 @@
-import ScatterJS from 'scatterjs-core'
-import ScatterEOS from 'scatterjs-plugin-eosjs'
 import Eos from 'eosjs'
 import ecc from 'eosjs-ecc'
 import sjcl from 'sjcl'
@@ -19,9 +17,7 @@ const { Socket: PhoenixSocket } = require('phoenix')
 // App startup
 // =========================================
 
-ScatterJS.plugins(new ScatterEOS())
 let eos = null
-let scatter = null
 var isAuthenticated = false // eslint-disable-line
 const USER_KEY = 'bespiral.user'
 const LANGUAGE_KEY = 'bespiral.language'
@@ -279,39 +275,6 @@ app.ports.javascriptOutPort.subscribe(handleJavascriptPort)
 async function handleJavascriptPort (arg) {
   devLog('handleJavascriptPort', arg)
   switch (arg.data.name) {
-    case 'checkScatterAvailability': {
-      devLog('=========================', 'checkScatterAvailability')
-      var sendScatterResponse = function (isAvailable) {
-        const response = {
-          address: arg.responseAddress,
-          addressData: arg.responseData,
-          isAvailable: isAvailable
-        }
-        devLog('checkScatterAvailability response', response)
-        app.ports.javascriptInPort.send(response)
-      }
-      ScatterJS.scatter
-        .connect(
-          'cambiatus',
-          {
-            initTimeout: 2500
-          }
-        )
-        .then(function (connected) {
-          if (connected) {
-            scatter = ScatterJS.scatter
-            window.ScatterJS = null
-            sendScatterResponse(true)
-          } else {
-            sendScatterResponse(false)
-          }
-        })
-        .catch(error => {
-          devLog('checkScatterAvailability error', error)
-          sendScatterResponse(false)
-        })
-      break
-    }
     case 'checkAccountAvailability': {
       devLog('=========================', 'checkAccountAvailability')
       var sendResponse = function (isAvailable) {
@@ -396,68 +359,6 @@ async function handleJavascriptPort (arg) {
           devLog('generateAccount response', errorResponse)
           app.ports.javascriptInPort.send(errorResponse)
         })
-      break
-    }
-    case 'loginWithScatter': {
-      devLog('=========================', 'loginWithScatter')
-      if (scatter) {
-        scatter
-          .suggestNetwork(config.network)
-          .then(function () {
-            scatter
-              .getIdentity({
-                personal: ['firstname', 'lastname', 'email'],
-                accounts: [config.network]
-              })
-              .then(function (identity) {
-                devLog('identity', identity)
-                eos = scatter.eos(config.network, Eos, config.eosOptions)
-                isAuthenticated = true
-                storeAccountName(identity.accounts[0].name)
-                storeAuthPreference('scatter')
-                const response = {
-                  address: arg.responseAddress,
-                  addressData: arg.responseData,
-                  accountName: identity.accounts[0].name,
-                  firstName: identity.personal.firstname,
-                  lastName: identity.personal.lastname,
-                  email: identity.personal.email,
-                  publicKey: identity.publicKey
-                }
-                devLog('response', response)
-                app.ports.javascriptInPort.send(response)
-              })
-              .catch(function (error) {
-                const response = {
-                  address: arg.responseAddress,
-                  addressData: arg.responseData,
-                  isAvailable: true,
-                  error: error.message
-                }
-                devLog('response', response)
-                app.ports.javascriptInPort.send(response)
-              })
-          })
-          .catch(function (error) {
-            const response = {
-              address: arg.responseAddress,
-              addressData: arg.responseData,
-              isAvailable: true,
-              error: error.message
-            }
-            devLog('response', response)
-            app.ports.javascriptInPort.send(response)
-          })
-      } else {
-        const response = {
-          address: arg.responseAddress,
-          addressData: arg.responseData,
-          isAvailable: false,
-          error: 'Scatter is unavailable'
-        }
-        devLog('response', response)
-        app.ports.javascriptInPort.send(response)
-      }
       break
     }
     case 'loginWithPrivateKey': {
@@ -685,9 +586,6 @@ async function handleJavascriptPort (arg) {
       window.localStorage.removeItem(CHAT_USER_ID_KEY)
       window.localStorage.removeItem(CHAT_TOKEN_KEY)
       attemptToLogout(arg.data.container)
-      if (scatter) {
-        scatter.forgetIdentity()
-      }
       isAuthenticated = false
       break
     }

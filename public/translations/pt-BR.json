@@ -79,9 +79,6 @@
   },
   "auth": {
     "title": "Use sua chave privada e PIN ou faça o login",
-    "verifyingScatter": "Verificando Disponibilidade do Scatter",
-    "loginScatter": "Entrar com Scatter",
-    "scatterUnavailable": "Scatter Indisponível",
     "loginPrivatekey": "Entrar com chave privada ou 12 palavras",
     "loginPrivatekeyPlaceholder": "Chave privada ou 12 palavras",
     "usePin": "Usar PIN",
@@ -94,7 +91,6 @@
     "login": {
       "loginTab": "Entrar",
       "registerTab": "Crie sua conta",
-      "scatter_prompt": "Faça login usando",
       "privateKeyMode": {
         "input": {
           "label": "Chave privada (você salvou ao criar sua conta)",
