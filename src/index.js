@@ -508,7 +508,7 @@ async function handleJavascriptPort (arg) {
       // let pkey = document.getElementById('p__key').textContent
 
       var doc = new JsPdf()
-      doc.addHtml(require('./pdfTemplate.html.txt'))
+      // doc.addHtml(require('./pdfTemplate.html.txt'))
       // doc.text('Your Words', 20, 20)
       // doc.text(words, 20, 30)
       // doc.text('Your Key', 20, 40)
