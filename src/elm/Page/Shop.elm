@@ -31,8 +31,9 @@ import Task
 import Time exposing (Posix)
 import Transfer exposing (Transfer)
 import UpdateResult as UR
-
-
+import User exposing (viewNameTag)
+import Utils exposing (..)
+import Browser.Events as Events
 
 -- INIT
 
@@ -62,7 +63,7 @@ init loggedIn filter =
 
 subscriptions : Model -> Sub Msg
 subscriptions model =
-    Sub.none
+    Sub.map PressedEnter (Events.onKeyDown decodeEnterKeyDown)
 
 
 
@@ -373,6 +374,7 @@ type Msg
     | ClickedFilter Filter
     | TransferSuccess Int
     | CompletedLoadBalances (Result Http.Error (List Balance))
+    | PressedEnter Bool
 
 
 update : Msg -> Model -> LoggedIn.Model -> UpdateResult
@@ -505,6 +507,9 @@ update msg model loggedIn =
                 Err _ ->
                     model
                         |> UR.init
+        PressedEnter _ ->
+            model
+                |> UR.init
 
 
 updateCardState : Msg -> Int -> CardState -> UpdateResult -> UpdateResult
@@ -625,3 +630,5 @@ msgToString msg =
 
         CompletedLoadBalances _ ->
             [ "CompletedLoadBalances" ]
+        PressedEnter _ ->
+            [ "PressedEnter" ]

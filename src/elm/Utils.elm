@@ -1,4 +1,4 @@
-module Utils exposing (decodeDate, decodeTimestamp, posixDateTime)
+module Utils exposing (decodeDate, decodeTimestamp, posixDateTime, decodeEnterKeyDown)
 
 import Bespiral.Scalar exposing (DateTime(..))
 import Iso8601
@@ -50,3 +50,20 @@ decodeTimestamp =
             (\ms ->
                 Decode.succeed <| Time.millisToPosix ms
             )
+
+
+decodeEnterKeyDown : Decode.Decoder Bool
+decodeEnterKeyDown =
+    let
+        isEnter code =
+            case code of
+                "Enter" ->
+                    True
+                _ ->
+                    False
+    in
+    Decode.string
+        |> Decode.andThen
+           (\cd ->
+                Decode.succeed <| isEnter cd
+           )
