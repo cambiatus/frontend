@@ -1133,23 +1133,6 @@ svg.main-header__info-arrow--up {
    margin-top: 40px;
 }
 
-.scatter__link {
-   color: #62AECA;
-   cursor: pointer;
-   text-decoration: underline;
-}
-
-.scatter__error {
-    margin-left: -24px;
-    margin-right: -24px;
-    color: #FFFFFF;
-    padding-top: 10px;
-    height: 30px;
-    background-color: red !important;
-    text-align: center !important;
-}
-
-
 .card__auth__tabs__login a ,
 .card__auth__tabs__register a {
    text-decoration: none;
@@ -3949,4 +3932,3 @@ input[type=number]::-webkit-outer-spin-button {
     -webkit-appearance: none;
     margin: 0;
 }
-

@@ -84,11 +84,11 @@
     @apply bg-white text-orange-300 rounded-full border;
 }
 
-.button-small {
+.button-sm {
     @apply py-1 px-6 h-8;
 }
 
-.button-large {
+.button-lg {
     @apply py-3 px-6 h-12;
 }
 
@@ -102,7 +102,7 @@
 
 .input {
     /* Form input comes from tailwind/custom-forms */
-    @apply form-input font-sans h-12;
+    @apply form-input h-12;
 }
 
 .input-label {
@@ -162,12 +162,52 @@
 
 @screen md {
     .modal-content {
-        @apply max-w-3xl mx-4 ml-auto bottom-auto right-auto left-auto relative h-64;
+        @apply max-w-3xl fixed top-modal mx-auto h-64;
     }
 }
 
 
 /* End of Modal */
+
+/* Tag */
+
+.tag {
+    @apply uppercase rounded text-caption py-1 px-5
+}
+
+/* End of Tag */
+
+/* CHECKBOX TOGGLE SWITCH */
+.form-switch {
+    @apply relative select-none w-10 mr-2 leading-normal;
+}
+.form-switch-checkbox {
+    @apply hidden;
+}
+.form-switch-label {
+    @apply block overflow-hidden cursor-pointer bg-white border-2 border-gray-100 rounded-full h-6;
+
+    transition: background-color 0.2s ease-in;
+}
+.form-switch-label:before {
+    @apply absolute block bg-gray-900 inset-y-0 w-4 h-4 rounded-full -ml-1 mt-1;
+
+    right: 50%;
+    content: "";
+    transition: all 0.2s ease-in;
+}
+.form-switch-checkbox:checked + .form-switch-label,
+.form-switch-checkbox:checked + .form-switch-label:before {
+
+}
+.form-switch-checkbox:checked + .form-switch-label {
+    @apply bg-indigo-500 shadow-none;
+}
+.form-switch-checkbox:checked + .form-switch-label:before {
+    @apply right-0 bg-white;
+
+    margin-right: 0.3rem;
+}
 
 
 /* https://tailwindcss.com/docs/extracting-components#extracting-css-components-with-apply */

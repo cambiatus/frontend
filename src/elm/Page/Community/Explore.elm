@@ -78,9 +78,15 @@ view loggedIn model =
         Loaded communities ->
             div [ class "container mx-auto px-4" ]
                 [ renderUserMessage model
-                , Page.viewTitle (t loggedIn.shared.translations "menu.communities")
                 , if loggedIn.shared.allowCommunityCreation then
-                    Page.viewButtonNew (I18Next.t loggedIn.shared.translations "community.create_button") Route.NewCommunity
+                    div
+                        [ class "my-10 w-full flex justify-end" ]
+                        [ a
+                            [ Route.href Route.NewCommunity
+                            , class "button button-primary w-64"
+                            ]
+                            [ text (I18Next.t loggedIn.shared.translations "community.create_button") ]
+                        ]
 
                   else
                     text ""

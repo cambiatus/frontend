@@ -1,12 +1,25 @@
-module Session.Shared exposing (ScatterAvailability(..), Shared, TranslationStatus(..), bespiralSymbol, gotScatterAvailability, init, langFlag, language, loadTranslation, toLoadingTranslation, translationStatus, verifyingScatterAvailability, viewFullError, viewFullGraphqlError, viewFullLoading, viewLanguageItems)
+module Session.Shared exposing
+    ( Shared
+    , TranslationStatus(..)
+    , bespiralSymbol
+    , init
+    , langFlag
+    , language
+    , loadTranslation
+    , toLoadingTranslation
+    , translationStatus
+    , viewFullError
+    , viewFullGraphqlError
+    , viewFullLoading
+    , viewLanguageItems
+    )
 
-import Account
 import Asset.Icon as Icon
 import Browser.Navigation as Nav
 import Community
 import Eos exposing (Symbol)
 import Eos.Account as Eos
-import Flags exposing (AuthPreference, Endpoints, Environment, Flags, defaultEndpoints)
+import Flags exposing (Endpoints, Environment, Flags, defaultEndpoints)
 import Graphql.Http
 import Html exposing (..)
 import Html.Attributes exposing (..)
@@ -22,9 +35,7 @@ type alias Shared =
     , translations : Translations
     , translationsStatus : TranslationStatus
     , environment : Environment
-    , scatter : ScatterAvailability
     , maybeAccount : Maybe ( Eos.Name, Bool )
-    , authPreference : Maybe AuthPreference
     , endpoints : Endpoints
     , logo : String
     , logoMobile : String
@@ -34,15 +45,13 @@ type alias Shared =
 
 
 init : Flags -> Nav.Key -> Shared
-init ({ environment, maybeAccount, authPreference, endpoints, allowCommunityCreation } as flags) navKey =
+init ({ environment, maybeAccount, endpoints, allowCommunityCreation } as flags) navKey =
     { navKey = navKey
     , language = flags.language
     , translations = initialTranslations
     , translationsStatus = LoadingTranslation
     , environment = environment
-    , scatter = VerifyingScatterAvailability
     , maybeAccount = maybeAccount
-    , authPreference = authPreference
     , endpoints = endpoints
     , logo = flags.logo
     , logoMobile = flags.logoMobile
@@ -57,12 +66,6 @@ type TranslationStatus
     | LoadedTranslation
     | LoadingAnotherTranslation
     | LoadingAnotherTranslationFailed Http.Error
-
-
-type ScatterAvailability
-    = VerifyingScatterAvailability
-    | ScatterAvailable
-    | ScatterUnavailable
 
 
 
@@ -127,23 +130,6 @@ loadTranslation result shared =
                 , translations = translations
                 , translationsStatus = LoadedTranslation
             }
-
-
-gotScatterAvailability : Bool -> Shared -> Shared
-gotScatterAvailability isAvailable shared =
-    { shared
-        | scatter =
-            if isAvailable then
-                ScatterAvailable
-
-            else
-                ScatterUnavailable
-    }
-
-
-verifyingScatterAvailability : Shared -> Shared
-verifyingScatterAvailability shared =
-    { shared | scatter = VerifyingScatterAvailability }
 
 
 

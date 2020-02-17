@@ -1,5 +1,3 @@
-import ScatterJS from 'scatterjs-core'
-import ScatterEOS from 'scatterjs-plugin-eosjs'
 import Eos from 'eosjs'
 import ecc from 'eosjs-ecc'
 import sjcl from 'sjcl'
@@ -19,22 +17,15 @@ const { Socket: PhoenixSocket } = require('phoenix')
 // App startup
 // =========================================
 
-ScatterJS.plugins(new ScatterEOS())
 let eos = null
-let scatter = null
-var isAuthenticated = false // eslint-disable-line
 const USER_KEY = 'bespiral.user'
 const LANGUAGE_KEY = 'bespiral.language'
 const AUTH_PREF_KEY = 'bespiral.auth.pref'
-const CHAT_TOKEN_KEY = 'bespiral.chat.token'
-const CHAT_USER_ID_KEY = 'bespiral.chat.user.id'
-const CHAT_CONTAINER_KEY = 'bespiral.chat.container'
 const PUSH_PREF = 'bespiral.push.pref'
 const env = process.env.NODE_ENV || 'development'
 const config = configuration[env]
 const urlParams = new URLSearchParams(window.location.search)
 const langParam = urlParams.get('lang')
-let isTrackingChat = false
 
 function flags () {
   const user = JSON.parse(window.localStorage.getItem(USER_KEY))
@@ -130,134 +121,13 @@ function storeAccountName (accountName) {
   window.localStorage.setItem(USER_KEY, JSON.stringify(storeData))
 }
 
-// STORE CHAT USER ID
-
-function storeChatUserId (userId) {
-  window.localStorage.setItem(CHAT_USER_ID_KEY, userId)
-}
-
-// STORE CHAT TOKEN
-
-function storeChatToken (token) {
-  window.localStorage.setItem(CHAT_TOKEN_KEY, token)
-}
-
-// STORE CHAT CONTAINER
-
-function storeChatContainer (container) {
-  window.localStorage.setItem(CHAT_CONTAINER_KEY, container)
-}
-
 // STORE PUSH PREF
 
 function storePushPref (pref) {
   window.localStorage.setItem(PUSH_PREF, pref)
 }
 
-// GET CHAT TOKEN
 
-function getChatToken () {
-  return window.localStorage.getItem(CHAT_TOKEN_KEY)
-}
-
-// GET CHAT CONTAINER
-
-function getChatContainer () {
-  return window.localStorage.getItem(CHAT_CONTAINER_KEY)
-}
-
-// POST MESSAGE TO ROCKET.CHAT
-
-function sendToChat (iframeChat, message, maybeTargetOrigin) {
-  const targetOrigin = maybeTargetOrigin || '*'
-
-  iframeChat.contentWindow.postMessage(message, targetOrigin)
-}
-
-// LOGOUT FROM ROCKET.CHAT
-
-function attemptToLogout (container) {
-  const c = container || getChatContainer()
-
-  if (c) {
-    isTrackingChat = false
-    const iframeChat = document.getElementById(container)
-    const message = {
-      externalCommand: 'logout'
-    }
-    sendToChat(iframeChat, message)
-    window.removeEventListener('message', window.onchat)
-  }
-}
-
-// LOGIN INTO ROCKET.CHAT
-
-function attemptToLogin (container, token, address, addressData) {
-  const c = container || getChatContainer()
-  const t = token || getChatToken()
-
-  if (c && t) {
-    const chatUrl = config.endpoints.chat
-    const iframeChat = document.getElementById(c)
-    iframeChat.src = `${chatUrl}`
-
-    if (!isTrackingChat) {
-      isTrackingChat = true
-
-      window.onchat = function (event) {
-        if (event.data.eventName === 'startup') {
-          devLog('========================', 'onStartup:')
-          devLog('onStartup:', event.data)
-          const message = {
-            event: 'login-with-token',
-            loginToken: t
-          }
-          sendToChat(iframeChat, message)
-        } else if (
-          chatUrl.indexOf(event.origin) >= 0 &&
-          event.data.eventName === 'notification'
-        ) {
-          devLog('========================', 'onNotification')
-          devLog('onNotification', event.data)
-
-          const username =
-            event &&
-            event.data &&
-            event.data.data &&
-            event.data.data.notification &&
-            event.data.data.notification.payload &&
-            event.data.data.notification.payload.sender &&
-            event.data.data.notification.payload.sender.username
-
-          if (username) {
-            const response = {
-              address: address,
-              addressData: addressData,
-              username: username
-            }
-            app.ports.javascriptInPort.send(response)
-          } else {
-            const errorResponse = {
-              address: address,
-              addressData: addressData,
-              error: 'No username found'
-            }
-            app.ports.javascriptInPort.send(errorResponse)
-          }
-        }
-      }
-
-      window.addEventListener('message', window.onchat)
-    }
-  }
-}
-
-// CREATE CHAT INSTANCE
-
-function createChat (username) {
-  const chatUrl = config.endpoints.chat
-  window.open(`${chatUrl}/direct/${username}`)
-}
 
 // STORE PIN
 
@@ -279,39 +149,6 @@ app.ports.javascriptOutPort.subscribe(handleJavascriptPort)
 async function handleJavascriptPort (arg) {
   devLog('handleJavascriptPort', arg)
   switch (arg.data.name) {
-    case 'checkScatterAvailability': {
-      devLog('=========================', 'checkScatterAvailability')
-      var sendScatterResponse = function (isAvailable) {
-        const response = {
-          address: arg.responseAddress,
-          addressData: arg.responseData,
-          isAvailable: isAvailable
-        }
-        devLog('checkScatterAvailability response', response)
-        app.ports.javascriptInPort.send(response)
-      }
-      ScatterJS.scatter
-        .connect(
-          'cambiatus',
-          {
-            initTimeout: 2500
-          }
-        )
-        .then(function (connected) {
-          if (connected) {
-            scatter = ScatterJS.scatter
-            window.ScatterJS = null
-            sendScatterResponse(true)
-          } else {
-            sendScatterResponse(false)
-          }
-        })
-        .catch(error => {
-          devLog('checkScatterAvailability error', error)
-          sendScatterResponse(false)
-        })
-      break
-    }
     case 'checkAccountAvailability': {
       devLog('=========================', 'checkAccountAvailability')
       var sendResponse = function (isAvailable) {
@@ -369,7 +206,6 @@ async function handleJavascriptPort (arg) {
             arg.data.pin
           )
 
-          isAuthenticated = true
           const response = {
             address: arg.responseAddress,
             addressData: arg.responseData,
@@ -396,68 +232,6 @@ async function handleJavascriptPort (arg) {
           devLog('generateAccount response', errorResponse)
           app.ports.javascriptInPort.send(errorResponse)
         })
-      break
-    }
-    case 'loginWithScatter': {
-      devLog('=========================', 'loginWithScatter')
-      if (scatter) {
-        scatter
-          .suggestNetwork(config.network)
-          .then(function () {
-            scatter
-              .getIdentity({
-                personal: ['firstname', 'lastname', 'email'],
-                accounts: [config.network]
-              })
-              .then(function (identity) {
-                devLog('identity', identity)
-                eos = scatter.eos(config.network, Eos, config.eosOptions)
-                isAuthenticated = true
-                storeAccountName(identity.accounts[0].name)
-                storeAuthPreference('scatter')
-                const response = {
-                  address: arg.responseAddress,
-                  addressData: arg.responseData,
-                  accountName: identity.accounts[0].name,
-                  firstName: identity.personal.firstname,
-                  lastName: identity.personal.lastname,
-                  email: identity.personal.email,
-                  publicKey: identity.publicKey
-                }
-                devLog('response', response)
-                app.ports.javascriptInPort.send(response)
-              })
-              .catch(function (error) {
-                const response = {
-                  address: arg.responseAddress,
-                  addressData: arg.responseData,
-                  isAvailable: true,
-                  error: error.message
-                }
-                devLog('response', response)
-                app.ports.javascriptInPort.send(response)
-              })
-          })
-          .catch(function (error) {
-            const response = {
-              address: arg.responseAddress,
-              addressData: arg.responseData,
-              isAvailable: true,
-              error: error.message
-            }
-            devLog('response', response)
-            app.ports.javascriptInPort.send(response)
-          })
-      } else {
-        const response = {
-          address: arg.responseAddress,
-          addressData: arg.responseData,
-          isAvailable: false,
-          error: 'Scatter is unavailable'
-        }
-        devLog('response', response)
-        app.ports.javascriptInPort.send(response)
-      }
       break
     }
     case 'loginWithPrivateKey': {
@@ -568,7 +342,6 @@ async function handleJavascriptPort (arg) {
           keyProvider: privateKey
         })
       )
-      isAuthenticated = true
       const response = {
         address: arg.responseAddress,
         addressData: arg.responseData,
@@ -593,7 +366,6 @@ async function handleJavascriptPort (arg) {
             })
           )
 
-          isAuthenticated = true
           storeAuthPreference('pin')
           const response = {
             address: arg.responseAddress,
@@ -659,36 +431,11 @@ async function handleJavascriptPort (arg) {
         })
       break
     }
-    case 'chatCredentials': {
-      devLog('=========================', 'chatCredentials')
-      storeChatUserId(arg.data.credentials.chatUserId)
-      storeChatToken(arg.data.credentials.chatToken)
-      storeChatContainer(arg.data.container)
-      attemptToLogin(
-        arg.data.container,
-        arg.data.credentials.chatToken,
-        arg.data.notificationAddress,
-        arg.responseData
-      )
-      break
-    }
-    case 'openChat': {
-      devLog('=========================', 'openChat')
-      devLog('openChat: ', arg.data)
-      createChat(arg.data.username)
-      break
-    }
     case 'logout': {
       devLog('=========================', 'logout')
       window.localStorage.removeItem(USER_KEY)
       window.localStorage.removeItem(AUTH_PREF_KEY)
-      window.localStorage.removeItem(CHAT_USER_ID_KEY)
-      window.localStorage.removeItem(CHAT_TOKEN_KEY)
       attemptToLogout(arg.data.container)
-      if (scatter) {
-        scatter.forgetIdentity()
-      }
-      isAuthenticated = false
       break
     }
     case 'requestPushPermission': {
@@ -760,14 +507,15 @@ async function handleJavascriptPort (arg) {
     case 'printAuthPdf': {
       devLog('=======================', 'printAuthPdf')
       const filename = '12_Words.pdf'
-      let words = document.getElementById('12__words').textContent
-      let pkey = document.getElementById('p__key').textContent
+      // let words = document.getElementById('12__words').textContent
+      // let pkey = document.getElementById('p__key').textContent
 
       var doc = new JsPdf()
-      doc.text('Your Words', 20, 20)
-      doc.text(words, 20, 30)
-      doc.text('Your Key', 20, 40)
-      doc.text(pkey, 20, 50)
+      doc.addHtml(require('./pdfTemplate.html.txt'))
+      // doc.text('Your Words', 20, 20)
+      // doc.text(words, 20, 30)
+      // doc.text('Your Key', 20, 40)
+      // doc.text(pkey, 20, 50)
       doc.save(filename)
 
       const response = {
@@ -782,9 +530,10 @@ async function handleJavascriptPort (arg) {
       devLog('=============================', 'validatingDate')
 
       const parsedDate = new Date(arg.data.deadline)
+      const now = new Date()
 
       console.log('p', parsedDate)
-      if (parsedDate.toString() === ('Invalid Date')) {
+      if (parsedDate.toString() === ('Invalid Date') || (parsedDate < now)) {
         const response = {
           address: arg.responseAddress,
           addressData: arg.responseData,

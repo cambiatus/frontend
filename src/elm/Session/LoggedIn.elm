@@ -1,15 +1,34 @@
-module Session.LoggedIn exposing (External(..), ExternalMsg(..), Model, Msg(..), Page(..), ProfileStatus(..), addNotification, askedAuthentication, init, initLogin, isAccount, isActive, isAuth, jsAddressToMsg, mapExternal, maybePrivateKey, msgToString, profile, readAllNotifications, subscriptions, update, view)
+module Session.LoggedIn exposing
+    ( External(..)
+    , ExternalMsg(..)
+    , Model
+    , Msg(..)
+    , Page(..)
+    , ProfileStatus(..)
+    , addNotification
+    , askedAuthentication
+    , init
+    , initLogin
+    , isAccount
+    , isActive
+    , isAuth
+    , jsAddressToMsg
+    , mapExternal
+    , maybePrivateKey
+    , msgToString
+    , profile
+    , readAllNotifications
+    , subscriptions
+    , update
+    , view
+    )
 
-import Account exposing (Profile, profileQuery)
 import Api
-import Api.Chat as Chat exposing (ChatPreferences)
 import Api.Graphql
-import Asset.Icon as Icon
 import Auth
 import Avatar
 import Bespiral.Object
 import Bespiral.Object.UnreadNotifications
-import Bespiral.Query
 import Bespiral.Subscription as Subscription
 import Browser.Dom as Dom
 import Browser.Events
@@ -28,14 +47,13 @@ import I18Next exposing (Delims(..), Translations, t, tr)
 import Icons
 import Json.Decode as Decode exposing (Decoder, Value)
 import Json.Encode as Encode exposing (Value)
-import Log
 import Notification exposing (Notification)
 import Ports
+import Profile exposing (Profile, query)
 import Route exposing (Route)
 import Session.Shared as Shared exposing (Shared)
 import Shop
-import Task exposing (Task)
-import Time
+import Task
 import Translation
 import UpdateResult as UR
 
@@ -52,14 +70,14 @@ init shared accountName =
     in
     ( initModel shared authModel accountName
     , Cmd.batch
-        [ Api.Graphql.query shared (profileQuery accountName) CompletedLoadProfile
+        [ Api.Graphql.query shared (Profile.query accountName) CompletedLoadProfile
         , Api.getBalances shared accountName CompletedLoadBalances
         ]
     )
 
 
 fetchTranslations : String -> Shared -> Cmd Msg
-fetchTranslations language shared =
+fetchTranslations language _ =
     CompletedLoadTranslation language
         |> Translation.get language
 
@@ -68,7 +86,7 @@ initLogin : Shared -> Auth.Model -> Profile -> ( Model, Cmd Msg )
 initLogin shared authModel profile_ =
     let
         model =
-            initModel shared authModel profile_.accountName
+            initModel shared authModel profile_.account
     in
     ( { model
         | profile = Loaded profile_
@@ -95,7 +113,6 @@ subscriptions model =
 
 type alias Model =
     { shared : Shared
-    , isAuthenticated : Bool
     , accountName : Eos.Name
     , profile : ProfileStatus
     , showUserNav : Bool
@@ -114,7 +131,6 @@ type alias Model =
 initModel : Shared -> Auth.Model -> Eos.Name -> Model
 initModel shared authModel accountName =
     { shared = shared
-    , isAuthenticated = False
     , accountName = accountName
     , profile = Loading accountName
     , showUserNav = False
@@ -134,11 +150,6 @@ type ProfileStatus
     = Loading Eos.Name
     | LoadingFailed Eos.Name (Graphql.Http.Error (Maybe Profile))
     | Loaded Profile
-
-
-type Authentication
-    = WithPrivateKey
-    | WithScatter
 
 
 isAuth : Model -> Bool
@@ -196,9 +207,6 @@ view thisMsg page ({ shared } as model) content =
 viewHelper : (Msg -> msg) -> Page -> Profile -> Model -> Html msg -> Html msg
 viewHelper thisMsg page profile_ ({ shared } as model) content =
     let
-        ipfsUrl =
-            shared.endpoints.ipfs
-
         onClickCloseAny =
             if model.showUserNav then
                 onClick (ShowUserNav False)
@@ -217,8 +225,12 @@ viewHelper thisMsg page profile_ ({ shared } as model) content =
     in
     div
         [ class "min-h-screen flex flex-col" ]
-        [ viewHeader model page profile_ |> Html.map thisMsg
-        , viewMainMenu page profile_ model |> Html.map thisMsg
+        [ div [ class "bg-white" ]
+            [ div [ class "container mx-auto" ]
+                [ viewHeader model page profile_ |> Html.map thisMsg
+                , viewMainMenu page profile_ model |> Html.map thisMsg
+                ]
+            ]
         , div [ class "flex-grow" ] [ content ]
         , viewFooter shared
         , div [ onClickCloseAny ] [] |> Html.map thisMsg
@@ -255,7 +267,7 @@ viewHeader ({ shared } as model) page profile_ =
         tr str values =
             I18Next.tr shared.translations I18Next.Curly str values
     in
-    div [ class "flex flex-wrap items-center justify-between bg-white px-4 pt-6 pb-4" ]
+    div [ class "flex flex-wrap items-center justify-between px-4 pt-6 pb-4" ]
         [ a [ Route.href Route.Dashboard ]
             [ img [ class "lg:hidden h-8", src shared.logoMobile ] []
             , img
@@ -290,7 +302,7 @@ viewHeader ({ shared } as model) page profile_ =
                     [ Avatar.view shared.endpoints.ipfs profile_.avatar "h-8 w-8"
                     , div [ class "flex flex-wrap text-left pl-2" ]
                         [ p [ class "w-full font-sans uppercase text-gray-900 text-xs overflow-x-hidden" ]
-                            [ text (tr "menu.welcome_message" [ ( "user_name", Eos.nameToString profile_.accountName ) ]) ]
+                            [ text (tr "menu.welcome_message" [ ( "user_name", Eos.nameToString profile_.account ) ]) ]
                         , p [ class "w-full font-sans text-indigo-500 text-sm" ]
                             [ text (t shared.translations "menu.my_account") ]
                         ]
@@ -400,7 +412,7 @@ viewMainMenu page profile_ model =
         iconClass =
             "w-6 h-6 fill-current hover:text-indigo-500 mr-5"
     in
-    nav [ class "bg-white h-16 w-full flex overflow-x-auto" ]
+    nav [ class "h-16 w-full flex overflow-x-auto" ]
         [ a
             [ classList
                 [ ( menuItemClass, True )
@@ -451,7 +463,7 @@ isActive page route =
 
 
 viewFooter : Shared -> Html msg
-viewFooter shared =
+viewFooter _ =
     footer [ class "bg-white w-full flex flex-wrap mx-auto border-t border-grey p-4 pt-6 h-40 bottom-0" ]
         [ p [ class "text-sm flex w-full justify-center items-center" ]
             [ text "Created with"
@@ -513,10 +525,8 @@ type Msg
     | FocusedSearchInput
     | ToggleLanguageItems
     | ClickedLanguage String
-    | CompletedChatTranslation (Result (Graphql.Http.Error (Maybe ChatPreferences)) (Maybe ChatPreferences))
     | ClosedAuthModal
     | GotAuthMsg Auth.Msg
-    | ReceivedNotification String
     | CompletedLoadBalances (Result Http.Error (List Balance))
     | CompletedLoadUnread Value
     | KeyDown String
@@ -553,7 +563,6 @@ update msg model =
             case model.profile of
                 Loaded profile_ ->
                     UR.init { model | shared = Shared.loadTranslation (Ok ( lang, transl )) shared }
-                        |> UR.addCmd (Chat.updateChatLanguage shared profile_ lang CompletedChatTranslation)
                         |> UR.addCmd (Ports.storeLanguage lang)
 
                 _ ->
@@ -576,20 +585,6 @@ update msg model =
             case profile_ of
                 Just p ->
                     UR.init { model | profile = Loaded p }
-                        |> UR.addCmd (Chat.updateChatLanguage shared p shared.language CompletedChatTranslation)
-                        |> UR.addPort
-                            { responseAddress = CompletedLoadProfile (Ok profile_)
-                            , responseData = Encode.null
-                            , data =
-                                Encode.object
-                                    [ ( "name", Encode.string "chatCredentials" )
-                                    , ( "container", Encode.string "chat-manager" )
-                                    , ( "credentials", Account.encodeProfileChat p )
-                                    , ( "notificationAddress"
-                                      , Encode.list Encode.string [ "GotPageMsg", "GotLoggedInMsg", "ReceivedNotification" ]
-                                      )
-                                    ]
-                            }
                         |> UR.addPort
                             { responseAddress = CompletedLoadUnread (Encode.string "")
                             , responseData = Encode.null
@@ -619,20 +614,11 @@ update msg model =
 
         ClickedTryAgainProfile accountName ->
             UR.init { model | profile = Loading accountName }
-                |> UR.addCmd (Api.Graphql.query shared (profileQuery accountName) CompletedLoadProfile)
+                |> UR.addCmd (Api.Graphql.query shared (Profile.query accountName) CompletedLoadProfile)
 
         ClickedLogout ->
             UR.init model
                 |> UR.addCmd (Route.replaceUrl shared.navKey Route.Logout)
-                |> UR.addPort
-                    { responseAddress = ClickedLogout
-                    , responseData = Encode.null
-                    , data =
-                        Encode.object
-                            [ ( "name", Encode.string "logout" )
-                            , ( "container", Encode.string "chat-manager" )
-                            ]
-                    }
 
         EnteredSearch s ->
             UR.init { model | searchText = s }
@@ -676,9 +662,6 @@ update msg model =
                 }
                 |> UR.addCmd (fetchTranslations lang shared)
 
-        CompletedChatTranslation _ ->
-            UR.init model
-
         ClosedAuthModal ->
             UR.init closeAllModals
 
@@ -693,12 +676,8 @@ update msg model =
                                 closeModal uResult
                                     |> UR.addExt AuthenticationFailed
 
-                            Auth.CompletedAuth profile_ ->
+                            Auth.CompletedAuth _ ->
                                 closeModal uResult
-                                    |> UR.mapModel
-                                        (\m ->
-                                            { m | isAuthenticated = True }
-                                        )
                                     |> UR.addExt AuthenticationSucceed
 
                             Auth.UpdatedShared newShared ->
@@ -707,19 +686,13 @@ update msg model =
                                     uResult
                     )
 
-        ReceivedNotification from ->
-            addNotification
-                (chatNotification model from)
-                model
-                |> UR.init
-
         CompletedLoadBalances res ->
             case res of
                 Ok bals ->
                     { model | balances = bals }
                         |> UR.init
 
-                Err err ->
+                Err _ ->
                     model
                         |> UR.init
 
@@ -741,16 +714,6 @@ update msg model =
             else
                 model
                     |> UR.init
-
-
-chatNotification : Model -> String -> Notification
-chatNotification model from =
-    { title = "menu.chat_message_notification"
-    , description = from
-    , class = "chat-notification"
-    , unread = True
-    , link = Just (model.shared.endpoints.chat ++ "/direct/" ++ from)
-    }
 
 
 closeModal : UpdateResult -> UpdateResult
@@ -808,7 +771,7 @@ profile model =
 
 isAccount : Eos.Name -> Model -> Bool
 isAccount accountName model =
-    Maybe.map .accountName (profile model) == Just accountName
+    Maybe.map .account (profile model) == Just accountName
 
 
 
@@ -844,13 +807,6 @@ jsAddressToMsg addr val =
         "GotAuthMsg" :: remainAddress ->
             Auth.jsAddressToMsg remainAddress val
                 |> Maybe.map GotAuthMsg
-
-        "ReceivedNotification" :: [] ->
-            Decode.decodeValue
-                (Decode.field "username" Decode.string)
-                val
-                |> Result.map ReceivedNotification
-                |> Result.toMaybe
 
         "CompletedLoadUnread" :: [] ->
             Decode.decodeValue (Decode.field "meta" Decode.value) val
@@ -906,17 +862,11 @@ msgToString msg =
         ClickedLanguage _ ->
             [ "ClickedLanguage" ]
 
-        CompletedChatTranslation _ ->
-            [ "CompletedChatTranslation" ]
-
         ClosedAuthModal ->
             [ "ClosedAuthModal" ]
 
         GotAuthMsg subMsg ->
             "GotAuthMsg" :: Auth.msgToString subMsg
-
-        ReceivedNotification _ ->
-            [ "ReceivedNotification" ]
 
         CompletedLoadBalances _ ->
             [ "CompletedLoadBalances" ]

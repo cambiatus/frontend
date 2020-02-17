@@ -1,6 +1,5 @@
 module Page.Profile exposing (Model, Msg, init, jsAddressToMsg, msgToString, update, view)
 
-import Account exposing (Profile, ProfileForm, decodeProfile)
 import Api
 import Api.Graphql
 import Asset.Icon as Icon
@@ -14,11 +13,11 @@ import Html exposing (..)
 import Html.Attributes exposing (..)
 import Html.Events exposing (..)
 import Http
-import I18Next exposing (Translations, t)
+import I18Next exposing (t)
 import Json.Decode as Decode exposing (Value)
 import Json.Encode as Encode
-import Log
 import Page
+import Profile exposing (Profile, ProfileForm, decode)
 import PushSubscription exposing (PushSubscription)
 import Session.LoggedIn as LoggedIn exposing (External(..))
 import Task
@@ -34,7 +33,7 @@ init loggedIn =
     let
         profileQuery =
             Api.Graphql.query loggedIn.shared
-                (Account.profileQuery loggedIn.accountName)
+                (Profile.query loggedIn.accountName)
                 CompletedProfileLoad
     in
     ( initModel loggedIn
@@ -57,7 +56,7 @@ type alias Model =
 
 
 initModel : LoggedIn.Model -> Model
-initModel loggedIn =
+initModel _ =
     { status = Loading
     , privateKeyModal = Nothing
     , pushNotifications = False
@@ -111,12 +110,11 @@ view_ loggedIn profile model =
             text (t loggedIn.shared.translations str)
 
         notification_prompt =
-            case model.pushNotifications of
-                True ->
-                    "Disable Push Notifications"
+            if model.pushNotifications then
+                "Disable Push Notifications"
 
-                False ->
-                    "profile.edit.push_notifications"
+            else
+                "profile.edit.push_notifications"
     in
     div [ class "container mx-auto px-4" ]
         [ Page.viewTitle (t loggedIn.shared.translations "profile.title")
@@ -127,13 +125,13 @@ view_ loggedIn profile model =
                 , div [ class "profile-info-container" ]
                     [ div [ class "profile-info-meta" ]
                         [ h3 [ class "profile-name" ]
-                            [ text (Account.username profile) ]
+                            [ text (Profile.username profile) ]
                         , span [ class "profile-email" ]
                             [ text (Maybe.withDefault "" profile.email) ]
                         , br [] []
                         , br [] []
                         , span [ class "profile-email" ]
-                            [ text (Eos.nameToString profile.accountName) ]
+                            [ text (Eos.nameToString profile.account) ]
                         ]
                     , p [ class "profile-description" ]
                         [ case profile.bio of
@@ -204,17 +202,30 @@ view_ loggedIn profile model =
                             text ""
 
                 Just privateKey ->
-                    button
-                        [ classList
-                            [ ( "key-button", True )
-                            , ( "circle-background", True )
-                            , ( "circle-background--primary", True )
+                    div []
+                        [ button
+                            [ classList
+                                [ ( "key-button", True )
+                                , ( "circle-background", True )
+                                , ( "circle-background--primary", True )
+                                ]
+                            , onClick (ClickedViewPrivateKey privateKey)
+                            , type_ "button"
+                            , title (t loggedIn.shared.translations "profile.actions.viewPrivatekey")
                             ]
-                        , onClick (ClickedViewPrivateKey privateKey)
-                        , type_ "button"
-                        , title (t loggedIn.shared.translations "profile.actions.viewPrivatekey")
+                            [ Icon.key "" ]
+                        , button
+                            [ classList
+                                [ ( "key-button", True )
+                                , ( "circle-background", True )
+                                , ( "circle-background--primary", True )
+                                ]
+                            , onClick DownloadPdf
+                            , type_ "button"
+                            , title (t loggedIn.shared.translations "profile.actions.viewPrivatekey")
+                            ]
+                            [ Icon.key "" ]
                         ]
-                        [ Icon.key "" ]
             , button
                 [ classList
                     [ ( "edit-button", True )
@@ -543,6 +554,7 @@ type Msg
     | CompletedPushUpload (Result (Graphql.Http.Error ()) ())
     | GotPushPreference Bool
     | CheckPushPref
+    | DownloadPdf
 
 
 update : Msg -> Model -> LoggedIn.Model -> UpdateResult
@@ -565,7 +577,7 @@ update msg model loggedIn =
         ClickedEdit ->
             case model.status of
                 Loaded profile ->
-                    { model | status = Editing profile NotAsked (Account.profileToForm profile) }
+                    { model | status = Editing profile NotAsked (Profile.profileToForm profile) }
                         |> UR.init
 
                 _ ->
@@ -588,7 +600,7 @@ update msg model loggedIn =
                         |> UR.init
                         |> UR.addCmd
                             (Api.Graphql.mutation loggedIn.shared
-                                (Account.profileMutation profile.accountName form)
+                                (Profile.mutation profile.account form)
                                 CompletedProfileLoad
                             )
 
@@ -795,8 +807,16 @@ update msg model loggedIn =
                         Encode.object [ ( "name", Encode.string "checkPushPref" ) ]
                     }
 
-
-
+        DownloadPdf ->
+            model
+                |> UR.init
+                |> UR.addPort
+                    { responseAddress = Ignored
+                    , responseData = Encode.null
+                    , data =
+                        Encode.object
+                            [ ( "name", Encode.string "printAuthPdf" ) ]
+                    }
 
 
 updateForm : (ProfileForm -> ProfileForm) -> UpdateResult -> UpdateResult
@@ -973,3 +993,6 @@ msgToString msg =
 
         CheckPushPref ->
             [ "CheckPushPref" ]
+
+        DownloadPdf ->
+            [ "DownloadPdf" ]

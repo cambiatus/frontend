@@ -1,4 +1,21 @@
-module UpdateResult exposing (UpdateResult, addCmd, addExt, addLog, addPort, init, logDebugValue, logDecodeError, logGraphqlError, logHttpError, logImpossible, map, mapModel, resultToString, setModel, toModelCmd)
+module UpdateResult exposing
+    ( UpdateResult
+    , addCmd
+    , addExt
+    , addLog
+    , addPort
+    , init
+    , logDebugValue
+    , logDecodeError
+    , logGraphqlError
+    , logHttpError
+    , logImpossible
+    , map
+    , mapModel
+    , resultToString
+    , setModel
+    , toModelCmd
+    )
 
 {- This library allows us to have an observable update function which allows us to transmit message from
    various model to and fro other modules including the Main module. This enables us to request side effects from within modules
@@ -59,7 +76,6 @@ map toModel toMsg handleExtMsg updateResult =
         , logs = List.map (Log.map toMsg) updateResult.logs
         }
         updateResult.exts
-
 
 
 {-| Converts the model in an UpdateResult from one model to another, accepts a function that does the conversion and after the conversion it applies

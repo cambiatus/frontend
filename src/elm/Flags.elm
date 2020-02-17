@@ -1,16 +1,22 @@
-module Flags exposing (AuthPreference(..), Endpoints, Environment(..), Flags, decode, default, defaultEndpoints)
+module Flags exposing
+    ( Endpoints
+    , Environment(..)
+    , Flags
+    , decode
+    , default
+    , defaultEndpoints
+    )
 
 import Eos
 import Eos.Account as Eos
 import Json.Decode as Decode exposing (Decoder, int, nullable, string)
-import Json.Decode.Pipeline as Decode exposing (hardcoded, optional, required)
+import Json.Decode.Pipeline as Decode exposing (optional, required)
 
 
 type alias Flags =
     { environment : Environment
     , language : String
     , maybeAccount : Maybe ( Eos.Name, Bool )
-    , authPreference : Maybe AuthPreference
     , endpoints : Endpoints
     , logo : String
     , logoMobile : String
@@ -24,7 +30,6 @@ default =
     { environment = Development
     , language = "en-US"
     , maybeAccount = Nothing
-    , authPreference = Nothing
     , endpoints = defaultEndpoints
     , logo = "/images/logo-cambiatus.png"
     , logoMobile = "/images/logo-cambiatus-mobile.svg"
@@ -46,7 +51,6 @@ decode =
                     (nullable Decode.bool)
                     Nothing
             )
-        |> optional "authPreference" decodeAuthPreference Nothing
         |> required "endpoints" decodeEndpoints
         |> required "logo" Decode.string
         |> required "logoMobile" Decode.string
@@ -99,27 +103,3 @@ decodeEnvironment =
                 Production
         )
         string
-
-
-type AuthPreference
-    = Pin
-    | Scatter
-
-
-decodeAuthPreference : Decoder (Maybe AuthPreference)
-decodeAuthPreference =
-    Decode.map
-        (\s ->
-            case s of
-                "pin" ->
-                    Just Pin
-
-                "scatter" ->
-                    Just Scatter
-
-                _ ->
-                    Nothing
-        )
-        Decode.string
-        |> nullable
-        |> Decode.map (Maybe.withDefault Nothing)

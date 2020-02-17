@@ -1,10 +1,42 @@
-module Page exposing (ExternalMsg(..), Msg, Session(..), errorToString, fullPageError, fullPageGraphQLError, fullPageLoading, fullPageNotFound, init, isLoggedIn, jsAddressToMsg, labelWithTooltip, loading, login, logout, msgToString, onFileChange, subscriptions, toShared, update, viewButtonNew, viewCardEmpty, viewCardList, viewDateDistance, viewGuest, viewLoggedIn, viewMaxTwoColumn, viewMenuFilter, viewMenuFilterButton, viewMenuFilterTabButton, viewMenuTab, viewTitle)
+module Page exposing
+    ( ExternalMsg(..)
+    , Msg
+    , Session(..)
+    , errorToString
+    , fullPageError
+    , fullPageGraphQLError
+    , fullPageLoading
+    , fullPageNotFound
+    , init
+    , isLoggedIn
+    , jsAddressToMsg
+    , labelWithTooltip
+    , loading
+    , login
+    , logout
+    , msgToString
+    , onFileChange
+    , subscriptions
+    , toShared
+    , update
+    , viewButtonNew
+    , viewCardEmpty
+    , viewCardList
+    , viewDateDistance
+    , viewGuest
+    , viewHeader
+    , viewLoggedIn
+    , viewMaxTwoColumn
+    , viewMenuFilter
+    , viewMenuFilterButton
+    , viewMenuFilterTabButton
+    , viewMenuTab
+    , viewTitle
+    )
 
-import Account exposing (Profile)
 import Asset.Icon as Icon
 import Auth
 import Browser.Navigation as Nav
-import Community exposing (ActionVerification)
 import DateDistance
 import File exposing (File)
 import Flags exposing (Flags)
@@ -15,9 +47,11 @@ import Html.Attributes exposing (..)
 import Html.Events exposing (on)
 import Http
 import I18Next exposing (Delims(..), Translations)
+import Icons
 import Json.Decode as Decode exposing (Decoder)
 import Json.Encode as Encode exposing (Value)
 import Ports
+import Profile exposing (Profile)
 import Route exposing (Route)
 import Session.Guest as Guest
 import Session.LoggedIn as LoggedIn
@@ -46,13 +80,6 @@ init flags navKey =
             UR.init (Guest model)
                 |> UR.addCmd (Cmd.map GotGuestMsg cmd)
                 |> UR.addCmd (fetchTranslations shared shared.language)
-                |> UR.addPort
-                    { responseAddress = GotScatterAvailability False
-                    , responseData = Encode.null
-                    , data =
-                        Encode.object
-                            [ ( "name", Encode.string "checkScatterAvailability" ) ]
-                    }
 
         Just ( accountName, _ ) ->
             let
@@ -62,17 +89,10 @@ init flags navKey =
             UR.init (LoggedIn model)
                 |> UR.addCmd (Cmd.map GotLoggedInMsg cmd)
                 |> UR.addCmd (fetchTranslations shared shared.language)
-                |> UR.addPort
-                    { responseAddress = GotScatterAvailability False
-                    , responseData = Encode.null
-                    , data =
-                        Encode.object
-                            [ ( "name", Encode.string "checkScatterAvailability" ) ]
-                    }
 
 
 fetchTranslations : Shared -> String -> Cmd Msg
-fetchTranslations shared language =
+fetchTranslations _ language =
     CompletedLoadTranslation language
         |> Translation.get language
 
@@ -225,6 +245,21 @@ viewTitle text_ =
         [ text text_ ]
 
 
+viewHeader : LoggedIn.Model -> String -> Route -> Html msg
+viewHeader ({ shared } as loggedIn) title route =
+    div [ class "w-full h-16 flex px-4 items-center bg-indigo-500" ]
+        [ a
+            [ class "flex absolute items-center"
+            , Route.href route
+            ]
+            [ Icons.back ""
+            , p [ class "ml-2 text-white text-sm" ]
+                [ text (I18Next.t shared.translations "back") ]
+            ]
+        , p [ class "mx-auto text-white" ] [ text title ]
+        ]
+
+
 viewButtonNew : String -> Route -> Html msg
 viewButtonNew title_ route =
     a
@@ -342,8 +377,7 @@ type ExternalMsg
 
 
 type Msg
-    = GotScatterAvailability Bool
-    | CompletedLoadTranslation String (Result Http.Error Translations)
+    = CompletedLoadTranslation String (Result Http.Error Translations)
     | GotGuestMsg Guest.Msg
     | GotLoggedInMsg LoggedIn.Msg
 
@@ -351,11 +385,6 @@ type Msg
 update : Msg -> Session -> UpdateResult
 update msg session =
     case ( msg, session ) of
-        ( GotScatterAvailability isAvailable, _ ) ->
-            Shared.gotScatterAvailability isAvailable
-                |> updateShared session
-                |> UR.init
-
         ( CompletedLoadTranslation lang (Ok transl), _ ) ->
             Shared.loadTranslation (Ok ( lang, transl ))
                 |> updateShared session
@@ -445,13 +474,6 @@ toShared session =
 jsAddressToMsg : List String -> Value -> Maybe Msg
 jsAddressToMsg addr val =
     case addr of
-        "GotScatterAvailability" :: [] ->
-            Decode.decodeValue
-                (Decode.field "isAvailable" Decode.bool)
-                val
-                |> Result.map GotScatterAvailability
-                |> Result.toMaybe
-
         "GotLoggedInMsg" :: remainAddress ->
             LoggedIn.jsAddressToMsg remainAddress val
                 |> Maybe.map GotLoggedInMsg
@@ -463,9 +485,6 @@ jsAddressToMsg addr val =
 msgToString : Msg -> List String
 msgToString msg =
     case msg of
-        GotScatterAvailability _ ->
-            [ "GotScatterAvailability" ]
-
         CompletedLoadTranslation _ r ->
             [ "CompletedLoadTranslation", UR.resultToString r ]
 

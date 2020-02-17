@@ -1,9 +1,25 @@
-module Account exposing (Profile, ProfileCreate, ProfileForm, accountSelectionSet, decodeProfile, emptyProfileForm, encodeProfileChat, encodeProfileCreate, encodeProfileForm, encodeProfileLogin, maxPinChars, minPinChars, pinValidationAttrs, profileMutation, profileQuery, profileToForm, username)
-
-{-| The logged-in user currently viewing this page. It stores enough data to
-be able to render the menu bar (username and avatar), along with Cred so it's
-impossible to have an Account if you aren't logged in.
--}
+module Profile exposing
+    ( Profile
+    , ProfileCreate
+    , ProfileForm
+    , decode
+    , emptyProfileForm
+    , encodeProfileChat
+    , encodeProfileCreate
+    , encodeProfileForm
+    , encodeProfileLogin
+    , maxPinChars
+    , minPinChars
+    , mutation
+    , pinValidationAttrs
+    , profileToForm
+    , query
+    , selectionSet
+    , username
+    , view
+    , viewProfileName
+    , viewProfileNameTag
+    )
 
 import Avatar exposing (Avatar)
 import Bespiral.Mutation
@@ -16,10 +32,11 @@ import Graphql.Operation exposing (RootMutation, RootQuery)
 import Graphql.OptionalArgument exposing (OptionalArgument(..))
 import Graphql.SelectionSet as SelectionSet exposing (SelectionSet, with)
 import Html exposing (..)
-import Html.Attributes exposing (maxlength, minlength, pattern, title, type_)
+import Html.Attributes exposing (class, maxlength, minlength, pattern, title, type_)
+import I18Next exposing (Translations, t)
 import Json.Decode as Decode exposing (Decoder, list, nullable, string)
 import Json.Decode.Pipeline as Decode exposing (optional, required)
-import Json.Encode as Encode exposing (Value)
+import Json.Encode as Encode
 import Time exposing (Posix)
 
 
@@ -32,7 +49,7 @@ type alias Profile =
     , email : Maybe String
     , bio : Maybe String
     , localization : Maybe String
-    , accountName : Eos.Name
+    , account : Eos.Name
     , avatar : Avatar
     , interests : List String
     , chatUserId : Maybe String
@@ -41,8 +58,8 @@ type alias Profile =
     }
 
 
-accountSelectionSet : SelectionSet Profile Bespiral.Object.Profile
-accountSelectionSet =
+selectionSet : SelectionSet Profile Bespiral.Object.Profile
+selectionSet =
     SelectionSet.succeed Profile
         |> with User.name
         |> with User.email
@@ -65,8 +82,8 @@ accountSelectionSet =
         |> SelectionSet.hardcoded (Time.millisToPosix 0)
 
 
-decodeProfile : Decoder Profile
-decodeProfile =
+decode : Decoder Profile
+decode =
     Decode.succeed Profile
         |> optional "name" (nullable string) Nothing
         |> optional "email" (nullable string) Nothing
@@ -91,22 +108,22 @@ decodeInterests =
             )
 
 
-profileQuery : Eos.Name -> SelectionSet (Maybe Profile) RootQuery
-profileQuery account =
+query : Eos.Name -> SelectionSet (Maybe Profile) RootQuery
+query account =
     let
         nameString =
             Eos.nameToString account
     in
     Bespiral.Query.profile
         { input = { account = Present nameString } }
-        accountSelectionSet
+        selectionSet
 
 
-profileMutation : Eos.Name -> ProfileForm -> SelectionSet (Maybe Profile) RootMutation
-profileMutation accountName form =
+mutation : Eos.Name -> ProfileForm -> SelectionSet (Maybe Profile) RootMutation
+mutation account form =
     let
         nameString =
-            Eos.nameToString accountName
+            Eos.nameToString account
 
         interestString =
             form.interest
@@ -129,7 +146,7 @@ profileMutation accountName form =
             , avatar = avatarInput
             }
         }
-        accountSelectionSet
+        selectionSet
 
 
 
@@ -157,12 +174,12 @@ encodeProfileChat profile =
 
 
 encodeProfileLogin : Eos.Name -> Encode.Value
-encodeProfileLogin accountName =
+encodeProfileLogin account =
     let
-        account =
-            Encode.object [ ( "account", Eos.encodeName accountName ) ]
+        accountEncoded =
+            Encode.object [ ( "account", Eos.encodeName account ) ]
     in
-    Encode.object [ ( "user", account ) ]
+    Encode.object [ ( "user", accountEncoded ) ]
 
 
 
@@ -172,7 +189,7 @@ encodeProfileLogin accountName =
 type alias ProfileCreate =
     { name : String
     , email : String
-    , accountName : Eos.Name
+    , account : Eos.Name
     , invitationId : Maybe String
     }
 
@@ -183,7 +200,7 @@ encodeProfileCreate form =
         user =
             [ Just ( "name", Encode.string form.name )
             , Just ( "email", Encode.string form.email )
-            , Just ( "account", Eos.encodeName form.accountName )
+            , Just ( "account", Eos.encodeName form.account )
             , Maybe.map (\invId -> ( "invitation_id", Encode.string invId )) form.invitationId
             ]
                 |> List.filterMap identity
@@ -235,13 +252,13 @@ profileToForm profile =
 
 
 encodeProfileForm : Eos.Name -> ProfileForm -> Encode.Value
-encodeProfileForm accountName form =
+encodeProfileForm account form =
     Encode.object
         [ ( "name", Encode.string form.name )
         , ( "email", Encode.string form.email )
         , ( "bio", Encode.string form.bio )
         , ( "localization", Encode.string form.localization )
-        , ( "account", Eos.encodeName accountName )
+        , ( "account", Eos.encodeName account )
         , ( "interests"
           , Encode.list Encode.string form.interests
           )
@@ -256,10 +273,10 @@ username : Profile -> String
 username profile =
     case Maybe.map String.trim profile.userName of
         Nothing ->
-            Eos.nameToString profile.accountName
+            Eos.nameToString profile.account
 
         Just "" ->
-            Eos.nameToString profile.accountName
+            Eos.nameToString profile.account
 
         Just userName ->
             userName
@@ -284,3 +301,40 @@ pinValidationAttrs =
     , Html.Attributes.attribute "inputmode" "numeric"
     , title "Use only numbers."
     ]
+
+
+
+-- View profile
+
+
+view : String -> Eos.Name -> Translations -> Profile -> Html msg
+view ipfsUrl loggedInAccount translations profile =
+    div [ class "flex flex-col items-center" ]
+        [ div [ class "w-10 h-10 rounded-full" ]
+            [ Avatar.view ipfsUrl profile.avatar "w-10 h-10"
+            ]
+        , div [ class "mt-2" ]
+            [ viewProfileNameTag loggedInAccount profile translations ]
+        ]
+
+
+viewProfileNameTag : Eos.Name -> Profile -> Translations -> Html msg
+viewProfileNameTag loggedInAccount profile translations =
+    div [ class "flex items-center bg-black rounded p-1" ]
+        [ p [ class "mx-2 pt-caption uppercase font-medium text-white text-caption" ]
+            [ viewProfileName loggedInAccount profile translations ]
+        ]
+
+
+viewProfileName : Eos.Name -> Profile -> Translations -> Html msg
+viewProfileName loggedInAccount profile translations =
+    if profile.account == loggedInAccount then
+        text (I18Next.t translations "transfer_result.you")
+
+    else
+        case profile.userName of
+            Just u ->
+                text u
+
+            Nothing ->
+                Eos.viewName profile.account

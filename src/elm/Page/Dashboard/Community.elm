@@ -1,6 +1,5 @@
 module Page.Dashboard.Community exposing (Model, Msg, UpdateResult, init, jsAddressToMsg, msgToString, update, viewCard, viewTableRow)
 
-import Account exposing (Profile)
 import Api
 import Api.Graphql
 import Asset.Icon as Icon
@@ -20,6 +19,7 @@ import Json.Encode as Encode exposing (Value)
 import List.Extra as List
 import Log
 import Ports
+import Profile exposing (Profile)
 import Route
 import Select
 import Session.LoggedIn as LoggedIn exposing (External(..))
@@ -102,8 +102,6 @@ viewCard loggedIn index model =
 
         Transferring (SendingTransferFailed f) ->
             viewCardFailure loggedIn
-
-
 
 
 viewCardFailure : LoggedIn.Model -> Html Msg
@@ -189,12 +187,12 @@ viewCardBalance loggedIn ({ balance } as model) =
                 [ text_ "account.my_wallet.balances.current" ]
             , div [ class "flex flex-col py-3 w-full" ]
                 [ a
-                    [ class "button button-secondary button-small text-xs font-medium w-full mb-4"
+                    [ class "button button-secondary button-sm text-xs font-medium w-full mb-4"
                     , Route.href (Route.Community balance.asset.symbol)
                     ]
                     [ text_ "menu.explore" ]
                 , button
-                    [ class "button button-primary button-small text-xs w-full"
+                    [ class "button button-primary button-sm text-xs w-full"
                     , onClick ClickedTransfer
                     ]
                     [ text (t loggedIn.shared.translations "account.my_wallet.balances.button") ]
@@ -434,7 +432,7 @@ viewAutoCompleteItem shared profile =
             [ Avatar.view ipfsUrl profile.avatar "h-7 w-7" ]
         , div [ class "flex flex-col font-sans border-b border-gray-500 pb-3 w-full" ]
             [ span [ class "text-black text-body leading-loose" ]
-                [ text (Eos.nameToString profile.accountName) ]
+                [ text (Eos.nameToString profile.account) ]
             , span [ class "leading-caption uppercase text-green text-caption" ]
                 [ case profile.userName of
                     Just name ->
@@ -476,8 +474,8 @@ selectConfig : Shared -> Bool -> Select.Config Msg Profile
 selectConfig shared isDisabled =
     Select.newConfig
         { onSelect = OnSelect
-        , toLabel = \p -> Eos.nameToString p.accountName
-        , filter = filter 2 (\p -> Eos.nameToString p.accountName)
+        , toLabel = \p -> Eos.nameToString p.account
+        , filter = filter 2 (\p -> Eos.nameToString p.account)
         }
         |> Select.withInputClass "input h-12 w-full border-none placeholder-gray-900"
         |> Select.withClear False
@@ -563,7 +561,7 @@ update loggedIn msg model =
                 ( Transferring (EditingTransfer form), True ) ->
                     let
                         account =
-                            Maybe.map .accountName form.selectedProfile
+                            Maybe.map .account form.selectedProfile
                                 |> Maybe.withDefault (Eos.stringToName "")
                     in
                     SendingTransfer form

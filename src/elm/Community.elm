@@ -1,6 +1,39 @@
-module Community exposing (Action, ActionVerification, ActionVerificationsResponse, Balance, ClaimResponse, Community, CreateCommunityData, CreateTokenData, DashboardInfo, Metadata, Objective, ObjectiveId(..), Transaction, Validator, Verification(..), Verifiers, WithObjectives, claimSelectionSet, communitiesQuery, communityQuery, createCommunityData, decodeBalance, decodeObjectiveId, decodeTransaction, encodeClaimAction, encodeCreateActionAction, encodeCreateCommunityData, encodeCreateObjectiveAction, encodeCreateTokenData, encodeObjectiveId, encodeUpdateLogoData, encodeUpdateObjectiveAction, logoBackground, logoTitleQuery, logoUrl, newCommunitySubscription, toVerifications, unwrapObjectiveId)
+module Community exposing
+    ( Action
+    , ActionVerification
+    , ActionVerificationsResponse
+    , Balance
+    , ClaimResponse
+    , Community
+    , CreateCommunityData
+    , CreateTokenData
+    , DashboardInfo
+    , Metadata
+    , Objective
+    , Transaction
+    , Verification(..)
+    , Verifiers
+    , WithObjectives
+    , claimSelectionSet
+    , communitiesQuery
+    , communityQuery
+    , createCommunityData
+    , decodeBalance
+    , decodeTransaction
+    , encodeClaimAction
+    , encodeCreateActionAction
+    , encodeCreateCommunityData
+    , encodeCreateObjectiveAction
+    , encodeCreateTokenData
+    , encodeUpdateLogoData
+    , encodeUpdateObjectiveAction
+    , logoBackground
+    , logoTitleQuery
+    , logoUrl
+    , newCommunitySubscription
+    , toVerifications
+    )
 
-import Account exposing (Profile, accountSelectionSet)
 import Api.Relay exposing (MetadataConnection, PaginationArgs)
 import Bespiral.Enum.VerificationType exposing (VerificationType(..))
 import Bespiral.Object
@@ -9,7 +42,6 @@ import Bespiral.Object.Check as Check
 import Bespiral.Object.Claim as Claim exposing (ChecksOptionalArguments)
 import Bespiral.Object.Community as Community
 import Bespiral.Object.Objective as Objective
-import Bespiral.Object.Validator
 import Bespiral.Query as Query
 import Bespiral.Scalar exposing (DateTime(..))
 import Bespiral.Subscription as Subscription
@@ -18,13 +50,14 @@ import Eos.Account as Eos
 import Graphql.Operation exposing (RootQuery, RootSubscription)
 import Graphql.OptionalArgument exposing (OptionalArgument(..))
 import Graphql.SelectionSet as SelectionSet exposing (SelectionSet, with)
-import Html exposing (Html)
+import Html
 import Html.Attributes
 import Json.Decode as Decode exposing (Decoder, string)
 import Json.Decode.Pipeline as Decode exposing (required)
 import Json.Encode as Encode exposing (Value)
+import Profile exposing (Profile)
 import Time exposing (Posix)
-import Transfer exposing (ConnectionTransfer, Transfer, metadataConnectionSelectionSet, transferConnectionSelectionSet)
+import Transfer exposing (ConnectionTransfer, metadataConnectionSelectionSet, transferConnectionSelectionSet)
 import Utils
 import View.Tag as Tag
 
@@ -100,7 +133,7 @@ dashboardSelectionSet =
     SelectionSet.succeed DashboardInfo
         |> with Community.name
         |> with Community.logo
-        |> with (Community.members accountSelectionSet)
+        |> with (Community.members Profile.selectionSet)
 
 
 communitySelectionSet : (PaginationArgs -> PaginationArgs) -> SelectionSet Community Bespiral.Object.Community
@@ -114,7 +147,7 @@ communitySelectionSet paginateArgs =
         |> with Community.inviterReward
         |> with Community.invitedReward
         |> with Community.memberCount
-        |> with (Community.members accountSelectionSet)
+        |> with (Community.members Profile.selectionSet)
         |> with
             (Community.transfers
                 paginateArgs
@@ -211,42 +244,20 @@ logoPlaceholder ipfsUrl =
 
 
 type alias Objective =
-    { id : ObjectiveId
+    { id : Int
     , description : String
     , creator : Eos.Name
     , actions : List Action
     }
 
 
-type ObjectiveId
-    = ObjectiveId Int
-
-
 objectiveSelectionSet : SelectionSet Objective Bespiral.Object.Objective
 objectiveSelectionSet =
     SelectionSet.succeed Objective
-        |> with
-            (Objective.id
-                |> SelectionSet.map ObjectiveId
-            )
+        |> with Objective.id
         |> with Objective.description
         |> with (Eos.nameSelectionSet Objective.creatorId)
         |> with (Objective.actions identity actionSelectionSet)
-
-
-decodeObjectiveId : Decoder ObjectiveId
-decodeObjectiveId =
-    Decode.map ObjectiveId Decode.int
-
-
-encodeObjectiveId : ObjectiveId -> Value
-encodeObjectiveId (ObjectiveId i) =
-    Encode.int i
-
-
-unwrapObjectiveId : ObjectiveId -> Int
-unwrapObjectiveId (ObjectiveId i) =
-    i
 
 
 type alias CreateObjectiveAction =
@@ -286,42 +297,36 @@ encodeUpdateObjectiveAction c =
 
 
 type alias Action =
-    { description : String
+    { id : Int
+    , description : String
     , reward : Float
     , verificationReward : Float
     , creator : Eos.Name
-    , validators : List Validator
+    , validators : List Profile
     , usages : Int
     , usagesLeft : Int
     , deadline : Maybe DateTime
     , verificationType : VerificationType
-    , id : Int
+    , verifications : Int
+    , isCompleted : Bool
     }
-
-
-type alias Validator =
-    { validator : Profile }
 
 
 actionSelectionSet : SelectionSet Action Bespiral.Object.Action
 actionSelectionSet =
     SelectionSet.succeed Action
+        |> with Action.id
         |> with Action.description
         |> with Action.reward
         |> with Action.verifierReward
         |> with (Eos.nameSelectionSet Action.creatorId)
-        |> with (Action.validators validatorSelectionSet)
+        |> with (Action.validators Profile.selectionSet)
         |> with Action.usages
         |> with Action.usagesLeft
         |> with Action.deadline
         |> with Action.verificationType
-        |> with Action.id
-
-
-validatorSelectionSet : SelectionSet Validator Bespiral.Object.Validator
-validatorSelectionSet =
-    SelectionSet.succeed Validator
-        |> with (Bespiral.Object.Validator.validator accountSelectionSet)
+        |> with Action.verifications
+        |> with Action.isCompleted
 
 
 type Verification
@@ -340,32 +345,38 @@ type alias Verifiers =
 
 
 type alias CreateActionAction =
-    { objective_id : ObjectiveId
+    { actionId : Int
+    , objectiveId : Int
     , description : String
     , reward : String
-    , verifier_reward : String
-    , creator : Eos.Name
+    , verifierReward : String
     , deadline : Int
-    , usages : Int
-    , verifications : Int
-    , verification_type : String
-    , validators_str : String
+    , usages : String
+    , usagesLeft : String
+    , verifications : String
+    , verificationType : String
+    , validatorsStr : String
+    , isCompleted : Int
+    , creator : Eos.Name
     }
 
 
 encodeCreateActionAction : CreateActionAction -> Value
 encodeCreateActionAction c =
     Encode.object
-        [ ( "objective_id", encodeObjectiveId c.objective_id )
+        [ ( "action_id", Encode.int c.actionId )
+        , ( "objective_id", Encode.int c.objectiveId )
         , ( "description", Encode.string c.description )
         , ( "reward", Encode.string c.reward )
-        , ( "verifier_reward", Encode.string c.verifier_reward )
-        , ( "creator", Eos.encodeName c.creator )
+        , ( "verifier_reward", Encode.string c.verifierReward )
         , ( "deadline", Encode.int c.deadline )
-        , ( "usages", Encode.int c.usages )
-        , ( "verifications", Encode.int c.verifications )
-        , ( "verification_type", Encode.string c.verification_type )
-        , ( "validators_str", Encode.string c.validators_str )
+        , ( "usages", Encode.string c.usages )
+        , ( "usages_left", Encode.string c.usagesLeft )
+        , ( "verifications", Encode.string c.verifications )
+        , ( "verification_type", Encode.string c.verificationType )
+        , ( "validators_str", Encode.string c.validatorsStr )
+        , ( "is_completed", Encode.int c.isCompleted )
+        , ( "creator", Eos.encodeName c.creator )
         ]
 
 

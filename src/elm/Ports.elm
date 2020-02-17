@@ -1,11 +1,17 @@
-port module Ports exposing (JavascriptOut, JavascriptOutModel, javascriptInPort, javascriptOut, javascriptOutCmd, loginWithScatter, mapAddress, onScatterLoginSub, storeLanguage)
+port module Ports exposing
+    ( JavascriptOut
+    , JavascriptOutModel
+    , javascriptInPort
+    , javascriptOut
+    , javascriptOutCmd
+    , mapAddress
+    , storeLanguage
+    )
 
-import Account
-import Community
 import Eos exposing (Symbol)
 import Eos.Account as Eos
 import Json.Decode as Decode
-import Json.Decode.Pipeline as Decode exposing (hardcoded, optional, required)
+import Json.Decode.Pipeline as Decode exposing (optional, required)
 import Json.Encode as Encode exposing (Value)
 
 
@@ -59,24 +65,10 @@ port javascriptInPort : (Value -> msg) -> Sub msg
 port storeLanguage : String -> Cmd msg
 
 
-port loginWithScatter : () -> Cmd msg
-
-
 
 --
 -- Callbacks
 --
-
-
-port onScatterLogin : (Value -> msg) -> Sub msg
-
-
-onScatterLoginSub : (Result String ( Eos.Name, Maybe String ) -> msg) -> Sub msg
-onScatterLoginSub toMsg =
-    onScatterLogin (decodeAccountNameOrStringError >> toMsg)
-
-
-
 -- Helpers
 
 

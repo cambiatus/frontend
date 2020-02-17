@@ -1,6 +1,5 @@
 module Session.Guest exposing (External(..), Model, Msg(..), Page(..), addAfterLoginRedirect, init, initModel, msgToString, subscriptions, update, view)
 
-import Account exposing (Profile)
 import Api
 import Asset.Icon as Icon
 import Browser.Events
@@ -13,6 +12,7 @@ import Icons
 import Json.Decode as Decode
 import Log
 import Ports
+import Profile exposing (Profile)
 import Route exposing (Route)
 import Session.Shared as Shared exposing (Shared)
 import Time

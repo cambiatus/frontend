@@ -1,6 +1,15 @@
-module Page.Community.Editor exposing (Model, Msg, initEdit, initNew, jsAddressToMsg, msgToString, subscriptions, update, view)
+module Page.Community.Editor exposing
+    ( Model
+    , Msg
+    , initEdit
+    , initNew
+    , jsAddressToMsg
+    , msgToString
+    , subscriptions
+    , update
+    , view
+    )
 
-import Account
 import Api
 import Api.Graphql
 import Asset.Icon as Icon
@@ -11,20 +20,18 @@ import Eos.Account as Eos
 import File exposing (File)
 import Graphql.Document
 import Graphql.Http
-import Html exposing (..)
+import Html exposing (Html, br, button, div, input, label, p, span, text, textarea)
 import Html.Attributes exposing (..)
-import Html.Events exposing (onClick, onInput, onSubmit, targetValue)
+import Html.Events exposing (onClick, onInput, onSubmit)
 import Http
 import I18Next
 import Json.Decode as Decode
 import Json.Encode as Encode exposing (Value, object, string)
 import List.Extra as List
-import Log
 import Page
-import Ports
 import Route
 import Session.LoggedIn as LoggedIn exposing (External(..))
-import Session.Shared as Shared exposing (Shared)
+import Session.Shared exposing (Shared)
 import UpdateResult as UR
 
 
@@ -33,7 +40,7 @@ import UpdateResult as UR
 
 
 initNew : LoggedIn.Model -> ( Model, Cmd Msg )
-initNew loggedIn =
+initNew _ =
     ( { status = EditingNew Dict.empty newForm
       }
     , Cmd.none
@@ -41,7 +48,7 @@ initNew loggedIn =
 
 
 initEdit : LoggedIn.Model -> Symbol -> ( Model, Cmd Msg )
-initEdit ({ shared } as loggedIn) symbol =
+initEdit { shared } symbol =
     ( { status = Loading symbol
       }
     , Api.Graphql.query shared (Community.communityQuery symbol) CompletedCommunityLoad
@@ -53,7 +60,7 @@ initEdit ({ shared } as loggedIn) symbol =
 
 
 subscriptions : Model -> Sub Msg
-subscriptions model =
+subscriptions _ =
     Sub.none
 
 
@@ -180,7 +187,7 @@ encodeForm loggedIn form =
 
 
 encodeFormHelper : String -> LoggedIn.Model -> Form -> FormStatus
-encodeFormHelper logoHash { shared, accountName } form =
+encodeFormHelper logoHash { accountName } form =
     let
         maybeSymbol =
             Eos.symbolFromString form.symbol

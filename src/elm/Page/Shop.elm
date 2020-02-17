@@ -1,6 +1,5 @@
 module Page.Shop exposing (Model, Msg, init, jsAddressToMsg, msgToString, subscriptions, update, view)
 
-import Account
 import Api
 import Api.Graphql
 import Asset.Icon as Icon
@@ -22,6 +21,7 @@ import Json.Encode as Encode
 import List.Extra as LE
 import Log
 import Page exposing (Session(..), viewMenuFilter, viewMenuFilterButton, viewMenuFilterTabButton, viewMenuTab)
+import Profile exposing (viewProfileNameTag)
 import Route exposing (Route)
 import Session.Guest as Guest
 import Session.LoggedIn as LoggedIn exposing (External(..))
@@ -31,7 +31,6 @@ import Task
 import Time exposing (Posix)
 import Transfer exposing (Transfer)
 import UpdateResult as UR
-import User exposing (viewNameTag)
 
 
 
@@ -165,7 +164,7 @@ view loggedIn model =
         Loaded cards ->
             div []
                 [ Lazy.lazy viewHeader loggedIn
-                , div [ class "justify-center px-4" ]
+                , div [ class "container mx-auto justify-center px-4" ]
                     [ viewShopFilter loggedIn model.filter
                     , Lazy.lazy3 viewGrid loggedIn cards model
                     ]
@@ -175,21 +174,23 @@ view loggedIn model =
 viewHeader : LoggedIn.Model -> Html Msg
 viewHeader loggedIn =
     div [ class "w-full flex flex-wrap relative bg-indigo-500 p-4 lg:container lg:mx-auto lg:py-12" ]
-        [ div [ class "w-full lg:w-1/2" ]
-            [ p [ class "text-white w-full text-xl font-medium mb-4 lg:mx-8 lg:text-xs lg:font-light lg:mb-2 lg:uppercase" ]
-                [ text (t loggedIn.shared.translations "shop.title") ]
-            , p [ class "hidden lg:visible lg:flex text-white text-3xl lg:mx-8 lg:mb-4 font-medium" ]
-                [ text (t loggedIn.shared.translations "shop.subtitle") ]
-            , p [ class "hidden lg:visible lg:flex text-white lg:mx-8 font-light text-sm" ]
-                [ text (t loggedIn.shared.translations "shop.description") ]
-            , a
-                [ Route.href Route.NewSale
-                , class "button button-primary button-small w-full lg:w-64 lg:mx-8 lg:mt-6 lg:button-medium font-medium"
+        [ div [ class "flex w-full container mx-auto" ]
+            [ div [ class "w-1/2" ]
+                [ p [ class "text-white w-full text-xl font-medium mb-4 mx-8 text-xs font-light mb-2 uppercase" ]
+                    [ text (t loggedIn.shared.translations "shop.title") ]
+                , p [ class "hidden lg:visible lg:flex text-white text-3xl mx-8 mb-4 font-medium" ]
+                    [ text (t loggedIn.shared.translations "shop.subtitle") ]
+                , p [ class "hidden lg:visible lg:flex text-white mx-8 font-light text-sm" ]
+                    [ text (t loggedIn.shared.translations "shop.description") ]
+                , a
+                    [ Route.href Route.NewSale
+                    , class "button button-primary button-sm w-full lg:w-64 lg:mx-8 lg:mt-6 lg:button-medium font-medium"
+                    ]
+                    [ text (t loggedIn.shared.translations "shop.create_offer") ]
                 ]
-                [ text (t loggedIn.shared.translations "shop.create_offer") ]
-            ]
-        , div [ class "hidden lg:visible lg:flex lg:absolute lg:w-1/2 lg:right-0 lg:bottom-0" ]
-            [ img [ src "/images/shop.svg" ] []
+            , div [ class "hidden lg:visible lg:flex w-1/2 justify-center absolute right-0 bottom-0" ]
+                [ img [ src "/images/shop.svg" ] []
+                ]
             ]
         ]
 
@@ -201,9 +202,6 @@ viewShopFilter loggedIn filter =
             ( t loggedIn.shared.translations "shop.all_offers"
             , t loggedIn.shared.translations "shop.my_offers"
             )
-
-        decoder =
-            decodeTargetValueToFilter translations
 
         buttonClass =
             "w-1/2 lg:w-56 border border-purple-500 first:rounded-l last:rounded-r px-12 py-2 text-sm font-light text-gray"
@@ -233,22 +231,22 @@ viewShopFilter loggedIn filter =
 viewGrid : LoggedIn.Model -> List Card -> Model -> Html Msg
 viewGrid loggedIn cards model =
     let
-        v_ viewFn index card =
-            viewFn model loggedIn index card
+        v_ viewFn card =
+            viewFn model loggedIn card
     in
     div [ class "flex flex-wrap -mx-2" ]
-        (List.indexedMap
-            (\index card ->
+        (List.map
+            (\card ->
                 case card.state of
                     ViewingCard ->
-                        v_ viewCard index card
+                        v_ viewCard card
             )
             cards
         )
 
 
-viewCard : Model -> LoggedIn.Model -> Int -> Card -> Html Msg
-viewCard model ({ shared } as loggedIn) index card =
+viewCard : Model -> LoggedIn.Model -> Card -> Html Msg
+viewCard model ({ shared } as loggedIn) card =
     let
         image =
             Maybe.withDefault "" card.sale.image
@@ -279,9 +277,6 @@ viewCard model ({ shared } as loggedIn) index card =
 
             else
                 card.sale.title
-
-        creatorId =
-            Eos.nameToString card.sale.creatorId
     in
     a
         [ class "w-full sm:w-full md:w-1/2 lg:w-1/3 xl:w-1/4 px-2 mb-6"
@@ -293,7 +288,7 @@ viewCard model ({ shared } as loggedIn) index card =
                 ]
             , div [ class "px-4 pb-2 flex flex-wrap" ]
                 [ p [ class "font-medium pt-2 w-full" ] [ text card.sale.title ]
-                , viewNameTag loggedIn.accountName card.sale.creator shared.translations
+                , viewProfileNameTag loggedIn.accountName card.sale.creator shared.translations
                 , div [ class "h-16 w-full flex flex-wrap items-end" ]
                     [ if card.sale.units == 0 && card.sale.trackStock then
                         div [ class "w-full" ]
@@ -319,7 +314,8 @@ viewCard model ({ shared } as loggedIn) index card =
             ]
             [ div [ class "w-full relative bg-gray-500" ]
                 [ img [ class "w-full h-48 object-cover", src imageUrl ] []
-                , div [ class "absolute right-1 bottom-1 " ] [ User.view shared.endpoints.ipfs loggedIn.accountName shared.translations card.sale.creator ]
+                , div [ class "absolute right-1 bottom-1 " ]
+                    [ Profile.view shared.endpoints.ipfs loggedIn.accountName shared.translations card.sale.creator ]
                 ]
             , div [ class "w-full px-6 pt-4" ]
                 [ p [ class "text-xl" ] [ text title ]
@@ -350,38 +346,6 @@ viewCard model ({ shared } as loggedIn) index card =
         ]
 
 
-viewHeaderBackground : Session -> Card -> Html Msg
-viewHeaderBackground session card =
-    let
-        ipfsUrl =
-            getIpfsUrl session
-
-        shared =
-            case session of
-                LoggedIn a ->
-                    a.shared
-
-                Guest a ->
-                    a.shared
-
-        tr r_id replaces =
-            I18Next.tr shared.translations I18Next.Curly r_id replaces
-    in
-    div
-        [ class "shop__background"
-        , style "background-image"
-            ("url("
-                ++ Maybe.withDefault "/temp/44884525495_2e5c792dd2_z.jpg" (Maybe.map (\img -> ipfsUrl ++ "/" ++ img) card.sale.image)
-                ++ ")"
-            )
-        ]
-        [ span
-            [ class "sale__more__details"
-            ]
-            [ text "MORE DETAILS" ]
-        ]
-
-
 getIpfsUrl : Session -> String
 getIpfsUrl session =
     case session of
@@ -390,33 +354,6 @@ getIpfsUrl session =
 
         LoggedIn s ->
             s.shared.endpoints.ipfs
-
-
-getValidationMessage : Validation -> String
-getValidationMessage validation =
-    case validation of
-        Valid ->
-            ""
-
-        Invalid error ->
-            case error of
-                UnitsEmpty ->
-                    "Unit cannot be empty"
-
-                UnitTooLow ->
-                    "Unit is too low, must be at least 1"
-
-                UnitTooHigh ->
-                    "Not enough units available"
-
-                UnitNotOnlyNumbers ->
-                    "Only numbers are allowed"
-
-                MemoEmpty ->
-                    "Memo cannot be empty"
-
-                MemoTooLong ->
-                    "Memo is too long, max is 256 characters"
 
 
 
@@ -432,12 +369,8 @@ type Msg
     | GotTime Posix
     | CompletedSalesLoad (Result (Graphql.Http.Error (List Sale)) (List Sale))
     | ClickedSendTransfer Card Int
-    | ClickedCancelTransfer Int
     | ClickedMessages Int Eos.Name
-    | ClickedCloseMessages Int
     | ClickedFilter Filter
-    | EnteredMemo Int String
-    | EnteredQuantity Int String
     | TransferSuccess Int
     | CompletedLoadBalances (Result Http.Error (List Balance))
 
@@ -540,10 +473,6 @@ update msg model loggedIn =
             updateCard msg index (\card -> ( { card | state = ViewingCard }, [] )) (UR.init model)
                 |> UR.addExt UpdateBalances
 
-        ClickedCancelTransfer cardIndex ->
-            UR.init model
-                |> updateCardState msg cardIndex ViewingCard
-
         ClickedMessages cardIndex creatorId ->
             UR.init model
                 |> UR.addPort
@@ -556,10 +485,6 @@ update msg model loggedIn =
                             ]
                     }
 
-        ClickedCloseMessages cardIndex ->
-            UR.init model
-                |> updateCardState msg cardIndex ViewingCard
-
         ClickedFilter filter ->
             let
                 navKey =
@@ -571,49 +496,13 @@ update msg model loggedIn =
             UR.init model
                 |> UR.addCmd (Route.pushUrl navKey route)
 
-        EnteredQuantity cardIndex quantity ->
-            updateCard msg
-                cardIndex
-                (\card ->
-                    let
-                        form_ =
-                            card.form
-
-                        newForm =
-                            { form_ | unit = quantity }
-                                |> validateForm card.sale
-                    in
-                    ( { card
-                        | form = newForm
-                      }
-                    , []
-                    )
-                )
-                (UR.init model)
-
-        EnteredMemo cardIndex s ->
-            updateCard msg
-                cardIndex
-                (\card ->
-                    let
-                        form_ =
-                            card.form
-
-                        newForm =
-                            { form_ | memo = s }
-                                |> validateForm card.sale
-                    in
-                    ( { card | form = newForm }, [] )
-                )
-                (UR.init model)
-
         CompletedLoadBalances res ->
             case res of
                 Ok bals ->
                     { model | balances = bals }
                         |> UR.init
 
-                Err err ->
+                Err _ ->
                     model
                         |> UR.init
 
@@ -696,7 +585,7 @@ isFormValid form =
 
 
 jsAddressToMsg : List String -> Value -> Maybe Msg
-jsAddressToMsg addr val =
+jsAddressToMsg addr _ =
     case addr of
         "TransferSuccess" :: [ index ] ->
             case String.toInt index of
@@ -728,23 +617,11 @@ msgToString msg =
         TransferSuccess index ->
             [ "TransferSuccess", String.fromInt index ]
 
-        ClickedCancelTransfer _ ->
-            [ "ClickedCancelTransfer" ]
-
         ClickedMessages _ _ ->
             [ "ClickedMessages" ]
 
-        ClickedCloseMessages _ ->
-            [ "ClickedCloseMessages" ]
-
         ClickedFilter _ ->
             [ "ClickedFilter" ]
-
-        EnteredQuantity _ _ ->
-            [ "EnteredQuantity" ]
-
-        EnteredMemo _ _ ->
-            [ "EnteredMemo" ]
 
         CompletedLoadBalances _ ->
             [ "CompletedLoadBalances" ]

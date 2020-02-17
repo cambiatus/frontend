@@ -1,4 +1,18 @@
-module Transfer exposing (ConnectionTransfer, QueryTransfers, Transfer, communityFilter, encodeEosActionData, getTotalCount, getTransfers, metadataConnectionSelectionSet, transferConnectionSelectionSet, transferItemSelectionSet, transferQuery, transfersQuery, userFilter)
+module Transfer exposing
+    ( ConnectionTransfer
+    , QueryTransfers
+    , Transfer
+    , communityFilter
+    , encodeEosActionData
+    , getTotalCount
+    , getTransfers
+    , metadataConnectionSelectionSet
+    , transferConnectionSelectionSet
+    , transferItemSelectionSet
+    , transferQuery
+    , transfersQuery
+    , userFilter
+    )
 
 import Api.Relay exposing (Edge, MetadataConnection, PageConnection, PageInfo, PaginationArgs, pageInfoSelectionSet)
 import Avatar exposing (Avatar)
@@ -16,7 +30,7 @@ import Graphql.Operation exposing (RootQuery)
 import Graphql.OptionalArgument exposing (OptionalArgument(..))
 import Graphql.SelectionSet as SelectionSet exposing (SelectionSet, with)
 import Json.Encode as Encode exposing (Value)
-import User exposing (User)
+import Profile exposing (Profile)
 
 
 type TransferFilter
@@ -48,8 +62,8 @@ type alias CommunityArgs =
 
 type alias Transfer =
     { id : Int
-    , to : User
-    , from : User
+    , to : Profile
+    , from : Profile
     , value : Float
     , memo : Maybe String
     , symbol : Symbol
@@ -114,8 +128,8 @@ transferItemSelectionSet : SelectionSet Transfer Bespiral.Object.Transfer
 transferItemSelectionSet =
     SelectionSet.succeed Transfer
         |> with Bespiral.Object.Transfer.id
-        |> with (Bespiral.Object.Transfer.to User.selectionSet)
-        |> with (Bespiral.Object.Transfer.from User.selectionSet)
+        |> with (Bespiral.Object.Transfer.to Profile.selectionSet)
+        |> with (Bespiral.Object.Transfer.from Profile.selectionSet)
         |> with Bespiral.Object.Transfer.amount
         |> with Bespiral.Object.Transfer.memo
         |> with (Eos.symbolSelectionSet Bespiral.Object.Transfer.communityId)

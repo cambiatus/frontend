@@ -1,8 +1,6 @@
 module Page.Register exposing (Model, Msg, init, jsAddressToMsg, msgToString, subscriptions, update, view)
 
-import Account exposing (Profile)
 import Api
-import Api.Chat as Chat exposing (ChatPreferences)
 import Auth exposing (viewFieldLabel)
 import Browser.Dom as Dom
 import Char
@@ -17,6 +15,7 @@ import Json.Decode as Decode exposing (Decoder, Value)
 import Json.Decode.Pipeline as Decode
 import Json.Encode as Encode
 import List.Extra as LE
+import Profile exposing (Profile)
 import Route
 import Session.Guest as Guest exposing (External(..))
 import Session.Shared exposing (Shared)
@@ -382,8 +381,6 @@ digitInput position inputType { form } =
         []
 
 
-
-
 type alias Field =
     { translationSuffix : String
     , isDisabled : Bool
@@ -531,7 +528,6 @@ type Msg
     | AccountGenerated (Result Decode.Error AccountKeys)
     | CompletedCreateProfile AccountKeys (Result Http.Error Profile)
     | CompletedLoadProfile AccountKeys (Result Http.Error Profile)
-    | CompletedChatTranslation (Result (Graphql.Http.Error (Maybe ChatPreferences)) (Maybe ChatPreferences))
     | EnteredPin Int String
     | EnteredPinConf Int String
     | DownloadPdf
@@ -654,7 +650,7 @@ update maybeInvitation msg model guest =
                             Api.signUp guest.shared
                                 { name = model.form.username
                                 , email = model.form.email
-                                , accountName = accountKeys.accountName
+                                , account = accountKeys.accountName
                                 , invitationId = maybeInvitation
                                 }
                                 (CompletedCreateProfile accountKeys)
@@ -663,7 +659,7 @@ update maybeInvitation msg model guest =
                             Api.signUpWithInvitation guest.shared
                                 { name = model.form.username
                                 , email = model.form.email
-                                , accountName = accountKeys.accountName
+                                , account = accountKeys.accountName
                                 , invitationId = maybeInvitation
                                 }
                                 (CompletedCreateProfile accountKeys)
@@ -695,30 +691,13 @@ update maybeInvitation msg model guest =
 
         CompletedLoadProfile accountKeys (Ok profile) ->
             UR.init model
-                |> UR.addCmd (Chat.updateChatLanguage shared profile language CompletedChatTranslation)
                 |> UR.addCmd (Route.replaceUrl guest.shared.navKey Route.Dashboard)
                 |> UR.addExt (UpdatedGuest { guest | profile = Just profile })
-                |> UR.addPort
-                    { responseAddress = CompletedLoadProfile accountKeys (Ok profile)
-                    , responseData = Encode.null
-                    , data =
-                        Encode.object
-                            [ ( "name", Encode.string "chatCredentials" )
-                            , ( "container", Encode.string "chat-manager" )
-                            , ( "credentials", Account.encodeProfileChat profile )
-                            , ( "notificationAddress"
-                              , Encode.list Encode.string [ "GotPageMsg", "GotLoggedInMsg", "ReceivedNotification" ]
-                              )
-                            ]
-                    }
 
         CompletedLoadProfile _ (Err err) ->
             { model | problems = ServerError "Auth failed" :: model.problems }
                 |> UR.init
                 |> UR.logHttpError msg err
-
-        CompletedChatTranslation _ ->
-            UR.init model
 
         EnteredPin pos data ->
             let
@@ -1044,9 +1023,6 @@ msgToString msg =
 
         CompletedLoadProfile _ r ->
             [ "CompletedLoadProfile", UR.resultToString r ]
-
-        CompletedChatTranslation _ ->
-            [ "CompletedChatTranslation" ]
 
         EnteredPin _ _ ->
             [ "EnteredPin" ]
