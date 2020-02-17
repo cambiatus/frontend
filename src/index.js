@@ -127,8 +127,6 @@ function storePushPref (pref) {
   window.localStorage.setItem(PUSH_PREF, pref)
 }
 
-
-
 // STORE PIN
 
 async function storePin (data, pin) {
