@@ -435,7 +435,6 @@ async function handleJavascriptPort (arg) {
       devLog('=========================', 'logout')
       window.localStorage.removeItem(USER_KEY)
       window.localStorage.removeItem(AUTH_PREF_KEY)
-      attemptToLogout(arg.data.container)
       break
     }
     case 'requestPushPermission': {
