@@ -84,7 +84,7 @@
     "elm-webpack-loader": "^6.0.1",
     "eosjs": "^16.0.9",
     "eosjs-ecc": "^4.0.4",
-    "jspdf": "^1.5.3",
+    "pdfmake": "^0.1.64",
     "phoenix": "^1.4.10",
     "postcss": "^7.0.17",
     "postcss-cli": "^6.1.3",
