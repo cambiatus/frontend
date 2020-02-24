@@ -246,7 +246,7 @@ defaultVerificationReward : Validator String
 defaultVerificationReward =
     []
         |> greaterThanOrEqual 0
-        |> newValidator "" (\s -> Just s) True
+        |> newValidator "0" (\s -> Just s) True
 
 
 defaultMinVotes : Validator String

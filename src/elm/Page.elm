@@ -246,17 +246,19 @@ viewTitle text_ =
 
 
 viewHeader : LoggedIn.Model -> String -> Route -> Html msg
-viewHeader ({ shared } as loggedIn) title route =
+viewHeader { shared } title route =
     div [ class "w-full h-16 flex px-4 items-center bg-indigo-500" ]
-        [ a
-            [ class "flex absolute items-center"
-            , Route.href route
+        [ div [ class "flex container mx-auto" ]
+            [ a
+                [ class "flex items-center"
+                , Route.href route
+                ]
+                [ Icons.back ""
+                , p [ class "ml-2 text-white text-sm" ]
+                    [ text (I18Next.t shared.translations "back") ]
+                ]
+            , p [ class "mx-auto text-white" ] [ text title ]
             ]
-            [ Icons.back ""
-            , p [ class "ml-2 text-white text-sm" ]
-                [ text (I18Next.t shared.translations "back") ]
-            ]
-        , p [ class "mx-auto text-white" ] [ text title ]
         ]
 
 
