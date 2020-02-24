@@ -104,6 +104,7 @@ type Msg
     | GotSaveObjectiveResponse (Result Value String)
 
 
+initObjectiveForm : ObjectiveForm
 initObjectiveForm =
     { description = ""
     , save = NotAsked
@@ -129,26 +130,26 @@ view ({ shared } as loggedIn) model =
         Unauthorized ->
             text "not allowed to edit"
 
-        Loaded ({ symbol } as community) editStatus ->
+        Loaded { symbol } editStatus ->
             div []
                 [ Page.viewHeader loggedIn (t shared.translations "community.objectives.title") (Route.Objectives symbol)
                 , case editStatus of
                     NewObjective objForm ->
                         viewForm loggedIn objForm
 
-                    EditObjective objectiveId objForm ->
+                    EditObjective _ objForm ->
                         viewForm loggedIn objForm
                 ]
 
 
 viewForm : LoggedIn.Model -> ObjectiveForm -> Html Msg
-viewForm ({ shared } as loggedIn) objForm =
+viewForm { shared } objForm =
     let
         isDisabled =
             objForm.save == Saving
     in
     div [ class "bg-white w-full p-10" ]
-        [ div [ class "mx-auto" ]
+        [ div [ class "container mx-auto" ]
             [ Html.form
                 [ class "mb-10"
                 ]
