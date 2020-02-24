@@ -619,6 +619,14 @@ update msg model =
         ClickedLogout ->
             UR.init model
                 |> UR.addCmd (Route.replaceUrl shared.navKey Route.Logout)
+                |> UR.addPort
+                    { responseAddress = ClickedLogout
+                    , responseData = Encode.null
+                    , data =
+                        Encode.object
+                            [ ( "name", Encode.string "logout" )
+                            ]
+                    }
 
         EnteredSearch s ->
             UR.init { model | searchText = s }
