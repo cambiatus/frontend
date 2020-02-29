@@ -162,11 +162,6 @@ viewObjective ({ shared } as loggedIn) model community index objective =
                     (objective.actions
                         |> List.map (viewAction loggedIn model objective.id)
                     )
-                , a
-                    [ class "w-full button button-secondary button-sm"
-                    , Route.href (Route.EditObjective model.communityId objective.id)
-                    ]
-                    [ text_ "menu.edit" ]
                 ]
 
           else
