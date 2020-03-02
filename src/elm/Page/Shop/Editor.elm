@@ -1152,7 +1152,7 @@ getNumericValues : String -> String
 getNumericValues value =
     value
         |> String.toList
-        |> List.filter (\x -> Char.isDigit x)
+        |> List.filter Char.isDigit
         |> List.map String.fromChar
         |> String.join ""
 
