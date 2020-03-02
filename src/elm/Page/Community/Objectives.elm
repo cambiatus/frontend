@@ -289,8 +289,8 @@ viewAction ({ shared } as loggedIn) model objectiveId action =
                     text ""
                 ]
             ]
-        , div [ class "flex justify-between items-end py-8" ]
-            [ div []
+        , div [ class "flex justify-between items-end py-8 flex-col" ]
+            [ div [ class "w-full" ]
                 [ p [ class "input-label mb-4" ] [ text_ "community.actions.verifiers" ]
                 , if validationType == "AUTOMATIC" then
                     div [ class "flex items-center" ]
@@ -309,7 +309,7 @@ viewAction ({ shared } as loggedIn) model objectiveId action =
                         )
                 ]
             , a
-                [ class "button button-secondary button-sm"
+                [ class "button button-secondary button-sm w-full"
                 , Route.href (Route.EditAction model.communityId objectiveId action.id)
                 ]
                 [ text_ "menu.edit" ]
