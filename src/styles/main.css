@@ -105,6 +105,10 @@
     @apply form-input h-12;
 }
 
+.input-counter {
+    @apply text-purple-100 uppercase font-bold float-right mt-1;
+}
+
 .input-label {
     @apply text-green text-caption uppercase font-sans
 }
