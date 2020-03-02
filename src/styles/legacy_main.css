@@ -3778,14 +3778,6 @@ textarea.form-input {
     font-size: 20px;
 }
 
-.input-counter {
-    margin-top: 5px;
-    color: #9B4198;
-    font-weight: bold;
-    text-transform: uppercase;
-    text-align: right;
-}
-
 .input-symbol {
     font-size: 20px !important;
     letter-spacing: 5px;
