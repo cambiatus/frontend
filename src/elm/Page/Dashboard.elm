@@ -128,6 +128,7 @@ view loggedIn model =
                         [ text (profile.userName |> Maybe.withDefault (Eos.nameToString profile.account))
                         ]
                     ]
+                , viewInvitations loggedIn communities
                 , viewBalances loggedIn communities
                 , viewVerifications loggedIn.shared model
                 , viewSections loggedIn model
@@ -406,6 +407,15 @@ viewBalances loggedIn communities =
                     |> Html.map (GotDashCommunityMsg i)
             )
             communities
+        )
+
+
+viewInvitations : LoggedIn.Model -> List DashCommunity.Model -> Html Msg
+viewInvitations loggedIn balances =
+    div []
+        (List.indexedMap
+            (\i b -> DashCommunity.viewInvitationModal loggedIn b |> Html.map (GotDashCommunityMsg i))
+            balances
         )
 
 

@@ -722,7 +722,7 @@ viewClaimModal loggedIn model =
                 [ div [ class "modal-bg", onClick CloseClaimConfirmation ] []
                 , div [ class "modal-content" ]
                     [ div [ class "w-full" ]
-                        [ p [ class "font-sans w-full font-bold text-heading text-2xl mb-4" ]
+                        [ p [ class "w-full font-bold text-heading text-2xl mb-4" ]
                             [ text_ "community.claimAction.title" ]
                         , button
                             [ if not isLoading then

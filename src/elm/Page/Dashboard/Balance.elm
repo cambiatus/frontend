@@ -1,4 +1,4 @@
-module Page.Dashboard.Balance exposing (Model, Msg, UpdateResult, init, jsAddressToMsg, msgToString, update, viewCard)
+module Page.Dashboard.Balance exposing (Model, Msg, UpdateResult, init, jsAddressToMsg, msgToString, update, viewCard, viewInvitationModal)
 
 import Api
 import Api.Graphql
@@ -268,6 +268,55 @@ viewCardTransfer loggedIn ({ balance } as model) index f isDisabled =
         ]
 
 
+viewInvitationModal : LoggedIn.Model -> Model -> Html Msg
+viewInvitationModal { shared } model =
+    let
+        t s =
+            I18Next.t shared.translations s
+
+        text_ s =
+            text (t s)
+    in
+    case model.inviteModal of
+        Closed ->
+            text ""
+
+        _ ->
+            div [ class "modal container" ]
+                [ div [ class "modal-bg", onClick CloseInviteModal ] []
+                , div [ class "modal-content" ]
+                    [ div [ class "w-full" ]
+                        [ p [ class "text-2xl font-bold mb-4" ] [ text_ "community.invite.title" ]
+                        , button [ onClick CloseInviteModal ]
+                            [ Icons.close "absolute fill-current text-gray-400 top-0 right-0 mx-8 my-4" ]
+                        , case model.inviteModal of
+                            Closed ->
+                                text ""
+
+                            Loading ->
+                                div [ class "flex items-center justify-center" ]
+                                    [ div [ class "spinner spinner--delay" ] [] ]
+
+                            Failed err ->
+                                div []
+                                    [ div [ class "flex items-center justify-center text-heading text-red" ]
+                                        [ text err ]
+                                    , div [ class "w-full md:bg-gray-100 flex md:absolute rounded-b-lg md:inset-x-0 md:bottom-0 md:p-4 justify-center items-center" ]
+                                        [ button
+                                            [ class "button button-primary"
+                                            , onClick CloseInviteModal
+                                            ]
+                                            [ text "OK" ]
+                                        ]
+                                    ]
+
+                            Loaded ->
+                                text "loaded"
+                        ]
+                    ]
+                ]
+
+
 
 -- VIEW HELPERS
 
@@ -390,6 +439,7 @@ type Msg
     | OnSelect (Maybe Profile)
     | SelectMsg (Select.Msg Profile)
     | CreateInvite
+    | CloseInviteModal
     | CompletedInviteCreation (Result Http.Error ())
 
 
@@ -595,6 +645,10 @@ update ({ shared } as loggedIn) msg model =
                         |> Api.communityInvite shared model.balance.asset.symbol loggedIn.accountName
                     )
 
+        CloseInviteModal ->
+            UR.init
+                { model | inviteModal = Closed }
+
         CompletedInviteCreation (Ok ()) ->
             -- TODO set Image as visible
             model
@@ -682,6 +736,9 @@ msgToString msg =
 
         CreateInvite ->
             [ "CreateInvite" ]
+
+        CloseInviteModal ->
+            [ "CloseInviteModal" ]
 
         CompletedInviteCreation _ ->
             [ "CompletedInviteCreation" ]
