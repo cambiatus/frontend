@@ -248,7 +248,7 @@
       "transfers": "{{quantity}} Transferências"
     },
     "invite": {
-      "title": "Convide seus amigos e amigas",
+      "title": "Convide um amigo",
       "subtitle": "Convide seus amigos e amigas para {{community_title}}",
       "labels": {
         "emails": "Emails, separados por virgula"

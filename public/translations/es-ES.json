@@ -244,7 +244,7 @@
       "transfers": "{{quantity}} Transferencias"
     },
     "invite": {
-      "title": "Invita a tus amigas y amigos",
+      "title": "Invita a un amigo",
       "subtitle": "Invita a tus amigas y amigos a la comunidad {{community_title}}",
       "labels": {
         "emails": "Correos electrónicos, separados por comas"
