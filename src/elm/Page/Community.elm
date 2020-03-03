@@ -101,7 +101,7 @@ verificationHistorySelectionSet stringSym =
 
 
 subscriptions : Model -> Sub Msg
-subscriptions model =
+subscriptions _ =
     Sub.none
 
 
@@ -123,7 +123,7 @@ type alias Model =
 
 
 initModel : LoggedIn.Model -> Symbol -> Model
-initModel loggedIn symbol =
+initModel _ symbol =
     { date = Nothing
     , community = Loading
     , members = []
@@ -241,11 +241,6 @@ view loggedIn model =
                 , div [ class "container mx-auto px-4" ]
                     [ viewClaimModal loggedIn model
                     , viewMessageStatus loggedIn model
-                    , if LoggedIn.isAccount community.creator loggedIn then
-                        viewInvitation loggedIn model
-
-                      else
-                        div [] []
                     , if canEdit then
                         div [ class "flex justify-between items-center py-2 px-8 sm:px-6 bg-white rounded-lg mt-4" ]
                             [ div []
@@ -774,32 +769,6 @@ viewClaimModal loggedIn model =
             text ""
 
 
-viewInvitation : LoggedIn.Model -> Model -> Html Msg
-viewInvitation loggedIn model =
-    let
-        t s =
-            I18Next.t loggedIn.shared.translations s
-
-        text_ s =
-            text (t s)
-    in
-    div [ class "bg-white py-6 px-3 sm:px-6 rounded-lg mt-4 flex flex-wrap" ]
-        [ p [ class "w-full font-medium text-heading mb-4" ] [ text_ "community.invite.title" ]
-        , label [ class "input-label w-full" ] [ text_ "community.invite.labels.emails" ]
-        , input
-            [ class "input block w-4/5"
-            , placeholder (t "community.invite.placeholders.emails")
-            , onInput EnteredEmail
-            ]
-            []
-        , button
-            [ class "button button-secondary button-sm w-2/5 mt-2"
-            , onClick SubmitInvitation
-            ]
-            [ text_ "community.invite.submit" ]
-        ]
-
-
 
 -- SECTIONS
 
@@ -916,9 +885,6 @@ type Msg
     | ClaimAction Int
     | GotClaimActionResponse (Result Value String)
     | CompletedLoadActions (Result (Graphql.Http.Error ActionVerificationsResponse) ActionVerificationsResponse)
-    | EnteredEmail String
-    | SubmitInvitation
-    | CompletedSendInvite (Result Http.Error ())
 
 
 update : Msg -> Model -> LoggedIn.Model -> UpdateResult
@@ -1023,43 +989,6 @@ update msg model loggedIn =
             }
                 |> UR.init
 
-        EnteredEmail val ->
-            { model
-                | invitations = val
-            }
-                |> UR.init
-
-        SubmitInvitation ->
-            model
-                |> UR.init
-                |> UR.addCmd
-                    (CompletedSendInvite
-                        |> Api.communityInvite loggedIn.shared model.symbol loggedIn.accountName model.invitations
-                    )
-
-        CompletedSendInvite (Ok ()) ->
-            UR.init
-                { model
-                    | messageStatus =
-                        Success
-                            (I18Next.t
-                                loggedIn.shared.translations
-                                "community.invite.succeed"
-                            )
-                }
-
-        CompletedSendInvite (Err httpError) ->
-            UR.init
-                { model
-                    | messageStatus =
-                        Failure
-                            (I18Next.t
-                                loggedIn.shared.translations
-                                "community.invite.failed"
-                            )
-                }
-                |> UR.logHttpError msg httpError
-
 
 jsAddressToMsg : List String -> Value -> Maybe Msg
 jsAddressToMsg addr val =
@@ -1114,12 +1043,3 @@ msgToString msg =
 
         CompletedLoadActions _ ->
             [ "CompletedLoadActions" ]
-
-        EnteredEmail _ ->
-            [ "EnteredEmail" ]
-
-        SubmitInvitation ->
-            [ "SubmitInvitation" ]
-
-        CompletedSendInvite _ ->
-            [ "CompletedSendInvite" ]
