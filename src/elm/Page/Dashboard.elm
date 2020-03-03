@@ -26,7 +26,7 @@ import I18Next exposing (Delims(..), t)
 import Json.Decode exposing (Decoder, Value)
 import List.Extra as List
 import Page
-import Page.Dashboard.Community as DashCommunity
+import Page.Dashboard.Balance as DashCommunity
 import Route
 import Session.LoggedIn as LoggedIn exposing (External(..), ProfileStatus)
 import Session.Shared as Shared exposing (Shared)

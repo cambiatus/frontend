@@ -168,14 +168,14 @@ uploadImage shared file toMsg =
         }
 
 
-communityInvite : Shared -> Symbol -> Eos.Name -> String -> (Result Http.Error () -> msg) -> Cmd msg
-communityInvite shared symbol inviter email toMsg =
+communityInvite : Shared -> Symbol -> Eos.Name -> (Result Http.Error () -> msg) -> Cmd msg
+communityInvite shared symbol inviter toMsg =
     Http.post
-        { url = backendUrl shared [ "communities", Eos.symbolToString symbol, "invite" ] []
+        { url = backendUrl shared [ "invite" ] []
         , body =
             Encode.object
-                [ ( "inviter", Eos.encodeName inviter )
-                , ( "invites", Encode.string email )
+                [ ( "creator_id", Eos.encodeName inviter )
+                , ( "community_id", Eos.symbolToString symbol |> Encode.string )
                 ]
                 |> Http.jsonBody
         , expect = Http.expectWhatever toMsg

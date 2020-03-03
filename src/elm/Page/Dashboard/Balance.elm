@@ -1,24 +1,21 @@
-module Page.Dashboard.Community exposing (Model, Msg, UpdateResult, init, jsAddressToMsg, msgToString, update, viewCard, viewTableRow)
+module Page.Dashboard.Balance exposing (Model, Msg, UpdateResult, init, jsAddressToMsg, msgToString, update, viewCard)
 
 import Api
 import Api.Graphql
 import Asset.Icon as Icon
-import Avatar exposing (Avatar)
-import Community exposing (Action, Balance, Objective, Transaction)
+import Avatar
+import Community exposing (Balance)
 import Eos
 import Eos.Account as Eos
 import Graphql.Http
 import Html exposing (..)
-import Html.Attributes as HtmlAttr exposing (class, classList, colspan, disabled, for, href, id, maxlength, minlength, placeholder, required, rows, selected, src, style, target, type_, value)
+import Html.Attributes as HtmlAttr exposing (class, classList, colspan, disabled, for, href, id, maxlength, placeholder, required, src, style, target, type_, value)
 import Html.Events exposing (onClick, onInput, onSubmit, targetValue)
 import Http
 import I18Next exposing (Delims(..), t, tr)
 import Icons
 import Json.Decode as Decode exposing (Decoder, Value)
 import Json.Encode as Encode exposing (Value)
-import List.Extra as List
-import Log
-import Ports
 import Profile exposing (Profile)
 import Route
 import Select
@@ -41,6 +38,7 @@ init { shared } balance =
       , status = ViewingBalance
       , dashboardInfo = Nothing
       , autoCompleteState = Select.newState ""
+      , inviteModal = Closed
       }
     , cmd
     )
@@ -55,6 +53,7 @@ type alias Model =
     , status : Status
     , dashboardInfo : Maybe Community.DashboardInfo
     , autoCompleteState : Select.State
+    , inviteModal : ModalStatus
     }
 
 
@@ -67,6 +66,13 @@ type TransferStatus
     = EditingTransfer TransferForm
     | SendingTransfer TransferForm
     | SendingTransferFailed TransferForm
+
+
+type ModalStatus
+    = Closed
+    | Loading
+    | Failed String
+    | Loaded
 
 
 type alias TransferForm =
@@ -144,10 +150,6 @@ viewCardBalance loggedIn ({ balance } as model) =
         ipfsUrl =
             loggedIn.shared.endpoints.ipfs
 
-        isBespiralSymbol : Bool
-        isBespiralSymbol =
-            balance.asset.symbol == Shared.bespiralSymbol loggedIn.shared
-
         text_ s =
             text (t loggedIn.shared.translations s)
 
@@ -192,10 +194,15 @@ viewCardBalance loggedIn ({ balance } as model) =
                     ]
                     [ text_ "menu.explore" ]
                 , button
+                    [ class "button button-secondary button-sm text-xs w-full mb-4"
+                    , onClick CreateInvite
+                    ]
+                    [ text_ "community.invite.title" ]
+                , button
                     [ class "button button-primary button-sm text-xs w-full"
                     , onClick ClickedTransfer
                     ]
-                    [ text (t loggedIn.shared.translations "account.my_wallet.balances.button") ]
+                    [ text_ "account.my_wallet.balances.button" ]
                 ]
             ]
         ]
@@ -258,133 +265,6 @@ viewCardTransfer loggedIn ({ balance } as model) index f isDisabled =
             ]
             [ Icons.close "fill-current text-gray-400"
             ]
-        ]
-
-
-
--- VIEW TABLE ROW
-
-
-viewTableRow : LoggedIn.Model -> Model -> List (Html Msg)
-viewTableRow loggedIn model =
-    let
-        logo =
-            case model.dashboardInfo of
-                Just info ->
-                    info.logo
-
-                Nothing ->
-                    ""
-
-        title =
-            case model.dashboardInfo of
-                Just info ->
-                    info.title
-
-                Nothing ->
-                    ""
-    in
-    case model.status of
-        ViewingBalance ->
-            [ viewTableRowHelper loggedIn model.balance logo title False
-            ]
-
-        Transferring (EditingTransfer f) ->
-            [ viewTableRowHelper loggedIn model.balance logo title True
-            , viewTableRowTransfer loggedIn model f False
-            ]
-
-        Transferring (SendingTransfer f) ->
-            [ viewTableRowHelper loggedIn model.balance logo title True
-            , viewTableRowTransfer loggedIn model f True
-            ]
-
-        Transferring (SendingTransferFailed f) ->
-            [ viewTableRowHelper loggedIn model.balance logo title True
-            , viewTableRowTransfer loggedIn model f False
-            ]
-
-
-viewTableRowHelper : LoggedIn.Model -> Balance -> String -> String -> Bool -> Html Msg
-viewTableRowHelper loggedIn balance logo title showTransfer =
-    let
-        ipfsUrl =
-            loggedIn.shared.endpoints.ipfs
-
-        isBespiralSymbol : Bool
-        isBespiralSymbol =
-            balance.asset.symbol == Shared.bespiralSymbol loggedIn.shared
-    in
-    div
-        [ classList
-            [ ( "card-table__row", True )
-            , ( "card-table__row--highlight", isBespiralSymbol )
-            , ( "card-table__row--transfer", showTransfer )
-            ]
-        ]
-        [ div [ class "card-table__community" ]
-            [ div
-                [ class "card__image-background card-table__image"
-                , Community.logoBackground ipfsUrl (Just logo)
-                ]
-                []
-            , span [] [ text title ]
-            ]
-        , span [ class "card-table__balance" ]
-            [ text (String.fromFloat balance.asset.amount ++ " " ++ Eos.symbolToString balance.asset.symbol) ]
-        , div [ class "card-table__action" ]
-            [ button
-                [ classList
-                    [ ( "btn", True )
-                    , ( "btn--primary", True )
-                    , ( "btn--active", showTransfer )
-                    ]
-                , disabled showTransfer
-                , onClick ClickedTransfer
-                ]
-                [ text (t loggedIn.shared.translations "account.my_wallet.balances.button") ]
-            , a
-                [ class "btn btn--primary"
-                , Route.href (Route.Community balance.asset.symbol)
-                ]
-                [ text (t loggedIn.shared.translations "menu.explore") ]
-            ]
-        ]
-
-
-viewTableRowTransfer : LoggedIn.Model -> Model -> TransferForm -> Bool -> Html Msg
-viewTableRowTransfer loggedIn ({ balance } as model) f isDisabled =
-    let
-        text_ s =
-            text (t loggedIn.shared.translations s)
-    in
-    form
-        [ class "card-table__row-transfer"
-        , onSubmit ClickedSendTransfer
-        ]
-        [ div [ class "card-table__row-transfer__cell" ]
-            [ label []
-                [ text (I18Next.tr loggedIn.shared.translations Curly "account.my_wallet.transfer.amount" [ ( "symbol", Eos.symbolToString balance.asset.symbol ) ]) ]
-            , viewInputAmount loggedIn.shared f isDisabled
-            ]
-        , div [ class "card-table__row-transfer__cell" ]
-            [ label [] [ text_ "account.my_wallet.transfer.memo" ]
-            , viewInputMemo loggedIn.shared f isDisabled
-            ]
-        , div [ class "card-table__row-transfer__cell card-table__row-transfer__cell--button" ]
-            [ button
-                [ class "btn btn--primary"
-                , disabled isDisabled
-                ]
-                [ text_ "account.my_wallet.transfer.submit" ]
-            ]
-        , button
-            [ class "row__close-btn circle-background"
-            , onClick ClickedCancelTransfer
-            , type_ "button"
-            , disabled isDisabled
-            ]
-            [ Icon.close "" ]
         ]
 
 
@@ -506,14 +386,15 @@ type Msg
     | ClickedCancelTransfer
     | GotTransferResult (Result Value String)
     | ClickedBackFromFailure
-    | ClickedBackToStart
     | CompletedDashboardInfoLoad (Result (Graphql.Http.Error (Maybe Community.DashboardInfo)) (Maybe Community.DashboardInfo))
     | OnSelect (Maybe Profile)
     | SelectMsg (Select.Msg Profile)
+    | CreateInvite
+    | CompletedInviteCreation (Result Http.Error ())
 
 
 update : LoggedIn.Model -> Msg -> Model -> UpdateResult
-update loggedIn msg model =
+update ({ shared } as loggedIn) msg model =
     let
         onlyLogImpossible desc =
             UR.init model
@@ -673,11 +554,6 @@ update loggedIn msg model =
                 _ ->
                     onlyLogImpossible []
 
-        ClickedBackToStart ->
-            ViewingBalance
-                |> updateStatus model
-                |> UR.init
-
         CompletedDashboardInfoLoad (Err _) ->
             model |> UR.init
 
@@ -706,10 +582,28 @@ update loggedIn msg model =
         SelectMsg subMsg ->
             let
                 ( updated, cmd ) =
-                    Select.update (selectConfig loggedIn.shared False) subMsg model.autoCompleteState
+                    Select.update (selectConfig shared False) subMsg model.autoCompleteState
             in
             UR.init { model | autoCompleteState = updated }
                 |> UR.addCmd cmd
+
+        CreateInvite ->
+            UR.init
+                { model | inviteModal = Loading }
+                |> UR.addCmd
+                    (CompletedInviteCreation
+                        |> Api.communityInvite shared model.balance.asset.symbol loggedIn.accountName
+                    )
+
+        CompletedInviteCreation (Ok ()) ->
+            -- TODO set Image as visible
+            model
+                |> UR.init
+
+        CompletedInviteCreation (Err httpError) ->
+            UR.init
+                { model | inviteModal = Failed (I18Next.t shared.translations "community.invite.failed") }
+                |> UR.logHttpError msg httpError
 
 
 updateDashboardInfo : Model -> Community.DashboardInfo -> Model
@@ -777,9 +671,6 @@ msgToString msg =
         ClickedBackFromFailure ->
             [ "ClickedBackFromFailure" ]
 
-        ClickedBackToStart ->
-            [ "ClickedBackToStart" ]
-
         CompletedDashboardInfoLoad result ->
             resultToString [ "CompletedDashboardInfoLoad" ] result
 
@@ -788,3 +679,9 @@ msgToString msg =
 
         SelectMsg subMsg ->
             "SelectMsg" :: "sub" :: []
+
+        CreateInvite ->
+            [ "CreateInvite" ]
+
+        CompletedInviteCreation _ ->
+            [ "CompletedInviteCreation" ]
