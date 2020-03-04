@@ -155,6 +155,16 @@ getBalances shared accountName toMsg =
         }
 
 
+
+-- {
+--     "data": {
+--         "id": "7wmLW4",
+--         "message": "Successfully invited",
+--         "status": "ok"
+--     }
+-- }
+
+
 uploadImage : Shared -> File -> (Result Http.Error String -> msg) -> Cmd msg
 uploadImage shared file toMsg =
     Http.post
@@ -168,7 +178,7 @@ uploadImage shared file toMsg =
         }
 
 
-communityInvite : Shared -> Symbol -> Eos.Name -> (Result Http.Error () -> msg) -> Cmd msg
+communityInvite : Shared -> Symbol -> Eos.Name -> (Result Http.Error String -> msg) -> Cmd msg
 communityInvite shared symbol inviter toMsg =
     Http.post
         { url = backendUrl shared [ "invite" ] []
@@ -178,5 +188,7 @@ communityInvite shared symbol inviter toMsg =
                 , ( "community_id", Eos.symbolToString symbol |> Encode.string )
                 ]
                 |> Http.jsonBody
-        , expect = Http.expectWhatever toMsg
+        , expect =
+            Decode.at [ "data", "id" ] Decode.string
+                |> Http.expectJson toMsg
         }

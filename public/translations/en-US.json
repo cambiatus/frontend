@@ -246,15 +246,12 @@
     "invite": {
       "title": "Invite your friends",
       "subtitle": "Invite your friends to {{community_title}} community",
-      "labels": {
-        "emails": "Emails, separeted by comma"
-      },
-      "placeholders": {
-        "emails": "Fill your friends email separating them by comma"
-      },
+      "label": "Send this URL to your friends",
       "submit": "Send invitations",
       "succeed": "Invitation succeed",
-      "failed": "Invitation failed"
+      "failed": "Invitation failed",
+      "copy": "Copy",
+      "copied": "Copied!"
     },
     "details": {
       "creator": "Creator",

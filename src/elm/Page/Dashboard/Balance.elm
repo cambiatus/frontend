@@ -39,6 +39,7 @@ init { shared } balance =
       , dashboardInfo = Nothing
       , autoCompleteState = Select.newState ""
       , inviteModal = Closed
+      , copied = False
       }
     , cmd
     )
@@ -54,6 +55,7 @@ type alias Model =
     , dashboardInfo : Maybe Community.DashboardInfo
     , autoCompleteState : Select.State
     , inviteModal : ModalStatus
+    , copied : Bool
     }
 
 
@@ -72,7 +74,7 @@ type ModalStatus
     = Closed
     | Loading
     | Failed String
-    | Loaded
+    | Loaded String
 
 
 type alias TransferForm =
@@ -286,7 +288,8 @@ viewInvitationModal { shared } model =
                 [ div [ class "modal-bg", onClick CloseInviteModal ] []
                 , div [ class "modal-content" ]
                     [ div [ class "w-full" ]
-                        [ p [ class "text-2xl font-bold mb-4" ] [ text_ "community.invite.title" ]
+                        [ p [ class "text-2xl font-bold mb-4" ]
+                            [ text_ "community.invite.title" ]
                         , button [ onClick CloseInviteModal ]
                             [ Icons.close "absolute fill-current text-gray-400 top-0 right-0 mx-8 my-4" ]
                         , case model.inviteModal of
@@ -300,7 +303,7 @@ viewInvitationModal { shared } model =
                             Failed err ->
                                 div []
                                     [ div [ class "flex items-center justify-center text-heading text-red" ]
-                                        [ text err ]
+                                        [ p [ class "text-sm text-red" ] [ text err ] ]
                                     , div [ class "w-full md:bg-gray-100 flex md:absolute rounded-b-lg md:inset-x-0 md:bottom-0 md:p-4 justify-center items-center" ]
                                         [ button
                                             [ class "button button-primary"
@@ -310,8 +313,36 @@ viewInvitationModal { shared } model =
                                         ]
                                     ]
 
-                            Loaded ->
-                                text "loaded"
+                            Loaded invitationId ->
+                                div [ class "flex items-center ml-6" ]
+                                    [ div [ class "flex flex-col items-left" ]
+                                        [ span [ class "input-label" ]
+                                            [ text_ "community.invite.label" ]
+                                        , input
+                                            [ class "text-heading outline-none text-black"
+                                            , id "invitation-id"
+                                            , value invitationId
+                                            , disabled True
+                                            ]
+                                            []
+                                        ]
+                                    , div [ class "w-full md:bg-gray-100 flex md:absolute rounded-b-lg md:inset-x-0 md:bottom-0 md:p-4 justify-center items-center" ]
+                                        [ button
+                                            [ classList
+                                                [ ( "button-primary", not model.copied )
+                                                , ( "button-success", model.copied )
+                                                ]
+                                            , class "button w-48"
+                                            , onClick (CopyToClipboard "invitation-id")
+                                            ]
+                                            [ if model.copied then
+                                                text_ "community.invite.copied"
+
+                                              else
+                                                text_ "community.invite.copy"
+                                            ]
+                                        ]
+                                    ]
                         ]
                     ]
                 ]
@@ -440,7 +471,9 @@ type Msg
     | SelectMsg (Select.Msg Profile)
     | CreateInvite
     | CloseInviteModal
-    | CompletedInviteCreation (Result Http.Error ())
+    | CompletedInviteCreation (Result Http.Error String)
+    | CopyToClipboard String
+    | CopiedToClipboard
 
 
 update : LoggedIn.Model -> Msg -> Model -> UpdateResult
@@ -649,15 +682,31 @@ update ({ shared } as loggedIn) msg model =
             UR.init
                 { model | inviteModal = Closed }
 
-        CompletedInviteCreation (Ok ()) ->
-            -- TODO set Image as visible
-            model
+        CompletedInviteCreation (Ok invitationId) ->
+            { model | inviteModal = Loaded invitationId }
                 |> UR.init
 
         CompletedInviteCreation (Err httpError) ->
             UR.init
                 { model | inviteModal = Failed (I18Next.t shared.translations "community.invite.failed") }
                 |> UR.logHttpError msg httpError
+
+        CopyToClipboard elementId ->
+            model
+                |> UR.init
+                |> UR.addPort
+                    { responseAddress = CopiedToClipboard
+                    , responseData = Encode.null
+                    , data =
+                        Encode.object
+                            [ ( "id", Encode.string elementId )
+                            , ( "name", Encode.string "copyToClipboard" )
+                            ]
+                    }
+
+        CopiedToClipboard ->
+            { model | copied = True }
+                |> UR.init
 
 
 updateDashboardInfo : Model -> Community.DashboardInfo -> Model
@@ -684,6 +733,9 @@ jsAddressToMsg addr val =
                 val
                 |> Result.map (Just << GotTransferResult)
                 |> Result.withDefault Nothing
+
+        "CopiedToClipboard" :: _ ->
+            Just CopiedToClipboard
 
         _ ->
             Nothing
@@ -731,7 +783,7 @@ msgToString msg =
         OnSelect _ ->
             [ "OnSelect" ]
 
-        SelectMsg subMsg ->
+        SelectMsg _ ->
             "SelectMsg" :: "sub" :: []
 
         CreateInvite ->
@@ -742,3 +794,9 @@ msgToString msg =
 
         CompletedInviteCreation _ ->
             [ "CompletedInviteCreation" ]
+
+        CopyToClipboard _ ->
+            [ "CopyToClipboard" ]
+
+        CopiedToClipboard ->
+            [ "CopiedToClipboard" ]
