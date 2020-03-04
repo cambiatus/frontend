@@ -309,7 +309,7 @@ viewAction ({ shared } as loggedIn) model objectiveId action =
                         )
                 ]
             , a
-                [ class "button button-secondary button-sm w-full"
+                [ class "button button-secondary button-sm w-full mt-16"
                 , Route.href (Route.EditAction model.communityId objectiveId action.id)
                 ]
                 [ text_ "menu.edit" ]
