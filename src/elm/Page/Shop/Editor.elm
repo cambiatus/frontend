@@ -712,7 +712,7 @@ update msg model loggedIn =
             model
                 |> updateForm
                     (\form ->
-                        { form | price = updateInput value form.price }
+                        { form | price = updateInput (getNumericValues value) form.price }
                     )
                 |> UR.init
 
@@ -1146,6 +1146,15 @@ encodeUpdateForm sale form =
         , ( "track_stock", trackStock )
         , ( "units", units )
         ]
+
+
+getNumericValues : String -> String
+getNumericValues value =
+    value
+        |> String.toList
+        |> List.filter Char.isDigit
+        |> List.map String.fromChar
+        |> String.join ""
 
 
 encodeDeleteForm : Sale -> Value

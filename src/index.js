@@ -2,16 +2,19 @@ import Eos from 'eosjs'
 import ecc from 'eosjs-ecc'
 import sjcl from 'sjcl'
 import axios from 'axios'
-import * as JsPdf from 'jspdf'
 import './styles/processed.css'
 import mnemonic from './scripts/mnemonic.js'
 import configuration from './scripts/config.js'
 import registerServiceWorker from './scripts/registerServiceWorker'
+import pdfDefinition from './scripts/pdfDefinition'
 import * as pushSub from './scripts/pushNotifications'
 import { Elm } from './elm/Main.elm'
 import * as Sentry from '@sentry/browser'
 import * as AbsintheSocket from '@absinthe/socket'
+import pdfMake from 'pdfmake/build/pdfmake'
+import pdfFonts from 'pdfmake/build/vfs_fonts'
 const { Socket: PhoenixSocket } = require('phoenix')
+pdfMake.vfs = pdfFonts.pdfMake.vfs
 
 // =========================================
 // App startup
@@ -126,8 +129,6 @@ function storeAccountName (accountName) {
 function storePushPref (pref) {
   window.localStorage.setItem(PUSH_PREF, pref)
 }
-
-
 
 // STORE PIN
 
@@ -435,7 +436,6 @@ async function handleJavascriptPort (arg) {
       devLog('=========================', 'logout')
       window.localStorage.removeItem(USER_KEY)
       window.localStorage.removeItem(AUTH_PREF_KEY)
-      attemptToLogout(arg.data.container)
       break
     }
     case 'requestPushPermission': {
@@ -506,17 +506,13 @@ async function handleJavascriptPort (arg) {
     }
     case 'printAuthPdf': {
       devLog('=======================', 'printAuthPdf')
-      const filename = '12_Words.pdf'
-      // let words = document.getElementById('12__words').textContent
-      // let pkey = document.getElementById('p__key').textContent
+      let words = document.getElementById('12__words').textContent
+      let pkey = document.getElementById('p__key').textContent
 
-      var doc = new JsPdf()
-      doc.addHtml(require('./pdfTemplate.html.txt'))
-      // doc.text('Your Words', 20, 20)
-      // doc.text(words, 20, 30)
-      // doc.text('Your Key', 20, 40)
-      // doc.text(pkey, 20, 50)
-      doc.save(filename)
+      const definition = pdfDefinition(words, pkey)
+
+      const pdf = pdfMake.createPdf(definition)
+      pdf.download('Cambiatus.pdf')
 
       const response = {
         address: arg.responseAddress,

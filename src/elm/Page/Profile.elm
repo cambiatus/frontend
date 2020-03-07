@@ -279,6 +279,9 @@ viewForm loggedIn isDisabled profile avatarS form =
         text_ s =
             text (t loggedIn.shared.translations s)
 
+        textr_ s m =
+            text (I18Next.tr loggedIn.shared.translations I18Next.Curly s m)
+
         plcH s =
             placeholder (t loggedIn.shared.translations s)
     in
@@ -330,9 +333,18 @@ viewForm loggedIn isDisabled profile avatarS form =
                                 , value form.bio
                                 , disabled isDisabled
                                 , plcH "profile.edit.placeholders.bio"
+                                , maxlength 255
                                 ]
                                 []
                             , viewFieldError "bio" form.errors
+                            ]
+                        , div [ class "input-counter" ]
+                            [ textr_ "edit.input_counter"
+                                [ ( "current"
+                                  , ( String.fromInt (String.length form.bio) )
+                                  )
+                                , ( "max", "255" )
+                                ]
                             ]
                         ]
                     ]

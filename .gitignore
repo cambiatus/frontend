@@ -22,5 +22,8 @@ ideaelm
 jim/
 yarn-error.log
 
+# VSCode files/folders
+.devcontainer*
+
 # Ignore build stylesheet
 src/styles/processed.css

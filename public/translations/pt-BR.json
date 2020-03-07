@@ -37,6 +37,9 @@
     "my_account": "Minha conta",
     "languages": "Linguagens"
   },
+  "edit": {
+    "input_counter": "{{current}} de {{max}}"
+  },
   "error": {
     "validator": {
       "number": {
