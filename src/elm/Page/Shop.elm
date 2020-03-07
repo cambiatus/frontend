@@ -31,7 +31,7 @@ import Task
 import Time exposing (Posix)
 import Transfer exposing (Transfer)
 import UpdateResult as UR
-import User exposing (viewNameTag)
+--import User exposing (viewNameTag)
 import Utils exposing (..)
 import Browser.Events as Events
 
