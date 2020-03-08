@@ -17,6 +17,7 @@ import Page.Community as Community
 import Page.Community.ActionEditor as ActionEditor
 import Page.Community.Editor as CommunityEditor
 import Page.Community.Explore as CommunityExplore
+import Page.Community.Invite as Invite
 import Page.Community.ObjectiveEditor as ObjectiveEditor
 import Page.Community.Objectives as Objectives
 import Page.Community.VerifyClaim as VerifyClaim
@@ -50,7 +51,6 @@ main =
                 { title = "Cambiatus"
                 , body =
                     [ view model
-                    , viewChat
                     ]
                 }
         , onUrlRequest = ClickedLink
@@ -167,6 +167,7 @@ type Status
     | ShopEditor (Maybe String) ShopEditor.Model
     | ShopViewer String ShopViewer.Model
     | Transfer Int Transfer.Model
+    | Invite Invite.Model
 
 
 
@@ -197,6 +198,7 @@ type Msg
     | GotUpdatedBalances (Result Http.Error (List Community.Balance))
     | GotShopViewerMsg ShopViewer.Msg
     | GotTransferScreenMsg Transfer.Msg
+    | GotInviteMsg Invite.Msg
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -748,6 +750,10 @@ changeRouteTo maybeRoute model =
                 >> updateStatusWith (Transfer transferId) GotTransferScreenMsg model
                 |> withLoggedIn (Route.Transfer transferId)
 
+        Just (Route.Invite invitationId) ->
+            Invite.init session invitationId
+                |> updateStatusWith Invite GotInviteMsg model
+
 
 jsAddressToMsg : List String -> Value -> Maybe Msg
 jsAddressToMsg address val =
@@ -876,21 +882,12 @@ msgToString msg =
         GotTransferScreenMsg subMsg ->
             "GotTransferScreenMsg" :: Transfer.msgToString subMsg
 
+        GotInviteMsg subMsg ->
+            "GotInviteMsg" :: Invite.msgToString subMsg
+
 
 
 -- VIEW
-
-
-viewChat : Html Msg
-viewChat =
-    div [ id "chat-container", style "display" "none" ]
-        [ iframe
-            [ id "chat-manager"
-            , style "height" "0%"
-            , style "width" "0%"
-            ]
-            []
-        ]
 
 
 view : Model -> Html Msg
@@ -970,7 +967,7 @@ view model =
         Profile subModel ->
             viewLoggedIn subModel LoggedIn.Profile GotProfileMsg Profile.view
 
-        Shop maybeFilter subModel ->
+        Shop _ subModel ->
             viewLoggedIn subModel LoggedIn.Shop GotShopMsg Shop.view
 
         ShopEditor _ subModel ->
@@ -981,3 +978,6 @@ view model =
 
         Transfer _ subModel ->
             viewLoggedIn subModel LoggedIn.Other GotTransferScreenMsg Transfer.view
+
+        Invite _ ->
+            Html.map (\_ -> Ignored) (Invite.view model.session)

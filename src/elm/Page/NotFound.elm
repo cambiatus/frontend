@@ -1,7 +1,7 @@
 module Page.NotFound exposing (view)
 
-import Html exposing (..)
-import I18Next exposing (Delims(..), t, tr)
+import Html exposing (Html)
+import I18Next exposing (t)
 import Page
 
 
