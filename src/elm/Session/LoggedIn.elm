@@ -28,11 +28,11 @@ import Api
 import Api.Graphql
 import Auth
 import Avatar
-import Bespiral.Object
-import Bespiral.Object.UnreadNotifications
-import Bespiral.Subscription as Subscription
 import Browser.Dom as Dom
 import Browser.Events
+import Cambiatus.Object
+import Cambiatus.Object.UnreadNotifications
+import Cambiatus.Subscription as Subscription
 import Community exposing (Balance)
 import Eos
 import Eos.Account as Eos
@@ -791,10 +791,10 @@ type alias UnreadMeta =
     { unreads : Int }
 
 
-unreadSelection : SelectionSet UnreadMeta Bespiral.Object.UnreadNotifications
+unreadSelection : SelectionSet UnreadMeta Cambiatus.Object.UnreadNotifications
 unreadSelection =
     SelectionSet.succeed UnreadMeta
-        |> with Bespiral.Object.UnreadNotifications.unreads
+        |> with Cambiatus.Object.UnreadNotifications.unreads
 
 
 unreadCountSubscription : Eos.Name -> SelectionSet UnreadMeta RootSubscription

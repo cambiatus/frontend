@@ -12,10 +12,10 @@ module Page.Community exposing
 import Api
 import Api.Graphql
 import Avatar
-import Bespiral.Enum.VerificationType as VerificationType
-import Bespiral.Object
-import Bespiral.Query exposing (ClaimsRequiredArguments)
-import Bespiral.Scalar exposing (DateTime(..))
+import Cambiatus.Enum.VerificationType as VerificationType
+import Cambiatus.Object
+import Cambiatus.Query exposing (ClaimsRequiredArguments)
+import Cambiatus.Scalar exposing (DateTime(..))
 import Community exposing (ActionVerification, ActionVerificationsResponse, ClaimResponse, Community)
 import Dict exposing (Dict)
 import Eos exposing (Symbol)
@@ -88,12 +88,12 @@ verificationHistorySelectionSet stringSym =
         vInput =
             { input = { validator = Absent, claimer = Absent, symbol = Present stringSym } }
 
-        selectionSet : SelectionSet ClaimResponse Bespiral.Object.Claim
+        selectionSet : SelectionSet ClaimResponse Cambiatus.Object.Claim
         selectionSet =
             Community.claimSelectionSet stringSym
     in
     SelectionSet.succeed ActionVerificationsResponse
-        |> with (Bespiral.Query.claims vInput selectionSet)
+        |> with (Cambiatus.Query.claims vInput selectionSet)
 
 
 

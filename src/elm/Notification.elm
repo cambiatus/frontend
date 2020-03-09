@@ -1,17 +1,17 @@
 module Notification exposing (History, MintData, Model, Notification, NotificationType(..), SaleHistoryData, TransferData, addNotification, init, markAsReadMutation, notificationHistoryQuery, readAll)
 
-import Bespiral.Mutation as Mutation
-import Bespiral.Object
-import Bespiral.Object.Community as Community
-import Bespiral.Object.Mint as Mint
-import Bespiral.Object.NotificationHistory as NotificationHistory
-import Bespiral.Object.Sale as Sale
-import Bespiral.Object.SaleHistory as SaleHistory
-import Bespiral.Object.Transfer as Transfer
-import Bespiral.Query as Query
-import Bespiral.Scalar exposing (DateTime(..))
-import Bespiral.Union
-import Bespiral.Union.NotificationType
+import Cambiatus.Mutation as Mutation
+import Cambiatus.Object
+import Cambiatus.Object.Community as Community
+import Cambiatus.Object.Mint as Mint
+import Cambiatus.Object.NotificationHistory as NotificationHistory
+import Cambiatus.Object.Sale as Sale
+import Cambiatus.Object.SaleHistory as SaleHistory
+import Cambiatus.Object.Transfer as Transfer
+import Cambiatus.Query as Query
+import Cambiatus.Scalar exposing (DateTime(..))
+import Cambiatus.Union
+import Cambiatus.Union.NotificationType
 import Community exposing (Balance, Community)
 import Eos exposing (Symbol)
 import Eos.Account as Eos
@@ -151,16 +151,16 @@ notificationHistorySelectionSet =
         |> with (Eos.nameSelectionSet NotificationHistory.recipientId)
 
 
-typeUnionSelectionSet : SelectionSet NotificationType Bespiral.Union.NotificationType
+typeUnionSelectionSet : SelectionSet NotificationType Cambiatus.Union.NotificationType
 typeUnionSelectionSet =
-    Bespiral.Union.NotificationType.fragments
+    Cambiatus.Union.NotificationType.fragments
         { onTransfer = SelectionSet.map Transfer transferSelectionSet
         , onSaleHistory = SelectionSet.map SaleHistory saleHistorySelectionSet
         , onMint = SelectionSet.map Mint mintSelectionSet
         }
 
 
-mintSelectionSet : SelectionSet MintData Bespiral.Object.Mint
+mintSelectionSet : SelectionSet MintData Cambiatus.Object.Mint
 mintSelectionSet =
     SelectionSet.succeed MintData
         |> with Mint.quantity
@@ -168,7 +168,7 @@ mintSelectionSet =
         |> with (Mint.community logoSelectionSet)
 
 
-transferSelectionSet : SelectionSet TransferData Bespiral.Object.Transfer
+transferSelectionSet : SelectionSet TransferData Cambiatus.Object.Transfer
 transferSelectionSet =
     SelectionSet.succeed TransferData
         |> with Transfer.amount

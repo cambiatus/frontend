@@ -14,7 +14,7 @@
     "repl": "elm repl",
     "reactor": "elm reactor",
     "test": "npx elm-test",
-    "generate-graphql": "npx elm-graphql https://api.cambiatus.io/api/graph --base Bespiral --output src/elm"
+    "generate-graphql": "npx elm-graphql https://api.cambiatus.io/api/graph --base Cambiatus --output src/elm"
   },
   "standard": {
     "plugins": [

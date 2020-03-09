@@ -3,7 +3,7 @@ module Page.Transfer exposing (Model, Msg, init, msgToString, subscriptions, upd
 import Api
 import Api.Graphql
 import Avatar
-import Bespiral.Scalar exposing (DateTime(..))
+import Cambiatus.Scalar exposing (DateTime(..))
 import Eos exposing (Symbol, symbolFromString)
 import Eos.Account as Eos
 import Graphql.Http
