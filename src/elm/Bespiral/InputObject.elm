@@ -54,60 +54,6 @@ encodeActionsInput input =
         [ ( "creator", Encode.string |> Encode.optional input.creator ), ( "isCompleted", Encode.bool |> Encode.optional input.isCompleted ), ( "validator", Encode.string |> Encode.optional input.validator ), ( "verificationType", Encode.enum Bespiral.Enum.VerificationType.toString |> Encode.optional input.verificationType ) ]
 
 
-buildChatInput : ChatInputRequiredFields -> ChatInput
-buildChatInput required =
-    { token = required.token, userId = required.userId }
-
-
-type alias ChatInputRequiredFields =
-    { token : String
-    , userId : String
-    }
-
-
-{-| Type for the ChatInput input object.
--}
-type alias ChatInput =
-    { token : String
-    , userId : String
-    }
-
-
-{-| Encode a ChatInput into a value that can be used as an argument.
--}
-encodeChatInput : ChatInput -> Value
-encodeChatInput input =
-    Encode.maybeObject
-        [ ( "token", Encode.string input.token |> Just ), ( "userId", Encode.string input.userId |> Just ) ]
-
-
-buildChatUpdateInput : ChatUpdateInputRequiredFields -> ChatUpdateInput
-buildChatUpdateInput required =
-    { language = required.language, userId = required.userId }
-
-
-type alias ChatUpdateInputRequiredFields =
-    { language : String
-    , userId : String
-    }
-
-
-{-| Type for the ChatUpdateInput input object.
--}
-type alias ChatUpdateInput =
-    { language : String
-    , userId : String
-    }
-
-
-{-| Encode a ChatUpdateInput into a value that can be used as an argument.
--}
-encodeChatUpdateInput : ChatUpdateInput -> Value
-encodeChatUpdateInput input =
-    Encode.maybeObject
-        [ ( "language", Encode.string input.language |> Just ), ( "userId", Encode.string input.userId |> Just ) ]
-
-
 buildChecksInput : (ChecksInputOptionalFields -> ChecksInputOptionalFields) -> ChecksInput
 buildChecksInput fillOptionals =
     let
@@ -191,6 +137,34 @@ encodeClaimsInput : ClaimsInput -> Value
 encodeClaimsInput input =
     Encode.maybeObject
         [ ( "claimer", Encode.string |> Encode.optional input.claimer ), ( "symbol", Encode.string |> Encode.optional input.symbol ), ( "validator", Encode.string |> Encode.optional input.validator ) ]
+
+
+buildInviteInput : (InviteInputOptionalFields -> InviteInputOptionalFields) -> InviteInput
+buildInviteInput fillOptionals =
+    let
+        optionals =
+            fillOptionals
+                { id = Absent }
+    in
+    { id = optionals.id }
+
+
+type alias InviteInputOptionalFields =
+    { id : OptionalArgument String }
+
+
+{-| Type for the InviteInput input object.
+-}
+type alias InviteInput =
+    { id : OptionalArgument String }
+
+
+{-| Encode a InviteInput into a value that can be used as an argument.
+-}
+encodeInviteInput : InviteInput -> Value
+encodeInviteInput input =
+    Encode.maybeObject
+        [ ( "id", Encode.string |> Encode.optional input.id ) ]
 
 
 buildNewCommunityInput : NewCommunityInputRequiredFields -> NewCommunityInput

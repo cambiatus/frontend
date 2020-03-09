@@ -9,10 +9,6 @@ type Action
     = Action
 
 
-type ChatPreferences
-    = ChatPreferences
-
-
 type Check
     = Check
 
@@ -23,6 +19,10 @@ type Claim
 
 type Community
     = Community
+
+
+type Invite
+    = Invite
 
 
 type Mint

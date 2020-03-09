@@ -321,7 +321,7 @@ viewInvitationModal { shared } model =
                                         , input
                                             [ class "text-heading outline-none text-black"
                                             , id "invitation-id"
-                                            , value invitationId
+                                            , value ("http://localhost:3000/invite/" ++ invitationId)
                                             , disabled True
                                             ]
                                             []

@@ -34,22 +34,11 @@ type alias RegisterPushRequiredArguments =
     { input : Bespiral.InputObject.PushSubscriptionInput }
 
 
-{-| Register an push subscription on BeSpiral
+{-| Register an push subscription on Cambiatus
 -}
 registerPush : RegisterPushRequiredArguments -> SelectionSet decodesTo Bespiral.Object.PushSubscription -> SelectionSet decodesTo RootMutation
 registerPush requiredArgs object_ =
     Object.selectionForCompositeField "registerPush" [ Argument.required "input" requiredArgs.input Bespiral.InputObject.encodePushSubscriptionInput ] object_ identity
-
-
-type alias UpdateChatLanguageRequiredArguments =
-    { input : Bespiral.InputObject.ChatUpdateInput }
-
-
-{-| A mutation to update user's chat language
--}
-updateChatLanguage : UpdateChatLanguageRequiredArguments -> SelectionSet decodesTo Bespiral.Object.ChatPreferences -> SelectionSet (Maybe decodesTo) RootMutation
-updateChatLanguage requiredArgs object_ =
-    Object.selectionForCompositeField "updateChatLanguage" [ Argument.required "input" requiredArgs.input Bespiral.InputObject.encodeChatUpdateInput ] object_ (identity >> Decode.nullable)
 
 
 type alias UpdateProfileRequiredArguments =

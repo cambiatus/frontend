@@ -2,7 +2,7 @@
 -- https://github.com/dillonkearns/elm-graphql
 
 
-module Bespiral.Object.ChatPreferences exposing (..)
+module Bespiral.Object.Invite exposing (..)
 
 import Bespiral.InputObject
 import Bespiral.Interface
@@ -19,11 +19,11 @@ import Graphql.SelectionSet exposing (SelectionSet)
 import Json.Decode as Decode
 
 
-language : SelectionSet String Bespiral.Object.ChatPreferences
-language =
-    Object.selectionForField "String" "language" [] Decode.string
+community : SelectionSet decodesTo Bespiral.Object.Community -> SelectionSet decodesTo Bespiral.Object.Invite
+community object_ =
+    Object.selectionForCompositeField "community" [] object_ identity
 
 
-userId : SelectionSet String Bespiral.Object.ChatPreferences
-userId =
-    Object.selectionForField "String" "userId" [] Decode.string
+creator : SelectionSet decodesTo Bespiral.Object.Profile -> SelectionSet decodesTo Bespiral.Object.Invite
+creator object_ =
+    Object.selectionForCompositeField "creator" [] object_ identity

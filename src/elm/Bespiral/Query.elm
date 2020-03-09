@@ -19,17 +19,6 @@ import Graphql.SelectionSet exposing (SelectionSet)
 import Json.Decode as Decode exposing (Decoder)
 
 
-type alias ChatPreferencesRequiredArguments =
-    { input : Bespiral.InputObject.ChatInput }
-
-
-{-| A chat preferences
--}
-chatPreferences : ChatPreferencesRequiredArguments -> SelectionSet decodesTo Bespiral.Object.ChatPreferences -> SelectionSet (Maybe decodesTo) RootQuery
-chatPreferences requiredArgs object_ =
-    Object.selectionForCompositeField "chatPreferences" [ Argument.required "input" requiredArgs.input Bespiral.InputObject.encodeChatInput ] object_ (identity >> Decode.nullable)
-
-
 type alias ClaimRequiredArguments =
     { input : Bespiral.InputObject.ClaimInput }
 
@@ -52,7 +41,7 @@ claims requiredArgs object_ =
     Object.selectionForCompositeField "claims" [ Argument.required "input" requiredArgs.input Bespiral.InputObject.encodeClaimsInput ] object_ (identity >> Decode.list)
 
 
-{-| A list of communities in BeSpiral
+{-| A list of communities in Cambiatus
 -}
 communities : SelectionSet decodesTo Bespiral.Object.Community -> SelectionSet (List decodesTo) RootQuery
 communities object_ =
@@ -68,6 +57,17 @@ type alias CommunityRequiredArguments =
 community : CommunityRequiredArguments -> SelectionSet decodesTo Bespiral.Object.Community -> SelectionSet (Maybe decodesTo) RootQuery
 community requiredArgs object_ =
     Object.selectionForCompositeField "community" [ Argument.required "symbol" requiredArgs.symbol Encode.string ] object_ (identity >> Decode.nullable)
+
+
+type alias InviteRequiredArguments =
+    { input : Bespiral.InputObject.InviteInput }
+
+
+{-| An invite
+-}
+invite : InviteRequiredArguments -> SelectionSet decodesTo Bespiral.Object.Invite -> SelectionSet (Maybe decodesTo) RootQuery
+invite requiredArgs object_ =
+    Object.selectionForCompositeField "invite" [ Argument.required "input" requiredArgs.input Bespiral.InputObject.encodeInviteInput ] object_ (identity >> Decode.nullable)
 
 
 type alias NotificationHistoryRequiredArguments =
@@ -105,7 +105,7 @@ type alias SaleRequiredArguments =
     { input : Bespiral.InputObject.SaleInput }
 
 
-{-| A single sale from BeSpiral
+{-| A single sale from Cambiatus
 -}
 sale : SaleRequiredArguments -> SelectionSet decodesTo Bespiral.Object.Sale -> SelectionSet (Maybe decodesTo) RootQuery
 sale requiredArgs object_ =
@@ -123,7 +123,7 @@ type alias SalesRequiredArguments =
     { input : Bespiral.InputObject.SalesInput }
 
 
-{-| A list of sales in BeSpiral
+{-| A list of sales in Cambiatus
 -}
 sales : SalesRequiredArguments -> SelectionSet decodesTo Bespiral.Object.Sale -> SelectionSet (List decodesTo) RootQuery
 sales requiredArgs object_ =
