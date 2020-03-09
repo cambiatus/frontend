@@ -21,6 +21,7 @@ module Session.LoggedIn exposing
     , subscriptions
     , update
     , view
+    , viewFooter
     )
 
 import Api

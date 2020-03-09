@@ -8,18 +8,16 @@ module Page.Community.Invite exposing
     )
 
 import Html exposing (Html, div, text)
-import Page exposing (Session)
+import Html.Attributes exposing (class)
+import Page exposing (Session(..))
 import Session.Guest as Guest
+import Session.LoggedIn as LoggedIn
 
 
-init : Session
-
-
-
---- > String -> ( Model, Cmd Msg )
--- init _ _ =
---     -- init : ( Model, Cmd Msg )
---     ( initModel, Cmd.none )
+init : Session -> String -> ( Model, Cmd Msg )
+init _ invitationId =
+    -- TODO: get invitation then get community
+    ( initModel, Cmd.none )
 
 
 initModel =
@@ -35,12 +33,26 @@ type Status
     = NoOp
 
 
+view : Session -> Html msg
+view session =
+    div [ class "flex flex-col min-h-screen" ]
+        [ div [ class "flex-grow" ] [ text "vish" ]
+        , viewFooter session
+        ]
 
--- view : Guest -> Html msg
 
+viewFooter : Session -> Html msg
+viewFooter session =
+    let
+        shared =
+            case session of
+                LoggedIn loggedIn ->
+                    loggedIn.shared
 
-view _ =
-    div [] [ text "invitation will be here" ]
+                Guest guest ->
+                    guest.shared
+    in
+    LoggedIn.viewFooter shared
 
 
 type Msg
@@ -52,5 +64,4 @@ update model =
 
 
 msgToString _ =
-    ggedIn
-        [ "" ]
+    [ "" ]
