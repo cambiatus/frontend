@@ -35,16 +35,16 @@ module Community exposing
     )
 
 import Api.Relay exposing (MetadataConnection, PaginationArgs)
-import Bespiral.Enum.VerificationType exposing (VerificationType(..))
-import Bespiral.Object
-import Bespiral.Object.Action as Action
-import Bespiral.Object.Check as Check
-import Bespiral.Object.Claim as Claim exposing (ChecksOptionalArguments)
-import Bespiral.Object.Community as Community
-import Bespiral.Object.Objective as Objective
-import Bespiral.Query as Query
-import Bespiral.Scalar exposing (DateTime(..))
-import Bespiral.Subscription as Subscription
+import Cambiatus.Enum.VerificationType exposing (VerificationType(..))
+import Cambiatus.Object
+import Cambiatus.Object.Action as Action
+import Cambiatus.Object.Check as Check
+import Cambiatus.Object.Claim as Claim exposing (ChecksOptionalArguments)
+import Cambiatus.Object.Community as Community
+import Cambiatus.Object.Objective as Objective
+import Cambiatus.Query as Query
+import Cambiatus.Scalar exposing (DateTime(..))
+import Cambiatus.Subscription as Subscription
 import Eos exposing (EosBool(..), Symbol, symbolToString)
 import Eos.Account as Eos
 import Graphql.Operation exposing (RootQuery, RootSubscription)
@@ -112,7 +112,7 @@ type alias Community =
 -- GraphQL
 
 
-communitiesSelectionSet : (PaginationArgs -> PaginationArgs) -> SelectionSet Metadata Bespiral.Object.Community
+communitiesSelectionSet : (PaginationArgs -> PaginationArgs) -> SelectionSet Metadata Cambiatus.Object.Community
 communitiesSelectionSet paginateArgs =
     SelectionSet.succeed Metadata
         |> with Community.name
@@ -128,7 +128,7 @@ communitiesSelectionSet paginateArgs =
         |> with Community.memberCount
 
 
-dashboardSelectionSet : SelectionSet DashboardInfo Bespiral.Object.Community
+dashboardSelectionSet : SelectionSet DashboardInfo Cambiatus.Object.Community
 dashboardSelectionSet =
     SelectionSet.succeed DashboardInfo
         |> with Community.name
@@ -136,7 +136,7 @@ dashboardSelectionSet =
         |> with (Community.members Profile.selectionSet)
 
 
-communitySelectionSet : (PaginationArgs -> PaginationArgs) -> SelectionSet Community Bespiral.Object.Community
+communitySelectionSet : (PaginationArgs -> PaginationArgs) -> SelectionSet Community Cambiatus.Object.Community
 communitySelectionSet paginateArgs =
     SelectionSet.succeed Community
         |> with Community.name
@@ -251,7 +251,7 @@ type alias Objective =
     }
 
 
-objectiveSelectionSet : SelectionSet Objective Bespiral.Object.Objective
+objectiveSelectionSet : SelectionSet Objective Cambiatus.Object.Objective
 objectiveSelectionSet =
     SelectionSet.succeed Objective
         |> with Objective.id
@@ -312,7 +312,7 @@ type alias Action =
     }
 
 
-actionSelectionSet : SelectionSet Action Bespiral.Object.Action
+actionSelectionSet : SelectionSet Action Cambiatus.Object.Action
 actionSelectionSet =
     SelectionSet.succeed Action
         |> with Action.id
@@ -588,7 +588,7 @@ type alias CommunityResponse =
 -- Verifications SelectionSets
 
 
-claimSelectionSet : String -> SelectionSet ClaimResponse Bespiral.Object.Claim
+claimSelectionSet : String -> SelectionSet ClaimResponse Cambiatus.Object.Claim
 claimSelectionSet validator =
     let
         checksArg : ChecksOptionalArguments -> ChecksOptionalArguments
@@ -603,13 +603,13 @@ claimSelectionSet validator =
         |> with (Claim.action verificationActionSelectionSet)
 
 
-checkSelectionSet : SelectionSet CheckResponse Bespiral.Object.Check
+checkSelectionSet : SelectionSet CheckResponse Cambiatus.Object.Check
 checkSelectionSet =
     SelectionSet.succeed CheckResponse
         |> with Check.isVerified
 
 
-verificationActionSelectionSet : SelectionSet ActionResponse Bespiral.Object.Action
+verificationActionSelectionSet : SelectionSet ActionResponse Cambiatus.Object.Action
 verificationActionSelectionSet =
     SelectionSet.succeed ActionResponse
         |> with Action.id
@@ -617,14 +617,14 @@ verificationActionSelectionSet =
         |> with (Action.objective verificationObjectiveSelectionSet)
 
 
-verificationObjectiveSelectionSet : SelectionSet ObjectiveResponse Bespiral.Object.Objective
+verificationObjectiveSelectionSet : SelectionSet ObjectiveResponse Cambiatus.Object.Objective
 verificationObjectiveSelectionSet =
     SelectionSet.succeed ObjectiveResponse
         |> with Objective.id
         |> with (Objective.community verificationCommunitySelectionSet)
 
 
-verificationCommunitySelectionSet : SelectionSet CommunityResponse Bespiral.Object.Community
+verificationCommunitySelectionSet : SelectionSet CommunityResponse Cambiatus.Object.Community
 verificationCommunitySelectionSet =
     SelectionSet.succeed CommunityResponse
         |> with Community.symbol

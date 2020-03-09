@@ -11,8 +11,8 @@ module Page.Community.ActionEditor exposing
 
 import Api.Graphql
 import Avatar
-import Bespiral.Enum.VerificationType as VerificationType exposing (VerificationType)
-import Bespiral.Scalar exposing (DateTime(..))
+import Cambiatus.Enum.VerificationType as VerificationType exposing (VerificationType)
+import Cambiatus.Scalar exposing (DateTime(..))
 import Community exposing (Community)
 import DataValidator
     exposing

@@ -16,14 +16,14 @@ module Transfer exposing
 
 import Api.Relay exposing (Edge, MetadataConnection, PageConnection, PageInfo, PaginationArgs, pageInfoSelectionSet)
 import Avatar exposing (Avatar)
-import Bespiral.Object
-import Bespiral.Object.Community
-import Bespiral.Object.Profile
-import Bespiral.Object.Transfer
-import Bespiral.Object.TransferConnection
-import Bespiral.Object.TransferEdge
-import Bespiral.Query
-import Bespiral.Scalar exposing (DateTime(..))
+import Cambiatus.Object
+import Cambiatus.Object.Community
+import Cambiatus.Object.Profile
+import Cambiatus.Object.Transfer
+import Cambiatus.Object.TransferConnection
+import Cambiatus.Object.TransferEdge
+import Cambiatus.Query
+import Cambiatus.Scalar exposing (DateTime(..))
 import Eos exposing (Symbol)
 import Eos.Account as Eos
 import Graphql.Operation exposing (RootQuery)
@@ -124,50 +124,50 @@ profileNameSelectionSet =
     SelectionSet.map (\t -> t)
 
 
-transferItemSelectionSet : SelectionSet Transfer Bespiral.Object.Transfer
+transferItemSelectionSet : SelectionSet Transfer Cambiatus.Object.Transfer
 transferItemSelectionSet =
     SelectionSet.succeed Transfer
-        |> with Bespiral.Object.Transfer.id
-        |> with (Bespiral.Object.Transfer.to Profile.selectionSet)
-        |> with (Bespiral.Object.Transfer.from Profile.selectionSet)
-        |> with Bespiral.Object.Transfer.amount
-        |> with Bespiral.Object.Transfer.memo
-        |> with (Eos.symbolSelectionSet Bespiral.Object.Transfer.communityId)
+        |> with Cambiatus.Object.Transfer.id
+        |> with (Cambiatus.Object.Transfer.to Profile.selectionSet)
+        |> with (Cambiatus.Object.Transfer.from Profile.selectionSet)
+        |> with Cambiatus.Object.Transfer.amount
+        |> with Cambiatus.Object.Transfer.memo
+        |> with (Eos.symbolSelectionSet Cambiatus.Object.Transfer.communityId)
         |> with
-            (Bespiral.Object.Transfer.community
+            (Cambiatus.Object.Transfer.community
                 (SelectionSet.succeed Cmm
-                    |> with Bespiral.Object.Community.name
+                    |> with Cambiatus.Object.Community.name
                 )
             )
-        |> with Bespiral.Object.Transfer.createdAt
+        |> with Cambiatus.Object.Transfer.createdAt
 
 
-transferEdgeSelectionSet : SelectionSet EdgeTransfer Bespiral.Object.TransferEdge
+transferEdgeSelectionSet : SelectionSet EdgeTransfer Cambiatus.Object.TransferEdge
 transferEdgeSelectionSet =
     SelectionSet.succeed Edge
-        |> with Bespiral.Object.TransferEdge.cursor
-        |> with (Bespiral.Object.TransferEdge.node transferItemSelectionSet)
+        |> with Cambiatus.Object.TransferEdge.cursor
+        |> with (Cambiatus.Object.TransferEdge.node transferItemSelectionSet)
 
 
-transferConnectionSelectionSet : SelectionSet ConnectionTransfer Bespiral.Object.TransferConnection
+transferConnectionSelectionSet : SelectionSet ConnectionTransfer Cambiatus.Object.TransferConnection
 transferConnectionSelectionSet =
     SelectionSet.succeed PageConnection
-        |> with (Bespiral.Object.TransferConnection.edges transferEdgeSelectionSet)
-        |> with (Bespiral.Object.TransferConnection.pageInfo pageInfoSelectionSet)
+        |> with (Cambiatus.Object.TransferConnection.edges transferEdgeSelectionSet)
+        |> with (Cambiatus.Object.TransferConnection.pageInfo pageInfoSelectionSet)
 
 
-metadataConnectionSelectionSet : SelectionSet MetadataConnection Bespiral.Object.TransferConnection
+metadataConnectionSelectionSet : SelectionSet MetadataConnection Cambiatus.Object.TransferConnection
 metadataConnectionSelectionSet =
     SelectionSet.succeed MetadataConnection
-        |> with Bespiral.Object.TransferConnection.totalCount
-        |> with Bespiral.Object.TransferConnection.fetchedCount
+        |> with Cambiatus.Object.TransferConnection.totalCount
+        |> with Cambiatus.Object.TransferConnection.fetchedCount
 
 
-profileTransfersSelectionSet : (PaginationArgs -> PaginationArgs) -> SelectionSet QueryTransfers Bespiral.Object.Profile
+profileTransfersSelectionSet : (PaginationArgs -> PaginationArgs) -> SelectionSet QueryTransfers Cambiatus.Object.Profile
 profileTransfersSelectionSet paginateArgs =
     let
         transfers =
-            Bespiral.Object.Profile.transfers
+            Cambiatus.Object.Profile.transfers
                 paginateArgs
                 transferConnectionSelectionSet
     in
@@ -175,11 +175,11 @@ profileTransfersSelectionSet paginateArgs =
         |> with transfers
 
 
-communityTransfersSelectionSet : (PaginationArgs -> PaginationArgs) -> SelectionSet QueryTransfers Bespiral.Object.Community
+communityTransfersSelectionSet : (PaginationArgs -> PaginationArgs) -> SelectionSet QueryTransfers Cambiatus.Object.Community
 communityTransfersSelectionSet paginateArgs =
     let
         transfers =
-            Bespiral.Object.Community.transfers
+            Cambiatus.Object.Community.transfers
                 paginateArgs
                 transferConnectionSelectionSet
     in
@@ -192,11 +192,11 @@ transfersQuery input paginateArgs =
     case input of
         RegularUser name ->
             profileTransfersSelectionSet paginateArgs
-                |> Bespiral.Query.profile { input = { account = Present (Eos.nameToString name) } }
+                |> Cambiatus.Query.profile { input = { account = Present (Eos.nameToString name) } }
 
         Community symbol ->
             communityTransfersSelectionSet paginateArgs
-                |> Bespiral.Query.community { symbol = Eos.symbolToString symbol }
+                |> Cambiatus.Query.community { symbol = Eos.symbolToString symbol }
 
 
 getTransfers : Maybe { t | transfers : Maybe ConnectionTransfer } -> List Transfer
@@ -277,4 +277,4 @@ transferQuery tID =
         args =
             { input = { id = tID } }
     in
-    Bespiral.Query.transfer args transferItemSelectionSet
+    Cambiatus.Query.transfer args transferItemSelectionSet

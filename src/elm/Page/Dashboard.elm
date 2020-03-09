@@ -2,14 +2,14 @@ module Page.Dashboard exposing (Model, Msg, init, jsAddressToMsg, msgToString, s
 
 import Api
 import Api.Graphql
-import Bespiral.Object
-import Bespiral.Object.Action as Action
-import Bespiral.Object.Check as Check
-import Bespiral.Object.Claim as Claim exposing (ChecksOptionalArguments)
-import Bespiral.Object.Community as Community
-import Bespiral.Object.Objective as Objective
-import Bespiral.Query exposing (ClaimsRequiredArguments)
-import Bespiral.Scalar exposing (DateTime(..))
+import Cambiatus.Object
+import Cambiatus.Object.Action as Action
+import Cambiatus.Object.Check as Check
+import Cambiatus.Object.Claim as Claim exposing (ChecksOptionalArguments)
+import Cambiatus.Object.Community as Community
+import Cambiatus.Object.Objective as Objective
+import Cambiatus.Query exposing (ClaimsRequiredArguments)
+import Cambiatus.Scalar exposing (DateTime(..))
 import Community exposing (ActionVerification, ActionVerificationsResponse, Balance, ClaimResponse, Metadata, Transaction)
 import Eos as Eos exposing (Symbol)
 import Eos.Account as Eos
@@ -441,7 +441,7 @@ update msg model loggedIn =
                                 |> Tuple.mapSecond
                                     (Cmd.map (GotDashCommunityMsg i))
                         )
-                        (sortBespiralFirst loggedIn balances)
+                        (sortCambiatusFirst loggedIn balances)
                         |> List.unzip
             in
             UR.init { model | communities = Loaded communities }
@@ -575,12 +575,12 @@ verificationHistorySelectionSet forValidator accName =
                 { input = { claimer = Present accName, validator = Absent, symbol = Absent }
                 }
 
-        selectionSet : SelectionSet ClaimResponse Bespiral.Object.Claim
+        selectionSet : SelectionSet ClaimResponse Cambiatus.Object.Claim
         selectionSet =
             Community.claimSelectionSet accName
     in
     SelectionSet.succeed ActionVerificationsResponse
-        |> with (Bespiral.Query.claims qInput selectionSet)
+        |> with (Cambiatus.Query.claims qInput selectionSet)
 
 
 fetchBalance : Shared -> Eos.Name -> Cmd Msg
@@ -600,8 +600,8 @@ fetchTransfers shared accountName =
         CompletedLoadUserTransfers
 
 
-sortBespiralFirst : LoggedIn.Model -> List Balance -> List Balance
-sortBespiralFirst loggedIn balances =
+sortCambiatusFirst : LoggedIn.Model -> List Balance -> List Balance
+sortCambiatusFirst loggedIn balances =
     let
         bespiral : Maybe Balance
         bespiral =

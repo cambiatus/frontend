@@ -1,15 +1,15 @@
 module Page.Community.VerifyClaim exposing (Model, Msg, init, jsAddressToMsg, msgToString, update, view)
 
 import Api.Graphql
-import Bespiral.Object exposing (Claim, Profile)
-import Bespiral.Object.Action as Action
-import Bespiral.Object.Check as Check
-import Bespiral.Object.Claim as Claim exposing (ChecksOptionalArguments)
-import Bespiral.Object.Community as Community
-import Bespiral.Object.Objective as Objective
-import Bespiral.Object.Profile as Profile
-import Bespiral.Query exposing (ClaimRequiredArguments, ClaimsRequiredArguments)
-import Bespiral.Scalar exposing (DateTime(..))
+import Cambiatus.Object exposing (Claim, Profile)
+import Cambiatus.Object.Action as Action
+import Cambiatus.Object.Check as Check
+import Cambiatus.Object.Claim as Claim exposing (ChecksOptionalArguments)
+import Cambiatus.Object.Community as Community
+import Cambiatus.Object.Objective as Objective
+import Cambiatus.Object.Profile as Profile
+import Cambiatus.Query exposing (ClaimRequiredArguments, ClaimsRequiredArguments)
+import Cambiatus.Scalar exposing (DateTime(..))
 import DateFormat
 import Eos
 import Eos.Account as Eos
@@ -719,15 +719,15 @@ verificationSelectionSet id validator =
             { input = { id = id }
             }
 
-        selectionSet : SelectionSet ClaimResponse Bespiral.Object.Claim
+        selectionSet : SelectionSet ClaimResponse Cambiatus.Object.Claim
         selectionSet =
             claimSelectionSet validator
     in
     SelectionSet.succeed VerificationResponse
-        |> with (Bespiral.Query.claim claimInput selectionSet)
+        |> with (Cambiatus.Query.claim claimInput selectionSet)
 
 
-claimSelectionSet : String -> SelectionSet ClaimResponse Bespiral.Object.Claim
+claimSelectionSet : String -> SelectionSet ClaimResponse Cambiatus.Object.Claim
 claimSelectionSet validator =
     let
         checksArg : ChecksOptionalArguments -> ChecksOptionalArguments
@@ -743,19 +743,19 @@ claimSelectionSet validator =
         |> with (Claim.action actionSelectionSet)
 
 
-checkSelectionSet : SelectionSet CheckResponse Bespiral.Object.Check
+checkSelectionSet : SelectionSet CheckResponse Cambiatus.Object.Check
 checkSelectionSet =
     SelectionSet.succeed CheckResponse
         |> with Check.isVerified
 
 
-profileSelectionSet : SelectionSet ProfileResponse Bespiral.Object.Profile
+profileSelectionSet : SelectionSet ProfileResponse Cambiatus.Object.Profile
 profileSelectionSet =
     SelectionSet.succeed ProfileResponse
         |> with Profile.account
 
 
-actionSelectionSet : SelectionSet ActionResponse Bespiral.Object.Action
+actionSelectionSet : SelectionSet ActionResponse Cambiatus.Object.Action
 actionSelectionSet =
     SelectionSet.succeed ActionResponse
         |> with Action.description
@@ -765,14 +765,14 @@ actionSelectionSet =
         |> with (Action.validators profileSelectionSet)
 
 
-objectiveSelectionSet : SelectionSet ObjectiveResponse Bespiral.Object.Objective
+objectiveSelectionSet : SelectionSet ObjectiveResponse Cambiatus.Object.Objective
 objectiveSelectionSet =
     SelectionSet.succeed ObjectiveResponse
         |> with Objective.description
         |> with (Objective.community communitySelectionSet)
 
 
-communitySelectionSet : SelectionSet CommunityResponse Bespiral.Object.Community
+communitySelectionSet : SelectionSet CommunityResponse Cambiatus.Object.Community
 communitySelectionSet =
     SelectionSet.succeed CommunityResponse
         |> with Community.symbol

@@ -1,8 +1,8 @@
 module Utils exposing (decodeDate, decodeTimestamp, posixDateTime)
 
-import Bespiral.Scalar exposing (DateTime(..))
+import Cambiatus.Scalar exposing (DateTime(..))
 import Iso8601
-import Json.Decode as Decode exposing (Decoder, int, nullable, string)
+import Json.Decode as Decode exposing (Decoder, int, string)
 import Time exposing (Posix)
 
 
@@ -38,7 +38,7 @@ decodeDate =
                     Ok posix ->
                         Decode.succeed posix
 
-                    Err e ->
+                    Err _ ->
                         Decode.fail "Failed to parse date"
             )
 

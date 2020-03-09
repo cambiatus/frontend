@@ -1,10 +1,10 @@
 module Page.Community.ObjectiveEditor exposing (Model, Msg, initEdit, initNew, jsAddressToMsg, msgToString, update, view)
 
 import Api.Graphql
-import Bespiral.Object
-import Bespiral.Object.Community as Community
-import Bespiral.Object.Objective as Objective
-import Bespiral.Query as Query
+import Cambiatus.Object
+import Cambiatus.Object.Community as Community
+import Cambiatus.Object.Objective as Objective
+import Cambiatus.Query as Query
 import Community
 import Eos as Eos exposing (Symbol, symbolToString)
 import Eos.Account as Eos
@@ -192,7 +192,7 @@ communityQuery symbol =
         )
 
 
-objectiveSelectionSet : SelectionSet Objective Bespiral.Object.Objective
+objectiveSelectionSet : SelectionSet Objective Cambiatus.Object.Objective
 objectiveSelectionSet =
     SelectionSet.succeed Objective
         |> with Objective.id

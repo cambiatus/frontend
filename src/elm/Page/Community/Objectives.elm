@@ -1,7 +1,7 @@
 module Page.Community.Objectives exposing (Model, Msg, init, msgToString, update, view)
 
 import Api.Graphql
-import Bespiral.Enum.VerificationType as VerificationType exposing (VerificationType)
+import Cambiatus.Enum.VerificationType as VerificationType exposing (VerificationType)
 import Community exposing (Community, communityQuery)
 import Eos exposing (Symbol)
 import Graphql.Http

@@ -1,7 +1,7 @@
 module Api.Relay exposing (Edge, MetadataConnection, PageConnection, PageInfo, PaginationArgs, pageInfoSelectionSet)
 
-import Bespiral.Object
-import Bespiral.Object.PageInfo
+import Cambiatus.Object
+import Cambiatus.Object.PageInfo
 import Graphql.OptionalArgument exposing (OptionalArgument(..))
 import Graphql.SelectionSet as SelectionSet exposing (SelectionSet, with)
 
@@ -40,10 +40,10 @@ type alias PaginationArgs =
     }
 
 
-pageInfoSelectionSet : SelectionSet PageInfo Bespiral.Object.PageInfo
+pageInfoSelectionSet : SelectionSet PageInfo Cambiatus.Object.PageInfo
 pageInfoSelectionSet =
     SelectionSet.succeed PageInfo
-        |> with Bespiral.Object.PageInfo.endCursor
-        |> with Bespiral.Object.PageInfo.hasNextPage
-        |> with Bespiral.Object.PageInfo.hasPreviousPage
-        |> with Bespiral.Object.PageInfo.startCursor
+        |> with Cambiatus.Object.PageInfo.endCursor
+        |> with Cambiatus.Object.PageInfo.hasNextPage
+        |> with Cambiatus.Object.PageInfo.hasPreviousPage
+        |> with Cambiatus.Object.PageInfo.startCursor

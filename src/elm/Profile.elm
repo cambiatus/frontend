@@ -22,10 +22,10 @@ module Profile exposing
     )
 
 import Avatar exposing (Avatar)
-import Bespiral.Mutation
-import Bespiral.Object
-import Bespiral.Object.Profile as User
-import Bespiral.Query
+import Cambiatus.Mutation
+import Cambiatus.Object
+import Cambiatus.Object.Profile as User
+import Cambiatus.Query
 import Dict exposing (Dict)
 import Eos.Account as Eos
 import Graphql.Operation exposing (RootMutation, RootQuery)
@@ -58,7 +58,7 @@ type alias Profile =
     }
 
 
-selectionSet : SelectionSet Profile Bespiral.Object.Profile
+selectionSet : SelectionSet Profile Cambiatus.Object.Profile
 selectionSet =
     SelectionSet.succeed Profile
         |> with User.name
@@ -114,7 +114,7 @@ query account =
         nameString =
             Eos.nameToString account
     in
-    Bespiral.Query.profile
+    Cambiatus.Query.profile
         { input = { account = Present nameString } }
         selectionSet
 
@@ -135,7 +135,7 @@ mutation account form =
             Maybe.map Present form.avatar
                 |> Maybe.withDefault Absent
     in
-    Bespiral.Mutation.updateProfile
+    Cambiatus.Mutation.updateProfile
         { input =
             { account = nameString
             , name = Present form.name
