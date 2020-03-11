@@ -1173,11 +1173,7 @@ viewValidations { shared } model =
                               else
                                 text_ "community.actions.form.validation_on"
                             ]
-                        , if model.form.validation == NoValidation then
-                            text_ "community.actions.form.validation_detail"
-
-                          else
-                            text_ "community.actions.form.validation_on_detail"
+                        , text_ "community.actions.form.validation_detail"
                         ]
                     ]
                 ]
