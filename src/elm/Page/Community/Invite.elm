@@ -83,23 +83,34 @@ viewContent shared invite =
     let
         text_ s =
             text (I18Next.t shared.translations s)
+
+        inviter =
+            invite.creator.userName
+                |> Maybe.withDefault (Eos.nameToString invite.creator.account)
     in
-    div [ class "bg-white" ]
-        [ img [ src (shared.endpoints.ipfs ++ "/" ++ invite.community.logo), class "object-scale-down" ] []
-        , div []
-            [ span []
-                [ text
-                    (invite.creator.userName
-                        |> Maybe.withDefault (Eos.nameToString invite.creator.account)
-                    )
+    div [ class "bg-white pb-20" ]
+        [ div [ class "flex flex-wrap content-end" ]
+            [ div [ class "flex items-center justify-center h-24 w-24 rounded-full mx-auto -mt-12 bg-white" ]
+                [ img
+                    [ src (shared.endpoints.ipfs ++ "/" ++ invite.community.logo)
+                    , class "object-scale-down h-20 w-20"
+                    ]
+                    []
                 ]
-            , text_ "community.invite.title"
-            , span []
-                [ text invite.community.title ]
             ]
-        , div []
-            [ button [ class "buton button-secondary" ] [ text_ "community.invite.no" ]
-            , button [ class "buton button-primary" ] [ text_ "community.invite.yes" ]
+        , div [ class "flex mx-auto justify-center mt-6" ]
+            [ span [ class "font-bold mr-1" ] [ text inviter ]
+            , span [ class "mr-1" ] [ text_ "community.invitation.title" ]
+            , span [ class "font-bold" ] [ text invite.community.title ]
+            ]
+        , div [ class "flex mx-auto justify-center mt-6" ]
+            [ span [ class "mr-1" ] [ text_ "community.invitation.subtitle" ]
+            , text invite.community.title
+            , text "?"
+            ]
+        , div [ class "flex justify-center w-full mt-6" ]
+            [ button [ class "button button-sm button-secondary uppercase mr-8" ] [ text_ "community.invitation.no" ]
+            , button [ class "button button-sm button-primary uppercase" ] [ text_ "community.invitation.yes" ]
             ]
         ]
 

@@ -253,6 +253,12 @@
       "copy": "Copy",
       "copied": "Copied!"
     },
+    "invitation": {
+      "title": "invited you to be part of the community",
+      "subtitle": "Would you like to join",
+      "yes": "Yes, join",
+      "no": "No, thanks"
+    },
     "details": {
       "creator": "Creator",
       "supply": "Supply",

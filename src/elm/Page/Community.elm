@@ -658,7 +658,7 @@ viewAction loggedIn metadata maybeDate action =
 
 
 viewHeader : LoggedIn.Model -> Community -> Html Msg
-viewHeader ({ shared } as loggedIn) community =
+viewHeader { shared } community =
     div []
         [ div [ class "h-16 w-full bg-indigo-500 flex px-4 items-center" ]
             [ a
@@ -673,7 +673,7 @@ viewHeader ({ shared } as loggedIn) community =
             , p [ class "text-white mx-auto" ] [ text community.title ]
             ]
         , div [ class "h-24 lg:h-56 bg-indigo-500 flex flex-wrap content-end" ]
-            [ div [ class "h-24 w-24 h-24 w-24 rounded-full mx-auto pt-12" ]
+            [ div [ class "h-24 w-24 rounded-full mx-auto pt-12" ]
                 [ img
                     [ src (shared.endpoints.ipfs ++ "/" ++ community.logo)
                     , class "object-scale-down"

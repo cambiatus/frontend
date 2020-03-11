@@ -254,6 +254,12 @@
       "copy": "Còpia",
       "copied": "Copiat!"
     },
+    "invitation": {
+      "title": "Et va convidar a formar part de la comunitat",
+      "subtitle": "Voleu unir-vos a",
+      "yes": "Sí, uniu-vos",
+      "no": "No gràcies"
+    },
     "details": {
       "creator": "Creador",
       "supply": "Monedes emeses",

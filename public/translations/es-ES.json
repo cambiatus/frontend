@@ -253,6 +253,12 @@
       "copy": "Copiar",
       "copied": "Copiado!"
     },
+    "invitation": {
+      "title": "Te invitó a ser parte de la comunidad",
+      "subtitle": "Te gustaría unirte",
+      "yes": "Si, únete",
+      "no": "No, gracias"
+    },
     "details": {
       "creator": "Creador/a",
       "supply": "Monedas emitidas",
