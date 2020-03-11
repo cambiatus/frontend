@@ -1,0 +1,113 @@
+
+       @font-face {
+         font-family: "Gotham Rounded";
+         font-style: normal;
+         font-weight: 700;
+         src: url("/fonts/gotham-rounded-bold.otf");
+       }
+
+       @font-face {
+         font-family: "Gotham Rounded";
+         font-style: italic;
+         font-weight: 700;
+         src: url("/fonts/gotham-rounded-bold-italic.otf");
+       }
+
+       @font-face {
+         font-family: "Gotham Rounded";
+         font-style: normal;
+         font-weight: 400;
+         src: url("/fonts/gotham-rounded-book.otf");
+       }
+
+       @font-face {
+         font-family: "Gotham Rounded";
+         font-style: italic;
+         font-weight: 400;
+         src: url("/fonts/gotham-rounded-book-italic.otf");
+       }
+
+       @font-face {
+         font-family: "Gotham Rounded";
+         font-style: normal;
+         font-weight: 300;
+         src: url("/fonts/gotham-rounded-light.otf");
+       }
+
+       @font-face {
+         font-family: "Gotham Rounded";
+         font-style: italic;
+         font-weight: 300;
+         src: url("/fonts/gotham-rounded-light-italic.otf");
+       }
+
+       @font-face {
+         font-family: "Gotham Rounded";
+         font-style: normal;
+         font-weight: 500;
+         src: url("/fonts/gotham-rounded-medium.otf");
+       }
+
+       @font-face {
+         font-family: "Gotham Rounded";
+         font-style: italic;
+         font-weight: 500;
+         src: url("/fonts/gotham-rounded-medium-italic.otf");
+       }
+
+       body {
+         margin: 0;
+         padding: 0;
+       }
+
+       noscript {
+         font-family: Gotham Rounded;
+         font-style: normal;
+         font-weight: 500;
+         font-size: 14px;
+         line-height: 22px;
+         display: flex;
+         justify-content: center;
+       }
+
+       .container {
+         height: 100vh;
+         display: flex;
+         flex-direction: column;
+         justify-content: space-around;
+         max-width: 70%;
+         align-items: center;
+       }
+
+       .warning {
+         margin-bottom: 20px;
+         width: 100%;
+         display: grid;
+
+         grid-template-columns: 50px auto;
+         grid-template-rows: auto auto;
+
+         grid-template-areas:
+           "icon title"
+           ". body"
+       }
+
+       h1 {
+         display: flex;
+         justify-content: center;
+       }
+
+       .icon {
+         grid-area: icon;
+       }
+
+       .title {
+         grid-area: title;
+         color: #45469B;
+         font-weight: 600;
+       }
+
+       .body {
+         grid-area: body;
+       }
+      
