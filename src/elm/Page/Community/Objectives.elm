@@ -332,7 +332,7 @@ type Msg
 
 
 update : Msg -> Model -> LoggedIn.Model -> UpdateResult
-update msg model loggedIn =
+update msg model _ =
     case msg of
         CompletedLoad (Ok community) ->
             case community of

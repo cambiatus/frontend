@@ -31,7 +31,7 @@ import Eos.Account as Eos
 import Graphql.Operation exposing (RootMutation, RootQuery)
 import Graphql.OptionalArgument exposing (OptionalArgument(..))
 import Graphql.SelectionSet as SelectionSet exposing (SelectionSet, with)
-import Html exposing (..)
+import Html exposing (Html, div, p, text)
 import Html.Attributes exposing (class, maxlength, minlength, pattern, title, type_)
 import I18Next exposing (Translations, t)
 import Json.Decode as Decode exposing (Decoder, list, nullable, string)
