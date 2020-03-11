@@ -406,6 +406,10 @@ update msg model =
                 >> updateLoggedInUResult (Transfer transferId) GotTransferScreenMsg model
                 |> withLoggedIn
 
+        ( GotInviteMsg subMsg, Invite subModel ) ->
+            Invite.update model.session subMsg subModel
+                |> updateLoggedInUResult Invite GotInviteMsg model
+
         ( _, _ ) ->
             ( model
             , Log.impossible ("Main" :: msgToString msg |> String.join ".")
@@ -979,5 +983,5 @@ view model =
         Transfer _ subModel ->
             viewLoggedIn subModel LoggedIn.Other GotTransferScreenMsg Transfer.view
 
-        Invite _ ->
-            Html.map (\_ -> Ignored) (Invite.view model.session)
+        Invite subModel ->
+            Html.map (\_ -> Ignored) (Invite.view model.session subModel)
