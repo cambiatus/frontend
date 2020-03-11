@@ -25,7 +25,7 @@ import Session.Shared exposing (Shared)
 import Shop exposing (Sale, SaleId)
 import UpdateResult as UR
 import Utils exposing (decodeEnterKeyDown)
-
+import Task
 
 
 -- INIT
@@ -933,12 +933,14 @@ update msg model loggedIn =
         PressedEnter val ->
             case val of
                 True ->
-                    model
-                        |> UR.init
+                    UR.init model
+                        |> UR.addCmd
+                            (Task.succeed ClickedSave
+                                 |> Task.perform identity)
+
 
                 False ->
-                    model
-                        |> UR.init
+                    UR.init model
 
 
 performRequest : Msg -> Model -> Status -> Eos.Name -> String -> Value -> UpdateResult

@@ -3,6 +3,7 @@ module Auth exposing (ExternalMsg(..), Model, Msg, PrivateKeyLogin, init, initRe
 import Api
 import Asset.Icon as Icon
 import Browser.Dom as Dom
+import Browser.Events
 import Eos.Account as Eos
 import Flags
 import Html exposing (..)
@@ -20,6 +21,7 @@ import Route
 import Session.Shared as Shared exposing (Shared)
 import Task
 import UpdateResult as UR
+import Utils
 
 
 
@@ -47,7 +49,7 @@ initRegister pk =
 
 subscriptions : Model -> Sub Msg
 subscriptions _ =
-    Sub.none
+    Sub.map PressedEnter (Browser.Events.onKeyDown Utils.decodeEnterKeyDown)
 
 
 
@@ -489,6 +491,7 @@ type Msg
     | CompletedCreateProfile Status Eos.Name (Result Http.Error Profile)
     | EnteredPinDigit Int String
     | TogglePinVisibility
+    | PressedEnter Bool
 
 
 type ExternalMsg
@@ -721,6 +724,18 @@ update msg shared model =
         TogglePinVisibility ->
             { model | pinVisibility = not model.pinVisibility } |> UR.init
 
+        PressedEnter val ->
+            case val of
+                True ->
+                    UR.init model
+                        |> UR.addCmd
+                            (Task.succeed (SubmittedLoginPrivateKey model.form)
+                                |> Task.perform identity
+                            )
+
+                False ->
+                    UR.init model
+
 
 loginFailed : Http.Error -> Model -> UpdateResult
 loginFailed httpError model =
@@ -834,3 +849,6 @@ msgToString msg =
 
         TogglePinVisibility ->
             [ "TogglePinVisibility" ]
+
+        PressedEnter _ ->
+            [ "PressedEnter" ]

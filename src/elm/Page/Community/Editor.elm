@@ -33,6 +33,7 @@ import Page
 import Route
 import Session.LoggedIn as LoggedIn exposing (External(..))
 import Session.Shared exposing (Shared)
+import Task
 import UpdateResult as UR
 import Utils exposing (..)
 
@@ -793,9 +794,17 @@ update msg model loggedIn =
                         |> UR.init
                         |> UR.logImpossible msg []
 
-        PressedEnter _ ->
-            model
-                |> UR.init
+        PressedEnter val ->
+            case val of
+                True ->
+                    UR.init model
+                        |> UR.addCmd
+                            (Task.succeed ClickedSave
+                                |> Task.perform identity
+                            )
+
+                False ->
+                    UR.init model
 
 
 updateStatus : Model -> Status -> Model

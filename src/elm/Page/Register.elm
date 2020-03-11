@@ -3,7 +3,7 @@ module Page.Register exposing (Model, Msg, init, jsAddressToMsg, msgToString, su
 import Api
 import Auth exposing (viewFieldLabel)
 import Browser.Dom as Dom
-import Browser.Events as Events
+import Browser.Events
 import Char
 import Eos.Account as Eos
 import Graphql.Http
@@ -43,7 +43,7 @@ init guest =
 
 subscriptions : Model -> Sub Msg
 subscriptions _ =
-    Sub.map PressedEnter (Events.onKeyDown decodeEnterKeyDown)
+    Sub.map PressedEnter (Browser.Events.onKeyDown decodeEnterKeyDown)
 
 
 
@@ -843,9 +843,20 @@ update maybeInvitation msg model guest =
                                 |> Api.signIn guest.shared keys.accountName
                             )
 
-        PressedEnter _ ->
-            model
-                |> UR.init
+        PressedEnter val ->
+            let
+                _ = Debug.log "Triggered"
+            in
+            case val of
+                True ->
+                    UR.init model
+                        |> UR.addCmd
+                            -- insufficient? slow?
+                            (Task.succeed ValidateForm
+                                 |> Task.perform identity)
+
+                False ->
+                    UR.init model
 
 
 

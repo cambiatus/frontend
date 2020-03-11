@@ -11,8 +11,9 @@ module Page.Community.ActionEditor exposing
 
 import Api.Graphql
 import Avatar
-import Cambiatus.Enum.VerificationType as VerificationType exposing (VerificationType)
-import Cambiatus.Scalar exposing (DateTime(..))
+import Bespiral.Enum.VerificationType as VerificationType exposing (VerificationType)
+import Bespiral.Scalar exposing (DateTime(..))
+import Browser.Events
 import Community exposing (Community)
 import DataValidator
     exposing
@@ -49,9 +50,19 @@ import Session.LoggedIn as LoggedIn exposing (External(..))
 import Session.Shared exposing (Shared)
 import Simple.Fuzzy
 import Strftime
+import Task
 import Time
 import UpdateResult as UR
 import Utils
+
+
+
+-- SUBSCRIPTION
+
+
+subscription : Model -> Sub Msg
+subscription _ =
+    Sub.map PressedEnter (Browser.Events.onKeyDown Utils.decodeEnterKeyDown)
 
 
 
@@ -372,6 +383,7 @@ type Msg
     | SaveAction Int -- Send the date
     | GotSaveAction (Result Value String)
     | DismissError
+    | PressedEnter Bool
 
 
 update : Msg -> Model -> LoggedIn.Model -> UpdateResult
@@ -897,6 +909,19 @@ update msg model loggedIn =
             in
             { model | form = { oldForm | saveStatus = NotAsked } }
                 |> UR.init
+
+        PressedEnter val ->
+            case val of
+                True ->
+                    UR.init model
+                        |> UR.addCmd
+                            -- get date in here
+                            (Task.succeed (SaveAction 0)
+                                |> Task.perform identity
+                            )
+
+                False ->
+                    UR.init model
 
 
 upsertAction : LoggedIn.Model -> Model -> Int -> UpdateResult
@@ -1627,3 +1652,6 @@ msgToString msg =
 
         DismissError ->
             [ "DismissError" ]
+
+        PressedEnter _ ->
+            [ "PressedEnter" ]
