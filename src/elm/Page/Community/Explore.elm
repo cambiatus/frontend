@@ -145,9 +145,6 @@ viewCommunity loggedIn community =
 
         tr =
             I18Next.tr loggedIn.shared.translations I18Next.Curly
-
-        maybeTransferCount =
-            Transfer.getTotalCount (Just community)
     in
     a
         [ class "w-full sm:w-1/2 md:w-1/3 lg:w-1/3 xl:w-1/4 px-2 mb-6 h-60"
@@ -168,14 +165,6 @@ viewCommunity loggedIn community =
             , div [ class "w-full px-6 py-4" ]
                 [ p [ class "flex-1 bg-indigo-500 mt-2 rounded-full px-3 py-1 text-sm font-bold text-white mr-2" ]
                     [ text (tr "community.index.members" [ ( "quantity", String.fromInt community.memberCount ) ]) ]
-                , case maybeTransferCount of
-                    Just transferCount ->
-                        p [ class "flex-1 bg-indigo-500 mt-2 rounded-full px-3 py-1 text-sm font-bold text-white mr-2" ]
-                            [ text (tr "community.index.transfers" [ ( "quantity", String.fromInt transferCount ) ])
-                            ]
-
-                    Nothing ->
-                        text ""
                 ]
             ]
         ]

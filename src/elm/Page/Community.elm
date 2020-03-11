@@ -278,8 +278,9 @@ view loggedIn model =
                                     text ""
                                ]
                         )
-                    , Transfer.getTransfers (Just community)
-                        |> viewSections loggedIn model
+
+                    -- , Transfer.getTransfers (Just community)
+                    --     |> viewSections loggedIn model
                     ]
                 ]
 
