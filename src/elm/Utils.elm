@@ -62,7 +62,7 @@ decodeEnterKeyDown =
                 _ ->
                     False
     in
-    Decode.string
+    Decode.field "key" Decode.string
         |> Decode.andThen
            (\cd ->
                 Decode.succeed <| isEnter cd

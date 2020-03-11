@@ -5,6 +5,7 @@ import Bespiral.Object
 import Bespiral.Object.Community as Community
 import Bespiral.Object.Objective as Objective
 import Bespiral.Query as Query
+import Browser.Events
 import Community
 import Eos as Eos exposing (Symbol, symbolToString)
 import Eos.Account as Eos
@@ -21,7 +22,18 @@ import Json.Encode as Encode exposing (Value)
 import Page
 import Route
 import Session.LoggedIn as LoggedIn exposing (External(..))
+import Task
 import UpdateResult as UR
+import Utils exposing (decodeEnterKeyDown)
+
+
+
+-- SUBSCRIPTIONS
+
+
+subscription : Model -> Sub Msg
+subscription _ =
+    Sub.map PressedEnter (Browser.Events.onKeyDown decodeEnterKeyDown)
 
 
 
@@ -102,6 +114,7 @@ type Msg
     | EnteredDescription String
     | ClickedSaveObjective
     | GotSaveObjectiveResponse (Result Value String)
+    | PressedEnter Bool
 
 
 initObjectiveForm : ObjectiveForm
@@ -381,6 +394,18 @@ update msg model loggedIn =
                 |> updateObjective msg (\o -> { o | save = SaveFailed })
                 |> UR.logDebugValue msg v
 
+        PressedEnter val ->
+            case val of
+                True ->
+                    UR.init model
+                        |> UR.addCmd
+                            (Task.succeed ClickedSaveObjective
+                                |> Task.perform identity
+                            )
+
+                False ->
+                    UR.init model
+
 
 
 -- UTILS
@@ -419,3 +444,6 @@ msgToString msg =
 
         GotSaveObjectiveResponse r ->
             [ "GotSaveObjectiveResponse", UR.resultToString r ]
+
+        PressedEnter _ ->
+            [ "PressedEnter" ]

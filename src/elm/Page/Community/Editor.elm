@@ -35,7 +35,7 @@ import Session.LoggedIn as LoggedIn exposing (External(..))
 import Session.Shared exposing (Shared)
 import UpdateResult as UR
 import Utils exposing (..)
-
+import Task
 
 
 -- INIT
@@ -793,9 +793,17 @@ update msg model loggedIn =
                         |> UR.init
                         |> UR.logImpossible msg []
 
-        PressedEnter _ ->
-            model
-                |> UR.init
+        PressedEnter val ->
+            case val of
+                True ->
+                    UR.init model
+                        |> UR.addCmd
+                            (Task.succeed ClickedSave
+                                 |> Task.perform identity)
+
+
+                False ->
+                    UR.init model
 
 
 updateStatus : Model -> Status -> Model
