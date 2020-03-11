@@ -1150,7 +1150,7 @@ viewValidations { shared } model =
     in
     div []
         [ div [ class "mb-6" ]
-            [ div [ class "mb-10" ]
+            [ div []
                 [ p [ class "input-label mb-6" ] [ text_ "community.actions.form.validity_label" ]
                 , div [ class "flex" ]
                     [ div [ class "form-switch inline-block align-middle" ]
