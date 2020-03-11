@@ -281,7 +281,7 @@
       "loading_error": "Something went wrong while fetching actions.",
       "no_actions_yet": "No actions yet.",
       "no_transfers_yet": "No transfers yet.",
-      "reward": "Reward",
+      "reward": "Claimants Reward",
       "manually_verified_by": "Manually verified by",
       "aumatically_verified_by": "Automatically verified by",
       "validation_reward": "Validation reward",
@@ -306,7 +306,7 @@
       "form": {
         "not_found": "Action not found",
         "description_label": "Description",
-        "reward_label": "Reward",
+        "reward_label": "Claimants Reward",
         "validity_label": "Validity type",
         "validation_on": "Expiration on,",
         "validation_off": "Expiration off,",
