@@ -311,6 +311,7 @@
         "validation_on": "Expiration on,",
         "validation_off": "Expiration off,",
         "validation_detail": "the action will be available until it is deleted",
+        "validation_on_detail": "the action will be available until a date, quantity or both",
         "verification_label": "Does it need verification?",
         "verifiers_label": "Choose the verifiers",
         "remove_verifier": "Remove",

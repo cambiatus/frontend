@@ -315,6 +315,7 @@
         "validation_on": "Expiração ativada,",
         "validation_off": "Expiração desativada,",
         "validation_detail": "a ação estará disponível até que seja deletada",
+        "validation_on_detail": "a ação estará disponível até uma data, quantidade ou ambos",
         "verification_label": "Precisa de verificação?",
         "verifiers_label": "Escolha os verificadores",
         "remove_verifier": "Remover",
