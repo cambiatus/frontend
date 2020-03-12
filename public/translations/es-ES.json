@@ -265,7 +265,7 @@
       "title": "Objetivo",
       "title_plural": "Objetivos y Acciones",
       "subtitle": "{{objectives}} objetivos y {{actions}} acciones",
-      "new": "Nuevo objetivo",
+      "new": "Crear nuevo objetivo",
       "action_count": "{{actions}} acciones",
       "editor": {
         "not_found": "No encontrado",

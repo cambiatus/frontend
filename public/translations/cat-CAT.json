@@ -266,7 +266,7 @@
       "title": "Objectiu",
       "title_plural": "Objectius i Accions",
       "subtitle": "{{objectives}} objectius i {{actions}} accions",
-      "new": "Nou objectiu",
+      "new": "Crear un objectiu nou",
       "action_count": "{{actions}} accions",
       "editor": {
         "not_found": "No trobat",
