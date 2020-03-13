@@ -13,12 +13,14 @@ import Api.Graphql
 import Community exposing (Invite, inviteQuery)
 import Eos.Account as Eos
 import Graphql.Http
-import Html exposing (Html, button, div, img, span, text)
+import Html exposing (Html, button, div, img, p, span, text)
 import Html.Attributes exposing (class, src)
+import Html.Events exposing (onClick)
 import I18Next exposing (t)
+import Icons
 import Page exposing (Session(..), toShared)
 import Session.LoggedIn as LoggedIn exposing (External)
-import Session.Shared as Shared exposing (Shared)
+import Session.Shared exposing (Shared)
 import UpdateResult as UR
 
 
@@ -29,11 +31,14 @@ init session invitationId =
 
 initModel : Model
 initModel =
-    { status = Loading }
+    { status = Loading
+    , confirmationModal = Closed
+    }
 
 
 type alias Model =
     { status : Status
+    , confirmationModal : ModalStatus
     }
 
 
@@ -44,7 +49,12 @@ type Status
     | Loaded Invite
 
 
-view : Session -> Model -> Html msg
+type ModalStatus
+    = Closed
+    | Open
+
+
+view : Session -> Model -> Html Msg
 view session model =
     let
         shared =
@@ -66,6 +76,7 @@ view session model =
                     div []
                         [ viewHeader
                         , viewContent shared invite
+                        , viewModal shared model
                         ]
             ]
         , viewFooter session
@@ -78,7 +89,7 @@ viewHeader =
         []
 
 
-viewContent : Shared -> Invite -> Html msg
+viewContent : Shared -> Invite -> Html Msg
 viewContent shared invite =
     let
         text_ s =
@@ -109,10 +120,54 @@ viewContent shared invite =
             , text "?"
             ]
         , div [ class "flex justify-center w-full mt-6" ]
-            [ button [ class "button button-sm button-secondary uppercase mr-8" ] [ text_ "community.invitation.no" ]
-            , button [ class "button button-sm button-primary uppercase" ] [ text_ "community.invitation.yes" ]
+            [ button
+                [ class "button button-sm button-secondary w-48 uppercase mr-8"
+                , onClick OpenConfirmationModal
+                ]
+                [ text_ "community.invitation.no" ]
+            , button [ class "button button-sm button-primary w-48 uppercase" ]
+                [ text_ "community.invitation.yes" ]
             ]
         ]
+
+
+viewModal : Shared -> Model -> Html Msg
+viewModal shared model =
+    let
+        t s =
+            I18Next.t shared.translations s
+
+        text_ s =
+            text (t s)
+    in
+    case model.confirmationModal of
+        Closed ->
+            text ""
+
+        _ ->
+            div [ class "modal container" ]
+                [ div [ class "modal-bg", onClick CloseConfirmationModal ] []
+                , div [ class "modal-content" ]
+                    [ div [ class "w-full" ]
+                        [ p [ class "text-2xl font-bold mb-4" ]
+                            [ text_ "community.invitation.modal.title" ]
+                        , button [ onClick CloseConfirmationModal ]
+                            [ Icons.close "absolute fill-current text-gray-400 top-0 right-0 mx-8 my-4" ]
+                        , div [ class "flex items-center" ]
+                            [ div [ class "flex flex-col items-left" ]
+                                [ p [ class "" ]
+                                    [ text_ "community.invitation.modal.body" ]
+                                ]
+                            , div [ class "w-full md:bg-gray-100 flex md:absolute rounded-b-lg md:inset-x-0 md:bottom-0 md:p-4 justify-center items-center" ]
+                                [ button [ class "button button-secondary w-48 mr-8" ]
+                                    [ text_ "community.invitation.modal.no"
+                                    ]
+                                , button [ class "button button-primary w-48" ] [ text_ "community.invitation.modal.yes" ]
+                                ]
+                            ]
+                        ]
+                    ]
+                ]
 
 
 viewFooter : Session -> Html msg
@@ -139,6 +194,8 @@ type alias UpdateResult =
 
 type Msg
     = CompletedLoad (Result (Graphql.Http.Error (Maybe Invite)) (Maybe Invite))
+    | OpenConfirmationModal
+    | CloseConfirmationModal
 
 
 update : Session -> Msg -> Model -> UpdateResult
@@ -155,9 +212,23 @@ update _ msg model =
                 |> UR.init
                 |> UR.logGraphqlError msg error
 
+        OpenConfirmationModal ->
+            { model | confirmationModal = Open }
+                |> UR.init
+
+        CloseConfirmationModal ->
+            { model | confirmationModal = Closed }
+                |> UR.init
+
 
 msgToString : Msg -> List String
 msgToString msg =
     case msg of
         CompletedLoad r ->
             [ "CompletedLoad", UR.resultToString r ]
+
+        OpenConfirmationModal ->
+            [ "OpenConfirmationModal" ]
+
+        CloseConfirmationModal ->
+            [ "CloseConfirmationModal" ]

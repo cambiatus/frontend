@@ -261,7 +261,13 @@
       "title": "convidou você para fazer parte da comunidade",
       "subtitle": "Gostaria de se juntar a",
       "yes": "Sim, participar",
-      "no": "Não, obrigado"
+      "no": "Não, obrigado",
+      "modal": {
+        "title": "Atenção",
+        "body": "Você realmente não deseja participar da comunidade?",
+        "yes": "Sim, participar",
+        "no": "Não, cancelar"
+      }
     },
     "details": {
       "creator": "Criador(a)",

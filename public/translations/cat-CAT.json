@@ -258,7 +258,14 @@
       "title": "Et va convidar a formar part de la comunitat",
       "subtitle": "Voleu unir-vos a",
       "yes": "Sí, uniu-vos",
-      "no": "No gràcies"
+      "no": "No gràcies",
+      "modal": {
+        "title": "Atenció",
+        "body": "De debò no vols unir-te a la comunitat?",
+        "yes": "Sí uniu-vos",
+        "no": "No, cancel·la"
+      }
+
     },
     "details": {
       "creator": "Creador",

@@ -984,4 +984,4 @@ view model =
             viewLoggedIn subModel LoggedIn.Other GotTransferScreenMsg Transfer.view
 
         Invite subModel ->
-            Html.map (\_ -> Ignored) (Invite.view model.session subModel)
+            Html.map GotInviteMsg (Invite.view model.session subModel)

@@ -257,7 +257,14 @@
       "title": "Te invitó a ser parte de la comunidad",
       "subtitle": "Te gustaría unirte",
       "yes": "Si, únete",
-      "no": "No, gracias"
+      "no": "No, gracias",
+      "modal": {
+        "title": "Atención",
+        "body": "¿Realmente no quieres unirte a la comunidad?",
+        "yes": "Sí, únete",
+        "no": "No, cancelar"
+      }
+
     },
     "details": {
       "creator": "Creador/a",

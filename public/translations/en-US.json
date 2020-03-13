@@ -257,7 +257,13 @@
       "title": "invited you to be part of the community",
       "subtitle": "Would you like to join",
       "yes": "Yes, join",
-      "no": "No, thanks"
+      "no": "No, thanks",
+      "modal": {
+        "title": "Attention",
+        "body": "Don't you really want to join the community?",
+        "yes": "Yes, join",
+        "no": "No, cancel"
+      }
     },
     "details": {
       "creator": "Creator",
