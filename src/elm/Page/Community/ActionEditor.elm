@@ -1411,8 +1411,8 @@ viewSelectedVerifiers shared selectedVerifiers =
                     div
                      [ class "flex justify-between flex-col m-3 items-center h-32" ]
                      [  Avatar.view ipfsUrl p.avatar "h-10 w-10"
-                     , span [ class "bg-black text-white rounded-sm px-3 text-body leading-normal" ]
-                            [ text (String.toUpper (Eos.nameToString p.account)) ]
+                     , span [ class "uppercase font-bold bg-black text-white rounded-sm px-3 py-1 text-body leading-normal" ]
+                            [ text (Eos.nameToString p.account) ]
                      , div
                             [ onClick (OnRemoveVerifier p)
                                   , class "h-6 w-6 flex items-center"
