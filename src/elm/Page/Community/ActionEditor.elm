@@ -1417,7 +1417,7 @@ viewSelectedVerifiers shared selectedVerifiers =
                             [ onClick (OnRemoveVerifier p)
                                   , class "h-6 w-6 flex items-center"
                                   ]
-                            [ Icons.remove "" ] ]
+                            [ Icons.trash "" ] ]
                 )
         )
 
