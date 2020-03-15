@@ -1409,18 +1409,15 @@ viewSelectedVerifiers shared selectedVerifiers =
             |> List.map
                 (\p ->
                     div
-                        [ class "flex flex-col m-3 items-center" ]
-                        [ div [ class "relative h-10 w-12 ml-2" ]
-                            [ Avatar.view ipfsUrl p.avatar "h-10 w-10"
-                            , div
-                                [ onClick (OnRemoveVerifier p)
-                                , class "absolute top-0 right-0 z-10 rounded-full h-6 w-6 flex items-center"
-                                ]
-                                [ Icons.remove "" ]
-                            ]
-                        , span [ class "mt-2 text-black font-sans text-body leading-normal" ]
+                     [ class "flex justify-between flex-col m-3 items-center h-32" ]
+                     [  Avatar.view ipfsUrl p.avatar "h-10 w-10"
+                     , span [ class "uppercase font-bold bg-black text-white rounded-sm px-3 py-1 text-body leading-normal" ]
                             [ text (Eos.nameToString p.account) ]
-                        ]
+                     , div
+                            [ onClick (OnRemoveVerifier p)
+                                  , class "h-6 w-6 flex items-center"
+                                  ]
+                            [ Icons.trash "" ] ]
                 )
         )
 
