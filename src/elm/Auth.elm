@@ -603,28 +603,27 @@ update msg shared model =
                 }
 
         SubmittedLoginPIN ->
-            case List.any (\a -> a == Nothing) model.form.enteredPin of
-                True ->
-                    { model | loginError = Just "Please fill in all the PIN digits" }
-                        |> UR.init
+            if List.any (\a -> a == Nothing) model.form.enteredPin then
+                { model | loginError = Just "Please fill in all the PIN digits" }
+                    |> UR.init
 
-                False ->
-                    let
-                        pinString =
-                            model.form.enteredPin
-                                |> List.map (\a -> Maybe.withDefault "" a)
-                                |> List.foldl (\a b -> a ++ b) ""
-                    in
-                    UR.init { model | status = LoggingInWithPin }
-                        |> UR.addPort
-                            { responseAddress = SubmittedLoginPIN
-                            , responseData = Encode.null
-                            , data =
-                                Encode.object
-                                    [ ( "name", Encode.string "loginWithPin" )
-                                    , ( "pin", Encode.string pinString )
-                                    ]
-                            }
+            else
+                let
+                    pinString =
+                        model.form.enteredPin
+                            |> List.map (\a -> Maybe.withDefault "" a)
+                            |> List.foldl (\a b -> a ++ b) ""
+                in
+                UR.init { model | status = LoggingInWithPin }
+                    |> UR.addPort
+                        { responseAddress = SubmittedLoginPIN
+                        , responseData = Encode.null
+                        , data =
+                            Encode.object
+                                [ ( "name", Encode.string "loginWithPin" )
+                                , ( "pin", Encode.string pinString )
+                                ]
+                        }
 
         GotPinLogin (Ok ( accountName, privateKey )) ->
             UR.init model

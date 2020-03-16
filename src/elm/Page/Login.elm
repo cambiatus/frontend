@@ -87,9 +87,6 @@ update msg model guest =
     let
         shared =
             guest.shared
-
-        language =
-            shared.language
     in
     case msg of
         GotAuthMsg authMsg ->

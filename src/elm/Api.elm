@@ -155,16 +155,6 @@ getBalances shared accountName toMsg =
         }
 
 
-
--- {
---     "data": {
---         "id": "7wmLW4",
---         "message": "Successfully invited",
---         "status": "ok"
---     }
--- }
-
-
 uploadImage : Shared -> File -> (Result Http.Error String -> msg) -> Cmd msg
 uploadImage shared file toMsg =
     Http.post
