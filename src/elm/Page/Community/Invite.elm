@@ -7,8 +7,7 @@ module Page.Community.Invite exposing
     , view
     )
 
--- import Session.Guest as Guest
-
+import Api
 import Api.Graphql
 import Community exposing (Invite, inviteQuery)
 import Eos.Account as Eos
@@ -16,9 +15,11 @@ import Graphql.Http
 import Html exposing (Html, button, div, img, p, span, text)
 import Html.Attributes exposing (class, src)
 import Html.Events exposing (onClick)
+import Http
 import I18Next exposing (t)
 import Icons
 import Page exposing (Session(..), toShared)
+import Profile exposing (Profile)
 import Route
 import Session.LoggedIn as LoggedIn exposing (External)
 import Session.Shared exposing (Shared)
@@ -55,6 +56,7 @@ type Status
     | NotFound
     | Failed (Graphql.Http.Error (Maybe Invite))
     | Loaded Invite
+    | Error Http.Error
 
 
 type ModalStatus
@@ -72,10 +74,10 @@ view session model =
         [ div [ class "flex-grow" ]
             [ case model.status of
                 Loading ->
-                    div [] [ text "loading" ]
+                    div [] []
 
                 NotFound ->
-                    div [] [ text "not found" ]
+                    div [] []
 
                 Failed e ->
                     Page.fullPageGraphQLError (t shared.translations "") e
@@ -86,6 +88,9 @@ view session model =
                         , viewContent shared invite model.invitationId
                         , viewModal shared model
                         ]
+
+                Error e ->
+                    Page.fullPageError (t shared.translations "") e
             ]
         , viewFooter session
         ]
@@ -213,6 +218,7 @@ type Msg
     | CloseConfirmationModal
     | RejectInvitation
     | AcceptInvitation String
+    | CompletedSignIn LoggedIn.Model (Result Http.Error Profile)
 
 
 update : Session -> Msg -> Model -> UpdateResult
@@ -255,8 +261,15 @@ update session msg model =
 
         AcceptInvitation invitationId ->
             case session of
-                LoggedIn _ ->
-                    Debug.todo "do sign in with invitation id"
+                LoggedIn loggedIn ->
+                    model
+                        |> UR.init
+                        |> UR.addCmd
+                            (Api.signInInvitation loggedIn.shared
+                                loggedIn.accountName
+                                invitationId
+                                (CompletedSignIn loggedIn)
+                            )
 
                 Guest guest ->
                     model
@@ -265,6 +278,18 @@ update session msg model =
                             (Route.Register (Just invitationId) Nothing
                                 |> Route.replaceUrl guest.shared.navKey
                             )
+
+        CompletedSignIn { shared } (Ok _) ->
+            model
+                |> UR.init
+                |> UR.addCmd
+                    (Route.Dashboard
+                        |> Route.replaceUrl shared.navKey
+                    )
+
+        CompletedSignIn _ (Err err) ->
+            { model | status = Error err }
+                |> UR.init
 
 
 msgToString : Msg -> List String
@@ -284,3 +309,6 @@ msgToString msg =
 
         AcceptInvitation _ ->
             [ "AcceptInvitation" ]
+
+        CompletedSignIn _ _ ->
+            [ "CompletedSignIn" ]
