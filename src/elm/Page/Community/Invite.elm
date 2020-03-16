@@ -19,6 +19,7 @@ import Html.Events exposing (onClick)
 import I18Next exposing (t)
 import Icons
 import Page exposing (Session(..), toShared)
+import Route
 import Session.LoggedIn as LoggedIn exposing (External)
 import Session.Shared exposing (Shared)
 import UpdateResult as UR
@@ -26,19 +27,26 @@ import UpdateResult as UR
 
 init : Session -> String -> ( Model, Cmd Msg )
 init session invitationId =
-    ( initModel, Api.Graphql.query (toShared session) (Community.inviteQuery invitationId) CompletedLoad )
+    ( initModel invitationId
+    , Api.Graphql.query
+        (toShared session)
+        (Community.inviteQuery invitationId)
+        CompletedLoad
+    )
 
 
-initModel : Model
-initModel =
+initModel : String -> Model
+initModel invitationId =
     { status = Loading
     , confirmationModal = Closed
+    , invitationId = invitationId
     }
 
 
 type alias Model =
     { status : Status
     , confirmationModal : ModalStatus
+    , invitationId : String
     }
 
 
@@ -75,7 +83,7 @@ view session model =
                 Loaded invite ->
                     div []
                         [ viewHeader
-                        , viewContent shared invite
+                        , viewContent shared invite model.invitationId
                         , viewModal shared model
                         ]
             ]
@@ -89,8 +97,8 @@ viewHeader =
         []
 
 
-viewContent : Shared -> Invite -> Html Msg
-viewContent shared invite =
+viewContent : Shared -> Invite -> String -> Html Msg
+viewContent shared invite invitationId =
     let
         text_ s =
             text (I18Next.t shared.translations s)
@@ -125,7 +133,10 @@ viewContent shared invite =
                 , onClick OpenConfirmationModal
                 ]
                 [ text_ "community.invitation.no" ]
-            , button [ class "button button-sm button-primary w-48 uppercase" ]
+            , button
+                [ class "button button-sm button-primary w-48 uppercase"
+                , onClick (AcceptInvitation invitationId)
+                ]
                 [ text_ "community.invitation.yes" ]
             ]
         ]
@@ -159,10 +170,14 @@ viewModal shared model =
                                     [ text_ "community.invitation.modal.body" ]
                                 ]
                             , div [ class "w-full md:bg-gray-100 flex md:absolute rounded-b-lg md:inset-x-0 md:bottom-0 md:p-4 justify-center items-center" ]
-                                [ button [ class "button button-secondary w-48 mr-8" ]
+                                [ button
+                                    [ class "button button-secondary w-48 mr-8"
+                                    , onClick RejectInvitation
+                                    ]
                                     [ text_ "community.invitation.modal.no"
                                     ]
-                                , button [ class "button button-primary w-48" ] [ text_ "community.invitation.modal.yes" ]
+                                , button [ class "button button-primary w-48" ]
+                                    [ text_ "community.invitation.modal.yes" ]
                                 ]
                             ]
                         ]
@@ -196,10 +211,12 @@ type Msg
     = CompletedLoad (Result (Graphql.Http.Error (Maybe Invite)) (Maybe Invite))
     | OpenConfirmationModal
     | CloseConfirmationModal
+    | RejectInvitation
+    | AcceptInvitation String
 
 
 update : Session -> Msg -> Model -> UpdateResult
-update _ msg model =
+update session msg model =
     case msg of
         CompletedLoad (Ok (Just invitation)) ->
             UR.init { model | status = Loaded invitation }
@@ -220,6 +237,35 @@ update _ msg model =
             { model | confirmationModal = Closed }
                 |> UR.init
 
+        RejectInvitation ->
+            case session of
+                LoggedIn loggedIn ->
+                    model
+                        |> UR.init
+                        |> UR.addCmd
+                            (Route.Dashboard |> Route.replaceUrl loggedIn.shared.navKey)
+
+                Guest guest ->
+                    model
+                        |> UR.init
+                        |> UR.addCmd
+                            (Route.Register Nothing Nothing
+                                |> Route.replaceUrl guest.shared.navKey
+                            )
+
+        AcceptInvitation invitationId ->
+            case session of
+                LoggedIn _ ->
+                    Debug.todo "do sign in with invitation id"
+
+                Guest guest ->
+                    model
+                        |> UR.init
+                        |> UR.addCmd
+                            (Route.Register (Just invitationId) Nothing
+                                |> Route.replaceUrl guest.shared.navKey
+                            )
+
 
 msgToString : Msg -> List String
 msgToString msg =
@@ -232,3 +278,9 @@ msgToString msg =
 
         CloseConfirmationModal ->
             [ "CloseConfirmationModal" ]
+
+        RejectInvitation ->
+            [ "RejectInvitation" ]
+
+        AcceptInvitation _ ->
+            [ "AcceptInvitation" ]
