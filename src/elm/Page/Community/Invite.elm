@@ -86,7 +86,7 @@ view session model =
                     div []
                         [ viewHeader
                         , viewContent shared invite model.invitationId
-                        , viewModal shared model
+                        , viewModal shared model model.invitationId
                         ]
 
                 Error e ->
@@ -147,8 +147,8 @@ viewContent shared invite invitationId =
         ]
 
 
-viewModal : Shared -> Model -> Html Msg
-viewModal shared model =
+viewModal : Shared -> Model -> String -> Html Msg
+viewModal shared model invitationId =
     let
         t s =
             I18Next.t shared.translations s
@@ -181,7 +181,10 @@ viewModal shared model =
                                     ]
                                     [ text_ "community.invitation.modal.no"
                                     ]
-                                , button [ class "button button-primary w-48" ]
+                                , button
+                                    [ class "button button-primary w-48"
+                                    , onClick (AcceptInvitation invitationId)
+                                    ]
                                     [ text_ "community.invitation.modal.yes" ]
                                 ]
                             ]
