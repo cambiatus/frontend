@@ -6,8 +6,7 @@ import Browser
 import Browser.Navigation as Nav
 import Community
 import Flags
-import Html exposing (Html, div, iframe, text)
-import Html.Attributes exposing (id, style)
+import Html exposing (Html, text)
 import Http
 import Json.Decode as Decode exposing (Value)
 import Log

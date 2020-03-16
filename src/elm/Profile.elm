@@ -8,6 +8,7 @@ module Profile exposing
     , encodeProfileCreate
     , encodeProfileForm
     , encodeProfileLogin
+    , encodeProfileLoginWithInvitation
     , maxPinChars
     , minPinChars
     , mutation
@@ -180,6 +181,18 @@ encodeProfileLogin account =
             Encode.object [ ( "account", Eos.encodeName account ) ]
     in
     Encode.object [ ( "user", accountEncoded ) ]
+
+
+encodeProfileLoginWithInvitation : Eos.Name -> String -> Encode.Value
+encodeProfileLoginWithInvitation account invitationId =
+    let
+        accountEncoded =
+            Encode.object [ ( "account", Eos.encodeName account ) ]
+    in
+    Encode.object
+        [ ( "user", accountEncoded )
+        , ( "invitation_id", Encode.string invitationId )
+        ]
 
 
 

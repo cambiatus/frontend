@@ -1,4 +1,19 @@
-module Api exposing (UserId, backendUrl, blockchainUrl, communityInvite, editProfile, get, getBalances, getTableRows, signIn, signUp, signUpWithInvitation, uploadAvatar, uploadImage)
+module Api exposing
+    ( UserId
+    , backendUrl
+    , blockchainUrl
+    , communityInvite
+    , editProfile
+    , get
+    , getBalances
+    , getTableRows
+    , signIn
+    , signInInvitation
+    , signUp
+    , signUpWithInvitation
+    , uploadAvatar
+    , uploadImage
+    )
 
 import Avatar exposing (Avatar)
 import Community exposing (Balance)
@@ -87,6 +102,17 @@ signIn shared accountName toMsg =
         { url = backendUrl shared [ "auth", "sign_in" ] []
         , body =
             Profile.encodeProfileLogin accountName
+                |> Http.jsonBody
+        , expect = Http.expectJson toMsg Profile.decode
+        }
+
+
+signInInvitation : Shared -> Eos.Name -> String -> (Result Http.Error Profile -> msg) -> Cmd msg
+signInInvitation shared accountName invitationId toMsg =
+    Http.post
+        { url = backendUrl shared [ "auth", "sign_in" ] []
+        , body =
+            Profile.encodeProfileLoginWithInvitation accountName invitationId
                 |> Http.jsonBody
         , expect = Http.expectJson toMsg Profile.decode
         }

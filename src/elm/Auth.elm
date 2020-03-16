@@ -1,4 +1,19 @@
-module Auth exposing (ExternalMsg(..), Model, Msg, PrivateKeyLogin, init, initRegister, isAuth, jsAddressToMsg, maybePrivateKey, msgToString, subscriptions, update, view, viewFieldLabel)
+module Auth exposing
+    ( ExternalMsg(..)
+    , Model
+    , Msg
+    , PrivateKeyLogin
+    , init
+    , initRegister
+    , isAuth
+    , jsAddressToMsg
+    , maybePrivateKey
+    , msgToString
+    , subscriptions
+    , update
+    , view
+    , viewFieldLabel
+    )
 
 import Api
 import Asset.Icon as Icon
