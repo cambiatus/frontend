@@ -83,6 +83,7 @@ noscript {
     display: grid;
     background: #FFFFFF;
     padding: 23px 23px 23px 23px;
+    line-height: 22px;
 
     grid-template-columns: 50px auto;
     grid-template-rows: auto auto;
