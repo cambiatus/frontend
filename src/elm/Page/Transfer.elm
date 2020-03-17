@@ -97,14 +97,14 @@ view loggedIn model =
 
         InvalidId invalidId ->
             div [ class "container mx-auto px-4" ]
-                [ Lazy.lazy viewHeader loggedIn
+                [ Page.viewHeader loggedIn (t "transfer_result.title") Route.Dashboard
                 , div []
                     [ text (invalidId ++ t "transfer_result.errors.invalid_id") ]
                 ]
 
         LoadFailed error ->
             div []
-                [ viewHeader loggedIn
+                [ Page.viewHeader loggedIn (t "transfer_result.title") Route.Dashboard
                 , Page.fullPageGraphQLError (t "transfer_result.title") error
                 ]
 
@@ -112,7 +112,7 @@ view loggedIn model =
             case maybeTransfer of
                 Just transfer ->
                     div []
-                        [ Lazy.lazy viewHeader loggedIn
+                        [ Page.viewHeader loggedIn (t "transfer_result.title") Route.Dashboard
                         , div []
                             [ viewTransfer loggedIn transfer state
                             , viewDetails loggedIn transfer state
@@ -126,28 +126,8 @@ view loggedIn model =
                         ]
 
 
-viewHeader : LoggedIn.Model -> Html Msg
-viewHeader ({ shared } as loggedIn) =
-    let
-        t =
-            I18Next.t loggedIn.shared.translations
-    in
-    div [ class "h-16 w-full bg-indigo-500 flex px-4 items-center" ]
-        [ a
-            [ class "items-center flex absolute"
-            , Route.href Route.Dashboard
-            ]
-            [ Icons.back ""
-            , p [ class "text-white text-sm ml-2" ]
-                [ text (I18Next.t shared.translations "back")
-                ]
-            ]
-        , p [ class "text-white mx-auto" ] [ text (t "transfer_result.title") ]
-        ]
-
-
 viewTransfer : LoggedIn.Model -> Transfer -> State -> Html Msg
-viewTransfer loggedIn transfer state =
+viewTransfer loggedIn _ state =
     let
         t =
             I18Next.t loggedIn.shared.translations
@@ -290,13 +270,15 @@ viewDetails ({ shared } as loggedIn) transfer state =
                 |> Strftime.format "%d %b %Y" Time.utc
     in
     div [ class "flex flex-wrap mb-4 bg-white" ]
-        [ div [ class "flex w-full lg:w-2/3 m-4 lg:mx-auto lg:-mt-20" ]
-            [ viewTransferCard loggedIn transfer state
-            ]
-        , div [ class "w-full mb-10" ]
-            [ viewDetail (t "transfer_result.community") transfer.community.name
-            , viewDetail (t "transfer_result.date") date
-            , viewDetail (t "transfer_result.message") <| Maybe.withDefault "" transfer.memo
+        [ div [ class "container mx-auto" ]
+            [ div [ class "flex w-full lg:w-2/3 m-4 lg:mx-auto lg:-mt-20" ]
+                [ viewTransferCard loggedIn transfer state
+                ]
+            , div [ class "w-full mb-10" ]
+                [ viewDetail (t "transfer_result.community") transfer.community.name
+                , viewDetail (t "transfer_result.date") date
+                , viewDetail (t "transfer_result.message") <| Maybe.withDefault "" transfer.memo
+                ]
             ]
         ]
 
