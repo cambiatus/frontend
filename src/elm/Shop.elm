@@ -1,11 +1,19 @@
-module Shop exposing (Filter(..), Sale, SaleId, decodeTargetValueToFilter, encodeTransferSale, saleQuery, salesQuery)
+module Shop exposing
+    ( Filter(..)
+    , Sale
+    , SaleId
+    , decodeTargetValueToFilter
+    , encodeTransferSale
+    , saleQuery
+    , salesQuery
+    )
 
 import Avatar exposing (Avatar)
-import Bespiral.Object
-import Bespiral.Object.Profile as Creator
-import Bespiral.Object.Sale
-import Bespiral.Object.SaleHistory
-import Bespiral.Query
+import Cambiatus.Object
+import Cambiatus.Object.Profile as Creator
+import Cambiatus.Object.Sale
+import Cambiatus.Object.SaleHistory
+import Cambiatus.Query
 import Eos exposing (Symbol)
 import Eos.Account as Eos
 import Graphql.Operation exposing (RootQuery)
@@ -94,21 +102,21 @@ decodeTargetValueToFilter ( all, user ) =
 -- SALE GRAPHQL API
 
 
-salesSelection : SelectionSet Sale Bespiral.Object.Sale
+salesSelection : SelectionSet Sale Cambiatus.Object.Sale
 salesSelection =
     SelectionSet.succeed Sale
-        |> with Bespiral.Object.Sale.id
-        |> with Bespiral.Object.Sale.title
-        |> with Bespiral.Object.Sale.description
-        |> with (Eos.nameSelectionSet Bespiral.Object.Sale.creatorId)
-        |> with (Eos.nameSelectionSet Bespiral.Object.Sale.createdEosAccount)
-        |> with Bespiral.Object.Sale.price
-        |> with (Eos.symbolSelectionSet Bespiral.Object.Sale.communityId)
+        |> with Cambiatus.Object.Sale.id
+        |> with Cambiatus.Object.Sale.title
+        |> with Cambiatus.Object.Sale.description
+        |> with (Eos.nameSelectionSet Cambiatus.Object.Sale.creatorId)
+        |> with (Eos.nameSelectionSet Cambiatus.Object.Sale.createdEosAccount)
+        |> with Cambiatus.Object.Sale.price
+        |> with (Eos.symbolSelectionSet Cambiatus.Object.Sale.communityId)
         |> SelectionSet.hardcoded (Just <| 0)
-        |> with Bespiral.Object.Sale.image
-        |> with Bespiral.Object.Sale.units
-        |> with Bespiral.Object.Sale.trackStock
-        |> with (Bespiral.Object.Sale.creator Profile.selectionSet)
+        |> with Cambiatus.Object.Sale.image
+        |> with Cambiatus.Object.Sale.units
+        |> with Cambiatus.Object.Sale.trackStock
+        |> with (Cambiatus.Object.Sale.creator Profile.selectionSet)
 
 
 saleQuery : Int -> SelectionSet (Maybe Sale) RootQuery
@@ -117,7 +125,7 @@ saleQuery saleId =
         args =
             { input = { id = saleId } }
     in
-    Bespiral.Query.sale
+    Cambiatus.Query.sale
         args
         salesSelection
 
@@ -133,7 +141,7 @@ salesQuery filter accName =
                 args =
                     { input = { account = Present accString, all = Absent, communities = Absent } }
             in
-            Bespiral.Query.sales
+            Cambiatus.Query.sales
                 args
                 salesSelection
 
@@ -145,6 +153,6 @@ salesQuery filter accName =
                 args =
                     { input = { account = Absent, all = Present accString, communities = Absent } }
             in
-            Bespiral.Query.sales
+            Cambiatus.Query.sales
                 args
                 salesSelection

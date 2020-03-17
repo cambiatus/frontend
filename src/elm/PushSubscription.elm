@@ -1,6 +1,6 @@
 module PushSubscription exposing (Keys, PushSubscription, activatePushMutation, decode)
 
-import Bespiral.Mutation as Mutation
+import Cambiatus.Mutation as Mutation
 import Eos.Account as Eos
 import Graphql.Operation exposing (RootMutation, RootQuery)
 import Graphql.OptionalArgument exposing (OptionalArgument(..))
