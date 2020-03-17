@@ -795,16 +795,15 @@ update msg model loggedIn =
                         |> UR.logImpossible msg []
 
         PressedEnter val ->
-            case val of
-                True ->
-                    UR.init model
-                        |> UR.addCmd
-                            (Task.succeed ClickedSave
-                                |> Task.perform identity
-                            )
+            if val then
+                UR.init model
+                    |> UR.addCmd
+                        (Task.succeed ClickedSave
+                            |> Task.perform identity
+                        )
 
-                False ->
-                    UR.init model
+            else
+                UR.init model
 
 
 updateStatus : Model -> Status -> Model

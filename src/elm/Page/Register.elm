@@ -844,19 +844,16 @@ update maybeInvitation msg model guest =
                             )
 
         PressedEnter val ->
-            let
-                _ = Debug.log "Triggered"
-            in
-            case val of
-                True ->
-                    UR.init model
-                        |> UR.addCmd
-                            -- insufficient? slow?
-                            (Task.succeed ValidateForm
-                                 |> Task.perform identity)
+            if val then
+                UR.init model
+                    |> UR.addCmd
+                        -- insufficient? slow?
+                        (Task.succeed ValidateForm
+                            |> Task.perform identity
+                        )
 
-                False ->
-                    UR.init model
+            else
+                UR.init model
 
 
 

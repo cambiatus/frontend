@@ -725,16 +725,15 @@ update msg shared model =
             { model | pinVisibility = not model.pinVisibility } |> UR.init
 
         PressedEnter val ->
-            case val of
-                True ->
-                    UR.init model
-                        |> UR.addCmd
-                            (Task.succeed (SubmittedLoginPrivateKey model.form)
-                                |> Task.perform identity
-                            )
+            if val then
+                UR.init model
+                    |> UR.addCmd
+                        (Task.succeed (SubmittedLoginPrivateKey model.form)
+                            |> Task.perform identity
+                        )
 
-                False ->
-                    UR.init model
+            else
+                UR.init model
 
 
 loginFailed : Http.Error -> Model -> UpdateResult

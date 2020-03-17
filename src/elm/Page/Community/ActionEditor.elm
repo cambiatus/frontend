@@ -901,17 +901,16 @@ update msg model loggedIn =
                 |> UR.init
 
         PressedEnter val ->
-            case val of
-                True ->
-                    UR.init model
-                        |> UR.addCmd
-                            -- get date in here
-                            (Task.succeed (SaveAction 0)
-                                |> Task.perform identity
-                            )
+            if val then
+                UR.init model
+                    |> UR.addCmd
+                        -- get date in here
+                        (Task.succeed ValidateDeadline
+                            |> Task.perform identity
+                        )
 
-                False ->
-                    UR.init model
+            else
+                UR.init model
 
 
 upsertAction : LoggedIn.Model -> Model -> Int -> UpdateResult
