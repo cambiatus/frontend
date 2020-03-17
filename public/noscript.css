@@ -77,13 +77,18 @@ noscript {
     align-items: center;
 }
 
+.container > embed {
+    width: 90%;
+    height: 90%;
+}
+
 .warning {
     margin-bottom: 20px;
-    width: 100%;
     display: grid;
     background: #FFFFFF;
     padding: 23px 23px 23px 23px;
     line-height: 22px;
+    width: 90%;
 
     grid-template-columns: 50px auto;
     grid-template-rows: auto auto;
