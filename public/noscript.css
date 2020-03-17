@@ -66,6 +66,7 @@ noscript {
     font-size: 14px;
     display: flex;
     justify-content: center;
+    background: #E5E5E5;
 }
 
 .container {
@@ -81,6 +82,8 @@ noscript {
     margin-bottom: 20px;
     width: 100%;
     display: grid;
+    background: #FFFFFF;
+    padding: 23px 23px 23px 23px;
 
     grid-template-columns: 50px auto;
     grid-template-rows: auto auto;
