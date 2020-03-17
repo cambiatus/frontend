@@ -101,6 +101,7 @@ noscript {
 h1 {
     display: flex;
     justify-content: center;
+    font-size: 14px;
 }
 
 .icon {
