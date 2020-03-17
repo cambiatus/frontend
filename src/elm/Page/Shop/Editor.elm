@@ -3,6 +3,7 @@ module Page.Shop.Editor exposing (Model, Msg(..), initCreate, initUpdate, jsAddr
 import Api
 import Api.Graphql
 import Asset.Icon as Icon
+import Browser.Events as Events
 import Community exposing (Balance)
 import DataValidator exposing (Validator, getInput, greaterThanOrEqual, hasErrors, listErrors, longerThan, newValidator, oneOf, updateInput, validate)
 import Eos exposing (Symbol)
@@ -22,7 +23,9 @@ import Route
 import Session.LoggedIn as LoggedIn exposing (External(..))
 import Session.Shared exposing (Shared)
 import Shop exposing (Sale, SaleId)
+import Task
 import UpdateResult as UR
+import Utils exposing (decodeEnterKeyDown)
 
 
 
@@ -51,7 +54,7 @@ initUpdate saleId loggedIn =
 
 subscriptions : Model -> Sub Msg
 subscriptions _ =
-    Sub.none
+    Sub.map PressedEnter (Events.onKeyDown decodeEnterKeyDown)
 
 
 
@@ -500,6 +503,7 @@ type Msg
     | ClickedDelete
     | GotSaveResponse (Result Value String)
     | GotDeleteResponse (Result Value String)
+    | PressedEnter Bool
 
 
 update : Msg -> Model -> LoggedIn.Model -> UpdateResult
@@ -927,6 +931,18 @@ update msg model loggedIn =
                         |> UR.init
                         |> UR.logImpossible msg []
 
+        PressedEnter val ->
+            case val of
+                True ->
+                    UR.init model
+                        |> UR.addCmd
+                            (Task.succeed ClickedSave
+                                |> Task.perform identity
+                            )
+
+                False ->
+                    UR.init model
+
 
 performRequest : Msg -> Model -> Status -> Eos.Name -> String -> Value -> UpdateResult
 performRequest msg model status account action data =
@@ -1239,3 +1255,6 @@ msgToString msg =
 
         GotDeleteResponse r ->
             [ "GotDeleteResponse", UR.resultToString r ]
+
+        PressedEnter _ ->
+            [ "PressedEnter" ]

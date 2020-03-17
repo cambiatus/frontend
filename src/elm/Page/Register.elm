@@ -3,6 +3,7 @@ module Page.Register exposing (Model, Msg, init, jsAddressToMsg, msgToString, su
 import Api
 import Auth exposing (viewFieldLabel)
 import Browser.Dom as Dom
+import Browser.Events
 import Char
 import Eos.Account as Eos
 import Graphql.Http
@@ -21,6 +22,7 @@ import Session.Guest as Guest exposing (External(..))
 import Session.Shared exposing (Shared)
 import Task
 import UpdateResult as UR
+import Utils exposing (..)
 import Validate exposing (Validator, ifBlank, ifFalse, ifInvalidEmail, ifTrue, validate)
 
 
@@ -41,7 +43,7 @@ init guest =
 
 subscriptions : Model -> Sub Msg
 subscriptions _ =
-    Sub.none
+    Sub.map PressedEnter (Browser.Events.onKeyDown decodeEnterKeyDown)
 
 
 
@@ -532,6 +534,7 @@ type Msg
     | EnteredPinConf Int String
     | DownloadPdf
     | PdfDownloaded
+    | PressedEnter Bool
 
 
 update : Maybe String -> Msg -> Model -> Guest.Model -> UpdateResult
@@ -840,6 +843,21 @@ update maybeInvitation msg model guest =
                                 |> Api.signIn guest.shared keys.accountName
                             )
 
+        PressedEnter val ->
+            let
+                _ = Debug.log "Triggered"
+            in
+            case val of
+                True ->
+                    UR.init model
+                        |> UR.addCmd
+                            -- insufficient? slow?
+                            (Task.succeed ValidateForm
+                                 |> Task.perform identity)
+
+                False ->
+                    UR.init model
+
 
 
 --
@@ -1035,3 +1053,6 @@ msgToString msg =
 
         PdfDownloaded ->
             [ "PdfDownloaded" ]
+
+        PressedEnter _ ->
+            [ "PressedEnter" ]

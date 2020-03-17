@@ -49,6 +49,7 @@ import Session.LoggedIn as LoggedIn exposing (External(..))
 import Session.Shared exposing (Shared)
 import Simple.Fuzzy
 import Strftime
+import Task
 import Time
 import UpdateResult as UR
 import Utils
@@ -372,6 +373,7 @@ type Msg
     | SaveAction Int -- Send the date
     | GotSaveAction (Result Value String)
     | DismissError
+    | PressedEnter Bool
 
 
 update : Msg -> Model -> LoggedIn.Model -> UpdateResult
@@ -898,6 +900,19 @@ update msg model loggedIn =
             { model | form = { oldForm | saveStatus = NotAsked } }
                 |> UR.init
 
+        PressedEnter val ->
+            case val of
+                True ->
+                    UR.init model
+                        |> UR.addCmd
+                            -- get date in here
+                            (Task.succeed (SaveAction 0)
+                                |> Task.perform identity
+                            )
+
+                False ->
+                    UR.init model
+
 
 upsertAction : LoggedIn.Model -> Model -> Int -> UpdateResult
 upsertAction loggedIn model isoDate =
@@ -1409,15 +1424,16 @@ viewSelectedVerifiers shared selectedVerifiers =
             |> List.map
                 (\p ->
                     div
-                     [ class "flex justify-between flex-col m-3 items-center h-32" ]
-                     [  Avatar.view ipfsUrl p.avatar "h-10 w-10"
-                     , span [ class "uppercase font-bold bg-black text-white rounded-sm px-3 py-1 text-body leading-normal" ]
+                        [ class "flex justify-between flex-col m-3 items-center h-32" ]
+                        [ Avatar.view ipfsUrl p.avatar "h-10 w-10"
+                        , span [ class "uppercase font-bold bg-black text-white rounded-sm px-3 py-1 text-body leading-normal" ]
                             [ text (Eos.nameToString p.account) ]
-                     , div
+                        , div
                             [ onClick (OnRemoveVerifier p)
-                                  , class "h-6 w-6 flex items-center"
-                                  ]
-                            [ Icons.trash "" ] ]
+                            , class "h-6 w-6 flex items-center"
+                            ]
+                            [ Icons.trash "" ]
+                        ]
                 )
         )
 
@@ -1627,3 +1643,6 @@ msgToString msg =
 
         DismissError ->
             [ "DismissError" ]
+
+        PressedEnter _ ->
+            [ "PressedEnter" ]
