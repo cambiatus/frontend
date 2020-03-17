@@ -311,6 +311,7 @@
         "validation_on": "Caducidad activada,",
         "validation_off": "Caducidad desactivada,",
         "validation_detail": "la acción estará disponible hasta que se elimine",
+        "validation_on_detail": "la acción estará disponible hasta una fecha, cantidad o ambas",
         "verification_label": "¿Necesita verificación?",
         "verifiers_label": "Elige los verificadores",
         "remove_verifier": "retirar",
