@@ -1150,7 +1150,7 @@ viewValidations { shared } model =
     in
     div []
         [ div [ class "mb-6" ]
-            [ div [ class "mb-10" ]
+            [ div []
                 [ p [ class "input-label mb-6" ] [ text_ "community.actions.form.validity_label" ]
                 , div [ class "flex" ]
                     [ div [ class "form-switch inline-block align-middle" ]
@@ -1173,8 +1173,11 @@ viewValidations { shared } model =
                               else
                                 text_ "community.actions.form.validation_on"
                             ]
-                        , text_ "community.actions.form.validation_detail"
-                        ]
+                        , if model.form.validation == NoValidation then
+                              text_ "community.actions.form.validation_detail"
+
+                          else
+                              text_ "community.actions.form.validation_on_detail"]
                     ]
                 ]
             ]
