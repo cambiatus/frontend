@@ -67,12 +67,12 @@ init flagsValue url navKey =
         ( session, pageCmd ) =
             case Decode.decodeValue Flags.decode flagsValue of
                 Ok flags ->
-                    Page.init flags navKey
+                    Page.init flags navKey url
                         |> UR.map identity GotPageMsg (\_ uR -> uR)
                         |> UR.toModelCmd (\_ m -> ( m, Cmd.none )) msgToString
 
                 Err e ->
-                    Page.init Flags.default navKey
+                    Page.init Flags.default navKey url
                         |> UR.map identity GotPageMsg (\_ uR -> uR)
                         |> UR.logDecodeError Ignored e
                         |> UR.toModelCmd (\_ m -> ( m, Cmd.none )) msgToString

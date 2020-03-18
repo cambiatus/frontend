@@ -611,19 +611,19 @@ fetchTransfers shared accountName =
 
 
 sortCambiatusFirst : LoggedIn.Model -> List Balance -> List Balance
-sortCambiatusFirst loggedIn balances =
+sortCambiatusFirst _ balances =
     let
         bespiral : Maybe Balance
         bespiral =
             balances
-                |> List.filter (\b -> b.asset.symbol == Shared.bespiralSymbol loggedIn.shared)
+                |> List.filter (\b -> b.asset.symbol == Eos.bespiralSymbol)
                 |> List.head
 
         --|> Maybe.withDefault (Balance "" 0 False False)
         balancesWithoutSpiral : List Balance
         balancesWithoutSpiral =
             balances
-                |> List.filter (\b -> b.asset.symbol /= Shared.bespiralSymbol loggedIn.shared)
+                |> List.filter (\b -> b.asset.symbol /= Eos.bespiralSymbol)
     in
     Maybe.map (\b -> b :: balancesWithoutSpiral) bespiral
         |> Maybe.withDefault balancesWithoutSpiral

@@ -1,7 +1,7 @@
 module Eos exposing (Action, Asset, Authorization, EosBool(..), Network, Symbol, TableQuery, Transaction, bespiralSymbol, boolToEosBool, decodeAmountToFloat, decodeAsset, encodeAction, encodeAsset, encodeAuthorization, encodeEosBool, encodeNetwork, encodeSymbol, encodeTableQuery, encodeTransaction, symbolDecoder, symbolFromString, symbolSelectionSet, symbolToString, symbolUrlParser)
 
 import Eos.Account as Account exposing (Account, PermissionName)
-import Graphql.SelectionSet as SelectionSet exposing (SelectionSet, with)
+import Graphql.SelectionSet as SelectionSet exposing (SelectionSet)
 import Json.Decode as Decode exposing (Decoder)
 import Json.Encode as Encode exposing (Value)
 import Url.Parser

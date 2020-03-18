@@ -1,4 +1,14 @@
-module Page.Dashboard.Balance exposing (Model, Msg, UpdateResult, init, jsAddressToMsg, msgToString, update, viewCard, viewInvitationModal)
+module Page.Dashboard.Balance exposing
+    ( Model
+    , Msg
+    , UpdateResult
+    , init
+    , jsAddressToMsg
+    , msgToString
+    , update
+    , viewCard
+    , viewInvitationModal
+    )
 
 import Api
 import Api.Graphql
@@ -8,13 +18,13 @@ import Community exposing (Balance)
 import Eos
 import Eos.Account as Eos
 import Graphql.Http
-import Html exposing (..)
-import Html.Attributes as HtmlAttr exposing (class, classList, colspan, disabled, for, href, id, maxlength, placeholder, required, src, style, target, type_, value)
-import Html.Events exposing (onClick, onInput, onSubmit, targetValue)
+import Html exposing (Html, a, br, button, div, form, img, input, p, span, text)
+import Html.Attributes as HtmlAttr exposing (class, classList, disabled, href, id, maxlength, placeholder, required, src, style, type_, value)
+import Html.Events exposing (onClick, onInput, onSubmit)
 import Http
 import I18Next exposing (Delims(..), t, tr)
 import Icons
-import Json.Decode as Decode exposing (Decoder, Value)
+import Json.Decode as Decode exposing (Value)
 import Json.Encode as Encode exposing (Value)
 import Profile exposing (Profile)
 import Route
@@ -22,8 +32,9 @@ import Select
 import Session.LoggedIn as LoggedIn exposing (External(..))
 import Session.Shared as Shared exposing (Shared)
 import Simple.Fuzzy
-import Transfer exposing (Transfer)
+import Transfer
 import UpdateResult as UR
+import Url
 
 
 init : LoggedIn.Model -> Balance -> ( Model, Cmd Msg )
@@ -278,6 +289,17 @@ viewInvitationModal { shared } model =
 
         text_ s =
             text (t s)
+
+        protocol =
+            case shared.url.protocol of
+                Url.Http ->
+                    "http://"
+
+                Url.Https ->
+                    "https://"
+
+        url invitationId =
+            protocol ++ shared.url.host ++ "/invite/" ++ invitationId
     in
     case model.inviteModal of
         Closed ->
@@ -315,13 +337,13 @@ viewInvitationModal { shared } model =
 
                             Loaded invitationId ->
                                 div [ class "flex items-center ml-6" ]
-                                    [ div [ class "flex flex-col items-left" ]
+                                    [ div [ class "flex flex-col items-left w-full" ]
                                         [ span [ class "input-label" ]
                                             [ text_ "community.invite.label" ]
                                         , input
                                             [ class "text-heading outline-none text-black"
                                             , id "invitation-id"
-                                            , value ("http://localhost:3000/invite/" ++ invitationId)
+                                            , value (url invitationId)
                                             , disabled True
                                             ]
                                             []
