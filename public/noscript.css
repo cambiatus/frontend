@@ -57,6 +57,7 @@
 body {
     margin: 0;
     padding: 0;
+    background: #F8F8F8;
 }
 
 noscript {
@@ -65,7 +66,6 @@ noscript {
     font-size: 14px;
     display: flex;
     justify-content: center;
-    background: #E5E5E5;
 }
 
 .container {
