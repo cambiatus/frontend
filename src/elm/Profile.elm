@@ -320,7 +320,7 @@ view ipfsUrl loggedInAccount translations profile =
 
 viewProfileNameTag : Eos.Name -> Profile -> Translations -> Html msg
 viewProfileNameTag loggedInAccount profile translations =
-    div [ class "flex items-center bg-black rounded p-1" ]
+    div [ class "flex items-center bg-black rounded-sm p-1" ]
         [ p [ class "mx-2 pt-caption uppercase font-medium text-white text-caption" ]
             [ viewProfileName loggedInAccount profile translations ]
         ]

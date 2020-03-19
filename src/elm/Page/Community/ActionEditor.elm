@@ -1174,10 +1174,11 @@ viewValidations { shared } model =
                                 text_ "community.actions.form.validation_on"
                             ]
                         , if model.form.validation == NoValidation then
-                              text_ "community.actions.form.validation_detail"
+                            text_ "community.actions.form.validation_detail"
 
                           else
-                              text_ "community.actions.form.validation_on_detail"]
+                            text_ "community.actions.form.validation_on_detail"
+                        ]
                     ]
                 ]
             ]
@@ -1349,7 +1350,7 @@ viewVerifications ({ shared } as loggedIn) model community =
 
 
 viewManualVerificationForm : LoggedIn.Model -> Model -> Community -> Html Msg
-viewManualVerificationForm { shared } model community =
+viewManualVerificationForm ({ shared } as loggedIn) model community =
     let
         text_ s =
             text (t shared.translations s)
@@ -1364,7 +1365,7 @@ viewManualVerificationForm { shared } model community =
                     [ text_ "community.actions.form.verifiers_label" ]
                 , div []
                     [ viewVerifierSelect shared model False
-                    , viewSelectedVerifiers shared selectedVerifiers
+                    , viewSelectedVerifiers loggedIn selectedVerifiers
                     ]
                 , span [ class "input-label" ]
                     [ text_ "community.actions.form.verifiers_reward_label" ]
@@ -1401,8 +1402,8 @@ viewManualVerificationForm { shared } model community =
                 ]
 
 
-viewSelectedVerifiers : Shared -> List Profile -> Html Msg
-viewSelectedVerifiers shared selectedVerifiers =
+viewSelectedVerifiers : LoggedIn.Model -> List Profile -> Html Msg
+viewSelectedVerifiers ({ shared } as loggedIn) selectedVerifiers =
     let
         ipfsUrl =
             shared.endpoints.ipfs
@@ -1412,15 +1413,14 @@ viewSelectedVerifiers shared selectedVerifiers =
             |> List.map
                 (\p ->
                     div
-                     [ class "flex justify-between flex-col m-3 items-center h-32" ]
-                     [  Avatar.view ipfsUrl p.avatar "h-10 w-10"
-                     , span [ class "uppercase font-bold bg-black text-white rounded-sm px-3 py-1 text-body leading-normal" ]
-                            [ text (Eos.nameToString p.account) ]
-                     , div
+                        [ class "flex justify-between flex-col m-3 items-center" ]
+                        [ Profile.view ipfsUrl loggedIn.accountName shared.translations p
+                        , div
                             [ onClick (OnRemoveVerifier p)
-                                  , class "h-6 w-6 flex items-center"
-                                  ]
-                            [ Icons.trash "" ] ]
+                            , class "h-6 w-6 flex items-center mt-4"
+                            ]
+                            [ Icons.trash "" ]
+                        ]
                 )
         )
 
