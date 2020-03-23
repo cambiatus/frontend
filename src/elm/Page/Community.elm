@@ -945,45 +945,44 @@ update msg model loggedIn =
                 newModel =
                     { model | modalStatus = Opened True actionId }
             in
-            case LoggedIn.isAuth loggedIn of
-                True ->
-                    newModel
-                        |> UR.init
-                        |> UR.addPort
-                            { responseAddress = ClaimAction actionId
-                            , responseData = Encode.null
-                            , data =
-                                Eos.encodeTransaction
-                                    { actions =
-                                        [ { accountName = "bes.cmm"
-                                          , name = "claimaction"
-                                          , authorization =
-                                                { actor = loggedIn.accountName
-                                                , permissionName = Eos.samplePermission
-                                                }
-                                          , data =
-                                                { actionId = actionId
-                                                , maker = loggedIn.accountName
-                                                }
-                                                    |> Community.encodeClaimAction
-                                          }
-                                        ]
-                                    }
-                            }
+            if LoggedIn.isAuth loggedIn then
+                newModel
+                    |> UR.init
+                    |> UR.addPort
+                        { responseAddress = ClaimAction actionId
+                        , responseData = Encode.null
+                        , data =
+                            Eos.encodeTransaction
+                                { actions =
+                                    [ { accountName = "bes.cmm"
+                                      , name = "claimaction"
+                                      , authorization =
+                                            { actor = loggedIn.accountName
+                                            , permissionName = Eos.samplePermission
+                                            }
+                                      , data =
+                                            { actionId = actionId
+                                            , maker = loggedIn.accountName
+                                            }
+                                                |> Community.encodeClaimAction
+                                      }
+                                    ]
+                                }
+                        }
 
-                False ->
-                    newModel
-                        |> UR.init
-                        |> UR.addExt (Just (ClaimAction actionId) |> RequiredAuthentication)
+            else
+                newModel
+                    |> UR.init
+                    |> UR.addExt (Just (ClaimAction actionId) |> RequiredAuthentication)
 
-        GotClaimActionResponse (Ok txId) ->
+        GotClaimActionResponse (Ok _) ->
             { model
                 | modalStatus = Closed
                 , messageStatus = Success "community.claimAction.success"
             }
                 |> UR.init
 
-        GotClaimActionResponse (Err v) ->
+        GotClaimActionResponse (Err _) ->
             { model
                 | modalStatus = Closed
                 , messageStatus = Failure "community.claimAction.failure"

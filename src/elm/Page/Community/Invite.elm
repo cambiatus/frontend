@@ -122,27 +122,33 @@ viewContent shared invite invitationId =
                     []
                 ]
             ]
-        , div [ class "flex mx-auto justify-center mt-6" ]
-            [ span [ class "font-bold mr-1" ] [ text inviter ]
-            , span [ class "mr-1" ] [ text_ "community.invitation.title" ]
-            , span [ class "font-bold" ] [ text invite.community.title ]
-            ]
-        , div [ class "flex mx-auto justify-center mt-6" ]
-            [ span [ class "mr-1" ] [ text_ "community.invitation.subtitle" ]
-            , text invite.community.title
-            , text "?"
-            ]
-        , div [ class "flex justify-center w-full mt-6" ]
-            [ button
-                [ class "button button-sm button-secondary w-48 uppercase mr-8"
-                , onClick OpenConfirmationModal
+        , div [ class " px-4" ]
+            [ div [ class "flex mx-auto justify-center justify-center mt-6" ]
+                [ div [ class "inline-block text-center text-heading font" ]
+                    [ span [ class "mr-1 font-medium" ] [ text inviter ]
+                    , text_ "community.invitation.title"
+                    , span [ class "ml-1 font-medium" ] [ text invite.community.title ]
+                    ]
                 ]
-                [ text_ "community.invitation.no" ]
-            , button
-                [ class "button button-sm button-primary w-48 uppercase"
-                , onClick (AcceptInvitation invitationId)
+            , div [ class "flex mx-auto justify-center mt-6 px-4" ]
+                [ div [ class "inline-block text-center text-heading" ]
+                    [ span [ class "mr-1" ] [ text_ "community.invitation.subtitle" ]
+                    , text invite.community.title
+                    , text "?"
+                    ]
                 ]
-                [ text_ "community.invitation.yes" ]
+            , div [ class "flex flex-wrap justify-center w-full mt-6" ]
+                [ button
+                    [ class "button button-sm button-secondary w-full md:w-48 uppercase mb-4 md:mr-8"
+                    , onClick OpenConfirmationModal
+                    ]
+                    [ text_ "community.invitation.no" ]
+                , button
+                    [ class "button button-sm button-primary w-full md:w-48 uppercase"
+                    , onClick (AcceptInvitation invitationId)
+                    ]
+                    [ text_ "community.invitation.yes" ]
+                ]
             ]
         ]
 
