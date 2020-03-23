@@ -310,7 +310,7 @@ viewInvitationModal { shared } model =
                 [ div [ class "modal-bg", onClick CloseInviteModal ] []
                 , div [ class "modal-content" ]
                     [ div [ class "w-full" ]
-                        [ p [ class "text-2xl font-bold mb-4" ]
+                        [ p [ class "text-2xl font-medium mb-4" ]
                             [ text_ "community.invite.title" ]
                         , button [ onClick CloseInviteModal ]
                             [ Icons.close "absolute fill-current text-gray-400 top-0 right-0 mx-8 my-4" ]
@@ -336,12 +336,12 @@ viewInvitationModal { shared } model =
                                     ]
 
                             Loaded invitationId ->
-                                div [ class "flex items-center ml-6" ]
-                                    [ div [ class "flex flex-col items-left w-full" ]
+                                div [ class "flex flex-wrap items-center mt-24 md:mt-0" ]
+                                    [ div [ class "flex flex-col items-left w-full mb-4" ]
                                         [ span [ class "input-label" ]
                                             [ text_ "community.invite.label" ]
                                         , input
-                                            [ class "text-heading outline-none text-black"
+                                            [ class "text-menu border p-2 md:border-none md:text-heading outline-none text-black"
                                             , id "invitation-id"
                                             , value (url invitationId)
                                             , disabled True
@@ -354,7 +354,7 @@ viewInvitationModal { shared } model =
                                                 [ ( "button-primary", not model.copied )
                                                 , ( "button-success", model.copied )
                                                 ]
-                                            , class "button w-48"
+                                            , class "button w-full md:w-48"
                                             , onClick (CopyToClipboard "invitation-id")
                                             ]
                                             [ if model.copied then
