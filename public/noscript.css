@@ -58,7 +58,6 @@ body {
     margin: 0;
     padding: 0;
     background: #F8F8F8;
-    overflow: hidden;
 }
 
 noscript {
@@ -76,7 +75,7 @@ noscript {
     grid-template-columns: 1fr;
     grid-template-rows: auto auto auto auto auto;
     min-width: 343px;
-    max-width: 70%;
+    max-width: 1024px;
     align-items: center;
 }
 
@@ -105,15 +104,17 @@ h1 {
 }
 
 .error {
-    display: flex;
+    display: grid;
     justify-content: center;
-    min-width: 20px;
-    min-height: 20px;
+    grid-template-columns: 100% auto;
+    grid-template-rows: auto auto;
+    grid-template-areas: "icon title" ". body";
+    margin-top: 50px;
 }
 
-.error > embed {
-    width: 80%;
-    height: 70%;
+.error > img {
+    object-fit: fill;
+    width: 100%;
 }
 
 .warning {
