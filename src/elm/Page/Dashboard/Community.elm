@@ -729,16 +729,15 @@ update loggedIn msg model =
                 |> UR.addCmd cmd
 
         PressedEnter val ->
-            case val of
-                True ->
-                    UR.init model
-                        |> UR.addCmd
-                            (Task.succeed ClickedTransfer
-                                |> Task.perform identity
-                            )
+            if val then
+                UR.init model
+                    |> UR.addCmd
+                        (Task.succeed ClickedSendTransfer
+                            |> Task.perform identity
+                        )
 
-                False ->
-                    UR.init model
+            else
+                UR.init model
 
 
 updateDashboardInfo : Model -> Community.DashboardInfo -> Model

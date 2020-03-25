@@ -904,7 +904,6 @@ update msg model loggedIn =
             if val then
                 UR.init model
                     |> UR.addCmd
-                        -- get date in here
                         (Task.succeed ValidateDeadline
                             |> Task.perform identity
                         )
