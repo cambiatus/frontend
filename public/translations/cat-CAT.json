@@ -312,6 +312,7 @@
         "validation_on": "La caducitat s'ha activat,",
         "validation_off": "La caducitat es va desactivar,",
         "validation_detail": "l'acció estarà disponible fins que no se suprimeixi",
+        "validation_on_detail": "l'acció estarà disponible fins a una data, quantitat o totes dues coses",
         "verification_label": "Necessita verificació?",
         "verifiers_label": "Trieu els verificadors",
         "remove_verifier": "Elimina",
