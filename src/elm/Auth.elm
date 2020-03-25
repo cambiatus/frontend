@@ -3,6 +3,7 @@ module Auth exposing (ExternalMsg(..), Model, Msg, PrivateKeyLogin, init, initRe
 import Api
 import Asset.Icon as Icon
 import Browser.Dom as Dom
+import Browser.Events
 import Eos.Account as Eos
 import Flags
 import Html exposing (..)
@@ -20,6 +21,7 @@ import Route
 import Session.Shared as Shared exposing (Shared)
 import Task
 import UpdateResult as UR
+import Utils
 
 
 
@@ -47,7 +49,7 @@ initRegister pk =
 
 subscriptions : Model -> Sub Msg
 subscriptions _ =
-    Sub.none
+    Sub.map PressedEnter (Browser.Events.onKeyDown Utils.decodeEnterKeyDown)
 
 
 
@@ -76,7 +78,6 @@ type Status
     | LoginWithPrivateKey PrivateKeyLogin
     | LoginWithPrivateKeyAccounts (List Eos.Name) PrivateKeyLogin
     | LoggingInWithPrivateKeyAccounts (List Eos.Name) PrivateKeyLogin
-    | LoggingInWithPrivateKey PrivateKeyLogin
     | LoggedInWithPrivateKey PrivateKey
     | LoginWithPin
     | LoggingInWithPin
@@ -161,9 +162,6 @@ view isModal shared model =
 
         LoggingInWithPrivateKeyAccounts accounts form ->
             viewMultipleAccount accounts form True isModal shared model
-
-        LoggingInWithPrivateKey form ->
-            viewLoginWithPrivateKeyLogin form True isModal shared model
 
         LoggedInWithPrivateKey _ ->
             viewOptions isModal shared model
@@ -489,6 +487,7 @@ type Msg
     | CompletedCreateProfile Status Eos.Name (Result Http.Error Profile)
     | EnteredPinDigit Int String
     | TogglePinVisibility
+    | PressedEnter Bool
 
 
 type ExternalMsg
@@ -497,8 +496,8 @@ type ExternalMsg
     | UpdatedShared Shared
 
 
-update : Msg -> Shared -> Model -> UpdateResult
-update msg shared model =
+update : Msg -> Shared -> Model -> Bool -> UpdateResult
+update msg shared model showAuthModal =
     case msg of
         Ignored ->
             UR.init model
@@ -553,9 +552,6 @@ update msg shared model =
                 { model
                     | status =
                         case model.status of
-                            LoggingInWithPrivateKey form ->
-                                LoginWithPrivateKeyAccounts accounts form
-
                             _ ->
                                 model.status
                 }
@@ -592,9 +588,6 @@ update msg shared model =
                     | loginError = Just err
                     , status =
                         case model.status of
-                            LoggingInWithPrivateKey form ->
-                                LoginWithPrivateKey form
-
                             LoggingInWithPrivateKeyAccounts accounts form ->
                                 LoginWithPrivateKeyAccounts accounts form
 
@@ -721,6 +714,18 @@ update msg shared model =
         TogglePinVisibility ->
             { model | pinVisibility = not model.pinVisibility } |> UR.init
 
+        PressedEnter val ->
+            -- if val then
+            if val && showAuthModal then
+                UR.init model
+                    |> UR.addCmd
+                        (Task.succeed (SubmittedLoginPrivateKey model.form)
+                            |> Task.perform identity
+                        )
+
+            else
+                UR.init model
+
 
 loginFailed : Http.Error -> Model -> UpdateResult
 loginFailed httpError model =
@@ -737,9 +742,6 @@ loginFailed httpError model =
                 case model.status of
                     LoggingInWithPrivateKeyAccounts accounts form ->
                         LoginWithPrivateKeyAccounts accounts form
-
-                    LoggingInWithPrivateKey pk ->
-                        LoginWithPrivateKey pk
 
                     LoggingInWithPin ->
                         LoginWithPin
@@ -834,3 +836,6 @@ msgToString msg =
 
         TogglePinVisibility ->
             [ "TogglePinVisibility" ]
+
+        PressedEnter _ ->
+            [ "PressedEnter" ]

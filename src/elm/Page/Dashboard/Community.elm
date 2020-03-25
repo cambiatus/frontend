@@ -4,6 +4,7 @@ import Api
 import Api.Graphql
 import Asset.Icon as Icon
 import Avatar exposing (Avatar)
+import Browser.Events
 import Community exposing (Action, Balance, Objective, Transaction)
 import Eos
 import Eos.Account as Eos
@@ -25,8 +26,23 @@ import Select
 import Session.LoggedIn as LoggedIn exposing (External(..))
 import Session.Shared as Shared exposing (Shared)
 import Simple.Fuzzy
+import Task
 import Transfer exposing (Transfer)
 import UpdateResult as UR
+import Utils
+
+
+
+-- SUBSCRIPTION
+
+
+subscription : Model -> Sub Msg
+subscription _ =
+    Sub.map PressedEnter (Browser.Events.onKeyDown Utils.decodeEnterKeyDown)
+
+
+
+-- INIT
 
 
 init : LoggedIn.Model -> Balance -> ( Model, Cmd Msg )
@@ -360,7 +376,7 @@ viewTableRowTransfer loggedIn ({ balance } as model) f isDisabled =
     in
     form
         [ class "card-table__row-transfer"
-        , onSubmit ClickedSendTransfer
+        , onSubmit (PressedEnter True)
         ]
         [ div [ class "card-table__row-transfer__cell" ]
             [ label []
@@ -510,6 +526,7 @@ type Msg
     | CompletedDashboardInfoLoad (Result (Graphql.Http.Error (Maybe Community.DashboardInfo)) (Maybe Community.DashboardInfo))
     | OnSelect (Maybe Profile)
     | SelectMsg (Select.Msg Profile)
+    | PressedEnter Bool
 
 
 update : LoggedIn.Model -> Msg -> Model -> UpdateResult
@@ -711,6 +728,17 @@ update loggedIn msg model =
             UR.init { model | autoCompleteState = updated }
                 |> UR.addCmd cmd
 
+        PressedEnter val ->
+            if val then
+                UR.init model
+                    |> UR.addCmd
+                        (Task.succeed ClickedSendTransfer
+                            |> Task.perform identity
+                        )
+
+            else
+                UR.init model
+
 
 updateDashboardInfo : Model -> Community.DashboardInfo -> Model
 updateDashboardInfo model result =
@@ -788,3 +816,6 @@ msgToString msg =
 
         SelectMsg subMsg ->
             "SelectMsg" :: "sub" :: []
+
+        PressedEnter _ ->
+            [ "PressedEnter" ]

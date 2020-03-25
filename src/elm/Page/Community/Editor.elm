@@ -13,6 +13,7 @@ module Page.Community.Editor exposing
 import Api
 import Api.Graphql
 import Asset.Icon as Icon
+import Browser.Events as Events
 import Community exposing (Community)
 import Dict exposing (Dict)
 import Eos as Eos exposing (Symbol)
@@ -32,7 +33,9 @@ import Page
 import Route
 import Session.LoggedIn as LoggedIn exposing (External(..))
 import Session.Shared exposing (Shared)
+import Task
 import UpdateResult as UR
+import Utils exposing (..)
 
 
 
@@ -61,7 +64,7 @@ initEdit { shared } symbol =
 
 subscriptions : Model -> Sub Msg
 subscriptions _ =
-    Sub.none
+    Sub.map PressedEnter (Events.onKeyDown decodeEnterKeyDown)
 
 
 
@@ -598,6 +601,7 @@ type Msg
       -- New Community
     | NewCommunitySubscription String
     | Redirect
+    | PressedEnter Bool
 
 
 update : Msg -> Model -> LoggedIn.Model -> UpdateResult
@@ -789,6 +793,17 @@ update msg model loggedIn =
                     model
                         |> UR.init
                         |> UR.logImpossible msg []
+
+        PressedEnter val ->
+            if val then
+                UR.init model
+                    |> UR.addCmd
+                        (Task.succeed ClickedSave
+                            |> Task.perform identity
+                        )
+
+            else
+                UR.init model
 
 
 updateStatus : Model -> Status -> Model
@@ -1017,3 +1032,6 @@ msgToString msg =
 
         Redirect ->
             [ "Redirect" ]
+
+        PressedEnter _ ->
+            [ "PressedEnter" ]

@@ -49,6 +49,7 @@ import Session.LoggedIn as LoggedIn exposing (External(..))
 import Session.Shared exposing (Shared)
 import Simple.Fuzzy
 import Strftime
+import Task
 import Time
 import UpdateResult as UR
 import Utils
@@ -372,6 +373,7 @@ type Msg
     | SaveAction Int -- Send the date
     | GotSaveAction (Result Value String)
     | DismissError
+    | PressedEnter Bool
 
 
 update : Msg -> Model -> LoggedIn.Model -> UpdateResult
@@ -897,6 +899,17 @@ update msg model loggedIn =
             in
             { model | form = { oldForm | saveStatus = NotAsked } }
                 |> UR.init
+
+        PressedEnter val ->
+            if val then
+                UR.init model
+                    |> UR.addCmd
+                        (Task.succeed ValidateDeadline
+                            |> Task.perform identity
+                        )
+
+            else
+                UR.init model
 
 
 upsertAction : LoggedIn.Model -> Model -> Int -> UpdateResult
@@ -1630,3 +1643,6 @@ msgToString msg =
 
         DismissError ->
             [ "DismissError" ]
+
+        PressedEnter _ ->
+            [ "PressedEnter" ]
