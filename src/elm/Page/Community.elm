@@ -512,12 +512,11 @@ viewAction loggedIn metadata maybeDate action =
 
         dateColor : String
         dateColor =
-            case pastDeadline of
-                True ->
-                    " text-date-red"
+            if pastDeadline then
+                " text-date-red"
 
-                False ->
-                    " text-date-purple"
+            else
+                " text-date-purple"
 
         usagesColor : String
         usagesColor =

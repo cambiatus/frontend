@@ -376,7 +376,7 @@ viewTableRowTransfer loggedIn ({ balance } as model) f isDisabled =
     in
     form
         [ class "card-table__row-transfer"
-        , onSubmit ClickedSendTransfer
+        , onSubmit (PressedEnter True)
         ]
         [ div [ class "card-table__row-transfer__cell" ]
             [ label []

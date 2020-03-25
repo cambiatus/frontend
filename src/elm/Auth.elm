@@ -78,7 +78,6 @@ type Status
     | LoginWithPrivateKey PrivateKeyLogin
     | LoginWithPrivateKeyAccounts (List Eos.Name) PrivateKeyLogin
     | LoggingInWithPrivateKeyAccounts (List Eos.Name) PrivateKeyLogin
-    | LoggingInWithPrivateKey PrivateKeyLogin
     | LoggedInWithPrivateKey PrivateKey
     | LoginWithPin
     | LoggingInWithPin
@@ -163,9 +162,6 @@ view isModal shared model =
 
         LoggingInWithPrivateKeyAccounts accounts form ->
             viewMultipleAccount accounts form True isModal shared model
-
-        LoggingInWithPrivateKey form ->
-            viewLoginWithPrivateKeyLogin form True isModal shared model
 
         LoggedInWithPrivateKey _ ->
             viewOptions isModal shared model
@@ -500,8 +496,8 @@ type ExternalMsg
     | UpdatedShared Shared
 
 
-update : Msg -> Shared -> Model -> UpdateResult
-update msg shared model =
+update : Msg -> Shared -> Model -> Bool -> UpdateResult
+update msg shared model showAuthModal =
     case msg of
         Ignored ->
             UR.init model
@@ -556,9 +552,6 @@ update msg shared model =
                 { model
                     | status =
                         case model.status of
-                            LoggingInWithPrivateKey form ->
-                                LoginWithPrivateKeyAccounts accounts form
-
                             _ ->
                                 model.status
                 }
@@ -595,9 +588,6 @@ update msg shared model =
                     | loginError = Just err
                     , status =
                         case model.status of
-                            LoggingInWithPrivateKey form ->
-                                LoginWithPrivateKey form
-
                             LoggingInWithPrivateKeyAccounts accounts form ->
                                 LoginWithPrivateKeyAccounts accounts form
 
@@ -725,7 +715,8 @@ update msg shared model =
             { model | pinVisibility = not model.pinVisibility } |> UR.init
 
         PressedEnter val ->
-            if val then
+            -- if val then
+            if val && showAuthModal then
                 UR.init model
                     |> UR.addCmd
                         (Task.succeed (SubmittedLoginPrivateKey model.form)
@@ -751,9 +742,6 @@ loginFailed httpError model =
                 case model.status of
                     LoggingInWithPrivateKeyAccounts accounts form ->
                         LoginWithPrivateKeyAccounts accounts form
-
-                    LoggingInWithPrivateKey pk ->
-                        LoginWithPrivateKey pk
 
                     LoggingInWithPin ->
                         LoginWithPin
