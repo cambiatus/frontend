@@ -8,6 +8,7 @@ module Community exposing
     , CreateCommunityData
     , CreateTokenData
     , DashboardInfo
+    , Invite
     , Metadata
     , Objective
     , Transaction
@@ -27,6 +28,7 @@ module Community exposing
     , encodeCreateTokenData
     , encodeUpdateLogoData
     , encodeUpdateObjectiveAction
+    , inviteQuery
     , logoBackground
     , logoTitleQuery
     , logoUrl
@@ -41,6 +43,7 @@ import Cambiatus.Object.Action as Action
 import Cambiatus.Object.Check as Check
 import Cambiatus.Object.Claim as Claim exposing (ChecksOptionalArguments)
 import Cambiatus.Object.Community as Community
+import Cambiatus.Object.Invite as Invite
 import Cambiatus.Object.Objective as Objective
 import Cambiatus.Query as Query
 import Cambiatus.Scalar exposing (DateTime(..))
@@ -84,7 +87,8 @@ type alias Metadata =
     , symbol : Symbol
     , logo : String
     , creator : Eos.Name
-    , transfers : Maybe MetadataConnection
+
+    -- , transfers : Maybe MetadataConnection
     , memberCount : Int
     }
 
@@ -103,7 +107,8 @@ type alias Community =
     , invitedReward : Float
     , memberCount : Int
     , members : List Profile
-    , transfers : Maybe ConnectionTransfer
+
+    -- , transfers : Maybe ConnectionTransfer
     , objectives : List Objective
     }
 
@@ -112,19 +117,14 @@ type alias Community =
 -- GraphQL
 
 
-communitiesSelectionSet : (PaginationArgs -> PaginationArgs) -> SelectionSet Metadata Cambiatus.Object.Community
-communitiesSelectionSet paginateArgs =
+communitiesSelectionSet : SelectionSet Metadata Cambiatus.Object.Community
+communitiesSelectionSet =
     SelectionSet.succeed Metadata
         |> with Community.name
         |> with Community.description
         |> with (Eos.symbolSelectionSet Community.symbol)
         |> with Community.logo
         |> with (Eos.nameSelectionSet Community.creator)
-        |> with
-            (Community.transfers
-                paginateArgs
-                metadataConnectionSelectionSet
-            )
         |> with Community.memberCount
 
 
@@ -136,8 +136,8 @@ dashboardSelectionSet =
         |> with (Community.members Profile.selectionSet)
 
 
-communitySelectionSet : (PaginationArgs -> PaginationArgs) -> SelectionSet Community Cambiatus.Object.Community
-communitySelectionSet paginateArgs =
+communitySelectionSet : SelectionSet Community Cambiatus.Object.Community
+communitySelectionSet =
     SelectionSet.succeed Community
         |> with Community.name
         |> with Community.description
@@ -148,11 +148,6 @@ communitySelectionSet paginateArgs =
         |> with Community.invitedReward
         |> with Community.memberCount
         |> with (Community.members Profile.selectionSet)
-        |> with
-            (Community.transfers
-                paginateArgs
-                transferConnectionSelectionSet
-            )
         |> with (Community.objectives objectiveSelectionSet)
 
 
@@ -162,11 +157,7 @@ communitySelectionSet paginateArgs =
 
 communitiesQuery : SelectionSet (List Metadata) RootQuery
 communitiesQuery =
-    communitiesSelectionSet
-        (\args ->
-            { args | first = Present 0 }
-        )
-        |> Query.communities
+    Query.communities communitiesSelectionSet
 
 
 
@@ -196,7 +187,7 @@ newCommunitySubscription symbol =
 
 logoTitleQuery : Symbol -> SelectionSet (Maybe DashboardInfo) RootQuery
 logoTitleQuery symbol =
-    Query.community { symbol = symbolToString symbol } <| dashboardSelectionSet
+    Query.community { symbol = symbolToString symbol } dashboardSelectionSet
 
 
 type alias WithObjectives =
@@ -207,11 +198,7 @@ type alias WithObjectives =
 
 communityQuery : Symbol -> SelectionSet (Maybe Community) RootQuery
 communityQuery symbol =
-    Query.community { symbol = symbolToString symbol } <|
-        communitySelectionSet
-            (\args ->
-                { args | first = Present 10 }
-            )
+    Query.community { symbol = symbolToString symbol } communitySelectionSet
 
 
 logoUrl : String -> Maybe String -> String
@@ -670,3 +657,25 @@ toVerifications actionVerificationResponse =
     List.map
         toVerification
         claimsResponse
+
+
+
+-- INVITE
+
+
+type alias Invite =
+    { community : Community
+    , creator : Profile
+    }
+
+
+inviteSelectionSet : SelectionSet Invite Cambiatus.Object.Invite
+inviteSelectionSet =
+    SelectionSet.succeed Invite
+        |> with (Invite.community communitySelectionSet)
+        |> with (Invite.creator Profile.selectionSet)
+
+
+inviteQuery : String -> SelectionSet (Maybe Invite) RootQuery
+inviteQuery invitationId =
+    Query.invite { input = { id = Present invitationId } } inviteSelectionSet

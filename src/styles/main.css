@@ -96,6 +96,10 @@
     @apply bg-gray-500 text-red rounded-super text-body;
 }
 
+.button-success {
+    @apply bg-green text-white rounded-full text-body;
+}
+
 /* End of Button */
 
 /* Input */

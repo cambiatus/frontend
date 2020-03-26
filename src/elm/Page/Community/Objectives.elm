@@ -22,7 +22,7 @@ import Utils
 
 
 init : LoggedIn.Model -> Symbol -> ( Model, Cmd Msg )
-init ({ shared } as loggedIn) symbol =
+init { shared } symbol =
     ( initModel symbol
     , Cmd.batch
         [ Api.Graphql.query shared (Community.communityQuery symbol) CompletedLoad
@@ -332,7 +332,7 @@ type Msg
 
 
 update : Msg -> Model -> LoggedIn.Model -> UpdateResult
-update msg model loggedIn =
+update msg model _ =
     case msg of
         CompletedLoad (Ok community) ->
             case community of

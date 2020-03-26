@@ -680,6 +680,17 @@ async function handleJavascriptPort (arg) {
       })
       break
     }
+    case 'copyToClipboard': {
+      devLog('=======================', 'copyToClipboard')
+      document.querySelector('#' + arg.data.id).select()
+      document.execCommand('copy')
+      const response = {
+        address: arg.responseAddress,
+        addressData: arg.responseData
+      }
+      app.ports.javascriptInPort.send(response)
+      break
+    }
     default: {
       devLog('No treatment found for ', arg.data.name)
     }

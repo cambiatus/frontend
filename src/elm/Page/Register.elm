@@ -1008,8 +1008,7 @@ jsAddressToMsg addr val =
                 |> Just
 
         "PdfDownloaded" :: _ ->
-            PdfDownloaded
-                |> Just
+            Just PdfDownloaded
 
         _ ->
             Nothing

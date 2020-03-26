@@ -1,4 +1,19 @@
-module Api exposing (UserId, backendUrl, blockchainUrl, communityInvite, editProfile, get, getBalances, getTableRows, signIn, signUp, signUpWithInvitation, uploadAvatar, uploadImage)
+module Api exposing
+    ( UserId
+    , backendUrl
+    , blockchainUrl
+    , communityInvite
+    , editProfile
+    , get
+    , getBalances
+    , getTableRows
+    , signIn
+    , signInInvitation
+    , signUp
+    , signUpWithInvitation
+    , uploadAvatar
+    , uploadImage
+    )
 
 import Avatar exposing (Avatar)
 import Community exposing (Balance)
@@ -92,6 +107,17 @@ signIn shared accountName toMsg =
         }
 
 
+signInInvitation : Shared -> Eos.Name -> String -> (Result Http.Error Profile -> msg) -> Cmd msg
+signInInvitation shared accountName invitationId toMsg =
+    Http.post
+        { url = backendUrl shared [ "auth", "sign_in" ] []
+        , body =
+            Profile.encodeProfileLoginWithInvitation accountName invitationId
+                |> Http.jsonBody
+        , expect = Http.expectJson toMsg Profile.decode
+        }
+
+
 
 -- Profile
 
@@ -168,15 +194,17 @@ uploadImage shared file toMsg =
         }
 
 
-communityInvite : Shared -> Symbol -> Eos.Name -> String -> (Result Http.Error () -> msg) -> Cmd msg
-communityInvite shared symbol inviter email toMsg =
+communityInvite : Shared -> Symbol -> Eos.Name -> (Result Http.Error String -> msg) -> Cmd msg
+communityInvite shared symbol inviter toMsg =
     Http.post
-        { url = backendUrl shared [ "communities", Eos.symbolToString symbol, "invite" ] []
+        { url = backendUrl shared [ "invite" ] []
         , body =
             Encode.object
-                [ ( "inviter", Eos.encodeName inviter )
-                , ( "invites", Encode.string email )
+                [ ( "creator_id", Eos.encodeName inviter )
+                , ( "community_id", Eos.symbolToString symbol |> Encode.string )
                 ]
                 |> Http.jsonBody
-        , expect = Http.expectWhatever toMsg
+        , expect =
+            Decode.at [ "data", "id" ] Decode.string
+                |> Http.expectJson toMsg
         }

@@ -59,17 +59,18 @@ import Session.Shared as Shared exposing (Shared)
 import Time exposing (Posix)
 import Translation
 import UpdateResult as UR
+import Url exposing (Url)
 
 
 
 -- INIT
 
 
-init : Flags -> Nav.Key -> UpdateResult
-init flags navKey =
+init : Flags -> Nav.Key -> Url -> UpdateResult
+init flags navKey url =
     let
         shared =
-            Shared.init flags navKey
+            Shared.init flags navKey url
     in
     case shared.maybeAccount of
         Nothing ->

@@ -1,7 +1,6 @@
 module Session.Shared exposing
     ( Shared
     , TranslationStatus(..)
-    , bespiralSymbol
     , init
     , langFlag
     , language
@@ -14,9 +13,7 @@ module Session.Shared exposing
     , viewLanguageItems
     )
 
-import Asset.Icon as Icon
 import Browser.Navigation as Nav
-import Community
 import Eos exposing (Symbol)
 import Eos.Account as Eos
 import Flags exposing (Endpoints, Environment, Flags, defaultEndpoints)
@@ -27,6 +24,7 @@ import Html.Events exposing (onClick)
 import Http
 import I18Next exposing (Translations, initialTranslations, t)
 import Time exposing (Posix)
+import Url exposing (Url)
 
 
 type alias Shared =
@@ -41,11 +39,12 @@ type alias Shared =
     , logoMobile : String
     , now : Posix
     , allowCommunityCreation : Bool
+    , url : Url
     }
 
 
-init : Flags -> Nav.Key -> Shared
-init ({ environment, maybeAccount, endpoints, allowCommunityCreation } as flags) navKey =
+init : Flags -> Nav.Key -> Url -> Shared
+init ({ environment, maybeAccount, endpoints, allowCommunityCreation } as flags) navKey url =
     { navKey = navKey
     , language = flags.language
     , translations = initialTranslations
@@ -57,6 +56,7 @@ init ({ environment, maybeAccount, endpoints, allowCommunityCreation } as flags)
     , logoMobile = flags.logoMobile
     , now = Time.millisToPosix flags.now
     , allowCommunityCreation = allowCommunityCreation
+    , url = url
     }
 
 
@@ -80,11 +80,6 @@ language shared =
 translationStatus : Shared -> TranslationStatus
 translationStatus shared =
     shared.translationsStatus
-
-
-bespiralSymbol : Shared -> Symbol
-bespiralSymbol shared =
-    Eos.bespiralSymbol
 
 
 

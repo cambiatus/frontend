@@ -1,4 +1,14 @@
-module Page.Dashboard.Community exposing (Model, Msg, UpdateResult, init, jsAddressToMsg, msgToString, update, viewCard, viewTableRow)
+module Page.Dashboard.Balance exposing
+    ( Model
+    , Msg
+    , UpdateResult
+    , init
+    , jsAddressToMsg
+    , msgToString
+    , update
+    , viewCard
+    , viewInvitationModal
+    )
 
 import Api
 import Api.Graphql
@@ -9,17 +19,14 @@ import Community exposing (Action, Balance, Objective, Transaction)
 import Eos
 import Eos.Account as Eos
 import Graphql.Http
-import Html exposing (..)
-import Html.Attributes as HtmlAttr exposing (class, classList, colspan, disabled, for, href, id, maxlength, minlength, placeholder, required, rows, selected, src, style, target, type_, value)
-import Html.Events exposing (onClick, onInput, onSubmit, targetValue)
+import Html exposing (Html, a, br, button, div, form, img, input, p, span, text)
+import Html.Attributes as HtmlAttr exposing (class, classList, disabled, href, id, maxlength, placeholder, required, src, style, type_, value)
+import Html.Events exposing (onClick, onInput, onSubmit)
 import Http
 import I18Next exposing (Delims(..), t, tr)
 import Icons
-import Json.Decode as Decode exposing (Decoder, Value)
+import Json.Decode as Decode exposing (Value)
 import Json.Encode as Encode exposing (Value)
-import List.Extra as List
-import Log
-import Ports
 import Profile exposing (Profile)
 import Route
 import Select
@@ -30,15 +37,6 @@ import Task
 import Transfer exposing (Transfer)
 import UpdateResult as UR
 import Utils
-
-
-
--- SUBSCRIPTION
-
-
-subscription : Model -> Sub Msg
-subscription _ =
-    Sub.map PressedEnter (Browser.Events.onKeyDown Utils.decodeEnterKeyDown)
 
 
 
@@ -57,9 +55,20 @@ init { shared } balance =
       , status = ViewingBalance
       , dashboardInfo = Nothing
       , autoCompleteState = Select.newState ""
+      , inviteModal = Closed
+      , copied = False
       }
     , cmd
     )
+
+
+
+-- SUBSCRIPTION
+
+
+subscription : Model -> Sub Msg
+subscription _ =
+    Sub.map PressedEnter (Browser.Events.onKeyDown Utils.decodeEnterKeyDown)
 
 
 
@@ -71,6 +80,8 @@ type alias Model =
     , status : Status
     , dashboardInfo : Maybe Community.DashboardInfo
     , autoCompleteState : Select.State
+    , inviteModal : ModalStatus
+    , copied : Bool
     }
 
 
@@ -83,6 +94,13 @@ type TransferStatus
     = EditingTransfer TransferForm
     | SendingTransfer TransferForm
     | SendingTransferFailed TransferForm
+
+
+type ModalStatus
+    = Closed
+    | Loading
+    | Failed String
+    | Loaded String
 
 
 type alias TransferForm =
@@ -160,10 +178,6 @@ viewCardBalance loggedIn ({ balance } as model) =
         ipfsUrl =
             loggedIn.shared.endpoints.ipfs
 
-        isBespiralSymbol : Bool
-        isBespiralSymbol =
-            balance.asset.symbol == Shared.bespiralSymbol loggedIn.shared
-
         text_ s =
             text (t loggedIn.shared.translations s)
 
@@ -208,10 +222,15 @@ viewCardBalance loggedIn ({ balance } as model) =
                     ]
                     [ text_ "menu.explore" ]
                 , button
+                    [ class "button button-secondary button-sm text-xs w-full mb-4"
+                    , onClick CreateInvite
+                    ]
+                    [ text_ "community.invite.title" ]
+                , button
                     [ class "button button-primary button-sm text-xs w-full"
                     , onClick ClickedTransfer
                     ]
-                    [ text (t loggedIn.shared.translations "account.my_wallet.balances.button") ]
+                    [ text_ "account.my_wallet.balances.button" ]
                 ]
             ]
         ]
@@ -277,131 +296,93 @@ viewCardTransfer loggedIn ({ balance } as model) index f isDisabled =
         ]
 
 
-
--- VIEW TABLE ROW
-
-
-viewTableRow : LoggedIn.Model -> Model -> List (Html Msg)
-viewTableRow loggedIn model =
+viewInvitationModal : LoggedIn.Model -> Model -> Html Msg
+viewInvitationModal { shared } model =
     let
-        logo =
-            case model.dashboardInfo of
-                Just info ->
-                    info.logo
+        t s =
+            I18Next.t shared.translations s
 
-                Nothing ->
-                    ""
-
-        title =
-            case model.dashboardInfo of
-                Just info ->
-                    info.title
-
-                Nothing ->
-                    ""
-    in
-    case model.status of
-        ViewingBalance ->
-            [ viewTableRowHelper loggedIn model.balance logo title False
-            ]
-
-        Transferring (EditingTransfer f) ->
-            [ viewTableRowHelper loggedIn model.balance logo title True
-            , viewTableRowTransfer loggedIn model f False
-            ]
-
-        Transferring (SendingTransfer f) ->
-            [ viewTableRowHelper loggedIn model.balance logo title True
-            , viewTableRowTransfer loggedIn model f True
-            ]
-
-        Transferring (SendingTransferFailed f) ->
-            [ viewTableRowHelper loggedIn model.balance logo title True
-            , viewTableRowTransfer loggedIn model f False
-            ]
-
-
-viewTableRowHelper : LoggedIn.Model -> Balance -> String -> String -> Bool -> Html Msg
-viewTableRowHelper loggedIn balance logo title showTransfer =
-    let
-        ipfsUrl =
-            loggedIn.shared.endpoints.ipfs
-
-        isBespiralSymbol : Bool
-        isBespiralSymbol =
-            balance.asset.symbol == Shared.bespiralSymbol loggedIn.shared
-    in
-    div
-        [ classList
-            [ ( "card-table__row", True )
-            , ( "card-table__row--highlight", isBespiralSymbol )
-            , ( "card-table__row--transfer", showTransfer )
-            ]
-        ]
-        [ div [ class "card-table__community" ]
-            [ div
-                [ class "card__image-background card-table__image"
-                , Community.logoBackground ipfsUrl (Just logo)
-                ]
-                []
-            , span [] [ text title ]
-            ]
-        , span [ class "card-table__balance" ]
-            [ text (String.fromFloat balance.asset.amount ++ " " ++ Eos.symbolToString balance.asset.symbol) ]
-        , div [ class "card-table__action" ]
-            [ button
-                [ classList
-                    [ ( "btn", True )
-                    , ( "btn--primary", True )
-                    , ( "btn--active", showTransfer )
-                    ]
-                , disabled showTransfer
-                , onClick ClickedTransfer
-                ]
-                [ text (t loggedIn.shared.translations "account.my_wallet.balances.button") ]
-            , a
-                [ class "btn btn--primary"
-                , Route.href (Route.Community balance.asset.symbol)
-                ]
-                [ text (t loggedIn.shared.translations "menu.explore") ]
-            ]
-        ]
-
-
-viewTableRowTransfer : LoggedIn.Model -> Model -> TransferForm -> Bool -> Html Msg
-viewTableRowTransfer loggedIn ({ balance } as model) f isDisabled =
-    let
         text_ s =
-            text (t loggedIn.shared.translations s)
+            text (t s)
+
+        protocol =
+            case shared.url.protocol of
+                Url.Http ->
+                    "http://"
+
+                Url.Https ->
+                    "https://"
+
+        url invitationId =
+            protocol ++ shared.url.host ++ "/invite/" ++ invitationId
     in
-    form
-        [ class "card-table__row-transfer"
-        , onSubmit (PressedEnter True)
-        ]
-        [ div [ class "card-table__row-transfer__cell" ]
-            [ label []
-                [ text (I18Next.tr loggedIn.shared.translations Curly "account.my_wallet.transfer.amount" [ ( "symbol", Eos.symbolToString balance.asset.symbol ) ]) ]
-            , viewInputAmount loggedIn.shared f isDisabled
-            ]
-        , div [ class "card-table__row-transfer__cell" ]
-            [ label [] [ text_ "account.my_wallet.transfer.memo" ]
-            , viewInputMemo loggedIn.shared f isDisabled
-            ]
-        , div [ class "card-table__row-transfer__cell card-table__row-transfer__cell--button" ]
-            [ button
-                [ class "btn btn--primary"
-                , disabled isDisabled
+    case model.inviteModal of
+        Closed ->
+            text ""
+
+        _ ->
+            div [ class "modal container" ]
+                [ div [ class "modal-bg", onClick CloseInviteModal ] []
+                , div [ class "modal-content" ]
+                    [ div [ class "w-full" ]
+                        [ p [ class "text-2xl font-medium mb-4" ]
+                            [ text_ "community.invite.title" ]
+                        , button [ onClick CloseInviteModal ]
+                            [ Icons.close "absolute fill-current text-gray-400 top-0 right-0 mx-8 my-4" ]
+                        , case model.inviteModal of
+                            Closed ->
+                                text ""
+
+                            Loading ->
+                                div [ class "flex items-center justify-center" ]
+                                    [ div [ class "spinner spinner--delay" ] [] ]
+
+                            Failed err ->
+                                div []
+                                    [ div [ class "flex items-center justify-center text-heading text-red" ]
+                                        [ p [ class "text-sm text-red" ] [ text err ] ]
+                                    , div [ class "w-full md:bg-gray-100 flex md:absolute rounded-b-lg md:inset-x-0 md:bottom-0 md:p-4 justify-center items-center" ]
+                                        [ button
+                                            [ class "button button-primary"
+                                            , onClick CloseInviteModal
+                                            ]
+                                            [ text "OK" ]
+                                        ]
+                                    ]
+
+                            Loaded invitationId ->
+                                div [ class "flex flex-wrap items-center mt-24 md:mt-0" ]
+                                    [ div [ class "flex flex-col items-left w-full mb-4" ]
+                                        [ span [ class "input-label" ]
+                                            [ text_ "community.invite.label" ]
+                                        , input
+                                            [ class "text-menu border p-2 md:border-none md:text-heading outline-none text-black"
+                                            , id "invitation-id"
+                                            , value (url invitationId)
+                                            , disabled True
+                                            ]
+                                            []
+                                        ]
+                                    , div [ class "w-full md:bg-gray-100 flex md:absolute rounded-b-lg md:inset-x-0 md:bottom-0 md:p-4 justify-center items-center" ]
+                                        [ button
+                                            [ classList
+                                                [ ( "button-primary", not model.copied )
+                                                , ( "button-success", model.copied )
+                                                ]
+                                            , class "button w-full md:w-48"
+                                            , onClick (CopyToClipboard "invitation-id")
+                                            ]
+                                            [ if model.copied then
+                                                text_ "community.invite.copied"
+
+                                              else
+                                                text_ "community.invite.copy"
+                                            ]
+                                        ]
+                                    ]
+                        ]
+                    ]
                 ]
-                [ text_ "account.my_wallet.transfer.submit" ]
-            ]
-        , button
-            [ class "row__close-btn circle-background"
-            , onClick ClickedCancelTransfer
-            , type_ "button"
-            , disabled isDisabled
-            ]
-            [ Icon.close "" ]
-        ]
 
 
 
@@ -522,15 +503,19 @@ type Msg
     | ClickedCancelTransfer
     | GotTransferResult (Result Value String)
     | ClickedBackFromFailure
-    | ClickedBackToStart
     | CompletedDashboardInfoLoad (Result (Graphql.Http.Error (Maybe Community.DashboardInfo)) (Maybe Community.DashboardInfo))
     | OnSelect (Maybe Profile)
     | SelectMsg (Select.Msg Profile)
+    | CreateInvite
+    | CloseInviteModal
+    | CompletedInviteCreation (Result Http.Error String)
+    | CopyToClipboard String
+    | CopiedToClipboard
     | PressedEnter Bool
 
 
 update : LoggedIn.Model -> Msg -> Model -> UpdateResult
-update loggedIn msg model =
+update ({ shared } as loggedIn) msg model =
     let
         onlyLogImpossible desc =
             UR.init model
@@ -690,11 +675,6 @@ update loggedIn msg model =
                 _ ->
                     onlyLogImpossible []
 
-        ClickedBackToStart ->
-            ViewingBalance
-                |> updateStatus model
-                |> UR.init
-
         CompletedDashboardInfoLoad (Err _) ->
             model |> UR.init
 
@@ -723,10 +703,48 @@ update loggedIn msg model =
         SelectMsg subMsg ->
             let
                 ( updated, cmd ) =
-                    Select.update (selectConfig loggedIn.shared False) subMsg model.autoCompleteState
+                    Select.update (selectConfig shared False) subMsg model.autoCompleteState
             in
             UR.init { model | autoCompleteState = updated }
                 |> UR.addCmd cmd
+
+        CreateInvite ->
+            UR.init
+                { model | inviteModal = Loading }
+                |> UR.addCmd
+                    (CompletedInviteCreation
+                        |> Api.communityInvite shared model.balance.asset.symbol loggedIn.accountName
+                    )
+
+        CloseInviteModal ->
+            UR.init
+                { model | inviteModal = Closed }
+
+        CompletedInviteCreation (Ok invitationId) ->
+            { model | inviteModal = Loaded invitationId }
+                |> UR.init
+
+        CompletedInviteCreation (Err httpError) ->
+            UR.init
+                { model | inviteModal = Failed (I18Next.t shared.translations "community.invite.failed") }
+                |> UR.logHttpError msg httpError
+
+        CopyToClipboard elementId ->
+            model
+                |> UR.init
+                |> UR.addPort
+                    { responseAddress = CopiedToClipboard
+                    , responseData = Encode.null
+                    , data =
+                        Encode.object
+                            [ ( "id", Encode.string elementId )
+                            , ( "name", Encode.string "copyToClipboard" )
+                            ]
+                    }
+
+        CopiedToClipboard ->
+            { model | copied = True }
+                |> UR.init
 
         PressedEnter val ->
             if val then
@@ -764,6 +782,9 @@ jsAddressToMsg addr val =
                 val
                 |> Result.map (Just << GotTransferResult)
                 |> Result.withDefault Nothing
+
+        "CopiedToClipboard" :: _ ->
+            Just CopiedToClipboard
 
         _ ->
             Nothing
@@ -805,17 +826,29 @@ msgToString msg =
         ClickedBackFromFailure ->
             [ "ClickedBackFromFailure" ]
 
-        ClickedBackToStart ->
-            [ "ClickedBackToStart" ]
-
         CompletedDashboardInfoLoad result ->
             resultToString [ "CompletedDashboardInfoLoad" ] result
 
         OnSelect _ ->
             [ "OnSelect" ]
 
-        SelectMsg subMsg ->
+        SelectMsg _ ->
             "SelectMsg" :: "sub" :: []
+
+        CreateInvite ->
+            [ "CreateInvite" ]
+
+        CloseInviteModal ->
+            [ "CloseInviteModal" ]
+
+        CompletedInviteCreation _ ->
+            [ "CompletedInviteCreation" ]
+
+        CopyToClipboard _ ->
+            [ "CopyToClipboard" ]
+
+        CopiedToClipboard ->
+            [ "CopiedToClipboard" ]
 
         PressedEnter _ ->
             [ "PressedEnter" ]

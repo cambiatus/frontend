@@ -248,17 +248,26 @@
       "transfers": "{{quantity}} Transferências"
     },
     "invite": {
-      "title": "Convide seus amigos e amigas",
+      "title": "Convide um amigo",
       "subtitle": "Convide seus amigos e amigas para {{community_title}}",
-      "labels": {
-        "emails": "Emails, separados por virgula"
-      },
-      "placeholders": {
-        "emails": "Preencha os emails, separados por virgula"
-      },
+      "label": "Envie essa URl para seus amigos",
       "submit": "Envie os convites",
       "succeed": "Convite enviado com sucesso",
-      "failed": "Falha ao enviar convite"
+      "failed": "Falha ao enviar convite",
+      "copy": "Copiar",
+      "copied": "Copiado!"
+    },
+    "invitation": {
+      "title": "convidou você para fazer parte da comunidade",
+      "subtitle": "Gostaria de se juntar a",
+      "yes": "Sim, participar",
+      "no": "Não, obrigado",
+      "modal": {
+        "title": "Atenção",
+        "body": "Você realmente não deseja participar da comunidade?",
+        "yes": "Sim, participar",
+        "no": "Não, cancelar"
+      }
     },
     "details": {
       "creator": "Criador(a)",

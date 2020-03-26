@@ -26,7 +26,7 @@ import I18Next exposing (Delims(..), t)
 import Json.Decode exposing (Decoder, Value)
 import List.Extra as List
 import Page
-import Page.Dashboard.Community as DashCommunity
+import Page.Dashboard.Balance as DashCommunity
 import Route
 import Session.LoggedIn as LoggedIn exposing (External(..), ProfileStatus)
 import Session.Shared as Shared exposing (Shared)
@@ -128,6 +128,7 @@ view loggedIn model =
                         [ text (profile.userName |> Maybe.withDefault (Eos.nameToString profile.account))
                         ]
                     ]
+                , viewInvitations loggedIn communities
                 , viewBalances loggedIn communities
                 , viewVerifications loggedIn.shared model
                 , viewSections loggedIn model
@@ -409,6 +410,15 @@ viewBalances loggedIn communities =
         )
 
 
+viewInvitations : LoggedIn.Model -> List DashCommunity.Model -> Html Msg
+viewInvitations loggedIn balances =
+    div []
+        (List.indexedMap
+            (\i b -> DashCommunity.viewInvitationModal loggedIn b |> Html.map (GotDashCommunityMsg i))
+            balances
+        )
+
+
 
 -- UPDATE
 
@@ -601,19 +611,19 @@ fetchTransfers shared accountName =
 
 
 sortCambiatusFirst : LoggedIn.Model -> List Balance -> List Balance
-sortCambiatusFirst loggedIn balances =
+sortCambiatusFirst _ balances =
     let
         bespiral : Maybe Balance
         bespiral =
             balances
-                |> List.filter (\b -> b.asset.symbol == Shared.bespiralSymbol loggedIn.shared)
+                |> List.filter (\b -> b.asset.symbol == Eos.bespiralSymbol)
                 |> List.head
 
         --|> Maybe.withDefault (Balance "" 0 False False)
         balancesWithoutSpiral : List Balance
         balancesWithoutSpiral =
             balances
-                |> List.filter (\b -> b.asset.symbol /= Shared.bespiralSymbol loggedIn.shared)
+                |> List.filter (\b -> b.asset.symbol /= Eos.bespiralSymbol)
     in
     Maybe.map (\b -> b :: balancesWithoutSpiral) bespiral
         |> Maybe.withDefault balancesWithoutSpiral

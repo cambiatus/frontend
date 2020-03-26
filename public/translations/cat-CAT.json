@@ -247,15 +247,25 @@
     "invite": {
       "title": "Convida als teus amics",
       "subtitle": "Convida als teus amics a la comunitat {{community_title}}",
-      "labels": {
-        "emails": "Correus electrònics, separats per comes"
-      },
-      "placeholders": {
-        "emails": "Introdueix els correus electrònics separats per comes"
-      },
+      "label": "Envia aquest URL als teus amics",
       "submit": "Enviar invitacions",
       "succeed": "Invitació exitosa",
-      "failed": "Invitació fallida"
+      "failed": "Invitació fallida",
+      "copy": "Còpia",
+      "copied": "Copiat!"
+    },
+    "invitation": {
+      "title": "Et va convidar a formar part de la comunitat",
+      "subtitle": "Voleu unir-vos a",
+      "yes": "Sí, uniu-vos",
+      "no": "No gràcies",
+      "modal": {
+        "title": "Atenció",
+        "body": "De debò no vols unir-te a la comunitat?",
+        "yes": "Sí uniu-vos",
+        "no": "No, cancel·la"
+      }
+
     },
     "details": {
       "creator": "Creador",

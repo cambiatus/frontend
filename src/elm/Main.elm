@@ -6,8 +6,7 @@ import Browser
 import Browser.Navigation as Nav
 import Community
 import Flags
-import Html exposing (Html, div, iframe, text)
-import Html.Attributes exposing (id, style)
+import Html exposing (Html, text)
 import Http
 import Json.Decode as Decode exposing (Value)
 import Log
@@ -17,6 +16,7 @@ import Page.Community as Community
 import Page.Community.ActionEditor as ActionEditor
 import Page.Community.Editor as CommunityEditor
 import Page.Community.Explore as CommunityExplore
+import Page.Community.Invite as Invite
 import Page.Community.ObjectiveEditor as ObjectiveEditor
 import Page.Community.Objectives as Objectives
 import Page.Community.VerifyClaim as VerifyClaim
@@ -50,7 +50,6 @@ main =
                 { title = "Cambiatus"
                 , body =
                     [ view model
-                    , viewChat
                     ]
                 }
         , onUrlRequest = ClickedLink
@@ -68,12 +67,12 @@ init flagsValue url navKey =
         ( session, pageCmd ) =
             case Decode.decodeValue Flags.decode flagsValue of
                 Ok flags ->
-                    Page.init flags navKey
+                    Page.init flags navKey url
                         |> UR.map identity GotPageMsg (\_ uR -> uR)
                         |> UR.toModelCmd (\_ m -> ( m, Cmd.none )) msgToString
 
                 Err e ->
-                    Page.init Flags.default navKey
+                    Page.init Flags.default navKey url
                         |> UR.map identity GotPageMsg (\_ uR -> uR)
                         |> UR.logDecodeError Ignored e
                         |> UR.toModelCmd (\_ m -> ( m, Cmd.none )) msgToString
@@ -167,6 +166,7 @@ type Status
     | ShopEditor (Maybe String) ShopEditor.Model
     | ShopViewer String ShopViewer.Model
     | Transfer Int Transfer.Model
+    | Invite Invite.Model
 
 
 
@@ -197,6 +197,7 @@ type Msg
     | GotUpdatedBalances (Result Http.Error (List Community.Balance))
     | GotShopViewerMsg ShopViewer.Msg
     | GotTransferScreenMsg Transfer.Msg
+    | GotInviteMsg Invite.Msg
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -403,6 +404,10 @@ update msg model =
             Transfer.update subMsg subModel
                 >> updateLoggedInUResult (Transfer transferId) GotTransferScreenMsg model
                 |> withLoggedIn
+
+        ( GotInviteMsg subMsg, Invite subModel ) ->
+            Invite.update model.session subMsg subModel
+                |> updateLoggedInUResult Invite GotInviteMsg model
 
         ( _, _ ) ->
             ( model
@@ -748,6 +753,10 @@ changeRouteTo maybeRoute model =
                 >> updateStatusWith (Transfer transferId) GotTransferScreenMsg model
                 |> withLoggedIn (Route.Transfer transferId)
 
+        Just (Route.Invite invitationId) ->
+            Invite.init session invitationId
+                |> updateStatusWith Invite GotInviteMsg model
+
 
 jsAddressToMsg : List String -> Value -> Maybe Msg
 jsAddressToMsg address val =
@@ -876,21 +885,12 @@ msgToString msg =
         GotTransferScreenMsg subMsg ->
             "GotTransferScreenMsg" :: Transfer.msgToString subMsg
 
+        GotInviteMsg subMsg ->
+            "GotInviteMsg" :: Invite.msgToString subMsg
+
 
 
 -- VIEW
-
-
-viewChat : Html Msg
-viewChat =
-    div [ id "chat-container", style "display" "none" ]
-        [ iframe
-            [ id "chat-manager"
-            , style "height" "0%"
-            , style "width" "0%"
-            ]
-            []
-        ]
 
 
 view : Model -> Html Msg
@@ -970,7 +970,7 @@ view model =
         Profile subModel ->
             viewLoggedIn subModel LoggedIn.Profile GotProfileMsg Profile.view
 
-        Shop maybeFilter subModel ->
+        Shop _ subModel ->
             viewLoggedIn subModel LoggedIn.Shop GotShopMsg Shop.view
 
         ShopEditor _ subModel ->
@@ -981,3 +981,6 @@ view model =
 
         Transfer _ subModel ->
             viewLoggedIn subModel LoggedIn.Other GotTransferScreenMsg Transfer.view
+
+        Invite subModel ->
+            Html.map GotInviteMsg (Invite.view model.session subModel)

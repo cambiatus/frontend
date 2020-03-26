@@ -244,17 +244,27 @@
       "transfers": "{{quantity}} Transferencias"
     },
     "invite": {
-      "title": "Invita a tus amigas y amigos",
+      "title": "Invita a un amigo",
       "subtitle": "Invita a tus amigas y amigos a la comunidad {{community_title}}",
-      "labels": {
-        "emails": "Correos electrónicos, separados por comas"
-      },
-      "placeholders": {
-        "emails": "Introduce los correos electrónicos separados por comas"
-      },
+      "label": "Envía esta URL a tus amigos",
       "submit": "Enviar invitaciones",
       "succeed": "Invitación exitosa",
-      "failed": "Invitación fallida"
+      "failed": "Invitación fallida",
+      "copy": "Copiar",
+      "copied": "Copiado!"
+    },
+    "invitation": {
+      "title": "Te invitó a ser parte de la comunidad",
+      "subtitle": "Te gustaría unirte",
+      "yes": "Si, únete",
+      "no": "No, gracias",
+      "modal": {
+        "title": "Atención",
+        "body": "¿Realmente no quieres unirte a la comunidad?",
+        "yes": "Sí, únete",
+        "no": "No, cancelar"
+      }
+
     },
     "details": {
       "creator": "Creador/a",

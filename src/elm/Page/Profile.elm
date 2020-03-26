@@ -770,28 +770,26 @@ update msg model loggedIn =
             UR.init { model | privateKeyModal = Nothing }
 
         RequestPush ->
-            case model.pushNotifications of
-                False ->
-                    model
-                        |> UR.init
-                        |> UR.addPort
-                            { responseAddress = RequestPush
-                            , responseData = Encode.null
-                            , data =
-                                Encode.object
-                                    [ ( "name", Encode.string "requestPushPermission" ) ]
-                            }
+            if model.pushNotifications then
+                model
+                    |> UR.init
+                    |> UR.addPort
+                        { responseAddress = GotPushPreference False
+                        , responseData = Encode.null
+                        , data =
+                            Encode.object [ ( "name", Encode.string "disablePushPref" ) ]
+                        }
 
-                True ->
-                    -- TODO : Tell Server Notification Is Disabled
-                    model
-                        |> UR.init
-                        |> UR.addPort
-                            { responseAddress = GotPushPreference False
-                            , responseData = Encode.null
-                            , data =
-                                Encode.object [ ( "name", Encode.string "disablePushPref" ) ]
-                            }
+            else
+                model
+                    |> UR.init
+                    |> UR.addPort
+                        { responseAddress = RequestPush
+                        , responseData = Encode.null
+                        , data =
+                            Encode.object
+                                [ ( "name", Encode.string "requestPushPermission" ) ]
+                        }
 
         GotPushSub push ->
             model
