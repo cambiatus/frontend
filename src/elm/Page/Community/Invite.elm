@@ -175,20 +175,20 @@ viewModal shared model invitationId =
                             [ text_ "community.invitation.modal.title" ]
                         , button [ onClick CloseConfirmationModal ]
                             [ Icons.close "absolute fill-current text-gray-400 top-0 right-0 mx-8 my-4" ]
-                        , div [ class "flex items-center" ]
-                            [ div [ class "flex flex-col items-left" ]
+                        , div [ class "flex flex-wrap items-center" ]
+                            [ div [ class "flex flex-col items-left mb-4" ]
                                 [ p [ class "" ]
                                     [ text_ "community.invitation.modal.body" ]
                                 ]
-                            , div [ class "w-full md:bg-gray-100 flex md:absolute rounded-b-lg md:inset-x-0 md:bottom-0 md:p-4 justify-center items-center" ]
+                            , div [ class "w-full md:bg-gray-100 flex flex-wrap md:absolute rounded-b-lg md:inset-x-0 md:bottom-0 md:p-4 justify-center items-center" ]
                                 [ button
-                                    [ class "button button-secondary w-48 mr-8"
+                                    [ class "button button-secondary w-full mb-4 md:mb-0 md:w-48 md:mr-8"
                                     , onClick RejectInvitation
                                     ]
                                     [ text_ "community.invitation.modal.no"
                                     ]
                                 , button
-                                    [ class "button button-primary w-48"
+                                    [ class "button button-primary w-full md:w-48"
                                     , onClick (AcceptInvitation invitationId)
                                     ]
                                     [ text_ "community.invitation.modal.yes" ]
