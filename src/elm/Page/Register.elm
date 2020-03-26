@@ -977,7 +977,7 @@ updateForm msg shared ({ form } as model) =
                     fieldProbs accountValidator str
 
                 newForm =
-                    { form | account = str }
+                    { form | account = str |> String.toLower }
             in
             { model
                 | form = newForm
