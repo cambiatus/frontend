@@ -13,8 +13,9 @@ module Page.Dashboard.Balance exposing
 import Api
 import Api.Graphql
 import Asset.Icon as Icon
-import Avatar
-import Community exposing (Balance)
+import Avatar exposing (Avatar)
+import Browser.Events
+import Community exposing (Action, Balance, Objective, Transaction)
 import Eos
 import Eos.Account as Eos
 import Graphql.Http
@@ -32,9 +33,14 @@ import Select
 import Session.LoggedIn as LoggedIn exposing (External(..))
 import Session.Shared as Shared exposing (Shared)
 import Simple.Fuzzy
-import Transfer
+import Task
+import Transfer exposing (Transfer)
 import UpdateResult as UR
-import Url
+import Utils
+
+
+
+-- INIT
 
 
 init : LoggedIn.Model -> Balance -> ( Model, Cmd Msg )
@@ -54,6 +60,15 @@ init { shared } balance =
       }
     , cmd
     )
+
+
+
+-- SUBSCRIPTION
+
+
+subscription : Model -> Sub Msg
+subscription _ =
+    Sub.map PressedEnter (Browser.Events.onKeyDown Utils.decodeEnterKeyDown)
 
 
 
@@ -496,6 +511,7 @@ type Msg
     | CompletedInviteCreation (Result Http.Error String)
     | CopyToClipboard String
     | CopiedToClipboard
+    | PressedEnter Bool
 
 
 update : LoggedIn.Model -> Msg -> Model -> UpdateResult
@@ -730,6 +746,17 @@ update ({ shared } as loggedIn) msg model =
             { model | copied = True }
                 |> UR.init
 
+        PressedEnter val ->
+            if val then
+                UR.init model
+                    |> UR.addCmd
+                        (Task.succeed ClickedSendTransfer
+                            |> Task.perform identity
+                        )
+
+            else
+                UR.init model
+
 
 updateDashboardInfo : Model -> Community.DashboardInfo -> Model
 updateDashboardInfo model result =
@@ -822,3 +849,6 @@ msgToString msg =
 
         CopiedToClipboard ->
             [ "CopiedToClipboard" ]
+
+        PressedEnter _ ->
+            [ "PressedEnter" ]

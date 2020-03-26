@@ -562,7 +562,7 @@ update msg model =
 
         CompletedLoadTranslation lang (Ok transl) ->
             case model.profile of
-                Loaded profile_ ->
+                Loaded _ ->
                     UR.init { model | shared = Shared.loadTranslation (Ok ( lang, transl )) shared }
                         |> UR.addCmd (Ports.storeLanguage lang)
 
@@ -675,7 +675,7 @@ update msg model =
             UR.init closeAllModals
 
         GotAuthMsg authMsg ->
-            Auth.update authMsg shared model.auth
+            Auth.update authMsg shared model.auth model.showAuthModal
                 |> UR.map
                     (\a -> { model | auth = a })
                     GotAuthMsg

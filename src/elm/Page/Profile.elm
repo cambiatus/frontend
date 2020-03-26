@@ -4,6 +4,7 @@ import Api
 import Api.Graphql
 import Asset.Icon as Icon
 import Avatar exposing (Avatar)
+import Browser.Events
 import Dict exposing (Dict)
 import Eos as Eos exposing (Symbol)
 import Eos.Account as Eos
@@ -22,6 +23,16 @@ import PushSubscription exposing (PushSubscription)
 import Session.LoggedIn as LoggedIn exposing (External(..))
 import Task
 import UpdateResult as UR
+import Utils
+
+
+
+-- SUBSCRIPTION
+
+
+subscription : Model -> Sub Msg
+subscription _ =
+    Sub.map PressedEnter (Browser.Events.onKeyDown Utils.decodeEnterKeyDown)
 
 
 
@@ -567,6 +578,7 @@ type Msg
     | GotPushPreference Bool
     | CheckPushPref
     | DownloadPdf
+    | PressedEnter Bool
 
 
 update : Msg -> Model -> LoggedIn.Model -> UpdateResult
@@ -828,6 +840,17 @@ update msg model loggedIn =
                             [ ( "name", Encode.string "printAuthPdf" ) ]
                     }
 
+        PressedEnter val ->
+            if val then
+                UR.init model
+                    |> UR.addCmd
+                        (Task.succeed ClickedSave
+                            |> Task.perform identity
+                        )
+
+            else
+                UR.init model
+
 
 updateForm : (ProfileForm -> ProfileForm) -> UpdateResult -> UpdateResult
 updateForm transform ({ model } as uResult) =
@@ -1006,3 +1029,6 @@ msgToString msg =
 
         DownloadPdf ->
             [ "DownloadPdf" ]
+
+        PressedEnter _ ->
+            [ "PressedEnter" ]

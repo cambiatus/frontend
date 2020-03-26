@@ -49,6 +49,7 @@ import Session.LoggedIn as LoggedIn exposing (External(..))
 import Session.Shared exposing (Shared)
 import Simple.Fuzzy
 import Strftime
+import Task
 import Time
 import UpdateResult as UR
 import Utils
@@ -372,6 +373,7 @@ type Msg
     | SaveAction Int -- Send the date
     | GotSaveAction (Result Value String)
     | DismissError
+    | PressedEnter Bool
 
 
 update : Msg -> Model -> LoggedIn.Model -> UpdateResult
@@ -898,6 +900,17 @@ update msg model loggedIn =
             { model | form = { oldForm | saveStatus = NotAsked } }
                 |> UR.init
 
+        PressedEnter val ->
+            if val then
+                UR.init model
+                    |> UR.addCmd
+                        (Task.succeed ValidateDeadline
+                            |> Task.perform identity
+                        )
+
+            else
+                UR.init model
+
 
 upsertAction : LoggedIn.Model -> Model -> Int -> UpdateResult
 upsertAction loggedIn model isoDate =
@@ -1150,7 +1163,7 @@ viewValidations { shared } model =
     in
     div []
         [ div [ class "mb-6" ]
-            [ div [ class "mb-10" ]
+            [ div []
                 [ p [ class "input-label mb-6" ] [ text_ "community.actions.form.validity_label" ]
                 , div [ class "flex" ]
                     [ div [ class "form-switch inline-block align-middle" ]
@@ -1173,7 +1186,11 @@ viewValidations { shared } model =
                               else
                                 text_ "community.actions.form.validation_on"
                             ]
-                        , text_ "community.actions.form.validation_detail"
+                        , if model.form.validation == NoValidation then
+                            text_ "community.actions.form.validation_detail"
+
+                          else
+                            text_ "community.actions.form.validation_on_detail"
                         ]
                     ]
                 ]
@@ -1346,7 +1363,7 @@ viewVerifications ({ shared } as loggedIn) model community =
 
 
 viewManualVerificationForm : LoggedIn.Model -> Model -> Community -> Html Msg
-viewManualVerificationForm { shared } model community =
+viewManualVerificationForm ({ shared } as loggedIn) model community =
     let
         text_ s =
             text (t shared.translations s)
@@ -1361,7 +1378,7 @@ viewManualVerificationForm { shared } model community =
                     [ text_ "community.actions.form.verifiers_label" ]
                 , div []
                     [ viewVerifierSelect shared model False
-                    , viewSelectedVerifiers shared selectedVerifiers
+                    , viewSelectedVerifiers loggedIn selectedVerifiers
                     ]
                 , span [ class "input-label" ]
                     [ text_ "community.actions.form.verifiers_reward_label" ]
@@ -1398,8 +1415,8 @@ viewManualVerificationForm { shared } model community =
                 ]
 
 
-viewSelectedVerifiers : Shared -> List Profile -> Html Msg
-viewSelectedVerifiers shared selectedVerifiers =
+viewSelectedVerifiers : LoggedIn.Model -> List Profile -> Html Msg
+viewSelectedVerifiers ({ shared } as loggedIn) selectedVerifiers =
     let
         ipfsUrl =
             shared.endpoints.ipfs
@@ -1409,17 +1426,13 @@ viewSelectedVerifiers shared selectedVerifiers =
             |> List.map
                 (\p ->
                     div
-                        [ class "flex flex-col m-3 items-center" ]
-                        [ div [ class "relative h-10 w-12 ml-2" ]
-                            [ Avatar.view ipfsUrl p.avatar "h-10 w-10"
-                            , div
-                                [ onClick (OnRemoveVerifier p)
-                                , class "absolute top-0 right-0 z-10 rounded-full h-6 w-6 flex items-center"
-                                ]
-                                [ Icons.remove "" ]
+                        [ class "flex justify-between flex-col m-3 items-center" ]
+                        [ Profile.view ipfsUrl loggedIn.accountName shared.translations p
+                        , div
+                            [ onClick (OnRemoveVerifier p)
+                            , class "h-6 w-6 flex items-center mt-4"
                             ]
-                        , span [ class "mt-2 text-black font-sans text-body leading-normal" ]
-                            [ text (Eos.nameToString p.account) ]
+                            [ Icons.trash "" ]
                         ]
                 )
         )
@@ -1630,3 +1643,6 @@ msgToString msg =
 
         DismissError ->
             [ "DismissError" ]
+
+        PressedEnter _ ->
+            [ "PressedEnter" ]

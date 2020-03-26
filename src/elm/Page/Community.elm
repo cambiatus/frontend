@@ -508,12 +508,11 @@ viewAction loggedIn metadata maybeDate action =
 
         dateColor : String
         dateColor =
-            case pastDeadline of
-                True ->
-                    " text-date-red"
+            if pastDeadline then
+                " text-date-red"
 
-                False ->
-                    " text-date-purple"
+            else
+                " text-date-purple"
 
         usagesColor : String
         usagesColor =
@@ -587,74 +586,78 @@ viewAction loggedIn metadata maybeDate action =
             action.verificationType
                 |> VerificationType.toString
     in
-    div [ class "py-6 px-2" ]
-        [ div [ class "flex flex-col border-l-8 border-light-grey rounded-l-sm pl-2 sm:pl-6" ]
-            [ span [ class "text-text-grey text-sm sm:text-base" ]
-                [ text action.description ]
-            , div [ class "flex flex-col sm:flex-row sm:items-center sm:justify-between" ]
-                [ div [ class "text-xs mt-5 sm:w-1/3" ]
-                    [ case action.deadline of
-                        Just deadline ->
-                            div []
-                                [ span [ class "capitalize text-text-grey" ] [ text_ "community.actions.available_until" ]
-                                , span [ class dateColor ] [ text deadlineStr ]
-                                , span [] [ text_ "community.actions.or" ]
-                                ]
+    if action.isCompleted then
+        text ""
 
-                        Nothing ->
+    else
+        div [ class "py-6 px-2" ]
+            [ div [ class "flex flex-col border-l-8 border-light-grey rounded-l-sm pl-2 sm:pl-6" ]
+                [ span [ class "text-text-grey text-sm sm:text-base" ]
+                    [ text action.description ]
+                , div [ class "flex flex-col sm:flex-row sm:items-center sm:justify-between" ]
+                    [ div [ class "text-xs mt-5 sm:w-1/3" ]
+                        [ case action.deadline of
+                            Just deadline ->
+                                div []
+                                    [ span [ class "capitalize text-text-grey" ] [ text_ "community.actions.available_until" ]
+                                    , span [ class dateColor ] [ text deadlineStr ]
+                                    , span [] [ text_ "community.actions.or" ]
+                                    ]
+
+                            Nothing ->
+                                text ""
+                        , if action.usages > 0 then
+                            p [ class usagesColor ]
+                                [ text (tr "community.actions.usages" [ ( "usages", usages ), ( "usagesLeft", usagesLeft ) ]) ]
+
+                          else
                             text ""
-                    , if action.usages > 0 then
-                        p [ class usagesColor ]
-                            [ text (tr "community.actions.usages" [ ( "usages", usages ), ( "usagesLeft", usagesLeft ) ]) ]
+                        ]
+                    , div [ class "sm:self-end" ]
+                        [ div [ class "mt-3 flex flex-row items-center" ]
+                            (if validationType == "CLAIMABLE" then
+                                validatorAvatars
 
-                      else
-                        text ""
+                             else
+                                [ span [ class "text-date-purple uppercase text-sm mr-1" ]
+                                    [ text_ "community.actions.automatic_analyzers" ]
+                                , img [ src "/icons/tooltip.svg" ] []
+                                ]
+                            )
+                        , div [ class "capitalize text-text-grey text-sm sm:text-right" ]
+                            [ text_ "community.actions.verifiers" ]
+                        ]
                     ]
-                , div [ class "sm:self-end" ]
-                    [ div [ class "mt-3 flex flex-row items-center" ]
-                        (if validationType == "CLAIMABLE" then
-                            validatorAvatars
+                , div [ class "mt-5 flex flex-row items-baseline" ]
+                    [ div [ class ("text-reward-green text-base mt-5 flex-grow-1" ++ rewardStrike) ]
+                        [ span [] [ text (t "community.actions.reward" ++ ": ") ]
+                        , span [ class "font-medium" ] [ text rewardStr ]
+                        ]
+                    , div [ class "hidden sm:flex sm:visible flex-row justify-end flex-grow-1" ]
+                        [ if validationType == "CLAIMABLE" then
+                            button
+                                [ class ("h-10 uppercase rounded-lg ml-1" ++ claimColors ++ claimSize)
+                                , onClick (OpenClaimConfirmation action.id)
+                                ]
+                                [ text_ claimText ]
 
-                         else
-                            [ span [ class "text-date-purple uppercase text-sm mr-1" ]
-                                [ text_ "community.actions.automatic_analyzers" ]
-                            , img [ src "/icons/tooltip.svg" ] []
-                            ]
-                        )
-                    , div [ class "capitalize text-text-grey text-sm sm:text-right" ]
-                        [ text_ "community.actions.verifiers" ]
+                          else
+                            text ""
+                        ]
                     ]
                 ]
-            , div [ class "mt-5 flex flex-row items-baseline" ]
-                [ div [ class ("text-reward-green text-base mt-5 flex-grow-1" ++ rewardStrike) ]
-                    [ span [] [ text (t "community.actions.reward" ++ ": ") ]
-                    , span [ class "font-medium" ] [ text rewardStr ]
-                    ]
-                , div [ class "hidden sm:flex sm:visible flex-row justify-end flex-grow-1" ]
-                    [ if validationType == "CLAIMABLE" then
-                        button
-                            [ class ("h-10 uppercase rounded-lg ml-1" ++ claimColors ++ claimSize)
-                            , onClick (OpenClaimConfirmation action.id)
-                            ]
-                            [ text_ claimText ]
+            , div [ class "flex flex-row mt-8 justify-between sm:hidden" ]
+                [ if validationType == "CLAIMABLE" then
+                    button
+                        [ class ("h-10 uppercase rounded-lg ml-1" ++ claimColors ++ claimSize)
+                        , onClick (OpenClaimConfirmation action.id)
+                        ]
+                        [ text_ claimText ]
 
-                      else
-                        text ""
-                    ]
+                  else
+                    text ""
                 ]
             ]
-        , div [ class "flex flex-row mt-8 justify-between sm:hidden" ]
-            [ if validationType == "CLAIMABLE" then
-                button
-                    [ class ("h-10 uppercase rounded-lg ml-1" ++ claimColors ++ claimSize)
-                    , onClick (OpenClaimConfirmation action.id)
-                    ]
-                    [ text_ claimText ]
-
-              else
-                text ""
-            ]
-        ]
 
 
 viewHeader : LoggedIn.Model -> Community -> Html Msg

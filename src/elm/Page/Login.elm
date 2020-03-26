@@ -90,7 +90,7 @@ update msg model guest =
     in
     case msg of
         GotAuthMsg authMsg ->
-            Auth.update authMsg guest.shared model.auth
+            Auth.update authMsg guest.shared model.auth False
                 |> UR.map
                     (\a -> { model | auth = a })
                     GotAuthMsg

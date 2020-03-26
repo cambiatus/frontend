@@ -1,4 +1,4 @@
-module Utils exposing (decodeDate, decodeTimestamp, posixDateTime)
+module Utils exposing (decodeDate, decodeEnterKeyDown, decodeTimestamp, posixDateTime)
 
 import Cambiatus.Scalar exposing (DateTime(..))
 import Iso8601
@@ -49,4 +49,22 @@ decodeTimestamp =
         |> Decode.andThen
             (\ms ->
                 Decode.succeed <| Time.millisToPosix ms
+            )
+
+
+decodeEnterKeyDown : Decode.Decoder Bool
+decodeEnterKeyDown =
+    let
+        isEnter code =
+            case code of
+                "Enter" ->
+                    True
+
+                _ ->
+                    False
+    in
+    Decode.field "key" Decode.string
+        |> Decode.andThen
+            (\cd ->
+                Decode.succeed <| isEnter cd
             )
