@@ -17,11 +17,6 @@ type alias Model =
 
 type Msg
     = ShowFeedback Model
-
-update : Msg -> Model -> Model
-update msg model =
-    case msg of
-        ShowFeedback feedback -> model
         
 
 -- VIEW
