@@ -55,6 +55,7 @@ import Session.Shared as Shared exposing (Shared)
 import Shop
 import Task
 import Translation
+import Feedback
 import UpdateResult as UR
 
 
@@ -125,6 +126,7 @@ type alias Model =
     , showAuthModal : Bool
     , auth : Auth.Model
     , balances : List Balance
+    , feedback : Maybe Feedback.Model
     }
 
 
@@ -143,8 +145,8 @@ initModel shared authModel accountName =
     , showAuthModal = False
     , auth = authModel
     , balances = []
+    , feedback = Nothing
     }
-
 
 type ProfileStatus
     = Loading Eos.Name
@@ -229,9 +231,18 @@ viewHelper thisMsg page profile_ ({ shared } as model) content =
             [ div [ class "container mx-auto" ]
                 [ viewHeader model page profile_ |> Html.map thisMsg
                 , viewMainMenu page profile_ model |> Html.map thisMsg
+              , div
+                   [ onClick ( ShowFeedback { message = "Hi!", success = False } )  ]
+                   [ text "clickme!" ] |> Html.map thisMsg
                 ]
             ]
-        , div [ class "flex-grow" ] [ content ]
+        , div [ class "flex-grow" ] [
+               case model.feedback of
+                   Just feedback -> Feedback.view feedback
+                   Nothing -> div [] []
+              , content
+              ] 
+                    
         , viewFooter shared
         , div [ onClickCloseAny ] [] |> Html.map thisMsg
         , if model.showAuthModal then
@@ -530,6 +541,7 @@ type Msg
     | CompletedLoadBalances (Result Http.Error (List Balance))
     | CompletedLoadUnread Value
     | KeyDown String
+    | ShowFeedback Feedback.Model
 
 
 update : Msg -> Model -> UpdateResult
@@ -723,6 +735,10 @@ update msg model =
                 model
                     |> UR.init
 
+        ShowFeedback feedback ->
+            { model | feedback = Just feedback }
+                |> UR.init
+
 
 closeModal : UpdateResult -> UpdateResult
 closeModal ({ model } as uResult) =
@@ -884,3 +900,6 @@ msgToString msg =
 
         KeyDown _ ->
             [ "KeyDown" ]
+
+        ShowFeedback _ ->
+            [ "ShowFeedback" ]
