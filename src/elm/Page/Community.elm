@@ -845,7 +845,7 @@ viewTransfer loggedIn model transfer =
     in
     a
         [ class "border-b last:border-b-0 border-gray-500 flex flex-wrap items-start p-4"
-        , Route.href (Route.Transfer transfer.id)
+        , Route.href (Route.ViewTransfer transfer.id)
         ]
         [ div [ class "flex justify-between w-full" ]
             [ p [] [ text (transferInfo transfer.from.account transfer.value transfer.to.account) ]

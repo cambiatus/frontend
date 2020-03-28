@@ -508,7 +508,7 @@ update msg model loggedIn =
         SelectMsg subMsg ->
             let
                 ( updated, cmd ) =
-                    Select.update (selectConfig loggedIn.shared False) subMsg model.multiSelectState
+                    Select.update (selectConfiguration loggedIn.shared False) subMsg model.multiSelectState
             in
             { model | multiSelectState = updated }
                 |> UR.init
@@ -1464,48 +1464,18 @@ filter minChars toLabel query items =
             |> Just
 
 
-selectConfig : Shared -> Bool -> Select.Config Msg Profile
-selectConfig shared isDisabled =
-    Select.newConfig
-        { onSelect = OnSelectVerifier
-        , toLabel = \p -> Eos.nameToString p.account
-        , filter = filter 2 (\p -> Eos.nameToString p.account)
-        }
-        |> Select.withMultiSelection True
-        |> Select.withInputClass "form-input h-12 w-full font-sans placeholder-gray-900"
-        |> Select.withClear False
-        |> Select.withMultiInputItemContainerClass "hidden h-0"
-        |> Select.withNotFound "No matches"
-        |> Select.withNotFoundClass "text-red  border-solid border-gray-100 border rounded z-30 bg-white w-select"
-        |> Select.withNotFoundStyles [ ( "padding", "0 2rem" ) ]
-        |> Select.withDisabled isDisabled
-        |> Select.withHighlightedItemClass "autocomplete-item-highlight"
-        |> Select.withPrompt (t shared.translations "community.actions.form.verifier_placeholder")
-        |> Select.withItemHtml (viewAutoCompleteItem shared)
-        |> Select.withMenuClass "border-t-none border-solid border-gray-100 border rounded-b z-30 bg-white"
-
-
-viewAutoCompleteItem : Shared -> Profile -> Html Never
-viewAutoCompleteItem shared profile =
-    let
-        ipfsUrl =
-            shared.endpoints.ipfs
-    in
-    div [ class "pt-3 pl-3 flex flex-row items-center w-select z-30" ]
-        [ div [ class "pr-3" ] [ Avatar.view ipfsUrl profile.avatar "h-7 w-7" ]
-        , div [ class "flex flex-col font-sans border-b border-gray-500 pb-3 w-full" ]
-            [ span [ class "text-black text-body leading-loose" ]
-                [ text (Eos.nameToString profile.account) ]
-            , span [ class "leading-caption uppercase text-green text-caption" ]
-                [ case profile.userName of
-                    Just name ->
-                        text name
-
-                    Nothing ->
-                        text ""
-                ]
-            ]
-        ]
+selectConfiguration : Shared -> Bool -> Select.Config Msg Profile
+selectConfiguration shared isDisabled =
+    Profile.selectConfig
+        (Select.newConfig
+            { onSelect = OnSelectVerifier
+            , toLabel = \p -> Eos.nameToString p.account
+            , filter = filter 2 (\p -> Eos.nameToString p.account)
+            }
+            |> Select.withMultiSelection True
+        )
+        shared
+        isDisabled
 
 
 viewVerifierSelect : Shared -> Model -> Bool -> Html Msg
@@ -1526,7 +1496,7 @@ viewVerifierSelect shared model isDisabled =
         Manual selectedUsers _ _ ->
             div []
                 [ Html.map SelectMsg
-                    (Select.view (selectConfig shared isDisabled)
+                    (Select.view (selectConfiguration shared isDisabled)
                         model.multiSelectState
                         users
                         selectedUsers
