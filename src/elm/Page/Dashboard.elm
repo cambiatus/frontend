@@ -403,7 +403,7 @@ viewBalances loggedIn communities =
     div [ class "flex flex-wrap -mx-2" ]
         (List.indexedMap
             (\i c ->
-                DashCommunity.viewCard loggedIn i c
+                DashCommunity.viewCard loggedIn c
                     |> Html.map (GotDashCommunityMsg i)
             )
             communities

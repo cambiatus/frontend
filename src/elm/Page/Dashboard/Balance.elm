@@ -12,32 +12,23 @@ module Page.Dashboard.Balance exposing
 
 import Api
 import Api.Graphql
-import Asset.Icon as Icon
-import Avatar exposing (Avatar)
-import Browser.Events
-import Community exposing (Action, Balance, Objective, Transaction)
+import Community exposing (Balance)
 import Eos
 import Eos.Account as Eos
 import Graphql.Http
-import Html exposing (Html, a, br, button, div, form, img, input, p, span, text)
-import Html.Attributes as HtmlAttr exposing (class, classList, disabled, href, id, maxlength, placeholder, required, src, style, type_, value)
-import Html.Events exposing (onClick, onInput, onSubmit)
+import Html exposing (Html, a, button, div, img, input, p, span, text)
+import Html.Attributes exposing (class, classList, disabled, href, id, src, value)
+import Html.Events exposing (onClick)
 import Http
-import I18Next exposing (Delims(..), t, tr)
+import I18Next exposing (Delims(..), t)
 import Icons
-import Json.Decode as Decode exposing (Value)
 import Json.Encode as Encode exposing (Value)
-import Profile exposing (Profile)
 import Route
 import Select
 import Session.LoggedIn as LoggedIn exposing (External(..))
-import Session.Shared as Shared exposing (Shared)
-import Simple.Fuzzy
-import Task
 import Transfer exposing (Transfer)
 import UpdateResult as UR
 import Url
-import Utils
 
 
 
@@ -64,15 +55,6 @@ init { shared } balance =
 
 
 
--- SUBSCRIPTION
-
-
-subscription : Model -> Sub Msg
-subscription _ =
-    Sub.map PressedEnter (Browser.Events.onKeyDown Utils.decodeEnterKeyDown)
-
-
-
 -- MODEL
 
 
@@ -88,13 +70,6 @@ type alias Model =
 
 type Status
     = ViewingBalance
-    | Transferring TransferStatus
-
-
-type TransferStatus
-    = EditingTransfer TransferForm
-    | SendingTransfer TransferForm
-    | SendingTransferFailed TransferForm
 
 
 type ModalStatus
@@ -104,73 +79,15 @@ type ModalStatus
     | Loaded String
 
 
-type alias TransferForm =
-    { selectedProfile : Maybe Profile
-    , amount : String
-    , memo : String
-    }
-
-
-emptyTransferForm : TransferForm
-emptyTransferForm =
-    { selectedProfile = Nothing
-    , amount = ""
-    , memo = ""
-    }
-
-
 
 -- VIEW
 
 
-viewCard : LoggedIn.Model -> Int -> Model -> Html Msg
-viewCard loggedIn index model =
+viewCard : LoggedIn.Model -> Model -> Html Msg
+viewCard loggedIn model =
     case model.status of
         ViewingBalance ->
             viewCardBalance loggedIn model
-
-        Transferring (EditingTransfer f) ->
-            viewCardTransfer loggedIn model index f False
-
-        Transferring (SendingTransfer f) ->
-            viewCardTransfer loggedIn model index f True
-
-        Transferring (SendingTransferFailed f) ->
-            viewCardFailure loggedIn
-
-
-viewCardFailure : LoggedIn.Model -> Html Msg
-viewCardFailure loggedIn =
-    let
-        text_ loc =
-            text (t loggedIn.shared.translations loc)
-    in
-    div
-        [ class "card card--failure" ]
-        [ div []
-            [ p [ class "card__title--failure" ]
-                [ text_ "dashboard.ops"
-                , br [] []
-                , text "dashboard.something_wrong"
-                ]
-            , p [ class "card__sub-title", style "text-align" "center" ] [ text_ "dashboard.please_try_again" ]
-            ]
-        , Icon.dead "card__big-icon"
-        , div [ class "card__button-row" ]
-            [ button
-                [ class "btn btn--primary btn--big"
-                , onClick ClickedBackFromFailure
-                ]
-                [ text_ "dashboard.back"
-                ]
-            ]
-        , button
-            [ class "card__close-btn"
-            , onClick ClickedBackFromFailure
-            , type_ "button"
-            ]
-            [ Icon.close "" ]
-        ]
 
 
 viewCardBalance : LoggedIn.Model -> Model -> Html Msg
@@ -227,72 +144,12 @@ viewCardBalance loggedIn ({ balance } as model) =
                     , onClick CreateInvite
                     ]
                     [ text_ "community.invite.title" ]
-                , button
+                , a
                     [ class "button button-primary button-sm text-xs w-full"
-                    , onClick ClickedTransfer
+                    , Route.href (Route.Transfer balance.asset.symbol Nothing)
                     ]
                     [ text_ "account.my_wallet.balances.button" ]
                 ]
-            ]
-        ]
-
-
-viewCardTransfer : LoggedIn.Model -> Model -> Int -> TransferForm -> Bool -> Html Msg
-viewCardTransfer loggedIn ({ balance } as model) index f isDisabled =
-    let
-        b =
-            balance
-
-        text_ s =
-            text (t loggedIn.shared.translations s)
-    in
-    form
-        [ class "w-full sm:w-1/2 lg:w-1/3 xl:w-1/4 px-2 mb-6 px-4 py-2 bg-white rounded-lg shadow-lg relative"
-        , onSubmit ClickedSendTransfer
-        ]
-        [ div [ class "flex flex-col justify-center items-center" ]
-            [ div [ class "flex items-center" ]
-                [ div [ class "text-indigo-500 font-bold text-3xl" ]
-                    [ text (String.fromFloat b.asset.amount) ]
-                , div [ class "text-indigo-500 ml-2" ]
-                    [ text (Eos.symbolToString b.asset.symbol) ]
-                ]
-            , div [ class "input-label" ]
-                [ text_ "account.my_wallet.balances.current" ]
-            ]
-        , div [ class "" ]
-            [ div [ class "mb-2" ]
-                [ span [ class "input-label" ]
-                    [ text_ "account.my_wallet.transfer.send_to" ]
-                , div [ class "flex flex-row border rounded" ]
-                    [ autoCompleteAccount loggedIn.shared model f isDisabled ]
-                ]
-            , div [ class "mb-2" ]
-                [ span [ class "input-label" ]
-                    [ text (I18Next.tr loggedIn.shared.translations Curly "account.my_wallet.transfer.amount" [ ( "symbol", Eos.symbolToString b.asset.symbol ) ]) ]
-                , div [ class "flex flex-row border rounded" ]
-                    [ viewInputAmount loggedIn.shared f isDisabled ]
-                ]
-            , div [ class "mb-2" ]
-                [ span [ class "input-label" ]
-                    [ text_ "account.my_wallet.transfer.memo" ]
-                , div [ class "flex flex-row border rounded" ]
-                    [ viewInputMemo loggedIn.shared f isDisabled ]
-                ]
-            ]
-        , div [ class "card__button-row" ]
-            [ button
-                [ class "btn btn--primary"
-                , disabled isDisabled
-                ]
-                [ text_ "account.my_wallet.transfer.submit" ]
-            ]
-        , button
-            [ onClick ClickedCancelTransfer
-            , disabled isDisabled
-            , class "absolute flex top-0 right-0 rounded-full h-10 w-10 justify-center"
-            ]
-            [ Icons.close "fill-current text-gray-400"
             ]
         ]
 
@@ -387,107 +244,6 @@ viewInvitationModal { shared } model =
 
 
 
--- VIEW HELPERS
-
-
-viewInputAmount : Shared -> TransferForm -> Bool -> Html Msg
-viewInputAmount shared f isDisabled =
-    input
-        [ class "input block border-none"
-        , type_ "number"
-        , placeholder (t shared.translations "account.my_wallet.transfer.amount_placeholder")
-        , value f.amount
-        , onInput EnteredTransferAmount
-        , HtmlAttr.min "0"
-        , required True
-        , disabled isDisabled
-        ]
-        []
-
-
-viewInputMemo : Shared -> TransferForm -> Bool -> Html Msg
-viewInputMemo shared f isDisabled =
-    input
-        [ class "input block border-none"
-        , placeholder (t shared.translations "account.my_wallet.transfer.memo_placeholder")
-        , type_ "text"
-        , value f.memo
-        , onInput EnteredTransferMemo
-        , disabled isDisabled
-        , maxlength 255
-        ]
-        []
-
-
-viewAutoCompleteItem : Shared -> Profile -> Html Never
-viewAutoCompleteItem shared profile =
-    let
-        ipfsUrl =
-            shared.endpoints.ipfs
-    in
-    div [ class "pt-3 pl-3 flex flex-row items-center w-select z-30" ]
-        [ div [ class "pr-3" ]
-            [ Avatar.view ipfsUrl profile.avatar "h-7 w-7" ]
-        , div [ class "flex flex-col font-sans border-b border-gray-500 pb-3 w-full" ]
-            [ span [ class "text-black text-body leading-loose" ]
-                [ text (Eos.nameToString profile.account) ]
-            , span [ class "leading-caption uppercase text-green text-caption" ]
-                [ case profile.userName of
-                    Just name ->
-                        text name
-
-                    Nothing ->
-                        text ""
-                ]
-            ]
-        ]
-
-
-autoCompleteAccount : Shared -> Model -> TransferForm -> Bool -> Html Msg
-autoCompleteAccount shared model form isDisabled =
-    let
-        users =
-            Maybe.map .members model.dashboardInfo
-                |> Maybe.withDefault []
-
-        selectedUsers =
-            Maybe.map (\v -> [ v ]) form.selectedProfile
-                |> Maybe.withDefault []
-    in
-    Html.map SelectMsg (Select.view (selectConfig shared isDisabled) model.autoCompleteState users selectedUsers)
-
-
-filter : Int -> (a -> String) -> String -> List a -> Maybe (List a)
-filter minChars toLabel query items =
-    if String.length query < minChars then
-        Nothing
-
-    else
-        items
-            |> Simple.Fuzzy.filter toLabel query
-            |> Just
-
-
-selectConfig : Shared -> Bool -> Select.Config Msg Profile
-selectConfig shared isDisabled =
-    Select.newConfig
-        { onSelect = OnSelect
-        , toLabel = \p -> Eos.nameToString p.account
-        , filter = filter 2 (\p -> Eos.nameToString p.account)
-        }
-        |> Select.withInputClass "input h-12 w-full border-none placeholder-gray-900"
-        |> Select.withClear False
-        |> Select.withMenuClass "border-t-none border-solid border-gray-100 border rounded-b z-30 bg-white"
-        |> Select.withNotFound "No matches"
-        |> Select.withNotFoundClass "text-red border-solid border-gray-100 border rounded z-30 bg-white w-select"
-        |> Select.withNotFoundStyles [ ( "padding", "0 2rem" ) ]
-        |> Select.withDisabled isDisabled
-        |> Select.withHighlightedItemClass "autocomplete-item-highlight"
-        |> Select.withPrompt (t shared.translations "account.my_wallet.transfer.send_to_placeholder")
-        |> Select.withItemHtml (viewAutoCompleteItem shared)
-
-
-
 -- UPDATE
 
 
@@ -496,186 +252,17 @@ type alias UpdateResult =
 
 
 type Msg
-    = Ignored
-    | ClickedTransfer
-    | EnteredTransferAmount String
-    | EnteredTransferMemo String
-    | ClickedSendTransfer
-    | ClickedCancelTransfer
-    | GotTransferResult (Result Value String)
-    | ClickedBackFromFailure
-    | CompletedDashboardInfoLoad (Result (Graphql.Http.Error (Maybe Community.DashboardInfo)) (Maybe Community.DashboardInfo))
-    | OnSelect (Maybe Profile)
-    | SelectMsg (Select.Msg Profile)
+    = CompletedDashboardInfoLoad (Result (Graphql.Http.Error (Maybe Community.DashboardInfo)) (Maybe Community.DashboardInfo))
     | CreateInvite
     | CloseInviteModal
     | CompletedInviteCreation (Result Http.Error String)
     | CopyToClipboard String
     | CopiedToClipboard
-    | PressedEnter Bool
 
 
 update : LoggedIn.Model -> Msg -> Model -> UpdateResult
 update ({ shared } as loggedIn) msg model =
-    let
-        onlyLogImpossible desc =
-            UR.init model
-                |> UR.logImpossible msg desc
-    in
     case msg of
-        Ignored ->
-            UR.init model
-
-        ClickedTransfer ->
-            case model.status of
-                ViewingBalance ->
-                    EditingTransfer emptyTransferForm
-                        |> Transferring
-                        |> updateStatus model
-                        |> UR.init
-
-                _ ->
-                    onlyLogImpossible []
-
-        EnteredTransferAmount str ->
-            case model.status of
-                Transferring (EditingTransfer form) ->
-                    EditingTransfer { form | amount = str }
-                        |> Transferring
-                        |> updateStatus model
-                        |> UR.init
-
-                _ ->
-                    onlyLogImpossible []
-
-        EnteredTransferMemo str ->
-            case model.status of
-                Transferring (EditingTransfer form) ->
-                    EditingTransfer { form | memo = str }
-                        |> Transferring
-                        |> updateStatus model
-                        |> UR.init
-
-                _ ->
-                    onlyLogImpossible []
-
-        ClickedSendTransfer ->
-            case ( model.status, LoggedIn.isAuth loggedIn ) of
-                ( Transferring (EditingTransfer form), True ) ->
-                    let
-                        account =
-                            Maybe.map .account form.selectedProfile
-                                |> Maybe.withDefault (Eos.stringToName "")
-                    in
-                    SendingTransfer form
-                        |> Transferring
-                        |> updateStatus model
-                        |> UR.init
-                        |> UR.addPort
-                            { responseAddress = ClickedSendTransfer
-                            , responseData = Encode.null
-                            , data =
-                                Eos.encodeTransaction
-                                    { actions =
-                                        [ { accountName = "bes.token"
-                                          , name = "transfer"
-                                          , authorization =
-                                                { actor = loggedIn.accountName
-                                                , permissionName = Eos.samplePermission
-                                                }
-                                          , data =
-                                                { from = loggedIn.accountName
-                                                , to = Eos.nameQueryUrlParser (Eos.nameToString account)
-                                                , value =
-                                                    { amount =
-                                                        String.toFloat form.amount
-                                                            |> Maybe.withDefault 0.0
-                                                    , symbol = model.balance.asset.symbol
-                                                    }
-                                                , memo = form.memo
-                                                }
-                                                    |> Transfer.encodeEosActionData
-                                          }
-                                        ]
-                                    }
-                            }
-
-                ( Transferring (EditingTransfer _), False ) ->
-                    UR.init model
-                        |> UR.addExt
-                            (Just ClickedSendTransfer
-                                |> RequiredAuthentication
-                            )
-
-                _ ->
-                    onlyLogImpossible []
-
-        ClickedCancelTransfer ->
-            case model.status of
-                Transferring (EditingTransfer form) ->
-                    ViewingBalance
-                        |> updateStatus model
-                        |> UR.init
-
-                Transferring (SendingTransferFailed form) ->
-                    ViewingBalance
-                        |> updateStatus model
-                        |> UR.init
-
-                _ ->
-                    onlyLogImpossible []
-
-        GotTransferResult (Ok txId) ->
-            case model.status of
-                Transferring (SendingTransfer form) ->
-                    let
-                        balance =
-                            model.balance
-
-                        asset =
-                            balance.asset
-                    in
-                    ViewingBalance
-                        |> updateStatus
-                            { model
-                                | balance =
-                                    { balance
-                                        | asset =
-                                            { asset
-                                                | amount =
-                                                    String.toFloat form.amount
-                                                        |> Maybe.withDefault 0
-                                                        |> (\i -> balance.asset.amount - i)
-                                            }
-                                    }
-                            }
-                        |> UR.init
-
-                _ ->
-                    onlyLogImpossible []
-
-        GotTransferResult (Err _) ->
-            case model.status of
-                Transferring (SendingTransfer form) ->
-                    SendingTransferFailed form
-                        |> Transferring
-                        |> updateStatus model
-                        |> UR.init
-
-                _ ->
-                    onlyLogImpossible []
-
-        ClickedBackFromFailure ->
-            case model.status of
-                Transferring (SendingTransferFailed f) ->
-                    EditingTransfer f
-                        |> Transferring
-                        |> updateStatus model
-                        |> UR.init
-
-                _ ->
-                    onlyLogImpossible []
-
         CompletedDashboardInfoLoad (Err _) ->
             model |> UR.init
 
@@ -689,25 +276,6 @@ update ({ shared } as loggedIn) msg model =
                 Nothing ->
                     model
                         |> UR.init
-
-        OnSelect maybeProfile ->
-            case model.status of
-                Transferring (EditingTransfer form) ->
-                    EditingTransfer { form | selectedProfile = maybeProfile }
-                        |> Transferring
-                        |> updateStatus model
-                        |> UR.init
-
-                _ ->
-                    model |> UR.init
-
-        SelectMsg subMsg ->
-            let
-                ( updated, cmd ) =
-                    Select.update (selectConfig shared False) subMsg model.autoCompleteState
-            in
-            UR.init { model | autoCompleteState = updated }
-                |> UR.addCmd cmd
 
         CreateInvite ->
             UR.init
@@ -747,43 +315,15 @@ update ({ shared } as loggedIn) msg model =
             { model | copied = True }
                 |> UR.init
 
-        PressedEnter val ->
-            if val then
-                UR.init model
-                    |> UR.addCmd
-                        (Task.succeed ClickedSendTransfer
-                            |> Task.perform identity
-                        )
-
-            else
-                UR.init model
-
 
 updateDashboardInfo : Model -> Community.DashboardInfo -> Model
 updateDashboardInfo model result =
     { model | dashboardInfo = Just result }
 
 
-updateStatus : Model -> Status -> Model
-updateStatus model status =
-    { model | status = status }
-
-
 jsAddressToMsg : List String -> Value -> Maybe Msg
-jsAddressToMsg addr val =
+jsAddressToMsg addr _ =
     case addr of
-        "ClickedSendTransfer" :: [] ->
-            Decode.decodeValue
-                (Decode.oneOf
-                    [ Decode.field "transactionId" Decode.string
-                        |> Decode.map Ok
-                    , Decode.succeed (Err Encode.null)
-                    ]
-                )
-                val
-                |> Result.map (Just << GotTransferResult)
-                |> Result.withDefault Nothing
-
         "CopiedToClipboard" :: _ ->
             Just CopiedToClipboard
 
@@ -803,38 +343,8 @@ msgToString msg =
                     ss ++ [ "Err" ]
     in
     case msg of
-        Ignored ->
-            [ "Ignored" ]
-
-        ClickedTransfer ->
-            [ "ClickedTransfer" ]
-
-        EnteredTransferAmount _ ->
-            [ "EnteredTransferAmount" ]
-
-        EnteredTransferMemo _ ->
-            [ "EnteredTransferMemo" ]
-
-        ClickedSendTransfer ->
-            [ "ClickedSendTransfer" ]
-
-        ClickedCancelTransfer ->
-            [ "ClickedCancelTransfer" ]
-
-        GotTransferResult result ->
-            resultToString [ "GotTransferResult" ] result
-
-        ClickedBackFromFailure ->
-            [ "ClickedBackFromFailure" ]
-
         CompletedDashboardInfoLoad result ->
             resultToString [ "CompletedDashboardInfoLoad" ] result
-
-        OnSelect _ ->
-            [ "OnSelect" ]
-
-        SelectMsg _ ->
-            "SelectMsg" :: "sub" :: []
 
         CreateInvite ->
             [ "CreateInvite" ]
@@ -850,6 +360,3 @@ msgToString msg =
 
         CopiedToClipboard ->
             [ "CopiedToClipboard" ]
-
-        PressedEnter _ ->
-            [ "PressedEnter" ]
