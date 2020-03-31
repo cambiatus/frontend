@@ -359,7 +359,7 @@ update msg model ({ shared } as loggedIn) =
 
         SubmitForm ->
             case model.status of
-                Loaded _ (EditingTransfer form) ->
+                Loaded c (EditingTransfer form) ->
                     case form.selectedProfile of
                         Just to ->
                             let
