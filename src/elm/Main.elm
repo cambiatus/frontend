@@ -412,10 +412,10 @@ update msg model =
             Invite.update model.session subMsg subModel
                 |> updateLoggedInUResult Invite GotInviteMsg model
 
-        (GotTransferMsg subMsg, Transfer subModel) ->
+        ( GotTransferMsg subMsg, Transfer subModel ) ->
             Transfer.update subMsg subModel
-            >> updateLoggedInUResult Transfer GotTransferMsg model
-            |> withLoggedIn
+                >> updateLoggedInUResult Transfer GotTransferMsg model
+                |> withLoggedIn
 
         ( _, _ ) ->
             ( model
@@ -821,6 +821,10 @@ jsAddressToMsg address val =
         "GotVerifyClaimMsg" :: rAddress ->
             Maybe.map GotVerifyClaimMsg
                 (VerifyClaim.jsAddressToMsg rAddress val)
+
+        "GotTransferMsg" :: rAddress ->
+            Maybe.map GotTransferMsg
+                (Transfer.jsAddressToMsg rAddress val)
 
         _ ->
             Nothing

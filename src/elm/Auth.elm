@@ -20,10 +20,9 @@ import Asset.Icon as Icon
 import Browser.Dom as Dom
 import Browser.Events
 import Eos.Account as Eos
-import Flags
 import Html exposing (..)
 import Html.Attributes exposing (..)
-import Html.Events exposing (keyCode, on, onClick, onInput, onSubmit)
+import Html.Events exposing (onClick, onInput, onSubmit)
 import Http
 import I18Next exposing (t)
 import Json.Decode as Decode
@@ -729,7 +728,6 @@ update msg shared model showAuthModal =
             { model | pinVisibility = not model.pinVisibility } |> UR.init
 
         PressedEnter val ->
-            -- if val then
             if val && showAuthModal then
                 UR.init model
                     |> UR.addCmd

@@ -10,11 +10,12 @@ module Transfer exposing
     , transferConnectionSelectionSet
     , transferItemSelectionSet
     , transferQuery
+    , transferSucceedSubscription
     , transfersQuery
     , userFilter
     )
 
-import Api.Relay exposing (Edge, MetadataConnection, PageConnection, PageInfo, PaginationArgs, pageInfoSelectionSet)
+import Api.Relay exposing (Edge, MetadataConnection, PageConnection, PaginationArgs, pageInfoSelectionSet)
 import Avatar exposing (Avatar)
 import Cambiatus.Object
 import Cambiatus.Object.Community
@@ -24,7 +25,8 @@ import Cambiatus.Object.TransferConnection
 import Cambiatus.Object.TransferEdge
 import Cambiatus.Query
 import Cambiatus.Scalar exposing (DateTime(..))
-import Eos exposing (Symbol)
+import Cambiatus.Subscription as Subscription
+import Eos exposing (Symbol, symbolToString)
 import Eos.Account as Eos
 import Graphql.Operation exposing (RootQuery)
 import Graphql.OptionalArgument exposing (OptionalArgument(..))
@@ -48,18 +50,6 @@ communityFilter sym =
     Community sym
 
 
-type alias ProfileArgs =
-    { input :
-        { account : OptionalArgument String
-        }
-    }
-
-
-type alias CommunityArgs =
-    { symbol : OptionalArgument String
-    }
-
-
 type alias Transfer =
     { id : Int
     , to : Profile
@@ -69,13 +59,6 @@ type alias Transfer =
     , symbol : Symbol
     , community : Cmm
     , blockTime : DateTime
-    }
-
-
-type alias TransferUser =
-    { avatar : Avatar
-    , userName : Maybe String
-    , account : Eos.Name
     }
 
 
@@ -117,11 +100,6 @@ encodeEosActionData data =
 
 
 -- GRAPHQL API
-
-
-profileNameSelectionSet : SelectionSet (Maybe String) typeLock -> SelectionSet (Maybe String) typeLock
-profileNameSelectionSet =
-    SelectionSet.map (\t -> t)
 
 
 transferItemSelectionSet : SelectionSet Transfer Cambiatus.Object.Transfer
@@ -259,12 +237,7 @@ getTotalCount maybeObj =
 
         toMaybeTotal : Maybe MetadataConnection -> Maybe Int
         toMaybeTotal maybeConn =
-            case maybeConn of
-                Just conn ->
-                    conn.totalCount
-
-                Nothing ->
-                    Nothing
+            Maybe.andThen (\conn -> conn.totalCount) maybeConn
     in
     maybeObj
         |> toMaybeConn
@@ -278,3 +251,17 @@ transferQuery tID =
             { input = { id = tID } }
     in
     Cambiatus.Query.transfer args transferItemSelectionSet
+
+
+transferSucceedSubscription : Symbol -> String -> String -> SelectionSet Transfer Graphql.Operation.RootSubscription
+transferSucceedSubscription symbol fromAccount toAccount =
+    let
+        args =
+            { input =
+                { from = fromAccount
+                , to = toAccount
+                , symbol = symbolToString symbol |> String.toUpper
+                }
+            }
+    in
+    Subscription.transfersucceed args transferItemSelectionSet

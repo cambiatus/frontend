@@ -14,6 +14,7 @@ import Browser.Events
 import Community exposing (Community, communityQuery)
 import Eos exposing (Symbol)
 import Eos.Account as Eos
+import Graphql.Document
 import Graphql.Http
 import Html exposing (Html, button, div, form, input, span, text, textarea)
 import Html.Attributes exposing (class, disabled, placeholder, required, rows, type_, value)
@@ -75,13 +76,21 @@ type Status
 
 type TransferStatus
     = EditingTransfer Form
+    | CreatingSubscription Form
     | SendingTransfer Form
     | SendingTransferFailed Form
 
 
+type Validation
+    = Valid
+    | Invalid String
+
+
 type alias Form =
     { selectedProfile : Maybe Profile
+    , selectedProfileValidation : Validation
     , amount : String
+    , amountValidation : Validation
     , memo : String
     }
 
@@ -89,9 +98,40 @@ type alias Form =
 emptyForm : Form
 emptyForm =
     { selectedProfile = Nothing
+    , selectedProfileValidation = Valid
     , amount = ""
+    , amountValidation = Valid
     , memo = ""
     }
+
+
+validateForm : Form -> Form
+validateForm form =
+    let
+        isAllowedChar : Char -> Bool
+        isAllowedChar c =
+            Char.isDigit c || c == ','
+    in
+    { form
+        | selectedProfileValidation =
+            case form.selectedProfile of
+                Just _ ->
+                    Valid
+
+                Nothing ->
+                    Invalid ""
+        , amountValidation =
+            if (String.toList form.amount |> List.any isAllowedChar) || String.length form.amount > 0 then
+                Valid
+
+            else
+                Invalid ""
+    }
+
+
+isFormValid : Form -> Bool
+isFormValid form =
+    form.selectedProfileValidation == Valid && form.amountValidation == Valid
 
 
 
@@ -112,6 +152,9 @@ view ({ shared } as loggedIn) model =
 
         Loaded community (EditingTransfer f) ->
             viewForm loggedIn model f community False
+
+        Loaded community (CreatingSubscription f) ->
+            viewForm loggedIn model f community True
 
         Loaded community (SendingTransfer f) ->
             viewForm loggedIn model f community True
@@ -232,7 +275,9 @@ type Msg
     | EnteredMemo String
     | SubmitForm
     | PressedEnter Bool
+    | PushTransaction
     | GotTransferResult (Result Value String)
+    | Redirect Value
 
 
 update : Msg -> Model -> LoggedIn.Model -> UpdateResult
@@ -313,8 +358,44 @@ update msg model ({ shared } as loggedIn) =
                     model |> UR.init
 
         SubmitForm ->
+            case model.status of
+                Loaded _ (EditingTransfer form) ->
+                    case form.selectedProfile of
+                        Just to ->
+                            let
+                                newForm =
+                                    validateForm form
+
+                                subscriptionDoc =
+                                    Transfer.transferSucceedSubscription model.communityId (Eos.nameToString loggedIn.accountName) (Eos.nameToString to.account)
+                                        |> Graphql.Document.serializeSubscription
+                            in
+                            if isFormValid newForm then
+                                { model | status = Loaded c (CreatingSubscription newForm) }
+                                    |> UR.init
+                                    |> UR.addPort
+                                        { responseAddress = SubmitForm
+                                        , responseData = Encode.null
+                                        , data =
+                                            Encode.object
+                                                [ ( "name", Encode.string "subscribeToTransfer" )
+                                                , ( "subscription", Encode.string subscriptionDoc )
+                                                ]
+                                        }
+
+                            else
+                                { model | status = Loaded c (EditingTransfer newForm) }
+                                    |> UR.init
+
+                        Nothing ->
+                            { model | status = Loaded c (EditingTransfer (validateForm form)) } |> UR.init
+
+                _ ->
+                    model |> UR.init
+
+        PushTransaction ->
             case ( model.status, LoggedIn.isAuth loggedIn ) of
-                ( Loaded c (EditingTransfer form), True ) ->
+                ( Loaded c (CreatingSubscription form), True ) ->
                     let
                         account =
                             Maybe.map .account form.selectedProfile
@@ -351,10 +432,10 @@ update msg model ({ shared } as loggedIn) =
                                     }
                             }
 
-                ( Loaded _ (EditingTransfer _), False ) ->
+                ( Loaded _ (CreatingSubscription _), False ) ->
                     UR.init model
                         |> UR.addExt
-                            (Just SubmitForm
+                            (Just PushTransaction
                                 |> RequiredAuthentication
                             )
 
@@ -376,8 +457,6 @@ update msg model ({ shared } as loggedIn) =
             case model.status of
                 Loaded _ (SendingTransfer _) ->
                     model
-                        -- TODO redirect
-                        -- TODO add global msg
                         |> UR.init
 
                 _ ->
@@ -393,11 +472,48 @@ update msg model ({ shared } as loggedIn) =
                 _ ->
                     onlyLogImpossible []
 
+        Redirect value ->
+            case model.status of
+                Loaded c (SendingTransfer form) ->
+                    case form.selectedProfile of
+                        Just to ->
+                            let
+                                sub =
+                                    Transfer.transferSucceedSubscription
+                                        model.communityId
+                                        (Eos.nameToString loggedIn.accountName)
+                                        (Eos.nameToString to.account)
+                                        |> Graphql.Document.decoder
+                            in
+                            case Decode.decodeValue sub value of
+                                Ok res ->
+                                    model
+                                        |> UR.init
+                                        |> UR.addCmd
+                                            (Route.ViewTransfer res.id
+                                                |> Route.replaceUrl shared.navKey
+                                            )
+
+                                Err _ ->
+                                    model
+                                        |> UR.init
+                                        |> UR.logImpossible msg []
+
+                        Nothing ->
+                            model
+                                |> UR.init
+                                |> UR.logImpossible msg []
+
+                _ ->
+                    model
+                        |> UR.init
+                        |> UR.logImpossible msg []
+
 
 jsAddressToMsg : List String -> Value -> Maybe Msg
 jsAddressToMsg addr val =
     case addr of
-        "SubmitForm" :: [] ->
+        [ "PushTransaction" ] ->
             Decode.decodeValue
                 (Decode.oneOf
                     [ Decode.field "transactionId" Decode.string
@@ -409,21 +525,30 @@ jsAddressToMsg addr val =
                 |> Result.map (Just << GotTransferResult)
                 |> Result.withDefault Nothing
 
+        [ "SubmitForm" ] ->
+            let
+                result =
+                    Decode.decodeValue (Decode.field "state" Decode.string) val
+                        |> Result.withDefault ""
+            in
+            case result of
+                "starting" ->
+                    Just PushTransaction
+
+                "responded" ->
+                    Decode.decodeValue (Decode.field "data" Decode.value) val
+                        |> Result.map Redirect
+                        |> Result.toMaybe
+
+                _ ->
+                    Nothing
+
         _ ->
             Nothing
 
 
 msgToString : Msg -> List String
 msgToString msg =
-    let
-        resultToString ss r =
-            case r of
-                Ok _ ->
-                    ss ++ [ "Ok" ]
-
-                Err _ ->
-                    ss ++ [ "Err" ]
-    in
     case msg of
         CompletedLoad r ->
             [ "CompletedLoad", UR.resultToString r ]
@@ -446,5 +571,11 @@ msgToString msg =
         PressedEnter _ ->
             [ "PressedEnter" ]
 
+        PushTransaction ->
+            [ "PushTransaction" ]
+
         GotTransferResult result ->
-            resultToString [ "GotTransferResult" ] result
+            [ "GotTransferResult", UR.resultToString result ]
+
+        Redirect _ ->
+            [ "Redirect" ]

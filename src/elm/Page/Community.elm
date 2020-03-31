@@ -9,7 +9,6 @@ module Page.Community exposing
     , view
     )
 
-import Api
 import Api.Graphql
 import Avatar
 import Cambiatus.Enum.VerificationType as VerificationType
@@ -24,10 +23,9 @@ import Graphql.Http
 import Graphql.Operation exposing (RootQuery)
 import Graphql.OptionalArgument exposing (OptionalArgument(..))
 import Graphql.SelectionSet as SelectionSet exposing (SelectionSet, with)
-import Html exposing (Html, a, button, div, hr, img, input, label, p, span, text)
+import Html exposing (Html, a, button, div, hr, img, p, span, text)
 import Html.Attributes exposing (class, classList, disabled, placeholder, src)
-import Html.Events exposing (onClick, onInput)
-import Http
+import Html.Events exposing (onClick)
 import I18Next exposing (t, tr)
 import Icons
 import Json.Decode as Decode
@@ -199,9 +197,6 @@ type alias Member =
 view : LoggedIn.Model -> Model -> Html Msg
 view loggedIn model =
     let
-        ipfsUrl =
-            loggedIn.shared.endpoints.ipfs
-
         t s =
             I18Next.t loggedIn.shared.translations s
 
@@ -210,9 +205,6 @@ view loggedIn model =
 
         text_ s =
             text (t s)
-
-        plcH s =
-            placeholder (t s)
     in
     case model.community of
         Loading ->
@@ -269,10 +261,10 @@ view loggedIn model =
                         text ""
                     , div [ class "bg-white py-6 sm:py-8 px-3 sm:px-6 rounded-lg mt-4" ]
                         ([ Page.viewTitle (t "community.objectives.title_plural") ]
-                            ++ List.indexedMap (viewObjective loggedIn model editStatus community)
+                            ++ List.indexedMap (viewObjective loggedIn model community)
                                 community.objectives
                             ++ [ if canEdit then
-                                    viewObjectiveNew loggedIn (List.length community.objectives) editStatus community.symbol
+                                    viewObjectiveNew loggedIn editStatus community.symbol
 
                                  else
                                     text ""
@@ -363,18 +355,9 @@ viewVerification shared verification =
 -- VIEW OBJECTIVE
 
 
-viewObjective : LoggedIn.Model -> Model -> EditStatus -> Community -> Int -> Community.Objective -> Html Msg
-viewObjective loggedIn model editStatus metadata index objective =
+viewObjective : LoggedIn.Model -> Model -> Community -> Int -> Community.Objective -> Html Msg
+viewObjective loggedIn model metadata index objective =
     let
-        t s =
-            I18Next.t loggedIn.shared.translations s
-
-        text_ s =
-            text (t s)
-
-        plcH s =
-            placeholder (t s)
-
         canEdit =
             LoggedIn.isAccount metadata.creator loggedIn
 
@@ -442,8 +425,8 @@ viewObjective loggedIn model editStatus metadata index objective =
         ]
 
 
-viewObjectiveNew : LoggedIn.Model -> Int -> EditStatus -> Symbol -> Html Msg
-viewObjectiveNew loggedIn index edit communityId =
+viewObjectiveNew : LoggedIn.Model -> EditStatus -> Symbol -> Html Msg
+viewObjectiveNew loggedIn edit communityId =
     let
         t s =
             I18Next.t loggedIn.shared.translations s
@@ -487,7 +470,7 @@ viewAction loggedIn metadata maybeDate action =
         pastDeadline : Bool
         pastDeadline =
             case action.deadline of
-                Just deadline ->
+                Just _ ->
                     case maybeDate of
                         Just today ->
                             posixToMillis today > posixToMillis posixDeadline
@@ -597,7 +580,7 @@ viewAction loggedIn metadata maybeDate action =
                 , div [ class "flex flex-col sm:flex-row sm:items-center sm:justify-between" ]
                     [ div [ class "text-xs mt-5 sm:w-1/3" ]
                         [ case action.deadline of
-                            Just deadline ->
+                            Just _ ->
                                 div []
                                     [ span [ class "capitalize text-text-grey" ] [ text_ "community.actions.available_until" ]
                                     , span [ class dateColor ] [ text deadlineStr ]
@@ -783,9 +766,6 @@ viewSections loggedIn model allTransfers =
         t s =
             I18Next.t loggedIn.shared.translations s
 
-        viewAccountName accountName =
-            Eos.nameToString accountName
-
         toView verifications =
             List.map
                 (viewVerification loggedIn.shared)
@@ -883,7 +863,6 @@ type Msg
     | ClickedOpenObjective Int
     | ClickedCloseObjective
       -- Action
-    | CreateAction Symbol Int
     | OpenClaimConfirmation Int
     | CloseClaimConfirmation
     | ClaimAction Int
@@ -929,11 +908,6 @@ update msg model loggedIn =
         ClickedCloseObjective ->
             { model | openObjective = Nothing }
                 |> UR.init
-
-        CreateAction sym id ->
-            model
-                |> UR.init
-                |> UR.addCmd (Route.replaceUrl loggedIn.shared.navKey (Route.NewAction sym id))
 
         OpenClaimConfirmation actionId ->
             { model | modalStatus = Opened False actionId }
@@ -1028,9 +1002,6 @@ msgToString msg =
 
         ClickedCloseObjective ->
             [ "ClickedCloseObjective" ]
-
-        CreateAction _ _ ->
-            [ "CreateAction" ]
 
         OpenClaimConfirmation _ ->
             [ "OpenClaimConfirmation" ]
