@@ -12,11 +12,6 @@ type alias Model =
     { message : String
     , success : Bool
     }
-
--- UPDATE
-
-type Msg
-    = ShowFeedback Model
         
 
 -- VIEW

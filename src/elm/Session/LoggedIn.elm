@@ -35,6 +35,7 @@ import Cambiatus.Subscription as Subscription
 import Community exposing (Balance)
 import Eos
 import Eos.Account as Eos
+import Feedback
 import Graphql.Document
 import Graphql.Http
 import Graphql.Operation exposing (RootQuery, RootSubscription)
@@ -55,7 +56,6 @@ import Session.Shared as Shared exposing (Shared)
 import Shop
 import Task
 import Translation
-import Feedback
 import UpdateResult as UR
 
 
@@ -231,18 +231,21 @@ viewHelper thisMsg page profile_ ({ shared } as model) content =
             [ div [ class "container mx-auto" ]
                 [ viewHeader model page profile_ |> Html.map thisMsg
                 , viewMainMenu page profile_ model |> Html.map thisMsg
-              , div
-                   [ onClick ( ShowFeedback { message = "Hi!", success = False } )  ]
-                   [ text "clickme!" ] |> Html.map thisMsg
+                , div
+                    [ onClick (ShowFeedback { message = "Hi!", success = False }) ]
+                    [ text "clickme!" ]
+                    |> Html.map thisMsg
                 ]
             ]
-        , div [ class "flex-grow" ] [
-               case model.feedback of
-                   Just feedback -> Feedback.view feedback
-                   Nothing -> div [] []
-              , content
-              ] 
-                    
+        , div [ class "flex-grow" ]
+            [ case model.feedback of
+                Just feedback ->
+                    Feedback.view feedback
+
+                Nothing ->
+                    div [] []
+            , content
+            ]
         , viewFooter shared
         , div [ onClickCloseAny ] [] |> Html.map thisMsg
         , if model.showAuthModal then
@@ -258,8 +261,14 @@ viewHelper thisMsg page profile_ ({ shared } as model) content =
                     , stopPropagationOn "click"
                         (Decode.succeed ( Ignored, True ))
                     ]
-                    (Auth.view True shared model.auth
-                        |> List.map (Html.map GotAuthMsg)
+                    ( Auth.view 
+                        { tagger = GotAuthMsg
+                        , showFeedback = ShowFeedback
+                        }
+                        True 
+                        shared 
+                        model.auth
+                        -- |> List.map (Html.map GotAuthMsg)
                     )
                 ]
                 |> Html.map thisMsg

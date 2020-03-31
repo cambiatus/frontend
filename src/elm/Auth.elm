@@ -4,6 +4,7 @@ import Api
 import Asset.Icon as Icon
 import Browser.Dom as Dom
 import Eos.Account as Eos
+import Feedback
 import Flags
 import Html exposing (..)
 import Html.Attributes exposing (..)
@@ -146,55 +147,68 @@ maybePrivateKey model =
 
 -- VIEW
 
+{-| You're gonna want a comment explaining how this works I reckon. -}
+type alias Handlers msg =
+    { tagger : Msg -> msg
+    , showFeedback : Feedback.Model -> msg
+    }
 
-view : Bool -> Shared -> Model -> List (Html Msg)
-view isModal shared model =
+
+view : Handlers msg -> Bool -> Shared -> Model -> List (Html msg)
+view handlers isModal shared model =
     case model.status of
         Options ->
-            viewOptions isModal shared model
+            viewOptions handlers isModal shared model
 
         LoginWithPrivateKey _ ->
-            viewOptions isModal shared model
+            viewOptions handlers isModal shared model
 
         LoginWithPrivateKeyAccounts accounts form ->
             viewMultipleAccount accounts form False isModal shared model
+                -- This is gross, we'll fix it in post <3
+                |> List.map (Html.map handlers.tagger)
 
         LoggingInWithPrivateKeyAccounts accounts form ->
             viewMultipleAccount accounts form True isModal shared model
+                |> List.map (Html.map handlers.tagger)
 
         LoggingInWithPrivateKey form ->
             viewLoginWithPrivateKeyLogin form True isModal shared model
+                |> List.map (Html.map handlers.tagger)
 
         LoggedInWithPrivateKey _ ->
-            viewOptions isModal shared model
+            viewOptions handlers isModal shared model
 
         LoginWithPin ->
             case shared.maybeAccount of
                 Just ( accountName, True ) ->
                     viewLoginWithPin accountName False isModal shared model
+                        |> List.map (Html.map handlers.tagger)
 
                 _ ->
-                    viewOptions isModal shared model
+                    viewOptions handlers isModal shared model
 
         LoggingInWithPin ->
             case shared.maybeAccount of
                 Just ( accountName, True ) ->
                     viewLoginWithPin accountName True isModal shared model
+                        |> List.map (Html.map handlers.tagger)
 
                 _ ->
-                    viewOptions isModal shared model
+                    viewOptions handlers isModal shared model
 
         LoggedInWithPin _ ->
             case shared.maybeAccount of
                 Just ( accountName, True ) ->
                     viewLoginWithPin accountName True isModal shared model
+                        |> List.map (Html.map handlers.tagger)
 
                 _ ->
-                    viewOptions isModal shared model
+                    viewOptions handlers isModal shared model
 
 
-viewOptions : Bool -> Shared -> Model -> List (Html Msg)
-viewOptions isModal shared model =
+viewOptions : Handlers msg -> Bool -> Shared -> Model -> List (Html msg)
+viewOptions h isModal shared model =
     let
         text_ s =
             Html.text (t shared.translations s)
@@ -202,11 +216,16 @@ viewOptions isModal shared model =
     [ div [ class "" ]
         [ if not isModal then
             viewAuthTabs shared
+                |> Html.map h.tagger
 
           else
             text ""
         , viewAuthError shared model.loginError
+            |> Html.map h.tagger
         ]
+    , div
+        [ onClick (h.showFeedback { message = "Hi!", success = False }) ]
+        [ text "clickme!" ]
     , div [ class "card__auth__input" ]
         [ viewFieldLabel shared "auth.login.wordsMode.input" "privateKey" Nothing
         , input
@@ -214,7 +233,7 @@ viewOptions isModal shared model =
             , type_ "text"
             , id "privateKey"
             , value model.form.privateKey
-            , onInput EnteredPrivateKey
+            , onInput (h.tagger << EnteredPrivateKey)
             , required True
             , autocomplete False
             ]
@@ -222,11 +241,13 @@ viewOptions isModal shared model =
         ]
     , div []
         [ div [ class "card__auth__pin__form" ]
-            [ viewLoginPinForm model shared ]
+            [ viewLoginPinForm model shared 
+                |> Html.map h.tagger
+            ]
         ]
     , button
         [ class "btn btn--primary btn--login"
-        , onClick (SubmittedLoginPrivateKey model.form)
+        , onClick (h.tagger <| SubmittedLoginPrivateKey model.form)
         ]
         [ text_ "auth.login.submit" ]
     , if not isModal then
@@ -360,7 +381,7 @@ viewAuthTabs { translations } =
         ]
 
 
-viewAuthError : Shared -> Maybe String -> Html Msg
+viewAuthError : Shared -> Maybe String -> Html msg
 viewAuthError shared maybeLoginError =
     case maybeLoginError of
         Nothing ->

@@ -2,6 +2,7 @@ module Page.Login exposing (Model, Msg, init, jsAddressToMsg, msgToString, subsc
 
 import Auth
 import Graphql.Http
+import Feedback
 import Html exposing (..)
 import Html.Attributes exposing (..)
 import I18Next exposing (t)
@@ -61,8 +62,9 @@ view : Guest.Model -> Model -> Html Msg
 view guest model =
     let
         authView =
-            Auth.view False guest.shared model.auth
-                |> List.map (Html.map GotAuthMsg)
+            -- Ah.
+            Auth.view { tagger = GotAuthMsg, showFeedback = ShowFeedback } False guest.shared model.auth
+                -- |> List.map (Html.map GotAuthMsg)
     in
     div [ class "container mx-auto px-4" ]
         [ div [ class "card card--register" ]
@@ -80,6 +82,7 @@ type alias UpdateResult =
 
 type Msg
     = GotAuthMsg Auth.Msg
+    | ShowFeedback Feedback.Model
 
 
 update : Msg -> Model -> Guest.Model -> UpdateResult
@@ -92,6 +95,12 @@ update msg model guest =
             shared.language
     in
     case msg of
+        ShowFeedback _ ->
+            let
+                _ = Debug.log "I shouldn't be called" ""
+            in
+            UR.init model            
+
         GotAuthMsg authMsg ->
             Auth.update authMsg guest.shared model.auth
                 |> UR.map
@@ -132,3 +141,5 @@ msgToString msg =
     case msg of
         GotAuthMsg subMsg ->
             "GotAuthMsg" :: Auth.msgToString subMsg
+
+        _ -> []

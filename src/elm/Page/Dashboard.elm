@@ -21,6 +21,7 @@ import Graphql.OptionalArgument exposing (OptionalArgument(..))
 import Graphql.SelectionSet as SelectionSet exposing (SelectionSet, with)
 import Html exposing (..)
 import Html.Attributes exposing (class, src, value)
+import Html.Events exposing (onClick)
 import Http
 import I18Next exposing (Delims(..), t)
 import Json.Decode exposing (Decoder, Value)
@@ -38,6 +39,7 @@ import UpdateResult as UR
 import Utils
 import View.Loading as Loading
 import View.Tag as Tag
+import Feedback
 
 
 
@@ -106,9 +108,14 @@ type GraphqlStatus err a
 
 -- VIEW
 
+{-| You're gonna want a comment explaining how this works I reckon. -}
+type alias Handlers msg =
+    { tagger : Msg -> msg
+    , showFeedback : Feedback.Model -> msg
+    }
 
-view : LoggedIn.Model -> Model -> Html Msg
-view loggedIn model =
+view : Handlers msg -> LoggedIn.Model -> Model -> Html msg
+view h loggedIn model =
     let
         t s =
             I18Next.t loggedIn.shared.translations s
@@ -122,15 +129,19 @@ view loggedIn model =
 
         ( Loaded communities, LoggedIn.Loaded profile ) ->
             div [ class "container mx-auto" ]
-                [ div [ class "text-gray-600 text-2xl font-light flex mt-6 mb-4" ]
+                [
+                 button
+                     [ onClick (h.showFeedback { message = "Hi!", success = False }) ]
+                     [ text "hello" ]
+                , div [ class "text-gray-600 text-2xl font-light flex mt-6 mb-4" ]
                     [ text (t "menu.my_communities")
                     , div [ class "text-indigo-500 ml-2 font-medium" ]
                         [ text (profile.userName |> Maybe.withDefault (Eos.nameToString profile.account))
                         ]
                     ]
-                , viewBalances loggedIn communities
-                , viewVerifications loggedIn.shared model
-                , viewSections loggedIn model
+                , viewBalances loggedIn communities |> Html.map h.tagger
+                , viewVerifications loggedIn.shared model |> Html.map h.tagger
+                , viewSections loggedIn model |> Html.map h.tagger
                 ]
 
         ( _, _ ) ->
@@ -424,11 +435,14 @@ type Msg
     | CompletedLoadUserTransfers (Result (Graphql.Http.Error (Maybe QueryTransfers)) (Maybe QueryTransfers))
     | CompletedLoadVerifications (Result (Graphql.Http.Error ActionVerificationsResponse) ActionVerificationsResponse)
     | CompletedLoadClaims (Result (Graphql.Http.Error ActionVerificationsResponse) ActionVerificationsResponse)
+    | ShowFeedback LoggedIn.Msg
 
 
 update : Msg -> Model -> LoggedIn.Model -> UpdateResult
 update msg model loggedIn =
     case msg of
+        ShowFeedback _ -> UR.init model
+        
         GotTime date ->
             UR.init { model | date = Just date }
 
@@ -631,6 +645,9 @@ msgToString msg =
                     ss ++ [ "Err" ]
     in
     case msg of
+        ShowFeedback _ ->
+            [ "ShowFeedback" ]
+
         GotTime _ ->
             [ "GotTime" ]
 

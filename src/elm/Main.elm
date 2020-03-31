@@ -37,6 +37,7 @@ import Session.LoggedIn as LoggedIn
 import Shop
 import UpdateResult as UR exposing (UpdateResult)
 import Url exposing (Url)
+import Feedback
 
 
 main : Program Value Model Msg
@@ -197,6 +198,7 @@ type Msg
     | GotUpdatedBalances (Result Http.Error (List Community.Balance))
     | GotShopViewerMsg ShopViewer.Msg
     | GotTransferScreenMsg Transfer.Msg
+    | ShowFeedback Feedback.Model
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -911,18 +913,21 @@ view model =
                     text ""
 
                 Page.LoggedIn loggedIn ->
-                    Html.map toMsg (content loggedIn subModel)
-                        |> Page.viewLoggedIn GotPageMsg page loggedIn
+                    Page.viewLoggedIn GotPageMsg page loggedIn content
 
         viewPage guestPage loggedInPage toMsg content =
             case model.session of
                 Page.Guest guest ->
-                    Html.map toMsg content
-                        |> Page.viewGuest GotPageMsg guestPage guest
+                    Page.viewGuest GotPageMsg guestPage guest
 
                 Page.LoggedIn loggedIn ->
-                    Html.map toMsg content
-                        |> Page.viewLoggedIn GotPageMsg loggedInPage loggedIn
+                    Page.viewLoggedIn GotPageMsg loggedInPage loggedIn
+
+        dashboardView =
+            case model.session of
+                Page.LoggedIn loggedIn ->
+                    Dashboard.view { tagger = GotDashboardMsg, showFeedback = ShowFeedback } loggedIn
+
     in
     case model.status of
         Redirect ->
@@ -965,7 +970,7 @@ view model =
             viewLoggedIn subModel LoggedIn.Communities GotCommunityExploreMsg CommunityExplore.view
 
         Dashboard subModel ->
-            viewLoggedIn subModel LoggedIn.Dashboard GotDashboardMsg Dashboard.view
+            viewLoggedIn subModel LoggedIn.Dashboard GotDashboardMsg ( dashboardView subModel )
 
         Profile subModel ->
             viewLoggedIn subModel LoggedIn.Profile GotProfileMsg Profile.view
