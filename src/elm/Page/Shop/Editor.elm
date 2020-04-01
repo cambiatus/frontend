@@ -10,11 +10,12 @@ import Eos exposing (Symbol)
 import Eos.Account as Eos
 import File exposing (File)
 import Graphql.Http
-import Html exposing (Attribute, Html, button, div, h3, input, label, option, select, span, text, textarea)
+import Html exposing (Attribute, Html, button, div, h2, h3, input, label, option, p, select, span, text, textarea)
 import Html.Attributes exposing (accept, attribute, class, disabled, for, hidden, id, maxlength, multiple, required, selected, style, type_, value)
 import Html.Events exposing (keyCode, on, onClick, onInput)
 import Http
 import I18Next
+import Icons
 import Json.Decode as Decode
 import Json.Encode as Encode exposing (Value)
 import Page
@@ -75,12 +76,17 @@ type
       -- Update
     | LoadingBalancesUpdate SaleId
     | LoadingSaleUpdate (List Balance) SaleId
-    | EditingUpdate (List Balance) Sale ImageStatus Form
+    | EditingUpdate (List Balance) Sale ImageStatus DeleteModalStatus Form
     | Saving (List Balance) Sale ImageStatus Form
     | Deleting (List Balance) Sale ImageStatus Form
       -- Errors
     | LoadBalancesFailed Http.Error
     | LoadSaleFailed (Graphql.Http.Error (Maybe Sale))
+
+
+type DeleteModalStatus
+    = Open
+    | Closed
 
 
 type alias FormError =
@@ -191,23 +197,23 @@ view loggedIn model =
             Page.fullPageGraphQLError (t "shop.title") error
 
         EditingCreate balances imageStatus form ->
-            viewForm shared balances imageStatus False False form
+            viewForm shared balances imageStatus False False Closed form
 
         Creating balances imageStatus form ->
-            viewForm shared balances imageStatus False True form
+            viewForm shared balances imageStatus False True Closed form
 
-        EditingUpdate balances _ imageStatus form ->
-            viewForm shared balances imageStatus True False form
+        EditingUpdate balances _ imageStatus confirmDelete form ->
+            viewForm shared balances imageStatus True False confirmDelete form
 
         Saving balances _ imageStatus form ->
-            viewForm shared balances imageStatus True True form
+            viewForm shared balances imageStatus True True Closed form
 
         Deleting balances _ imageStatus form ->
-            viewForm shared balances imageStatus True True form
+            viewForm shared balances imageStatus True True Closed form
 
 
-viewForm : Shared -> List Balance -> ImageStatus -> Bool -> Bool -> Form -> Html Msg
-viewForm shared balances imageStatus isEdit isDisabled form =
+viewForm : Shared -> List Balance -> ImageStatus -> Bool -> Bool -> DeleteModalStatus -> Form -> Html Msg
+viewForm shared balances imageStatus isEdit isDisabled deleteModal form =
     let
         ipfsUrl =
             shared.endpoints.ipfs
@@ -267,10 +273,15 @@ viewForm shared balances imageStatus isEdit isDisabled form =
                             , disabled isDisabled
                             , onClick ClickedDelete
                             ]
-                            [ text (t "DELETE") ]
+                            [ text (t "shop.delete") ]
 
                     False ->
                         text ""
+                , if isEdit && deleteModal == Open then
+                    viewConfirmDeleteModal t
+
+                  else
+                    text ""
                 ]
             , div
                 [ class "shop-editor__image-upload w-full " ]
@@ -453,6 +464,38 @@ viewForm shared balances imageStatus isEdit isDisabled form =
         ]
 
 
+viewConfirmDeleteModal : (String -> String) -> Html Msg
+viewConfirmDeleteModal t =
+    div [ class "modal container" ]
+        [ div [ class "modal-bg", onClick ClickedDeleteCancel ] []
+        , div [ class "modal-content" ]
+            [ div [ class "w-full" ]
+                [ p [ class "text-2xl font-medium mb-4" ]
+                    [ text (t "shop.delete_modal.title") ]
+                , button [ onClick ClickedDeleteCancel ]
+                    [ Icons.close "absolute fill-current text-gray-400 top-0 right-0 mx-8 my-4" ]
+                , p [ class "text-body w-full font-sans mb-10" ]
+                    [ text (t "shop.delete_modal.body") ]
+                ]
+            , div [ class "w-full md:bg-gray-100 md:flex md:absolute rounded-b-lg md:inset-x-0 md:bottom-0 md:p-4 justify-center" ]
+                [ div [ class "flex" ]
+                    [ button
+                        [ class "flex-1 block button button-secondary mb-4 button-lg w-full md:w-40 md:mb-0"
+                        , onClick ClickedDeleteCancel
+                        ]
+                        [ text (t "shop.delete_modal.cancel") ]
+                    , div [ class "w-8" ] []
+                    , button
+                        [ class "flex-1 block button button-primary button-lg w-full md:w-40"
+                        , onClick ClickedDeleteConfirm
+                        ]
+                        [ text (t "shop.delete_modal.confirm") ]
+                    ]
+                ]
+            ]
+        ]
+
+
 formField : List (Html msg) -> Html msg
 formField =
     div [ class "mb-2" ]
@@ -501,6 +544,8 @@ type Msg
     | EnteredPrice String
     | ClickedSave
     | ClickedDelete
+    | ClickedDeleteConfirm
+    | ClickedDeleteCancel
     | GotSaveResponse (Result Value String)
     | GotDeleteResponse (Result Value String)
     | PressedEnter Bool
@@ -569,7 +614,7 @@ update msg model loggedIn =
                                 trackNo
                     in
                     model
-                        |> updateStatus (EditingUpdate balances sale NoImage (initForm balanceOptions))
+                        |> updateStatus (EditingUpdate balances sale NoImage Closed (initForm balanceOptions))
                         |> updateForm
                             (\form ->
                                 { form
@@ -606,9 +651,9 @@ update msg model loggedIn =
                             )
                         |> UR.init
 
-                EditingUpdate balances sale _ form ->
+                EditingUpdate balances sale _ _ form ->
                     model
-                        |> updateStatus (EditingUpdate balances sale (Uploaded hash) form)
+                        |> updateStatus (EditingUpdate balances sale (Uploaded hash) Closed form)
                         |> updateForm
                             (\form_ ->
                                 { form_ | image = updateInput (Just hash) form_.image }
@@ -628,9 +673,9 @@ update msg model loggedIn =
                         |> UR.init
                         |> UR.logHttpError msg error
 
-                EditingUpdate balances sale _ form ->
+                EditingUpdate balances sale _ _ form ->
                     model
-                        |> updateStatus (EditingUpdate balances sale (UploadFailed error) form)
+                        |> updateStatus (EditingUpdate balances sale (UploadFailed error) Closed form)
                         |> UR.init
                         |> UR.logHttpError msg error
 
@@ -651,9 +696,9 @@ update msg model loggedIn =
                         |> UR.init
                         |> UR.addCmd uploadImage
 
-                EditingUpdate balances sale _ form ->
+                EditingUpdate balances sale _ _ form ->
                     model
-                        |> updateStatus (EditingUpdate balances sale Uploading form)
+                        |> updateStatus (EditingUpdate balances sale Uploading Closed form)
                         |> UR.init
                         |> UR.addCmd uploadImage
 
@@ -770,7 +815,7 @@ update msg model loggedIn =
                             validatedModel
                                 |> UR.init
 
-                    EditingUpdate balances sale (Uploaded hash) form ->
+                    EditingUpdate balances sale (Uploaded hash) _ form ->
                         if isValidForm form then
                             performRequest
                                 ClickedSave
@@ -784,7 +829,7 @@ update msg model loggedIn =
                             validatedModel
                                 |> UR.init
 
-                    EditingUpdate balances sale (UploadFailed error) form ->
+                    EditingUpdate balances sale (UploadFailed error) _ form ->
                         if isValidForm form then
                             performRequest
                                 ClickedSave
@@ -798,7 +843,7 @@ update msg model loggedIn =
                             validatedModel
                                 |> UR.init
 
-                    EditingUpdate balances sale NoImage form ->
+                    EditingUpdate balances sale NoImage _ form ->
                         if isValidForm form then
                             performRequest
                                 ClickedSave
@@ -823,29 +868,49 @@ update msg model loggedIn =
                     |> UR.addExt (RequiredAuthentication (Just ClickedSave))
 
         ClickedDelete ->
+            case model.status of
+                EditingUpdate balances sale imageStatus _ form ->
+                    model
+                        |> updateStatus (EditingUpdate balances sale imageStatus Open form)
+                        |> UR.init
+
+                _ ->
+                    UR.init model
+
+        ClickedDeleteCancel ->
+            case model.status of
+                EditingUpdate balances sale imageStatus _ form ->
+                    model
+                        |> updateStatus (EditingUpdate balances sale imageStatus Closed form)
+                        |> UR.init
+
+                _ ->
+                    UR.init model
+
+        ClickedDeleteConfirm ->
             if LoggedIn.isAuth loggedIn then
                 case model.status of
-                    EditingUpdate balances sale (Uploaded hash) form ->
+                    EditingUpdate balances sale (Uploaded hash) _ form ->
                         performRequest
-                            ClickedDelete
+                            ClickedDeleteConfirm
                             model
                             (Deleting balances sale (Uploaded hash) form)
                             loggedIn.accountName
                             "deletesale"
                             (encodeDeleteForm sale)
 
-                    EditingUpdate balances sale (UploadFailed error) form ->
+                    EditingUpdate balances sale (UploadFailed error) _ form ->
                         performRequest
-                            ClickedDelete
+                            ClickedDeleteConfirm
                             model
                             (Deleting balances sale (UploadFailed error) form)
                             loggedIn.accountName
                             "deletesale"
                             (encodeDeleteForm sale)
 
-                    EditingUpdate balances sale NoImage form ->
+                    EditingUpdate balances sale NoImage _ form ->
                         performRequest
-                            ClickedDelete
+                            ClickedDeleteConfirm
                             model
                             (Deleting balances sale NoImage form)
                             loggedIn.accountName
@@ -860,7 +925,7 @@ update msg model loggedIn =
             else
                 model
                     |> UR.init
-                    |> UR.addExt (RequiredAuthentication (Just ClickedDelete))
+                    |> UR.addExt (RequiredAuthentication (Just ClickedDeleteConfirm))
 
         GotSaveResponse (Ok _) ->
             UR.init model
@@ -887,7 +952,7 @@ update msg model loggedIn =
 
                 Saving balances sale imageStatus form ->
                     model
-                        |> updateStatus (EditingUpdate balances sale imageStatus form)
+                        |> updateStatus (EditingUpdate balances sale imageStatus Closed form)
                         |> updateForm
                             (\form_ ->
                                 { form_
@@ -916,7 +981,7 @@ update msg model loggedIn =
             case model.status of
                 Deleting balances sale imageStatus form ->
                     model
-                        |> updateStatus (EditingUpdate balances sale imageStatus form)
+                        |> updateStatus (EditingUpdate balances sale imageStatus Closed form)
                         |> updateForm
                             (\form_ ->
                                 { form_
@@ -993,8 +1058,8 @@ updateForm transform model =
                 Creating balances imageStatus form ->
                     Creating balances imageStatus (transform form)
 
-                EditingUpdate balances sale imageStatus form ->
-                    EditingUpdate balances sale imageStatus (transform form)
+                EditingUpdate balances sale imageStatus confirmDelete form ->
+                    EditingUpdate balances sale imageStatus confirmDelete (transform form)
 
                 Saving balances sale imageStatus form ->
                     Saving balances sale imageStatus (transform form)
@@ -1194,7 +1259,7 @@ jsAddressToMsg addr val =
                 |> Result.map (Just << GotSaveResponse)
                 |> Result.withDefault Nothing
 
-        "ClickedDelete" :: [] ->
+        "ClickedDeleteConfirm" :: [] ->
             Decode.decodeValue
                 (Decode.oneOf
                     [ Decode.field "transactionId" Decode.string
@@ -1248,6 +1313,12 @@ msgToString msg =
 
         ClickedDelete ->
             [ "ClickedDelete" ]
+
+        ClickedDeleteConfirm ->
+            [ "ClickedDeleteConfirm" ]
+
+        ClickedDeleteCancel ->
+            [ "ClickedDeleteCancel" ]
 
         GotSaveResponse r ->
             [ "GotSaveResponse", UR.resultToString r ]
