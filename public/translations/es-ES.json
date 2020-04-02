@@ -47,6 +47,7 @@
         "negative": "El número debe ser negativo",
         "greater_than": "El número debe ser mayor que {{base}}",
         "greater_than_or_equal": "El número debe ser mayor o igual que {{base}}",
+        "length_greater_than_or_equal": "Elige al menos {{count}} artículos",
         "lower_than": "El número debe ser inferior a {{base}}",
         "lower_than_or_equal": "El número debe ser inferior o igual a {{base}}"
       },
@@ -324,6 +325,7 @@
         "validation_on_detail": "la acción estará disponible hasta una fecha, cantidad o ambas",
         "verification_label": "¿Necesita verificación?",
         "verifiers_label": "Elige los verificadores",
+        "verifiers_label_count": "Elija al menos {{count}} verificadores",
         "remove_verifier": "retirar",
         "verifiers_reward_label": "Recompensa por verificadores",
         "votes_label": "Numero minimo de votos",
