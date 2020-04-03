@@ -7,6 +7,7 @@ module DataValidator exposing
     , greaterThan
     , greaterThanOrEqual
     , hasErrors
+    , lengthGreaterThanOrEqual
     , listErrors
     , longerThan
     , lowerThan
@@ -216,6 +217,18 @@ greaterThanOrEqual base constraints =
     , defaultError =
         \translations ->
             I18Next.tr translations I18Next.Curly (numTranslation "greater_than_or_equal") [ ( "base", String.fromFloat base ) ]
+    }
+        :: constraints
+
+
+lengthGreaterThanOrEqual : Int -> List Constraint -> List Constraint
+lengthGreaterThanOrEqual count constraints =
+    { test =
+        \v ->
+            Maybe.withDefault 0 (String.toInt v) >= count
+    , defaultError =
+        \translations ->
+            I18Next.tr translations I18Next.Curly (numTranslation "length_greater_than_or_equal") [ ( "count", String.fromInt count ) ]
     }
         :: constraints
 
