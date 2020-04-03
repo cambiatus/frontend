@@ -38,6 +38,7 @@ import I18Next exposing (Translations, t)
 import Json.Decode as Decode exposing (Decoder, list, nullable, string)
 import Json.Decode.Pipeline as Decode exposing (optional, required)
 import Json.Encode as Encode
+import Session.Shared exposing (Shared)
 import Time exposing (Posix)
 
 
@@ -320,14 +321,14 @@ pinValidationAttrs =
 -- View profile
 
 
-view : String -> Eos.Name -> Translations -> Profile -> Html msg
-view ipfsUrl loggedInAccount translations profile =
+view : Shared -> Eos.Name -> Profile -> Html msg
+view shared loggedInAccount profile =
     div [ class "flex flex-col items-center" ]
         [ div [ class "w-10 h-10 rounded-full" ]
-            [ Avatar.view ipfsUrl profile.avatar "w-10 h-10"
+            [ Avatar.view shared.endpoints.ipfs profile.avatar "w-10 h-10"
             ]
         , div [ class "mt-2" ]
-            [ viewProfileNameTag loggedInAccount profile translations ]
+            [ viewProfileNameTag loggedInAccount profile shared.translations ]
         ]
 
 

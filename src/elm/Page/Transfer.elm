@@ -177,7 +177,7 @@ viewTransferCard loggedIn transfer state =
                     transfer.to
 
         viewUser_ =
-            Profile.view loggedIn.shared.endpoints.ipfs loggedIn.accountName loggedIn.shared.translations
+            Profile.view loggedIn.shared loggedIn.accountName
     in
     div [ class "flex flex-row w-full justify-center items-center py-5 rounded bg-gray-100" ]
         [ viewUser_ originUser

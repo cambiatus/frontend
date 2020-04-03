@@ -315,7 +315,7 @@ viewCard model ({ shared } as loggedIn) card =
             [ div [ class "w-full relative bg-gray-500" ]
                 [ img [ class "w-full h-48 object-cover", src imageUrl ] []
                 , div [ class "absolute right-1 bottom-1 " ]
-                    [ Profile.view shared.endpoints.ipfs loggedIn.accountName shared.translations card.sale.creator ]
+                    [ Profile.view shared loggedIn.accountName card.sale.creator ]
                 ]
             , div [ class "w-full px-6 pt-4" ]
                 [ p [ class "text-xl" ] [ text title ]

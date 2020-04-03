@@ -26,6 +26,7 @@ import Icons
 import Json.Decode as Decode
 import Json.Encode as Encode
 import Page
+import Profile
 import Route
 import Session.LoggedIn as LoggedIn exposing (External)
 import Session.Shared exposing (Shared)
@@ -38,7 +39,7 @@ import Utils
 -- INIT
 
 
-init : LoggedIn.Model -> ClaimId -> ( Model, Cmd Msg )
+init : LoggedIn.Model -> Int -> ( Model, Cmd Msg )
 init { accountName, shared } claimId =
     ( initModel claimId
     , Cmd.batch
@@ -53,12 +54,13 @@ init { accountName, shared } claimId =
 
 
 type alias Model =
-    { claimId : ClaimId
+    { claimId : Int
     , status : Status
     , statusClaim : StatusClaim
     }
 
 
+initModel : Int -> Model
 initModel claimId =
     { claimId = claimId
     , status = LoadingVerification
@@ -87,10 +89,6 @@ type ModalStatus
 type Vote
     = Disapproved
     | Approved
-
-
-type alias ClaimId =
-    Int
 
 
 type alias Verification =
@@ -139,8 +137,7 @@ view ({ shared } as loggedIn) model =
                             [ viewModal shared.translations modalStatus verification
                             , div
                                 [ class "mx-4 mt-4 md:mt-10 md:mx-8 lg:mx-auto pb-4 md:pb-10 bg-white max-w-4xl rounded-lg" ]
-                                [ viewHeader shared.endpoints.ipfs verification.logo verification.name
-                                , viewStatus shared.translations verification.symbol verification.verifierReward verification.status
+                                [ viewStatus shared.translations verification.symbol verification.verifierReward verification.status
                                 , viewInfo shared.translations verification
                                 , viewAction shared.translations verification
                                 ]
@@ -166,7 +163,6 @@ view ({ shared } as loggedIn) model =
                             , div
                                 [ class "mx-4 mt-4 md:mt-10 md:mx-8 lg:mx-auto pb-4 md:pb-10 bg-white max-w-4xl rounded-lg" ]
                                 [ viewError (t "community.verifyClaim.error")
-                                , viewHeader shared.endpoints.ipfs verification.logo verification.name
                                 , viewStatus shared.translations verification.symbol verification.verifierReward verification.status
                                 , viewInfo shared.translations verification
                                 , viewAction shared.translations verification
@@ -184,9 +180,10 @@ view ({ shared } as loggedIn) model =
             Loading ->
                 Page.fullPageLoading
 
-            Loaded _ ->
+            Loaded claim ->
                 div []
-                    [ Page.viewHeader loggedIn (t "") Route.Dashboard
+                    [ Page.viewHeader loggedIn claim.action.description Route.Dashboard
+                    , Profile.view shared loggedIn.accountName claim.claimer
                     ]
 
             Failed err ->
@@ -263,37 +260,6 @@ viewError : String -> Html Msg
 viewError err =
     div [ class "bg-red h-10 text-white text-center flex flex-col items-center" ]
         [ p [ class "my-auto" ] [ text err ] ]
-
-
-viewHeader : String -> String -> String -> Html Msg
-viewHeader ipfsUrl logo name =
-    let
-        maybeLogo : Maybe String
-        maybeLogo =
-            if String.isEmpty logo then
-                Nothing
-
-            else
-                Just (ipfsUrl ++ "/" ++ logo)
-    in
-    div
-        [ class "p-6 flex items-center" ]
-        [ case maybeLogo of
-            Just logoUrl ->
-                img
-                    [ class "h-14"
-                    , src logoUrl
-                    ]
-                    []
-
-            Nothing ->
-                div
-                    [ class "w-16 h-16" ]
-                    []
-        , p
-            [ class "pl-6 text-heading text-black font-medium" ]
-            [ text name ]
-        ]
 
 
 viewStatus : Translations -> String -> Float -> VerificationStatus -> Html Msg
@@ -601,32 +567,31 @@ update msg model ({ accountName, shared } as loggedIn) =
                 |> UR.init
 
         ClickedConfirm verification vote ->
-            case LoggedIn.isAuth loggedIn of
-                True ->
-                    { model | status = LoadVerification Closed (Just verification) }
-                        |> UR.init
-                        |> UR.addPort
-                            { responseAddress = msg
-                            , responseData = Encode.null
-                            , data =
-                                Eos.encodeTransaction
-                                    { actions =
-                                        [ { accountName = "bes.cmm"
-                                          , name = "verifyclaim"
-                                          , authorization =
-                                                { actor = accountName
-                                                , permissionName = Eos.samplePermission
-                                                }
-                                          , data = encodeVerification model.claimId accountName vote
-                                          }
-                                        ]
-                                    }
-                            }
+            if LoggedIn.isAuth loggedIn then
+                { model | status = LoadVerification Closed (Just verification) }
+                    |> UR.init
+                    |> UR.addPort
+                        { responseAddress = msg
+                        , responseData = Encode.null
+                        , data =
+                            Eos.encodeTransaction
+                                { actions =
+                                    [ { accountName = "bes.cmm"
+                                      , name = "verifyclaim"
+                                      , authorization =
+                                            { actor = accountName
+                                            , permissionName = Eos.samplePermission
+                                            }
+                                      , data = encodeVerification model.claimId accountName vote
+                                      }
+                                    ]
+                                }
+                        }
 
-                False ->
-                    model
-                        |> UR.init
-                        |> UR.addExt (Just (ClickedConfirm verification vote) |> LoggedIn.RequiredAuthentication)
+            else
+                model
+                    |> UR.init
+                    |> UR.addExt (Just (ClickedConfirm verification vote) |> LoggedIn.RequiredAuthentication)
 
         GotVerificationResponse (Ok _) ->
             model
@@ -648,7 +613,7 @@ update msg model ({ accountName, shared } as loggedIn) =
                         |> UR.logImpossible msg []
 
 
-encodeVerification : ClaimId -> Eos.Name -> Vote -> Encode.Value
+encodeVerification : Int -> Eos.Name -> Vote -> Encode.Value
 encodeVerification claimId validator vote =
     let
         encodedClaimId : Encode.Value
@@ -743,7 +708,7 @@ fetchClaim claimId shared =
         ClaimLoaded
 
 
-fetchVerification : ClaimId -> Eos.Name -> Shared -> Cmd Msg
+fetchVerification : Int -> Eos.Name -> Shared -> Cmd Msg
 fetchVerification claimId accountName shared =
     let
         id : Int
