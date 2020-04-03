@@ -5,6 +5,7 @@ import Cambiatus.Object
 import Cambiatus.Object.Action as Action
 import Cambiatus.Object.Check as Check
 import Cambiatus.Object.Claim as Claim
+import Cambiatus.Scalar exposing (DateTime(..))
 import Community exposing (Objective)
 import Graphql.OptionalArgument exposing (OptionalArgument(..))
 import Graphql.SelectionSet as SelectionSet exposing (SelectionSet, with)
@@ -17,6 +18,7 @@ type alias Model =
     , claimer : Profile
     , action : Action
     , checks : List Check
+    , createdAt : DateTime
     }
 
 
@@ -35,6 +37,7 @@ type alias Action =
     , verifications : Int
     , verificationType : VerificationType
     , objective : Objective
+    , createdAt : DateTime
     }
 
 
@@ -50,6 +53,7 @@ selectionSet =
         |> with (Claim.claimer Profile.selectionSet)
         |> with (Claim.action actionSelectionSet)
         |> with (Claim.checks (\_ -> { input = Absent }) checkSelectionSet)
+        |> with Claim.createdAt
 
 
 actionSelectionSet : SelectionSet Action Cambiatus.Object.Action
@@ -63,6 +67,7 @@ actionSelectionSet =
         |> with Action.verifications
         |> with Action.verificationType
         |> with (Action.objective Community.objectiveSelectionSet)
+        |> with Action.createdAt
 
 
 checkSelectionSet : SelectionSet Check Cambiatus.Object.Check

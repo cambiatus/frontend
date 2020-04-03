@@ -66,7 +66,7 @@
       }
     },
     "objective": {
-        "invalid_id": "ID de objetivo no válido "
+      "invalid_id": "ID de objetivo no válido "
     },
     "pageNotFound": "¡Pagina no encontrada.",
     "required": "Parece que olvidaste completar esto.",
@@ -151,14 +151,14 @@
     },
     "account_created": {
       "congrats": "Felicidades",
-        "account": "Su cuenta fue",
-        "created": "creada ;)",
-        "welcome_message": "Bienvenido {{username}}, siempre podrá acceder a Cambiatus con este dispositivo de una manera simple y segura, pero si desea usar una computadora, teléfono inteligente o tableta diferente, necesitará tener a mano la siguiente información:",
-        "twelve_words": "Tus 12 palabras",
-        "private_key": "Tu clave privada",
-        "recommendation": "Le recomendamos que guarde esta información haciendo clic en el botón a continuación; si la pierde, no podrá volver a iniciar sesión en su cuenta",
-        "download": "Guardar clave privada y 12 palabras",
-        "instructions": "Guardará la clave privada y las 12 palabras en su computadora en formato PDF."
+      "account": "Su cuenta fue",
+      "created": "creada ;)",
+      "welcome_message": "Bienvenido {{username}}, siempre podrá acceder a Cambiatus con este dispositivo de una manera simple y segura, pero si desea usar una computadora, teléfono inteligente o tableta diferente, necesitará tener a mano la siguiente información:",
+      "twelve_words": "Tus 12 palabras",
+      "private_key": "Tu clave privada",
+      "recommendation": "Le recomendamos que guarde esta información haciendo clic en el botón a continuación; si la pierde, no podrá volver a iniciar sesión en su cuenta",
+      "download": "Guardar clave privada y 12 palabras",
+      "instructions": "Guardará la clave privada y las 12 palabras en su computadora en formato PDF."
     }
   },
   "account": {
@@ -264,7 +264,6 @@
         "yes": "Sí, únete",
         "no": "No, cancelar"
       }
-
     },
     "details": {
       "creator": "Creador/a",
@@ -357,17 +356,9 @@
         "success": "La actividad se creó con éxito."
       }
     },
-    "claimAction": {
-      "title": "Reclamación",
-      "body": "¿Realmente quieres reclamar esta acción?",
-      "yes": "Sí, reclamar",
-      "no": "No, cancelar",
-      "success": "Reclamación exitosa, espere la aprobación",
-      "failure": "Se produjo un error al intentar procesar su reclamo. Vuelva a intentarlo más tarde."
-    },
     "verifyClaim": {
       "error": "Se produjo un error al intentar procesar la validación. Vuelve a intentarlo más tarde."
-     }
+    }
   },
   "profile": {
     "title": "Mi perfil",
@@ -478,9 +469,30 @@
     "activities": {
       "title": "Actividades para su análisis",
       "no_activities_yet": "Aún no hay actividades."
+    },
+    "check_claim": {
+      "title": "Reclamacion",
+      "body": "¿Realmente quieres reclamar esta acción?",
+      "yes": "Sí, reclamar",
+      "no": "No, cancelar",
+      "success": "Reclamación exitosa, espere la aprobación",
+      "failure": "Se produjo un error al intentar procesar su reclamo. Vuelva a intentarlo más tarde."
     }
   },
-  "verify_claim": {
+  "claim": {
+    "title_under_review": {
+      "1": "Este reclamo está",
+      "2": "bajo revisión",
+      "3": ", otros miembros aún necesitan votar"
+    },
+    "title_approved": {
+      "1": "Este reclamo fue",
+      "2": "aprobado"
+    },
+    "title_rejected": {
+      "1": "Este reclamo fue",
+      "2": "rechazado"
+    },
     "pending": "Pendiente",
     "disapproved": "Rechazado",
     "approved": "Aprobado",

@@ -12,13 +12,13 @@ import Cambiatus.Query exposing (ClaimRequiredArguments)
 import Cambiatus.Scalar exposing (DateTime(..))
 import Claim
 import DateFormat
-import Eos
+import Eos exposing (Symbol, symbolToString)
 import Eos.Account as Eos
 import Graphql.Http
 import Graphql.Operation exposing (RootQuery)
 import Graphql.OptionalArgument exposing (OptionalArgument(..))
 import Graphql.SelectionSet as SelectionSet exposing (SelectionSet, with)
-import Html exposing (Html, button, div, img, p, text)
+import Html exposing (Html, button, div, img, p, span, text)
 import Html.Attributes exposing (class, src)
 import Html.Events exposing (onClick)
 import I18Next exposing (Replacements, Translations)
@@ -30,6 +30,7 @@ import Profile
 import Route
 import Session.LoggedIn as LoggedIn exposing (External)
 import Session.Shared exposing (Shared)
+import Strftime
 import Time
 import UpdateResult as UR
 import Utils
@@ -39,9 +40,9 @@ import Utils
 -- INIT
 
 
-init : LoggedIn.Model -> Int -> ( Model, Cmd Msg )
-init { accountName, shared } claimId =
-    ( initModel claimId
+init : LoggedIn.Model -> Symbol -> Int -> ( Model, Cmd Msg )
+init { accountName, shared } communityId claimId =
+    ( initModel communityId claimId
     , Cmd.batch
         [ fetchClaim claimId shared
         , fetchVerification claimId accountName shared
@@ -54,15 +55,17 @@ init { accountName, shared } claimId =
 
 
 type alias Model =
-    { claimId : Int
+    { communityId : Symbol
+    , claimId : Int
     , status : Status
     , statusClaim : StatusClaim
     }
 
 
-initModel : Int -> Model
-initModel claimId =
-    { claimId = claimId
+initModel : Symbol -> Int -> Model
+initModel communityId claimId =
+    { communityId = communityId
+    , claimId = claimId
     , status = LoadingVerification
     , statusClaim = Loading
     }
@@ -181,13 +184,107 @@ view ({ shared } as loggedIn) model =
                 Page.fullPageLoading
 
             Loaded claim ->
-                div []
+                div [ class "bg-white" ]
                     [ Page.viewHeader loggedIn claim.action.description Route.Dashboard
-                    , Profile.view shared loggedIn.accountName claim.claimer
+                    , div [ class "mt-12 mb-8" ]
+                        [ Profile.viewLarge shared loggedIn.accountName claim.claimer
+                        ]
+                    , div [ class "mx-auto container" ]
+                        [ viewTitle shared claim
+                        , viewDetails shared model claim
+                        ]
                     ]
 
             Failed err ->
                 Page.fullPageGraphQLError (t "error.unknown") err
+        ]
+
+
+viewTitle : Shared -> Claim.Model -> Html msg
+viewTitle shared claim =
+    let
+        text_ s =
+            text (I18Next.t shared.translations s)
+    in
+    div [ class "text-heading font-bold text-center mb-8" ]
+        [ if claim.isVerified then
+            div [ class "inline-block" ]
+                [ text_ "claim.title_approved.1"
+                , span [ class "text-green ml-1" ] [ text_ "claim.title_approved.2" ]
+                ]
+
+          else if List.length claim.checks < claim.action.verifications then
+            div [ class "inline-block" ]
+                [ text_ "claim.title_under_review.1"
+                , span [ class "text-gray ml-1" ] [ text_ "claim.title_under_review.2" ]
+                , span [ class "mr-1" ] [ text_ "claim.title_under_review.3" ]
+                ]
+
+          else
+            div [ class "inline-block" ]
+                [ text_ "claim.title_rejected.1"
+                , span [ class "text-red ml-1" ] [ text_ "claim.title_rejected.2" ]
+                ]
+        ]
+
+
+viewDetails : Shared -> Model -> Claim.Model -> Html msg
+viewDetails shared model claim =
+    let
+        text_ s =
+            text (I18Next.t shared.translations s)
+    in
+    div []
+        [ div [ class "mb-8" ]
+            [ p
+                [ class "text-caption uppercase text-green" ]
+                [ text_ "claim.action" ]
+            , div [ class "" ]
+                [ p [ class "text-body mb-2" ]
+                    [ text claim.action.description ]
+                ]
+            ]
+        , div [ class "mb-8" ]
+            [ p [ class "text-caption uppercase text-green" ]
+                [ text_ "claim.date" ]
+            , p [ class "text-body" ]
+                [ text
+                    (claim.createdAt
+                        |> Just
+                        |> Utils.posixDateTime
+                        |> Strftime.format "%d %b %Y %H:%M" Time.utc
+                    )
+                ]
+            ]
+        , div [ class "mb-8" ]
+            [ p
+                [ class "pt-6 text-caption uppercase text-green" ]
+                [ text_ "claim.objective" ]
+            , p
+                [ class "pt-2 text-body text-black" ]
+                [ text claim.action.objective.description ]
+            ]
+        , div [ class "mb-6" ]
+            [ div
+                [ class "flex justify-start" ]
+                [ div [ class "mr-6" ]
+                    [ p
+                        [ class "text-caption uppercase text-green" ]
+                        [ text_ "claim.your_reward" ]
+                    , p
+                        [ class "pt-2 text-body text-black" ]
+                        [ text (String.fromFloat claim.action.verifierReward ++ " " ++ Eos.symbolToString model.communityId) ]
+                    ]
+                , div [ class "" ]
+                    [ p
+                        [ class "text-caption uppercase text-green" ]
+                        [ text_ "claim.claimer_reward" ]
+                    , p
+                        [ class "pt-2 text-body text-black" ]
+                        [ text (String.fromFloat claim.action.reward ++ " " ++ Eos.symbolToString model.communityId) ]
+                    ]
+                ]
+            ]
         ]
 
 

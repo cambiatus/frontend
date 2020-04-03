@@ -66,8 +66,8 @@
       }
     },
     "objective": {
-         "invalid_id": "Identificador d'objectius no vàlid "
-     },
+      "invalid_id": "Identificador d'objectius no vàlid "
+    },
     "pageNotFound": "Pàgina no trobada!",
     "required": "Sembla que t’has oblidat de completar això.",
     "tooShort": "Molt curta. Has d’emprar com a mínim {{minLength}} caràcters.",
@@ -150,16 +150,15 @@
       "title": "Oh-oh. Alguna cosa ha sortit malament mentre creàvem el teu compte"
     },
     "account_created": {
-        "congrats": "Felicitats",
-        "account": "El vostre compte ha estat",
-        "created": "creat ;)",
-        "welcome_message": "Benvingut {{username}}, sempre podreu accedir a Cambiatus amb aquest dispositiu de manera senzilla i segura, però si voleu utilitzar un ordinador, smartphone o tauleta diferent, haureu de tenir la informació següent:",
-        "twelve_words": "Les vostres 12 paraules",
-        "private_key": "La vostra clau privada",
-        "recommendation": "Us recomanem que deseu aquesta informació fent clic al botó següent, si la perds, no podreu tornar a iniciar la sessió al vostre compte",
-        "download": "Desa la clau privada i 12 paraules",
-        "instructions": "Desa la clau privada i les 12 paraules a l’ordinador en format PDF."
-
+      "congrats": "Felicitats",
+      "account": "El vostre compte ha estat",
+      "created": "creat ;)",
+      "welcome_message": "Benvingut {{username}}, sempre podreu accedir a Cambiatus amb aquest dispositiu de manera senzilla i segura, però si voleu utilitzar un ordinador, smartphone o tauleta diferent, haureu de tenir la informació següent:",
+      "twelve_words": "Les vostres 12 paraules",
+      "private_key": "La vostra clau privada",
+      "recommendation": "Us recomanem que deseu aquesta informació fent clic al botó següent, si la perds, no podreu tornar a iniciar la sessió al vostre compte",
+      "download": "Desa la clau privada i 12 paraules",
+      "instructions": "Desa la clau privada i les 12 paraules a l’ordinador en format PDF."
     }
   },
   "account": {
@@ -265,7 +264,6 @@
         "yes": "Sí uniu-vos",
         "no": "No, cancel·la"
       }
-
     },
     "details": {
       "creator": "Creador",
@@ -311,7 +309,7 @@
       "verifiers": "verificadors",
       "usages": "{{usages}} accions ({{usagesLeft}} disponibles)",
       "available_until": "disponible fins ",
-      "or" : " o ",
+      "or": " o ",
       "completed": "Completat",
       "closed": "Tancat",
       "form": {
@@ -340,36 +338,29 @@
         "manual": "Manual,",
         "manual_detail": "recompensa l’usuari només després d’haver-lo revisat per altres",
         "verifier_placeholder": "Escriviu el nom d’usuari",
-       	"date_label": "Tria la data",
+        "date_label": "Tria la data",
         "quantity_label": "Tria la quantitat",
         "usages_left_label": "Usos restants",
         "mark_completed": "Marca com a completat",
-        "errors" : {
-           "description": "La descripció no pot estar buida",
-           "reward": "La recompensa ha de ser superior a 0",
-           "validity": "Cal utilitzar almenys una validesa si es fa servir la validesa",
-           "usage": "La quantitat ha de tenir com a mínim 1",
-           "empty_verifiers": "Necessiteu almenys un verificador si feu servir verificadors",
-           "less_verifiers": "Necessiteu més verificadors per vots suficients",
-           "minvotes": "Cal utilitzar almenys un vot mínim si es fa servir verificadors",
-           "verifier_reward": "La recompensa del verificador ha de tenir com a mínim 0"
+        "errors": {
+          "description": "La descripció no pot estar buida",
+          "reward": "La recompensa ha de ser superior a 0",
+          "validity": "Cal utilitzar almenys una validesa si es fa servir la validesa",
+          "usage": "La quantitat ha de tenir com a mínim 1",
+          "empty_verifiers": "Necessiteu almenys un verificador si feu servir verificadors",
+          "less_verifiers": "Necessiteu més verificadors per vots suficients",
+          "minvotes": "Cal utilitzar almenys un vot mínim si es fa servir verificadors",
+          "verifier_reward": "La recompensa del verificador ha de tenir com a mínim 0"
         },
-       "success": "L’activitat s’ha creat correctament.",
-       "error": "L'activitat no es pot crear. Proveu més endavant"
+        "success": "L’activitat s’ha creat correctament.",
+        "error": "L'activitat no es pot crear. Proveu més endavant"
       }
-    },
-    "claimAction": {
-      "title": "Reclamació",
-      "body": "Vols realment reclamar aquesta acció?",
-      "yes": "Sí, reclameu",
-      "no": "No, cancel·la",
-      "success": "Reclamar que tingui èxit, espereu l’aprovació",
-      "failure": "Alguna cosa no va funcionar correctament mentre intenteu processar la vostra reclamació. Torneu-ho a provar més endavant"
     },
     "verifyClaim": {
       "error": "S'ha produït un error en intentar processar la convalidació. Torneu-ho a provar més endavant"
     }
   },
+
   "profile": {
     "title": "El meu perfil",
     "my_transfers": "Les meves transferències",
@@ -479,9 +470,29 @@
     "activities": {
       "title": "Activitats per a la vostra anàlisi",
       "no_activities_yet": "Encara no hi ha activitats.."
+    },
+    "check_claim": {
+      "body": "Vols realment reclamar aquesta acció?",
+      "yes": "Sí, reclameu",
+      "no": "No, cancel·la",
+      "success": "Reclamar que tingui èxit, espereu l’aprovació",
+      "failure": "Alguna cosa no va funcionar correctament mentre intenteu processar la vostra reclamació. Torneu-ho a provar més endavant"
     }
   },
-  "verify_claim": {
+  "claim": {
+    "title_under_review": {
+      "1": "Aquesta reclamació està en",
+      "2": "fase de revisió",
+      "3": ", els altres membres encara han de votar"
+    },
+    "title_approved": {
+      "1": "Aquesta solicitud es va",
+      "2": "aprovar"
+    },
+    "title_rejected": {
+      "1": "Aquesta solicitud es va",
+      "2": "rebutjat"
+    },
     "pending": "Pendent",
     "disapproved": "Desaprovat",
     "approved": "Aprovat",

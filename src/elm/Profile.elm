@@ -18,6 +18,7 @@ module Profile exposing
     , selectionSet
     , username
     , view
+    , viewLarge
     , viewProfileName
     , viewProfileNameTag
     )
@@ -326,6 +327,17 @@ view shared loggedInAccount profile =
     div [ class "flex flex-col items-center" ]
         [ div [ class "w-10 h-10 rounded-full" ]
             [ Avatar.view shared.endpoints.ipfs profile.avatar "w-10 h-10"
+            ]
+        , div [ class "mt-2" ]
+            [ viewProfileNameTag loggedInAccount profile shared.translations ]
+        ]
+
+
+viewLarge : Shared -> Eos.Name -> Profile -> Html msg
+viewLarge shared loggedInAccount profile =
+    div [ class "flex flex-col items-center" ]
+        [ div [ class "w-20 h-20 rounded-full" ]
+            [ Avatar.view shared.endpoints.ipfs profile.avatar "w-20 h-20"
             ]
         , div [ class "mt-2" ]
             [ viewProfileNameTag loggedInAccount profile shared.translations ]

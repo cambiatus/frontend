@@ -719,7 +719,7 @@ changeRouteTo maybeRoute model =
                 |> withLoggedIn (Route.EditAction symbol objectiveId actionId)
 
         Just (Route.Claim communityId objectiveId actionId claimId) ->
-            (\l -> Claim.init l claimId)
+            (\l -> Claim.init l communityId claimId)
                 >> updateStatusWith Claim GotVerifyClaimMsg model
                 |> withLoggedIn (Route.Claim communityId objectiveId actionId claimId)
 

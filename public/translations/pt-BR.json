@@ -66,7 +66,7 @@
       }
     },
     "objective": {
-        "invalid_id": "ID do objetivo inválido "
+      "invalid_id": "ID do objetivo inválido "
     },
     "pageNotFound": "Pagina não encontrada",
     "required": "Parece que voce esqueceu de preencher esse.",
@@ -155,16 +155,16 @@
       "title": "Opa. Algo de errado aconteceu enquanto criavamos sua conta"
     },
     "account_created": {
-       "congrats": "Parabéns",
-        "account": "Sua conta foi",
-        "created": "criada ;)",
-        "welcome_message": "Seja bem-vindo {{username}}, você sempre poderá acessar o Cambiatus com este dispositivo de maneira simples e segura, mas se quiser usar um computador, smartphone ou tablet diferente, precisará ter as seguintes informações em mãos:",
-        "twelve_words": "Suas 12 palavras",
-        "private_key": "Sua chave privada",
-        "recommendation": "Recomendamos que você salve essas informações clicando no botão abaixo. Se você perder, não poderá fazer login novamente na sua conta.",
-        "download": "Salvar chave privada e 12 palavras",
-        "instructions": "Você salvará a chave privada e as 12 palavras em seu computador no formato PDF."
-     }
+      "congrats": "Parabéns",
+      "account": "Sua conta foi",
+      "created": "criada ;)",
+      "welcome_message": "Seja bem-vindo {{username}}, você sempre poderá acessar o Cambiatus com este dispositivo de maneira simples e segura, mas se quiser usar um computador, smartphone ou tablet diferente, precisará ter as seguintes informações em mãos:",
+      "twelve_words": "Suas 12 palavras",
+      "private_key": "Sua chave privada",
+      "recommendation": "Recomendamos que você salve essas informações clicando no botão abaixo. Se você perder, não poderá fazer login novamente na sua conta.",
+      "download": "Salvar chave privada e 12 palavras",
+      "instructions": "Você salvará a chave privada e as 12 palavras em seu computador no formato PDF."
+    }
   },
   "account": {
     "my_wallet": {
@@ -360,14 +360,6 @@
         "error": "A atividade não pode ser criada. Tente depois"
       }
     },
-    "claimAction": {
-      "title": "Reinvindicar",
-      "body": "Confirmar reinvindicação de ação?",
-      "yes": "Sim, reinvindicar",
-      "no": "Não, cancelar",
-      "success": "Reinvidicação concluída, aguarde as aprovações",
-      "failure": "Algo deu errado ao tentar realizar sua reinvidicação, tente novamente mais tarde"
-    },
     "verifyClaim": {
       "error": "Ocorreu um erro ao tentar processar sua validação. Tente novamente mais tarde"
     }
@@ -481,9 +473,29 @@
     "activities": {
       "title": "Atividades para sua análise",
       "no_activities_yet": "Nenhuma atividade."
+    },
+    "check_claim": {
+      "body": "Confirmar reinvindicação de ação?",
+      "yes": "Sim, reinvindicar",
+      "no": "Não, cancelar",
+      "success": "Reinvidicação concluída, aguarde as aprovações",
+      "failure": "Algo deu errado ao tentar realizar sua reinvidicação, tente novamente mais tarde"
     }
   },
-  "verify_claim": {
+  "claim": {
+    "title_under_review": {
+      "1": "Esta reinvindicação está",
+      "2": "em análise",
+      "3": ", outros membros ainda precisam votar"
+    },
+    "title_approved": {
+      "1": "Esta reinvindicação foi",
+      "2": "aprovada"
+    },
+    "title_rejected": {
+      "1": "Esta reinvindicação foi",
+      "2": "rejeitada"
+    },
     "pending": "Pendente",
     "disapproved": "Reprovado",
     "approved": "Aprovado",
