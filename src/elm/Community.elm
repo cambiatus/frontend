@@ -33,6 +33,7 @@ module Community exposing
     , logoTitleQuery
     , logoUrl
     , newCommunitySubscription
+    , objectiveSelectionSet
     , toVerifications
     )
 

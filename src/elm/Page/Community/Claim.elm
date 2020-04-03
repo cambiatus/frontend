@@ -1,15 +1,16 @@
-module Page.Community.VerifyClaim exposing (Model, Msg, init, jsAddressToMsg, msgToString, update, view)
+module Page.Community.Claim exposing (Model, Msg, init, jsAddressToMsg, msgToString, update, view)
 
 import Api.Graphql
-import Cambiatus.Object exposing (Claim, Profile)
+import Cambiatus.Object
 import Cambiatus.Object.Action as Action
 import Cambiatus.Object.Check as Check
 import Cambiatus.Object.Claim as Claim exposing (ChecksOptionalArguments)
 import Cambiatus.Object.Community as Community
 import Cambiatus.Object.Objective as Objective
 import Cambiatus.Object.Profile as Profile
-import Cambiatus.Query exposing (ClaimRequiredArguments, ClaimsRequiredArguments)
+import Cambiatus.Query exposing (ClaimRequiredArguments)
 import Cambiatus.Scalar exposing (DateTime(..))
+import Claim
 import DateFormat
 import Eos
 import Eos.Account as Eos
@@ -20,7 +21,7 @@ import Graphql.SelectionSet as SelectionSet exposing (SelectionSet, with)
 import Html exposing (Html, button, div, img, p, text)
 import Html.Attributes exposing (class, src)
 import Html.Events exposing (onClick)
-import I18Next exposing (Delims, Replacements, Translations)
+import I18Next exposing (Replacements, Translations)
 import Icons
 import Json.Decode as Decode
 import Json.Encode as Encode
@@ -39,8 +40,11 @@ import Utils
 
 init : LoggedIn.Model -> ClaimId -> ( Model, Cmd Msg )
 init { accountName, shared } claimId =
-    ( { claimId = claimId, status = LoadingVerification }
-    , fetchVerification claimId accountName shared
+    ( initModel claimId
+    , Cmd.batch
+        [ fetchClaim claimId shared
+        , fetchVerification claimId accountName shared
+        ]
     )
 
 
@@ -51,6 +55,14 @@ init { accountName, shared } claimId =
 type alias Model =
     { claimId : ClaimId
     , status : Status
+    , statusClaim : StatusClaim
+    }
+
+
+initModel claimId =
+    { claimId = claimId
+    , status = LoadingVerification
+    , statusClaim = Loading
     }
 
 
@@ -59,6 +71,12 @@ type Status
     | LoadVerification ModalStatus (Maybe Verification)
     | LoadVerificationFailed (Graphql.Http.Error VerificationResponse)
     | VotingFailed (Maybe Verification)
+
+
+type StatusClaim
+    = Loading
+    | Loaded Claim.Model
+    | Failed (Graphql.Http.Error Claim.Model)
 
 
 type ModalStatus
@@ -102,65 +120,78 @@ type VerificationStatus
 
 
 view : LoggedIn.Model -> Model -> Html Msg
-view { accountName, shared } { claimId, status } =
+view ({ shared } as loggedIn) model =
     let
         t : String -> String
         t =
             I18Next.t shared.translations
     in
-    case status of
-        LoadingVerification ->
-            Page.fullPageLoading
+    div []
+        [ case model.status of
+            LoadingVerification ->
+                Page.fullPageLoading
 
-        LoadVerification modalStatus maybeVerification ->
-            case maybeVerification of
-                Just verification ->
-                    div
-                        [ class "font-sans" ]
-                        [ viewModal shared.translations modalStatus verification
-                        , div
-                            [ class "mx-4 mt-4 md:mt-10 md:mx-8 lg:mx-auto pb-4 md:pb-10 bg-white max-w-4xl rounded-lg" ]
-                            [ viewHeader shared.endpoints.ipfs verification.logo verification.name
-                            , viewStatus shared.translations verification.symbol verification.verifierReward verification.status
-                            , viewInfo shared.translations verification
-                            , viewAction shared.translations verification
+            LoadVerification modalStatus maybeVerification ->
+                case maybeVerification of
+                    Just verification ->
+                        div
+                            [ class "font-sans" ]
+                            [ viewModal shared.translations modalStatus verification
+                            , div
+                                [ class "mx-4 mt-4 md:mt-10 md:mx-8 lg:mx-auto pb-4 md:pb-10 bg-white max-w-4xl rounded-lg" ]
+                                [ viewHeader shared.endpoints.ipfs verification.logo verification.name
+                                , viewStatus shared.translations verification.symbol verification.verifierReward verification.status
+                                , viewInfo shared.translations verification
+                                , viewAction shared.translations verification
+                                ]
                             ]
-                        ]
 
-                Nothing ->
-                    div
-                        [ class "flex justify-center items-center md:w-full mx-4 mt-4 md:mx-auto md:mt-10 bg-white max-w-4xl rounded-lg" ]
-                        [ p
-                            [ class "font-sans text-body text-black text-center p-8" ]
-                            [ text (t "verify_claim.no_results_found") ]
-                        ]
-
-        LoadVerificationFailed err ->
-            Page.fullPageGraphQLError (t "error.unknown") err
-
-        VotingFailed maybeVerification ->
-            case maybeVerification of
-                Just verification ->
-                    div
-                        [ class "font-sans" ]
-                        [ viewModal shared.translations Closed verification
-                        , div
-                            [ class "mx-4 mt-4 md:mt-10 md:mx-8 lg:mx-auto pb-4 md:pb-10 bg-white max-w-4xl rounded-lg" ]
-                            [ viewError (t "community.verifyClaim.error")
-                            , viewHeader shared.endpoints.ipfs verification.logo verification.name
-                            , viewStatus shared.translations verification.symbol verification.verifierReward verification.status
-                            , viewInfo shared.translations verification
-                            , viewAction shared.translations verification
+                    Nothing ->
+                        div
+                            [ class "flex justify-center items-center md:w-full mx-4 mt-4 md:mx-auto md:mt-10 bg-white max-w-4xl rounded-lg" ]
+                            [ p
+                                [ class "font-sans text-body text-black text-center p-8" ]
+                                [ text (t "verify_claim.no_results_found") ]
                             ]
-                        ]
 
-                Nothing ->
-                    div
-                        [ class "flex justify-center items-center md:w-full mx-4 mt-4 md:mx-auto md:mt-10 bg-white max-w-4xl rounded-lg" ]
-                        [ p
-                            [ class "font-sans text-body text-black text-center p-8" ]
-                            [ text (t "verify_claim.no_results_found") ]
-                        ]
+            LoadVerificationFailed err ->
+                Page.fullPageGraphQLError (t "error.unknown") err
+
+            VotingFailed maybeVerification ->
+                case maybeVerification of
+                    Just verification ->
+                        div
+                            [ class "font-sans" ]
+                            [ viewModal shared.translations Closed verification
+                            , div
+                                [ class "mx-4 mt-4 md:mt-10 md:mx-8 lg:mx-auto pb-4 md:pb-10 bg-white max-w-4xl rounded-lg" ]
+                                [ viewError (t "community.verifyClaim.error")
+                                , viewHeader shared.endpoints.ipfs verification.logo verification.name
+                                , viewStatus shared.translations verification.symbol verification.verifierReward verification.status
+                                , viewInfo shared.translations verification
+                                , viewAction shared.translations verification
+                                ]
+                            ]
+
+                    Nothing ->
+                        div
+                            [ class "flex justify-center items-center md:w-full mx-4 mt-4 md:mx-auto md:mt-10 bg-white max-w-4xl rounded-lg" ]
+                            [ p
+                                [ class "font-sans text-body text-black text-center p-8" ]
+                                [ text (t "verify_claim.no_results_found") ]
+                            ]
+        , case model.statusClaim of
+            Loading ->
+                Page.fullPageLoading
+
+            Loaded _ ->
+                div []
+                    [ Page.viewHeader loggedIn (t "") Route.Dashboard
+                    ]
+
+            Failed err ->
+                Page.fullPageGraphQLError (t "error.unknown") err
+        ]
 
 
 viewModal : Translations -> ModalStatus -> Verification -> Html Msg
@@ -522,6 +553,7 @@ type alias UpdateResult =
 
 type Msg
     = CompletedVerificationLoad (Result (Graphql.Http.Error VerificationResponse) VerificationResponse)
+    | ClaimLoaded (Result (Graphql.Http.Error Claim.Model) Claim.Model)
     | ClickedDisapprove Verification
     | ClickedApproved Verification
     | ClickedClose Verification
@@ -532,6 +564,15 @@ type Msg
 update : Msg -> Model -> LoggedIn.Model -> UpdateResult
 update msg model ({ accountName, shared } as loggedIn) =
     case msg of
+        ClaimLoaded (Ok response) ->
+            { model | statusClaim = Loaded response }
+                |> UR.init
+
+        ClaimLoaded (Err err) ->
+            { model | statusClaim = Failed err }
+                |> UR.init
+                |> UR.logGraphqlError msg err
+
         CompletedVerificationLoad (Ok response) ->
             let
                 maybeVerification =
@@ -692,6 +733,14 @@ type CheckStatus
     = BLANK
     | NEGATIVE
     | POSITIVE
+
+
+fetchClaim : Int -> Shared -> Cmd Msg
+fetchClaim claimId shared =
+    Api.Graphql.query
+        shared
+        (Cambiatus.Query.claim { input = { id = claimId } } Claim.selectionSet)
+        ClaimLoaded
 
 
 fetchVerification : ClaimId -> Eos.Name -> Shared -> Cmd Msg
@@ -904,6 +953,9 @@ jsAddressToMsg addr val =
 msgToString : Msg -> List String
 msgToString msg =
     case msg of
+        ClaimLoaded r ->
+            [ "ClaimLoaded", UR.resultToString r ]
+
         CompletedVerificationLoad r ->
             [ "CompletedVerificationLoad", UR.resultToString r ]
 

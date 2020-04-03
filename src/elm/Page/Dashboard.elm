@@ -203,7 +203,7 @@ viewVerification shared verification =
         route =
             case verification.symbol of
                 Just symbol ->
-                    Route.VerifyClaim
+                    Route.Claim
                         symbol
                         verification.objectiveId
                         verification.actionId

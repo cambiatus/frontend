@@ -14,12 +14,12 @@ import Page exposing (Session)
 import Page.ComingSoon as ComingSoon
 import Page.Community as Community
 import Page.Community.ActionEditor as ActionEditor
+import Page.Community.Claim as Claim
 import Page.Community.Editor as CommunityEditor
 import Page.Community.Explore as CommunityExplore
 import Page.Community.Invite as Invite
 import Page.Community.ObjectiveEditor as ObjectiveEditor
 import Page.Community.Objectives as Objectives
-import Page.Community.VerifyClaim as VerifyClaim
 import Page.Dashboard as Dashboard
 import Page.Login as Login
 import Page.NotFound as NotFound
@@ -155,7 +155,7 @@ type Status
     | Objectives Objectives.Model
     | ObjectiveEditor ObjectiveEditor.Model
     | ActionEditor ActionEditor.Model
-    | VerifyClaim VerifyClaim.Model
+    | Claim Claim.Model
     | CommunityExplore CommunityExplore.Model
     | Notification Notification.Model
     | Dashboard Dashboard.Model
@@ -186,7 +186,7 @@ type Msg
     | GotObjectivesMsg Objectives.Msg
     | GotActionEditorMsg ActionEditor.Msg
     | GotObjectiveEditorMsg ObjectiveEditor.Msg
-    | GotVerifyClaimMsg VerifyClaim.Msg
+    | GotVerifyClaimMsg Claim.Msg
     | GotCommunityExploreMsg CommunityExplore.Msg
     | GotDashboardMsg Dashboard.Msg
     | GotLoginMsg Login.Msg
@@ -395,9 +395,9 @@ update msg model =
                 >> updateLoggedInUResult ActionEditor GotActionEditorMsg model
                 |> withLoggedIn
 
-        ( GotVerifyClaimMsg subMsg, VerifyClaim subModel ) ->
-            VerifyClaim.update subMsg subModel
-                >> updateLoggedInUResult VerifyClaim GotVerifyClaimMsg model
+        ( GotVerifyClaimMsg subMsg, Claim subModel ) ->
+            Claim.update subMsg subModel
+                >> updateLoggedInUResult Claim GotVerifyClaimMsg model
                 |> withLoggedIn
 
         ( GotTransferScreenMsg subMsg, Transfer transferId subModel ) ->
@@ -718,10 +718,10 @@ changeRouteTo maybeRoute model =
                 >> updateStatusWith ActionEditor GotActionEditorMsg model
                 |> withLoggedIn (Route.EditAction symbol objectiveId actionId)
 
-        Just (Route.VerifyClaim communityId objectiveId actionId claimId) ->
-            (\l -> VerifyClaim.init l claimId)
-                >> updateStatusWith VerifyClaim GotVerifyClaimMsg model
-                |> withLoggedIn (Route.VerifyClaim communityId objectiveId actionId claimId)
+        Just (Route.Claim communityId objectiveId actionId claimId) ->
+            (\l -> Claim.init l claimId)
+                >> updateStatusWith Claim GotVerifyClaimMsg model
+                |> withLoggedIn (Route.Claim communityId objectiveId actionId claimId)
 
         Just Route.Communities ->
             CommunityExplore.init
@@ -807,7 +807,7 @@ jsAddressToMsg address val =
 
         "GotVerifyClaimMsg" :: rAddress ->
             Maybe.map GotVerifyClaimMsg
-                (VerifyClaim.jsAddressToMsg rAddress val)
+                (Claim.jsAddressToMsg rAddress val)
 
         _ ->
             Nothing
@@ -850,7 +850,7 @@ msgToString msg =
             "GotActionEditor" :: ActionEditor.msgToString subMsg
 
         GotVerifyClaimMsg subMsg ->
-            "GotVerifyClaimMsg" :: VerifyClaim.msgToString subMsg
+            "GotVerifyClaimMsg" :: Claim.msgToString subMsg
 
         GotCommunityExploreMsg subMsg ->
             "GotCommunityExploreMsg" :: CommunityExplore.msgToString subMsg
@@ -958,8 +958,8 @@ view model =
         ActionEditor subModel ->
             viewLoggedIn subModel LoggedIn.Other GotActionEditorMsg ActionEditor.view
 
-        VerifyClaim subModel ->
-            viewLoggedIn subModel LoggedIn.Other GotVerifyClaimMsg VerifyClaim.view
+        Claim subModel ->
+            viewLoggedIn subModel LoggedIn.Other GotVerifyClaimMsg Claim.view
 
         CommunityExplore subModel ->
             viewLoggedIn subModel LoggedIn.Communities GotCommunityExploreMsg CommunityExplore.view
