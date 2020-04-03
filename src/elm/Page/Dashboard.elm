@@ -13,9 +13,9 @@ import Cambiatus.Scalar exposing (DateTime(..))
 import Community exposing (ActionVerification, ActionVerificationsResponse, Balance, ClaimResponse, Metadata, Transaction)
 import Eos as Eos exposing (Symbol)
 import Eos.Account as Eos
+import Feedback
 import FormatNumber exposing (format)
 import FormatNumber.Locales exposing (usLocale)
-import Feedback
 import Graphql.Http
 import Graphql.Operation exposing (RootQuery)
 import Graphql.OptionalArgument exposing (OptionalArgument(..))
@@ -29,7 +29,7 @@ import List.Extra as List
 import Page
 import Page.Dashboard.Community as DashCommunity
 import Route
-import Session.LoggedIn as LoggedIn exposing (External(..), ProfileStatus, Msg)
+import Session.LoggedIn as LoggedIn exposing (External(..), Msg, ProfileStatus)
 import Session.Shared as Shared exposing (Shared)
 import Strftime
 import Task
@@ -425,7 +425,6 @@ type Msg
     | CompletedLoadUserTransfers (Result (Graphql.Http.Error (Maybe QueryTransfers)) (Maybe QueryTransfers))
     | CompletedLoadVerifications (Result (Graphql.Http.Error ActionVerificationsResponse) ActionVerificationsResponse)
     | CompletedLoadClaims (Result (Graphql.Http.Error ActionVerificationsResponse) ActionVerificationsResponse)
-    | ShowFeedback Feedback.Model
 
 
 update : Msg -> Model -> LoggedIn.Model -> UpdateResult
@@ -433,11 +432,7 @@ update msg model loggedIn =
     case msg of
         GotTime date ->
             UR.init { model | date = Just date }
-
-        ShowFeedback feedback ->
-            UR.init model
-                |> UR.addExt (ShowFeedback { message = "Hi!", success = True })
-
+                |> UR.addExt (ShowFeedback { message = " ae jureg", success = True })
 
         CompletedLoadBalances (Ok balances) ->
             let

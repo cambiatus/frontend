@@ -1,6 +1,7 @@
 module Session.LoggedIn exposing
     ( External(..)
     , ExternalMsg(..)
+    , FeedbackStatus(..)
     , Model
     , Msg(..)
     , Page(..)
@@ -35,6 +36,7 @@ import Cambiatus.Subscription as Subscription
 import Community exposing (Balance)
 import Eos
 import Eos.Account as Eos
+import Feedback
 import Graphql.Document
 import Graphql.Http
 import Graphql.Operation exposing (RootQuery, RootSubscription)
@@ -55,7 +57,6 @@ import Session.Shared as Shared exposing (Shared)
 import Shop
 import Task
 import Translation
-import Feedback
 import UpdateResult as UR
 
 
@@ -126,7 +127,7 @@ type alias Model =
     , showAuthModal : Bool
     , auth : Auth.Model
     , balances : List Balance
-    , feedback : Maybe Feedback.Model
+    , feedback : FeedbackStatus
     }
 
 
@@ -145,8 +146,14 @@ initModel shared authModel accountName =
     , showAuthModal = False
     , auth = authModel
     , balances = []
-    , feedback = Nothing
+    , feedback = Hidden
     }
+
+
+type FeedbackStatus
+    = Show Feedback.Model
+    | Hidden
+
 
 type ProfileStatus
     = Loading Eos.Name
@@ -231,18 +238,17 @@ viewHelper thisMsg page profile_ ({ shared } as model) content =
             [ div [ class "container mx-auto" ]
                 [ viewHeader model page profile_ |> Html.map thisMsg
                 , viewMainMenu page profile_ model |> Html.map thisMsg
-              , div
-                   [ onClick ( ShowFeedback { message = "Hi!", success = False } )  ]
-                   [ text "clickme!" ] |> Html.map thisMsg
                 ]
             ]
-        , div [ class "flex-grow" ] [
-               case model.feedback of
-                   Just feedback -> Feedback.view feedback
-                   Nothing -> div [] []
-              , content
-              ] 
-                    
+        , div [ class "flex-grow" ]
+            [ case model.feedback of
+                Show feedback ->
+                    Feedback.view feedback
+
+                Hidden ->
+                    div [] []
+            , content
+            ]
         , viewFooter shared
         , div [ onClickCloseAny ] [] |> Html.map thisMsg
         , if model.showAuthModal then
@@ -497,6 +503,7 @@ type External msg
     = UpdatedLoggedIn Model
     | RequiredAuthentication (Maybe msg)
     | UpdateBalances
+    | ShowFeedback Feedback.Model
 
 
 mapExternal : (msg -> msg2) -> External msg -> External msg2
@@ -510,6 +517,9 @@ mapExternal transform ext =
 
         UpdateBalances ->
             UpdateBalances
+
+        ShowFeedback f ->
+            ShowFeedback f
 
 
 type alias UpdateResult =
@@ -541,7 +551,6 @@ type Msg
     | CompletedLoadBalances (Result Http.Error (List Balance))
     | CompletedLoadUnread Value
     | KeyDown String
-    | ShowFeedback Feedback.Model
 
 
 update : Msg -> Model -> UpdateResult
@@ -735,10 +744,6 @@ update msg model =
                 model
                     |> UR.init
 
-        ShowFeedback feedback ->
-            { model | feedback = Just feedback }
-                |> UR.init
-
 
 closeModal : UpdateResult -> UpdateResult
 closeModal ({ model } as uResult) =
@@ -900,6 +905,3 @@ msgToString msg =
 
         KeyDown _ ->
             [ "KeyDown" ]
-
-        ShowFeedback _ ->
-            [ "ShowFeedback" ]
