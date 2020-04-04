@@ -478,7 +478,7 @@ viewConfirmDeleteModal t =
                     [ text (t "shop.delete_modal.body") ]
                 ]
             , div [ class "w-full md:bg-gray-100 md:flex md:absolute rounded-b-lg md:inset-x-0 md:bottom-0 md:p-4 justify-center" ]
-                [ div [ class "flex" ]
+                [ div [ class "md:flex" ]
                     [ button
                         [ class "flex-1 block button button-secondary mb-4 button-lg w-full md:w-40 md:mb-0"
                         , onClick ClickedDeleteCancel
