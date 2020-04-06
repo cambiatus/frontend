@@ -381,7 +381,7 @@ viewAuthError shared maybeLoginError =
 
         Just error ->
             div [ class "bg-red border-lg rounded p-4 mt-2" ]
-                [ p [ class "text-white" ] [ text (t shared.translations "error.accountNotFound") ]
+                [ p [ class "text-white" ] [ text (t shared.translations "error.invalidPin") ]
                 ]
 
 

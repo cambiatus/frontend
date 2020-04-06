@@ -79,7 +79,8 @@
     "chooseOrUploadLogo": "Escull o puja el teu propi logotip.",
     "invalidSymbol": "Símbol invàlid.",
     "unknown": "Oh oh. Alguna cosa ha anat malament.",
-    "accountNotFound": "Compte no trobat. Esteu segur que heu creat el vostre compte?"
+    "accountNotFound": "Compte no trobat. Esteu segur que heu creat el vostre compte?",
+    "invalidPin": "PIN invàlid."
   },
   "auth": {
     "title": "Utilitzeu la vostra clau privada i el PIN o connecteu-vos per",
