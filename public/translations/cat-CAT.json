@@ -450,6 +450,13 @@
       "memo_label": "Comentaris (opcional)",
       "default_memo": "Gràcies per la teva ajuda",
       "submit": "Compra ara"
+    },
+    "delete": "Eliminar",
+    "delete_modal": {
+      "title": "Eliminar",
+      "body": "Estàs segur de que vols eliminar aquest ítem?",
+      "confirm": "Si",
+      "cancel": "No"
     }
   },
   "dashboard": {

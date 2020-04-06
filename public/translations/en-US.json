@@ -448,6 +448,13 @@
       "memo_label": "Comments (optional)",
       "default_memo": "Thanks for the help!",
       "submit": "Buy"
+    },
+    "delete": "Delete",
+    "delete_modal": {
+      "title": "Delete",
+      "body": "Are you sure you want to delete this item?",
+      "confirm": "Yes",
+      "cancel": "No"
     }
   },
   "dashboard": {

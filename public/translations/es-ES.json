@@ -280,8 +280,8 @@
       "action_count": "{{actions}} acciones",
       "editor": {
         "not_found": "No encontrado",
-        "error": "Huy! Algo salió mal",
-        "description_label": "Cual es tu objetivo?",
+        "error": "¡Huy! Algo salió mal",
+        "description_label": "¿Cual es tu objetivo?",
         "description_placeholder": "Define un objetivo que atienda el problema que enfrenta tu comunidad.",
         "submit": "Salvar"
       }
@@ -422,7 +422,7 @@
     "rate_sale": "Clasificación",
     "messages": "Mensajes",
     "no_answer_yet": "Sin respuesta aun",
-    "message_placeholder": "Escribe tu mensaje aqui o envia un mensaje directo usando Whatsapp o chat.",
+    "message_placeholder": "Escribe tu mensaje aqui o envía un mensaje directo usando Whatsapp o chat.",
     "create_offer": "Crear oferta",
     "edit_offer": "Editar oferta",
     "unauthorized": "No tienes autorización para editar esta venta",
@@ -449,6 +449,13 @@
       "memo_label": "Comentarios (opcional)",
       "default_memo": "Gracias por tu ayuda",
       "submit": "Comprar"
+    },
+    "delete": "Eliminar",
+    "delete_modal": {
+      "title": "Eliminar",
+      "body": "¿Estás seguro de que quieres eliminar este item?",
+      "confirm": "Sí",
+      "cancel": "No"
     }
   },
   "dashboard": {
@@ -509,8 +516,8 @@
   },
   "transfer_result": {
     "title": "Transferida",
-    "transfer_success": "Transferencia exitosa!",
-    "receive_success": "Recibido con éxito!",
+    "transfer_success": "¡Transferencia exitosa!",
+    "receive_success": "¡Recibido con éxito!",
     "date": "Fecha",
     "message": "Mensaje",
     "community": "Comunidad",

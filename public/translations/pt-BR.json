@@ -452,6 +452,13 @@
       "memo_label": "Comentários (opcional)",
       "default_memo": "Obrigado pela ajuda!",
       "submit": "Comprar"
+    },
+    "delete": "Excluir",
+    "delete_modal": {
+      "title": "Excluir",
+      "body": "Tem certeza de que deseja excluir este item?",
+      "confirm": "Sim",
+      "cancel": "Não"
     }
   },
   "dashboard": {
