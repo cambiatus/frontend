@@ -364,6 +364,7 @@
   "profile": {
     "title": "El meu perfil",
     "my_transfers": "Les meves transferències",
+    "no_one": "Ningú",
     "actions": {
       "edit": "Editar",
       "viewPrivatekey": "Veure clau privada"
@@ -502,7 +503,7 @@
     "objective": "Objectiu",
     "action": "Acció",
     "claimer": "Reclamat per",
-    "date": "Data",
+    "date": "Data de reclamació",
     "claimer_reward": "Recompensa per l'usuari",
     "your_reward": "La teva recompensa",
     "disapprove": "Desaprovar",

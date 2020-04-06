@@ -365,6 +365,7 @@
   "profile": {
     "title": "My profile",
     "my_transfers": "My Transfers",
+    "no_one": "No one",
     "actions": {
       "edit": "Edit",
       "viewPrivatekey": "View Private Key"
@@ -504,7 +505,7 @@
     "objective": "Objective",
     "action": "Action",
     "claimer": "Claimed by",
-    "date": "Date",
+    "date": "Claim Date",
     "claimer_reward": "User reward",
     "your_reward": "Your reward",
     "disapprove": "Disapprove",

@@ -363,6 +363,7 @@
   "profile": {
     "title": "Mi perfil",
     "my_transfers": "Mis Transferencias",
+    "no_one": "Ninguno",
     "actions": {
       "edit": "Editar",
       "viewPrivatekey": "Ver Llave Privada"
@@ -502,7 +503,7 @@
     "objective": "Objetivo",
     "action": "Acción",
     "claimer": "Reclamado por",
-    "date": "Fecha",
+    "date": "Fecha de reclamo",
     "claimer_reward": "Recompensa del usuario",
     "your_reward": "Su recompensa",
     "disapprove": "Desaprobar",

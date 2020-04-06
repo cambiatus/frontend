@@ -367,6 +367,7 @@
   "profile": {
     "title": "Meu perfil",
     "my_transfers": "Minhas transferências",
+    "no_one": "Ninguém",
     "actions": {
       "edit": "Editar",
       "viewPrivatekey": "Ver chave privada"
@@ -497,15 +498,15 @@
       "2": "rejeitada"
     },
     "pending": "Pendente",
-    "disapproved": "Reprovado",
-    "approved": "Aprovado",
+    "disapproved_by": "Reprovado por",
+    "approved_by": "Aprovado por",
     "reward": "Você ganhou: {{value}}",
     "sub_wait_1": "Aguarde, esta reivindicação está sendo analisada por outros usuários.",
     "sub_wait_2": "Quando terminar, você receberá sua recompensa.",
     "objective": "Objetivo",
     "action": "Ação",
     "claimer": "Reivindicado por",
-    "date": "Data",
+    "date": "Data da reinvindicação",
     "claimer_reward": "Recompensa do usuário",
     "your_reward": "Sua recompensa",
     "disapprove": "Reprovar",
