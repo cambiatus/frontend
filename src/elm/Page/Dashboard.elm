@@ -13,7 +13,6 @@ import Cambiatus.Scalar exposing (DateTime(..))
 import Community exposing (ActionVerification, ActionVerificationsResponse, Balance, ClaimResponse, Metadata, Transaction)
 import Eos as Eos exposing (Symbol)
 import Eos.Account as Eos
-import Feedback
 import FormatNumber exposing (format)
 import FormatNumber.Locales exposing (usLocale)
 import Graphql.Http
@@ -432,7 +431,6 @@ update msg model loggedIn =
     case msg of
         GotTime date ->
             UR.init { model | date = Just date }
-                |> UR.addExt (ShowFeedback { message = " ae jureg", success = True })
 
         CompletedLoadBalances (Ok balances) ->
             let
