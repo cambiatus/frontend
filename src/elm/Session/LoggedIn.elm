@@ -36,7 +36,6 @@ import Cambiatus.Subscription as Subscription
 import Community exposing (Balance)
 import Eos
 import Eos.Account as Eos
-import Feedback
 import Graphql.Document
 import Graphql.Http
 import Graphql.Operation exposing (RootQuery, RootSubscription)
@@ -150,8 +149,14 @@ initModel shared authModel accountName =
     }
 
 
+type alias Feedback =
+    { message : String
+    , success : Bool
+    }
+
+
 type FeedbackStatus
-    = Show Feedback.Model
+    = Show Feedback
     | Hidden
 
 
@@ -213,6 +218,24 @@ view thisMsg page ({ shared } as model) content =
             viewHelper thisMsg page profile_ model content
 
 
+viewFeedback : Feedback -> Html Msg
+viewFeedback feedback =
+    div
+        [ class "flex justify-center items-center"
+        , style "background-color" (getBackgroundColor feedback.success)
+        ]
+        [ span [ class "ml-auto invisible" ] []
+        , span [ class "flex items-center text-sm h-10 leading-snug text-white font-bold" ]
+            [ text feedback.message ]
+        , span
+            [ class "ml-auto text-lg text-white font-bold mr-5 cursor-pointer"
+            , onClick HideFeedback
+            ]
+            [ text "X"
+            ]
+        ]
+
+
 viewHelper : (Msg -> msg) -> Page -> Profile -> Model -> Html msg -> Html msg
 viewHelper thisMsg page profile_ ({ shared } as model) content =
     let
@@ -243,10 +266,10 @@ viewHelper thisMsg page profile_ ({ shared } as model) content =
         , div [ class "flex-grow" ]
             [ case model.feedback of
                 Show feedback ->
-                    Feedback.view feedback
+                    viewFeedback feedback |> Html.map thisMsg
 
                 Hidden ->
-                    div [] []
+                    div [] [] |> Html.map thisMsg
             , content
             ]
         , viewFooter shared
@@ -495,6 +518,15 @@ viewFooter _ =
         ]
 
 
+getBackgroundColor : Bool -> String
+getBackgroundColor isSuccess =
+    if isSuccess == True then
+        "#8ACC9E"
+
+    else
+        "#DB1B1B"
+
+
 
 -- UPDATE
 
@@ -503,7 +535,7 @@ type External msg
     = UpdatedLoggedIn Model
     | RequiredAuthentication (Maybe msg)
     | UpdateBalances
-    | ShowFeedback Feedback.Model
+    | ShowFeedback Feedback
 
 
 mapExternal : (msg -> msg2) -> External msg -> External msg2
@@ -551,6 +583,7 @@ type Msg
     | CompletedLoadBalances (Result Http.Error (List Balance))
     | CompletedLoadUnread Value
     | KeyDown String
+    | HideFeedback
 
 
 update : Msg -> Model -> UpdateResult
@@ -744,6 +777,10 @@ update msg model =
                 model
                     |> UR.init
 
+        HideFeedback ->
+            { model | feedback = Hidden }
+                |> UR.init
+
 
 closeModal : UpdateResult -> UpdateResult
 closeModal ({ model } as uResult) =
@@ -905,3 +942,6 @@ msgToString msg =
 
         KeyDown _ ->
             [ "KeyDown" ]
+
+        HideFeedback ->
+            [ "HideFeedback" ]
