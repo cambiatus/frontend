@@ -5,7 +5,6 @@ module Page.Dashboard.Balance exposing
     , init
     , jsAddressToMsg
     , msgToString
-    , subscription
     , update
     , viewCard
     , viewInvitationModal
@@ -13,9 +12,6 @@ module Page.Dashboard.Balance exposing
 
 import Api
 import Api.Graphql
-import Asset.Icon as Icon
-import Avatar
-import Browser.Events
 import Community exposing (Balance)
 import Eos
 import Eos.Account as Eos
