@@ -145,7 +145,7 @@ initModel shared authModel accountName =
     , showAuthModal = False
     , auth = authModel
     , balances = []
-    , feedback = Show { message = "qqr coisa", success = False }
+    , feedback = Hidden
     }
 
 
