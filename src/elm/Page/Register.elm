@@ -79,8 +79,6 @@ type alias Form =
     { username : String
     , email : String
     , account : String
-    , pin : String
-    , pinConfirm : String
     , enteredPin : List (Maybe String)
     , enteredPinConf : List (Maybe String)
     }
@@ -91,8 +89,6 @@ initForm =
     { username = ""
     , email = ""
     , account = ""
-    , pin = ""
-    , pinConfirm = ""
     , enteredPin = List.repeat 6 Nothing
     , enteredPinConf = List.repeat 6 Nothing
     }
@@ -177,96 +173,94 @@ view guest model =
         name =
             accName model
     in
-    case model.accountGenerated of
-        True ->
-            div [ class "main__register__details" ]
-                [ div [ class "register__congrats" ]
-                    [ div [ class "register__woman" ] []
-                    , p [ class "congrats__message" ]
-                        [ span [] [ text_ "register.account_created.congrats" ]
-                        , span [] [ text_ "register.account_created.account" ]
-                        , span [] [ text_ "register.account_created.created" ]
-                        ]
-                    , div [ class "register__dog" ] []
+    if model.accountGenerated then
+        div [ class "main__register__details" ]
+            [ div [ class "register__congrats" ]
+                [ div [ class "register__woman" ] []
+                , p [ class "congrats__message" ]
+                    [ span [] [ text_ "register.account_created.congrats" ]
+                    , span [] [ text_ "register.account_created.account" ]
+                    , span [] [ text_ "register.account_created.created" ]
                     ]
-                , div [ class "register__welcome" ]
-                    [ text (tr "register.account_created.welcome_message" [ ( "username", name ) ]) ]
-                , div [ class "register__keys" ]
-                    [ p [ class "key__title" ] [ text_ "register.account_created.twelve_words" ]
-                    , p [ class "key", id "12__words" ] [ text (words model) ]
-                    , p [ class "key__title" ] [ text_ "register.account_created.private_key" ]
-                    , p [ class "key", id "p__key" ] [ text (privateKey model) ]
-                    ]
-                , div [ class "register__instructions" ]
-                    [ p [] [ text_ "register.account_created.instructions" ] ]
-                , button
-                    [ onClick DownloadPdf
-                    , class "btn btn__register"
-                    ]
-                    [ text_ "register.account_created.download" ]
-                , div [ class "register__footer" ]
-                    [ span [] [ text_ "register.account_created.instructions" ] ]
+                , div [ class "register__dog" ] []
                 ]
-
-        False ->
-            Html.form
-                [ onSubmit ValidateForm
+            , div [ class "register__welcome" ]
+                [ text (tr "register.account_created.welcome_message" [ ( "username", name ) ]) ]
+            , div [ class "register__keys" ]
+                [ p [ class "key__title" ] [ text_ "register.account_created.twelve_words" ]
+                , p [ class "key", id "12__words" ] [ text (words model) ]
+                , p [ class "key__title" ] [ text_ "register.account_created.private_key" ]
+                , p [ class "key", id "p__key" ] [ text (privateKey model) ]
                 ]
-                [ div [ class "card card--register" ]
-                    (viewAuthTabs shared
-                        :: [ p [ class "card__auth__register__prompt" ]
-                                [ text_ "register.form.title" ]
-                           , viewServerErrors model.problems
-                           , viewField shared
-                                (Field
-                                    "register.form.name"
-                                    isDisabled
-                                    "name"
-                                    Username
-                                )
-                                (identity EnteredUsername)
-                                [ maxlength 255 ]
-                                model.problems
-                           , viewField shared
-                                (Field
-                                    "register.form.account"
-                                    isDisabled
-                                    "account"
-                                    Account
-                                )
-                                (identity EnteredAccount)
-                                Eos.nameValidationAttrs
-                                model.problems
-                           , viewField shared
-                                (Field
-                                    "register.form.email"
-                                    isDisabled
-                                    "email"
-                                    Email
-                                )
-                                (identity EnteredEmail)
-                                [ type_ "email" ]
-                                model.problems
-                           , viewPinForm model shared PinInput
-                           , viewPinForm model shared PinConfInput
-                           , button
-                                [ class "btn btn--primary btn--login"
-                                , type_ "submit"
-                                , disabled isDisabled
-                                ]
-                                [ if model.isCheckingAccount then
-                                    text_ "register.form.checkingAvailability"
+            , div [ class "register__instructions" ]
+                [ p [] [ text_ "register.account_created.instructions" ] ]
+            , button
+                [ onClick DownloadPdf
+                , class "btn btn__register"
+                ]
+                [ text_ "register.account_created.download" ]
+            , div [ class "register__footer" ]
+                [ span [] [ text_ "register.account_created.instructions" ] ]
+            ]
 
-                                  else
-                                    text_ "register.form.button"
-                                ]
-                           , a [ Route.href (Route.Login Nothing), class "card__auth__prompt" ]
-                                [ span [] [ text_ "register.login" ]
-                                , span [ class "card__auth__login__mode" ] [ text_ "register.authLink" ]
-                                ]
-                           ]
+    else
+        Html.form
+            [ onSubmit ValidateForm
+            ]
+            [ div [ class "card card--register" ]
+                [ viewAuthTabs shared
+                , p [ class "card__auth__register__prompt" ]
+                    [ text_ "register.form.title" ]
+                , viewServerErrors model.problems
+                , viewField shared
+                    (Field
+                        "register.form.name"
+                        isDisabled
+                        "name"
+                        Username
                     )
+                    (identity EnteredUsername)
+                    [ maxlength 255 ]
+                    model.problems
+                , viewField shared
+                    (Field
+                        "register.form.account"
+                        isDisabled
+                        "account"
+                        Account
+                    )
+                    (identity EnteredAccount)
+                    Eos.nameValidationAttrs
+                    model.problems
+                , viewField shared
+                    (Field
+                        "register.form.email"
+                        isDisabled
+                        "email"
+                        Email
+                    )
+                    (identity EnteredEmail)
+                    [ type_ "email" ]
+                    model.problems
+                , viewPinForm model shared PinInput
+                , viewPinForm model shared PinConfInput
+                , button
+                    [ class "btn btn--primary btn--login"
+                    , type_ "submit"
+                    , disabled isDisabled
+                    ]
+                    [ if model.isCheckingAccount then
+                        text_ "register.form.checkingAvailability"
+
+                      else
+                        text_ "register.form.button"
+                    ]
+                , a [ Route.href (Route.Login Nothing), class "card__auth__prompt" ]
+                    [ span [] [ text_ "register.login" ]
+                    , span [ class "card__auth__login__mode" ] [ text_ "register.authLink" ]
+                    ]
                 ]
+            ]
 
 
 viewAuthTabs : Shared -> Html msg
@@ -542,9 +536,6 @@ update maybeInvitation msg model guest =
     let
         shared =
             guest.shared
-
-        language =
-            shared.language
     in
     case msg of
         Ignored ->
@@ -623,7 +614,14 @@ update maybeInvitation msg model guest =
                                         Just invitationId ->
                                             Encode.string invitationId
                                   )
-                                , ( "pin", Encode.string model.form.pin )
+                                , ( "pin"
+                                  , Encode.string
+                                        (model.form.enteredPin
+                                            |> List.map (Maybe.withDefault "")
+                                            |> String.concat
+                                            |> String.reverse
+                                        )
+                                  )
                                 , ( "account", Encode.string model.form.account )
                                 ]
                         }
@@ -676,7 +674,7 @@ update maybeInvitation msg model guest =
                 }
                 |> UR.logDecodeError msg v
 
-        CompletedCreateProfile accountKeys (Ok _) ->
+        CompletedCreateProfile _ (Ok _) ->
             { model | accountGenerated = True }
                 |> UR.init
                 |> UR.addPort
@@ -692,7 +690,7 @@ update maybeInvitation msg model guest =
                 |> UR.init
                 |> UR.logHttpError msg err
 
-        CompletedLoadProfile accountKeys (Ok profile) ->
+        CompletedLoadProfile _ (Ok profile) ->
             UR.init model
                 |> UR.addCmd (Route.replaceUrl guest.shared.navKey Route.Dashboard)
                 |> UR.addExt (UpdatedGuest { guest | profile = Just profile })
@@ -727,12 +725,11 @@ update maybeInvitation msg model guest =
                         LE.setAt pos (Just data) model.form.enteredPin
 
                 pinErrors =
-                    case List.any (\a -> a == Nothing) newPin of
-                        True ->
-                            [ InvalidEntry Pin (validationErrorToString shared PinTooShort) ]
+                    if List.any (\a -> a == Nothing) newPin then
+                        [ InvalidEntry Pin (validationErrorToString shared PinTooShort) ]
 
-                        False ->
-                            []
+                    else
+                        []
 
                 nextFocusPosition : Int
                 nextFocusPosition =
@@ -785,12 +782,11 @@ update maybeInvitation msg model guest =
                         LE.setAt pos (Just data) model.form.enteredPinConf
 
                 pinConfProbs =
-                    case List.any (\a -> a == Nothing) newPin of
-                        True ->
-                            [ InvalidEntry PinConfirmation (validationErrorToString shared PinTooShort) ]
+                    if List.any (\a -> a == Nothing) newPin then
+                        [ InvalidEntry PinConfirmation (validationErrorToString shared PinTooShort) ]
 
-                        False ->
-                            []
+                    else
+                        []
 
                 nextFocusPosition : Int
                 nextFocusPosition =
@@ -847,7 +843,6 @@ update maybeInvitation msg model guest =
             if val then
                 UR.init model
                     |> UR.addCmd
-                        -- insufficient? slow?
                         (Task.succeed ValidateForm
                             |> Task.perform identity
                         )
@@ -954,11 +949,7 @@ updateForm msg shared ({ form } as model) =
                                 |> String.toInt
                                 |> Maybe.withDefault 0
                     in
-                    if compare charInt 6 == Basics.LT then
-                        True
-
-                    else
-                        False
+                    compare charInt 6 == Basics.LT
 
                 isValidAlphaNum : Char -> Bool
                 isValidAlphaNum c =

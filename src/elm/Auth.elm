@@ -31,7 +31,6 @@ import Html.Attributes
         , id
         , maxlength
         , pattern
-        , placeholder
         , required
         , src
         , title
@@ -690,7 +689,6 @@ update msg shared model showAuthModal =
             { model | pinVisibility = not model.pinVisibility } |> UR.init
 
         PressedEnter val ->
-            -- if val then
             if val && showAuthModal then
                 UR.init model
                     |> UR.addCmd

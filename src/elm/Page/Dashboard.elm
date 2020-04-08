@@ -275,7 +275,7 @@ viewTransfer ({ shared } as loggedIn) transfer =
     in
     a
         [ class "flex items-start lg:items-center p-4 border-b last:border-b-0"
-        , Route.href (Route.Transfer transfer.id)
+        , Route.href (Route.ViewTransfer transfer.id)
         ]
         [ div [ class "flex-col flex-grow-1 pl-4" ]
             [ p
@@ -317,7 +317,7 @@ viewBalances loggedIn communities =
     div [ class "flex flex-wrap -mx-2" ]
         (List.indexedMap
             (\i c ->
-                DashCommunity.viewCard loggedIn i c
+                DashCommunity.viewCard loggedIn c
                     |> Html.map (GotDashCommunityMsg i)
             )
             communities

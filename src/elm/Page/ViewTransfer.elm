@@ -1,4 +1,4 @@
-module Page.Transfer exposing (Model, Msg, init, msgToString, subscriptions, update, view)
+module Page.ViewTransfer exposing (Model, Msg, init, msgToString, subscriptions, update, view)
 
 import Api
 import Api.Graphql
