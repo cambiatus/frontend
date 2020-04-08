@@ -1,6 +1,7 @@
 module Session.LoggedIn exposing
     ( External(..)
     , ExternalMsg(..)
+    , FeedbackStatus(..)
     , Model
     , Msg(..)
     , Page(..)
@@ -41,7 +42,7 @@ import Graphql.Document
 import Graphql.Http
 import Graphql.Operation exposing (RootSubscription)
 import Graphql.SelectionSet as SelectionSet exposing (SelectionSet, with)
-import Html exposing (Html, a, button, div, footer, img, input, nav, p, text)
+import Html exposing (Html, a, button, div, footer, img, input, nav, p, span, text)
 import Html.Attributes exposing (..)
 import Html.Events exposing (onClick, onFocus, onInput, onMouseEnter, onSubmit, stopPropagationOn)
 import Http
@@ -126,6 +127,7 @@ type alias Model =
     , unreadCount : Int
     , showAuthModal : Bool
     , auth : Auth.Model
+    , feedback : FeedbackStatus
     }
 
 
@@ -144,7 +146,19 @@ initModel shared authModel accountName selectedCommunity =
     , unreadCount = 0
     , showAuthModal = False
     , auth = authModel
+    , feedback = Hidden
     }
+
+
+type alias Feedback =
+    { message : String
+    , success : Bool
+    }
+
+
+type FeedbackStatus
+    = Show Feedback
+    | Hidden
 
 
 type ProfileStatus
@@ -205,6 +219,24 @@ view thisMsg page ({ shared } as model) content =
             viewHelper thisMsg page profile_ model content
 
 
+viewFeedback : Feedback -> Html Msg
+viewFeedback feedback =
+    div
+        [ class "sticky top-0 w-full flex justify-center items-center"
+        , classList [ ( "bg-green", feedback.success ), ( "bg-red", not feedback.success ) ]
+        ]
+        [ span [ class "ml-auto invisible" ] []
+        , span [ class "flex items-center text-sm h-10 leading-snug text-white font-bold" ]
+            [ text feedback.message ]
+        , span
+            [ class "ml-auto mr-5 cursor-pointer"
+            , onClick HideFeedback
+            ]
+            [ Icons.close "fill-current text-white"
+            ]
+        ]
+
+
 viewHelper : (Msg -> msg) -> Page -> Profile -> Model -> Html msg -> Html msg
 viewHelper thisMsg page profile_ ({ shared } as model) content =
     let
@@ -232,7 +264,15 @@ viewHelper thisMsg page profile_ ({ shared } as model) content =
                 , viewMainMenu page profile_ model |> Html.map thisMsg
                 ]
             ]
-        , div [ class "flex-grow" ] [ content ]
+        , case model.feedback of
+            Show feedback ->
+                viewFeedback feedback |> Html.map thisMsg
+
+            Hidden ->
+                text ""
+        , div [ class "flex-grow" ]
+            [ content
+            ]
         , viewFooter shared
         , div [ onClickCloseAny ] [] |> Html.map thisMsg
         , if model.showAuthModal then
@@ -485,6 +525,7 @@ viewFooter _ =
 type External msg
     = UpdatedLoggedIn Model
     | RequiredAuthentication (Maybe msg)
+    | ShowFeedback Feedback
 
 
 mapExternal : (msg -> msg2) -> External msg -> External msg2
@@ -496,10 +537,11 @@ mapExternal transform ext =
         RequiredAuthentication maybeM ->
             RequiredAuthentication (Maybe.map transform maybeM)
 
+        ShowFeedback f ->
+            ShowFeedback f
+
 
 type alias UpdateResult =
-<<<<<<< HEAD
-=======
     UR.UpdateResult Model Msg ExternalMsg
 
 
@@ -527,6 +569,7 @@ type Msg
     | GotAuthMsg Auth.Msg
     | CompletedLoadUnread Value
     | KeyDown String
+    | HideFeedback
 
 
 update : Msg -> Model -> UpdateResult
@@ -711,6 +754,10 @@ update msg model =
                 model
                     |> UR.init
 
+        HideFeedback ->
+            { model | feedback = Hidden }
+                |> UR.init
+
 
 closeModal : UpdateResult -> UpdateResult
 closeModal ({ model } as uResult) =
@@ -869,3 +916,6 @@ msgToString msg =
 
         KeyDown _ ->
             [ "KeyDown" ]
+
+        HideFeedback ->
+            [ "HideFeedback" ]
