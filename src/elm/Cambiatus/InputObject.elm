@@ -420,6 +420,35 @@ encodeTransferInput input =
         [ ( "id", Encode.int input.id |> Just ) ]
 
 
+buildTransferSucceedInput : TransferSucceedInputRequiredFields -> TransferSucceedInput
+buildTransferSucceedInput required =
+    { from = required.from, symbol = required.symbol, to = required.to }
+
+
+type alias TransferSucceedInputRequiredFields =
+    { from : String
+    , symbol : String
+    , to : String
+    }
+
+
+{-| Type for the TransferSucceedInput input object.
+-}
+type alias TransferSucceedInput =
+    { from : String
+    , symbol : String
+    , to : String
+    }
+
+
+{-| Encode a TransferSucceedInput into a value that can be used as an argument.
+-}
+encodeTransferSucceedInput : TransferSucceedInput -> Value
+encodeTransferSucceedInput input =
+    Encode.maybeObject
+        [ ( "from", Encode.string input.from |> Just ), ( "symbol", Encode.string input.symbol |> Just ), ( "to", Encode.string input.to |> Just ) ]
+
+
 buildUnreadNotificationsSubscriptionInput : UnreadNotificationsSubscriptionInputRequiredFields -> UnreadNotificationsSubscriptionInput
 buildUnreadNotificationsSubscriptionInput required =
     { account = required.account }

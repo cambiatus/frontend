@@ -194,7 +194,8 @@
     "loading_error": "Algo de errado aconteceu ao carregar as transferências.",
     "no_transfers_yet": "Nenhuma transferência.",
     "info": "{{from}} transferiu {{value}} para {{to}}",
-    "you": "voce"
+    "you": "voce",
+    "title": "Transferir"
   },
   "notifications": {
     "title": "Notificações",

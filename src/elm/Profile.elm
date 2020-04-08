@@ -15,6 +15,8 @@ module Profile exposing
     , pinValidationAttrs
     , profileToForm
     , query
+    , selectConfig
+    , selectFilter
     , selectionSet
     , username
     , view
@@ -32,12 +34,15 @@ import Eos.Account as Eos
 import Graphql.Operation exposing (RootMutation, RootQuery)
 import Graphql.OptionalArgument exposing (OptionalArgument(..))
 import Graphql.SelectionSet as SelectionSet exposing (SelectionSet, with)
-import Html exposing (Html, div, p, text)
+import Html exposing (Html, div, p, span, text)
 import Html.Attributes exposing (class, maxlength, minlength, pattern, title, type_)
 import I18Next exposing (Translations, t)
 import Json.Decode as Decode exposing (Decoder, list, nullable, string)
 import Json.Decode.Pipeline as Decode exposing (optional, required)
 import Json.Encode as Encode
+import Select
+import Session.Shared as Shared
+import Simple.Fuzzy
 import Time exposing (Posix)
 
 
@@ -351,3 +356,57 @@ viewProfileName loggedInAccount profile translations =
 
             Nothing ->
                 Eos.viewName profile.account
+
+
+
+-- Autocomplete select
+
+
+selectConfig : Select.Config msg Profile -> Shared.Shared -> Bool -> Select.Config msg Profile
+selectConfig select shared isDisabled =
+    select
+        |> Select.withInputClass "form-input h-12 w-full font-sans placeholder-gray-900"
+        |> Select.withClear False
+        |> Select.withMultiInputItemContainerClass "hidden h-0"
+        |> Select.withNotFound "No matches"
+        |> Select.withNotFoundClass "text-red  border-solid border-gray-100 border rounded z-30 bg-white w-select"
+        |> Select.withNotFoundStyles [ ( "padding", "0 2rem" ) ]
+        |> Select.withDisabled isDisabled
+        |> Select.withHighlightedItemClass "autocomplete-item-highlight"
+        |> Select.withPrompt (t shared.translations "community.actions.form.verifier_placeholder")
+        |> Select.withItemHtml (viewAutoCompleteItem shared)
+        |> Select.withMenuClass "border-t-none border-solid border-gray-100 border rounded-b z-30 bg-white"
+
+
+selectFilter : Int -> (a -> String) -> String -> List a -> Maybe (List a)
+selectFilter minChars toLabel q items =
+    if String.length q < minChars then
+        Nothing
+
+    else
+        items
+            |> Simple.Fuzzy.filter toLabel q
+            |> Just
+
+
+viewAutoCompleteItem : Shared.Shared -> Profile -> Html Never
+viewAutoCompleteItem shared profile =
+    let
+        ipfsUrl =
+            shared.endpoints.ipfs
+    in
+    div [ class "pt-3 pl-3 flex flex-row items-center w-select z-30" ]
+        [ div [ class "pr-3" ] [ Avatar.view ipfsUrl profile.avatar "h-7 w-7" ]
+        , div [ class "flex flex-col font-sans border-b border-gray-500 pb-3 w-full" ]
+            [ span [ class "text-black text-body leading-loose" ]
+                [ text (Eos.nameToString profile.account) ]
+            , span [ class "leading-caption uppercase text-green text-caption" ]
+                [ case profile.userName of
+                    Just name ->
+                        text name
+
+                    Nothing ->
+                        text ""
+                ]
+            ]
+        ]

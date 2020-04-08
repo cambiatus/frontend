@@ -51,6 +51,15 @@ transfers object_ =
     Object.selectionForCompositeField "transfers" [] object_ (identity >> Decode.nullable)
 
 
+type alias TransfersucceedRequiredArguments =
+    { input : Cambiatus.InputObject.TransferSucceedInput }
+
+
+transfersucceed : TransfersucceedRequiredArguments -> SelectionSet decodesTo Cambiatus.Object.Transfer -> SelectionSet decodesTo RootSubscription
+transfersucceed requiredArgs object_ =
+    Object.selectionForCompositeField "transfersucceed" [ Argument.required "input" requiredArgs.input Cambiatus.InputObject.encodeTransferSucceedInput ] object_ identity
+
+
 type alias UnreadsRequiredArguments =
     { input : Cambiatus.InputObject.UnreadNotificationsSubscriptionInput }
 
