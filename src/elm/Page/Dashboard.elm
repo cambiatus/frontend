@@ -28,7 +28,7 @@ import List.Extra as List
 import Page
 import Page.Dashboard.Balance as DashCommunity
 import Route
-import Session.LoggedIn as LoggedIn exposing (External(..), ProfileStatus)
+import Session.LoggedIn as LoggedIn exposing (External(..), Msg, ProfileStatus)
 import Session.Shared as Shared exposing (Shared)
 import Strftime
 import Task
