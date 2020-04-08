@@ -159,8 +159,8 @@ view ({ shared } as loggedIn) model =
         Loaded community (SendingTransfer f) ->
             viewForm loggedIn model f community True
 
-        Loaded _ (SendingTransferFailed _) ->
-            text "Failed transfer"
+        Loaded community (SendingTransferFailed f) ->
+            viewForm loggedIn model f community False
 
 
 viewForm : LoggedIn.Model -> Model -> Form -> Community -> Bool -> Html Msg
@@ -170,7 +170,7 @@ viewForm ({ shared } as loggedIn) model f community isDisabled =
             text (t loggedIn.shared.translations s)
     in
     div [ class "bg-white" ]
-        [ Page.viewHeader loggedIn (t shared.translations "transfer.title") (Route.Community model.communityId)
+        [ Page.viewHeader loggedIn (t shared.translations "transfer.title") Route.Dashboard
         , form [ class "container mx-auto py-4", onSubmit SubmitForm ]
             [ div [ class "mb-10" ]
                 [ span [ class "input-label" ]
@@ -404,7 +404,7 @@ update msg model ({ shared } as loggedIn) =
                     { model | status = Loaded c (SendingTransfer form) }
                         |> UR.init
                         |> UR.addPort
-                            { responseAddress = SubmitForm
+                            { responseAddress = PushTransaction
                             , responseData = Encode.null
                             , data =
                                 Eos.encodeTransaction
@@ -462,19 +462,24 @@ update msg model ({ shared } as loggedIn) =
                 _ ->
                     onlyLogImpossible []
 
-        GotTransferResult (Err _) ->
+        GotTransferResult (Err s) ->
             case model.status of
                 Loaded c (SendingTransfer form) ->
                     { model | status = Loaded c (SendingTransferFailed form) }
-                        -- TODO add global failure msg
                         |> UR.init
+                        |> UR.addExt
+                            (LoggedIn.ShowFeedback
+                                { message = "Transfer Failed"
+                                , success = False
+                                }
+                            )
 
                 _ ->
                     onlyLogImpossible []
 
         Redirect value ->
             case model.status of
-                Loaded c (SendingTransfer form) ->
+                Loaded _ (SendingTransfer form) ->
                     case form.selectedProfile of
                         Just to ->
                             let
