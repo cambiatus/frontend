@@ -47,6 +47,7 @@
         "negative": "O número deve ser negativo",
         "greater_than": "O número deve ser maior do que {{base}}",
         "greater_than_or_equal": "O número deve ser maior ou igual a {{base}}",
+        "length_greater_than_or_equal": "Escolha ao menos {{count}} itens",
         "lower_than": "O número deve ser menor do que {{base}}",
         "lower_than_or_equal": "O número deve ser menor ou igual a {{base}}"
       },
@@ -328,6 +329,7 @@
         "validation_on_detail": "a ação estará disponível até uma data, quantidade ou ambos",
         "verification_label": "Precisa de verificação?",
         "verifiers_label": "Escolha os verificadores",
+        "verifiers_label_count": "Escolha ao menos {{count}} verificadores",
         "remove_verifier": "Remover",
         "verifiers_reward_label": "Recompensa para verificadores",
         "votes_label": "Número mínimo de votos",
@@ -451,6 +453,13 @@
       "memo_label": "Comentários (opcional)",
       "default_memo": "Obrigado pela ajuda!",
       "submit": "Comprar"
+    },
+    "delete": "Excluir",
+    "delete_modal": {
+      "title": "Excluir",
+      "body": "Tem certeza de que deseja excluir este item?",
+      "confirm": "Sim",
+      "cancel": "Não"
     }
   },
   "dashboard": {

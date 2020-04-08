@@ -47,6 +47,7 @@
         "negative": "El nombre ha de ser negatiu",
         "greater_than": "El nombre ha de ser superior a {{base}}",
         "greater_than_or_equal": "El nombre ha de ser major o igual a {{base}}",
+        "length_greater_than_or_equal": "Trieu almenys {{count}} elements",
         "lower_than": "El nombre ha de ser inferior a {{base}}",
         "lower_than_or_equal": "El nombre ha de ser inferior o igual a {{base}}"
       },
@@ -326,6 +327,7 @@
         "validation_on_detail": "l'acció estarà disponible fins a una data, quantitat o totes dues coses",
         "verification_label": "Necessita verificació?",
         "verifiers_label": "Trieu els verificadors",
+        "verifiers_label_count": "Trieu almenys {{count}} verificadors",
         "remove_verifier": "Elimina",
         "verifiers_reward_label": "Recompensa per als verificadors",
         "votes_label": "Nombre mínim de vots",
@@ -449,6 +451,13 @@
       "memo_label": "Comentaris (opcional)",
       "default_memo": "Gràcies per la teva ajuda",
       "submit": "Compra ara"
+    },
+    "delete": "Eliminar",
+    "delete_modal": {
+      "title": "Eliminar",
+      "body": "Estàs segur de que vols eliminar aquest ítem?",
+      "confirm": "Si",
+      "cancel": "No"
     }
   },
   "dashboard": {

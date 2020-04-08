@@ -34,7 +34,7 @@ import Page.ViewTransfer as ViewTransfer
 import Ports
 import Route exposing (Route)
 import Session.Guest as Guest
-import Session.LoggedIn as LoggedIn
+import Session.LoggedIn as LoggedIn exposing (FeedbackStatus(..))
 import Shop
 import UpdateResult as UR exposing (UpdateResult)
 import Url exposing (Url)
@@ -495,6 +495,19 @@ updateLoggedInUResult toStatus toMsg model uResult =
                             ( { m
                                 | session = Page.LoggedIn (LoggedIn.askedAuthentication loggedIn)
                                 , afterAuthMsg = Maybe.map toMsg maybeMsg
+                              }
+                            , cmds_
+                            )
+
+                        _ ->
+                            ( m, cmds_ )
+
+                LoggedIn.ShowFeedback feedback ->
+                    case m.session of
+                        Page.LoggedIn loggedIn ->
+                            ( { m
+                                | session =
+                                    Page.LoggedIn { loggedIn | feedback = Show feedback }
                               }
                             , cmds_
                             )

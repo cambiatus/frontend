@@ -47,6 +47,7 @@
         "negative": "El número debe ser negativo",
         "greater_than": "El número debe ser mayor que {{base}}",
         "greater_than_or_equal": "El número debe ser mayor o igual que {{base}}",
+        "length_greater_than_or_equal": "Elige al menos {{count}} artículos",
         "lower_than": "El número debe ser inferior a {{base}}",
         "lower_than_or_equal": "El número debe ser inferior o igual a {{base}}"
       },
@@ -280,8 +281,8 @@
       "action_count": "{{actions}} acciones",
       "editor": {
         "not_found": "No encontrado",
-        "error": "Huy! Algo salió mal",
-        "description_label": "Cual es tu objetivo?",
+        "error": "¡Huy! Algo salió mal",
+        "description_label": "¿Cual es tu objetivo?",
         "description_placeholder": "Define un objetivo que atienda el problema que enfrenta tu comunidad.",
         "submit": "Salvar"
       }
@@ -325,6 +326,7 @@
         "validation_on_detail": "la acción estará disponible hasta una fecha, cantidad o ambas",
         "verification_label": "¿Necesita verificación?",
         "verifiers_label": "Elige los verificadores",
+        "verifiers_label_count": "Elija al menos {{count}} verificadores",
         "remove_verifier": "retirar",
         "verifiers_reward_label": "Recompensa por verificadores",
         "votes_label": "Numero minimo de votos",
@@ -421,7 +423,7 @@
     "rate_sale": "Clasificación",
     "messages": "Mensajes",
     "no_answer_yet": "Sin respuesta aun",
-    "message_placeholder": "Escribe tu mensaje aqui o envia un mensaje directo usando Whatsapp o chat.",
+    "message_placeholder": "Escribe tu mensaje aqui o envía un mensaje directo usando Whatsapp o chat.",
     "create_offer": "Crear oferta",
     "edit_offer": "Editar oferta",
     "unauthorized": "No tienes autorización para editar esta venta",
@@ -448,6 +450,13 @@
       "memo_label": "Comentarios (opcional)",
       "default_memo": "Gracias por tu ayuda",
       "submit": "Comprar"
+    },
+    "delete": "Eliminar",
+    "delete_modal": {
+      "title": "Eliminar",
+      "body": "¿Estás seguro de que quieres eliminar este item?",
+      "confirm": "Sí",
+      "cancel": "No"
     }
   },
   "dashboard": {
@@ -508,8 +517,8 @@
   },
   "transfer_result": {
     "title": "Transferida",
-    "transfer_success": "Transferencia exitosa!",
-    "receive_success": "Recibido con éxito!",
+    "transfer_success": "¡Transferencia exitosa!",
+    "receive_success": "¡Recibido con éxito!",
     "date": "Fecha",
     "message": "Mensaje",
     "community": "Comunidad",

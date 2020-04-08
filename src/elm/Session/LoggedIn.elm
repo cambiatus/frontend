@@ -1,6 +1,7 @@
 module Session.LoggedIn exposing
     ( External(..)
     , ExternalMsg(..)
+    , FeedbackStatus(..)
     , Model
     , Msg(..)
     , Page(..)
@@ -38,7 +39,7 @@ import Eos
 import Eos.Account as Eos
 import Graphql.Document
 import Graphql.Http
-import Graphql.Operation exposing (RootQuery, RootSubscription)
+import Graphql.Operation exposing (RootSubscription)
 import Graphql.SelectionSet as SelectionSet exposing (SelectionSet, with)
 import Html exposing (..)
 import Html.Attributes exposing (..)
@@ -126,6 +127,7 @@ type alias Model =
     , showAuthModal : Bool
     , auth : Auth.Model
     , balances : List Balance
+    , feedback : FeedbackStatus
     }
 
 
@@ -144,7 +146,19 @@ initModel shared authModel accountName =
     , showAuthModal = False
     , auth = authModel
     , balances = []
+    , feedback = Hidden
     }
+
+
+type alias Feedback =
+    { message : String
+    , success : Bool
+    }
+
+
+type FeedbackStatus
+    = Show Feedback
+    | Hidden
 
 
 type ProfileStatus
@@ -205,6 +219,24 @@ view thisMsg page ({ shared } as model) content =
             viewHelper thisMsg page profile_ model content
 
 
+viewFeedback : Feedback -> Html Msg
+viewFeedback feedback =
+    div
+        [ class "sticky top-0 w-full flex justify-center items-center"
+        , classList [ ( "bg-green", feedback.success ), ( "bg-red", not feedback.success ) ]
+        ]
+        [ span [ class "ml-auto invisible" ] []
+        , span [ class "flex items-center text-sm h-10 leading-snug text-white font-bold" ]
+            [ text feedback.message ]
+        , span
+            [ class "ml-auto mr-5 cursor-pointer"
+            , onClick HideFeedback
+            ]
+            [ Icons.close "fill-current text-white"
+            ]
+        ]
+
+
 viewHelper : (Msg -> msg) -> Page -> Profile -> Model -> Html msg -> Html msg
 viewHelper thisMsg page profile_ ({ shared } as model) content =
     let
@@ -232,7 +264,15 @@ viewHelper thisMsg page profile_ ({ shared } as model) content =
                 , viewMainMenu page profile_ model |> Html.map thisMsg
                 ]
             ]
-        , div [ class "flex-grow" ] [ content ]
+        , case model.feedback of
+            Show feedback ->
+                viewFeedback feedback |> Html.map thisMsg
+
+            Hidden ->
+                text ""
+        , div [ class "flex-grow" ]
+            [ content
+            ]
         , viewFooter shared
         , div [ onClickCloseAny ] [] |> Html.map thisMsg
         , if model.showAuthModal then
@@ -487,6 +527,7 @@ type External msg
     = UpdatedLoggedIn Model
     | RequiredAuthentication (Maybe msg)
     | UpdateBalances
+    | ShowFeedback Feedback
 
 
 mapExternal : (msg -> msg2) -> External msg -> External msg2
@@ -500,6 +541,9 @@ mapExternal transform ext =
 
         UpdateBalances ->
             UpdateBalances
+
+        ShowFeedback f ->
+            ShowFeedback f
 
 
 type alias UpdateResult =
@@ -531,6 +575,7 @@ type Msg
     | CompletedLoadBalances (Result Http.Error (List Balance))
     | CompletedLoadUnread Value
     | KeyDown String
+    | HideFeedback
 
 
 update : Msg -> Model -> UpdateResult
@@ -724,6 +769,10 @@ update msg model =
                 model
                     |> UR.init
 
+        HideFeedback ->
+            { model | feedback = Hidden }
+                |> UR.init
+
 
 closeModal : UpdateResult -> UpdateResult
 closeModal ({ model } as uResult) =
@@ -885,3 +934,6 @@ msgToString msg =
 
         KeyDown _ ->
             [ "KeyDown" ]
+
+        HideFeedback ->
+            [ "HideFeedback" ]
