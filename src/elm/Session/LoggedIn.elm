@@ -38,7 +38,7 @@ import Eos
 import Eos.Account as Eos
 import Graphql.Document
 import Graphql.Http
-import Graphql.Operation exposing (RootQuery, RootSubscription)
+import Graphql.Operation exposing (RootSubscription)
 import Graphql.SelectionSet as SelectionSet exposing (SelectionSet, with)
 import Html exposing (..)
 import Html.Attributes exposing (..)
@@ -145,7 +145,7 @@ initModel shared authModel accountName =
     , showAuthModal = False
     , auth = authModel
     , balances = []
-    , feedback = Hidden
+    , feedback = Show { message = "qqr coisa", success = False }
     }
 
 
@@ -221,17 +221,17 @@ view thisMsg page ({ shared } as model) content =
 viewFeedback : Feedback -> Html Msg
 viewFeedback feedback =
     div
-        [ class "flex justify-center items-center"
-        , style "background-color" (getBackgroundColor feedback.success)
+        [ class "sticky top-0 w-full flex justify-center items-center"
+        , classList [ ( "bg-green", feedback.success ), ( "bg-red", not feedback.success ) ]
         ]
         [ span [ class "ml-auto invisible" ] []
         , span [ class "flex items-center text-sm h-10 leading-snug text-white font-bold" ]
             [ text feedback.message ]
         , span
-            [ class "ml-auto text-lg text-white font-bold mr-5 cursor-pointer"
+            [ class "ml-auto mr-5 cursor-pointer"
             , onClick HideFeedback
             ]
-            [ text "X"
+            [ Icons.close "fill-current text-white"
             ]
         ]
 
@@ -263,14 +263,14 @@ viewHelper thisMsg page profile_ ({ shared } as model) content =
                 , viewMainMenu page profile_ model |> Html.map thisMsg
                 ]
             ]
-        , div [ class "flex-grow" ]
-            [ case model.feedback of
-                Show feedback ->
-                    viewFeedback feedback |> Html.map thisMsg
+        , case model.feedback of
+            Show feedback ->
+                viewFeedback feedback |> Html.map thisMsg
 
-                Hidden ->
-                    div [] [] |> Html.map thisMsg
-            , content
+            Hidden ->
+                text ""
+        , div [ class "flex-grow" ]
+            [ content
             ]
         , viewFooter shared
         , div [ onClickCloseAny ] [] |> Html.map thisMsg
@@ -516,15 +516,6 @@ viewFooter _ =
             ]
             []
         ]
-
-
-getBackgroundColor : Bool -> String
-getBackgroundColor isSuccess =
-    if isSuccess == True then
-        "#8ACC9E"
-
-    else
-        "#DB1B1B"
 
 
 

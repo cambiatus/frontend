@@ -489,10 +489,13 @@ updateLoggedInUResult toStatus toMsg model uResult =
                         _ ->
                             ( m, cmds_ )
 
-                LoggedIn.ShowFeedback x ->
+                LoggedIn.ShowFeedback feedback ->
                     case m.session of
                         Page.LoggedIn loggedIn ->
-                            ( { m | session = Page.LoggedIn { loggedIn | feedback = Show x } }
+                            ( { m
+                                | session =
+                                    Page.LoggedIn { loggedIn | feedback = Show feedback }
+                              }
                             , cmds_
                             )
 
