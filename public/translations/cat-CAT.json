@@ -468,6 +468,12 @@
     "reject": "Rebutjar",
     "verify": "Verificar",
     "closed": "tancat",
+    "analysis": {
+      "title": {
+        "1": "Accions",
+        "2": "per a l'anàlisi"
+      }
+    },
     "activities": {
       "title": "Activitats per a la vostra anàlisi",
       "no_activities_yet": "Encara no hi ha activitats.."

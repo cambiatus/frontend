@@ -1,43 +1,45 @@
-module Page.Dashboard exposing (Model, Msg, init, jsAddressToMsg, msgToString, subscriptions, update, view)
+module Page.Dashboard exposing
+    ( Model
+    , Msg
+    , init
+    , jsAddressToMsg
+    , msgToString
+    , subscriptions
+    , update
+    , view
+    )
 
 import Api
 import Api.Graphql
-import Cambiatus.Object
-import Cambiatus.Object.Action as Action
-import Cambiatus.Object.Check as Check
-import Cambiatus.Object.Claim as Claim exposing (ChecksOptionalArguments)
-import Cambiatus.Object.Community as Community
-import Cambiatus.Object.Objective as Objective
-import Cambiatus.Query exposing (ClaimsRequiredArguments)
+import Cambiatus.Query
 import Cambiatus.Scalar exposing (DateTime(..))
-import Community exposing (ActionVerification, ActionVerificationsResponse, Balance, ClaimResponse, Metadata, Transaction)
+import Claim
+import Community exposing (Balance)
 import Eos as Eos exposing (Symbol)
 import Eos.Account as Eos
 import FormatNumber exposing (format)
 import FormatNumber.Locales exposing (usLocale)
 import Graphql.Http
-import Graphql.Operation exposing (RootQuery)
 import Graphql.OptionalArgument exposing (OptionalArgument(..))
 import Graphql.SelectionSet as SelectionSet exposing (SelectionSet, with)
-import Html exposing (..)
-import Html.Attributes exposing (class, src, value)
+import Html exposing (Html, a, button, div, p, text)
+import Html.Attributes exposing (class)
+import Html.Events exposing (onClick)
 import Http
-import I18Next exposing (Delims(..), t)
-import Json.Decode exposing (Decoder, Value)
+import I18Next exposing (Delims(..))
+import Json.Decode as Decode exposing (Value)
+import Json.Encode as Encode
 import List.Extra as List
 import Page
 import Page.Dashboard.Balance as DashCommunity
+import Profile
 import Route
-import Session.LoggedIn as LoggedIn exposing (External(..), ProfileStatus)
-import Session.Shared as Shared exposing (Shared)
-import Strftime
+import Session.LoggedIn as LoggedIn exposing (External(..))
+import Session.Shared exposing (Shared)
 import Task
 import Time exposing (Posix)
 import Transfer exposing (QueryTransfers, Transfer, userFilter)
 import UpdateResult as UR
-import Utils
-import View.Loading as Loading
-import View.Tag as Tag
 
 
 
@@ -45,13 +47,12 @@ import View.Tag as Tag
 
 
 init : LoggedIn.Model -> ( Model, Cmd Msg )
-init { shared, accountName } =
+init { shared, accountName, selectedCommunity } =
     ( initModel
     , Cmd.batch
-        [ fetchVerifications shared accountName
-        , fetchBalance shared accountName
+        [ fetchBalance shared accountName
         , fetchTransfers shared accountName
-        , fetchClaims shared accountName
+        , fetchAvailableAnalysis shared selectedCommunity accountName
         , Task.perform GotTime Time.now
         ]
     )
@@ -73,10 +74,9 @@ subscriptions _ =
 type alias Model =
     { date : Maybe Posix
     , communities : Status (List DashCommunity.Model)
+    , analysis : GraphqlStatus (List Claim.Model) (List ClaimStatus)
     , lastSocket : String
     , transfers : GraphqlStatus (Maybe QueryTransfers) (List Transfer)
-    , verifications : GraphqlStatus ActionVerificationsResponse (List ActionVerification)
-    , claims : GraphqlStatus ActionVerificationsResponse (List ActionVerification)
     }
 
 
@@ -84,10 +84,9 @@ initModel : Model
 initModel =
     { date = Nothing
     , communities = Loading
+    , analysis = LoadingGraphql
     , lastSocket = ""
     , transfers = LoadingGraphql
-    , verifications = LoadingGraphql
-    , claims = LoadingGraphql
     }
 
 
@@ -101,6 +100,13 @@ type GraphqlStatus err a
     = LoadingGraphql
     | LoadedGraphql a
     | FailedGraphql (Graphql.Http.Error err)
+
+
+type ClaimStatus
+    = ClaimLoaded Claim.Model
+    | ClaimLoading Claim.Model
+    | ClaimVoted Claim.Model
+    | ClaimVoteFailed Claim.Model
 
 
 
@@ -121,7 +127,7 @@ view loggedIn model =
             Page.fullPageError (t "menu.my_communities") e
 
         ( Loaded communities, LoggedIn.Loaded profile ) ->
-            div [ class "container mx-auto" ]
+            div [ class "container mx-auto mb-10" ]
                 [ div [ class "text-gray-600 text-2xl font-light flex mt-6 mb-4" ]
                     [ text (t "menu.my_communities")
                     , div [ class "text-indigo-500 ml-2 font-medium" ]
@@ -130,7 +136,7 @@ view loggedIn model =
                     ]
                 , viewInvitations loggedIn communities
                 , viewBalances loggedIn communities
-                , viewVerifications loggedIn.shared model
+                , viewAnalysisList loggedIn model
                 , viewSections loggedIn model
                 ]
 
@@ -138,125 +144,74 @@ view loggedIn model =
             Page.fullPageNotFound (t "menu.my_communities") ""
 
 
-viewVerifications : Shared -> Model -> Html Msg
-viewVerifications shared model =
+viewAnalysisList : LoggedIn.Model -> Model -> Html Msg
+viewAnalysisList loggedIn model =
     let
-        t =
-            I18Next.t shared.translations
-
-        toView verifications =
-            List.map
-                (viewVerification shared)
-                verifications
+        text_ s =
+            text (I18Next.t loggedIn.shared.translations s)
     in
-    div
-        []
-        [ Page.viewTitle (t "dashboard.activities.title")
-        , case model.verifications of
-            LoadingGraphql ->
-                viewNoVerification
-                    [ Loading.view "text-gray-900" ]
+    case model.analysis of
+        LoadingGraphql ->
+            Page.fullPageLoading
 
-            FailedGraphql err ->
-                viewNoVerification
-                    [ p
-                        [ class "font-sans text-gray-900 text-sm" ]
-                        [ text (Page.errorToString err) ]
+        LoadedGraphql claims ->
+            div [ class "w-full flex flex-wrap -mx-2" ]
+                [ div
+                    [ class "w-full sm:w-1/2 lg:w-1/3 xl:w-1/4 px-2 mb-6" ]
+                    [ div [ class "text-gray-600 text-2xl font-light flex mt-6 mb-4" ]
+                        [ div [ class "text-indigo-500 mr-2 font-medium" ]
+                            [ text_ "dashboard.analysis.title.1"
+                            ]
+                        , text_ "dashboard.analysis.title.2"
+                        ]
+                    , div [] (List.map (viewAnalysis loggedIn) claims)
                     ]
+                ]
 
-            LoadedGraphql verifications ->
-                if List.isEmpty verifications then
-                    viewNoVerification
-                        [ p
-                            [ class "font-sans text-gray-900 text-sm" ]
-                            [ text (t "dashboard.activities.no_activities_yet") ]
-                        ]
-
-                else
-                    div
-                        [ class "rounded-lg bg-white mt-5" ]
-                        (toView verifications)
-        ]
+        FailedGraphql err ->
+            div [] [ Page.fullPageGraphQLError "Failed load" err ]
 
 
-viewVerification : Shared -> ActionVerification -> Html Msg
-viewVerification shared verification =
+viewAnalysis : LoggedIn.Model -> ClaimStatus -> Html Msg
+viewAnalysis ({ shared } as loggedIn) claimStatus =
     let
-        maybeLogo =
-            if String.isEmpty verification.logo then
-                Nothing
-
-            else
-                Just (shared.endpoints.ipfs ++ "/" ++ verification.logo)
-
-        description =
-            verification.description
-
-        date =
-            Just verification.createdAt
-                |> Utils.posixDateTime
-                |> Strftime.format "%d %b %Y" Time.utc
-
-        status =
-            verification.status
-
-        route =
-            case verification.symbol of
-                Just symbol ->
-                    Route.Claim
-                        symbol
-                        verification.objectiveId
-                        verification.actionId
-                        verification.claimId
-
-                Nothing ->
-                    Route.ComingSoon
+        text_ s =
+            text (I18Next.t shared.translations s)
     in
-    a
-        [ class "border-b last:border-b-0 border-gray-500 flex items-start lg:items-center hover:bg-gray-100 first-hover:rounded-t-lg last-hover:rounded-b-lg p-4"
-        , Route.href route
-        ]
-        [ div
-            [ class "flex-none" ]
-            [ case maybeLogo of
-                Just logoUrl ->
-                    img
-                        [ class "w-10 h-10 object-scale-down"
-                        , src logoUrl
+    case claimStatus of
+        ClaimLoaded claim ->
+            div [ class "flex flex-col items-center justify-center px-3 pt-5 pb-2 my-2 rounded-lg hover:shadow-lg bg-white" ]
+                [ div []
+                    [ Profile.view shared loggedIn.accountName claim.claimer
+                    ]
+                , div []
+                    [ p [ class "text-body" ]
+                        [ text claim.action.description ]
+                    ]
+                , div [ class "flex" ]
+                    [ button
+                        [ class "button button-secondary w-1/2"
+                        , onClick (VoteClaim claim.id False)
                         ]
-                        []
+                        [ text_ "dashboard.reject" ]
+                    , button
+                        [ class "button button-primary w-1/2"
+                        , onClick (VoteClaim claim.id True)
+                        ]
+                        [ text_ "dashboard.verify" ]
+                    ]
+                ]
 
-                Nothing ->
-                    div
-                        [ class "w-10 h-10 object-scale-down" ]
-                        []
-            ]
-        , div
-            [ class "flex-col flex-grow-1 pl-4" ]
-            [ p
-                [ class "font-sans text-black text-sm leading-relaxed" ]
-                [ text description ]
-            , p
-                [ class "font-normal font-sans text-gray-900 text-caption uppercase" ]
-                [ text date ]
-            , div
-                [ class "lg:hidden mt-4" ]
-                [ Tag.view status shared.translations ]
-            ]
-        , div
-            [ class "hidden lg:visible lg:flex lg:flex-none pl-4" ]
-            [ Tag.view status shared.translations ]
-        ]
+        ClaimLoading _ ->
+            div [ class "flex flex-col items-center justify-center px-3 pt-5 pb-2 my-2 rounded-lg hover:shadow-lg bg-white" ]
+                [ Page.fullPageLoading
+                ]
 
+        ClaimVoted _ ->
+            text ""
 
-viewNoVerification : List (Html Msg) -> Html Msg
-viewNoVerification elements =
-    div
-        [ class "rounded-lg bg-white mt-5 p-4" ]
-        [ div
-            [ class "bg-white-smoke flex items-center justify-center p-8" ]
-            elements
-        ]
+        ClaimVoteFailed _ ->
+            div [ class "text-red" ] [ text "failed" ]
 
 
 viewSections : LoggedIn.Model -> Model -> Html Msg
@@ -264,49 +219,8 @@ viewSections loggedIn model =
     let
         t s =
             I18Next.t loggedIn.shared.translations s
-
-        viewAccountName accountName =
-            Eos.nameToString accountName
-
-        transferInfo from value to =
-            [ ( "from", viewAccountName from )
-            , ( "value", String.fromFloat value )
-            , ( "to", viewAccountName to )
-            ]
-                |> I18Next.tr loggedIn.shared.translations I18Next.Curly "transfer.info"
-
-        toView claims =
-            List.map
-                (viewVerification loggedIn.shared)
-                claims
     in
-    Page.viewMaxTwoColumn
-        [ Page.viewTitle (t "community.actions.last_title")
-        , case model.claims of
-            LoadingGraphql ->
-                viewNoVerification
-                    [ Loading.view "text-gray-900" ]
-
-            FailedGraphql err ->
-                viewNoVerification
-                    [ p
-                        [ class "font-sans text-gray-900 text-sm" ]
-                        [ text (Page.errorToString err) ]
-                    ]
-
-            LoadedGraphql claims ->
-                if List.isEmpty claims then
-                    viewNoVerification
-                        [ p
-                            [ class "font-sans text-gray-900 text-sm" ]
-                            [ text (t "dashboard.activities.no_activities_yet") ]
-                        ]
-
-                else
-                    div
-                        [ class "rounded-lg bg-white " ]
-                        (toView claims)
-        ]
+    div []
         [ Page.viewTitle (t "transfer.last_title")
         , case model.transfers of
             LoadingGraphql ->
@@ -432,8 +346,9 @@ type Msg
     | CompletedLoadBalances (Result Http.Error (List Balance))
     | GotDashCommunityMsg Int DashCommunity.Msg
     | CompletedLoadUserTransfers (Result (Graphql.Http.Error (Maybe QueryTransfers)) (Maybe QueryTransfers))
-    | CompletedLoadVerifications (Result (Graphql.Http.Error ActionVerificationsResponse) ActionVerificationsResponse)
-    | CompletedLoadClaims (Result (Graphql.Http.Error ActionVerificationsResponse) ActionVerificationsResponse)
+    | ClaimsLoaded (Result (Graphql.Http.Error (List Claim.Model)) (List Claim.Model))
+    | VoteClaim Int Bool
+    | GotVoteResult Int (Result Value String)
 
 
 update : Msg -> Model -> LoggedIn.Model -> UpdateResult
@@ -471,6 +386,19 @@ update msg model loggedIn =
                     UR.init model
                         |> UR.logImpossible msg []
 
+        ClaimsLoaded (Ok claims) ->
+            let
+                wrappedClaims =
+                    List.map ClaimLoaded claims
+            in
+            { model | analysis = LoadedGraphql wrappedClaims }
+                |> UR.init
+
+        ClaimsLoaded (Err err) ->
+            { model | analysis = FailedGraphql err }
+                |> UR.init
+                |> UR.logGraphqlError msg err
+
         CompletedLoadUserTransfers (Ok maybeTransfers) ->
             { model | transfers = LoadedGraphql (Transfer.getTransfers maybeTransfers) }
                 |> UR.init
@@ -480,23 +408,65 @@ update msg model loggedIn =
                 |> UR.init
                 |> UR.logGraphqlError msg err
 
-        CompletedLoadVerifications (Ok result) ->
-            { model | verifications = LoadedGraphql (Community.toVerifications result) }
-                |> UR.init
+        VoteClaim claimId vote ->
+            case model.analysis of
+                LoadedGraphql claims ->
+                    let
+                        newClaims =
+                            setClaimStatus claims claimId ClaimLoading
 
-        CompletedLoadVerifications (Err err) ->
-            { model | verifications = FailedGraphql err }
-                |> UR.init
-                |> UR.logGraphqlError msg err
+                        newModel =
+                            { model | analysis = LoadedGraphql newClaims }
+                    in
+                    if LoggedIn.isAuth loggedIn then
+                        UR.init newModel
+                            |> UR.addPort
+                                { responseAddress = msg
+                                , responseData = Encode.null
+                                , data =
+                                    Eos.encodeTransaction
+                                        { actions =
+                                            [ { accountName = "bes.cmm"
+                                              , name = "verifyclaim"
+                                              , authorization =
+                                                    { actor = loggedIn.accountName
+                                                    , permissionName = Eos.samplePermission
+                                                    }
+                                              , data = encodeVerification claimId loggedIn.accountName vote
+                                              }
+                                            ]
+                                        }
+                                }
 
-        CompletedLoadClaims (Ok result) ->
-            { model | claims = LoadedGraphql (Community.toVerifications result) }
-                |> UR.init
+                    else
+                        UR.init newModel
+                            |> UR.addExt (Just (VoteClaim claimId vote) |> LoggedIn.RequiredAuthentication)
 
-        CompletedLoadClaims (Err err) ->
-            { model | claims = FailedGraphql err }
-                |> UR.init
-                |> UR.logGraphqlError msg err
+                _ ->
+                    model
+                        |> UR.init
+
+        GotVoteResult claimId (Ok _) ->
+            case model.analysis of
+                LoadedGraphql claims ->
+                    let
+                        newClaims =
+                            setClaimStatus claims claimId ClaimVoted
+                    in
+                    { model | analysis = LoadedGraphql newClaims }
+                        |> UR.init
+
+                _ ->
+                    model |> UR.init
+
+        GotVoteResult claimId (Err _) ->
+            case model.analysis of
+                LoadedGraphql claims ->
+                    { model | analysis = LoadedGraphql (setClaimStatus claims claimId ClaimVoteFailed) }
+                        |> UR.init
+
+                _ ->
+                    model |> UR.init
 
 
 updateDashCommunity : Int -> List DashCommunity.Model -> Model -> (DashCommunity.Model -> DashCommunity.UpdateResult) -> UpdateResult
@@ -538,61 +508,6 @@ updateDashCommunityUpdateResult index uResult commUResult =
 -- HELPERS
 
 
-fetchClaims : Shared -> Eos.Name -> Cmd Msg
-fetchClaims shared accountName =
-    let
-        claimer : String
-        claimer =
-            Eos.nameToString accountName
-
-        selectionSet : SelectionSet ActionVerificationsResponse RootQuery
-        selectionSet =
-            verificationHistorySelectionSet False claimer
-    in
-    Api.Graphql.query
-        shared
-        selectionSet
-        CompletedLoadClaims
-
-
-fetchVerifications : Shared -> Eos.Name -> Cmd Msg
-fetchVerifications shared accountName =
-    let
-        validator : String
-        validator =
-            Eos.nameToString accountName
-
-        selectionSet : SelectionSet ActionVerificationsResponse RootQuery
-        selectionSet =
-            verificationHistorySelectionSet True validator
-    in
-    Api.Graphql.query
-        shared
-        selectionSet
-        CompletedLoadVerifications
-
-
-verificationHistorySelectionSet : Bool -> String -> SelectionSet ActionVerificationsResponse RootQuery
-verificationHistorySelectionSet forValidator accName =
-    let
-        qInput : ClaimsRequiredArguments
-        qInput =
-            if forValidator then
-                { input = { validator = Present accName, claimer = Absent, symbol = Absent }
-                }
-
-            else
-                { input = { claimer = Present accName, validator = Absent, symbol = Absent }
-                }
-
-        selectionSet : SelectionSet ClaimResponse Cambiatus.Object.Claim
-        selectionSet =
-            Community.claimSelectionSet accName
-    in
-    SelectionSet.succeed ActionVerificationsResponse
-        |> with (Cambiatus.Query.claims qInput selectionSet)
-
-
 fetchBalance : Shared -> Eos.Name -> Cmd Msg
 fetchBalance shared accountName =
     Api.getBalances shared accountName CompletedLoadBalances
@@ -608,6 +523,39 @@ fetchTransfers shared accountName =
             )
         )
         CompletedLoadUserTransfers
+
+
+fetchAvailableAnalysis : Shared -> Symbol -> Eos.Name -> Cmd Msg
+fetchAvailableAnalysis shared communityId account =
+    let
+        arg =
+            { claimer = Absent
+            , symbol = Present (Eos.symbolToString communityId)
+            , validator = Present (Eos.nameToString account)
+            }
+    in
+    Api.Graphql.query
+        shared
+        (Cambiatus.Query.claims { input = arg } Claim.selectionSet)
+        ClaimsLoaded
+
+
+setClaimStatus : List ClaimStatus -> Int -> (Claim.Model -> ClaimStatus) -> List ClaimStatus
+setClaimStatus claims claimId status =
+    claims
+        |> List.map
+            (\c ->
+                case c of
+                    ClaimLoaded c_ ->
+                        if c_.id == claimId then
+                            status c_
+
+                        else
+                            c
+
+                    _ ->
+                        c
+            )
 
 
 sortCambiatusFirst : LoggedIn.Model -> List Balance -> List Balance
@@ -627,6 +575,64 @@ sortCambiatusFirst _ balances =
     in
     Maybe.map (\b -> b :: balancesWithoutSpiral) bespiral
         |> Maybe.withDefault balancesWithoutSpiral
+
+
+encodeVerification : Int -> Eos.Name -> Bool -> Encode.Value
+encodeVerification claimId validator vote =
+    let
+        encodedClaimId : Encode.Value
+        encodedClaimId =
+            Encode.int claimId
+
+        encodedVerifier : Encode.Value
+        encodedVerifier =
+            Eos.encodeName validator
+
+        encodedVote : Encode.Value
+        encodedVote =
+            vote
+                |> Eos.boolToEosBool
+                |> Eos.encodeEosBool
+    in
+    Encode.object
+        [ ( "claim_id", encodedClaimId )
+        , ( "verifier", encodedVerifier )
+        , ( "vote", encodedVote )
+        ]
+
+
+jsAddressToMsg : List String -> Value -> Maybe Msg
+jsAddressToMsg addr val =
+    case addr of
+        "GotDashCommunityMsg" :: indexStr :: remainAddress ->
+            let
+                _ =
+                    Debug.log "veio dash comunidade"
+            in
+            Maybe.map2
+                GotDashCommunityMsg
+                (String.toInt indexStr)
+                (DashCommunity.jsAddressToMsg remainAddress val)
+
+        "VoteClaim" :: claimId :: _ ->
+            let
+                id =
+                    String.toInt claimId
+                        |> Maybe.withDefault 0
+            in
+            Decode.decodeValue
+                (Decode.oneOf
+                    [ Decode.field "transactionId" Decode.string
+                        |> Decode.map Ok
+                    , Decode.succeed (Err Encode.null)
+                    ]
+                )
+                val
+                |> Result.map (Just << GotVoteResult id)
+                |> Result.withDefault Nothing
+
+        _ ->
+            Nothing
 
 
 msgToString : Msg -> List String
@@ -655,21 +661,11 @@ msgToString msg =
         CompletedLoadUserTransfers result ->
             resultToString [ "CompletedLoadUserTransfers" ] result
 
-        CompletedLoadVerifications result ->
-            resultToString [ "CompletedLoadActivities" ] result
+        ClaimsLoaded result ->
+            resultToString [ "ClaimsLoaded" ] result
 
-        CompletedLoadClaims result ->
-            resultToString [ "CompletedLoadClaims" ] result
+        VoteClaim claimId _ ->
+            [ "VoteClaim", String.fromInt claimId ]
 
-
-jsAddressToMsg : List String -> Value -> Maybe Msg
-jsAddressToMsg addr val =
-    case addr of
-        "GotDashCommunityMsg" :: indexStr :: remainAddress ->
-            Maybe.map2
-                GotDashCommunityMsg
-                (String.toInt indexStr)
-                (DashCommunity.jsAddressToMsg remainAddress val)
-
-        _ ->
-            Nothing
+        GotVoteResult _ result ->
+            resultToString [ "GotVoteResult" ] result

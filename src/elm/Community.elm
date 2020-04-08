@@ -61,7 +61,6 @@ import Json.Decode.Pipeline as Decode exposing (required)
 import Json.Encode as Encode exposing (Value)
 import Profile exposing (Profile)
 import Time exposing (Posix)
-import Transfer exposing (ConnectionTransfer, metadataConnectionSelectionSet, transferConnectionSelectionSet)
 import Utils
 import View.Tag as Tag
 
@@ -88,8 +87,6 @@ type alias Metadata =
     , symbol : Symbol
     , logo : String
     , creator : Eos.Name
-
-    -- , transfers : Maybe MetadataConnection
     , memberCount : Int
     }
 
@@ -108,8 +105,6 @@ type alias Community =
     , invitedReward : Float
     , memberCount : Int
     , members : List Profile
-
-    -- , transfers : Maybe ConnectionTransfer
     , objectives : List Objective
     }
 

@@ -194,7 +194,6 @@ type Msg
     | GotRegisterMsg Register.Msg
     | GotShopMsg Shop.Msg
     | GotShopEditorMsg ShopEditor.Msg
-    | GotUpdatedBalances (Result Http.Error (List Community.Balance))
     | GotShopViewerMsg ShopViewer.Msg
     | GotTransferScreenMsg Transfer.Msg
     | GotInviteMsg Invite.Msg
@@ -253,6 +252,9 @@ update msg model =
                             |> Decode.field "address"
                         )
                         val
+
+                _ =
+                    Debug.log "OLHA AI O PORTS VINDO"
             in
             case jsAddressResult of
                 Ok jsAddress ->
@@ -365,26 +367,6 @@ update msg model =
                 >> updateLoggedInUResult (ShopEditor id) GotShopEditorMsg model
                 |> withLoggedIn
 
-        ( GotUpdatedBalances (Ok bals), _ ) ->
-            case model.session of
-                Page.LoggedIn session ->
-                    let
-                        new_session =
-                            { session | balances = bals }
-
-                        new_model =
-                            { model | session = Page.LoggedIn new_session }
-                    in
-                    ( new_model, Cmd.none )
-
-                _ ->
-                    ( model, Cmd.none )
-
-        ( GotUpdatedBalances (Err err), _ ) ->
-            ( model
-            , Log.httpError err
-            )
-
         ( GotShopViewerMsg subMsg, ShopViewer saleId subModel ) ->
             ShopViewer.update subMsg subModel
                 >> updateLoggedInUResult (ShopViewer saleId) GotShopViewerMsg model
@@ -460,22 +442,6 @@ updateLoggedInUResult toStatus toMsg model uResult =
     List.foldl
         (\commExtMsg ( m, cmds_ ) ->
             case commExtMsg of
-                LoggedIn.UpdateBalances ->
-                    let
-                        update_cmd =
-                            case m.session of
-                                Page.LoggedIn loggedIn ->
-                                    let
-                                        u_command =
-                                            Api.getBalances loggedIn.shared loggedIn.accountName GotUpdatedBalances
-                                    in
-                                    u_command
-
-                                _ ->
-                                    Cmd.none
-                    in
-                    ( m, cmds_ ++ [ update_cmd ] )
-
                 LoggedIn.UpdatedLoggedIn loggedIn ->
                     ( { m | session = Page.LoggedIn loggedIn }
                     , cmds_
@@ -875,9 +841,6 @@ msgToString msg =
 
         GotShopEditorMsg subMsg ->
             "GotShopEditorMsg" :: ShopEditor.msgToString subMsg
-
-        GotUpdatedBalances _ ->
-            [ "GotUpdatedBalances" ]
 
         GotShopViewerMsg subMsg ->
             "GotShopViewerMsg" :: ShopViewer.msgToString subMsg

@@ -25,6 +25,7 @@ const USER_KEY = 'bespiral.user'
 const LANGUAGE_KEY = 'bespiral.language'
 const AUTH_PREF_KEY = 'bespiral.auth.pref'
 const PUSH_PREF = 'bespiral.push.pref'
+const SELECTED_COMMUNITY_KEY = 'bespiral.selected_community'
 const env = process.env.NODE_ENV || 'development'
 const config = configuration[env]
 const urlParams = new URLSearchParams(window.location.search)
@@ -47,7 +48,8 @@ function flags () {
     logo: config.logo,
     logoMobile: config.logoMobile,
     now: Date.now(),
-    allowCommunityCreation: config.allowCommunityCreation
+    allowCommunityCreation: config.allowCommunityCreation,
+    selectedCommunity: getSelectedCommunity() || config.selectedCommunity
   }
   devLog('flags', flags_)
   return flags_
@@ -144,6 +146,10 @@ async function storePin (data, pin) {
 
   window.localStorage.removeItem(USER_KEY)
   window.localStorage.setItem(USER_KEY, JSON.stringify(storeData))
+}
+
+function getSelectedCommunity () {
+  window.localStorage.getItem(SELECTED_COMMUNITY_KEY)
 }
 
 app.ports.javascriptOutPort.subscribe(handleJavascriptPort)
@@ -529,7 +535,7 @@ async function handleJavascriptPort (arg) {
       const now = new Date()
 
       console.log('p', parsedDate)
-      if (parsedDate.toString() === ('Invalid Date') || (parsedDate < now)) {
+      if (parsedDate.toString() === 'Invalid Date' || parsedDate < now) {
         const response = {
           address: arg.responseAddress,
           addressData: arg.responseData,
@@ -576,7 +582,7 @@ async function handleJavascriptPort (arg) {
         })
       )
 
-      let onStart = (data) => {
+      let onStart = data => {
         const payload = { dta: data, msg: 'starting community subscription' }
         devLog('==========================', payload)
         const response = {
@@ -587,19 +593,22 @@ async function handleJavascriptPort (arg) {
         app.ports.javascriptInPort.send(response)
       }
 
-      let onAbort = (data) => {
+      let onAbort = data => {
         devLog('===========================', 'aborting community subscription')
       }
 
-      let onCancel = (data) => {
-        devLog('===========================', 'cancellling community subscription ')
+      let onCancel = data => {
+        devLog(
+          '===========================',
+          'cancellling community subscription '
+        )
       }
 
-      let onError = (data) => {
+      let onError = data => {
         devLog('community subscrition error', data)
       }
 
-      let onResult = (data) => {
+      let onResult = data => {
         devLog('===========================', 'community subscription results')
         const response = {
           address: arg.responseAddress,
@@ -642,25 +651,34 @@ async function handleJavascriptPort (arg) {
         })
       )
 
-      let onStart = (data) => {
+      let onStart = data => {
         const payload = { dta: data, msg: 'starting unread countsubscription' }
         devLog('==========================', payload)
       }
 
-      let onAbort = (data) => {
-        devLog('===========================', 'aborting unread count subscription')
+      let onAbort = data => {
+        devLog(
+          '===========================',
+          'aborting unread count subscription'
+        )
       }
 
-      let onCancel = (data) => {
-        devLog('===========================', 'cancelling unread count subscription ')
+      let onCancel = data => {
+        devLog(
+          '===========================',
+          'cancelling unread count subscription '
+        )
       }
 
-      let onError = (data) => {
+      let onError = data => {
         devLog('community subscrition error', data)
       }
 
-      let onResult = (data) => {
-        devLog('===========================', 'unread count subscription results')
+      let onResult = data => {
+        devLog(
+          '===========================',
+          'unread count subscription results'
+        )
         const response = {
           address: arg.responseAddress,
           addressData: arg.responseData,

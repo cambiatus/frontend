@@ -27,9 +27,11 @@ module Profile exposing
 import Avatar exposing (Avatar)
 import Cambiatus.Mutation
 import Cambiatus.Object
+import Cambiatus.Object.Community as Community
 import Cambiatus.Object.Profile as User
 import Cambiatus.Query
 import Dict exposing (Dict)
+import Eos exposing (Symbol)
 import Eos.Account as Eos
 import Graphql.Operation exposing (RootMutation, RootQuery)
 import Graphql.OptionalArgument exposing (OptionalArgument(..))
@@ -59,6 +61,7 @@ type alias Profile =
     , chatUserId : Maybe String
     , chatToken : Maybe String
     , createdAt : Posix
+    , communities : List String
     }
 
 
@@ -84,6 +87,7 @@ selectionSet =
         |> with User.chatUserId
         |> with User.chatToken
         |> SelectionSet.hardcoded (Time.millisToPosix 0)
+        |> with (User.communities Community.symbol)
 
 
 decode : Decoder Profile
@@ -100,6 +104,7 @@ decode =
         |> optional "chat_token" (nullable string) Nothing
         |> Decode.hardcoded (Time.millisToPosix 0)
         |> Decode.at [ "data", "user" ]
+        |> Decode.hardcoded []
 
 
 decodeInterests : Decoder (List String)

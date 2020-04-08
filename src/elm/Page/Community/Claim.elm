@@ -45,7 +45,7 @@ init { shared } communityId claimId =
 type alias Model =
     { communityId : Symbol
     , claimId : Int
-    , statusClaim : StatusClaim
+    , statusClaim : Status
     }
 
 
@@ -57,7 +57,7 @@ initModel communityId claimId =
     }
 
 
-type StatusClaim
+type Status
     = Loading
     | Loaded Claim.Model
     | Failed (Graphql.Http.Error Claim.Model)

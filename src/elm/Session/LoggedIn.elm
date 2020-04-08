@@ -34,19 +34,20 @@ import Cambiatus.Object
 import Cambiatus.Object.UnreadNotifications
 import Cambiatus.Subscription as Subscription
 import Community exposing (Balance)
-import Eos
+import Eos exposing (Symbol)
 import Eos.Account as Eos
+import Flags exposing (Flags)
 import Graphql.Document
 import Graphql.Http
-import Graphql.Operation exposing (RootQuery, RootSubscription)
+import Graphql.Operation exposing (RootSubscription)
 import Graphql.SelectionSet as SelectionSet exposing (SelectionSet, with)
-import Html exposing (..)
+import Html exposing (Html, a, button, div, footer, img, input, nav, p, text)
 import Html.Attributes exposing (..)
 import Html.Events exposing (onClick, onFocus, onInput, onMouseEnter, onSubmit, stopPropagationOn)
 import Http
-import I18Next exposing (Delims(..), Translations, t, tr)
+import I18Next exposing (Delims(..), Translations, t)
 import Icons
-import Json.Decode as Decode exposing (Decoder, Value)
+import Json.Decode as Decode exposing (Value)
 import Json.Encode as Encode exposing (Value)
 import Notification exposing (Notification)
 import Ports
@@ -63,16 +64,15 @@ import UpdateResult as UR
 -- INIT
 
 
-init : Shared -> Eos.Name -> ( Model, Cmd Msg )
-init shared accountName =
+init : Shared -> Eos.Name -> Flags -> ( Model, Cmd Msg )
+init shared accountName flags =
     let
         authModel =
             Auth.init shared
     in
-    ( initModel shared authModel accountName
+    ( initModel shared authModel accountName flags.selectedCommunity
     , Cmd.batch
         [ Api.Graphql.query shared (Profile.query accountName) CompletedLoadProfile
-        , Api.getBalances shared accountName CompletedLoadBalances
         ]
     )
 
@@ -87,7 +87,7 @@ initLogin : Shared -> Auth.Model -> Profile -> ( Model, Cmd Msg )
 initLogin shared authModel profile_ =
     let
         model =
-            initModel shared authModel profile_.account
+            initModel shared authModel profile_.account Eos.bespiralSymbol
     in
     ( { model
         | profile = Loaded profile_
@@ -116,6 +116,7 @@ type alias Model =
     { shared : Shared
     , accountName : Eos.Name
     , profile : ProfileStatus
+    , selectedCommunity : Symbol
     , showUserNav : Bool
     , showLanguageItems : Bool
     , searchText : String
@@ -125,15 +126,15 @@ type alias Model =
     , unreadCount : Int
     , showAuthModal : Bool
     , auth : Auth.Model
-    , balances : List Balance
     }
 
 
-initModel : Shared -> Auth.Model -> Eos.Name -> Model
-initModel shared authModel accountName =
+initModel : Shared -> Auth.Model -> Eos.Name -> Symbol -> Model
+initModel shared authModel accountName selectedCommunity =
     { shared = shared
     , accountName = accountName
     , profile = Loading accountName
+    , selectedCommunity = selectedCommunity
     , showUserNav = False
     , showLanguageItems = False
     , searchText = ""
@@ -143,7 +144,6 @@ initModel shared authModel accountName =
     , unreadCount = 0
     , showAuthModal = False
     , auth = authModel
-    , balances = []
     }
 
 
@@ -354,12 +354,11 @@ viewHeader ({ shared } as model) page profile_ =
                         ]
                     , if model.showLanguageItems then
                         div [ class "ml-10 mb-2" ]
-                            ([ button
+                            (button
                                 [ class "flex block px-4 py-2 text-gray justify-between items-center text-indigo-500 font-bold text-xs"
                                 ]
                                 [ Shared.langFlag shared.language, text (String.toUpper shared.language) ]
-                             ]
-                                ++ Shared.viewLanguageItems shared ClickedLanguage
+                                :: Shared.viewLanguageItems shared ClickedLanguage
                             )
 
                       else
@@ -486,7 +485,6 @@ viewFooter _ =
 type External msg
     = UpdatedLoggedIn Model
     | RequiredAuthentication (Maybe msg)
-    | UpdateBalances
 
 
 mapExternal : (msg -> msg2) -> External msg -> External msg2
@@ -497,9 +495,6 @@ mapExternal transform ext =
 
         RequiredAuthentication maybeM ->
             RequiredAuthentication (Maybe.map transform maybeM)
-
-        UpdateBalances ->
-            UpdateBalances
 
 
 type alias UpdateResult =
@@ -528,7 +523,6 @@ type Msg
     | ClickedLanguage String
     | ClosedAuthModal
     | GotAuthMsg Auth.Msg
-    | CompletedLoadBalances (Result Http.Error (List Balance))
     | CompletedLoadUnread Value
     | KeyDown String
 
@@ -569,7 +563,7 @@ update msg model =
                 _ ->
                     UR.init model
 
-        CompletedLoadTranslation lang (Err err) ->
+        CompletedLoadTranslation _ (Err err) ->
             UR.init { model | shared = Shared.loadTranslation (Err err) shared }
                 |> UR.logHttpError msg err
 
@@ -585,7 +579,8 @@ update msg model =
             in
             case profile_ of
                 Just p ->
-                    UR.init { model | profile = Loaded p }
+                    { model | profile = Loaded p }
+                        |> UR.init
                         |> UR.addPort
                             { responseAddress = CompletedLoadUnread (Encode.string "")
                             , responseData = Encode.null
@@ -694,16 +689,6 @@ update msg model =
                                     (\m -> { m | shared = newShared })
                                     uResult
                     )
-
-        CompletedLoadBalances res ->
-            case res of
-                Ok bals ->
-                    { model | balances = bals }
-                        |> UR.init
-
-                Err _ ->
-                    model
-                        |> UR.init
 
         CompletedLoadUnread payload ->
             case Decode.decodeValue (unreadCountSubscription model.accountName |> Graphql.Document.decoder) payload of
@@ -876,9 +861,6 @@ msgToString msg =
 
         GotAuthMsg subMsg ->
             "GotAuthMsg" :: Auth.msgToString subMsg
-
-        CompletedLoadBalances _ ->
-            [ "CompletedLoadBalances" ]
 
         CompletedLoadUnread _ ->
             [ "CompletedLoadUnread" ]

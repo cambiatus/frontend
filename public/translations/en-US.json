@@ -361,7 +361,6 @@
       "error": "Something went wrong while trying to process your validation, please try again later"
     }
   },
-
   "profile": {
     "title": "My profile",
     "my_transfers": "My Transfers",
@@ -469,6 +468,12 @@
     "reject": "Reject",
     "verify": "Verify",
     "closed": "closed",
+    "analysis": {
+      "title": {
+        "1": "Actions",
+        "2": "for analysis"
+      }
+    },
     "activities": {
       "title": "Activities for your analysis",
       "no_activities_yet": "No activities yet."

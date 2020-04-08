@@ -471,6 +471,12 @@
     "reject": "Rejeitar",
     "verify": "Verificar",
     "closed": "fechados",
+    "analysis": {
+      "title": {
+        "1": "Ações",
+        "2": "para análise"
+      }
+    },
     "activities": {
       "title": "Atividades para sua análise",
       "no_activities_yet": "Nenhuma atividade."

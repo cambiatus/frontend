@@ -5,6 +5,7 @@ module Page.Dashboard.Balance exposing
     , init
     , jsAddressToMsg
     , msgToString
+    , subscription
     , update
     , viewCard
     , viewInvitationModal
@@ -13,9 +14,9 @@ module Page.Dashboard.Balance exposing
 import Api
 import Api.Graphql
 import Asset.Icon as Icon
-import Avatar exposing (Avatar)
+import Avatar
 import Browser.Events
-import Community exposing (Action, Balance, Objective, Transaction)
+import Community exposing (Balance)
 import Eos
 import Eos.Account as Eos
 import Graphql.Http
@@ -31,10 +32,10 @@ import Profile exposing (Profile)
 import Route
 import Select
 import Session.LoggedIn as LoggedIn exposing (External(..))
-import Session.Shared as Shared exposing (Shared)
+import Session.Shared exposing (Shared)
 import Simple.Fuzzy
 import Task
-import Transfer exposing (Transfer)
+import Transfer
 import UpdateResult as UR
 import Url
 import Utils
@@ -834,7 +835,7 @@ msgToString msg =
             [ "OnSelect" ]
 
         SelectMsg _ ->
-            "SelectMsg" :: "sub" :: []
+            [ "SelectMsg", "sub" ]
 
         CreateInvite ->
             [ "CreateInvite" ]

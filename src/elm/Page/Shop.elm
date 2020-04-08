@@ -471,7 +471,6 @@ update msg model loggedIn =
 
         TransferSuccess index ->
             updateCard msg index (\card -> ( { card | state = ViewingCard }, [] )) (UR.init model)
-                |> UR.addExt UpdateBalances
 
         ClickedMessages cardIndex creatorId ->
             UR.init model
@@ -505,11 +504,6 @@ update msg model loggedIn =
                 Err _ ->
                     model
                         |> UR.init
-
-
-updateCardState : Msg -> Int -> CardState -> UpdateResult -> UpdateResult
-updateCardState msg cardIndex newState uResult =
-    updateCard msg cardIndex (\card -> ( { card | state = newState }, [] )) uResult
 
 
 updateCard : Msg -> Int -> (Card -> ( Card, List (UpdateResult -> UpdateResult) )) -> UpdateResult -> UpdateResult
