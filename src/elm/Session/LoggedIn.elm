@@ -498,6 +498,8 @@ mapExternal transform ext =
 
 
 type alias UpdateResult =
+<<<<<<< HEAD
+=======
     UR.UpdateResult Model Msg ExternalMsg
 
 

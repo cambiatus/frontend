@@ -22,6 +22,7 @@ import DataValidator
         , greaterThan
         , greaterThanOrEqual
         , hasErrors
+        , lengthGreaterThanOrEqual
         , listErrors
         , longerThan
         , newValidator
@@ -115,7 +116,7 @@ type ActionValidation
 
 type Verification
     = Automatic
-    | Manual (List Profile) (Validator String) (Validator String) -- Manual: users list, verification reward and min votes
+    | Manual (Validator (List Profile)) (Validator String) (Validator String) -- Manual: users list, verification reward and min votes
 
 
 type SaveStatus
@@ -195,9 +196,14 @@ editForm form action =
                 Automatic
 
             else
-                Manual verificators
+                let
+                    newVerifications =
+                        defaultMinVotes |> updateInput (String.fromInt action.verifications)
+                in
+                Manual
+                    (defaultVerifiersValidator verificators (getInput newVerifications) |> updateInput verificators)
                     (defaultVerificationReward |> updateInput (String.fromFloat action.verificationReward))
-                    (defaultMinVotes |> updateInput (String.fromInt action.verifications))
+                    newVerifications
     in
     { form
         | description = updateInput action.description form.description
@@ -236,6 +242,26 @@ defaultUsagesValidator =
         |> newValidator "" (\s -> Just s) True
 
 
+defaultVerifiersValidator : List Profile -> String -> Validator (List Profile)
+defaultVerifiersValidator verifiers minVerifiersQty =
+    let
+        limit =
+            case String.toInt minVerifiersQty of
+                Just m ->
+                    if m < minVotesLimit then
+                        minVotesLimit
+
+                    else
+                        m
+
+                Nothing ->
+                    minVotesLimit
+    in
+    []
+        |> lengthGreaterThanOrEqual limit
+        |> newValidator verifiers (\s -> Just (String.fromInt (List.length s))) True
+
+
 defaultUsagesLeftValidator : Validator String
 defaultUsagesLeftValidator =
     []
@@ -250,11 +276,16 @@ defaultVerificationReward =
         |> newValidator "0" (\s -> Just s) True
 
 
+minVotesLimit : Int
+minVotesLimit =
+    2
+
+
 defaultMinVotes : Validator String
 defaultMinVotes =
     []
-        |> greaterThanOrEqual 2
-        |> newValidator "2" (\s -> Just s) True
+        |> greaterThanOrEqual (toFloat minVotesLimit)
+        |> newValidator (String.fromInt minVotesLimit) (\s -> Just s) True
 
 
 validateForm : Form -> Form
@@ -283,7 +314,7 @@ validateForm form =
                     Automatic
 
                 Manual profiles verificationReward minVotes ->
-                    Manual profiles (validate verificationReward) (validate minVotes)
+                    Manual (validate profiles) (validate verificationReward) (validate minVotes)
     in
     { form
         | description = validate form.description
@@ -295,8 +326,21 @@ validateForm form =
 
 isFormValid : Form -> Bool
 isFormValid form =
+    let
+        verificationHasErrors =
+            case form.verification of
+                Manual profiles verificationReward minVotes ->
+                    hasErrors minVotes
+                        || hasErrors profiles
+                        || hasErrors verificationReward
+
+                Automatic ->
+                    -- Automatic verification never has validation errors
+                    False
+    in
     hasErrors form.description
         || hasErrors form.reward
+        || verificationHasErrors
         |> not
 
 
@@ -472,11 +516,14 @@ update msg model loggedIn =
                         | form =
                             { oldForm
                                 | verification =
+                                    let
+                                        newVerifiers =
+                                            maybeProfile
+                                                |> Maybe.map (List.singleton >> List.append (getInput selectedVerifiers))
+                                                |> Maybe.withDefault (getInput selectedVerifiers)
+                                    in
                                     Manual
-                                        (maybeProfile
-                                            |> Maybe.map (List.singleton >> List.append selectedVerifiers)
-                                            |> Maybe.withDefault selectedVerifiers
-                                        )
+                                        (updateInput newVerifiers selectedVerifiers)
                                         verificationReward
                                         minVotes
                             }
@@ -494,11 +541,14 @@ update msg model loggedIn =
                             model.form.verification
 
                         Manual selectedVerifiers a b ->
+                            let
+                                newVerifiers =
+                                    List.filter
+                                        (\currVerifier -> currVerifier.account /= profile.account)
+                                        (getInput selectedVerifiers)
+                            in
                             Manual
-                                (List.filter
-                                    (\currVerifier -> currVerifier.account /= profile.account)
-                                    selectedVerifiers
-                                )
+                                (updateInput newVerifiers selectedVerifiers)
                                 a
                                 b
             in
@@ -625,7 +675,15 @@ update msg model loggedIn =
                         |> UR.logImpossible msg []
 
                 Manual listProfile verifierReward minVotes ->
-                    { model | form = { oldForm | verification = Manual listProfile verifierReward (updateInput val minVotes) } }
+                    let
+                        newMinVotes =
+                            updateInput val minVotes
+
+                        newVerifiers =
+                            -- Update min. verifiers quantity
+                            defaultVerifiersValidator (getInput listProfile) val
+                    in
+                    { model | form = { oldForm | verification = Manual newVerifiers verifierReward newMinVotes } }
                         |> UR.init
 
         ValidateForm ->
@@ -788,7 +846,7 @@ update msg model loggedIn =
                                 Automatic
 
                             else
-                                Manual [] defaultVerificationReward defaultMinVotes
+                                Manual (defaultVerifiersValidator [] (getInput defaultMinVotes)) defaultVerificationReward defaultMinVotes
                     }
             }
                 |> UR.init
@@ -956,7 +1014,7 @@ upsertAction loggedIn model isoDate =
                     []
 
                 Manual list _ _ ->
-                    list
+                    getInput list
 
         validatorsStr =
             validators
@@ -1367,6 +1425,9 @@ viewManualVerificationForm ({ shared } as loggedIn) model community =
     let
         text_ s =
             text (t shared.translations s)
+
+        tr r_id replaces =
+            I18Next.tr shared.translations I18Next.Curly r_id replaces
     in
     case model.form.verification of
         Automatic ->
@@ -1375,10 +1436,11 @@ viewManualVerificationForm ({ shared } as loggedIn) model community =
         Manual selectedVerifiers verificationReward minVotes ->
             div [ class "w-2/5" ]
                 [ span [ class "input-label" ]
-                    [ text_ "community.actions.form.verifiers_label" ]
+                    [ text (tr "community.actions.form.verifiers_label_count" [ ( "count", getInput minVotes ) ]) ]
                 , div []
                     [ viewVerifierSelect shared model False
-                    , viewSelectedVerifiers loggedIn selectedVerifiers
+                    , viewFieldErrors (listErrors shared.translations selectedVerifiers)
+                    , viewSelectedVerifiers loggedIn (getInput selectedVerifiers)
                     ]
                 , span [ class "input-label" ]
                     [ text_ "community.actions.form.verifiers_reward_label" ]
@@ -1525,7 +1587,7 @@ viewVerifierSelect shared model isDisabled =
                     (Select.view (selectConfig shared isDisabled)
                         model.multiSelectState
                         users
-                        selectedUsers
+                        (getInput selectedUsers)
                     )
                 ]
 

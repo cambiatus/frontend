@@ -165,12 +165,12 @@
 }
 
 .modal-content {
-    @apply bg-white bottom-0 right-0 left-0 fixed rounded-lg p-4;
+    @apply bg-white bottom-0 right-0 left-0 fixed rounded-t-lg p-4;
 }
 
 @screen md {
     .modal-content {
-        @apply max-w-3xl fixed top-modal mx-auto h-64;
+        @apply max-w-3xl fixed top-modal mx-auto h-64 rounded-lg;
     }
 }
 
