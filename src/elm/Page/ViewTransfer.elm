@@ -1,21 +1,16 @@
 module Page.ViewTransfer exposing (Model, Msg, init, msgToString, subscriptions, update, view)
 
-import Api
 import Api.Graphql
-import Avatar
 import Cambiatus.Scalar exposing (DateTime(..))
-import Eos exposing (Symbol, symbolFromString)
+import Eos
 import Eos.Account as Eos
 import Graphql.Http
 import Html exposing (..)
 import Html.Attributes exposing (..)
-import Html.Lazy as Lazy
 import I18Next
-import Icons
 import Page
-import Profile exposing (Profile)
+import Profile
 import Route
-import Session.Guest as Guest
 import Session.LoggedIn as LoggedIn exposing (External(..))
 import Session.Shared exposing (Shared)
 import Strftime
@@ -32,27 +27,14 @@ import Utils
 init : LoggedIn.Model -> Int -> ( Model, Cmd Msg )
 init { shared } transferId =
     let
-        currentStatus =
-            Loading transferId
-
         model =
-            { status = currentStatus }
+            { status = Loading transferId
+            , transferId = transferId
+            }
     in
-    ( model, initCmd shared currentStatus )
-
-
-initCmd : Shared -> Status -> Cmd Msg
-initCmd shared status =
-    case status of
-        Loading transferId ->
-            Api.Graphql.query shared (transferQuery transferId) CompletedTransferLoad
-
-        _ ->
-            Cmd.none
-
-
-
--- SUBSCRIPTIONS
+    ( model
+    , Api.Graphql.query shared (transferQuery transferId) CompletedTransferLoad
+    )
 
 
 subscriptions : Model -> Sub Msg
@@ -66,6 +48,7 @@ subscriptions _ =
 
 type alias Model =
     { status : Status
+    , transferId : Int
     }
 
 
@@ -140,7 +123,7 @@ viewTransfer loggedIn _ state =
                     , src "/images/transfer-doggo.svg"
                     ]
                     []
-                , h2 [ class "w-full lg:w-2/3 mt-8 mb-20 lg:px-8 text-center lg:text-left text-3xl font-medium font-sans text-white" ]
+                , h2 [ class "w-full lg:w-2/3 mt-8 mb-6 lg:px-8 text-center lg:text-left text-3xl font-medium text-white" ]
                     [ text <|
                         case state of
                             Transferred ->
@@ -157,9 +140,6 @@ viewTransfer loggedIn _ state =
 viewTransferCard : LoggedIn.Model -> Transfer -> State -> Html Msg
 viewTransferCard loggedIn transfer state =
     let
-        ipfsUrl =
-            loggedIn.shared.endpoints.ipfs
-
         originUser =
             case state of
                 Received ->
@@ -179,10 +159,10 @@ viewTransferCard loggedIn transfer state =
         viewUser_ =
             Profile.view loggedIn.shared.endpoints.ipfs loggedIn.accountName loggedIn.shared.translations
     in
-    div [ class "flex flex-row w-full justify-center items-center py-5 rounded bg-gray-100" ]
-        [ viewUser_ originUser
-        , viewAmount loggedIn transfer state
-        , viewUser_ destinationUser
+    div [ class "flex flex-row w-full justify-center items-center bg-gray-100 px-6 pt-8 pb-6" ]
+        [ div [ class "w-1/4" ] [ viewUser_ originUser ]
+        , div [ class "w-1/2" ] [ viewAmount loggedIn transfer state ]
+        , div [ class "w-1/4" ] [ viewUser_ destinationUser ]
         ]
 
 
@@ -196,61 +176,57 @@ viewAmount { shared } transfer state =
             case state of
                 Received ->
                     div [ class "flex flex-row" ]
-                        [ div [ class "pr-0 pl-1 py-2 m-2 " ]
-                            [ div [ class "border border-solid border-green border-t-0 border-r-3 border-b-3 border-l-0 inline-block p-1 sm:ml-5 ml-10 mt-5 rotate-135" ]
+                        [ div [ class "" ]
+                            [ div [ class "border border-solid border-green border-t-0 border-r-3 border-b-3 border-l-0 inline-block rotate-135" ]
                                 []
                             ]
-                        , div [ class "pl-3 pr-3 py-2 m-2" ]
-                            [ hr [ class "sm:-ml-6 -ml-5 items-center border border-dashed border-green m-auto w-6 mt-6" ] [] ]
+                        , div [ class "" ]
+                            [ hr [ class "items-center border-sm border-dashed border-green" ] [] ]
                         ]
 
                 Transferred ->
                     div [ class "flex flex-row" ]
-                        [ div [ class "px-4 py-2 m-2" ]
-                            [ hr [ class "ml-5 border border-dashed border-green w-8 mt-6 m-auto mb-6" ] [] ]
+                        [ div [ class "" ]
+                            [ hr [ class "ml-5 border border-dashed border-green" ] [] ]
                         ]
 
         tail =
             case state of
                 Received ->
                     div [ class "flex flex-row" ]
-                        [ div [ class "pl-2 pr-10 py-2 m-2" ]
-                            [ hr [ class "sm:-ml-8 -ml-10 border border-dashed border-green sm:w-8 w-6 mt-6 m-auto mb-6" ] [] ]
+                        [ div [ class "" ]
+                            [ hr [ class "border border-dashed border-green" ] [] ]
                         ]
 
                 Transferred ->
                     div [ class "flex flex-row" ]
-                        [ div [ class "pl-2 pr-2 py-2 m-2" ]
-                            [ hr [ class "-ml-8 items-center border border-dashed border-green w-6 mt-6 m-auto mb-6" ] [] ]
-                        , div [ class "px-4 py-2 m-2" ]
-                            [ div [ class "border border-solid border-green border-t-0 border-r-3 border-b-3 border-l-0 inline-block p-1 -rotate-45 -ml-12 mt-5" ]
+                        [ div [ class "" ]
+                            [ hr [ class "items-center border border-dashed border-green " ] [] ]
+                        , div [ class "" ]
+                            [ div [ class "border border-solid border-green border-t-0 border-r-3 border-b-3 border-l-0 inline-block p-1 -rotate-45" ]
                                 []
                             ]
                         ]
     in
-    div [ class "flex flex-row" ]
+    div [ class "flex flex-row justify-center" ]
         [ head
-        , div [ class "px-4 py-2 m-2" ]
-            [ div [ class "-ml-10 border border-solid rounded border-green bg-white" ]
-                [ div [ class "ml-1" ]
-                    [ p [ class "pt-1 text-caption font-hairline text-gray-900 pl-1" ]
-                        [ text <|
-                            case state of
-                                Received ->
-                                    String.toUpper (t "transfer_result.received")
+        , div [ class "w-32 border border-solid rounded-sm border-green bg-white px-4 py-1" ]
+            [ p [ class "text-caption text-gray-900" ]
+                [ text <|
+                    case state of
+                        Received ->
+                            String.toUpper (t "transfer_result.received")
 
-                                Transferred ->
-                                    String.toUpper (t "transfer_result.transferred")
-                        ]
-                    , div [ class "flex flex-row" ]
-                        [ p [ class "pl-1 pr-5 text-lg font-bold text-green" ]
-                            [ text <|
-                                String.fromFloat transfer.value
-                            ]
-                        , span [ class "ml-2 text-caption text-green mt-1 mb-1 font-thin pr-3 pl-3" ]
-                            [ text <| Eos.symbolToString transfer.symbol ]
-                        ]
+                        Transferred ->
+                            String.toUpper (t "transfer_result.transferred")
+                ]
+            , div [ class "flex flex-row items-center" ]
+                [ p [ class "text-lg font-semibold text-green" ]
+                    [ text <|
+                        String.fromFloat transfer.value
                     ]
+                , span [ class "ml-2 text-caption text-green font-thin" ]
+                    [ text <| Eos.symbolToString transfer.symbol ]
                 ]
             ]
         , tail
@@ -271,13 +247,17 @@ viewDetails ({ shared } as loggedIn) transfer state =
     in
     div [ class "flex flex-wrap mb-4 bg-white" ]
         [ div [ class "container mx-auto" ]
-            [ div [ class "flex w-full lg:w-2/3 m-4 lg:mx-auto lg:-mt-20" ]
+            [ div [ class "flex w-full" ]
                 [ viewTransferCard loggedIn transfer state
                 ]
-            , div [ class "w-full mb-10" ]
-                [ viewDetail (t "transfer_result.community") transfer.community.name
-                , viewDetail (t "transfer_result.date") date
-                , viewDetail (t "transfer_result.message") <| Maybe.withDefault "" transfer.memo
+            , div [ class "w-full mb-10 text-body" ]
+                [ viewDetail (t "transfer_result.date") date
+                , case transfer.memo of
+                    Just memo ->
+                        viewDetail (t "transfer_result.message") memo
+
+                    Nothing ->
+                        text ""
                 ]
             ]
         ]
@@ -286,9 +266,9 @@ viewDetails ({ shared } as loggedIn) transfer state =
 viewDetail : String -> String -> Html Msg
 viewDetail title content =
     div [ class "m-4" ]
-        [ h5 [ class "leading-tight text-xs mb-1 text-reward-green" ]
+        [ h5 [ class "leading-tight text-caption mb-1 text-reward-green" ]
             [ text title ]
-        , p [ class "text-lg font-sans not-italic" ]
+        , p [ class "text-lg text-body" ]
             [ text content ]
         ]
 
