@@ -270,7 +270,6 @@ routeToString route =
                       , String.fromInt actionId
                       , "claim"
                       , String.fromInt claimId
-                      , "verification"
                       ]
                     , []
                     )

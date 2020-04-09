@@ -21,7 +21,6 @@ import FormatNumber exposing (format)
 import FormatNumber.Locales exposing (usLocale)
 import Graphql.Http
 import Graphql.OptionalArgument exposing (OptionalArgument(..))
-import Graphql.SelectionSet as SelectionSet exposing (SelectionSet, with)
 import Html exposing (Html, a, button, div, p, text)
 import Html.Attributes exposing (class)
 import Html.Events exposing (onClick)
@@ -180,7 +179,10 @@ viewAnalysis ({ shared } as loggedIn) claimStatus =
     in
     case claimStatus of
         ClaimLoaded claim ->
-            div [ class "flex flex-col items-center justify-center px-3 pt-5 pb-2 my-2 rounded-lg hover:shadow-lg bg-white" ]
+            a
+                [ class "flex flex-col items-center justify-center px-3 pt-5 pb-2 my-2 rounded-lg hover:shadow-lg bg-white"
+                , Route.href (Route.Claim loggedIn.selectedCommunity claim.action.objective.id claim.action.id claim.id)
+                ]
                 [ div []
                     [ Profile.view shared loggedIn.accountName claim.claimer
                     ]
