@@ -627,6 +627,7 @@ update msg model loggedIn =
                                 (Profile.mutation profile.account form)
                                 CompletedProfileLoad
                             )
+                        |> UR.addExt (ShowFeedback { message = "Success!", success = True })
 
                 _ ->
                     UR.init model
