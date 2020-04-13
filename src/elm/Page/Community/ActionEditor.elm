@@ -936,6 +936,7 @@ update msg model loggedIn =
             model
                 |> UR.init
                 |> UR.addCmd (Route.replaceUrl loggedIn.shared.navKey (Route.Community model.communityId))
+                |> UR.addExt (ShowFeedback { message = "Success!", success = True })
 
         GotSaveAction (Err val) ->
             let
