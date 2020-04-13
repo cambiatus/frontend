@@ -931,6 +931,7 @@ update msg model loggedIn =
             UR.init model
                 |> UR.addCmd
                     (Route.replaceUrl loggedIn.shared.navKey (Route.Shop Shop.All))
+                |> UR.addExt (ShowFeedback { message = "Success!", success = True })
 
         GotSaveResponse (Err error) ->
             let
@@ -972,6 +973,7 @@ update msg model loggedIn =
                 |> UR.init
                 |> UR.addCmd
                     (Route.replaceUrl loggedIn.shared.navKey (Route.Shop Shop.All))
+                |> UR.addExt (ShowFeedback { message = "Success!", success = True })
 
         GotDeleteResponse (Err error) ->
             let
