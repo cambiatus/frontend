@@ -375,6 +375,7 @@ update msg model loggedIn =
                     (Route.replaceUrl loggedIn.shared.navKey
                         (Route.Community model.community)
                     )
+                |> UR.addExt (ShowFeedback { message = "Success!", success = True })
 
         GotSaveObjectiveResponse (Err v) ->
             UR.init model
