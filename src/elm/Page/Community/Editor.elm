@@ -742,6 +742,7 @@ update msg model loggedIn =
                             (Route.Community symbol
                                 |> Route.replaceUrl loggedIn.shared.navKey
                             )
+                        |> UR.addExt (ShowFeedback { message = "Success", success = True })
 
                 _ ->
                     model
