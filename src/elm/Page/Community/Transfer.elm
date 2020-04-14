@@ -205,7 +205,7 @@ viewForm ({ shared } as loggedIn) model f community isDisabled =
                 ]
             , div [ class "mb-10" ]
                 [ span [ class "input-label" ]
-                    [ text_ "community.actions.form.description_label" ]
+                    [ text_ "account.my_wallet.transfer.memo" ]
                 , textarea
                     [ class "w-full input rounded-sm"
                     , rows 5

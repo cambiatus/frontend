@@ -177,7 +177,7 @@
         "title": "Sending {{symbol}}",
         "send_to": "Transfer to",
         "send_to_placeholder": "Friend account",
-        "amount": "Quantity",
+        "amount": "How much",
         "amount_placeholder": "0.00",
         "memo": "Message (optional)",
         "memo_placeholder": "Thanks for the help",

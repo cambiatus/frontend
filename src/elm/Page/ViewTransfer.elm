@@ -209,8 +209,8 @@ viewAmount { shared } transfer state =
                         ]
     in
     div [ class "flex flex-row justify-center" ]
-        [ head
-        , div [ class "w-32 border border-solid rounded-sm border-green bg-white px-4 py-1" ]
+        -- [ head
+        [ div [ class "w-32 border border-solid rounded-sm border-green bg-white px-4 py-1" ]
             [ p [ class "text-caption text-gray-900" ]
                 [ text <|
                     case state of
@@ -229,7 +229,7 @@ viewAmount { shared } transfer state =
                     [ text <| Eos.symbolToString transfer.symbol ]
                 ]
             ]
-        , tail
+        -- , tail
         ]
 
 
