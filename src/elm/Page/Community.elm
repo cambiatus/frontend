@@ -24,7 +24,7 @@ import Graphql.Operation exposing (RootQuery)
 import Graphql.OptionalArgument exposing (OptionalArgument(..))
 import Graphql.SelectionSet as SelectionSet exposing (SelectionSet, with)
 import Html exposing (Html, a, button, div, hr, img, p, span, text)
-import Html.Attributes exposing (class, classList, disabled, placeholder, src)
+import Html.Attributes exposing (class, classList, disabled, src)
 import Html.Events exposing (onClick)
 import I18Next exposing (t, tr)
 import Icons
@@ -710,7 +710,7 @@ viewClaimModal loggedIn model =
                 , div [ class "modal-content" ]
                     [ div [ class "w-full" ]
                         [ p [ class "w-full font-bold text-heading text-2xl mb-4" ]
-                            [ text_ "community.claimAction.title" ]
+                            [ text_ "dashboard.check_claim.title" ]
                         , button
                             [ if not isLoading then
                                 onClick CloseClaimConfirmation
@@ -722,7 +722,7 @@ viewClaimModal loggedIn model =
                             [ Icons.close "absolute fill-current text-gray-400 top-0 right-0 mx-8 my-4"
                             ]
                         , p [ class "text-body w-full font-sans mb-10" ]
-                            [ text_ "community.claimAction.body" ]
+                            [ text_ "dashboard.check_claim.body" ]
                         ]
                     , div [ class "w-full md:bg-gray-100 md:flex md:absolute rounded-b-lg md:inset-x-0 md:bottom-0 md:p-4 justify-center" ]
                         [ div [ class "flex" ]
@@ -735,7 +735,7 @@ viewClaimModal loggedIn model =
                                     onClick NoOp
                                 , disabled isLoading
                                 ]
-                                [ text_ "community.claimAction.no" ]
+                                [ text_ "dashboard.check_claim.no" ]
                             , div [ class "w-8" ] []
                             , button
                                 [ class "flex-1 block button button-primary button-lg w-full md:w-40"
@@ -746,7 +746,7 @@ viewClaimModal loggedIn model =
                                     onClick NoOp
                                 , disabled isLoading
                                 ]
-                                [ text_ "community.claimAction.yes" ]
+                                [ text_ "dashboard.check_claim.yes" ]
                             ]
                         ]
                     ]
@@ -955,14 +955,14 @@ update msg model loggedIn =
         GotClaimActionResponse (Ok _) ->
             { model
                 | modalStatus = Closed
-                , messageStatus = Success "community.claimAction.success"
+                , messageStatus = Success "dashboard.check_claim.success"
             }
                 |> UR.init
 
         GotClaimActionResponse (Err _) ->
             { model
                 | modalStatus = Closed
-                , messageStatus = Failure "community.claimAction.failure"
+                , messageStatus = Failure "dashboard.check_claim.failure"
             }
                 |> UR.init
 

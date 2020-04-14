@@ -485,6 +485,11 @@
       "title": {
         "1": "Ações",
         "2": "para análise"
+      },
+      "empty": {
+        "1": "Wooow",
+        "2": ", bom trabalho.",
+        "3": "Você finalizou tudo"
       }
     },
     "activities": {
@@ -529,7 +534,7 @@
     "approve": "Aprovar",
     "no_results_found": "Nenhum resultado encontrado",
     "modal": {
-      "title": "Reivindicação",
+      "title": "Sob análise",
       "message_disapprove": "Você realmente deseja reprovar esta reivindicação?",
       "message_approve": "Você realmente deseja aprovar esta reivindicação?",
       "primary_disapprove": "sim, reprovar",

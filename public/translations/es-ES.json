@@ -481,6 +481,11 @@
       "title": {
         "1": "Acciones",
         "2": "para el análisis"
+      },
+      "empty": {
+        "1": "Wooow",
+        "2": ", buen trabajo.",
+        "3": "has terminado todo"
       }
     },
     "activities": {
@@ -526,7 +531,7 @@
     "approve": "Aprobar",
     "no_results_found": "No se han encontrado resultados",
     "modal": {
-      "title": "Reclamación",
+      "title": "Bajo Revisión",
       "message_disapprove": "Realmente quiere desaprobar este reclamo?",
       "message_approve": "Realmente desea aprobar este reclamo?",
       "primary_disapprove": "sí, desaprobar",

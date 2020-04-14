@@ -359,7 +359,6 @@
         "error": "The activity cannot be created. Try later"
       }
     },
-
     "verifyClaim": {
       "error": "Something went wrong while trying to process your validation, please try again later"
     }
@@ -482,6 +481,11 @@
       "title": {
         "1": "Actions",
         "2": "for analysis"
+      },
+      "empty": {
+        "1": "Wooow",
+        "2": ", good job.",
+        "3": "You have finished all"
       }
     },
     "activities": {
@@ -514,7 +518,7 @@
     "pending": "Pending",
     "disapproved": "Disapproved",
     "approved": "Approved",
-    "reward": "You won: {{value}}",
+    "reward": "Congrats, you gained: {{value}}",
     "sub_wait_1": "You must wait, this claim is under review by other users.",
     "sub_wait_2": "When finished, you will receive your reward.",
     "objective": "Objective",
@@ -527,9 +531,9 @@
     "approve": "Approve",
     "no_results_found": "No results found",
     "modal": {
-      "title": "Claim",
-      "message_disapprove": "Do you really want to disapprove this claim?",
-      "message_approve": "Do you really want to approve this claim?",
+      "title": "Under Review",
+      "message_disapprove": "Do you really want to disapprove this action?",
+      "message_approve": "Do you really want to approve this action?",
       "primary_disapprove": "yes, disapprove",
       "primary_approve": "yes, approve",
       "secondary": "no, cancel"

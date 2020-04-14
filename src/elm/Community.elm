@@ -231,6 +231,7 @@ type alias Objective =
     , description : String
     , creator : Eos.Name
     , actions : List Action
+    , community : Metadata
     }
 
 
@@ -241,6 +242,7 @@ objectiveSelectionSet =
         |> with Objective.description
         |> with (Eos.nameSelectionSet Objective.creatorId)
         |> with (Objective.actions identity actionSelectionSet)
+        |> with (Objective.community communitiesSelectionSet)
 
 
 type alias CreateObjectiveAction =

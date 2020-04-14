@@ -21,11 +21,12 @@ import FormatNumber exposing (format)
 import FormatNumber.Locales exposing (usLocale)
 import Graphql.Http
 import Graphql.OptionalArgument exposing (OptionalArgument(..))
-import Html exposing (Html, a, button, div, p, text)
-import Html.Attributes exposing (class)
+import Html exposing (Html, a, button, div, img, p, text)
+import Html.Attributes exposing (class, src)
 import Html.Events exposing (onClick)
 import Http
 import I18Next exposing (Delims(..))
+import Icons
 import Json.Decode as Decode exposing (Value)
 import Json.Encode as Encode
 import List.Extra as List
@@ -76,6 +77,7 @@ type alias Model =
     , analysis : GraphqlStatus (List Claim.Model) (List ClaimStatus)
     , lastSocket : String
     , transfers : GraphqlStatus (Maybe QueryTransfers) (List Transfer)
+    , modalStatus : ModalStatus
     }
 
 
@@ -86,6 +88,7 @@ initModel =
     , analysis = LoadingGraphql
     , lastSocket = ""
     , transfers = LoadingGraphql
+    , modalStatus = Closed
     }
 
 
@@ -108,6 +111,11 @@ type ClaimStatus
     | ClaimVoteFailed Claim.Model
 
 
+type ModalStatus
+    = Closed
+    | Opened Int Bool
+
+
 
 -- VIEW
 
@@ -126,7 +134,7 @@ view loggedIn model =
             Page.fullPageError (t "menu.my_communities") e
 
         ( Loaded communities, LoggedIn.Loaded profile ) ->
-            div [ class "container mx-auto mb-10" ]
+            div [ class "container mx-auto px-4 mb-10" ]
                 [ div [ class "text-gray-600 text-2xl font-light flex mt-6 mb-4" ]
                     [ text (t "menu.my_communities")
                     , div [ class "text-indigo-500 ml-2 font-medium" ]
@@ -137,10 +145,67 @@ view loggedIn model =
                 , viewBalances loggedIn communities
                 , viewAnalysisList loggedIn model
                 , viewSections loggedIn model
+                , viewModal loggedIn model
                 ]
 
         ( _, _ ) ->
             Page.fullPageNotFound (t "menu.my_communities") ""
+
+
+viewModal : LoggedIn.Model -> Model -> Html Msg
+viewModal loggedIn model =
+    case model.modalStatus of
+        Opened claimId vote ->
+            let
+                t s =
+                    I18Next.t loggedIn.shared.translations s
+
+                text_ s =
+                    text (t s)
+            in
+            div [ class "modal container" ]
+                [ div [ class "modal-bg", onClick CloseModal ] []
+                , div [ class "modal-content" ]
+                    [ div [ class "w-full" ]
+                        [ p [ class "w-full font-bold text-heading text-2xl mb-4" ]
+                            [ text_ "claim.modal.title" ]
+                        , button
+                            [ onClick CloseModal ]
+                            [ Icons.close "absolute fill-current text-gray-400 top-0 right-0 mx-8 my-4"
+                            ]
+                        , p [ class "text-body w-full font-sans mb-10" ]
+                            [ if vote then
+                                text_ "claim.modal.message_approve"
+
+                              else
+                                text_ "claim.modal.message_disapprove"
+                            ]
+                        ]
+                    , div [ class "w-full md:bg-gray-100 md:flex md:absolute rounded-b-lg md:inset-x-0 md:bottom-0 md:p-4 justify-center" ]
+                        [ div [ class "flex" ]
+                            [ button
+                                [ class "flex-1 block button button-secondary mb-4 button-lg w-full md:w-40 md:mb-0"
+                                , onClick CloseModal
+                                ]
+                                [ text_ "claim.modal.secondary" ]
+                            , div [ class "w-8" ] []
+                            , button
+                                [ class "flex-1 block button button-primary button-lg w-full md:w-40"
+                                , onClick (VoteClaim claimId vote)
+                                ]
+                                [ if vote then
+                                    text_ "claim.modal.primary_approve"
+
+                                  else
+                                    text_ "claim.modal.primary_disapprove"
+                                ]
+                            ]
+                        ]
+                    ]
+                ]
+
+        Closed ->
+            text ""
 
 
 viewAnalysisList : LoggedIn.Model -> Model -> Html Msg
@@ -154,16 +219,27 @@ viewAnalysisList loggedIn model =
             Page.fullPageLoading
 
         LoadedGraphql claims ->
-            div [ class "w-full flex flex-wrap -mx-2" ]
+            div [ class "w-full flex" ]
                 [ div
-                    [ class "w-full sm:w-1/2 lg:w-1/3 xl:w-1/4 px-2 mb-6" ]
+                    [ class "w-full" ]
                     [ div [ class "text-gray-600 text-2xl font-light flex mt-6 mb-4" ]
                         [ div [ class "text-indigo-500 mr-2 font-medium" ]
                             [ text_ "dashboard.analysis.title.1"
                             ]
                         , text_ "dashboard.analysis.title.2"
                         ]
-                    , div [] (List.map (viewAnalysis loggedIn) claims)
+                    , if List.isEmpty claims then
+                        div [ class "flex flex-col w-full h-64 items-center justify-center px-3 py-12 my-2 rounded-lg hover:shadow-lg bg-white" ]
+                            [ img [ src "/images/not_found.svg", class "object-contain h-32 mb-3" ] []
+                            , p [ class "flex text-body text-gray mb-6" ]
+                                [ p [ class "font-bold" ] [ text_ "dashboard.analysis.empty.1" ]
+                                , text_ "dashboard.analysis.empty.2"
+                                ]
+                            , p [ class "text-body text-gray" ] [ text_ "dashboard.analysis.empty.3" ]
+                            ]
+
+                      else
+                        div [ class "w-full sm:w-1/2 lg:w-1/3 xl:w-1/4 px-2 mb-6" ] (List.map (viewAnalysis loggedIn) claims)
                     ]
                 ]
 
@@ -179,9 +255,8 @@ viewAnalysis ({ shared } as loggedIn) claimStatus =
     in
     case claimStatus of
         ClaimLoaded claim ->
-            a
+            div
                 [ class "flex flex-col items-center justify-center px-3 pt-5 pb-2 my-2 rounded-lg hover:shadow-lg bg-white"
-                , Route.href (Route.Claim loggedIn.selectedCommunity claim.action.objective.id claim.action.id claim.id)
                 ]
                 [ div []
                     [ Profile.view shared loggedIn.accountName claim.claimer
@@ -193,12 +268,16 @@ viewAnalysis ({ shared } as loggedIn) claimStatus =
                 , div [ class "flex" ]
                     [ button
                         [ class "button button-secondary w-1/2"
-                        , onClick (VoteClaim claim.id False)
+
+                        -- , onClick (VoteClaim claim.id False)
+                        , onClick (OpenModal claim.id False)
                         ]
                         [ text_ "dashboard.reject" ]
                     , button
                         [ class "button button-primary w-1/2"
-                        , onClick (VoteClaim claim.id True)
+
+                        -- , onClick (VoteClaim claim.id True)
+                        , onClick (OpenModal claim.id True)
                         ]
                         [ text_ "dashboard.verify" ]
                     ]
@@ -349,6 +428,8 @@ type Msg
     | GotDashCommunityMsg Int DashCommunity.Msg
     | CompletedLoadUserTransfers (Result (Graphql.Http.Error (Maybe QueryTransfers)) (Maybe QueryTransfers))
     | ClaimsLoaded (Result (Graphql.Http.Error (List Claim.Model)) (List Claim.Model))
+    | OpenModal Int Bool
+    | CloseModal
     | VoteClaim Int Bool
     | GotVoteResult Int (Result Value String)
 
@@ -410,6 +491,14 @@ update msg model loggedIn =
                 |> UR.init
                 |> UR.logGraphqlError msg err
 
+        OpenModal claimId vote ->
+            { model | modalStatus = Opened claimId vote }
+                |> UR.init
+
+        CloseModal ->
+            { model | modalStatus = Closed }
+                |> UR.init
+
         VoteClaim claimId vote ->
             case model.analysis of
                 LoadedGraphql claims ->
@@ -454,9 +543,30 @@ update msg model loggedIn =
                     let
                         newClaims =
                             setClaimStatus claims claimId ClaimVoted
+
+                        maybeClaim : Maybe Claim.Model
+                        maybeClaim =
+                            findClaim claims claimId
+
+                        message val =
+                            [ ( "value", val ) ] |> I18Next.tr loggedIn.shared.translations I18Next.Curly "claim.reward"
                     in
-                    { model | analysis = LoadedGraphql newClaims }
-                        |> UR.init
+                    case maybeClaim of
+                        Just claim ->
+                            let
+                                value =
+                                    String.fromFloat claim.action.verifierReward ++ " " ++ Eos.symbolToString claim.action.objective.community.symbol
+                            in
+                            { model
+                                | analysis = LoadedGraphql newClaims
+                                , modalStatus = Closed
+                            }
+                                |> UR.init
+                                |> UR.addExt (ShowFeedback { message = message value, success = True })
+
+                        Nothing ->
+                            model
+                                |> UR.init
 
                 _ ->
                     model |> UR.init
@@ -558,6 +668,27 @@ setClaimStatus claims claimId status =
                     _ ->
                         c
             )
+
+
+findClaim : List ClaimStatus -> Int -> Maybe Claim.Model
+findClaim claims claimId =
+    claims
+        |> List.map
+            (\c ->
+                case c of
+                    ClaimLoaded claim ->
+                        claim
+
+                    ClaimLoading claim ->
+                        claim
+
+                    ClaimVoted claim ->
+                        claim
+
+                    ClaimVoteFailed claim ->
+                        claim
+            )
+        |> List.find (\c -> c.id == claimId)
 
 
 sortCambiatusFirst : LoggedIn.Model -> List Balance -> List Balance
@@ -665,6 +796,12 @@ msgToString msg =
 
         ClaimsLoaded result ->
             resultToString [ "ClaimsLoaded" ] result
+
+        OpenModal claimId _ ->
+            [ "OpenConfirmationModal", String.fromInt claimId ]
+
+        CloseModal ->
+            [ "CloseModal" ]
 
         VoteClaim claimId _ ->
             [ "VoteClaim", String.fromInt claimId ]
