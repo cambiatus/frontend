@@ -526,6 +526,7 @@
     "error": {
       "invalid_id": " no es un ID de transferencia válido"
     },
-    "you": "tú"
+    "you": "tú",
+    "my_balance": "Mi balance"
   }
 }

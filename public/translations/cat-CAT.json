@@ -526,6 +526,7 @@
     "error": {
       "invalid_id": " no és un ID de transferència vàlid"
     },
-    "you": "vostè"
+    "you": "vostè",
+    "my_balance": "El meu balanç"
   }
 }

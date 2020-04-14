@@ -229,6 +229,7 @@ viewAmount { shared } transfer state =
                     [ text <| Eos.symbolToString transfer.symbol ]
                 ]
             ]
+
         -- , tail
         ]
 
@@ -250,14 +251,21 @@ viewDetails ({ shared } as loggedIn) transfer state =
             [ div [ class "flex w-full" ]
                 [ viewTransferCard loggedIn transfer state
                 ]
-            , div [ class "w-full mb-10 text-body" ]
-                [ viewDetail (t "transfer_result.date") date
+            , div [ class "w-full mb-10" ]
+                [ viewDetail (t "transfer_result.community") transfer.community.name
+                , viewDetail (t "transfer_result.date") date
                 , case transfer.memo of
                     Just memo ->
-                        viewDetail (t "transfer_result.message") memo
+                        if String.length memo > 0 then
+                            viewDetail (t "transfer_result.message") memo
+
+                        else
+                            text ""
 
                     Nothing ->
                         text ""
+                , a [ class "button button-secondary w-full mt-10", Route.href Route.Dashboard ]
+                    [ text (t "transfer_result.my_balance") ]
                 ]
             ]
         ]
