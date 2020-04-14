@@ -20,7 +20,7 @@ import Json.Decode as Decode exposing (Decoder)
 import Json.Encode as Encode exposing (Value)
 import Page
 import Route
-import Session.LoggedIn as LoggedIn exposing (External(..))
+import Session.LoggedIn as LoggedIn exposing (External(..), FeedbackStatus(..))
 import UpdateResult as UR
 
 
@@ -375,7 +375,7 @@ update msg model loggedIn =
                     (Route.replaceUrl loggedIn.shared.navKey
                         (Route.Community model.community)
                     )
-                |> UR.addExt (ShowFeedback { message = "Success!", success = True })
+                |> UR.addExt (ShowFeedback Success "Success!")
 
         GotSaveObjectiveResponse (Err v) ->
             UR.init model

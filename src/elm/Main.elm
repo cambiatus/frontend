@@ -33,7 +33,7 @@ import Page.Transfer as Transfer
 import Ports
 import Route exposing (Route)
 import Session.Guest as Guest
-import Session.LoggedIn as LoggedIn exposing (FeedbackStatus(..))
+import Session.LoggedIn as LoggedIn exposing (FeedbackVisibility(..))
 import Shop
 import UpdateResult as UR exposing (UpdateResult)
 import Url exposing (Url)
@@ -494,12 +494,12 @@ updateLoggedInUResult toStatus toMsg model uResult =
                         _ ->
                             ( m, cmds_ )
 
-                LoggedIn.ShowFeedback feedback ->
+                LoggedIn.ShowFeedback status message ->
                     case m.session of
                         Page.LoggedIn loggedIn ->
                             ( { m
                                 | session =
-                                    Page.LoggedIn { loggedIn | feedback = Show feedback }
+                                    Page.LoggedIn { loggedIn | feedback = Show status message }
                               }
                             , cmds_
                             )

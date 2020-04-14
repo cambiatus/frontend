@@ -46,7 +46,7 @@ import Page
 import Profile exposing (Profile)
 import Route
 import Select
-import Session.LoggedIn as LoggedIn exposing (External(..))
+import Session.LoggedIn as LoggedIn exposing (External(..), FeedbackStatus(..))
 import Session.Shared exposing (Shared)
 import Simple.Fuzzy
 import Strftime
@@ -936,7 +936,7 @@ update msg model loggedIn =
             model
                 |> UR.init
                 |> UR.addCmd (Route.replaceUrl loggedIn.shared.navKey (Route.Community model.communityId))
-                |> UR.addExt (ShowFeedback { message = "Success!", success = True })
+                |> UR.addExt (ShowFeedback Success "Success!")
 
         GotSaveAction (Err val) ->
             let

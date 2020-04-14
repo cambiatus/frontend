@@ -31,7 +31,7 @@ import Json.Encode as Encode exposing (Value, object, string)
 import List.Extra as List
 import Page
 import Route
-import Session.LoggedIn as LoggedIn exposing (External(..))
+import Session.LoggedIn as LoggedIn exposing (External(..), FeedbackStatus(..))
 import Session.Shared exposing (Shared)
 import Task
 import UpdateResult as UR
@@ -742,7 +742,7 @@ update msg model loggedIn =
                             (Route.Community symbol
                                 |> Route.replaceUrl loggedIn.shared.navKey
                             )
-                        |> UR.addExt (ShowFeedback { message = "Success", success = True })
+                        |> UR.addExt (ShowFeedback Success "Success!")
 
                 _ ->
                     model

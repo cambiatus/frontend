@@ -20,7 +20,7 @@ import Json.Encode as Encode
 import Page
 import Profile exposing (Profile, ProfileForm, decode)
 import PushSubscription exposing (PushSubscription)
-import Session.LoggedIn as LoggedIn exposing (External(..))
+import Session.LoggedIn as LoggedIn exposing (External(..), FeedbackStatus(..))
 import Task
 import UpdateResult as UR
 import Utils
@@ -627,7 +627,7 @@ update msg model loggedIn =
                                 (Profile.mutation profile.account form)
                                 CompletedProfileLoad
                             )
-                        |> UR.addExt (ShowFeedback { message = "Success!", success = True })
+                        |> UR.addExt (ShowFeedback Success "Success!")
 
                 _ ->
                     UR.init model

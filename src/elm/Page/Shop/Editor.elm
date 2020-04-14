@@ -21,7 +21,7 @@ import Json.Encode as Encode exposing (Value)
 import Page
 import Result exposing (Result)
 import Route
-import Session.LoggedIn as LoggedIn exposing (External(..))
+import Session.LoggedIn as LoggedIn exposing (External(..), FeedbackStatus(..))
 import Session.Shared exposing (Shared)
 import Shop exposing (Sale, SaleId)
 import Task
@@ -931,7 +931,7 @@ update msg model loggedIn =
             UR.init model
                 |> UR.addCmd
                     (Route.replaceUrl loggedIn.shared.navKey (Route.Shop Shop.All))
-                |> UR.addExt (ShowFeedback { message = "Success!", success = True })
+                |> UR.addExt (ShowFeedback Success "Success!")
 
         GotSaveResponse (Err error) ->
             let
@@ -973,7 +973,7 @@ update msg model loggedIn =
                 |> UR.init
                 |> UR.addCmd
                     (Route.replaceUrl loggedIn.shared.navKey (Route.Shop Shop.All))
-                |> UR.addExt (ShowFeedback { message = "Success!", success = True })
+                |> UR.addExt (ShowFeedback Success "Success!")
 
         GotDeleteResponse (Err error) ->
             let
