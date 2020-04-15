@@ -15,6 +15,7 @@ import Html.Attributes exposing (..)
 import Html.Events exposing (..)
 import Http
 import I18Next exposing (t)
+import Icons
 import Json.Decode as Decode exposing (Value)
 import Json.Encode as Encode
 import Page
@@ -213,30 +214,17 @@ view_ loggedIn profile model =
                             text ""
 
                 Just privateKey ->
-                    div []
-                        [ button
-                            [ classList
-                                [ ( "key-button", True )
-                                , ( "circle-background", True )
-                                , ( "circle-background--primary", True )
-                                ]
-                            , onClick (ClickedViewPrivateKey privateKey)
-                            , type_ "button"
-                            , title (t loggedIn.shared.translations "profile.actions.viewPrivatekey")
+                    button
+                        [ classList
+                            [ ( "key-button", True )
+                            , ( "circle-background", True )
+                            , ( "circle-background--primary", True )
                             ]
-                            [ Icon.key "" ]
-                        , button
-                            [ classList
-                                [ ( "key-button", True )
-                                , ( "circle-background", True )
-                                , ( "circle-background--primary", True )
-                                ]
-                            , onClick DownloadPdf
-                            , type_ "button"
-                            , title (t loggedIn.shared.translations "profile.actions.viewPrivatekey")
-                            ]
-                            [ Icon.key "" ]
+                        , onClick (ClickedViewPrivateKey privateKey)
+                        , type_ "button"
+                        , title (t loggedIn.shared.translations "profile.actions.viewPrivatekey")
                         ]
+                        [ Icon.key "" ]
             , button
                 [ classList
                     [ ( "edit-button", True )
@@ -254,28 +242,36 @@ view_ loggedIn profile model =
                 text ""
 
             Just pk ->
-                div
-                    [ onClick ClickedClosePrivateKey
-                    ]
-                    [ div
-                        [ class "card card--modal"
-                        , stopPropagationOn "click"
-                            (Decode.succeed ( Ignored, True ))
-                        , style "position" "relative"
-                        , style "align-items" "stretch"
-                        ]
-                        [ h2 [ class "card__title" ]
-                            [ text_ "profile.edit.labels.privateKey" ]
-                        , br [] []
-                        , p [] [ text_ "profile.edit.placeholders.privateKey" ]
-                        , br [] []
-                        , p [] [ text pk ]
-                        , button
-                            [ class "card__close-btn"
-                            , onClick ClickedClosePrivateKey
-                            , type_ "button"
+                div [ class "modal container" ]
+                    [ div [ class "modal-bg", onClick ClickedClosePrivateKey ] []
+                    , div [ class "modal-content" ]
+                        [ div [ class "w-full" ]
+                            [ p [ class "w-full font-bold text-heading text-2xl" ]
+                                [ text_ "profile.edit.labels.privateKey" ]
+                            , button
+                                [ onClick ClickedClosePrivateKey
+                                , class "absolute fill-current text-gray-400 top-0 right-0 mx-8 my-4"
+                                ]
+                                [ Icons.close ""
+                                ]
                             ]
-                            [ Icon.close "" ]
+                        , p [ class "mt-3" ] [ text_ "profile.edit.placeholders.privateKey" ]
+                        , p [ class "font-mono text-center font-bold mt-7" ] [ text pk ]
+                        , div [ class "w-full md:bg-gray-100 md:flex md:absolute rounded-b-lg md:inset-x-0 md:bottom-0 md:p-4 justify-center" ]
+                            [ div [ class "flex" ]
+                                [ button
+                                    [ class "flex-1 block button button-secondary mb-4 button-lg w-full md:w-40 md:mb-0"
+                                    , onClick ClickedClosePrivateKey
+                                    ]
+                                    [ text_ "Cancel" ]
+                                , div [ class "w-8" ] []
+                                , button
+                                    [ class "flex-1 block button button-primary button-lg w-full md:w-40"
+                                    , onClick (DownloadPdf pk)
+                                    ]
+                                    [ text_ "Save as PDF" ]
+                                ]
+                            ]
                         ]
                     ]
         ]
@@ -571,13 +567,13 @@ type Msg
     | CompletedAvatarUpload (Result Http.Error Avatar)
     | ClickedViewPrivateKeyAuth
     | ClickedViewPrivateKey String
+    | DownloadPdf String
     | ClickedClosePrivateKey
     | RequestPush
     | GotPushSub PushSubscription
     | CompletedPushUpload (Result (Graphql.Http.Error ()) ())
     | GotPushPreference Bool
     | CheckPushPref
-    | DownloadPdf
     | PressedEnter Bool
 
 
@@ -829,7 +825,7 @@ update msg model loggedIn =
                         Encode.object [ ( "name", Encode.string "checkPushPref" ) ]
                     }
 
-        DownloadPdf ->
+        DownloadPdf words ->
             model
                 |> UR.init
                 |> UR.addPort
@@ -837,7 +833,9 @@ update msg model loggedIn =
                     , responseData = Encode.null
                     , data =
                         Encode.object
-                            [ ( "name", Encode.string "printAuthPdf" ) ]
+                            [ ( "name", Encode.string "printAuthPdf" )
+                            , ( "words", Encode.string words )
+                            ]
                     }
 
         PressedEnter val ->
@@ -1027,8 +1025,8 @@ msgToString msg =
         CheckPushPref ->
             [ "CheckPushPref" ]
 
-        DownloadPdf ->
-            [ "DownloadPdf" ]
+        DownloadPdf words ->
+            [ "DownloadPdf", words ]
 
         PressedEnter _ ->
             [ "PressedEnter" ]

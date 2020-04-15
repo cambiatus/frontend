@@ -195,7 +195,7 @@ view guest model =
             , div [ class "register__instructions" ]
                 [ p [] [ text_ "register.account_created.instructions" ] ]
             , button
-                [ onClick DownloadPdf
+                [ onClick (DownloadPdf (words model))
                 , class "btn btn__register"
                 ]
                 [ text_ "register.account_created.download" ]
@@ -526,7 +526,7 @@ type Msg
     | CompletedLoadProfile AccountKeys (Result Http.Error Profile)
     | EnteredPin Int String
     | EnteredPinConf Int String
-    | DownloadPdf
+    | DownloadPdf String
     | PdfDownloaded
     | PressedEnter Bool
 
@@ -814,7 +814,7 @@ update maybeInvitation msg model guest =
                 |> UR.addCmd
                     (Task.attempt (\_ -> Ignored) (Dom.focus ("pin_conf_input_" ++ String.fromInt nextFocusPosition)))
 
-        DownloadPdf ->
+        DownloadPdf w ->
             model
                 |> UR.init
                 |> UR.addPort
@@ -822,7 +822,9 @@ update maybeInvitation msg model guest =
                     , responseData = Encode.null
                     , data =
                         Encode.object
-                            [ ( "name", Encode.string "printAuthPdf" ) ]
+                            [ ( "name", Encode.string "printAuthPdf" )
+                            , ( "words", Encode.string w )
+                            ]
                     }
 
         PdfDownloaded ->
@@ -1035,8 +1037,8 @@ msgToString msg =
         EnteredPinConf _ _ ->
             [ "EnteredPinConf" ]
 
-        DownloadPdf ->
-            [ "DownloadPdf" ]
+        DownloadPdf ws ->
+            [ "DownloadPdf", ws ]
 
         PdfDownloaded ->
             [ "PdfDownloaded" ]

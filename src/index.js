@@ -506,13 +506,18 @@ async function handleJavascriptPort (arg) {
     }
     case 'printAuthPdf': {
       devLog('=======================', 'printAuthPdf')
-      let words = document.getElementById('12__words').textContent
-      let pkey = document.getElementById('p__key').textContent
+
+      let words = arg.data.words
+      let pkey =
+        words.split(' ').length === 12
+          ? ecc.seedPrivate(mnemonic.toSeedHex(words))
+          : words
 
       const definition = pdfDefinition(words, pkey)
 
       const pdf = pdfMake.createPdf(definition)
-      pdf.download('Cambiatus.pdf')
+      const user = JSON.parse(window.localStorage.getItem(USER_KEY))
+      pdf.download(user.accountName + '_cambiatus.pdf')
 
       const response = {
         address: arg.responseAddress,
