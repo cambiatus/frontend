@@ -251,9 +251,8 @@ viewDetails ({ shared } as loggedIn) transfer state =
             [ div [ class "flex w-full" ]
                 [ viewTransferCard loggedIn transfer state
                 ]
-            , div [ class "w-full mb-10" ]
-                [ viewDetail (t "transfer_result.community") transfer.community.name
-                , viewDetail (t "transfer_result.date") date
+            , div [ class "w-full mb-10 px-4" ]
+                [ viewDetail (t "transfer_result.date") date
                 , case transfer.memo of
                     Just memo ->
                         if String.length memo > 0 then
@@ -273,7 +272,7 @@ viewDetails ({ shared } as loggedIn) transfer state =
 
 viewDetail : String -> String -> Html Msg
 viewDetail title content =
-    div [ class "m-4" ]
+    div [ class "my-4" ]
         [ h5 [ class "leading-tight text-caption mb-1 text-reward-green" ]
             [ text title ]
         , p [ class "text-lg text-body" ]
