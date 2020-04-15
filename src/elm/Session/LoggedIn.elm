@@ -239,7 +239,7 @@ viewFeedback status message =
             [ text message ]
         , span
             [ class "ml-auto mr-5 cursor-pointer"
-            , onClick HideFeedback
+            , onClick HideFeedbackLocal
             ]
             [ Icons.close "fill-current text-white"
             ]
@@ -537,6 +537,7 @@ type External msg
     | RequiredAuthentication (Maybe msg)
     | UpdateBalances
     | ShowFeedback FeedbackStatus String
+    | HideFeedback
 
 
 mapExternal : (msg -> msg2) -> External msg -> External msg2
@@ -553,6 +554,9 @@ mapExternal transform ext =
 
         ShowFeedback message status ->
             ShowFeedback message status
+
+        HideFeedback ->
+            HideFeedback
 
 
 type alias UpdateResult =
@@ -584,7 +588,7 @@ type Msg
     | CompletedLoadBalances (Result Http.Error (List Balance))
     | CompletedLoadUnread Value
     | KeyDown String
-    | HideFeedback
+    | HideFeedbackLocal
 
 
 update : Msg -> Model -> UpdateResult
@@ -778,7 +782,7 @@ update msg model =
                 model
                     |> UR.init
 
-        HideFeedback ->
+        HideFeedbackLocal ->
             { model | feedback = Hidden }
                 |> UR.init
 
@@ -944,5 +948,5 @@ msgToString msg =
         KeyDown _ ->
             [ "KeyDown" ]
 
-        HideFeedback ->
-            [ "HideFeedback" ]
+        HideFeedbackLocal ->
+            [ "HideFeedbackLocal" ]
