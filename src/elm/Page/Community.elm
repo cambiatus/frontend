@@ -34,7 +34,7 @@ import Json.Decode as Decode
 import Json.Encode as Encode exposing (Value)
 import Page
 import Route
-import Session.LoggedIn as LoggedIn exposing (External(..))
+import Session.LoggedIn as LoggedIn exposing (External(..), FeedbackStatus(..))
 import Session.Shared exposing (Shared)
 import Strftime
 import Task
@@ -984,6 +984,7 @@ update msg model loggedIn =
                 , messageStatus = Success "community.claimAction.success"
             }
                 |> UR.init
+                |> UR.addExt (ShowFeedback LoggedIn.Success "Success!")
 
         GotClaimActionResponse (Err _) ->
             { model
