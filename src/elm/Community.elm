@@ -37,7 +37,6 @@ module Community exposing
     , toVerifications
     )
 
-import Api.Relay exposing (MetadataConnection, PaginationArgs)
 import Cambiatus.Enum.VerificationType exposing (VerificationType(..))
 import Cambiatus.Object
 import Cambiatus.Object.Action as Action

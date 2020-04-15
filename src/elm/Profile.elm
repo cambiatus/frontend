@@ -1,5 +1,6 @@
 module Profile exposing
-    ( Profile
+    ( CommunityInfo
+    , Profile
     , ProfileCreate
     , ProfileForm
     , decode
@@ -65,7 +66,14 @@ type alias Profile =
     , chatUserId : Maybe String
     , chatToken : Maybe String
     , createdAt : Posix
-    , communities : List String
+    , communities : List CommunityInfo
+    }
+
+
+type alias CommunityInfo =
+    { id : Symbol
+    , name : String
+    , logo : String
     }
 
 
@@ -91,7 +99,15 @@ selectionSet =
         |> with User.chatUserId
         |> with User.chatToken
         |> SelectionSet.hardcoded (Time.millisToPosix 0)
-        |> with (User.communities Community.symbol)
+        |> with (User.communities communityInfoSelectionSet)
+
+
+communityInfoSelectionSet : SelectionSet CommunityInfo Cambiatus.Object.Community
+communityInfoSelectionSet =
+    SelectionSet.succeed CommunityInfo
+        |> with (Eos.symbolSelectionSet Community.symbol)
+        |> with Community.name
+        |> with Community.logo
 
 
 decode : Decoder Profile

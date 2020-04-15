@@ -229,7 +229,7 @@ viewAnalysisList loggedIn model =
                         , text_ "dashboard.analysis.title.2"
                         ]
                     , if List.isEmpty claims then
-                        div [ class "flex flex-col w-full h-64 items-center justify-center px-3 py-12 my-2 rounded-lg hover:shadow-lg bg-white" ]
+                        div [ class "flex flex-col w-full h-64 items-center justify-center px-3 py-12 my-2 rounded-lg bg-white" ]
                             [ img [ src "/images/not_found.svg", class "object-contain h-32 mb-3" ] []
                             , p [ class "flex text-body text-gray mb-6" ]
                                 [ p [ class "font-bold" ] [ text_ "dashboard.analysis.empty.1" ]

@@ -25,7 +25,6 @@ module Session.LoggedIn exposing
     , viewFooter
     )
 
-import Api
 import Api.Graphql
 import Auth
 import Avatar
@@ -34,7 +33,6 @@ import Browser.Events
 import Cambiatus.Object
 import Cambiatus.Object.UnreadNotifications
 import Cambiatus.Subscription as Subscription
-import Community exposing (Balance)
 import Eos exposing (Symbol)
 import Eos.Account as Eos
 import Flags exposing (Flags)
@@ -43,13 +41,14 @@ import Graphql.Http
 import Graphql.Operation exposing (RootSubscription)
 import Graphql.SelectionSet as SelectionSet exposing (SelectionSet, with)
 import Html exposing (Html, a, button, div, footer, img, input, nav, p, span, text)
-import Html.Attributes exposing (..)
+import Html.Attributes exposing (class, classList, placeholder, required, src, style, type_, value)
 import Html.Events exposing (onClick, onFocus, onInput, onMouseEnter, onSubmit, stopPropagationOn)
 import Http
 import I18Next exposing (Delims(..), Translations, t)
 import Icons
 import Json.Decode as Decode exposing (Value)
 import Json.Encode as Encode exposing (Value)
+import List.Extra as List
 import Notification exposing (Notification)
 import Ports
 import Profile exposing (Profile, query)
@@ -128,6 +127,7 @@ type alias Model =
     , showAuthModal : Bool
     , auth : Auth.Model
     , feedback : FeedbackStatus
+    , showCommunitySelector : Bool
     }
 
 
@@ -147,6 +147,7 @@ initModel shared authModel accountName selectedCommunity =
     , showAuthModal = False
     , auth = authModel
     , feedback = Hidden
+    , showCommunitySelector = False
     }
 
 
@@ -260,8 +261,8 @@ viewHelper thisMsg page profile_ ({ shared } as model) content =
         [ class "min-h-screen flex flex-col" ]
         [ div [ class "bg-white" ]
             [ div [ class "container mx-auto" ]
-                [ viewHeader model page profile_ |> Html.map thisMsg
-                , viewMainMenu page profile_ model |> Html.map thisMsg
+                [ viewHeader model profile_ |> Html.map thisMsg
+                , viewMainMenu page model |> Html.map thisMsg
                 ]
             ]
         , case model.feedback of
@@ -296,11 +297,13 @@ viewHelper thisMsg page profile_ ({ shared } as model) content =
 
           else
             text ""
+        , communitySelectorModal model
+            |> Html.map thisMsg
         ]
 
 
-viewHeader : Model -> Page -> Profile -> Html Msg
-viewHeader ({ shared } as model) page profile_ =
+viewHeader : Model -> Profile -> Html Msg
+viewHeader ({ shared } as model) profile_ =
     let
         text_ str =
             text (t shared.translations str)
@@ -309,14 +312,7 @@ viewHeader ({ shared } as model) page profile_ =
             I18Next.tr shared.translations I18Next.Curly str values
     in
     div [ class "flex flex-wrap items-center justify-between px-4 pt-6 pb-4" ]
-        [ a [ Route.href Route.Dashboard ]
-            [ img [ class "lg:hidden h-8", src shared.logoMobile ] []
-            , img
-                [ class "hidden lg:block lg:visible h-6"
-                , src shared.logo
-                ]
-                []
-            ]
+        [ viewCommunitySelector model
         , div [ class "hidden lg:block lg:visible lg:w-1/3" ] [ searchBar model ]
         , div [ class "flex items-center float-right" ]
             [ a
@@ -417,6 +413,87 @@ viewHeader ({ shared } as model) page profile_ =
         ]
 
 
+viewCommunitySelector : Model -> Html Msg
+viewCommunitySelector ({ shared } as model) =
+    let
+        findCommunity : Symbol -> Maybe Profile.CommunityInfo
+        findCommunity symbol =
+            case model.profile of
+                Loaded p ->
+                    p.communities
+                        |> List.find (\c -> c.id == symbol)
+
+                _ ->
+                    Nothing
+
+        url hash =
+            shared.endpoints.ipfs ++ "/" ++ hash
+    in
+    case findCommunity model.selectedCommunity of
+        Just community ->
+            div [ class "flex items-center" ]
+                [ a [ Route.href Route.Dashboard ]
+                    [ img [ class "h-10", src <| url community.logo ] [] ]
+                , button [ onClick OpenCommunitySelector ] [ Icons.arrowDown "" ]
+                ]
+
+        Nothing ->
+            a [ Route.href Route.Dashboard ]
+                [ img [ class "lg:hidden h-8", src shared.logoMobile ] []
+                , img
+                    [ class "hidden lg:block lg:visible h-6"
+                    , src shared.logo
+                    ]
+                    []
+                ]
+
+
+communitySelectorModal : Model -> Html Msg
+communitySelectorModal model =
+    let
+        t s =
+            I18Next.t model.shared.translations s
+
+        text_ s =
+            text (t s)
+
+        viewCommunityItem : Profile.CommunityInfo -> Html Msg
+        viewCommunityItem c =
+            div [] [ text c.name ]
+    in
+    if model.showCommunitySelector then
+        case model.profile of
+            Loaded pro ->
+                if List.isEmpty pro.communities then
+                    text ""
+
+                else
+                    div [ class "modal container" ]
+                        [ div [ class "modal-bg", onClick CloseCommunitySelector ] []
+                        , div [ class "modal-content" ]
+                            [ div [ class "w-full" ]
+                                [ p [ class "w-full font-bold text-heading text-2xl" ]
+                                    [ text_ "menu.community_selector.title" ]
+                                , button
+                                    [ onClick CloseCommunitySelector ]
+                                    [ Icons.close "absolute fill-current text-gray-400 top-0 right-0 mx-8 my-4"
+                                    ]
+                                , p [ class "text-body w-full font-sans mb-10" ]
+                                    [ text_ "menu.community_selector.body"
+                                    ]
+                                , div [ class "w-full" ]
+                                    (List.map viewCommunityItem pro.communities)
+                                ]
+                            ]
+                        ]
+
+            _ ->
+                text ""
+
+    else
+        text ""
+
+
 searchBar : Model -> Html Msg
 searchBar ({ shared } as model) =
     Html.form
@@ -437,12 +514,9 @@ searchBar ({ shared } as model) =
         ]
 
 
-viewMainMenu : Page -> Profile -> Model -> Html Msg
-viewMainMenu page profile_ model =
+viewMainMenu : Page -> Model -> Html Msg
+viewMainMenu page model =
     let
-        ipfsUrl =
-            model.shared.endpoints.ipfs
-
         menuItemClass =
             "mx-4 w-48 font-sans uppercase flex items-center justify-center leading-tight text-xs text-gray-700 hover:text-indigo-500"
 
@@ -570,6 +644,8 @@ type Msg
     | CompletedLoadUnread Value
     | KeyDown String
     | HideFeedback
+    | OpenCommunitySelector
+    | CloseCommunitySelector
 
 
 update : Msg -> Model -> UpdateResult
@@ -758,6 +834,14 @@ update msg model =
             { model | feedback = Hidden }
                 |> UR.init
 
+        OpenCommunitySelector ->
+            { model | showCommunitySelector = True }
+                |> UR.init
+
+        CloseCommunitySelector ->
+            { model | showCommunitySelector = False }
+                |> UR.init
+
 
 closeModal : UpdateResult -> UpdateResult
 closeModal ({ model } as uResult) =
@@ -919,3 +1003,9 @@ msgToString msg =
 
         HideFeedback ->
             [ "HideFeedback" ]
+
+        OpenCommunitySelector ->
+            [ "OpenCommunitySelector" ]
+
+        CloseCommunitySelector ->
+            [ "CloseCommunitySelector" ]
