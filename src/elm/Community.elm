@@ -18,7 +18,9 @@ module Community exposing
     , claimSelectionSet
     , communitiesQuery
     , communityQuery
+    , communitySelectionSet
     , createCommunityData
+    , dashboardSelectionSet
     , decodeBalance
     , decodeTransaction
     , encodeClaimAction
@@ -69,9 +71,12 @@ import View.Tag as Tag
 
 
 type alias DashboardInfo =
-    { title : String
+    { name : String
     , logo : String
-    , members : List Profile
+    , memberCount : Int
+    , transferCount : Int
+    , actionCount : Int
+    , saleCount : Int
     }
 
 
@@ -128,7 +133,10 @@ dashboardSelectionSet =
     SelectionSet.succeed DashboardInfo
         |> with Community.name
         |> with Community.logo
-        |> with (Community.members Profile.selectionSet)
+        |> with Community.memberCount
+        |> with Community.transferCount
+        |> with Community.actionCount
+        |> with Community.saleCount
 
 
 communitySelectionSet : SelectionSet Community Cambiatus.Object.Community

@@ -35,7 +35,11 @@
     "try_again": "Tente novamente",
     "coming_soon": "Em Breve",
     "my_account": "Minha conta",
-    "languages": "Linguagens"
+    "languages": "Linguagens",
+    "community_selector": {
+      "title": "Alterar comunidade",
+      "body": "Selecione uma comunidade"
+    }
   },
   "edit": {
     "input_counter": "{{current}} de {{max}}"
@@ -457,6 +461,9 @@
   },
   "dashboard": {
     "back": "Voltar",
+    "transfer": "Transferir para um amigo",
+    "explore": "Sobre essa comunidade",
+    "invite": "Convide seus amigos",
     "sorry": "Desculpe!",
     "action_rejected": "Sua ação foi rejeitada",
     "please_try_again": "Por favor tente novamente",

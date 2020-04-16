@@ -158,6 +158,8 @@
 
 .modal {
     @apply z-50 fixed top-1/2;
+
+    transition: opacity 0.25s ease;
 }
 
 .modal-bg {
@@ -189,14 +191,17 @@
 .form-switch {
     @apply relative select-none w-10 mr-2 leading-normal;
 }
+
 .form-switch-checkbox {
     @apply hidden;
 }
+
 .form-switch-label {
     @apply block overflow-hidden cursor-pointer bg-white border-2 border-gray-100 rounded-full h-6;
 
     transition: background-color 0.2s ease-in;
 }
+
 .form-switch-label:before {
     @apply absolute block bg-gray-900 inset-y-0 w-4 h-4 rounded-full -ml-1 mt-1;
 
@@ -204,14 +209,12 @@
     content: "";
     transition: all 0.2s ease-in;
 }
-.form-switch-checkbox:checked + .form-switch-label,
-.form-switch-checkbox:checked + .form-switch-label:before {
 
-}
-.form-switch-checkbox:checked + .form-switch-label {
+.form-switch-checkbox:checked+.form-switch-label {
     @apply bg-indigo-500 shadow-none;
 }
-.form-switch-checkbox:checked + .form-switch-label:before {
+
+.form-switch-checkbox:checked+.form-switch-label:before {
     @apply right-0 bg-white;
 
     margin-right: 0.3rem;

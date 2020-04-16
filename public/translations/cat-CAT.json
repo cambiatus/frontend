@@ -35,7 +35,11 @@
     "try_again": "Intenta de nou",
     "coming_soon": "Pròximament",
     "my_account": "Meu compte",
-    "languages": "Idiomes"
+    "languages": "Idiomes",
+    "community_selector": {
+      "title": "Community switch",
+      "body": "Selecciona la teva comunitat"
+    }
   },
   "edit": {
     "input_counter": "{{current}} de {{max}}"
@@ -454,6 +458,9 @@
   },
   "dashboard": {
     "back": "Tornar",
+    "transfer": "Trasllat a un company",
+    "explore": "Sobre aquesta comunitat",
+    "invite": "Convida els teus amics",
     "sorry": "ho sentim!",
     "action_rejected": "S'ha rebutjat la teva acció",
     "please_try_again": "Si us plau intenta-de nou",

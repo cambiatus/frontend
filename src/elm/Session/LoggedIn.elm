@@ -431,10 +431,10 @@ viewCommunitySelector ({ shared } as model) =
     in
     case findCommunity model.selectedCommunity of
         Just community ->
-            div [ class "flex items-center" ]
+            button [ class "flex items-center", onClick OpenCommunitySelector ]
                 [ a [ Route.href Route.Dashboard ]
                     [ img [ class "h-10", src <| url community.logo ] [] ]
-                , button [ onClick OpenCommunitySelector ] [ Icons.arrowDown "" ]
+                , Icons.arrowDown ""
                 ]
 
         Nothing ->
@@ -457,9 +457,18 @@ communitySelectorModal model =
         text_ s =
             text (t s)
 
+        logoUrl hash =
+            model.shared.endpoints.ipfs ++ "/" ++ hash
+
         viewCommunityItem : Profile.CommunityInfo -> Html Msg
         viewCommunityItem c =
-            div [] [ text c.name ]
+            div
+                [ class "flex items-center h-16 border-b text-body hover:pointer"
+                , onClick <| SelectCommunity c.id
+                ]
+                [ img [ src (logoUrl c.logo), class "h-12 mr-5" ] []
+                , text c.name
+                ]
     in
     if model.showCommunitySelector then
         case model.profile of
@@ -470,7 +479,7 @@ communitySelectorModal model =
                 else
                     div [ class "modal container" ]
                         [ div [ class "modal-bg", onClick CloseCommunitySelector ] []
-                        , div [ class "modal-content" ]
+                        , div [ class "modal-content overflow-auto", style "height" "65%" ]
                             [ div [ class "w-full" ]
                                 [ p [ class "w-full font-bold text-heading text-2xl" ]
                                     [ text_ "menu.community_selector.title" ]
@@ -478,10 +487,10 @@ communitySelectorModal model =
                                     [ onClick CloseCommunitySelector ]
                                     [ Icons.close "absolute fill-current text-gray-400 top-0 right-0 mx-8 my-4"
                                     ]
-                                , p [ class "text-body w-full font-sans mb-10" ]
+                                , p [ class "text-body w-full font-sans mb-2" ]
                                     [ text_ "menu.community_selector.body"
                                     ]
-                                , div [ class "w-full" ]
+                                , div [ class "w-full overflow-scroll" ]
                                     (List.map viewCommunityItem pro.communities)
                                 ]
                             ]
@@ -646,6 +655,7 @@ type Msg
     | HideFeedback
     | OpenCommunitySelector
     | CloseCommunitySelector
+    | SelectCommunity Symbol
 
 
 update : Msg -> Model -> UpdateResult
@@ -817,7 +827,7 @@ update msg model =
                     { model | unreadCount = res.unreads }
                         |> UR.init
 
-                Err e ->
+                Err _ ->
                     model
                         |> UR.init
                         |> UR.logImpossible msg []
@@ -841,6 +851,11 @@ update msg model =
         CloseCommunitySelector ->
             { model | showCommunitySelector = False }
                 |> UR.init
+
+        SelectCommunity communityId ->
+            { model | selectedCommunity = communityId, showCommunitySelector = False }
+                |> UR.init
+                |> UR.addCmd (Route.replaceUrl model.shared.navKey Route.Dashboard)
 
 
 closeModal : UpdateResult -> UpdateResult
@@ -1009,3 +1024,6 @@ msgToString msg =
 
         CloseCommunitySelector ->
             [ "CloseCommunitySelector" ]
+
+        SelectCommunity _ ->
+            [ "SelectCommunity" ]

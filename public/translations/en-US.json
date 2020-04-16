@@ -35,7 +35,11 @@
     "try_again": "Try again",
     "coming_soon": "Coming Soon",
     "my_account": "My account",
-    "languages": "Languages"
+    "languages": "Languages",
+    "community_selector": {
+      "title": "Community switch",
+      "body": "Select the community"
+    }
   },
   "edit": {
     "input_counter": "{{current}} of {{max}}"
@@ -453,6 +457,9 @@
   },
   "dashboard": {
     "back": "Back",
+    "transfer": "Transfer to a friend",
+    "explore": "About this community",
+    "invite": "Invite your friends",
     "sorry": "Sorry!",
     "action_rejected": "Your action was rejected",
     "please_try_again": "Please try again",
