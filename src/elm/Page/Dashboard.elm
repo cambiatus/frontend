@@ -35,11 +35,13 @@ import Profile
 import Route
 import Session.LoggedIn as LoggedIn exposing (External(..))
 import Session.Shared exposing (Shared)
+import Strftime
 import Task
 import Time exposing (Posix)
 import Transfer exposing (QueryTransfers, Transfer, userFilter)
 import UpdateResult as UR
 import Url
+import Utils
 
 
 
@@ -115,7 +117,6 @@ type GraphqlStatus err a
 type ClaimStatus
     = ClaimLoaded Claim.Model
     | ClaimLoading Claim.Model
-    | ClaimVoted Claim.Model
     | ClaimVoteFailed Claim.Model
 
 
@@ -150,9 +151,9 @@ view loggedIn model =
 
         ( Loaded balance, LoggedIn.Loaded profile ) ->
             div [ class "container mx-auto px-4 mb-10" ]
-                [ div [ class "text-gray-600 text-2xl font-light flex mt-6 mb-4" ]
+                [ div [ class "inline-block text-gray-600 text-2xl font-light mt-6 mb-4" ]
                     [ text (t "menu.my_communities")
-                    , div [ class "text-indigo-500 ml-2 font-medium" ]
+                    , span [ class "text-indigo-500 font-medium" ]
                         [ text (profile.userName |> Maybe.withDefault (Eos.nameToString profile.account))
                         ]
                     ]
@@ -196,24 +197,21 @@ viewAnalysisModal loggedIn model =
                                 text_ "claim.modal.message_disapprove"
                             ]
                         ]
-                    , div [ class "w-full md:bg-gray-100 md:flex md:absolute rounded-b-lg md:inset-x-0 md:bottom-0 md:p-4 justify-center" ]
-                        [ div [ class "flex" ]
-                            [ button
-                                [ class "flex-1 block button button-secondary mb-4 button-lg w-full md:w-40 md:mb-0"
-                                , onClick CloseModal
-                                ]
-                                [ text_ "claim.modal.secondary" ]
-                            , div [ class "w-8" ] []
-                            , button
-                                [ class "flex-1 block button button-primary button-lg w-full md:w-40"
-                                , onClick (VoteClaim claimId vote)
-                                ]
-                                [ if vote then
-                                    text_ "claim.modal.primary_approve"
+                    , div [ class "modal-footer" ]
+                        [ button
+                            [ class "modal-cancel"
+                            , onClick CloseModal
+                            ]
+                            [ text_ "claim.modal.secondary" ]
+                        , button
+                            [ class "modal-accept"
+                            , onClick (VoteClaim claimId vote)
+                            ]
+                            [ if vote then
+                                text_ "claim.modal.primary_approve"
 
-                                  else
-                                    text_ "claim.modal.primary_disapprove"
-                                ]
+                              else
+                                text_ "claim.modal.primary_disapprove"
                             ]
                         ]
                     ]
@@ -356,31 +354,36 @@ viewAnalysis ({ shared } as loggedIn) claimStatus =
     let
         text_ s =
             text (I18Next.t shared.translations s)
+
+        date dateTime =
+            Just dateTime
+                |> Utils.posixDateTime
+                |> Strftime.format "%d %b %Y" Time.utc
     in
     case claimStatus of
         ClaimLoaded claim ->
             div
-                [ class "flex flex-col items-center justify-center px-3 pt-5 pb-2 my-2 rounded-lg hover:shadow-lg bg-white"
+                [ class "flex flex-col p-4 my-2 rounded-lg bg-white"
                 ]
-                [ div []
+                [ div [ class "flex justify-start mb-8" ]
                     [ Profile.view shared loggedIn.accountName claim.claimer
                     ]
-                , div []
+                , div [ class "mb-6" ]
                     [ p [ class "text-body" ]
                         [ text claim.action.description ]
+                    , p
+                        [ class "text-gray-900 text-caption uppercase" ]
+                        [ text <| date claim.createdAt ]
                     ]
                 , div [ class "flex" ]
                     [ button
-                        [ class "button button-secondary w-1/2"
-
-                        -- , onClick (VoteClaim claim.id False)
+                        [ class "flex-1 button button-secondary"
                         , onClick (OpenModal claim.id False)
                         ]
                         [ text_ "dashboard.reject" ]
+                    , div [ class "w-4" ] []
                     , button
-                        [ class "button button-primary w-1/2"
-
-                        -- , onClick (VoteClaim claim.id True)
+                        [ class "flex-1 button button-primary"
                         , onClick (OpenModal claim.id True)
                         ]
                         [ text_ "dashboard.verify" ]
@@ -388,12 +391,9 @@ viewAnalysis ({ shared } as loggedIn) claimStatus =
                 ]
 
         ClaimLoading _ ->
-            div [ class "flex flex-col items-center justify-center px-3 pt-5 pb-2 my-2 rounded-lg hover:shadow-lg bg-white" ]
+            div [ class "flex flex-col items-center justify-center px-3 py-5 my-2 rounded-lg hover:shadow-lg bg-white" ]
                 [ Page.fullPageLoading
                 ]
-
-        ClaimVoted _ ->
-            text ""
 
         ClaimVoteFailed _ ->
             div [ class "text-red" ] [ text "failed" ]
@@ -505,7 +505,7 @@ viewBalance loggedIn model balance =
         balanceText =
             String.fromFloat balance.asset.amount ++ " "
     in
-    div [ class "flex w-1/3 bg-white rounded h-64 p-4" ]
+    div [ class "flex w-full lg:w-1/3 bg-white rounded h-64 p-4" ]
         [ div [ class "w-full" ]
             [ div [ class "input-label mb-2" ]
                 [ text_ "account.my_wallet.balances.current" ]
@@ -622,7 +622,10 @@ update msg model loggedIn =
                             setClaimStatus claims claimId ClaimLoading
 
                         newModel =
-                            { model | analysis = LoadedGraphql newClaims }
+                            { model
+                                | analysis = LoadedGraphql newClaims
+                                , voteModalStatus = VoteModalClosed
+                            }
                     in
                     if LoggedIn.isAuth loggedIn then
                         UR.init newModel
@@ -657,24 +660,26 @@ update msg model loggedIn =
                 LoadedGraphql claims ->
                     let
                         newClaims =
-                            setClaimStatus claims claimId ClaimVoted
+                            removeClaim claims claimId
 
                         maybeClaim : Maybe Claim.Model
                         maybeClaim =
                             findClaim claims claimId
 
                         message val =
-                            [ ( "value", val ) ] |> I18Next.tr loggedIn.shared.translations I18Next.Curly "claim.reward"
+                            [ ( "value", val ) ]
+                                |> I18Next.tr loggedIn.shared.translations I18Next.Curly "claim.reward"
                     in
                     case maybeClaim of
                         Just claim ->
                             let
                                 value =
-                                    String.fromFloat claim.action.verifierReward ++ " " ++ Eos.symbolToString claim.action.objective.community.symbol
+                                    String.fromFloat claim.action.verifierReward
+                                        ++ " "
+                                        ++ Eos.symbolToString claim.action.objective.community.symbol
                             in
                             { model
                                 | analysis = LoadedGraphql newClaims
-                                , voteModalStatus = VoteModalClosed
                             }
                                 |> UR.init
                                 |> UR.addExt (ShowFeedback { message = message value, success = True })
@@ -828,32 +833,31 @@ findClaim claims claimId =
                     ClaimLoading claim ->
                         claim
 
-                    ClaimVoted claim ->
-                        claim
-
                     ClaimVoteFailed claim ->
                         claim
             )
         |> List.find (\c -> c.id == claimId)
 
 
-sortCambiatusFirst : LoggedIn.Model -> List Balance -> List Balance
-sortCambiatusFirst _ balances =
+removeClaim : List ClaimStatus -> Int -> List ClaimStatus
+removeClaim claims claimId =
     let
-        bespiral : Maybe Balance
-        bespiral =
-            balances
-                |> List.filter (\b -> b.asset.symbol == Eos.bespiralSymbol)
-                |> List.head
-
-        --|> Maybe.withDefault (Balance "" 0 False False)
-        balancesWithoutSpiral : List Balance
-        balancesWithoutSpiral =
-            balances
-                |> List.filter (\b -> b.asset.symbol /= Eos.bespiralSymbol)
+        maybeC c =
+            c.id /= claimId
     in
-    Maybe.map (\b -> b :: balancesWithoutSpiral) bespiral
-        |> Maybe.withDefault balancesWithoutSpiral
+    List.filter
+        (\c ->
+            case c of
+                ClaimLoaded claim ->
+                    maybeC claim
+
+                ClaimLoading claim ->
+                    maybeC claim
+
+                ClaimVoteFailed claim ->
+                    maybeC claim
+        )
+        claims
 
 
 encodeVerification : Int -> Eos.Name -> Bool -> Encode.Value

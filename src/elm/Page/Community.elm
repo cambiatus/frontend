@@ -710,7 +710,7 @@ viewClaimModal loggedIn model =
                 , div [ class "modal-content" ]
                     [ div [ class "w-full" ]
                         [ p [ class "w-full font-bold text-heading text-2xl mb-4" ]
-                            [ text_ "dashboard.check_claim.title" ]
+                            [ text_ "claim.modal.title" ]
                         , button
                             [ if not isLoading then
                                 onClick CloseClaimConfirmation

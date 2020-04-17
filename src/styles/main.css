@@ -170,14 +170,52 @@
     @apply bg-white bottom-0 right-0 left-0 fixed rounded-t-lg p-4;
 }
 
+.modal-footer {
+    @apply w-full flex flex-wrap absolute rounded-b-lg justify-center items-center;
+}
+
+.modal-cancel {
+    @apply button button-secondary w-full mb-4;
+}
+
+.modal-accept {
+    @apply button button-primary w-full;
+}
+
+
 @screen md {
     .modal-content {
         @apply max-w-3xl fixed top-modal mx-auto h-64 rounded-lg;
     }
+
+    .modal-footer {
+        @apply bg-gray-100 inset-x-0 bottom-0 p-4;
+    }
+
+    .modal-cancel {
+        @apply mb-0 w-48 mr-8;
+    }
+
+    .modal-accept {
+        @apply w-48;
+    }
 }
 
-
 /* End of Modal */
+
+/* Swiper */
+
+.swiper {
+    scroll-snap-type: x mandatory;
+    scroll-behavior: smooth;
+    -webkit-overflow-scrolling: touch;
+}
+
+.swiper>* {
+    scroll-snap-align: start;
+}
+
+/* End of swiper */
 
 /* Tag */
 

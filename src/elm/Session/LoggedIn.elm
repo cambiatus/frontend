@@ -432,8 +432,7 @@ viewCommunitySelector ({ shared } as model) =
     case findCommunity model.selectedCommunity of
         Just community ->
             button [ class "flex items-center", onClick OpenCommunitySelector ]
-                [ a [ Route.href Route.Dashboard ]
-                    [ img [ class "h-10", src <| url community.logo ] [] ]
+                [ img [ class "h-10", src <| url community.logo ] []
                 , Icons.arrowDown ""
                 ]
 
