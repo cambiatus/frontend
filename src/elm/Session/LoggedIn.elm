@@ -223,7 +223,7 @@ view thisMsg page ({ shared } as model) content =
 viewFeedback : Feedback -> Html Msg
 viewFeedback feedback =
     div
-        [ class "sticky top-0 w-full flex justify-center items-center"
+        [ class "sticky z-100 top-0 w-full flex justify-center items-center"
         , classList [ ( "bg-green", feedback.success ), ( "bg-red", not feedback.success ) ]
         ]
         [ span [ class "ml-auto invisible" ] []
@@ -855,6 +855,15 @@ update msg model =
             { model | selectedCommunity = communityId, showCommunitySelector = False }
                 |> UR.init
                 |> UR.addCmd (Route.replaceUrl model.shared.navKey Route.Dashboard)
+                |> UR.addPort
+                    { responseAddress = msg
+                    , responseData = Encode.null
+                    , data =
+                        Encode.object
+                            [ ( "selectedCommunity", Eos.encodeSymbol communityId )
+                            , ( "name", Encode.string "setSelectedCommunity" )
+                            ]
+                    }
 
 
 closeModal : UpdateResult -> UpdateResult

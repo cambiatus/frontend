@@ -55,6 +55,8 @@ function flags () {
   return flags_
 }
 
+window.a = getSelectedCommunity
+
 // Start elm app with flags
 const app = Elm.Main.init({
   flags: flags()
@@ -149,7 +151,7 @@ async function storePin (data, pin) {
 }
 
 function getSelectedCommunity () {
-  window.localStorage.getItem(SELECTED_COMMUNITY_KEY)
+  return window.localStorage.getItem(SELECTED_COMMUNITY_KEY)
 }
 
 app.ports.javascriptOutPort.subscribe(handleJavascriptPort)
@@ -699,7 +701,6 @@ async function handleJavascriptPort (arg) {
 
       break
     }
-
     case 'subscribeToUnreadCount': {
       devLog('=======================', 'unreadCountSubscription')
       let notifiers = []
@@ -778,6 +779,17 @@ async function handleJavascriptPort (arg) {
         addressData: arg.responseData
       }
       app.ports.javascriptInPort.send(response)
+      break
+    }
+    case 'setSelectedCommunity': {
+      devLog('=======================', 'storeSelectedCommunity')
+
+      window.localStorage.removeItem(SELECTED_COMMUNITY_KEY)
+      window.localStorage.setItem(
+        SELECTED_COMMUNITY_KEY,
+        arg.data.selectedCommunity
+      )
+
       break
     }
     default: {
