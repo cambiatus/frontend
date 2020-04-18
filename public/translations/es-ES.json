@@ -426,6 +426,7 @@
     "create_offer": "Crear oferta",
     "create_offer_success": "Oferta creada con éxito",
     "edit_offer": "Editar oferta",
+    "delete_offer_success": "Oferta eliminado con éxito",
     "unauthorized": "No tienes autorización para editar esta venta",
     "photo_label": "Subir imagen",
     "what_label": "Que estas vendiendo?",

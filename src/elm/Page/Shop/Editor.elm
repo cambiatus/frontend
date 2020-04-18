@@ -977,7 +977,7 @@ update msg model loggedIn =
                 |> UR.init
                 |> UR.addCmd
                     (Route.replaceUrl loggedIn.shared.navKey (Route.Shop Shop.All))
-                |> UR.addExt (ShowFeedback Success "Success!")
+                |> UR.addExt (ShowFeedback Success (t "shop.delete_offer_success"))
 
         GotDeleteResponse (Err error) ->
             let

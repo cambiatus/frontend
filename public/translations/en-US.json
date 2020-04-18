@@ -425,6 +425,7 @@
     "create_offer": "Create offer",
     "create_offer_success": "Offer created with success",
     "edit_offer": "Edit offer",
+    "delete_offer_success": "Offer removed with success",
     "unauthorized": "You are not authorized to edit this sale",
     "photo_label": "Upload image",
     "what_label": "What are you selling?",
