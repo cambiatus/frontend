@@ -250,6 +250,10 @@ updateObjective msg fn uResult =
 
 update : Msg -> Model -> LoggedIn.Model -> UpdateResult
 update msg model loggedIn =
+    let
+        t =
+            I18Next.t loggedIn.shared.translations
+    in
     case msg of
         CompletedCommunityLoad (Ok community) ->
             case community of
@@ -375,7 +379,7 @@ update msg model loggedIn =
                     (Route.replaceUrl loggedIn.shared.navKey
                         (Route.Community model.community)
                     )
-                |> UR.addExt (ShowFeedback Success "Success!")
+                |> UR.addExt (ShowFeedback Success (t "community.objectives.create_success"))
 
         GotSaveObjectiveResponse (Err v) ->
             UR.init model
