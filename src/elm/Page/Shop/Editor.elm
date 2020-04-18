@@ -553,6 +553,10 @@ type Msg
 
 update : Msg -> Model -> LoggedIn.Model -> UpdateResult
 update msg model loggedIn =
+    let
+        t =
+            I18Next.t loggedIn.shared.translations
+    in
     case msg of
         CompletedBalancesLoad (Ok balances) ->
             case model.status of
@@ -931,7 +935,7 @@ update msg model loggedIn =
             UR.init model
                 |> UR.addCmd
                     (Route.replaceUrl loggedIn.shared.navKey (Route.Shop Shop.All))
-                |> UR.addExt (ShowFeedback Success "Success!")
+                |> UR.addExt (ShowFeedback Success (t "shop.create_offer_success"))
 
         GotSaveResponse (Err error) ->
             let

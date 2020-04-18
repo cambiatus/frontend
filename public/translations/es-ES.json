@@ -424,6 +424,7 @@
     "no_answer_yet": "Sin respuesta aun",
     "message_placeholder": "Escribe tu mensaje aqui o envía un mensaje directo usando Whatsapp o chat.",
     "create_offer": "Crear oferta",
+    "create_offer_success": "Oferta creada con éxito",
     "edit_offer": "Editar oferta",
     "unauthorized": "No tienes autorización para editar esta venta",
     "photo_label": "Subir imagen",

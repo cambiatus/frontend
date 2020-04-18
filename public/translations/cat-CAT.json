@@ -425,6 +425,7 @@
     "no_answer_yet": "Encara sense resposta",
     "message_placeholder": "Escriu el teu missatge aquí o envia un missatge directe emprant Whatsapp o xat.",
     "create_offer": "Crear oferta",
+    "create_offer_success": "Oferta creada amb èxit",
     "edit_offer": "Editar oferta",
     "unauthorized": "No tens autorització per a editar aquesta venda",
     "photo_label": "Pujar imatge",
