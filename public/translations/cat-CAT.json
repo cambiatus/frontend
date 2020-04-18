@@ -377,6 +377,7 @@
   "profile": {
     "title": "El meu perfil",
     "my_transfers": "Les meves transferències",
+    "edit_success": "El perfil s'ha editat correctament",
     "actions": {
       "edit": "Editar",
       "viewPrivatekey": "Veure clau privada"

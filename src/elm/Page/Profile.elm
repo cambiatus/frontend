@@ -583,6 +583,10 @@ type Msg
 
 update : Msg -> Model -> LoggedIn.Model -> UpdateResult
 update msg model loggedIn =
+    let
+        t =
+            I18Next.t loggedIn.shared.translations
+    in
     case msg of
         Ignored ->
             UR.init model
@@ -627,7 +631,7 @@ update msg model loggedIn =
                                 (Profile.mutation profile.account form)
                                 CompletedProfileLoad
                             )
-                        |> UR.addExt (ShowFeedback Success "Success!")
+                        |> UR.addExt (ShowFeedback Success (t "profile.edit_success"))
 
                 _ ->
                     UR.init model

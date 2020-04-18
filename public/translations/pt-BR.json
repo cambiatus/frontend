@@ -379,6 +379,7 @@
   "profile": {
     "title": "Meu perfil",
     "my_transfers": "Minhas transferências",
+    "edit_success": "Perfil editado com sucesso",
     "actions": {
       "edit": "Editar",
       "viewPrivatekey": "Ver chave privada"

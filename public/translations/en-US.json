@@ -375,6 +375,7 @@
   "profile": {
     "title": "My profile",
     "my_transfers": "My Transfers",
+    "edit_success": "Profile edited successfully",
     "actions": {
       "edit": "Edit",
       "viewPrivatekey": "View Private Key"
