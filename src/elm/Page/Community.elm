@@ -893,6 +893,10 @@ type Msg
 
 update : Msg -> Model -> LoggedIn.Model -> UpdateResult
 update msg model loggedIn =
+    let
+        t =
+            I18Next.t loggedIn.shared.translations
+    in
     case msg of
         NoOp ->
             UR.init model
@@ -984,7 +988,7 @@ update msg model loggedIn =
                 , messageStatus = Success "community.claimAction.success"
             }
                 |> UR.init
-                |> UR.addExt (ShowFeedback LoggedIn.Success "Success!")
+                |> UR.addExt (ShowFeedback LoggedIn.Success (t "community.claimAction.success"))
 
         GotClaimActionResponse (Err _) ->
             { model
@@ -992,6 +996,7 @@ update msg model loggedIn =
                 , messageStatus = Failure "community.claimAction.failure"
             }
                 |> UR.init
+                |> UR.addExt (ShowFeedback LoggedIn.Failure (t "community.claimAction.failure"))
 
 
 jsAddressToMsg : List String -> Value -> Maybe Msg
