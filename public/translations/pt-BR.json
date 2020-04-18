@@ -216,6 +216,7 @@
     "create_button": "Criar uma comunidade",
     "create": {
       "title": "Criar comunidade",
+      "success": "Comunidade editada com sucesso",
       "labels": {
         "title": "Titulo",
         "symbol": "Simbolo",

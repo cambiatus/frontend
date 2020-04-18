@@ -213,6 +213,7 @@
     "create_button": "Crear comunitat",
     "create": {
       "title": "Crear comunitat",
+      "success": "S'ha editat la comunitat amb èxit",
       "labels": {
         "title": "Nom",
         "symbol": "Símbol",

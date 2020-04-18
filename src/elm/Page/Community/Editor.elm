@@ -606,6 +606,10 @@ type Msg
 
 update : Msg -> Model -> LoggedIn.Model -> UpdateResult
 update msg model loggedIn =
+    let
+        t =
+            I18Next.t loggedIn.shared.translations
+    in
     case msg of
         CompletedCommunityLoad (Ok community) ->
             case community of
@@ -742,7 +746,7 @@ update msg model loggedIn =
                             (Route.Community symbol
                                 |> Route.replaceUrl loggedIn.shared.navKey
                             )
-                        |> UR.addExt (ShowFeedback Success "Success!")
+                        |> UR.addExt (ShowFeedback Success (t "community.create.success"))
 
                 _ ->
                     model
