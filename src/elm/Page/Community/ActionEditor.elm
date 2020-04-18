@@ -936,7 +936,7 @@ update msg model loggedIn =
             model
                 |> UR.init
                 |> UR.addCmd (Route.replaceUrl loggedIn.shared.navKey (Route.Community model.communityId))
-                |> UR.addExt (ShowFeedback Success "Success!")
+                |> UR.addExt (ShowFeedback Success (t shared.translations "community.actions.create_success"))
 
         GotSaveAction (Err val) ->
             let
@@ -950,6 +950,7 @@ update msg model loggedIn =
                 |> UR.init
                 |> UR.logDebugValue msg val
                 |> UR.logImpossible msg []
+                |> UR.addExt (ShowFeedback Failure (t shared.translations "error.unknown"))
 
         DismissError ->
             let

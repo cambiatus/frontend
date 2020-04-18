@@ -291,6 +291,7 @@
     },
     "actions": {
       "title": "Ação",
+      "create_success": "Ação criada com sucesso",
       "last_title": "Últimas Ações",
       "loading_error": "Alguma coisa deu errado ao carregar as ações.",
       "no_actions_yet": "Nenhuma ação.",
