@@ -211,7 +211,7 @@
     -webkit-overflow-scrolling: touch;
 }
 
-.swiper>* {
+.swiper>div {
     scroll-snap-align: start;
 }
 

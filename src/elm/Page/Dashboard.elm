@@ -341,7 +341,9 @@ viewAnalysisList loggedIn model =
                             ]
 
                       else
-                        div [ class "w-full sm:w-1/2 lg:w-1/3 xl:w-1/4 mb-6" ] (List.map (viewAnalysis loggedIn) claims)
+                        div [ class "w-full sm:w-1/2 lg:w-1/3 xl:w-1/4 mb-6 swiper flex overflow-x-scroll" ]
+                            (List.map (viewAnalysis loggedIn) claims)
+                    , div [ class "flex mt-4" ] (List.map viewDots claims)
                     ]
                 ]
 
@@ -364,6 +366,7 @@ viewAnalysis ({ shared } as loggedIn) claimStatus =
         ClaimLoaded claim ->
             div
                 [ class "flex flex-col p-4 my-2 rounded-lg bg-white"
+                , id ("claim" ++ String.fromInt claim.id)
                 ]
                 [ div [ class "flex justify-start mb-8" ]
                     [ Profile.view shared loggedIn.accountName claim.claimer
@@ -397,6 +400,27 @@ viewAnalysis ({ shared } as loggedIn) claimStatus =
 
         ClaimVoteFailed _ ->
             div [ class "text-red" ] [ text "failed" ]
+
+
+viewDots : ClaimStatus -> Html msg
+viewDots claim =
+    let
+        link c =
+            a
+                [ Html.Attributes.href <| "#claim" ++ String.fromInt c.id
+                , class "w-4 h-4 mx-1 bg-indigo-500 rounded-full"
+                ]
+                []
+    in
+    case claim of
+        ClaimLoaded c ->
+            link c
+
+        ClaimLoading c ->
+            link c
+
+        ClaimVoteFailed c ->
+            link c
 
 
 viewTransfers : LoggedIn.Model -> Model -> Html Msg
