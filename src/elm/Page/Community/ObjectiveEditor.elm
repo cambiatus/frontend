@@ -385,6 +385,7 @@ update msg model loggedIn =
             UR.init model
                 |> updateObjective msg (\o -> { o | save = SaveFailed })
                 |> UR.logDebugValue msg v
+                |> UR.addExt (ShowFeedback Failure (t "errors.unknown"))
 
 
 
