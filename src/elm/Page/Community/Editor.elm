@@ -762,16 +762,19 @@ update msg model loggedIn =
                     { model | status = Editing community err form }
                         |> UR.init
                         |> UR.logDebugValue msg val
+                        |> UR.addExt (ShowFeedback Failure (t "error.unknown"))
 
                 Creating form ->
                     { model | status = EditingNew err form }
                         |> UR.init
                         |> UR.logDebugValue msg val
+                        |> UR.addExt (ShowFeedback Failure (t "error.unknown"))
 
                 _ ->
                     UR.init model
                         |> UR.logImpossible msg []
                         |> UR.logDebugValue msg val
+                        |> UR.addExt (ShowFeedback Failure (t "error.unknown"))
 
         Redirect ->
             case model.status of
