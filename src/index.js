@@ -55,8 +55,6 @@ function flags () {
   return flags_
 }
 
-window.a = getSelectedCommunity
-
 // Start elm app with flags
 const app = Elm.Main.init({
   flags: flags()
