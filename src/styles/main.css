@@ -1,57 +1,57 @@
 @font-face {
-    font-family: "Gotham Rounded";
-    font-style: normal;
-    font-weight: 700;
-    src: url("/fonts/gotham-rounded-bold.otf");
+  font-family: 'Gotham Rounded';
+  font-style: normal;
+  font-weight: 700;
+  src: url('/fonts/gotham-rounded-bold.otf');
 }
 
 @font-face {
-    font-family: "Gotham Rounded";
-    font-style: italic;
-    font-weight: 700;
-    src: url("/fonts/gotham-rounded-bold-italic.otf");
+  font-family: 'Gotham Rounded';
+  font-style: italic;
+  font-weight: 700;
+  src: url('/fonts/gotham-rounded-bold-italic.otf');
 }
 
 @font-face {
-    font-family: "Gotham Rounded";
-    font-style: normal;
-    font-weight: 400;
-    src: url("/fonts/gotham-rounded-book.otf");
+  font-family: 'Gotham Rounded';
+  font-style: normal;
+  font-weight: 400;
+  src: url('/fonts/gotham-rounded-book.otf');
 }
 
 @font-face {
-    font-family: "Gotham Rounded";
-    font-style: italic;
-    font-weight: 400;
-    src: url("/fonts/gotham-rounded-book-italic.otf");
+  font-family: 'Gotham Rounded';
+  font-style: italic;
+  font-weight: 400;
+  src: url('/fonts/gotham-rounded-book-italic.otf');
 }
 
 @font-face {
-    font-family: "Gotham Rounded";
-    font-style: normal;
-    font-weight: 300;
-    src: url("/fonts/gotham-rounded-light.otf");
+  font-family: 'Gotham Rounded';
+  font-style: normal;
+  font-weight: 300;
+  src: url('/fonts/gotham-rounded-light.otf');
 }
 
 @font-face {
-    font-family: "Gotham Rounded";
-    font-style: italic;
-    font-weight: 300;
-    src: url("/fonts/gotham-rounded-light-italic.otf");
+  font-family: 'Gotham Rounded';
+  font-style: italic;
+  font-weight: 300;
+  src: url('/fonts/gotham-rounded-light-italic.otf');
 }
 
 @font-face {
-    font-family: "Gotham Rounded";
-    font-style: normal;
-    font-weight: 500;
-    src: url("/fonts/gotham-rounded-medium.otf");
+  font-family: 'Gotham Rounded';
+  font-style: normal;
+  font-weight: 500;
+  src: url('/fonts/gotham-rounded-medium.otf');
 }
 
 @font-face {
-    font-family: "Gotham Rounded";
-    font-style: italic;
-    font-weight: 500;
-    src: url("/fonts/gotham-rounded-medium-italic.otf");
+  font-family: 'Gotham Rounded';
+  font-style: italic;
+  font-weight: 500;
+  src: url('/fonts/gotham-rounded-medium-italic.otf');
 }
 
 @tailwind base;
@@ -61,7 +61,7 @@
 /* Typography */
 
 .heading-bold {
-    @apply font-medium font-sans text-black text-heading my-3;
+  @apply font-medium font-sans text-black text-heading my-3;
 }
 
 /* End of Typography */
@@ -69,35 +69,35 @@
 /* Button */
 
 .button {
-    @apply uppercase font-sans text-sm flex items-center justify-center leading-none w-40 h-10;
+  @apply uppercase font-sans text-sm flex items-center justify-center leading-none w-40 h-10;
 }
 
 .button-primary {
-    @apply bg-orange-300 text-white text-body rounded-super;
+  @apply bg-orange-300 text-white text-body rounded-super;
 }
 
 .button-primary:hover {
-    @apply bg-orange-100;
+  @apply bg-orange-100;
 }
 
 .button-secondary {
-    @apply bg-white text-orange-300 rounded-full border;
+  @apply bg-white text-orange-300 rounded-full border;
 }
 
 .button-sm {
-    @apply py-1 px-6 h-8;
+  @apply py-1 px-6 h-8;
 }
 
 .button-lg {
-    @apply py-3 px-6 h-12;
+  @apply py-3 px-6 h-12;
 }
 
 .button-disabled {
-    @apply bg-gray-500 text-red rounded-super text-body;
+  @apply bg-gray-500 text-red rounded-super text-body;
 }
 
 .button-success {
-    @apply bg-green text-white rounded-full text-body;
+  @apply bg-green text-white rounded-full text-body;
 }
 
 /* End of Button */
@@ -105,20 +105,20 @@
 /* Input */
 
 .input {
-    /* Form input comes from tailwind/custom-forms */
-    @apply form-input h-12;
+  /* Form input comes from tailwind/custom-forms */
+  @apply form-input h-12;
 }
 
 .input-counter {
-    @apply text-purple-100 uppercase font-bold float-right mt-1;
+  @apply text-purple-100 uppercase font-bold float-right mt-1;
 }
 
 .input-label {
-    @apply text-green text-caption uppercase font-sans
+  @apply text-green text-caption uppercase font-sans;
 }
 
 .input-token {
-    @apply text-white font-sans items-center justify-center bg-indigo-500 px-4 py-3 text-body rounded-r
+  @apply text-white font-sans items-center justify-center bg-indigo-500 px-4 py-3 text-body rounded-r;
 }
 
 /* End of Input */
@@ -126,7 +126,7 @@
 /* Select */
 
 .select {
-    @apply h-12 block border font-sans border-gray-500 rounded
+  @apply h-12 block border font-sans border-gray-500 rounded;
 }
 
 /* End of Select */
@@ -134,22 +134,22 @@
 /* Tooltip */
 
 .tooltip-container p {
-    visibility: hidden;
+  visibility: hidden;
 }
 
 .tooltip-container:hover p {
-    visibility: visible;
+  visibility: visible;
 }
 
 .tooltip-container p::after {
-    content: " ";
-    position: absolute;
-    bottom: 100%;
-    right: 5%;
-    margin-left: -5px;
-    border-width: 10px;
-    border-style: solid;
-    border-color: transparent transparent black transparent;
+  content: ' ';
+  position: absolute;
+  bottom: 100%;
+  right: 5%;
+  margin-left: -5px;
+  border-width: 10px;
+  border-style: solid;
+  border-color: transparent transparent black transparent;
 }
 
 /* End of Tooltip */
@@ -157,109 +157,93 @@
 /* Modal */
 
 .modal {
-    @apply z-50 fixed top-1/2;
+  @apply z-50 fixed top-1/2;
 
-    transition: opacity 0.25s ease;
+  transition: opacity 0.25s ease;
 }
 
 .modal-bg {
-    @apply bg-black w-full h-full fixed bottom-0 left-0 top-0 right-0 opacity-25;
+  @apply bg-black w-full h-full fixed bottom-0 left-0 top-0 right-0 opacity-25;
 }
 
 .modal-content {
-    @apply bg-white bottom-0 right-0 left-0 fixed rounded-t-lg p-4;
+  @apply bg-white bottom-0 right-0 left-0 fixed rounded-t-lg p-4;
 }
 
 .modal-footer {
-    @apply w-full flex flex-wrap absolute rounded-b-lg justify-center items-center;
+  @apply w-full flex flex-wrap absolute rounded-b-lg justify-center items-center;
 }
 
 .modal-cancel {
-    @apply button button-secondary w-full mb-4;
+  @apply button button-secondary w-full mb-4;
 }
 
 .modal-accept {
-    @apply button button-primary w-full;
+  @apply button button-primary w-full;
 }
 
-
 @screen md {
-    .modal-content {
-        @apply max-w-3xl fixed top-modal mx-auto h-64 rounded-lg;
-    }
+  .modal-content {
+    @apply max-w-3xl fixed top-modal mx-auto h-64 rounded-lg;
+  }
 
-    .modal-footer {
-        @apply bg-gray-100 inset-x-0 bottom-0 p-4;
-    }
+  .modal-footer {
+    @apply bg-gray-100 inset-x-0 bottom-0 p-4;
+  }
 
-    .modal-cancel {
-        @apply mb-0 w-48 mr-8;
-    }
+  .modal-cancel {
+    @apply mb-0 w-48 mr-8;
+  }
 
-    .modal-accept {
-        @apply w-48;
-    }
+  .modal-accept {
+    @apply w-48;
+  }
 }
 
 /* End of Modal */
 
-/* Swiper */
-
-.swiper {
-    scroll-snap-type: x mandatory;
-    scroll-behavior: smooth;
-    -webkit-overflow-scrolling: touch;
-}
-
-.swiper>div {
-    scroll-snap-align: start;
-}
-
-/* End of swiper */
-
 /* Tag */
 
 .tag {
-    @apply uppercase rounded text-caption py-1 px-5
+  @apply uppercase rounded text-caption py-1 px-5;
 }
 
 /* End of Tag */
 
 /* CHECKBOX TOGGLE SWITCH */
 .form-switch {
-    @apply relative select-none w-10 mr-2 leading-normal;
+  @apply relative select-none w-10 mr-2 leading-normal;
 }
 
 .form-switch-checkbox {
-    @apply hidden;
+  @apply hidden;
 }
 
 .form-switch-label {
-    @apply block overflow-hidden cursor-pointer bg-white border-2 border-gray-100 rounded-full h-6;
+  @apply block overflow-hidden cursor-pointer bg-white border-2 border-gray-100 rounded-full h-6;
 
-    transition: background-color 0.2s ease-in;
+  transition: background-color 0.2s ease-in;
 }
 
 .form-switch-label:before {
-    @apply absolute block bg-gray-900 inset-y-0 w-4 h-4 rounded-full -ml-1 mt-1;
+  @apply absolute block bg-gray-900 inset-y-0 w-4 h-4 rounded-full -ml-1 mt-1;
 
-    right: 50%;
-    content: "";
-    transition: all 0.2s ease-in;
+  right: 50%;
+  content: '';
+  transition: all 0.2s ease-in;
 }
 
-.form-switch-checkbox:checked+.form-switch-label {
-    @apply bg-indigo-500 shadow-none;
+.form-switch-checkbox:checked + .form-switch-label {
+  @apply bg-indigo-500 shadow-none;
 }
 
-.form-switch-checkbox:checked+.form-switch-label:before {
-    @apply right-0 bg-white;
+.form-switch-checkbox:checked + .form-switch-label:before {
+  @apply right-0 bg-white;
 
-    margin-right: 0.3rem;
+  margin-right: 0.3rem;
 }
-
 
 /* https://tailwindcss.com/docs/extracting-components#extracting-css-components-with-apply */
 @tailwind utilities;
 
-@import "./legacy_main.css";
+@import './legacy_main.css';

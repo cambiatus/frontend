@@ -341,9 +341,8 @@ viewAnalysisList loggedIn model =
                             ]
 
                       else
-                        div [ class "w-full sm:w-1/2 lg:w-1/3 xl:w-1/4 mb-6 swiper flex overflow-x-scroll" ]
+                        div [ class "flex flex-wrap -mx-2" ]
                             (List.map (viewAnalysis loggedIn) claims)
-                    , div [ class "flex mt-4" ] (List.map viewDots claims)
                     ]
                 ]
 
@@ -364,63 +363,44 @@ viewAnalysis ({ shared } as loggedIn) claimStatus =
     in
     case claimStatus of
         ClaimLoaded claim ->
-            div
-                [ class "flex flex-col p-4 my-2 rounded-lg bg-white"
-                , id ("claim" ++ String.fromInt claim.id)
-                ]
-                [ div [ class "flex justify-start mb-8" ]
-                    [ Profile.view shared loggedIn.accountName claim.claimer
+            div [ class "w-full sm:w-full md:w-1/2 lg:w-1/3 xl:w-1/4 px-2 mb-4" ]
+                [ div
+                    [ class " flex flex-col p-4 my-2 rounded-lg bg-white"
+                    , id ("claim" ++ String.fromInt claim.id)
                     ]
-                , div [ class "mb-6" ]
-                    [ p [ class "text-body" ]
-                        [ text claim.action.description ]
-                    , p
-                        [ class "text-gray-900 text-caption uppercase" ]
-                        [ text <| date claim.createdAt ]
-                    ]
-                , div [ class "flex" ]
-                    [ button
-                        [ class "flex-1 button button-secondary"
-                        , onClick (OpenModal claim.id False)
+                    [ div [ class "flex justify-start mb-8" ]
+                        [ Profile.view shared loggedIn.accountName claim.claimer
                         ]
-                        [ text_ "dashboard.reject" ]
-                    , div [ class "w-4" ] []
-                    , button
-                        [ class "flex-1 button button-primary"
-                        , onClick (OpenModal claim.id True)
+                    , div [ class "mb-6" ]
+                        [ p [ class "text-body" ]
+                            [ text claim.action.description ]
+                        , p
+                            [ class "text-gray-900 text-caption uppercase" ]
+                            [ text <| date claim.createdAt ]
                         ]
-                        [ text_ "dashboard.verify" ]
+                    , div [ class "flex" ]
+                        [ button
+                            [ class "flex-1 button button-secondary"
+                            , onClick (OpenModal claim.id False)
+                            ]
+                            [ text_ "dashboard.reject" ]
+                        , div [ class "w-4" ] []
+                        , button
+                            [ class "flex-1 button button-primary"
+                            , onClick (OpenModal claim.id True)
+                            ]
+                            [ text_ "dashboard.verify" ]
+                        ]
                     ]
                 ]
 
         ClaimLoading _ ->
-            div [ class "flex flex-col items-center justify-center px-3 py-5 my-2 rounded-lg hover:shadow-lg bg-white" ]
+            div [ class "w-full sm:w-full md:w-1/2 lg:w-1/3 xl:w-1/4 px-2 mb-4 rounded-lg bg-white h-56" ]
                 [ Page.fullPageLoading
                 ]
 
         ClaimVoteFailed _ ->
             div [ class "text-red" ] [ text "failed" ]
-
-
-viewDots : ClaimStatus -> Html msg
-viewDots claim =
-    let
-        link c =
-            a
-                [ Html.Attributes.href <| "#claim" ++ String.fromInt c.id
-                , class "w-4 h-4 mx-1 bg-indigo-500 rounded-full"
-                ]
-                []
-    in
-    case claim of
-        ClaimLoaded c ->
-            link c
-
-        ClaimLoading c ->
-            link c
-
-        ClaimVoteFailed c ->
-            link c
 
 
 viewTransfers : LoggedIn.Model -> Model -> Html Msg

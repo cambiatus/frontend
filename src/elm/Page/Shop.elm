@@ -103,7 +103,6 @@ type Status
 
 type alias Card =
     { sale : Sale
-    , state : CardState
     , rate : Maybe Int
     , form : SaleTransferForm
     }
@@ -112,7 +111,6 @@ type alias Card =
 cardFromSale : Sale -> Card
 cardFromSale sale =
     { sale = sale
-    , state = ViewingCard
     , rate = Nothing
     , form = initSaleFrom
     }
@@ -149,8 +147,6 @@ type ValidationError
     | MemoTooLong
 
 
-type CardState
-    = ViewingCard
 
 
 
@@ -245,11 +241,7 @@ viewGrid loggedIn cards model =
     in
     div [ class "flex flex-wrap -mx-2" ]
         (List.map
-            (\card ->
-                case card.state of
-                    ViewingCard ->
-                        v_ viewCard card
-            )
+            (v_ viewCard)
             cards
         )
 
@@ -479,7 +471,7 @@ update msg model loggedIn =
                 UR.init model
 
         TransferSuccess index ->
-            updateCard msg index (\card -> ( { card | state = ViewingCard }, [] )) (UR.init model)
+            updateCard msg index (\card -> (  card   , [] )) (UR.init model)
 
         ClickedMessages cardIndex creatorId ->
             UR.init model

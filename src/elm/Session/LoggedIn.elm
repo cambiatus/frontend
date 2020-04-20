@@ -409,7 +409,7 @@ viewHeader ({ shared } as model) profile_ =
                     ]
                 ]
             ]
-        , div [ class "w-full mt-2 lg:hidden" ] [ searchBar model ]
+        , div [ class "w-full mt-6 lg:hidden" ] [ searchBar model ]
         ]
 
 
