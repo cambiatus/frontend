@@ -212,7 +212,7 @@
     "create_button": "Create Community",
     "create": {
       "title": "Create community",
-      "success": "Successfully edited community",
+      "success": "Successfully saved community",
       "labels": {
         "title": "Title",
         "symbol": "Symbol",
@@ -376,7 +376,7 @@
   "profile": {
     "title": "My profile",
     "my_transfers": "My Transfers",
-    "edit_success": "Profile edited successfully",
+    "edit_success": "Profile saved successfully",
     "actions": {
       "edit": "Edit",
       "viewPrivatekey": "View Private Key"

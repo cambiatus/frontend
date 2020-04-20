@@ -212,7 +212,7 @@
     "create_button": "Crear Comunidad",
     "create": {
       "title": "Crear comunidad",
-      "success": "Comunidad editada con éxito",
+      "success": "Comunidad guardada con éxito",
       "labels": {
         "title": "Nombre",
         "symbol": "Simbolo",
@@ -377,7 +377,7 @@
   "profile": {
     "title": "Mi perfil",
     "my_transfers": "Mis Transferencias",
-    "edit_success": "Perfil editado con éxito",
+    "edit_success": "Perfil guardado con éxito",
     "actions": {
       "edit": "Editar",
       "viewPrivatekey": "Ver Llave Privada"

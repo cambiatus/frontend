@@ -213,7 +213,7 @@
     "create_button": "Crear comunitat",
     "create": {
       "title": "Crear comunitat",
-      "success": "S'ha editat la comunitat amb èxit",
+      "success": "El perfil s'ha desat correctament",
       "labels": {
         "title": "Nom",
         "symbol": "Símbol",
@@ -378,7 +378,7 @@
   "profile": {
     "title": "El meu perfil",
     "my_transfers": "Les meves transferències",
-    "edit_success": "El perfil s'ha editat correctament",
+    "edit_success": "El perfil s'ha desat correctament",
     "actions": {
       "edit": "Editar",
       "viewPrivatekey": "Veure clau privada"
