@@ -68,6 +68,7 @@ module.exports = {
     },
     // transform keys
     rotate: {
+      '-90': '-90deg',
       '-45': '-45deg',
       '90': '90deg',
       '135': '135deg',
