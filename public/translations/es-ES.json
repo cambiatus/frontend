@@ -67,7 +67,7 @@
       }
     },
     "objective": {
-        "invalid_id": "ID de objetivo no válido "
+      "invalid_id": "ID de objetivo no válido "
     },
     "pageNotFound": "¡Pagina no encontrada.",
     "required": "Parece que olvidaste completar esto.",
@@ -152,14 +152,14 @@
     },
     "account_created": {
       "congrats": "Felicidades",
-        "account": "Su cuenta fue",
-        "created": "creada ;)",
-        "welcome_message": "Bienvenido {{username}}, siempre podrá acceder a Cambiatus con este dispositivo de una manera simple y segura, pero si desea usar una computadora, teléfono inteligente o tableta diferente, necesitará tener a mano la siguiente información:",
-        "twelve_words": "Tus 12 palabras",
-        "private_key": "Tu clave privada",
-        "recommendation": "Le recomendamos que guarde esta información haciendo clic en el botón a continuación; si la pierde, no podrá volver a iniciar sesión en su cuenta",
-        "download": "Guardar clave privada y 12 palabras",
-        "instructions": "Guardará la clave privada y las 12 palabras en su computadora en formato PDF."
+      "account": "Su cuenta fue",
+      "created": "creada ;)",
+      "welcome_message": "Bienvenido {{username}}, siempre podrá acceder a Cambiatus con este dispositivo de una manera simple y segura, pero si desea usar una computadora, teléfono inteligente o tableta diferente, necesitará tener a mano la siguiente información:",
+      "twelve_words": "Tus 12 palabras",
+      "private_key": "Tu clave privada",
+      "recommendation": "Le recomendamos que guarde esta información haciendo clic en el botón a continuación; si la pierde, no podrá volver a iniciar sesión en su cuenta",
+      "download": "Guardar clave privada y 12 palabras",
+      "instructions": "Guardará la clave privada y las 12 palabras en su computadora en formato PDF."
     }
   },
   "account": {
@@ -175,11 +175,11 @@
       },
       "transfer": {
         "title": "Enviando {{symbol}}",
-        "send_to": "Enviar a:",
+        "send_to": "Enviar a",
         "send_to_placeholder": "Cuenta a enviar",
-        "amount": "Monto:",
+        "amount": "Monto",
         "amount_placeholder": "0.00",
-        "memo": "Memo:",
+        "memo": "Memo (opcional)",
         "memo_placeholder": "Gracias por tu ayuda",
         "submit": "Enviar"
       }
@@ -266,7 +266,6 @@
         "yes": "Sí, únete",
         "no": "No, cancelar"
       }
-
     },
     "details": {
       "creator": "Creador/a",
@@ -370,7 +369,7 @@
     },
     "verifyClaim": {
       "error": "Se produjo un error al intentar procesar la validación. Vuelve a intentarlo más tarde."
-     }
+    }
   },
   "profile": {
     "title": "Mi perfil",
@@ -527,6 +526,7 @@
     "error": {
       "invalid_id": " no es un ID de transferencia válido"
     },
-    "you": "tú"
+    "you": "tú",
+    "my_balance": "Mi balance"
   }
 }
