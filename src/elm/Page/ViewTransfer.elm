@@ -8,6 +8,7 @@ import Graphql.Http
 import Html exposing (..)
 import Html.Attributes exposing (..)
 import I18Next
+import Icons
 import Page
 import Profile
 import Route
@@ -160,9 +161,9 @@ viewTransferCard loggedIn transfer state =
             Profile.view loggedIn.shared.endpoints.ipfs loggedIn.accountName loggedIn.shared.translations
     in
     div [ class "flex flex-row w-full justify-center items-center bg-gray-100 px-6 pt-8 pb-6" ]
-        [ div [ class "w-1/4" ] [ viewUser_ originUser ]
-        , div [ class "w-1/2" ] [ viewAmount loggedIn transfer state ]
-        , div [ class "w-1/4" ] [ viewUser_ destinationUser ]
+        [ div [ class "w-1/6" ] [ viewUser_ originUser ]
+        , div [ class "w-4/6" ] [ viewAmount loggedIn transfer state ]
+        , div [ class "w-1/6" ] [ viewUser_ destinationUser ]
         ]
 
 
@@ -172,45 +173,17 @@ viewAmount { shared } transfer state =
         t =
             I18Next.t shared.translations
 
-        head =
+        direction =
             case state of
                 Received ->
-                    div [ class "flex flex-row" ]
-                        [ div [ class "" ]
-                            [ div [ class "border border-solid border-green border-t-0 border-r-3 border-b-3 border-l-0 inline-block rotate-135" ]
-                                []
-                            ]
-                        , div [ class "" ]
-                            [ hr [ class "items-center border-sm border-dashed border-green" ] [] ]
-                        ]
+                    "rotate-90"
 
                 Transferred ->
-                    div [ class "flex flex-row" ]
-                        [ div [ class "" ]
-                            [ hr [ class "ml-5 border border-dashed border-green" ] [] ]
-                        ]
-
-        tail =
-            case state of
-                Received ->
-                    div [ class "flex flex-row" ]
-                        [ div [ class "" ]
-                            [ hr [ class "border border-dashed border-green" ] [] ]
-                        ]
-
-                Transferred ->
-                    div [ class "flex flex-row" ]
-                        [ div [ class "" ]
-                            [ hr [ class "items-center border border-dashed border-green " ] [] ]
-                        , div [ class "" ]
-                            [ div [ class "border border-solid border-green border-t-0 border-r-3 border-b-3 border-l-0 inline-block p-1 -rotate-45" ]
-                                []
-                            ]
-                        ]
+                    "rotate--90"
     in
-    div [ class "flex flex-row justify-center" ]
-        -- [ head
-        [ div [ class "w-32 border border-solid rounded-sm border-green bg-white px-4 py-1" ]
+    div [ class "flex flex-row justify-center items-center" ]
+        [ div [ class "w-1/4 flex  justify-end" ] [ Icons.arrowDown ("fill-current text-green " ++ direction) ]
+        , div [ class "w-32 border border-solid rounded-sm border-green bg-white px-4 py-1 mx-2" ]
             [ p [ class "text-caption text-gray-900" ]
                 [ text <|
                     case state of
@@ -221,7 +194,7 @@ viewAmount { shared } transfer state =
                             String.toUpper (t "transfer_result.transferred")
                 ]
             , div [ class "flex flex-row items-center" ]
-                [ p [ class "text-lg font-semibold text-green" ]
+                [ p [ class "text-heading font-semibold text-green" ]
                     [ text <|
                         String.fromFloat transfer.value
                     ]
@@ -229,8 +202,7 @@ viewAmount { shared } transfer state =
                     [ text <| Eos.symbolToString transfer.symbol ]
                 ]
             ]
-
-        -- , tail
+        , div [ class "w-1/4" ] [ Icons.arrowDown ("fill-current text-green " ++ direction) ]
         ]
 
 
@@ -273,9 +245,9 @@ viewDetails ({ shared } as loggedIn) transfer state =
 viewDetail : String -> String -> Html Msg
 viewDetail title content =
     div [ class "my-4" ]
-        [ h5 [ class "leading-tight text-caption mb-1 text-reward-green" ]
+        [ h5 [ class "input-label mb-2" ]
             [ text title ]
-        , p [ class "text-lg text-body" ]
+        , p [ class "text-body" ]
             [ text content ]
         ]
 
