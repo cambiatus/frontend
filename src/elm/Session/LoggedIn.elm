@@ -231,14 +231,19 @@ viewFeedback status message =
                     "bg-red"
     in
     div
-        [ class "sticky top-0 w-full flex justify-center items-center"
+        [ class "sticky top-0 w-full"
         , classList [ ( color, True ) ]
+        , style "display" "grid"
+        , style "grid-template" "\". text x\" 100% / 5% 90% 5%"
         ]
-        [ span [ class "ml-auto invisible" ] []
-        , span [ class "flex items-center text-sm h-10 leading-snug text-white font-bold" ]
+        [ span
+            [ class "flex justify-center items-center text-sm h-10 leading-snug text-white font-bold"
+            , style "grid-area" "text"
+            ]
             [ text message ]
         , span
-            [ class "ml-auto mr-5 cursor-pointer"
+            [ class "flex justify-center items-center ml-auto mr-5 cursor-pointer"
+            , style "grid-area" "x"
             , onClick HideFeedbackLocal
             ]
             [ Icons.close "fill-current text-white"
