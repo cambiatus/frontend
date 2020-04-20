@@ -208,8 +208,7 @@ view guest model =
             [ onSubmit ValidateForm
             ]
             [ div [ class "card card--register" ]
-                [ viewAuthTabs shared
-                , p [ class "card__auth__register__prompt" ]
+                [ p [ class "card__auth__register__prompt" ]
                     [ text_ "register.form.title" ]
                 , viewServerErrors model.problems
                 , viewField shared

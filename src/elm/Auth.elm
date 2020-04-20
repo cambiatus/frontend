@@ -80,7 +80,7 @@ type alias Model =
 
 initModel : Model
 initModel =
-    { status = Options
+    { status = Options LoginStepPassphrase
     , loginError = Nothing
     , form = initPrivateKeyLogin
     , pinVisibility = True
@@ -88,7 +88,7 @@ initModel =
 
 
 type Status
-    = Options
+    = Options LoginStep
     | LoginWithPrivateKey PrivateKeyLogin
     | LoginWithPrivateKeyAccounts (List Eos.Name) PrivateKeyLogin
     | LoggingInWithPrivateKeyAccounts (List Eos.Name) PrivateKeyLogin
@@ -165,11 +165,11 @@ maybePrivateKey model =
 view : Bool -> Shared -> Model -> List (Html Msg)
 view isModal shared model =
     case model.status of
-        Options ->
-            viewOptions isModal shared model
+        Options loginStep ->
+            viewLoginSteps isModal shared model loginStep
 
         LoginWithPrivateKey _ ->
-            viewOptions isModal shared model
+            viewLoginSteps isModal shared model LoginStepPassphrase
 
         LoginWithPrivateKeyAccounts accounts form ->
             viewMultipleAccount accounts form False isModal shared model
@@ -178,7 +178,7 @@ view isModal shared model =
             viewMultipleAccount accounts form True isModal shared model
 
         LoggedInWithPrivateKey _ ->
-            viewOptions isModal shared model
+            viewLoginSteps isModal shared model LoginStepPassphrase
 
         LoginWithPin ->
             case shared.maybeAccount of
@@ -186,7 +186,7 @@ view isModal shared model =
                     viewLoginWithPin accountName False isModal shared model
 
                 _ ->
-                    viewOptions isModal shared model
+                    viewLoginSteps isModal shared model LoginStepPassphrase
 
         LoggingInWithPin ->
             case shared.maybeAccount of
@@ -194,7 +194,7 @@ view isModal shared model =
                     viewLoginWithPin accountName True isModal shared model
 
                 _ ->
-                    viewOptions isModal shared model
+                    viewLoginSteps isModal shared model LoginStepPassphrase
 
         LoggedInWithPin _ ->
             case shared.maybeAccount of
@@ -202,53 +202,70 @@ view isModal shared model =
                     viewLoginWithPin accountName True isModal shared model
 
                 _ ->
-                    viewOptions isModal shared model
+                    viewLoginSteps isModal shared model LoginStepPassphrase
 
 
-viewOptions : Bool -> Shared -> Model -> List (Html Msg)
-viewOptions isModal shared model =
+type LoginStep
+    = LoginStepPassphrase
+    | LoginStepPIN
+
+
+viewLoginSteps : Bool -> Shared -> Model -> LoginStep -> List (Html Msg)
+viewLoginSteps isModal shared model loginStep =
     let
         text_ s =
             Html.text (t shared.translations s)
+
+        viewLoginPassphrase =
+            div [ class "temp-passphrase-step" ]
+                [ div [ class "card__auth__input" ]
+                    [ viewFieldLabel shared "auth.login.wordsMode.input" "privateKey" Nothing
+                    , input
+                        [ class "input"
+                        , type_ "text"
+                        , id "privateKey"
+                        , value model.form.privateKey
+                        , onInput EnteredPrivateKey
+                        , required True
+                        , autocomplete False
+                        ]
+                        []
+                    ]
+                , if not isModal then
+                    a [ Route.href (Route.Register Nothing Nothing), class "card__auth__prompt" ]
+                        [ span [] [ text_ "auth.login.register" ]
+                        , span [ class "card__auth__login__mode" ] [ text_ "auth.login.registerLink" ]
+                        ]
+
+                  else
+                    text ""
+                , button
+                    [ class "btn btn--primary btn--login"
+                    , onClick ClickedViewLoginPinStep
+                    ]
+                    [ text_ "Next" ]
+                ]
+
+        viewLoginPin =
+            div [ class "temp-pin-step" ]
+                [ div [ class "card__auth__pin__form" ]
+                    [ viewLoginPinForm model shared ]
+                , button
+                    [ class "btn btn--primary btn--login"
+                    , onClick (SubmittedLoginPrivateKey model.form)
+                    ]
+                    [ text_ "auth.login.submit" ]
+                ]
     in
     [ div [ class "" ]
-        [ if not isModal then
-            viewAuthTabs shared
+        [ viewAuthError shared model.loginError
+        ]
+    , case loginStep of
+        LoginStepPassphrase ->
+            viewLoginPassphrase
 
-          else
-            text ""
-        , viewAuthError shared model.loginError
-        ]
-    , div [ class "card__auth__input" ]
-        [ viewFieldLabel shared "auth.login.wordsMode.input" "privateKey" Nothing
-        , input
-            [ class "input auth__input"
-            , type_ "text"
-            , id "privateKey"
-            , value model.form.privateKey
-            , onInput EnteredPrivateKey
-            , required True
-            , autocomplete False
-            ]
-            []
-        ]
-    , div []
-        [ div [ class "card__auth__pin__form" ]
-            [ viewLoginPinForm model shared ]
-        ]
-    , button
-        [ class "btn btn--primary btn--login"
-        , onClick (SubmittedLoginPrivateKey model.form)
-        ]
-        [ text_ "auth.login.submit" ]
-    , if not isModal then
-        a [ Route.href (Route.Register Nothing Nothing), class "card__auth__prompt" ]
-            [ span [] [ text_ "auth.login.register" ]
-            , span [ class "card__auth__login__mode" ] [ text_ "auth.login.registerLink" ]
-            ]
-
-      else
-        text ""
+        LoginStepPIN ->
+            viewLoginPin
     ]
 
 
@@ -451,31 +468,15 @@ digitInput position { form, pinVisibility } =
 
 
 viewFieldLabel : Shared -> String -> String -> Maybe (Html msg) -> Html msg
-viewFieldLabel { translations } tSuffix id_ maybeView =
+viewFieldLabel { translations } tSuffix id_ viewToggleHiddenSymbols =
     let
         labelText : String
         labelText =
             t translations (tSuffix ++ ".label")
-
-        tooltipText : String
-        tooltipText =
-            t translations (tSuffix ++ ".tooltip")
     in
     label [ for id_ ]
-        [ div [ class "tooltip__text" ]
-            [ span [ class "card__auth__label" ] [ Html.text labelText ]
-            , Maybe.withDefault (text "") maybeView
-            , if String.isEmpty tooltipText then
-                div [] [ Html.text "" ]
-
-              else
-                button
-                    [ class "tooltip"
-                    , type_ "button"
-                    , attribute "tooltip" tooltipText
-                    ]
-                    [ img [ src "/icons/tooltip.svg" ] [] ]
-            ]
+        [ span [ class "text-white text-body" ] [ Html.text labelText ]
+        , Maybe.withDefault (text "") viewToggleHiddenSymbols
         ]
 
 
@@ -490,6 +491,7 @@ type alias UpdateResult =
 type Msg
     = Ignored
     | ClickedViewOptions
+    | ClickedViewLoginPinStep
     | EnteredPrivateKey String
     | SubmittedLoginPrivateKey PrivateKeyLogin
     | GotMultipleAccountsLogin (List Eos.Name)
@@ -520,7 +522,14 @@ update msg shared model showAuthModal =
             UR.init
                 { model
                     | loginError = Nothing
-                    , status = Options
+                    , status = Options LoginStepPassphrase
+                }
+
+        ClickedViewLoginPinStep ->
+            UR.init
+                { model
+                    | loginError = Nothing
+                    , status = Options LoginStepPIN
                 }
 
         EnteredPrivateKey s ->
@@ -759,7 +768,7 @@ loginFailed httpError model =
                         LoginWithPin
 
                     _ ->
-                        Options
+                        Options LoginStepPassphrase
         }
         |> UR.addCmd (Log.httpError httpError)
         |> UR.addPort
@@ -815,6 +824,9 @@ msgToString msg =
 
         ClickedViewOptions ->
             [ "ClickedViewOptions" ]
+
+        ClickedViewLoginPinStep ->
+            [ "ClickedViewLoginPinStep" ]
 
         EnteredPrivateKey _ ->
             [ "EnteredPrivateKey" ]

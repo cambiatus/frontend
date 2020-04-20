@@ -109,14 +109,14 @@ view thisMsg page ({ shared } as model) content =
                 [ header
                     [ class "flex items-center justify-between px-4 py-3 bg-white" ]
                     [ div []
-                        [ img
-                            [ class "lg:hidden h-8"
-                            , src shared.logoMobile
-                            , alt "Cambiatus"
-                            ]
-                            []
-                        , img
-                            [ class "hidden lg:block lg:visible h-6"
+                        [ --img
+                          --    [ class "lg:hidden h-8"
+                          --    , src shared.logoMobile
+                          --    , alt "Cambiatus"
+                          --    ]
+                          --    []
+                          img
+                            [ class "lg:block h-6"
                             , src shared.logo
                             , alt "Cambiatus"
                             ]
@@ -166,12 +166,13 @@ view thisMsg page ({ shared } as model) content =
                     |> Html.map thisMsg
                 , main_
                     [ id "main-content"
-                    , class "min-h-screen main-content__guest flex-wrap flex items-center justify-center outline-none bg-local"
-                    , if Time.toHour Time.utc shared.now >= 6 && Time.toHour Time.utc shared.now <= 18 then
-                        style "background-image" "url('/images/login-bg-day.png')"
+                    , class "min-h-screen bg-purple-500 flex-wrap flex items-center justify-center outline-none bg-local"
 
-                      else
-                        style "background-image" "url('/images/login-bg-night.png')"
+                    --, if Time.toHour Time.utc shared.now >= 6 && Time.toHour Time.utc shared.now <= 18 then
+                    --    style "background-image" "url('/images/login-bg-day.png')"
+                    --
+                    --  else
+                    --    style "background-image" "url('/images/login-bg-night.png')"
                     , tabindex -1
                     ]
                     [ content
