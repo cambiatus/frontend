@@ -179,11 +179,11 @@
       },
       "transfer": {
         "title": "Sending {{symbol}}",
-        "send_to": "Send to:",
+        "send_to": "Transfer to",
         "send_to_placeholder": "Friend account",
-        "amount": "Amount:",
+        "amount": "How much",
         "amount_placeholder": "0.00",
-        "memo": "Memo:",
+        "memo": "Message (optional)",
         "memo_placeholder": "Thanks for the help",
         "submit": "Transfer"
       }
@@ -548,9 +548,9 @@
   },
   "transfer_result": {
     "title": "Transferred",
-    "transfer_success": "Transfer completed successfully!",
+    "transfer_success": "Complete Transaction",
     "receive_success": "Successfully received!",
-    "date": "Date",
+    "date": "Transaction date",
     "message": "Message",
     "community": "Community",
     "received": "Received",
@@ -558,6 +558,7 @@
     "error": {
       "invalid_id": " is not a valid Transfer Id"
     },
-    "you": "You"
+    "you": "You",
+    "my_balance": "My Balance"
   }
 }

@@ -232,7 +232,6 @@
   content: '';
   transition: all 0.2s ease-in;
 }
-
 .form-switch-checkbox:checked + .form-switch-label {
   @apply bg-indigo-500 shadow-none;
 }

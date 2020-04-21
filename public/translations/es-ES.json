@@ -179,11 +179,11 @@
       },
       "transfer": {
         "title": "Enviando {{symbol}}",
-        "send_to": "Enviar a:",
+        "send_to": "Enviar a",
         "send_to_placeholder": "Cuenta a enviar",
-        "amount": "Monto:",
+        "amount": "Monto",
         "amount_placeholder": "0.00",
-        "memo": "Memo:",
+        "memo": "Memo (opcional)",
         "memo_placeholder": "Gracias por tu ayuda",
         "submit": "Enviar"
       }
@@ -558,6 +558,7 @@
     "error": {
       "invalid_id": " no es un ID de transferencia válido"
     },
-    "you": "tú"
+    "you": "tú",
+    "my_balance": "Mi balance"
   }
 }

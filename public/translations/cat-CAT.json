@@ -179,11 +179,11 @@
       },
       "transfer": {
         "title": "Enviant {{symbol}}",
-        "send_to": "Enviar a:",
+        "send_to": "Enviar a",
         "send_to_placeholder": "Compte a enviar",
-        "amount": "Import:",
+        "amount": "Import",
         "amount_placeholder": "0.00",
-        "memo": "Memo:",
+        "memo": "Memo (opcional)",
         "memo_placeholder": "Gràcies pel teu ajut ",
         "submit": "Enviar"
       }
@@ -558,6 +558,7 @@
     "error": {
       "invalid_id": " no és un ID de transferència vàlid"
     },
-    "you": "vostè"
+    "you": "vostè",
+    "my_balance": "El meu balanç"
   }
 }

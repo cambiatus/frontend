@@ -230,9 +230,7 @@ viewFeedback feedback =
         , span [ class "flex items-center text-sm h-10 leading-snug text-white font-bold" ]
             [ text feedback.message ]
         , span
-            [ class "ml-auto mr-5 cursor-pointer"
-            , onClick HideFeedback
-            ]
+            [ class "ml-auto mr-5 cursor-pointer", onClick HideFeedback ]
             [ Icons.close "fill-current text-white"
             ]
         ]

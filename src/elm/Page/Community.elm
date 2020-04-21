@@ -385,7 +385,7 @@ viewObjective loggedIn model metadata index objective =
     in
     div [ class "my-2" ]
         [ div
-            [ class "px-3 py-4 bg-body-blue flex flex-col sm:flex-row sm:items-center sm:h-10"
+            [ class "px-3 py-4 bg-indigo-500 flex flex-col sm:flex-row sm:items-center sm:h-10"
             ]
             [ div [ class "sm:flex-grow-7 sm:w-5/12" ]
                 [ div
@@ -436,8 +436,8 @@ viewObjectiveNew loggedIn edit communityId =
         , Route.href (Route.NewObjective communityId)
         , disabled (edit /= NoEdit)
         ]
-        [ span [ class "px-2 text-button-orange font-medium" ] [ text "+" ]
-        , span [ class "text-button-orange font-medium" ] [ text (t "community.objectives.new") ]
+        [ span [ class "px-2 text-orange" ] [ text "+" ]
+        , span [ class "text-orange" ] [ text (t "community.objectives.new") ]
         ]
 
 
@@ -492,18 +492,18 @@ viewAction loggedIn metadata maybeDate action =
         dateColor : String
         dateColor =
             if pastDeadline then
-                " text-date-red"
+                " text-red"
 
             else
-                " text-date-purple"
+                " text-indigo-500"
 
         usagesColor : String
         usagesColor =
             if action.usagesLeft >= 1 || action.usages == 0 then
-                " text-date-purple"
+                " text-indigo-500"
 
             else
-                " text-date-red"
+                " text-red"
 
         ( claimColors, claimText ) =
             if pastDeadline || (action.usagesLeft < 1 && action.usages > 0) then

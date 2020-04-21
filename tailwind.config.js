@@ -70,21 +70,17 @@ module.exports = {
     rotate: {
       '-90': '-90deg',
       '-45': '-45deg',
+      '90': '90deg',
       '135': '135deg',
       '180': '180deg'
     },
     extend: {
-      // TODO: Below are the colors that need to be removed after refactor
       colors: {
         'body-blue': '#45469B',
         grey: '#D4D4D4',
         'light-grey': '#EEEEEE',
         'text-grey': '#666666',
-        'border-grey': '#E0E0E0',
-        'reward-green': '#8ACC9E',
-        'date-purple': '#45469B',
-        'button-orange': '#F99D33',
-        'date-red': '#E02020'
+        'border-grey': '#E0E0E0'
       },
       flexGrow: {
         '1': 1,
@@ -100,7 +96,6 @@ module.exports = {
       fontFamily: {
         sans: ['"Gotham Rounded"', 'sans-serif']
       },
-      // TODO: move this to parent section to overwrite current behaviour
       fontSize: {
         caption: '.625rem',
         menu: '.8125rem',
