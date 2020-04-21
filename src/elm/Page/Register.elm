@@ -79,8 +79,6 @@ type alias Form =
     { username : String
     , email : String
     , account : String
-    , enteredPin : List (Maybe String)
-    , enteredPinConf : List (Maybe String)
     }
 
 
@@ -89,14 +87,7 @@ initForm =
     { username = ""
     , email = ""
     , account = ""
-    , enteredPin = List.repeat 6 Nothing
-    , enteredPinConf = List.repeat 6 Nothing
     }
-
-
-type PinInput
-    = PinInput
-    | PinConfInput
 
 
 type Problem
@@ -108,8 +99,6 @@ type ValidatedField
     = Username
     | Email
     | Account
-    | Pin
-    | PinConfirmation
 
 
 type ValidationError
@@ -117,10 +106,6 @@ type ValidationError
     | AccountTooLong
     | AccountAlreadyExists
     | AccountInvalidChars
-    | PinTooShort
-    | PinTooLong
-    | PinInvalidChars
-    | PinConfirmDontMatch
 
 
 
@@ -207,7 +192,7 @@ view guest model =
         Html.form
             [ onSubmit ValidateForm
             ]
-            [ div [ class "card card--register" ]
+            [ div [ class "" ]
                 [ p [ class "card__auth__register__prompt" ]
                     [ text_ "register.form.title" ]
                 , viewServerErrors model.problems
@@ -241,8 +226,6 @@ view guest model =
                     (identity EnteredEmail)
                     [ type_ "email" ]
                     model.problems
-                , viewPinForm model shared PinInput
-                , viewPinForm model shared PinConfInput
                 , button
                     [ class "btn btn--primary btn--login"
                     , type_ "submit"
@@ -262,17 +245,6 @@ view guest model =
             ]
 
 
-viewAuthTabs : Shared -> Html msg
-viewAuthTabs { translations } =
-    div [ class "card__auth__tabs__register" ]
-        [ div [ class "enabled" ] [ p [] [ text (t translations "register.registerTab") ] ]
-        , div [ class "disabled" ]
-            [ a [ Route.href (Route.Login Nothing) ]
-                [ p [] [ text (t translations "register.loginTab") ] ]
-            ]
-        ]
-
-
 viewServerErrors : List Problem -> Html msg
 viewServerErrors problems =
     let
@@ -289,91 +261,6 @@ viewServerErrors problems =
                     )
     in
     ul [] errorList
-
-
-viewPinForm : Model -> Shared -> PinInput -> Html Msg
-viewPinForm model shared inputType =
-    let
-        inputs =
-            List.range 0 5
-                |> List.map (\pos -> digitInput pos inputType model)
-
-        pinPrompt =
-            case inputType of
-                PinInput ->
-                    "auth.pin"
-
-                PinConfInput ->
-                    "auth.pinConfirmation"
-
-        errors =
-            case inputType of
-                PinInput ->
-                    List.map (\err -> viewFieldProblem Pin err) model.problems
-
-                PinConfInput ->
-                    List.map (\err -> viewFieldProblem PinConfirmation err) model.problems
-    in
-    div [ class "card__auth__pin__section" ]
-        [ viewFieldLabel shared pinPrompt "pin_input_0" Nothing
-        , div [] inputs
-        , ul [] errors
-        ]
-
-
-digitInput : Int -> PinInput -> Model -> Html Msg
-digitInput position inputType { form } =
-    let
-        getVal pinField =
-            Maybe.andThen
-                identity
-                (LE.getAt position pinField)
-
-        val =
-            case inputType of
-                PinInput ->
-                    case getVal form.enteredPin of
-                        Nothing ->
-                            ""
-
-                        Just dig ->
-                            dig
-
-                PinConfInput ->
-                    case getVal form.enteredPinConf of
-                        Nothing ->
-                            ""
-
-                        Just dig ->
-                            dig
-
-        msg =
-            case inputType of
-                PinInput ->
-                    EnteredPin position
-
-                PinConfInput ->
-                    EnteredPinConf position
-
-        inputId =
-            case inputType of
-                PinInput ->
-                    "pin_input_" ++ String.fromInt position
-
-                PinConfInput ->
-                    "pin_conf_input_" ++ String.fromInt position
-    in
-    input
-        [ class "card__auth__pin__input"
-        , id inputId
-        , maxlength 1
-        , value val
-        , onInput msg
-        , required True
-        , autocomplete False
-        , attribute "inputmode" "numeric"
-        ]
-        []
 
 
 type alias Field =
@@ -464,18 +351,6 @@ validationErrorToString shared error =
         AccountInvalidChars ->
             t "register.form.accountCharError"
 
-        PinTooShort ->
-            tr "error.tooShort" [ ( "minLength", "6" ) ]
-
-        PinTooLong ->
-            tr "error.tooLong" [ ( "maxLength", "6" ) ]
-
-        PinInvalidChars ->
-            t "register.form.pinCharError"
-
-        PinConfirmDontMatch ->
-            t "register.form.pinConfirmError"
-
 
 accName : Model -> String
 accName model =
@@ -523,8 +398,6 @@ type Msg
     | AccountGenerated (Result Decode.Error AccountKeys)
     | CompletedCreateProfile AccountKeys (Result Http.Error Profile)
     | CompletedLoadProfile AccountKeys (Result Http.Error Profile)
-    | EnteredPin Int String
-    | EnteredPinConf Int String
     | DownloadPdf
     | PdfDownloaded
     | PressedEnter Bool
@@ -547,31 +420,8 @@ update maybeInvitation msg model guest =
 
         ValidateForm ->
             let
-                pinStr =
-                    asPinString model.form.enteredPin
-
-                pinConfStr =
-                    asPinString model.form.enteredPinConf
-
-                pinConfErrors =
-                    if pinStr == pinConfStr then
-                        []
-
-                    else
-                        [ InvalidEntry PinConfirmation (validationErrorToString shared PinConfirmDontMatch) ]
-
                 allProbs =
                     model.problems
-                        |> List.filter
-                            (\p ->
-                                case p of
-                                    InvalidEntry PinConfirmation _ ->
-                                        False
-
-                                    _ ->
-                                        True
-                            )
-                        |> (++) pinConfErrors
             in
             case allProbs of
                 [] ->
@@ -612,14 +462,6 @@ update maybeInvitation msg model guest =
 
                                         Just invitationId ->
                                             Encode.string invitationId
-                                  )
-                                , ( "pin"
-                                  , Encode.string
-                                        (model.form.enteredPin
-                                            |> List.map (Maybe.withDefault "")
-                                            |> String.concat
-                                            |> String.reverse
-                                        )
                                   )
                                 , ( "account", Encode.string model.form.account )
                                 ]
@@ -698,120 +540,6 @@ update maybeInvitation msg model guest =
             { model | problems = ServerError "Auth failed" :: model.problems }
                 |> UR.init
                 |> UR.logHttpError msg err
-
-        EnteredPin pos data ->
-            let
-                otherProblems =
-                    model.problems
-                        |> List.filter
-                            (\p ->
-                                case p of
-                                    InvalidEntry Pin _ ->
-                                        False
-
-                                    _ ->
-                                        True
-                            )
-
-                currentForm =
-                    model.form
-
-                newPin =
-                    if data == "" then
-                        LE.setAt pos Nothing model.form.enteredPin
-
-                    else
-                        LE.setAt pos (Just data) model.form.enteredPin
-
-                pinErrors =
-                    if List.any (\a -> a == Nothing) newPin then
-                        [ InvalidEntry Pin (validationErrorToString shared PinTooShort) ]
-
-                    else
-                        []
-
-                nextFocusPosition : Int
-                nextFocusPosition =
-                    if data == "" then
-                        pos - 1
-
-                    else
-                        pos + 1
-            in
-            { model
-                | form = { currentForm | enteredPin = newPin }
-                , problems = otherProblems ++ pinErrors
-            }
-                |> UR.init
-                |> UR.addPort
-                    { responseAddress = Ignored
-                    , responseData = Encode.null
-                    , data =
-                        Encode.object
-                            [ ( "pos", Encode.int pos )
-                            , ( "data", Encode.string data )
-                            , ( "isWithinif", Encode.bool True )
-                            ]
-                    }
-                |> UR.addCmd
-                    (Task.attempt (\_ -> Ignored) (Dom.focus ("pin_input_" ++ String.fromInt nextFocusPosition)))
-
-        EnteredPinConf pos data ->
-            let
-                otherProblems =
-                    model.problems
-                        |> List.filter
-                            (\p ->
-                                case p of
-                                    InvalidEntry PinConfirmation _ ->
-                                        False
-
-                                    _ ->
-                                        True
-                            )
-
-                currentForm =
-                    model.form
-
-                newPin =
-                    if data == "" then
-                        LE.setAt pos Nothing model.form.enteredPinConf
-
-                    else
-                        LE.setAt pos (Just data) model.form.enteredPinConf
-
-                pinConfProbs =
-                    if List.any (\a -> a == Nothing) newPin then
-                        [ InvalidEntry PinConfirmation (validationErrorToString shared PinTooShort) ]
-
-                    else
-                        []
-
-                nextFocusPosition : Int
-                nextFocusPosition =
-                    if data == "" then
-                        pos - 1
-
-                    else
-                        pos + 1
-            in
-            { model
-                | form = { currentForm | enteredPinConf = newPin }
-                , problems = pinConfProbs ++ otherProblems
-            }
-                |> UR.init
-                |> UR.addPort
-                    { responseAddress = Ignored
-                    , responseData = Encode.null
-                    , data =
-                        Encode.object
-                            [ ( "pos", Encode.int pos )
-                            , ( "data", Encode.string data )
-                            , ( "isWithinif", Encode.bool True )
-                            ]
-                    }
-                |> UR.addCmd
-                    (Task.attempt (\_ -> Ignored) (Dom.focus ("pin_conf_input_" ++ String.fromInt nextFocusPosition)))
 
         DownloadPdf ->
             model
@@ -1027,12 +755,6 @@ msgToString msg =
 
         CompletedLoadProfile _ r ->
             [ "CompletedLoadProfile", UR.resultToString r ]
-
-        EnteredPin _ _ ->
-            [ "EnteredPin" ]
-
-        EnteredPinConf _ _ ->
-            [ "EnteredPinConf" ]
 
         DownloadPdf ->
             [ "DownloadPdf" ]
