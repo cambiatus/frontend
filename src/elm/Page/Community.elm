@@ -507,10 +507,10 @@ viewAction loggedIn metadata maybeDate action =
 
         ( claimColors, claimText ) =
             if pastDeadline || (action.usagesLeft < 1 && action.usages > 0) then
-                ( " text-text-grey bg-grey cursor-not-allowed", "dashboard.closed" )
+                ( " text-grey bg-grey cursor-not-allowed", "dashboard.closed" )
 
             else
-                ( " text-white bg-button-orange", "dashboard.claim" )
+                ( " text-white button button-primary", "dashboard.claim" )
 
         claimSize =
             if canEdit then
@@ -612,7 +612,7 @@ viewAction loggedIn metadata maybeDate action =
                         ]
                     ]
                 , div [ class "mt-5 flex flex-row items-baseline" ]
-                    [ div [ class ("text-reward-green text-base mt-5 flex-grow-1" ++ rewardStrike) ]
+                    [ div [ class ("text-green text-base mt-5 flex-grow-1" ++ rewardStrike) ]
                         [ span [] [ text (t "community.actions.reward" ++ ": ") ]
                         , span [ class "font-medium" ] [ text rewardStr ]
                         ]
