@@ -1,8 +1,8 @@
 module Auth exposing
     ( ExternalMsg(..)
+    , LoginFormData
     , Model
     , Msg
-    , PrivateKeyLogin
     , init
     , initRegister
     , isAuth
@@ -31,13 +31,24 @@ import Json.Encode as Encode exposing (Value)
 import List.Extra as LE
 import Log
 import Profile exposing (Profile)
-import Regex
 import Route
 import Session.Shared as Shared exposing (Shared)
 import Task
 import UpdateResult as UR
 import Utils
-import Validate exposing (Validator, fromValid, ifNotInt, validate)
+import Validate exposing (Validator, validate)
+
+
+{-| Authentication of a user with Passphrase or Private Key.
+
+  - Passphrase consists of 12 unique words given to the user during the registration. Only users knows this phrase.
+  - Private Key (PK) is a hashed analogue of a Passphrase, we identify the user by the PK in the backend.
+  - PIN is used to encrypt the Passphrase/PK in the browser. Each time the user logs-in the new PIN is created.
+
+User may use Passphrase and PK interchangeable for logging in, although we push the user forward to use the Passphrase
+because it's more convenient for humans.
+
+-}
 
 
 
@@ -75,7 +86,7 @@ subscriptions _ =
 type alias Model =
     { status : Status
     , loginError : Maybe String
-    , form : PrivateKeyLogin
+    , form : LoginFormData
     , pinVisibility : Bool
     , problems : List Problem
     }
@@ -93,80 +104,72 @@ initModel =
 
 type Status
     = Options LoginStep
-    | LoginWithPrivateKey PrivateKeyLogin
-    | LoginWithPrivateKeyAccounts (List Eos.Name) PrivateKeyLogin
-    | LoggingInWithPrivateKeyAccounts (List Eos.Name) PrivateKeyLogin
+    | LoginWithPrivateKey LoginFormData
+    | LoginWithPrivateKeyAccounts (List Eos.Name) LoginFormData
+    | LoggingInWithPrivateKeyAccounts (List Eos.Name) LoginFormData
     | LoggedInWithPrivateKey PrivateKey
     | LoginWithPin
     | LoggingInWithPin
     | LoggedInWithPin PrivateKey
 
 
-type alias PrivateKeyLogin =
-    { privateKey : String
+type alias LoginFormData =
+    { passphrase : String
     , usePin : Maybe String
     , enteredPin : String
-    , enteredPinConf : String
+    , enteredPinConfirmation : String
     }
 
 
-initPrivateKeyLogin : PrivateKeyLogin
+initPrivateKeyLogin : LoginFormData
 initPrivateKeyLogin =
-    { privateKey = ""
+    { passphrase = ""
     , usePin = Nothing
     , enteredPin = ""
-    , enteredPinConf = ""
+    , enteredPinConfirmation = ""
     }
 
 
 type PinField
     = PinInput
-    | PinConfInput
+    | PinConfirmationInput
 
 
-{-| Validator for checking entered 12 words.
--}
-passphraseValidator : Validator Problem PrivateKeyLogin
+passphraseValidator : Validator Problem LoginFormData
 passphraseValidator =
     Validate.all
         [ Validate.firstError
-            [ Validate.ifBlank .privateKey (InvalidEntry Passphrase "error.required")
+            [ Validate.ifBlank .passphrase (InvalidEntry Passphrase "error.required")
             , Validate.fromErrors
                 (\form ->
                     let
-                        oneOrMoreSpaces =
-                            Maybe.withDefault Regex.never <|
-                                Regex.fromString "\\s+"
+                        words : List String
+                        words =
+                            String.words form.passphrase
 
-                        letter =
-                            Maybe.withDefault Regex.never <|
-                                Regex.fromString "[a-zA-Z]"
+                        has12words : Bool
+                        has12words =
+                            List.length words == 12
 
-                        passphraseAsList =
-                            form.privateKey
-                                |> String.trim
-                                |> Regex.split oneOrMoreSpaces
-
-                        passphraseHasTwelveWords =
-                            List.length passphraseAsList == 12
-
-                        passphraseHasOnlyLetters =
+                        allWordsConsistOnlyOfLetters : Bool
+                        allWordsConsistOnlyOfLetters =
                             let
                                 onlyLetters s =
-                                    List.length (Regex.find letter s) == String.length s
+                                    String.length (String.filter Char.isAlpha s) == String.length s
                             in
-                            List.all onlyLetters passphraseAsList
+                            List.all onlyLetters words
 
-                        passphraseHasWordsWithAtLeastTwoLetters =
-                            List.all (\w -> String.length w > 2) passphraseAsList
+                        allWordsHaveAtLeastThreeLetters =
+                            List.all (\w -> String.length w > 2) words
                     in
-                    if not passphraseHasTwelveWords then
+                    {- These rules force user to use 12 words instead of PK. -}
+                    if not has12words then
                         [ InvalidEntry Passphrase "Please, enter 12 words (TR)" ]
 
-                    else if not passphraseHasOnlyLetters then
+                    else if not allWordsConsistOnlyOfLetters then
                         [ InvalidEntry Passphrase "Please, use only letters (TR)" ]
 
-                    else if not passphraseHasWordsWithAtLeastTwoLetters then
+                    else if not allWordsHaveAtLeastThreeLetters then
                         [ InvalidEntry Passphrase "All words should have at least 3 letters (TR)" ]
 
                     else
@@ -176,21 +179,45 @@ passphraseValidator =
         ]
 
 
-{-| Validates PIN field and related PIN confirmation field.
--}
-pinValidator : Validator ( ValidatedField, String ) PrivateKeyLogin
+validatePinNumber : String -> List Problem
+validatePinNumber pin =
+    let
+        hasCorrectLength =
+            String.length pin == 6
+
+        hasOnlyDigits =
+            String.all Char.isDigit pin
+    in
+    if not hasCorrectLength || not hasOnlyDigits then
+        [ InvalidEntry PinConfirmation "PIN must be 6 digits (TR)" ]
+
+    else
+        []
+
+
+pinValidator : Validator Problem LoginFormData
 pinValidator =
     Validate.all
         [ Validate.firstError
-            [ Validate.ifBlank .enteredPin ( Pin, "Pin can't be blank." )
-            , Validate.ifBlank .enteredPinConf ( PinConfirmation, "Conf Pin can't be blank." )
+            [ Validate.ifBlank .enteredPin (InvalidEntry Pin "Pin can't be blank (TR)")
+            , Validate.ifBlank .enteredPinConfirmation (InvalidEntry PinConfirmation "Pin Confirmation field can't be blank (TR)")
             , Validate.fromErrors
                 (\form ->
-                    if form.enteredPin == form.enteredPinConf then
-                        []
+                    let
+                        pin =
+                            form.enteredPin
+
+                        pinConfirmed =
+                            form.enteredPinConfirmation
+
+                        isPinConfirmedCorrectly =
+                            pin == pinConfirmed
+                    in
+                    if not isPinConfirmedCorrectly then
+                        [ InvalidEntry PinConfirmation "PIN and PIN Confirmation must match (TR)" ]
 
                     else
-                        [ ( PinConfirmation, "PIN must match." ) ]
+                        validatePinNumber pin
                 )
             ]
         ]
@@ -212,12 +239,12 @@ viewFieldErrors field errors =
         ]
 
 
-encodePrivateKeyLogin : PrivateKeyLogin -> Value
-encodePrivateKeyLogin pk =
+encodePrivateKeyLogin : LoginFormData -> Value
+encodePrivateKeyLogin formData =
     Encode.object
-        [ ( "privateKey", Encode.string pk.privateKey )
+        [ ( "privateKey", Encode.string formData.passphrase )
         , ( "usePin"
-          , case pk.usePin of
+          , case formData.usePin of
                 Nothing ->
                     Encode.null
 
@@ -318,20 +345,22 @@ viewLoginSteps isModal shared model loginStep =
         errors =
             case loginStep of
                 LoginStepPassphrase ->
-                    List.map (\err -> viewFieldProblem shared Passphrase err) model.problems
+                    List.map (viewFieldProblem shared Passphrase) model.problems
 
                 LoginStepPIN ->
-                    List.map (\err -> viewFieldProblem shared Pin err) model.problems
+                    List.map (viewFieldProblem shared Pin) model.problems
 
-        viewLoginPassphrase =
+        viewPassphrase =
             div [ class "temp-passphrase-step" ]
-                [ div [ class "card__auth__input" ]
-                    [ img [ src "images/login_key.svg" ] []
+                [ div [ class "text-center" ]
+                    [ div [ class "text-center" ]
+                        [ img [ class "inline", src "images/login_key.svg" ] []
+                        ]
                     , viewFieldLabel shared "auth.login.wordsMode.input" "privateKey" Nothing
                     , textarea
-                        [ class "input"
+                        [ class "input h-20 min-w-full"
                         , id "privateKey"
-                        , value model.form.privateKey
+                        , value model.form.passphrase
                         , onInput EnteredPassphrase
                         , required True
                         , autocomplete False
@@ -348,13 +377,13 @@ viewLoginSteps isModal shared model loginStep =
                   else
                     text ""
                 , button
-                    [ class "btn btn--primary btn--login"
+                    [ class "button button-primary"
                     , onClick ClickedViewLoginPinStep
                     ]
                     [ text_ "Next" ]
                 ]
 
-        viewLoginPin =
+        viewCreatePin =
             div [ class "temp-pin-step" ]
                 [ div [ onClick ClickedViewOptions ] [ text "← Back to 12 words" ]
                 , div [ class "text-center" ]
@@ -364,8 +393,8 @@ viewLoginSteps isModal shared model loginStep =
                         ]
                         []
                     ]
-                , viewPinForm model shared PinInput
-                , viewPinForm model shared PinConfInput
+                , viewPinField model shared PinInput
+                , viewPinField model shared PinConfirmationInput
                 , button
                     [ class "btn btn--primary btn--login"
                     , onClick (SubmittedLoginPrivateKey model.form)
@@ -378,14 +407,14 @@ viewLoginSteps isModal shared model loginStep =
         ]
     , case loginStep of
         LoginStepPassphrase ->
-            viewLoginPassphrase
+            viewPassphrase
 
         LoginStepPIN ->
-            viewLoginPin
+            viewCreatePin
     ]
 
 
-viewLoginWithPrivateKeyLogin : PrivateKeyLogin -> Bool -> Bool -> Shared -> Model -> List (Html Msg)
+viewLoginWithPrivateKeyLogin : LoginFormData -> Bool -> Bool -> Shared -> Model -> List (Html Msg)
 viewLoginWithPrivateKeyLogin form isDisabled isModal shared model =
     let
         text_ s =
@@ -410,7 +439,7 @@ viewLoginWithPrivateKeyLogin form isDisabled isModal shared model =
             [ input
                 [ class "input input--login flex100"
                 , type_ "text"
-                , value form.privateKey
+                , value form.passphrase
                 , onInput EnteredPassphrase
                 , placeholder (t shared.translations "auth.loginPrivatekeyPlaceholder")
                 , required True
@@ -427,7 +456,7 @@ viewLoginWithPrivateKeyLogin form isDisabled isModal shared model =
     ]
 
 
-viewMultipleAccount : List Eos.Name -> PrivateKeyLogin -> Bool -> Bool -> Shared -> Model -> List (Html Msg)
+viewMultipleAccount : List Eos.Name -> LoginFormData -> Bool -> Bool -> Shared -> Model -> List (Html Msg)
 viewMultipleAccount accounts form isDisabled isModal shared model =
     let
         text_ s =
@@ -479,7 +508,7 @@ viewLoginWithPin accountName isDisabled isModal shared model =
         [ class "card__pin__input__group"
         , onSubmit SubmittedLoginPIN
         ]
-        [ viewPinForm model shared PinInput
+        [ viewPinField model shared PinInput
         , button
             [ class "btn btn--primary btn--login flex000"
             , disabled isDisabled
@@ -487,22 +516,6 @@ viewLoginWithPin accountName isDisabled isModal shared model =
             [ text_ "auth.login.submit" ]
         ]
     ]
-
-
-viewAuthTabs : Shared -> Html msg
-viewAuthTabs { translations } =
-    let
-        text_ : String -> Html msg
-        text_ s =
-            text (t translations s)
-    in
-    div [ class "card__auth__tabs__login" ]
-        [ div [ class "disabled" ]
-            [ a [ Route.href (Route.Register Nothing Nothing) ]
-                [ p [] [ text_ "auth.login.registerTab" ] ]
-            ]
-        , div [ class "enabled" ] [ p [] [ text_ "auth.login.loginTab" ] ]
-        ]
 
 
 viewAuthError : Shared -> Maybe String -> Html Msg
@@ -558,9 +571,9 @@ type Msg
     | ClickedViewOptions
     | ClickedViewLoginPinStep
     | EnteredPassphrase String
-    | SubmittedLoginPrivateKey PrivateKeyLogin
+    | SubmittedLoginPrivateKey LoginFormData
     | GotMultipleAccountsLogin (List Eos.Name)
-    | ClickedPrivateKeyAccount Eos.Name PrivateKeyLogin
+    | ClickedPrivateKeyAccount Eos.Name LoginFormData
     | GotPrivateKeyLogin (Result String ( Eos.Name, String ))
     | SubmittedLoginPIN
     | GotPinLogin (Result String ( Eos.Name, String ))
@@ -568,7 +581,6 @@ type Msg
     | CompletedCreateProfile Status Eos.Name (Result Http.Error Profile)
     | TogglePinVisibility
     | PressedEnter Bool
-    | EnteredPinDigit String
     | EnteredPin String
     | EnteredPinConf String
 
@@ -609,69 +621,43 @@ validationErrorToString shared error =
             t "register.form.pinConfirmError"
 
 
+trimPinNumber : String -> Int -> String
+trimPinNumber pin desiredLength =
+    if String.length pin > desiredLength then
+        String.slice 0 6 pin
+
+    else
+        pin
+
+
 update : Msg -> Shared -> Model -> Bool -> UpdateResult
 update msg shared model showAuthModal =
     case msg of
-        EnteredPin data ->
+        EnteredPin pin ->
             let
-                _ =
-                    Debug.log "EnterdPin data" data
-
-                otherProblems =
-                    model.problems
-                        |> List.filter
-                            (\p ->
-                                case p of
-                                    InvalidEntry Pin _ ->
-                                        False
-
-                                    _ ->
-                                        True
-                            )
-
-                pinErrors =
-                    if data == "" then
-                        [ InvalidEntry Pin (validationErrorToString shared PinTooShort) ]
-
-                    else
-                        []
-
                 currentForm =
                     model.form
             in
             { model
-                | form = { currentForm | enteredPin = data }
-                , problems = otherProblems ++ pinErrors
+                | form = { currentForm | enteredPin = trimPinNumber pin 6 }
+
+                -- show validation errors only when form submitted
+                , loginError = Nothing
+                , problems = []
             }
                 |> UR.init
 
-        EnteredPinConf data ->
+        EnteredPinConf pin ->
             let
-                otherProblems =
-                    model.problems
-                        |> List.filter
-                            (\p ->
-                                case p of
-                                    InvalidEntry PinConfirmation _ ->
-                                        False
-
-                                    _ ->
-                                        True
-                            )
-
-                pinConfProbs =
-                    if data == "" then
-                        [ InvalidEntry PinConfirmation (validationErrorToString shared PinTooShort) ]
-
-                    else
-                        []
-
                 currentForm =
                     model.form
             in
             { model
-                | form = { currentForm | enteredPinConf = data }
-                , problems = pinConfProbs ++ otherProblems
+                | form = { currentForm | enteredPinConfirmation = trimPinNumber pin 6 }
+
+                -- show validation errors only when form submitted
+                , loginError = Nothing
+                , problems = []
             }
                 |> UR.init
 
@@ -706,7 +692,7 @@ update msg shared model showAuthModal =
 
                 newForm =
                     { currentForm
-                        | privateKey = phrase
+                        | passphrase = phrase
                     }
             in
             { model
@@ -716,12 +702,8 @@ update msg shared model showAuthModal =
                 |> UR.init
 
         SubmittedLoginPrivateKey form ->
-            case form.enteredPin of
-                "" ->
-                    { model | loginError = Just "Please fill in all the PIN digits" }
-                        |> UR.init
-
-                _ ->
+            case validate pinValidator form of
+                Ok _ ->
                     let
                         pinString =
                             form.enteredPin
@@ -740,6 +722,10 @@ update msg shared model showAuthModal =
                                     , ( "form", encodePrivateKeyLogin newForm )
                                     ]
                             }
+
+                Err errors ->
+                    { model | problems = errors }
+                        |> UR.init
 
         GotMultipleAccountsLogin accounts ->
             UR.init
@@ -869,27 +855,6 @@ update msg shared model showAuthModal =
         CompletedCreateProfile _ _ (Err err) ->
             loginFailed err model
 
-        EnteredPinDigit data ->
-            let
-                currentForm =
-                    model.form
-
-                newPin =
-                    model.form.enteredPin
-            in
-            { model | form = { currentForm | enteredPin = newPin } }
-                |> UR.init
-                |> UR.addPort
-                    { responseAddress = Ignored
-                    , responseData = Encode.null
-                    , data =
-                        Encode.object
-                            [ ( "pos", Encode.int -999 )
-                            , ( "data", Encode.string data )
-                            , ( "iswithinif", Encode.bool True )
-                            ]
-                    }
-
         TogglePinVisibility ->
             { model | pinVisibility = not model.pinVisibility } |> UR.init
 
@@ -1012,9 +977,6 @@ msgToString msg =
         CompletedCreateProfile _ _ r ->
             [ "CompletedCreateProfile", UR.resultToString r ]
 
-        EnteredPinDigit _ ->
-            [ "EnteredPinDigit" ]
-
         EnteredPin _ ->
             [ "EnteredPin" ]
 
@@ -1031,10 +993,10 @@ msgToString msg =
 {-| Call this function under the field to render related validation problems.
 -}
 viewFieldProblem : Shared -> ValidatedField -> Problem -> Html msg
-viewFieldProblem shared field problem =
+viewFieldProblem { translations } field problem =
     let
         t s =
-            I18Next.t shared.translations s
+            I18Next.t translations s
     in
     case problem of
         ServerError _ ->
@@ -1048,47 +1010,51 @@ viewFieldProblem shared field problem =
                 text ""
 
 
-viewPinForm : Model -> Shared -> PinField -> Html Msg
-viewPinForm model shared inputType =
+viewPinField : Model -> Shared -> PinField -> Html Msg
+viewPinField { form, problems } shared inputType =
     let
         pinPrompt =
             case inputType of
                 PinInput ->
                     "auth.pin"
 
-                PinConfInput ->
+                PinConfirmationInput ->
                     "auth.pinConfirmation"
 
         errors =
             case inputType of
                 PinInput ->
-                    List.map (\err -> viewFieldProblem shared Pin err) model.problems
+                    List.map (viewFieldProblem shared Pin) problems
 
-                PinConfInput ->
-                    List.map (\err -> viewFieldProblem shared PinConfirmation err) model.problems
+                PinConfirmationInput ->
+                    List.map (viewFieldProblem shared PinConfirmation) problems
 
         val =
             case inputType of
                 PinInput ->
-                    model.form.enteredPin
+                    form.enteredPin
 
-                PinConfInput ->
-                    model.form.enteredPinConf
+                PinConfirmationInput ->
+                    form.enteredPinConfirmation
 
         msg =
             case inputType of
                 PinInput ->
                     EnteredPin
 
-                PinConfInput ->
+                PinConfirmationInput ->
                     EnteredPinConf
     in
     div [ class "card__auth__pin__section" ]
         [ viewFieldLabel shared pinPrompt "pin_input_0" Nothing
         , div []
             [ input
-                [ class ""
+                [ class "input min-w-full tracking-widest"
+                , type_ "number"
+                , placeholder "******"
                 , maxlength 6
+                , attribute "min" "1"
+                , attribute "max" "999999"
                 , value val
                 , onInput msg
                 , required True
