@@ -470,9 +470,8 @@ update msg model ({ shared } as loggedIn) =
                         |> UR.init
                         |> UR.addExt
                             (LoggedIn.ShowFeedback
-                                { message = "Transfer Failed"
-                                , success = False
-                                }
+                                LoggedIn.Failure
+                                "Transfer Failed"
                             )
 
                 _ ->
