@@ -32,7 +32,7 @@ import Page.ViewTransfer as ViewTransfer
 import Ports
 import Route exposing (Route)
 import Session.Guest as Guest
-import Session.LoggedIn as LoggedIn exposing (FeedbackStatus(..))
+import Session.LoggedIn as LoggedIn exposing (External(..), FeedbackVisibility(..))
 import Shop
 import UpdateResult as UR exposing (UpdateResult)
 import Url exposing (Url)
@@ -236,12 +236,12 @@ update msg model =
         ( ClickedLink urlRequest, _ ) ->
             case urlRequest of
                 Browser.Internal url ->
-                    ( model
+                    ( model |> hideFeedback
                     , Nav.pushUrl (.navKey (Page.toShared model.session)) (Url.toString url)
                     )
 
                 Browser.External href ->
-                    ( model
+                    ( model |> hideFeedback
                     , Nav.load href
                     )
 
@@ -463,12 +463,25 @@ updateLoggedInUResult toStatus toMsg model uResult =
                         _ ->
                             ( m, cmds_ )
 
-                LoggedIn.ShowFeedback feedback ->
+                LoggedIn.ShowFeedback status message ->
                     case m.session of
                         Page.LoggedIn loggedIn ->
                             ( { m
                                 | session =
-                                    Page.LoggedIn { loggedIn | feedback = Show feedback }
+                                    Page.LoggedIn { loggedIn | feedback = Show status message }
+                              }
+                            , cmds_
+                            )
+
+                        _ ->
+                            ( m, cmds_ )
+
+                LoggedIn.HideFeedback ->
+                    case m.session of
+                        Page.LoggedIn loggedIn ->
+                            ( { m
+                                | session =
+                                    Page.LoggedIn { loggedIn | feedback = Hidden }
                               }
                             , cmds_
                             )
@@ -490,6 +503,19 @@ updateLoggedInUResult toStatus toMsg model uResult =
                     )
                 )
            )
+
+
+hideFeedback : Model -> Model
+hideFeedback model =
+    case model.session of
+        Page.LoggedIn loggedIn ->
+            { model
+                | session =
+                    Page.LoggedIn { loggedIn | feedback = Hidden }
+            }
+
+        _ ->
+            model
 
 
 changeRouteTo : Maybe Route -> Model -> ( Model, Cmd Msg )

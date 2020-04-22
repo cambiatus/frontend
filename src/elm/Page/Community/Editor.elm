@@ -31,7 +31,7 @@ import Json.Encode as Encode exposing (Value, object, string)
 import List.Extra as List
 import Page
 import Route
-import Session.LoggedIn as LoggedIn exposing (External(..))
+import Session.LoggedIn as LoggedIn exposing (External(..), FeedbackStatus(..))
 import Session.Shared exposing (Shared)
 import Task
 import UpdateResult as UR
@@ -606,6 +606,10 @@ type Msg
 
 update : Msg -> Model -> LoggedIn.Model -> UpdateResult
 update msg model loggedIn =
+    let
+        t =
+            I18Next.t loggedIn.shared.translations
+    in
     case msg of
         CompletedCommunityLoad (Ok community) ->
             case community of
@@ -742,6 +746,7 @@ update msg model loggedIn =
                             (Route.Community symbol
                                 |> Route.replaceUrl loggedIn.shared.navKey
                             )
+                        |> UR.addExt (ShowFeedback Success (t "community.create.success"))
 
                 _ ->
                     model
@@ -757,16 +762,19 @@ update msg model loggedIn =
                     { model | status = Editing community err form }
                         |> UR.init
                         |> UR.logDebugValue msg val
+                        |> UR.addExt (ShowFeedback Failure (t "error.unknown"))
 
                 Creating form ->
                     { model | status = EditingNew err form }
                         |> UR.init
                         |> UR.logDebugValue msg val
+                        |> UR.addExt (ShowFeedback Failure (t "error.unknown"))
 
                 _ ->
                     UR.init model
                         |> UR.logImpossible msg []
                         |> UR.logDebugValue msg val
+                        |> UR.addExt (ShowFeedback Failure (t "error.unknown"))
 
         Redirect ->
             case model.status of

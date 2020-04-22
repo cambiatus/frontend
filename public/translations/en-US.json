@@ -217,6 +217,7 @@
     "create_button": "Create Community",
     "create": {
       "title": "Create community",
+      "success": "Successfully saved community",
       "labels": {
         "title": "Title",
         "symbol": "Symbol",
@@ -278,6 +279,7 @@
     },
     "objectives": {
       "title": "Objective",
+      "create_success": "Objective successfully created",
       "title_plural": "Objectives and Actions",
       "subtitle": "{{objectives}} objetives and {{actions}} actions",
       "new": "Create new objective",
@@ -292,6 +294,7 @@
     },
     "actions": {
       "title": "Action",
+      "create_success": "Action created with success",
       "last_title": "Last Actions",
       "loading_error": "Something went wrong while fetching actions.",
       "no_actions_yet": "No actions yet.",
@@ -371,6 +374,7 @@
     "title": "My profile",
     "my_transfers": "My Transfers",
     "no_one": "No one",
+    "edit_success": "Profile saved successfully",
     "actions": {
       "edit": "Edit",
       "viewPrivatekey": "View Private Key"
@@ -421,7 +425,9 @@
     "no_answer_yet": "No answer yet",
     "message_placeholder": "Type your message here or send a direct message through whatsapp or chat.",
     "create_offer": "Create offer",
+    "create_offer_success": "Offer created with success",
     "edit_offer": "Edit offer",
+    "delete_offer_success": "Offer removed with success",
     "unauthorized": "You are not authorized to edit this sale",
     "photo_label": "Upload image",
     "what_label": "What are you selling?",
