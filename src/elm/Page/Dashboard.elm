@@ -686,7 +686,7 @@ update msg model loggedIn =
                                 | analysis = LoadedGraphql newClaims
                             }
                                 |> UR.init
-                                |> UR.addExt (ShowFeedback { message = message value, success = True })
+                                |> UR.addExt (ShowFeedback LoggedIn.Success (message value))
 
                         Nothing ->
                             model

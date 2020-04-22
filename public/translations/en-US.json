@@ -179,6 +179,7 @@
       },
       "transfer": {
         "title": "Sending {{symbol}}",
+        "error": "Transfer Failed",
         "send_to": "Transfer to",
         "send_to_placeholder": "Friend account",
         "amount": "How much",

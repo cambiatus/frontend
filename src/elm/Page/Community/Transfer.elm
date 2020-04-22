@@ -463,17 +463,12 @@ update msg model ({ shared } as loggedIn) =
                 _ ->
                     onlyLogImpossible []
 
-        GotTransferResult (Err s) ->
+        GotTransferResult (Err _) ->
             case model.status of
                 Loaded c (SendingTransfer form) ->
                     { model | status = Loaded c (SendingTransferFailed form) }
                         |> UR.init
-                        |> UR.addExt
-                            (LoggedIn.ShowFeedback
-                                { message = "Transfer Failed"
-                                , success = False
-                                }
-                            )
+                        |> UR.addExt (ShowFeedback LoggedIn.Failure (t shared.translations "account.my_wallet.transfer.error"))
 
                 _ ->
                     onlyLogImpossible []

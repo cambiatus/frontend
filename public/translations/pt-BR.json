@@ -183,6 +183,7 @@
       },
       "transfer": {
         "title": "Enviando {{symbol}}",
+        "error": "Falha na transferência",
         "send_to": "Transferir para",
         "send_to_placeholder": "Conta do seu amigo",
         "amount": "Quantidade",

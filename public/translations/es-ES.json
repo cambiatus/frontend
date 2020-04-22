@@ -179,6 +179,7 @@
       },
       "transfer": {
         "title": "Enviando {{symbol}}",
+        "error": "Transferencia fallida",
         "send_to": "Enviar a",
         "send_to_placeholder": "Cuenta a enviar",
         "amount": "Monto",
