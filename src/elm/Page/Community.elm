@@ -928,14 +928,14 @@ update msg model loggedIn =
                 | modalStatus = Closed
             }
                 |> UR.init
-                |> UR.addExt (ShowFeedback LoggedIn.Success (t "community.claimAction.success"))
+                |> UR.addExt (ShowFeedback LoggedIn.Success (t "dashboard.check_claim.success"))
 
         GotClaimActionResponse (Err _) ->
             { model
                 | modalStatus = Closed
             }
                 |> UR.init
-                |> UR.addExt (ShowFeedback LoggedIn.Failure (t "community.claimAction.failure"))
+                |> UR.addExt (ShowFeedback LoggedIn.Failure (t "dashboard.check_claim.failure"))
 
 
 jsAddressToMsg : List String -> Value -> Maybe Msg

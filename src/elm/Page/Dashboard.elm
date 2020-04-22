@@ -117,6 +117,7 @@ type GraphqlStatus err a
 type ClaimStatus
     = ClaimLoaded Claim.Model
     | ClaimLoading Claim.Model
+    | ClaimVoted Claim.Model
     | ClaimVoteFailed Claim.Model
 
 
@@ -315,36 +316,53 @@ viewAnalysisList loggedIn model =
     let
         text_ s =
             text (I18Next.t loggedIn.shared.translations s)
+
+        isVoted : List ClaimStatus -> Bool
+        isVoted claims =
+            List.all
+                (\c ->
+                    case c of
+                        ClaimVoted _ ->
+                            True
+
+                        _ ->
+                            False
+                )
+                claims
     in
     case model.analysis of
         LoadingGraphql ->
             Page.fullPageLoading
 
         LoadedGraphql claims ->
-            div [ class "w-full flex" ]
-                [ div
-                    [ class "w-full" ]
-                    [ div [ class "text-gray-600 text-2xl font-light flex mt-6 mb-4" ]
-                        [ div [ class "text-indigo-500 mr-2 font-medium" ]
-                            [ text_ "dashboard.analysis.title.1"
-                            ]
-                        , text_ "dashboard.analysis.title.2"
-                        ]
-                    , if List.isEmpty claims then
-                        div [ class "flex flex-col w-full h-64 items-center justify-center px-3 py-12 my-2 rounded-lg bg-white" ]
-                            [ img [ src "/images/not_found.svg", class "object-contain h-32 mb-3" ] []
-                            , p [ class "flex text-body text-gray mb-6" ]
-                                [ p [ class "font-bold" ] [ text_ "dashboard.analysis.empty.1" ]
-                                , text_ "dashboard.analysis.empty.2"
+            if not (List.isEmpty claims) then
+                div [ class "w-full flex" ]
+                    [ div
+                        [ class "w-full" ]
+                        [ div [ class "text-gray-600 text-2xl font-light flex mt-4 mb-4" ]
+                            [ div [ class "text-indigo-500 mr-2 font-medium" ]
+                                [ text_ "dashboard.analysis.title.1"
                                 ]
-                            , p [ class "text-body text-gray" ] [ text_ "dashboard.analysis.empty.3" ]
+                            , text_ "dashboard.analysis.title.2"
                             ]
+                        , if isVoted claims then
+                            div [ class "flex flex-col w-full h-64 items-center justify-center px-3 py-12 my-2 rounded-lg bg-white" ]
+                                [ img [ src "/images/not_found.svg", class "object-contain h-32 mb-3" ] []
+                                , p [ class "flex text-body text-gray mb-6" ]
+                                    [ p [ class "font-bold" ] [ text_ "dashboard.analysis.empty.1" ]
+                                    , text_ "dashboard.analysis.empty.2"
+                                    ]
+                                , p [ class "text-body text-gray" ] [ text_ "dashboard.analysis.empty.3" ]
+                                ]
 
-                      else
-                        div [ class "flex flex-wrap -mx-2" ]
-                            (List.map (viewAnalysis loggedIn) claims)
+                          else
+                            div [ class "flex flex-wrap -mx-2" ]
+                                (List.map (viewAnalysis loggedIn) claims)
+                        ]
                     ]
-                ]
+
+            else
+                text ""
 
         FailedGraphql err ->
             div [] [ Page.fullPageGraphQLError "Failed load" err ]
@@ -395,9 +413,12 @@ viewAnalysis ({ shared } as loggedIn) claimStatus =
                 ]
 
         ClaimLoading _ ->
-            div [ class "w-full sm:w-full md:w-1/2 lg:w-1/3 xl:w-1/4 px-2 mb-4 rounded-lg bg-white h-56" ]
-                [ Page.fullPageLoading
+            div [ class "w-full sm:w-full md:w-1/2 lg:w-1/3 xl:w-1/4 px-2 mb-4" ]
+                [ div [ class "rounded-lg bg-white h-56 my-2" ] [ Page.fullPageLoading ]
                 ]
+
+        ClaimVoted _ ->
+            text ""
 
         ClaimVoteFailed _ ->
             div [ class "text-red" ] [ text "failed" ]
@@ -663,9 +684,6 @@ update msg model loggedIn =
             case model.analysis of
                 LoadedGraphql claims ->
                     let
-                        newClaims =
-                            removeClaim claims claimId
-
                         maybeClaim : Maybe Claim.Model
                         maybeClaim =
                             findClaim claims claimId
@@ -683,7 +701,7 @@ update msg model loggedIn =
                                         ++ Eos.symbolToString claim.action.objective.community.symbol
                             in
                             { model
-                                | analysis = LoadedGraphql newClaims
+                                | analysis = LoadedGraphql (setClaimStatus claims claimId ClaimVoted)
                             }
                                 |> UR.init
                                 |> UR.addExt (ShowFeedback LoggedIn.Success (message value))
@@ -820,6 +838,13 @@ setClaimStatus claims claimId status =
                         else
                             c
 
+                    ClaimLoading c_ ->
+                        if c_.id == claimId then
+                            status c_
+
+                        else
+                            c
+
                     _ ->
                         c
             )
@@ -828,40 +853,24 @@ setClaimStatus claims claimId status =
 findClaim : List ClaimStatus -> Int -> Maybe Claim.Model
 findClaim claims claimId =
     claims
-        |> List.map
-            (\c ->
-                case c of
-                    ClaimLoaded claim ->
-                        claim
-
-                    ClaimLoading claim ->
-                        claim
-
-                    ClaimVoteFailed claim ->
-                        claim
-            )
+        |> List.map unwrapClaimStatus
         |> List.find (\c -> c.id == claimId)
 
 
-removeClaim : List ClaimStatus -> Int -> List ClaimStatus
-removeClaim claims claimId =
-    let
-        maybeC c =
-            c.id /= claimId
-    in
-    List.filter
-        (\c ->
-            case c of
-                ClaimLoaded claim ->
-                    maybeC claim
+unwrapClaimStatus : ClaimStatus -> Claim.Model
+unwrapClaimStatus claimStatus =
+    case claimStatus of
+        ClaimLoaded claim ->
+            claim
 
-                ClaimLoading claim ->
-                    maybeC claim
+        ClaimLoading claim ->
+            claim
 
-                ClaimVoteFailed claim ->
-                    maybeC claim
-        )
-        claims
+        ClaimVoted claim ->
+            claim
+
+        ClaimVoteFailed claim ->
+            claim
 
 
 encodeVerification : Int -> Eos.Name -> Bool -> Encode.Value
