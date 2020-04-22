@@ -488,8 +488,8 @@
     "verification": "Verification",
     "your_reward": "Your Reward",
     "action": "Action",
-    "reject": "Reject",
-    "verify": "Verify",
+    "reject": "Disapprove",
+    "verify": "Approve",
     "closed": "closed",
     "analysis": {
       "title": {

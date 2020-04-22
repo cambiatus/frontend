@@ -110,6 +110,7 @@ module.exports = {
         '7': '1.75rem',
         heading: '1.375rem',
         '14': '3.5rem',
+        '72': '18rem',
         select: '18.75rem'
       },
       lineHeight: {

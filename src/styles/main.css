@@ -167,11 +167,11 @@
 }
 
 .modal-content {
-  @apply bg-white bottom-0 right-0 left-0 fixed rounded-t-lg p-4;
+  @apply bg-white bottom-0 right-0 left-0 fixed rounded-t-lg p-4 h-72;
 }
 
 .modal-footer {
-  @apply w-full flex flex-wrap absolute rounded-b-lg justify-center items-center;
+  @apply w-full flex flex-wrap rounded-b-lg justify-center items-center;
 }
 
 .modal-cancel {
@@ -188,7 +188,7 @@
   }
 
   .modal-footer {
-    @apply bg-gray-100 inset-x-0 bottom-0 p-4;
+    @apply bg-gray-100 absolute inset-x-0 bottom-0 p-4;
   }
 
   .modal-cancel {

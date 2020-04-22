@@ -188,7 +188,7 @@ viewAnalysisModal loggedIn model =
                             [ text_ "claim.modal.title" ]
                         , button
                             [ onClick CloseModal ]
-                            [ Icons.close "absolute fill-current text-gray-400 top-0 right-0 mx-8 my-4"
+                            [ Icons.close "absolute fill-current text-gray-400 top-0 right-0 mx-4 my-4"
                             ]
                         , p [ class "text-body w-full font-sans mb-10" ]
                             [ if vote then
@@ -348,7 +348,7 @@ viewAnalysisList loggedIn model =
                         , if isVoted claims then
                             div [ class "flex flex-col w-full h-64 items-center justify-center px-3 py-12 my-2 rounded-lg bg-white" ]
                                 [ img [ src "/images/not_found.svg", class "object-contain h-32 mb-3" ] []
-                                , p [ class "flex text-body text-gray mb-6" ]
+                                , p [ class "flex text-body text-gray" ]
                                     [ p [ class "font-bold" ] [ text_ "dashboard.analysis.empty.1" ]
                                     , text_ "dashboard.analysis.empty.2"
                                     ]
