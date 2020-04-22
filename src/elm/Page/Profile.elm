@@ -20,7 +20,7 @@ import Json.Encode as Encode
 import Page
 import Profile exposing (Profile, ProfileForm, decode)
 import PushSubscription exposing (PushSubscription)
-import Session.LoggedIn as LoggedIn exposing (External(..))
+import Session.LoggedIn as LoggedIn exposing (External(..), FeedbackStatus(..))
 import Task
 import UpdateResult as UR
 import Utils
@@ -583,6 +583,10 @@ type Msg
 
 update : Msg -> Model -> LoggedIn.Model -> UpdateResult
 update msg model loggedIn =
+    let
+        t =
+            I18Next.t loggedIn.shared.translations
+    in
     case msg of
         Ignored ->
             UR.init model
@@ -627,6 +631,7 @@ update msg model loggedIn =
                                 (Profile.mutation profile.account form)
                                 CompletedProfileLoad
                             )
+                        |> UR.addExt (ShowFeedback Success (t "profile.edit_success"))
 
                 _ ->
                     UR.init model

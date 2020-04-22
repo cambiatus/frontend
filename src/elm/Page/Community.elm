@@ -32,7 +32,7 @@ import Json.Decode as Decode
 import Json.Encode as Encode exposing (Value)
 import Page
 import Route
-import Session.LoggedIn as LoggedIn exposing (External(..))
+import Session.LoggedIn as LoggedIn exposing (External(..), FeedbackStatus(..))
 import Session.Shared exposing (Shared)
 import Strftime
 import Task
@@ -113,7 +113,6 @@ type alias Model =
     , members : List Member
     , openObjective : Maybe Int
     , modalStatus : ModalStatus
-    , messageStatus : MessageStatus
     , actions : Maybe ActionVerificationsResponse
     , invitations : String
     , symbol : Symbol
@@ -127,7 +126,6 @@ initModel _ symbol =
     , members = []
     , openObjective = Nothing
     , modalStatus = Closed
-    , messageStatus = None
     , actions = Nothing
     , invitations = ""
     , symbol = symbol
@@ -155,12 +153,6 @@ type SaveStatus
 type ModalStatus
     = Opened Bool Int -- Action id
     | Closed
-
-
-type MessageStatus
-    = None
-    | Success String
-    | Failure String
 
 
 type alias ObjectiveForm =
@@ -232,7 +224,6 @@ view loggedIn model =
                     ]
                 , div [ class "container mx-auto px-4" ]
                     [ viewClaimModal loggedIn model
-                    , viewMessageStatus loggedIn model
                     , if canEdit then
                         div [ class "flex justify-between items-center py-2 px-8 sm:px-6 bg-white rounded-lg mt-4" ]
                             [ div []
@@ -670,30 +661,6 @@ viewHeader { shared } community =
         ]
 
 
-viewMessageStatus : LoggedIn.Model -> Model -> Html msg
-viewMessageStatus loggedIn model =
-    let
-        t s =
-            I18Next.t loggedIn.shared.translations s
-
-        text_ s =
-            text (t s)
-    in
-    case model.messageStatus of
-        None ->
-            text ""
-
-        Success message ->
-            div [ class "z-40 bg-green w-full my-2 p-2 rounded-lg text-center" ]
-                [ p [ class "text-white font-sans" ] [ text_ message ]
-                ]
-
-        Failure message ->
-            div [ class "z-40 bg-red w-full my-2 rounded-lg p-2 text-center" ]
-                [ p [ class "text-white font-sans font-bold" ] [ text_ message ]
-                ]
-
-
 viewClaimModal : LoggedIn.Model -> Model -> Html Msg
 viewClaimModal loggedIn model =
     case model.modalStatus of
@@ -872,6 +839,10 @@ type Msg
 
 update : Msg -> Model -> LoggedIn.Model -> UpdateResult
 update msg model loggedIn =
+    let
+        t =
+            I18Next.t loggedIn.shared.translations
+    in
     case msg of
         NoOp ->
             UR.init model
@@ -955,16 +926,16 @@ update msg model loggedIn =
         GotClaimActionResponse (Ok _) ->
             { model
                 | modalStatus = Closed
-                , messageStatus = Success "community.claimAction.success"
             }
                 |> UR.init
+                |> UR.addExt (ShowFeedback LoggedIn.Success (t "community.claimAction.success"))
 
         GotClaimActionResponse (Err _) ->
             { model
                 | modalStatus = Closed
-                , messageStatus = Failure "community.claimAction.failure"
             }
                 |> UR.init
+                |> UR.addExt (ShowFeedback LoggedIn.Failure (t "community.claimAction.failure"))
 
 
 jsAddressToMsg : List String -> Value -> Maybe Msg

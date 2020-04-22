@@ -20,7 +20,7 @@ import Json.Decode as Decode exposing (Decoder)
 import Json.Encode as Encode exposing (Value)
 import Page
 import Route
-import Session.LoggedIn as LoggedIn exposing (External(..))
+import Session.LoggedIn as LoggedIn exposing (External(..), FeedbackStatus(..))
 import UpdateResult as UR
 
 
@@ -250,6 +250,10 @@ updateObjective msg fn uResult =
 
 update : Msg -> Model -> LoggedIn.Model -> UpdateResult
 update msg model loggedIn =
+    let
+        t =
+            I18Next.t loggedIn.shared.translations
+    in
     case msg of
         CompletedCommunityLoad (Ok community) ->
             case community of
@@ -375,11 +379,13 @@ update msg model loggedIn =
                     (Route.replaceUrl loggedIn.shared.navKey
                         (Route.Community model.community)
                     )
+                |> UR.addExt (ShowFeedback Success (t "community.objectives.create_success"))
 
         GotSaveObjectiveResponse (Err v) ->
             UR.init model
                 |> updateObjective msg (\o -> { o | save = SaveFailed })
                 |> UR.logDebugValue msg v
+                |> UR.addExt (ShowFeedback Failure (t "errors.unknown"))
 
 
 

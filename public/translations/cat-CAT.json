@@ -213,6 +213,7 @@
     "create_button": "Crear comunitat",
     "create": {
       "title": "Crear comunitat",
+      "success": "El perfil s'ha desat correctament",
       "labels": {
         "title": "Nom",
         "symbol": "Símbol",
@@ -274,6 +275,7 @@
     },
     "objectives": {
       "title": "Objectiu",
+      "create_success": "Objectiu creat amb èxit",
       "title_plural": "Objectius i Accions",
       "subtitle": "{{objectives}} objectius i {{actions}} accions",
       "new": "Crear un objectiu nou",
@@ -288,6 +290,7 @@
     },
     "actions": {
       "title": "Acció",
+      "create_success": "Acció creada amb èxit",
       "last_title": "Darreres accions",
       "loading_error": "Alguna cosa ha sortit malament mentre recuperàvem les accions.",
       "no_actions_yet": "Encara no hi ha accions.",
@@ -374,6 +377,7 @@
   "profile": {
     "title": "El meu perfil",
     "my_transfers": "Les meves transferències",
+    "edit_success": "El perfil s'ha desat correctament",
     "actions": {
       "edit": "Editar",
       "viewPrivatekey": "Veure clau privada"
@@ -424,7 +428,9 @@
     "no_answer_yet": "Encara sense resposta",
     "message_placeholder": "Escriu el teu missatge aquí o envia un missatge directe emprant Whatsapp o xat.",
     "create_offer": "Crear oferta",
+    "create_offer_success": "Oferta creada amb èxit",
     "edit_offer": "Editar oferta",
+    "delete_offer_success": "L’oferta s’ha suprimit correctament",
     "unauthorized": "No tens autorització per a editar aquesta venda",
     "photo_label": "Pujar imatge",
     "what_label": "Què estàs venent?",

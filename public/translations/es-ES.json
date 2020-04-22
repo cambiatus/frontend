@@ -213,6 +213,7 @@
     "create_button": "Crear Comunidad",
     "create": {
       "title": "Crear comunidad",
+      "success": "Comunidad guardada con éxito",
       "labels": {
         "title": "Nombre",
         "symbol": "Simbolo",
@@ -274,6 +275,7 @@
     },
     "objectives": {
       "title": "Objetivo",
+      "create_success": "Objetivo creado con éxito",
       "title_plural": "Objetivos y Acciones",
       "subtitle": "{{objectives}} objetivos y {{actions}} acciones",
       "new": "Crear nuevo objetivo",
@@ -288,6 +290,7 @@
     },
     "actions": {
       "title": "Acción",
+      "create_success": "Acción creada con éxito",
       "last_title": "Últimas acciones",
       "loading_error": "Algo salió mal mientras recuperabamos las acciones.",
       "no_actions_yet": "Aún no hay acciones",
@@ -374,6 +377,7 @@
   "profile": {
     "title": "Mi perfil",
     "my_transfers": "Mis Transferencias",
+    "edit_success": "Perfil guardado con éxito",
     "actions": {
       "edit": "Editar",
       "viewPrivatekey": "Ver Llave Privada"
@@ -424,7 +428,9 @@
     "no_answer_yet": "Sin respuesta aun",
     "message_placeholder": "Escribe tu mensaje aqui o envía un mensaje directo usando Whatsapp o chat.",
     "create_offer": "Crear oferta",
+    "create_offer_success": "Oferta creada con éxito",
     "edit_offer": "Editar oferta",
+    "delete_offer_success": "Oferta eliminado con éxito",
     "unauthorized": "No tienes autorización para editar esta venta",
     "photo_label": "Subir imagen",
     "what_label": "Que estas vendiendo?",

@@ -2,6 +2,7 @@ module Session.LoggedIn exposing
     ( External(..)
     , ExternalMsg(..)
     , FeedbackStatus(..)
+    , FeedbackVisibility(..)
     , Model
     , Msg(..)
     , Page(..)
@@ -127,7 +128,7 @@ type alias Model =
     , showAuthModal : Bool
     , auth : Auth.Model
     , balances : List Balance
-    , feedback : FeedbackStatus
+    , feedback : FeedbackVisibility
     }
 
 
@@ -150,14 +151,13 @@ initModel shared authModel accountName =
     }
 
 
-type alias Feedback =
-    { message : String
-    , success : Bool
-    }
-
-
 type FeedbackStatus
-    = Show Feedback
+    = Success
+    | Failure
+
+
+type FeedbackVisibility
+    = Show FeedbackStatus String
     | Hidden
 
 
@@ -219,17 +219,33 @@ view thisMsg page ({ shared } as model) content =
             viewHelper thisMsg page profile_ model content
 
 
-viewFeedback : Feedback -> Html Msg
-viewFeedback feedback =
+viewFeedback : FeedbackStatus -> String -> Html Msg
+viewFeedback status message =
+    let
+        color =
+            case status of
+                Success ->
+                    "bg-green"
+
+                Failure ->
+                    "bg-red"
+    in
     div
-        [ class "sticky top-0 w-full flex justify-center items-center"
-        , classList [ ( "bg-green", feedback.success ), ( "bg-red", not feedback.success ) ]
+        [ class "sticky top-0 w-full"
+        , classList [ ( color, True ) ]
+        , style "display" "grid"
+        , style "grid-template" "\". text x\" 100% / 5% 90% 5%"
         ]
-        [ span [ class "ml-auto invisible" ] []
-        , span [ class "flex items-center text-sm h-10 leading-snug text-white font-bold" ]
-            [ text feedback.message ]
+        [ span
+            [ class "flex justify-center items-center text-sm h-10 leading-snug text-white font-bold"
+            , style "grid-area" "text"
+            ]
+            [ text message ]
         , span
-            [ class "ml-auto mr-5 cursor-pointer", onClick HideFeedback ]
+            [ class "flex justify-center items-center ml-auto mr-5 cursor-pointer"
+            , style "grid-area" "x"
+            , onClick HideFeedbackLocal
+            ]
             [ Icons.close "fill-current text-white"
             ]
         ]
@@ -263,8 +279,8 @@ viewHelper thisMsg page profile_ ({ shared } as model) content =
                 ]
             ]
         , case model.feedback of
-            Show feedback ->
-                viewFeedback feedback |> Html.map thisMsg
+            Show status message ->
+                viewFeedback status message |> Html.map thisMsg
 
             Hidden ->
                 text ""
@@ -525,7 +541,8 @@ type External msg
     = UpdatedLoggedIn Model
     | RequiredAuthentication (Maybe msg)
     | UpdateBalances
-    | ShowFeedback Feedback
+    | ShowFeedback FeedbackStatus String
+    | HideFeedback
 
 
 mapExternal : (msg -> msg2) -> External msg -> External msg2
@@ -540,8 +557,11 @@ mapExternal transform ext =
         UpdateBalances ->
             UpdateBalances
 
-        ShowFeedback f ->
-            ShowFeedback f
+        ShowFeedback message status ->
+            ShowFeedback message status
+
+        HideFeedback ->
+            HideFeedback
 
 
 type alias UpdateResult =
@@ -573,7 +593,7 @@ type Msg
     | CompletedLoadBalances (Result Http.Error (List Balance))
     | CompletedLoadUnread Value
     | KeyDown String
-    | HideFeedback
+    | HideFeedbackLocal
 
 
 update : Msg -> Model -> UpdateResult
@@ -767,7 +787,7 @@ update msg model =
                 model
                     |> UR.init
 
-        HideFeedback ->
+        HideFeedbackLocal ->
             { model | feedback = Hidden }
                 |> UR.init
 
@@ -933,5 +953,5 @@ msgToString msg =
         KeyDown _ ->
             [ "KeyDown" ]
 
-        HideFeedback ->
-            [ "HideFeedback" ]
+        HideFeedbackLocal ->
+            [ "HideFeedbackLocal" ]
