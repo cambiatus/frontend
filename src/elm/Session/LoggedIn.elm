@@ -476,7 +476,7 @@ communitySelectorModal model =
         viewCommunityItem : Profile.CommunityInfo -> Html Msg
         viewCommunityItem c =
             div
-                [ class "flex items-center h-16 border-b text-body hover:pointer"
+                [ class "flex items-center h-16 py-4 border-b text-body hover:pointer"
                 , onClick <| SelectCommunity c.id
                 ]
                 [ img [ src (logoUrl c.logo), class "h-12 mr-5" ] []
@@ -498,9 +498,9 @@ communitySelectorModal model =
                                     [ text_ "menu.community_selector.title" ]
                                 , button
                                     [ onClick CloseCommunitySelector ]
-                                    [ Icons.close "absolute fill-current text-gray-400 top-0 right-0 mx-8 my-4"
+                                    [ Icons.close "absolute fill-current text-gray-400 top-0 right-0 m-4"
                                     ]
-                                , p [ class "text-body w-full font-sans mb-2" ]
+                                , p [ class "text-body w-full font-sans -mt-2 mb-2" ]
                                     [ text_ "menu.community_selector.body"
                                     ]
                                 , div [ class "w-full overflow-scroll" ]
