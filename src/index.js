@@ -529,7 +529,7 @@ async function handleJavascriptPort (arg) {
       const now = new Date()
 
       console.log('p', parsedDate)
-      if (parsedDate.toString() === ('Invalid Date') || (parsedDate < now)) {
+      if (parsedDate.toString() === 'Invalid Date' || parsedDate < now) {
         const response = {
           address: arg.responseAddress,
           addressData: arg.responseData,
@@ -576,7 +576,7 @@ async function handleJavascriptPort (arg) {
         })
       )
 
-      let onStart = (data) => {
+      let onStart = data => {
         const payload = { dta: data, msg: 'starting community subscription' }
         devLog('==========================', payload)
         const response = {
@@ -587,19 +587,22 @@ async function handleJavascriptPort (arg) {
         app.ports.javascriptInPort.send(response)
       }
 
-      let onAbort = (data) => {
+      let onAbort = data => {
         devLog('===========================', 'aborting community subscription')
       }
 
-      let onCancel = (data) => {
-        devLog('===========================', 'cancellling community subscription ')
+      let onCancel = data => {
+        devLog(
+          '===========================',
+          'cancellling community subscription '
+        )
       }
 
-      let onError = (data) => {
+      let onError = data => {
         devLog('community subscrition error', data)
       }
 
-      let onResult = (data) => {
+      let onResult = data => {
         devLog('===========================', 'community subscription results')
         const response = {
           address: arg.responseAddress,
@@ -620,6 +623,77 @@ async function handleJavascriptPort (arg) {
       })
       break
     }
+    case 'subscribeToTransfer': {
+      devLog('=======================', 'subscribeToTransfer')
+
+      let notifiers = []
+
+      // Open a socket connection
+      const socketConn = new PhoenixSocket(config.endpoints.socket)
+
+      // Build a graphql Socket
+      const abSocket = AbsintheSocket.create(socketConn)
+
+      // Remove existing notifiers if any
+      notifiers.map(notifier => AbsintheSocket.cancel(abSocket, notifier))
+
+      devLog('subscription doc', arg.data.subscription)
+      // Create new notifiers
+      notifiers = [arg.data.subscription].map(operation =>
+        AbsintheSocket.send(abSocket, {
+          operation,
+          variables: {}
+        })
+      )
+
+      let onStart = data => {
+        const payload = { dta: data, msg: 'starting transfer subscription' }
+        devLog('==========================', payload)
+
+        const response = {
+          address: arg.responseAddress,
+          addressData: arg.responseData,
+          state: 'starting'
+        }
+        app.ports.javascriptInPort.send(response)
+      }
+
+      let onAbort = data => {
+        devLog('===========================', 'aborting transfer subscription')
+      }
+
+      let onCancel = data => {
+        devLog('===========================', 'cancel transfer subscription ')
+      }
+
+      let onError = data => {
+        devLog('transfer subscrition error', data)
+      }
+
+      let onResult = data => {
+        devLog('===========================', 'Transfer subscription results')
+        const response = {
+          address: arg.responseAddress,
+          addressData: arg.responseData,
+          state: 'responded',
+          data: data
+        }
+        app.ports.javascriptInPort.send(response)
+      }
+
+      notifiers.map(notifier => {
+        AbsintheSocket.observe(abSocket, notifier, {
+          onAbort,
+          onError,
+          onCancel,
+          onStart,
+          onResult
+        })
+      })
+
+      break
+    }
+
     case 'subscribeToUnreadCount': {
       devLog('=======================', 'unreadCountSubscription')
       let notifiers = []
@@ -642,25 +716,34 @@ async function handleJavascriptPort (arg) {
         })
       )
 
-      let onStart = (data) => {
+      let onStart = data => {
         const payload = { dta: data, msg: 'starting unread countsubscription' }
         devLog('==========================', payload)
       }
 
-      let onAbort = (data) => {
-        devLog('===========================', 'aborting unread count subscription')
+      let onAbort = data => {
+        devLog(
+          '===========================',
+          'aborting unread count subscription'
+        )
       }
 
-      let onCancel = (data) => {
-        devLog('===========================', 'cancelling unread count subscription ')
+      let onCancel = data => {
+        devLog(
+          '===========================',
+          'cancelling unread count subscription '
+        )
       }
 
-      let onError = (data) => {
+      let onError = data => {
         devLog('community subscrition error', data)
       }
 
-      let onResult = (data) => {
-        devLog('===========================', 'unread count subscription results')
+      let onResult = data => {
+        devLog(
+          '===========================',
+          'unread count subscription results'
+        )
         const response = {
           address: arg.responseAddress,
           addressData: arg.responseData,

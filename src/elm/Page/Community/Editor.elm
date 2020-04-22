@@ -21,7 +21,7 @@ import Eos.Account as Eos
 import File exposing (File)
 import Graphql.Document
 import Graphql.Http
-import Html exposing (Html, br, button, div, input, label, p, span, text, textarea)
+import Html exposing (Html, br, button, div, input, label, span, text, textarea)
 import Html.Attributes exposing (..)
 import Html.Events exposing (onClick, onInput, onSubmit)
 import Http
@@ -238,7 +238,7 @@ view loggedIn model =
         NotFound ->
             Page.viewCardEmpty [ text "Community not found" ]
 
-        Unauthorized community ->
+        Unauthorized _ ->
             defaultContainer
                 [ Page.viewTitle (t "community.edit.title")
                 , div [ class "card" ]

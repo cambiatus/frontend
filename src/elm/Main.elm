@@ -19,6 +19,7 @@ import Page.Community.Explore as CommunityExplore
 import Page.Community.Invite as Invite
 import Page.Community.ObjectiveEditor as ObjectiveEditor
 import Page.Community.Objectives as Objectives
+import Page.Community.Transfer as Transfer
 import Page.Community.VerifyClaim as VerifyClaim
 import Page.Dashboard as Dashboard
 import Page.Login as Login
@@ -29,7 +30,7 @@ import Page.Register as Register
 import Page.Shop as Shop
 import Page.Shop.Editor as ShopEditor
 import Page.Shop.Viewer as ShopViewer
-import Page.Transfer as Transfer
+import Page.ViewTransfer as ViewTransfer
 import Ports
 import Route exposing (Route)
 import Session.Guest as Guest
@@ -165,8 +166,9 @@ type Status
     | Shop Shop.Filter Shop.Model
     | ShopEditor (Maybe String) ShopEditor.Model
     | ShopViewer String ShopViewer.Model
-    | Transfer Int Transfer.Model
+    | ViewTransfer Int ViewTransfer.Model
     | Invite Invite.Model
+    | Transfer Transfer.Model
 
 
 
@@ -196,8 +198,9 @@ type Msg
     | GotShopEditorMsg ShopEditor.Msg
     | GotUpdatedBalances (Result Http.Error (List Community.Balance))
     | GotShopViewerMsg ShopViewer.Msg
-    | GotTransferScreenMsg Transfer.Msg
+    | GotViewTransferScreenMsg ViewTransfer.Msg
     | GotInviteMsg Invite.Msg
+    | GotTransferMsg Transfer.Msg
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -400,14 +403,19 @@ update msg model =
                 >> updateLoggedInUResult VerifyClaim GotVerifyClaimMsg model
                 |> withLoggedIn
 
-        ( GotTransferScreenMsg subMsg, Transfer transferId subModel ) ->
-            Transfer.update subMsg subModel
-                >> updateLoggedInUResult (Transfer transferId) GotTransferScreenMsg model
+        ( GotViewTransferScreenMsg subMsg, ViewTransfer transferId subModel ) ->
+            ViewTransfer.update subMsg subModel
+                >> updateLoggedInUResult (ViewTransfer transferId) GotViewTransferScreenMsg model
                 |> withLoggedIn
 
         ( GotInviteMsg subMsg, Invite subModel ) ->
             Invite.update model.session subMsg subModel
                 |> updateLoggedInUResult Invite GotInviteMsg model
+
+        ( GotTransferMsg subMsg, Transfer subModel ) ->
+            Transfer.update subMsg subModel
+                >> updateLoggedInUResult Transfer GotTransferMsg model
+                |> withLoggedIn
 
         ( _, _ ) ->
             ( model
@@ -787,14 +795,19 @@ changeRouteTo maybeRoute model =
                 >> updateStatusWith (ShopViewer saleId) GotShopViewerMsg model
                 |> withLoggedIn (Route.ViewSale saleId)
 
-        Just (Route.Transfer transferId) ->
-            (\l -> Transfer.init l transferId)
-                >> updateStatusWith (Transfer transferId) GotTransferScreenMsg model
-                |> withLoggedIn (Route.Transfer transferId)
+        Just (Route.ViewTransfer transferId) ->
+            (\l -> ViewTransfer.init l transferId)
+                >> updateStatusWith (ViewTransfer transferId) GotViewTransferScreenMsg model
+                |> withLoggedIn (Route.ViewTransfer transferId)
 
         Just (Route.Invite invitationId) ->
             Invite.init session invitationId
                 |> updateStatusWith Invite GotInviteMsg model
+
+        Just (Route.Transfer symbol maybeTo) ->
+            (\l -> Transfer.init l symbol maybeTo)
+                >> updateStatusWith Transfer GotTransferMsg model
+                |> withLoggedIn (Route.Transfer symbol maybeTo)
 
 
 jsAddressToMsg : List String -> Value -> Maybe Msg
@@ -847,6 +860,10 @@ jsAddressToMsg address val =
         "GotVerifyClaimMsg" :: rAddress ->
             Maybe.map GotVerifyClaimMsg
                 (VerifyClaim.jsAddressToMsg rAddress val)
+
+        "GotTransferMsg" :: rAddress ->
+            Maybe.map GotTransferMsg
+                (Transfer.jsAddressToMsg rAddress val)
 
         _ ->
             Nothing
@@ -921,11 +938,14 @@ msgToString msg =
         GotShopViewerMsg subMsg ->
             "GotShopViewerMsg" :: ShopViewer.msgToString subMsg
 
-        GotTransferScreenMsg subMsg ->
-            "GotTransferScreenMsg" :: Transfer.msgToString subMsg
+        GotViewTransferScreenMsg subMsg ->
+            "GotViewTransferScreenMsg" :: ViewTransfer.msgToString subMsg
 
         GotInviteMsg subMsg ->
             "GotInviteMsg" :: Invite.msgToString subMsg
+
+        GotTransferMsg subMsg ->
+            "GotTransferMsg" :: Transfer.msgToString subMsg
 
 
 
@@ -1018,8 +1038,11 @@ view model =
         ShopViewer _ subModel ->
             viewLoggedIn subModel LoggedIn.Shop GotShopViewerMsg ShopViewer.view
 
-        Transfer _ subModel ->
-            viewLoggedIn subModel LoggedIn.Other GotTransferScreenMsg Transfer.view
+        ViewTransfer _ subModel ->
+            viewLoggedIn subModel LoggedIn.Other GotViewTransferScreenMsg ViewTransfer.view
 
         Invite subModel ->
             Html.map GotInviteMsg (Invite.view model.session subModel)
+
+        Transfer subModel ->
+            viewLoggedIn subModel LoggedIn.Other GotTransferMsg Transfer.view

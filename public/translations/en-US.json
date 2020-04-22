@@ -128,14 +128,14 @@
         "placeholder": ""
       },
       "email": {
-          "label": "Email",
-          "tooltip": "",
-          "placeholder": ""
+        "label": "Email",
+        "tooltip": "",
+        "placeholder": ""
       },
       "account": {
-          "label": "Create an username with exactly 12 characters",
-          "tooltip": "The username will be as you will be known on the platform by the other participants, it must have exact 12 characters.",
-          "placeholder": "Only letters from a-z and numbers from 1-5"
+        "label": "Create an username with exactly 12 characters",
+        "tooltip": "The username will be as you will be known on the platform by the other participants, it must have exact 12 characters.",
+        "placeholder": "Only letters from a-z and numbers from 1-5"
       },
       "accountCharError": "Invalid character found. Use only letters and numbers between 1-5",
       "pin": "PIN",
@@ -151,15 +151,15 @@
       "title": "Uoh. Something went wrong while creating your account"
     },
     "account_created": {
-        "congrats": "Congrats",
-        "account": "Your account was",
-        "created": "created ;)",
-        "welcome_message": "Welcome {{username}}, you will always be able to access Cambiatus with this device in a simple and safe manner, but if you want to use a different computer, smartphone or tablet you will need to have the following information at hand:",
-        "twelve_words": "Your 12 words",
-        "private_key": "Your private key",
-        "recommendation": "We recommend you to save this information by clicking the button below, if you lose it you won't be able to login to your account again",
-        "download": "Save private key and 12 words",
-        "instructions": "You will save the private key and the 12 words on your computer in PDF format."
+      "congrats": "Congrats",
+      "account": "Your account was",
+      "created": "created ;)",
+      "welcome_message": "Welcome {{username}}, you will always be able to access Cambiatus with this device in a simple and safe manner, but if you want to use a different computer, smartphone or tablet you will need to have the following information at hand:",
+      "twelve_words": "Your 12 words",
+      "private_key": "Your private key",
+      "recommendation": "We recommend you to save this information by clicking the button below, if you lose it you won't be able to login to your account again",
+      "download": "Save private key and 12 words",
+      "instructions": "You will save the private key and the 12 words on your computer in PDF format."
     }
   },
   "account": {
@@ -175,11 +175,11 @@
       },
       "transfer": {
         "title": "Sending {{symbol}}",
-        "send_to": "Send to:",
+        "send_to": "Transfer to",
         "send_to_placeholder": "Friend account",
-        "amount": "Amount:",
+        "amount": "How much",
         "amount_placeholder": "0.00",
-        "memo": "Memo:",
+        "memo": "Message (optional)",
         "memo_placeholder": "Thanks for the help",
         "submit": "Transfer"
       }
@@ -190,7 +190,8 @@
     "loading_error": "Something went wrong while fetching transfers.",
     "no_transfers_yet": "No transfers yet.",
     "info": "{{from}} transfered {{value}} to {{to}}",
-    "you": "you"
+    "you": "you",
+    "title": "Transfer"
   },
   "notifications": {
     "title": "Notifications",
@@ -347,8 +348,8 @@
         "quantity_label": "Choose usages",
         "usages_left_label": "Usages left",
         "mark_completed": "Mark as completed",
-				"errors" :{
-					"description": "Description cannot be empty",
+        "errors": {
+          "description": "Description cannot be empty",
           "reward": "The reward needs to be more than 0",
           "validity": "At least one validity is required if using validity",
           "usage": "Quantity needs to be atleast 1",
@@ -356,9 +357,9 @@
           "less_verifiers": "You need more verifiers for enough votes",
           "minvotes": "You need to at least 1 minimum vote if using verifiers",
           "verifier_reward": "Verifier reward needs to be atleast 0"
-				},
-       "success": "The activity was successfully created.",
-       "error": "The activity cannot be created. Try later"
+        },
+        "success": "The activity was successfully created.",
+        "error": "The activity cannot be created. Try later"
       }
     },
     "claimAction": {
@@ -521,9 +522,9 @@
   },
   "transfer_result": {
     "title": "Transferred",
-    "transfer_success": "Transfer completed successfully!",
+    "transfer_success": "Complete Transaction",
     "receive_success": "Successfully received!",
-    "date": "Date",
+    "date": "Transaction date",
     "message": "Message",
     "community": "Community",
     "received": "Received",
@@ -531,6 +532,7 @@
     "error": {
       "invalid_id": " is not a valid Transfer Id"
     },
-    "you": "You"
+    "you": "You",
+    "my_balance": "My Balance"
   }
 }

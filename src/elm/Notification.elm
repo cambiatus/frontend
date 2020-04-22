@@ -12,14 +12,13 @@ import Cambiatus.Query as Query
 import Cambiatus.Scalar exposing (DateTime(..))
 import Cambiatus.Union
 import Cambiatus.Union.NotificationType
-import Community exposing (Balance, Community)
-import Eos exposing (Symbol)
+import Community exposing (Community)
+import Eos
 import Eos.Account as Eos
 import Graphql.Operation exposing (RootMutation, RootQuery)
 import Graphql.OptionalArgument exposing (OptionalArgument(..))
 import Graphql.SelectionSet as SelectionSet exposing (SelectionSet, with)
-import Profile exposing (Profile)
-import Transfer exposing (transferItemSelectionSet)
+import Transfer
 
 
 
@@ -141,6 +140,7 @@ notificationHistoryQuery account =
         notificationHistorySelectionSet
 
 
+notificationHistorySelectionSet : SelectionSet History Cambiatus.Object.NotificationHistory
 notificationHistorySelectionSet =
     SelectionSet.succeed History
         |> with NotificationHistory.id
@@ -179,6 +179,7 @@ transferSelectionSet =
         |> with (Transfer.community logoSelectionSet)
 
 
+saleHistorySelectionSet : SelectionSet SaleHistoryData Cambiatus.Object.SaleHistory
 saleHistorySelectionSet =
     SelectionSet.succeed SaleHistoryData
         |> with SaleHistory.amount
@@ -196,6 +197,7 @@ saleHistorySelectionSet =
             )
 
 
+logoSelectionSet : SelectionSet Community Cambiatus.Object.Community
 logoSelectionSet =
     SelectionSet.succeed Community
         |> with Community.logo
