@@ -42,7 +42,7 @@ import Validate exposing (Validator, validate)
 {-| Authentication of a user with Passphrase or Private Key.
 
   - Passphrase consists of 12 unique words given to the user during the registration. Only users knows this phrase.
-  - Private Key (PK) is a hashed analogue of a Passphrase, we identify the user by the PK in the backend.
+  - Private Key (PK) is a hashed analogue of a Passphrase.
   - PIN is used to encrypt the Passphrase/PK in the browser. Each time the user logs-in the new PIN is created.
 
 User may use Passphrase and PK interchangeable for logging in, although we push the user forward to use the Passphrase
@@ -96,7 +96,7 @@ initModel : Model
 initModel =
     { status = Options LoginStepPassphrase
     , loginError = Nothing
-    , form = initPrivateKeyLogin
+    , form = initLoginFormData
     , pinVisibility = True
     , problems = []
     }
@@ -121,8 +121,8 @@ type alias LoginFormData =
     }
 
 
-initPrivateKeyLogin : LoginFormData
-initPrivateKeyLogin =
+initLoginFormData : LoginFormData
+initLoginFormData =
     { passphrase = ""
     , usePin = Nothing
     , enteredPin = ""
@@ -167,7 +167,7 @@ passphraseValidator =
                         [ InvalidEntry Passphrase "Please, enter 12 words (TR)" ]
 
                     else if not allWordsConsistOnlyOfLetters then
-                        [ InvalidEntry Passphrase "Please, use only letters (TR)" ]
+                        [ InvalidEntry Passphrase "Please, use only basic Latin letters (TR)" ]
 
                     else if not allWordsHaveAtLeastThreeLetters then
                         [ InvalidEntry Passphrase "All words should have at least 3 letters (TR)" ]
@@ -223,24 +223,8 @@ pinValidator =
         ]
 
 
-viewFieldErrors : ValidatedField -> List ( ValidatedField, String ) -> Html msg
-viewFieldErrors field errors =
-    let
-        isFieldType error =
-            field == Tuple.first error
-
-        fieldErrors =
-            errors
-                |> List.filter isFieldType
-                |> List.map Tuple.second
-    in
-    b [ class "text-red" ]
-        [ text (String.join "; " fieldErrors)
-        ]
-
-
-encodePrivateKeyLogin : LoginFormData -> Value
-encodePrivateKeyLogin formData =
+encodeLoginFormData : LoginFormData -> Value
+encodeLoginFormData formData =
     Encode.object
         [ ( "privateKey", Encode.string formData.passphrase )
         , ( "usePin"
@@ -350,61 +334,77 @@ viewLoginSteps isModal shared model loginStep =
                 LoginStepPIN ->
                     List.map (viewFieldProblem shared Pin) model.problems
 
+        illustration fileName =
+            img [ class "h-40 mx-auto mt-8 mb-7", src ("images/" ++ fileName) ] []
+
+        buttonClass =
+            "button button-primary min-w-full md:min-w-0"
+
+        labelText : String -> Html msg
+        labelText tSuffix =
+            text <| t shared.translations (tSuffix ++ ".label")
+
+        pClass =
+            "text-white text-body mb-5"
+
         viewPassphrase =
-            div [ class "temp-passphrase-step" ]
-                [ div [ class "text-center" ]
-                    [ div [ class "text-center" ]
-                        [ img [ class "inline", src "images/login_key.svg" ] []
-                        ]
-                    , viewFieldLabel shared "auth.login.wordsMode.input" "privateKey" Nothing
-                    , textarea
-                        [ class "input h-20 min-w-full"
-                        , id "privateKey"
-                        , value model.form.passphrase
-                        , onInput EnteredPassphrase
-                        , required True
-                        , autocomplete False
-                        ]
-                        []
-                    , ul [] errors
+            let
+                passphraseId =
+                    "passphrase"
+            in
+            div [ class "" ]
+                [ illustration "login_key.svg"
+                , p [ class pClass ]
+                    [ span [ class "text-green text-caption tracking-wide uppercase block mb-1" ] [ text ("Welcome back" ++ ",") ]
+                    , span [ class "text-white block leading-relaxed" ] [ text "Enter your 12 words that you've saved on PDF in your device" ]
                     ]
+                , viewFieldLabel shared "auth.login.wordsMode.input" passphraseId Nothing
+                , textarea
+                    [ class "form-textarea h-19 min-w-full block"
+                    , id passphraseId
+                    , value model.form.passphrase
+                    , onInput EnteredPassphrase
+                    , required True
+                    , autocomplete False
+                    ]
+                    []
+                , ul [ class "form-error-on-dark-bg absolute" ] errors
                 , if not isModal then
-                    a [ Route.href (Route.Register Nothing Nothing), class "card__auth__prompt" ]
-                        [ span [] [ text_ "auth.login.register" ]
-                        , span [ class "card__auth__login__mode" ] [ text_ "auth.login.registerLink" ]
+                    p [ class "text-white text-body text-center mt-16 mb-4 block" ]
+                        [ text_ "auth.login.register"
+                        , a [ Route.href (Route.Register Nothing Nothing), class "text-orange-300 underline" ] [ text_ "auth.login.registerLink" ]
                         ]
 
                   else
                     text ""
                 , button
-                    [ class "button button-primary"
+                    [ class buttonClass
                     , onClick ClickedViewLoginPinStep
                     ]
-                    [ text_ "Next" ]
+                    [ text_ "dashboard.next" ]
                 ]
 
         viewCreatePin =
-            div [ class "temp-pin-step" ]
-                [ div [ onClick ClickedViewOptions ] [ text "← Back to 12 words" ]
-                , div [ class "text-center" ]
-                    [ img
-                        [ class "inline"
-                        , src "images/login_pin.svg"
-                        ]
-                        []
+            div [ class "" ]
+                [ span
+                    [ class "text-green text-xs absolute"
+                    , onClick ClickedViewOptions
                     ]
+                    [ text "← to 12 words" ]
+                , illustration "login_pin.svg"
+                , p [ class pClass ] [ text "Cool, now create a six-digit PIN. The PIN is not a password and you can change it each login." ]
                 , viewPinField model shared PinInput
+                , div [ class "h-10" ] []
                 , viewPinField model shared PinConfirmationInput
+                , div [ class "h-20" ] []
                 , button
-                    [ class "btn btn--primary btn--login"
+                    [ class buttonClass
                     , onClick (SubmittedLoginPrivateKey model.form)
                     ]
                     [ text_ "auth.login.submit" ]
                 ]
     in
-    [ div [ class "" ]
-        [ viewAuthError shared model.loginError
-        ]
+    [ viewAuthError shared model.loginError
     , case loginStep of
         LoginStepPassphrase ->
             viewPassphrase
@@ -414,8 +414,8 @@ viewLoginSteps isModal shared model loginStep =
     ]
 
 
-viewLoginWithPrivateKeyLogin : LoginFormData -> Bool -> Bool -> Shared -> Model -> List (Html Msg)
-viewLoginWithPrivateKeyLogin form isDisabled isModal shared model =
+viewLoginWithLoginFormData : LoginFormData -> Bool -> Bool -> Shared -> Model -> List (Html Msg)
+viewLoginWithLoginFormData form isDisabled isModal shared model =
     let
         text_ s =
             Html.text (t shared.translations s)
@@ -552,8 +552,9 @@ viewFieldLabel { translations } tSuffix id_ viewToggleHiddenSymbols =
         labelText =
             t translations (tSuffix ++ ".label")
     in
-    label [ for id_ ]
-        [ span [ class "text-white text-body" ] [ Html.text labelText ]
+    label [ for id_, class "block" ]
+        [ span [ class "text-green tracking-wide uppercase text-caption block mb-1" ]
+            [ text <| labelText ]
         , Maybe.withDefault (text "") viewToggleHiddenSymbols
         ]
 
@@ -624,7 +625,7 @@ validationErrorToString shared error =
 trimPinNumber : String -> Int -> String
 trimPinNumber pin desiredLength =
     if String.length pin > desiredLength then
-        String.slice 0 6 pin
+        String.slice 0 desiredLength pin
 
     else
         pin
@@ -719,7 +720,7 @@ update msg shared model showAuthModal =
                             , data =
                                 Encode.object
                                     [ ( "name", Encode.string "loginWithPrivateKey" )
-                                    , ( "form", encodePrivateKeyLogin newForm )
+                                    , ( "form", encodeLoginFormData newForm )
                                     ]
                             }
 
@@ -754,7 +755,7 @@ update msg shared model showAuthModal =
                         Encode.object
                             [ ( "name", Encode.string "loginWithPrivateKeyAccount" )
                             , ( "accountName", Eos.encodeName accountName )
-                            , ( "form", encodePrivateKeyLogin form )
+                            , ( "form", encodeLoginFormData form )
                             ]
                     }
 
@@ -1004,7 +1005,7 @@ viewFieldProblem { translations } field problem =
 
         InvalidEntry f str ->
             if f == field then
-                li [ class "field__error" ] [ text (t str) ]
+                li [] [ text (t str) ]
 
             else
                 text ""
@@ -1037,6 +1038,14 @@ viewPinField { form, problems } shared inputType =
                 PinConfirmationInput ->
                     form.enteredPinConfirmation
 
+        inputId =
+            case inputType of
+                PinInput ->
+                    "pinInput"
+
+                PinConfirmationInput ->
+                    "pinInputConfirmation"
+
         msg =
             case inputType of
                 PinInput ->
@@ -1045,25 +1054,22 @@ viewPinField { form, problems } shared inputType =
                 PinConfirmationInput ->
                     EnteredPinConf
     in
-    div [ class "card__auth__pin__section" ]
-        [ viewFieldLabel shared pinPrompt "pin_input_0" Nothing
-        , div []
-            [ input
-                [ class "input min-w-full tracking-widest"
-                , type_ "number"
-                , placeholder "******"
-                , maxlength 6
-                , attribute "min" "1"
-                , attribute "max" "999999"
-                , value val
-                , onInput msg
-                , required True
-                , autocomplete False
-                , attribute "inputmode" "numeric"
-                ]
-                []
+    div [ class "" ]
+        [ viewFieldLabel shared pinPrompt inputId Nothing
+        , input
+            [ class "form-input min-w-full tracking-widest"
+            , type_ "number"
+            , id inputId
+            , placeholder "******"
+            , maxlength 6
+            , value val
+            , onInput msg
+            , required True
+            , autocomplete False
+            , attribute "inputmode" "numeric"
             ]
-        , ul [] errors
+            []
+        , ul [ class "form-error-on-dark-bg absolute" ] errors
         ]
 
 

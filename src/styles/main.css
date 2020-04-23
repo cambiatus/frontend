@@ -216,6 +216,12 @@
 
     margin-right: 0.3rem;
 }
+.form-error { /* validation message for the field */
+    @apply text-red text-caption uppercase tracking-wide block mt-1 leading-none;
+}
+.form-error-on-dark-bg {
+    @apply form-error text-lightred;
+}
 
 
 /* https://tailwindcss.com/docs/extracting-components#extracting-css-components-with-apply */

@@ -104,7 +104,7 @@ view thisMsg page ({ shared } as model) content =
                         |> String.fromInt
             in
             div
-                [ class "main-login-grid min-h-screen"
+                [ class "min-h-screen bg-purple-500"
                 ]
                 [ header
                     [ class "flex items-center justify-between px-4 py-3 bg-white" ]
@@ -164,23 +164,7 @@ view thisMsg page ({ shared } as model) content =
                         ]
                     ]
                     |> Html.map thisMsg
-                , main_
-                    [ id "main-content"
-                    , class "min-h-screen bg-purple-500 flex-wrap flex items-center justify-center outline-none bg-local"
-
-                    --, if Time.toHour Time.utc shared.now >= 6 && Time.toHour Time.utc shared.now <= 18 then
-                    --    style "background-image" "url('/images/login-bg-day.png')"
-                    --
-                    --  else
-                    --    style "background-image" "url('/images/login-bg-night.png')"
-                    , tabindex -1
-                    ]
-                    [ content
-                    , footer [ class "main-footer w-full", id "guest-footer" ]
-                        [ p [ class "main-footer__text main-footer__text--login" ]
-                            [ text ("Copyrights © " ++ currentYear ++ " • Cambiatus") ]
-                        ]
-                    ]
+                , main_ [ class "pb-10" ] [ content ]
                 ]
 
 

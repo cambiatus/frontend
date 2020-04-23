@@ -37,6 +37,7 @@ module.exports = {
         '500': '#45469B'
       },
       'red': '#DB1B1B',
+      'lightred': '#F56565',
       'yellow': '#FFD200',
       'green': '#8ACC9E',
       'blue': '#00BDCD',

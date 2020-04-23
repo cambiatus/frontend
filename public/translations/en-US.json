@@ -99,7 +99,7 @@
       },
       "wordsMode": {
         "input": {
-          "label": "Your 12 words (you saved when creating your account)",
+          "label": "Your 12 words or private key",
           "tooltip": "You can use your PRIVATE KEY too",
           "toggle": "I want to use the Private Key"
         }
@@ -109,11 +109,11 @@
       "registerLink": "Create now"
     },
     "pin": {
-      "label": "Security PIN (only numbers)",
+      "label": "Create a new six-digit PIN",
       "tooltip": "The PIN must contain 6 numbers, for your security, enter the PIN you created each time we request it"
     },
     "pinConfirmation": {
-      "label": "Type the PIN again",
+      "label": "Type again the new six-digit PIN",
       "tooltip": ""
     }
   },

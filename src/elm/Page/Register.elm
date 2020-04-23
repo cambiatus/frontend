@@ -192,8 +192,11 @@ view guest model =
         Html.form
             [ onSubmit ValidateForm
             ]
-            [ div [ class "" ]
-                [ p [ class "card__auth__register__prompt" ]
+            [ div [ class "min-w-full md:min-w-0 md:mx-auto px-4" ]
+                [ p [ class "text-white" ]
+                    [ text "Step 1 of 2 / Basic informations" ]
+                , p
+                    [ class "text-grey" ]
                     [ text_ "register.form.title" ]
                 , viewServerErrors model.problems
                 , viewField shared
@@ -226,8 +229,12 @@ view guest model =
                     (identity EnteredEmail)
                     [ type_ "email" ]
                     model.problems
+                , p [ class "text-white my-10" ]
+                    [ text_ "register.login"
+                    , a [ Route.href (Route.Login Nothing), class "text-orange-300 underline" ] [ text_ "register.authLink" ]
+                    ]
                 , button
-                    [ class "btn btn--primary btn--login"
+                    [ class "button button-primary min-w-full"
                     , type_ "submit"
                     , disabled isDisabled
                     ]
@@ -236,10 +243,6 @@ view guest model =
 
                       else
                         text_ "register.form.button"
-                    ]
-                , a [ Route.href (Route.Login Nothing), class "card__auth__prompt" ]
-                    [ span [] [ text_ "register.login" ]
-                    , span [ class "card__auth__login__mode" ] [ text_ "register.authLink" ]
                     ]
                 ]
             ]
@@ -302,7 +305,7 @@ viewField ({ translations } as shared) { translationSuffix, isDisabled, id_, val
         , input
             ([ id id_
              , onInput msg
-             , class ("input auth__input" ++ errorClass)
+             , class ("input" ++ errorClass)
              , disabled isDisabled
              , required True
              , placeholder (t translations (translationSuffix ++ ".placeholder"))
@@ -562,9 +565,11 @@ update maybeInvitation msg model guest =
                     model
                         |> UR.init
                         |> UR.addCmd
-                            (CompletedLoadProfile keys
-                                |> Api.signIn guest.shared keys.accountName
-                            )
+                            --(CompletedLoadProfile keys
+                            --    |> Api.signIn guest.shared keys.accountName
+                            --)
+                            -- Go to login page after downloading PDF
+                            (Route.replaceUrl guest.shared.navKey (Route.Login Nothing))
 
         PressedEnter val ->
             if val then
