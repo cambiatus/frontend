@@ -152,7 +152,7 @@ view loggedIn model =
 
         ( Loaded balance, LoggedIn.Loaded profile ) ->
             div [ class "container mx-auto px-4 mb-10" ]
-                [ div [ class "inline-block text-gray-600 text-2xl font-light mt-6 mb-4" ]
+                [ div [ class "inline-block text-gray-600 font-light mt-6 mb-4" ]
                     [ text (t "menu.my_communities")
                     , span [ class "text-indigo-500 font-medium" ]
                         [ text (profile.userName |> Maybe.withDefault (Eos.nameToString profile.account))

@@ -476,10 +476,10 @@ communitySelectorModal model =
         viewCommunityItem : Profile.CommunityInfo -> Html Msg
         viewCommunityItem c =
             div
-                [ class "flex items-center h-16 py-4 border-b text-body hover:pointer"
+                [ class "flex items-center py-4 border-b text-body hover:pointer"
                 , onClick <| SelectCommunity c.id
                 ]
-                [ img [ src (logoUrl c.logo), class "h-12 mr-5" ] []
+                [ img [ src (logoUrl c.logo), class "h-16 w-16 mr-5" ] []
                 , text c.name
                 ]
     in
