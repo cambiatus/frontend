@@ -103,7 +103,6 @@ type Status
 
 type alias Card =
     { sale : Sale
-    , state : CardState
     , rate : Maybe Int
     , form : SaleTransferForm
     }
@@ -112,7 +111,6 @@ type alias Card =
 cardFromSale : Sale -> Card
 cardFromSale sale =
     { sale = sale
-    , state = ViewingCard
     , rate = Nothing
     , form = initSaleFrom
     }
@@ -149,8 +147,6 @@ type ValidationError
     | MemoTooLong
 
 
-type CardState
-    = ViewingCard
 
 
 
@@ -245,11 +241,7 @@ viewGrid loggedIn cards model =
     in
     div [ class "flex flex-wrap -mx-2" ]
         (List.map
-            (\card ->
-                case card.state of
-                    ViewingCard ->
-                        v_ viewCard card
-            )
+            (v_ viewCard)
             cards
         )
 
@@ -324,7 +316,7 @@ viewCard model ({ shared } as loggedIn) card =
             [ div [ class "w-full relative bg-gray-500" ]
                 [ img [ class "w-full h-48 object-cover", src imageUrl ] []
                 , div [ class "absolute right-1 bottom-1 " ]
-                    [ Profile.view shared.endpoints.ipfs loggedIn.accountName shared.translations card.sale.creator ]
+                    [ Profile.view shared loggedIn.accountName card.sale.creator ]
                 ]
             , div [ class "w-full px-6 pt-4" ]
                 [ p [ class "text-xl" ] [ text title ]
@@ -479,8 +471,7 @@ update msg model loggedIn =
                 UR.init model
 
         TransferSuccess index ->
-            updateCard msg index (\card -> ( { card | state = ViewingCard }, [] )) (UR.init model)
-                |> UR.addExt UpdateBalances
+            updateCard msg index (\card -> (  card   , [] )) (UR.init model)
 
         ClickedMessages cardIndex creatorId ->
             UR.init model
@@ -514,11 +505,6 @@ update msg model loggedIn =
                 Err _ ->
                     model
                         |> UR.init
-
-
-updateCardState : Msg -> Int -> CardState -> UpdateResult -> UpdateResult
-updateCardState msg cardIndex newState uResult =
-    updateCard msg cardIndex (\card -> ( { card | state = newState }, [] )) uResult
 
 
 updateCard : Msg -> Int -> (Card -> ( Card, List (UpdateResult -> UpdateResult) )) -> UpdateResult -> UpdateResult

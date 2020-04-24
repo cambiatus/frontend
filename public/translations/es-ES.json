@@ -35,7 +35,11 @@
     "try_again": "Intenta de nuevo",
     "coming_soon": "Próximamente",
     "my_account": "Mi cuenta",
-    "languages": "Idiomas"
+    "languages": "Idiomas",
+    "community_selector": {
+      "title": "Cambio de comunidad",
+      "body": "Selecciona tu comunidad"
+    }
   },
   "edit": {
     "input_counter": "{{current}} de {{max}}"
@@ -175,6 +179,7 @@
       },
       "transfer": {
         "title": "Enviando {{symbol}}",
+        "error": "Transferencia fallida",
         "send_to": "Enviar a",
         "send_to_placeholder": "Cuenta a enviar",
         "amount": "Monto",
@@ -362,14 +367,6 @@
         "success": "La actividad se creó con éxito."
       }
     },
-    "claimAction": {
-      "title": "Reclamación",
-      "body": "¿Realmente quieres reclamar esta acción?",
-      "yes": "Sí, reclamar",
-      "no": "No, cancelar",
-      "success": "Reclamación exitosa, espere la aprobación",
-      "failure": "Se produjo un error al intentar procesar su reclamo. Vuelva a intentarlo más tarde."
-    },
     "verifyClaim": {
       "error": "Se produjo un error al intentar procesar la validación. Vuelve a intentarlo más tarde."
     }
@@ -377,6 +374,7 @@
   "profile": {
     "title": "Mi perfil",
     "my_transfers": "Mis Transferencias",
+    "no_one": "Ninguno",
     "edit_success": "Perfil guardado con éxito",
     "actions": {
       "edit": "Editar",
@@ -466,6 +464,9 @@
   },
   "dashboard": {
     "back": "Atrás",
+    "transfer": "Transfir a un(a) colega",
+    "explore": "Acerca de esta comunidad",
+    "invite": "Invita a tus amigas(os)",
     "sorry": "¡Lo sentimos!",
     "action_rejected": "Tu acción fue rechazada",
     "please_try_again": "Por favor intenta de nuevo",
@@ -490,12 +491,44 @@
     "reject": "Rechazar",
     "verify": "Verificar",
     "closed": "cerrado",
+    "analysis": {
+      "title": {
+        "1": "Acciones",
+        "2": "para el análisis"
+      },
+      "empty": {
+        "1": "Wooow",
+        "2": ", buen trabajo.",
+        "3": "has terminado todo"
+      }
+    },
     "activities": {
       "title": "Actividades para su análisis",
       "no_activities_yet": "Aún no hay actividades."
+    },
+    "check_claim": {
+      "title": "Reclamacion",
+      "body": "¿Realmente quieres reclamar esta acción?",
+      "yes": "Sí, reclamar",
+      "no": "No, cancelar",
+      "success": "Reclamación exitosa, espere la aprobación",
+      "failure": "Se produjo un error al intentar procesar su reclamo. Vuelva a intentarlo más tarde."
     }
   },
-  "verify_claim": {
+  "claim": {
+    "title_under_review": {
+      "1": "Este reclamo está",
+      "2": "bajo revisión",
+      "3": ", otros miembros aún necesitan votar"
+    },
+    "title_approved": {
+      "1": "Este reclamo fue",
+      "2": "aprobado"
+    },
+    "title_rejected": {
+      "1": "Este reclamo fue",
+      "2": "rechazado"
+    },
     "pending": "Pendiente",
     "disapproved": "Rechazado",
     "approved": "Aprobado",
@@ -505,14 +538,14 @@
     "objective": "Objetivo",
     "action": "Acción",
     "claimer": "Reclamado por",
-    "date": "Fecha",
+    "date": "Fecha de reclamo",
     "claimer_reward": "Recompensa del usuario",
     "your_reward": "Su recompensa",
     "disapprove": "Desaprobar",
     "approve": "Aprobar",
     "no_results_found": "No se han encontrado resultados",
     "modal": {
-      "title": "Reclamación",
+      "title": "Bajo Revisión",
       "message_disapprove": "Realmente quiere desaprobar este reclamo?",
       "message_approve": "Realmente desea aprobar este reclamo?",
       "primary_disapprove": "sí, desaprobar",

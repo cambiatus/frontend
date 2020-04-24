@@ -25,6 +25,7 @@ const USER_KEY = 'bespiral.user'
 const LANGUAGE_KEY = 'bespiral.language'
 const AUTH_PREF_KEY = 'bespiral.auth.pref'
 const PUSH_PREF = 'bespiral.push.pref'
+const SELECTED_COMMUNITY_KEY = 'bespiral.selected_community'
 const env = process.env.NODE_ENV || 'development'
 const config = configuration[env]
 const urlParams = new URLSearchParams(window.location.search)
@@ -47,7 +48,8 @@ function flags () {
     logo: config.logo,
     logoMobile: config.logoMobile,
     now: Date.now(),
-    allowCommunityCreation: config.allowCommunityCreation
+    allowCommunityCreation: config.allowCommunityCreation,
+    selectedCommunity: getSelectedCommunity() || config.selectedCommunity
   }
   devLog('flags', flags_)
   return flags_
@@ -144,6 +146,10 @@ async function storePin (data, pin) {
 
   window.localStorage.removeItem(USER_KEY)
   window.localStorage.setItem(USER_KEY, JSON.stringify(storeData))
+}
+
+function getSelectedCommunity () {
+  return window.localStorage.getItem(SELECTED_COMMUNITY_KEY)
 }
 
 app.ports.javascriptOutPort.subscribe(handleJavascriptPort)
@@ -693,7 +699,6 @@ async function handleJavascriptPort (arg) {
 
       break
     }
-
     case 'subscribeToUnreadCount': {
       devLog('=======================', 'unreadCountSubscription')
       let notifiers = []
@@ -772,6 +777,17 @@ async function handleJavascriptPort (arg) {
         addressData: arg.responseData
       }
       app.ports.javascriptInPort.send(response)
+      break
+    }
+    case 'setSelectedCommunity': {
+      devLog('=======================', 'storeSelectedCommunity')
+
+      window.localStorage.removeItem(SELECTED_COMMUNITY_KEY)
+      window.localStorage.setItem(
+        SELECTED_COMMUNITY_KEY,
+        arg.data.selectedCommunity
+      )
+
       break
     }
     default: {

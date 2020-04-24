@@ -303,7 +303,7 @@ viewAction ({ shared } as loggedIn) model objectiveId action =
                         (List.map
                             (\u ->
                                 div [ class "mx-2" ]
-                                    [ Profile.view shared.endpoints.ipfs loggedIn.accountName shared.translations u ]
+                                    [ Profile.view shared loggedIn.accountName u ]
                             )
                             action.validators
                         )

@@ -30,7 +30,7 @@ type Route
     | EditObjective Symbol Int
     | NewAction Symbol Int
     | EditAction Symbol Int Int
-    | VerifyClaim Symbol Int Int Int
+    | Claim Symbol Int Int Int
     | Shop Shop.Filter
     | NewSale
     | EditSale String
@@ -84,7 +84,7 @@ parser url =
         , Url.map EditObjective (s "community" </> Eos.symbolUrlParser </> s "objectives" </> int </> s "edit")
         , Url.map NewAction (s "community" </> Eos.symbolUrlParser </> s "objectives" </> int </> s "action" </> s "new")
         , Url.map EditAction (s "community" </> Eos.symbolUrlParser </> s "objectives" </> int </> s "action" </> int </> s "edit")
-        , Url.map VerifyClaim (s "community" </> Eos.symbolUrlParser </> s "objectives" </> int </> s "action" </> int </> s "claim" </> int </> s "verification")
+        , Url.map Claim (s "community" </> Eos.symbolUrlParser </> s "objectives" </> int </> s "action" </> int </> s "claim" </> int)
         , Url.map Shop
             (s "shop"
                 <?> Query.map
@@ -261,7 +261,7 @@ routeToString route =
                     , []
                     )
 
-                VerifyClaim communityId objectiveId actionId claimId ->
+                Claim communityId objectiveId actionId claimId ->
                     ( [ "community"
                       , Eos.symbolToString communityId
                       , "objectives"
@@ -270,7 +270,6 @@ routeToString route =
                       , String.fromInt actionId
                       , "claim"
                       , String.fromInt claimId
-                      , "verification"
                       ]
                     , []
                     )

@@ -1090,8 +1090,7 @@ view ({ shared } as loggedIn) model =
 
         Loaded community ->
             div [ class "bg-white" ]
-                [ viewErrors model
-                , Page.viewHeader loggedIn (t "community.actions.title") (Route.Objectives model.communityId)
+                [ Page.viewHeader loggedIn (t "community.actions.title") (Route.Objectives model.communityId)
                 , viewForm loggedIn community model
                 ]
 
@@ -1103,19 +1102,6 @@ view ({ shared } as loggedIn) model =
 
         Unauthorized ->
             Page.fullPageNotFound "not authorized" ""
-
-
-viewErrors : Model -> Html Msg
-viewErrors model =
-    case model.form.saveStatus of
-        Failed e ->
-            div [ class "sticky w-full flex items-center z-10 h-10 bg-red" ]
-                [ p [ class "mx-auto text-white" ] [ text e ]
-                , button [ onClick DismissError ] [ Icons.close "fill-current text-white h-4" ]
-                ]
-
-        _ ->
-            text ""
 
 
 viewForm : LoggedIn.Model -> Community -> Model -> Html Msg
@@ -1481,17 +1467,13 @@ viewManualVerificationForm ({ shared } as loggedIn) model community =
 
 viewSelectedVerifiers : LoggedIn.Model -> List Profile -> Html Msg
 viewSelectedVerifiers ({ shared } as loggedIn) selectedVerifiers =
-    let
-        ipfsUrl =
-            shared.endpoints.ipfs
-    in
     div [ class "flex flex-row mt-3 mb-10 flex-wrap" ]
         (selectedVerifiers
             |> List.map
                 (\p ->
                     div
                         [ class "flex justify-between flex-col m-3 items-center" ]
-                        [ Profile.view ipfsUrl loggedIn.accountName shared.translations p
+                        [ Profile.view shared loggedIn.accountName p
                         , div
                             [ onClick (OnRemoveVerifier p)
                             , class "h-6 w-6 flex items-center mt-4"

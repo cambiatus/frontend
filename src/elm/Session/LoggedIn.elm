@@ -26,7 +26,6 @@ module Session.LoggedIn exposing
     , viewFooter
     )
 
-import Api
 import Api.Graphql
 import Auth
 import Avatar
@@ -35,21 +34,22 @@ import Browser.Events
 import Cambiatus.Object
 import Cambiatus.Object.UnreadNotifications
 import Cambiatus.Subscription as Subscription
-import Community exposing (Balance)
-import Eos
+import Eos exposing (Symbol)
 import Eos.Account as Eos
+import Flags exposing (Flags)
 import Graphql.Document
 import Graphql.Http
 import Graphql.Operation exposing (RootSubscription)
 import Graphql.SelectionSet as SelectionSet exposing (SelectionSet, with)
-import Html exposing (..)
-import Html.Attributes exposing (..)
+import Html exposing (Html, a, button, div, footer, img, input, nav, p, span, text)
+import Html.Attributes exposing (class, classList, placeholder, required, src, style, type_, value)
 import Html.Events exposing (onClick, onFocus, onInput, onMouseEnter, onSubmit, stopPropagationOn)
 import Http
-import I18Next exposing (Delims(..), Translations, t, tr)
+import I18Next exposing (Delims(..), Translations, t)
 import Icons
-import Json.Decode as Decode exposing (Decoder, Value)
+import Json.Decode as Decode exposing (Value)
 import Json.Encode as Encode exposing (Value)
+import List.Extra as List
 import Notification exposing (Notification)
 import Ports
 import Profile exposing (Profile, query)
@@ -65,16 +65,15 @@ import UpdateResult as UR
 -- INIT
 
 
-init : Shared -> Eos.Name -> ( Model, Cmd Msg )
-init shared accountName =
+init : Shared -> Eos.Name -> Flags -> ( Model, Cmd Msg )
+init shared accountName flags =
     let
         authModel =
             Auth.init shared
     in
-    ( initModel shared authModel accountName
+    ( initModel shared authModel accountName flags.selectedCommunity
     , Cmd.batch
         [ Api.Graphql.query shared (Profile.query accountName) CompletedLoadProfile
-        , Api.getBalances shared accountName CompletedLoadBalances
         ]
     )
 
@@ -89,7 +88,7 @@ initLogin : Shared -> Auth.Model -> Profile -> ( Model, Cmd Msg )
 initLogin shared authModel profile_ =
     let
         model =
-            initModel shared authModel profile_.account
+            initModel shared authModel profile_.account Eos.bespiralSymbol
     in
     ( { model
         | profile = Loaded profile_
@@ -118,6 +117,7 @@ type alias Model =
     { shared : Shared
     , accountName : Eos.Name
     , profile : ProfileStatus
+    , selectedCommunity : Symbol
     , showUserNav : Bool
     , showLanguageItems : Bool
     , searchText : String
@@ -127,16 +127,17 @@ type alias Model =
     , unreadCount : Int
     , showAuthModal : Bool
     , auth : Auth.Model
-    , balances : List Balance
+    , showCommunitySelector : Bool
     , feedback : FeedbackVisibility
     }
 
 
-initModel : Shared -> Auth.Model -> Eos.Name -> Model
-initModel shared authModel accountName =
+initModel : Shared -> Auth.Model -> Eos.Name -> Symbol -> Model
+initModel shared authModel accountName selectedCommunity =
     { shared = shared
     , accountName = accountName
     , profile = Loading accountName
+    , selectedCommunity = selectedCommunity
     , showUserNav = False
     , showLanguageItems = False
     , searchText = ""
@@ -146,8 +147,8 @@ initModel shared authModel accountName =
     , unreadCount = 0
     , showAuthModal = False
     , auth = authModel
-    , balances = []
     , feedback = Hidden
+    , showCommunitySelector = False
     }
 
 
@@ -274,8 +275,8 @@ viewHelper thisMsg page profile_ ({ shared } as model) content =
         [ class "min-h-screen flex flex-col" ]
         [ div [ class "bg-white" ]
             [ div [ class "container mx-auto" ]
-                [ viewHeader model page profile_ |> Html.map thisMsg
-                , viewMainMenu page profile_ model |> Html.map thisMsg
+                [ viewHeader model profile_ |> Html.map thisMsg
+                , viewMainMenu page model |> Html.map thisMsg
                 ]
             ]
         , case model.feedback of
@@ -310,11 +311,13 @@ viewHelper thisMsg page profile_ ({ shared } as model) content =
 
           else
             text ""
+        , communitySelectorModal model
+            |> Html.map thisMsg
         ]
 
 
-viewHeader : Model -> Page -> Profile -> Html Msg
-viewHeader ({ shared } as model) page profile_ =
+viewHeader : Model -> Profile -> Html Msg
+viewHeader ({ shared } as model) profile_ =
     let
         text_ str =
             text (t shared.translations str)
@@ -323,14 +326,7 @@ viewHeader ({ shared } as model) page profile_ =
             I18Next.tr shared.translations I18Next.Curly str values
     in
     div [ class "flex flex-wrap items-center justify-between px-4 pt-6 pb-4" ]
-        [ a [ Route.href Route.Dashboard ]
-            [ img [ class "lg:hidden h-8", src shared.logoMobile ] []
-            , img
-                [ class "hidden lg:block lg:visible h-6"
-                , src shared.logo
-                ]
-                []
-            ]
+        [ viewCommunitySelector model
         , div [ class "hidden lg:block lg:visible lg:w-1/3" ] [ searchBar model ]
         , div [ class "flex items-center float-right" ]
             [ a
@@ -408,12 +404,11 @@ viewHeader ({ shared } as model) page profile_ =
                         ]
                     , if model.showLanguageItems then
                         div [ class "ml-10 mb-2" ]
-                            ([ button
+                            (button
                                 [ class "flex block px-4 py-2 text-gray justify-between items-center text-indigo-500 font-bold text-xs"
                                 ]
                                 [ Shared.langFlag shared.language, text (String.toUpper shared.language) ]
-                             ]
-                                ++ Shared.viewLanguageItems shared ClickedLanguage
+                                :: Shared.viewLanguageItems shared ClickedLanguage
                             )
 
                       else
@@ -428,8 +423,97 @@ viewHeader ({ shared } as model) page profile_ =
                     ]
                 ]
             ]
-        , div [ class "w-full mt-2 lg:hidden" ] [ searchBar model ]
+        , div [ class "w-full mt-6 lg:hidden" ] [ searchBar model ]
         ]
+
+
+viewCommunitySelector : Model -> Html Msg
+viewCommunitySelector ({ shared } as model) =
+    let
+        findCommunity : Symbol -> Maybe Profile.CommunityInfo
+        findCommunity symbol =
+            case model.profile of
+                Loaded p ->
+                    p.communities
+                        |> List.find (\c -> c.id == symbol)
+
+                _ ->
+                    Nothing
+
+        url hash =
+            shared.endpoints.ipfs ++ "/" ++ hash
+    in
+    case findCommunity model.selectedCommunity of
+        Just community ->
+            button [ class "flex items-center", onClick OpenCommunitySelector ]
+                [ img [ class "h-10", src <| url community.logo ] []
+                , Icons.arrowDown ""
+                ]
+
+        Nothing ->
+            a [ Route.href Route.Dashboard ]
+                [ img [ class "lg:hidden h-8", src shared.logoMobile ] []
+                , img
+                    [ class "hidden lg:block lg:visible h-6"
+                    , src shared.logo
+                    ]
+                    []
+                ]
+
+
+communitySelectorModal : Model -> Html Msg
+communitySelectorModal model =
+    let
+        t s =
+            I18Next.t model.shared.translations s
+
+        text_ s =
+            text (t s)
+
+        logoUrl hash =
+            model.shared.endpoints.ipfs ++ "/" ++ hash
+
+        viewCommunityItem : Profile.CommunityInfo -> Html Msg
+        viewCommunityItem c =
+            div
+                [ class "flex items-center py-4 border-b text-body hover:pointer"
+                , onClick <| SelectCommunity c.id
+                ]
+                [ img [ src (logoUrl c.logo), class "h-16 w-16 mr-5" ] []
+                , text c.name
+                ]
+    in
+    if model.showCommunitySelector then
+        case model.profile of
+            Loaded pro ->
+                if List.isEmpty pro.communities then
+                    text ""
+
+                else
+                    div [ class "modal container" ]
+                        [ div [ class "modal-bg", onClick CloseCommunitySelector ] []
+                        , div [ class "modal-content overflow-auto", style "height" "65%" ]
+                            [ div [ class "w-full" ]
+                                [ p [ class "w-full font-bold text-heading text-2xl" ]
+                                    [ text_ "menu.community_selector.title" ]
+                                , button
+                                    [ onClick CloseCommunitySelector ]
+                                    [ Icons.close "absolute fill-current text-gray-400 top-0 right-0 m-4"
+                                    ]
+                                , p [ class "text-body w-full font-sans -mt-2 mb-2" ]
+                                    [ text_ "menu.community_selector.body"
+                                    ]
+                                , div [ class "w-full overflow-scroll" ]
+                                    (List.map viewCommunityItem pro.communities)
+                                ]
+                            ]
+                        ]
+
+            _ ->
+                text ""
+
+    else
+        text ""
 
 
 searchBar : Model -> Html Msg
@@ -452,12 +536,9 @@ searchBar ({ shared } as model) =
         ]
 
 
-viewMainMenu : Page -> Profile -> Model -> Html Msg
-viewMainMenu page profile_ model =
+viewMainMenu : Page -> Model -> Html Msg
+viewMainMenu page model =
     let
-        ipfsUrl =
-            model.shared.endpoints.ipfs
-
         menuItemClass =
             "mx-4 w-48 font-sans uppercase flex items-center justify-center leading-tight text-xs text-gray-700 hover:text-indigo-500"
 
@@ -540,7 +621,6 @@ viewFooter _ =
 type External msg
     = UpdatedLoggedIn Model
     | RequiredAuthentication (Maybe msg)
-    | UpdateBalances
     | ShowFeedback FeedbackStatus String
     | HideFeedback
 
@@ -553,9 +633,6 @@ mapExternal transform ext =
 
         RequiredAuthentication maybeM ->
             RequiredAuthentication (Maybe.map transform maybeM)
-
-        UpdateBalances ->
-            UpdateBalances
 
         ShowFeedback message status ->
             ShowFeedback message status
@@ -590,9 +667,11 @@ type Msg
     | ClickedLanguage String
     | ClosedAuthModal
     | GotAuthMsg Auth.Msg
-    | CompletedLoadBalances (Result Http.Error (List Balance))
     | CompletedLoadUnread Value
     | KeyDown String
+    | OpenCommunitySelector
+    | CloseCommunitySelector
+    | SelectCommunity Symbol
     | HideFeedbackLocal
 
 
@@ -632,7 +711,7 @@ update msg model =
                 _ ->
                     UR.init model
 
-        CompletedLoadTranslation lang (Err err) ->
+        CompletedLoadTranslation _ (Err err) ->
             UR.init { model | shared = Shared.loadTranslation (Err err) shared }
                 |> UR.logHttpError msg err
 
@@ -648,7 +727,8 @@ update msg model =
             in
             case profile_ of
                 Just p ->
-                    UR.init { model | profile = Loaded p }
+                    { model | profile = Loaded p }
+                        |> UR.init
                         |> UR.addPort
                             { responseAddress = CompletedLoadUnread (Encode.string "")
                             , responseData = Encode.null
@@ -758,23 +838,13 @@ update msg model =
                                     uResult
                     )
 
-        CompletedLoadBalances res ->
-            case res of
-                Ok bals ->
-                    { model | balances = bals }
-                        |> UR.init
-
-                Err _ ->
-                    model
-                        |> UR.init
-
         CompletedLoadUnread payload ->
             case Decode.decodeValue (unreadCountSubscription model.accountName |> Graphql.Document.decoder) payload of
                 Ok res ->
                     { model | unreadCount = res.unreads }
                         |> UR.init
 
-                Err e ->
+                Err _ ->
                     model
                         |> UR.init
                         |> UR.logImpossible msg []
@@ -790,6 +860,28 @@ update msg model =
         HideFeedbackLocal ->
             { model | feedback = Hidden }
                 |> UR.init
+
+        OpenCommunitySelector ->
+            { model | showCommunitySelector = True }
+                |> UR.init
+
+        CloseCommunitySelector ->
+            { model | showCommunitySelector = False }
+                |> UR.init
+
+        SelectCommunity communityId ->
+            { model | selectedCommunity = communityId, showCommunitySelector = False }
+                |> UR.init
+                |> UR.addCmd (Route.replaceUrl model.shared.navKey Route.Dashboard)
+                |> UR.addPort
+                    { responseAddress = msg
+                    , responseData = Encode.null
+                    , data =
+                        Encode.object
+                            [ ( "selectedCommunity", Eos.encodeSymbol communityId )
+                            , ( "name", Encode.string "setSelectedCommunity" )
+                            ]
+                    }
 
 
 closeModal : UpdateResult -> UpdateResult
@@ -944,14 +1036,20 @@ msgToString msg =
         GotAuthMsg subMsg ->
             "GotAuthMsg" :: Auth.msgToString subMsg
 
-        CompletedLoadBalances _ ->
-            [ "CompletedLoadBalances" ]
-
         CompletedLoadUnread _ ->
             [ "CompletedLoadUnread" ]
 
         KeyDown _ ->
             [ "KeyDown" ]
+
+        OpenCommunitySelector ->
+            [ "OpenCommunitySelector" ]
+
+        CloseCommunitySelector ->
+            [ "CloseCommunitySelector" ]
+
+        SelectCommunity _ ->
+            [ "SelectCommunity" ]
 
         HideFeedbackLocal ->
             [ "HideFeedbackLocal" ]

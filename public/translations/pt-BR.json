@@ -35,7 +35,11 @@
     "try_again": "Tente novamente",
     "coming_soon": "Em Breve",
     "my_account": "Minha conta",
-    "languages": "Linguagens"
+    "languages": "Linguagens",
+    "community_selector": {
+      "title": "Alterar comunidade",
+      "body": "Selecione uma comunidade"
+    }
   },
   "edit": {
     "input_counter": "{{current}} de {{max}}"
@@ -179,6 +183,7 @@
       },
       "transfer": {
         "title": "Enviando {{symbol}}",
+        "error": "Falha na transferência",
         "send_to": "Transferir para",
         "send_to_placeholder": "Conta do seu amigo",
         "amount": "Quantidade",
@@ -194,7 +199,7 @@
     "loading_error": "Algo de errado aconteceu ao carregar as transferências.",
     "no_transfers_yet": "Nenhuma transferência.",
     "info": "{{from}} transferiu {{value}} para {{to}}",
-    "you": "voce",
+    "you": "você",
     "title": "Transferir"
   },
   "notifications": {
@@ -366,14 +371,6 @@
         "error": "A atividade não pode ser criada. Tente depois"
       }
     },
-    "claimAction": {
-      "title": "Reinvindicar",
-      "body": "Confirmar reinvindicação de ação?",
-      "yes": "Sim, reinvindicar",
-      "no": "Não, cancelar",
-      "success": "Reinvidicação concluída, aguarde as aprovações",
-      "failure": "Algo deu errado ao tentar realizar sua reinvidicação, tente novamente mais tarde"
-    },
     "verifyClaim": {
       "error": "Ocorreu um erro ao tentar processar sua validação. Tente novamente mais tarde"
     }
@@ -381,6 +378,7 @@
   "profile": {
     "title": "Meu perfil",
     "my_transfers": "Minhas transferências",
+    "no_one": "Ninguém",
     "edit_success": "Perfil salvo com sucesso",
     "actions": {
       "edit": "Editar",
@@ -469,6 +467,9 @@
   },
   "dashboard": {
     "back": "Voltar",
+    "transfer": "Transferir para um amigo",
+    "explore": "Sobre essa comunidade",
+    "invite": "Convide seus amigos",
     "sorry": "Desculpe!",
     "action_rejected": "Sua ação foi rejeitada",
     "please_try_again": "Por favor tente novamente",
@@ -493,29 +494,60 @@
     "reject": "Rejeitar",
     "verify": "Verificar",
     "closed": "fechados",
+    "analysis": {
+      "title": {
+        "1": "Ações",
+        "2": "para análise"
+      },
+      "empty": {
+        "1": "Wooow",
+        "2": ", bom trabalho.",
+        "3": "Você finalizou tudo"
+      }
+    },
     "activities": {
       "title": "Atividades para sua análise",
       "no_activities_yet": "Nenhuma atividade."
+    },
+    "check_claim": {
+      "body": "Confirmar reinvindicação de ação?",
+      "yes": "Sim, reinvindicar",
+      "no": "Não, cancelar",
+      "success": "Reinvidicação concluída, aguarde as aprovações",
+      "failure": "Algo deu errado ao tentar realizar sua reinvidicação, tente novamente mais tarde"
     }
   },
-  "verify_claim": {
+  "claim": {
+    "title_under_review": {
+      "1": "Esta reinvindicação está",
+      "2": "em análise",
+      "3": ", outros membros ainda precisam votar"
+    },
+    "title_approved": {
+      "1": "Esta reinvindicação foi",
+      "2": "aprovada"
+    },
+    "title_rejected": {
+      "1": "Esta reinvindicação foi",
+      "2": "rejeitada"
+    },
     "pending": "Pendente",
-    "disapproved": "Reprovado",
-    "approved": "Aprovado",
+    "disapproved_by": "Reprovado por",
+    "approved_by": "Aprovado por",
     "reward": "Você ganhou: {{value}}",
     "sub_wait_1": "Aguarde, esta reivindicação está sendo analisada por outros usuários.",
     "sub_wait_2": "Quando terminar, você receberá sua recompensa.",
     "objective": "Objetivo",
     "action": "Ação",
     "claimer": "Reivindicado por",
-    "date": "Data",
+    "date": "Data da reinvindicação",
     "claimer_reward": "Recompensa do usuário",
     "your_reward": "Sua recompensa",
     "disapprove": "Reprovar",
     "approve": "Aprovar",
     "no_results_found": "Nenhum resultado encontrado",
     "modal": {
-      "title": "Reivindicação",
+      "title": "Sob análise",
       "message_disapprove": "Você realmente deseja reprovar esta reivindicação?",
       "message_approve": "Você realmente deseja aprovar esta reivindicação?",
       "primary_disapprove": "sim, reprovar",

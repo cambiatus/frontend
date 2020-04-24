@@ -24,7 +24,7 @@ import Graphql.Operation exposing (RootQuery)
 import Graphql.OptionalArgument exposing (OptionalArgument(..))
 import Graphql.SelectionSet as SelectionSet exposing (SelectionSet, with)
 import Html exposing (Html, a, button, div, hr, img, p, span, text)
-import Html.Attributes exposing (class, classList, disabled, placeholder, src)
+import Html.Attributes exposing (class, classList, disabled, src)
 import Html.Events exposing (onClick)
 import I18Next exposing (t, tr)
 import Icons
@@ -296,7 +296,7 @@ viewVerification shared verification =
         route =
             case verification.symbol of
                 Just symbol ->
-                    Route.VerifyClaim
+                    Route.Claim
                         symbol
                         verification.objectiveId
                         verification.actionId
@@ -498,10 +498,10 @@ viewAction loggedIn metadata maybeDate action =
 
         ( claimColors, claimText ) =
             if pastDeadline || (action.usagesLeft < 1 && action.usages > 0) then
-                ( " text-text-grey bg-grey cursor-not-allowed", "dashboard.closed" )
+                ( " text-grey bg-grey cursor-not-allowed", "dashboard.closed" )
 
             else
-                ( " text-white bg-button-orange", "dashboard.claim" )
+                ( " text-white button button-primary", "dashboard.claim" )
 
         claimSize =
             if canEdit then
@@ -603,7 +603,7 @@ viewAction loggedIn metadata maybeDate action =
                         ]
                     ]
                 , div [ class "mt-5 flex flex-row items-baseline" ]
-                    [ div [ class ("text-reward-green text-base mt-5 flex-grow-1" ++ rewardStrike) ]
+                    [ div [ class ("text-green text-base mt-5 flex-grow-1" ++ rewardStrike) ]
                         [ span [] [ text (t "community.actions.reward" ++ ": ") ]
                         , span [ class "font-medium" ] [ text rewardStr ]
                         ]
@@ -677,7 +677,7 @@ viewClaimModal loggedIn model =
                 , div [ class "modal-content" ]
                     [ div [ class "w-full" ]
                         [ p [ class "w-full font-bold text-heading text-2xl mb-4" ]
-                            [ text_ "community.claimAction.title" ]
+                            [ text_ "claim.modal.title" ]
                         , button
                             [ if not isLoading then
                                 onClick CloseClaimConfirmation
@@ -689,7 +689,7 @@ viewClaimModal loggedIn model =
                             [ Icons.close "absolute fill-current text-gray-400 top-0 right-0 mx-8 my-4"
                             ]
                         , p [ class "text-body w-full font-sans mb-10" ]
-                            [ text_ "community.claimAction.body" ]
+                            [ text_ "dashboard.check_claim.body" ]
                         ]
                     , div [ class "w-full md:bg-gray-100 md:flex md:absolute rounded-b-lg md:inset-x-0 md:bottom-0 md:p-4 justify-center" ]
                         [ div [ class "flex" ]
@@ -702,7 +702,7 @@ viewClaimModal loggedIn model =
                                     onClick NoOp
                                 , disabled isLoading
                                 ]
-                                [ text_ "community.claimAction.no" ]
+                                [ text_ "dashboard.check_claim.no" ]
                             , div [ class "w-8" ] []
                             , button
                                 [ class "flex-1 block button button-primary button-lg w-full md:w-40"
@@ -713,7 +713,7 @@ viewClaimModal loggedIn model =
                                     onClick NoOp
                                 , disabled isLoading
                                 ]
-                                [ text_ "community.claimAction.yes" ]
+                                [ text_ "dashboard.check_claim.yes" ]
                             ]
                         ]
                     ]
@@ -928,14 +928,14 @@ update msg model loggedIn =
                 | modalStatus = Closed
             }
                 |> UR.init
-                |> UR.addExt (ShowFeedback LoggedIn.Success (t "community.claimAction.success"))
+                |> UR.addExt (ShowFeedback LoggedIn.Success (t "dashboard.check_claim.success"))
 
         GotClaimActionResponse (Err _) ->
             { model
                 | modalStatus = Closed
             }
                 |> UR.init
-                |> UR.addExt (ShowFeedback LoggedIn.Failure (t "community.claimAction.failure"))
+                |> UR.addExt (ShowFeedback LoggedIn.Failure (t "dashboard.check_claim.failure"))
 
 
 jsAddressToMsg : List String -> Value -> Maybe Msg

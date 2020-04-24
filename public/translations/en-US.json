@@ -3,7 +3,7 @@
   "back": "Back",
   "menu": {
     "title": "Menu",
-    "my_communities": "Welcome back,",
+    "my_communities": "Welcome back, ",
     "dashboard": "Dashboard",
     "news": "News",
     "learn": "Learn",
@@ -35,7 +35,11 @@
     "try_again": "Try again",
     "coming_soon": "Coming Soon",
     "my_account": "My account",
-    "languages": "Languages"
+    "languages": "Languages",
+    "community_selector": {
+      "title": "Community switch",
+      "body": "Select the community"
+    }
   },
   "edit": {
     "input_counter": "{{current}} of {{max}}"
@@ -175,6 +179,7 @@
       },
       "transfer": {
         "title": "Sending {{symbol}}",
+        "error": "Transfer Failed",
         "send_to": "Transfer to",
         "send_to_placeholder": "Friend account",
         "amount": "How much",
@@ -362,14 +367,6 @@
         "error": "The activity cannot be created. Try later"
       }
     },
-    "claimAction": {
-      "title": "Claim",
-      "body": "Do you really want to claim this action?",
-      "yes": "Yes, claim",
-      "no": "No, cancel",
-      "success": "Claim successful, please wait for approval",
-      "failure": "Something went wrong while trying to process your claim, please try again later"
-    },
     "verifyClaim": {
       "error": "Something went wrong while trying to process your validation, please try again later"
     }
@@ -377,6 +374,7 @@
   "profile": {
     "title": "My profile",
     "my_transfers": "My Transfers",
+    "no_one": "No one",
     "edit_success": "Profile saved successfully",
     "actions": {
       "edit": "Edit",
@@ -466,6 +464,9 @@
   },
   "dashboard": {
     "back": "Back",
+    "transfer": "Transfer to a friend",
+    "explore": "About this community",
+    "invite": "Invite your friends",
     "sorry": "Sorry!",
     "action_rejected": "Your action was rejected",
     "please_try_again": "Please try again",
@@ -487,34 +488,66 @@
     "verification": "Verification",
     "your_reward": "Your Reward",
     "action": "Action",
-    "reject": "Reject",
-    "verify": "Verify",
+    "reject": "Disapprove",
+    "verify": "Approve",
     "closed": "closed",
+    "analysis": {
+      "title": {
+        "1": "Actions",
+        "2": "for analysis"
+      },
+      "empty": {
+        "1": "Wooow",
+        "2": ", good job.",
+        "3": "You have finished all"
+      }
+    },
     "activities": {
       "title": "Activities for your analysis",
       "no_activities_yet": "No activities yet."
+    },
+    "check_claim": {
+      "title": "Claim",
+      "body": "Do you really want to claim this action?",
+      "yes": "Yes, claim",
+      "no": "No, cancel",
+      "success": "Claim successful, please wait for approval",
+      "failure": "Something went wrong while trying to process your claim, please try again later"
     }
   },
-  "verify_claim": {
+  "claim": {
+    "title_under_review": {
+      "1": "This claim is",
+      "2": "under review",
+      "3": ", other members still need to vote"
+    },
+    "title_approved": {
+      "1": "This claim was",
+      "2": "approved"
+    },
+    "title_rejected": {
+      "1": "This claim was",
+      "2": "rejected"
+    },
     "pending": "Pending",
     "disapproved": "Disapproved",
     "approved": "Approved",
-    "reward": "You won: {{value}}",
+    "reward": "Congrats, you gained: {{value}}",
     "sub_wait_1": "You must wait, this claim is under review by other users.",
     "sub_wait_2": "When finished, you will receive your reward.",
     "objective": "Objective",
     "action": "Action",
     "claimer": "Claimed by",
-    "date": "Date",
+    "date": "Claim Date",
     "claimer_reward": "User reward",
     "your_reward": "Your reward",
     "disapprove": "Disapprove",
     "approve": "Approve",
     "no_results_found": "No results found",
     "modal": {
-      "title": "Claim",
-      "message_disapprove": "Do you really want to disapprove this claim?",
-      "message_approve": "Do you really want to approve this claim?",
+      "title": "Under Review",
+      "message_disapprove": "Do you really want to disapprove this action?",
+      "message_approve": "Do you really want to approve this action?",
       "primary_disapprove": "yes, disapprove",
       "primary_approve": "yes, approve",
       "secondary": "no, cancel"
