@@ -235,7 +235,7 @@ viewFeedback status message =
         [ class "sticky top-0 w-full"
         , classList [ ( color, True ) ]
         , style "display" "grid"
-        , style "grid-template" "\". text x\" 100% / 5% 90% 5%"
+        , style "grid-template" "\". text x\" 100% / 10% 80% 10%"
         ]
         [ span
             [ class "flex justify-center items-center text-sm h-10 leading-snug text-white font-bold"
@@ -243,7 +243,7 @@ viewFeedback status message =
             ]
             [ text message ]
         , span
-            [ class "flex justify-center items-center ml-auto mr-5 cursor-pointer"
+            [ class "flex justify-center items-center ml-auto mr-6 cursor-pointer"
             , style "grid-area" "x"
             , onClick HideFeedbackLocal
             ]

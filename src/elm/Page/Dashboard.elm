@@ -199,15 +199,9 @@ viewAnalysisModal loggedIn model =
                             ]
                         ]
                     , div [ class "modal-footer" ]
-                        [ button
-                            [ class "modal-cancel"
-                            , onClick CloseModal
-                            ]
+                        [ button [ class "modal-cancel", onClick CloseModal ]
                             [ text_ "claim.modal.secondary" ]
-                        , button
-                            [ class "modal-accept"
-                            , onClick (VoteClaim claimId vote)
-                            ]
+                        , button [ class "modal-accept", onClick (VoteClaim claimId vote) ]
                             [ if vote then
                                 text_ "claim.modal.primary_approve"
 
