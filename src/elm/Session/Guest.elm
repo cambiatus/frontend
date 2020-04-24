@@ -90,7 +90,7 @@ view thisMsg page ({ shared } as model) content =
             Shared.viewFullError shared
                 err
                 ClickedTryAgainTranslation
-                "An error ocurred while loading translation."
+                "An error occurred while loading translation."
                 |> Html.map thisMsg
 
         _ ->

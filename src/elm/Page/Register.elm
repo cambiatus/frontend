@@ -200,7 +200,6 @@ view guest model =
                 , viewServerErrors model.problems
                 , viewField
                     shared
-                    model
                     (Field
                         "register.form.name"
                         isDisabled
@@ -209,9 +208,9 @@ view guest model =
                     )
                     (identity EnteredUsername)
                     [ maxlength 255 ]
+                    model.problems
                 , viewField
                     shared
-                    model
                     (Field
                         "register.form.account"
                         isDisabled
@@ -220,9 +219,9 @@ view guest model =
                     )
                     (identity EnteredAccount)
                     Eos.nameValidationAttrs
+                    model.problems
                 , viewField
                     shared
-                    model
                     (Field
                         "register.form.email"
                         isDisabled
@@ -231,6 +230,7 @@ view guest model =
                     )
                     (identity EnteredEmail)
                     [ type_ "email" ]
+                    model.problems
                 , p [ class "text-center text-body mt-16 mb-6" ]
                     [ text_ "register.login"
                     , a [ Route.href (Route.Login Nothing), class "text-orange-300 underline" ] [ text_ "register.authLink" ]
@@ -276,8 +276,8 @@ type alias Field =
     }
 
 
-viewField : Shared -> Model -> Field -> (String -> FormInputMsg) -> List (Attribute FormInputMsg) -> Html Msg
-viewField ({ translations } as shared) { form, problems } { translationSuffix, isDisabled, currentValue, fieldName } msg extraAttrs =
+viewField : Shared -> Field -> (String -> FormInputMsg) -> List (Attribute FormInputMsg) -> List Problem -> Html Msg
+viewField ({ translations } as shared) { translationSuffix, isDisabled, currentValue, fieldName } msg extraAttrs problems =
     let
         isCurrentFieldNameProblem p =
             case p of
