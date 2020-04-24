@@ -69,7 +69,7 @@
 /* Button */
 
 .button {
-    @apply uppercase font-sans text-sm flex items-center justify-center leading-none w-40 h-10;
+    @apply uppercase font-sans text-sm flex items-center justify-center leading-none w-40 h-12;
 }
 
 .button-primary {
@@ -107,6 +107,10 @@
 .input {
     /* Form input comes from tailwind/custom-forms */
     @apply form-input h-12;
+}
+
+.field-with-error {
+    @apply border-red;
 }
 
 .input-counter {
@@ -217,7 +221,7 @@
     margin-right: 0.3rem;
 }
 .form-error { /* validation message for the field */
-    @apply text-red text-caption uppercase tracking-wide block mt-1 leading-none;
+    @apply text-red text-caption uppercase tracking-wide block mt-1;
 }
 .form-error-on-dark-bg {
     @apply form-error text-lightred;

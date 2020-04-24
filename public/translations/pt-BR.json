@@ -126,21 +126,20 @@
     "registerTab": "Crie sua conta",
     "loginTab": "Entrar",
     "form": {
-      "title": "Crie sua conta no Cambiatus e aproveite nossa plataforma",
       "name": {
         "label": "Nome completo",
         "tooltip": "",
-        "placeholder": ""
+        "placeholder": "Ex.: Arlene Warren"
       },
       "email": {
         "label": "Email",
         "tooltip": "",
-        "placeholder": ""
+        "placeholder": "Ex.: arlene_warren@email.com"
       },
       "account": {
-        "label": "Crie um nome de usuário com exatamente 12 caracteres",
+        "label": "Crie um nome de usuário com exatamente 12 caracteres (somente letras de a-z e números de 1 a 5)",
         "tooltip": "O nome de usuário será como você será conhecido na plataforma pelos outros participantes, deve ter exatamente 12 caracteres.",
-        "placeholder": "Somente letras de a-z e números de 1 a 5"
+        "placeholder": "Ex.: arlenewa1224"
       },
       "accountCharError": "Caractere invalido encontrado. Use apenas letras de 'a' a 'z' e numeros entre 1 e 5",
       "pin": "PIN",

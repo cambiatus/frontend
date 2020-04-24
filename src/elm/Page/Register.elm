@@ -193,43 +193,45 @@ view guest model =
             [ onSubmit ValidateForm
             ]
             [ div [ class "min-w-full md:min-w-0 md:mx-auto px-4" ]
-                [ p [ class "text-white" ]
-                    [ text "Step 1 of 2 / Basic informations" ]
-                , p
-                    [ class "text-grey" ]
-                    [ text_ "register.form.title" ]
+                [ p [ class "py-4 mb-4 text-grey text-body border-grey-500 border-b border-dotted " ]
+                    [ text "Step 1 of 2 / "
+                    , strong [ class "text-black" ] [ text "Basic Information" ]
+                    ]
                 , viewServerErrors model.problems
-                , viewField shared
+                , viewField
+                    shared
+                    model
                     (Field
                         "register.form.name"
                         isDisabled
-                        "name"
+                        model.form.username
                         Username
                     )
                     (identity EnteredUsername)
                     [ maxlength 255 ]
-                    model.problems
-                , viewField shared
+                , viewField
+                    shared
+                    model
                     (Field
                         "register.form.account"
                         isDisabled
-                        "account"
+                        model.form.account
                         Account
                     )
                     (identity EnteredAccount)
                     Eos.nameValidationAttrs
-                    model.problems
-                , viewField shared
+                , viewField
+                    shared
+                    model
                     (Field
                         "register.form.email"
                         isDisabled
-                        "email"
+                        model.form.email
                         Email
                     )
                     (identity EnteredEmail)
                     [ type_ "email" ]
-                    model.problems
-                , p [ class "text-white my-10" ]
+                , p [ class "text-center text-body mt-16 mb-6" ]
                     [ text_ "register.login"
                     , a [ Route.href (Route.Login Nothing), class "text-orange-300 underline" ] [ text_ "register.authLink" ]
                     ]
@@ -269,44 +271,49 @@ viewServerErrors problems =
 type alias Field =
     { translationSuffix : String
     , isDisabled : Bool
-    , id_ : String
-    , validation : ValidatedField
+    , currentValue : String
+    , fieldName : ValidatedField
     }
 
 
-viewField : Shared -> Field -> (String -> FormInputMsg) -> List (Attribute FormInputMsg) -> List Problem -> Html Msg
-viewField ({ translations } as shared) { translationSuffix, isDisabled, id_, validation } msg extraAttrs problems =
+viewField : Shared -> Model -> Field -> (String -> FormInputMsg) -> List (Attribute FormInputMsg) -> Html Msg
+viewField ({ translations } as shared) { form, problems } { translationSuffix, isDisabled, currentValue, fieldName } msg extraAttrs =
     let
-        errors =
-            List.map (\err -> viewFieldProblem validation err) problems
+        isCurrentFieldNameProblem p =
+            case p of
+                InvalidEntry validatedField _ ->
+                    fieldName == validatedField
 
-        fProbs =
-            List.filter
-                (\p ->
-                    case p of
-                        InvalidEntry v _ ->
-                            validation == v
+                _ ->
+                    False
 
-                        _ ->
-                            False
-                )
-                problems
+        fieldProblems =
+            List.filter isCurrentFieldNameProblem problems
 
         errorClass =
-            case fProbs of
+            case fieldProblems of
                 [] ->
                     ""
 
                 _ ->
-                    " errored__field"
+                    "field-with-error"
+
+        viewFieldErrors =
+            List.map (viewFieldProblem fieldName) problems
+
+        id_ =
+            -- In HTML `id` attribute may contain dots,
+            -- so it's convenient to use translation suffix here (e.g. `register.form.account`)
+            translationSuffix
     in
-    div [ class "form-field" ]
+    div [ class "mb-10 relative" ]
         [ viewFieldLabel shared translationSuffix id_ Nothing
         , input
             ([ id id_
              , onInput msg
-             , class ("input" ++ errorClass)
+             , class ("input min-w-full" ++ " " ++ errorClass)
              , disabled isDisabled
+             , value currentValue
              , required True
              , placeholder (t translations (translationSuffix ++ ".placeholder"))
              ]
@@ -314,7 +321,14 @@ viewField ({ translations } as shared) { translationSuffix, isDisabled, id_, val
             )
             []
             |> Html.map UpdateForm
-        , ul [] errors
+        , case fieldName of
+            Account ->
+                div [ class "input-label text-right text-purple-100 font-bold mt-1 absolute right-0" ]
+                    [ text <| (String.fromInt <| String.length currentValue) ++ " of 12" ]
+
+            _ ->
+                text ""
+        , ul [] viewFieldErrors
         ]
 
 
@@ -326,7 +340,7 @@ viewFieldProblem field problem =
 
         InvalidEntry f str ->
             if f == field then
-                li [ class "field__error" ] [ text str ]
+                li [ class "form-error absolute" ] [ text str ]
 
             else
                 text ""
@@ -565,9 +579,6 @@ update maybeInvitation msg model guest =
                     model
                         |> UR.init
                         |> UR.addCmd
-                            --(CompletedLoadProfile keys
-                            --    |> Api.signIn guest.shared keys.accountName
-                            --)
                             -- Go to login page after downloading PDF
                             (Route.replaceUrl guest.shared.navKey (Route.Login Nothing))
 

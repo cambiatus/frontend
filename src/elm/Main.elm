@@ -968,10 +968,10 @@ view model =
             viewPage Guest.Other LoggedIn.Other (\_ -> Ignored) (ComingSoon.view model.session)
 
         Register _ subModel ->
-            viewGuest subModel Guest.Other GotRegisterMsg Register.view
+            viewGuest subModel Guest.Register GotRegisterMsg Register.view
 
         Login subModel ->
-            viewGuest subModel Guest.Other GotLoginMsg Login.view
+            viewGuest subModel Guest.Login GotLoginMsg Login.view
 
         Notification subModel ->
             viewLoggedIn subModel LoggedIn.Other GotNotificationMsg Notification.view

@@ -121,21 +121,20 @@
     "registerTab": "Crea el teu compte",
     "loginTab": "Inicieu la sessió",
     "form": {
-      "title": "Crea el teu compte Cambiatus i gaudeix de la nostra plataforma",
       "name": {
         "label": "Nom complet",
         "tooltip": "",
-        "placeholder": ""
+        "placeholder": "Ex.: Arlene Warren"
       },
       "email": {
         "label": "Email",
         "tooltip": "",
-        "placeholder": ""
+        "placeholder": "Ex.: arlene_warren@email.com"
       },
       "account": {
-        "label": "Creeu un nom d’usuari amb exactament 12 caràcters",
+        "label": "Creeu un nom d’usuari amb exactament 12 caràcters (només lletres de la a-z i números de la 1-5)",
         "tooltip": "El nom d'usuari serà tal com els altres participants el coneixeran a la plataforma, ha de tenir 12 caràcters exactes.",
-        "placeholder": "Només lletres de la a-z i números de la 1-5"
+        "placeholder": "Ex.: arlenewa1224"
       },
       "accountCharError": "Hem trobat un caràcter invàlid. Utilitza solament lletres i números de 1-5",
       "pin": "PIN",

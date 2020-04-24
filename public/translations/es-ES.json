@@ -121,21 +121,20 @@
     "registerTab": "Crea tu cuenta",
     "loginTab": "Iniciar sesión",
     "form": {
-      "title": "Crea tu cuenta en Cambiatus y disfruta de nuestra plataforma",
       "name": {
         "label": "Nombre completo",
         "tooltip": "",
-        "placeholder": ""
+        "placeholder": "Ex.: Arlene Warren"
       },
       "email": {
         "label": "Email",
         "tooltip": "",
-        "placeholder": ""
+        "placeholder": "Ex.: arlene_warren@email.com"
       },
       "account": {
-        "label": "Crea un nombre de usuario con exactamente 12 caracteres",
+        "label": "Crea un nombre de usuario con exactamente 12 caracteres (solo letras de la A a la Z y números del 1 al 5)",
         "tooltip": "El nombre de usuario será como los demás participantes lo conocerán en la plataforma, debe tener exactamente 12 caracteres.",
-        "placeholder": "Solo letras de la A a la Z y números del 1 al 5"
+        "placeholder": "Ex.: arlenewa1224"
       },
       "accountCharError": "Hemos encontrado un caracter invalido. Usa solamente letras y numeros de 1-5",
       "pin": "PIN",

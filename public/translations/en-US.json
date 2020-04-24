@@ -121,21 +121,20 @@
     "registerTab": "Create your account",
     "loginTab": "Login",
     "form": {
-      "title": "Create your Cambiatus account and enjoy our platform",
       "name": {
         "label": "Full name",
         "tooltip": "",
-        "placeholder": ""
+        "placeholder": "Ex.: Arlene Warren"
       },
       "email": {
           "label": "Email",
           "tooltip": "",
-          "placeholder": ""
+          "placeholder": "Ex.: arlene_warren@email.com"
       },
       "account": {
-          "label": "Create an username with exactly 12 characters",
+          "label": "Create a username with exactly 12 characters (letters from a-z and numbers from 1-5)",
           "tooltip": "The username will be as you will be known on the platform by the other participants, it must have exact 12 characters.",
-          "placeholder": "Only letters from a-z and numbers from 1-5"
+          "placeholder": "Ex.: arlenewa1224"
       },
       "accountCharError": "Invalid character found. Use only letters and numbers between 1-5",
       "pin": "PIN",

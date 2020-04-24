@@ -71,9 +71,13 @@ subscriptions model =
 -- VIEW
 
 
+{-| Page types the Guest can access.
+-}
 type Page
-    = Other
+    = Register
+    | Login
     | Shop
+    | Other
 
 
 view : (Msg -> msg) -> Page -> Model -> Html msg -> Html msg
@@ -91,31 +95,20 @@ view thisMsg page ({ shared } as model) content =
 
         _ ->
             let
-                onClickCloseLanguageNav =
-                    if not model.showLanguageNav then
-                        onClick (ShowLanguageNav False)
+                contentBackgroundClass =
+                    case page of
+                        Login ->
+                            "bg-purple-500"
 
-                    else
-                        style "" ""
-
-                currentYear : String
-                currentYear =
-                    Time.toYear Time.utc shared.now
-                        |> String.fromInt
+                        _ ->
+                            "bg-white"
             in
             div
-                [ class "min-h-screen bg-purple-500"
-                ]
+                [ class <| "min-h-screen" ++ " " ++ contentBackgroundClass ]
                 [ header
                     [ class "flex items-center justify-between px-4 py-3 bg-white" ]
                     [ div []
-                        [ --img
-                          --    [ class "lg:hidden h-8"
-                          --    , src shared.logoMobile
-                          --    , alt "Cambiatus"
-                          --    ]
-                          --    []
-                          img
+                        [ img
                             [ class "lg:block h-6"
                             , src shared.logo
                             , alt "Cambiatus"
