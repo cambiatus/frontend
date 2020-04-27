@@ -42,7 +42,7 @@ import Graphql.SelectionSet as SelectionSet exposing (SelectionSet, with)
 import Html exposing (Html, div, p, span, text)
 import Html.Attributes exposing (class, maxlength, minlength, pattern, title, type_)
 import I18Next exposing (Translations, t)
-import Json.Decode as Decode exposing (Decoder, list, nullable, string)
+import Json.Decode as Decode exposing (Decoder, int, list, nullable, string)
 import Json.Decode.Pipeline as Decode exposing (optional, required)
 import Json.Encode as Encode
 import Select
@@ -67,6 +67,7 @@ type alias Profile =
     , chatToken : Maybe String
     , createdAt : Posix
     , communities : List CommunityInfo
+    , analysisCount : Int
     }
 
 
@@ -100,6 +101,7 @@ selectionSet =
         |> with User.chatToken
         |> SelectionSet.hardcoded (Time.millisToPosix 0)
         |> with (User.communities communityInfoSelectionSet)
+        |> with User.analysisCount
 
 
 communityInfoSelectionSet : SelectionSet CommunityInfo Cambiatus.Object.Community
@@ -125,6 +127,7 @@ decode =
         |> Decode.hardcoded (Time.millisToPosix 0)
         |> Decode.at [ "data", "user" ]
         |> Decode.hardcoded []
+        |> optional "analysisCount" int 0
 
 
 decodeInterests : Decoder (List String)

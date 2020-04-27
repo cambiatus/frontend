@@ -368,15 +368,16 @@ buildSalesInput fillOptionals =
     let
         optionals =
             fillOptionals
-                { account = Absent, all = Absent, communities = Absent }
+                { account = Absent, all = Absent, communities = Absent, communityId = Absent }
     in
-    { account = optionals.account, all = optionals.all, communities = optionals.communities }
+    { account = optionals.account, all = optionals.all, communities = optionals.communities, communityId = optionals.communityId }
 
 
 type alias SalesInputOptionalFields =
     { account : OptionalArgument String
     , all : OptionalArgument String
     , communities : OptionalArgument String
+    , communityId : OptionalArgument String
     }
 
 
@@ -386,6 +387,7 @@ type alias SalesInput =
     { account : OptionalArgument String
     , all : OptionalArgument String
     , communities : OptionalArgument String
+    , communityId : OptionalArgument String
     }
 
 
@@ -394,7 +396,7 @@ type alias SalesInput =
 encodeSalesInput : SalesInput -> Value
 encodeSalesInput input =
     Encode.maybeObject
-        [ ( "account", Encode.string |> Encode.optional input.account ), ( "all", Encode.string |> Encode.optional input.all ), ( "communities", Encode.string |> Encode.optional input.communities ) ]
+        [ ( "account", Encode.string |> Encode.optional input.account ), ( "all", Encode.string |> Encode.optional input.all ), ( "communities", Encode.string |> Encode.optional input.communities ), ( "communityId", Encode.string |> Encode.optional input.communityId ) ]
 
 
 buildTransferInput : TransferInputRequiredFields -> TransferInput
