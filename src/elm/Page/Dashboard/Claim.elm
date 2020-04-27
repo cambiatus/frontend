@@ -1,4 +1,4 @@
-module Page.Community.Claim exposing (Model, Msg, init, jsAddressToMsg, msgToString, update, view, viewVoters)
+module Page.Dashboard.Claim exposing (Model, Msg, init, jsAddressToMsg, msgToString, update, view, viewVoters)
 
 import Api.Graphql
 import Cambiatus.Object.Claim as Claim

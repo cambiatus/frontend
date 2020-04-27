@@ -332,11 +332,18 @@ viewAnalysisList loggedIn profile model =
             div [ class "w-full flex" ]
                 [ div
                     [ class "w-full" ]
-                    [ div [ class "text-gray-600 text-2xl font-light flex mt-4 mb-4" ]
-                        [ div [ class "text-indigo-500 mr-2 font-medium" ]
-                            [ text_ "dashboard.analysis.title.1"
+                    [ div [ class "flex justify-between text-gray-600 text-2xl font-light flex mt-4 mb-4" ]
+                        [ div [ class "flex" ]
+                            [ div [ class "text-indigo-500 mr-2 font-medium" ]
+                                [ text_ "dashboard.analysis.title.1"
+                                ]
+                            , text_ "dashboard.analysis.title.2"
                             ]
-                        , text_ "dashboard.analysis.title.2"
+                        , a
+                            [ class "button button-secondary h-8 w-20"
+                            , Route.href Route.Analysis
+                            ]
+                            [ text_ "dashboard.analysis.all" ]
                         ]
                     , if isVoted claims || profile.analysisCount < 0 then
                         div [ class "flex flex-col w-full items-center justify-center px-3 py-12 my-2 rounded-lg bg-white" ]
