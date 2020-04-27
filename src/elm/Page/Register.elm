@@ -9,7 +9,7 @@ import Eos.Account as Eos
 import Graphql.Http
 import Html exposing (..)
 import Html.Attributes exposing (..)
-import Html.Events exposing (keyCode, on, onClick, onInput, onSubmit)
+import Html.Events exposing (keyCode, on, onCheck, onClick, onInput, onSubmit)
 import Http
 import I18Next exposing (t)
 import Json.Decode as Decode exposing (Decoder, Value)
@@ -55,6 +55,8 @@ type alias Model =
     , isLoading : Bool
     , isCheckingAccount : Bool
     , form : Form
+    , isAgreedToSavePassphrase : Bool
+    , isPassphraseCopiedToClipboard : Bool
     , accountGenerated : Bool
     , problems : List Problem
     }
@@ -66,6 +68,8 @@ initModel _ =
     , isLoading = False
     , isCheckingAccount = False
     , form = initForm
+    , isAgreedToSavePassphrase = False
+    , isPassphraseCopiedToClipboard = False
     , accountGenerated = False
     , problems = []
     }
@@ -157,35 +161,121 @@ view guest model =
 
         name =
             accName model
+
+        passphraseTextId =
+            "passphraseText"
+
+        passphraseInputId =
+            "passphraseWords"
     in
     if model.accountGenerated then
-        div [ class "main__register__details" ]
-            [ div [ class "register__congrats" ]
-                [ div [ class "register__woman" ] []
-                , p [ class "congrats__message" ]
-                    [ span [] [ text_ "register.account_created.congrats" ]
-                    , span [] [ text_ "register.account_created.account" ]
-                    , span [] [ text_ "register.account_created.created" ]
+        div [ class "" ]
+            [ div [ class "min-w-full md:min-w-0 md:mx-auto px-4 bg-purple-500 text-white text-body pb-10" ]
+                [ p
+                    [ class "py-4 mb-4 text-body border-b border-dotted text-white border-white" ]
+                    [ text <| "Step 2 of 2 / "
+                    , strong [] [ text "12 words" ]
                     ]
-                , div [ class "register__dog" ] []
+                , p
+                    [ class "text-xl mb-3" ]
+                    [ text "Hey Helton, it is the last step, and the more important." ]
+                , p [ class "mb-1" ]
+                    [ text "You must copy and paste on a secure place these 12 words below. We also are going to give you a PDF with these 12 words when you are finishing the register."
+                    ]
+
+                --, div [ class "register__congrats" ]
+                --    [ div [ class "register__woman" ] []
+                --    , p [ class "congrats__message" ]
+                --        [ span [] [ text_ "register.account_created.congrats" ]
+                --        , span [] [ text_ "register.account_created.account" ]
+                --        , span [] [ text_ "register.account_created.created" ]
+                --        ]
+                --    , div [ class "register__dog" ] []
+                --    ]
+                --, div [ class "register__welcome" ]
+                --    [ text (tr "register.account_created.welcome_message" [ ( "username", name ) ]) ]
+                , div
+                    [ class "w-1/4 m-auto relative"
+                    , style "left" "1rem"
+                    , style "max-width" "10rem"
+                    ]
+                    [ img
+                        [ class ""
+                        , src "images/reg-passphrase-boy.svg"
+                        ]
+                        []
+                    , img [ class "absolute w-1/4 -mt-2 -ml-10", src "images/reg-passphrase-boy-hand.svg" ] []
+                    ]
+                , div [ class "bg-white text-black text-2xl mb-12 p-4 rounded-lg" ]
+                    [ p [ class "input-label" ]
+                        [ text_ "register.account_created.twelve_words"
+                        , if model.isPassphraseCopiedToClipboard then
+                            span [ class "rounded-sm ml-1" ]
+                                [ strong [] [ text "WERE COPIED TO CLIPBOARD ✔" ]
+                                ]
+
+                          else
+                            text ""
+                        ]
+                    , p
+                        [ class "pb-2 leading-tight" ]
+                        [ span [ id passphraseTextId ] [ text (words model) ]
+                        , input
+                            -- We use `HTMLInputElement.select()` method in port to select and copy the text. This method
+                            -- works only with `input` and `textarea` elements which has to be presented in DOM (e.g. we can't
+                            -- hide it with `display: hidden`), so we hide it using position and opacity.
+                            [ type_ "text"
+                            , class "absolute opacity-0"
+                            , style "left" "-9999em"
+                            , id passphraseInputId
+                            , value (words model)
+                            ]
+                            []
+                        ]
+                    , button
+                        [ class "button m-auto button-primary button-sm"
+                        , onClick <| CopyToClipboard passphraseInputId
+                        ]
+                        [ text "Copy" ]
+                    ]
+                , div [ class "my-4" ]
+                    [ label [ class "form-label" ]
+                        [ input
+                            [ type_ "checkbox"
+                            , class "form-checkbox mr-2 p-1"
+                            , checked model.isAgreedToSavePassphrase
+                            , onCheck AgreedToSave12Words
+                            ]
+                            []
+                        , text
+                            "I've copied and pasted on a secure place the 12 words as Cambiatus asked 💜"
+                        ]
+                    ]
+
+                --, div [ class "register__keys" ]
+                --    [ p [ class "key__title" ] [ text_ "register.account_created.twelve_words" ]
+                --    , p [ class "key", id "12__words" ] [ text (words model) ]
+                --    , p [ class "key__title" ] [ text_ "register.account_created.private_key" ]
+                --    , p [ class "key", id "p__key" ] [ text (privateKey model) ]
+                --    ]
+                --, div [ class "register__instructions" ]
+                --    [ p [] [ text_ "register.account_created.instructions" ] ]
+                , button
+                    [ onClick DownloadPdf
+                    , class "button button-primary w-full"
+                    , disabled (not model.isAgreedToSavePassphrase)
+                    , class <|
+                        if model.isAgreedToSavePassphrase then
+                            ""
+
+                        else
+                            "button-disabled text-gray-600"
+                    ]
+                    [ text_ "register.account_created.download" ]
+
+                --, div [ class "register__footer" ]
+                --    [ span [] [ text_ "register.account_created.instructions" ] ]
                 ]
-            , div [ class "register__welcome" ]
-                [ text (tr "register.account_created.welcome_message" [ ( "username", name ) ]) ]
-            , div [ class "register__keys" ]
-                [ p [ class "key__title" ] [ text_ "register.account_created.twelve_words" ]
-                , p [ class "key", id "12__words" ] [ text (words model) ]
-                , p [ class "key__title" ] [ text_ "register.account_created.private_key" ]
-                , p [ class "key", id "p__key" ] [ text (privateKey model) ]
-                ]
-            , div [ class "register__instructions" ]
-                [ p [] [ text_ "register.account_created.instructions" ] ]
-            , button
-                [ onClick DownloadPdf
-                , class "btn btn__register"
-                ]
-                [ text_ "register.account_created.download" ]
-            , div [ class "register__footer" ]
-                [ span [] [ text_ "register.account_created.instructions" ] ]
             ]
 
     else
@@ -193,8 +283,9 @@ view guest model =
             [ onSubmit ValidateForm
             ]
             [ div [ class "min-w-full md:min-w-0 md:mx-auto px-4" ]
-                [ p [ class "py-4 mb-4 text-grey text-body border-grey-500 border-b border-dotted " ]
-                    [ text "Step 1 of 2 / "
+                [ p
+                    [ class "py-4 mb-4 text-body border-b border-dotted text-grey border-grey-500" ]
+                    [ text <| "Step 1 of 2 / "
                     , strong [ class "text-black" ] [ text "Basic Information" ]
                     ]
                 , viewServerErrors model.problems
@@ -323,7 +414,7 @@ viewField ({ translations } as shared) { translationSuffix, isDisabled, currentV
             |> Html.map UpdateForm
         , case fieldName of
             Account ->
-                div [ class "input-label text-right text-purple-100 font-bold mt-1 absolute right-0" ]
+                div [ class "input-label pr-1 text-right text-purple-100 font-bold mt-1 absolute right-0" ]
                     [ text <| (String.fromInt <| String.length currentValue) ++ " of 12" ]
 
             _ ->
@@ -415,9 +506,12 @@ type Msg
     | AccountGenerated (Result Decode.Error AccountKeys)
     | CompletedCreateProfile AccountKeys (Result Http.Error Profile)
     | CompletedLoadProfile AccountKeys (Result Http.Error Profile)
+    | AgreedToSave12Words Bool
     | DownloadPdf
     | PdfDownloaded
     | PressedEnter Bool
+    | CopyToClipboard String
+    | CopiedToClipboard
 
 
 update : Maybe String -> Msg -> Model -> Guest.Model -> UpdateResult
@@ -535,13 +629,6 @@ update maybeInvitation msg model guest =
         CompletedCreateProfile _ (Ok _) ->
             { model | accountGenerated = True }
                 |> UR.init
-                |> UR.addPort
-                    { responseAddress = Ignored
-                    , responseData = Encode.null
-                    , data =
-                        Encode.object
-                            [ ( "name", Encode.string "hideFooter" ) ]
-                    }
 
         CompletedCreateProfile _ (Err err) ->
             { model | problems = ServerError "Auth failed" :: model.problems }
@@ -557,6 +644,27 @@ update maybeInvitation msg model guest =
             { model | problems = ServerError "Auth failed" :: model.problems }
                 |> UR.init
                 |> UR.logHttpError msg err
+
+        AgreedToSave12Words val ->
+            { model | isAgreedToSavePassphrase = val }
+                |> UR.init
+
+        CopyToClipboard elementId ->
+            model
+                |> UR.init
+                |> UR.addPort
+                    { responseAddress = CopiedToClipboard
+                    , responseData = Encode.null
+                    , data =
+                        Encode.object
+                            [ ( "id", Encode.string elementId )
+                            , ( "name", Encode.string "copyToClipboard" )
+                            ]
+                    }
+
+        CopiedToClipboard ->
+            { model | isPassphraseCopiedToClipboard = True }
+                |> UR.init
 
         DownloadPdf ->
             model
@@ -744,6 +852,9 @@ jsAddressToMsg addr val =
         "PdfDownloaded" :: _ ->
             Just PdfDownloaded
 
+        "CopiedToClipboard" :: _ ->
+            Just CopiedToClipboard
+
         _ ->
             Nothing
 
@@ -771,6 +882,15 @@ msgToString msg =
 
         CompletedLoadProfile _ r ->
             [ "CompletedLoadProfile", UR.resultToString r ]
+
+        AgreedToSave12Words _ ->
+            [ "AgreedToSave12Words" ]
+
+        CopyToClipboard _ ->
+            [ "CopyToClipboard" ]
+
+        CopiedToClipboard ->
+            [ "CopiedToClipboard" ]
 
         DownloadPdf ->
             [ "DownloadPdf" ]

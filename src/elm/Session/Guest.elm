@@ -157,7 +157,7 @@ view thisMsg page ({ shared } as model) content =
                         ]
                     ]
                     |> Html.map thisMsg
-                , main_ [ class "pb-10" ] [ content ]
+                , main_ [ class "" ] [ content ]
                 ]
 
 
