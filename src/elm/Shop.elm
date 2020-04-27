@@ -130,8 +130,8 @@ saleQuery saleId =
         salesSelection
 
 
-salesQuery : Filter -> Eos.Name -> SelectionSet (List Sale) RootQuery
-salesQuery filter accName =
+salesQuery : Filter -> Eos.Name -> Symbol -> SelectionSet (List Sale) RootQuery
+salesQuery filter accName communityId =
     case filter of
         UserSales ->
             let
@@ -139,7 +139,13 @@ salesQuery filter accName =
                     Eos.nameToString accName
 
                 args =
-                    { input = { account = Present accString, all = Absent, communities = Absent } }
+                    { input =
+                        { account = Present accString
+                        , all = Absent
+                        , communities = Absent
+                        , communityId = Present (Eos.symbolToString communityId)
+                        }
+                    }
             in
             Cambiatus.Query.sales
                 args
@@ -151,7 +157,13 @@ salesQuery filter accName =
                     Eos.nameToString accName
 
                 args =
-                    { input = { account = Absent, all = Present accString, communities = Absent } }
+                    { input =
+                        { account = Absent
+                        , all = Present accString
+                        , communities = Absent
+                        , communityId = Present (Eos.symbolToString communityId)
+                        }
+                    }
             in
             Cambiatus.Query.sales
                 args

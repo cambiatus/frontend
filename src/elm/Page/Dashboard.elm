@@ -159,7 +159,7 @@ view loggedIn model =
                         ]
                     ]
                 , viewBalance loggedIn model balance
-                , viewAnalysisList loggedIn model
+                , viewAnalysisList loggedIn profile model
                 , viewTransfers loggedIn model
                 , viewAnalysisModal loggedIn model
                 , viewInvitationModal loggedIn model
@@ -305,8 +305,8 @@ viewInvitationModal { shared } model =
                 ]
 
 
-viewAnalysisList : LoggedIn.Model -> Model -> Html Msg
-viewAnalysisList loggedIn model =
+viewAnalysisList : LoggedIn.Model -> Profile.Profile -> Model -> Html Msg
+viewAnalysisList loggedIn profile model =
     let
         text_ s =
             text (I18Next.t loggedIn.shared.translations s)
@@ -329,34 +329,30 @@ viewAnalysisList loggedIn model =
             Page.fullPageLoading
 
         LoadedGraphql claims ->
-            if not (List.isEmpty claims) then
-                div [ class "w-full flex" ]
-                    [ div
-                        [ class "w-full" ]
-                        [ div [ class "text-gray-600 text-2xl font-light flex mt-4 mb-4" ]
-                            [ div [ class "text-indigo-500 mr-2 font-medium" ]
-                                [ text_ "dashboard.analysis.title.1"
-                                ]
-                            , text_ "dashboard.analysis.title.2"
+            div [ class "w-full flex" ]
+                [ div
+                    [ class "w-full" ]
+                    [ div [ class "text-gray-600 text-2xl font-light flex mt-4 mb-4" ]
+                        [ div [ class "text-indigo-500 mr-2 font-medium" ]
+                            [ text_ "dashboard.analysis.title.1"
                             ]
-                        , if isVoted claims then
-                            div [ class "flex flex-col w-full h-64 items-center justify-center px-3 py-12 my-2 rounded-lg bg-white" ]
-                                [ img [ src "/images/not_found.svg", class "object-contain h-32 mb-3" ] []
-                                , p [ class "flex text-body text-gray" ]
-                                    [ p [ class "font-bold" ] [ text_ "dashboard.analysis.empty.1" ]
-                                    , text_ "dashboard.analysis.empty.2"
-                                    ]
-                                , p [ class "text-body text-gray" ] [ text_ "dashboard.analysis.empty.3" ]
-                                ]
-
-                          else
-                            div [ class "flex flex-wrap -mx-2" ]
-                                (List.map (viewAnalysis loggedIn) claims)
+                        , text_ "dashboard.analysis.title.2"
                         ]
-                    ]
+                    , if isVoted claims || profile.analysisCount < 0 then
+                        div [ class "flex flex-col w-full items-center justify-center px-3 py-12 my-2 rounded-lg bg-white" ]
+                            [ img [ src "/images/not_found.svg", class "object-contain h-32 mb-3" ] []
+                            , p [ class "flex text-body text-gray" ]
+                                [ p [ class "font-bold" ] [ text_ "dashboard.analysis.empty.1" ]
+                                , text_ "dashboard.analysis.empty.2"
+                                ]
+                            , p [ class "text-body text-gray" ] [ text_ "dashboard.analysis.empty.3" ]
+                            ]
 
-            else
-                text ""
+                      else
+                        div [ class "flex flex-wrap -mx-2" ]
+                            (List.map (viewAnalysis loggedIn) claims)
+                    ]
+                ]
 
         FailedGraphql err ->
             div [] [ Page.fullPageGraphQLError "Failed load" err ]
