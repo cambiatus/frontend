@@ -410,48 +410,6 @@ viewLoginSteps isModal shared model loginStep =
     ]
 
 
-viewLoginWithLoginFormData : LoginFormData -> Bool -> Bool -> Shared -> Model -> List (Html Msg)
-viewLoginWithLoginFormData form isDisabled isModal shared model =
-    let
-        text_ s =
-            Html.text (t shared.translations s)
-    in
-    [ div [ class "card__login-header" ]
-        [ h2 [ class "card__title" ]
-            [ text_ "auth.loginPrivatekey" ]
-        , viewAuthError shared model.loginError
-        , button
-            [ class "card__close-btn"
-            , onClick ClickedViewOptions
-            , type_ "button"
-            , disabled isDisabled
-            , title (t shared.translations "menu.cancel")
-            ]
-            [ Icon.close "" ]
-        ]
-    , Html.form
-        [ onSubmit (SubmittedLoginPrivateKey form) ]
-        [ div [ class "input-group" ]
-            [ input
-                [ class "input input--login flex100"
-                , type_ "text"
-                , value form.passphrase
-                , onInput EnteredPassphrase
-                , placeholder (t shared.translations "auth.loginPrivatekeyPlaceholder")
-                , required True
-                , disabled isDisabled
-                ]
-                []
-            , button
-                [ class "btn btn--primary btn--login flex000"
-                , disabled isDisabled
-                ]
-                [ text_ "auth.login" ]
-            ]
-        ]
-    ]
-
-
 viewMultipleAccount : List Eos.Name -> LoginFormData -> Bool -> Shared -> Model -> List (Html Msg)
 viewMultipleAccount accounts form isDisabled shared model =
     let
