@@ -17,7 +17,7 @@ import Eos.Account as Eos
 import Graphql.Document
 import Graphql.Http
 import Html exposing (Html, button, div, form, input, span, text, textarea)
-import Html.Attributes exposing (class, disabled, placeholder, required, rows, type_, value)
+import Html.Attributes exposing (class, disabled, pattern, placeholder, required, rows, type_, value)
 import Html.Events exposing (onInput, onSubmit)
 import I18Next exposing (Delims(..), t)
 import Json.Decode as Decode exposing (Value)
@@ -171,7 +171,7 @@ viewForm ({ shared } as loggedIn) model f community isDisabled =
     in
     div [ class "bg-white" ]
         [ Page.viewHeader loggedIn (t shared.translations "transfer.title") Route.Dashboard
-        , form [ class "container mx-auto py-4", onSubmit SubmitForm ]
+        , form [ class "container mx-auto p-4", onSubmit SubmitForm ]
             [ div [ class "mb-10" ]
                 [ span [ class "input-label" ]
                     [ text_ "account.my_wallet.transfer.send_to" ]
@@ -193,6 +193,7 @@ viewForm ({ shared } as loggedIn) model f community isDisabled =
                         , placeholder "0.00"
                         , disabled isDisabled
                         , required True
+                        , pattern "[0-9]*"
                         , onInput EnteredAmount
                         , value f.amount
                         ]
@@ -204,7 +205,7 @@ viewForm ({ shared } as loggedIn) model f community isDisabled =
                 ]
             , div [ class "mb-10" ]
                 [ span [ class "input-label" ]
-                    [ text_ "community.actions.form.description_label" ]
+                    [ text_ "account.my_wallet.transfer.memo" ]
                 , textarea
                     [ class "w-full input rounded-sm"
                     , rows 5
@@ -462,16 +463,15 @@ update msg model ({ shared } as loggedIn) =
                 _ ->
                     onlyLogImpossible []
 
-        GotTransferResult (Err s) ->
+        GotTransferResult (Err _) ->
             case model.status of
                 Loaded c (SendingTransfer form) ->
                     { model | status = Loaded c (SendingTransferFailed form) }
                         |> UR.init
                         |> UR.addExt
                             (LoggedIn.ShowFeedback
-                                { message = "Transfer Failed"
-                                , success = False
-                                }
+                                LoggedIn.Failure
+                                "Transfer Failed"
                             )
 
                 _ ->

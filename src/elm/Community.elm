@@ -18,7 +18,9 @@ module Community exposing
     , claimSelectionSet
     , communitiesQuery
     , communityQuery
+    , communitySelectionSet
     , createCommunityData
+    , dashboardSelectionSet
     , decodeBalance
     , decodeTransaction
     , encodeClaimAction
@@ -33,10 +35,10 @@ module Community exposing
     , logoTitleQuery
     , logoUrl
     , newCommunitySubscription
+    , objectiveSelectionSet
     , toVerifications
     )
 
-import Api.Relay exposing (MetadataConnection, PaginationArgs)
 import Cambiatus.Enum.VerificationType exposing (VerificationType(..))
 import Cambiatus.Object
 import Cambiatus.Object.Action as Action
@@ -60,7 +62,6 @@ import Json.Decode.Pipeline as Decode exposing (required)
 import Json.Encode as Encode exposing (Value)
 import Profile exposing (Profile)
 import Time exposing (Posix)
-import Transfer exposing (ConnectionTransfer, metadataConnectionSelectionSet, transferConnectionSelectionSet)
 import Utils
 import View.Tag as Tag
 
@@ -70,9 +71,12 @@ import View.Tag as Tag
 
 
 type alias DashboardInfo =
-    { title : String
+    { name : String
     , logo : String
-    , members : List Profile
+    , memberCount : Int
+    , transferCount : Int
+    , actionCount : Int
+    , saleCount : Int
     }
 
 
@@ -87,8 +91,6 @@ type alias Metadata =
     , symbol : Symbol
     , logo : String
     , creator : Eos.Name
-
-    -- , transfers : Maybe MetadataConnection
     , memberCount : Int
     }
 
@@ -107,8 +109,6 @@ type alias Community =
     , invitedReward : Float
     , memberCount : Int
     , members : List Profile
-
-    -- , transfers : Maybe ConnectionTransfer
     , objectives : List Objective
     }
 
@@ -133,7 +133,10 @@ dashboardSelectionSet =
     SelectionSet.succeed DashboardInfo
         |> with Community.name
         |> with Community.logo
-        |> with (Community.members Profile.selectionSet)
+        |> with Community.memberCount
+        |> with Community.transferCount
+        |> with Community.actionCount
+        |> with Community.saleCount
 
 
 communitySelectionSet : SelectionSet Community Cambiatus.Object.Community
@@ -235,6 +238,7 @@ type alias Objective =
     , description : String
     , creator : Eos.Name
     , actions : List Action
+    , community : Metadata
     }
 
 
@@ -245,6 +249,7 @@ objectiveSelectionSet =
         |> with Objective.description
         |> with (Eos.nameSelectionSet Objective.creatorId)
         |> with (Objective.actions identity actionSelectionSet)
+        |> with (Objective.community communitiesSelectionSet)
 
 
 type alias CreateObjectiveAction =

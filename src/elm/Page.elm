@@ -42,14 +42,14 @@ import File exposing (File)
 import Flags exposing (Flags)
 import Graphql.Http
 import Graphql.Http.GraphqlError
-import Html exposing (..)
-import Html.Attributes exposing (..)
+import Html exposing (Attribute, Html, a, br, button, div, img, label, li, p, span, text, ul)
+import Html.Attributes exposing (attribute, class, classList, for, src, title, type_, value)
 import Html.Events exposing (on)
 import Http
 import I18Next exposing (Delims(..), Translations)
 import Icons
 import Json.Decode as Decode exposing (Decoder)
-import Json.Encode as Encode exposing (Value)
+import Json.Encode exposing (Value)
 import Ports
 import Profile exposing (Profile)
 import Route exposing (Route)
@@ -85,7 +85,7 @@ init flags navKey url =
         Just ( accountName, _ ) ->
             let
                 ( model, cmd ) =
-                    LoggedIn.init shared accountName
+                    LoggedIn.init shared accountName flags
             in
             UR.init (LoggedIn model)
                 |> UR.addCmd (Cmd.map GotLoggedInMsg cmd)
@@ -251,11 +251,11 @@ viewHeader { shared } title route =
     div [ class "w-full h-16 flex px-4 items-center bg-indigo-500" ]
         [ div [ class "flex container mx-auto" ]
             [ a
-                [ class "flex items-center"
+                [ class "flex items-center absolute"
                 , Route.href route
                 ]
                 [ Icons.back ""
-                , p [ class "ml-2 text-white text-sm" ]
+                , p [ class "ml-2 text-white text-sm hidden md:visible md:flex" ]
                     [ text (I18Next.t shared.translations "back") ]
                 ]
             , p [ class "mx-auto text-white" ] [ text title ]
@@ -444,7 +444,7 @@ login auth profile guest =
 
 
 logout : LoggedIn.Model -> ( Session, Cmd Msg )
-logout ({ shared } as loggedIn) =
+logout { shared } =
     ( Guest (Guest.initModel { shared | maybeAccount = Nothing })
     , Route.replaceUrl shared.navKey (Route.Login Nothing)
     )

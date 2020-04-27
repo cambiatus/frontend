@@ -1,26 +1,24 @@
 module Main exposing (main)
 
-import Api
 import Auth
 import Browser
 import Browser.Navigation as Nav
 import Community
 import Flags
 import Html exposing (Html, text)
-import Http
 import Json.Decode as Decode exposing (Value)
 import Log
 import Page exposing (Session)
 import Page.ComingSoon as ComingSoon
 import Page.Community as Community
 import Page.Community.ActionEditor as ActionEditor
+import Page.Community.Claim as Claim
 import Page.Community.Editor as CommunityEditor
 import Page.Community.Explore as CommunityExplore
 import Page.Community.Invite as Invite
 import Page.Community.ObjectiveEditor as ObjectiveEditor
 import Page.Community.Objectives as Objectives
 import Page.Community.Transfer as Transfer
-import Page.Community.VerifyClaim as VerifyClaim
 import Page.Dashboard as Dashboard
 import Page.Login as Login
 import Page.NotFound as NotFound
@@ -34,7 +32,7 @@ import Page.ViewTransfer as ViewTransfer
 import Ports
 import Route exposing (Route)
 import Session.Guest as Guest
-import Session.LoggedIn as LoggedIn exposing (FeedbackStatus(..))
+import Session.LoggedIn as LoggedIn exposing (External(..), FeedbackVisibility(..))
 import Shop
 import UpdateResult as UR exposing (UpdateResult)
 import Url exposing (Url)
@@ -156,7 +154,7 @@ type Status
     | Objectives Objectives.Model
     | ObjectiveEditor ObjectiveEditor.Model
     | ActionEditor ActionEditor.Model
-    | VerifyClaim VerifyClaim.Model
+    | Claim Claim.Model
     | CommunityExplore CommunityExplore.Model
     | Notification Notification.Model
     | Dashboard Dashboard.Model
@@ -188,7 +186,7 @@ type Msg
     | GotObjectivesMsg Objectives.Msg
     | GotActionEditorMsg ActionEditor.Msg
     | GotObjectiveEditorMsg ObjectiveEditor.Msg
-    | GotVerifyClaimMsg VerifyClaim.Msg
+    | GotVerifyClaimMsg Claim.Msg
     | GotCommunityExploreMsg CommunityExplore.Msg
     | GotDashboardMsg Dashboard.Msg
     | GotLoginMsg Login.Msg
@@ -196,7 +194,6 @@ type Msg
     | GotRegisterMsg Register.Msg
     | GotShopMsg Shop.Msg
     | GotShopEditorMsg ShopEditor.Msg
-    | GotUpdatedBalances (Result Http.Error (List Community.Balance))
     | GotShopViewerMsg ShopViewer.Msg
     | GotViewTransferScreenMsg ViewTransfer.Msg
     | GotInviteMsg Invite.Msg
@@ -239,12 +236,12 @@ update msg model =
         ( ClickedLink urlRequest, _ ) ->
             case urlRequest of
                 Browser.Internal url ->
-                    ( model
+                    ( model |> hideFeedback
                     , Nav.pushUrl (.navKey (Page.toShared model.session)) (Url.toString url)
                     )
 
                 Browser.External href ->
-                    ( model
+                    ( model |> hideFeedback
                     , Nav.load href
                     )
 
@@ -368,26 +365,6 @@ update msg model =
                 >> updateLoggedInUResult (ShopEditor id) GotShopEditorMsg model
                 |> withLoggedIn
 
-        ( GotUpdatedBalances (Ok bals), _ ) ->
-            case model.session of
-                Page.LoggedIn session ->
-                    let
-                        new_session =
-                            { session | balances = bals }
-
-                        new_model =
-                            { model | session = Page.LoggedIn new_session }
-                    in
-                    ( new_model, Cmd.none )
-
-                _ ->
-                    ( model, Cmd.none )
-
-        ( GotUpdatedBalances (Err err), _ ) ->
-            ( model
-            , Log.httpError err
-            )
-
         ( GotShopViewerMsg subMsg, ShopViewer saleId subModel ) ->
             ShopViewer.update subMsg subModel
                 >> updateLoggedInUResult (ShopViewer saleId) GotShopViewerMsg model
@@ -398,9 +375,9 @@ update msg model =
                 >> updateLoggedInUResult ActionEditor GotActionEditorMsg model
                 |> withLoggedIn
 
-        ( GotVerifyClaimMsg subMsg, VerifyClaim subModel ) ->
-            VerifyClaim.update subMsg subModel
-                >> updateLoggedInUResult VerifyClaim GotVerifyClaimMsg model
+        ( GotVerifyClaimMsg subMsg, Claim subModel ) ->
+            Claim.update subMsg subModel
+                >> updateLoggedInUResult Claim GotVerifyClaimMsg model
                 |> withLoggedIn
 
         ( GotViewTransferScreenMsg subMsg, ViewTransfer transferId subModel ) ->
@@ -468,22 +445,6 @@ updateLoggedInUResult toStatus toMsg model uResult =
     List.foldl
         (\commExtMsg ( m, cmds_ ) ->
             case commExtMsg of
-                LoggedIn.UpdateBalances ->
-                    let
-                        update_cmd =
-                            case m.session of
-                                Page.LoggedIn loggedIn ->
-                                    let
-                                        u_command =
-                                            Api.getBalances loggedIn.shared loggedIn.accountName GotUpdatedBalances
-                                    in
-                                    u_command
-
-                                _ ->
-                                    Cmd.none
-                    in
-                    ( m, cmds_ ++ [ update_cmd ] )
-
                 LoggedIn.UpdatedLoggedIn loggedIn ->
                     ( { m | session = Page.LoggedIn loggedIn }
                     , cmds_
@@ -502,12 +463,25 @@ updateLoggedInUResult toStatus toMsg model uResult =
                         _ ->
                             ( m, cmds_ )
 
-                LoggedIn.ShowFeedback feedback ->
+                LoggedIn.ShowFeedback status message ->
                     case m.session of
                         Page.LoggedIn loggedIn ->
                             ( { m
                                 | session =
-                                    Page.LoggedIn { loggedIn | feedback = Show feedback }
+                                    Page.LoggedIn { loggedIn | feedback = Show status message }
+                              }
+                            , cmds_
+                            )
+
+                        _ ->
+                            ( m, cmds_ )
+
+                LoggedIn.HideFeedback ->
+                    case m.session of
+                        Page.LoggedIn loggedIn ->
+                            ( { m
+                                | session =
+                                    Page.LoggedIn { loggedIn | feedback = Hidden }
                               }
                             , cmds_
                             )
@@ -529,6 +503,19 @@ updateLoggedInUResult toStatus toMsg model uResult =
                     )
                 )
            )
+
+
+hideFeedback : Model -> Model
+hideFeedback model =
+    case model.session of
+        Page.LoggedIn loggedIn ->
+            { model
+                | session =
+                    Page.LoggedIn { loggedIn | feedback = Hidden }
+            }
+
+        _ ->
+            model
 
 
 changeRouteTo : Maybe Route -> Model -> ( Model, Cmd Msg )
@@ -739,10 +726,10 @@ changeRouteTo maybeRoute model =
                 >> updateStatusWith ActionEditor GotActionEditorMsg model
                 |> withLoggedIn (Route.EditAction symbol objectiveId actionId)
 
-        Just (Route.VerifyClaim communityId objectiveId actionId claimId) ->
-            (\l -> VerifyClaim.init l claimId)
-                >> updateStatusWith VerifyClaim GotVerifyClaimMsg model
-                |> withLoggedIn (Route.VerifyClaim communityId objectiveId actionId claimId)
+        Just (Route.Claim communityId objectiveId actionId claimId) ->
+            (\l -> Claim.init l communityId claimId)
+                >> updateStatusWith Claim GotVerifyClaimMsg model
+                |> withLoggedIn (Route.Claim communityId objectiveId actionId claimId)
 
         Just Route.Communities ->
             CommunityExplore.init
@@ -833,7 +820,7 @@ jsAddressToMsg address val =
 
         "GotVerifyClaimMsg" :: rAddress ->
             Maybe.map GotVerifyClaimMsg
-                (VerifyClaim.jsAddressToMsg rAddress val)
+                (Claim.jsAddressToMsg rAddress val)
 
         "GotTransferMsg" :: rAddress ->
             Maybe.map GotTransferMsg
@@ -880,7 +867,7 @@ msgToString msg =
             "GotActionEditor" :: ActionEditor.msgToString subMsg
 
         GotVerifyClaimMsg subMsg ->
-            "GotVerifyClaimMsg" :: VerifyClaim.msgToString subMsg
+            "GotVerifyClaimMsg" :: Claim.msgToString subMsg
 
         GotCommunityExploreMsg subMsg ->
             "GotCommunityExploreMsg" :: CommunityExplore.msgToString subMsg
@@ -905,9 +892,6 @@ msgToString msg =
 
         GotShopEditorMsg subMsg ->
             "GotShopEditorMsg" :: ShopEditor.msgToString subMsg
-
-        GotUpdatedBalances _ ->
-            [ "GotUpdatedBalances" ]
 
         GotShopViewerMsg subMsg ->
             "GotShopViewerMsg" :: ShopViewer.msgToString subMsg
@@ -991,8 +975,8 @@ view model =
         ActionEditor subModel ->
             viewLoggedIn subModel LoggedIn.Other GotActionEditorMsg ActionEditor.view
 
-        VerifyClaim subModel ->
-            viewLoggedIn subModel LoggedIn.Other GotVerifyClaimMsg VerifyClaim.view
+        Claim subModel ->
+            viewLoggedIn subModel LoggedIn.Other GotVerifyClaimMsg Claim.view
 
         CommunityExplore subModel ->
             viewLoggedIn subModel LoggedIn.Communities GotCommunityExploreMsg CommunityExplore.view

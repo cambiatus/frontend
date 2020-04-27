@@ -82,10 +82,6 @@ type Msg
 
 update : Msg -> Model -> Guest.Model -> UpdateResult
 update msg model guest =
-    let
-        shared =
-            guest.shared
-    in
     case msg of
         GotAuthMsg authMsg ->
             Auth.update authMsg guest.shared model.auth False

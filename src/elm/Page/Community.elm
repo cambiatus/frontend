@@ -24,7 +24,7 @@ import Graphql.Operation exposing (RootQuery)
 import Graphql.OptionalArgument exposing (OptionalArgument(..))
 import Graphql.SelectionSet as SelectionSet exposing (SelectionSet, with)
 import Html exposing (Html, a, button, div, hr, img, p, span, text)
-import Html.Attributes exposing (class, classList, disabled, placeholder, src)
+import Html.Attributes exposing (class, classList, disabled, src)
 import Html.Events exposing (onClick)
 import I18Next exposing (t, tr)
 import Icons
@@ -32,7 +32,7 @@ import Json.Decode as Decode
 import Json.Encode as Encode exposing (Value)
 import Page
 import Route
-import Session.LoggedIn as LoggedIn exposing (External(..))
+import Session.LoggedIn as LoggedIn exposing (External(..), FeedbackStatus(..))
 import Session.Shared exposing (Shared)
 import Strftime
 import Task
@@ -113,7 +113,6 @@ type alias Model =
     , members : List Member
     , openObjective : Maybe Int
     , modalStatus : ModalStatus
-    , messageStatus : MessageStatus
     , actions : Maybe ActionVerificationsResponse
     , invitations : String
     , symbol : Symbol
@@ -127,7 +126,6 @@ initModel _ symbol =
     , members = []
     , openObjective = Nothing
     , modalStatus = Closed
-    , messageStatus = None
     , actions = Nothing
     , invitations = ""
     , symbol = symbol
@@ -155,12 +153,6 @@ type SaveStatus
 type ModalStatus
     = Opened Bool Int -- Action id
     | Closed
-
-
-type MessageStatus
-    = None
-    | Success String
-    | Failure String
 
 
 type alias ObjectiveForm =
@@ -232,7 +224,6 @@ view loggedIn model =
                     ]
                 , div [ class "container mx-auto px-4" ]
                     [ viewClaimModal loggedIn model
-                    , viewMessageStatus loggedIn model
                     , if canEdit then
                         div [ class "flex justify-between items-center py-2 px-8 sm:px-6 bg-white rounded-lg mt-4" ]
                             [ div []
@@ -305,7 +296,7 @@ viewVerification shared verification =
         route =
             case verification.symbol of
                 Just symbol ->
-                    Route.VerifyClaim
+                    Route.Claim
                         symbol
                         verification.objectiveId
                         verification.actionId
@@ -385,7 +376,7 @@ viewObjective loggedIn model metadata index objective =
     in
     div [ class "my-2" ]
         [ div
-            [ class "px-3 py-4 bg-body-blue flex flex-col sm:flex-row sm:items-center sm:h-10"
+            [ class "px-3 py-4 bg-indigo-500 flex flex-col sm:flex-row sm:items-center sm:h-10"
             ]
             [ div [ class "sm:flex-grow-7 sm:w-5/12" ]
                 [ div
@@ -436,8 +427,8 @@ viewObjectiveNew loggedIn edit communityId =
         , Route.href (Route.NewObjective communityId)
         , disabled (edit /= NoEdit)
         ]
-        [ span [ class "px-2 text-button-orange font-medium" ] [ text "+" ]
-        , span [ class "text-button-orange font-medium" ] [ text (t "community.objectives.new") ]
+        [ span [ class "px-2 text-orange" ] [ text "+" ]
+        , span [ class "text-orange" ] [ text (t "community.objectives.new") ]
         ]
 
 
@@ -492,25 +483,25 @@ viewAction loggedIn metadata maybeDate action =
         dateColor : String
         dateColor =
             if pastDeadline then
-                " text-date-red"
+                " text-red"
 
             else
-                " text-date-purple"
+                " text-indigo-500"
 
         usagesColor : String
         usagesColor =
             if action.usagesLeft >= 1 || action.usages == 0 then
-                " text-date-purple"
+                " text-indigo-500"
 
             else
-                " text-date-red"
+                " text-red"
 
         ( claimColors, claimText ) =
             if pastDeadline || (action.usagesLeft < 1 && action.usages > 0) then
-                ( " text-text-grey bg-grey cursor-not-allowed", "dashboard.closed" )
+                ( " text-grey bg-grey cursor-not-allowed", "dashboard.closed" )
 
             else
-                ( " text-white bg-button-orange", "dashboard.claim" )
+                ( " text-white button button-primary", "dashboard.claim" )
 
         claimSize =
             if canEdit then
@@ -612,7 +603,7 @@ viewAction loggedIn metadata maybeDate action =
                         ]
                     ]
                 , div [ class "mt-5 flex flex-row items-baseline" ]
-                    [ div [ class ("text-reward-green text-base mt-5 flex-grow-1" ++ rewardStrike) ]
+                    [ div [ class ("text-green text-base mt-5 flex-grow-1" ++ rewardStrike) ]
                         [ span [] [ text (t "community.actions.reward" ++ ": ") ]
                         , span [ class "font-medium" ] [ text rewardStr ]
                         ]
@@ -670,30 +661,6 @@ viewHeader { shared } community =
         ]
 
 
-viewMessageStatus : LoggedIn.Model -> Model -> Html msg
-viewMessageStatus loggedIn model =
-    let
-        t s =
-            I18Next.t loggedIn.shared.translations s
-
-        text_ s =
-            text (t s)
-    in
-    case model.messageStatus of
-        None ->
-            text ""
-
-        Success message ->
-            div [ class "z-40 bg-green w-full my-2 p-2 rounded-lg text-center" ]
-                [ p [ class "text-white font-sans" ] [ text_ message ]
-                ]
-
-        Failure message ->
-            div [ class "z-40 bg-red w-full my-2 rounded-lg p-2 text-center" ]
-                [ p [ class "text-white font-sans font-bold" ] [ text_ message ]
-                ]
-
-
 viewClaimModal : LoggedIn.Model -> Model -> Html Msg
 viewClaimModal loggedIn model =
     case model.modalStatus of
@@ -710,7 +677,7 @@ viewClaimModal loggedIn model =
                 , div [ class "modal-content" ]
                     [ div [ class "w-full" ]
                         [ p [ class "w-full font-bold text-heading text-2xl mb-4" ]
-                            [ text_ "community.claimAction.title" ]
+                            [ text_ "claim.modal.title" ]
                         , button
                             [ if not isLoading then
                                 onClick CloseClaimConfirmation
@@ -722,7 +689,7 @@ viewClaimModal loggedIn model =
                             [ Icons.close "absolute fill-current text-gray-400 top-0 right-0 mx-8 my-4"
                             ]
                         , p [ class "text-body w-full font-sans mb-10" ]
-                            [ text_ "community.claimAction.body" ]
+                            [ text_ "dashboard.check_claim.body" ]
                         ]
                     , div [ class "w-full md:bg-gray-100 md:flex md:absolute rounded-b-lg md:inset-x-0 md:bottom-0 md:p-4 justify-center" ]
                         [ div [ class "flex" ]
@@ -735,7 +702,7 @@ viewClaimModal loggedIn model =
                                     onClick NoOp
                                 , disabled isLoading
                                 ]
-                                [ text_ "community.claimAction.no" ]
+                                [ text_ "dashboard.check_claim.no" ]
                             , div [ class "w-8" ] []
                             , button
                                 [ class "flex-1 block button button-primary button-lg w-full md:w-40"
@@ -746,7 +713,7 @@ viewClaimModal loggedIn model =
                                     onClick NoOp
                                 , disabled isLoading
                                 ]
-                                [ text_ "community.claimAction.yes" ]
+                                [ text_ "dashboard.check_claim.yes" ]
                             ]
                         ]
                     ]
@@ -872,6 +839,10 @@ type Msg
 
 update : Msg -> Model -> LoggedIn.Model -> UpdateResult
 update msg model loggedIn =
+    let
+        t =
+            I18Next.t loggedIn.shared.translations
+    in
     case msg of
         NoOp ->
             UR.init model
@@ -955,16 +926,16 @@ update msg model loggedIn =
         GotClaimActionResponse (Ok _) ->
             { model
                 | modalStatus = Closed
-                , messageStatus = Success "community.claimAction.success"
             }
                 |> UR.init
+                |> UR.addExt (ShowFeedback LoggedIn.Success (t "dashboard.check_claim.success"))
 
         GotClaimActionResponse (Err _) ->
             { model
                 | modalStatus = Closed
-                , messageStatus = Failure "community.claimAction.failure"
             }
                 |> UR.init
+                |> UR.addExt (ShowFeedback LoggedIn.Failure (t "dashboard.check_claim.failure"))
 
 
 jsAddressToMsg : List String -> Value -> Maybe Msg

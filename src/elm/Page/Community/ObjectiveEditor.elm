@@ -11,16 +11,15 @@ import Eos.Account as Eos
 import Graphql.Http
 import Graphql.Operation exposing (RootQuery)
 import Graphql.SelectionSet as SelectionSet exposing (SelectionSet, with)
-import Html exposing (..)
-import Html.Attributes exposing (..)
-import Html.Events exposing (..)
-import I18Next exposing (Translations, t)
-import Icons
-import Json.Decode as Decode exposing (Decoder)
+import Html exposing (Html, button, div, span, text, textarea)
+import Html.Attributes exposing (class, disabled, maxlength, placeholder, required, rows, type_, value)
+import Html.Events exposing (onClick, onInput)
+import I18Next exposing (t)
+import Json.Decode as Decode
 import Json.Encode as Encode exposing (Value)
 import Page
 import Route
-import Session.LoggedIn as LoggedIn exposing (External(..))
+import Session.LoggedIn as LoggedIn exposing (External(..), FeedbackStatus(..))
 import UpdateResult as UR
 
 
@@ -29,14 +28,14 @@ import UpdateResult as UR
 
 
 initNew : LoggedIn.Model -> Symbol -> ( Model, Cmd Msg )
-initNew ({ shared } as loggedIn) communityId =
+initNew { shared } communityId =
     ( { status = Loading, community = communityId, objectiveId = Nothing }
     , Api.Graphql.query shared (communityQuery communityId) CompletedCommunityLoad
     )
 
 
 initEdit : LoggedIn.Model -> Symbol -> Int -> ( Model, Cmd Msg )
-initEdit ({ shared } as loggedIn) communityId objectiveId =
+initEdit { shared } communityId objectiveId =
     ( { status = Loading, community = communityId, objectiveId = Just objectiveId }
     , Api.Graphql.query shared (communityQuery communityId) CompletedCommunityLoad
     )
@@ -250,6 +249,10 @@ updateObjective msg fn uResult =
 
 update : Msg -> Model -> LoggedIn.Model -> UpdateResult
 update msg model loggedIn =
+    let
+        t =
+            I18Next.t loggedIn.shared.translations
+    in
     case msg of
         CompletedCommunityLoad (Ok community) ->
             case community of
@@ -353,10 +356,10 @@ update msg model loggedIn =
             in
             if LoggedIn.isAuth loggedIn then
                 case model.status of
-                    Loaded cmm (NewObjective objForm) ->
+                    Loaded _ (NewObjective objForm) ->
                         save objForm Nothing
 
-                    Loaded cmm (EditObjective objectiveId objForm) ->
+                    Loaded _ (EditObjective objectiveId objForm) ->
                         save objForm (Just objectiveId)
 
                     _ ->
@@ -375,11 +378,13 @@ update msg model loggedIn =
                     (Route.replaceUrl loggedIn.shared.navKey
                         (Route.Community model.community)
                     )
+                |> UR.addExt (ShowFeedback Success (t "community.objectives.create_success"))
 
         GotSaveObjectiveResponse (Err v) ->
             UR.init model
                 |> updateObjective msg (\o -> { o | save = SaveFailed })
                 |> UR.logDebugValue msg v
+                |> UR.addExt (ShowFeedback Failure (t "errors.unknown"))
 
 
 

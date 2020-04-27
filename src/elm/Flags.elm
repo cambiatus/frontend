@@ -7,7 +7,7 @@ module Flags exposing
     , defaultEndpoints
     )
 
-import Eos
+import Eos exposing (Symbol)
 import Eos.Account as Eos
 import Json.Decode as Decode exposing (Decoder, int, nullable, string)
 import Json.Decode.Pipeline as Decode exposing (optional, required)
@@ -22,6 +22,7 @@ type alias Flags =
     , logoMobile : String
     , now : Int
     , allowCommunityCreation : Bool
+    , selectedCommunity : Symbol
     }
 
 
@@ -35,6 +36,7 @@ default =
     , logoMobile = "/images/logo-cambiatus-mobile.svg"
     , now = 0
     , allowCommunityCreation = True
+    , selectedCommunity = Eos.bespiralSymbol
     }
 
 
@@ -56,6 +58,7 @@ decode =
         |> required "logoMobile" Decode.string
         |> required "now" Decode.int
         |> required "allowCommunityCreation" Decode.bool
+        |> required "selectedCommunity" Eos.symbolDecoder
 
 
 type alias Endpoints =

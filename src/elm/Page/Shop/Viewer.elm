@@ -5,6 +5,7 @@ import Api.Graphql
 import Asset.Icon as Icon
 import Avatar
 import Browser.Navigation as Nav
+import Community exposing (Balance)
 import Dict exposing (Dict)
 import Eos as Eos exposing (Symbol)
 import Eos.Account as Eos
@@ -13,6 +14,7 @@ import Html exposing (..)
 import Html.Attributes exposing (..)
 import Html.Events exposing (on, onClick, onInput, onSubmit, targetValue)
 import Html.Lazy as Lazy
+import Http
 import I18Next exposing (Translations, t)
 import Icons
 import Json.Encode as Encode
@@ -33,7 +35,7 @@ import UpdateResult as UR
 
 
 init : LoggedIn.Model -> String -> ( Model, Cmd Msg )
-init { shared } saleId =
+init { shared, accountName } saleId =
     let
         currentStatus =
             initStatus saleId
@@ -42,11 +44,14 @@ init { shared } saleId =
             { status = currentStatus
             , viewing = ViewingCard
             , form = initForm shared.translations
+            , balances = []
             }
     in
     ( model
     , Cmd.batch
-        [ initCmd shared currentStatus ]
+        [ initCmd shared currentStatus
+        , Api.getBalances shared accountName CompletedLoadBalances
+        ]
     )
 
 
@@ -89,6 +94,7 @@ type alias Model =
     { status : Status
     , viewing : ViewState
     , form : Form
+    , balances : List Balance
     }
 
 
@@ -143,6 +149,7 @@ type Validation
 
 type Msg
     = CompletedSaleLoad (Result (Graphql.Http.Error (Maybe Sale)) (Maybe Sale))
+    | CompletedLoadBalances (Result Http.Error (List Balance))
     | ClickedBuy Sale
     | ClickedEdit Sale
     | ClickedQuestions Sale
@@ -315,6 +322,16 @@ update msg model user =
             { model | form = newForm }
                 |> UR.init
 
+        CompletedLoadBalances res ->
+            case res of
+                Ok bals ->
+                    { model | balances = bals }
+                        |> UR.init
+
+                Err _ ->
+                    model
+                        |> UR.init
+
 
 
 -- VIEW
@@ -375,7 +392,7 @@ viewCard : LoggedIn.Model -> Card -> Model -> Html Msg
 viewCard ({ shared } as loggedIn) card model =
     let
         cmmBalance =
-            LE.find (\bal -> bal.asset.symbol == card.sale.symbol) loggedIn.balances
+            LE.find (\bal -> bal.asset.symbol == card.sale.symbol) model.balances
 
         balance =
             case cmmBalance of
@@ -489,7 +506,7 @@ viewTransferForm ({ shared } as loggedIn) card errors model =
             Eos.symbolToString card.sale.symbol
 
         maybeBal =
-            LE.find (\bal -> bal.asset.symbol == card.sale.symbol) loggedIn.balances
+            LE.find (\bal -> bal.asset.symbol == card.sale.symbol) model.balances
 
         symbolBalance =
             case maybeBal of
@@ -714,3 +731,6 @@ msgToString msg =
 
         EnteredMemo m ->
             "EnteredMemo" :: [ m ]
+
+        CompletedLoadBalances _ ->
+            [ "CompletedLoadBalances" ]

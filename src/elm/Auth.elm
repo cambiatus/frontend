@@ -20,8 +20,8 @@ import Asset.Icon as Icon
 import Browser.Dom as Dom
 import Browser.Events
 import Eos.Account as Eos
-import Html exposing (..)
-import Html.Attributes exposing (..)
+import Html exposing (Html, a, button, div, h2, img, input, label, li, p, span, text, textarea, ul)
+import Html.Attributes exposing (attribute, autocomplete, class, disabled, for, id, maxlength, pattern, placeholder, required, src, title, type_, value)
 import Html.Events exposing (onClick, onInput, onSubmit)
 import Http
 import I18Next exposing (t)
@@ -32,7 +32,7 @@ import List.Extra as LE
 import Log
 import Profile exposing (Profile)
 import Route
-import Session.Shared as Shared exposing (Shared)
+import Session.Shared exposing (Shared)
 import Task
 import UpdateResult as UR
 import Utils
@@ -104,7 +104,6 @@ initModel =
 
 type Status
     = Options LoginStep
-    | LoginWithPrivateKey LoginFormData
     | LoginWithPrivateKeyAccounts (List Eos.Name) LoginFormData
     | LoggingInWithPrivateKeyAccounts (List Eos.Name) LoginFormData
     | LoggedInWithPrivateKey PrivateKey
@@ -278,14 +277,11 @@ view isModal shared model =
         Options loginStep ->
             viewLoginSteps isModal shared model loginStep
 
-        LoginWithPrivateKey _ ->
-            viewLoginSteps isModal shared model LoginStepPassphrase
-
         LoginWithPrivateKeyAccounts accounts form ->
-            viewMultipleAccount accounts form False isModal shared model
+            viewMultipleAccount accounts form False shared model
 
         LoggingInWithPrivateKeyAccounts accounts form ->
-            viewMultipleAccount accounts form True isModal shared model
+            viewMultipleAccount accounts form True shared model
 
         LoggedInWithPrivateKey _ ->
             viewLoginSteps isModal shared model LoginStepPassphrase
@@ -456,8 +452,8 @@ viewLoginWithLoginFormData form isDisabled isModal shared model =
     ]
 
 
-viewMultipleAccount : List Eos.Name -> LoginFormData -> Bool -> Bool -> Shared -> Model -> List (Html Msg)
-viewMultipleAccount accounts form isDisabled isModal shared model =
+viewMultipleAccount : List Eos.Name -> LoginFormData -> Bool -> Shared -> Model -> List (Html Msg)
+viewMultipleAccount accounts form isDisabled shared model =
     let
         text_ s =
             Html.text (t shared.translations s)
@@ -728,7 +724,7 @@ update msg shared model showAuthModal =
                     { model | problems = errors }
                         |> UR.init
 
-        GotMultipleAccountsLogin accounts ->
+        GotMultipleAccountsLogin _ ->
             UR.init
                 { model
                     | status =
@@ -761,7 +757,12 @@ update msg shared model showAuthModal =
 
         GotPrivateKeyLogin (Ok ( accountName, privateKey )) ->
             UR.init model
-                |> UR.addCmd (Api.signIn shared accountName (CompletedLoadProfile (LoggedInWithPrivateKey privateKey) accountName))
+                |> UR.addCmd
+                    (Api.signIn
+                        shared
+                        accountName
+                        (CompletedLoadProfile (LoggedInWithPrivateKey privateKey) accountName)
+                    )
 
         GotPrivateKeyLogin (Err err) ->
             UR.init
@@ -815,22 +816,9 @@ update msg shared model showAuthModal =
                                 model.status
                 }
 
-        CompletedLoadProfile newStatus accountName (Ok profile) ->
+        CompletedLoadProfile newStatus _ (Ok profile) ->
             UR.init { model | status = newStatus }
                 |> UR.addExt (CompletedAuth profile)
-                |> UR.addPort
-                    { responseAddress = CompletedLoadProfile newStatus accountName (Ok profile)
-                    , responseData = Encode.null
-                    , data =
-                        Encode.object
-                            [ ( "name", Encode.string "chatCredentials" )
-                            , ( "container", Encode.string "chat-manager" )
-                            , ( "credentials", Profile.encodeProfileChat profile )
-                            , ( "notificationAddress"
-                              , Encode.list Encode.string [ "GotPageMsg", "GotLoggedInMsg", "ReceivedNotification" ]
-                              )
-                            ]
-                    }
 
         CompletedLoadProfile newStatus accountName (Err err) ->
             case err of

@@ -180,15 +180,15 @@ viewModal shared model invitationId =
                                 [ p [ class "" ]
                                     [ text_ "community.invitation.modal.body" ]
                                 ]
-                            , div [ class "w-full md:bg-gray-100 flex flex-wrap md:absolute rounded-b-lg md:inset-x-0 md:bottom-0 md:p-4 justify-center items-center" ]
+                            , div [ class "modal-footer" ]
                                 [ button
-                                    [ class "button button-secondary w-full mb-4 md:mb-0 md:w-48 md:mr-8"
+                                    [ class "modal-cancel"
                                     , onClick RejectInvitation
                                     ]
                                     [ text_ "community.invitation.modal.no"
                                     ]
                                 , button
-                                    [ class "button button-primary w-full md:w-48"
+                                    [ class "modal-accept"
                                     , onClick (AcceptInvitation invitationId)
                                     ]
                                     [ text_ "community.invitation.modal.yes" ]
