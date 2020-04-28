@@ -55,7 +55,7 @@ init loggedIn filter =
     ( model
     , Cmd.batch
         [ Api.Graphql.query loggedIn.shared
-            (Shop.salesQuery filter loggedIn.accountName)
+            (Shop.salesQuery filter loggedIn.accountName loggedIn.selectedCommunity)
             CompletedSalesLoad
         , Api.getBalances loggedIn.shared loggedIn.accountName CompletedLoadBalances
         , Task.perform GotTime Time.now
@@ -145,8 +145,6 @@ type ValidationError
     | UnitNotOnlyNumbers
     | MemoEmpty
     | MemoTooLong
-
-
 
 
 
@@ -471,7 +469,7 @@ update msg model loggedIn =
                 UR.init model
 
         TransferSuccess index ->
-            updateCard msg index (\card -> (  card   , [] )) (UR.init model)
+            updateCard msg index (\card -> ( card, [] )) (UR.init model)
 
         ClickedMessages cardIndex creatorId ->
             UR.init model

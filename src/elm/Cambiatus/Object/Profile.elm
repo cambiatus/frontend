@@ -24,6 +24,11 @@ account =
     Object.selectionForField "String" "account" [] Decode.string
 
 
+analysisCount : SelectionSet Int Cambiatus.Object.Profile
+analysisCount =
+    Object.selectionForField "Int" "analysisCount" [] Decode.int
+
+
 avatar : SelectionSet (Maybe String) Cambiatus.Object.Profile
 avatar =
     Object.selectionForField "(Maybe String)" "avatar" [] (Decode.string |> Decode.nullable)
