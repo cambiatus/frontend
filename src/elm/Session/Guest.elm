@@ -104,61 +104,115 @@ view thisMsg page ({ shared } as model) content =
                             "bg-white"
             in
             div
-                [ class <| "min-h-screen" ++ " " ++ contentBackgroundClass ]
-                [ header
-                    [ class "flex items-center justify-between px-4 py-3 bg-white" ]
-                    [ div []
-                        [ img
-                            [ class "lg:block h-6"
-                            , src shared.logo
-                            , alt "Cambiatus"
+                [ class "md:pl-1/3 lg:pl-1/2 md:bg-cover md:bg-center"
+                , style "background-image" "url(images/login-bg-day.png)"
+                ]
+                [ viewQuote
+                    { photoSrc = "images/register-dog.png"
+                    , name = "Victoria Lane"
+                    , occupation = "Founder"
+                    , quote = "We are designing for a global user base, we can get feedback not just from drivers we see in San Francisco"
+                    }
+                , div
+                    [ class "min-h-screen"
+                    , class contentBackgroundClass
+                    ]
+                    [ div
+                        [ class "md:max-w-lg md:pt-20 md:m-auto" ]
+                        [ viewPageHeader model shared
+                            |> Html.map thisMsg
+                        , main_ []
+                            [ div [] [ content ]
                             ]
-                            []
-                        ]
-                    , div [ class "relative z-10" ]
-                        [ button
-                            [ type_ "button"
-                            , tabindex -1
-                            , class "flex block relative z-10 w-32 items-center px-4 py-2 bg-white text-xs focus:outline-none"
-                            , classList
-                                [ ( "rounded-tr-lg rounded-tl-lg justify-between"
-                                  , model.showLanguageNav
-                                  )
-                                ]
-                            , onClick (ShowLanguageNav (not model.showLanguageNav))
-                            , onMouseEnter (ShowLanguageNav True)
-                            ]
-                            [ Shared.langFlag shared.language
-                            , if model.showLanguageNav then
-                                div [ class "flex-grow" ]
-                                    [ text (String.toUpper model.shared.language) ]
-
-                              else
-                                text ""
-                            , Icons.arrowDown "flex-none"
-                            ]
-                        , if model.showLanguageNav then
-                            button
-                                [ class "fixed h-full w-full inset-0 bg-black opacity-50 cursor-default"
-                                , onClick (ShowLanguageNav False)
-                                , onMouseEnter (ShowLanguageNav False)
-                                ]
-                                []
-
-                          else
-                            text ""
-                        , div
-                            [ class "absolute right-0 w-32 py-2 bg-white border-t rounded-br-lg rounded-bl-lg shadow-lg"
-                            , classList
-                                [ ( "hidden", not model.showLanguageNav )
-                                ]
-                            ]
-                            (Shared.viewLanguageItems shared ClickedLanguage)
                         ]
                     ]
-                    |> Html.map thisMsg
-                , main_ [ class "" ] [ content ]
                 ]
+
+
+viewPageHeader : Model -> Shared -> Html Msg
+viewPageHeader model shared =
+    header
+        [ class "flex items-center justify-between px-4 py-3 bg-white" ]
+        [ div []
+            [ img
+                [ class "lg:block h-6"
+                , src shared.logo
+                , alt "Cambiatus"
+                ]
+                []
+            ]
+        , div [ class "relative z-10" ]
+            [ button
+                [ type_ "button"
+                , tabindex -1
+                , class "flex block relative z-10 w-32 items-center px-4 py-2 bg-white text-xs focus:outline-none"
+                , classList
+                    [ ( "rounded-tr-lg rounded-tl-lg justify-between"
+                      , model.showLanguageNav
+                      )
+                    ]
+                , onClick (ShowLanguageNav (not model.showLanguageNav))
+                , onMouseEnter (ShowLanguageNav True)
+                ]
+                [ Shared.langFlag shared.language
+                , if model.showLanguageNav then
+                    div [ class "flex-grow" ]
+                        [ text (String.toUpper model.shared.language) ]
+
+                  else
+                    text ""
+                , Icons.arrowDown "flex-none"
+                ]
+            , if model.showLanguageNav then
+                button
+                    [ class "fixed h-full w-full inset-0 bg-black opacity-50 cursor-default"
+                    , onClick (ShowLanguageNav False)
+                    , onMouseEnter (ShowLanguageNav False)
+                    ]
+                    []
+
+              else
+                text ""
+            , div
+                [ class "absolute right-0 w-32 py-2 bg-white border-t rounded-br-lg rounded-bl-lg shadow-lg"
+                , classList
+                    [ ( "hidden", not model.showLanguageNav )
+                    ]
+                ]
+                (Shared.viewLanguageItems shared ClickedLanguage)
+            ]
+        ]
+
+
+type alias Quote =
+    { photoSrc : String
+    , name : String
+    , occupation : String
+    , quote : String
+    }
+
+
+viewQuote : Quote -> Html msg
+viewQuote { photoSrc, name, occupation, quote } =
+    div
+        [ class "lg:block lg:visible hidden md:absolute md:left-0 md:w-1/3 lg:w-1/2 md:p-10"
+        ]
+        [ div [ class "flex items-center mb-3" ]
+            [ div [ class "rounded-full border-white border-2 bg-grey w-16 h-16" ]
+                [ img
+                    [ class "max-w-full max-h-full"
+                    , src photoSrc
+                    ]
+                    []
+                ]
+            , p [ class "ml-3" ]
+                [ span [ class "block text-2xl text-black" ] [ text name ]
+                , span [ class "text-purple-500 text-body uppercase" ] [ text occupation ]
+                ]
+            ]
+        , p [ class "text-gray-900 max-w-xl" ]
+            [ text <| "“" ++ quote ++ "”" ]
+        ]
 
 
 

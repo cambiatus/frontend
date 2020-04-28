@@ -334,7 +334,7 @@ viewLoginSteps isModal shared model loginStep =
             img [ class "h-40 mx-auto mt-8 mb-7", src ("images/" ++ fileName) ] []
 
         buttonClass =
-            "button button-primary min-w-full md:min-w-0"
+            "button button-primary min-w-full"
 
         labelText : String -> Html msg
         labelText tSuffix =

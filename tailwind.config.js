@@ -112,7 +112,9 @@ module.exports = {
         heading: '1.375rem',
         '14': '3.5rem',
         '72': '18rem',
-        select: '18.75rem'
+        select: '18.75rem',
+        '1/3': '33%',
+        '1/2': '50%'
       },
       lineHeight: {
         caption: 0.75
