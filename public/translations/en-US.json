@@ -137,6 +137,9 @@
       "confirmPin": "Confirm PIN",
       "pinCharError": "Your PIN must use only numbers"
     },
+    "pinPopup": {
+      "label": "Your six-digit PIN"
+    },
     "pinConfirmation": {
       "label": "Type again the new six-digit PIN",
       "tooltip": "",

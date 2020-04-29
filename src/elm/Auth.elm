@@ -495,7 +495,19 @@ viewAuthError shared maybeLoginError =
 
         Just error ->
             div [ class "bg-red border-lg rounded p-4 mt-2" ]
-                [ p [ class "text-white" ] [ text (t shared.translations error) ]
+                [ p [ class "text-white" ]
+                    [ text (t shared.translations error)
+                    , if error == "error.accountNotFound" then
+                        -- Let user to go back and correct 12 words
+                        span
+                            [ class "block mt-2 text-body cursor-pointer", onClick ClickedViewOptions ]
+                            [ text "← "
+                            , span [ class "underline" ] [ text (t shared.translations "auth.backToWords") ]
+                            ]
+
+                      else
+                        text ""
+                    ]
                 ]
 
 
@@ -639,9 +651,7 @@ update msg shared model showAuthModal =
                     { currentForm
                         | enteredPinConfirmation = trimPinNumber 6 currentForm.enteredPinConfirmation pin
                     }
-
-                -- show validation errors only when form submitted
-                , loginError = Nothing
+                , loginError = Nothing -- show validation errors only when form is submitted
                 , problems = []
             }
                 |> UR.init
@@ -677,7 +687,7 @@ update msg shared model showAuthModal =
 
                 newForm =
                     { currentForm
-                        | passphrase = String.trim phrase -- while copy/pasting user will likely catch a line break
+                        | passphrase = phrase
                     }
             in
             { model
@@ -999,7 +1009,13 @@ viewPinField ({ form, problems } as model) shared inputType =
         pinPrompt =
             case inputType of
                 PinInput ->
-                    "auth.pin"
+                    case shared.maybeAccount of
+                        Nothing ->
+                            "auth.pin"
+
+                        _ ->
+                            -- Popup with PIN input for logged-in user has different label
+                            "auth.pinPopup"
 
                 PinConfirmationInput ->
                     "auth.pinConfirmation"
