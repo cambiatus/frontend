@@ -1,20 +1,19 @@
-module Page.PublicProfile exposing (Model, Msg, init, jsAddressToMsg, msgToString, view)
+module Page.PublicProfile exposing (Model, Msg, init, jsAddressToMsg, msgToString, update, view)
 
-import Api
 import Api.Graphql
+import Eos.Account as Eos
 import Graphql.Http
 import Html exposing (..)
 import Html.Attributes exposing (..)
-import I18Next exposing (t, tr)
+import I18Next exposing (t)
 import Icons
-import Json.Decode as Decode exposing (Value)
-import Json.Encode as Encode
-import Profile exposing (Profile, ProfileForm, decode)
-import PushSubscription exposing (PushSubscription)
+import Json.Decode exposing (Value)
+import Page
+import Profile exposing (Profile)
 import Route
 import Session.LoggedIn as LoggedIn exposing (External(..), FeedbackStatus(..))
-import Session.Shared as Shared exposing (Shared)
-import Task
+import Session.Shared exposing (Shared)
+import UpdateResult as UR
 
 
 init : LoggedIn.Model -> ( Model, Cmd Msg )
@@ -28,16 +27,16 @@ init loggedIn =
     ( initModel loggedIn
     , Cmd.batch
         [ profileQuery
-        , Task.succeed CheckPushPref |> Task.perform identity
         ]
     )
 
 
+type alias UpdateResult =
+    UR.UpdateResult Model Msg (External Msg)
+
+
 type Msg
     = CompletedProfileLoad (Result (Graphql.Http.Error (Maybe Profile)) (Maybe Profile))
-    | CheckPushPref
-    | GotPushSub PushSubscription
-    | GotPushPreference Bool
 
 
 type alias Model =
@@ -59,35 +58,59 @@ initModel _ =
 
 view : LoggedIn.Model -> Model -> Html msg
 view loggedIn model =
+    case model.status of
+        Loading ->
+            Page.fullPageLoading
+
+        Loaded profile ->
+            view_ loggedIn profile model
+
+        _ ->
+            div [] []
+
+
+view_ : LoggedIn.Model -> Profile -> Model -> Html msg
+view_ loggedIn profile model =
+    let
+        userName =
+            Maybe.withDefault "" profile.userName
+
+        email =
+            Maybe.withDefault "" profile.email
+
+        description =
+            Maybe.withDefault "" profile.bio
+
+        location =
+            Maybe.withDefault "" profile.localization
+
+        account =
+            Eos.nameToString profile.account
+    in
     div [ class "h-full flex items-center flex-col" ]
         [ viewHeader loggedIn.shared
         , div
-            [ class "w-full h-full bg-white max-w-6xl"
-            , style "padding-top" "16px"
-            , style "display" "grid"
+            [ class "grid w-full pt-4 h-full bg-white max-w-6xl gap-4"
             , style "grid-template" """
                                  ". avatar  info    info ."
                                  ". desc    desc    desc ."
                                  ". balance balance balance ."
                                  ". extra   extra   extra ." / 1px 84px auto auto 1px
                                  """
-            , style "grid-gap" "16px 16px"
             ]
             [ img
-                [ class "rounded-full"
-                , style "width" "84px"
-                , style "height" "84px"
+                [ class "rounded-full w-20 h-20"
                 , style "grid-area" "avatar"
                 , src "https://b.thumbs.redditmedia.com/4_F9NWICIq_yOAFfRqg37l3n9vFs3Li5qQMyN2QzayQ.png"
                 ]
                 []
-            , div [ style "grid-area" "info" ] [ viewUserInfo "Clara Matos" "clara@gmail.com" "clara172983" ]
-            , div [ style "grid-area" "desc" ] [ viewUserDescription "My name is Clara, i work as a Designer and can help you to learn too." ]
+            , div [ style "grid-area" "info" ] [ viewUserInfo userName email account ]
+            , div [ style "grid-area" "desc" ] [ viewUserDescription description ]
             , div [ style "grid-area" "balance" ] [ viewUserBalance 500 ]
             , div [ style "grid-area" "extra" ]
                 [ viewUserExtendedInfo
-                    [ ( "Locations", [ "Costa Rica", "Brazil" ] )
-                    , ( "Interests", [ "Games", "Food", "Tech", "Lord of the Rings", "Surf", "Beach" ] )
+                    [ ( "Locations", [ location ] )
+                    , ( "Interests", profile.interests )
                     ]
                 ]
             ]
@@ -97,18 +120,13 @@ view loggedIn model =
 viewUserBalance : Int -> Html msg
 viewUserBalance amount =
     div
-        [ class "flex flex-col justify-between items-center py-4 w-full w-full bg-gray-100 h-40"
-        , style "border-radius" "24px"
+        [ class "flex flex-col justify-between items-center py-4 w-full w-full bg-gray-100 h-40 rounded"
         ]
         [ span [ class "text-xs uppercase text-green" ] [ text "User Balance" ]
         , span [ class "text-indigo-500 text-3xl font-medium" ] [ text (String.fromInt amount ++ " cr") ]
         , button
-            [ style "width" "311px"
-            , style "height" "40px"
-            , style "border-radius" "40px"
-            , style "width" "calc(100% - 16px)"
-            , style "max-width" "311px"
-            , class "bg-orange-300 uppercase text-sm font-medium text-white"
+            [ style "width" "calc(100% - 16px)"
+            , class "bg-orange-300 uppercase text-sm font-medium text-white h-10 rounded-lg max-w-xs"
             ]
             [ text "Transfer CR" ]
         ]
@@ -117,57 +135,23 @@ viewUserBalance amount =
 viewUserExtendedInfo : List ( String, List String ) -> Html msg
 viewUserExtendedInfo data =
     div
-        [ style "display" "grid"
+        [ class "grid divide-y"
         ]
-        (List.indexedMap
-            (\index x ->
-                let
-                    isNotLast =
-                        index /= List.length data - 1
-
-                    isNotFirst =
-                        index /= 0
-
-                    notFirstStyle =
-                        if isNotFirst then
-                            [ style "padding-top" "16px" ]
-
-                        else
-                            []
-
-                    notLastPadding =
-                        if isNotLast then
-                            [ style "border-bottom" "1px solid #E7E7E7E7"
-                            ]
-
-                        else
-                            []
-                in
+        (List.map
+            (\x ->
                 div
-                    [ style "display" "grid"
-                    , style "grid-template-columns" "50% 50%"
-                    , style "grid-template-rows" "1fr"
+                    [ class "grid grid-cols-2 grid-rows-1"
                     , style "grid-template-areas" "'key value'"
                     ]
                     [ span
-                        ([ class "text-xs"
-                         , style "line-height" "24px"
-                         , style "grid-area" "key"
-                         , style "padding-bottom" "16px"
-                         ]
-                            ++ notFirstStyle
-                            ++ notLastPadding
-                        )
+                        [ class "text-xs py-2 leading-6"
+                        , style "grid-area" "key"
+                        ]
                         [ text (Tuple.first x) ]
                     , span
-                        ([ class "text-indigo-500 font-medium text-xs text-right"
-                         , style "line-height" "16px"
-                         , style "grid-area" "value"
-                         , style "padding-bottom" "16px"
-                         ]
-                            ++ notFirstStyle
-                            ++ notLastPadding
-                        )
+                        [ class "text-indigo-500 font-medium text-xs text-right py-2 leading-6"
+                        , style "grid-area" "value"
+                        ]
                         [ text (String.join ", " (Tuple.second x)) ]
                     ]
             )
@@ -222,55 +206,37 @@ viewHeader shared =
         ]
 
 
+
+-- UPDATE
+
+
+update : Msg -> Model -> LoggedIn.Model -> UpdateResult
+update msg model loggedIn =
+    case msg of
+        CompletedProfileLoad (Ok Nothing) ->
+            -- TODO: not found account
+            UR.init model
+
+        CompletedProfileLoad (Ok (Just profile)) ->
+            UR.init { model | status = Loaded profile }
+
+        CompletedProfileLoad (Err err) ->
+            UR.init { model | status = LoadingFailed err }
+                |> UR.logGraphqlError msg err
+
+
 jsAddressToMsg : List String -> Value -> Maybe Msg
-jsAddressToMsg addr val =
+jsAddressToMsg addr _ =
     case addr of
-        "RequestPush" :: _ ->
-            let
-                push =
-                    Decode.decodeValue (Decode.field "sub" Decode.string) val
-                        |> Result.andThen (Decode.decodeString Decode.value)
-                        |> Result.andThen (Decode.decodeValue PushSubscription.decode)
-            in
-            case push of
-                Ok res ->
-                    Just (GotPushSub res)
-
-                Err err ->
-                    -- TODO: Handle PushSubscription Decode error
-                    Nothing
-
-        "CompletedPushUpload" :: _ ->
-            decodePushPref val
-
-        "GotPushPreference" :: _ ->
-            decodePushPref val
-
         _ ->
             Nothing
-
-
-decodePushPref : Value -> Maybe Msg
-decodePushPref val =
-    Decode.decodeValue (Decode.field "isSet" Decode.bool) val
-        |> Result.map GotPushPreference
-        |> Result.toMaybe
 
 
 msgToString : Msg -> List String
 msgToString msg =
     case msg of
-        CompletedProfileLoad r ->
+        CompletedProfileLoad _ ->
             [ "CompletedProfileLoad" ]
-
-        CheckPushPref ->
-            [ "CheckPushPref" ]
-
-        GotPushSub subMsg ->
-            [ "GotPushSub" ]
-
-        GotPushPreference subMsg ->
-            [ "GotPushPreference" ]
 
 
 

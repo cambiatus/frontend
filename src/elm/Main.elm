@@ -356,6 +356,11 @@ update msg model =
                 >> updateLoggedInUResult Dashboard GotDashboardMsg model
                 |> withLoggedIn
 
+        ( GotPublicProfileMsg subMsg, PublicProfile subModel ) ->
+            PublicProfile.update subMsg subModel
+                >> updateLoggedInUResult PublicProfile GotPublicProfileMsg model
+                |> withLoggedIn
+
         ( GotProfileMsg subMsg, Profile subModel ) ->
             Profile.update subMsg subModel
                 >> updateLoggedInUResult Profile GotProfileMsg model
