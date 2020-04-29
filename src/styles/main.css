@@ -61,7 +61,7 @@
 /* Typography */
 
 .heading-bold {
-  @apply font-medium font-sans text-black text-heading my-3;
+  @apply font-medium text-black text-heading my-3;
 }
 
 /* End of Typography */
@@ -69,7 +69,7 @@
 /* Button */
 
 .button {
-  @apply uppercase font-sans text-sm flex items-center justify-center leading-none w-40 h-10;
+  @apply uppercase text-sm flex items-center justify-center leading-none w-40 h-10;
 }
 
 .button-primary {

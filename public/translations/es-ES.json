@@ -516,7 +516,11 @@
       "failure": "Se produjo un error al intentar procesar su reclamo. Vuelva a intentarlo más tarde."
     },
     "all_analysis": {
-      "title": "Todas las acciones para el análisis."
+      "title": "Todas las acciones para el análisis.",
+      "more_details": "Más detalles",
+      "approved": "Aprobada",
+      "pending": "Pendiente",
+      "disapproved": "Rechazada"
     }
   },
   "claim": {

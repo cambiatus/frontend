@@ -1,4 +1,9 @@
-module Claim exposing (Model, selectionSet)
+module Claim exposing
+    ( Model
+    , encodeVerification
+    , isAlreadyValidated
+    , selectionSet
+    )
 
 import Cambiatus.Enum.VerificationType exposing (VerificationType(..))
 import Cambiatus.Object
@@ -7,8 +12,11 @@ import Cambiatus.Object.Check as Check
 import Cambiatus.Object.Claim as Claim
 import Cambiatus.Scalar exposing (DateTime(..))
 import Community exposing (Objective)
+import Eos
+import Eos.Account as Eos
 import Graphql.OptionalArgument exposing (OptionalArgument(..))
 import Graphql.SelectionSet as SelectionSet exposing (SelectionSet, with)
+import Json.Encode as Encode
 import Profile exposing (Profile)
 
 
@@ -39,6 +47,35 @@ type alias Action =
     , objective : Objective
     , createdAt : DateTime
     }
+
+
+isAlreadyValidated : Model -> Eos.Name -> Bool
+isAlreadyValidated claim user =
+    claim.isVerified || List.any (\c -> c.validator.account == user) claim.checks
+
+
+encodeVerification : Int -> Eos.Name -> Bool -> Encode.Value
+encodeVerification claimId validator vote =
+    let
+        encodedClaimId : Encode.Value
+        encodedClaimId =
+            Encode.int claimId
+
+        encodedVerifier : Encode.Value
+        encodedVerifier =
+            Eos.encodeName validator
+
+        encodedVote : Encode.Value
+        encodedVote =
+            vote
+                |> Eos.boolToEosBool
+                |> Eos.encodeEosBool
+    in
+    Encode.object
+        [ ( "claim_id", encodedClaimId )
+        , ( "verifier", encodedVerifier )
+        , ( "vote", encodedVote )
+        ]
 
 
 

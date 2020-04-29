@@ -123,7 +123,7 @@ type ClaimStatus
 
 type VoteModalStatus
     = VoteModalClosed
-    | VoteOpened Int Bool
+    | VoteModalOpened Int Bool
 
 
 type InviteModalStatus
@@ -172,7 +172,7 @@ view loggedIn model =
 viewAnalysisModal : LoggedIn.Model -> Model -> Html Msg
 viewAnalysisModal loggedIn model =
     case model.voteModalStatus of
-        VoteOpened claimId vote ->
+        VoteModalOpened claimId vote ->
             let
                 t s =
                     I18Next.t loggedIn.shared.translations s
@@ -395,13 +395,13 @@ viewAnalysis ({ shared } as loggedIn) claimStatus =
                         ]
                     , div [ class "flex" ]
                         [ button
-                            [ class "flex-1 button button-secondary"
+                            [ class "flex-1 button button-secondary font-medium text-red"
                             , onClick (OpenModal claim.id False)
                             ]
                             [ text_ "dashboard.reject" ]
                         , div [ class "w-4" ] []
                         , button
-                            [ class "flex-1 button button-primary"
+                            [ class "flex-1 button button-primary font-medium"
                             , onClick (OpenModal claim.id True)
                             ]
                             [ text_ "dashboard.verify" ]
@@ -516,7 +516,7 @@ viewAmount amount symbol =
 
 
 viewBalance : LoggedIn.Model -> Model -> Balance -> Html Msg
-viewBalance loggedIn model balance =
+viewBalance loggedIn _ balance =
     let
         text_ s =
             text (I18Next.t loggedIn.shared.translations s)
@@ -538,7 +538,7 @@ viewBalance loggedIn model balance =
                     [ text symbolText ]
                 ]
             , a
-                [ class "button button-primary w-full font-semibold mb-2"
+                [ class "button button-primary w-full font-medium mb-2"
                 , Route.href <| Route.Transfer loggedIn.selectedCommunity Nothing
                 ]
                 [ text_ "dashboard.transfer" ]
@@ -629,7 +629,7 @@ update msg model loggedIn =
                 |> UR.logGraphqlError msg err
 
         OpenModal claimId vote ->
-            { model | voteModalStatus = VoteOpened claimId vote }
+            { model | voteModalStatus = VoteModalOpened claimId vote }
                 |> UR.init
 
         CloseModal ->
@@ -663,7 +663,7 @@ update msg model loggedIn =
                                                     { actor = loggedIn.accountName
                                                     , permissionName = Eos.samplePermission
                                                     }
-                                              , data = encodeVerification claimId loggedIn.accountName vote
+                                              , data = Claim.encodeVerification claimId loggedIn.accountName vote
                                               }
                                             ]
                                         }
@@ -806,7 +806,7 @@ fetchAvailableAnalysis shared communityId account =
             { claimer = Absent
             , symbol = Present (Eos.symbolToString communityId)
             , validator = Present (Eos.nameToString account)
-            , all = Absent
+            , all = Present False
             }
     in
     Api.Graphql.query
@@ -869,30 +869,6 @@ unwrapClaimStatus claimStatus =
 
         ClaimVoteFailed claim ->
             claim
-
-
-encodeVerification : Int -> Eos.Name -> Bool -> Encode.Value
-encodeVerification claimId validator vote =
-    let
-        encodedClaimId : Encode.Value
-        encodedClaimId =
-            Encode.int claimId
-
-        encodedVerifier : Encode.Value
-        encodedVerifier =
-            Eos.encodeName validator
-
-        encodedVote : Encode.Value
-        encodedVote =
-            vote
-                |> Eos.boolToEosBool
-                |> Eos.encodeEosBool
-    in
-    Encode.object
-        [ ( "claim_id", encodedClaimId )
-        , ( "verifier", encodedVerifier )
-        , ( "vote", encodedVote )
-        ]
 
 
 jsAddressToMsg : List String -> Value -> Maybe Msg

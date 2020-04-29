@@ -516,7 +516,11 @@
       "failure": "Alguna cosa no va funcionar correctament mentre intenteu processar la vostra reclamació. Torneu-ho a provar més endavant"
     },
     "all_analysis": {
-      "title": "Totes les accions per a l'anàlisi"
+      "title": "Totes les accions per a l'anàlisi",
+      "more_details": "Més detalls",
+      "approved": "Aprovat",
+      "pending": "Pendents",
+      "disapproved": "Rebutjat"
     }
   },
   "claim": {

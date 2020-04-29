@@ -516,7 +516,11 @@
       "failure": "Something went wrong while trying to process your claim, please try again later"
     },
     "all_analysis": {
-      "title": "All actions for analysis"
+      "title": "All actions for analysis",
+      "more_details": "More details",
+      "approved": "Approved",
+      "pending": "Pending",
+      "disapproved": "Disapproved"
     }
   },
   "claim": {

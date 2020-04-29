@@ -208,8 +208,19 @@ viewVoters ({ shared } as loggedIn) claim =
                     Profile.viewEmpty shared
 
                   else
-                    div [ class "flex flex-row mt-3 mb-10 flex-wrap" ]
-                        (List.map (\c -> Profile.view shared loggedIn.accountName c.validator) claim.checks)
+                    div [ class "flex flex-wrap -mx-2 mt-3 mb-10" ]
+                        (List.map
+                            (\c ->
+                                if c.isApproved then
+                                    div [ class "px-2" ]
+                                        [ Profile.view shared loggedIn.accountName c.validator
+                                        ]
+
+                                else
+                                    text ""
+                            )
+                            claim.checks
+                        )
                 ]
             ]
         , div []
@@ -220,7 +231,19 @@ viewVoters ({ shared } as loggedIn) claim =
                     Profile.viewEmpty shared
 
                   else
-                    text ""
+                    div [ class "flex flex-wrap -mx-2 mt-3 mb-10" ]
+                        (List.map
+                            (\c ->
+                                if not c.isApproved then
+                                    div [ class "px-2" ]
+                                        [ Profile.view shared loggedIn.accountName c.validator
+                                        ]
+
+                                else
+                                    text ""
+                            )
+                            claim.checks
+                        )
                 ]
             ]
         , div []

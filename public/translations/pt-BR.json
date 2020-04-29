@@ -518,7 +518,11 @@
       "failure": "Algo deu errado ao tentar realizar sua reinvidicação, tente novamente mais tarde"
     },
     "all_analysis": {
-      "title": "Todas as ações para análise"
+      "title": "Todas as ações para análise",
+      "more_details": "Mais detalhes",
+      "approved": "Aprovado",
+      "pending": "Pendente",
+      "disapproved": "Reprovado"
     }
   },
   "claim": {
