@@ -94,7 +94,6 @@ view_ loggedIn profile model =
             , style "grid-template" """
                                  ". avatar  info    info ."
                                  ". desc    desc    desc ."
-                                 ". balance balance balance ."
                                  ". extra   extra   extra ." / 1px 84px auto auto 1px
                                  """
             ]
@@ -106,7 +105,6 @@ view_ loggedIn profile model =
                 []
             , div [ style "grid-area" "info" ] [ viewUserInfo userName email account ]
             , div [ style "grid-area" "desc" ] [ viewUserDescription description ]
-            , div [ style "grid-area" "balance" ] [ viewUserBalance 500 ]
             , div [ style "grid-area" "extra" ]
                 [ viewUserExtendedInfo
                     [ ( "Locations", [ location ] )
