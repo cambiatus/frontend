@@ -169,8 +169,10 @@ view guest model =
             "passphraseWords"
     in
     if model.accountGenerated then
-        div [ class "" ]
-            [ div [ class "min-w-full md:min-w-0 md:mx-auto px-4 bg-purple-500 text-white text-body pb-10" ]
+        div
+            [ class "flex-grow bg-purple-500"
+            ]
+            [ div [ class "min-w-full md:min-w-0 md:mx-auto px-4 text-white text-body pb-10" ]
                 [ p
                     [ class "py-4 mb-4 text-body border-b border-dotted text-white border-white" ]
                     [ text <| "Step 2 of 2 / "
@@ -279,10 +281,11 @@ view guest model =
             ]
 
     else
-        Html.form
-            [ onSubmit ValidateForm
-            ]
-            [ div [ class "min-w-full md:min-w-0 md:mx-auto px-4" ]
+        div [ class "flex-grow bg-white" ]
+            [ Html.form
+                [ class "px-4 md:max-w-sm md:mx-auto md:pt-20 md:px-0"
+                , onSubmit ValidateForm
+                ]
                 [ p
                     [ class "py-4 mb-4 text-body border-b border-dotted text-grey border-grey-500" ]
                     [ text <| "Step 1 of 2 / "

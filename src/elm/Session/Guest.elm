@@ -94,18 +94,10 @@ view thisMsg page ({ shared } as model) content =
                 |> Html.map thisMsg
 
         _ ->
-            let
-                contentBackgroundClass =
-                    case page of
-                        Login ->
-                            "bg-purple-500"
-
-                        _ ->
-                            "bg-white"
-            in
             div
                 [ class "md:flex" ]
                 [ div
+                    -- Left part with background and quote (desktop only)
                     [ class "hidden md:block md:visible min-h-screen md:w-2/5"
                     , class "bg-center bg-no-repeat"
                     , style "background-color" "#EFF9FB"
@@ -121,17 +113,11 @@ view thisMsg page ({ shared } as model) content =
                         }
                     ]
                 , div
-                    [ class "min-h-screen md:w-3/5"
-                    , class contentBackgroundClass
-                    ]
+                    -- Content: Header, Login/Registration forms
+                    [ class "min-h-screen flex flex-col md:w-3/5" ]
                     [ viewPageHeader model shared
                         |> Html.map thisMsg
-                    , div
-                        [ class "md:max-w-sm md:pt-20 md:m-auto" ]
-                        [ main_ []
-                            [ div [] [ content ]
-                            ]
-                        ]
+                    , content
                     ]
                 ]
 

@@ -350,7 +350,7 @@ viewLoginSteps isModal shared model loginStep =
                 passphraseId =
                     "passphrase"
             in
-            div [ class "" ]
+            div []
                 [ illustration "login_key.svg"
                 , p [ class pClass ]
                     [ span [ class "text-green text-caption tracking-wide uppercase block mb-1" ] [ text ("Welcome back" ++ ",") ]
@@ -383,13 +383,8 @@ viewLoginSteps isModal shared model loginStep =
                 ]
 
         viewCreatePin =
-            div [ class "" ]
-                [ span
-                    [ class "text-green text-xs absolute"
-                    , onClick ClickedViewOptions
-                    ]
-                    [ text "← to 12 words" ]
-                , illustration "login_pin.svg"
+            div []
+                [ illustration "login_pin.svg"
                 , p [ class pClass ] [ text "Cool, now create a six-digit PIN. The PIN is not a password and you can change it each login." ]
                 , viewPinField model shared PinInput
                 , div [ class "h-10" ] []
