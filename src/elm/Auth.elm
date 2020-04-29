@@ -494,12 +494,8 @@ viewAuthError shared maybeLoginError =
             text ""
 
         Just error ->
-            let
-                tr =
-                    t shared.translations "error.accountNotFound"
-            in
             div [ class "bg-red border-lg rounded p-4 mt-2" ]
-                [ p [ class "text-white" ] [ text error ]
+                [ p [ class "text-white" ] [ text (t shared.translations error) ]
                 ]
 
 
@@ -681,7 +677,7 @@ update msg shared model showAuthModal =
 
                 newForm =
                     { currentForm
-                        | passphrase = phrase
+                        | passphrase = String.trim phrase -- while copy/pasting user will likely catch a line break
                     }
             in
             { model
