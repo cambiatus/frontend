@@ -154,15 +154,16 @@
       "title": "Uoh. Something went wrong while creating your account"
     },
     "account_created": {
-      "congrats": "Congrats",
-      "account": "Your account was",
-      "created": "created ;)",
-      "welcome_message": "Welcome {{username}}, you will always be able to access Cambiatus with this device in a simple and safe manner, but if you want to use a different computer, smartphone or tablet you will need to have the following information at hand:",
+      "greet": "Hey",
+      "last_step": "it is the last step, and the most important",
+      "copy": "copy",
+      "i_saved_words": "I've copied and pasted on a secure place the 12 words as Cambiatus asked",
+      "words_copied": "were copied to clipboard",
       "twelve_words": "Your 12 words",
       "private_key": "Your private key",
       "recommendation": "We recommend you to save this information by clicking the button below, if you lose it you won't be able to login to your account again",
-      "download": "Save private key and 12 words",
-      "instructions": "You will save the private key and the 12 words on your computer in PDF format."
+      "download": "Save to PDF and Create Account",
+      "instructions": "You must copy and paste on a secure place these 12 words below. We also are going to give you a PDF with these 12 words when you are finishing the register."
     }
   },
   "account": {

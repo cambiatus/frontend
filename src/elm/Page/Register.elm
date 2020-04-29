@@ -172,7 +172,7 @@ view guest model =
         div
             [ class "flex-grow bg-purple-500"
             ]
-            [ div [ class "min-w-full md:min-w-0 md:mx-auto px-4 text-white text-body pb-10" ]
+            [ div [ class "px-4 md:max-w-sm md:mx-auto md:pt-20 md:px-0 text-white text-body" ]
                 [ p
                     [ class "py-4 mb-4 text-body border-b border-dotted text-white border-white" ]
                     [ text <| "Step 2 of 2 / "
@@ -180,22 +180,15 @@ view guest model =
                     ]
                 , p
                     [ class "text-xl mb-3" ]
-                    [ text "Hey Helton, it is the last step, and the more important." ]
-                , p [ class "mb-1" ]
-                    [ text "You must copy and paste on a secure place these 12 words below. We also are going to give you a PDF with these 12 words when you are finishing the register."
+                    [ text_ "register.account_created.greet"
+                    , text " "
+                    , strong [] [ text name ]
+                    , text ", "
+                    , text_ "register.account_created.last_step"
                     ]
-
-                --, div [ class "register__congrats" ]
-                --    [ div [ class "register__woman" ] []
-                --    , p [ class "congrats__message" ]
-                --        [ span [] [ text_ "register.account_created.congrats" ]
-                --        , span [] [ text_ "register.account_created.account" ]
-                --        , span [] [ text_ "register.account_created.created" ]
-                --        ]
-                --    , div [ class "register__dog" ] []
-                --    ]
-                --, div [ class "register__welcome" ]
-                --    [ text (tr "register.account_created.welcome_message" [ ( "username", name ) ]) ]
+                , p [ class "mb-3" ]
+                    [ text_ "register.account_created.instructions"
+                    ]
                 , div
                     [ class "w-1/4 m-auto relative"
                     , style "left" "1rem"
@@ -212,8 +205,9 @@ view guest model =
                     [ p [ class "input-label" ]
                         [ text_ "register.account_created.twelve_words"
                         , if model.isPassphraseCopiedToClipboard then
-                            span [ class "rounded-sm ml-1" ]
-                                [ strong [] [ text "WERE COPIED TO CLIPBOARD ✔" ]
+                            strong [ class "uppercase ml-1" ]
+                                [ text_ "register.account_created.words_copied"
+                                , text " ✔"
                                 ]
 
                           else
@@ -238,10 +232,10 @@ view guest model =
                         [ class "button m-auto button-primary button-sm"
                         , onClick <| CopyToClipboard passphraseInputId
                         ]
-                        [ text "Copy" ]
+                        [ text_ "register.account_created.copy" ]
                     ]
                 , div [ class "my-4" ]
-                    [ label [ class "form-label" ]
+                    [ label [ class "form-label block" ]
                         [ input
                             [ type_ "checkbox"
                             , class "form-checkbox mr-2 p-1"
@@ -249,19 +243,10 @@ view guest model =
                             , onCheck AgreedToSave12Words
                             ]
                             []
-                        , text
-                            "I've copied and pasted on a secure place the 12 words as Cambiatus asked 💜"
+                        , text_ "register.account_created.i_saved_words"
+                        , text " 💜"
                         ]
                     ]
-
-                --, div [ class "register__keys" ]
-                --    [ p [ class "key__title" ] [ text_ "register.account_created.twelve_words" ]
-                --    , p [ class "key", id "12__words" ] [ text (words model) ]
-                --    , p [ class "key__title" ] [ text_ "register.account_created.private_key" ]
-                --    , p [ class "key", id "p__key" ] [ text (privateKey model) ]
-                --    ]
-                --, div [ class "register__instructions" ]
-                --    [ p [] [ text_ "register.account_created.instructions" ] ]
                 , button
                     [ onClick DownloadPdf
                     , class "button button-primary w-full"
@@ -274,9 +259,6 @@ view guest model =
                             "button-disabled text-gray-600"
                     ]
                     [ text_ "register.account_created.download" ]
-
-                --, div [ class "register__footer" ]
-                --    [ span [] [ text_ "register.account_created.instructions" ] ]
                 ]
             ]
 
