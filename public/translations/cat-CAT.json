@@ -514,6 +514,9 @@
       "no": "No, cancel·la",
       "success": "Reclamar que tingui èxit, espereu l’aprovació",
       "failure": "Alguna cosa no va funcionar correctament mentre intenteu processar la vostra reclamació. Torneu-ho a provar més endavant"
+    },
+    "all_analysis": {
+      "title": "Totes les accions per a l'anàlisi"
     }
   },
   "claim": {

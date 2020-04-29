@@ -514,6 +514,9 @@
       "no": "No, cancel",
       "success": "Claim successful, please wait for approval",
       "failure": "Something went wrong while trying to process your claim, please try again later"
+    },
+    "all_analysis": {
+      "title": "All actions for analysis"
     }
   },
   "claim": {

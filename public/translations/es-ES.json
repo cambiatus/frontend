@@ -514,6 +514,9 @@
       "no": "No, cancelar",
       "success": "Reclamación exitosa, espere la aprobación",
       "failure": "Se produjo un error al intentar procesar su reclamo. Vuelva a intentarlo más tarde."
+    },
+    "all_analysis": {
+      "title": "Todas las acciones para el análisis."
     }
   },
   "claim": {

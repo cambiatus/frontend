@@ -516,6 +516,9 @@
       "no": "Não, cancelar",
       "success": "Reinvidicação concluída, aguarde as aprovações",
       "failure": "Algo deu errado ao tentar realizar sua reinvidicação, tente novamente mais tarde"
+    },
+    "all_analysis": {
+      "title": "Todas as ações para análise"
     }
   },
   "claim": {

@@ -95,7 +95,7 @@ update msg model _ =
             Loaded All results |> UR.init
 
         ClaimsLoaded (Err _) ->
-            model |> UR.init
+            Failed |> UR.init
 
 
 fetchAnalysis : Shared -> Symbol -> Eos.Name -> Cmd Msg
