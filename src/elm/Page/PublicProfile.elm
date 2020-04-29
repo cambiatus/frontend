@@ -90,8 +90,6 @@ view loggedIn model =
                     , ( "Interests", [ "Games", "Food", "Tech", "Lord of the Rings", "Surf", "Beach" ] )
                     ]
                 ]
-
-            -- , span [ style "grid-area" "info" ] [ text "hiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiii" ]
             ]
         ]
 
