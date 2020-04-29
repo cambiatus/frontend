@@ -167,17 +167,34 @@ view guest model =
 
         passphraseInputId =
             "passphraseWords"
+
+        viewTitleForStep : Int -> Html msg
+        viewTitleForStep s =
+            let
+                step =
+                    String.fromInt s
+            in
+            p
+                [ class "py-4 mb-4 text-body border-b border-dotted text-grey border-grey-500" ]
+                [ text (tr "register.form.step" [ ( "stepNum", step ) ])
+                , text " / "
+                , strong
+                    [ class <|
+                        if s == 1 then
+                            "text-black"
+
+                        else
+                            "text-white"
+                    ]
+                    [ text_ ("register.form.step" ++ step ++ "_title") ]
+                ]
     in
     if model.accountGenerated then
         div
             [ class "flex-grow bg-purple-500"
             ]
             [ div [ class "px-4 md:max-w-sm md:mx-auto md:pt-20 md:px-0 text-white text-body" ]
-                [ p
-                    [ class "py-4 mb-4 text-body border-b border-dotted text-white border-white" ]
-                    [ text <| "Step 2 of 2 / "
-                    , strong [] [ text "12 words" ]
-                    ]
+                [ viewTitleForStep 2
                 , p
                     [ class "text-xl mb-3" ]
                     [ text_ "register.account_created.greet"
@@ -268,12 +285,8 @@ view guest model =
                 [ class "px-4 md:max-w-sm md:mx-auto md:pt-20 md:px-0"
                 , onSubmit ValidateForm
                 ]
-                [ p
-                    [ class "py-4 mb-4 text-body border-b border-dotted text-grey border-grey-500" ]
-                    [ text <| "Step 1 of 2 / "
-                    , strong [ class "text-black" ] [ text "Basic Information" ]
-                    ]
-                , viewServerErrors model.problems
+                [ viewServerErrors model.problems
+                , viewTitleForStep 1
                 , viewField
                     shared
                     (Field
@@ -378,9 +391,11 @@ viewField ({ translations } as shared) { translationSuffix, isDisabled, currentV
             List.map (viewFieldProblem fieldName) problems
 
         id_ =
-            -- In HTML `id` attribute may contain dots,
-            -- so it's convenient to use translation suffix here (e.g. `register.form.account`)
             translationSuffix
+
+        tr : String -> I18Next.Replacements -> String
+        tr =
+            I18Next.tr shared.translations I18Next.Curly
     in
     div [ class "mb-10 relative" ]
         [ viewFieldLabel shared translationSuffix id_ Nothing
@@ -400,7 +415,13 @@ viewField ({ translations } as shared) { translationSuffix, isDisabled, currentV
         , case fieldName of
             Account ->
                 div [ class "input-label pr-1 text-right text-purple-100 font-bold mt-1 absolute right-0" ]
-                    [ text <| (String.fromInt <| String.length currentValue) ++ " of 12" ]
+                    [ text <|
+                        tr
+                            "general.remains"
+                            [ ( "current", String.fromInt <| String.length currentValue )
+                            , ( "total", "12" )
+                            ]
+                    ]
 
             _ ->
                 text ""

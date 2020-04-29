@@ -20,7 +20,7 @@ import Asset.Icon as Icon
 import Browser.Dom as Dom
 import Browser.Events
 import Eos.Account as Eos
-import Html exposing (Html, a, button, div, h2, img, input, label, li, p, span, text, textarea, ul)
+import Html exposing (Html, a, button, div, h2, img, input, label, li, p, span, strong, text, textarea, ul)
 import Html.Attributes exposing (attribute, autocomplete, class, disabled, for, id, maxlength, pattern, placeholder, required, src, title, type_, value)
 import Html.Events exposing (onClick, onInput, onSubmit)
 import Http
@@ -160,18 +160,22 @@ passphraseValidator =
                             in
                             List.all onlyLetters words
 
+                        allWordsHaveAtLeastThreeLetters : Bool
                         allWordsHaveAtLeastThreeLetters =
                             List.all (\w -> String.length w > 2) words
+
+                        trPrefix s =
+                            "auth.login.wordsMode.input." ++ s
                     in
                     {- These rules force user to use 12 words instead of PK. -}
                     if not has12words then
-                        [ InvalidEntry Passphrase "Please, enter 12 words (TR)" ]
+                        [ InvalidEntry Passphrase (trPrefix "notPassphraseError") ]
 
                     else if not allWordsConsistOnlyOfLetters then
-                        [ InvalidEntry Passphrase "Please, use only basic Latin letters (TR)" ]
+                        [ InvalidEntry Passphrase (trPrefix ".notLatinLettersError") ]
 
                     else if not allWordsHaveAtLeastThreeLetters then
-                        [ InvalidEntry Passphrase "All words should have at least 3 letters (TR)" ]
+                        [ InvalidEntry Passphrase (trPrefix ".atLeastThreeLettersError") ]
 
                     else
                         []
@@ -190,7 +194,7 @@ validatePinNumber pin =
             String.all Char.isDigit pin
     in
     if not hasCorrectLength || not hasOnlyDigits then
-        [ InvalidEntry PinConfirmation "PIN must be 6 digits (TR)" ]
+        [ InvalidEntry PinConfirmation "auth.pin.shouldHaveSixDigitsError" ]
 
     else
         []
@@ -200,8 +204,8 @@ pinValidator : Validator Problem LoginFormData
 pinValidator =
     Validate.all
         [ Validate.firstError
-            [ Validate.ifBlank .enteredPin (InvalidEntry Pin "Pin can't be blank (TR)")
-            , Validate.ifBlank .enteredPinConfirmation (InvalidEntry PinConfirmation "Pin Confirmation field can't be blank (TR)")
+            [ Validate.ifBlank .enteredPin (InvalidEntry Pin "auth.pin.shouldHaveSixDigitsError")
+            , Validate.ifBlank .enteredPinConfirmation (InvalidEntry PinConfirmation "auth.pin.shouldHaveSixDigitsError")
             , Validate.fromErrors
                 (\form ->
                     let
@@ -215,7 +219,7 @@ pinValidator =
                             pin == pinConfirmed
                     in
                     if not isPinConfirmedCorrectly then
-                        [ InvalidEntry PinConfirmation "PIN and PIN Confirmation must match (TR)" ]
+                        [ InvalidEntry PinConfirmation "auth.pinConfirmation.differsFromPinError" ]
 
                     else
                         validatePinNumber pin
@@ -383,9 +387,23 @@ viewLoginSteps isModal shared model loginStep =
                 ]
 
         viewCreatePin =
+            let
+                trPrefix s =
+                    "auth.pin.instruction." ++ s
+            in
             div []
                 [ illustration "login_pin.svg"
-                , p [ class pClass ] [ text "Cool, now create a six-digit PIN. The PIN is not a password and you can change it each login." ]
+                , p [ class pClass ]
+                    [ text_ (trPrefix "nowCreate")
+                    , text " "
+                    , strong [] [ text_ (trPrefix "sixDigitPin") ]
+                    , text ". "
+                    , text_ (trPrefix "thePin")
+                    , text " "
+                    , strong [] [ text_ (trPrefix "notPassword") ]
+                    , text " "
+                    , text_ (trPrefix "eachLogin")
+                    ]
                 , viewPinField model shared PinInput
                 , div [ class "h-10" ] []
                 , viewPinField model shared PinConfirmationInput
@@ -485,18 +503,18 @@ viewAuthError shared maybeLoginError =
                 ]
 
 
-toggleViewPin : Bool -> Msg -> Html Msg
-toggleViewPin isVisible msg =
+toggleViewPin : Bool -> String -> String -> Msg -> Html Msg
+toggleViewPin isVisible showLabel hideLabel msg =
     button
         [ class "absolute mt-3 uppercase text-xs right-0 mr-3 text-orange-300"
         , onClick msg
         , attribute "tabindex" "-1"
         ]
         [ if isVisible then
-            text "Hide"
+            text hideLabel
 
           else
-            text "Show"
+            text showLabel
         ]
 
 
@@ -1037,6 +1055,13 @@ viewPinField ({ form, problems } as model) shared inputType =
 
                 PinConfirmationInput ->
                     model.pinConfirmationVisibility
+
+        t =
+            I18Next.t shared.translations
+
+        tr : String -> I18Next.Replacements -> String
+        tr =
+            I18Next.tr shared.translations I18Next.Curly
     in
     div [ class "relative" ]
         [ viewFieldLabel shared pinPrompt inputId Nothing
@@ -1061,9 +1086,14 @@ viewPinField ({ form, problems } as model) shared inputType =
             ]
             []
         , div [ class "input-label pr-1 text-right text-white font-bold mt-1 absolute right-0" ]
-            [ text <| (String.fromInt <| String.length val) ++ " of 6"
+            [ text <|
+                tr
+                    "general.remains"
+                    [ ( "current", String.fromInt <| String.length val )
+                    , ( "total", "6" )
+                    ]
             ]
-        , toggleViewPin isVisible toggleVisibilityMsg
+        , toggleViewPin isVisible (t "auth.pin.toggle.show") (t "auth.pin.toggle.hide") toggleVisibilityMsg
         , ul [ class "form-error-on-dark-bg absolute" ] errors
         ]
 

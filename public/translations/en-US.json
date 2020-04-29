@@ -85,6 +85,9 @@
     "unknown": "Uoh. Something wrong happened.",
     "accountNotFound": "Account not found. Are you sure you created your account?"
   },
+  "general": {
+    "remains": "{{current}} of {{total}}"
+  },
   "auth": {
     "title": "Use your private key and PIN or log in by",
     "loginPin": "Welcome {{accountName}}, use your security PIN to login",
@@ -105,26 +108,48 @@
         "input": {
           "label": "Your 12 words or private key",
           "tooltip": "You can use your PRIVATE KEY too",
-          "toggle": "I want to use the Private Key"
+          "toggle": "I want to use the Private Key",
+          "notPassphraseError": "Please, enter 12 words",
+          "notLatinLettersError": "Please, use only basic Latin letters",
+          "atLeastThreeLettersError": "All words should have at least 3 letters"
         }
       },
-      "submit": "Log in",
+      "submit": "Sign In",
       "register": "Don't have an account yet? ",
       "registerLink": "Create now"
     },
     "pin": {
+      "instruction": {
+        "nowCreate": "Cool, now create a",
+        "sixDigitPin": "six-digit PIN",
+        "thePin": "The PIN",
+        "notPassword": "is not a password",
+        "eachLogin": "and you can change it each login."
+      },
+      "toggle": {
+        "show": "Show",
+        "hide": "Hide"
+      },
       "label": "Create a new six-digit PIN",
-      "tooltip": "The PIN must contain 6 numbers, for your security, enter the PIN you created each time we request it"
+      "tooltip": "The PIN must contain 6 numbers, for your security, enter the PIN you created each time we request it",
+      "shouldHaveSixDigitsError": "PIN should have 6 digits",
+      "pin": "PIN",
+      "confirmPin": "Confirm PIN",
+      "pinCharError": "Your PIN must use only numbers"
     },
     "pinConfirmation": {
       "label": "Type again the new six-digit PIN",
-      "tooltip": ""
+      "tooltip": "",
+      "differsFromPinError": "Please enter the same PIN as above"
     }
   },
   "register": {
     "registerTab": "Create your account",
     "loginTab": "Login",
     "form": {
+      "step": "Step {{stepNum}} of 2",
+      "step1_title": "Basic Information",
+      "step2_title": "12 words",
       "name": {
         "label": "Full name",
         "tooltip": "",
@@ -141,10 +166,6 @@
           "placeholder": "Ex.: arlenewa1224"
       },
       "accountCharError": "Invalid character found. Use only letters and numbers between 1-5",
-      "pin": "PIN",
-      "confirmPin": "Confirm PIN",
-      "pinCharError": "Your PIN must use only numbers",
-      "pinConfirmError": "Please enter the same PIN as above",
       "checkingAvailability": "Checking availability of that account",
       "button": "Create"
     },
