@@ -93,7 +93,10 @@
 }
 
 .button-disabled {
-  @apply bg-gray-500 text-red rounded-super text-body;
+  @apply bg-gray-500 text-red rounded-super text-body cursor-not-allowed;
+}
+.button-disabled:hover {
+  @apply bg-gray-500;
 }
 
 .button-success {
