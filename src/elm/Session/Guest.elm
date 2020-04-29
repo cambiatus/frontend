@@ -104,24 +104,31 @@ view thisMsg page ({ shared } as model) content =
                             "bg-white"
             in
             div
-                [ class "md:pl-1/3 lg:pl-1/2 md:bg-cover md:bg-center"
-                , style "background-image" "url(images/login-bg-day.png)"
-                ]
-                [ viewQuote
-                    { photoSrc = "images/register-dog.png"
-                    , name = "Victoria Lane"
-                    , occupation = "Founder"
-                    , quote = "We are designing for a global user base, we can get feedback not just from drivers we see in San Francisco"
-                    }
+                [ class "md:flex" ]
+                [ div
+                    [ class "hidden md:block md:visible min-h-screen md:w-2/5"
+                    , class "bg-center bg-no-repeat"
+                    , style "background-color" "#EFF9FB"
+                    , style "background-position" "center bottom"
+                    , style "background-size" "auto 80%"
+                    , style "background-image" "url(images/auth_bg_full.png)"
+                    ]
+                    [ viewQuote
+                        { photoSrc = "images/woman.png"
+                        , name = "Victoria Lane"
+                        , occupation = "Founder"
+                        , quote = "We are designing for a global user base, we can get feedback not just from drivers we see in San Francisco"
+                        }
+                    ]
                 , div
-                    [ class "min-h-screen"
+                    [ class "min-h-screen md:w-3/5"
                     , class contentBackgroundClass
                     ]
-                    [ div
-                        [ class "md:max-w-lg md:pt-20 md:m-auto" ]
-                        [ viewPageHeader model shared
-                            |> Html.map thisMsg
-                        , main_ []
+                    [ viewPageHeader model shared
+                        |> Html.map thisMsg
+                    , div
+                        [ class "md:max-w-sm md:pt-20 md:m-auto" ]
+                        [ main_ []
                             [ div [] [ content ]
                             ]
                         ]
@@ -132,10 +139,10 @@ view thisMsg page ({ shared } as model) content =
 viewPageHeader : Model -> Shared -> Html Msg
 viewPageHeader model shared =
     header
-        [ class "flex items-center justify-between px-4 py-3 bg-white" ]
+        [ class "flex items-center justify-between pl-4 md:pl-6 py-3 bg-white" ]
         [ div []
             [ img
-                [ class "lg:block h-6"
+                [ class "h-5"
                 , src shared.logo
                 , alt "Cambiatus"
                 ]
@@ -195,22 +202,22 @@ type alias Quote =
 viewQuote : Quote -> Html msg
 viewQuote { photoSrc, name, occupation, quote } =
     div
-        [ class "lg:block lg:visible hidden md:absolute md:left-0 md:w-1/3 lg:w-1/2 md:p-10"
+        [ class "md:block md:visible hidden md:p-7"
         ]
-        [ div [ class "flex items-center mb-3" ]
-            [ div [ class "rounded-full border-white border-2 bg-grey w-16 h-16" ]
+        [ div [ class "flex mb-3 md:flex-col lg:flex-row lg:items-center" ]
+            [ div [ class "rounded-full overflow-hidden border-white border-2 bg-grey w-14 h-14" ]
                 [ img
                     [ class "max-w-full max-h-full"
                     , src photoSrc
                     ]
                     []
                 ]
-            , p [ class "ml-3" ]
+            , p [ class "lg:ml-3 text-body" ]
                 [ span [ class "block text-2xl text-black" ] [ text name ]
-                , span [ class "text-purple-500 text-body uppercase" ] [ text occupation ]
+                , span [ class "text-purple-500 text-xs uppercase" ] [ text occupation ]
                 ]
             ]
-        , p [ class "text-gray-900 max-w-xl" ]
+        , p [ class "text-gray-900 text-body max-w-xl" ]
             [ text <| "“" ++ quote ++ "”" ]
         ]
 
