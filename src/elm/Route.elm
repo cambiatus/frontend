@@ -19,6 +19,7 @@ type Route
     | LoginWithPrivateKey (Maybe Route)
     | Logout
     | Notification
+    | PublicProfile
     | Profile
     | Dashboard
     | Community Symbol
@@ -72,6 +73,7 @@ parser url =
                         (Query.string "redirect")
             )
         , Url.map Logout (s "logout")
+        , Url.map PublicProfile (s "publicprofile")
         , Url.map Profile (s "profile")
         , Url.map Notification (s "notification")
         , Url.map Dashboard (s "dashboard")
@@ -226,6 +228,9 @@ routeToString route =
 
                 Notification ->
                     ( [ "notification" ], [] )
+
+                PublicProfile ->
+                    ( [ "publicprofile" ], [] )
 
                 Profile ->
                     ( [ "profile" ], [] )

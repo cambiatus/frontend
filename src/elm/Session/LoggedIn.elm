@@ -190,6 +190,7 @@ type Page
     | Shop
     | FAQ
     | Profile
+    | PublicProfile
 
 
 view : (Msg -> msg) -> Page -> Model -> Html msg -> Html msg
@@ -284,7 +285,7 @@ viewHelper thisMsg page profile_ ({ shared } as model) content =
 
             Hidden ->
                 text ""
-        , div [ class "flex-grow" ]
+        , div [ class "flex-grow bg-white" ]
             [ content
             ]
         , viewFooter shared
