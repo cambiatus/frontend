@@ -88,6 +88,7 @@ type alias Model =
     , loginError : Maybe String
     , form : LoginFormData
     , pinVisibility : Bool
+    , pinConfirmationVisibility : Bool
     , problems : List Problem
     }
 
@@ -98,6 +99,7 @@ initModel =
     , loginError = Nothing
     , form = initLoginFormData
     , pinVisibility = True
+    , pinConfirmationVisibility = True
     , problems = []
     }
 
@@ -488,14 +490,18 @@ viewAuthError shared maybeLoginError =
                 ]
 
 
-toggleViewPin : Model -> Html Msg
-toggleViewPin model =
-    button [ class "", onClick TogglePinVisibility ]
-        [ if model.pinVisibility then
-            img [ src "/icons/eye-show.svg" ] []
+toggleViewPin : Bool -> Msg -> Html Msg
+toggleViewPin isVisible msg =
+    button
+        [ class "absolute mt-3 uppercase text-xs right-0 mr-3 text-orange-300"
+        , onClick msg
+        , attribute "tabindex" "-1"
+        ]
+        [ if isVisible then
+            text "Hide"
 
           else
-            img [ src "/icons/eye-close.svg" ] []
+            text "Show"
         ]
 
 
@@ -535,6 +541,7 @@ type Msg
     | CompletedLoadProfile Status Eos.Name (Result Http.Error Profile)
     | CompletedCreateProfile Status Eos.Name (Result Http.Error Profile)
     | TogglePinVisibility
+    | TogglePinConfirmationVisibility
     | PressedEnter Bool
     | EnteredPin String
     | EnteredPinConf String
@@ -576,13 +583,21 @@ validationErrorToString shared error =
             t "register.form.pinConfirmError"
 
 
-trimPinNumber : String -> Int -> String
-trimPinNumber pin desiredLength =
-    if String.length pin > desiredLength then
-        String.slice 0 desiredLength pin
+trimPinNumber : Int -> String -> String -> String
+trimPinNumber desiredLength oldPin newPin =
+    let
+        correctedPIN =
+            if String.all Char.isDigit newPin then
+                newPin
+
+            else
+                oldPin
+    in
+    if String.length correctedPIN > desiredLength then
+        String.slice 0 desiredLength correctedPIN
 
     else
-        pin
+        correctedPIN
 
 
 update : Msg -> Shared -> Model -> Bool -> UpdateResult
@@ -594,7 +609,10 @@ update msg shared model showAuthModal =
                     model.form
             in
             { model
-                | form = { currentForm | enteredPin = trimPinNumber pin 6 }
+                | form =
+                    { currentForm
+                        | enteredPin = trimPinNumber 6 currentForm.enteredPin pin
+                    }
 
                 -- show validation errors only when form submitted
                 , loginError = Nothing
@@ -608,7 +626,10 @@ update msg shared model showAuthModal =
                     model.form
             in
             { model
-                | form = { currentForm | enteredPinConfirmation = trimPinNumber pin 6 }
+                | form =
+                    { currentForm
+                        | enteredPinConfirmation = trimPinNumber 6 currentForm.enteredPinConfirmation pin
+                    }
 
                 -- show validation errors only when form submitted
                 , loginError = Nothing
@@ -805,6 +826,9 @@ update msg shared model showAuthModal =
         TogglePinVisibility ->
             { model | pinVisibility = not model.pinVisibility } |> UR.init
 
+        TogglePinConfirmationVisibility ->
+            { model | pinConfirmationVisibility = not model.pinConfirmationVisibility } |> UR.init
+
         PressedEnter val ->
             if val && showAuthModal then
                 UR.init model
@@ -933,6 +957,9 @@ msgToString msg =
         TogglePinVisibility ->
             [ "TogglePinVisibility" ]
 
+        TogglePinConfirmationVisibility ->
+            [ "TogglePinConfirmationVisibility" ]
+
         PressedEnter _ ->
             [ "PressedEnter" ]
 
@@ -958,7 +985,7 @@ viewFieldProblem { translations } field problem =
 
 
 viewPinField : Model -> Shared -> PinField -> Html Msg
-viewPinField { form, problems } shared inputType =
+viewPinField ({ form, problems } as model) shared inputType =
     let
         pinPrompt =
             case inputType of
@@ -999,12 +1026,35 @@ viewPinField { form, problems } shared inputType =
 
                 PinConfirmationInput ->
                     EnteredPinConf
+
+        toggleVisibilityMsg =
+            case inputType of
+                PinInput ->
+                    TogglePinVisibility
+
+                PinConfirmationInput ->
+                    TogglePinConfirmationVisibility
+
+        isVisible =
+            case inputType of
+                PinInput ->
+                    model.pinVisibility
+
+                PinConfirmationInput ->
+                    model.pinConfirmationVisibility
     in
-    div [ class "" ]
+    div [ class "relative" ]
         [ viewFieldLabel shared pinPrompt inputId Nothing
         , input
             [ class "form-input min-w-full tracking-widest"
-            , type_ "number"
+            , type_ <|
+                if isVisible then
+                    -- `"text"` is used here because with `"number"` field restrictions for the PIN
+                    -- don't apply after toggling visibility (see `trimPinNumber` function).
+                    "text"
+
+                else
+                    "password"
             , id inputId
             , placeholder "******"
             , maxlength 6
@@ -1015,6 +1065,10 @@ viewPinField { form, problems } shared inputType =
             , attribute "inputmode" "numeric"
             ]
             []
+        , div [ class "input-label pr-1 text-right text-white font-bold mt-1 absolute right-0" ]
+            [ text <| (String.fromInt <| String.length val) ++ " of 6"
+            ]
+        , toggleViewPin isVisible toggleVisibilityMsg
         , ul [ class "form-error-on-dark-bg absolute" ] errors
         ]
 
