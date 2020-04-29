@@ -340,7 +340,7 @@ viewAnalysisList loggedIn profile model =
                             , text_ "dashboard.analysis.title.2"
                             ]
                         , a
-                            [ class "button button-secondary h-8 w-20"
+                            [ class "button button-secondary font-medium h-8 w-20"
                             , Route.href Route.Analysis
                             ]
                             [ text_ "dashboard.analysis.all" ]
@@ -806,6 +806,7 @@ fetchAvailableAnalysis shared communityId account =
             { claimer = Absent
             , symbol = Present (Eos.symbolToString communityId)
             , validator = Present (Eos.nameToString account)
+            , all = Absent
             }
     in
     Api.Graphql.query

@@ -32,9 +32,7 @@ import Utils
 init : LoggedIn.Model -> Symbol -> Int -> ( Model, Cmd Msg )
 init { shared } communityId claimId =
     ( initModel communityId claimId
-    , Cmd.batch
-        [ fetchClaim claimId shared
-        ]
+    , fetchClaim claimId shared
     )
 
 

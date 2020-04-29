@@ -8,8 +8,13 @@ module Page.Dashboard.Analysis exposing
     , view
     )
 
+import Api.Graphql
+import Cambiatus.Query
 import Claim
+import Eos exposing (Symbol)
+import Eos.Account as Eos
 import Graphql.Http
+import Graphql.OptionalArgument exposing (OptionalArgument(..))
 import Html exposing (Html, div, text)
 import Html.Attributes exposing (class)
 import I18Next
@@ -17,13 +22,14 @@ import Json.Encode as Encode
 import Page
 import Route
 import Session.LoggedIn as LoggedIn exposing (External)
+import Session.Shared exposing (Shared)
 import UpdateResult as UR
 
 
 init : LoggedIn.Model -> ( Model, Cmd Msg )
-init { shared } =
+init { shared, accountName, selectedCommunity } =
     ( Loading
-    , Cmd.none
+    , fetchAnalysis shared selectedCommunity accountName
     )
 
 
@@ -33,7 +39,7 @@ init { shared } =
 
 type Model
     = Loading
-    | Loaded Filter
+    | Loaded Filter (List Claim.Model)
     | Failed
 
 
@@ -60,7 +66,7 @@ view ({ shared } as loggedIn) model =
         Loading ->
             Page.fullPageLoading
 
-        Loaded filter ->
+        Loaded filter _ ->
             div [ class "bg-white py-2" ]
                 [ Page.viewHeader loggedIn (t "dashboard.all_analysis.title") Route.Dashboard
                 , text "WIP"
@@ -79,17 +85,33 @@ type alias UpdateResult =
 
 
 type Msg
-    = ChecksLoaded (Result (Graphql.Http.Error (List Claim.Model)) (List Claim.Model))
+    = ClaimsLoaded (Result (Graphql.Http.Error (List Claim.Model)) (List Claim.Model))
 
 
 update : Msg -> Model -> LoggedIn.Model -> UpdateResult
 update msg model _ =
     case msg of
-        ChecksLoaded (Ok _) ->
+        ClaimsLoaded (Ok results) ->
+            Loaded All results |> UR.init
+
+        ClaimsLoaded (Err _) ->
             model |> UR.init
 
-        ChecksLoaded (Err _) ->
-            model |> UR.init
+
+fetchAnalysis : Shared -> Symbol -> Eos.Name -> Cmd Msg
+fetchAnalysis shared communityId account =
+    let
+        arg =
+            { claimer = Absent
+            , symbol = Present (Eos.symbolToString communityId)
+            , validator = Present (Eos.nameToString account)
+            , all = Present True
+            }
+    in
+    Api.Graphql.query
+        shared
+        (Cambiatus.Query.claims { input = arg } Claim.selectionSet)
+        ClaimsLoaded
 
 
 jsAddressToMsg : List String -> Encode.Value -> Maybe Msg
@@ -102,5 +124,5 @@ jsAddressToMsg addr _ =
 msgToString : Msg -> List String
 msgToString msg =
     case msg of
-        ChecksLoaded r ->
+        ClaimsLoaded r ->
             [ "ChecksLoaded", UR.resultToString r ]

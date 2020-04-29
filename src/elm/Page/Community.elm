@@ -84,7 +84,13 @@ verificationHistorySelectionSet stringSym =
     let
         vInput : ClaimsRequiredArguments
         vInput =
-            { input = { validator = Absent, claimer = Absent, symbol = Present stringSym } }
+            { input =
+                { validator = Absent
+                , claimer = Absent
+                , symbol = Present stringSym
+                , all = Absent
+                }
+            }
 
         selectionSet : SelectionSet ClaimResponse Cambiatus.Object.Claim
         selectionSet =
