@@ -1100,9 +1100,9 @@ viewPinField ({ form, problems } as model) shared inputType =
         , div [ class "input-label pr-1 text-right text-white font-bold mt-1 absolute right-0" ]
             [ text <|
                 tr
-                    "general.remains"
+                    "edit.input_counter"
                     [ ( "current", String.fromInt <| String.length val )
-                    , ( "total", "6" )
+                    , ( "max", "6" )
                     ]
             ]
         , toggleViewPin isVisible (t "auth.pin.toggle.show") (t "auth.pin.toggle.hide") toggleVisibilityMsg

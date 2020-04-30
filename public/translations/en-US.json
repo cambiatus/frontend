@@ -85,9 +85,6 @@
     "unknown": "Uoh. Something wrong happened.",
     "accountNotFound": "Account not found. Are you sure you created your account?"
   },
-  "general": {
-    "remains": "{{current}} of {{total}}"
-  },
   "auth": {
     "title": "Use your private key and PIN or log in by",
     "loginPin": "Welcome {{accountName}}, use your security PIN to login",
@@ -106,7 +103,7 @@
       },
       "wordsMode": {
         "input": {
-          "label": "Your 12 words or private key",
+          "label": "Your 12 words (you saved when creating your account)",
           "tooltip": "You can use your PRIVATE KEY too",
           "toggle": "I want to use the Private Key",
           "notPassphraseError": "Please, enter 12 words",
@@ -141,7 +138,7 @@
       "label": "Your six-digit PIN"
     },
     "pinConfirmation": {
-      "label": "Type again the new six-digit PIN",
+      "label": "Type the PIN again",
       "tooltip": "",
       "differsFromPinError": "Please enter the same PIN as above"
     }

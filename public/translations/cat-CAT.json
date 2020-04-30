@@ -105,7 +105,10 @@
         "input": {
           "label": "Les vostres 12 paraules (heu desat en crear el vostre compte)",
           "tooltip": "També podeu fer servir la tecla PRIVADA",
-          "toggle": "Vull utilitzar la clau privada"
+          "toggle": "Vull utilitzar la clau privada",
+          "notPassphraseError": "Introduïu 12 paraules",
+          "notLatinLettersError": "Si us plau, utilitzeu només lletres bàsiques llatines",
+          "atLeastThreeLettersError": "Totes les paraules han de tenir almenys 3 lletres"
         }
       },
       "submit": "Inicieu la sessió",
@@ -113,18 +116,40 @@
       "registerLink": "Crea ara"
     },
     "pin": {
-      "label": "PIN de seguretat (només números)",
-      "tooltip": "El PIN ha de contenir 6 números, per a la vostra seguretat, introduïu el PIN que creeu cada vegada que el sol·licitem"
+      "instruction": {
+        "nowCreate": "Genial, ara crea un",
+        "sixDigitPin": "PIN de sis dígits",
+        "thePin": "El PIN",
+        "notPassword": "no és una contrasenya",
+        "eachLogin": "i podeu canviar-lo cada inici de sessió."
+      },
+      "label": "Creeu un nou PIN de sis dígits",
+      "tooltip": "El PIN ha de contenir 6 números, per a la vostra seguretat, introduïu el PIN que creeu cada vegada que el sol·licitem",
+      "toggle": {
+        "show": "Espectacle",
+        "hide": "Amagar"
+      },
+      "shouldHaveSixDigitsError": "El PIN ha de tenir 6 dígits",
+      "pin": "PIN",
+      "confirmPin": "Confirmeu el PIN",
+      "pinCharError": "El PIN ha d’utilitzar només números"
+    },
+    "pinPopup": {
+      "label": "El vostre PIN de sis dígits"
     },
     "pinConfirmation": {
       "label": "Torneu a escriure el PIN",
-      "tooltip": ""
+      "tooltip": "",
+      "differsFromPinError": "Introduïu el mateix PIN anterior"
     }
   },
   "register": {
     "registerTab": "Crea el teu compte",
     "loginTab": "Inicieu la sessió",
     "form": {
+      "step": "Pas {{stepNum}} de 2",
+      "step1_title": "Informació bàsica",
+      "step2_title": "12 paraules",
       "name": {
         "label": "Nom complet",
         "tooltip": "",
@@ -154,10 +179,11 @@
       "title": "Oh-oh. Alguna cosa ha sortit malament mentre creàvem el teu compte"
     },
     "account_created": {
-      "congrats": "Felicitats",
-      "account": "El vostre compte ha estat",
-      "created": "creat ;)",
-      "welcome_message": "Benvingut {{username}}, sempre podreu accedir a Cambiatus amb aquest dispositiu de manera senzilla i segura, però si voleu utilitzar un ordinador, smartphone o tauleta diferent, haureu de tenir la informació següent:",
+      "greet": "Ei",
+      "last_step": "és l’últim pas i el més important",
+      "copy": "copieu",
+      "i_saved_words": "He copiat i enganxat en un lloc segur les 12 paraules que va demanar Cambiatus",
+      "words_copied": "es van copiar al porta-retalls",
       "twelve_words": "Les vostres 12 paraules",
       "private_key": "La vostra clau privada",
       "recommendation": "Us recomanem que deseu aquesta informació fent clic al botó següent, si la perds, no podreu tornar a iniciar la sessió al vostre compte",

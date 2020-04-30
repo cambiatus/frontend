@@ -417,9 +417,9 @@ viewField ({ translations } as shared) { translationSuffix, isDisabled, currentV
                 div [ class "input-label pr-1 text-right text-purple-100 font-bold mt-1 absolute right-0" ]
                     [ text <|
                         tr
-                            "general.remains"
+                            "edit.input_counter"
                             [ ( "current", String.fromInt <| String.length currentValue )
-                            , ( "total", "12" )
+                            , ( "max", "12" )
                             ]
                     ]
 

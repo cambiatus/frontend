@@ -110,7 +110,10 @@
         "input": {
           "label": "Suas 12 palavras (você salvou ao criar sua conta)",
           "tooltip": "Você também pode usar sua CHAVE PRIVADA",
-          "toggle": "Eu quero usar a chave privada"
+          "toggle": "Eu quero usar a chave privada",
+          "notPassphraseError": "Por favor, digite 12 palavras",
+          "notLatinLettersError": "Por favor, use apenas letras latinas básicas",
+          "atLeastThreeLettersError": "Todas as palavras devem ter pelo menos 3 letras"
         }
       },
       "submit": "Entrar",
@@ -118,18 +121,40 @@
       "registerLink": "Crie agora"
     },
     "pin": {
-      "label": "PIN de segurança (apenas números)",
-      "tooltip": "O PIN deve conter 6 números, para sua segurança, insira o PIN que você criou toda vez que o solicitarmos"
+      "instruction": {
+        "nowCreate": "Legal, agora crie um",
+        "sixDigitPin": "PIN de seis dígitos",
+        "thePin": "O PIN",
+        "notPassword": "não é uma senha",
+        "eachLogin": "e você pode alterá-la a cada login."
+      },
+      "toggle": {
+        "show": "Exposição",
+        "hide": "Ocultar"
+      },
+      "label": "Crie um novo PIN de seis dígitos",
+      "tooltip": "O PIN deve conter 6 números, para sua segurança, insira o PIN que você criou toda vez que o solicitarmos",
+      "shouldHaveSixDigitsError": "O PIN deve ter 6 dígitos",
+      "pin": "PIN",
+      "confirmPin": "Confirmar PIN",
+      "pinCharError": "Seu PIN deve usar apenas números"
+    },
+    "pinPopup": {
+      "label": "Seu PIN de seis dígitos"
     },
     "pinConfirmation": {
       "label": "Digite o PIN novamente",
-      "tooltip": ""
+      "tooltip": "",
+      "differsFromPinError": "Digite o mesmo PIN acima"
     }
   },
   "register": {
     "registerTab": "Crie sua conta",
     "loginTab": "Entrar",
     "form": {
+      "step": "Passo {{stepNum}} de 2",
+      "step1_title": "Informação básica",
+      "step2_title": "12 palavras",
       "name": {
         "label": "Nome completo",
         "tooltip": "",
@@ -159,10 +184,11 @@
       "title": "Opa. Algo de errado aconteceu enquanto criavamos sua conta"
     },
     "account_created": {
-      "congrats": "Parabéns",
-      "account": "Sua conta foi",
-      "created": "criada ;)",
-      "welcome_message": "Seja bem-vindo {{username}}, você sempre poderá acessar o Cambiatus com este dispositivo de maneira simples e segura, mas se quiser usar um computador, smartphone ou tablet diferente, precisará ter as seguintes informações em mãos:",
+      "greet": "Ei",
+      "last_step": "é o último passo e o mais importante",
+      "copy": "copie",
+      "i_saved_words": "Copiei e colei em um local seguro as 12 palavras que Cambiatus pediu",
+      "words_copied": "were copied to clipboard",
       "twelve_words": "Suas 12 palavras",
       "private_key": "Sua chave privada",
       "recommendation": "Recomendamos que você salve essas informações clicando no botão abaixo. Se você perder, não poderá fazer login novamente na sua conta.",
