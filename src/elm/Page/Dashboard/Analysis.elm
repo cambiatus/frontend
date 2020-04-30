@@ -143,7 +143,7 @@ viewClaim ({ shared, accountName, selectedCommunity } as loggedIn) filter claim 
                     [ div
                         [ class "bg-gray-100 flex items-center justify-center h-6 w-32" ]
                         [ p
-                            [ class ("font-sans text-caption uppercase " ++ textColor) ]
+                            [ class ("text-caption uppercase " ++ textColor) ]
                             [ text msg ]
                         ]
                     , p [ class "text-body" ]
