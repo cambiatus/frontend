@@ -265,7 +265,7 @@ view guest model =
                         ]
                     ]
                 , button
-                    [ onClick DownloadPdf
+                    [ onClick <| DownloadPdf (words model)
                     , class "button button-primary w-full"
                     , disabled (not model.isAgreedToSavePassphrase)
                     , class <|
@@ -513,7 +513,7 @@ type Msg
     | CompletedCreateProfile AccountKeys (Result Http.Error Profile)
     | CompletedLoadProfile AccountKeys (Result Http.Error Profile)
     | AgreedToSave12Words Bool
-    | DownloadPdf
+    | DownloadPdf String
     | PdfDownloaded
     | PressedEnter Bool
     | CopyToClipboard String
@@ -672,7 +672,7 @@ update maybeInvitation msg model guest =
             { model | isPassphraseCopiedToClipboard = True }
                 |> UR.init
 
-        DownloadPdf ->
+        DownloadPdf passPhrase ->
             model
                 |> UR.init
                 |> UR.addPort
@@ -680,7 +680,9 @@ update maybeInvitation msg model guest =
                     , responseData = Encode.null
                     , data =
                         Encode.object
-                            [ ( "name", Encode.string "printAuthPdf" ) ]
+                            [ ( "name", Encode.string "printAuthPdf" )
+                            , ( "passphrase", Encode.string passPhrase )
+                            ]
                     }
 
         PdfDownloaded ->
@@ -898,7 +900,7 @@ msgToString msg =
         CopiedToClipboard ->
             [ "CopiedToClipboard" ]
 
-        DownloadPdf ->
+        DownloadPdf _ ->
             [ "DownloadPdf" ]
 
         PdfDownloaded ->

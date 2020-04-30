@@ -1,4 +1,4 @@
-module.exports = function (words, key) {
+module.exports = function (words, key = '') {
  return {
   pageSize: 'A4',
     pageMargins: [34, 32, 34, 30],

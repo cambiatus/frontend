@@ -231,7 +231,9 @@ view_ loggedIn profile model =
                                 , ( "circle-background", True )
                                 , ( "circle-background--primary", True )
                                 ]
-                            , onClick DownloadPdf
+
+                            -- TODO: Should be passphrase, not privateKey
+                            , onClick (DownloadPdf privateKey)
                             , type_ "button"
                             , title (t loggedIn.shared.translations "profile.actions.viewPrivatekey")
                             ]
@@ -577,7 +579,7 @@ type Msg
     | CompletedPushUpload (Result (Graphql.Http.Error ()) ())
     | GotPushPreference Bool
     | CheckPushPref
-    | DownloadPdf
+    | DownloadPdf String
     | PressedEnter Bool
 
 
@@ -834,7 +836,7 @@ update msg model loggedIn =
                         Encode.object [ ( "name", Encode.string "checkPushPref" ) ]
                     }
 
-        DownloadPdf ->
+        DownloadPdf passPhrase ->
             model
                 |> UR.init
                 |> UR.addPort
@@ -842,7 +844,9 @@ update msg model loggedIn =
                     , responseData = Encode.null
                     , data =
                         Encode.object
-                            [ ( "name", Encode.string "printAuthPdf" ) ]
+                            [ ( "name", Encode.string "printAuthPdf" )
+                            , ( "passphrase", Encode.string passPhrase )
+                            ]
                     }
 
         PressedEnter val ->
@@ -1032,7 +1036,7 @@ msgToString msg =
         CheckPushPref ->
             [ "CheckPushPref" ]
 
-        DownloadPdf ->
+        DownloadPdf _ ->
             [ "DownloadPdf" ]
 
         PressedEnter _ ->

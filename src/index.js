@@ -504,11 +504,8 @@ async function handleJavascriptPort (arg) {
     }
     case 'printAuthPdf': {
       devLog('=======================', 'printAuthPdf')
-      let words = document.getElementById('12__words').textContent
-      let pkey = document.getElementById('p__key').textContent
 
-      const definition = pdfDefinition(words, pkey)
-
+      const definition = pdfDefinition(arg.data.passphrase)
       const pdf = pdfMake.createPdf(definition)
       pdf.download('Cambiatus.pdf')
 
