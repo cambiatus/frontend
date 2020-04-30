@@ -497,16 +497,12 @@ viewAuthError shared maybeLoginError =
             div [ class "bg-red border-lg rounded p-4 mt-2" ]
                 [ p [ class "text-white" ]
                     [ text (t shared.translations error)
-                    , if error == "error.accountNotFound" then
-                        -- Let user to go back and correct 12 words
-                        span
-                            [ class "block mt-2 text-body cursor-pointer", onClick ClickedViewOptions ]
-                            [ text "← "
-                            , span [ class "underline" ] [ text (t shared.translations "auth.backToWords") ]
-                            ]
-
-                      else
-                        text ""
+                    , span
+                        -- Let the User to go back and correct 12 words
+                        [ class "block mt-2 text-body cursor-pointer", onClick ClickedViewOptions ]
+                        [ text "← "
+                        , span [ class "underline" ] [ text (t shared.translations "back") ]
+                        ]
                     ]
                 ]
 
