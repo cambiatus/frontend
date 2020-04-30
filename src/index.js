@@ -12,9 +12,15 @@ import { Elm } from './elm/Main.elm'
 import * as Sentry from '@sentry/browser'
 import * as AbsintheSocket from '@absinthe/socket'
 import pdfMake from 'pdfmake/build/pdfmake'
-import pdfFonts from 'pdfmake/build/vfs_fonts'
-const { Socket: PhoenixSocket } = require('phoenix')
+import pdfFonts from './vfs_fonts'
 pdfMake.vfs = pdfFonts.pdfMake.vfs
+pdfMake.fonts = {
+  Gotham: {
+    normal: 'gotham-rounded-book.otf',
+    bold: 'gotham-rounded-bold.otf'
+  }
+}
+const { Socket: PhoenixSocket } = require('phoenix')
 
 // =========================================
 // App startup
