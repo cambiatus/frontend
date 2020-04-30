@@ -93,7 +93,7 @@ view_ loggedIn profile model =
             loggedIn.shared.endpoints.ipfs
     in
     div [ class "h-full flex items-center flex-col" ]
-        [ viewHeader loggedIn.shared
+        [ Page.viewHeader loggedIn "Profile" Route.Communities
         , div
             [ class "grid w-full pt-4 h-full bg-white max-w-6xl gap-4"
             , style "grid-template" """
@@ -182,25 +182,6 @@ viewUserInfo name email username =
         , li
             [ class contentClasses ]
             [ text username ]
-        ]
-
-
-viewHeader : Shared -> Html msg
-viewHeader shared =
-    div
-        [ class "h-16 w-full bg-indigo-500 flex px-4 items-center"
-        , style "grid-area" "header"
-        ]
-        [ a
-            [ class "items-center flex absolute"
-            , Route.href Route.Communities
-            ]
-            [ Icons.back ""
-            , p [ class "text-white text-sm ml-2" ]
-                [ text (t shared.translations "back")
-                ]
-            ]
-        , p [ class "text-white mx-auto" ] [ text "Profile" ]
         ]
 
 
