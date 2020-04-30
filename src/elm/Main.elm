@@ -723,10 +723,10 @@ changeRouteTo maybeRoute model =
                 >> updateStatusWith Notification GotNotificationMsg model
                 |> withLoggedIn Route.Notification
 
-        Just Route.PublicProfile ->
-            PublicProfile.init
+        Just (Route.PublicProfile accountName) ->
+            (\l -> PublicProfile.init l accountName)
                 >> updateStatusWith PublicProfile GotPublicProfileMsg model
-                |> withLoggedIn Route.PublicProfile
+                |> withLoggedIn (Route.PublicProfile accountName)
 
         Just Route.Profile ->
             Profile.init

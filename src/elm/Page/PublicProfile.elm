@@ -1,6 +1,7 @@
 module Page.PublicProfile exposing (Model, Msg, init, jsAddressToMsg, msgToString, update, view)
 
 import Api.Graphql
+import Eos
 import Eos.Account as Eos
 import Graphql.Http
 import Html exposing (..)
@@ -16,12 +17,12 @@ import Session.Shared exposing (Shared)
 import UpdateResult as UR
 
 
-init : LoggedIn.Model -> ( Model, Cmd Msg )
-init loggedIn =
+init : LoggedIn.Model -> String -> ( Model, Cmd Msg )
+init loggedIn accountName =
     let
         profileQuery =
             Api.Graphql.query loggedIn.shared
-                (Profile.query loggedIn.accountName)
+                (Profile.query (Eos.stringToName accountName))
                 CompletedProfileLoad
     in
     ( initModel loggedIn
