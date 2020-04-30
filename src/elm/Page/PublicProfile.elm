@@ -1,6 +1,7 @@
 module Page.PublicProfile exposing (Model, Msg, init, jsAddressToMsg, msgToString, update, view)
 
 import Api.Graphql
+import Avatar
 import Eos
 import Eos.Account as Eos
 import Graphql.Http
@@ -87,6 +88,9 @@ view_ loggedIn profile model =
 
         account =
             Eos.nameToString profile.account
+
+        ipfsUrl =
+            loggedIn.shared.endpoints.ipfs
     in
     div [ class "h-full flex items-center flex-col" ]
         [ viewHeader loggedIn.shared
@@ -98,12 +102,7 @@ view_ loggedIn profile model =
                                  ". extra   extra   extra ." / 1px 84px auto auto 1px
                                  """
             ]
-            [ img
-                [ class "rounded-full w-20 h-20"
-                , style "grid-area" "avatar"
-                , src "https://b.thumbs.redditmedia.com/4_F9NWICIq_yOAFfRqg37l3n9vFs3Li5qQMyN2QzayQ.png"
-                ]
-                []
+            [ div [ style "grid-area" "avatar" ] [ Avatar.view ipfsUrl profile.avatar "w-20 h-20" ]
             , div [ style "grid-area" "info" ] [ viewUserInfo userName email account ]
             , div [ style "grid-area" "desc" ] [ viewUserDescription description ]
             , div [ style "grid-area" "extra" ]
