@@ -205,14 +205,6 @@ async function handleJavascriptPort (arg) {
             })
           )
 
-          storePin(
-            Object.assign(data, {
-              accountName: arg.data.account,
-              privateKey: privateKey
-            }),
-            arg.data.pin
-          )
-
           const response = {
             address: arg.responseAddress,
             addressData: arg.responseData,
