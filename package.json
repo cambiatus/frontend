@@ -9,7 +9,7 @@
     "build": "yarn transform && yarn bundle",
     "bundle": "NODE_ENV=production yarn webpack --color --mode=production --config config/webpack.config.prod.js",
     "transform": "postcss src/styles/main.css -o src/styles/processed.css",
-    "start": "yarn transform && standard && npx elm-app start",
+    "start": "standard && node scripts/start.js",
     "make": "elm make",
     "repl": "elm repl",
     "reactor": "elm reactor",
