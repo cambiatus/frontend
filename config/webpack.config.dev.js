@@ -195,10 +195,13 @@ module.exports = {
           {
             loader: require.resolve('css-loader'),
             options: {
-              importLoaders: 1
+              importLoaders: 1,
+              sourceMap: true
             }
           },
-          { loader: 'postcss-loader' }
+          { loader: 'postcss-loader',
+            options: { sourceMap: true }
+          }
         ]
       },
 
