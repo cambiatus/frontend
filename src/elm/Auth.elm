@@ -496,14 +496,7 @@ viewAuthError shared maybeLoginError =
         Just error ->
             div [ class "bg-red border-lg rounded p-4 mt-2" ]
                 [ p [ class "text-white" ]
-                    [ text (t shared.translations error)
-                    , span
-                        -- Let the User to go back and correct 12 words
-                        [ class "block mt-2 text-body cursor-pointer", onClick ClickedViewOptions ]
-                        [ text "← "
-                        , span [ class "underline" ] [ text (t shared.translations "back") ]
-                        ]
-                    ]
+                    [ text (t shared.translations error) ]
                 ]
 
 
