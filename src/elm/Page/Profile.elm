@@ -231,8 +231,6 @@ view_ loggedIn profile model =
                                 , ( "circle-background", True )
                                 , ( "circle-background--primary", True )
                                 ]
-
-                            -- TODO: Should be passphrase, not privateKey
                             , onClick (DownloadPdf privateKey)
                             , type_ "button"
                             , title (t loggedIn.shared.translations "profile.actions.viewPrivatekey")
