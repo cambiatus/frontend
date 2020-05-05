@@ -24,6 +24,7 @@ type Route
     | Community Symbol
     | Communities
     | NewCommunity
+    | CommunitySettings Symbol
     | EditCommunity Symbol
     | Objectives Symbol
     | NewObjective Symbol
@@ -79,6 +80,7 @@ parser url =
         , Url.map NewCommunity (s "community" </> s "new")
         , Url.map Community (s "community" </> Eos.symbolUrlParser)
         , Url.map EditCommunity (s "community" </> Eos.symbolUrlParser </> s "edit")
+        , Url.map CommunitySettings (s "community" </> Eos.symbolUrlParser </> s "settings")
         , Url.map Objectives (s "community" </> Eos.symbolUrlParser </> s "objectives")
         , Url.map NewObjective (s "community" </> Eos.symbolUrlParser </> s "objectives" </> s "new")
         , Url.map EditObjective (s "community" </> Eos.symbolUrlParser </> s "objectives" </> int </> s "edit")
@@ -235,6 +237,9 @@ routeToString route =
 
                 Community symbol ->
                     ( [ "community", Eos.symbolToString symbol ], [] )
+
+                CommunitySettings symbol ->
+                    ( [ "community", Eos.symbolToString symbol, "settings" ], [] )
 
                 NewCommunity ->
                     ( [ "community", "new" ], [] )

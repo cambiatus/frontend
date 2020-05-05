@@ -18,6 +18,7 @@ import Page.Community.Explore as CommunityExplore
 import Page.Community.Invite as Invite
 import Page.Community.ObjectiveEditor as ObjectiveEditor
 import Page.Community.Objectives as Objectives
+import Page.Community.Settings as CommunitySettings
 import Page.Community.Transfer as Transfer
 import Page.Dashboard as Dashboard
 import Page.Login as Login
@@ -151,6 +152,7 @@ type Status
     | ComingSoon
     | Community Community.Model
     | CommunityEditor CommunityEditor.Model
+    | CommunitySettings CommunitySettings.Model
     | Objectives Objectives.Model
     | ObjectiveEditor ObjectiveEditor.Model
     | ActionEditor ActionEditor.Model
@@ -183,6 +185,7 @@ type Msg
     | GotNotificationMsg Notification.Msg
     | GotCommunityMsg Community.Msg
     | GotCommunityEditorMsg CommunityEditor.Msg
+    | GotCommunitySettingsMsg CommunitySettings.Msg
     | GotObjectivesMsg Objectives.Msg
     | GotActionEditorMsg ActionEditor.Msg
     | GotObjectiveEditorMsg ObjectiveEditor.Msg
@@ -691,6 +694,11 @@ changeRouteTo maybeRoute model =
                 >> updateStatusWith Community GotCommunityMsg model
                 |> withLoggedIn (Route.Community symbol)
 
+        Just (Route.CommunitySettings symbol) ->
+            (\l -> CommunitySettings.init l symbol)
+                >> updateStatusWith CommunitySettings GotCommunitySettingsMsg model
+                |> withLoggedIn (Route.CommunitySettings symbol)
+
         Just Route.NewCommunity ->
             CommunityEditor.initNew
                 >> updateStatusWith CommunityEditor GotCommunityEditorMsg model
@@ -857,6 +865,9 @@ msgToString msg =
         GotCommunityEditorMsg subMsg ->
             "GotCommunityEditorMsg" :: CommunityEditor.msgToString subMsg
 
+        GotCommunitySettingsMsg subMsg ->
+            "GotCommunitySettingsMsg" :: CommunitySettings.msgToString subMsg
+
         GotObjectivesMsg subMsg ->
             "GotObjectives" :: Objectives.msgToString subMsg
 
@@ -962,6 +973,9 @@ view model =
 
         Community subModel ->
             viewLoggedIn subModel LoggedIn.Other GotCommunityMsg Community.view
+
+        CommunitySettings subModel ->
+            viewLoggedIn subModel LoggedIn.Other GotCommunitySettingsMsg CommunitySettings.view
 
         CommunityEditor subModel ->
             viewLoggedIn subModel LoggedIn.Other GotCommunityEditorMsg CommunityEditor.view
