@@ -2,20 +2,17 @@ module Page.Register exposing (Model, Msg, init, jsAddressToMsg, msgToString, su
 
 import Api
 import Auth exposing (viewFieldLabel)
-import Browser.Dom as Dom
 import Browser.Events
 import Char
 import Eos.Account as Eos
-import Graphql.Http
 import Html exposing (..)
 import Html.Attributes exposing (..)
-import Html.Events exposing (keyCode, on, onCheck, onClick, onInput, onSubmit)
+import Html.Events exposing (onCheck, onClick, onInput, onSubmit)
 import Http
 import I18Next exposing (t)
 import Json.Decode as Decode exposing (Decoder, Value)
 import Json.Decode.Pipeline as Decode
 import Json.Encode as Encode
-import List.Extra as LE
 import Profile exposing (Profile)
 import Route
 import Session.Guest as Guest exposing (External(..))
@@ -43,7 +40,7 @@ init guest =
 
 subscriptions : Model -> Sub Msg
 subscriptions _ =
-    Sub.map PressedEnter (Browser.Events.onKeyDown decodeEnterKeyDown)
+    Sub.map KeyPressed (Browser.Events.onKeyDown decodeEnterKeyDown)
 
 
 
@@ -166,6 +163,7 @@ view guest model =
             "passphraseText"
 
         passphraseInputId =
+            -- Passphrase text is duplicated in `input:text` to be able to copy via Browser API
             "passphraseWords"
 
         viewTitleForStep : Int -> Html msg
@@ -348,13 +346,17 @@ viewServerErrors problems =
                     (\p ->
                         case p of
                             ServerError e ->
-                                Just (li [ class "field__error" ] [ text e ])
+                                Just (li [] [ text e ])
 
                             _ ->
                                 Nothing
                     )
     in
-    ul [] errorList
+    if List.isEmpty errorList then
+        text ""
+
+    else
+        ul [ class "bg-red border-lg rounded p-4 mt-2 text-white" ] errorList
 
 
 type alias Field =
@@ -515,7 +517,7 @@ type Msg
     | AgreedToSave12Words Bool
     | DownloadPdf String
     | PdfDownloaded
-    | PressedEnter Bool
+    | KeyPressed Bool
     | CopyToClipboard String
     | CopiedToClipboard
 
@@ -691,15 +693,15 @@ update maybeInvitation msg model guest =
                     model
                         |> UR.init
 
-                Just keys ->
+                Just _ ->
                     model
                         |> UR.init
                         |> UR.addCmd
                             -- Go to login page after downloading PDF
                             (Route.replaceUrl guest.shared.navKey (Route.Login Nothing))
 
-        PressedEnter val ->
-            if val then
+        KeyPressed isEnter ->
+            if isEnter then
                 UR.init model
                     |> UR.addCmd
                         (Task.succeed ValidateForm
@@ -906,5 +908,5 @@ msgToString msg =
         PdfDownloaded ->
             [ "PdfDownloaded" ]
 
-        PressedEnter _ ->
-            [ "PressedEnter" ]
+        KeyPressed _ ->
+            [ "KeyPressed" ]
