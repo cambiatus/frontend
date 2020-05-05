@@ -105,12 +105,7 @@ view thisMsg page ({ shared } as model) content =
                     , style "background-size" "auto 80%"
                     , style "background-image" "url(images/auth_bg_full.png)"
                     ]
-                    [ viewQuote
-                        { photoSrc = "images/woman.png"
-                        , name = "Victoria Lane"
-                        , occupation = "Founder"
-                        , quote = "We are designing for a global user base, we can get feedback not just from drivers we see in San Francisco"
-                        }
+                    [-- Use `viewQuote` with actual data here to show the user's quote
                     ]
                 , div
                     -- Content: Header, Login/Registration forms
