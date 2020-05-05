@@ -76,7 +76,7 @@ initRegister pk =
 
 subscriptions : Model -> Sub Msg
 subscriptions _ =
-    Sub.map PressedEnter (Browser.Events.onKeyDown Utils.decodeEnterKeyDown)
+    Sub.map KeyPressed (Browser.Events.onKeyDown Utils.decodeEnterKeyDown)
 
 
 
@@ -138,94 +138,79 @@ type PinField
 
 passphraseValidator : Validator Problem LoginFormData
 passphraseValidator =
-    Validate.all
-        [ Validate.firstError
-            [ Validate.ifBlank .passphrase (InvalidEntry Passphrase "error.required")
-            , Validate.fromErrors
-                (\form ->
+    Validate.fromErrors
+        (\form ->
+            let
+                words : List String
+                words =
+                    String.words form.passphrase
+
+                has12words : Bool
+                has12words =
+                    List.length words == 12
+
+                allWordsConsistOnlyOfLetters : Bool
+                allWordsConsistOnlyOfLetters =
                     let
-                        words : List String
-                        words =
-                            String.words form.passphrase
-
-                        has12words : Bool
-                        has12words =
-                            List.length words == 12
-
-                        allWordsConsistOnlyOfLetters : Bool
-                        allWordsConsistOnlyOfLetters =
-                            let
-                                onlyLetters s =
-                                    String.length (String.filter Char.isAlpha s) == String.length s
-                            in
-                            List.all onlyLetters words
-
-                        allWordsHaveAtLeastThreeLetters : Bool
-                        allWordsHaveAtLeastThreeLetters =
-                            List.all (\w -> String.length w > 2) words
-
-                        trPrefix s =
-                            "auth.login.wordsMode.input." ++ s
+                        onlyLetters s =
+                            String.length (String.filter Char.isAlpha s) == String.length s
                     in
-                    {- These rules force user to use 12 words instead of PK. -}
-                    if not has12words then
-                        [ InvalidEntry Passphrase (trPrefix "notPassphraseError") ]
+                    List.all onlyLetters words
 
-                    else if not allWordsConsistOnlyOfLetters then
-                        [ InvalidEntry Passphrase (trPrefix ".notLatinLettersError") ]
+                allWordsHaveAtLeastThreeLetters : Bool
+                allWordsHaveAtLeastThreeLetters =
+                    List.all (\w -> String.length w > 2) words
 
-                    else if not allWordsHaveAtLeastThreeLetters then
-                        [ InvalidEntry Passphrase (trPrefix ".atLeastThreeLettersError") ]
+                trPrefix s =
+                    "auth.login.wordsMode.input." ++ s
+            in
+            {- These rules force user to use 12 words instead of PK. -}
+            if not has12words then
+                [ InvalidEntry Passphrase (trPrefix "notPassphraseError") ]
 
-                    else
-                        []
-                )
-            ]
-        ]
+            else if not allWordsConsistOnlyOfLetters then
+                [ InvalidEntry Passphrase (trPrefix "notLatinLettersError") ]
 
+            else if not allWordsHaveAtLeastThreeLetters then
+                [ InvalidEntry Passphrase (trPrefix "atLeastThreeLettersError") ]
 
-validatePinNumber : String -> List Problem
-validatePinNumber pin =
-    let
-        hasCorrectLength =
-            String.length pin == 6
-
-        hasOnlyDigits =
-            String.all Char.isDigit pin
-    in
-    if not hasCorrectLength || not hasOnlyDigits then
-        [ InvalidEntry PinConfirmation "auth.pin.shouldHaveSixDigitsError" ]
-
-    else
-        []
+            else
+                []
+        )
 
 
 pinValidator : Validator Problem LoginFormData
 pinValidator =
-    Validate.all
-        [ Validate.firstError
-            [ Validate.ifBlank .enteredPin (InvalidEntry Pin "auth.pin.shouldHaveSixDigitsError")
-            , Validate.ifBlank .enteredPinConfirmation (InvalidEntry PinConfirmation "auth.pin.shouldHaveSixDigitsError")
-            , Validate.fromErrors
-                (\form ->
-                    let
-                        pin =
-                            form.enteredPin
+    Validate.fromErrors
+        (\form ->
+            let
+                pin =
+                    form.enteredPin
 
-                        pinConfirmed =
-                            form.enteredPinConfirmation
+                pinConfirmed =
+                    form.enteredPinConfirmation
 
-                        isPinConfirmedCorrectly =
-                            pin == pinConfirmed
-                    in
-                    if not isPinConfirmedCorrectly then
-                        [ InvalidEntry PinConfirmation "auth.pinConfirmation.differsFromPinError" ]
+                hasCorrectLength p =
+                    String.length p == 6
 
-                    else
-                        validatePinNumber pin
-                )
-            ]
-        ]
+                hasOnlyDigits p =
+                    String.all Char.isDigit p
+
+                isPinConfirmedCorrectly =
+                    pin == pinConfirmed
+            in
+            if not (hasCorrectLength pin) || not (hasOnlyDigits pin) then
+                [ InvalidEntry Pin "auth.pin.shouldHaveSixDigitsError" ]
+
+            else if not (hasCorrectLength pinConfirmed) || not (hasOnlyDigits pinConfirmed) then
+                [ InvalidEntry PinConfirmation "auth.pin.shouldHaveSixDigitsError" ]
+
+            else if not isPinConfirmedCorrectly then
+                [ InvalidEntry PinConfirmation "auth.pinConfirmation.differsFromPinError" ]
+
+            else
+                []
+        )
 
 
 encodeLoginFormData : LoginFormData -> Value
@@ -328,6 +313,10 @@ viewLoginSteps isModal shared model loginStep =
         text_ s =
             Html.text (t shared.translations s)
 
+        tr : String -> I18Next.Replacements -> String
+        tr =
+            I18Next.tr shared.translations I18Next.Curly
+
         errors =
             case loginStep of
                 LoginStepPassphrase ->
@@ -370,6 +359,21 @@ viewLoginSteps isModal shared model loginStep =
                     , autocomplete False
                     ]
                     []
+                , div [ class "input-label pr-1 text-white font-bold mt-1 text-right" ]
+                    [ text <|
+                        let
+                            passphraseWordsCount =
+                                String.fromInt <| List.length (List.filter (not << String.isEmpty) <| String.words model.form.passphrase)
+
+                            _ =
+                                Debug.log "passphraseWordsCount"
+                        in
+                        tr
+                            "edit.input_counter"
+                            [ ( "current", passphraseWordsCount )
+                            , ( "max", "12" )
+                            ]
+                    ]
                 , ul [ class "form-error-on-dark-bg absolute" ] errors
                 , if not isModal then
                     p [ class "text-white text-body text-center mt-16 mb-4 block" ]
@@ -552,7 +556,7 @@ type Msg
     | CompletedCreateProfile Status Eos.Name (Result Http.Error Profile)
     | TogglePinVisibility
     | TogglePinConfirmationVisibility
-    | PressedEnter Bool
+    | KeyPressed Bool
     | EnteredPin String
     | EnteredPinConf String
 
@@ -561,36 +565,6 @@ type ExternalMsg
     = ClickedCancel
     | CompletedAuth Profile
     | UpdatedShared Shared
-
-
-type ValidationError
-    = PinTooShort
-    | PinTooLong
-    | PinInvalidChars
-    | PinConfirmDontMatch
-
-
-validationErrorToString : Shared -> ValidationError -> String
-validationErrorToString shared error =
-    let
-        t s =
-            I18Next.t shared.translations s
-
-        tr str values =
-            I18Next.tr shared.translations I18Next.Curly str values
-    in
-    case error of
-        PinTooShort ->
-            tr "error.tooShort" [ ( "minLength", "6" ) ]
-
-        PinTooLong ->
-            tr "error.tooLong" [ ( "maxLength", "6" ) ]
-
-        PinInvalidChars ->
-            t "register.form.pinCharError"
-
-        PinConfirmDontMatch ->
-            t "register.form.pinConfirmError"
 
 
 trimPinNumber : Int -> String -> String -> String
@@ -623,9 +597,7 @@ update msg shared model showAuthModal =
                     { currentForm
                         | enteredPin = trimPinNumber 6 currentForm.enteredPin pin
                     }
-
-                -- show validation errors only when form submitted
-                , loginError = Nothing
+                , loginError = Nothing -- show validation errors only when form submitted
                 , problems = []
             }
                 |> UR.init
@@ -658,8 +630,20 @@ update msg shared model showAuthModal =
         ClickedViewLoginPinStep ->
             case validate passphraseValidator model.form of
                 Ok _ ->
+                    let
+                        passphraseWithOnlySpaces =
+                            -- Make sure that we have only spaces as a word separators (e.g. line brakes won't work)
+                            String.join " " <| String.words model.form.passphrase
+
+                        currentForm =
+                            model.form
+
+                        newForm =
+                            { currentForm | passphrase = passphraseWithOnlySpaces }
+                    in
                     { model
                         | loginError = Nothing
+                        , form = newForm
                         , problems = []
                         , status = Options LoginStepPIN
                     }
@@ -837,8 +821,8 @@ update msg shared model showAuthModal =
         TogglePinConfirmationVisibility ->
             { model | pinConfirmationVisibility = not model.pinConfirmationVisibility } |> UR.init
 
-        PressedEnter val ->
-            if val && showAuthModal then
+        KeyPressed isEnter ->
+            if isEnter then
                 UR.init model
                     |> UR.addCmd
                         (Task.succeed (SubmittedLoginPrivateKey model.form)
@@ -968,8 +952,8 @@ msgToString msg =
         TogglePinConfirmationVisibility ->
             [ "TogglePinConfirmationVisibility" ]
 
-        PressedEnter _ ->
-            [ "PressedEnter" ]
+        KeyPressed _ ->
+            [ "KeyPressed" ]
 
 
 {-| Call this function under the field to render related validation problems.
