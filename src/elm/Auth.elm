@@ -385,7 +385,7 @@ viewLoginSteps isModal shared model loginStep =
                     ]
                 , ul [ class "form-error-on-dark-bg absolute" ] errors
                 , if not isModal then
-                    p [ class "text-white text-body text-center mt-16 mb-4 block" ]
+                    p [ class "text-white text-body text-center mt-16 mb-6 block" ]
                         [ text_ "auth.login.register"
                         , a [ Route.href (Route.Register Nothing Nothing), class "text-orange-300 underline" ] [ text_ "auth.login.registerLink" ]
                         ]
