@@ -15,7 +15,7 @@ import Cambiatus.Enum.VerificationType as VerificationType
 import Cambiatus.Object
 import Cambiatus.Query exposing (ClaimsRequiredArguments)
 import Cambiatus.Scalar exposing (DateTime(..))
-import Community exposing (ActionVerification, ActionVerificationsResponse, ClaimResponse, Community)
+import Community exposing (ActionVerification, ActionVerificationsResponse, ClaimResponse, Model)
 import Dict exposing (Dict)
 import Eos exposing (Symbol)
 import Eos.Account as Eos
@@ -140,9 +140,9 @@ initModel _ symbol =
 
 type LoadStatus
     = Loading
-    | Loaded Community EditStatus
+    | Loaded Community.Model EditStatus
     | NotFound
-    | Failed (Graphql.Http.Error (Maybe Community))
+    | Failed (Graphql.Http.Error (Maybe Community.Model))
 
 
 type EditStatus
@@ -352,7 +352,7 @@ viewVerification shared verification =
 -- VIEW OBJECTIVE
 
 
-viewObjective : LoggedIn.Model -> Model -> Community -> Int -> Community.Objective -> Html Msg
+viewObjective : LoggedIn.Model -> Model -> Community.Model -> Int -> Community.Objective -> Html Msg
 viewObjective loggedIn model metadata index objective =
     let
         canEdit =
@@ -442,7 +442,7 @@ viewObjectiveNew loggedIn edit communityId =
 -- VIEW ACTION
 
 
-viewAction : LoggedIn.Model -> Community -> Maybe Posix -> Community.Action -> Html Msg
+viewAction : LoggedIn.Model -> Community.Model -> Maybe Posix -> Community.Action -> Html Msg
 viewAction loggedIn metadata maybeDate action =
     let
         t s =
@@ -640,7 +640,7 @@ viewAction loggedIn metadata maybeDate action =
             ]
 
 
-viewHeader : LoggedIn.Model -> Community -> Html Msg
+viewHeader : LoggedIn.Model -> Community.Model -> Html Msg
 viewHeader { shared } community =
     div []
         [ div [ class "h-16 w-full bg-indigo-500 flex px-4 items-center" ]
@@ -831,7 +831,7 @@ type alias UpdateResult =
 type Msg
     = NoOp
     | GotTime Posix
-    | CompletedLoadCommunity (Result (Graphql.Http.Error (Maybe Community)) (Maybe Community))
+    | CompletedLoadCommunity (Result (Graphql.Http.Error (Maybe Community.Model)) (Maybe Community.Model))
       -- Objective
     | ClickedOpenObjective Int
     | ClickedCloseObjective

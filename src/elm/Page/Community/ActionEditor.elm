@@ -12,7 +12,7 @@ module Page.Community.ActionEditor exposing
 import Api.Graphql
 import Cambiatus.Enum.VerificationType as VerificationType
 import Cambiatus.Scalar exposing (DateTime(..))
-import Community exposing (Community)
+import Community exposing (Model)
 import DataValidator
     exposing
         ( Validator
@@ -101,9 +101,9 @@ type alias Model =
 
 type Status
     = Loading
-    | Loaded Community
+    | Loaded Community.Model
       -- Errors
-    | LoadFailed (Graphql.Http.Error (Maybe Community))
+    | LoadFailed (Graphql.Http.Error (Maybe Community.Model))
     | NotFound
     | Unauthorized
 
@@ -392,7 +392,7 @@ type alias UpdateResult =
 
 
 type Msg
-    = CompletedCommunityLoad (Result (Graphql.Http.Error (Maybe Community)) (Maybe Community))
+    = CompletedCommunityLoad (Result (Graphql.Http.Error (Maybe Community.Model)) (Maybe Community.Model))
     | OnSelectVerifier (Maybe Profile)
     | OnRemoveVerifier Profile
     | SelectMsg (Select.Msg Profile)
@@ -1103,7 +1103,7 @@ view ({ shared } as loggedIn) model =
             Page.fullPageNotFound "not authorized" ""
 
 
-viewForm : LoggedIn.Model -> Community -> Model -> Html Msg
+viewForm : LoggedIn.Model -> Community.Model -> Model -> Html Msg
 viewForm ({ shared } as loggedIn) community model =
     div [ class "container mx-auto" ]
         [ div [ class "py-6 px-4" ]
@@ -1170,7 +1170,7 @@ viewDescription { shared } form =
         ]
 
 
-viewReward : LoggedIn.Model -> Community -> Form -> Html Msg
+viewReward : LoggedIn.Model -> Community.Model -> Form -> Html Msg
 viewReward { shared } community form =
     let
         text_ s =
@@ -1348,7 +1348,7 @@ viewValidations { shared } model =
         ]
 
 
-viewVerifications : LoggedIn.Model -> Model -> Community -> Html Msg
+viewVerifications : LoggedIn.Model -> Model -> Community.Model -> Html Msg
 viewVerifications ({ shared } as loggedIn) model community =
     let
         text_ s =
@@ -1407,7 +1407,7 @@ viewVerifications ({ shared } as loggedIn) model community =
         ]
 
 
-viewManualVerificationForm : LoggedIn.Model -> Model -> Community -> Html Msg
+viewManualVerificationForm : LoggedIn.Model -> Model -> Community.Model -> Html Msg
 viewManualVerificationForm ({ shared } as loggedIn) model community =
     let
         text_ s =
