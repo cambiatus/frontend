@@ -135,11 +135,6 @@ type Field
     | PinConfirmation
 
 
-type PinField
-    = PinInput
-    | PinConfirmationInput
-
-
 passphraseValidator : Validator ( Field, String ) LoginFormData
 passphraseValidator =
     Validate.fromErrors
@@ -351,7 +346,7 @@ viewLoginSteps isModal shared model loginStep =
                     [ span [ class "text-green text-caption tracking-wide uppercase block mb-1" ] [ text ("Welcome back" ++ ",") ]
                     , span [ class "text-white block leading-relaxed" ] [ text "Enter your 12 words that you've saved on PDF in your device" ]
                     ]
-                , viewFieldLabel shared "auth.login.wordsMode.input" passphraseId Nothing
+                , viewFieldLabel shared "auth.login.wordsMode.input" passphraseId
                 , div [ class "relative" ]
                     [ textarea
                         [ class "form-textarea h-19 min-w-full block"
@@ -405,9 +400,9 @@ viewLoginSteps isModal shared model loginStep =
                     , text " "
                     , text_ (trPrefix "eachLogin")
                     ]
-                , viewPinField model shared PinInput
+                , viewPin model shared
                 , div [ class "h-10" ] []
-                , viewPinField model shared PinConfirmationInput
+                , viewPinConfirmation model shared
                 , div [ class "h-20" ] []
                 , button
                     [ class buttonClass
@@ -478,7 +473,7 @@ viewLoginWithPin accountName isDisabled isModal shared model =
         [ class "card__pin__input__group"
         , onSubmit SubmittedLoginPIN
         ]
-        [ viewPinField model shared PinInput
+        [ viewPin model shared
         , button
             [ class "btn btn--primary btn--login flex000"
             , disabled isDisabled
@@ -516,17 +511,19 @@ toggleViewPin isVisible showLabel hideLabel msg =
         ]
 
 
-viewFieldLabel : Shared -> String -> String -> Maybe (Html msg) -> Html msg
-viewFieldLabel { translations } tSuffix id_ viewToggleHiddenSymbols =
+viewFieldLabel : Shared -> String -> String -> Html msg
+viewFieldLabel { translations } tSuffix id_ =
     let
         labelText : String
         labelText =
             t translations (tSuffix ++ ".label")
     in
-    label [ for id_, class "block" ]
+    label
+        [ class "block"
+        , for id_
+        ]
         [ span [ class "text-green tracking-wide uppercase text-caption block mb-1" ]
             [ text <| labelText ]
-        , Maybe.withDefault (text "") viewToggleHiddenSymbols
         ]
 
 
@@ -968,71 +965,58 @@ viewFieldProblem { translations } currentField ( fieldWithError, errorDescriptio
         text ""
 
 
-viewPinField : Model -> Shared -> PinField -> Html Msg
-viewPinField ({ form, problems } as model) shared inputType =
+viewPin : Model -> Shared -> Html Msg
+viewPin ({ form, problems } as model) shared =
     let
-        pinPrompt =
-            case inputType of
-                PinInput ->
-                    case shared.maybeAccount of
-                        Nothing ->
-                            "auth.pin"
+        pinLabel =
+            case shared.maybeAccount of
+                Nothing ->
+                    "auth.pin"
 
-                        _ ->
-                            -- Popup with PIN input for logged-in user has different label
-                            "auth.pinPopup"
+                _ ->
+                    -- Popup with PIN input for logged-in user has different label
+                    "auth.pinPopup"
+    in
+    viewPinField
+        shared
+        { labelText = pinLabel
+        , inputId = "pinInput"
+        , inputValue = form.enteredPin
+        , onInputMsgConstructor = EnteredPin
+        , isVisible = model.pinVisibility
+        , toggleVisibilityMsg = TogglePinVisibility
+        , errors = List.map (viewFieldProblem shared Pin) problems
+        }
 
-                PinConfirmationInput ->
-                    "auth.pinConfirmation"
 
-        errors =
-            case inputType of
-                PinInput ->
-                    List.map (viewFieldProblem shared Pin) problems
+viewPinConfirmation : Model -> Shared -> Html Msg
+viewPinConfirmation ({ form, problems } as model) shared =
+    viewPinField
+        shared
+        { labelText = "auth.pinConfirmation"
+        , inputId = "pinInputConfirmation"
+        , inputValue = form.enteredPinConfirmation
+        , onInputMsgConstructor = EnteredPinConf
+        , isVisible = model.pinConfirmationVisibility
+        , toggleVisibilityMsg = TogglePinConfirmationVisibility
+        , errors = List.map (viewFieldProblem shared PinConfirmation) problems
+        }
 
-                PinConfirmationInput ->
-                    List.map (viewFieldProblem shared PinConfirmation) problems
 
-        val =
-            case inputType of
-                PinInput ->
-                    form.enteredPin
+type alias PinFieldData =
+    { labelText : String
+    , inputId : String
+    , inputValue : String
+    , onInputMsgConstructor : String -> Msg
+    , isVisible : Bool
+    , toggleVisibilityMsg : Msg
+    , errors : List (Html Msg)
+    }
 
-                PinConfirmationInput ->
-                    form.enteredPinConfirmation
 
-        inputId =
-            case inputType of
-                PinInput ->
-                    "pinInput"
-
-                PinConfirmationInput ->
-                    "pinInputConfirmation"
-
-        msg =
-            case inputType of
-                PinInput ->
-                    EnteredPin
-
-                PinConfirmationInput ->
-                    EnteredPinConf
-
-        toggleVisibilityMsg =
-            case inputType of
-                PinInput ->
-                    TogglePinVisibility
-
-                PinConfirmationInput ->
-                    TogglePinConfirmationVisibility
-
-        isVisible =
-            case inputType of
-                PinInput ->
-                    model.pinVisibility
-
-                PinConfirmationInput ->
-                    model.pinConfirmationVisibility
-
+viewPinField : Shared -> PinFieldData -> Html Msg
+viewPinField shared { labelText, inputId, inputValue, onInputMsgConstructor, isVisible, toggleVisibilityMsg, errors } =
+    let
         t =
             I18Next.t shared.translations
 
@@ -1041,7 +1025,7 @@ viewPinField ({ form, problems } as model) shared inputType =
             I18Next.tr shared.translations I18Next.Curly
     in
     div [ class "relative" ]
-        [ viewFieldLabel shared pinPrompt inputId Nothing
+        [ viewFieldLabel shared labelText inputId
         , input
             [ class "form-input min-w-full tracking-widest"
             , type_ <|
@@ -1055,8 +1039,8 @@ viewPinField ({ form, problems } as model) shared inputType =
             , id inputId
             , placeholder "******"
             , maxlength 6
-            , value val
-            , onInput msg
+            , value inputValue
+            , onInput onInputMsgConstructor
             , required True
             , autocomplete False
             , attribute "inputmode" "numeric"
@@ -1066,7 +1050,7 @@ viewPinField ({ form, problems } as model) shared inputType =
             [ text <|
                 tr
                     "edit.input_counter"
-                    [ ( "current", String.fromInt <| String.length val )
+                    [ ( "current", String.fromInt <| String.length inputValue )
                     , ( "max", "6" )
                     ]
             ]

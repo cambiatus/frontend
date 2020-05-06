@@ -400,7 +400,7 @@ viewField ({ translations } as shared) { translationSuffix, isDisabled, currentV
             I18Next.tr shared.translations I18Next.Curly
     in
     div [ class "mb-10 relative" ]
-        [ viewFieldLabel shared translationSuffix id_ Nothing
+        [ viewFieldLabel shared translationSuffix id_
         , input
             ([ id id_
              , onInput msg
