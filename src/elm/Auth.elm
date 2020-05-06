@@ -87,7 +87,7 @@ type alias Model =
     , form : LoginFormData
     , pinVisibility : Bool
     , pinConfirmationVisibility : Bool
-    , problems : List Problem
+    , problems : List ( Field, String )
     }
 
 
@@ -129,12 +129,18 @@ initLoginFormData =
     }
 
 
+type Field
+    = Passphrase
+    | Pin
+    | PinConfirmation
+
+
 type PinField
     = PinInput
     | PinConfirmationInput
 
 
-passphraseValidator : Validator Problem LoginFormData
+passphraseValidator : Validator ( Field, String ) LoginFormData
 passphraseValidator =
     Validate.fromErrors
         (\form ->
@@ -164,20 +170,20 @@ passphraseValidator =
             in
             {- These rules force user to use 12 words instead of PK. -}
             if not has12words then
-                [ InvalidEntry Passphrase (trPrefix "notPassphraseError") ]
+                [ ( Passphrase, trPrefix "notPassphraseError" ) ]
 
             else if not allWordsConsistOnlyOfLetters then
-                [ InvalidEntry Passphrase (trPrefix "notLatinLettersError") ]
+                [ ( Passphrase, trPrefix "notLatinLettersError" ) ]
 
             else if not allWordsHaveAtLeastThreeLetters then
-                [ InvalidEntry Passphrase (trPrefix "atLeastThreeLettersError") ]
+                [ ( Passphrase, trPrefix "atLeastThreeLettersError" ) ]
 
             else
                 []
         )
 
 
-pinValidator : Validator Problem LoginFormData
+pinValidator : Validator ( Field, String ) LoginFormData
 pinValidator =
     Validate.fromErrors
         (\form ->
@@ -198,13 +204,13 @@ pinValidator =
                     pin == pinConfirmed
             in
             if not (hasCorrectLength pin) || not (hasOnlyDigits pin) then
-                [ InvalidEntry Pin "auth.pin.shouldHaveSixDigitsError" ]
+                [ ( Pin, "auth.pin.shouldHaveSixDigitsError" ) ]
 
             else if not (hasCorrectLength pinConfirmed) || not (hasOnlyDigits pinConfirmed) then
-                [ InvalidEntry PinConfirmation "auth.pin.shouldHaveSixDigitsError" ]
+                [ ( PinConfirmation, "auth.pin.shouldHaveSixDigitsError" ) ]
 
             else if not isPinConfirmedCorrectly then
-                [ InvalidEntry PinConfirmation "auth.pinConfirmation.differsFromPinError" ]
+                [ ( PinConfirmation, "auth.pinConfirmation.differsFromPinError" ) ]
 
             else
                 []
@@ -949,14 +955,14 @@ msgToString msg =
 
 {-| Call this function under the field to render related validation problems.
 -}
-viewFieldProblem : Shared -> ValidatedField -> Problem -> Html msg
-viewFieldProblem { translations } field (InvalidEntry f str) =
+viewFieldProblem : Shared -> Field -> ( Field, String ) -> Html msg
+viewFieldProblem { translations } currentField ( fieldWithError, errorDescription ) =
     let
         t s =
             I18Next.t translations s
     in
-    if f == field then
-        li [] [ text (t str) ]
+    if fieldWithError == currentField then
+        li [] [ text (t errorDescription) ]
 
     else
         text ""
@@ -1067,13 +1073,3 @@ viewPinField ({ form, problems } as model) shared inputType =
         , toggleViewPin isVisible (t "auth.pin.toggle.show") (t "auth.pin.toggle.hide") toggleVisibilityMsg
         , ul [ class "form-error-on-dark-bg absolute" ] errors
         ]
-
-
-type ValidatedField
-    = Passphrase
-    | Pin
-    | PinConfirmation
-
-
-type Problem
-    = InvalidEntry ValidatedField String
