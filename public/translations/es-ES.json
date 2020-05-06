@@ -75,6 +75,7 @@
     },
     "pageNotFound": "¡Pagina no encontrada.",
     "required": "Parece que olvidaste completar esto.",
+    "email": "Por favor, utilice un correo electrónico válido.",
     "tooShort": "Muy corto. Debes usar al menos {{minLength}} caracteres.",
     "tooLong": "Muy largo. Debes usar como maximo {{maxLength}} caracteres.",
     "invalidChar": "Caracter invalido {{invalidChar}}.",

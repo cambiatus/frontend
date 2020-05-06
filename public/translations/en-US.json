@@ -75,6 +75,7 @@
     },
     "pageNotFound": "Page not found",
     "required": "It looks like you forgot to fill this one out.",
+    "email": "Please, use a valid email.",
     "tooShort": "Too short. Must be at least {{minLength}} characters.",
     "tooLong": "Too long. Must be at most {{maxLength}} characters.",
     "invalidChar": "Invalid character {{invalidChar}}.",
