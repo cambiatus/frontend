@@ -256,6 +256,10 @@
     @apply form-error text-lightred;
 }
 
+.lang-menu-open .lang-flag {
+  @apply mr-2;
+}
+
 /* https://tailwindcss.com/docs/extracting-components#extracting-css-components-with-apply */
 @tailwind utilities;
 

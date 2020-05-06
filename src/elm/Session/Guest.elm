@@ -133,9 +133,9 @@ viewPageHeader model shared =
             [ button
                 [ type_ "button"
                 , tabindex -1
-                , class "flex block relative z-10 w-32 items-center px-4 py-2 bg-white text-xs focus:outline-none"
+                , class "flex block relative z-10 items-center px-4 py-2 bg-white text-xs focus:outline-none"
                 , classList
-                    [ ( "rounded-tr-lg rounded-tl-lg justify-between"
+                    [ ( "rounded-tr-lg rounded-tl-lg justify-between lang-menu-open"
                       , model.showLanguageNav
                       )
                     ]
@@ -144,7 +144,7 @@ viewPageHeader model shared =
                 ]
                 [ Shared.langFlag shared.language
                 , if model.showLanguageNav then
-                    div [ class "flex-grow" ]
+                    div [ class "flex-grow whitespace-no-wrap" ]
                         [ text (String.toUpper model.shared.language) ]
 
                   else
@@ -162,7 +162,8 @@ viewPageHeader model shared =
               else
                 text ""
             , div
-                [ class "absolute right-0 w-32 py-2 bg-white border-t rounded-br-lg rounded-bl-lg shadow-lg"
+                [ class "absolute right-0 w-full py-2 bg-white border-t rounded-br-lg rounded-bl-lg shadow-lg"
+                , class "lang-menu-open"
                 , classList
                     [ ( "hidden", not model.showLanguageNav )
                     ]
