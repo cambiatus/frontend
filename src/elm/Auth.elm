@@ -320,7 +320,7 @@ viewLoginSteps isModal shared model loginStep =
             img [ class "h-40 mx-auto mt-8 mb-7", src ("images/" ++ fileName) ] []
 
         buttonClass =
-            "button button-primary min-w-full"
+            "button button-primary min-w-full mb-8"
 
         pClass =
             "text-white text-body mb-5"
