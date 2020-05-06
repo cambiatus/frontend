@@ -230,7 +230,7 @@ routeToString route =
                     ( [ "notification" ], [] )
 
                 PublicProfile accountName ->
-                    ( [ "publicprofile", accountName ], [] )
+                    ( [ "profile", accountName ], [] )
 
                 Profile ->
                     ( [ "profile" ], [] )
