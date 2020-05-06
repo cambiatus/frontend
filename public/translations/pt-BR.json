@@ -75,6 +75,7 @@
     },
     "pageNotFound": "Pagina não encontrada",
     "required": "Parece que voce esqueceu de preencher esse.",
+    "email": "Por favor, use um email válido.",
     "tooShort": "Muito curto. Deve ter pelo menos {{minLength}} caracteres.",
     "tooLong": "Muito longo. Deve ter no maximo {{maxLength}} caracteres.",
     "invalidChar": "Caractere invalido: '{{invalidChar}}'.",
@@ -113,7 +114,7 @@
           "toggle": "Eu quero usar a chave privada",
           "notPassphraseError": "Por favor, digite 12 palavras",
           "notLatinLettersError": "Por favor, use apenas letras latinas básicas",
-          "atLeastThreeLettersError": "Todas as palavras devem ter pelo menos 3 letras"
+          "atLeastThreeLettersError": "Todas as palavras devem ter ao menos 3 letras"
         }
       },
       "submit": "Entrar",
@@ -153,7 +154,7 @@
     "loginTab": "Entrar",
     "form": {
       "step": "Passo {{stepNum}} de 2",
-      "step1_title": "Informação básica",
+      "step1_title": "Informações básicas",
       "step2_title": "12 palavras",
       "name": {
         "label": "Nome completo",
