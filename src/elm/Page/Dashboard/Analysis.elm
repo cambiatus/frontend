@@ -97,7 +97,7 @@ view ({ shared } as loggedIn) model =
             div []
                 [ Page.viewHeader loggedIn (t "dashboard.all_analysis.title") Route.Dashboard
                 , div [ class "container mx-auto px-4 mb-10" ]
-                    [ text "filtro de conta do claimer"
+                    [ div [] []
                     , text "filtro do estado do claim"
                     , div [ class "flex flex-wrap -mx-2" ]
                         (List.map (viewClaim loggedIn filter) claims)

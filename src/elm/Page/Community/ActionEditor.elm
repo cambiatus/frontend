@@ -10,8 +10,7 @@ module Page.Community.ActionEditor exposing
     )
 
 import Api.Graphql
-import Avatar
-import Cambiatus.Enum.VerificationType as VerificationType exposing (VerificationType)
+import Cambiatus.Enum.VerificationType as VerificationType
 import Cambiatus.Scalar exposing (DateTime(..))
 import Community exposing (Community)
 import DataValidator
