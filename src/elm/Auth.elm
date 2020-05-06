@@ -330,8 +330,19 @@ viewLoginSteps isModal shared model loginStep =
                 passphraseId =
                     "passphrase"
 
+                isPassphraseError ( problemType, _ ) =
+                    case problemType of
+                        Passphrase ->
+                            True
+
+                        _ ->
+                            False
+
+                passphraseErrors =
+                    List.filter isPassphraseError model.problems
+
                 errors =
-                    List.map (viewFieldProblem shared Passphrase) model.problems
+                    List.map (\( _, errorDescription ) -> li [] [ text_ errorDescription ]) passphraseErrors
 
                 passphraseWordsCount =
                     model.form.passphrase
@@ -350,6 +361,12 @@ viewLoginSteps isModal shared model loginStep =
                 , div [ class "relative" ]
                     [ textarea
                         [ class "form-textarea h-19 min-w-full block"
+                        , class <|
+                            if not (List.isEmpty passphraseErrors) then
+                                "field-with-error"
+
+                            else
+                                ""
                         , id passphraseId
                         , value model.form.passphrase
                         , onInput EnteredPassphrase
@@ -950,21 +967,6 @@ msgToString msg =
             [ "KeyPressed" ]
 
 
-{-| Call this function under the field to render related validation problems.
--}
-viewFieldProblem : Shared -> Field -> ( Field, String ) -> Html msg
-viewFieldProblem { translations } currentField ( fieldWithError, errorDescription ) =
-    let
-        t s =
-            I18Next.t translations s
-    in
-    if fieldWithError == currentField then
-        li [] [ text (t errorDescription) ]
-
-    else
-        text ""
-
-
 viewPin : Model -> Shared -> Html Msg
 viewPin ({ form, problems } as model) shared =
     let
@@ -976,6 +978,17 @@ viewPin ({ form, problems } as model) shared =
                 _ ->
                     -- Popup with PIN input for logged-in user has different label
                     "auth.pinPopup"
+
+        isPinError ( problemType, _ ) =
+            case problemType of
+                Pin ->
+                    True
+
+                _ ->
+                    False
+
+        errors =
+            List.filter isPinError model.problems
     in
     viewPinField
         shared
@@ -985,12 +998,24 @@ viewPin ({ form, problems } as model) shared =
         , onInputMsgConstructor = EnteredPin
         , isVisible = model.pinVisibility
         , toggleVisibilityMsg = TogglePinVisibility
-        , errors = List.map (viewFieldProblem shared Pin) problems
+        , errors = errors
         }
 
 
 viewPinConfirmation : Model -> Shared -> Html Msg
 viewPinConfirmation ({ form, problems } as model) shared =
+    let
+        isPinConfirmError ( problemType, _ ) =
+            case problemType of
+                PinConfirmation ->
+                    True
+
+                _ ->
+                    False
+
+        errors =
+            List.filter isPinConfirmError model.problems
+    in
     viewPinField
         shared
         { labelText = "auth.pinConfirmation"
@@ -999,7 +1024,7 @@ viewPinConfirmation ({ form, problems } as model) shared =
         , onInputMsgConstructor = EnteredPinConf
         , isVisible = model.pinConfirmationVisibility
         , toggleVisibilityMsg = TogglePinConfirmationVisibility
-        , errors = List.map (viewFieldProblem shared PinConfirmation) problems
+        , errors = errors
         }
 
 
@@ -1010,7 +1035,7 @@ type alias PinFieldData =
     , onInputMsgConstructor : String -> Msg
     , isVisible : Bool
     , toggleVisibilityMsg : Msg
-    , errors : List (Html Msg)
+    , errors : List ( Field, String )
     }
 
 
@@ -1023,19 +1048,29 @@ viewPinField shared { labelText, inputId, inputValue, onInputMsgConstructor, isV
         tr : String -> I18Next.Replacements -> String
         tr =
             I18Next.tr shared.translations I18Next.Curly
+
+        inputType =
+            if isVisible then
+                -- `"text"` is used here because with `"number"` field restrictions for the PIN
+                -- don't apply after toggling visibility (see `trimPinNumber` function).
+                "text"
+
+            else
+                "password"
+
+        errorClass =
+            if List.length errors > 0 then
+                "field-with-error"
+
+            else
+                ""
     in
     div [ class "relative" ]
         [ viewFieldLabel shared labelText inputId
         , input
             [ class "form-input min-w-full tracking-widest"
-            , type_ <|
-                if isVisible then
-                    -- `"text"` is used here because with `"number"` field restrictions for the PIN
-                    -- don't apply after toggling visibility (see `trimPinNumber` function).
-                    "text"
-
-                else
-                    "password"
+            , class errorClass
+            , type_ inputType
             , id inputId
             , placeholder "******"
             , maxlength 6
@@ -1055,5 +1090,6 @@ viewPinField shared { labelText, inputId, inputValue, onInputMsgConstructor, isV
                     ]
             ]
         , toggleViewPin isVisible (t "auth.pin.toggle.show") (t "auth.pin.toggle.hide") toggleVisibilityMsg
-        , ul [ class "form-error-on-dark-bg absolute" ] errors
+        , ul [ class "form-error-on-dark-bg absolute" ]
+            (List.map (\( _, errorDescription ) -> li [] [ text (t errorDescription) ]) errors)
         ]

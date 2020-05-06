@@ -281,7 +281,7 @@ view guest model =
         div [ class "flex-grow bg-white" ]
             [ Html.form
                 [ class "px-4 md:max-w-sm md:mx-auto md:pt-20 md:px-0"
-                , onSubmit ValidateForm
+                , onSubmit (ValidateForm model.form)
                 ]
                 [ viewServerErrors model.problems
                 , viewTitleForStep 1
@@ -316,7 +316,7 @@ view guest model =
                         Email
                     )
                     (identity EnteredEmail)
-                    [ type_ "email" ]
+                    [ attribute "inputmode" "email" ]
                     model.problems
                 , p [ class "text-center text-body mt-16 mb-6" ]
                     [ text_ "register.login"
@@ -407,7 +407,6 @@ viewField ({ translations } as shared) { translationSuffix, isDisabled, currentV
              , class ("input min-w-full" ++ " " ++ errorClass)
              , disabled isDisabled
              , value currentValue
-             , required True
              , placeholder (t translations (translationSuffix ++ ".placeholder"))
              ]
                 ++ extraAttrs
@@ -439,33 +438,10 @@ viewFieldProblem field problem =
 
         InvalidEntry f str ->
             if f == field then
-                li [ class "form-error absolute" ] [ text str ]
+                li [ class "form-error absolute mr-8" ] [ text str ]
 
             else
                 text ""
-
-
-validationErrorToString : Shared -> ValidationError -> String
-validationErrorToString shared error =
-    let
-        t s =
-            I18Next.t shared.translations s
-
-        tr str values =
-            I18Next.tr shared.translations I18Next.Curly str values
-    in
-    case error of
-        AccountTooShort ->
-            tr "error.tooShort" [ ( "minLength", "12" ) ]
-
-        AccountTooLong ->
-            tr "error.tooLong" [ ( "maxLength", "12" ) ]
-
-        AccountAlreadyExists ->
-            t "error.alreadyTaken"
-
-        AccountInvalidChars ->
-            t "register.form.accountCharError"
 
 
 accName : Model -> String
@@ -488,16 +464,6 @@ words model =
             ""
 
 
-privateKey : Model -> String
-privateKey model =
-    case model.accountKeys of
-        Just keys ->
-            keys.privateKey
-
-        Nothing ->
-            ""
-
-
 
 -- UPDATE
 
@@ -509,7 +475,7 @@ type alias UpdateResult =
 type Msg
     = UpdateForm FormInputMsg
     | Ignored
-    | ValidateForm
+    | ValidateForm Form
     | GotAccountAvailabilityResponse Bool
     | AccountGenerated (Result Decode.Error AccountKeys)
     | CompletedCreateProfile AccountKeys (Result Http.Error Profile)
@@ -527,6 +493,12 @@ update maybeInvitation msg model guest =
     let
         shared =
             guest.shared
+
+        t s =
+            I18Next.t shared.translations s
+
+        tr str values =
+            I18Next.tr shared.translations I18Next.Curly str values
     in
     case msg of
         Ignored ->
@@ -534,20 +506,55 @@ update maybeInvitation msg model guest =
                 |> UR.init
 
         UpdateForm subMsg ->
-            updateForm subMsg shared model
+            updateForm subMsg model
                 |> UR.init
 
-        ValidateForm ->
+        ValidateForm form ->
             let
-                allProbs =
-                    model.problems
+                isLowerThan6 : Char -> Bool
+                isLowerThan6 c =
+                    let
+                        charInt : Int
+                        charInt =
+                            c
+                                |> String.fromChar
+                                |> String.toInt
+                                |> Maybe.withDefault 0
+                    in
+                    compare charInt 6 == Basics.LT
+
+                isValidAlphaNum : Char -> Bool
+                isValidAlphaNum c =
+                    (Char.isUpper c || Char.isLower c || Char.isDigit c) && isLowerThan6 c
+
+                formValidator =
+                    Validate.all
+                        [ Validate.firstError
+                            [ ifBlank .username (InvalidEntry Username (t "error.required")) ]
+                        , Validate.firstError
+                            [ ifBlank .email (InvalidEntry Email (t "error.required"))
+                            , ifInvalidEmail .email (\_ -> InvalidEntry Email (t "error.email"))
+                            ]
+                        , Validate.firstError
+                            [ ifBlank .account (InvalidEntry Account (t "error.required"))
+                            , ifTrue
+                                (\f -> String.length f.account < 12)
+                                (InvalidEntry Account (t "error.tooShort"))
+                            , ifTrue
+                                (\f -> String.length f.account > 12)
+                                (InvalidEntry Account (tr "error.tooLong" [ ( "maxLength", "12" ) ]))
+                            , ifFalse
+                                (\f -> String.all isValidAlphaNum f.account)
+                                (InvalidEntry Account (t "register.form.accountCharError"))
+                            ]
+                        ]
             in
-            case allProbs of
-                [] ->
+            case validate formValidator form of
+                Ok _ ->
                     { model | isCheckingAccount = True }
                         |> UR.init
                         |> UR.addPort
-                            { responseAddress = ValidateForm
+                            { responseAddress = ValidateForm form
                             , responseData = Encode.null
                             , data =
                                 Encode.object
@@ -556,8 +563,8 @@ update maybeInvitation msg model guest =
                                     ]
                             }
 
-                _ ->
-                    { model | problems = allProbs }
+                Err problems ->
+                    { model | problems = problems }
                         |> UR.init
 
         GotAccountAvailabilityResponse isAvailable ->
@@ -589,8 +596,7 @@ update maybeInvitation msg model guest =
             else
                 let
                     fieldError =
-                        validationErrorToString shared AccountAlreadyExists
-                            |> InvalidEntry Account
+                        InvalidEntry Account (t "error.alreadyTaken")
                 in
                 UR.init
                     { model
@@ -704,7 +710,7 @@ update maybeInvitation msg model guest =
             if isEnter then
                 UR.init model
                     |> UR.addCmd
-                        (Task.succeed ValidateForm
+                        (Task.succeed (ValidateForm model.form)
                             |> Task.perform identity
                         )
 
@@ -724,124 +730,24 @@ type FormInputMsg
     | EnteredAccount String
 
 
-updateForm : FormInputMsg -> Shared -> Model -> Model
-updateForm msg shared ({ form } as model) =
+updateForm : FormInputMsg -> Model -> Model
+updateForm msg ({ form } as model) =
     let
-        vErrorString verror =
-            validationErrorToString shared verror
-
-        fieldProbs validator val =
-            case validate validator val of
-                Ok _ ->
-                    []
-
-                Err errs ->
-                    errs
-
-        otherProbs validationField probs =
-            probs
-                |> List.filter
-                    (\p ->
-                        case p of
-                            InvalidEntry v _ ->
-                                v /= validationField
-
-                            _ ->
-                                True
-                    )
+        updateModel newForm =
+            { model
+                | form = newForm
+                , problems = []
+            }
     in
     case msg of
         EnteredUsername str ->
-            let
-                newProblems =
-                    otherProbs Username model.problems
-
-                nameValidator : Validator Problem String
-                nameValidator =
-                    Validate.firstError
-                        [ ifBlank identity (InvalidEntry Username "Name can't be blank") ]
-
-                nameProbs =
-                    fieldProbs nameValidator str
-
-                newForm =
-                    { form | username = str }
-            in
-            { model
-                | form = newForm
-                , problems = newProblems ++ nameProbs
-            }
+            updateModel { form | username = str }
 
         EnteredEmail str ->
-            let
-                newProblems =
-                    otherProbs Email model.problems
-
-                emailValidator : Validator Problem String
-                emailValidator =
-                    Validate.firstError
-                        [ ifBlank identity (InvalidEntry Email "Email can't be blank")
-                        , ifInvalidEmail identity (\_ -> InvalidEntry Email "Email has to be valid email")
-                        ]
-
-                emailProbs =
-                    fieldProbs emailValidator str
-
-                newForm =
-                    { form | email = str }
-            in
-            { model
-                | form = newForm
-                , problems = newProblems ++ emailProbs
-            }
+            updateModel { form | email = str }
 
         EnteredAccount str ->
-            let
-                newProblems =
-                    otherProbs Account model.problems
-
-                isLowerThan6 : Char -> Bool
-                isLowerThan6 c =
-                    let
-                        charInt : Int
-                        charInt =
-                            c
-                                |> String.fromChar
-                                |> String.toInt
-                                |> Maybe.withDefault 0
-                    in
-                    compare charInt 6 == Basics.LT
-
-                isValidAlphaNum : Char -> Bool
-                isValidAlphaNum c =
-                    (Char.isUpper c || Char.isLower c || Char.isDigit c) && isLowerThan6 c
-
-                accountValidator : Validator Problem String
-                accountValidator =
-                    Validate.firstError
-                        [ ifBlank identity (InvalidEntry Account "Account is required")
-                        , ifTrue (\accStr -> String.length accStr < 12) (InvalidEntry Account (vErrorString AccountTooShort))
-                        , ifTrue (\accStr -> String.length accStr > 12) (InvalidEntry Account (vErrorString AccountTooLong))
-                        , ifFalse (\accStr -> String.all isValidAlphaNum accStr) (InvalidEntry Account (vErrorString AccountInvalidChars))
-                        ]
-
-                accProbs =
-                    fieldProbs accountValidator str
-
-                newForm =
-                    { form | account = str |> String.toLower }
-            in
-            { model
-                | form = newForm
-                , problems = newProblems ++ accProbs
-            }
-
-
-asPinString : List (Maybe String) -> String
-asPinString entered =
-    entered
-        |> List.map (\a -> Maybe.withDefault "" a)
-        |> List.foldl (\a b -> a ++ b) ""
+            updateModel { form | account = str |> String.toLower }
 
 
 jsAddressToMsg : List String -> Value -> Maybe Msg
@@ -878,7 +784,7 @@ msgToString msg =
         UpdateForm _ ->
             [ "UpdateForm" ]
 
-        ValidateForm ->
+        ValidateForm _ ->
             [ "ValidateForm" ]
 
         GotAccountAvailabilityResponse _ ->

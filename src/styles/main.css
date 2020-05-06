@@ -112,8 +112,9 @@
   @apply form-input h-12;
 }
 
-.field-with-error {
-    @apply border-red;
+.field-with-error,
+.field-with-error:focus {
+    @apply border-red text-red;
 }
 
 .input-counter {
