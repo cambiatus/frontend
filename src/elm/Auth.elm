@@ -17,18 +17,16 @@ module Auth exposing
 
 import Api
 import Asset.Icon as Icon
-import Browser.Dom as Dom
 import Browser.Events
 import Eos.Account as Eos
 import Html exposing (Html, a, button, div, h2, img, input, label, li, p, span, strong, text, textarea, ul)
-import Html.Attributes exposing (attribute, autocomplete, class, disabled, for, id, maxlength, pattern, placeholder, required, src, title, type_, value)
+import Html.Attributes exposing (attribute, autocomplete, class, disabled, for, id, maxlength, placeholder, required, src, title, type_, value)
 import Html.Events exposing (onClick, onInput, onSubmit)
 import Http
 import I18Next exposing (t)
 import Json.Decode as Decode
 import Json.Decode.Pipeline as Decode
 import Json.Encode as Encode exposing (Value)
-import List.Extra as LE
 import Log
 import Profile exposing (Profile)
 import Route
@@ -317,23 +315,11 @@ viewLoginSteps isModal shared model loginStep =
         tr =
             I18Next.tr shared.translations I18Next.Curly
 
-        errors =
-            case loginStep of
-                LoginStepPassphrase ->
-                    List.map (viewFieldProblem shared Passphrase) model.problems
-
-                LoginStepPIN ->
-                    List.map (viewFieldProblem shared Pin) model.problems
-
         illustration fileName =
             img [ class "h-40 mx-auto mt-8 mb-7", src ("images/" ++ fileName) ] []
 
         buttonClass =
             "button button-primary min-w-full"
-
-        labelText : String -> Html msg
-        labelText tSuffix =
-            text <| t shared.translations (tSuffix ++ ".label")
 
         pClass =
             "text-white text-body mb-5"
@@ -342,6 +328,16 @@ viewLoginSteps isModal shared model loginStep =
             let
                 passphraseId =
                     "passphrase"
+
+                errors =
+                    List.map (viewFieldProblem shared Passphrase) model.problems
+
+                passphraseWordsCount =
+                    model.form.passphrase
+                        |> String.words
+                        |> List.filter (not << String.isEmpty)
+                        |> List.length
+                        |> String.fromInt
             in
             div []
                 [ illustration "login_key.svg"
@@ -350,29 +346,24 @@ viewLoginSteps isModal shared model loginStep =
                     , span [ class "text-white block leading-relaxed" ] [ text "Enter your 12 words that you've saved on PDF in your device" ]
                     ]
                 , viewFieldLabel shared "auth.login.wordsMode.input" passphraseId Nothing
-                , textarea
-                    [ class "form-textarea h-19 min-w-full block"
-                    , id passphraseId
-                    , value model.form.passphrase
-                    , onInput EnteredPassphrase
-                    , required True
-                    , autocomplete False
-                    ]
-                    []
-                , div [ class "input-label pr-1 text-white font-bold mt-1 text-right" ]
-                    [ text <|
-                        let
-                            passphraseWordsCount =
-                                String.fromInt <| List.length (List.filter (not << String.isEmpty) <| String.words model.form.passphrase)
-
-                            _ =
-                                Debug.log "passphraseWordsCount"
-                        in
-                        tr
-                            "edit.input_counter"
-                            [ ( "current", passphraseWordsCount )
-                            , ( "max", "12" )
-                            ]
+                , div [ class "relative" ]
+                    [ textarea
+                        [ class "form-textarea h-19 min-w-full block"
+                        , id passphraseId
+                        , value model.form.passphrase
+                        , onInput EnteredPassphrase
+                        , required True
+                        , autocomplete False
+                        ]
+                        []
+                    , div [ class "input-label pr-1 absolute right-0 text-white font-bold mt-1 text-right" ]
+                        [ text <|
+                            tr
+                                "edit.input_counter"
+                                [ ( "current", passphraseWordsCount )
+                                , ( "max", "12" )
+                                ]
+                        ]
                     ]
                 , ul [ class "form-error-on-dark-bg absolute" ] errors
                 , if not isModal then
@@ -959,21 +950,16 @@ msgToString msg =
 {-| Call this function under the field to render related validation problems.
 -}
 viewFieldProblem : Shared -> ValidatedField -> Problem -> Html msg
-viewFieldProblem { translations } field problem =
+viewFieldProblem { translations } field (InvalidEntry f str) =
     let
         t s =
             I18Next.t translations s
     in
-    case problem of
-        ServerError _ ->
-            text ""
+    if f == field then
+        li [] [ text (t str) ]
 
-        InvalidEntry f str ->
-            if f == field then
-                li [] [ text (t str) ]
-
-            else
-                text ""
+    else
+        text ""
 
 
 viewPinField : Model -> Shared -> PinField -> Html Msg
@@ -1091,4 +1077,3 @@ type ValidatedField
 
 type Problem
     = InvalidEntry ValidatedField String
-    | ServerError String
