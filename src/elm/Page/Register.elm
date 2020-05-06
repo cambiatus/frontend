@@ -102,13 +102,6 @@ type ValidatedField
     | Account
 
 
-type ValidationError
-    = AccountTooShort
-    | AccountTooLong
-    | AccountAlreadyExists
-    | AccountInvalidChars
-
-
 
 ---- ACCOUNT KEYS
 
@@ -323,7 +316,7 @@ view guest model =
                     , a [ Route.href (Route.Login Nothing), class "text-orange-300 underline" ] [ text_ "register.authLink" ]
                     ]
                 , button
-                    [ class "button button-primary min-w-full mb-8"
+                    [ class "button button-primary min-w-full mb-6"
                     , type_ "submit"
                     , disabled isDisabled
                     ]

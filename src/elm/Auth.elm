@@ -20,7 +20,7 @@ import Asset.Icon as Icon
 import Browser.Events
 import Eos.Account as Eos
 import Html exposing (Html, a, button, div, h2, img, input, label, li, p, span, strong, text, textarea, ul)
-import Html.Attributes exposing (attribute, autocomplete, class, disabled, for, id, maxlength, placeholder, required, src, title, type_, value)
+import Html.Attributes exposing (attribute, autocomplete, class, disabled, for, id, maxlength, placeholder, required, src, style, title, type_, value)
 import Html.Events exposing (onClick, onInput, onSubmit)
 import Http
 import I18Next exposing (t)
@@ -320,7 +320,7 @@ viewLoginSteps isModal shared model loginStep =
             img [ class "h-40 mx-auto mt-8 mb-7", src ("images/" ++ fileName) ] []
 
         buttonClass =
-            "button button-primary min-w-full mb-8"
+            "button button-primary min-w-full mb-6"
 
         pClass =
             "text-white text-body mb-5"
