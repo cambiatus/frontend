@@ -20,7 +20,7 @@ import Session.Shared exposing (Shared)
 import Task
 import UpdateResult as UR
 import Utils exposing (..)
-import Validate exposing (Validator, ifBlank, ifFalse, ifInvalidEmail, ifTrue, validate)
+import Validate exposing (ifBlank, ifFalse, ifInvalidEmail, ifTrue, validate)
 
 
 

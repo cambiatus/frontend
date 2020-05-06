@@ -20,7 +20,7 @@ import Asset.Icon as Icon
 import Browser.Events
 import Eos.Account as Eos
 import Html exposing (Html, a, button, div, h2, img, input, label, li, p, span, strong, text, textarea, ul)
-import Html.Attributes exposing (attribute, autocomplete, class, disabled, for, id, maxlength, placeholder, required, src, style, title, type_, value)
+import Html.Attributes exposing (attribute, autocomplete, class, disabled, for, id, maxlength, placeholder, required, src, title, type_, value)
 import Html.Events exposing (onClick, onInput, onSubmit)
 import Http
 import I18Next exposing (t)
