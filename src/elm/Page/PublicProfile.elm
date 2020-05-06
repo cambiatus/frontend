@@ -216,11 +216,3 @@ msgToString msg =
     case msg of
         CompletedProfileLoad _ ->
             [ "CompletedProfileLoad" ]
-
-
-
--- type Msg
---     = CompletedProfileLoad (Result (Graphql.Http.Error (Maybe Profile)) (Maybe Profile))
---     | CheckPushPref
---     | GotPushSub PushSubscription
---     | GotPushPreference Bool
