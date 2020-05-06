@@ -176,7 +176,7 @@ viewForm ({ shared } as loggedIn) model f community isDisabled =
                 [ span [ class "input-label" ]
                     [ text_ "account.my_wallet.transfer.send_to" ]
                 , div [ class "" ]
-                    [ autoCompleteAccount shared model f isDisabled community ]
+                    [ viewAutoCompleteAccount shared model f isDisabled community ]
                 ]
             , div [ class "mb-10" ]
                 [ span [ class "input-label" ]
@@ -226,8 +226,8 @@ viewForm ({ shared } as loggedIn) model f community isDisabled =
         ]
 
 
-autoCompleteAccount : Shared.Shared -> Model -> Form -> Bool -> Community.Model -> Html Msg
-autoCompleteAccount shared model form isDisabled community =
+viewAutoCompleteAccount : Shared.Shared -> Model -> Form -> Bool -> Community.Model -> Html Msg
+viewAutoCompleteAccount shared model form isDisabled community =
     let
         users =
             community.members

@@ -17,6 +17,14 @@ type Claim
     = Claim
 
 
+type ClaimConnection
+    = ClaimConnection
+
+
+type ClaimEdge
+    = ClaimEdge
+
+
 type Community
     = Community
 

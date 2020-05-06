@@ -78,7 +78,7 @@ type alias Model =
     { date : Maybe Posix
     , community : GraphqlStatus (Maybe Community.DashboardInfo) Community.DashboardInfo
     , balance : Status Balance
-    , analysis : GraphqlStatus (List Claim.Model) (List ClaimStatus)
+    , analysis : GraphqlStatus (Maybe Claim.Paginated) (List ClaimStatus)
     , lastSocket : String
     , transfers : GraphqlStatus (Maybe QueryTransfers) (List Transfer)
     , inviteModalStatus : InviteModalStatus
@@ -568,7 +568,7 @@ type Msg
     = GotTime Posix
     | CompletedLoadBalances (Result Http.Error (List Balance))
     | CompletedLoadUserTransfers (Result (Graphql.Http.Error (Maybe QueryTransfers)) (Maybe QueryTransfers))
-    | ClaimsLoaded (Result (Graphql.Http.Error (List Claim.Model)) (List Claim.Model))
+    | ClaimsLoaded (Result (Graphql.Http.Error (Maybe Claim.Paginated)) (Maybe Claim.Paginated))
     | CommunityLoaded (Result (Graphql.Http.Error (Maybe Community.DashboardInfo)) (Maybe Community.DashboardInfo))
     | OpenModal Int Bool
     | CloseModal
@@ -609,7 +609,7 @@ update msg model loggedIn =
         ClaimsLoaded (Ok claims) ->
             let
                 wrappedClaims =
-                    List.map ClaimLoaded claims
+                    List.map ClaimLoaded (Claim.paginatedToList claims)
             in
             { model | analysis = LoadedGraphql wrappedClaims }
                 |> UR.init
@@ -803,15 +803,20 @@ fetchAvailableAnalysis : Shared -> Symbol -> Eos.Name -> Cmd Msg
 fetchAvailableAnalysis shared communityId account =
     let
         arg =
-            { claimer = Absent
-            , symbol = Present (Eos.symbolToString communityId)
-            , validator = Present (Eos.nameToString account)
-            , all = Present False
+            { input =
+                { claimer = Absent
+                , symbol = Present (Eos.symbolToString communityId)
+                , validator = Present (Eos.nameToString account)
+                , all = Present False
+                }
             }
+
+        pagination =
+            \a -> { a | first = Present 4 }
     in
     Api.Graphql.query
         shared
-        (Cambiatus.Query.claims { input = arg } Claim.selectionSet)
+        (Cambiatus.Query.claims pagination arg Claim.claimPaginatedSelectionSet)
         ClaimsLoaded
 
 

@@ -1,15 +1,21 @@
 module Claim exposing
     ( Model
+    , Paginated
+    , claimPaginatedSelectionSet
     , encodeVerification
     , isAlreadyValidated
+    , paginatedToList
     , selectionSet
     )
 
+import Api.Relay exposing (Edge, PageConnection)
 import Cambiatus.Enum.VerificationType exposing (VerificationType(..))
 import Cambiatus.Object
 import Cambiatus.Object.Action as Action
 import Cambiatus.Object.Check as Check
 import Cambiatus.Object.Claim as Claim
+import Cambiatus.Object.ClaimConnection
+import Cambiatus.Object.ClaimEdge
 import Cambiatus.Scalar exposing (DateTime(..))
 import Community exposing (Objective)
 import Eos
@@ -82,6 +88,24 @@ encodeVerification claimId validator vote =
 -- GraphQL
 
 
+type alias Paginated =
+    PageConnection Model
+
+
+claimPaginatedSelectionSet : SelectionSet Paginated Cambiatus.Object.ClaimConnection
+claimPaginatedSelectionSet =
+    SelectionSet.succeed PageConnection
+        |> with (Cambiatus.Object.ClaimConnection.edges claimEdgeSelectionSet)
+        |> with (Cambiatus.Object.ClaimConnection.pageInfo Api.Relay.pageInfoSelectionSet)
+
+
+claimEdgeSelectionSet : SelectionSet (Edge Model) Cambiatus.Object.ClaimEdge
+claimEdgeSelectionSet =
+    SelectionSet.succeed Edge
+        |> with Cambiatus.Object.ClaimEdge.cursor
+        |> with (Cambiatus.Object.ClaimEdge.node selectionSet)
+
+
 selectionSet : SelectionSet Model Cambiatus.Object.Claim
 selectionSet =
     SelectionSet.succeed Model
@@ -112,3 +136,39 @@ checkSelectionSet =
     SelectionSet.succeed Check
         |> with Check.isVerified
         |> with (Check.validator Profile.selectionSet)
+
+
+paginatedToList : Maybe Paginated -> List Model
+paginatedToList maybeObj =
+    let
+        toMaybeEdges : Maybe Paginated -> Maybe (List (Maybe (Edge Model)))
+        toMaybeEdges maybeConn =
+            Maybe.andThen
+                (\a -> a.edges)
+                maybeConn
+
+        toEdges : Maybe (List (Maybe (Edge Model))) -> List (Maybe (Edge Model))
+        toEdges maybeEdges =
+            Maybe.withDefault
+                []
+                maybeEdges
+
+        toMaybeNodes : List (Maybe (Edge Model)) -> List (Maybe Model)
+        toMaybeNodes edges =
+            List.map
+                (\a ->
+                    Maybe.andThen
+                        (\b -> b.node)
+                        a
+                )
+                edges
+
+        toNodes : List (Maybe Model) -> List Model
+        toNodes maybeNodes =
+            List.filterMap identity maybeNodes
+    in
+    maybeObj
+        |> toMaybeEdges
+        |> toEdges
+        |> toMaybeNodes
+        |> toNodes

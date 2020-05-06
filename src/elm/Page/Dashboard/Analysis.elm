@@ -42,8 +42,7 @@ init { shared, accountName, selectedCommunity } =
     ( initModel
     , Cmd.batch
         [ fetchAnalysis shared selectedCommunity accountName
-
-        -- , Api.Graphql.query shared (Community.communityQuery selectedCommunity) CompletedCommunityLoad
+        , Api.Graphql.query shared (Community.communityQuery selectedCommunity) CompletedCommunityLoad
         ]
     )
 
@@ -54,32 +53,31 @@ init { shared, accountName, selectedCommunity } =
 
 type alias Model =
     { status : Status
-
-    -- , communityStatus : CommunityStatus
+    , communityStatus : CommunityStatus
     , modalStatus : ModalStatus
-    , multiSelectState : Select.State
+    , autoCompleteState : Select.State
     }
 
 
 initModel : Model
 initModel =
     { status = Loading
+    , communityStatus = LoadingCommunity
     , modalStatus = ModalClosed
-    , multiSelectState = Select.newState ""
+    , autoCompleteState = Select.newState ""
     }
 
 
 type Status
     = Loading
-    | Loaded Filter (List Claim.Model)
+    | Loaded (Maybe Profile) Filter (List Claim.Model)
     | Failed
 
 
-
--- type CommunityStatus =
---     Loading
---     | Loaded Community.Model
---     | Failed
+type CommunityStatus
+    = LoadingCommunity
+    | LoadedCommunity Community.Model
+    | FailedCommunity
 
 
 type Filter
@@ -114,14 +112,11 @@ view ({ shared } as loggedIn) model =
         Loading ->
             Page.fullPageLoading
 
-        Loaded f claims ->
+        Loaded maybeProfile f claims ->
             div []
                 [ Page.viewHeader loggedIn (t "dashboard.all_analysis.title") Route.Dashboard
                 , div [ class "container mx-auto px-4 mb-10" ]
-                    [ div []
-                        [ span [ class "input-label" ] [ text_ "" ]
-                        , input [ class "" ] []
-                        ]
+                    [ viewAutoCompleteProfile loggedIn model maybeProfile
                     , text "filtro do estado do claim"
                     , div [ class "flex flex-wrap -mx-2" ]
                         (List.map (viewClaim loggedIn f) claims)
@@ -130,6 +125,29 @@ view ({ shared } as loggedIn) model =
                 ]
 
         Failed ->
+            text ""
+
+
+viewAutoCompleteProfile : LoggedIn.Model -> Model -> Maybe Profile -> Html Msg
+viewAutoCompleteProfile { shared } model maybeProfile =
+    case model.communityStatus of
+        LoadedCommunity community ->
+            let
+                selectedUsers =
+                    Maybe.map (\v -> [ v ]) maybeProfile
+                        |> Maybe.withDefault []
+            in
+            div []
+                [ Html.map SelectMsg
+                    (Select.view
+                        (selectConfiguration shared False)
+                        model.autoCompleteState
+                        community.members
+                        selectedUsers
+                    )
+                ]
+
+        _ ->
             text ""
 
 
@@ -271,19 +289,25 @@ type alias UpdateResult =
 
 
 type Msg
-    = ClaimsLoaded (Result (Graphql.Http.Error (List Claim.Model)) (List Claim.Model))
+    = ClaimsLoaded (Result (Graphql.Http.Error (Maybe Claim.Paginated)) (Maybe Claim.Paginated))
     | OpenModal Int Bool
     | CloseModal
     | VoteClaim Int Bool
     | GotVoteResult Int (Result Decode.Value String)
+    | SelectMsg (Select.Msg Profile)
     | OnSelectVerifier (Maybe Profile)
+    | CompletedCommunityLoad (Result (Graphql.Http.Error (Maybe Community.Model)) (Maybe Community.Model))
 
 
 update : Msg -> Model -> LoggedIn.Model -> UpdateResult
 update msg model loggedIn =
     case msg of
         ClaimsLoaded (Ok results) ->
-            { model | status = Loaded All results } |> UR.init
+            { model
+                | status =
+                    Loaded Nothing All (Claim.paginatedToList results)
+            }
+                |> UR.init
 
         ClaimsLoaded (Err _) ->
             { model | status = Failed } |> UR.init
@@ -296,7 +320,7 @@ update msg model loggedIn =
 
         VoteClaim claimId vote ->
             case model.status of
-                Loaded _ _ ->
+                Loaded _ _ _ ->
                     let
                         newModel =
                             { model
@@ -333,7 +357,7 @@ update msg model loggedIn =
 
         GotVoteResult claimId (Ok _) ->
             case model.status of
-                Loaded f claims ->
+                Loaded maybeProfile f claims ->
                     let
                         maybeClaim : Maybe Claim.Model
                         maybeClaim =
@@ -352,7 +376,7 @@ update msg model loggedIn =
                                         ++ Eos.symbolToString claim.action.objective.community.symbol
                             in
                             { model
-                                | status = Loaded f claims
+                                | status = Loaded maybeProfile f claims
                             }
                                 |> UR.init
                                 |> UR.addExt (LoggedIn.ShowFeedback LoggedIn.Success (message value))
@@ -370,59 +394,82 @@ update msg model loggedIn =
 
         GotVoteResult _ (Err _) ->
             case model.status of
-                Loaded f claims ->
-                    { model | status = Loaded f claims }
+                Loaded maybeProfile f claims ->
+                    { model | status = Loaded maybeProfile f claims }
                         |> UR.init
 
                 _ ->
                     model |> UR.init
 
+        SelectMsg subMsg ->
+            let
+                ( updated, cmd ) =
+                    Select.update (selectConfiguration loggedIn.shared False) subMsg model.autoCompleteState
+            in
+            UR.init { model | autoCompleteState = updated }
+                |> UR.addCmd cmd
+
         OnSelectVerifier maybeProfile ->
             UR.init model
 
+        -- let
+        --     oldForm =
+        --         model.form
+        -- in
+        -- case model.form.verification of
+        --     Automatic ->
+        --         model
+        --             |> UR.init
+        --     Manual selectedVerifiers verificationReward minVotes ->
+        --         { model
+        --             | form =
+        --                 { oldForm
+        --                     | verification =
+        --                         let
+        --                             newVerifiers =
+        --                                 maybeProfile
+        --                                     |> Maybe.map (List.singleton >> List.append (getInput selectedVerifiers))
+        --                                     |> Maybe.withDefault (getInput selectedVerifiers)
+        --                         in
+        --                         Manual
+        --                             (updateInput newVerifiers selectedVerifiers)
+        --                             verificationReward
+        --                             minVotes
+        --                 }
+        --         }
+        --             |> UR.init
+        CompletedCommunityLoad (Ok community) ->
+            case community of
+                Just cmm ->
+                    UR.init { model | communityStatus = LoadedCommunity cmm }
 
+                Nothing ->
+                    UR.init { model | communityStatus = FailedCommunity }
 
--- let
---     oldForm =
---         model.form
--- in
--- case model.form.verification of
---     Automatic ->
---         model
---             |> UR.init
---     Manual selectedVerifiers verificationReward minVotes ->
---         { model
---             | form =
---                 { oldForm
---                     | verification =
---                         let
---                             newVerifiers =
---                                 maybeProfile
---                                     |> Maybe.map (List.singleton >> List.append (getInput selectedVerifiers))
---                                     |> Maybe.withDefault (getInput selectedVerifiers)
---                         in
---                         Manual
---                             (updateInput newVerifiers selectedVerifiers)
---                             verificationReward
---                             minVotes
---                 }
---         }
---             |> UR.init
+        CompletedCommunityLoad (Err error) ->
+            { model | communityStatus = FailedCommunity }
+                |> UR.init
+                |> UR.logGraphqlError msg error
 
 
 fetchAnalysis : Shared -> Symbol -> Eos.Name -> Cmd Msg
 fetchAnalysis shared communityId account =
     let
-        arg =
-            { claimer = Absent
-            , symbol = Present (Eos.symbolToString communityId)
-            , validator = Present (Eos.nameToString account)
-            , all = Present True
+        args =
+            { input =
+                { claimer = Absent
+                , symbol = Present (Eos.symbolToString communityId)
+                , validator = Present (Eos.nameToString account)
+                , all = Present True
+                }
             }
+
+        pagination =
+            \a -> { a | first = Present 16 }
     in
     Api.Graphql.query
         shared
-        (Cambiatus.Query.claims { input = arg } Claim.selectionSet)
+        (Cambiatus.Query.claims pagination args Claim.claimPaginatedSelectionSet)
         ClaimsLoaded
 
 
@@ -453,34 +500,6 @@ selectConfiguration shared isDisabled =
         )
         shared
         isDisabled
-
-
-viewVerifierSelect : Shared -> Model -> Bool -> Html Msg
-viewVerifierSelect shared model isDisabled =
-    text ""
-
-
-
--- let
---     users =
---         case model.communityStatus of
---             Loaded community ->
---                 community.members
---             _ ->
---                 []
--- in
--- case model.form.verification of
---     Automatic ->
---         text ""
---     Manual selectedUsers _ _ ->
---         div []
---             [ Html.map SelectMsg
---                 (Select.view (selectConfiguration shared isDisabled)
---                     model.multiSelectState
---                     users
---                     (getInput selectedUsers)
---                 )
---             ]
 
 
 jsAddressToMsg : List String -> Encode.Value -> Maybe Msg
@@ -525,5 +544,11 @@ msgToString msg =
         GotVoteResult _ r ->
             [ "GotVoteResult", UR.resultToString r ]
 
+        SelectMsg _ ->
+            [ "SelectMsg", "sub" ]
+
         OnSelectVerifier _ ->
             [ "OnSelectVerifier" ]
+
+        CompletedCommunityLoad r ->
+            [ "CompletedCommunityLoad", UR.resultToString r ]

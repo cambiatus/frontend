@@ -52,52 +52,9 @@ init ({ shared } as loggedIn) symbol =
     ( initModel loggedIn symbol
     , Cmd.batch
         [ Api.Graphql.query shared (Community.communityQuery symbol) CompletedLoadCommunity
-        , fetchCommunityActions shared symbol
         , Task.perform GotTime Time.now
         ]
     )
-
-
-fetchCommunityActions : Shared -> Symbol -> Cmd Msg
-fetchCommunityActions shared sym =
-    let
-        stringSymbol : String
-        stringSymbol =
-            Eos.symbolToString sym
-
-        selectionSet : SelectionSet ActionVerificationsResponse RootQuery
-        selectionSet =
-            verificationHistorySelectionSet stringSymbol
-    in
-    Api.Graphql.query
-        shared
-        selectionSet
-        CompletedLoadActions
-
-
-
--- Actions SelectionSet
-
-
-verificationHistorySelectionSet : String -> SelectionSet ActionVerificationsResponse RootQuery
-verificationHistorySelectionSet stringSym =
-    let
-        vInput : ClaimsRequiredArguments
-        vInput =
-            { input =
-                { validator = Absent
-                , claimer = Absent
-                , symbol = Present stringSym
-                , all = Absent
-                }
-            }
-
-        selectionSet : SelectionSet ClaimResponse Cambiatus.Object.Claim
-        selectionSet =
-            Community.claimSelectionSet stringSym
-    in
-    SelectionSet.succeed ActionVerificationsResponse
-        |> with (Cambiatus.Query.claims vInput selectionSet)
 
 
 
@@ -119,7 +76,6 @@ type alias Model =
     , members : List Member
     , openObjective : Maybe Int
     , modalStatus : ModalStatus
-    , actions : Maybe ActionVerificationsResponse
     , invitations : String
     , symbol : Symbol
     }
@@ -132,7 +88,6 @@ initModel _ symbol =
     , members = []
     , openObjective = Nothing
     , modalStatus = Closed
-    , actions = Nothing
     , invitations = ""
     , symbol = symbol
     }
@@ -746,23 +701,6 @@ viewSections loggedIn model allTransfers =
     in
     Page.viewMaxTwoColumn
         [ Page.viewTitle (t "community.actions.last_title")
-        , case model.actions of
-            Nothing ->
-                Page.viewCardEmpty [ text (t "community.actions.no_actions_yet") ]
-
-            Just resp ->
-                div []
-                    [ if List.isEmpty resp.claims then
-                        div [ class "mt-5" ]
-                            [ Page.viewCardEmpty
-                                [ text (t "community.actions.no_actions_yet") ]
-                            ]
-
-                      else
-                        div
-                            [ class "rounded-lg bg-white mt-5" ]
-                            (toView (Community.toVerifications resp))
-                    ]
         ]
         [ Page.viewTitle (t "transfer.last_title")
         , case allTransfers of
@@ -840,7 +778,6 @@ type Msg
     | CloseClaimConfirmation
     | ClaimAction Int
     | GotClaimActionResponse (Result Value String)
-    | CompletedLoadActions (Result (Graphql.Http.Error ActionVerificationsResponse) ActionVerificationsResponse)
 
 
 update : Msg -> Model -> LoggedIn.Model -> UpdateResult
@@ -866,15 +803,6 @@ update msg model loggedIn =
 
         CompletedLoadCommunity (Err err) ->
             { model | community = Failed err }
-                |> UR.init
-                |> UR.logGraphqlError msg err
-
-        CompletedLoadActions (Ok resp) ->
-            { model | actions = Just resp }
-                |> UR.init
-
-        CompletedLoadActions (Err err) ->
-            model
                 |> UR.init
                 |> UR.logGraphqlError msg err
 
@@ -991,6 +919,3 @@ msgToString msg =
 
         GotClaimActionResponse r ->
             [ "GotClaimActionResponse", UR.resultToString r ]
-
-        CompletedLoadActions _ ->
-            [ "CompletedLoadActions" ]
