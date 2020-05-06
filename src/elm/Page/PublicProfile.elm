@@ -49,7 +49,7 @@ type alias Model =
 type Status
     = Loading
     | LoadingFailed (Graphql.Http.Error (Maybe Profile))
-    | Loaded Profile
+    | Loaded (Maybe Profile)
 
 
 initModel : LoggedIn.Model -> Model
@@ -60,15 +60,22 @@ initModel _ =
 
 view : LoggedIn.Model -> Model -> Html msg
 view loggedIn model =
+    let
+        t =
+            I18Next.t loggedIn.shared.translations
+    in
     case model.status of
         Loading ->
             Page.fullPageLoading
 
-        Loaded profile ->
+        Loaded (Just profile) ->
             view_ loggedIn profile model
 
-        _ ->
-            div [] []
+        Loaded Nothing ->
+            Page.fullPageNotFound (t "error.unknown") (t "error.pageNotFound")
+
+        LoadingFailed err ->
+            Page.fullPageNotFound (t "error.unknown") (Page.errorToString err)
 
 
 view_ : LoggedIn.Model -> Profile -> Model -> Html msg
@@ -193,11 +200,10 @@ update : Msg -> Model -> LoggedIn.Model -> UpdateResult
 update msg model loggedIn =
     case msg of
         CompletedProfileLoad (Ok Nothing) ->
-            -- TODO: not found account
-            UR.init model
+            UR.init { model | status = Loaded Nothing }
 
         CompletedProfileLoad (Ok (Just profile)) ->
-            UR.init { model | status = Loaded profile }
+            UR.init { model | status = Loaded (Just profile) }
 
         CompletedProfileLoad (Err err) ->
             UR.init { model | status = LoadingFailed err }
