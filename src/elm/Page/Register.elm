@@ -544,7 +544,7 @@ update maybeInvitation msg model guest =
                             [ ifBlank .account (InvalidEntry Account (t "error.required"))
                             , ifTrue
                                 (\f -> String.length f.account < 12)
-                                (InvalidEntry Account (t "error.tooShort"))
+                                (InvalidEntry Account (tr "error.tooShort" [ ( "minLength", "12" ) ]))
                             , ifTrue
                                 (\f -> String.length f.account > 12)
                                 (InvalidEntry Account (tr "error.tooLong" [ ( "maxLength", "12" ) ]))
