@@ -320,7 +320,7 @@ viewLoginSteps isModal shared model loginStep =
             img [ class "h-40 mx-auto mt-8 mb-7", src ("images/" ++ fileName) ] []
 
         buttonClass =
-            "button button-primary min-w-full mb-6"
+            "button button-primary min-w-full mb-8"
 
         pClass =
             "text-white text-body mb-5"
@@ -351,7 +351,7 @@ viewLoginSteps isModal shared model loginStep =
                         |> List.length
                         |> String.fromInt
             in
-            div []
+            [ div [ class "sf-content" ]
                 [ illustration "login_key.svg"
                 , p [ class pClass ]
                     [ span [ class "text-green text-caption tracking-wide uppercase block mb-1" ] [ text ("Welcome back" ++ ",") ]
@@ -384,7 +384,9 @@ viewLoginSteps isModal shared model loginStep =
                         ]
                     ]
                 , ul [ class "form-error-on-dark-bg absolute" ] errors
-                , if not isModal then
+                ]
+            , div [ class "sf-footer" ]
+                [ if not isModal then
                     p [ class "text-white text-body text-center mt-16 mb-6 block" ]
                         [ text_ "auth.login.register"
                         , a [ Route.href (Route.Register Nothing Nothing), class "text-orange-300 underline" ] [ text_ "auth.login.registerLink" ]
@@ -398,13 +400,14 @@ viewLoginSteps isModal shared model loginStep =
                     ]
                     [ text_ "dashboard.next" ]
                 ]
+            ]
 
         viewCreatePin =
             let
                 trPrefix s =
                     "auth.pin.instruction." ++ s
             in
-            div []
+            [ div [ class "sf-content" ]
                 [ illustration "login_pin.svg"
                 , p [ class pClass ]
                     [ text_ (trPrefix "nowCreate")
@@ -418,23 +421,31 @@ viewLoginSteps isModal shared model loginStep =
                     , text_ (trPrefix "eachLogin")
                     ]
                 , viewPin model shared
-                , div [ class "h-10" ] []
                 , viewPinConfirmation model shared
-                , div [ class "h-20" ] []
-                , button
+                ]
+            , div [ class "sf-footer" ]
+                [ button
                     [ class buttonClass
+                    , class "mt-10"
                     , onClick (SubmittedLoginPrivateKey model.form)
                     ]
                     [ text_ "auth.login.submit" ]
                 ]
+            ]
     in
-    [ viewAuthError shared model.loginError
-    , case loginStep of
-        LoginStepPassphrase ->
-            viewPassphrase
+    [ div
+        [ class "px-4 md:max-w-sm md:mx-auto md:pt-20 md:px-0"
+        , class "sf-wrapper w-full"
+        ]
+        ([ viewAuthError shared model.loginError ]
+            ++ (case loginStep of
+                    LoginStepPassphrase ->
+                        viewPassphrase
 
-        LoginStepPIN ->
-            viewCreatePin
+                    LoginStepPIN ->
+                        viewCreatePin
+               )
+        )
     ]
 
 
@@ -1065,7 +1076,7 @@ viewPinField shared { labelText, inputId, inputValue, onInputMsgConstructor, isV
             else
                 ""
     in
-    div [ class "relative" ]
+    div [ class "relative mb-10" ]
         [ viewFieldLabel shared labelText inputId
         , input
             [ class "form-input min-w-full tracking-widest"

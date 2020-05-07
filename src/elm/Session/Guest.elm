@@ -109,7 +109,8 @@ view thisMsg page ({ shared } as model) content =
                     ]
                 , div
                     -- Content: Header, Login/Registration forms
-                    [ class "min-h-screen flex flex-col md:w-3/5" ]
+                    [ class "min-h-stretch flex flex-col md:w-3/5"
+                    ]
                     [ viewPageHeader model shared
                         |> Html.map thisMsg
                     , content

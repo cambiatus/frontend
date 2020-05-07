@@ -260,6 +260,27 @@
   @apply mr-2;
 }
 
+.min-h-stretch {
+  /* Fill all available vertical space. It works predictable for mobile,
+  because it doesn't take the address bar into account. */
+  @apply min-h-screen;
+  min-height: stretch;
+}
+
+/* Sticky Footer, https://css-tricks.com/couple-takes-sticky-footer/#article-header-id-3 */
+.sf-wrapper {
+  @apply flex flex-col;
+}
+
+.sf-content {
+  flex: 1 0 auto;
+}
+
+.sf-footer {
+  flex-shrink: 0;
+}
+/* End of Sticky Footer */
+
 /* https://tailwindcss.com/docs/extracting-components#extracting-css-components-with-apply */
 @tailwind utilities;
 
