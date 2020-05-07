@@ -113,7 +113,7 @@
           "tooltip": "Você também pode usar sua CHAVE PRIVADA",
           "toggle": "Eu quero usar a chave privada",
           "notPassphraseError": "Por favor, digite 12 palavras",
-          "notLatinLettersError": "Por favor, use apenas letras latinas básicas",
+          "notLatinLettersError": "Por favor, use apenas letras",
           "atLeastThreeLettersError": "Todas as palavras devem ter ao menos 3 letras"
         }
       },

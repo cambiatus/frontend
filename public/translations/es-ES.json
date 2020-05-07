@@ -107,8 +107,8 @@
           "label": "Sus 12 palabras (que guardó al crear su cuenta)",
           "tooltip": "También puedes usar tu CLAVE PRIVADA",
           "toggle": "Quiero usar la clave privada",
-          "notPassphraseError": "Por favor, ingrese 12 palabras",
-          "notLatinLettersError": "Por favor, use solo letras latinas básicas",
+          "notPassphraseError": "Por favor, ingrese sus 12 palabras",
+          "notLatinLettersError": "Por favor, use solo letras",
           "atLeastThreeLettersError": "Todas las palabras deben tener al menos 3 letras."
         }
       },
@@ -122,18 +122,18 @@
         "sixDigitPin": "PIN de seis dígitos",
         "thePin": "El pin",
         "notPassword": "no es una contraseña",
-        "eachLogin": "y puede cambiarlo cada vez que inicie sesión."
+        "eachLogin": "y puedes cambiarlo cada vez que inicies sesión."
       },
       "toggle": {
         "show": "mostrar",
-        "hide": "esconder"
+        "hide": "ocultar"
       },
       "label": "Crea un nuevo PIN de seis dígitos",
       "tooltip": "El PIN debe contener 6 números, para su seguridad, ingrese el PIN que creó cada vez que lo solicitamos",
       "shouldHaveSixDigitsError": "El PIN debe tener 6 dígitos",
       "pin": "PIN",
       "confirmPin": "confirmar PIN",
-      "pinCharError": "Su PIN debe usar solo números"
+      "pinCharError": "Tu PIN debe contener solo números"
 
     },
     "pinPopup": {
@@ -142,7 +142,7 @@
     "pinConfirmation": {
       "label": "Escriba el PIN nuevamente",
       "tooltip": "",
-      "differsFromPinError": "Ingrese el mismo PIN que el anterior"
+      "differsFromPinError": "Ingresa el mismo PIN anterior"
     }
   },
   "register": {
@@ -184,8 +184,8 @@
       "greet": "Oye",
       "last_step": "es el último paso y el más importante",
       "copy": "Copiar",
-      "i_saved_words": "Copié y pegué en un lugar seguro las 12 palabras que Cambiatus preguntó",
-      "words_copied": "fueron copiados al portapapeles",
+      "i_saved_words": "Copié y pegué en un lugar seguro las 12 palabras como Cambiatus me indicó",
+      "words_copied": "fueron copiadas al portapapeles",
       "twelve_words": "Tus 12 palabras",
       "private_key": "Tu clave privada",
       "recommendation": "Le recomendamos que guarde esta información haciendo clic en el botón a continuación; si la pierde, no podrá volver a iniciar sesión en su cuenta",
