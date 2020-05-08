@@ -52,7 +52,7 @@ type alias Model =
     , isLoading : Bool
     , isCheckingAccount : Bool
     , form : Form
-    , isAgreedToSavePassphrase : Bool
+    , hasAgreedToSavePassphrase : Bool
     , isPassphraseCopiedToClipboard : Bool
     , accountGenerated : Bool
     , problems : List Problem
@@ -65,7 +65,7 @@ initModel _ =
     , isLoading = False
     , isCheckingAccount = False
     , form = initForm
-    , isAgreedToSavePassphrase = False
+    , hasAgreedToSavePassphrase = False
     , isPassphraseCopiedToClipboard = False
     , accountGenerated = False
     , problems = []
@@ -201,17 +201,14 @@ view guest model =
                     , p [ class "mb-3" ]
                         [ text_ "register.account_created.instructions"
                         ]
-                    , div
-                        [ class "w-1/4 m-auto relative"
-                        , style "left" "1rem"
-                        , style "max-width" "10rem"
-                        ]
-                        [ img
-                            [ class ""
-                            , src "images/reg-passphrase-boy.svg"
+                    , div [ class "w-1/4 m-auto relative left-1" ]
+                        [ img [ src "images/reg-passphrase-boy.svg" ]
+                            []
+                        , img
+                            [ class "absolute w-1/4 -mt-2 -ml-10"
+                            , src "images/reg-passphrase-boy-hand.svg"
                             ]
                             []
-                        , img [ class "absolute w-1/4 -mt-2 -ml-10", src "images/reg-passphrase-boy-hand.svg" ] []
                         ]
                     , div [ class "bg-white text-black text-2xl mb-12 p-4 rounded-lg" ]
                         [ p [ class "input-label" ]
@@ -253,7 +250,7 @@ view guest model =
                             [ input
                                 [ type_ "checkbox"
                                 , class "form-checkbox mr-2 p-1"
-                                , checked model.isAgreedToSavePassphrase
+                                , checked model.hasAgreedToSavePassphrase
                                 , onCheck AgreedToSave12Words
                                 ]
                                 []
@@ -264,9 +261,9 @@ view guest model =
                     , button
                         [ onClick <| DownloadPdf (words model)
                         , class "button button-primary w-full mb-8"
-                        , disabled (not model.isAgreedToSavePassphrase)
+                        , disabled (not model.hasAgreedToSavePassphrase)
                         , class <|
-                            if model.isAgreedToSavePassphrase then
+                            if model.hasAgreedToSavePassphrase then
                                 ""
 
                             else
@@ -368,17 +365,17 @@ type alias Field =
     { translationSuffix : String
     , isDisabled : Bool
     , currentValue : String
-    , fieldName : ValidatedField
+    , name : ValidatedField
     }
 
 
 viewField : Shared -> Field -> (String -> FormInputMsg) -> List (Attribute FormInputMsg) -> List Problem -> Html Msg
-viewField ({ translations } as shared) { translationSuffix, isDisabled, currentValue, fieldName } msg extraAttrs problems =
+viewField ({ translations } as shared) { translationSuffix, isDisabled, currentValue, name } msg extraAttrs problems =
     let
         isCurrentFieldNameProblem p =
             case p of
                 InvalidEntry validatedField _ ->
-                    fieldName == validatedField
+                    name == validatedField
 
                 _ ->
                     False
@@ -395,7 +392,7 @@ viewField ({ translations } as shared) { translationSuffix, isDisabled, currentV
                     "field-with-error"
 
         viewFieldErrors =
-            List.map (viewFieldProblem fieldName) problems
+            List.map (viewFieldProblem name) problems
 
         id_ =
             translationSuffix
@@ -418,7 +415,7 @@ viewField ({ translations } as shared) { translationSuffix, isDisabled, currentV
             )
             []
             |> Html.map UpdateForm
-        , case fieldName of
+        , case name of
             Account ->
                 div [ class "input-label pr-1 text-right text-purple-100 font-bold mt-1 absolute right-0" ]
                     [ text <|
@@ -665,7 +662,7 @@ update maybeInvitation msg model guest =
                 |> UR.logHttpError msg err
 
         AgreedToSave12Words val ->
-            { model | isAgreedToSavePassphrase = val }
+            { model | hasAgreedToSavePassphrase = val }
                 |> UR.init
 
         CopyToClipboard elementId ->
