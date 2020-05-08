@@ -52,7 +52,7 @@ view url (Avatar maybeHash) username cls =
                     , href ("/profile/" ++ Maybe.withDefault "" username)
                     ]
                     [ Html.img
-                        [ class ("profile-avatar " ++ cls)
+                        [ class ("profile-avatar object-cover " ++ cls)
                         , src (url ++ "/" ++ hash)
                         ]
                         []
