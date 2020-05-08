@@ -165,8 +165,7 @@ langFlag st =
                 "/icons/en-lang.svg"
     in
     img
-        [ class "object-cover w-6 h-6"
-        , class "lang-flag"
+        [ class "object-cover w-6 h-6 lang-flag"
         , src iconLink
         ]
         []
