@@ -329,7 +329,7 @@ view : String -> Eos.Name -> Translations -> Profile -> Html msg
 view ipfsUrl loggedInAccount translations profile =
     div [ class "flex flex-col items-center" ]
         [ div [ class "w-10 h-10 rounded-full" ]
-            [ Avatar.view ipfsUrl profile.avatar "w-10 h-10"
+            [ Avatar.view ipfsUrl profile.avatar (Just (Eos.nameToString profile.account)) "w-10 h-10"
             ]
         , div [ class "mt-2" ]
             [ viewProfileNameTag loggedInAccount profile translations ]
@@ -396,7 +396,7 @@ viewAutoCompleteItem shared profile =
             shared.endpoints.ipfs
     in
     div [ class "pt-3 pl-3 flex flex-row items-center w-select z-30" ]
-        [ div [ class "pr-3" ] [ Avatar.view ipfsUrl profile.avatar "h-7 w-7" ]
+        [ div [ class "pr-3" ] [ Avatar.view ipfsUrl profile.avatar Nothing "h-7 w-7" ]
         , div [ class "flex flex-col font-sans border-b border-gray-500 pb-3 w-full" ]
             [ span [ class "text-black text-body leading-loose" ]
                 [ text (Eos.nameToString profile.account) ]

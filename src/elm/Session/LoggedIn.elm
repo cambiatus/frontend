@@ -355,7 +355,7 @@ viewHeader ({ shared } as model) page profile_ =
                     , onClick (ShowUserNav (not model.showUserNav))
                     , onMouseEnter (ShowUserNav True)
                     ]
-                    [ Avatar.view shared.endpoints.ipfs profile_.avatar "h-8 w-8"
+                    [ Avatar.view shared.endpoints.ipfs profile_.avatar Nothing "h-8 w-8"
                     , div [ class "flex flex-wrap text-left pl-2" ]
                         [ p [ class "w-full font-sans uppercase text-gray-900 text-xs overflow-x-hidden" ]
                             [ text (tr "menu.welcome_message" [ ( "user_name", Eos.nameToString profile_.account ) ]) ]
@@ -372,7 +372,7 @@ viewHeader ({ shared } as model) page profile_ =
                     , onClick (ShowUserNav (not model.showUserNav))
                     , onMouseEnter (ShowUserNav True)
                     ]
-                    [ Avatar.view shared.endpoints.ipfs profile_.avatar "h-8 w-8"
+                    [ Avatar.view shared.endpoints.ipfs profile_.avatar (Just (Eos.nameToString profile_.account)) "h-8 w-8"
                     ]
 
                 -- Invisible button to hide menu when clicking outside
