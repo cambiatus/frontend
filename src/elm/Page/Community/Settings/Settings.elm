@@ -1,4 +1,4 @@
-module Page.Community.Settings exposing (Model, Msg, init, msgToString, view)
+module Page.Community.Settings.Settings exposing (Model, Msg, init, msgToString, update, view)
 
 import Api.Graphql
 import Community exposing (Community)
@@ -20,19 +20,33 @@ init { shared } symbol =
 
 
 type alias Model =
-    { currency : String }
+    { currency : String
+    , status : Status
+    }
 
 
-initModel : Symbol -> Model
-initModel symbol =
-    { currency = "MUDA" }
+type alias UpdateResult =
+    UR.UpdateResult Model Msg (External Msg)
+
+
+type Status
+    = Loading
+    | LoadingFailed (Graphql.Http.Error (Maybe Community))
+    | Loaded Community
 
 
 type Msg
     = CompletedLoad (Result (Graphql.Http.Error (Maybe Community)) (Maybe Community))
 
 
-view : LoggedIn.Model -> Model -> Html msg
+initModel : Symbol -> Model
+initModel symbol =
+    { currency = "MUDA"
+    , status = Loading
+    }
+
+
+view : LoggedIn.Model -> Model -> Html Msg
 view loggedIn model =
     div []
         [ Page.viewHeader loggedIn "Edit community" Route.Dashboard
@@ -40,7 +54,7 @@ view loggedIn model =
         ]
 
 
-view_ : Model -> Html msg
+view_ : Model -> Html Msg
 view_ model =
     div
         [ class "grid my-4"
@@ -49,14 +63,14 @@ view_ model =
         , style "grid-gap" "16px"
         ]
         [ settingCard "Community information" "Logo, name, description"
-        , settingCard "Community informtion" "Logo, name, description"
-        , settingCard "Community information" "Logo, name, description"
-        , settingCard "Community information" "Logo, name, description"
-        , settingCard "Community information" "Logo, name, description"
+        , settingCard "Currency" "MUDA"
+        , settingCard "Objectives and Actions" ""
+        , settingCard "Team" "Team building"
+        , settingCard "Features" "Actions, shop"
         ]
 
 
-settingCard : String -> String -> Html msg
+settingCard : String -> String -> Html Msg
 settingCard title description =
     div
         [ class "flex flex-col justify-around bg-white w-full h-32 rounded px-4 pt-3 pb-4"
@@ -69,6 +83,30 @@ settingCard title description =
             ]
             [ text "Edit" ]
         ]
+
+
+featuresView : Html Msg
+featuresView =
+    div [] [ text "Features!" ]
+
+
+
+-- UPDATE
+
+
+update : Msg -> Model -> LoggedIn.Model -> UpdateResult
+update msg model loggedIn =
+    case msg of
+        CompletedLoad (Ok (Just community)) ->
+            UR.init { model | status = Loaded community }
+
+        CompletedLoad (Ok Nothing) ->
+            -- TODO: community not found
+            UR.init model
+
+        CompletedLoad (Err err) ->
+            UR.init { model | status = LoadingFailed err }
+                |> UR.logGraphqlError msg err
 
 
 msgToString : Msg -> List String

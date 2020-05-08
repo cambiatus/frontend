@@ -18,7 +18,8 @@ import Page.Community.Explore as CommunityExplore
 import Page.Community.Invite as Invite
 import Page.Community.ObjectiveEditor as ObjectiveEditor
 import Page.Community.Objectives as Objectives
-import Page.Community.Settings as CommunitySettings
+import Page.Community.Settings.Features as CommunitySettingsFeatures
+import Page.Community.Settings.Settings as CommunitySettings
 import Page.Community.Transfer as Transfer
 import Page.Dashboard as Dashboard
 import Page.Login as Login
@@ -356,6 +357,11 @@ update msg model =
         ( GotProfileMsg subMsg, Profile subModel ) ->
             Profile.update subMsg subModel
                 >> updateLoggedInUResult Profile GotProfileMsg model
+                |> withLoggedIn
+
+        ( GotCommunitySettingsMsg subMsg, CommunitySettings subModel ) ->
+            CommunitySettings.update subMsg subModel
+                >> updateLoggedInUResult CommunitySettings GotCommunitySettingsMsg model
                 |> withLoggedIn
 
         ( GotShopMsg subMsg, Shop maybeFilter subModel ) ->
