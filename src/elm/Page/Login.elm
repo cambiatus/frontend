@@ -64,7 +64,7 @@ view guest model =
             Auth.view False guest.shared model.auth
                 |> List.map (Html.map GotAuthMsg)
     in
-    div [ class "bg-purple-500 flex-grow flex md:block" ]
+    div [ class "bg-purple-500 flex-grow flex flex-wrap md:block" ]
         authView
 
 

@@ -432,20 +432,19 @@ viewLoginSteps isModal shared model loginStep =
                     [ text_ "auth.login.submit" ]
                 ]
             ]
-    in
-    [ div
-        [ class "px-4 md:max-w-sm md:mx-auto md:pt-20 md:px-0"
-        , class "sf-wrapper w-full"
-        ]
-        ([ viewAuthError shared model.loginError ]
-            ++ (case loginStep of
-                    LoginStepPassphrase ->
-                        viewPassphrase
 
-                    LoginStepPIN ->
-                        viewCreatePin
-               )
-        )
+        stepBody =
+            case loginStep of
+                LoginStepPassphrase ->
+                    viewPassphrase
+
+                LoginStepPIN ->
+                    viewCreatePin
+    in
+    [ div [ class "mx-4 mt-4 md:max-w-sm md:mx-auto" ]
+        [ viewAuthError shared model.loginError ]
+    , div [ class "sf-wrapper w-full px-4 md:max-w-sm md:mx-auto md:pt-20 md:px-0" ]
+        stepBody
     ]
 
 
@@ -771,26 +770,25 @@ update msg shared model showAuthModal =
                 }
 
         SubmittedLoginPIN ->
-            case model.form.enteredPin of
-                "" ->
-                    { model | loginError = Just "Please fill in all the PIN digits" }
-                        |> UR.init
+            if String.isEmpty model.form.enteredPin then
+                { model | loginError = Just "Please fill in all the PIN digits" }
+                    |> UR.init
 
-                _ ->
-                    let
-                        pinString =
-                            model.form.enteredPin
-                    in
-                    UR.init { model | status = LoggingInWithPin }
-                        |> UR.addPort
-                            { responseAddress = SubmittedLoginPIN
-                            , responseData = Encode.null
-                            , data =
-                                Encode.object
-                                    [ ( "name", Encode.string "loginWithPin" )
-                                    , ( "pin", Encode.string pinString )
-                                    ]
-                            }
+            else
+                let
+                    pinString =
+                        model.form.enteredPin
+                in
+                UR.init { model | status = LoggingInWithPin }
+                    |> UR.addPort
+                        { responseAddress = SubmittedLoginPIN
+                        , responseData = Encode.null
+                        , data =
+                            Encode.object
+                                [ ( "name", Encode.string "loginWithPin" )
+                                , ( "pin", Encode.string pinString )
+                                ]
+                        }
 
         GotPinLogin (Ok ( accountName, privateKey )) ->
             UR.init model
@@ -983,12 +981,12 @@ viewPin ({ form, problems } as model) shared =
     let
         pinLabel =
             case shared.maybeAccount of
-                Nothing ->
-                    "auth.pin"
-
-                _ ->
+                Just _ ->
                     -- Popup with PIN input for logged-in user has different label
                     "auth.pinPopup"
+
+                Nothing ->
+                    "auth.pin"
 
         isPinError ( problemType, _ ) =
             case problemType of
