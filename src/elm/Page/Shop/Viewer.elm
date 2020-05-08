@@ -406,7 +406,7 @@ viewCard ({ shared } as loggedIn) card model =
             [ div [ class "font-medium text-3xl w-full" ] [ text card.sale.title ]
             , div [ class "text-gray w-full md:text-sm" ] [ text card.sale.description ]
             , div [ class "w-full flex items-center text-sm" ]
-                [ div [ class "mr-4" ] [ Avatar.view shared.endpoints.ipfs card.sale.creator.avatar (Just (Eos.nameToString card.sale.creator.account)) "h-10 w-10" ]
+                [ div [ class "mr-4" ] [ Avatar.view shared.endpoints.ipfs card.sale.creator.avatar (Eos.nameToString card.sale.creator.account) "h-10 w-10" ]
                 , text_ "shop.sold_by"
                 , p [ class "font-bold ml-1" ]
                     [ Profile.viewProfileName loggedIn.accountName card.sale.creator shared.translations ]

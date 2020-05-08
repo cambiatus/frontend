@@ -132,7 +132,7 @@ view_ loggedIn profile model =
         , div [ class "card profile-card" ]
             [ div [ class "profile-info" ]
                 [ div [ class "profile-img" ]
-                    [ Avatar.view ipfsUrl profile.avatar (Just (Eos.nameToString profile.account)) "profile-img-avatar" ]
+                    [ Avatar.view ipfsUrl profile.avatar (Eos.nameToString profile.account) "profile-img-avatar" ]
                 , div [ class "profile-info-container" ]
                     [ div [ class "profile-info-meta" ]
                         [ h3 [ class "profile-name" ]
@@ -480,7 +480,7 @@ viewAvatar ipfsUrl profile plchldr avatarS =
             , for "profile-upload-avatar"
             , title plchldr
             ]
-            [ Avatar.view ipfsUrl profile.avatar (Just (Eos.nameToString profile.account)) "profile-img-avatar"
+            [ Avatar.view ipfsUrl profile.avatar (Eos.nameToString profile.account) "profile-img-avatar"
             , if isUploading then
                 div [ class "profile-img-loading" ]
                     [ div [ class "spinner" ] [] ]
