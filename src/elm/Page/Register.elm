@@ -2,20 +2,17 @@ module Page.Register exposing (Model, Msg, init, jsAddressToMsg, msgToString, su
 
 import Api
 import Auth exposing (viewFieldLabel)
-import Browser.Dom as Dom
 import Browser.Events
 import Char
 import Eos.Account as Eos
-import Graphql.Http
 import Html exposing (..)
 import Html.Attributes exposing (..)
-import Html.Events exposing (keyCode, on, onClick, onInput, onSubmit)
+import Html.Events exposing (onCheck, onClick, onInput, onSubmit)
 import Http
 import I18Next exposing (t)
 import Json.Decode as Decode exposing (Decoder, Value)
 import Json.Decode.Pipeline as Decode
 import Json.Encode as Encode
-import List.Extra as LE
 import Profile exposing (Profile)
 import Route
 import Session.Guest as Guest exposing (External(..))
@@ -23,7 +20,7 @@ import Session.Shared exposing (Shared)
 import Task
 import UpdateResult as UR
 import Utils exposing (..)
-import Validate exposing (Validator, ifBlank, ifFalse, ifInvalidEmail, ifTrue, validate)
+import Validate exposing (ifBlank, ifFalse, ifInvalidEmail, ifTrue, validate)
 
 
 
@@ -43,7 +40,7 @@ init guest =
 
 subscriptions : Model -> Sub Msg
 subscriptions _ =
-    Sub.map PressedEnter (Browser.Events.onKeyDown decodeEnterKeyDown)
+    Sub.map KeyPressed (Browser.Events.onKeyDown decodeEnterKeyDown)
 
 
 
@@ -55,6 +52,8 @@ type alias Model =
     , isLoading : Bool
     , isCheckingAccount : Bool
     , form : Form
+    , hasAgreedToSavePassphrase : Bool
+    , isPassphraseCopiedToClipboard : Bool
     , accountGenerated : Bool
     , problems : List Problem
     }
@@ -66,6 +65,8 @@ initModel _ =
     , isLoading = False
     , isCheckingAccount = False
     , form = initForm
+    , hasAgreedToSavePassphrase = False
+    , isPassphraseCopiedToClipboard = False
     , accountGenerated = False
     , problems = []
     }
@@ -79,8 +80,6 @@ type alias Form =
     { username : String
     , email : String
     , account : String
-    , enteredPin : List (Maybe String)
-    , enteredPinConf : List (Maybe String)
     }
 
 
@@ -89,14 +88,7 @@ initForm =
     { username = ""
     , email = ""
     , account = ""
-    , enteredPin = List.repeat 6 Nothing
-    , enteredPinConf = List.repeat 6 Nothing
     }
-
-
-type PinInput
-    = PinInput
-    | PinConfInput
 
 
 type Problem
@@ -108,19 +100,6 @@ type ValidatedField
     = Username
     | Email
     | Account
-    | Pin
-    | PinConfirmation
-
-
-type ValidationError
-    = AccountTooShort
-    | AccountTooLong
-    | AccountAlreadyExists
-    | AccountInvalidChars
-    | PinTooShort
-    | PinTooLong
-    | PinInvalidChars
-    | PinConfirmDontMatch
 
 
 
@@ -172,106 +151,192 @@ view guest model =
 
         name =
             accName model
+
+        passphraseTextId =
+            "passphraseText"
+
+        passphraseInputId =
+            -- Passphrase text is duplicated in `input:text` to be able to copy via Browser API
+            "passphraseWords"
+
+        viewTitleForStep : Int -> Html msg
+        viewTitleForStep s =
+            let
+                step =
+                    String.fromInt s
+            in
+            p
+                [ class "py-4 mb-4 text-body border-b border-dotted text-grey border-grey-500" ]
+                [ text (tr "register.form.step" [ ( "stepNum", step ) ])
+                , text " / "
+                , strong
+                    [ class <|
+                        if s == 1 then
+                            "text-black"
+
+                        else
+                            "text-white"
+                    ]
+                    [ text_ ("register.form.step" ++ step ++ "_title") ]
+                ]
     in
     if model.accountGenerated then
-        div [ class "main__register__details" ]
-            [ div [ class "register__congrats" ]
-                [ div [ class "register__woman" ] []
-                , p [ class "congrats__message" ]
-                    [ span [] [ text_ "register.account_created.congrats" ]
-                    , span [] [ text_ "register.account_created.account" ]
-                    , span [] [ text_ "register.account_created.created" ]
+        div
+            [ class "flex-grow bg-purple-500 flex md:block"
+            ]
+            [ div
+                [ class "sf-wrapper"
+                , class "px-4 md:max-w-sm md:mx-auto md:pt-20 md:px-0 text-white text-body"
+                ]
+                [ div [ class "sf-content" ]
+                    [ viewTitleForStep 2
+                    , p
+                        [ class "text-xl mb-3" ]
+                        [ text_ "register.account_created.greet"
+                        , text " "
+                        , strong [] [ text name ]
+                        , text ", "
+                        , text_ "register.account_created.last_step"
+                        ]
+                    , p [ class "mb-3" ]
+                        [ text_ "register.account_created.instructions"
+                        ]
+                    , div [ class "w-1/4 m-auto relative left-1" ]
+                        [ img [ src "images/reg-passphrase-boy.svg" ]
+                            []
+                        , img
+                            [ class "absolute w-1/4 -mt-2 -ml-10"
+                            , src "images/reg-passphrase-boy-hand.svg"
+                            ]
+                            []
+                        ]
+                    , div [ class "bg-white text-black text-2xl mb-12 p-4 rounded-lg" ]
+                        [ p [ class "input-label" ]
+                            [ text_ "register.account_created.twelve_words"
+                            , if model.isPassphraseCopiedToClipboard then
+                                strong [ class "uppercase ml-1" ]
+                                    [ text_ "register.account_created.words_copied"
+                                    , text " ✔"
+                                    ]
+
+                              else
+                                text ""
+                            ]
+                        , p
+                            [ class "pb-2 leading-tight" ]
+                            [ span [ id passphraseTextId ] [ text (words model) ]
+                            , input
+                                -- We use `HTMLInputElement.select()` method in port to select and copy the text. This method
+                                -- works only with `input` and `textarea` elements which has to be presented in DOM (e.g. we can't
+                                -- hide it with `display: hidden`), so we hide it using position and opacity.
+                                [ type_ "text"
+                                , class "absolute opacity-0"
+                                , style "left" "-9999em"
+                                , id passphraseInputId
+                                , value (words model)
+                                ]
+                                []
+                            ]
+                        , button
+                            [ class "button m-auto button-primary button-sm"
+                            , onClick <| CopyToClipboard passphraseInputId
+                            ]
+                            [ text_ "register.account_created.copy" ]
+                        ]
                     ]
-                , div [ class "register__dog" ] []
+                , div [ class "sf-footer" ]
+                    [ div [ class "my-4" ]
+                        [ label [ class "form-label block" ]
+                            [ input
+                                [ type_ "checkbox"
+                                , class "form-checkbox mr-2 p-1"
+                                , checked model.hasAgreedToSavePassphrase
+                                , onCheck AgreedToSave12Words
+                                ]
+                                []
+                            , text_ "register.account_created.i_saved_words"
+                            , text " 💜"
+                            ]
+                        ]
+                    , button
+                        [ onClick <| DownloadPdf (words model)
+                        , class "button button-primary w-full mb-8"
+                        , disabled (not model.hasAgreedToSavePassphrase)
+                        , class <|
+                            if model.hasAgreedToSavePassphrase then
+                                ""
+
+                            else
+                                "button-disabled text-gray-600"
+                        ]
+                        [ text_ "register.account_created.download" ]
+                    ]
                 ]
-            , div [ class "register__welcome" ]
-                [ text (tr "register.account_created.welcome_message" [ ( "username", name ) ]) ]
-            , div [ class "register__keys" ]
-                [ p [ class "key__title" ] [ text_ "register.account_created.twelve_words" ]
-                , p [ class "key", id "12__words" ] [ text (words model) ]
-                , p [ class "key__title" ] [ text_ "register.account_created.private_key" ]
-                , p [ class "key", id "p__key" ] [ text (privateKey model) ]
-                ]
-            , div [ class "register__instructions" ]
-                [ p [] [ text_ "register.account_created.instructions" ] ]
-            , button
-                [ onClick DownloadPdf
-                , class "btn btn__register"
-                ]
-                [ text_ "register.account_created.download" ]
-            , div [ class "register__footer" ]
-                [ span [] [ text_ "register.account_created.instructions" ] ]
             ]
 
     else
-        Html.form
-            [ onSubmit ValidateForm
-            ]
-            [ div [ class "card card--register" ]
-                [ viewAuthTabs shared
-                , p [ class "card__auth__register__prompt" ]
-                    [ text_ "register.form.title" ]
-                , viewServerErrors model.problems
-                , viewField shared
-                    (Field
-                        "register.form.name"
-                        isDisabled
-                        "name"
-                        Username
-                    )
-                    (identity EnteredUsername)
-                    [ maxlength 255 ]
-                    model.problems
-                , viewField shared
-                    (Field
-                        "register.form.account"
-                        isDisabled
-                        "account"
-                        Account
-                    )
-                    (identity EnteredAccount)
-                    Eos.nameValidationAttrs
-                    model.problems
-                , viewField shared
-                    (Field
-                        "register.form.email"
-                        isDisabled
-                        "email"
-                        Email
-                    )
-                    (identity EnteredEmail)
-                    [ type_ "email" ]
-                    model.problems
-                , viewPinForm model shared PinInput
-                , viewPinForm model shared PinConfInput
-                , button
-                    [ class "btn btn--primary btn--login"
-                    , type_ "submit"
-                    , disabled isDisabled
+        div [ class "flex-grow bg-white flex md:block" ]
+            [ Html.form
+                [ class "sf-wrapper"
+                , class "px-4 md:max-w-sm md:mx-auto md:pt-20 md:px-0"
+                , onSubmit (ValidateForm model.form)
+                ]
+                [ div [ class "sf-content" ]
+                    [ viewServerErrors model.problems
+                    , viewTitleForStep 1
+                    , viewField
+                        shared
+                        (Field
+                            "register.form.name"
+                            isDisabled
+                            model.form.username
+                            Username
+                        )
+                        (identity EnteredUsername)
+                        [ maxlength 255 ]
+                        model.problems
+                    , viewField
+                        shared
+                        (Field
+                            "register.form.account"
+                            isDisabled
+                            model.form.account
+                            Account
+                        )
+                        (identity EnteredAccount)
+                        Eos.nameValidationAttrs
+                        model.problems
+                    , viewField
+                        shared
+                        (Field
+                            "register.form.email"
+                            isDisabled
+                            model.form.email
+                            Email
+                        )
+                        (identity EnteredEmail)
+                        [ attribute "inputmode" "email" ]
+                        model.problems
                     ]
-                    [ if model.isCheckingAccount then
-                        text_ "register.form.checkingAvailability"
+                , div [ class "sf-footer" ]
+                    [ p [ class "text-center text-body my-6" ]
+                        [ text_ "register.login"
+                        , a [ Route.href (Route.Login Nothing), class "text-orange-300 underline" ] [ text_ "register.authLink" ]
+                        ]
+                    , button
+                        [ class "button button-primary min-w-full mb-8"
+                        , type_ "submit"
+                        , disabled isDisabled
+                        ]
+                        [ if model.isCheckingAccount then
+                            text_ "register.form.checkingAvailability"
 
-                      else
-                        text_ "register.form.button"
-                    ]
-                , a [ Route.href (Route.Login Nothing), class "card__auth__prompt" ]
-                    [ span [] [ text_ "register.login" ]
-                    , span [ class "card__auth__login__mode" ] [ text_ "register.authLink" ]
+                          else
+                            text_ "register.form.button"
+                        ]
                     ]
                 ]
             ]
-
-
-viewAuthTabs : Shared -> Html msg
-viewAuthTabs { translations } =
-    div [ class "card__auth__tabs__register" ]
-        [ div [ class "enabled" ] [ p [] [ text (t translations "register.registerTab") ] ]
-        , div [ class "disabled" ]
-            [ a [ Route.href (Route.Login Nothing) ]
-                [ p [] [ text (t translations "register.loginTab") ] ]
-            ]
-        ]
 
 
 viewServerErrors : List Problem -> Html msg
@@ -283,149 +348,87 @@ viewServerErrors problems =
                     (\p ->
                         case p of
                             ServerError e ->
-                                Just (li [ class "field__error" ] [ text e ])
+                                Just (li [] [ text e ])
 
                             _ ->
                                 Nothing
                     )
     in
-    ul [] errorList
+    if List.isEmpty errorList then
+        text ""
 
-
-viewPinForm : Model -> Shared -> PinInput -> Html Msg
-viewPinForm model shared inputType =
-    let
-        inputs =
-            List.range 0 5
-                |> List.map (\pos -> digitInput pos inputType model)
-
-        pinPrompt =
-            case inputType of
-                PinInput ->
-                    "auth.pin"
-
-                PinConfInput ->
-                    "auth.pinConfirmation"
-
-        errors =
-            case inputType of
-                PinInput ->
-                    List.map (\err -> viewFieldProblem Pin err) model.problems
-
-                PinConfInput ->
-                    List.map (\err -> viewFieldProblem PinConfirmation err) model.problems
-    in
-    div [ class "card__auth__pin__section" ]
-        [ viewFieldLabel shared pinPrompt "pin_input_0" Nothing
-        , div [] inputs
-        , ul [] errors
-        ]
-
-
-digitInput : Int -> PinInput -> Model -> Html Msg
-digitInput position inputType { form } =
-    let
-        getVal pinField =
-            Maybe.andThen
-                identity
-                (LE.getAt position pinField)
-
-        val =
-            case inputType of
-                PinInput ->
-                    case getVal form.enteredPin of
-                        Nothing ->
-                            ""
-
-                        Just dig ->
-                            dig
-
-                PinConfInput ->
-                    case getVal form.enteredPinConf of
-                        Nothing ->
-                            ""
-
-                        Just dig ->
-                            dig
-
-        msg =
-            case inputType of
-                PinInput ->
-                    EnteredPin position
-
-                PinConfInput ->
-                    EnteredPinConf position
-
-        inputId =
-            case inputType of
-                PinInput ->
-                    "pin_input_" ++ String.fromInt position
-
-                PinConfInput ->
-                    "pin_conf_input_" ++ String.fromInt position
-    in
-    input
-        [ class "card__auth__pin__input"
-        , id inputId
-        , maxlength 1
-        , value val
-        , onInput msg
-        , required True
-        , autocomplete False
-        , attribute "inputmode" "numeric"
-        ]
-        []
+    else
+        ul [ class "bg-red border-lg rounded p-4 mt-2 text-white" ] errorList
 
 
 type alias Field =
     { translationSuffix : String
     , isDisabled : Bool
-    , id_ : String
-    , validation : ValidatedField
+    , currentValue : String
+    , name : ValidatedField
     }
 
 
 viewField : Shared -> Field -> (String -> FormInputMsg) -> List (Attribute FormInputMsg) -> List Problem -> Html Msg
-viewField ({ translations } as shared) { translationSuffix, isDisabled, id_, validation } msg extraAttrs problems =
+viewField ({ translations } as shared) { translationSuffix, isDisabled, currentValue, name } msg extraAttrs problems =
     let
-        errors =
-            List.map (\err -> viewFieldProblem validation err) problems
+        isCurrentFieldNameProblem p =
+            case p of
+                InvalidEntry validatedField _ ->
+                    name == validatedField
 
-        fProbs =
-            List.filter
-                (\p ->
-                    case p of
-                        InvalidEntry v _ ->
-                            validation == v
+                _ ->
+                    False
 
-                        _ ->
-                            False
-                )
-                problems
+        fieldProblems =
+            List.filter isCurrentFieldNameProblem problems
 
         errorClass =
-            case fProbs of
+            case fieldProblems of
                 [] ->
                     ""
 
                 _ ->
-                    " errored__field"
+                    "field-with-error"
+
+        viewFieldErrors =
+            List.map (viewFieldProblem name) problems
+
+        id_ =
+            translationSuffix
+
+        tr : String -> I18Next.Replacements -> String
+        tr =
+            I18Next.tr shared.translations I18Next.Curly
     in
-    div [ class "form-field" ]
-        [ viewFieldLabel shared translationSuffix id_ Nothing
+    div [ class "mb-10 relative" ]
+        [ viewFieldLabel shared translationSuffix id_
         , input
             ([ id id_
              , onInput msg
-             , class ("input auth__input" ++ errorClass)
+             , class ("input min-w-full" ++ " " ++ errorClass)
              , disabled isDisabled
-             , required True
+             , value currentValue
              , placeholder (t translations (translationSuffix ++ ".placeholder"))
              ]
                 ++ extraAttrs
             )
             []
             |> Html.map UpdateForm
-        , ul [] errors
+        , case name of
+            Account ->
+                div [ class "input-label pr-1 text-right text-purple-100 font-bold mt-1 absolute right-0" ]
+                    [ text <|
+                        tr
+                            "edit.input_counter"
+                            [ ( "current", String.fromInt <| String.length currentValue )
+                            , ( "max", "12" )
+                            ]
+                    ]
+
+            _ ->
+                text ""
+        , ul [] viewFieldErrors
         ]
 
 
@@ -437,45 +440,10 @@ viewFieldProblem field problem =
 
         InvalidEntry f str ->
             if f == field then
-                li [ class "field__error" ] [ text str ]
+                li [ class "form-error absolute mr-8" ] [ text str ]
 
             else
                 text ""
-
-
-validationErrorToString : Shared -> ValidationError -> String
-validationErrorToString shared error =
-    let
-        t s =
-            I18Next.t shared.translations s
-
-        tr str values =
-            I18Next.tr shared.translations I18Next.Curly str values
-    in
-    case error of
-        AccountTooShort ->
-            tr "error.tooShort" [ ( "minLength", "12" ) ]
-
-        AccountTooLong ->
-            tr "error.tooLong" [ ( "maxLength", "12" ) ]
-
-        AccountAlreadyExists ->
-            t "error.alreadyTaken"
-
-        AccountInvalidChars ->
-            t "register.form.accountCharError"
-
-        PinTooShort ->
-            tr "error.tooShort" [ ( "minLength", "6" ) ]
-
-        PinTooLong ->
-            tr "error.tooLong" [ ( "maxLength", "6" ) ]
-
-        PinInvalidChars ->
-            t "register.form.pinCharError"
-
-        PinConfirmDontMatch ->
-            t "register.form.pinConfirmError"
 
 
 accName : Model -> String
@@ -498,16 +466,6 @@ words model =
             ""
 
 
-privateKey : Model -> String
-privateKey model =
-    case model.accountKeys of
-        Just keys ->
-            keys.privateKey
-
-        Nothing ->
-            ""
-
-
 
 -- UPDATE
 
@@ -519,16 +477,17 @@ type alias UpdateResult =
 type Msg
     = UpdateForm FormInputMsg
     | Ignored
-    | ValidateForm
+    | ValidateForm Form
     | GotAccountAvailabilityResponse Bool
     | AccountGenerated (Result Decode.Error AccountKeys)
     | CompletedCreateProfile AccountKeys (Result Http.Error Profile)
     | CompletedLoadProfile AccountKeys (Result Http.Error Profile)
-    | EnteredPin Int String
-    | EnteredPinConf Int String
-    | DownloadPdf
+    | AgreedToSave12Words Bool
+    | DownloadPdf String
     | PdfDownloaded
-    | PressedEnter Bool
+    | KeyPressed Bool
+    | CopyToClipboard String
+    | CopiedToClipboard
 
 
 update : Maybe String -> Msg -> Model -> Guest.Model -> UpdateResult
@@ -536,6 +495,12 @@ update maybeInvitation msg model guest =
     let
         shared =
             guest.shared
+
+        t s =
+            I18Next.t shared.translations s
+
+        tr str values =
+            I18Next.tr shared.translations I18Next.Curly str values
     in
     case msg of
         Ignored ->
@@ -543,43 +508,55 @@ update maybeInvitation msg model guest =
                 |> UR.init
 
         UpdateForm subMsg ->
-            updateForm subMsg shared model
+            updateForm subMsg model
                 |> UR.init
 
-        ValidateForm ->
+        ValidateForm form ->
             let
-                pinStr =
-                    asPinString model.form.enteredPin
+                isLowerThan6 : Char -> Bool
+                isLowerThan6 c =
+                    let
+                        charInt : Int
+                        charInt =
+                            c
+                                |> String.fromChar
+                                |> String.toInt
+                                |> Maybe.withDefault 0
+                    in
+                    compare charInt 6 == Basics.LT
 
-                pinConfStr =
-                    asPinString model.form.enteredPinConf
+                isValidAlphaNum : Char -> Bool
+                isValidAlphaNum c =
+                    (Char.isUpper c || Char.isLower c || Char.isDigit c) && isLowerThan6 c
 
-                pinConfErrors =
-                    if pinStr == pinConfStr then
-                        []
-
-                    else
-                        [ InvalidEntry PinConfirmation (validationErrorToString shared PinConfirmDontMatch) ]
-
-                allProbs =
-                    model.problems
-                        |> List.filter
-                            (\p ->
-                                case p of
-                                    InvalidEntry PinConfirmation _ ->
-                                        False
-
-                                    _ ->
-                                        True
-                            )
-                        |> (++) pinConfErrors
+                formValidator =
+                    Validate.all
+                        [ Validate.firstError
+                            [ ifBlank .username (InvalidEntry Username (t "error.required")) ]
+                        , Validate.firstError
+                            [ ifBlank .email (InvalidEntry Email (t "error.required"))
+                            , ifInvalidEmail .email (\_ -> InvalidEntry Email (t "error.email"))
+                            ]
+                        , Validate.firstError
+                            [ ifBlank .account (InvalidEntry Account (t "error.required"))
+                            , ifTrue
+                                (\f -> String.length f.account < 12)
+                                (InvalidEntry Account (tr "error.tooShort" [ ( "minLength", "12" ) ]))
+                            , ifTrue
+                                (\f -> String.length f.account > 12)
+                                (InvalidEntry Account (tr "error.tooLong" [ ( "maxLength", "12" ) ]))
+                            , ifFalse
+                                (\f -> String.all isValidAlphaNum f.account)
+                                (InvalidEntry Account (t "register.form.accountCharError"))
+                            ]
+                        ]
             in
-            case allProbs of
-                [] ->
+            case validate formValidator form of
+                Ok _ ->
                     { model | isCheckingAccount = True }
                         |> UR.init
                         |> UR.addPort
-                            { responseAddress = ValidateForm
+                            { responseAddress = ValidateForm form
                             , responseData = Encode.null
                             , data =
                                 Encode.object
@@ -588,8 +565,8 @@ update maybeInvitation msg model guest =
                                     ]
                             }
 
-                _ ->
-                    { model | problems = allProbs }
+                Err problems ->
+                    { model | problems = problems }
                         |> UR.init
 
         GotAccountAvailabilityResponse isAvailable ->
@@ -614,14 +591,6 @@ update maybeInvitation msg model guest =
                                         Just invitationId ->
                                             Encode.string invitationId
                                   )
-                                , ( "pin"
-                                  , Encode.string
-                                        (model.form.enteredPin
-                                            |> List.map (Maybe.withDefault "")
-                                            |> String.concat
-                                            |> String.reverse
-                                        )
-                                  )
                                 , ( "account", Encode.string model.form.account )
                                 ]
                         }
@@ -629,8 +598,7 @@ update maybeInvitation msg model guest =
             else
                 let
                     fieldError =
-                        validationErrorToString shared AccountAlreadyExists
-                            |> InvalidEntry Account
+                        InvalidEntry Account (t "error.alreadyTaken")
                 in
                 UR.init
                     { model
@@ -677,13 +645,6 @@ update maybeInvitation msg model guest =
         CompletedCreateProfile _ (Ok _) ->
             { model | accountGenerated = True }
                 |> UR.init
-                |> UR.addPort
-                    { responseAddress = Ignored
-                    , responseData = Encode.null
-                    , data =
-                        Encode.object
-                            [ ( "name", Encode.string "hideFooter" ) ]
-                    }
 
         CompletedCreateProfile _ (Err err) ->
             { model | problems = ServerError "Auth failed" :: model.problems }
@@ -700,121 +661,28 @@ update maybeInvitation msg model guest =
                 |> UR.init
                 |> UR.logHttpError msg err
 
-        EnteredPin pos data ->
-            let
-                otherProblems =
-                    model.problems
-                        |> List.filter
-                            (\p ->
-                                case p of
-                                    InvalidEntry Pin _ ->
-                                        False
+        AgreedToSave12Words val ->
+            { model | hasAgreedToSavePassphrase = val }
+                |> UR.init
 
-                                    _ ->
-                                        True
-                            )
-
-                currentForm =
-                    model.form
-
-                newPin =
-                    if data == "" then
-                        LE.setAt pos Nothing model.form.enteredPin
-
-                    else
-                        LE.setAt pos (Just data) model.form.enteredPin
-
-                pinErrors =
-                    if List.any (\a -> a == Nothing) newPin then
-                        [ InvalidEntry Pin (validationErrorToString shared PinTooShort) ]
-
-                    else
-                        []
-
-                nextFocusPosition : Int
-                nextFocusPosition =
-                    if data == "" then
-                        pos - 1
-
-                    else
-                        pos + 1
-            in
-            { model
-                | form = { currentForm | enteredPin = newPin }
-                , problems = otherProblems ++ pinErrors
-            }
+        CopyToClipboard elementId ->
+            model
                 |> UR.init
                 |> UR.addPort
-                    { responseAddress = Ignored
+                    { responseAddress = CopiedToClipboard
                     , responseData = Encode.null
                     , data =
                         Encode.object
-                            [ ( "pos", Encode.int pos )
-                            , ( "data", Encode.string data )
-                            , ( "isWithinif", Encode.bool True )
+                            [ ( "id", Encode.string elementId )
+                            , ( "name", Encode.string "copyToClipboard" )
                             ]
                     }
-                |> UR.addCmd
-                    (Task.attempt (\_ -> Ignored) (Dom.focus ("pin_input_" ++ String.fromInt nextFocusPosition)))
 
-        EnteredPinConf pos data ->
-            let
-                otherProblems =
-                    model.problems
-                        |> List.filter
-                            (\p ->
-                                case p of
-                                    InvalidEntry PinConfirmation _ ->
-                                        False
-
-                                    _ ->
-                                        True
-                            )
-
-                currentForm =
-                    model.form
-
-                newPin =
-                    if data == "" then
-                        LE.setAt pos Nothing model.form.enteredPinConf
-
-                    else
-                        LE.setAt pos (Just data) model.form.enteredPinConf
-
-                pinConfProbs =
-                    if List.any (\a -> a == Nothing) newPin then
-                        [ InvalidEntry PinConfirmation (validationErrorToString shared PinTooShort) ]
-
-                    else
-                        []
-
-                nextFocusPosition : Int
-                nextFocusPosition =
-                    if data == "" then
-                        pos - 1
-
-                    else
-                        pos + 1
-            in
-            { model
-                | form = { currentForm | enteredPinConf = newPin }
-                , problems = pinConfProbs ++ otherProblems
-            }
+        CopiedToClipboard ->
+            { model | isPassphraseCopiedToClipboard = True }
                 |> UR.init
-                |> UR.addPort
-                    { responseAddress = Ignored
-                    , responseData = Encode.null
-                    , data =
-                        Encode.object
-                            [ ( "pos", Encode.int pos )
-                            , ( "data", Encode.string data )
-                            , ( "isWithinif", Encode.bool True )
-                            ]
-                    }
-                |> UR.addCmd
-                    (Task.attempt (\_ -> Ignored) (Dom.focus ("pin_conf_input_" ++ String.fromInt nextFocusPosition)))
 
-        DownloadPdf ->
+        DownloadPdf passPhrase ->
             model
                 |> UR.init
                 |> UR.addPort
@@ -822,7 +690,9 @@ update maybeInvitation msg model guest =
                     , responseData = Encode.null
                     , data =
                         Encode.object
-                            [ ( "name", Encode.string "printAuthPdf" ) ]
+                            [ ( "name", Encode.string "printAuthPdf" )
+                            , ( "passphrase", Encode.string passPhrase )
+                            ]
                     }
 
         PdfDownloaded ->
@@ -831,19 +701,18 @@ update maybeInvitation msg model guest =
                     model
                         |> UR.init
 
-                Just keys ->
+                Just _ ->
                     model
                         |> UR.init
                         |> UR.addCmd
-                            (CompletedLoadProfile keys
-                                |> Api.signIn guest.shared keys.accountName
-                            )
+                            -- Go to login page after downloading PDF
+                            (Route.replaceUrl guest.shared.navKey (Route.Login Nothing))
 
-        PressedEnter val ->
-            if val then
+        KeyPressed isEnter ->
+            if isEnter then
                 UR.init model
                     |> UR.addCmd
-                        (Task.succeed ValidateForm
+                        (Task.succeed (ValidateForm model.form)
                             |> Task.perform identity
                         )
 
@@ -863,124 +732,24 @@ type FormInputMsg
     | EnteredAccount String
 
 
-updateForm : FormInputMsg -> Shared -> Model -> Model
-updateForm msg shared ({ form } as model) =
+updateForm : FormInputMsg -> Model -> Model
+updateForm msg ({ form } as model) =
     let
-        vErrorString verror =
-            validationErrorToString shared verror
-
-        fieldProbs validator val =
-            case validate validator val of
-                Ok _ ->
-                    []
-
-                Err errs ->
-                    errs
-
-        otherProbs validationField probs =
-            probs
-                |> List.filter
-                    (\p ->
-                        case p of
-                            InvalidEntry v _ ->
-                                v /= validationField
-
-                            _ ->
-                                True
-                    )
+        updateModel newForm =
+            { model
+                | form = newForm
+                , problems = []
+            }
     in
     case msg of
         EnteredUsername str ->
-            let
-                newProblems =
-                    otherProbs Username model.problems
-
-                nameValidator : Validator Problem String
-                nameValidator =
-                    Validate.firstError
-                        [ ifBlank identity (InvalidEntry Username "Name can't be blank") ]
-
-                nameProbs =
-                    fieldProbs nameValidator str
-
-                newForm =
-                    { form | username = str }
-            in
-            { model
-                | form = newForm
-                , problems = newProblems ++ nameProbs
-            }
+            updateModel { form | username = str }
 
         EnteredEmail str ->
-            let
-                newProblems =
-                    otherProbs Email model.problems
-
-                emailValidator : Validator Problem String
-                emailValidator =
-                    Validate.firstError
-                        [ ifBlank identity (InvalidEntry Email "Email can't be blank")
-                        , ifInvalidEmail identity (\_ -> InvalidEntry Email "Email has to be valid email")
-                        ]
-
-                emailProbs =
-                    fieldProbs emailValidator str
-
-                newForm =
-                    { form | email = str }
-            in
-            { model
-                | form = newForm
-                , problems = newProblems ++ emailProbs
-            }
+            updateModel { form | email = str }
 
         EnteredAccount str ->
-            let
-                newProblems =
-                    otherProbs Account model.problems
-
-                isLowerThan6 : Char -> Bool
-                isLowerThan6 c =
-                    let
-                        charInt : Int
-                        charInt =
-                            c
-                                |> String.fromChar
-                                |> String.toInt
-                                |> Maybe.withDefault 0
-                    in
-                    compare charInt 6 == Basics.LT
-
-                isValidAlphaNum : Char -> Bool
-                isValidAlphaNum c =
-                    (Char.isUpper c || Char.isLower c || Char.isDigit c) && isLowerThan6 c
-
-                accountValidator : Validator Problem String
-                accountValidator =
-                    Validate.firstError
-                        [ ifBlank identity (InvalidEntry Account "Account is required")
-                        , ifTrue (\accStr -> String.length accStr < 12) (InvalidEntry Account (vErrorString AccountTooShort))
-                        , ifTrue (\accStr -> String.length accStr > 12) (InvalidEntry Account (vErrorString AccountTooLong))
-                        , ifFalse (\accStr -> String.all isValidAlphaNum accStr) (InvalidEntry Account (vErrorString AccountInvalidChars))
-                        ]
-
-                accProbs =
-                    fieldProbs accountValidator str
-
-                newForm =
-                    { form | account = str |> String.toLower }
-            in
-            { model
-                | form = newForm
-                , problems = newProblems ++ accProbs
-            }
-
-
-asPinString : List (Maybe String) -> String
-asPinString entered =
-    entered
-        |> List.map (\a -> Maybe.withDefault "" a)
-        |> List.foldl (\a b -> a ++ b) ""
+            updateModel { form | account = str |> String.toLower }
 
 
 jsAddressToMsg : List String -> Value -> Maybe Msg
@@ -1001,6 +770,9 @@ jsAddressToMsg addr val =
         "PdfDownloaded" :: _ ->
             Just PdfDownloaded
 
+        "CopiedToClipboard" :: _ ->
+            Just CopiedToClipboard
+
         _ ->
             Nothing
 
@@ -1014,7 +786,7 @@ msgToString msg =
         UpdateForm _ ->
             [ "UpdateForm" ]
 
-        ValidateForm ->
+        ValidateForm _ ->
             [ "ValidateForm" ]
 
         GotAccountAvailabilityResponse _ ->
@@ -1029,17 +801,20 @@ msgToString msg =
         CompletedLoadProfile _ r ->
             [ "CompletedLoadProfile", UR.resultToString r ]
 
-        EnteredPin _ _ ->
-            [ "EnteredPin" ]
+        AgreedToSave12Words _ ->
+            [ "AgreedToSave12Words" ]
 
-        EnteredPinConf _ _ ->
-            [ "EnteredPinConf" ]
+        CopyToClipboard _ ->
+            [ "CopyToClipboard" ]
 
-        DownloadPdf ->
+        CopiedToClipboard ->
+            [ "CopiedToClipboard" ]
+
+        DownloadPdf _ ->
             [ "DownloadPdf" ]
 
         PdfDownloaded ->
             [ "PdfDownloaded" ]
 
-        PressedEnter _ ->
-            [ "PressedEnter" ]
+        KeyPressed _ ->
+            [ "KeyPressed" ]

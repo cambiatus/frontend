@@ -380,10 +380,6 @@ textarea.input {
 
 
 
-.main__register__details {
-   background: #FFFFFF;
-}
-
 
 
 /* Account Details */
@@ -396,102 +392,6 @@ textarea.input {
     text-transform: none;
 }
 
-
-.congrats__message {
-    font-size: 48px !important;
-    max-width: 442px;
-    color: #FFFFFF;
-    display: flex;
-    text-align: center;
-    flex-direction: column;
-}
-
-
-.register__congrats {
-   height: 345px;
-   color: #FFFFFF;
-   font-size: 48px;
-   background-color: #45469B;
-   display: flex;
-   justify-content: space-around;
-}
-
-.register__welcome {
-   margin-top: 30px;
-   margin-bottom: 28px;
-   margin-left: 337px;
-   margin-right: 338px;
-}
-
-.register__keys {
-   width: 522px;
-   background-color: #EEEEEE;
-   margin-left: 337px;
-   margin-right: 338px;
-   border-left: 2px solid #8ACC9E;
-   padding: 18px 21px;
-}
-
-.register__keys .key {
-   margin-bottom: 20px;
-   overflow-wrap: break-word;
-   font-weight: 100;
-}
-
-.register__keys .key__title {
-    height: 24px;
-    color: #45469B !important;
-    font-family: Roboto;
-    font-size: 11px !important;
-    font-weight: bold;
-    letter-spacing: 0.33px;
-    line-height: 24px;
-}
-
-.register__instructions {
-    margin-top: 19px;
-    margin-bottom: 21px;
-    margin-left: 337px;
-    margin-right: 339px;
-}
-
-.register__instructions p {
-    color: #666666;
-    font-size: 15px !important;
-}
-
-.register__footer {
-    margin-top: 20px;
-    margin-bottom: 34px;
-    margin-left: 339px;
-    margin-right: 339px;
-}
-
-.register__footer {
-    color: #666666;
-    font-size: 12px !important;
-}
-
-.register__footer .bold {
-    font-weight: bold;
-}
-
-.register__woman {
-    background-position: 0px 17px;
-    background-image: url("/images/register-woman.png");
-    height: 345px;
-    width: 284px;
-    background-repeat: no-repeat;
-    background-size: cover;
-}
-
-.register__dog {
-    background-image: url("/images/register-dog.png");
-    height: 258px;
-    width: 220px;
-    background-size: cover;
-    margin-top: 142px;
-}
 
 /* Main Header */
 
@@ -3458,28 +3358,6 @@ textarea.form-input {
         display: flex;
     }
 
-
-    .register__welcome {
-        margin-right: 19px;
-        margin-left: 19px;
-        color: #666666;
-        font-family: Roboto;
-        font-size: 15px !important;
-        letter-spacing: 0.33px;
-        line-height: 24px;
-    }
-
-    .register__keys {
-        margin-right: 19px;
-        margin-left: 19px;
-        margin: auto auto;
-    }
-
-    .register__instructions {
-        margin-right: 19px;
-        margin-left: 19px;
-    }
-
     .btn__register {
         height: 47px;
         width: 272px;
@@ -3490,12 +3368,6 @@ textarea.form-input {
         margin-right: 19px;
         margin-left: 19px;
     }
-
-    .register__woman,
-    .register__dog {
-        display: none;
-    }
-
 }
 
 @media (max-width:800px) {
@@ -3634,47 +3506,6 @@ textarea.form-input {
         line-height: 14px;
     }
 
-    .card__auth__pin__input {
-        width: 35px;
-        margin-right: 9px;
-    }
-
-    .card__auth__tabs__login p,
-    .card__auth__tabs__register p {
-        font-size: 18px !important;
-    }
-
-    .main__register__details {
-        margin: unset;
-    }
-
-    .register__welcome {
-        margin-right: 19px;
-        margin-left: 19px;
-        height: 168px;
-        width: 272px;
-        color: #666666;
-        font-family: Roboto;
-        font-size: 15px !important;
-        letter-spacing: 0.33px;
-        line-height: 24px;
-    }
-
-    .register__keys {
-        margin-right: 19px;
-        margin-left: 19px;
-        width: 270px;
-    }
-
-    .register__keys p {
-        max-width: inherit;
-    }
-
-    .register__instructions {
-        margin-right: 19px;
-        margin-left: 19px;
-    }
-
     .btn__register {
         height: 47px;
         width: 272px;
@@ -3684,11 +3515,6 @@ textarea.form-input {
     .register__footer {
         margin-right: 19px;
         margin-left: 19px;
-    }
-
-    .register__woman,
-    .register__dog {
-        display: none;
     }
 
     .card--register {
@@ -3706,9 +3532,6 @@ textarea.form-input {
         margin-left: -16px;
     }
 
-    .card__auth__register__prompt {
-        width: unset;
-    }
 
     .card--register [tooltip]::after {
         transform: translateX(-85%) translateY(-100%);
