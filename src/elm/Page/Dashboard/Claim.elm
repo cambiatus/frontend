@@ -108,7 +108,7 @@ viewTitle shared claim =
                 , span [ class "text-green ml-1" ] [ text_ "claim.title_approved.2" ]
                 ]
 
-          else if List.length claim.checks < claim.action.verifications then
+          else if List.length claim.checks >= claim.action.verifications then
             div [ class "inline-block" ]
                 [ text_ "claim.title_under_review.1"
                 , span [ class "text-gray ml-1" ] [ text_ "claim.title_under_review.2" ]
@@ -251,7 +251,9 @@ viewVoters ({ shared } as loggedIn) claim =
                 [ text_ "claim.pending" ]
             , div []
                 [ if List.length claim.checks == claim.action.verifications then
-                    Profile.viewEmpty shared
+                    div [ class "flex" ]
+                        [ Profile.viewEmpty shared
+                        ]
 
                   else
                     div [ class "flex flex-row mt-3 mb-10 flex-wrap" ]

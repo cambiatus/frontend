@@ -4,6 +4,7 @@ module Claim exposing
     , claimPaginatedSelectionSet
     , encodeVerification
     , isAlreadyValidated
+    , paginatedPageInfo
     , paginatedToList
     , selectionSet
     )
@@ -172,3 +173,10 @@ paginatedToList maybeObj =
         |> toEdges
         |> toMaybeNodes
         |> toNodes
+
+
+paginatedPageInfo : Maybe Paginated -> Maybe Api.Relay.PageInfo
+paginatedPageInfo maybePaginated =
+    Maybe.map
+        (\a -> a.pageInfo)
+        maybePaginated

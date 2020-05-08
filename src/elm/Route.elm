@@ -38,7 +38,7 @@ type Route
     | ViewTransfer Int
     | Invite String
     | Transfer Symbol (Maybe String)
-    | Analysis
+    | Analysis (Maybe String) (Maybe String)
 
 
 parser : Url -> Parser (Route -> a) a
@@ -104,7 +104,7 @@ parser url =
         , Url.map ViewTransfer (s "transfer" </> int)
         , Url.map Invite (s "invite" </> string)
         , Url.map Transfer (s "community" </> Eos.symbolUrlParser </> s "transfer" <?> Query.string "to")
-        , Url.map Analysis (s "dashboard" </> s "analysis")
+        , Url.map Analysis (s "dashboard" </> s "analysis" <?> Query.string "after" <?> Query.string "before")
         ]
 
 
@@ -296,7 +296,11 @@ routeToString route =
                     , [ Url.Builder.string "to" (Maybe.withDefault "" maybeTo) ]
                     )
 
-                Analysis ->
-                    ( [ "dashboard", "analysis" ], [] )
+                Analysis maybeAfter maybeBefore ->
+                    ( [ "dashboard", "analysis" ]
+                    , [ Url.Builder.string "after" (Maybe.withDefault "" maybeAfter)
+                      , Url.Builder.string "before" (Maybe.withDefault "" maybeBefore)
+                      ]
+                    )
     in
     Url.Builder.absolute paths queries

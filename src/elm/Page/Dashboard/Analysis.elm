@@ -9,6 +9,7 @@ module Page.Dashboard.Analysis exposing
     )
 
 import Api.Graphql
+import Api.Relay
 import Cambiatus.Query
 import Claim
 import Community
@@ -37,11 +38,11 @@ import UpdateResult as UR
 import Utils
 
 
-init : LoggedIn.Model -> ( Model, Cmd Msg )
-init { shared, accountName, selectedCommunity } =
-    ( initModel
+init : LoggedIn.Model -> Maybe String -> Maybe String -> ( Model, Cmd Msg )
+init { shared, accountName, selectedCommunity } maybeAfter maybeBefore =
+    ( initModel maybeAfter maybeBefore
     , Cmd.batch
-        [ fetchAnalysis shared selectedCommunity accountName
+        [ fetchAnalysis shared selectedCommunity accountName maybeAfter maybeBefore
         , Api.Graphql.query shared (Community.communityQuery selectedCommunity) CompletedCommunityLoad
         ]
     )
@@ -56,21 +57,23 @@ type alias Model =
     , communityStatus : CommunityStatus
     , modalStatus : ModalStatus
     , autoCompleteState : Select.State
+    , pagination : ( Maybe String, Maybe String )
     }
 
 
-initModel : Model
-initModel =
+initModel : Maybe String -> Maybe String -> Model
+initModel maybeAfter maybeBefore =
     { status = Loading
     , communityStatus = LoadingCommunity
     , modalStatus = ModalClosed
     , autoCompleteState = Select.newState ""
+    , pagination = ( maybeAfter, maybeBefore )
     }
 
 
 type Status
     = Loading
-    | Loaded (Maybe Profile) Filter (List Claim.Model)
+    | Loaded (Maybe Profile) Filter (List Claim.Model) (Maybe Api.Relay.PageInfo)
     | Failed
 
 
@@ -112,7 +115,7 @@ view ({ shared } as loggedIn) model =
         Loading ->
             Page.fullPageLoading
 
-        Loaded maybeProfile f claims ->
+        Loaded maybeProfile f claims pageInfo ->
             div []
                 [ Page.viewHeader loggedIn (t "dashboard.all_analysis.title") Route.Dashboard
                 , div [ class "container mx-auto px-4 mb-10" ]
@@ -120,6 +123,7 @@ view ({ shared } as loggedIn) model =
                     , text "filtro do estado do claim"
                     , div [ class "flex flex-wrap -mx-2" ]
                         (List.map (viewClaim loggedIn f) claims)
+                    , viewPagination pageInfo
                     ]
                 , viewAnalysisModal loggedIn model
                 ]
@@ -176,7 +180,8 @@ viewClaim ({ shared, accountName, selectedCommunity } as loggedIn) f claim =
                 ( t "dashboard.all_analysis.disapproved", "text-red" )
     in
     div [ class "w-full sm:w-full md:w-1/2 lg:w-1/3 xl:w-1/4 px-2 mb-4" ]
-        [ if Claim.isAlreadyValidated claim accountName then
+        [ div [ class "text-2xl" ] [ text <| String.fromInt claim.id ]
+        , if Claim.isAlreadyValidated claim accountName then
             div [ class " flex flex-col p-4 my-2 rounded-lg bg-white" ]
                 [ div [ class "flex justify-center mb-8" ]
                     [ Profile.view shared accountName claim.claimer
@@ -228,6 +233,35 @@ viewClaim ({ shared, accountName, selectedCommunity } as loggedIn) f claim =
                     ]
                 ]
         ]
+
+
+viewPagination : Maybe Api.Relay.PageInfo -> Html Msg
+viewPagination maybePageInfo =
+    case maybePageInfo of
+        Just pageInfo ->
+            div [ class "flex justify-center" ]
+                [ if pageInfo.hasPreviousPage then
+                    a
+                        [ Route.href <|
+                            Route.Analysis Nothing pageInfo.endCursor
+                        ]
+                        [ Icons.arrowDown "rotate-90" ]
+
+                  else
+                    text ""
+                , if pageInfo.hasNextPage then
+                    a
+                        [ Route.href <|
+                            Route.Analysis pageInfo.endCursor Nothing
+                        ]
+                        [ Icons.arrowDown "rotate--90" ]
+
+                  else
+                    text ""
+                ]
+
+        Nothing ->
+            text ""
 
 
 viewAnalysisModal : LoggedIn.Model -> Model -> Html Msg
@@ -305,7 +339,11 @@ update msg model loggedIn =
         ClaimsLoaded (Ok results) ->
             { model
                 | status =
-                    Loaded Nothing All (Claim.paginatedToList results)
+                    Loaded
+                        Nothing
+                        All
+                        (Claim.paginatedToList results)
+                        (Claim.paginatedPageInfo results)
             }
                 |> UR.init
 
@@ -320,7 +358,7 @@ update msg model loggedIn =
 
         VoteClaim claimId vote ->
             case model.status of
-                Loaded _ _ _ ->
+                Loaded _ _ _ _ ->
                     let
                         newModel =
                             { model
@@ -357,7 +395,7 @@ update msg model loggedIn =
 
         GotVoteResult claimId (Ok _) ->
             case model.status of
-                Loaded maybeProfile f claims ->
+                Loaded maybeProfile f claims pageInfo ->
                     let
                         maybeClaim : Maybe Claim.Model
                         maybeClaim =
@@ -376,12 +414,12 @@ update msg model loggedIn =
                                         ++ Eos.symbolToString claim.action.objective.community.symbol
                             in
                             { model
-                                | status = Loaded maybeProfile f claims
+                                | status = Loaded maybeProfile f claims pageInfo
                             }
                                 |> UR.init
                                 |> UR.addExt (LoggedIn.ShowFeedback LoggedIn.Success (message value))
                                 |> UR.addCmd
-                                    (Route.Analysis
+                                    (Route.Analysis (Tuple.first model.pagination) (Tuple.second model.pagination)
                                         |> Route.replaceUrl loggedIn.shared.navKey
                                     )
 
@@ -394,8 +432,8 @@ update msg model loggedIn =
 
         GotVoteResult _ (Err _) ->
             case model.status of
-                Loaded maybeProfile f claims ->
-                    { model | status = Loaded maybeProfile f claims }
+                Loaded maybeProfile f claims pageInfo ->
+                    { model | status = Loaded maybeProfile f claims pageInfo }
                         |> UR.init
 
                 _ ->
@@ -452,8 +490,8 @@ update msg model loggedIn =
                 |> UR.logGraphqlError msg error
 
 
-fetchAnalysis : Shared -> Symbol -> Eos.Name -> Cmd Msg
-fetchAnalysis shared communityId account =
+fetchAnalysis : Shared -> Symbol -> Eos.Name -> Maybe String -> Maybe String -> Cmd Msg
+fetchAnalysis shared communityId account maybeAfter maybeBefore =
     let
         args =
             { input =
@@ -464,8 +502,25 @@ fetchAnalysis shared communityId account =
                 }
             }
 
+        mapFn =
+            \s ->
+                if String.isEmpty s then
+                    Nothing
+
+                else
+                    Just (Present s)
+
         pagination =
-            \a -> { a | first = Present 16 }
+            \a ->
+                { a
+                    | first = Present 16
+                    , after =
+                        Maybe.andThen mapFn maybeAfter
+                            |> Maybe.withDefault Absent
+                    , before =
+                        Maybe.andThen mapFn maybeBefore
+                            |> Maybe.withDefault Absent
+                }
     in
     Api.Graphql.query
         shared
