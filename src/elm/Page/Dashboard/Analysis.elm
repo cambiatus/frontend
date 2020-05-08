@@ -117,9 +117,9 @@ view ({ shared } as loggedIn) model =
             div []
                 [ Page.viewHeader loggedIn (t "dashboard.all_analysis.title") Route.Dashboard
                 , div [ class "container mx-auto px-4 mb-10" ]
-                    [ viewAutoCompleteProfile loggedIn model maybeProfile
-                    , text "filtro do estado do claim"
-                    , div [ class "flex flex-wrap -mx-2" ]
+                    [ --viewAutoCompleteProfile loggedIn model maybeProfile
+                      -- , text "filtro do estado do claim"
+                      div [ class "flex flex-wrap -mx-2" ]
                         (List.map (viewClaim loggedIn f) claims)
                     , viewPagination loggedIn pageInfo
                     ]
@@ -178,8 +178,7 @@ viewClaim ({ shared, accountName, selectedCommunity } as loggedIn) f claim =
                 ( t "dashboard.all_analysis.disapproved", "text-red" )
     in
     div [ class "w-full sm:w-full md:w-1/2 lg:w-1/3 xl:w-1/4 px-2 mb-4" ]
-        [ div [ class "text-2xl" ] [ text <| String.fromInt claim.id ]
-        , if Claim.isAlreadyValidated claim accountName then
+        [ if Claim.isAlreadyValidated claim accountName then
             div [ class " flex flex-col p-4 my-2 rounded-lg bg-white" ]
                 [ div [ class "flex justify-center mb-8" ]
                     [ Profile.view shared accountName claim.claimer

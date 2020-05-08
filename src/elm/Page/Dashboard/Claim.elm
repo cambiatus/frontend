@@ -100,6 +100,9 @@ viewTitle shared claim =
     let
         text_ s =
             text (I18Next.t shared.translations s)
+
+        negativeChecks =
+            List.filter (\ch -> not ch.isApproved) claim.checks
     in
     div [ class "text-heading font-bold text-center mb-8" ]
         [ if claim.isVerified then
@@ -108,17 +111,17 @@ viewTitle shared claim =
                 , span [ class "text-green ml-1" ] [ text_ "claim.title_approved.2" ]
                 ]
 
-          else if List.length claim.checks >= claim.action.verifications then
+          else if List.length negativeChecks >= claim.action.verifications then
             div [ class "inline-block" ]
-                [ text_ "claim.title_under_review.1"
-                , span [ class "text-gray ml-1" ] [ text_ "claim.title_under_review.2" ]
-                , span [ class "mr-1" ] [ text_ "claim.title_under_review.3" ]
+                [ text_ "claim.title_rejected.1"
+                , span [ class "text-red ml-1" ] [ text_ "claim.title_rejected.2" ]
                 ]
 
           else
             div [ class "inline-block" ]
-                [ text_ "claim.title_rejected.1"
-                , span [ class "text-red ml-1" ] [ text_ "claim.title_rejected.2" ]
+                [ text_ "claim.title_under_review.1"
+                , span [ class "text-gray ml-1" ] [ text_ "claim.title_under_review.2" ]
+                , span [ class "mr-1" ] [ text_ "claim.title_under_review.3" ]
                 ]
         ]
 
