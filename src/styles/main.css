@@ -69,7 +69,7 @@
 /* Button */
 
 .button {
-  @apply uppercase text-sm flex items-center justify-center leading-none w-40 h-10;
+  @apply uppercase text-sm flex items-center justify-center leading-none w-40 h-12;
 }
 
 .button-primary {
@@ -93,7 +93,11 @@
 }
 
 .button-disabled {
-  @apply bg-gray-500 text-red rounded-super text-body;
+  @apply bg-gray-500 text-red rounded-super text-body cursor-not-allowed;
+}
+
+.button-disabled:hover {
+  @apply bg-gray-500;
 }
 
 .button-success {
@@ -107,6 +111,11 @@
 .input {
   /* Form input comes from tailwind/custom-forms */
   @apply form-input h-12;
+}
+
+.field-with-error,
+.field-with-error:focus {
+  @apply border-red text-red;
 }
 
 .input-counter {
@@ -232,6 +241,7 @@
   content: '';
   transition: all 0.2s ease-in;
 }
+
 .form-switch-checkbox:checked + .form-switch-label {
   @apply bg-indigo-500 shadow-none;
 }
@@ -241,6 +251,41 @@
 
   margin-right: 0.3rem;
 }
+
+.form-error {
+  /* validation message for the field */
+  @apply text-red text-caption uppercase tracking-wide block mt-1;
+}
+
+.form-error-on-dark-bg {
+  @apply form-error text-lightred;
+}
+
+.lang-menu-open .lang-flag {
+  @apply mr-2;
+}
+
+.min-h-stretch {
+  /* Fill all available vertical space. It works predictable for mobile,
+  because it doesn't take the address bar into account. */
+  @apply min-h-screen;
+  min-height: stretch;
+}
+
+/* Sticky Footer, https://css-tricks.com/couple-takes-sticky-footer/#article-header-id-3 */
+.sf-wrapper {
+  @apply flex flex-col;
+}
+
+.sf-content {
+  flex: 1 0 auto;
+}
+
+.sf-footer {
+  flex-shrink: 0;
+}
+
+/* End of Sticky Footer */
 
 /* https://tailwindcss.com/docs/extracting-components#extracting-css-components-with-apply */
 @tailwind utilities;

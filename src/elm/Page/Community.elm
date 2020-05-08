@@ -520,6 +520,9 @@ viewAction loggedIn metadata maybeDate action =
         validationType =
             action.verificationType
                 |> VerificationType.toString
+
+        isClosed =
+            pastDeadline || (action.usages > 0 && action.usagesLeft == 0)
     in
     if action.isCompleted then
         text ""
@@ -572,7 +575,11 @@ viewAction loggedIn metadata maybeDate action =
                         [ if validationType == "CLAIMABLE" then
                             button
                                 [ class ("h-10 uppercase rounded-lg ml-1" ++ claimColors ++ claimSize)
-                                , onClick (OpenClaimConfirmation action.id)
+                                , if isClosed == False then
+                                    onClick (OpenClaimConfirmation action.id)
+
+                                  else
+                                    class ""
                                 ]
                                 [ text_ claimText ]
 

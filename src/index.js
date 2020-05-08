@@ -2,7 +2,7 @@ import Eos from 'eosjs'
 import ecc from 'eosjs-ecc'
 import sjcl from 'sjcl'
 import axios from 'axios'
-import './styles/processed.css'
+import './styles/main.css'
 import mnemonic from './scripts/mnemonic.js'
 import configuration from './scripts/config.js'
 import registerServiceWorker from './scripts/registerServiceWorker'
@@ -12,9 +12,15 @@ import { Elm } from './elm/Main.elm'
 import * as Sentry from '@sentry/browser'
 import * as AbsintheSocket from '@absinthe/socket'
 import pdfMake from 'pdfmake/build/pdfmake'
-import pdfFonts from 'pdfmake/build/vfs_fonts'
-const { Socket: PhoenixSocket } = require('phoenix')
+import pdfFonts from './vfs_fonts'
 pdfMake.vfs = pdfFonts.pdfMake.vfs
+pdfMake.fonts = {
+  Gotham: {
+    normal: 'gotham-rounded-book.otf',
+    bold: 'gotham-rounded-bold.otf'
+  }
+}
+const { Socket: PhoenixSocket } = require('phoenix')
 
 // =========================================
 // App startup
@@ -203,14 +209,6 @@ async function handleJavascriptPort (arg) {
             Object.assign(config.eosOptions, {
               keyProvider: privateKey
             })
-          )
-
-          storePin(
-            Object.assign(data, {
-              accountName: arg.data.account,
-              privateKey: privateKey
-            }),
-            arg.data.pin
           )
 
           const response = {
@@ -512,11 +510,8 @@ async function handleJavascriptPort (arg) {
     }
     case 'printAuthPdf': {
       devLog('=======================', 'printAuthPdf')
-      let words = document.getElementById('12__words').textContent
-      let pkey = document.getElementById('p__key').textContent
 
-      const definition = pdfDefinition(words, pkey)
-
+      const definition = pdfDefinition(arg.data.passphrase)
       const pdf = pdfMake.createPdf(definition)
       pdf.download('Cambiatus.pdf')
 
