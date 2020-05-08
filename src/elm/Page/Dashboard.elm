@@ -341,7 +341,7 @@ viewAnalysisList loggedIn profile model =
                             ]
                         , a
                             [ class "button button-secondary font-medium h-8 w-20"
-                            , Route.href <| Route.Analysis Nothing Nothing
+                            , Route.href Route.Analysis
                             ]
                             [ text_ "dashboard.analysis.all" ]
                         ]

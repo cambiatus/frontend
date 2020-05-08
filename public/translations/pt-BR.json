@@ -522,7 +522,8 @@
       "more_details": "Mais detalhes",
       "approved": "Aprovado",
       "pending": "Pendente",
-      "disapproved": "Reprovado"
+      "disapproved": "Reprovado",
+      "show_more": "Mostrar próximos 16 items"
     }
   },
   "claim": {

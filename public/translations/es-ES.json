@@ -520,7 +520,8 @@
       "more_details": "Más detalles",
       "approved": "Aprobada",
       "pending": "Pendiente",
-      "disapproved": "Rechazada"
+      "disapproved": "Rechazada",
+      "show_more": "mostrar los siguientes 16 artículos"
     }
   },
   "claim": {

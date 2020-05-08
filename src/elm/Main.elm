@@ -778,10 +778,10 @@ changeRouteTo maybeRoute model =
                 >> updateStatusWith Transfer GotTransferMsg model
                 |> withLoggedIn (Route.Transfer symbol maybeTo)
 
-        Just (Route.Analysis maybeAfter maybeBefore) ->
-            (\l -> Analysis.init l maybeAfter maybeBefore)
+        Just Route.Analysis ->
+            (\l -> Analysis.init l)
                 >> updateStatusWith Analysis GotAnalysisMsg model
-                |> withLoggedIn (Route.Analysis maybeAfter maybeBefore)
+                |> withLoggedIn Route.Analysis
 
 
 jsAddressToMsg : List String -> Value -> Maybe Msg

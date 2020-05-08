@@ -520,7 +520,8 @@
       "more_details": "Més detalls",
       "approved": "Aprovat",
       "pending": "Pendents",
-      "disapproved": "Rebutjat"
+      "disapproved": "Rebutjat",
+      "show_more": "mostra els següents 16 articles"
     }
   },
   "claim": {

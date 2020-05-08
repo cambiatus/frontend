@@ -38,11 +38,11 @@ import UpdateResult as UR
 import Utils
 
 
-init : LoggedIn.Model -> Maybe String -> Maybe String -> ( Model, Cmd Msg )
-init { shared, accountName, selectedCommunity } maybeAfter maybeBefore =
-    ( initModel maybeAfter maybeBefore
+init : LoggedIn.Model -> ( Model, Cmd Msg )
+init { shared, accountName, selectedCommunity } =
+    ( initModel
     , Cmd.batch
-        [ fetchAnalysis shared selectedCommunity accountName maybeAfter maybeBefore
+        [ fetchAnalysis shared selectedCommunity accountName Nothing
         , Api.Graphql.query shared (Community.communityQuery selectedCommunity) CompletedCommunityLoad
         ]
     )
@@ -57,17 +57,15 @@ type alias Model =
     , communityStatus : CommunityStatus
     , modalStatus : ModalStatus
     , autoCompleteState : Select.State
-    , pagination : ( Maybe String, Maybe String )
     }
 
 
-initModel : Maybe String -> Maybe String -> Model
-initModel maybeAfter maybeBefore =
+initModel : Model
+initModel =
     { status = Loading
     , communityStatus = LoadingCommunity
     , modalStatus = ModalClosed
     , autoCompleteState = Select.newState ""
-    , pagination = ( maybeAfter, maybeBefore )
     }
 
 
@@ -123,7 +121,7 @@ view ({ shared } as loggedIn) model =
                     , text "filtro do estado do claim"
                     , div [ class "flex flex-wrap -mx-2" ]
                         (List.map (viewClaim loggedIn f) claims)
-                    , viewPagination pageInfo
+                    , viewPagination loggedIn pageInfo
                     ]
                 , viewAnalysisModal loggedIn model
                 ]
@@ -235,26 +233,25 @@ viewClaim ({ shared, accountName, selectedCommunity } as loggedIn) f claim =
         ]
 
 
-viewPagination : Maybe Api.Relay.PageInfo -> Html Msg
-viewPagination maybePageInfo =
+viewPagination : LoggedIn.Model -> Maybe Api.Relay.PageInfo -> Html Msg
+viewPagination { shared } maybePageInfo =
+    let
+        t s =
+            I18Next.t shared.translations s
+
+        text_ s =
+            text (t s)
+    in
     case maybePageInfo of
         Just pageInfo ->
             div [ class "flex justify-center" ]
-                [ if pageInfo.hasPreviousPage then
-                    a
-                        [ Route.href <|
-                            Route.Analysis Nothing pageInfo.endCursor
+                [ if pageInfo.hasNextPage then
+                    button
+                        [ Route.href Route.Analysis
+                        , class "button button-primary uppercase w-full"
+                        , onClick ShowMore
                         ]
-                        [ Icons.arrowDown "rotate-90" ]
-
-                  else
-                    text ""
-                , if pageInfo.hasNextPage then
-                    a
-                        [ Route.href <|
-                            Route.Analysis pageInfo.endCursor Nothing
-                        ]
-                        [ Icons.arrowDown "rotate--90" ]
+                        [ text_ "dashboard.all_analysis.show_more" ]
 
                   else
                     text ""
@@ -331,21 +328,35 @@ type Msg
     | SelectMsg (Select.Msg Profile)
     | OnSelectVerifier (Maybe Profile)
     | CompletedCommunityLoad (Result (Graphql.Http.Error (Maybe Community.Model)) (Maybe Community.Model))
+    | ShowMore
 
 
 update : Msg -> Model -> LoggedIn.Model -> UpdateResult
 update msg model loggedIn =
     case msg of
         ClaimsLoaded (Ok results) ->
-            { model
-                | status =
-                    Loaded
-                        Nothing
-                        All
-                        (Claim.paginatedToList results)
-                        (Claim.paginatedPageInfo results)
-            }
-                |> UR.init
+            case model.status of
+                Loaded filterProfile filterStatus claims _ ->
+                    { model
+                        | status =
+                            Loaded
+                                filterProfile
+                                filterStatus
+                                (claims ++ Claim.paginatedToList results)
+                                (Claim.paginatedPageInfo results)
+                    }
+                        |> UR.init
+
+                _ ->
+                    { model
+                        | status =
+                            Loaded
+                                Nothing
+                                All
+                                (Claim.paginatedToList results)
+                                (Claim.paginatedPageInfo results)
+                    }
+                        |> UR.init
 
         ClaimsLoaded (Err _) ->
             { model | status = Failed } |> UR.init
@@ -418,10 +429,7 @@ update msg model loggedIn =
                             }
                                 |> UR.init
                                 |> UR.addExt (LoggedIn.ShowFeedback LoggedIn.Success (message value))
-                                |> UR.addCmd
-                                    (Route.Analysis (Tuple.first model.pagination) (Tuple.second model.pagination)
-                                        |> Route.replaceUrl loggedIn.shared.navKey
-                                    )
+                                |> UR.addCmd (Route.replaceUrl loggedIn.shared.navKey Route.Analysis)
 
                         Nothing ->
                             model
@@ -489,9 +497,24 @@ update msg model loggedIn =
                 |> UR.init
                 |> UR.logGraphqlError msg error
 
+        ShowMore ->
+            case model.status of
+                Loaded _ _ _ pageInfo ->
+                    let
+                        cursor : Maybe String
+                        cursor =
+                            Maybe.andThen .endCursor pageInfo
+                    in
+                    model
+                        |> UR.init
+                        |> UR.addCmd (fetchAnalysis loggedIn.shared loggedIn.selectedCommunity loggedIn.accountName cursor)
 
-fetchAnalysis : Shared -> Symbol -> Eos.Name -> Maybe String -> Maybe String -> Cmd Msg
-fetchAnalysis shared communityId account maybeAfter maybeBefore =
+                _ ->
+                    UR.init model
+
+
+fetchAnalysis : Shared -> Symbol -> Eos.Name -> Maybe String -> Cmd Msg
+fetchAnalysis shared communityId account maybeCursorAfter =
     let
         args =
             { input =
@@ -515,10 +538,7 @@ fetchAnalysis shared communityId account maybeAfter maybeBefore =
                 { a
                     | first = Present 16
                     , after =
-                        Maybe.andThen mapFn maybeAfter
-                            |> Maybe.withDefault Absent
-                    , before =
-                        Maybe.andThen mapFn maybeBefore
+                        Maybe.andThen mapFn maybeCursorAfter
                             |> Maybe.withDefault Absent
                 }
     in
@@ -607,3 +627,6 @@ msgToString msg =
 
         CompletedCommunityLoad r ->
             [ "CompletedCommunityLoad", UR.resultToString r ]
+
+        ShowMore ->
+            [ "ShowMore" ]
