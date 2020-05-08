@@ -157,14 +157,14 @@
         "placeholder": "Ex.: Arlene Warren"
       },
       "email": {
-          "label": "Email",
-          "tooltip": "",
-          "placeholder": "Ex.: arlene_warren@email.com"
+        "label": "Email",
+        "tooltip": "",
+        "placeholder": "Ex.: arlene_warren@email.com"
       },
       "account": {
-          "label": "Create a username with exactly 12 characters (letters from a-z and numbers from 1-5)",
-          "tooltip": "The username will be as you will be known on the platform by the other participants, it must have exact 12 characters.",
-          "placeholder": "Ex.: arlenewa1224"
+        "label": "Create a username with exactly 12 characters (letters from a-z and numbers from 1-5)",
+        "tooltip": "The username will be as you will be known on the platform by the other participants, it must have exact 12 characters.",
+        "placeholder": "Ex.: arlenewa1224"
       },
       "accountCharError": "Invalid character found. Use only letters and numbers between 1-5",
       "checkingAvailability": "Checking availability of that account",
@@ -184,7 +184,7 @@
       "twelve_words": "Your 12 words",
       "private_key": "Your private key",
       "recommendation": "We recommend you to save this information by clicking the button below, if you lose it you won't be able to login to your account again",
-      "download": "Save to PDF and Create Account",
+      "download": "Save your PDF and Create an Account",
       "instructions": "You must copy and paste on a secure place these 12 words below. We also are going to give you a PDF with these 12 words when you are finishing the register."
     }
   },

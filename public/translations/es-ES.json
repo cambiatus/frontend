@@ -134,7 +134,6 @@
       "pin": "PIN",
       "confirmPin": "confirmar PIN",
       "pinCharError": "Tu PIN debe contener solo números"
-
     },
     "pinPopup": {
       "label": "Tu PIN de seis dígitos"
