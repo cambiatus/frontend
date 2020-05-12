@@ -179,7 +179,7 @@ viewClaim ({ shared, accountName, selectedCommunity } as loggedIn) f claim =
     in
     div [ class "w-full sm:w-full md:w-1/2 lg:w-1/3 xl:w-1/4 px-2 mb-4" ]
         [ if Claim.isAlreadyValidated claim accountName then
-            div [ class " flex flex-col p-4 my-2 rounded-lg bg-white" ]
+            div [ class "flex flex-col p-4 my-2 rounded-lg bg-white" ]
                 [ div [ class "flex justify-center mb-8" ]
                     [ Profile.view shared accountName claim.claimer
                     ]
@@ -204,7 +204,7 @@ viewClaim ({ shared, accountName, selectedCommunity } as loggedIn) f claim =
                 ]
 
           else
-            div [ class " flex flex-col p-4 my-2 rounded-lg bg-white", id <| "claim-" ++ String.fromInt claim.id ]
+            div [ class "flex flex-col p-4 my-2 rounded-lg bg-white", id <| "claim-" ++ String.fromInt claim.id ]
                 [ div [ class "flex justify-start mb-8" ]
                     [ Profile.view shared accountName claim.claimer
                     ]

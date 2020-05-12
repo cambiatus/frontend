@@ -3,14 +3,13 @@ module Main exposing (main)
 import Auth
 import Browser
 import Browser.Navigation as Nav
-import Community
 import Flags
 import Html exposing (Html, text)
 import Json.Decode as Decode exposing (Value)
 import Log
 import Page exposing (Session)
 import Page.ComingSoon as ComingSoon
-import Page.Community as PageCommunity
+import Page.Community as CommunityPage
 import Page.Community.ActionEditor as ActionEditor
 import Page.Community.Editor as CommunityEditor
 import Page.Community.Explore as CommunityExplore
@@ -115,7 +114,7 @@ subscriptions model =
                     |> Sub.map GotRegisterMsg
 
             Community subModel ->
-                PageCommunity.subscriptions subModel
+                CommunityPage.subscriptions subModel
                     |> Sub.map GotCommunityMsg
 
             CommunityEditor subModel ->
@@ -150,7 +149,7 @@ type Status
     = Redirect
     | NotFound
     | ComingSoon
-    | Community PageCommunity.Model
+    | Community CommunityPage.Model
     | CommunityEditor CommunityEditor.Model
     | Objectives Objectives.Model
     | ObjectiveEditor ObjectiveEditor.Model
@@ -183,7 +182,7 @@ type Msg
     | GotJavascriptData Value
     | GotPageMsg Page.Msg
     | GotNotificationMsg Notification.Msg
-    | GotCommunityMsg PageCommunity.Msg
+    | GotCommunityMsg CommunityPage.Msg
     | GotCommunityEditorMsg CommunityEditor.Msg
     | GotObjectivesMsg Objectives.Msg
     | GotActionEditorMsg ActionEditor.Msg
@@ -324,7 +323,7 @@ update msg model =
                 |> withLoggedIn
 
         ( GotCommunityMsg subMsg, Community subModel ) ->
-            PageCommunity.update subMsg subModel
+            CommunityPage.update subMsg subModel
                 >> updateLoggedInUResult Community GotCommunityMsg model
                 |> withLoggedIn
 
@@ -695,7 +694,7 @@ changeRouteTo maybeRoute model =
                 |> withLoggedIn Route.Dashboard
 
         Just (Route.Community symbol) ->
-            (\l -> PageCommunity.init l symbol)
+            (\l -> CommunityPage.init l symbol)
                 >> updateStatusWith Community GotCommunityMsg model
                 |> withLoggedIn (Route.Community symbol)
 
@@ -801,7 +800,7 @@ jsAddressToMsg address val =
 
         "GotCommunityMsg" :: rAddress ->
             Maybe.map GotCommunityMsg
-                (PageCommunity.jsAddressToMsg rAddress val)
+                (CommunityPage.jsAddressToMsg rAddress val)
 
         "GotCommunityEditorMsg" :: rAddress ->
             Maybe.map GotCommunityEditorMsg
@@ -869,7 +868,7 @@ msgToString msg =
             "GotPageMsg" :: Page.msgToString subMsg
 
         GotCommunityMsg subMsg ->
-            "GotCommunityMsg" :: PageCommunity.msgToString subMsg
+            "GotCommunityMsg" :: CommunityPage.msgToString subMsg
 
         GotCommunityEditorMsg subMsg ->
             "GotCommunityEditorMsg" :: CommunityEditor.msgToString subMsg
@@ -981,7 +980,7 @@ view model =
             viewLoggedIn subModel LoggedIn.Other GotNotificationMsg Notification.view
 
         Community subModel ->
-            viewLoggedIn subModel LoggedIn.Other GotCommunityMsg PageCommunity.view
+            viewLoggedIn subModel LoggedIn.Other GotCommunityMsg CommunityPage.view
 
         CommunityEditor subModel ->
             viewLoggedIn subModel LoggedIn.Other GotCommunityEditorMsg CommunityEditor.view
