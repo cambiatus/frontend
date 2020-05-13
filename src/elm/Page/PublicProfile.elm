@@ -26,7 +26,7 @@ init loggedIn accountName =
                 (Profile.query (Eos.stringToName accountName))
                 CompletedProfileLoad
     in
-    ( initModel loggedIn
+    ( initModel
     , profileQuery
     )
 
@@ -50,8 +50,8 @@ type Status
     | NotFound
 
 
-initModel : LoggedIn.Model -> Model
-initModel _ =
+initModel : Model
+initModel =
     Loading
 
 
