@@ -544,7 +544,7 @@
       "title": "Totes les accions per a l'anàlisi",
       "more_details": "Més detalls",
       "approved": "Aprovat",
-      "pending": "Pendents",
+      "pending": "Sota Revisió",
       "disapproved": "Rebutjat",
       "show_more": "mostra els següents 16 articles"
     }
@@ -575,6 +575,8 @@
     "date": "Data de reclamació",
     "claimer_reward": "Recompensa per l'usuari",
     "your_reward": "La teva recompensa",
+    "approved_by": "Aprovat per",
+    "disapproved_by": "Desaprovat per",
     "disapprove": "Desaprovar",
     "approve": "Aprovar",
     "no_results_found": "Sense resultats",

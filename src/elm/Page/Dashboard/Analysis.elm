@@ -185,12 +185,12 @@ viewClaim ({ shared, accountName, selectedCommunity } as loggedIn) f claim =
                     ]
                 , div [ class "mb-6" ]
                     [ div
-                        [ class "bg-gray-100 flex items-center justify-center h-6 w-32" ]
+                        [ class "bg-gray-100 flex items-center justify-center h-6 w-32 mb-2" ]
                         [ p
                             [ class ("text-caption uppercase " ++ textColor) ]
                             [ text msg ]
                         ]
-                    , p [ class "text-body" ]
+                    , p [ class "text-body mb-2" ]
                         [ text claim.action.description ]
                     , p
                         [ class "text-gray-900 text-caption uppercase" ]

@@ -517,8 +517,8 @@
     "verification": "Verificação",
     "your_reward": "Sua recompensa",
     "action": "Ação",
-    "reject": "Rejeitar",
-    "verify": "Verificar",
+    "reject": "Reprovar",
+    "verify": "Aprovar",
     "closed": "fechados",
     "analysis": {
       "title": {
@@ -547,7 +547,7 @@
       "title": "Todas as ações para análise",
       "more_details": "Mais detalhes",
       "approved": "Aprovado",
-      "pending": "Pendente",
+      "pending": "Sob análise",
       "disapproved": "Reprovado",
       "show_more": "Mostrar próximos 16 items"
     }

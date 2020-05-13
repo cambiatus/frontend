@@ -545,7 +545,7 @@
       "title": "Todas las acciones para el análisis.",
       "more_details": "Más detalles",
       "approved": "Aprobada",
-      "pending": "Pendiente",
+      "pending": "Bajo revisión",
       "disapproved": "Rechazada",
       "show_more": "mostrar los siguientes 16 artículos"
     }
@@ -575,6 +575,8 @@
     "claimer": "Reclamado por",
     "date": "Fecha de reclamo",
     "claimer_reward": "Recompensa del usuario",
+    "approved_by": "Aprobado por",
+    "disapproved_by": "Rechazado por",
     "your_reward": "Su recompensa",
     "disapprove": "Desaprobar",
     "approve": "Aprobar",

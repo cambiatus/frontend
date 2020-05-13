@@ -83,7 +83,7 @@ view ({ shared } as loggedIn) model =
                     , div [ class "mt-10 mb-8" ]
                         [ Profile.viewLarge shared loggedIn.accountName claim.claimer
                         ]
-                    , div [ class "mx-auto container" ]
+                    , div [ class "mx-auto container px-4" ]
                         [ viewTitle shared claim
                         , viewDetails shared model claim
                         , viewVoters loggedIn claim
@@ -131,6 +131,12 @@ viewDetails shared model claim =
     let
         text_ s =
             text (I18Next.t shared.translations s)
+
+        negativeChecks =
+            List.filter (\ch -> not ch.isApproved) claim.checks
+
+        isRejected =
+            claim.isVerified == False && (List.length negativeChecks >= claim.action.verifications)
     in
     div []
         [ div [ class "mb-8" ]
@@ -163,7 +169,7 @@ viewDetails shared model claim =
                         [ text_ "claim.claimer_reward" ]
                     , p
                         [ class "pt-2 text-body"
-                        , classList [ ( "text-red line-through", claim.isVerified == False && (List.length claim.checks >= claim.action.verifications) ) ]
+                        , classList [ ( "text-red line-through", isRejected ) ]
                         ]
                         [ text (String.fromFloat claim.action.reward ++ " " ++ Eos.symbolToString model.communityId) ]
                     ]
