@@ -172,10 +172,10 @@ viewUserInfo : String -> String -> String -> Html msg
 viewUserInfo name email username =
     let
         contentClasses =
-            [ "text-sm", "text-gray-900" ] |> String.join " "
+            "text-sm text-gray-900"
 
         headerClasses =
-            [ "font-medium", "text-2xl" ] |> String.join " "
+            "font-medium text-2xl"
     in
     ul []
         [ li [ class headerClasses ]
