@@ -40,8 +40,7 @@ type Msg
 
 
 type alias Model =
-    { status : Status
-    }
+    Status
 
 
 type Status
@@ -53,22 +52,21 @@ type Status
 
 initModel : LoggedIn.Model -> Model
 initModel _ =
-    { status = Loading
-    }
+    Loading
 
 
 view : LoggedIn.Model -> Model -> Html msg
-view loggedIn model =
+view loggedIn status =
     let
         t =
             I18Next.t loggedIn.shared.translations
     in
-    case model.status of
+    case status of
         Loading ->
             Page.fullPageLoading
 
         Loaded profile ->
-            view_ loggedIn profile model
+            view_ loggedIn profile status
 
         NotFound ->
             Page.fullPageNotFound (t "error.unknown") (t "error.pageNotFound")
@@ -78,7 +76,7 @@ view loggedIn model =
 
 
 view_ : LoggedIn.Model -> Profile -> Model -> Html msg
-view_ loggedIn profile model =
+view_ loggedIn profile status =
     let
         userName =
             Maybe.withDefault "" profile.userName
@@ -199,13 +197,13 @@ update : Msg -> Model -> LoggedIn.Model -> UpdateResult
 update msg model loggedIn =
     case msg of
         CompletedProfileLoad (Ok Nothing) ->
-            UR.init { model | status = NotFound }
+            UR.init NotFound
 
         CompletedProfileLoad (Ok (Just profile)) ->
-            UR.init { model | status = Loaded profile }
+            UR.init (Loaded profile)
 
         CompletedProfileLoad (Err err) ->
-            UR.init { model | status = LoadingFailed err }
+            UR.init (LoadingFailed err)
                 |> UR.logGraphqlError msg err
 
 
