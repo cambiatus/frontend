@@ -110,7 +110,7 @@ view_ loggedIn profile model =
                                  ". extra   extra   extra ." / 1px 84px auto auto 1px
                                  """
             ]
-            [ div [ style "grid-area" "avatar" ] [ Avatar.viewNoAnchor ipfsUrl profile.avatar "w-20 h-20" ]
+            [ div [ style "grid-area" "avatar" ] [ Avatar.view ipfsUrl profile.avatar "w-20 h-20" ]
             , div [ style "grid-area" "info" ] [ viewUserInfo userName email account ]
             , div [ style "grid-area" "desc" ] [ viewUserDescription description ]
             , div [ style "grid-area" "extra" ]

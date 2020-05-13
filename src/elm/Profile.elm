@@ -34,8 +34,8 @@ import Eos.Account as Eos
 import Graphql.Operation exposing (RootMutation, RootQuery)
 import Graphql.OptionalArgument exposing (OptionalArgument(..))
 import Graphql.SelectionSet as SelectionSet exposing (SelectionSet, with)
-import Html exposing (Html, div, p, span, text)
-import Html.Attributes exposing (class, maxlength, minlength, pattern, title, type_)
+import Html exposing (Html, a, div, p, span, text)
+import Html.Attributes exposing (class, href, maxlength, minlength, pattern, title, type_)
 import I18Next exposing (Translations, t)
 import Json.Decode as Decode exposing (Decoder, list, nullable, string)
 import Json.Decode.Pipeline as Decode exposing (optional, required)
@@ -327,9 +327,12 @@ pinValidationAttrs =
 
 view : String -> Eos.Name -> Translations -> Profile -> Html msg
 view ipfsUrl loggedInAccount translations profile =
-    div [ class "flex flex-col items-center" ]
+    a
+        [ class "flex flex-col items-center"
+        , href ("/profile/" ++ Eos.nameToString profile.account)
+        ]
         [ div [ class "w-10 h-10 rounded-full" ]
-            [ Avatar.view ipfsUrl profile.avatar (Eos.nameToString profile.account) "w-10 h-10"
+            [ Avatar.view ipfsUrl profile.avatar "w-10 h-10"
             ]
         , div [ class "mt-2" ]
             [ viewProfileNameTag loggedInAccount profile translations ]
@@ -396,7 +399,7 @@ viewAutoCompleteItem shared profile =
             shared.endpoints.ipfs
     in
     div [ class "pt-3 pl-3 flex flex-row items-center w-select z-30" ]
-        [ div [ class "pr-3" ] [ Avatar.viewNoAnchor ipfsUrl profile.avatar "h-7 w-7" ]
+        [ div [ class "pr-3" ] [ Avatar.view ipfsUrl profile.avatar "h-7 w-7" ]
         , div [ class "flex flex-col font-sans border-b border-gray-500 pb-3 w-full" ]
             [ span [ class "text-black text-body leading-loose" ]
                 [ text (Eos.nameToString profile.account) ]

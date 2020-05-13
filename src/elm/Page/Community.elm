@@ -526,7 +526,7 @@ viewAction loggedIn metadata maybeDate action =
                                     ""
                         in
                         ("h-10 w-10 border-white border-4 rounded-full bg-white" ++ margin)
-                            |> Avatar.view ipfsUrl v.avatar (Eos.nameToString v.account)
+                            |> Avatar.view ipfsUrl v.avatar
                     )
                 |> (\vals ->
                         let

@@ -1,4 +1,4 @@
-module Avatar exposing (Avatar, decode, empty, encode, selectionSet, toMaybeString, view, viewNoAnchor)
+module Avatar exposing (Avatar, decode, empty, encode, selectionSet, toMaybeString, view)
 
 import Asset.Icon as Icon
 import Graphql.SelectionSet as SelectionSet exposing (SelectionSet)
@@ -36,16 +36,8 @@ encode (Avatar maybeHash) =
             Encode.null
 
 
-view : String -> Avatar -> String -> String -> Html msg
-view url (Avatar maybeHash) username cls =
-    Html.a
-        [ href ("/profile/" ++ username)
-        ]
-        [ viewIcon url (Avatar maybeHash) cls ]
-
-
-viewIcon : String -> Avatar -> String -> Html msg
-viewIcon url (Avatar maybeHash) cls =
+view : String -> Avatar -> String -> Html msg
+view url (Avatar maybeHash) cls =
     case maybeHash of
         Nothing ->
             Icon.accountCircle cls
@@ -55,7 +47,7 @@ viewIcon url (Avatar maybeHash) cls =
                 Icon.accountCircle cls
 
             else
-                Html.a
+                Html.div
                     [ class ("profile-avatar " ++ cls)
                     ]
                     [ Html.img
@@ -64,13 +56,6 @@ viewIcon url (Avatar maybeHash) cls =
                         ]
                         []
                     ]
-
-
-viewNoAnchor : String -> Avatar -> String -> Html msg
-viewNoAnchor url (Avatar maybeHash) cls =
-    Html.div []
-        [ viewIcon url (Avatar maybeHash) cls
-        ]
 
 
 selectionSet : SelectionSet (Maybe String) typeLock -> SelectionSet Avatar typeLock
