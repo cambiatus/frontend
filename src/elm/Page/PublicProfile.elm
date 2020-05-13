@@ -100,10 +100,10 @@ view_ loggedIn profile model =
         ipfsUrl =
             loggedIn.shared.endpoints.ipfs
     in
-    div [ class "h-full flex items-center flex-col" ]
+    div []
         [ Page.viewHeader loggedIn "Profile" Route.Communities
         , div
-            [ class "grid w-full pt-4 h-full bg-white max-w-6xl gap-4"
+            [ class "grid pt-8 bg-white gap-4 container mx-auto"
             , style "grid-template" """
                                  ". avatar  info    info ."
                                  ". desc    desc    desc ."
