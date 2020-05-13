@@ -5,16 +5,14 @@ import Avatar
 import Eos
 import Eos.Account as Eos
 import Graphql.Http
-import Html exposing (..)
-import Html.Attributes exposing (..)
-import I18Next exposing (t)
-import Icons
+import Html exposing (Html, div, li, p, span, text, ul)
+import Html.Attributes exposing (class, style)
+import I18Next
 import Json.Decode exposing (Value)
 import Page
 import Profile exposing (Profile)
 import Route
 import Session.LoggedIn as LoggedIn exposing (External(..), FeedbackStatus(..))
-import Session.Shared exposing (Shared)
 import UpdateResult as UR
 
 
@@ -66,7 +64,7 @@ view loggedIn status =
             Page.fullPageLoading
 
         Loaded profile ->
-            view_ loggedIn profile status
+            view_ loggedIn profile
 
         NotFound ->
             Page.fullPageNotFound (t "error.unknown") (t "error.pageNotFound")
@@ -75,8 +73,8 @@ view loggedIn status =
             Page.fullPageNotFound (t "error.unknown") (Page.errorToString err)
 
 
-view_ : LoggedIn.Model -> Profile -> Model -> Html msg
-view_ loggedIn profile status =
+view_ : LoggedIn.Model -> Profile -> Html msg
+view_ loggedIn profile =
     let
         userName =
             Maybe.withDefault "" profile.userName
@@ -116,21 +114,6 @@ view_ loggedIn profile status =
                     ]
                 ]
             ]
-        ]
-
-
-viewUserBalance : Int -> Html msg
-viewUserBalance amount =
-    div
-        [ class "flex flex-col justify-between items-center py-4 w-full w-full bg-gray-100 h-40 rounded"
-        ]
-        [ span [ class "text-sm uppercase text-green" ] [ text "User Balance" ]
-        , span [ class "text-indigo-500 text-3xl font-medium" ] [ text (String.fromInt amount ++ " cr") ]
-        , button
-            [ style "width" "calc(100% - 16px)"
-            , class "bg-orange-300 uppercase text-sm font-medium text-white h-10 rounded-lg max-w-xs"
-            ]
-            [ text "Transfer CR" ]
         ]
 
 
@@ -194,7 +177,7 @@ viewUserInfo name email username =
 
 
 update : Msg -> Model -> LoggedIn.Model -> UpdateResult
-update msg model loggedIn =
+update msg _ _ =
     case msg of
         CompletedProfileLoad (Ok Nothing) ->
             UR.init NotFound
