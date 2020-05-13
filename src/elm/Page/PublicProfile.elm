@@ -27,9 +27,7 @@ init loggedIn accountName =
                 CompletedProfileLoad
     in
     ( initModel loggedIn
-    , Cmd.batch
-        [ profileQuery
-        ]
+    , profileQuery
     )
 
 
