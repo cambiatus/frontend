@@ -128,7 +128,7 @@ viewUserBalance amount =
     div
         [ class "flex flex-col justify-between items-center py-4 w-full w-full bg-gray-100 h-40 rounded"
         ]
-        [ span [ class "text-xs uppercase text-green" ] [ text "User Balance" ]
+        [ span [ class "text-sm uppercase text-green" ] [ text "User Balance" ]
         , span [ class "text-indigo-500 text-3xl font-medium" ] [ text (String.fromInt amount ++ " cr") ]
         , button
             [ style "width" "calc(100% - 16px)"
@@ -150,12 +150,12 @@ viewUserExtendedInfo data =
                     , style "grid-template-areas" "'key value'"
                     ]
                     [ span
-                        [ class "text-xs py-2 leading-6"
+                        [ class "text-sm py-2 leading-6"
                         , style "grid-area" "key"
                         ]
                         [ text (Tuple.first x) ]
                     , span
-                        [ class "text-indigo-500 font-medium text-xs text-right py-2 leading-6"
+                        [ class "text-indigo-500 font-medium text-sm text-right py-2 leading-6"
                         , style "grid-area" "value"
                         ]
                         [ text (String.join ", " (Tuple.second x)) ]
