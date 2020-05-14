@@ -1,5 +1,6 @@
 module Profile exposing
-    ( Profile
+    ( CommunityInfo
+    , Profile
     , ProfileCreate
     , ProfileForm
     , decode
@@ -20,6 +21,8 @@ module Profile exposing
     , selectionSet
     , username
     , view
+    , viewEmpty
+    , viewLarge
     , viewProfileName
     , viewProfileNameTag
     )
@@ -27,9 +30,11 @@ module Profile exposing
 import Avatar exposing (Avatar)
 import Cambiatus.Mutation
 import Cambiatus.Object
+import Cambiatus.Object.Community as Community
 import Cambiatus.Object.Profile as User
 import Cambiatus.Query
 import Dict exposing (Dict)
+import Eos exposing (Symbol)
 import Eos.Account as Eos
 import Graphql.Operation exposing (RootMutation, RootQuery)
 import Graphql.OptionalArgument exposing (OptionalArgument(..))
@@ -37,11 +42,11 @@ import Graphql.SelectionSet as SelectionSet exposing (SelectionSet, with)
 import Html exposing (Html, a, div, p, span, text)
 import Html.Attributes exposing (class, href, maxlength, minlength, pattern, title, type_)
 import I18Next exposing (Translations, t)
-import Json.Decode as Decode exposing (Decoder, list, nullable, string)
+import Json.Decode as Decode exposing (Decoder, int, list, nullable, string)
 import Json.Decode.Pipeline as Decode exposing (optional, required)
 import Json.Encode as Encode
 import Select
-import Session.Shared as Shared
+import Session.Shared exposing (Shared)
 import Simple.Fuzzy
 import Time exposing (Posix)
 
@@ -61,6 +66,15 @@ type alias Profile =
     , chatUserId : Maybe String
     , chatToken : Maybe String
     , createdAt : Posix
+    , communities : List CommunityInfo
+    , analysisCount : Int
+    }
+
+
+type alias CommunityInfo =
+    { id : Symbol
+    , name : String
+    , logo : String
     }
 
 
@@ -86,6 +100,16 @@ selectionSet =
         |> with User.chatUserId
         |> with User.chatToken
         |> SelectionSet.hardcoded (Time.millisToPosix 0)
+        |> with (User.communities communityInfoSelectionSet)
+        |> with User.analysisCount
+
+
+communityInfoSelectionSet : SelectionSet CommunityInfo Cambiatus.Object.Community
+communityInfoSelectionSet =
+    SelectionSet.succeed CommunityInfo
+        |> with (Eos.symbolSelectionSet Community.symbol)
+        |> with Community.name
+        |> with Community.logo
 
 
 decode : Decoder Profile
@@ -102,6 +126,8 @@ decode =
         |> optional "chat_token" (nullable string) Nothing
         |> Decode.hardcoded (Time.millisToPosix 0)
         |> Decode.at [ "data", "user" ]
+        |> Decode.hardcoded []
+        |> optional "analysisCount" int 0
 
 
 decodeInterests : Decoder (List String)
@@ -325,17 +351,28 @@ pinValidationAttrs =
 -- View profile
 
 
-view : String -> Eos.Name -> Translations -> Profile -> Html msg
-view ipfsUrl loggedInAccount translations profile =
-    a
+view : Shared -> Eos.Name -> Profile -> Html msg
+view shared loggedInAccount profile =
+    div
         [ class "flex flex-col items-center"
         , href ("/profile/" ++ Eos.nameToString profile.account)
         ]
         [ div [ class "w-10 h-10 rounded-full" ]
-            [ Avatar.view ipfsUrl profile.avatar "w-10 h-10"
+            [ Avatar.view shared.endpoints.ipfs profile.avatar "w-10 h-10"
             ]
         , div [ class "mt-2" ]
-            [ viewProfileNameTag loggedInAccount profile translations ]
+            [ viewProfileNameTag loggedInAccount profile shared.translations ]
+        ]
+
+
+viewLarge : Shared -> Eos.Name -> Profile -> Html msg
+viewLarge shared loggedInAccount profile =
+    div [ class "flex flex-col items-center" ]
+        [ div [ class "w-20 h-20 rounded-full" ]
+            [ Avatar.view shared.endpoints.ipfs profile.avatar "w-20 h-20"
+            ]
+        , div [ class "mt-2" ]
+            [ viewProfileNameTag loggedInAccount profile shared.translations ]
         ]
 
 
@@ -361,11 +398,29 @@ viewProfileName loggedInAccount profile translations =
                 Eos.viewName profile.account
 
 
+viewEmpty : Shared -> Html msg
+viewEmpty shared =
+    div [ class "flex flex-col items-center" ]
+        [ div [ class "w-10 h-10 rounded-full" ]
+            [ div
+                [ class "profile-avatar w-10 h-10"
+                ]
+                []
+            ]
+        , div [ class "mt-2" ]
+            [ div [ class "flex items-center bg-black rounded-sm p-1" ]
+                [ p [ class "mx-2 pt-caption uppercase font-medium text-white text-caption" ]
+                    [ text (I18Next.t shared.translations "profile.no_one") ]
+                ]
+            ]
+        ]
+
+
 
 -- Autocomplete select
 
 
-selectConfig : Select.Config msg Profile -> Shared.Shared -> Bool -> Select.Config msg Profile
+selectConfig : Select.Config msg Profile -> Shared -> Bool -> Select.Config msg Profile
 selectConfig select shared isDisabled =
     select
         |> Select.withInputClass "form-input h-12 w-full font-sans placeholder-gray-900"
@@ -392,7 +447,7 @@ selectFilter minChars toLabel q items =
             |> Just
 
 
-viewAutoCompleteItem : Shared.Shared -> Profile -> Html Never
+viewAutoCompleteItem : Shared -> Profile -> Html Never
 viewAutoCompleteItem shared profile =
     let
         ipfsUrl =

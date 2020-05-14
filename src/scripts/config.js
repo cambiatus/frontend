@@ -26,6 +26,7 @@ const local = {
   communityContract: 'bes.cmm',
   tokenContract: 'bes.token',
   allowCommunityCreation: true,
+  selectedCommunity: 'BES',
   pushKey:
     'BDzXEdCCYafisu3jmYxBGDboAfwfIHYzM9BbT2DmL8VzIqSWu5BnW6lC-xEoXExQUS81vwOSPF9w8kpcINWCvUM'
 }
@@ -57,6 +58,7 @@ const dev = {
   communityContract: 'bes.cmm',
   tokenContract: 'bes.token',
   allowCommunityCreation: true,
+  selectedCommunity: 'BES',
   pushKey:
     'BDzXEdCCYafisu3jmYxBGDboAfwfIHYzM9BbT2DmL8VzIqSWu5BnW6lC-xEoXExQUS81vwOSPF9w8kpcINWCvUM'
 }
@@ -70,12 +72,19 @@ const graphqlUrl = isLocal ? dev.endpoints.graphql : _env_.GRAPHQL_URL
 const apiUrl = isLocal ? dev.endpoints.api : _env_.API_URL
 const chatUrl = isLocal ? dev.endpoints.chat : _env_.CHAT_URL
 const ipfsUrl = isLocal ? dev.endpoints.ipfs : _env_.IPFS_URL
-const httpEndpoint = isLocal ? dev.eosOptions.httpEndpoint : `${chainUrl}:${chainPort}`
+const httpEndpoint = isLocal
+  ? dev.eosOptions.httpEndpoint
+  : `${chainUrl}:${chainPort}`
 const socketUrl = isLocal ? dev.endpoints.socket : _env_.SOCKET_URL
 const pKey = isLocal ? dev.pushKey : _env_.PUSH_KEY
 const appLogo = isLocal ? dev.logo : _env_.LOGO
 const appLogoMobile = isLocal ? dev.logoMobile : _env_.LOGO_MOBILE
-const allowCommunityCreation = isLocal ? dev.allowCommunityCreation : (_env_.ALLOW_COMMUNITY_CREATION === 'true')
+const allowCommunityCreation = isLocal
+  ? dev.allowCommunityCreation
+  : _env_.ALLOW_COMMUNITY_CREATION === 'true'
+const selectedCommunity = isLocal
+  ? dev.selectedCommunity
+  : _env_.SELECTED_COMMUNITY
 
 const prod = {
   network: {
@@ -104,6 +113,7 @@ const prod = {
   communityContract: 'bes.cmm',
   tokenContract: 'bes.token',
   allowCommunityCreation: allowCommunityCreation,
+  selectedCommunity: selectedCommunity,
   pushKey: pKey
 }
 

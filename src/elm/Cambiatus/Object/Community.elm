@@ -19,6 +19,11 @@ import Graphql.SelectionSet exposing (SelectionSet)
 import Json.Decode as Decode
 
 
+actionCount : SelectionSet Int Cambiatus.Object.Community
+actionCount =
+    Object.selectionForField "Int" "actionCount" [] Decode.int
+
+
 createdAt : SelectionSet Cambiatus.ScalarCodecs.DateTime Cambiatus.Object.Community
 createdAt =
     Object.selectionForField "ScalarCodecs.DateTime" "createdAt" [] (Cambiatus.ScalarCodecs.codecs |> Cambiatus.Scalar.unwrapCodecs |> .codecDateTime |> .decoder)
@@ -104,6 +109,11 @@ objectives object_ =
     Object.selectionForCompositeField "objectives" [] object_ (identity >> Decode.list)
 
 
+saleCount : SelectionSet Int Cambiatus.Object.Community
+saleCount =
+    Object.selectionForField "Int" "saleCount" [] Decode.int
+
+
 supply : SelectionSet (Maybe Float) Cambiatus.Object.Community
 supply =
     Object.selectionForField "(Maybe Float)" "supply" [] (Decode.float |> Decode.nullable)
@@ -112,6 +122,11 @@ supply =
 symbol : SelectionSet String Cambiatus.Object.Community
 symbol =
     Object.selectionForField "String" "symbol" [] Decode.string
+
+
+transferCount : SelectionSet Int Cambiatus.Object.Community
+transferCount =
+    Object.selectionForField "Int" "transferCount" [] Decode.int
 
 
 type alias TransfersOptionalArguments =

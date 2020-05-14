@@ -76,6 +76,7 @@ module.exports = {
     },
     extend: {
       colors: {
+        'body-blue': '#45469B',
         grey: '#D4D4D4',
         'light-grey': '#EEEEEE',
         'text-grey': '#666666',
@@ -109,6 +110,7 @@ module.exports = {
         '7': '1.75rem',
         heading: '1.375rem',
         '14': '3.5rem',
+        '72': '18rem',
         select: '18.75rem'
       },
       lineHeight: {

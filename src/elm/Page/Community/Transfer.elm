@@ -463,7 +463,7 @@ update msg model ({ shared } as loggedIn) =
                 _ ->
                     onlyLogImpossible []
 
-        GotTransferResult (Err s) ->
+        GotTransferResult (Err _) ->
             case model.status of
                 Loaded c (SendingTransfer form) ->
                     { model | status = Loaded c (SendingTransferFailed form) }

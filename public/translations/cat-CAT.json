@@ -35,7 +35,11 @@
     "try_again": "Intenta de nou",
     "coming_soon": "Pròximament",
     "my_account": "Meu compte",
-    "languages": "Idiomes"
+    "languages": "Idiomes",
+    "community_selector": {
+      "title": "Community switch",
+      "body": "Selecciona la teva comunitat"
+    }
   },
   "edit": {
     "input_counter": "{{current}} de {{max}}"
@@ -175,6 +179,7 @@
       },
       "transfer": {
         "title": "Enviant {{symbol}}",
+        "error": "La transferència ha fallat",
         "send_to": "Enviar a",
         "send_to_placeholder": "Compte a enviar",
         "amount": "Import",
@@ -362,21 +367,15 @@
         "error": "L'activitat no es pot crear. Proveu més endavant"
       }
     },
-    "claimAction": {
-      "title": "Reclamació",
-      "body": "Vols realment reclamar aquesta acció?",
-      "yes": "Sí, reclameu",
-      "no": "No, cancel·la",
-      "success": "Reclamar que tingui èxit, espereu l’aprovació",
-      "failure": "Alguna cosa no va funcionar correctament mentre intenteu processar la vostra reclamació. Torneu-ho a provar més endavant"
-    },
     "verifyClaim": {
       "error": "S'ha produït un error en intentar processar la convalidació. Torneu-ho a provar més endavant"
     }
   },
+
   "profile": {
     "title": "El meu perfil",
     "my_transfers": "Les meves transferències",
+    "no_one": "Ningú",
     "edit_success": "El perfil s'ha desat correctament",
     "actions": {
       "edit": "Editar",
@@ -466,6 +465,9 @@
   },
   "dashboard": {
     "back": "Tornar",
+    "transfer": "Trasllat a un company",
+    "explore": "Sobre aquesta comunitat",
+    "invite": "Convida els teus amics",
     "sorry": "ho sentim!",
     "action_rejected": "S'ha rebutjat la teva acció",
     "please_try_again": "Si us plau intenta-de nou",
@@ -490,12 +492,43 @@
     "reject": "Rebutjar",
     "verify": "Verificar",
     "closed": "tancat",
+    "analysis": {
+      "title": {
+        "1": "Accions",
+        "2": "per a l'anàlisi"
+      },
+      "empty": {
+        "1": "Wooow",
+        "2": ", bona feina.",
+        "3": "ja heu acabat tot"
+      }
+    },
     "activities": {
       "title": "Activitats per a la vostra anàlisi",
       "no_activities_yet": "Encara no hi ha activitats.."
+    },
+    "check_claim": {
+      "body": "Vols realment reclamar aquesta acció?",
+      "yes": "Sí, reclameu",
+      "no": "No, cancel·la",
+      "success": "Reclamar que tingui èxit, espereu l’aprovació",
+      "failure": "Alguna cosa no va funcionar correctament mentre intenteu processar la vostra reclamació. Torneu-ho a provar més endavant"
     }
   },
-  "verify_claim": {
+  "claim": {
+    "title_under_review": {
+      "1": "Aquesta reclamació està en",
+      "2": "fase de revisió",
+      "3": ", els altres membres encara han de votar"
+    },
+    "title_approved": {
+      "1": "Aquesta solicitud es va",
+      "2": "aprovar"
+    },
+    "title_rejected": {
+      "1": "Aquesta solicitud es va",
+      "2": "rebutjat"
+    },
     "pending": "Pendent",
     "disapproved": "Desaprovat",
     "approved": "Aprovat",
@@ -505,14 +538,14 @@
     "objective": "Objectiu",
     "action": "Acció",
     "claimer": "Reclamat per",
-    "date": "Data",
+    "date": "Data de reclamació",
     "claimer_reward": "Recompensa per l'usuari",
     "your_reward": "La teva recompensa",
     "disapprove": "Desaprovar",
     "approve": "Aprovar",
     "no_results_found": "Sense resultats",
     "modal": {
-      "title": "Reclamació",
+      "title": "Sota Revisió",
       "message_disapprove": "Realment voleu rebutjar aquesta reclamació?",
       "message_approve": "Realment voleu aprovar aquesta reclamació?",
       "primary_disapprove": "sí, desaproveu",
