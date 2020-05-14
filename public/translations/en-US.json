@@ -522,7 +522,8 @@
         "1": "Wooow",
         "2": ", good job.",
         "3": "You have finished all"
-      }
+      },
+      "all": "All"
     },
     "activities": {
       "title": "Activities for your analysis",
@@ -535,6 +536,14 @@
       "no": "No, cancel",
       "success": "Claim successful, please wait for approval",
       "failure": "Something went wrong while trying to process your claim, please try again later"
+    },
+    "all_analysis": {
+      "title": "All actions for analysis",
+      "more_details": "More details",
+      "approved": "Approved",
+      "pending": "Under Review",
+      "disapproved": "Disapproved",
+      "show_more": "Show next 16 items"
     }
   },
   "claim": {
@@ -563,6 +572,8 @@
     "date": "Claim Date",
     "claimer_reward": "User reward",
     "your_reward": "Your reward",
+    "approved_by": "Approved by",
+    "disapproved_by": "Disapproved by",
     "disapprove": "Disapprove",
     "approve": "Approve",
     "no_results_found": "No results found",

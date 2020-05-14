@@ -3,16 +3,14 @@ module Main exposing (main)
 import Auth
 import Browser
 import Browser.Navigation as Nav
-import Community
 import Flags
 import Html exposing (Html, text)
 import Json.Decode as Decode exposing (Value)
 import Log
 import Page exposing (Session)
 import Page.ComingSoon as ComingSoon
-import Page.Community as Community
+import Page.Community as CommunityPage
 import Page.Community.ActionEditor as ActionEditor
-import Page.Community.Claim as Claim
 import Page.Community.Editor as CommunityEditor
 import Page.Community.Explore as CommunityExplore
 import Page.Community.Invite as Invite
@@ -20,6 +18,8 @@ import Page.Community.ObjectiveEditor as ObjectiveEditor
 import Page.Community.Objectives as Objectives
 import Page.Community.Transfer as Transfer
 import Page.Dashboard as Dashboard
+import Page.Dashboard.Analysis as Analysis
+import Page.Dashboard.Claim as Claim
 import Page.Login as Login
 import Page.NotFound as NotFound
 import Page.Notification as Notification
@@ -114,7 +114,7 @@ subscriptions model =
                     |> Sub.map GotRegisterMsg
 
             Community subModel ->
-                Community.subscriptions subModel
+                CommunityPage.subscriptions subModel
                     |> Sub.map GotCommunityMsg
 
             CommunityEditor subModel ->
@@ -149,7 +149,7 @@ type Status
     = Redirect
     | NotFound
     | ComingSoon
-    | Community Community.Model
+    | Community CommunityPage.Model
     | CommunityEditor CommunityEditor.Model
     | Objectives Objectives.Model
     | ObjectiveEditor ObjectiveEditor.Model
@@ -167,6 +167,7 @@ type Status
     | ViewTransfer Int ViewTransfer.Model
     | Invite Invite.Model
     | Transfer Transfer.Model
+    | Analysis Analysis.Model
 
 
 
@@ -181,7 +182,7 @@ type Msg
     | GotJavascriptData Value
     | GotPageMsg Page.Msg
     | GotNotificationMsg Notification.Msg
-    | GotCommunityMsg Community.Msg
+    | GotCommunityMsg CommunityPage.Msg
     | GotCommunityEditorMsg CommunityEditor.Msg
     | GotObjectivesMsg Objectives.Msg
     | GotActionEditorMsg ActionEditor.Msg
@@ -198,6 +199,7 @@ type Msg
     | GotViewTransferScreenMsg ViewTransfer.Msg
     | GotInviteMsg Invite.Msg
     | GotTransferMsg Transfer.Msg
+    | GotAnalysisMsg Analysis.Msg
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -321,7 +323,7 @@ update msg model =
                 |> withLoggedIn
 
         ( GotCommunityMsg subMsg, Community subModel ) ->
-            Community.update subMsg subModel
+            CommunityPage.update subMsg subModel
                 >> updateLoggedInUResult Community GotCommunityMsg model
                 |> withLoggedIn
 
@@ -392,6 +394,11 @@ update msg model =
         ( GotTransferMsg subMsg, Transfer subModel ) ->
             Transfer.update subMsg subModel
                 >> updateLoggedInUResult Transfer GotTransferMsg model
+                |> withLoggedIn
+
+        ( GotAnalysisMsg subMsg, Analysis subModel ) ->
+            Analysis.update subMsg subModel
+                >> updateLoggedInUResult Analysis GotAnalysisMsg model
                 |> withLoggedIn
 
         ( _, _ ) ->
@@ -687,7 +694,7 @@ changeRouteTo maybeRoute model =
                 |> withLoggedIn Route.Dashboard
 
         Just (Route.Community symbol) ->
-            (\l -> Community.init l symbol)
+            (\l -> CommunityPage.init l symbol)
                 >> updateStatusWith Community GotCommunityMsg model
                 |> withLoggedIn (Route.Community symbol)
 
@@ -770,6 +777,11 @@ changeRouteTo maybeRoute model =
                 >> updateStatusWith Transfer GotTransferMsg model
                 |> withLoggedIn (Route.Transfer symbol maybeTo)
 
+        Just Route.Analysis ->
+            (\l -> Analysis.init l)
+                >> updateStatusWith Analysis GotAnalysisMsg model
+                |> withLoggedIn Route.Analysis
+
 
 jsAddressToMsg : List String -> Value -> Maybe Msg
 jsAddressToMsg address val =
@@ -788,7 +800,7 @@ jsAddressToMsg address val =
 
         "GotCommunityMsg" :: rAddress ->
             Maybe.map GotCommunityMsg
-                (Community.jsAddressToMsg rAddress val)
+                (CommunityPage.jsAddressToMsg rAddress val)
 
         "GotCommunityEditorMsg" :: rAddress ->
             Maybe.map GotCommunityEditorMsg
@@ -826,6 +838,10 @@ jsAddressToMsg address val =
             Maybe.map GotTransferMsg
                 (Transfer.jsAddressToMsg rAddress val)
 
+        "GotAnalysisMsg" :: rAddress ->
+            Maybe.map GotAnalysisMsg
+                (Analysis.jsAddressToMsg rAddress val)
+
         _ ->
             Nothing
 
@@ -852,7 +868,7 @@ msgToString msg =
             "GotPageMsg" :: Page.msgToString subMsg
 
         GotCommunityMsg subMsg ->
-            "GotCommunityMsg" :: Community.msgToString subMsg
+            "GotCommunityMsg" :: CommunityPage.msgToString subMsg
 
         GotCommunityEditorMsg subMsg ->
             "GotCommunityEditorMsg" :: CommunityEditor.msgToString subMsg
@@ -904,6 +920,9 @@ msgToString msg =
 
         GotTransferMsg subMsg ->
             "GotTransferMsg" :: Transfer.msgToString subMsg
+
+        GotAnalysisMsg subMsg ->
+            "GotAnalysisMsg" :: Analysis.msgToString subMsg
 
 
 
@@ -961,7 +980,7 @@ view model =
             viewLoggedIn subModel LoggedIn.Other GotNotificationMsg Notification.view
 
         Community subModel ->
-            viewLoggedIn subModel LoggedIn.Other GotCommunityMsg Community.view
+            viewLoggedIn subModel LoggedIn.Other GotCommunityMsg CommunityPage.view
 
         CommunityEditor subModel ->
             viewLoggedIn subModel LoggedIn.Other GotCommunityEditorMsg CommunityEditor.view
@@ -1004,3 +1023,6 @@ view model =
 
         Transfer subModel ->
             viewLoggedIn subModel LoggedIn.Other GotTransferMsg Transfer.view
+
+        Analysis subModel ->
+            viewLoggedIn subModel LoggedIn.Other GotAnalysisMsg Analysis.view

@@ -440,6 +440,7 @@ async function handleJavascriptPort (arg) {
       devLog('=========================', 'logout')
       window.localStorage.removeItem(USER_KEY)
       window.localStorage.removeItem(AUTH_PREF_KEY)
+      window.localStorage.removeItem(SELECTED_COMMUNITY_KEY)
       break
     }
     case 'requestPushPermission': {

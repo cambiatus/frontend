@@ -16,7 +16,6 @@ module Transfer exposing
     )
 
 import Api.Relay exposing (Edge, MetadataConnection, PageConnection, PaginationArgs, pageInfoSelectionSet)
-import Avatar exposing (Avatar)
 import Cambiatus.Object
 import Cambiatus.Object.Community
 import Cambiatus.Object.Profile
