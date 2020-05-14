@@ -4,7 +4,7 @@ import Api.Graphql
 import Avatar
 import Eos.Account as Eos
 import Graphql.Http
-import Html exposing (Html, div, li, p, span, text, ul)
+import Html exposing (Html, button, div, li, p, span, text, ul)
 import Html.Attributes exposing (class, style)
 import I18Next
 import Json.Decode exposing (Value)
@@ -100,11 +100,13 @@ view_ loggedIn profile =
             , style "grid-template" """
                                  ". avatar  info    info ."
                                  ". desc    desc    desc ."
+                                 ". transfer    transfer    transfer ."
                                  ". extra   extra   extra ." / 1px 84px auto auto 1px
                                  """
             ]
             [ div [ style "grid-area" "avatar" ] [ Avatar.view ipfsUrl profile.avatar "w-20 h-20" ]
             , div [ style "grid-area" "info" ] [ viewUserInfo userName email account ]
+            , div [ style "grid-area" "transfer" ] [ viewTransferButton ]
             , div [ style "grid-area" "desc" ] [ viewUserDescription description ]
             , div [ style "grid-area" "extra" ]
                 [ viewUserExtendedInfo
@@ -141,6 +143,19 @@ viewUserExtendedInfo data =
             )
             data
         )
+
+
+viewTransferButton : Html msg
+viewTransferButton =
+    div
+        [ class "flex justify-center"
+        ]
+        [ button
+            [ style "width" "calc(100% - 16px)"
+            , class "bg-orange-300 uppercase text-sm font-medium text-white h-10 rounded-lg max-w-xs"
+            ]
+            [ text "Transfer" ]
+        ]
 
 
 viewUserDescription : String -> Html msg
