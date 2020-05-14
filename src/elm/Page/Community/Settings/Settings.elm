@@ -4,10 +4,12 @@ import Api.Graphql
 import Community exposing (Community)
 import Eos exposing (Symbol)
 import Graphql.Http
+import Graphql.Operation exposing (RootQuery, RootSubscription)
+import Graphql.SelectionSet exposing (SelectionSet)
 import Html exposing (..)
 import Html.Attributes exposing (..)
 import Page
-import Route
+import Route exposing (Route)
 import Session.LoggedIn as LoggedIn exposing (External(..))
 import UpdateResult as UR
 
@@ -48,40 +50,50 @@ initModel symbol =
 
 view : LoggedIn.Model -> Model -> Html Msg
 view loggedIn model =
-    div []
-        [ Page.viewHeader loggedIn "Edit community" Route.Dashboard
-        , view_ model
-        ]
+    case model.status of
+        Loading ->
+            div [] []
+
+        Loaded community ->
+            div []
+                [ Page.viewHeader loggedIn "Edit community" Route.Dashboard
+                , view_ community.symbol
+                ]
+
+        LoadingFailed _ ->
+            div [] []
 
 
-view_ : Model -> Html Msg
-view_ model =
+view_ : Symbol -> Html Msg
+view_ symbol =
     div
         [ class "grid my-4"
         , style "grid-template-columns" "0 1fr 0"
         , style "grid-template-rows" "auto"
         , style "grid-gap" "16px"
         ]
-        [ settingCard "Community information" "Logo, name, description"
-        , settingCard "Currency" "MUDA"
-        , settingCard "Objectives and Actions" ""
-        , settingCard "Team" "Team building"
-        , settingCard "Features" "Actions, shop"
+        [ settingCard "Community information" "Logo, name, description" Route.Dashboard
+        , settingCard "Currency" "MUDA" Route.Dashboard
+        , settingCard "Objectives and Actions" "" Route.Dashboard
+        , settingCard "Team" "Team building" Route.Dashboard
+        , settingCard "Features" "Actions, shop" (Route.CommunitySettingsFeatures symbol)
         ]
 
 
-settingCard : String -> String -> Html Msg
-settingCard title description =
+settingCard : String -> String -> Route -> Html Msg
+settingCard title description route =
     div
         [ class "flex flex-col justify-around bg-white w-full h-32 rounded px-4 pt-3 pb-4"
         , style "grid-column" "2 / 3"
         ]
         [ span [ class "text-sm font-medium" ] [ text title ]
         , span [ class "text-xs text-gray-900 uppercase" ] [ text description ]
-        , button
-            [ class "w-full bg-orange-300 rounded-lg text-sm uppercase text-white font-medium h-8"
+        , a [ Route.href route ]
+            [ button
+                [ class "w-full bg-orange-300 rounded-lg text-sm uppercase text-white font-medium h-8"
+                ]
+                [ text "Edit" ]
             ]
-            [ text "Edit" ]
         ]
 
 

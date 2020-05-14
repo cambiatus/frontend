@@ -154,6 +154,7 @@ type Status
     | Community Community.Model
     | CommunityEditor CommunityEditor.Model
     | CommunitySettings CommunitySettings.Model
+    | CommunitySettingsFeatures CommunitySettingsFeatures.Model
     | Objectives Objectives.Model
     | ObjectiveEditor ObjectiveEditor.Model
     | ActionEditor ActionEditor.Model
@@ -187,6 +188,7 @@ type Msg
     | GotCommunityMsg Community.Msg
     | GotCommunityEditorMsg CommunityEditor.Msg
     | GotCommunitySettingsMsg CommunitySettings.Msg
+    | GotCommunitySettingsFeaturesMsg CommunitySettingsFeatures.Msg
     | GotObjectivesMsg Objectives.Msg
     | GotActionEditorMsg ActionEditor.Msg
     | GotObjectiveEditorMsg ObjectiveEditor.Msg
@@ -705,6 +707,11 @@ changeRouteTo maybeRoute model =
                 >> updateStatusWith CommunitySettings GotCommunitySettingsMsg model
                 |> withLoggedIn (Route.CommunitySettings symbol)
 
+        Just (Route.CommunitySettingsFeatures symbol) ->
+            (\l -> CommunitySettingsFeatures.init l symbol)
+                >> updateStatusWith CommunitySettingsFeatures GotCommunitySettingsFeaturesMsg model
+                |> withLoggedIn (Route.CommunitySettingsFeatures symbol)
+
         Just Route.NewCommunity ->
             CommunityEditor.initNew
                 >> updateStatusWith CommunityEditor GotCommunityEditorMsg model
@@ -874,6 +881,9 @@ msgToString msg =
         GotCommunitySettingsMsg subMsg ->
             "GotCommunitySettingsMsg" :: CommunitySettings.msgToString subMsg
 
+        GotCommunitySettingsFeaturesMsg subMsg ->
+            "GotCommunitySettingsFeaturesMsg" :: CommunitySettingsFeatures.msgToString subMsg
+
         GotObjectivesMsg subMsg ->
             "GotObjectives" :: Objectives.msgToString subMsg
 
@@ -982,6 +992,9 @@ view model =
 
         CommunitySettings subModel ->
             viewLoggedIn subModel LoggedIn.Other GotCommunitySettingsMsg CommunitySettings.view
+
+        CommunitySettingsFeatures subModel ->
+            viewLoggedIn subModel LoggedIn.Other GotCommunitySettingsFeaturesMsg CommunitySettingsFeatures.view
 
         CommunityEditor subModel ->
             viewLoggedIn subModel LoggedIn.Other GotCommunityEditorMsg CommunityEditor.view

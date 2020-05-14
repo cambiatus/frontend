@@ -5,6 +5,7 @@ import Community
 import Eos exposing (Symbol)
 import Graphql.Http
 import Html exposing (..)
+import Page.Community.Settings.Settings
 import Session.LoggedIn as LoggedIn exposing (External(..))
 import UpdateResult as UR
 
@@ -12,7 +13,7 @@ import UpdateResult as UR
 init : LoggedIn.Model -> Symbol -> ( Model, Cmd Msg )
 init { shared } symbol =
     ( initModel symbol
-    , Api.Graphql.query shared (Settings.settingsQuery symbol) Settings
+    , Cmd.none
     )
 
 
@@ -54,16 +55,16 @@ type alias UpdateResult =
     UR.UpdateResult Model Msg (External Msg)
 
 
-view : Model -> Html msg
-view model =
+view : LoggedIn.Model -> Model -> Html Msg
+view loggedIn model =
     div [] [ text "Features!" ]
 
 
 update : Msg -> Model -> LoggedIn.Model -> UpdateResult
 update msg model loggedIn =
     case msg of
-        CompletedLoad (Ok settings) ->
-            UR.init { model | settings = settings }
+        CompletedLoad (Ok (Just settings)) ->
+            UR.init { model | settings = Just settings }
 
         CompletedLoad (Ok Nothing) ->
             -- TODO: community not found
