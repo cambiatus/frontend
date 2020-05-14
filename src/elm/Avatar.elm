@@ -2,8 +2,8 @@ module Avatar exposing (Avatar, decode, empty, encode, selectionSet, toMaybeStri
 
 import Asset.Icon as Icon
 import Graphql.SelectionSet as SelectionSet exposing (SelectionSet)
-import Html exposing (Attribute, Html)
-import Html.Attributes exposing (class, href, src, style)
+import Html exposing (Html)
+import Html.Attributes exposing (class, src)
 import Json.Decode as Decode exposing (Decoder)
 import Json.Encode as Encode exposing (Value)
 

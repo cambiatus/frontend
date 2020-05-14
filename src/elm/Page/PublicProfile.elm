@@ -2,7 +2,6 @@ module Page.PublicProfile exposing (Model, Msg, init, jsAddressToMsg, msgToStrin
 
 import Api.Graphql
 import Avatar
-import Eos
 import Eos.Account as Eos
 import Graphql.Http
 import Html exposing (Html, div, li, p, span, text, ul)
