@@ -353,7 +353,7 @@ pinValidationAttrs =
 
 view : Shared -> Eos.Name -> Profile -> Html msg
 view shared loggedInAccount profile =
-    div
+    a
         [ class "flex flex-col items-center"
         , href ("/profile/" ++ Eos.nameToString profile.account)
         ]
