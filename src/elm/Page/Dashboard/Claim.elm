@@ -79,7 +79,7 @@ view ({ shared } as loggedIn) model =
 
             Loaded claim ->
                 div [ class "bg-white py-2" ]
-                    [ Page.viewHeader loggedIn claim.action.description Route.Dashboard
+                    [ Page.viewHeader loggedIn claim.action.description Route.Analysis
                     , div [ class "mt-10 mb-8" ]
                         [ Profile.viewLarge shared loggedIn.accountName claim.claimer
                         ]
@@ -177,7 +177,7 @@ viewDetails shared model claim =
             ]
         , div [ class "mb-8" ]
             [ p
-                [ class "pt-6 text-caption uppercase text-green" ]
+                [ class "text-caption uppercase text-green" ]
                 [ text_ "claim.objective" ]
             , p
                 [ class "pt-2 text-body" ]
@@ -209,7 +209,7 @@ viewVoters ({ shared } as loggedIn) claim =
                 claim.action.validators
     in
     div []
-        [ div []
+        [ div [ class "mb-8" ]
             [ p [ class "text-caption uppercase text-green" ]
                 [ text_ "claim.approved_by" ]
             , div []
@@ -217,7 +217,7 @@ viewVoters ({ shared } as loggedIn) claim =
                     Profile.viewEmpty shared
 
                   else
-                    div [ class "flex flex-wrap -mx-2 mt-3 mb-10" ]
+                    div [ class "flex flex-wrap -mx-2" ]
                         (List.map
                             (\c ->
                                 if c.isApproved then
@@ -232,7 +232,7 @@ viewVoters ({ shared } as loggedIn) claim =
                         )
                 ]
             ]
-        , div []
+        , div [ class "mb-8" ]
             [ p [ class "text-caption uppercase text-green" ]
                 [ text_ "claim.disapproved_by" ]
             , div [ class "flex mb-10 " ]
@@ -240,7 +240,7 @@ viewVoters ({ shared } as loggedIn) claim =
                     Profile.viewEmpty shared
 
                   else
-                    div [ class "flex flex-wrap -mx-2 mt-3 mb-10" ]
+                    div [ class "flex flex-wrap -mx-2" ]
                         (List.map
                             (\c ->
                                 if not c.isApproved then
@@ -255,7 +255,7 @@ viewVoters ({ shared } as loggedIn) claim =
                         )
                 ]
             ]
-        , div []
+        , div [ class "mb-8" ]
             [ p [ class "text-caption uppercase text-green" ]
                 [ text_ "claim.pending" ]
             , div []
@@ -265,7 +265,7 @@ viewVoters ({ shared } as loggedIn) claim =
                         ]
 
                   else
-                    div [ class "flex flex-row mt-3 mb-10 flex-wrap" ]
+                    div [ class "flex flex-row flex-wrap" ]
                         (List.map (\v -> Profile.view shared loggedIn.accountName v) pendingValidators)
                 ]
             ]
