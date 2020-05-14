@@ -214,10 +214,10 @@ viewVoters ({ shared } as loggedIn) claim =
                 [ text_ "claim.approved_by" ]
             , div []
                 [ if List.isEmpty claim.checks then
-                    Profile.viewEmpty shared
+                    div [ class "pt-2" ] [ Profile.viewEmpty shared ]
 
                   else
-                    div [ class "flex flex-wrap -mx-2" ]
+                    div [ class "flex flex-wrap -mx-2 pt-2" ]
                         (List.map
                             (\c ->
                                 if c.isApproved then
@@ -237,10 +237,10 @@ viewVoters ({ shared } as loggedIn) claim =
                 [ text_ "claim.disapproved_by" ]
             , div [ class "flex mb-10 " ]
                 [ if List.filter (\check -> check.isApproved == False) claim.checks |> List.isEmpty then
-                    Profile.viewEmpty shared
+                    div [ class "pt-2" ] [ Profile.viewEmpty shared ]
 
                   else
-                    div [ class "flex flex-wrap -mx-2" ]
+                    div [ class "flex flex-wrap -mx-2 pt-2" ]
                         (List.map
                             (\c ->
                                 if not c.isApproved then
@@ -258,7 +258,7 @@ viewVoters ({ shared } as loggedIn) claim =
         , div [ class "mb-8" ]
             [ p [ class "text-caption uppercase text-green" ]
                 [ text_ "claim.pending" ]
-            , div []
+            , div [ class "pt-2" ]
                 [ if List.length claim.checks == claim.action.verifications then
                     div [ class "flex" ]
                         [ Profile.viewEmpty shared
