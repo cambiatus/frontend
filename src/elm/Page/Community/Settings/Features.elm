@@ -5,7 +5,10 @@ import Community
 import Eos exposing (Symbol)
 import Graphql.Http
 import Html exposing (..)
+import Html.Attributes exposing (class, style)
+import Page
 import Page.Community.Settings.Settings
+import Route
 import Session.LoggedIn as LoggedIn exposing (External(..))
 import UpdateResult as UR
 
@@ -21,12 +24,14 @@ initModel : Symbol -> Model
 initModel symbol =
     { status = Loading
     , settings = Nothing
+    , symbol = symbol
     }
 
 
 type alias Model =
     { status : Status
     , settings : Maybe Settings
+    , symbol : Symbol
     }
 
 
@@ -57,7 +62,15 @@ type alias UpdateResult =
 
 view : LoggedIn.Model -> Model -> Html Msg
 view loggedIn model =
-    div [] [ text "Features!" ]
+    div []
+        [ Page.viewHeader loggedIn "Features" (Route.CommunitySettings model.symbol)
+        , div
+            [ class "grid"
+            , style "grid-template" """
+                                     """
+            ]
+            []
+        ]
 
 
 update : Msg -> Model -> LoggedIn.Model -> UpdateResult
