@@ -97,11 +97,6 @@ settingCard title description route =
         ]
 
 
-featuresView : Html Msg
-featuresView =
-    div [] [ text "Features!" ]
-
-
 
 -- UPDATE
 
