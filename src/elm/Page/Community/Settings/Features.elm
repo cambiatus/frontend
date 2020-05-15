@@ -5,7 +5,8 @@ import Community
 import Eos exposing (Symbol)
 import Graphql.Http
 import Html exposing (..)
-import Html.Attributes exposing (class, style)
+import Html.Attributes exposing (checked, class, for, id, name, style, type_)
+import Html.Events exposing (onCheck, onInput)
 import Page
 import Page.Community.Settings.Settings
 import Route
@@ -23,15 +24,19 @@ init { shared } symbol =
 initModel : Symbol -> Model
 initModel symbol =
     { status = Loading
-    , settings = Nothing
     , symbol = symbol
+    , actions = False
+    , shop = False
+    , test = ""
     }
 
 
 type alias Model =
     { status : Status
-    , settings : Maybe Settings
     , symbol : Symbol
+    , actions : Bool
+    , shop : Bool
+    , test : String
     }
 
 
@@ -54,6 +59,8 @@ type SettingStatus
 
 type Msg
     = CompletedLoad (Result (Graphql.Http.Error (Maybe Settings)) (Maybe Settings))
+    | ToggleActions Bool
+    | ToggleShop Bool
 
 
 type alias UpdateResult =
@@ -62,14 +69,53 @@ type alias UpdateResult =
 
 view : LoggedIn.Model -> Model -> Html Msg
 view loggedIn model =
-    div []
+    div [ class "bg-white" ]
         [ Page.viewHeader loggedIn "Features" (Route.CommunitySettings model.symbol)
         , div
-            [ class "grid"
-            , style "grid-template" """
-                                     """
+            [ class "container mx-auto divide-y"
             ]
-            []
+            [ toggleView "Actions" model.actions ToggleActions
+            , toggleView "Shop" model.actions ToggleShop
+            ]
+        ]
+
+
+toggleView : String -> Bool -> (Bool -> Msg) -> Html Msg
+toggleView labelText status toggleFunction =
+    let
+        classes =
+            class "flex items-center"
+
+        statusText =
+            if status == True then
+                "Enabled"
+
+            else
+                "Disabled"
+    in
+    div
+        [ class "grid w-full"
+        , style "height" "52px"
+        , style "grid-template" """
+                                'label status toggle' 40px / auto 100px 50px
+                                """
+        ]
+        [ span [ classes, style "grid-area" "label" ] [ text labelText ]
+        , span [ classes, class "text-purple-500 font-medium lowercase", style "grid-area" "status" ] [ text statusText ]
+        , div [ classes ]
+            [ div [ class "form-switch inline-block align-middle" ]
+                [ input
+                    [ type_ "checkbox"
+                    , id "expiration-toggle"
+                    , name "expiration-toggle"
+                    , class "form-switch-checkbox"
+                    , checked status
+                    , onCheck toggleFunction
+                    ]
+                    []
+                , label [ class "form-switch-label", for "expiration-toggle" ] []
+                ]
+            ]
         ]
 
 
@@ -77,15 +123,20 @@ update : Msg -> Model -> LoggedIn.Model -> UpdateResult
 update msg model loggedIn =
     case msg of
         CompletedLoad (Ok (Just settings)) ->
-            UR.init { model | settings = Just settings }
+            UR.init { model | actions = settings.actions, shop = settings.shop }
 
         CompletedLoad (Ok Nothing) ->
-            -- TODO: community not found
             UR.init model
 
         CompletedLoad (Err err) ->
             UR.init { model | status = LoadingFailed err }
                 |> UR.logGraphqlError msg err
+
+        ToggleActions state ->
+            UR.init { model | actions = state }
+
+        ToggleShop state ->
+            UR.init { model | shop = state }
 
 
 msgToString : Msg -> List String
@@ -93,3 +144,9 @@ msgToString msg =
     case msg of
         CompletedLoad r ->
             [ "CompletedLoad", UR.resultToString r ]
+
+        ToggleActions r ->
+            [ "ToggleActions" ]
+
+        ToggleShop r ->
+            [ "ToggleShop" ]

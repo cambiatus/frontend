@@ -113,7 +113,6 @@ update msg model loggedIn =
             UR.init { model | status = Loaded community }
 
         CompletedLoad (Ok Nothing) ->
-            -- TODO: community not found
             UR.init model
 
         CompletedLoad (Err err) ->
