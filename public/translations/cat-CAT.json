@@ -567,5 +567,27 @@
     },
     "you": "vostè",
     "my_balance": "El meu balanç"
+  },
+  "settings": {
+    "community_info": {
+      "title": "Informació de la Comunitat",
+      "description": "Logo, nome, des crição"
+    },
+    "currency": {
+      "title": "Moeda",
+      "description": ""
+    },
+    "actions": {
+      "title": "Objetius i Ações",
+      "description": ""
+    },
+    "team": {
+      "title": "Temps",
+      "description": "Construcció de temps"
+    },
+    "features": {
+      "title": "Recursos",
+      "description": "Ações, loja"
+    }
   }
 }

@@ -567,5 +567,27 @@
     },
     "you": "tú",
     "my_balance": "Mi balance"
+  },
+  "settings": {
+    "community_info": {
+      "title": "Informações da Comunidade",
+      "description": "Logo, nome, des crição"
+    },
+    "currency": {
+      "title": "Moeda",
+      "description": ""
+    },
+    "actions": {
+      "title": "Objetivos e Ações",
+      "description": ""
+    },
+    "teams": {
+      "title": "Tiempo",
+      "description": "Construção de times"
+    },
+    "features": {
+      "title": "Recursos",
+      "description": "Ações, loja"
+    }
   }
 }

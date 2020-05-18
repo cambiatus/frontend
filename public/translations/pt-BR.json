@@ -569,5 +569,27 @@
     },
     "you": "você",
     "my_balance": "Meu saldo"
+  },
+  "settings": {
+    "community_info": {
+      "title": "Informações da Comunidade",
+      "description": "Logo, nome, descrição"
+    },
+    "currency": {
+      "title": "Moeda",
+      "description": ""
+    },
+    "actions": {
+      "title": "Objetivos e Ações",
+      "description": ""
+    },
+    "team": {
+      "title": "Time",
+      "description": "Construção de times"
+    },
+    "features": {
+      "title": "Recursos",
+      "description": "Ações, loja"
+    }
   }
 }

@@ -9,9 +9,11 @@ import Graphql.SelectionSet exposing (SelectionSet)
 import Html exposing (..)
 import Html.Attributes exposing (..)
 import Html.Lazy as Lazy
+import I18Next exposing (t)
 import Page exposing (viewHeader)
 import Route exposing (Route)
 import Session.LoggedIn as LoggedIn exposing (External(..))
+import Session.Shared exposing (Shared)
 import UpdateResult as UR
 
 
@@ -52,8 +54,14 @@ initModel symbol =
 view : LoggedIn.Model -> Model -> Html Msg
 view loggedIn model =
     let
+        translate =
+            t loggedIn.shared.translations
+
+        headerText =
+            translate "community.edit.title"
+
         header =
-            Page.viewHeader loggedIn "Edit community" Route.Dashboard
+            Page.viewHeader loggedIn headerText Route.Dashboard
     in
     case model.status of
         Loading ->
@@ -70,22 +78,26 @@ view loggedIn model =
                 ]
 
         LoadingFailed e ->
-            Page.fullPageGraphQLError "Settings" e
+            Page.fullPageGraphQLError headerText e
 
 
-view_ : Symbol -> Html Msg
-view_ symbol =
+view_ : Shared -> Symbol -> Html Msg
+view_ shared symbol =
+    let
+        translate =
+            t shared.translations
+    in
     div
         [ class "grid my-4"
         , style "grid-template-columns" "0 1fr 0"
         , style "grid-template-rows" "auto"
         , style "grid-gap" "16px"
         ]
-        [ settingCard "Community information" "Logo, name, description" Route.Dashboard
-        , settingCard "Currency" (Eos.symbolToString symbol) Route.Dashboard
-        , settingCard "Objectives and Actions" "" Route.Dashboard
-        , settingCard "Team" "Team building" Route.Dashboard
-        , settingCard "Features" "Actions, shop" (Route.CommunitySettingsFeatures symbol)
+        [ settingCard (translate "settings.community_info.title") (translate "settings.community_info.description") Route.Dashboard
+        , settingCard (translate "settings.currency.title") (Eos.symbolToString symbol) Route.Dashboard
+        , settingCard (translate "settings.actions.title") "" Route.Dashboard
+        , settingCard (translate "settings.team.title") (translate "settings.team.description") Route.Dashboard
+        , settingCard (translate "settings.features.title") (translate "settings.features.description") (Route.CommunitySettingsFeatures symbol)
         ]
 
 
