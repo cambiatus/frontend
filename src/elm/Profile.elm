@@ -378,8 +378,8 @@ viewLarge shared loggedInAccount profile =
 
 viewProfileNameTag : Eos.Name -> Profile -> Translations -> Html msg
 viewProfileNameTag loggedInAccount profile translations =
-    div [ class "flex items-center bg-black rounded-sm p-1" ]
-        [ p [ class "mx-2 pt-caption uppercase font-medium text-white text-caption" ]
+    div [ class "flex items-center bg-black rounded-label p-1" ]
+        [ p [ class "mx-2 pt-caption uppercase font-bold text-white text-caption" ]
             [ viewProfileName loggedInAccount profile translations ]
         ]
 

@@ -75,6 +75,7 @@
     },
     "pageNotFound": "Page not found",
     "required": "It looks like you forgot to fill this one out.",
+    "email": "Please, use a valid email.",
     "tooShort": "Too short. Must be at least {{minLength}} characters.",
     "tooLong": "Too long. Must be at most {{maxLength}} characters.",
     "invalidChar": "Invalid character {{invalidChar}}.",
@@ -105,47 +106,67 @@
         "input": {
           "label": "Your 12 words (you saved when creating your account)",
           "tooltip": "You can use your PRIVATE KEY too",
-          "toggle": "I want to use the Private Key"
+          "toggle": "I want to use the Private Key",
+          "notPassphraseError": "Please, enter 12 words",
+          "notLatinLettersError": "Please, use only basic Latin letters",
+          "atLeastThreeLettersError": "All words should have at least 3 letters"
         }
       },
-      "submit": "Log in",
+      "submit": "Sign In",
       "register": "Don't have an account yet? ",
       "registerLink": "Create now"
     },
     "pin": {
-      "label": "Security PIN (only numbers)",
-      "tooltip": "The PIN must contain 6 numbers, for your security, enter the PIN you created each time we request it"
+      "instruction": {
+        "nowCreate": "Cool, now create a",
+        "sixDigitPin": "six-digit PIN",
+        "thePin": "The PIN",
+        "notPassword": "is not a password",
+        "eachLogin": "and you can change it each login."
+      },
+      "toggle": {
+        "show": "Show",
+        "hide": "Hide"
+      },
+      "label": "Create a new six-digit PIN",
+      "tooltip": "The PIN must contain 6 numbers, for your security, enter the PIN you created each time we request it",
+      "shouldHaveSixDigitsError": "PIN should have 6 digits",
+      "pin": "PIN",
+      "confirmPin": "Confirm PIN",
+      "pinCharError": "Your PIN must use only numbers"
+    },
+    "pinPopup": {
+      "label": "Your six-digit PIN"
     },
     "pinConfirmation": {
       "label": "Type the PIN again",
-      "tooltip": ""
+      "tooltip": "",
+      "differsFromPinError": "Please enter the same PIN as above"
     }
   },
   "register": {
     "registerTab": "Create your account",
     "loginTab": "Login",
     "form": {
-      "title": "Create your Cambiatus account and enjoy our platform",
+      "step": "Step {{stepNum}} of 2",
+      "step1_title": "Basic Information",
+      "step2_title": "12 words",
       "name": {
         "label": "Full name",
         "tooltip": "",
-        "placeholder": ""
+        "placeholder": "Ex.: Arlene Warren"
       },
       "email": {
         "label": "Email",
         "tooltip": "",
-        "placeholder": ""
+        "placeholder": "Ex.: arlene_warren@email.com"
       },
       "account": {
-        "label": "Create an username with exactly 12 characters",
+        "label": "Create a username with exactly 12 characters (letters from a-z and numbers from 1-5)",
         "tooltip": "The username will be as you will be known on the platform by the other participants, it must have exact 12 characters.",
-        "placeholder": "Only letters from a-z and numbers from 1-5"
+        "placeholder": "Ex.: arlenewa1224"
       },
       "accountCharError": "Invalid character found. Use only letters and numbers between 1-5",
-      "pin": "PIN",
-      "confirmPin": "Confirm PIN",
-      "pinCharError": "Your PIN must use only numbers",
-      "pinConfirmError": "Please enter the same PIN as above",
       "checkingAvailability": "Checking availability of that account",
       "button": "Create"
     },
@@ -155,15 +176,16 @@
       "title": "Uoh. Something went wrong while creating your account"
     },
     "account_created": {
-      "congrats": "Congrats",
-      "account": "Your account was",
-      "created": "created ;)",
-      "welcome_message": "Welcome {{username}}, you will always be able to access Cambiatus with this device in a simple and safe manner, but if you want to use a different computer, smartphone or tablet you will need to have the following information at hand:",
+      "greet": "Hey",
+      "last_step": "it is the last step, and the most important",
+      "copy": "copy",
+      "i_saved_words": "I've copied and pasted on a secure place the 12 words as Cambiatus asked",
+      "words_copied": "were copied to clipboard",
       "twelve_words": "Your 12 words",
       "private_key": "Your private key",
       "recommendation": "We recommend you to save this information by clicking the button below, if you lose it you won't be able to login to your account again",
-      "download": "Save private key and 12 words",
-      "instructions": "You will save the private key and the 12 words on your computer in PDF format."
+      "download": "Save your PDF and Create an Account",
+      "instructions": "You must copy and paste on a secure place these 12 words below. We also are going to give you a PDF with these 12 words when you are finishing the register."
     }
   },
   "account": {
@@ -500,7 +522,8 @@
         "1": "Wooow",
         "2": ", good job.",
         "3": "You have finished all"
-      }
+      },
+      "all": "All"
     },
     "activities": {
       "title": "Activities for your analysis",
@@ -513,6 +536,14 @@
       "no": "No, cancel",
       "success": "Claim successful, please wait for approval",
       "failure": "Something went wrong while trying to process your claim, please try again later"
+    },
+    "all_analysis": {
+      "title": "All actions for analysis",
+      "more_details": "More details",
+      "approved": "Approved",
+      "pending": "Under Review",
+      "disapproved": "Disapproved",
+      "show_more": "Show next 16 items"
     }
   },
   "claim": {
@@ -541,6 +572,8 @@
     "date": "Claim Date",
     "claimer_reward": "User reward",
     "your_reward": "Your reward",
+    "approved_by": "Approved by",
+    "disapproved_by": "Disapproved by",
     "disapprove": "Disapprove",
     "approve": "Approve",
     "no_results_found": "No results found",
