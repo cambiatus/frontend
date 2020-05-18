@@ -94,10 +94,10 @@ view_ loggedIn profile =
         ipfsUrl =
             loggedIn.shared.endpoints.ipfs
     in
-    div []
+    div [ class "bg-white" ]
         [ Page.viewHeader loggedIn "Profile" Route.Communities
         , div
-            [ class "grid pt-4 bg-white gap-4 container mx-auto"
+            [ class "grid pt-4 gap-4 container mx-auto p-4"
             , style "grid-template" """
                                  ". avatar  info    info ."
                                  ". desc    desc    desc ."
@@ -149,12 +149,11 @@ viewUserExtendedInfo data =
 viewTransferButton : Symbol -> String -> Html msg
 viewTransferButton symbol user =
     a
-        [ class "flex justify-center"
+        [ class "flex justify-center w-full"
         , Route.href (Route.Transfer symbol (Just user))
         ]
         [ button
-            [ style "width" "calc(100% - 16px)"
-            , class "bg-orange-300 uppercase text-sm font-medium text-white h-10 rounded-lg max-w-xs"
+            [ class "button button-primary w-full"
             ]
             [ text "Transfer" ]
         ]
