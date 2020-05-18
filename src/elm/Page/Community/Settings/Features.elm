@@ -57,10 +57,10 @@ type alias UpdateResult =
 
 view : LoggedIn.Model -> Model -> Html Msg
 view loggedIn model =
-    div [ class "bg-white" ]
+    div [ class "bg-white flex flex-col items-center" ]
         [ Page.viewHeader loggedIn "Features" (Route.CommunitySettings model.symbol)
         , div
-            [ class "container mx-auto divide-y"
+            [ class "container w-full divide-y"
             ]
             [ toggleView "Actions" model.actions ToggleActions "actions"
             , toggleView "Shop" model.shop ToggleShop "shop"
@@ -82,8 +82,7 @@ toggleView labelText status toggleFunction inputId =
                 "Disabled"
     in
     div
-        [ class "grid w-full"
-        , style "height" "52px"
+        [ class "grid w-full py-4"
         , style "grid-template" """
                                 'label status toggle' 40px / auto 100px 50px
                                 """
