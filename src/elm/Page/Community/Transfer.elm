@@ -281,6 +281,25 @@ type Msg
     | Redirect Value
 
 
+getProfile : Maybe String -> Community.Model -> TransferStatus
+getProfile maybeTo community =
+    case maybeTo of
+        Just name ->
+            let
+                member =
+                    List.head (List.filter (\m -> Eos.nameToString m.account == name) community.members)
+            in
+            case member of
+                Just profile ->
+                    EditingTransfer { emptyForm | selectedProfile = Just profile }
+
+                Nothing ->
+                    EditingTransfer emptyForm
+
+        Nothing ->
+            EditingTransfer emptyForm
+
+
 update : Msg -> Model -> LoggedIn.Model -> UpdateResult
 update msg model ({ shared } as loggedIn) =
     let
@@ -292,7 +311,7 @@ update msg model ({ shared } as loggedIn) =
         CompletedLoad (Ok community) ->
             case community of
                 Just cmm ->
-                    UR.init { model | status = Loaded cmm (EditingTransfer emptyForm) }
+                    UR.init { model | status = Loaded cmm (getProfile model.maybeTo cmm) }
 
                 Nothing ->
                     UR.init { model | status = NotFound }
