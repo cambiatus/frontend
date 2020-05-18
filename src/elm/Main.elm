@@ -366,6 +366,11 @@ update msg model =
                 >> updateLoggedInUResult CommunitySettings GotCommunitySettingsMsg model
                 |> withLoggedIn
 
+        ( GotCommunitySettingsFeaturesMsg subMsg, CommunitySettingsFeatures subModel ) ->
+            CommunitySettingsFeatures.update subMsg subModel
+                >> updateLoggedInUResult CommunitySettingsFeatures GotCommunitySettingsFeaturesMsg model
+                |> withLoggedIn
+
         ( GotShopMsg subMsg, Shop maybeFilter subModel ) ->
             Shop.update subMsg subModel
                 >> updateLoggedInUResult (Shop maybeFilter) GotShopMsg model
