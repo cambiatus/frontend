@@ -97,7 +97,7 @@ view_ loggedIn profile =
     div []
         [ Page.viewHeader loggedIn "Profile" Route.Communities
         , div
-            [ class "grid pt-8 bg-white gap-4 container mx-auto"
+            [ class "grid pt-4 bg-white gap-4 container mx-auto"
             , style "grid-template" """
                                  ". avatar  info    info ."
                                  ". desc    desc    desc ."
