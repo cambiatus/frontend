@@ -69,7 +69,7 @@ view loggedIn model =
                 , view_ loggedIn.shared community.symbol
                 ]
 
-        LoadingFailed _ ->
+        LoadingFailed e ->
             Page.fullPageGraphQLError "Settings" e
 
 
