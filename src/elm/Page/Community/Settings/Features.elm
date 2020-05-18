@@ -6,7 +6,8 @@ import Eos exposing (Symbol)
 import Graphql.Http
 import Html exposing (..)
 import Html.Attributes exposing (checked, class, for, id, name, style, type_)
-import Html.Events exposing (onCheck, onInput)
+import Html.Events exposing (on, onCheck, onClick, onInput)
+import Json.Decode
 import Page
 import Page.Community.Settings.Settings
 import Route
@@ -74,14 +75,14 @@ view loggedIn model =
         , div
             [ class "container mx-auto divide-y"
             ]
-            [ toggleView "Actions" model.actions ToggleShop
-            , toggleView "Shop" model.shop ToggleActions
+            [ toggleView "Actions" model.actions ToggleActions "actions"
+            , toggleView "Shop" model.shop ToggleShop "shop"
             ]
         ]
 
 
-toggleView : String -> Bool -> (Bool -> Msg) -> Html Msg
-toggleView labelText status toggleFunction =
+toggleView : String -> Bool -> (Bool -> Msg) -> String -> Html Msg
+toggleView labelText status toggleFunction inputId =
     let
         classes =
             class "flex items-center"
@@ -106,14 +107,14 @@ toggleView labelText status toggleFunction =
             [ div [ class "form-switch inline-block align-middle" ]
                 [ input
                     [ type_ "checkbox"
-                    , id "expiration-toggle"
-                    , name "expiration-toggle"
+                    , id inputId
+                    , name inputId
                     , class "form-switch-checkbox"
                     , checked status
                     , onCheck toggleFunction
                     ]
                     []
-                , label [ class "form-switch-label", for "expiration-toggle" ] []
+                , label [ class "form-switch-label", for inputId ] []
                 ]
             ]
         ]
