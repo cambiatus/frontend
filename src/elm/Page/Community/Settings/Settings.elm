@@ -51,18 +51,22 @@ initModel symbol =
 
 view : LoggedIn.Model -> Model -> Html Msg
 view loggedIn model =
+    let
+        header =
+            Page.viewHeader loggedIn "Edit community" Route.Dashboard
+    in
     case model.status of
         Loading ->
             div []
-                [ Lazy.lazy viewHeader loggedIn
+                [ header
                 , div [ class "container mx-auto px-4" ]
                     [ Page.fullPageLoading ]
                 ]
 
         Loaded community ->
             div []
-                [ Page.viewHeader loggedIn "Edit community" Route.Dashboard
-                , view_ community.symbol
+                [ header
+                , view_ loggedIn.shared community.symbol
                 ]
 
         LoadingFailed _ ->
