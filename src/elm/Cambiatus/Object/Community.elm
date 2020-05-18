@@ -24,6 +24,11 @@ actionCount =
     Object.selectionForField "Int" "actionCount" [] Decode.int
 
 
+actions : SelectionSet Bool Cambiatus.Object.Community
+actions =
+    Object.selectionForField "Boolean" "actions" [] Decode.bool
+
+
 createdAt : SelectionSet Cambiatus.ScalarCodecs.DateTime Cambiatus.Object.Community
 createdAt =
     Object.selectionForField "ScalarCodecs.DateTime" "createdAt" [] (Cambiatus.ScalarCodecs.codecs |> Cambiatus.Scalar.unwrapCodecs |> .codecDateTime |> .decoder)
@@ -112,6 +117,11 @@ objectives object_ =
 saleCount : SelectionSet Int Cambiatus.Object.Community
 saleCount =
     Object.selectionForField "Int" "saleCount" [] Decode.int
+
+
+shop : SelectionSet Bool Cambiatus.Object.Community
+shop =
+    Object.selectionForField "Boolean" "shop" [] Decode.bool
 
 
 supply : SelectionSet (Maybe Float) Cambiatus.Object.Community

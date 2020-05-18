@@ -1,7 +1,7 @@
 module Page.Community.Settings.Features exposing (Model, Msg, init, msgToString, update, view)
 
 import Api.Graphql
-import Community
+import Community exposing (Community)
 import Eos exposing (Symbol)
 import Graphql.Http
 import Html exposing (..)
@@ -17,7 +17,7 @@ import UpdateResult as UR
 init : LoggedIn.Model -> Symbol -> ( Model, Cmd Msg )
 init { shared } symbol =
     ( initModel symbol
-    , Cmd.none
+    , Api.Graphql.query shared (Community.communityQuery symbol) CompletedLoad
     )
 
 
@@ -48,7 +48,7 @@ type alias Settings =
 
 type Status
     = Loading
-    | LoadingFailed (Graphql.Http.Error (Maybe Settings))
+    | LoadingFailed (Graphql.Http.Error (Maybe Community))
     | Loaded Settings
 
 
@@ -58,7 +58,7 @@ type SettingStatus
 
 
 type Msg
-    = CompletedLoad (Result (Graphql.Http.Error (Maybe Settings)) (Maybe Settings))
+    = CompletedLoad (Result (Graphql.Http.Error (Maybe Community)) (Maybe Community))
     | ToggleActions Bool
     | ToggleShop Bool
 
@@ -74,8 +74,8 @@ view loggedIn model =
         , div
             [ class "container mx-auto divide-y"
             ]
-            [ toggleView "Actions" model.actions ToggleActions
-            , toggleView "Shop" model.actions ToggleShop
+            [ toggleView "Actions" model.actions ToggleShop
+            , toggleView "Shop" model.shop ToggleActions
             ]
         ]
 
@@ -122,8 +122,8 @@ toggleView labelText status toggleFunction =
 update : Msg -> Model -> LoggedIn.Model -> UpdateResult
 update msg model loggedIn =
     case msg of
-        CompletedLoad (Ok (Just settings)) ->
-            UR.init { model | actions = settings.actions, shop = settings.shop }
+        CompletedLoad (Ok (Just community)) ->
+            UR.init { model | actions = community.actions, shop = community.shop }
 
         CompletedLoad (Ok Nothing) ->
             UR.init model
@@ -145,8 +145,8 @@ msgToString msg =
         CompletedLoad r ->
             [ "CompletedLoad", UR.resultToString r ]
 
-        ToggleActions r ->
+        ToggleActions _ ->
             [ "ToggleActions" ]
 
-        ToggleShop r ->
+        ToggleShop _ ->
             [ "ToggleShop" ]

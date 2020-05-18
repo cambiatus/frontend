@@ -110,6 +110,8 @@ type alias Community =
     , memberCount : Int
     , members : List Profile
     , objectives : List Objective
+    , actions : Bool
+    , shop : Bool
     }
 
 
@@ -152,6 +154,8 @@ communitySelectionSet =
         |> with Community.memberCount
         |> with (Community.members Profile.selectionSet)
         |> with (Community.objectives objectiveSelectionSet)
+        |> with Community.actions
+        |> with Community.shop
 
 
 
