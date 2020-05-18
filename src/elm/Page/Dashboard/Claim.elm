@@ -163,7 +163,7 @@ viewDetails shared model claim =
                             )
                         ]
                     ]
-                , div [ class "" ]
+                , div []
                     [ p
                         [ class "text-caption uppercase text-green" ]
                         [ text_ "claim.claimer_reward" ]

@@ -366,7 +366,7 @@ viewAnalysisList loggedIn profile model =
 
 
 viewAnalysis : LoggedIn.Model -> ClaimStatus -> Html Msg
-viewAnalysis ({ shared } as loggedIn) claimStatus =
+viewAnalysis ({ shared, selectedCommunity } as loggedIn) claimStatus =
     let
         text_ s =
             text (I18Next.t shared.translations s)
@@ -378,20 +378,26 @@ viewAnalysis ({ shared } as loggedIn) claimStatus =
     in
     case claimStatus of
         ClaimLoaded claim ->
-            div [ class "w-full sm:w-full md:w-1/2 lg:w-1/3 xl:w-1/4 px-2 mb-4" ]
+            div
+                [ class "w-full sm:w-full md:w-1/2 lg:w-1/3 xl:w-1/4 px-2 mb-4"
+                ]
                 [ div
                     [ class " flex flex-col p-4 my-2 rounded-lg bg-white"
                     , id ("claim" ++ String.fromInt claim.id)
                     ]
-                    [ div [ class "flex justify-start mb-8" ]
-                        [ Profile.view shared loggedIn.accountName claim.claimer
+                    [ a
+                        [ Route.href <| Route.Claim selectedCommunity claim.action.objective.id claim.action.id claim.id
                         ]
-                    , div [ class "mb-6" ]
-                        [ p [ class "text-body" ]
-                            [ text claim.action.description ]
-                        , p
-                            [ class "text-gray-900 text-caption uppercase" ]
-                            [ text <| date claim.createdAt ]
+                        [ div [ class "flex justify-start mb-8" ]
+                            [ Profile.view shared loggedIn.accountName claim.claimer
+                            ]
+                        , div [ class "mb-6" ]
+                            [ p [ class "text-body" ]
+                                [ text claim.action.description ]
+                            , p
+                                [ class "text-gray-900 text-caption uppercase" ]
+                                [ text <| date claim.createdAt ]
+                            ]
                         ]
                     , div [ class "flex" ]
                         [ button
