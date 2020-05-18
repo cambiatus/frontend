@@ -8,7 +8,7 @@ import Graphql.Operation exposing (RootQuery, RootSubscription)
 import Graphql.SelectionSet exposing (SelectionSet)
 import Html exposing (..)
 import Html.Attributes exposing (..)
-import Lazy
+import Html.Lazy as Lazy
 import Page exposing (viewHeader)
 import Route exposing (Route)
 import Session.LoggedIn as LoggedIn exposing (External(..))
