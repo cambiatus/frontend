@@ -4,12 +4,10 @@ import Api.Graphql
 import Community exposing (Community)
 import Eos exposing (Symbol)
 import Graphql.Http
-import Html exposing (..)
+import Html exposing (Html, div, input, label, span, text)
 import Html.Attributes exposing (checked, class, for, id, name, style, type_)
-import Html.Events exposing (on, onCheck, onClick, onInput)
-import Json.Decode
+import Html.Events exposing (onCheck)
 import Page
-import Page.Community.Settings.Settings
 import Route
 import Session.LoggedIn as LoggedIn exposing (External(..))
 import UpdateResult as UR
@@ -41,21 +39,10 @@ type alias Model =
     }
 
 
-type alias Settings =
-    { actions : Bool
-    , shop : Bool
-    }
-
-
 type Status
     = Loading
     | LoadingFailed (Graphql.Http.Error (Maybe Community))
-    | Loaded Settings
-
-
-type SettingStatus
-    = Enabled
-    | Disabled
+    | Loaded Community
 
 
 type Msg
@@ -121,10 +108,10 @@ toggleView labelText status toggleFunction inputId =
 
 
 update : Msg -> Model -> LoggedIn.Model -> UpdateResult
-update msg model loggedIn =
+update msg model _ =
     case msg of
         CompletedLoad (Ok (Just community)) ->
-            UR.init { model | actions = community.actions, shop = community.shop }
+            UR.init { model | status = Loaded community, actions = community.actions, shop = community.shop }
 
         CompletedLoad (Ok Nothing) ->
             UR.init model
