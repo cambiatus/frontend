@@ -7,12 +7,13 @@ import Eos.Account as Eos
 import Graphql.Http
 import Html exposing (Html, a, button, div, li, p, span, text, ul)
 import Html.Attributes exposing (class, style)
-import I18Next
+import I18Next exposing (t)
 import Json.Decode exposing (Value)
 import Page
 import Profile exposing (Profile)
 import Route
 import Session.LoggedIn as LoggedIn exposing (External(..), FeedbackStatus(..))
+import Session.Shared exposing (Shared)
 import UpdateResult as UR
 
 
@@ -107,7 +108,7 @@ view_ loggedIn profile =
             ]
             [ div [ style "grid-area" "avatar" ] [ Avatar.view ipfsUrl profile.avatar "w-20 h-20" ]
             , div [ style "grid-area" "info" ] [ viewUserInfo userName email account ]
-            , div [ style "grid-area" "transfer" ] [ viewTransferButton loggedIn.selectedCommunity account ]
+            , div [ style "grid-area" "transfer" ] [ viewTransferButton loggedIn.shared loggedIn.selectedCommunity account ]
             , div [ style "grid-area" "desc" ] [ viewUserDescription description ]
             , div [ style "grid-area" "extra" ]
                 [ viewUserExtendedInfo
@@ -146,8 +147,12 @@ viewUserExtendedInfo data =
         )
 
 
-viewTransferButton : Symbol -> String -> Html msg
-viewTransferButton symbol user =
+viewTransferButton : Shared -> Symbol -> String -> Html msg
+viewTransferButton shared symbol user =
+    let
+        text_ s =
+            text (t shared.translations s)
+    in
     a
         [ class "flex justify-center w-full"
         , Route.href (Route.Transfer symbol (Just user))
@@ -155,7 +160,7 @@ viewTransferButton symbol user =
         [ button
             [ class "button button-primary w-full"
             ]
-            [ text "Transfer" ]
+            [ text_ "transfer.title" ]
         ]
 
 
