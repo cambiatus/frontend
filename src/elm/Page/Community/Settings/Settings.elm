@@ -8,7 +8,8 @@ import Graphql.Operation exposing (RootQuery, RootSubscription)
 import Graphql.SelectionSet exposing (SelectionSet)
 import Html exposing (..)
 import Html.Attributes exposing (..)
-import Page
+import Lazy
+import Page exposing (viewHeader)
 import Route exposing (Route)
 import Session.LoggedIn as LoggedIn exposing (External(..))
 import UpdateResult as UR
@@ -52,7 +53,11 @@ view : LoggedIn.Model -> Model -> Html Msg
 view loggedIn model =
     case model.status of
         Loading ->
-            div [] []
+            div []
+                [ Lazy.lazy viewHeader loggedIn
+                , div [ class "container mx-auto px-4" ]
+                    [ Page.fullPageLoading ]
+                ]
 
         Loaded community ->
             div []
