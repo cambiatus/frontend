@@ -74,15 +74,15 @@ view loggedIn model =
         Loaded community ->
             div []
                 [ header
-                , view_ loggedIn.shared community.symbol
+                , viewSettingsList loggedIn.shared community.symbol
                 ]
 
         LoadingFailed e ->
             Page.fullPageGraphQLError headerText e
 
 
-view_ : Shared -> Symbol -> Html Msg
-view_ shared symbol =
+viewSettingsList : Shared -> Symbol -> Html Msg
+viewSettingsList shared symbol =
     let
         translate =
             t shared.translations
