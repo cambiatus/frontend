@@ -2,9 +2,10 @@ module Page.PublicProfile exposing (Model, Msg, init, jsAddressToMsg, msgToStrin
 
 import Api.Graphql
 import Avatar
+import Eos exposing (Symbol)
 import Eos.Account as Eos
 import Graphql.Http
-import Html exposing (Html, button, div, li, p, span, text, ul)
+import Html exposing (Html, a, button, div, li, p, span, text, ul)
 import Html.Attributes exposing (class, style)
 import I18Next
 import Json.Decode exposing (Value)
@@ -106,7 +107,7 @@ view_ loggedIn profile =
             ]
             [ div [ style "grid-area" "avatar" ] [ Avatar.view ipfsUrl profile.avatar "w-20 h-20" ]
             , div [ style "grid-area" "info" ] [ viewUserInfo userName email account ]
-            , div [ style "grid-area" "transfer" ] [ viewTransferButton ]
+            , div [ style "grid-area" "transfer" ] [ viewTransferButton loggedIn.selectedCommunity account ]
             , div [ style "grid-area" "desc" ] [ viewUserDescription description ]
             , div [ style "grid-area" "extra" ]
                 [ viewUserExtendedInfo
@@ -145,10 +146,11 @@ viewUserExtendedInfo data =
         )
 
 
-viewTransferButton : Html msg
-viewTransferButton =
-    div
+viewTransferButton : Symbol -> String -> Html msg
+viewTransferButton symbol user =
+    a
         [ class "flex justify-center"
+        , Route.href (Route.Transfer symbol (Just user))
         ]
         [ button
             [ style "width" "calc(100% - 16px)"
