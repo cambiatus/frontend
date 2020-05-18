@@ -96,7 +96,7 @@ view_ loggedIn profile =
             loggedIn.shared.endpoints.ipfs
     in
     div [ class "bg-white" ]
-        [ Page.viewHeader loggedIn "Profile" Route.Communities
+        [ Page.viewHeader loggedIn (t loggedIn.shared.translations "menu.profile") Route.Communities
         , div
             [ class "grid pt-4 gap-4 container mx-auto p-4"
             , style "grid-template" """
