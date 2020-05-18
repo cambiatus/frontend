@@ -66,7 +66,7 @@ view loggedIn model =
                 ]
 
         LoadingFailed _ ->
-            div [] []
+            Page.fullPageGraphQLError "Settings" e
 
 
 view_ : Symbol -> Html Msg
