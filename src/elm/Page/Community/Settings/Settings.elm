@@ -43,7 +43,7 @@ type Msg
 
 initModel : Symbol -> Model
 initModel symbol =
-    { currency = "MUDA"
+    { currency = Eos.symbolToString symbol
     , status = Loading
     }
 
@@ -73,7 +73,7 @@ view_ symbol =
         , style "grid-gap" "16px"
         ]
         [ settingCard "Community information" "Logo, name, description" Route.Dashboard
-        , settingCard "Currency" "MUDA" Route.Dashboard
+        , settingCard "Currency" (Eos.symbolToString symbol) Route.Dashboard
         , settingCard "Objectives and Actions" "" Route.Dashboard
         , settingCard "Team" "Team building" Route.Dashboard
         , settingCard "Features" "Actions, shop" (Route.CommunitySettingsFeatures symbol)
