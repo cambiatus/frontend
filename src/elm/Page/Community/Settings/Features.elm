@@ -69,13 +69,13 @@ view loggedIn model =
 
 
 toggleView : String -> Bool -> (Bool -> Msg) -> String -> Html Msg
-toggleView labelText status toggleFunction inputId =
+toggleView labelText isEnabled toggleFunction inputId =
     let
         classes =
             class "flex items-center"
 
         statusText =
-            if status == True then
+            if isEnabled then
                 "Enabled"
 
             else
@@ -96,7 +96,7 @@ toggleView labelText status toggleFunction inputId =
                     , id inputId
                     , name inputId
                     , class "form-switch-checkbox"
-                    , checked status
+                    , checked isEnabled
                     , onCheck toggleFunction
                     ]
                     []
