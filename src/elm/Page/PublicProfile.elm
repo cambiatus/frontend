@@ -112,8 +112,8 @@ view_ loggedIn profile =
             , div [ style "grid-area" "desc" ] [ viewUserDescription description ]
             , div [ style "grid-area" "extra" ]
                 [ viewUserExtendedInfo
-                    [ ( "Locations", [ location ] )
-                    , ( "Interests", profile.interests )
+                    [ ( t loggedIn.shared.translations "profile.locations", [ location ] )
+                    , ( t loggedIn.shared.translations "profile.interests", profile.interests )
                     ]
                 ]
             ]

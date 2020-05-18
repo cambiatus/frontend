@@ -402,6 +402,8 @@
     "my_transfers": "Mis Transferencias",
     "no_one": "Ninguno",
     "edit_success": "Perfil guardado con éxito",
+    "locations": "Ubicaciones",
+    "interests": "Intereses",
     "actions": {
       "edit": "Editar",
       "viewPrivatekey": "Ver Llave Privada"

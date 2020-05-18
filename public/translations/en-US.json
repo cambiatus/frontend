@@ -398,6 +398,8 @@
     "my_transfers": "My Transfers",
     "no_one": "No one",
     "edit_success": "Profile saved successfully",
+    "locations": "Locations",
+    "interests": "Interests",
     "actions": {
       "edit": "Edit",
       "viewPrivatekey": "View Private Key"
