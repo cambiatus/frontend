@@ -998,7 +998,7 @@ view model =
             viewPage Guest.Other LoggedIn.Other (\_ -> Ignored) (ComingSoon.view model.session)
 
         PaymentHistory ->
-            viewPage Guest.Other LoggedIn.Other (\_ -> Ignored) (PaymentHistory.view model.session)
+            viewPage Guest.PaymentHistory LoggedIn.Other (\_ -> Ignored) (PaymentHistory.view model.session)
 
         Register _ subModel ->
             viewGuest subModel Guest.Register GotRegisterMsg Register.view
