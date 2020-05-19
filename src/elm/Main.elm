@@ -23,6 +23,7 @@ import Page.Dashboard.Claim as Claim
 import Page.Login as Login
 import Page.NotFound as NotFound
 import Page.Notification as Notification
+import Page.PaymentHistory as PaymentHistory
 import Page.Profile as Profile
 import Page.PublicProfile as PublicProfile
 import Page.Register as Register
@@ -150,6 +151,7 @@ type Status
     = Redirect
     | NotFound
     | ComingSoon
+    | PaymentHistory
     | Community CommunityPage.Model
     | CommunityEditor CommunityEditor.Model
     | Objectives Objectives.Model
@@ -675,6 +677,11 @@ changeRouteTo maybeRoute model =
                 (updateStatusWith Login GotLoginMsg)
                 maybeRedirect
 
+        Just (Route.PaymentHistory accountName) ->
+            PaymentHistory
+                |> updateStatus model
+                |> noCmd
+
         Just (Route.LoginWithPrivateKey maybeRedirect) ->
             withGuest
                 Login.init
@@ -989,6 +996,9 @@ view model =
 
         ComingSoon ->
             viewPage Guest.Other LoggedIn.Other (\_ -> Ignored) (ComingSoon.view model.session)
+
+        PaymentHistory ->
+            viewPage Guest.Other LoggedIn.Other (\_ -> Ignored) (PaymentHistory.view model.session)
 
         Register _ subModel ->
             viewGuest subModel Guest.Register GotRegisterMsg Register.view
