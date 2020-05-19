@@ -575,11 +575,13 @@ viewAction loggedIn metadata maybeDate action =
                         [ if validationType == "CLAIMABLE" then
                             button
                                 [ class ("h-10 uppercase rounded-lg ml-1" ++ claimColors ++ claimSize)
-                                , if isClosed == False then
-                                    onClick (OpenClaimConfirmation action.id)
+                                , onClick
+                                    (if isClosed then
+                                        NoOp
 
-                                  else
-                                    class ""
+                                     else
+                                        OpenClaimConfirmation action.id
+                                    )
                                 ]
                                 [ text_ claimText ]
 

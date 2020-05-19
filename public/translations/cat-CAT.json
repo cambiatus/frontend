@@ -402,6 +402,8 @@
     "my_transfers": "Les meves transferències",
     "no_one": "Ningú",
     "edit_success": "El perfil s'ha desat correctament",
+    "locations": "Localització",
+    "interests": "Interessos",
     "actions": {
       "edit": "Editar",
       "viewPrivatekey": "Veure clau privada"

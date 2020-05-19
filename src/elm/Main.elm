@@ -24,6 +24,7 @@ import Page.Login as Login
 import Page.NotFound as NotFound
 import Page.Notification as Notification
 import Page.Profile as Profile
+import Page.PublicProfile as PublicProfile
 import Page.Register as Register
 import Page.Shop as Shop
 import Page.Shop.Editor as ShopEditor
@@ -159,6 +160,7 @@ type Status
     | Notification Notification.Model
     | Dashboard Dashboard.Model
     | Login Login.Model
+    | PublicProfile PublicProfile.Model
     | Profile Profile.Model
     | Register (Maybe String) Register.Model
     | Shop Shop.Filter Shop.Model
@@ -191,6 +193,7 @@ type Msg
     | GotCommunityExploreMsg CommunityExplore.Msg
     | GotDashboardMsg Dashboard.Msg
     | GotLoginMsg Login.Msg
+    | GotPublicProfileMsg PublicProfile.Msg
     | GotProfileMsg Profile.Msg
     | GotRegisterMsg Register.Msg
     | GotShopMsg Shop.Msg
@@ -350,6 +353,11 @@ update msg model =
         ( GotDashboardMsg subMsg, Dashboard subModel ) ->
             Dashboard.update subMsg subModel
                 >> updateLoggedInUResult Dashboard GotDashboardMsg model
+                |> withLoggedIn
+
+        ( GotPublicProfileMsg subMsg, PublicProfile subModel ) ->
+            PublicProfile.update subMsg subModel
+                >> updateLoggedInUResult PublicProfile GotPublicProfileMsg model
                 |> withLoggedIn
 
         ( GotProfileMsg subMsg, Profile subModel ) ->
@@ -683,6 +691,11 @@ changeRouteTo maybeRoute model =
                 >> updateStatusWith Notification GotNotificationMsg model
                 |> withLoggedIn Route.Notification
 
+        Just (Route.PublicProfile accountName) ->
+            (\l -> PublicProfile.init l accountName)
+                >> updateStatusWith PublicProfile GotPublicProfileMsg model
+                |> withLoggedIn (Route.PublicProfile accountName)
+
         Just Route.Profile ->
             Profile.init
                 >> updateStatusWith Profile GotProfileMsg model
@@ -822,6 +835,10 @@ jsAddressToMsg address val =
             Maybe.map GotShopMsg
                 (Shop.jsAddressToMsg rAddress val)
 
+        "GotPublicProfileMsg" :: rAddress ->
+            Maybe.map GotPublicProfileMsg
+                (PublicProfile.jsAddressToMsg rAddress val)
+
         "GotProfileMsg" :: rAddress ->
             Maybe.map GotProfileMsg
                 (Profile.jsAddressToMsg rAddress val)
@@ -896,6 +913,9 @@ msgToString msg =
 
         GotLoginMsg subMsg ->
             "GotLoginMsg" :: Login.msgToString subMsg
+
+        GotPublicProfileMsg subMsg ->
+            "GotPublicProfileMsg" :: PublicProfile.msgToString subMsg
 
         GotProfileMsg subMsg ->
             "GotProfileMsg" :: Profile.msgToString subMsg
@@ -1002,6 +1022,9 @@ view model =
 
         Dashboard subModel ->
             viewLoggedIn subModel LoggedIn.Dashboard GotDashboardMsg Dashboard.view
+
+        PublicProfile subModel ->
+            viewLoggedIn subModel LoggedIn.PublicProfile GotPublicProfileMsg PublicProfile.view
 
         Profile subModel ->
             viewLoggedIn subModel LoggedIn.Profile GotProfileMsg Profile.view

@@ -39,8 +39,8 @@ import Eos.Account as Eos
 import Graphql.Operation exposing (RootMutation, RootQuery)
 import Graphql.OptionalArgument exposing (OptionalArgument(..))
 import Graphql.SelectionSet as SelectionSet exposing (SelectionSet, with)
-import Html exposing (Html, div, p, span, text)
-import Html.Attributes exposing (class, maxlength, minlength, pattern, title, type_)
+import Html exposing (Html, a, div, p, span, text)
+import Html.Attributes exposing (class, href, maxlength, minlength, pattern, title, type_)
 import I18Next exposing (Translations, t)
 import Json.Decode as Decode exposing (Decoder, int, list, nullable, string)
 import Json.Decode.Pipeline as Decode exposing (optional, required)
@@ -353,7 +353,10 @@ pinValidationAttrs =
 
 view : Shared -> Eos.Name -> Profile -> Html msg
 view shared loggedInAccount profile =
-    div [ class "flex flex-col items-center" ]
+    a
+        [ class "flex flex-col items-center"
+        , href ("/profile/" ++ Eos.nameToString profile.account)
+        ]
         [ div [ class "w-10 h-10 rounded-full" ]
             [ Avatar.view shared.endpoints.ipfs profile.avatar "w-10 h-10"
             ]
