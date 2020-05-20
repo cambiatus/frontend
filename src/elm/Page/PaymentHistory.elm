@@ -1,32 +1,21 @@
 module Page.PaymentHistory exposing (Model, Msg, init, msgToString, update, view)
 
+import Community
+import Eos.Account as Eos
 import Html exposing (Html, button, div, h1, h2, img, input, label, p, span, text, ul)
 import Html.Attributes exposing (class, for, placeholder, src, style)
+import Profile exposing (Profile)
 import Select
 import Session.Guest as Guest exposing (External(..))
+import Session.Shared as Shared
 import Simple.Fuzzy
 import UpdateResult as UR
 
 
-init : Guest.Model -> ( Model, Cmd Msg )
-init guest =
-    ( { userSelectorState = Select.newState ""
-      , selectedName = Nothing
-      , users = []
-      }
-    , Cmd.none
-    )
-
-
-type alias ProfileTemp =
-    { name : String
-    }
-
-
 type Msg
     = NoOp
-    | OnSelect (Maybe ProfileTemp)
-    | SelectMsg (Select.Msg ProfileTemp)
+    | OnSelect (Maybe Profile)
+    | SelectMsg (Select.Msg Profile)
 
 
 msgToString : Msg -> List String
@@ -43,19 +32,55 @@ msgToString msg =
 
 
 type alias Model =
-    { userSelectorState : Select.State
-    , selectedName : Maybe String
-    , users : List ProfileTemp
+    { autocompleteState : Select.State
+    , selectedProfile : Maybe Profile
+    , users : List Profile
     }
 
 
-selectConfig : Select.Config Msg ProfileTemp
-selectConfig =
-    Select.newConfig
-        { onSelect = OnSelect
-        , toLabel = .name
-        , filter = filter 4 .name
-        }
+viewAutoCompleteAccount : Shared.Shared -> Model -> Bool -> Html Msg
+viewAutoCompleteAccount shared model isDisabled =
+    let
+        users =
+            []
+
+        selectedUsers =
+            Maybe.map (\v -> [ v ]) model.selectedProfile
+                |> Maybe.withDefault []
+    in
+    div []
+        [ Html.map SelectMsg
+            (Select.view
+                (selectConfiguration shared isDisabled)
+                model.autocompleteState
+                users
+                selectedUsers
+            )
+        ]
+
+
+selectConfiguration : Shared.Shared -> Bool -> Select.Config Msg Profile
+selectConfiguration shared isDisabled =
+    Profile.selectConfig
+        (Select.newConfig
+            { onSelect = OnSelect
+            , toLabel = \p -> Eos.nameToString p.account
+            , filter = Profile.selectFilter 2 (\p -> Eos.nameToString p.account)
+            }
+            |> Select.withInputClass "form-input"
+        )
+        shared
+        isDisabled
+
+
+init : Guest.Model -> ( Model, Cmd Msg )
+init guest =
+    ( { autocompleteState = Select.newState ""
+      , selectedProfile = Nothing
+      , users = []
+      }
+    , Cmd.none
+    )
 
 
 filter : Int -> (a -> String) -> String -> List a -> Maybe (List a)
@@ -76,22 +101,22 @@ type alias UpdateResult =
 update : Msg -> Model -> Guest.Model -> UpdateResult
 update msg model guest =
     case msg of
-        OnSelect maybeUser ->
-            let
-                maybeName =
-                    Maybe.map .name maybeUser
-            in
-            UR.init { model | selectedName = maybeName }
+        OnSelect maybeProfile ->
+            { model
+                | selectedProfile = maybeProfile
+            }
+                |> UR.init
 
         SelectMsg subMsg ->
             let
                 ( updated, cmd ) =
-                    Select.update selectConfig subMsg model.userSelectorState
+                    Select.update (selectConfiguration guest.shared False) subMsg model.autocompleteState
             in
-            UR.init { model | userSelectorState = updated }
+            UR.init { model | autocompleteState = updated }
+                |> UR.addCmd cmd
 
-        NoOp ->
-            UR.init model
+        _ ->
+            model |> UR.init
 
 
 view : Guest.Model -> Model -> Html Msg
@@ -100,7 +125,7 @@ view guest model =
         [ viewSplash
         , div [ class "mx-4 max-w-md md:m-auto" ]
             [ h2 [ class "text-center text-black text-2xl" ] [ text "Payment History" ]
-            , viewUserAutocomplete
+            , viewUserAutocomplete guest model
             , viewPeriodSelector
             , viewPayersList
             , viewPagination
@@ -117,18 +142,14 @@ viewSplash =
         ]
 
 
-viewUserAutocomplete =
+viewUserAutocomplete guest model =
     div [ class "my-4" ]
         [ label
             [ class "block" ]
             [ span [ class "text-green tracking-wide uppercase text-caption block mb-1" ]
                 [ text "User" ]
             ]
-        , input
-            [ class "input min-w-full"
-            , placeholder "Type username here"
-            ]
-            []
+        , viewAutoCompleteAccount guest.shared model False
         ]
 
 
