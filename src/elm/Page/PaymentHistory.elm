@@ -1,20 +1,101 @@
-module Page.PaymentHistory exposing (view)
+module Page.PaymentHistory exposing (Model, Msg, init, msgToString, update, view)
 
 import Html exposing (Html, button, div, h1, h2, img, input, label, p, span, text, ul)
 import Html.Attributes exposing (class, for, placeholder, src, style)
-import I18Next exposing (t)
-import Page
+import Select
+import Session.Guest as Guest exposing (External(..))
+import Simple.Fuzzy
+import UpdateResult as UR
 
 
-view : Page.Session -> Html msg
-view session =
-    let
-        shared =
-            Page.toShared session
+init : Guest.Model -> ( Model, Cmd Msg )
+init guest =
+    ( { userSelectorState = Select.newState ""
+      , selectedName = Nothing
+      , users = []
+      }
+    , Cmd.none
+    )
 
-        text_ =
-            t shared.translations
-    in
+
+type alias ProfileTemp =
+    { name : String
+    }
+
+
+type Msg
+    = NoOp
+    | OnSelect (Maybe ProfileTemp)
+    | SelectMsg (Select.Msg ProfileTemp)
+
+
+msgToString : Msg -> List String
+msgToString msg =
+    case msg of
+        NoOp ->
+            [ "NoOp" ]
+
+        OnSelect _ ->
+            [ "OnSelect" ]
+
+        SelectMsg _ ->
+            [ "SelectMsg" ]
+
+
+type alias Model =
+    { userSelectorState : Select.State
+    , selectedName : Maybe String
+    , users : List ProfileTemp
+    }
+
+
+selectConfig : Select.Config Msg ProfileTemp
+selectConfig =
+    Select.newConfig
+        { onSelect = OnSelect
+        , toLabel = .name
+        , filter = filter 4 .name
+        }
+
+
+filter : Int -> (a -> String) -> String -> List a -> Maybe (List a)
+filter minChars toLabel query items =
+    if String.length query < minChars then
+        Nothing
+
+    else
+        items
+            |> Simple.Fuzzy.filter toLabel query
+            |> Just
+
+
+type alias UpdateResult =
+    UR.UpdateResult Model Msg External
+
+
+update : Msg -> Model -> Guest.Model -> UpdateResult
+update msg model guest =
+    case msg of
+        OnSelect maybeUser ->
+            let
+                maybeName =
+                    Maybe.map .name maybeUser
+            in
+            UR.init { model | selectedName = maybeName }
+
+        SelectMsg subMsg ->
+            let
+                ( updated, cmd ) =
+                    Select.update selectConfig subMsg model.userSelectorState
+            in
+            UR.init { model | userSelectorState = updated }
+
+        NoOp ->
+            UR.init model
+
+
+view : Guest.Model -> Model -> Html Msg
+view guest model =
     div [ class "bg-white" ]
         [ viewSplash
         , div [ class "mx-4 max-w-md md:m-auto" ]

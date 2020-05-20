@@ -20,7 +20,7 @@ type Route
     | Logout
     | Notification
     | PublicProfile String
-    | PaymentHistory String
+    | PaymentHistory String (Maybe Route)
     | Profile
     | Dashboard
     | Community Symbol
@@ -76,7 +76,13 @@ parser url =
             )
         , Url.map Logout (s "logout")
         , Url.map PublicProfile (s "profile" </> string)
-        , Url.map PaymentHistory (s "payment-history" </> string)
+        , Url.map PaymentHistory
+            (s "payment-history"
+                </> string
+                <?> Query.map
+                        (parseRedirect url)
+                        (Query.string "redirect")
+            )
         , Url.map Profile (s "profile")
         , Url.map Notification (s "notification")
         , Url.map Dashboard (s "dashboard")
@@ -225,8 +231,10 @@ routeToString route =
                 PublicProfile accountName ->
                     ( [ "profile", accountName ], [] )
 
-                PaymentHistory accountName ->
-                    ( [ "payment-history", accountName ], [] )
+                PaymentHistory accountName maybeRedirect ->
+                    ( [ "payment-history", accountName ]
+                    , queryBuilder routeToString maybeRedirect "redirect"
+                    )
 
                 Profile ->
                     ( [ "profile" ], [] )

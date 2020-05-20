@@ -151,7 +151,7 @@ type Status
     = Redirect
     | NotFound
     | ComingSoon
-    | PaymentHistory
+    | PaymentHistory PaymentHistory.Model
     | Community CommunityPage.Model
     | CommunityEditor CommunityEditor.Model
     | Objectives Objectives.Model
@@ -196,6 +196,7 @@ type Msg
     | GotDashboardMsg Dashboard.Msg
     | GotLoginMsg Login.Msg
     | GotPublicProfileMsg PublicProfile.Msg
+    | GotPaymentHistoryMsg PaymentHistory.Msg
     | GotProfileMsg Profile.Msg
     | GotRegisterMsg Register.Msg
     | GotShopMsg Shop.Msg
@@ -312,13 +313,18 @@ update msg model =
                 -- provides the above composed function with the initial guest input
                 |> withGuest
 
+        ( GotPaymentHistoryMsg subMsg, PaymentHistory subModel ) ->
+            PaymentHistory.update subMsg subModel
+                >> updateGuestUResult PaymentHistory GotPaymentHistoryMsg model
+                |> withGuest
+
         ( GotLoginMsg subMsg, Login subModel ) ->
             Login.update subMsg subModel
                 >> updateGuestUResult Login GotLoginMsg model
                 |> withGuest
 
         ( GotNotificationMsg subMsg, Notification subModel ) ->
-            -- Will return afunction expecting a LoggedIn Model
+            -- Will return a function expecting a LoggedIn Model
             Notification.update subMsg subModel
                 -- will return a function expecting an UpdateResult
                 -- The composition operator will take the result of the above function and use as
@@ -677,10 +683,11 @@ changeRouteTo maybeRoute model =
                 (updateStatusWith Login GotLoginMsg)
                 maybeRedirect
 
-        Just (Route.PaymentHistory accountName) ->
-            PaymentHistory
-                |> updateStatus model
-                |> noCmd
+        Just (Route.PaymentHistory accountName maybeRedirect) ->
+            withGuest
+                PaymentHistory.init
+                (updateStatusWith PaymentHistory GotPaymentHistoryMsg)
+                maybeRedirect
 
         Just (Route.LoginWithPrivateKey maybeRedirect) ->
             withGuest
@@ -924,6 +931,9 @@ msgToString msg =
         GotPublicProfileMsg subMsg ->
             "GotPublicProfileMsg" :: PublicProfile.msgToString subMsg
 
+        GotPaymentHistoryMsg subMsg ->
+            "GotPaymentHistoryMsg" :: PaymentHistory.msgToString subMsg
+
         GotProfileMsg subMsg ->
             "GotProfileMsg" :: Profile.msgToString subMsg
 
@@ -997,8 +1007,8 @@ view model =
         ComingSoon ->
             viewPage Guest.Other LoggedIn.Other (\_ -> Ignored) (ComingSoon.view model.session)
 
-        PaymentHistory ->
-            viewPage Guest.PaymentHistory LoggedIn.Other (\_ -> Ignored) (PaymentHistory.view model.session)
+        PaymentHistory subModel ->
+            viewGuest subModel Guest.PaymentHistory GotPaymentHistoryMsg PaymentHistory.view
 
         Register _ subModel ->
             viewGuest subModel Guest.Register GotRegisterMsg Register.view
