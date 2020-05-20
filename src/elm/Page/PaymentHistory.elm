@@ -1,15 +1,17 @@
 module Page.PaymentHistory exposing (Model, Msg, init, msgToString, update, view)
 
-import Community
 import Eos.Account as Eos
 import Html exposing (Html, button, div, h1, h2, img, input, label, p, span, text, ul)
-import Html.Attributes exposing (class, for, placeholder, src, style)
+import Html.Attributes exposing (class, placeholder, src, style)
 import Profile exposing (Profile)
 import Select
 import Session.Guest as Guest exposing (External(..))
 import Session.Shared as Shared
-import Simple.Fuzzy
 import UpdateResult as UR
+
+
+
+-- MSG
 
 
 type Msg
@@ -31,11 +33,92 @@ msgToString msg =
             [ "SelectMsg" ]
 
 
+
+-- MODEL
+
+
 type alias Model =
     { autocompleteState : Select.State
     , selectedProfile : Maybe Profile
     , users : List Profile
     }
+
+
+init : Guest.Model -> ( Model, Cmd Msg )
+init guest =
+    ( { autocompleteState = Select.newState ""
+      , selectedProfile = Nothing
+      , users = []
+      }
+    , Cmd.none
+    )
+
+
+
+-- UPDATE
+
+
+update : Msg -> Model -> Guest.Model -> UpdateResult
+update msg model guest =
+    case msg of
+        OnSelect maybeProfile ->
+            { model
+                | selectedProfile = maybeProfile
+            }
+                |> UR.init
+
+        SelectMsg subMsg ->
+            let
+                ( updated, cmd ) =
+                    Select.update (selectConfiguration guest.shared False) subMsg model.autocompleteState
+            in
+            UR.init { model | autocompleteState = updated }
+                |> UR.addCmd cmd
+
+        _ ->
+            model |> UR.init
+
+
+type alias UpdateResult =
+    UR.UpdateResult Model Msg External
+
+
+
+-- VIEW
+
+
+view : Guest.Model -> Model -> Html Msg
+view guest model =
+    div [ class "bg-white" ]
+        [ viewSplash
+        , div [ class "mx-4 max-w-md md:m-auto" ]
+            [ h2 [ class "text-center text-black text-2xl" ] [ text "Payment History" ]
+            , viewUserAutocomplete guest model
+            , viewPeriodSelector
+            , viewPayersList
+            , viewPagination
+            ]
+        ]
+
+
+viewSplash =
+    div
+        [ class "bg-black bg-cover h-56 mb-6 flex justify-center items-center"
+        , style "background-image" "url(/images/bg_cafe.png)"
+        ]
+        [ h1 [ class "text-white text-center text-5xl mx-3" ] [ text "Pura Vida Cafe" ]
+        ]
+
+
+viewUserAutocomplete guest model =
+    div [ class "my-4" ]
+        [ label
+            [ class "block" ]
+            [ span [ class "text-green tracking-wide uppercase text-caption block mb-1" ]
+                [ text "User" ]
+            ]
+        , viewAutoCompleteAccount guest.shared model False
+        ]
 
 
 viewAutoCompleteAccount : Shared.Shared -> Model -> Bool -> Html Msg
@@ -71,86 +154,6 @@ selectConfiguration shared isDisabled =
         )
         shared
         isDisabled
-
-
-init : Guest.Model -> ( Model, Cmd Msg )
-init guest =
-    ( { autocompleteState = Select.newState ""
-      , selectedProfile = Nothing
-      , users = []
-      }
-    , Cmd.none
-    )
-
-
-filter : Int -> (a -> String) -> String -> List a -> Maybe (List a)
-filter minChars toLabel query items =
-    if String.length query < minChars then
-        Nothing
-
-    else
-        items
-            |> Simple.Fuzzy.filter toLabel query
-            |> Just
-
-
-type alias UpdateResult =
-    UR.UpdateResult Model Msg External
-
-
-update : Msg -> Model -> Guest.Model -> UpdateResult
-update msg model guest =
-    case msg of
-        OnSelect maybeProfile ->
-            { model
-                | selectedProfile = maybeProfile
-            }
-                |> UR.init
-
-        SelectMsg subMsg ->
-            let
-                ( updated, cmd ) =
-                    Select.update (selectConfiguration guest.shared False) subMsg model.autocompleteState
-            in
-            UR.init { model | autocompleteState = updated }
-                |> UR.addCmd cmd
-
-        _ ->
-            model |> UR.init
-
-
-view : Guest.Model -> Model -> Html Msg
-view guest model =
-    div [ class "bg-white" ]
-        [ viewSplash
-        , div [ class "mx-4 max-w-md md:m-auto" ]
-            [ h2 [ class "text-center text-black text-2xl" ] [ text "Payment History" ]
-            , viewUserAutocomplete guest model
-            , viewPeriodSelector
-            , viewPayersList
-            , viewPagination
-            ]
-        ]
-
-
-viewSplash =
-    div
-        [ class "bg-black bg-cover h-56 mb-6 flex justify-center items-center"
-        , style "background-image" "url(/images/bg_cafe.png)"
-        ]
-        [ h1 [ class "text-white text-center text-5xl mx-3" ] [ text "Pura Vida Cafe" ]
-        ]
-
-
-viewUserAutocomplete guest model =
-    div [ class "my-4" ]
-        [ label
-            [ class "block" ]
-            [ span [ class "text-green tracking-wide uppercase text-caption block mb-1" ]
-                [ text "User" ]
-            ]
-        , viewAutoCompleteAccount guest.shared model False
-        ]
 
 
 viewPeriodSelector =
