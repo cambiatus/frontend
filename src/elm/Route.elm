@@ -77,7 +77,7 @@ parser url =
         , Url.map Logout (s "logout")
         , Url.map PublicProfile (s "profile" </> string)
         , Url.map PaymentHistory
-            (s "payment-history"
+            (s "payments"
                 </> string
                 <?> Query.map
                         (parseRedirect url)
