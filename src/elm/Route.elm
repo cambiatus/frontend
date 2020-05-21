@@ -232,7 +232,7 @@ routeToString route =
                     ( [ "profile", accountName ], [] )
 
                 PaymentHistory accountName maybeRedirect ->
-                    ( [ "payment-history", accountName ]
+                    ( [ "payments", accountName ]
                     , queryBuilder routeToString maybeRedirect "redirect"
                     )
 
