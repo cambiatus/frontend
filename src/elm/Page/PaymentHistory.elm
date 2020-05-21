@@ -1,5 +1,7 @@
 module Page.PaymentHistory exposing (Model, Msg, init, msgToString, update, view)
 
+import Date exposing (Date, day, fromPosix, month, weekday, year)
+import DatePicker exposing (DateEvent(..), defaultSettings, off)
 import Eos.Account as Eos
 import Html exposing (Html, button, div, h1, h2, img, input, label, p, span, text, ul)
 import Html.Attributes exposing (class, placeholder, src, style)
@@ -7,6 +9,8 @@ import Profile exposing (Profile)
 import Select
 import Session.Guest as Guest exposing (External(..))
 import Session.Shared as Shared
+import Task
+import Time exposing (Month(..), Weekday(..))
 import UpdateResult as UR
 
 
@@ -18,6 +22,7 @@ type Msg
     = NoOp
     | OnSelect (Maybe Profile)
     | SelectMsg (Select.Msg Profile)
+    | ToDatePicker DatePicker.Msg
 
 
 msgToString : Msg -> List String
@@ -32,6 +37,9 @@ msgToString msg =
         SelectMsg _ ->
             [ "SelectMsg" ]
 
+        ToDatePicker _ ->
+            [ "ToDatePicker" ]
+
 
 
 -- MODEL
@@ -41,16 +49,33 @@ type alias Model =
     { autocompleteState : Select.State
     , selectedProfile : Maybe Profile
     , users : List Profile
+    , date : Maybe Date
+    , datePicker : DatePicker.DatePicker
+    }
+
+
+settings : DatePicker.Settings
+settings =
+    { defaultSettings
+        | changeYear = off
+        , inputClassList = [ ( "input", True ), ( "w-full", True ) ]
+        , dateFormatter = Date.format "E, d MMM y"
     }
 
 
 init : Guest.Model -> ( Model, Cmd Msg )
 init guest =
+    let
+        ( datePicker, datePickerFx ) =
+            DatePicker.init
+    in
     ( { autocompleteState = Select.newState ""
       , selectedProfile = Nothing
       , users = []
+      , date = Nothing
+      , datePicker = datePicker
       }
-    , Cmd.none
+    , Cmd.map ToDatePicker datePickerFx
     )
 
 
@@ -75,6 +100,28 @@ update msg model guest =
             UR.init { model | autocompleteState = updated }
                 |> UR.addCmd cmd
 
+        ToDatePicker subMsg ->
+            let
+                _ =
+                    Debug.log "today?" subMsg
+
+                ( newDatePicker, dateEvent ) =
+                    DatePicker.update settings subMsg model.datePicker
+
+                newDate =
+                    case dateEvent of
+                        Picked changedDate ->
+                            Just changedDate
+
+                        _ ->
+                            model.date
+            in
+            { model
+                | date = newDate
+                , datePicker = newDatePicker
+            }
+                |> UR.init
+
         _ ->
             model |> UR.init
 
@@ -94,7 +141,7 @@ view guest model =
         , div [ class "mx-4 max-w-md md:m-auto" ]
             [ h2 [ class "text-center text-black text-2xl" ] [ text "Payment History" ]
             , viewUserAutocomplete guest model
-            , viewPeriodSelector
+            , viewPeriodSelector model
             , viewPayersList
             , viewPagination
             ]
@@ -156,18 +203,15 @@ selectConfiguration shared isDisabled =
         isDisabled
 
 
-viewPeriodSelector =
+viewPeriodSelector model =
     div [ class "my-4" ]
         [ label
             [ class "block" ]
             [ span [ class "text-green tracking-wide uppercase text-caption block mb-1" ]
                 [ text "Period" ]
+            , DatePicker.view model.date settings model.datePicker
+                |> Html.map ToDatePicker
             ]
-        , input
-            [ class "input min-w-full"
-            , placeholder "27 Oct 2020 (today)"
-            ]
-            []
         ]
 
 

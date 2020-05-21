@@ -6,6 +6,7 @@
     "elm-version": "0.19.1",
     "dependencies": {
         "direct": {
+            "CurrySoftware/elm-datepicker": "4.0.0",
             "NoRedInk/elm-json-decode-pipeline": "1.0.0",
             "NoRedInk/elm-simple-fuzzy": "1.0.3",
             "abadi199/elm-input-extra": "5.2.2",
@@ -21,6 +22,7 @@
             "elm/time": "1.0.0",
             "elm/url": "1.0.0",
             "elm-community/list-extra": "8.1.0",
+            "justinmimbs/date": "3.2.0",
             "rtfeldman/elm-iso8601-date-strings": "1.1.2",
             "rtfeldman/elm-validate": "4.0.1",
             "ryannhg/date-format": "2.3.0",

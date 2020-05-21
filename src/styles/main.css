@@ -287,6 +287,8 @@
 
 /* End of Sticky Footer */
 
+@import './elm-datepicker.css';
+
 /* https://tailwindcss.com/docs/extracting-components#extracting-css-components-with-apply */
 @tailwind utilities;
 
