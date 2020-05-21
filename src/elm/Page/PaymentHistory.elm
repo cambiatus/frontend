@@ -102,9 +102,6 @@ update msg model guest =
 
         ToDatePicker subMsg ->
             let
-                _ =
-                    Debug.log "today?" subMsg
-
                 ( newDatePicker, dateEvent ) =
                     DatePicker.update settings subMsg model.datePicker
 
