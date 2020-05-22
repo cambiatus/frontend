@@ -30,9 +30,17 @@ import Utils
 type Msg
     = NoOp
     | CompletedLoadUserTransfers (Result (Graphql.Http.Error (Maybe QueryTransfers)) (Maybe QueryTransfers))
+    | CompletedProfileLoad (Result (Graphql.Http.Error (Maybe Profile)) (Maybe Profile))
     | OnSelect (Maybe Profile)
     | SelectMsg (Select.Msg Profile)
     | ToDatePicker DatePicker.Msg
+
+
+fetchProfileByUri : Shared -> Eos.Account.Name -> Cmd Msg
+fetchProfileByUri shared accountName =
+    Api.Graphql.query shared
+        (Profile.query accountName)
+        CompletedProfileLoad
 
 
 fetchTransfers : Shared -> Eos.Account.Name -> Cmd Msg
@@ -66,6 +74,9 @@ msgToString msg =
         CompletedLoadUserTransfers result ->
             resultToString [ "CompletedLoadUserTransfers" ] result
 
+        CompletedProfileLoad r ->
+            [ "CompletedProfileLoad", UR.resultToString r ]
+
         OnSelect _ ->
             [ "OnSelect" ]
 
@@ -83,8 +94,8 @@ msgToString msg =
 type alias Model =
     { autocompleteState : Select.State
     , selectedProfile : Maybe Profile
-    , currentAccount : Eos.Account.Name
-    , userFullName : String
+    , status : Status
+    , currentProfile : Maybe Profile
     , date : Maybe Date
     , datePicker : DatePicker.DatePicker
     , fetchingTransfersStatus : GraphqlStatus (Maybe QueryTransfers) (List Transfer)
@@ -96,6 +107,12 @@ type GraphqlStatus err a
     = LoadingGraphql
     | LoadedGraphql a
     | FailedGraphql (Graphql.Http.Error err)
+
+
+type Status
+    = Loading
+    | LoadingFailed (Graphql.Http.Error (Maybe Profile))
+    | Loaded Profile
 
 
 filterTransfers : List Transfer -> Eos.Account.Name -> List Transfer
@@ -140,14 +157,15 @@ init guest =
     ( { autocompleteState = Select.newState ""
       , selectedProfile = Nothing
       , date = Nothing
-      , currentAccount = accountName
-      , userFullName = ""
+      , status = Loading
+      , currentProfile = Nothing
       , fetchingTransfersStatus = LoadingGraphql
       , transfersToCurrentUser = []
       , datePicker = datePicker
       }
     , Cmd.batch
         [ Cmd.map ToDatePicker datePickerFx
+        , fetchProfileByUri guest.shared accountName
         , fetchTransfers guest.shared accountName
         ]
     )
@@ -163,26 +181,37 @@ update msg model guest =
         CompletedLoadUserTransfers (Ok maybeTransfers) ->
             let
                 transfersToCurrentUser =
-                    filterTransfers (Transfer.getTransfers maybeTransfers) model.currentAccount
+                    case model.currentProfile of
+                        Just p ->
+                            filterTransfers (Transfer.getTransfers maybeTransfers) p.account
 
-                currentUserFullName =
-                    -- Get current user details from the first transfer
-                    -- TODO: User couldn't have any transfers! Get Profile details via GraphQl query.
-                    transfersToCurrentUser
-                        |> List.head
-                        |> Maybe.andThen (\f -> f.to.userName)
-                        |> Maybe.withDefault (Eos.Account.nameToString model.currentAccount)
+                        Nothing ->
+                            []
             in
             { model
                 | fetchingTransfersStatus = LoadedGraphql (Transfer.getTransfers maybeTransfers)
                 , transfersToCurrentUser = transfersToCurrentUser
-                , userFullName = currentUserFullName
             }
                 |> UR.init
 
         CompletedLoadUserTransfers (Err err) ->
             { model | fetchingTransfersStatus = FailedGraphql err }
                 |> UR.init
+                |> UR.logGraphqlError msg err
+
+        CompletedProfileLoad (Ok Nothing) ->
+            -- TODO: not found account
+            UR.init model
+
+        CompletedProfileLoad (Ok (Just profile)) ->
+            UR.init
+                { model
+                    | status = Loaded profile
+                    , currentProfile = Just profile
+                }
+
+        CompletedProfileLoad (Err err) ->
+            UR.init { model | status = LoadingFailed err }
                 |> UR.logGraphqlError msg err
 
         OnSelect maybeProfile ->
@@ -232,27 +261,47 @@ type alias UpdateResult =
 
 view : Guest.Model -> Model -> Html Msg
 view guest model =
-    case model.fetchingTransfersStatus of
-        LoadedGraphql _ ->
-            div [ class "bg-white" ]
-                [ viewSplash model.userFullName
-                , div [ class "mx-4 max-w-md md:m-auto" ]
-                    [ h2 [ class "text-center text-black text-2xl" ] [ text "Payment History" ]
-                    , viewUserAutocomplete guest model
-                    , viewPeriodSelector model
-                    , viewPayersList guest model
-                    , viewPagination
-                    ]
-                ]
+    div [ class "bg-white" ]
+        [ case model.currentProfile of
+            Just p ->
+                viewSplash model
 
-        LoadingGraphql ->
-            Page.fullPageLoading
+            Nothing ->
+                div [] [ text "profile not found" ]
+        , div [ class "mx-4 max-w-md md:m-auto" ]
+            [ h2 [ class "text-center text-black text-2xl" ] [ text "Payment History" ]
+            , case model.fetchingTransfersStatus of
+                LoadedGraphql _ ->
+                    if List.isEmpty model.transfersToCurrentUser then
+                        div [] [ text "No payment for this user" ]
 
-        FailedGraphql err ->
-            div [] [ Page.fullPageGraphQLError "Sorry, no user found" err ]
+                    else
+                        div []
+                            [ viewUserAutocomplete guest model
+                            , viewPeriodSelector model
+                            , viewPayersList guest model
+                            , viewPagination
+                            ]
+
+                LoadingGraphql ->
+                    div [] [ text "loading" ]
+
+                FailedGraphql err ->
+                    div [] [ Page.fullPageGraphQLError "Sorry, no user found" err ]
+            ]
+        ]
 
 
-viewSplash name =
+viewSplash model =
+    let
+        name =
+            case model.currentProfile of
+                Just p ->
+                    Maybe.withDefault (Eos.Account.nameToString p.account) p.userName
+
+                Nothing ->
+                    ""
+    in
     div
         [ class "bg-black bg-cover h-56 mb-6 flex justify-center items-center"
         , style "background-image" "url(/images/bg_cafe.png)"
