@@ -2,6 +2,10 @@
   @apply relative;
 }
 
+.elm-datepicker--input {
+  background: no-repeat url(/icons/calendar.svg) right center;
+}
+
 .elm-datepicker--input:focus {
   @apply outline-none;
 }

@@ -4,7 +4,7 @@ import Date exposing (Date, day, fromPosix, month, weekday, year)
 import DatePicker exposing (DateEvent(..), defaultSettings, off)
 import Eos.Account as Eos
 import Html exposing (Html, button, div, h1, h2, img, input, label, p, span, text, ul)
-import Html.Attributes exposing (class, placeholder, src, style)
+import Html.Attributes as Attrs exposing (class, placeholder, src, style)
 import Profile exposing (Profile)
 import Select
 import Session.Guest as Guest exposing (External(..))
@@ -60,6 +60,11 @@ settings =
         | changeYear = off
         , inputClassList = [ ( "input", True ), ( "w-full", True ) ]
         , dateFormatter = Date.format "E, d MMM y"
+        , firstDayOfWeek = Mon
+        , inputAttributes =
+            [ Attrs.required False
+            , Attrs.readonly True
+            ]
     }
 
 
@@ -159,7 +164,7 @@ viewUserAutocomplete guest model =
         [ label
             [ class "block" ]
             [ span [ class "text-green tracking-wide uppercase text-caption block mb-1" ]
-                [ text "User" ]
+                [ text "Payer" ]
             ]
         , viewAutoCompleteAccount guest.shared model False
         ]
@@ -205,7 +210,7 @@ viewPeriodSelector model =
         [ label
             [ class "block" ]
             [ span [ class "text-green tracking-wide uppercase text-caption block mb-1" ]
-                [ text "Period" ]
+                [ text "Date" ]
             , DatePicker.view model.date settings model.datePicker
                 |> Html.map ToDatePicker
             ]
