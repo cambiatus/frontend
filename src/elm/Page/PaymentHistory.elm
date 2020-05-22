@@ -1,17 +1,24 @@
 module Page.PaymentHistory exposing (Model, Msg, init, msgToString, update, view)
 
-import Date exposing (Date, day, fromPosix, month, weekday, year)
+import Api.Graphql
+import Avatar
+import Date exposing (Date)
 import DatePicker exposing (DateEvent(..), defaultSettings, off)
-import Eos.Account as Eos
-import Html exposing (Html, button, div, h1, h2, img, input, label, p, span, text, ul)
-import Html.Attributes as Attrs exposing (class, placeholder, src, style)
+import Eos
+import Eos.Account
+import Graphql.Http
+import Graphql.OptionalArgument exposing (OptionalArgument(..))
+import Html exposing (Html, button, div, h1, h2, label, p, span, text, ul)
+import Html.Attributes as Attrs exposing (class, style)
 import Profile exposing (Profile)
 import Select
 import Session.Guest as Guest exposing (External(..))
-import Session.Shared as Shared
-import Task
+import Session.Shared as Shared exposing (Shared)
+import Strftime
 import Time exposing (Month(..), Weekday(..))
+import Transfer exposing (QueryTransfers, Transfer, userFilter)
 import UpdateResult as UR
+import Utils
 
 
 
@@ -20,16 +27,42 @@ import UpdateResult as UR
 
 type Msg
     = NoOp
+    | CompletedLoadUserTransfers (Result (Graphql.Http.Error (Maybe QueryTransfers)) (Maybe QueryTransfers))
     | OnSelect (Maybe Profile)
     | SelectMsg (Select.Msg Profile)
     | ToDatePicker DatePicker.Msg
 
 
+fetchTransfers : Shared -> Eos.Account.Name -> Cmd Msg
+fetchTransfers shared accountName =
+    -- TODO: Query only `to` transfers if possible. Now query returns all the transfers (`from` ang `to`)
+    Api.Graphql.query shared
+        (Transfer.transfersQuery
+            (userFilter accountName)
+            (\args ->
+                { args | first = Present 10 }
+            )
+        )
+        CompletedLoadUserTransfers
+
+
 msgToString : Msg -> List String
 msgToString msg =
+    let
+        resultToString ss r =
+            case r of
+                Ok _ ->
+                    ss ++ [ "Ok" ]
+
+                Err _ ->
+                    ss ++ [ "Err" ]
+    in
     case msg of
         NoOp ->
             [ "NoOp" ]
+
+        CompletedLoadUserTransfers result ->
+            resultToString [ "CompletedLoadUserTransfers" ] result
 
         OnSelect _ ->
             [ "OnSelect" ]
@@ -48,10 +81,27 @@ msgToString msg =
 type alias Model =
     { autocompleteState : Select.State
     , selectedProfile : Maybe Profile
-    , users : List Profile
     , date : Maybe Date
     , datePicker : DatePicker.DatePicker
+    , fetchingTransfersStatus : GraphqlStatus (Maybe QueryTransfers) (List Transfer)
+    , transfersToCurrentUser : List Transfer
     }
+
+
+type GraphqlStatus err a
+    = LoadingGraphql
+    | LoadedGraphql a
+    | FailedGraphql (Graphql.Http.Error err)
+
+
+filterTransfers : List Transfer -> Eos.Account.Name -> List Transfer
+filterTransfers transfers currentUser =
+    let
+        isCurrentUser : Transfer -> Bool
+        isCurrentUser t =
+            t.to.account == currentUser
+    in
+    List.filter isCurrentUser transfers
 
 
 settings : DatePicker.Settings
@@ -68,6 +118,11 @@ settings =
     }
 
 
+tempAccountName =
+    -- TODO: fetch a real name
+    Eos.Account.stringToName "andreymiskov"
+
+
 init : Guest.Model -> ( Model, Cmd Msg )
 init guest =
     let
@@ -76,11 +131,15 @@ init guest =
     in
     ( { autocompleteState = Select.newState ""
       , selectedProfile = Nothing
-      , users = []
       , date = Nothing
+      , fetchingTransfersStatus = LoadingGraphql
+      , transfersToCurrentUser = []
       , datePicker = datePicker
       }
-    , Cmd.map ToDatePicker datePickerFx
+    , Cmd.batch
+        [ Cmd.map ToDatePicker datePickerFx
+        , fetchTransfers guest.shared tempAccountName
+        ]
     )
 
 
@@ -91,6 +150,22 @@ init guest =
 update : Msg -> Model -> Guest.Model -> UpdateResult
 update msg model guest =
     case msg of
+        CompletedLoadUserTransfers (Ok maybeTransfers) ->
+            let
+                transfersToCurrentUser =
+                    filterTransfers (Transfer.getTransfers maybeTransfers) tempAccountName
+            in
+            { model
+                | fetchingTransfersStatus = LoadedGraphql (Transfer.getTransfers maybeTransfers)
+                , transfersToCurrentUser = transfersToCurrentUser
+            }
+                |> UR.init
+
+        CompletedLoadUserTransfers (Err err) ->
+            { model | fetchingTransfersStatus = FailedGraphql err }
+                |> UR.init
+                |> UR.logGraphqlError msg err
+
         OnSelect maybeProfile ->
             { model
                 | selectedProfile = maybeProfile
@@ -144,7 +219,7 @@ view guest model =
             [ h2 [ class "text-center text-black text-2xl" ] [ text "Payment History" ]
             , viewUserAutocomplete guest model
             , viewPeriodSelector model
-            , viewPayersList
+            , viewPayersList guest model
             , viewPagination
             ]
         ]
@@ -196,8 +271,8 @@ selectConfiguration shared isDisabled =
     Profile.selectConfig
         (Select.newConfig
             { onSelect = OnSelect
-            , toLabel = \p -> Eos.nameToString p.account
-            , filter = Profile.selectFilter 2 (\p -> Eos.nameToString p.account)
+            , toLabel = \p -> Eos.Account.nameToString p.account
+            , filter = Profile.selectFilter 2 (\p -> Eos.Account.nameToString p.account)
             }
             |> Select.withInputClass "form-input"
         )
@@ -217,43 +292,53 @@ viewPeriodSelector model =
         ]
 
 
-viewPayment payment =
-    div
-        [ class "bg-gray-100 text-center py-6 my-6 rounded-lg"
-        ]
-        [ div [ class "rounded-full m-auto overflow-hidden border-white border-2 bg-grey w-14 h-14" ]
-            [ img
-                [ class "max-w-full max-h-full"
-                , src payment.userpic
+viewPayment guest payment =
+    let
+        payer =
+            payment.from
+
+        userName =
+            Eos.Account.nameToString payer.account
+
+        time =
+            Utils.posixDateTime (Just payment.blockTime)
+                |> Strftime.format "%d %b %Y" Time.utc
+
+        ipfsUrl =
+            guest.shared.endpoints.ipfs
+
+        avatarImg =
+            Avatar.view ipfsUrl payer.avatar "max-w-full max-h-full"
+
+        amount =
+            String.concat
+                [ String.fromFloat payment.value
+                , " "
+                , Eos.symbolToString payment.symbol
                 ]
-                []
-            ]
+    in
+    div
+        [ class "bg-gray-100 text-center py-6 my-6 rounded-lg" ]
+        [ div [ class "rounded-full m-auto overflow-hidden border-white border-2 bg-grey w-14 h-14" ]
+            [ avatarImg ]
         , p [ class "text-black mt-2" ]
-            [ text payment.username ]
+            [ text userName ]
         , p [ class "uppercase text-gray-900 text-xs my-1" ]
-            [ text payment.paymentDate ]
+            [ text time ]
         , p [ class "text-green text-4xl my-3" ]
-            [ text payment.paymentAmount ]
+            [ text amount ]
         , p [ class "tracking-widest text-2xl" ]
-            [ text payment.emojiHash ]
+            [ text "\u{1F916} 🇨🇷 💜 😙 😎 💻 😇 🎃" ]
         ]
 
 
-viewPayersList =
+viewPayersList : Guest.Model -> Model -> Html msg
+viewPayersList guest model =
     ul [ class "" ]
-        (List.map viewPayment
-            (List.repeat
-                10
-                { userpic = "/images/woman.png"
-                , username = "vasya222"
-                , paymentDate = "today, 14:03"
-                , paymentAmount = "1234 COS"
-                , emojiHash = "\u{1F916}🇨🇷💜😙😎💻😇🎃"
-                }
-            )
-        )
+        (List.map (viewPayment guest) model.transfersToCurrentUser)
 
 
 viewPagination =
     div [ class "pb-8" ]
-        [ button [ class "button m-auto button-primary w-full sm:w-40" ] [ text "Show More" ] ]
+        [ button [ class "button m-auto button-primary w-full sm:w-40" ] [ text "Show More" ]
+        ]

@@ -157,12 +157,14 @@ viewPageHeader model shared =
     header
         [ class "flex items-center justify-between pl-4 md:pl-6 py-3 bg-white" ]
         [ div []
-            [ img
-                [ class "h-5"
-                , src shared.logo
-                , alt "Cambiatus"
+            [ a [ Route.href Route.Root, class "text-orange-300 underline" ]
+                [ img
+                    [ class "h-5"
+                    , src shared.logo
+                    , alt "Cambiatus"
+                    ]
+                    []
                 ]
-                []
             ]
         , div [ class "relative z-10" ]
             [ button
