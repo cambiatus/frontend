@@ -10,6 +10,8 @@ import Graphql.Http
 import Graphql.OptionalArgument exposing (OptionalArgument(..))
 import Html exposing (Html, button, div, h1, h2, label, p, span, text, ul)
 import Html.Attributes as Attrs exposing (class, style)
+import List.Extra as LE
+import Page
 import Profile exposing (Profile)
 import Select
 import Session.Guest as Guest exposing (External(..))
@@ -81,6 +83,8 @@ msgToString msg =
 type alias Model =
     { autocompleteState : Select.State
     , selectedProfile : Maybe Profile
+    , currentAccount : Eos.Account.Name
+    , userFullName : String
     , date : Maybe Date
     , datePicker : DatePicker.DatePicker
     , fetchingTransfersStatus : GraphqlStatus (Maybe QueryTransfers) (List Transfer)
@@ -118,27 +122,33 @@ settings =
     }
 
 
-tempAccountName =
-    -- TODO: fetch a real name
-    Eos.Account.stringToName "andreymiskov"
-
-
 init : Guest.Model -> ( Model, Cmd Msg )
 init guest =
     let
         ( datePicker, datePickerFx ) =
             DatePicker.init
+
+        accountName =
+            let
+                uriLastPart =
+                    String.split "/" guest.shared.url.path
+                        |> LE.last
+            in
+            Eos.Account.stringToName <|
+                Maybe.withDefault "" uriLastPart
     in
     ( { autocompleteState = Select.newState ""
       , selectedProfile = Nothing
       , date = Nothing
+      , currentAccount = accountName
+      , userFullName = ""
       , fetchingTransfersStatus = LoadingGraphql
       , transfersToCurrentUser = []
       , datePicker = datePicker
       }
     , Cmd.batch
         [ Cmd.map ToDatePicker datePickerFx
-        , fetchTransfers guest.shared tempAccountName
+        , fetchTransfers guest.shared accountName
         ]
     )
 
@@ -153,11 +163,20 @@ update msg model guest =
         CompletedLoadUserTransfers (Ok maybeTransfers) ->
             let
                 transfersToCurrentUser =
-                    filterTransfers (Transfer.getTransfers maybeTransfers) tempAccountName
+                    filterTransfers (Transfer.getTransfers maybeTransfers) model.currentAccount
+
+                currentUserFullName =
+                    -- Get current user details from the first transfer
+                    -- TODO: User couldn't have any transfers! Get Profile details via GraphQl query.
+                    transfersToCurrentUser
+                        |> List.head
+                        |> Maybe.andThen (\f -> f.to.userName)
+                        |> Maybe.withDefault (Eos.Account.nameToString model.currentAccount)
             in
             { model
                 | fetchingTransfersStatus = LoadedGraphql (Transfer.getTransfers maybeTransfers)
                 , transfersToCurrentUser = transfersToCurrentUser
+                , userFullName = currentUserFullName
             }
                 |> UR.init
 
@@ -213,24 +232,32 @@ type alias UpdateResult =
 
 view : Guest.Model -> Model -> Html Msg
 view guest model =
-    div [ class "bg-white" ]
-        [ viewSplash
-        , div [ class "mx-4 max-w-md md:m-auto" ]
-            [ h2 [ class "text-center text-black text-2xl" ] [ text "Payment History" ]
-            , viewUserAutocomplete guest model
-            , viewPeriodSelector model
-            , viewPayersList guest model
-            , viewPagination
-            ]
-        ]
+    case model.fetchingTransfersStatus of
+        LoadedGraphql _ ->
+            div [ class "bg-white" ]
+                [ viewSplash model.userFullName
+                , div [ class "mx-4 max-w-md md:m-auto" ]
+                    [ h2 [ class "text-center text-black text-2xl" ] [ text "Payment History" ]
+                    , viewUserAutocomplete guest model
+                    , viewPeriodSelector model
+                    , viewPayersList guest model
+                    , viewPagination
+                    ]
+                ]
+
+        LoadingGraphql ->
+            Page.fullPageLoading
+
+        FailedGraphql err ->
+            div [] [ Page.fullPageGraphQLError "Sorry, no user found" err ]
 
 
-viewSplash =
+viewSplash name =
     div
         [ class "bg-black bg-cover h-56 mb-6 flex justify-center items-center"
         , style "background-image" "url(/images/bg_cafe.png)"
         ]
-        [ h1 [ class "text-white text-center text-5xl mx-3" ] [ text "Pura Vida Cafe" ]
+        [ h1 [ class "text-white text-center text-5xl mx-3" ] [ text name ]
         ]
 
 

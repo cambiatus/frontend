@@ -683,7 +683,7 @@ changeRouteTo maybeRoute model =
                 (updateStatusWith Login GotLoginMsg)
                 maybeRedirect
 
-        Just (Route.PaymentHistory maybeRedirect) ->
+        Just (Route.PaymentHistory accountName maybeRedirect) ->
             withGuest
                 PaymentHistory.init
                 (updateStatusWith PaymentHistory GotPaymentHistoryMsg)
