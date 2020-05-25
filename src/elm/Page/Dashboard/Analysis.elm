@@ -13,7 +13,7 @@ import Api.Relay
 import Cambiatus.Query
 import Claim
 import Community
-import Eos exposing (Symbol)
+import Eos
 import Eos.Account as Eos
 import Graphql.Http
 import Graphql.OptionalArgument exposing (OptionalArgument(..))
@@ -39,10 +39,14 @@ import Utils
 
 
 init : LoggedIn.Model -> ( Model, Cmd Msg )
-init { shared, accountName, selectedCommunity } =
-    ( initModel
+init ({ shared, selectedCommunity } as loggedIn) =
+    let
+        newModel =
+            initModel
+    in
+    ( newModel
     , Cmd.batch
-        [ fetchAnalysis shared selectedCommunity accountName Nothing
+        [ fetchAnalysis loggedIn newModel.filters Nothing
         , Api.Graphql.query shared (Community.communityQuery selectedCommunity) CompletedCommunityLoad
         ]
     )
@@ -57,6 +61,8 @@ type alias Model =
     , communityStatus : CommunityStatus
     , modalStatus : ModalStatus
     , autoCompleteState : Select.State
+    , reloadOnNextQuery : Bool
+    , filters : Filter
     }
 
 
@@ -66,12 +72,14 @@ initModel =
     , communityStatus = LoadingCommunity
     , modalStatus = ModalClosed
     , autoCompleteState = Select.newState ""
+    , reloadOnNextQuery = False
+    , filters = { profile = Nothing, statusFilter = All }
     }
 
 
 type Status
     = Loading
-    | Loaded (Maybe Profile) Filter (List Claim.Model) (Maybe Api.Relay.PageInfo)
+    | Loaded (List Claim.Model) (Maybe Api.Relay.PageInfo)
     | Failed
 
 
@@ -81,12 +89,21 @@ type CommunityStatus
     | FailedCommunity
 
 
-type Filter
+type alias Filter =
+    { profile : Maybe Profile
+    , statusFilter : StatusFilter
+    }
+
+
+type StatusFilter
     = All
-    | Approved
-    | Disapproved
-    | UnderReview
-    | UnderReviewPending
+
+
+
+-- | Approved
+-- | Disapproved
+-- | UnderReview
+-- | UnderReviewPending
 
 
 type ModalStatus
@@ -110,14 +127,14 @@ view ({ shared } as loggedIn) model =
         Loading ->
             Page.fullPageLoading
 
-        Loaded maybeProfile f claims pageInfo ->
+        Loaded claims pageInfo ->
             div []
                 [ Page.viewHeader loggedIn (t "all_analysis.title") Route.Dashboard
                 , div [ class "container mx-auto px-4 mb-10" ]
-                    [ viewFilters loggedIn model maybeProfile
+                    [ viewFilters loggedIn model
                     , div
                         [ class "flex flex-wrap -mx-2" ]
-                        (List.map (viewClaim loggedIn f) claims)
+                        (List.map (viewClaim loggedIn) claims)
                     , viewPagination loggedIn pageInfo
                     ]
                 , viewAnalysisModal loggedIn model
@@ -127,8 +144,8 @@ view ({ shared } as loggedIn) model =
             text ""
 
 
-viewFilters : LoggedIn.Model -> Model -> Maybe Profile -> Html Msg
-viewFilters { shared } model maybeProfile =
+viewFilters : LoggedIn.Model -> Model -> Html Msg
+viewFilters ({ shared } as loggedIn) model =
     let
         t : String -> String
         t =
@@ -145,7 +162,7 @@ viewFilters { shared } model maybeProfile =
                 LoadedCommunity community ->
                     let
                         selectedUsers =
-                            Maybe.map (\v -> [ v ]) maybeProfile
+                            Maybe.map (\v -> [ v ]) model.filters.profile
                                 |> Maybe.withDefault []
                     in
                     div []
@@ -156,6 +173,7 @@ viewFilters { shared } model maybeProfile =
                                 community.members
                                 selectedUsers
                             )
+                        , viewSelectedVerifiers loggedIn selectedUsers
                         ]
 
                 _ ->
@@ -194,8 +212,8 @@ viewFilters { shared } model maybeProfile =
         ]
 
 
-viewClaim : LoggedIn.Model -> Filter -> Claim.Model -> Html Msg
-viewClaim { shared, accountName, selectedCommunity } f claim =
+viewClaim : LoggedIn.Model -> Claim.Model -> Html Msg
+viewClaim { shared, accountName, selectedCommunity } claim =
     let
         t =
             I18Next.t shared.translations
@@ -369,6 +387,7 @@ type Msg
     | OnSelectVerifier (Maybe Profile)
     | CompletedCommunityLoad (Result (Graphql.Http.Error (Maybe Community.Model)) (Maybe Community.Model))
     | ShowMore
+    | ClearSelectSelection
 
 
 update : Msg -> Model -> LoggedIn.Model -> UpdateResult
@@ -376,25 +395,26 @@ update msg model loggedIn =
     case msg of
         ClaimsLoaded (Ok results) ->
             case model.status of
-                Loaded filterProfile filterStatus claims _ ->
+                Loaded claims _ ->
+                    let
+                        newClaims =
+                            if model.reloadOnNextQuery then
+                                Claim.paginatedToList results
+
+                            else
+                                claims ++ Claim.paginatedToList results
+                    in
                     { model
-                        | status =
-                            Loaded
-                                filterProfile
-                                filterStatus
-                                (claims ++ Claim.paginatedToList results)
-                                (Claim.paginatedPageInfo results)
+                        | status = Loaded newClaims (Claim.paginatedPageInfo results)
+                        , reloadOnNextQuery = False
                     }
                         |> UR.init
 
                 _ ->
                     { model
                         | status =
-                            Loaded
-                                Nothing
-                                All
-                                (Claim.paginatedToList results)
-                                (Claim.paginatedPageInfo results)
+                            Loaded (Claim.paginatedToList results) (Claim.paginatedPageInfo results)
+                        , reloadOnNextQuery = False
                     }
                         |> UR.init
 
@@ -409,7 +429,7 @@ update msg model loggedIn =
 
         VoteClaim claimId vote ->
             case model.status of
-                Loaded _ _ _ _ ->
+                Loaded _ _ ->
                     let
                         newModel =
                             { model
@@ -446,7 +466,7 @@ update msg model loggedIn =
 
         GotVoteResult claimId (Ok _) ->
             case model.status of
-                Loaded maybeProfile f claims pageInfo ->
+                Loaded claims pageInfo ->
                     let
                         maybeClaim : Maybe Claim.Model
                         maybeClaim =
@@ -465,7 +485,7 @@ update msg model loggedIn =
                                         ++ Eos.symbolToString claim.action.objective.community.symbol
                             in
                             { model
-                                | status = Loaded maybeProfile f claims pageInfo
+                                | status = Loaded claims pageInfo
                             }
                                 |> UR.init
                                 |> UR.addExt (LoggedIn.ShowFeedback LoggedIn.Success (message value))
@@ -480,8 +500,8 @@ update msg model loggedIn =
 
         GotVoteResult _ (Err _) ->
             case model.status of
-                Loaded maybeProfile f claims pageInfo ->
-                    { model | status = Loaded maybeProfile f claims pageInfo }
+                Loaded claims pageInfo ->
+                    { model | status = Loaded claims pageInfo }
                         |> UR.init
 
                 _ ->
@@ -496,34 +516,27 @@ update msg model loggedIn =
                 |> UR.addCmd cmd
 
         OnSelectVerifier maybeProfile ->
-            UR.init model
+            let
+                oldFilters =
+                    model.filters
+            in
+            case model.status of
+                Loaded _ _ ->
+                    let
+                        newModel =
+                            { model
+                                | status = Loading
+                                , filters = { oldFilters | profile = maybeProfile }
+                                , reloadOnNextQuery = True
+                            }
+                    in
+                    newModel
+                        |> UR.init
+                        |> UR.addCmd (fetchAnalysis loggedIn newModel.filters Nothing)
 
-        -- let
-        --     oldForm =
-        --         model.form
-        -- in
-        -- case model.form.verification of
-        --     Automatic ->
-        --         model
-        --             |> UR.init
-        --     Manual selectedVerifiers verificationReward minVotes ->
-        --         { model
-        --             | form =
-        --                 { oldForm
-        --                     | verification =
-        --                         let
-        --                             newVerifiers =
-        --                                 maybeProfile
-        --                                     |> Maybe.map (List.singleton >> List.append (getInput selectedVerifiers))
-        --                                     |> Maybe.withDefault (getInput selectedVerifiers)
-        --                         in
-        --                         Manual
-        --                             (updateInput newVerifiers selectedVerifiers)
-        --                             verificationReward
-        --                             minVotes
-        --                 }
-        --         }
-        --             |> UR.init
+                _ ->
+                    UR.init model
+
         CompletedCommunityLoad (Ok community) ->
             case community of
                 Just cmm ->
@@ -539,7 +552,7 @@ update msg model loggedIn =
 
         ShowMore ->
             case model.status of
-                Loaded _ _ _ pageInfo ->
+                Loaded _ pageInfo ->
                     let
                         cursor : Maybe String
                         cursor =
@@ -547,20 +560,49 @@ update msg model loggedIn =
                     in
                     model
                         |> UR.init
-                        |> UR.addCmd (fetchAnalysis loggedIn.shared loggedIn.selectedCommunity loggedIn.accountName cursor)
+                        |> UR.addCmd (fetchAnalysis loggedIn model.filters cursor)
+
+                _ ->
+                    UR.init model
+
+        ClearSelectSelection ->
+            case model.status of
+                Loaded _ _ ->
+                    let
+                        oldFilters =
+                            model.filters
+
+                        newModel =
+                            { model
+                                | status = Loading
+                                , filters = { oldFilters | profile = Nothing }
+                                , reloadOnNextQuery = True
+                            }
+                    in
+                    newModel
+                        |> UR.init
+                        |> UR.addCmd (fetchAnalysis loggedIn newModel.filters Nothing)
 
                 _ ->
                     UR.init model
 
 
-fetchAnalysis : Shared -> Symbol -> Eos.Name -> Maybe String -> Cmd Msg
-fetchAnalysis shared communityId account maybeCursorAfter =
+fetchAnalysis : LoggedIn.Model -> Filter -> Maybe String -> Cmd Msg
+fetchAnalysis { accountName, selectedCommunity, shared } { profile, statusFilter } maybeCursorAfter =
     let
+        filter =
+            case ( profile, statusFilter ) of
+                ( Just p, sFilter ) ->
+                    Present { claimer = Present (Eos.nameToString p.account), status = Absent }
+
+                _ ->
+                    Absent
+
         args =
             { input =
-                { symbol = Eos.symbolToString communityId
-                , account = Eos.nameToString account
-                , filter = Absent
+                { symbol = Eos.symbolToString selectedCommunity
+                , account = Eos.nameToString accountName
+                , filter = filter
                 }
             }
 
@@ -591,8 +633,8 @@ fetchAnalysis shared communityId account maybeCursorAfter =
 -- Configure Select
 
 
-filter : Int -> (a -> String) -> String -> List a -> Maybe (List a)
-filter minChars toLabel query items =
+selectFilter : Int -> (a -> String) -> String -> List a -> Maybe (List a)
+selectFilter minChars toLabel query items =
     if String.length query < minChars then
         Nothing
 
@@ -608,12 +650,31 @@ selectConfiguration shared isDisabled =
         (Select.newConfig
             { onSelect = OnSelectVerifier
             , toLabel = \p -> Eos.nameToString p.account
-            , filter = filter 2 (\p -> Eos.nameToString p.account)
+            , filter = selectFilter 2 (\p -> Eos.nameToString p.account)
             }
             |> Select.withMultiSelection True
         )
         shared
         isDisabled
+
+
+viewSelectedVerifiers : LoggedIn.Model -> List Profile -> Html Msg
+viewSelectedVerifiers ({ shared } as loggedIn) selectedVerifiers =
+    div [ class "flex flex-row mt-3 mb-10 flex-wrap" ]
+        (selectedVerifiers
+            |> List.map
+                (\p ->
+                    div
+                        [ class "flex justify-between flex-col m-3 items-center" ]
+                        [ Profile.view shared loggedIn.accountName p
+                        , div
+                            [ onClick ClearSelectSelection
+                            , class "h-6 w-6 flex items-center mt-4"
+                            ]
+                            [ Icons.trash "" ]
+                        ]
+                )
+        )
 
 
 jsAddressToMsg : List String -> Encode.Value -> Maybe Msg
@@ -669,3 +730,6 @@ msgToString msg =
 
         ShowMore ->
             [ "ShowMore" ]
+
+        ClearSelectSelection ->
+            [ "ClearSelectSelection" ]
