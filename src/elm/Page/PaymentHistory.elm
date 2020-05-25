@@ -36,26 +36,6 @@ type Msg
     | ToDatePicker DatePicker.Msg
 
 
-fetchProfileByUri : Shared -> Eos.Account.Name -> Cmd Msg
-fetchProfileByUri shared accountName =
-    Api.Graphql.query shared
-        (Profile.query accountName)
-        CompletedProfileLoad
-
-
-fetchTransfers : Shared -> Eos.Account.Name -> Cmd Msg
-fetchTransfers shared accountName =
-    -- TODO: Query only `to` transfers if possible. Now query returns all the transfers (`from` ang `to`)
-    Api.Graphql.query shared
-        (Transfer.transfersQuery
-            (userFilter accountName)
-            (\args ->
-                { args | first = Present 10 }
-            )
-        )
-        CompletedLoadUserTransfers
-
-
 msgToString : Msg -> List String
 msgToString msg =
     let
@@ -92,27 +72,41 @@ msgToString msg =
 
 
 type alias Model =
-    { autocompleteState : Select.State
-    , selectedProfile : Maybe Profile
-    , status : Status
+    { payerAutocompleteState : Select.State
+    , selectedPayerProfile : Maybe Profile
     , currentProfile : Maybe Profile
-    , date : Maybe Date
+    , profileLoadingStatus : QueryStatus (Maybe Profile) Profile
+    , transfersLoadingStatus : QueryStatus (Maybe QueryTransfers) (List Transfer)
+    , selectedDate : Maybe Date
     , datePicker : DatePicker.DatePicker
-    , fetchingTransfersStatus : GraphqlStatus (Maybe QueryTransfers) (List Transfer)
     , transfersToCurrentUser : List Transfer
     }
 
 
-type GraphqlStatus err a
-    = LoadingGraphql
-    | LoadedGraphql a
-    | FailedGraphql (Graphql.Http.Error err)
-
-
-type Status
+type QueryStatus err resp
     = Loading
-    | LoadingFailed (Graphql.Http.Error (Maybe Profile))
-    | Loaded Profile
+    | Loaded resp
+    | Failed (Graphql.Http.Error err)
+
+
+fetchProfile : Shared -> Eos.Account.Name -> Cmd Msg
+fetchProfile shared accountName =
+    Api.Graphql.query shared
+        (Profile.query accountName)
+        CompletedProfileLoad
+
+
+fetchTransfers : Shared -> Eos.Account.Name -> Cmd Msg
+fetchTransfers shared accountName =
+    -- TODO: Query only `to` transfers if possible. Now query returns all the transfers (`from` ang `to`)
+    Api.Graphql.query shared
+        (Transfer.transfersQuery
+            (userFilter accountName)
+            (\args ->
+                { args | first = Present 10 }
+            )
+        )
+        CompletedLoadUserTransfers
 
 
 filterTransfers : List Transfer -> Eos.Account.Name -> List Transfer
@@ -154,18 +148,18 @@ init guest =
             Eos.Account.stringToName <|
                 Maybe.withDefault "" uriLastPart
     in
-    ( { autocompleteState = Select.newState ""
-      , selectedProfile = Nothing
-      , date = Nothing
-      , status = Loading
+    ( { payerAutocompleteState = Select.newState ""
+      , selectedPayerProfile = Nothing
+      , selectedDate = Nothing
       , currentProfile = Nothing
-      , fetchingTransfersStatus = LoadingGraphql
+      , profileLoadingStatus = Loading
+      , transfersLoadingStatus = Loading
       , transfersToCurrentUser = []
       , datePicker = datePicker
       }
     , Cmd.batch
         [ Cmd.map ToDatePicker datePickerFx
-        , fetchProfileByUri guest.shared accountName
+        , fetchProfile guest.shared accountName
         , fetchTransfers guest.shared accountName
         ]
     )
@@ -189,13 +183,13 @@ update msg model guest =
                             []
             in
             { model
-                | fetchingTransfersStatus = LoadedGraphql (Transfer.getTransfers maybeTransfers)
+                | transfersLoadingStatus = Loaded (Transfer.getTransfers maybeTransfers)
                 , transfersToCurrentUser = transfersToCurrentUser
             }
                 |> UR.init
 
         CompletedLoadUserTransfers (Err err) ->
-            { model | fetchingTransfersStatus = FailedGraphql err }
+            { model | transfersLoadingStatus = Failed err }
                 |> UR.init
                 |> UR.logGraphqlError msg err
 
@@ -206,26 +200,26 @@ update msg model guest =
         CompletedProfileLoad (Ok (Just profile)) ->
             UR.init
                 { model
-                    | status = Loaded profile
+                    | profileLoadingStatus = Loaded profile
                     , currentProfile = Just profile
                 }
 
         CompletedProfileLoad (Err err) ->
-            UR.init { model | status = LoadingFailed err }
+            UR.init { model | profileLoadingStatus = Failed err }
                 |> UR.logGraphqlError msg err
 
         OnSelect maybeProfile ->
             { model
-                | selectedProfile = maybeProfile
+                | selectedPayerProfile = maybeProfile
             }
                 |> UR.init
 
         SelectMsg subMsg ->
             let
                 ( updated, cmd ) =
-                    Select.update (selectConfiguration guest.shared False) subMsg model.autocompleteState
+                    Select.update (selectConfiguration guest.shared False) subMsg model.payerAutocompleteState
             in
-            UR.init { model | autocompleteState = updated }
+            UR.init { model | payerAutocompleteState = updated }
                 |> UR.addCmd cmd
 
         ToDatePicker subMsg ->
@@ -239,10 +233,10 @@ update msg model guest =
                             Just changedDate
 
                         _ ->
-                            model.date
+                            model.selectedDate
             in
             { model
-                | date = newDate
+                | selectedDate = newDate
                 , datePicker = newDatePicker
             }
                 |> UR.init
@@ -270,8 +264,8 @@ view guest model =
                 div [] [ text "profile not found" ]
         , div [ class "mx-4 max-w-md md:m-auto" ]
             [ h2 [ class "text-center text-black text-2xl" ] [ text "Payment History" ]
-            , case model.fetchingTransfersStatus of
-                LoadedGraphql _ ->
+            , case model.transfersLoadingStatus of
+                Loaded _ ->
                     if List.isEmpty model.transfersToCurrentUser then
                         div [] [ text "No payment for this user" ]
 
@@ -283,10 +277,10 @@ view guest model =
                             , viewPagination
                             ]
 
-                LoadingGraphql ->
+                Loading ->
                     div [] [ text "loading" ]
 
-                FailedGraphql err ->
+                Failed err ->
                     div [] [ Page.fullPageGraphQLError "Sorry, no user found" err ]
             ]
         ]
@@ -328,14 +322,14 @@ viewAutoCompleteAccount shared model isDisabled =
             []
 
         selectedUsers =
-            Maybe.map (\v -> [ v ]) model.selectedProfile
+            Maybe.map (\v -> [ v ]) model.selectedPayerProfile
                 |> Maybe.withDefault []
     in
     div []
         [ Html.map SelectMsg
             (Select.view
                 (selectConfiguration shared isDisabled)
-                model.autocompleteState
+                model.payerAutocompleteState
                 users
                 selectedUsers
             )
@@ -362,7 +356,7 @@ viewPeriodSelector model =
             [ class "block" ]
             [ span [ class "text-green tracking-wide uppercase text-caption block mb-1" ]
                 [ text "Date" ]
-            , DatePicker.view model.date settings model.datePicker
+            , DatePicker.view model.selectedDate settings model.datePicker
                 |> Html.map ToDatePicker
             ]
         ]
