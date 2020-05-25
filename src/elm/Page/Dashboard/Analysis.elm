@@ -97,12 +97,12 @@ type alias Filter =
 
 type StatusFilter
     = All
+    | Approved
+    | Rejected
+    | Pending
 
 
 
--- | Approved
--- | Disapproved
--- | UnderReview
 -- | UnderReviewPending
 
 
@@ -181,32 +181,53 @@ viewFilters ({ shared } as loggedIn) model =
             ]
         , div [ class "mt-6" ]
             [ span [ class "input-label" ] [ text_ "all_analysis.filter.status.label" ]
-            , select [ class "input w-full mb-2 border form-select border-gray-500 rounded-sm" ]
+            , select
+                [ class "input w-full mb-2 border form-select border-gray-500 rounded-sm"
+                , Html.Events.on "change"
+                    (Decode.map
+                        (\val ->
+                            case val of
+                                "approved" ->
+                                    SelectStatusFilter Approved
+
+                                "rejected" ->
+                                    SelectStatusFilter Rejected
+
+                                "pending" ->
+                                    SelectStatusFilter Pending
+
+                                _ ->
+                                    SelectStatusFilter All
+                        )
+                        Html.Events.targetValue
+                    )
+                ]
                 [ option
                     [ value ""
-                    , selected True
+                    , selected (model.filters.statusFilter == All)
                     ]
                     [ text "" ]
                 , option
-                    [ value ""
-                    , selected False
+                    [ value "approved"
+                    , selected (model.filters.statusFilter == Approved)
                     ]
                     [ text_ "all_analysis.approved" ]
                 , option
-                    [ value ""
-                    , selected False
+                    [ value "rejected"
+                    , selected (model.filters.statusFilter == Rejected)
                     ]
                     [ text_ "all_analysis.disapproved" ]
                 , option
-                    [ value ""
-                    , selected False
+                    [ value "pending"
+                    , selected (model.filters.statusFilter == Pending)
                     ]
                     [ text_ "all_analysis.pending" ]
-                , option
-                    [ value ""
-                    , selected False
-                    ]
-                    [ text_ "all_analysis.filter.status.pending_review" ]
+
+                -- , option
+                --     [ value ""
+                --     , selected False
+                --     ]
+                --     [ text_ "all_analysis.filter.status.pending_review" ]
                 ]
             ]
         ]
@@ -230,11 +251,11 @@ viewClaim { shared, accountName, selectedCommunity } claim =
             if claim.status == "approved" then
                 ( t "all_analysis.approved", "text-green" )
 
-            else if Claim.isAlreadyValidated claim accountName then
-                ( t "all_analysis.pending", "text-black" )
+            else if claim.status == "rejected" then
+                ( t "all_analysis.disapproved", "text-red" )
 
             else
-                ( t "all_analysis.disapproved", "text-red" )
+                ( t "all_analysis.pending", "text-black" )
     in
     div [ class "w-full sm:w-full md:w-1/2 lg:w-1/3 xl:w-1/4 px-2 mb-4" ]
         [ if Claim.isAlreadyValidated claim accountName then
@@ -388,6 +409,7 @@ type Msg
     | CompletedCommunityLoad (Result (Graphql.Http.Error (Maybe Community.Model)) (Maybe Community.Model))
     | ShowMore
     | ClearSelectSelection
+    | SelectStatusFilter StatusFilter
 
 
 update : Msg -> Model -> LoggedIn.Model -> UpdateResult
@@ -586,17 +608,65 @@ update msg model loggedIn =
                 _ ->
                     UR.init model
 
+        SelectStatusFilter statusFilter ->
+            let
+                oldFilters =
+                    model.filters
+
+                newModel =
+                    { model
+                        | filters = { oldFilters | statusFilter = statusFilter }
+                        , status = Loading
+                        , reloadOnNextQuery = True
+                    }
+            in
+            newModel
+                |> UR.init
+                |> UR.addCmd (fetchAnalysis loggedIn newModel.filters Nothing)
+
 
 fetchAnalysis : LoggedIn.Model -> Filter -> Maybe String -> Cmd Msg
 fetchAnalysis { accountName, selectedCommunity, shared } { profile, statusFilter } maybeCursorAfter =
     let
-        filter =
-            case ( profile, statusFilter ) of
-                ( Just p, sFilter ) ->
-                    Present { claimer = Present (Eos.nameToString p.account), status = Absent }
+        filterRecord =
+            { claimer = Absent
+            , status = Absent
+            }
+                |> (\fr ->
+                        { fr
+                            | claimer =
+                                case profile of
+                                    Just p ->
+                                        Present (Eos.nameToString p.account)
 
-                _ ->
-                    Absent
+                                    Nothing ->
+                                        Absent
+                        }
+                   )
+                |> (\fr ->
+                        { fr
+                            | status =
+                                case statusFilter of
+                                    All ->
+                                        Absent
+
+                                    Approved ->
+                                        Present "approved"
+
+                                    Rejected ->
+                                        Present "rejected"
+
+                                    Pending ->
+                                        Present "pending"
+                        }
+                   )
+
+        filter =
+            if filterRecord.claimer /= Absent || filterRecord.status /= Absent then
+                Present filterRecord
+
+            else
+                Absent
 
         args =
             { input =
@@ -733,3 +803,6 @@ msgToString msg =
 
         ClearSelectSelection ->
             [ "ClearSelectSelection" ]
+
+        SelectStatusFilter _ ->
+            [ "SelectStatusFilter" ]
