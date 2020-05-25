@@ -17,8 +17,8 @@ import Eos exposing (Symbol)
 import Eos.Account as Eos
 import Graphql.Http
 import Graphql.OptionalArgument exposing (OptionalArgument(..))
-import Html exposing (Html, a, button, div, input, p, span, text)
-import Html.Attributes exposing (class, id)
+import Html exposing (Html, a, button, div, option, p, select, span, text)
+import Html.Attributes exposing (class, id, selected, value)
 import Html.Events exposing (onClick)
 import I18Next
 import Icons
@@ -105,9 +105,6 @@ view ({ shared } as loggedIn) model =
         t : String -> String
         t =
             I18Next.t shared.translations
-
-        text_ s =
-            text (t s)
     in
     case model.status of
         Loading ->
@@ -115,11 +112,11 @@ view ({ shared } as loggedIn) model =
 
         Loaded maybeProfile f claims pageInfo ->
             div []
-                [ Page.viewHeader loggedIn (t "dashboard.all_analysis.title") Route.Dashboard
+                [ Page.viewHeader loggedIn (t "all_analysis.title") Route.Dashboard
                 , div [ class "container mx-auto px-4 mb-10" ]
-                    [ --viewAutoCompleteProfile loggedIn model maybeProfile
-                      -- , text "filtro do estado do claim"
-                      div [ class "flex flex-wrap -mx-2" ]
+                    [ viewFilters loggedIn model maybeProfile
+                    , div
+                        [ class "flex flex-wrap -mx-2" ]
                         (List.map (viewClaim loggedIn f) claims)
                     , viewPagination loggedIn pageInfo
                     ]
@@ -130,31 +127,75 @@ view ({ shared } as loggedIn) model =
             text ""
 
 
-viewAutoCompleteProfile : LoggedIn.Model -> Model -> Maybe Profile -> Html Msg
-viewAutoCompleteProfile { shared } model maybeProfile =
-    case model.communityStatus of
-        LoadedCommunity community ->
-            let
-                selectedUsers =
-                    Maybe.map (\v -> [ v ]) maybeProfile
-                        |> Maybe.withDefault []
-            in
-            div []
-                [ Html.map SelectMsg
-                    (Select.view
-                        (selectConfiguration shared False)
-                        model.autoCompleteState
-                        community.members
-                        selectedUsers
-                    )
-                ]
+viewFilters : LoggedIn.Model -> Model -> Maybe Profile -> Html Msg
+viewFilters { shared } model maybeProfile =
+    let
+        t : String -> String
+        t =
+            I18Next.t shared.translations
 
-        _ ->
-            text ""
+        text_ s =
+            text (t s)
+    in
+    div [ class "mt-4 mb-12" ]
+        [ div []
+            [ span [ class "input-label" ]
+                [ text_ "all_analysis.filter.user" ]
+            , case model.communityStatus of
+                LoadedCommunity community ->
+                    let
+                        selectedUsers =
+                            Maybe.map (\v -> [ v ]) maybeProfile
+                                |> Maybe.withDefault []
+                    in
+                    div []
+                        [ Html.map SelectMsg
+                            (Select.view
+                                (selectConfiguration shared False)
+                                model.autoCompleteState
+                                community.members
+                                selectedUsers
+                            )
+                        ]
+
+                _ ->
+                    text ""
+            ]
+        , div [ class "mt-6" ]
+            [ span [ class "input-label" ] [ text_ "all_analysis.filter.status.label" ]
+            , select [ class "input w-full mb-2 border form-select border-gray-500 rounded-sm" ]
+                [ option
+                    [ value ""
+                    , selected True
+                    ]
+                    [ text "" ]
+                , option
+                    [ value ""
+                    , selected False
+                    ]
+                    [ text_ "all_analysis.approved" ]
+                , option
+                    [ value ""
+                    , selected False
+                    ]
+                    [ text_ "all_analysis.disapproved" ]
+                , option
+                    [ value ""
+                    , selected False
+                    ]
+                    [ text_ "all_analysis.pending" ]
+                , option
+                    [ value ""
+                    , selected False
+                    ]
+                    [ text_ "all_analysis.filter.status.pending_review" ]
+                ]
+            ]
+        ]
 
 
 viewClaim : LoggedIn.Model -> Filter -> Claim.Model -> Html Msg
-viewClaim ({ shared, accountName, selectedCommunity } as loggedIn) f claim =
+viewClaim { shared, accountName, selectedCommunity } f claim =
     let
         t =
             I18Next.t shared.translations
@@ -168,14 +209,14 @@ viewClaim ({ shared, accountName, selectedCommunity } as loggedIn) f claim =
                 |> Strftime.format "%d %b %Y" Time.utc
 
         ( msg, textColor ) =
-            if claim.isVerified then
-                ( t "dashboard.all_analysis.approved", "text-green" )
+            if claim.status == "approved" then
+                ( t "all_analysis.approved", "text-green" )
 
             else if Claim.isAlreadyValidated claim accountName then
-                ( t "dashboard.all_analysis.pending", "text-black" )
+                ( t "all_analysis.pending", "text-black" )
 
             else
-                ( t "dashboard.all_analysis.disapproved", "text-red" )
+                ( t "all_analysis.disapproved", "text-red" )
     in
     div [ class "w-full sm:w-full md:w-1/2 lg:w-1/3 xl:w-1/4 px-2 mb-4" ]
         [ if Claim.isAlreadyValidated claim accountName then
@@ -200,7 +241,7 @@ viewClaim ({ shared, accountName, selectedCommunity } as loggedIn) f claim =
                     [ class "button button-secondary w-full font-medium mb-2"
                     , Route.href <| Route.Claim selectedCommunity claim.action.objective.id claim.action.id claim.id
                     ]
-                    [ text_ "dashboard.all_analysis.more_details" ]
+                    [ text_ "all_analysis.more_details" ]
                 ]
 
           else
@@ -250,7 +291,7 @@ viewPagination { shared } maybePageInfo =
                         , class "button button-primary uppercase w-full"
                         , onClick ShowMore
                         ]
-                        [ text_ "dashboard.all_analysis.show_more" ]
+                        [ text_ "all_analysis.show_more" ]
 
                   else
                     text ""
@@ -517,10 +558,9 @@ fetchAnalysis shared communityId account maybeCursorAfter =
     let
         args =
             { input =
-                { claimer = Absent
-                , symbol = Present (Eos.symbolToString communityId)
-                , validator = Present (Eos.nameToString account)
-                , all = Present True
+                { symbol = Eos.symbolToString communityId
+                , account = Eos.nameToString account
+                , filter = Absent
                 }
             }
 
@@ -543,7 +583,7 @@ fetchAnalysis shared communityId account maybeCursorAfter =
     in
     Api.Graphql.query
         shared
-        (Cambiatus.Query.claims pagination args Claim.claimPaginatedSelectionSet)
+        (Cambiatus.Query.claimsAnalysisHistory pagination args Claim.claimPaginatedSelectionSet)
         ClaimsLoaded
 
 

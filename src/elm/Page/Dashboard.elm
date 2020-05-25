@@ -810,10 +810,8 @@ fetchAvailableAnalysis shared communityId account =
     let
         arg =
             { input =
-                { claimer = Absent
-                , symbol = Present (Eos.symbolToString communityId)
-                , validator = Present (Eos.nameToString account)
-                , all = Present False
+                { symbol = Eos.symbolToString communityId
+                , account = Eos.nameToString account
                 }
             }
 
@@ -822,7 +820,7 @@ fetchAvailableAnalysis shared communityId account =
     in
     Api.Graphql.query
         shared
-        (Cambiatus.Query.claims pagination arg Claim.claimPaginatedSelectionSet)
+        (Cambiatus.Query.claimsAnalysis pagination arg Claim.claimPaginatedSelectionSet)
         ClaimsLoaded
 
 

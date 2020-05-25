@@ -542,14 +542,21 @@
       "no": "No, cancelar",
       "success": "Reclamación exitosa, espere la aprobación",
       "failure": "Se produjo un error al intentar procesar su reclamo. Vuelva a intentarlo más tarde."
-    },
-    "all_analysis": {
-      "title": "Todas las acciones para el análisis.",
-      "more_details": "Más detalles",
-      "approved": "Aprobada",
-      "pending": "Bajo revisión",
-      "disapproved": "Rechazada",
-      "show_more": "mostrar los siguientes 16 artículos"
+    }
+  },
+  "all_analysis": {
+    "title": "Todas las acciones para el análisis.",
+    "more_details": "Más detalles",
+    "approved": "Aprobada",
+    "pending": "Bajo revisión",
+    "disapproved": "Rechazada",
+    "show_more": "mostrar los siguientes 16 artículos",
+    "filter": {
+      "user": "Usario",
+      "status": {
+        "label": "estado de acción",
+        "pending_review": "Bajo revisión (mi voto está pendiente)"
+      }
     }
   },
   "claim": {

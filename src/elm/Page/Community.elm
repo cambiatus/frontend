@@ -12,21 +12,16 @@ module Page.Community exposing
 import Api.Graphql
 import Avatar
 import Cambiatus.Enum.VerificationType as VerificationType
-import Cambiatus.Object
-import Cambiatus.Query exposing (ClaimsRequiredArguments)
 import Cambiatus.Scalar exposing (DateTime(..))
-import Community exposing (ActionVerification, ActionVerificationsResponse, ClaimResponse, Model)
-import Dict exposing (Dict)
+import Community exposing (ActionVerification, Model)
 import Eos exposing (Symbol)
 import Eos.Account as Eos
 import Graphql.Http
-import Graphql.Operation exposing (RootQuery)
 import Graphql.OptionalArgument exposing (OptionalArgument(..))
-import Graphql.SelectionSet as SelectionSet exposing (SelectionSet, with)
 import Html exposing (Html, a, button, div, hr, img, p, span, text)
 import Html.Attributes exposing (class, classList, disabled, src)
 import Html.Events exposing (onClick)
-import I18Next exposing (t, tr)
+import I18Next exposing (t)
 import Icons
 import Json.Decode as Decode
 import Json.Encode as Encode exposing (Value)
@@ -37,7 +32,6 @@ import Session.Shared exposing (Shared)
 import Strftime
 import Task
 import Time exposing (Posix, posixToMillis)
-import Transfer exposing (Transfer)
 import UpdateResult as UR
 import Utils
 import View.Tag as Tag
@@ -105,35 +99,9 @@ type EditStatus
     | OpenObjective Int
 
 
-type SaveStatus
-    = NotAsked
-    | Saving
-    | SaveFailed (Dict String FormError)
-
-
 type ModalStatus
     = Opened Bool Int -- Action id
     | Closed
-
-
-type alias ObjectiveForm =
-    { description : String
-    , save : SaveStatus
-    }
-
-
-type Verification
-    = Manually
-    | Automatically
-
-
-type FormError
-    = Required
-    | TooShort Int
-    | TooLong Int
-    | InvalidChar Char
-    | AlreadyTaken
-    | NotMember
 
 
 type alias Member =
@@ -695,79 +663,6 @@ viewClaimModal loggedIn model =
 
 
 -- SECTIONS
-
-
-viewSections : LoggedIn.Model -> Model -> List Transfer -> Html Msg
-viewSections loggedIn model allTransfers =
-    let
-        t s =
-            I18Next.t loggedIn.shared.translations s
-
-        toView verifications =
-            List.map
-                (viewVerification loggedIn.shared)
-                verifications
-    in
-    Page.viewMaxTwoColumn
-        [ Page.viewTitle (t "community.actions.last_title")
-        ]
-        [ Page.viewTitle (t "transfer.last_title")
-        , case allTransfers of
-            [] ->
-                div [ class "mt-5" ]
-                    [ Page.viewCardEmpty [ text (t "transfer.no_transfers_yet") ]
-                    ]
-
-            transfers ->
-                div [ class "rounded-lg bg-white mt-5" ]
-                    (List.map
-                        (\transfer ->
-                            viewTransfer loggedIn model transfer
-                        )
-                        transfers
-                    )
-        ]
-
-
-viewTransfer : LoggedIn.Model -> Model -> Transfer -> Html msg
-viewTransfer loggedIn model transfer =
-    let
-        transferInfo from value to =
-            let
-                val =
-                    String.fromFloat value
-            in
-            [ ( "from", Eos.nameToString from )
-            , ( "value", val )
-            , ( "to", Eos.nameToString to )
-            ]
-                |> I18Next.tr loggedIn.shared.translations I18Next.Curly "transfer.info"
-    in
-    a
-        [ class "border-b last:border-b-0 border-gray-500 flex flex-wrap items-start p-4"
-        , Route.href (Route.ViewTransfer transfer.id)
-        ]
-        [ div [ class "flex justify-between w-full" ]
-            [ p [] [ text (transferInfo transfer.from.account transfer.value transfer.to.account) ]
-            , p [ class "text-sm text-orange-500" ]
-                (Page.viewDateDistance
-                    (Utils.posixDateTime (Just transfer.blockTime))
-                    model.date
-                )
-            ]
-        , div [ class "w-full" ]
-            [ case transfer.memo of
-                Nothing ->
-                    text ""
-
-                Just mem ->
-                    p [ class "flex-1 text-xs text-gray-700" ]
-                        [ text mem ]
-            ]
-        ]
-
-
-
 -- UPDATE
 
 

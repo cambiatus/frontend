@@ -544,14 +544,21 @@
       "no": "Não, cancelar",
       "success": "Reinvidicação concluída, aguarde as aprovações",
       "failure": "Algo deu errado ao tentar realizar sua reinvidicação, tente novamente mais tarde"
-    },
-    "all_analysis": {
-      "title": "Todas as ações para análise",
-      "more_details": "Mais detalhes",
-      "approved": "Aprovado",
-      "pending": "Sob análise",
-      "disapproved": "Reprovado",
-      "show_more": "Mostrar próximos 16 items"
+    }
+  },
+  "all_analysis": {
+    "title": "Todas as ações para análise",
+    "more_details": "Mais detalhes",
+    "approved": "Aprovado",
+    "pending": "Sob análise",
+    "disapproved": "Reprovado",
+    "show_more": "Mostrar próximos 16 items",
+    "filter": {
+      "user": "Usuário",
+      "status": {
+        "label": "Estado da ação",
+        "pending_review": "Sob análise (meu voto está pendente)"
+      }
     }
   },
   "claim": {

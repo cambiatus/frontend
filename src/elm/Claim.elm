@@ -29,7 +29,7 @@ import Profile exposing (Profile)
 
 type alias Model =
     { id : Int
-    , isVerified : Bool
+    , status : String
     , claimer : Profile
     , action : Action
     , checks : List Check
@@ -58,7 +58,7 @@ type alias Action =
 
 isAlreadyValidated : Model -> Eos.Name -> Bool
 isAlreadyValidated claim user =
-    claim.isVerified || List.any (\c -> c.validator.account == user) claim.checks
+    claim.status /= "pending" || List.any (\c -> c.validator.account == user) claim.checks
 
 
 encodeVerification : Int -> Eos.Name -> Bool -> Encode.Value
@@ -111,7 +111,7 @@ selectionSet : SelectionSet Model Cambiatus.Object.Claim
 selectionSet =
     SelectionSet.succeed Model
         |> with Claim.id
-        |> with Claim.isVerified
+        |> with Claim.status
         |> with (Claim.claimer Profile.selectionSet)
         |> with (Claim.action actionSelectionSet)
         |> with (Claim.checks (\_ -> { input = Absent }) checkSelectionSet)

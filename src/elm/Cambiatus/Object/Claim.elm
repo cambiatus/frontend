@@ -71,6 +71,6 @@ id =
     Object.selectionForField "Int" "id" [] Decode.int
 
 
-isVerified : SelectionSet Bool Cambiatus.Object.Claim
-isVerified =
-    Object.selectionForField "Bool" "isVerified" [] Decode.bool
+status : SelectionSet String Cambiatus.Object.Claim
+status =
+    Object.selectionForField "String" "status" [] Decode.string

@@ -105,13 +105,13 @@ viewTitle shared claim =
             List.filter (\ch -> not ch.isApproved) claim.checks
     in
     div [ class "text-heading font-bold text-center mb-8" ]
-        [ if claim.isVerified then
+        [ if claim.status == "approved" then
             div [ class "inline-block" ]
                 [ text_ "claim.title_approved.1"
                 , span [ class "text-green ml-1" ] [ text_ "claim.title_approved.2" ]
                 ]
 
-          else if List.length negativeChecks >= claim.action.verifications then
+          else if claim.status == "rejected" then
             div [ class "inline-block" ]
                 [ text_ "claim.title_rejected.1"
                 , span [ class "text-red ml-1" ] [ text_ "claim.title_rejected.2" ]
@@ -136,7 +136,7 @@ viewDetails shared model claim =
             List.filter (\ch -> not ch.isApproved) claim.checks
 
         isRejected =
-            claim.isVerified == False && (List.length negativeChecks >= claim.action.verifications)
+            claim.status == "rejected"
     in
     div []
         [ div [ class "mb-8" ]
