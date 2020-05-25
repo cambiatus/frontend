@@ -73,7 +73,7 @@ msgToString msg =
 
 type alias Model =
     { payerAutocompleteState : Select.State
-    , selectedPayerProfile : Maybe Profile
+    , selectedPayer : Maybe Profile
     , currentProfile : Maybe Profile
     , profileLoadingStatus : QueryStatus (Maybe Profile) Profile
     , transfersLoadingStatus : QueryStatus (Maybe QueryTransfers) (List Transfer)
@@ -149,7 +149,7 @@ init guest =
                 Maybe.withDefault "" uriLastPart
     in
     ( { payerAutocompleteState = Select.newState ""
-      , selectedPayerProfile = Nothing
+      , selectedPayer = Nothing
       , selectedDate = Nothing
       , currentProfile = Nothing
       , profileLoadingStatus = Loading
@@ -210,7 +210,7 @@ update msg model guest =
 
         OnSelect maybeProfile ->
             { model
-                | selectedPayerProfile = maybeProfile
+                | selectedPayer = maybeProfile
             }
                 |> UR.init
 
@@ -272,7 +272,7 @@ view guest model =
                     else
                         div []
                             [ viewUserAutocomplete guest model
-                            , viewPeriodSelector model
+                            , viewDatePicker model
                             , viewPayersList guest model
                             , viewPagination
                             ]
@@ -311,18 +311,20 @@ viewUserAutocomplete guest model =
             [ span [ class "text-green tracking-wide uppercase text-caption block mb-1" ]
                 [ text "Payer" ]
             ]
-        , viewAutoCompleteAccount guest.shared model False
+        , viewFilterTransfersByAccount guest.shared model False
         ]
 
 
-viewAutoCompleteAccount : Shared.Shared -> Model -> Bool -> Html Msg
-viewAutoCompleteAccount shared model isDisabled =
+viewFilterTransfersByAccount : Shared.Shared -> Model -> Bool -> Html Msg
+viewFilterTransfersByAccount shared model isDisabled =
     let
-        users =
-            []
+        payers =
+            model.transfersToCurrentUser
+                |> List.map .from
+                |> LE.uniqueBy (\profile -> Eos.Account.nameToString profile.account)
 
-        selectedUsers =
-            Maybe.map (\v -> [ v ]) model.selectedPayerProfile
+        selectedPayers =
+            Maybe.map (\v -> [ v ]) model.selectedPayer
                 |> Maybe.withDefault []
     in
     div []
@@ -330,8 +332,8 @@ viewAutoCompleteAccount shared model isDisabled =
             (Select.view
                 (selectConfiguration shared isDisabled)
                 model.payerAutocompleteState
-                users
-                selectedUsers
+                payers
+                selectedPayers
             )
         ]
 
@@ -350,7 +352,7 @@ selectConfiguration shared isDisabled =
         isDisabled
 
 
-viewPeriodSelector model =
+viewDatePicker model =
     div [ class "my-4" ]
         [ label
             [ class "block" ]
@@ -404,8 +406,17 @@ viewPayment guest payment =
 
 viewPayersList : Guest.Model -> Model -> Html msg
 viewPayersList guest model =
+    let
+        transfers =
+            case model.selectedPayer of
+                Just p ->
+                    List.filter (\t -> t.from.account == p.account) model.transfersToCurrentUser
+
+                Nothing ->
+                    model.transfersToCurrentUser
+    in
     ul [ class "" ]
-        (List.map (viewPayment guest) model.transfersToCurrentUser)
+        (List.map (viewPayment guest) transfers)
 
 
 viewPagination =
