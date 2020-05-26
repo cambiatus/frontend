@@ -17,8 +17,8 @@ import Eos
 import Eos.Account as Eos
 import Graphql.Http
 import Graphql.OptionalArgument exposing (OptionalArgument(..))
-import Html exposing (Html, a, button, div, option, p, select, span, text)
-import Html.Attributes exposing (class, id, selected, value)
+import Html exposing (Html, a, button, div, img, option, p, select, span, text)
+import Html.Attributes exposing (class, id, selected, src, value)
 import Html.Events exposing (onClick)
 import I18Next
 import Icons
@@ -40,13 +40,9 @@ import Utils
 
 init : LoggedIn.Model -> ( Model, Cmd Msg )
 init ({ shared, selectedCommunity } as loggedIn) =
-    let
-        newModel =
-            initModel
-    in
-    ( newModel
+    ( initModel
     , Cmd.batch
-        [ fetchAnalysis loggedIn newModel.filters Nothing
+        [ fetchAnalysis loggedIn initFilter Nothing
         , Api.Graphql.query shared (Community.communityQuery selectedCommunity) CompletedCommunityLoad
         ]
     )
@@ -73,7 +69,7 @@ initModel =
     , modalStatus = ModalClosed
     , autoCompleteState = Select.newState ""
     , reloadOnNextQuery = False
-    , filters = { profile = Nothing, statusFilter = All }
+    , filters = initFilter
     }
 
 
@@ -93,6 +89,11 @@ type alias Filter =
     { profile : Maybe Profile
     , statusFilter : StatusFilter
     }
+
+
+initFilter : Filter
+initFilter =
+    { profile = Nothing, statusFilter = All }
 
 
 type StatusFilter
@@ -135,7 +136,7 @@ view ({ shared } as loggedIn) model =
                             ]
 
                       else
-                        viewEmptyResults
+                        viewEmptyResults loggedIn
                     ]
                 , viewAnalysisModal loggedIn model
                 ]
@@ -227,10 +228,20 @@ viewFilters ({ shared } as loggedIn) model =
         ]
 
 
-viewEmptyResults : Html Msg
-viewEmptyResults =
-    div []
-        [ text "empty"
+viewEmptyResults : LoggedIn.Model -> Html Msg
+viewEmptyResults { shared } =
+    let
+        text_ s =
+            text (I18Next.t shared.translations s)
+    in
+    div [ class "w-full text-center" ]
+        [ div [ class "w-full flex justify-center" ]
+            [ img [ src "/images/not_found.svg", class "object-contain h-32 mb-3" ] []
+            ]
+        , div [ class "inline-block text-gray" ]
+            [ text_ "all_analysis.empty"
+            , span [ class "underline text-orange-500", onClick ClearFilters ] [ text_ "all_analysis.clear_filters" ]
+            ]
         ]
 
 
@@ -418,6 +429,7 @@ type Msg
     | ShowMore
     | ClearSelectSelection
     | SelectStatusFilter StatusFilter
+    | ClearFilters
 
 
 update : Msg -> Model -> LoggedIn.Model -> UpdateResult
@@ -632,6 +644,15 @@ update msg model loggedIn =
                 |> UR.init
                 |> UR.addCmd (fetchAnalysis loggedIn newModel.filters Nothing)
 
+        ClearFilters ->
+            { model
+                | filters = initFilter
+                , reloadOnNextQuery = True
+                , status = Loading
+            }
+                |> UR.init
+                |> UR.addCmd (fetchAnalysis loggedIn initFilter Nothing)
+
 
 fetchAnalysis : LoggedIn.Model -> Filter -> Maybe String -> Cmd Msg
 fetchAnalysis { accountName, selectedCommunity, shared } { profile, statusFilter } maybeCursorAfter =
@@ -809,3 +830,6 @@ msgToString msg =
 
         SelectStatusFilter _ ->
             [ "SelectStatusFilter" ]
+
+        ClearFilters ->
+            [ "ClearFilters" ]

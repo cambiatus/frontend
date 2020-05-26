@@ -551,6 +551,8 @@
     "approved": "Aprobada",
     "pending": "Bajo revisión",
     "disapproved": "Rechazada",
+    "empty": "No hay resultados, ",
+    "clear_filters": "limpiar los filtros",
     "show_more": "mostrar los siguientes 16 artículos",
     "filter": {
       "user": "Usario",

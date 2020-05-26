@@ -547,6 +547,8 @@
     "approved": "Approved",
     "pending": "Under Review",
     "disapproved": "Disapproved",
+    "empty": "No results, ",
+    "clear_filters": "clear the filters",
     "show_more": "Show next 16 items",
     "filter": {
       "user": "User",

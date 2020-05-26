@@ -550,6 +550,8 @@
     "approved": "Aprovat",
     "pending": "Sota Revisió",
     "disapproved": "Rebutjat",
+    "empty": "Sense resultats, ",
+    "clear_filters": "esborreu els filtres",
     "show_more": "mostra els següents 16 articles",
     "filter": {
       "user": "Usuari",
