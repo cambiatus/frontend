@@ -102,10 +102,6 @@ type StatusFilter
     | Pending
 
 
-
--- | UnderReviewPending
-
-
 type ModalStatus
     = ModalClosed
     | ModalLoading Int Bool
@@ -132,10 +128,14 @@ view ({ shared } as loggedIn) model =
                 [ Page.viewHeader loggedIn (t "all_analysis.title") Route.Dashboard
                 , div [ class "container mx-auto px-4 mb-10" ]
                     [ viewFilters loggedIn model
-                    , div
-                        [ class "flex flex-wrap -mx-2" ]
-                        (List.map (viewClaim loggedIn) claims)
-                    , viewPagination loggedIn pageInfo
+                    , if List.length claims > 0 then
+                        div []
+                            [ div [ class "flex flex-wrap -mx-2" ] (List.map (viewClaim loggedIn) claims)
+                            , viewPagination loggedIn pageInfo
+                            ]
+
+                      else
+                        viewEmptyResults
                     ]
                 , viewAnalysisModal loggedIn model
                 ]
@@ -222,14 +222,15 @@ viewFilters ({ shared } as loggedIn) model =
                     , selected (model.filters.statusFilter == Pending)
                     ]
                     [ text_ "all_analysis.pending" ]
-
-                -- , option
-                --     [ value ""
-                --     , selected False
-                --     ]
-                --     [ text_ "all_analysis.filter.status.pending_review" ]
                 ]
             ]
+        ]
+
+
+viewEmptyResults : Html Msg
+viewEmptyResults =
+    div []
+        [ text "empty"
         ]
 
 
@@ -248,14 +249,15 @@ viewClaim { shared, accountName, selectedCommunity } claim =
                 |> Strftime.format "%d %b %Y" Time.utc
 
         ( msg, textColor ) =
-            if claim.status == "approved" then
-                ( t "all_analysis.approved", "text-green" )
+            case claim.status of
+                Claim.Approved ->
+                    ( t "all_analysis.approved", "text-green" )
 
-            else if claim.status == "rejected" then
-                ( t "all_analysis.disapproved", "text-red" )
+                Claim.Rejected ->
+                    ( t "all_analysis.disapproved", "text-red" )
 
-            else
-                ( t "all_analysis.pending", "text-black" )
+                Claim.Pending ->
+                    ( t "all_analysis.pending", "text-black" )
     in
     div [ class "w-full md:w-1/2 lg:w-1/3 xl:w-1/4 px-2 mb-4" ]
         [ if Claim.isAlreadyValidated claim accountName then

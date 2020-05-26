@@ -1,5 +1,6 @@
 module Claim exposing
-    ( Model
+    ( ClaimStatus(..)
+    , Model
     , Paginated
     , claimPaginatedSelectionSet
     , encodeVerification
@@ -10,6 +11,7 @@ module Claim exposing
     )
 
 import Api.Relay exposing (Edge, PageConnection)
+import Cambiatus.Enum.ClaimStatus as ClaimStatus
 import Cambiatus.Enum.VerificationType exposing (VerificationType(..))
 import Cambiatus.Object
 import Cambiatus.Object.Action as Action
@@ -29,12 +31,18 @@ import Profile exposing (Profile)
 
 type alias Model =
     { id : Int
-    , status : String
+    , status : ClaimStatus
     , claimer : Profile
     , action : Action
     , checks : List Check
     , createdAt : DateTime
     }
+
+
+type ClaimStatus
+    = Approved
+    | Rejected
+    | Pending
 
 
 type alias Check =
@@ -58,7 +66,7 @@ type alias Action =
 
 isAlreadyValidated : Model -> Eos.Name -> Bool
 isAlreadyValidated claim user =
-    claim.status /= "pending" || List.any (\c -> c.validator.account == user) claim.checks
+    claim.status /= Pending || List.any (\c -> c.validator.account == user) claim.checks
 
 
 encodeVerification : Int -> Eos.Name -> Bool -> Encode.Value
@@ -111,11 +119,24 @@ selectionSet : SelectionSet Model Cambiatus.Object.Claim
 selectionSet =
     SelectionSet.succeed Model
         |> with Claim.id
-        |> with Claim.status
+        |> with (SelectionSet.map claimStatusMap Claim.status)
         |> with (Claim.claimer Profile.selectionSet)
         |> with (Claim.action actionSelectionSet)
         |> with (Claim.checks (\_ -> { input = Absent }) checkSelectionSet)
         |> with Claim.createdAt
+
+
+claimStatusMap : ClaimStatus.ClaimStatus -> ClaimStatus
+claimStatusMap v =
+    case v of
+        ClaimStatus.Approved ->
+            Approved
+
+        ClaimStatus.Rejected ->
+            Rejected
+
+        ClaimStatus.Pending ->
+            Pending
 
 
 actionSelectionSet : SelectionSet Action Cambiatus.Object.Action
