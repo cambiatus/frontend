@@ -112,8 +112,8 @@ communityInfoSelectionSet =
         |> with (Eos.symbolSelectionSet Community.symbol)
         |> with Community.name
         |> with Community.logo
-        |> with Community.shop
-        |> with Community.actions
+        |> with Community.hasShop
+        |> with Community.hasActions
 
 
 decode : Decoder Profile

@@ -24,8 +24,8 @@ actionCount =
     Object.selectionForField "Int" "actionCount" [] Decode.int
 
 
-actions : SelectionSet Bool Cambiatus.Object.Community
-actions =
+hasActions : SelectionSet Bool Cambiatus.Object.Community
+hasActions =
     Object.selectionForField "Boolean" "actions" [] Decode.bool
 
 
@@ -119,8 +119,8 @@ saleCount =
     Object.selectionForField "Int" "saleCount" [] Decode.int
 
 
-shop : SelectionSet Bool Cambiatus.Object.Community
-shop =
+hasShop : SelectionSet Bool Cambiatus.Object.Community
+hasShop =
     Object.selectionForField "Boolean" "shop" [] Decode.bool
 
 

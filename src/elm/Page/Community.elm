@@ -211,7 +211,7 @@ view loggedIn model =
 
                       else
                         text ""
-                    , if community.actions then
+                    , if community.hasActions then
                         div [ class "bg-white py-6 sm:py-8 px-3 sm:px-6 rounded-lg mt-4" ]
                             ([ Page.viewTitle (t "community.objectives.title_plural") ]
                                 ++ List.indexedMap (viewObjective loggedIn model community)

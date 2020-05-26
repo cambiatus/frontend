@@ -777,13 +777,13 @@ update msg model =
                     { model
                         | features =
                             model.features
-                                |> (if comm.actions then
+                                |> (if comm.hasActions then
                                         Feature.add Feature.Actions
 
                                     else
                                         \r -> r
                                    )
-                                |> (if comm.shop then
+                                |> (if comm.hasShop then
                                         Feature.add Feature.Shop
 
                                     else

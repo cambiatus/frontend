@@ -110,7 +110,7 @@ update : Msg -> Model -> LoggedIn.Model -> UpdateResult
 update msg model _ =
     case msg of
         CompletedLoad (Ok (Just community)) ->
-            UR.init { model | status = Loaded community, actions = community.actions, shop = community.shop }
+            UR.init { model | status = Loaded community, actions = community.hasActions, shop = community.hasShop }
 
         CompletedLoad (Ok Nothing) ->
             UR.init model
