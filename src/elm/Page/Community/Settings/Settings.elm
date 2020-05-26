@@ -1,7 +1,7 @@
 module Page.Community.Settings.Settings exposing (Model, Msg, init, msgToString, update, view)
 
 import Api.Graphql
-import Community exposing (Community)
+import Community
 import Eos exposing (Symbol)
 import Graphql.Http
 import Graphql.Operation exposing (RootQuery, RootSubscription)
@@ -36,12 +36,12 @@ type alias UpdateResult =
 
 type Status
     = Loading
-    | LoadingFailed (Graphql.Http.Error (Maybe Community))
-    | Loaded Community
+    | LoadingFailed (Graphql.Http.Error (Maybe Community.Model))
+    | Loaded Community.Model
 
 
 type Msg
-    = CompletedLoad (Result (Graphql.Http.Error (Maybe Community)) (Maybe Community))
+    = CompletedLoad (Result (Graphql.Http.Error (Maybe Community.Model)) (Maybe Community.Model))
 
 
 initModel : Symbol -> Model
