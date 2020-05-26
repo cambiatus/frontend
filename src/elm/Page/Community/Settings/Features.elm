@@ -8,6 +8,7 @@ import Graphql.Http
 import Html exposing (Html, div, input, label, span, text)
 import Html.Attributes exposing (checked, class, for, id, name, style, type_)
 import Html.Events exposing (onCheck)
+import I18Next exposing (t)
 import Page
 import Route
 import Session.LoggedIn as LoggedIn exposing (External(..))
@@ -54,13 +55,17 @@ type alias UpdateResult =
 
 view : LoggedIn.Model -> Model -> Html Msg
 view loggedIn model =
+    let
+        translate =
+            t loggedIn.shared.translations
+    in
     div [ class "bg-white flex flex-col items-center" ]
         [ Page.viewHeader loggedIn "Features" (Route.CommunitySettings model.symbol)
         , div
             [ class "container w-full divide-y"
             ]
-            [ toggleView "Actions" (model.features |> Feature.has Feature.Actions) ToggleActions "actions"
-            , toggleView "Shop" (model.features |> Feature.has Feature.Shop) ToggleShop "shop"
+            [ toggleView (translate "objectives.title_plural") (model.features |> Feature.has Feature.Actions) ToggleActions "actions"
+            , toggleView (translate "menu.shop") (model.features |> Feature.has Feature.Shop) ToggleShop "shop"
             ]
         ]
 
