@@ -614,6 +614,38 @@ changeRouteTo maybeRoute model =
                     , Route.replaceUrl shared.navKey redirect
                     )
 
+        withActionsFeature fn =
+            case session of
+                Page.Guest guest ->
+                    NotFound
+                        |> updateStatus model
+                        |> noCmd
+
+                Page.LoggedIn loggedIn ->
+                    if loggedIn.actions then
+                        fn
+
+                    else
+                        NotFound
+                            |> updateStatus model
+                            |> noCmd
+
+        withShopFeature fn =
+            case session of
+                Page.Guest guest ->
+                    NotFound
+                        |> updateStatus model
+                        |> noCmd
+
+                Page.LoggedIn loggedIn ->
+                    if loggedIn.shop then
+                        fn
+
+                    else
+                        NotFound
+                            |> updateStatus model
+                            |> noCmd
+
         withLoggedIn route fn =
             case session of
                 Page.LoggedIn loggedIn ->
@@ -766,16 +798,19 @@ changeRouteTo maybeRoute model =
             (\l -> ActionEditor.initNew l symbol objectiveId)
                 >> updateStatusWith ActionEditor GotActionEditorMsg model
                 |> withLoggedIn (Route.NewAction symbol objectiveId)
+                |> withActionsFeature
 
         Just (Route.EditAction symbol objectiveId actionId) ->
             (\l -> ActionEditor.initEdit l symbol objectiveId actionId)
                 >> updateStatusWith ActionEditor GotActionEditorMsg model
                 |> withLoggedIn (Route.EditAction symbol objectiveId actionId)
+                |> withActionsFeature
 
         Just (Route.Claim communityId objectiveId actionId claimId) ->
             (\l -> Claim.init l communityId claimId)
                 >> updateStatusWith Claim GotVerifyClaimMsg model
                 |> withLoggedIn (Route.Claim communityId objectiveId actionId claimId)
+                |> withActionsFeature
 
         Just Route.Communities ->
             CommunityExplore.init
@@ -786,21 +821,25 @@ changeRouteTo maybeRoute model =
             (\l -> Shop.init l maybeFilter)
                 >> updateStatusWith (Shop maybeFilter) GotShopMsg model
                 |> withLoggedIn (Route.Shop maybeFilter)
+                |> withShopFeature
 
         Just Route.NewSale ->
             ShopEditor.initCreate
                 >> updateStatusWith (ShopEditor Nothing) GotShopEditorMsg model
                 |> withLoggedIn Route.NewSale
+                |> withShopFeature
 
         Just (Route.EditSale saleId) ->
             (\l -> ShopEditor.initUpdate saleId l)
                 >> updateStatusWith (ShopEditor (Just saleId)) GotShopEditorMsg model
                 |> withLoggedIn (Route.EditSale saleId)
+                |> withShopFeature
 
         Just (Route.ViewSale saleId) ->
             (\l -> ShopViewer.init l saleId)
                 >> updateStatusWith (ShopViewer saleId) GotShopViewerMsg model
                 |> withLoggedIn (Route.ViewSale saleId)
+                |> withShopFeature
 
         Just (Route.ViewTransfer transferId) ->
             (\l -> ViewTransfer.init l transferId)
