@@ -45,8 +45,7 @@ type Status
 
 type Msg
     = CompletedLoad (Result (Graphql.Http.Error (Maybe Community.Model)) (Maybe Community.Model))
-    | ToggleActions Bool
-    | ToggleShop Bool
+    | ToggleFeature Feature Bool
 
 
 type alias UpdateResult =
@@ -64,8 +63,8 @@ view loggedIn model =
         , div
             [ class "container w-full divide-y"
             ]
-            [ toggleView (translate "objectives.title_plural") (model.features |> Feature.has Feature.Actions) ToggleActions "actions"
-            , toggleView (translate "menu.shop") (model.features |> Feature.has Feature.Shop) ToggleShop "shop"
+            [ toggleView (translate "objectives.title_plural") (model.features |> Feature.has Feature.Actions) (ToggleFeature Feature.Actions) "actions"
+            , toggleView (translate "menu.shop") (model.features |> Feature.has Feature.Shop) (ToggleFeature Feature.Shop) "shop"
             ]
         ]
 
@@ -138,20 +137,12 @@ update msg model _ =
             UR.init { model | status = LoadingFailed err }
                 |> UR.logGraphqlError msg err
 
-        ToggleActions state ->
+        ToggleFeature feature state ->
             UR.init
                 { model
                     | features =
                         model.features
-                            |> toggleFeature state Feature.Actions
-                }
-
-        ToggleShop state ->
-            UR.init
-                { model
-                    | features =
-                        model.features
-                            |> toggleFeature state Feature.Shop
+                            |> toggleFeature state feature
                 }
 
 
@@ -172,8 +163,5 @@ msgToString msg =
         CompletedLoad r ->
             [ "CompletedLoad", UR.resultToString r ]
 
-        ToggleActions _ ->
-            [ "ToggleActions" ]
-
-        ToggleShop _ ->
-            [ "ToggleShop" ]
+        ToggleFeature _ _ ->
+            [ "ToggleFeature" ]
