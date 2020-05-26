@@ -26,7 +26,6 @@ initModel symbol =
     { status = Loading
     , symbol = symbol
     , features = FeatureFlags []
-    , test = ""
     }
 
 
@@ -34,7 +33,6 @@ type alias Model =
     { status : Status
     , symbol : Symbol
     , features : FeatureFlags
-    , test : String
     }
 
 
