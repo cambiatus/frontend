@@ -38,6 +38,7 @@ module.exports = {
         '500': '#45469B'
       },
       red: '#DB1B1B',
+      lightred: '#F56565',
       yellow: '#FFD200',
       green: '#8ACC9E',
       blue: '#00BDCD',
@@ -55,6 +56,7 @@ module.exports = {
     borderRadius: {
       none: '0',
       sm: '.125rem',
+      label: '.313rem', // 5px
       default: '.4rem',
       lg: '1.25rem',
       full: '9999px'
@@ -111,7 +113,9 @@ module.exports = {
         heading: '1.375rem',
         '14': '3.5rem',
         '72': '18rem',
-        select: '18.75rem'
+        select: '18.75rem',
+        '1/3': '33%',
+        '1/2': '50%'
       },
       lineHeight: {
         caption: 0.75

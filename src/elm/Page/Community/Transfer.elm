@@ -11,7 +11,7 @@ module Page.Community.Transfer exposing
 
 import Api.Graphql
 import Browser.Events
-import Community exposing (Community, communityQuery)
+import Community exposing (Model, communityQuery)
 import Eos exposing (Symbol)
 import Eos.Account as Eos
 import Graphql.Document
@@ -69,9 +69,9 @@ initModel symbol maybeTo =
 
 type Status
     = Loading
-    | Loaded Community TransferStatus
+    | Loaded Community.Model TransferStatus
     | NotFound
-    | Failed (Graphql.Http.Error (Maybe Community))
+    | Failed (Graphql.Http.Error (Maybe Community.Model))
 
 
 type TransferStatus
@@ -163,7 +163,7 @@ view ({ shared } as loggedIn) model =
             viewForm loggedIn model f community False
 
 
-viewForm : LoggedIn.Model -> Model -> Form -> Community -> Bool -> Html Msg
+viewForm : LoggedIn.Model -> Model -> Form -> Community.Model -> Bool -> Html Msg
 viewForm ({ shared } as loggedIn) model f community isDisabled =
     let
         text_ s =
@@ -176,7 +176,7 @@ viewForm ({ shared } as loggedIn) model f community isDisabled =
                 [ span [ class "input-label" ]
                     [ text_ "account.my_wallet.transfer.send_to" ]
                 , div [ class "" ]
-                    [ autoCompleteAccount shared model f isDisabled community ]
+                    [ viewAutoCompleteAccount shared model f isDisabled community ]
                 ]
             , div [ class "mb-10" ]
                 [ span [ class "input-label" ]
@@ -226,8 +226,8 @@ viewForm ({ shared } as loggedIn) model f community isDisabled =
         ]
 
 
-autoCompleteAccount : Shared.Shared -> Model -> Form -> Bool -> Community -> Html Msg
-autoCompleteAccount shared model form isDisabled community =
+viewAutoCompleteAccount : Shared.Shared -> Model -> Form -> Bool -> Community.Model -> Html Msg
+viewAutoCompleteAccount shared model form isDisabled community =
     let
         users =
             community.members
@@ -269,7 +269,7 @@ type alias UpdateResult =
 
 
 type Msg
-    = CompletedLoad (Result (Graphql.Http.Error (Maybe Community)) (Maybe Community))
+    = CompletedLoad (Result (Graphql.Http.Error (Maybe Community.Model)) (Maybe Community.Model))
     | OnSelect (Maybe Profile)
     | SelectMsg (Select.Msg Profile)
     | EnteredAmount String
@@ -279,6 +279,25 @@ type Msg
     | PushTransaction
     | GotTransferResult (Result Value String)
     | Redirect Value
+
+
+getProfile : Maybe String -> Community.Model -> TransferStatus
+getProfile maybeTo community =
+    case maybeTo of
+        Just name ->
+            let
+                member =
+                    List.head (List.filter (\m -> Eos.nameToString m.account == name) community.members)
+            in
+            case member of
+                Just profile ->
+                    EditingTransfer { emptyForm | selectedProfile = Just profile }
+
+                Nothing ->
+                    EditingTransfer emptyForm
+
+        Nothing ->
+            EditingTransfer emptyForm
 
 
 update : Msg -> Model -> LoggedIn.Model -> UpdateResult
@@ -292,7 +311,7 @@ update msg model ({ shared } as loggedIn) =
         CompletedLoad (Ok community) ->
             case community of
                 Just cmm ->
-                    UR.init { model | status = Loaded cmm (EditingTransfer emptyForm) }
+                    UR.init { model | status = Loaded cmm (getProfile model.maybeTo cmm) }
 
                 Nothing ->
                     UR.init { model | status = NotFound }

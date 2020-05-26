@@ -30,15 +30,31 @@ claim requiredArgs object_ =
     Object.selectionForCompositeField "claim" [ Argument.required "input" requiredArgs.input Cambiatus.InputObject.encodeClaimInput ] object_ identity
 
 
+type alias ClaimsOptionalArguments =
+    { after : OptionalArgument String
+    , before : OptionalArgument String
+    , first : OptionalArgument Int
+    , last : OptionalArgument Int
+    }
+
+
 type alias ClaimsRequiredArguments =
     { input : Cambiatus.InputObject.ClaimsInput }
 
 
 {-| A list of claims
 -}
-claims : ClaimsRequiredArguments -> SelectionSet decodesTo Cambiatus.Object.Claim -> SelectionSet (List decodesTo) RootQuery
-claims requiredArgs object_ =
-    Object.selectionForCompositeField "claims" [ Argument.required "input" requiredArgs.input Cambiatus.InputObject.encodeClaimsInput ] object_ (identity >> Decode.list)
+claims : (ClaimsOptionalArguments -> ClaimsOptionalArguments) -> ClaimsRequiredArguments -> SelectionSet decodesTo Cambiatus.Object.ClaimConnection -> SelectionSet (Maybe decodesTo) RootQuery
+claims fillInOptionals requiredArgs object_ =
+    let
+        filledInOptionals =
+            fillInOptionals { after = Absent, before = Absent, first = Absent, last = Absent }
+
+        optionalArgs =
+            [ Argument.optional "after" filledInOptionals.after Encode.string, Argument.optional "before" filledInOptionals.before Encode.string, Argument.optional "first" filledInOptionals.first Encode.int, Argument.optional "last" filledInOptionals.last Encode.int ]
+                |> List.filterMap identity
+    in
+    Object.selectionForCompositeField "claims" (optionalArgs ++ [ Argument.required "input" requiredArgs.input Cambiatus.InputObject.encodeClaimsInput ]) object_ (identity >> Decode.nullable)
 
 
 {-| A list of communities in Cambiatus

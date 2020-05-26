@@ -78,7 +78,7 @@ type alias Model =
     { date : Maybe Posix
     , community : GraphqlStatus (Maybe Community.DashboardInfo) Community.DashboardInfo
     , balance : Status Balance
-    , analysis : GraphqlStatus (List Claim.Model) (List ClaimStatus)
+    , analysis : GraphqlStatus (Maybe Claim.Paginated) (List ClaimStatus)
     , lastSocket : String
     , transfers : GraphqlStatus (Maybe QueryTransfers) (List Transfer)
     , inviteModalStatus : InviteModalStatus
@@ -123,7 +123,7 @@ type ClaimStatus
 
 type VoteModalStatus
     = VoteModalClosed
-    | VoteOpened Int Bool
+    | VoteModalOpened Int Bool
 
 
 type InviteModalStatus
@@ -172,7 +172,7 @@ view loggedIn model =
 viewAnalysisModal : LoggedIn.Model -> Model -> Html Msg
 viewAnalysisModal loggedIn model =
     case model.voteModalStatus of
-        VoteOpened claimId vote ->
+        VoteModalOpened claimId vote ->
             let
                 t s =
                     I18Next.t loggedIn.shared.translations s
@@ -332,11 +332,18 @@ viewAnalysisList loggedIn profile model =
             div [ class "w-full flex" ]
                 [ div
                     [ class "w-full" ]
-                    [ div [ class "text-gray-600 text-2xl font-light flex mt-4 mb-4" ]
-                        [ div [ class "text-indigo-500 mr-2 font-medium" ]
-                            [ text_ "dashboard.analysis.title.1"
+                    [ div [ class "flex justify-between text-gray-600 text-2xl font-light flex mt-4 mb-4" ]
+                        [ div [ class "flex" ]
+                            [ div [ class "text-indigo-500 mr-2 font-medium" ]
+                                [ text_ "dashboard.analysis.title.1"
+                                ]
+                            , text_ "dashboard.analysis.title.2"
                             ]
-                        , text_ "dashboard.analysis.title.2"
+                        , a
+                            [ class "button button-secondary font-medium h-8 w-20"
+                            , Route.href Route.Analysis
+                            ]
+                            [ text_ "dashboard.analysis.all" ]
                         ]
                     , if isVoted claims || profile.analysisCount < 0 then
                         div [ class "flex flex-col w-full items-center justify-center px-3 py-12 my-2 rounded-lg bg-white" ]
@@ -388,13 +395,13 @@ viewAnalysis ({ shared } as loggedIn) claimStatus =
                         ]
                     , div [ class "flex" ]
                         [ button
-                            [ class "flex-1 button button-secondary"
+                            [ class "flex-1 button button-secondary font-medium text-red"
                             , onClick (OpenModal claim.id False)
                             ]
                             [ text_ "dashboard.reject" ]
                         , div [ class "w-4" ] []
                         , button
-                            [ class "flex-1 button button-primary"
+                            [ class "flex-1 button button-primary font-medium"
                             , onClick (OpenModal claim.id True)
                             ]
                             [ text_ "dashboard.verify" ]
@@ -509,7 +516,7 @@ viewAmount amount symbol =
 
 
 viewBalance : LoggedIn.Model -> Model -> Balance -> Html Msg
-viewBalance loggedIn model balance =
+viewBalance loggedIn _ balance =
     let
         text_ s =
             text (I18Next.t loggedIn.shared.translations s)
@@ -531,7 +538,7 @@ viewBalance loggedIn model balance =
                     [ text symbolText ]
                 ]
             , a
-                [ class "button button-primary w-full font-semibold mb-2"
+                [ class "button button-primary w-full font-medium mb-2"
                 , Route.href <| Route.Transfer loggedIn.selectedCommunity Nothing
                 ]
                 [ text_ "dashboard.transfer" ]
@@ -561,7 +568,7 @@ type Msg
     = GotTime Posix
     | CompletedLoadBalances (Result Http.Error (List Balance))
     | CompletedLoadUserTransfers (Result (Graphql.Http.Error (Maybe QueryTransfers)) (Maybe QueryTransfers))
-    | ClaimsLoaded (Result (Graphql.Http.Error (List Claim.Model)) (List Claim.Model))
+    | ClaimsLoaded (Result (Graphql.Http.Error (Maybe Claim.Paginated)) (Maybe Claim.Paginated))
     | CommunityLoaded (Result (Graphql.Http.Error (Maybe Community.DashboardInfo)) (Maybe Community.DashboardInfo))
     | OpenModal Int Bool
     | CloseModal
@@ -602,7 +609,7 @@ update msg model loggedIn =
         ClaimsLoaded (Ok claims) ->
             let
                 wrappedClaims =
-                    List.map ClaimLoaded claims
+                    List.map ClaimLoaded (Claim.paginatedToList claims)
             in
             { model | analysis = LoadedGraphql wrappedClaims }
                 |> UR.init
@@ -622,7 +629,7 @@ update msg model loggedIn =
                 |> UR.logGraphqlError msg err
 
         OpenModal claimId vote ->
-            { model | voteModalStatus = VoteOpened claimId vote }
+            { model | voteModalStatus = VoteModalOpened claimId vote }
                 |> UR.init
 
         CloseModal ->
@@ -656,7 +663,7 @@ update msg model loggedIn =
                                                     { actor = loggedIn.accountName
                                                     , permissionName = Eos.samplePermission
                                                     }
-                                              , data = encodeVerification claimId loggedIn.accountName vote
+                                              , data = Claim.encodeVerification claimId loggedIn.accountName vote
                                               }
                                             ]
                                         }
@@ -796,14 +803,20 @@ fetchAvailableAnalysis : Shared -> Symbol -> Eos.Name -> Cmd Msg
 fetchAvailableAnalysis shared communityId account =
     let
         arg =
-            { claimer = Absent
-            , symbol = Present (Eos.symbolToString communityId)
-            , validator = Present (Eos.nameToString account)
+            { input =
+                { claimer = Absent
+                , symbol = Present (Eos.symbolToString communityId)
+                , validator = Present (Eos.nameToString account)
+                , all = Present False
+                }
             }
+
+        pagination =
+            \a -> { a | first = Present 4 }
     in
     Api.Graphql.query
         shared
-        (Cambiatus.Query.claims { input = arg } Claim.selectionSet)
+        (Cambiatus.Query.claims pagination arg Claim.claimPaginatedSelectionSet)
         ClaimsLoaded
 
 
@@ -861,30 +874,6 @@ unwrapClaimStatus claimStatus =
 
         ClaimVoteFailed claim ->
             claim
-
-
-encodeVerification : Int -> Eos.Name -> Bool -> Encode.Value
-encodeVerification claimId validator vote =
-    let
-        encodedClaimId : Encode.Value
-        encodedClaimId =
-            Encode.int claimId
-
-        encodedVerifier : Encode.Value
-        encodedVerifier =
-            Eos.encodeName validator
-
-        encodedVote : Encode.Value
-        encodedVote =
-            vote
-                |> Eos.boolToEosBool
-                |> Eos.encodeEosBool
-    in
-    Encode.object
-        [ ( "claim_id", encodedClaimId )
-        , ( "verifier", encodedVerifier )
-        , ( "vote", encodedVote )
-        ]
 
 
 jsAddressToMsg : List String -> Value -> Maybe Msg

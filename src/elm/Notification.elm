@@ -12,7 +12,6 @@ import Cambiatus.Query as Query
 import Cambiatus.Scalar exposing (DateTime(..))
 import Cambiatus.Union
 import Cambiatus.Union.NotificationType
-import Community exposing (Community)
 import Eos
 import Eos.Account as Eos
 import Graphql.Operation exposing (RootMutation, RootQuery)

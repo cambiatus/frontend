@@ -110,13 +110,14 @@ buildClaimsInput fillOptionals =
     let
         optionals =
             fillOptionals
-                { claimer = Absent, symbol = Absent, validator = Absent }
+                { all = Absent, claimer = Absent, symbol = Absent, validator = Absent }
     in
-    { claimer = optionals.claimer, symbol = optionals.symbol, validator = optionals.validator }
+    { all = optionals.all, claimer = optionals.claimer, symbol = optionals.symbol, validator = optionals.validator }
 
 
 type alias ClaimsInputOptionalFields =
-    { claimer : OptionalArgument String
+    { all : OptionalArgument Bool
+    , claimer : OptionalArgument String
     , symbol : OptionalArgument String
     , validator : OptionalArgument String
     }
@@ -125,7 +126,8 @@ type alias ClaimsInputOptionalFields =
 {-| Type for the ClaimsInput input object.
 -}
 type alias ClaimsInput =
-    { claimer : OptionalArgument String
+    { all : OptionalArgument Bool
+    , claimer : OptionalArgument String
     , symbol : OptionalArgument String
     , validator : OptionalArgument String
     }
@@ -136,7 +138,7 @@ type alias ClaimsInput =
 encodeClaimsInput : ClaimsInput -> Value
 encodeClaimsInput input =
     Encode.maybeObject
-        [ ( "claimer", Encode.string |> Encode.optional input.claimer ), ( "symbol", Encode.string |> Encode.optional input.symbol ), ( "validator", Encode.string |> Encode.optional input.validator ) ]
+        [ ( "all", Encode.bool |> Encode.optional input.all ), ( "claimer", Encode.string |> Encode.optional input.claimer ), ( "symbol", Encode.string |> Encode.optional input.symbol ), ( "validator", Encode.string |> Encode.optional input.validator ) ]
 
 
 buildInviteInput : (InviteInputOptionalFields -> InviteInputOptionalFields) -> InviteInput

@@ -164,7 +164,11 @@ langFlag st =
             else
                 "/icons/en-lang.svg"
     in
-    img [ src iconLink, class "object-cover w-6 h-6 mr-4" ] []
+    img
+        [ class "object-cover w-6 h-6 lang-flag"
+        , src iconLink
+        ]
+        []
 
 
 viewFullLoading : Html msg

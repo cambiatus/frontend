@@ -14,7 +14,7 @@ import Api
 import Api.Graphql
 import Asset.Icon as Icon
 import Browser.Events as Events
-import Community exposing (Community)
+import Community exposing (Model)
 import Dict exposing (Dict)
 import Eos as Eos exposing (Symbol)
 import Eos.Account as Eos
@@ -81,11 +81,11 @@ type
     -- Edit Community
     = Loading Symbol
     | NotFound
-    | LoadingFailed (Graphql.Http.Error (Maybe Community))
-    | Unauthorized Community
-    | Editing Community (Dict String FormError) Form
-    | WaitingEditLogoUpload Community Form
-    | Saving Community Form
+    | LoadingFailed (Graphql.Http.Error (Maybe Community.Model))
+    | Unauthorized Community.Model
+    | Editing Community.Model (Dict String FormError) Form
+    | WaitingEditLogoUpload Community.Model Form
+    | Saving Community.Model Form
       -- New Community
     | EditingNew (Dict String FormError) Form
     | WaitingNewLogoUpload Form
@@ -115,7 +115,7 @@ newForm =
     }
 
 
-editForm : Community -> Form
+editForm : Community.Model -> Form
 editForm community =
     let
         ( logoSelected, logoList ) =
@@ -587,7 +587,7 @@ type alias UpdateResult =
 
 
 type Msg
-    = CompletedCommunityLoad (Result (Graphql.Http.Error (Maybe Community)) (Maybe Community))
+    = CompletedCommunityLoad (Result (Graphql.Http.Error (Maybe Community.Model)) (Maybe Community.Model))
     | EnteredTitle String
     | EnteredDescription String
     | EnteredSymbol String

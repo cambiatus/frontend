@@ -5,15 +5,14 @@ import Cambiatus.Scalar exposing (DateTime(..))
 import Eos
 import Eos.Account as Eos
 import Graphql.Http
-import Html exposing (..)
-import Html.Attributes exposing (..)
+import Html exposing (Html, a, div, h2, h5, img, p, span, text)
+import Html.Attributes exposing (class, src)
 import I18Next
 import Icons
 import Page
 import Profile
 import Route
 import Session.LoggedIn as LoggedIn exposing (External(..))
-import Session.Shared exposing (Shared)
 import Strftime
 import Time
 import Transfer exposing (Transfer, transferQuery)
@@ -60,7 +59,6 @@ type State
 
 type Status
     = Loading Int
-    | InvalidId String
     | LoadFailed (Graphql.Http.Error (Maybe Transfer))
     | Loaded (Maybe Transfer) State
 
@@ -78,13 +76,6 @@ view loggedIn model =
     case model.status of
         Loading _ ->
             Page.fullPageLoading
-
-        InvalidId invalidId ->
-            div [ class "container mx-auto px-4" ]
-                [ Page.viewHeader loggedIn (t "transfer_result.title") Route.Dashboard
-                , div []
-                    [ text (invalidId ++ t "transfer_result.errors.invalid_id") ]
-                ]
 
         LoadFailed error ->
             div []

@@ -191,6 +191,7 @@ type Page
     | Shop
     | FAQ
     | Profile
+    | PublicProfile
 
 
 view : (Msg -> msg) -> Page -> Model -> Html msg -> Html msg

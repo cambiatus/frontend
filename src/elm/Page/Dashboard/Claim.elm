@@ -1,4 +1,4 @@
-module Page.Community.Claim exposing (Model, Msg, init, jsAddressToMsg, msgToString, update, view, viewVoters)
+module Page.Dashboard.Claim exposing (Model, Msg, init, jsAddressToMsg, msgToString, update, view, viewVoters)
 
 import Api.Graphql
 import Cambiatus.Object.Claim as Claim
@@ -32,9 +32,7 @@ import Utils
 init : LoggedIn.Model -> Symbol -> Int -> ( Model, Cmd Msg )
 init { shared } communityId claimId =
     ( initModel communityId claimId
-    , Cmd.batch
-        [ fetchClaim claimId shared
-        ]
+    , fetchClaim claimId shared
     )
 
 
@@ -81,11 +79,11 @@ view ({ shared } as loggedIn) model =
 
             Loaded claim ->
                 div [ class "bg-white py-2" ]
-                    [ Page.viewHeader loggedIn claim.action.description Route.Dashboard
+                    [ Page.viewHeader loggedIn claim.action.description Route.Analysis
                     , div [ class "mt-10 mb-8" ]
                         [ Profile.viewLarge shared loggedIn.accountName claim.claimer
                         ]
-                    , div [ class "mx-auto container" ]
+                    , div [ class "mx-auto container px-4" ]
                         [ viewTitle shared claim
                         , viewDetails shared model claim
                         , viewVoters loggedIn claim
@@ -102,6 +100,9 @@ viewTitle shared claim =
     let
         text_ s =
             text (I18Next.t shared.translations s)
+
+        negativeChecks =
+            List.filter (\ch -> not ch.isApproved) claim.checks
     in
     div [ class "text-heading font-bold text-center mb-8" ]
         [ if claim.isVerified then
@@ -110,17 +111,17 @@ viewTitle shared claim =
                 , span [ class "text-green ml-1" ] [ text_ "claim.title_approved.2" ]
                 ]
 
-          else if List.length claim.checks < claim.action.verifications then
+          else if List.length negativeChecks >= claim.action.verifications then
             div [ class "inline-block" ]
-                [ text_ "claim.title_under_review.1"
-                , span [ class "text-gray ml-1" ] [ text_ "claim.title_under_review.2" ]
-                , span [ class "mr-1" ] [ text_ "claim.title_under_review.3" ]
+                [ text_ "claim.title_rejected.1"
+                , span [ class "text-red ml-1" ] [ text_ "claim.title_rejected.2" ]
                 ]
 
           else
             div [ class "inline-block" ]
-                [ text_ "claim.title_rejected.1"
-                , span [ class "text-red ml-1" ] [ text_ "claim.title_rejected.2" ]
+                [ text_ "claim.title_under_review.1"
+                , span [ class "text-gray ml-1" ] [ text_ "claim.title_under_review.2" ]
+                , span [ class "mr-1" ] [ text_ "claim.title_under_review.3" ]
                 ]
         ]
 
@@ -130,6 +131,12 @@ viewDetails shared model claim =
     let
         text_ s =
             text (I18Next.t shared.translations s)
+
+        negativeChecks =
+            List.filter (\ch -> not ch.isApproved) claim.checks
+
+        isRejected =
+            claim.isVerified == False && (List.length negativeChecks >= claim.action.verifications)
     in
     div []
         [ div [ class "mb-8" ]
@@ -162,7 +169,7 @@ viewDetails shared model claim =
                         [ text_ "claim.claimer_reward" ]
                     , p
                         [ class "pt-2 text-body"
-                        , classList [ ( "text-red line-through", claim.isVerified == False && (List.length claim.checks >= claim.action.verifications) ) ]
+                        , classList [ ( "text-red line-through", isRejected ) ]
                         ]
                         [ text (String.fromFloat claim.action.reward ++ " " ++ Eos.symbolToString model.communityId) ]
                     ]
@@ -170,7 +177,7 @@ viewDetails shared model claim =
             ]
         , div [ class "mb-8" ]
             [ p
-                [ class "pt-6 text-caption uppercase text-green" ]
+                [ class "text-caption uppercase text-green" ]
                 [ text_ "claim.objective" ]
             , p
                 [ class "pt-2 text-body" ]
@@ -202,38 +209,63 @@ viewVoters ({ shared } as loggedIn) claim =
                 claim.action.validators
     in
     div []
-        [ div []
+        [ div [ class "mb-8" ]
             [ p [ class "text-caption uppercase text-green" ]
                 [ text_ "claim.approved_by" ]
             , div []
                 [ if List.isEmpty claim.checks then
-                    Profile.viewEmpty shared
+                    div [ class "pt-2" ] [ Profile.viewEmpty shared ]
 
                   else
-                    div [ class "flex flex-row mt-3 mb-10 flex-wrap" ]
-                        (List.map (\c -> Profile.view shared loggedIn.accountName c.validator) claim.checks)
+                    div [ class "flex flex-wrap -mx-2 pt-2" ]
+                        (List.map
+                            (\c ->
+                                if c.isApproved then
+                                    div [ class "px-2" ]
+                                        [ Profile.view shared loggedIn.accountName c.validator
+                                        ]
+
+                                else
+                                    text ""
+                            )
+                            claim.checks
+                        )
                 ]
             ]
-        , div []
+        , div [ class "mb-8" ]
             [ p [ class "text-caption uppercase text-green" ]
                 [ text_ "claim.disapproved_by" ]
             , div [ class "flex mb-10 " ]
                 [ if List.filter (\check -> check.isApproved == False) claim.checks |> List.isEmpty then
-                    Profile.viewEmpty shared
+                    div [ class "pt-2" ] [ Profile.viewEmpty shared ]
 
                   else
-                    text ""
+                    div [ class "flex flex-wrap -mx-2 pt-2" ]
+                        (List.map
+                            (\c ->
+                                if not c.isApproved then
+                                    div [ class "px-2" ]
+                                        [ Profile.view shared loggedIn.accountName c.validator
+                                        ]
+
+                                else
+                                    text ""
+                            )
+                            claim.checks
+                        )
                 ]
             ]
-        , div []
+        , div [ class "mb-8" ]
             [ p [ class "text-caption uppercase text-green" ]
                 [ text_ "claim.pending" ]
-            , div []
+            , div [ class "pt-2" ]
                 [ if List.length claim.checks == claim.action.verifications then
-                    Profile.viewEmpty shared
+                    div [ class "flex" ]
+                        [ Profile.viewEmpty shared
+                        ]
 
                   else
-                    div [ class "flex flex-row mt-3 mb-10 flex-wrap" ]
+                    div [ class "flex flex-row flex-wrap" ]
                         (List.map (\v -> Profile.view shared loggedIn.accountName v) pendingValidators)
                 ]
             ]

@@ -19,6 +19,7 @@ type Route
     | LoginWithPrivateKey (Maybe Route)
     | Logout
     | Notification
+    | PublicProfile String
     | Profile
     | Dashboard
     | Community Symbol
@@ -40,6 +41,7 @@ type Route
     | ViewTransfer Int
     | Invite String
     | Transfer Symbol (Maybe String)
+    | Analysis
 
 
 parser : Url -> Parser (Route -> a) a
@@ -74,6 +76,7 @@ parser url =
                         (Query.string "redirect")
             )
         , Url.map Logout (s "logout")
+        , Url.map PublicProfile (s "profile" </> string)
         , Url.map Profile (s "profile")
         , Url.map Notification (s "notification")
         , Url.map Dashboard (s "dashboard")
@@ -107,6 +110,7 @@ parser url =
         , Url.map ViewTransfer (s "transfer" </> int)
         , Url.map Invite (s "invite" </> string)
         , Url.map Transfer (s "community" </> Eos.symbolUrlParser </> s "transfer" <?> Query.string "to")
+        , Url.map Analysis (s "dashboard" </> s "analysis")
         ]
 
 
@@ -159,21 +163,10 @@ parseRedirect url maybeQuery =
 
                 Just p ->
                     ":" ++ String.fromInt p
-
-        maybeUrl =
-            case maybeQuery of
-                Nothing ->
-                    Nothing
-
-                Just query ->
-                    Url.fromString (protocol ++ host ++ port_ ++ query)
     in
-    case maybeUrl of
-        Nothing ->
-            Nothing
-
-        Just url_ ->
-            Url.parse (parser url_) url_
+    maybeQuery
+        |> Maybe.andThen (\query -> Url.fromString (protocol ++ host ++ port_ ++ query))
+        |> Maybe.andThen (\url_ -> Url.parse (parser url_) url_)
 
 
 shopFilterToString : Shop.Filter -> String
@@ -230,6 +223,9 @@ routeToString route =
 
                 Notification ->
                     ( [ "notification" ], [] )
+
+                PublicProfile accountName ->
+                    ( [ "profile", accountName ], [] )
 
                 Profile ->
                     ( [ "profile" ], [] )
@@ -314,5 +310,8 @@ routeToString route =
                       ]
                     , [ Url.Builder.string "to" (Maybe.withDefault "" maybeTo) ]
                     )
+
+                Analysis ->
+                    ( [ "dashboard", "analysis" ], [] )
     in
     Url.Builder.absolute paths queries

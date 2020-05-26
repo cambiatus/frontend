@@ -2,7 +2,7 @@ module Page.Community.Objectives exposing (Model, Msg, init, msgToString, update
 
 import Api.Graphql
 import Cambiatus.Enum.VerificationType as VerificationType exposing (VerificationType)
-import Community exposing (Community, communityQuery)
+import Community exposing (Model, communityQuery)
 import Eos exposing (Symbol)
 import Graphql.Http
 import Html exposing (..)
@@ -54,9 +54,9 @@ initModel symbol =
 
 type Status
     = Loading
-    | Loaded Community
+    | Loaded Community.Model
     | NotFound
-    | Failed (Graphql.Http.Error (Maybe Community))
+    | Failed (Graphql.Http.Error (Maybe Community.Model))
 
 
 
@@ -90,7 +90,7 @@ view ({ shared } as loggedIn) model =
                 ]
 
 
-viewNewObjectiveButton : LoggedIn.Model -> Community -> Html msg
+viewNewObjectiveButton : LoggedIn.Model -> Community.Model -> Html msg
 viewNewObjectiveButton ({ shared } as loggedIn) community =
     if LoggedIn.isAccount community.creator loggedIn then
         a
@@ -103,7 +103,7 @@ viewNewObjectiveButton ({ shared } as loggedIn) community =
         text ""
 
 
-viewObjective : LoggedIn.Model -> Model -> Community -> Int -> Community.Objective -> Html Msg
+viewObjective : LoggedIn.Model -> Model -> Community.Model -> Int -> Community.Objective -> Html Msg
 viewObjective ({ shared } as loggedIn) model community index objective =
     let
         canEdit : Bool
@@ -326,7 +326,7 @@ type alias UpdateResult =
 
 
 type Msg
-    = CompletedLoad (Result (Graphql.Http.Error (Maybe Community)) (Maybe Community))
+    = CompletedLoad (Result (Graphql.Http.Error (Maybe Community.Model)) (Maybe Community.Model))
     | GotTime Posix
     | OpenObjective Int
 

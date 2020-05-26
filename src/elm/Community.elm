@@ -4,12 +4,12 @@ module Community exposing
     , ActionVerificationsResponse
     , Balance
     , ClaimResponse
-    , Community
     , CreateCommunityData
     , CreateTokenData
     , DashboardInfo
     , Invite
     , Metadata
+    , Model
     , Objective
     , Transaction
     , Verification(..)
@@ -99,7 +99,7 @@ type alias Metadata =
 -- Community Data
 
 
-type alias Community =
+type alias Model =
     { title : String
     , description : String
     , symbol : Symbol
@@ -141,9 +141,9 @@ dashboardSelectionSet =
         |> with Community.saleCount
 
 
-communitySelectionSet : SelectionSet Community Cambiatus.Object.Community
+communitySelectionSet : SelectionSet Model Cambiatus.Object.Community
 communitySelectionSet =
-    SelectionSet.succeed Community
+    SelectionSet.succeed Model
         |> with Community.name
         |> with Community.description
         |> with (Eos.symbolSelectionSet Community.symbol)
@@ -203,7 +203,7 @@ type alias WithObjectives =
     }
 
 
-communityQuery : Symbol -> SelectionSet (Maybe Community) RootQuery
+communityQuery : Symbol -> SelectionSet (Maybe Model) RootQuery
 communityQuery symbol =
     Query.community { symbol = symbolToString symbol } communitySelectionSet
 
@@ -673,7 +673,7 @@ toVerifications actionVerificationResponse =
 
 
 type alias Invite =
-    { community : Community
+    { community : Model
     , creator : Profile
     }
 
