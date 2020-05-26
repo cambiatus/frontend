@@ -34,6 +34,7 @@ import Browser.Events
 import Cambiatus.Object
 import Cambiatus.Object.UnreadNotifications
 import Cambiatus.Subscription as Subscription
+import Community
 import Eos exposing (Symbol)
 import Eos.Account as Eos
 import Flags exposing (Flags)
@@ -74,6 +75,7 @@ init shared accountName flags =
     ( initModel shared authModel accountName flags.selectedCommunity
     , Cmd.batch
         [ Api.Graphql.query shared (Profile.query accountName) CompletedLoadProfile
+        , Api.Graphql.query shared (Community.communityQuery flags.selectedCommunity) CompletedLoadCommunity
         ]
     )
 
@@ -129,6 +131,8 @@ type alias Model =
     , auth : Auth.Model
     , showCommunitySelector : Bool
     , feedback : FeedbackVisibility
+    , shop : Bool
+    , actions : Bool
     }
 
 
@@ -149,6 +153,8 @@ initModel shared authModel accountName selectedCommunity =
     , auth = authModel
     , feedback = Hidden
     , showCommunitySelector = False
+    , shop = True
+    , actions = True
     }
 
 
@@ -478,7 +484,7 @@ communitySelectorModal model =
         viewCommunityItem c =
             div
                 [ class "flex items-center py-4 border-b text-body hover:pointer"
-                , onClick <| SelectCommunity c.id
+                , onClick <| SelectCommunity c.id c.shop c.actions
                 ]
                 [ img [ src (logoUrl c.logo), class "h-16 w-16 mr-5" ] []
                 , text c.name
@@ -656,6 +662,7 @@ type Msg
     | CompletedLoadTranslation String (Result Http.Error Translations)
     | ClickedTryAgainTranslation
     | CompletedLoadProfile (Result (Graphql.Http.Error (Maybe Profile)) (Maybe Profile))
+    | CompletedLoadCommunity (Result (Graphql.Http.Error (Maybe Community.Model)) (Maybe Community.Model))
     | ClickedTryAgainProfile Eos.Name
     | ClickedLogout
     | EnteredSearch String
@@ -672,7 +679,7 @@ type Msg
     | KeyDown String
     | OpenCommunitySelector
     | CloseCommunitySelector
-    | SelectCommunity Symbol
+    | SelectCommunity Symbol Bool Bool
     | HideFeedbackLocal
 
 
@@ -756,6 +763,18 @@ update msg model =
                                 model.profile
                 }
                 |> UR.logGraphqlError msg err
+
+        CompletedLoadCommunity (Ok community) ->
+            case community of
+                Just comm ->
+                    { model | actions = comm.actions, shop = comm.shop }
+                        |> UR.init
+
+                Nothing ->
+                    UR.init model
+
+        CompletedLoadCommunity (Err err) ->
+            UR.init model
 
         ClickedTryAgainProfile accountName ->
             UR.init { model | profile = Loading accountName }
@@ -870,8 +889,8 @@ update msg model =
             { model | showCommunitySelector = False }
                 |> UR.init
 
-        SelectCommunity communityId ->
-            { model | selectedCommunity = communityId, showCommunitySelector = False }
+        SelectCommunity communityId shop actions ->
+            { model | selectedCommunity = communityId, showCommunitySelector = False, shop = shop, actions = actions }
                 |> UR.init
                 |> UR.addCmd (Route.replaceUrl model.shared.navKey Route.Dashboard)
                 |> UR.addPort
@@ -1001,6 +1020,9 @@ msgToString msg =
         CompletedLoadProfile r ->
             [ "CompletedLoadProfile", UR.resultToString r ]
 
+        CompletedLoadCommunity r ->
+            [ "CompletedLoadCommunity", UR.resultToString r ]
+
         ClickedTryAgainProfile _ ->
             [ "ClickedTryAgainProfile" ]
 
@@ -1049,7 +1071,7 @@ msgToString msg =
         CloseCommunitySelector ->
             [ "CloseCommunitySelector" ]
 
-        SelectCommunity _ ->
+        SelectCommunity _ _ _ ->
             [ "SelectCommunity" ]
 
         HideFeedbackLocal ->
