@@ -223,8 +223,6 @@ view loggedIn model =
                                         text ""
                                    ]
                             )
-                        -- , Transfer.getTransfers (Just community)
-                        --     |> viewSections loggedIn model
 
                       else
                         div [] []
