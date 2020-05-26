@@ -626,7 +626,9 @@
     },
     "features": {
       "title": "Recursos",
-      "description": "Ações, loja"
+      "description": "Ações, loja",
+      "enabled": "Habilitado",
+      "disabled": "Desabilitado"
     }
   }
 }

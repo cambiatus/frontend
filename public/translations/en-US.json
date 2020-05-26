@@ -622,7 +622,9 @@
     },
     "features": {
       "title": "Features",
-      "description": "Actions, shop"
+      "description": "Actions, shop",
+      "enabled": "Enabled",
+      "disabled": "Disabled"
     }
   }
 }
