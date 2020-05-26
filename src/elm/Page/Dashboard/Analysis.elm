@@ -630,45 +630,40 @@ update msg model loggedIn =
 fetchAnalysis : LoggedIn.Model -> Filter -> Maybe String -> Cmd Msg
 fetchAnalysis { accountName, selectedCommunity, shared } { profile, statusFilter } maybeCursorAfter =
     let
+        optionalClaimer =
+            case profile of
+                Just p ->
+                    Present (Eos.nameToString p.account)
+
+                Nothing ->
+                    Absent
+
+        optionalStatus =
+            case statusFilter of
+                All ->
+                    Absent
+
+                Approved ->
+                    Present "approved"
+
+                Rejected ->
+                    Present "rejected"
+
+                Pending ->
+                    Present "pending"
+
         filterRecord =
-            { claimer = Absent
-            , status = Absent
+            { claimer = optionalClaimer
+            , status = optionalStatus
             }
-                |> (\fr ->
-                        { fr
-                            | claimer =
-                                case profile of
-                                    Just p ->
-                                        Present (Eos.nameToString p.account)
-
-                                    Nothing ->
-                                        Absent
-                        }
-                   )
-                |> (\fr ->
-                        { fr
-                            | status =
-                                case statusFilter of
-                                    All ->
-                                        Absent
-
-                                    Approved ->
-                                        Present "approved"
-
-                                    Rejected ->
-                                        Present "rejected"
-
-                                    Pending ->
-                                        Present "pending"
-                        }
-                   )
 
         filter =
-            if filterRecord.claimer /= Absent || filterRecord.status /= Absent then
-                Present filterRecord
+            case ( filterRecord.claimer, filterRecord.status ) of
+                ( Absent, Absent ) ->
+                    Absent
 
-            else
-                Absent
+                ( _, _ ) ->
+                    Present filterRecord
 
         args =
             { input =
