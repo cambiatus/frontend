@@ -257,7 +257,7 @@ viewClaim { shared, accountName, selectedCommunity } claim =
             else
                 ( t "all_analysis.pending", "text-black" )
     in
-    div [ class "w-full sm:w-full md:w-1/2 lg:w-1/3 xl:w-1/4 px-2 mb-4" ]
+    div [ class "w-full md:w-1/2 lg:w-1/3 xl:w-1/4 px-2 mb-4" ]
         [ if Claim.isAlreadyValidated claim accountName then
             div [ class "flex flex-col p-4 my-2 rounded-lg bg-white" ]
                 [ div [ class "flex justify-center mb-8" ]

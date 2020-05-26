@@ -379,7 +379,7 @@ viewAnalysis ({ shared, selectedCommunity } as loggedIn) claimStatus =
     case claimStatus of
         ClaimLoaded claim ->
             div
-                [ class "w-full sm:w-full md:w-1/2 lg:w-1/3 xl:w-1/4 px-2 mb-4"
+                [ class "w-full md:w-1/2 lg:w-1/3 xl:w-1/4 px-2 mb-4"
                 ]
                 [ div
                     [ class " flex flex-col p-4 my-2 rounded-lg bg-white"
@@ -416,7 +416,7 @@ viewAnalysis ({ shared, selectedCommunity } as loggedIn) claimStatus =
                 ]
 
         ClaimLoading _ ->
-            div [ class "w-full sm:w-full md:w-1/2 lg:w-1/3 xl:w-1/4 px-2 mb-4" ]
+            div [ class "w-full md:w-1/2 lg:w-1/3 xl:w-1/4 px-2 mb-4" ]
                 [ div [ class "rounded-lg bg-white h-56 my-2" ] [ Page.fullPageLoading ]
                 ]
 
