@@ -37,6 +37,7 @@ import Cambiatus.Subscription as Subscription
 import Community
 import Eos exposing (Symbol)
 import Eos.Account as Eos
+import Feature exposing (FeatureFlags(..))
 import Flags exposing (Flags)
 import Graphql.Document
 import Graphql.Http
@@ -131,8 +132,7 @@ type alias Model =
     , auth : Auth.Model
     , showCommunitySelector : Bool
     , feedback : FeedbackVisibility
-    , shop : Bool
-    , actions : Bool
+    , features : FeatureFlags
     }
 
 
@@ -153,8 +153,7 @@ initModel shared authModel accountName selectedCommunity =
     , auth = authModel
     , feedback = Hidden
     , showCommunitySelector = False
-    , shop = True
-    , actions = True
+    , features = FeatureFlags []
     }
 
 
@@ -567,7 +566,7 @@ viewMainMenu page model =
             , text (t model.shared.translations "menu.dashboard")
             ]
          ]
-            ++ (if model.shop then
+            ++ (if model.features |> Feature.has Feature.Shop then
                     [ a
                         [ classList
                             [ ( menuItemClass, True )
@@ -775,13 +774,28 @@ update msg model =
         CompletedLoadCommunity (Ok community) ->
             case community of
                 Just comm ->
-                    { model | actions = comm.actions, shop = comm.shop }
+                    { model
+                        | features =
+                            model.features
+                                |> (if comm.actions then
+                                        Feature.add Feature.Actions
+
+                                    else
+                                        \r -> r
+                                   )
+                                |> (if comm.shop then
+                                        Feature.add Feature.Shop
+
+                                    else
+                                        \r -> r
+                                   )
+                    }
                         |> UR.init
 
                 Nothing ->
                     UR.init model
 
-        CompletedLoadCommunity (Err err) ->
+        CompletedLoadCommunity (Err _) ->
             UR.init model
 
         ClickedTryAgainProfile accountName ->
@@ -898,7 +912,24 @@ update msg model =
                 |> UR.init
 
         SelectCommunity communityId shop actions ->
-            { model | selectedCommunity = communityId, showCommunitySelector = False, shop = shop, actions = actions }
+            { model
+                | selectedCommunity = communityId
+                , showCommunitySelector = False
+                , features =
+                    model.features
+                        |> (if actions then
+                                Feature.add Feature.Actions
+
+                            else
+                                \r -> r
+                           )
+                        |> (if shop then
+                                Feature.add Feature.Shop
+
+                            else
+                                \r -> r
+                           )
+            }
                 |> UR.init
                 |> UR.addCmd (Route.replaceUrl model.shared.navKey Route.Dashboard)
                 |> UR.addPort
