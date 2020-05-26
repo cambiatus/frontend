@@ -290,6 +290,12 @@ viewClaim { shared, accountName, selectedCommunity } claim =
                 [ div [ class "flex justify-start mb-8" ]
                     [ Profile.view shared accountName claim.claimer
                     ]
+                , div
+                    [ class "bg-gray-100 flex items-center justify-center h-6 w-32 mb-2" ]
+                    [ p
+                        [ class ("text-caption uppercase " ++ textColor) ]
+                        [ text msg ]
+                    ]
                 , div [ class "mb-6" ]
                     [ p [ class "text-body" ]
                         [ text claim.action.description ]
