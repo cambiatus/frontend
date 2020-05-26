@@ -543,6 +543,7 @@
   "all_analysis": {
     "title": "All actions for analysis",
     "more_details": "More details",
+    "all": "All",
     "approved": "Approved",
     "pending": "Under Review",
     "disapproved": "Disapproved",

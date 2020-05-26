@@ -549,6 +549,7 @@
   "all_analysis": {
     "title": "Todas as ações para análise",
     "more_details": "Mais detalhes",
+    "all": "Todos",
     "approved": "Aprovado",
     "pending": "Sob análise",
     "disapproved": "Reprovado",

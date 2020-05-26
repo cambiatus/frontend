@@ -547,6 +547,7 @@
   "all_analysis": {
     "title": "Todas las acciones para el análisis.",
     "more_details": "Más detalles",
+    "all": "Todas",
     "approved": "Aprobada",
     "pending": "Bajo revisión",
     "disapproved": "Rechazada",

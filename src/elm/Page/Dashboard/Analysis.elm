@@ -206,7 +206,7 @@ viewFilters ({ shared } as loggedIn) model =
                     [ value ""
                     , selected (model.filters.statusFilter == All)
                     ]
-                    [ text "" ]
+                    [ text_ "all_analysis.all" ]
                 , option
                     [ value "approved"
                     , selected (model.filters.statusFilter == Approved)

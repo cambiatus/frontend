@@ -662,7 +662,6 @@ viewClaimModal loggedIn model =
 
 
 
--- SECTIONS
 -- UPDATE
 
 

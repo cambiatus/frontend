@@ -546,6 +546,7 @@
   "all_analysis": {
     "title": "Totes les accions per a l'anàlisi",
     "more_details": "Més detalls",
+    "all": "Tot",
     "approved": "Aprovat",
     "pending": "Sota Revisió",
     "disapproved": "Rebutjat",
