@@ -53,7 +53,8 @@
         "greater_than_or_equal": "El nombre ha de ser major o igual a {{base}}",
         "length_greater_than_or_equal": "Trieu almenys {{count}} elements",
         "lower_than": "El nombre ha de ser inferior a {{base}}",
-        "lower_than_or_equal": "El nombre ha de ser inferior o igual a {{base}}"
+        "lower_than_or_equal": "El nombre ha de ser inferior o igual a {{base}}",
+        "is_odd": "El nombre ha de ser imparell"
       },
       "date": {
         "invalid": "La data no és vàlida, fes-la servir 'mm/dd/aaaa'"

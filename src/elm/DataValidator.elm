@@ -200,7 +200,7 @@ isOdd constraints =
                     modBy 2 num /= 0
     , defaultError =
         \translations ->
-            I18Next.t translations (numTranslation "isOdd")
+            I18Next.t translations (numTranslation "is_odd")
     }
         :: constraints
 
