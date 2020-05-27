@@ -278,13 +278,13 @@ defaultVerificationReward =
 
 minVotesLimit : Int
 minVotesLimit =
-    1
+    3
 
 
 defaultMinVotes : Validator String
 defaultMinVotes =
     []
-        |> greaterThanOrEqual (toFloat minVotesLimit)
+        |> greaterThan (toFloat minVotesLimit)
         |> isOdd
         |> newValidator (String.fromInt minVotesLimit) (\s -> Just s) True
 
