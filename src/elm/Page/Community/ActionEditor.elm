@@ -284,7 +284,7 @@ minVotesLimit =
 defaultMinVotes : Validator String
 defaultMinVotes =
     []
-        |> greaterThan (toFloat minVotesLimit)
+        |> greaterThanOrEqual (toFloat minVotesLimit)
         |> isOdd
         |> newValidator (String.fromInt minVotesLimit) (\s -> Just s) True
 
