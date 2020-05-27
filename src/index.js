@@ -378,6 +378,13 @@ async function handleJavascriptPort (arg) {
             accountName: store.accountName,
             privateKey: decryptedKey
           }
+
+          // Set default selected community
+          window.localStorage.setItem(
+            SELECTED_COMMUNITY_KEY,
+            flags.selectedCommunity
+          )
+
           devLog('response', response)
           app.ports.javascriptInPort.send(response)
         } catch (e) {
