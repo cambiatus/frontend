@@ -56,7 +56,7 @@
         "lower_than_or_equal": "O número deve ser menor ou igual a {{base}}",
         "is_odd": "O número deve ser ímpar"
       },
-      "DATE": {
+      "date": {
         "invalid": "A data está inválida. Use 'mm/dd/aaaa'"
       },
       "text": {
