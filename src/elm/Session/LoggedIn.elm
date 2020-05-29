@@ -447,6 +447,15 @@ viewCommunitySelector ({ shared } as model) =
                 _ ->
                     Nothing
 
+        hasMultipleCommunities : Bool
+        hasMultipleCommunities =
+            case model.profile of
+                Loaded p ->
+                    List.length p.communities > 1
+
+                _ ->
+                    False
+
         url hash =
             shared.endpoints.ipfs ++ "/" ++ hash
     in
@@ -454,7 +463,11 @@ viewCommunitySelector ({ shared } as model) =
         Just community ->
             button [ class "flex items-center", onClick OpenCommunitySelector ]
                 [ img [ class "h-10", src <| url community.logo ] []
-                , Icons.arrowDown ""
+                , if hasMultipleCommunities then
+                    Icons.arrowDown ""
+
+                  else
+                    text ""
                 ]
 
         Nothing ->
