@@ -76,7 +76,7 @@ init shared accountName flags =
     ( initModel shared authModel accountName flags.selectedCommunity
     , Cmd.batch
         [ Api.Graphql.query shared (Profile.query accountName) CompletedLoadProfile
-        , Api.Graphql.query shared (Community.communityQuery flags.selectedCommunity) CompletedLoadCommunity
+        , Api.Graphql.query shared (Community.communityQuery flags.selectedCommunity) CompletedLoadSettings
         ]
     )
 
@@ -669,7 +669,7 @@ type Msg
     | CompletedLoadTranslation String (Result Http.Error Translations)
     | ClickedTryAgainTranslation
     | CompletedLoadProfile (Result (Graphql.Http.Error (Maybe Profile)) (Maybe Profile))
-    | CompletedLoadCommunity (Result (Graphql.Http.Error (Maybe Community.Model)) (Maybe Community.Model))
+    | CompletedLoadSettings (Result (Graphql.Http.Error (Maybe Community.Model)) (Maybe Community.Model))
     | ClickedTryAgainProfile Eos.Name
     | ClickedLogout
     | EnteredSearch String
@@ -771,7 +771,7 @@ update msg model =
                 }
                 |> UR.logGraphqlError msg err
 
-        CompletedLoadCommunity (Ok community) ->
+        CompletedLoadSettings (Ok community) ->
             case community of
                 Just comm ->
                     { model
@@ -795,7 +795,7 @@ update msg model =
                 Nothing ->
                     UR.init model
 
-        CompletedLoadCommunity (Err _) ->
+        CompletedLoadSettings (Err _) ->
             UR.init model
 
         ClickedTryAgainProfile accountName ->
@@ -918,7 +918,7 @@ update msg model =
             }
                 |> UR.init
                 |> UR.addCmd (Route.replaceUrl model.shared.navKey Route.Dashboard)
-                |> UR.addCmd (Api.Graphql.query shared (Community.communityQuery communityId) CompletedLoadCommunity)
+                |> UR.addCmd (Api.Graphql.query shared (Community.communityQuery communityId) CompletedLoadSettings)
                 |> UR.addPort
                     { responseAddress = msg
                     , responseData = Encode.null
@@ -1046,8 +1046,8 @@ msgToString msg =
         CompletedLoadProfile r ->
             [ "CompletedLoadProfile", UR.resultToString r ]
 
-        CompletedLoadCommunity r ->
-            [ "CompletedLoadCommunity", UR.resultToString r ]
+        CompletedLoadSettings r ->
+            [ "CompletedLoadSettings", UR.resultToString r ]
 
         ClickedTryAgainProfile _ ->
             [ "ClickedTryAgainProfile" ]
