@@ -1,15 +1,25 @@
 module Page.PaymentHistory exposing (Model, Msg, init, msgToString, update, view)
 
 import Api.Graphql
-import Avatar
+import Api.Relay exposing (Edge, PageConnection)
+import Avatar exposing (Avatar)
+import Cambiatus.InputObject exposing (PaymentHistoryInput, PaymentHistoryInputRequiredFields)
+import Cambiatus.Object
+import Cambiatus.Object.Profile as User
+import Cambiatus.Query
+import Cambiatus.Scalar
 import Date exposing (Date)
 import DatePicker exposing (DateEvent(..), defaultSettings, off)
 import Eos
 import Eos.Account
 import Graphql.Http
 import Graphql.OptionalArgument exposing (OptionalArgument(..))
-import Html exposing (Html, button, div, h1, h2, label, p, span, text, ul)
-import Html.Attributes as Attrs exposing (class, style)
+import Graphql.SelectionSet as SelectionSet exposing (SelectionSet)
+import Html exposing (Html, a, button, div, h1, h2, label, p, span, text, ul)
+import Html.Attributes as Attrs exposing (class, href, style)
+import Html.Events exposing (onClick)
+import I18Next exposing (Translations, t)
+import Icons
 import List.Extra as LE
 import Page
 import Profile exposing (Profile)
@@ -18,7 +28,7 @@ import Session.Guest as Guest exposing (External(..))
 import Session.Shared as Shared exposing (Shared)
 import Strftime
 import Time exposing (Month(..), Weekday(..))
-import Transfer exposing (QueryTransfers, Transfer, userFilter)
+import Transfer exposing (ConnectionTransfer, QueryTransfers, Transfer)
 import UpdateResult as UR
 import Utils
 
@@ -29,11 +39,14 @@ import Utils
 
 type Msg
     = NoOp
-    | CompletedLoadUserTransfers (Result (Graphql.Http.Error (Maybe QueryTransfers)) (Maybe QueryTransfers))
-    | CompletedProfileLoad (Result (Graphql.Http.Error (Maybe Profile)) (Maybe Profile))
+    | TransfersLoaded (Result (Graphql.Http.Error (Maybe ConnectionTransfer)) (Maybe ConnectionTransfer))
+    | ProfileLoaded (Result (Graphql.Http.Error (Maybe RecipientProfile)) (Maybe RecipientProfile))
     | OnSelect (Maybe Profile)
     | SelectMsg (Select.Msg Profile)
-    | ToDatePicker DatePicker.Msg
+    | SetDatePicker DatePicker.Msg
+    | ClearSelectedDate
+    | ClearSelectSelection
+    | ShowMore
 
 
 msgToString : Msg -> List String
@@ -51,11 +64,17 @@ msgToString msg =
         NoOp ->
             [ "NoOp" ]
 
-        CompletedLoadUserTransfers result ->
+        ShowMore ->
+            [ "ShowMore" ]
+
+        TransfersLoaded result ->
             resultToString [ "CompletedLoadUserTransfers" ] result
 
-        CompletedProfileLoad r ->
+        ProfileLoaded r ->
             [ "CompletedProfileLoad", UR.resultToString r ]
+
+        ClearSelectSelection ->
+            [ "ClearSelectSelection" ]
 
         OnSelect _ ->
             [ "OnSelect" ]
@@ -63,8 +82,11 @@ msgToString msg =
         SelectMsg _ ->
             [ "SelectMsg" ]
 
-        ToDatePicker _ ->
+        SetDatePicker _ ->
             [ "ToDatePicker" ]
+
+        ClearSelectedDate ->
+            [ "ClearSelectedDate" ]
 
 
 
@@ -74,12 +96,11 @@ msgToString msg =
 type alias Model =
     { payerAutocompleteState : Select.State
     , selectedPayer : Maybe Profile
-    , currentProfile : Maybe Profile
-    , profileLoadingStatus : QueryStatus (Maybe Profile) Profile
-    , transfersLoadingStatus : QueryStatus (Maybe QueryTransfers) (List Transfer)
+    , recipientProfile : QueryStatus (Maybe RecipientProfile) RecipientProfile
+    , incomingTransfers : QueryStatus (Maybe ConnectionTransfer) (List Transfer)
+    , pageInfo : Maybe Api.Relay.PageInfo
     , selectedDate : Maybe Date
     , datePicker : DatePicker.DatePicker
-    , transfersToCurrentUser : List Transfer
     }
 
 
@@ -89,41 +110,105 @@ type QueryStatus err resp
     | Failed (Graphql.Http.Error err)
 
 
-fetchProfile : Shared -> Eos.Account.Name -> Cmd Msg
-fetchProfile shared accountName =
-    Api.Graphql.query shared
-        (Profile.query accountName)
-        CompletedProfileLoad
+{-| `RecipientProfile` type is only for the recipient of the payments. Payers have `Profile` types.
+-}
+type alias RecipientProfile =
+    { userName : Maybe String
+    , account : Eos.Account.Name
+    , avatar : Avatar
+    }
 
 
-fetchTransfers : Shared -> Eos.Account.Name -> Cmd Msg
-fetchTransfers shared accountName =
-    -- TODO: Query only `to` transfers if possible. Now query returns all the transfers (`from` ang `to`)
+fetchRecipientProfile : Shared -> Eos.Account.Name -> Cmd Msg
+fetchRecipientProfile shared accountName =
     Api.Graphql.query shared
-        (Transfer.transfersQuery
-            (userFilter accountName)
-            (\args ->
-                { args | first = Present 10 }
-            )
+        (Cambiatus.Query.profile
+            { input = { account = Present (Eos.Account.nameToString accountName) } }
+            recipientProfileSelectionSet
         )
-        CompletedLoadUserTransfers
+        ProfileLoaded
 
 
-filterTransfers : List Transfer -> Eos.Account.Name -> List Transfer
-filterTransfers transfers currentUser =
+recipientProfileSelectionSet : SelectionSet RecipientProfile Cambiatus.Object.Profile
+recipientProfileSelectionSet =
+    SelectionSet.map3 RecipientProfile
+        User.name
+        (Eos.Account.nameSelectionSet User.account)
+        (Avatar.selectionSet User.avatar)
+
+
+fetchTransfers : Shared -> Model -> Cmd Msg
+fetchTransfers shared model =
     let
-        isCurrentUser : Transfer -> Bool
-        isCurrentUser t =
-            t.to.account == currentUser
+        endCursor =
+            Maybe.andThen .endCursor model.pageInfo
+
+        afterOption =
+            case endCursor of
+                Just ec ->
+                    Present ec
+
+                Nothing ->
+                    Absent
+
+        pagingFn =
+            \r ->
+                { r
+                    | first = Present 16
+                    , after = afterOption
+                }
+
+        optionalDate =
+            case model.selectedDate of
+                Just d ->
+                    Present (Cambiatus.Scalar.Date (Date.toIsoString d))
+
+                Nothing ->
+                    Absent
+
+        optionalPayer =
+            case model.selectedPayer of
+                Just p ->
+                    Present (Eos.Account.nameToString p.account)
+
+                Nothing ->
+                    Absent
     in
-    List.filter isCurrentUser transfers
+    case model.recipientProfile of
+        Loaded rp ->
+            let
+                input =
+                    { input =
+                        { recipient = Eos.Account.nameToString rp.account
+                        , date = optionalDate
+                        , payer = optionalPayer
+                        }
+                    }
+            in
+            Api.Graphql.query shared
+                (incomingTransfersSelectionSet pagingFn input)
+                TransfersLoaded
+
+        _ ->
+            Cmd.none
 
 
-settings : DatePicker.Settings
-settings =
+incomingTransfersSelectionSet optionalArgsFn input =
+    Cambiatus.Query.paymentHistory
+        optionalArgsFn
+        input
+        Transfer.transferConnectionSelectionSet
+
+
+datePickerSettings : DatePicker.Settings
+datePickerSettings =
     { defaultSettings
         | changeYear = off
-        , inputClassList = [ ( "input", True ), ( "w-full", True ) ]
+        , placeholder = "Pick a date..."
+        , inputClassList =
+            [ ( "input", True )
+            , ( "w-full", True )
+            ]
         , dateFormatter = Date.format "E, d MMM y"
         , firstDayOfWeek = Mon
         , inputAttributes =
@@ -136,10 +221,10 @@ settings =
 init : Guest.Model -> ( Model, Cmd Msg )
 init guest =
     let
-        ( datePicker, datePickerFx ) =
+        ( datePicker, datePickerCmd ) =
             DatePicker.init
 
-        accountName =
+        recipientAccountName =
             let
                 uriLastPart =
                     String.split "/" guest.shared.url.path
@@ -151,18 +236,60 @@ init guest =
     ( { payerAutocompleteState = Select.newState ""
       , selectedPayer = Nothing
       , selectedDate = Nothing
-      , currentProfile = Nothing
-      , profileLoadingStatus = Loading
-      , transfersLoadingStatus = Loading
-      , transfersToCurrentUser = []
+      , recipientProfile = Loading
+      , incomingTransfers = Loading
+      , pageInfo = Nothing
       , datePicker = datePicker
       }
     , Cmd.batch
-        [ Cmd.map ToDatePicker datePickerFx
-        , fetchProfile guest.shared accountName
-        , fetchTransfers guest.shared accountName
+        [ Cmd.map SetDatePicker datePickerCmd
+        , fetchRecipientProfile guest.shared recipientAccountName
         ]
     )
+
+
+type alias EdgeTransfer =
+    Edge Transfer
+
+
+getTransfers : Maybe ConnectionTransfer -> List Transfer
+getTransfers maybeObj =
+    let
+        toMaybeEdges : Maybe ConnectionTransfer -> Maybe (List (Maybe EdgeTransfer))
+        toMaybeEdges maybeConn =
+            Maybe.andThen
+                (\a -> a.edges)
+                maybeConn
+
+        toEdges : Maybe (List (Maybe EdgeTransfer)) -> List (Maybe EdgeTransfer)
+        toEdges maybeEdges =
+            Maybe.withDefault
+                []
+                maybeEdges
+
+        toMaybeNodes : List (Maybe EdgeTransfer) -> List (Maybe Transfer)
+        toMaybeNodes edges =
+            List.map
+                (\a ->
+                    Maybe.andThen
+                        (\b ->
+                            b.node
+                        )
+                        a
+                )
+                edges
+
+        toNodes : List (Maybe Transfer) -> List Transfer
+        toNodes maybeNodes =
+            List.filterMap
+                identity
+                maybeNodes
+    in
+    maybeObj
+        |> toMaybeEdges
+        |> toEdges
+        |> toMaybeNodes
+        |> toNodes
 
 
 
@@ -172,77 +299,129 @@ init guest =
 update : Msg -> Model -> Guest.Model -> UpdateResult
 update msg model guest =
     case msg of
-        CompletedLoadUserTransfers (Ok maybeTransfers) ->
-            let
-                transfersToCurrentUser =
-                    case model.currentProfile of
-                        Just p ->
-                            filterTransfers (Transfer.getTransfers maybeTransfers) p.account
+        ProfileLoaded (Ok maybeProfile) ->
+            case maybeProfile of
+                Just profile ->
+                    let
+                        newModel =
+                            { model | recipientProfile = Loaded profile }
+                    in
+                    newModel
+                        |> UR.init
+                        |> UR.addCmd (fetchTransfers guest.shared newModel)
 
-                        Nothing ->
-                            []
+                Nothing ->
+                    model
+                        |> UR.init
+
+        ProfileLoaded (Err err) ->
+            { model | recipientProfile = Failed err }
+                |> UR.init
+                |> UR.logGraphqlError msg err
+
+        TransfersLoaded (Ok maybeTransfers) ->
+            let
+                pageInfo =
+                    Maybe.map .pageInfo maybeTransfers
+
+                newIncomingTransfers =
+                    case model.incomingTransfers of
+                        Loaded it ->
+                            it ++ getTransfers maybeTransfers
+
+                        _ ->
+                            getTransfers maybeTransfers
             in
             { model
-                | transfersLoadingStatus = Loaded (Transfer.getTransfers maybeTransfers)
-                , transfersToCurrentUser = transfersToCurrentUser
+                | incomingTransfers = Loaded newIncomingTransfers
+                , pageInfo = pageInfo
             }
                 |> UR.init
 
-        CompletedLoadUserTransfers (Err err) ->
-            { model | transfersLoadingStatus = Failed err }
+        TransfersLoaded (Err err) ->
+            { model | incomingTransfers = Failed err }
                 |> UR.init
                 |> UR.logGraphqlError msg err
 
-        CompletedProfileLoad (Ok Nothing) ->
-            -- TODO: not found account
-            UR.init model
-
-        CompletedProfileLoad (Ok (Just profile)) ->
-            UR.init
-                { model
-                    | profileLoadingStatus = Loaded profile
-                    , currentProfile = Just profile
-                }
-
-        CompletedProfileLoad (Err err) ->
-            UR.init { model | profileLoadingStatus = Failed err }
-                |> UR.logGraphqlError msg err
+        ShowMore ->
+            model
+                |> UR.init
+                |> UR.addCmd (fetchTransfers guest.shared model)
 
         OnSelect maybeProfile ->
-            { model
-                | selectedPayer = maybeProfile
-            }
+            let
+                newModel =
+                    { model
+                        | incomingTransfers = Loading
+                        , pageInfo = Nothing
+                        , selectedPayer = maybeProfile
+                    }
+            in
+            newModel
                 |> UR.init
+                |> UR.addCmd (fetchTransfers guest.shared newModel)
 
         SelectMsg subMsg ->
             let
                 ( updated, cmd ) =
                     Select.update (selectConfiguration guest.shared False) subMsg model.payerAutocompleteState
             in
-            UR.init { model | payerAutocompleteState = updated }
+            { model | payerAutocompleteState = updated }
+                |> UR.init
                 |> UR.addCmd cmd
 
-        ToDatePicker subMsg ->
+        ClearSelectSelection ->
+            let
+                newModel =
+                    { model
+                        | incomingTransfers = Loading
+                        , pageInfo = Nothing
+                        , selectedPayer = Nothing
+                    }
+            in
+            newModel
+                |> UR.init
+                |> UR.addCmd (fetchTransfers guest.shared newModel)
+
+        SetDatePicker subMsg ->
             let
                 ( newDatePicker, dateEvent ) =
-                    DatePicker.update settings subMsg model.datePicker
-
-                newDate =
-                    case dateEvent of
-                        Picked changedDate ->
-                            Just changedDate
-
-                        _ ->
-                            model.selectedDate
+                    DatePicker.update datePickerSettings subMsg model.datePicker
             in
-            { model
-                | selectedDate = newDate
-                , datePicker = newDatePicker
-            }
-                |> UR.init
+            case dateEvent of
+                Picked newDate ->
+                    let
+                        newModel =
+                            { model
+                                | selectedDate = Just newDate
+                                , pageInfo = Nothing
+                                , datePicker = newDatePicker
+                                , incomingTransfers = Loading
+                            }
+                    in
+                    newModel
+                        |> UR.init
+                        |> UR.addCmd (fetchTransfers guest.shared newModel)
 
-        _ ->
-            model |> UR.init
+                _ ->
+                    { model | datePicker = newDatePicker }
+                        |> UR.init
+
+        ClearSelectedDate ->
+            let
+                newModel =
+                    { model
+                        | incomingTransfers = Loading
+                        , selectedDate = Nothing
+                    }
+            in
+            newModel
+                |> UR.init
+                |> UR.addCmd (fetchTransfers guest.shared newModel)
+
+        NoOp ->
+            model
+                |> UR.init
 
 
 type alias UpdateResult =
@@ -255,52 +434,38 @@ type alias UpdateResult =
 
 view : Guest.Model -> Model -> Html Msg
 view guest model =
-    div [ class "bg-white" ]
-        [ case model.currentProfile of
-            Just p ->
-                viewSplash model
+    case model.recipientProfile of
+        Loaded profile ->
+            div [ class "bg-white" ]
+                [ viewSplash profile
+                , div [ class "mx-4 max-w-md md:m-auto" ]
+                    [ h2 [ class "text-center text-black text-2xl" ]
+                        [ text "Payment History" ]
+                    , div []
+                        [ viewUserAutocomplete guest model
+                        , viewDatePicker model
+                        ]
+                    , viewTransfers guest model
+                    ]
+                ]
 
-            Nothing ->
-                div [] [ text "profile not found" ]
-        , div [ class "mx-4 max-w-md md:m-auto" ]
-            [ h2 [ class "text-center text-black text-2xl" ] [ text "Payment History" ]
-            , case model.transfersLoadingStatus of
-                Loaded _ ->
-                    if List.isEmpty model.transfersToCurrentUser then
-                        div [] [ text "No payment for this user" ]
+        Failed err ->
+            div [] [ Page.fullPageGraphQLError "Account not found" err ]
 
-                    else
-                        div []
-                            [ viewUserAutocomplete guest model
-                            , viewDatePicker model
-                            , viewPayersList guest model
-                            , viewPagination
-                            ]
-
-                Loading ->
-                    div [] [ text "loading" ]
-
-                Failed err ->
-                    div [] [ Page.fullPageGraphQLError "Sorry, no user found" err ]
-            ]
-        ]
+        Loading ->
+            Page.fullPageLoading
 
 
-viewSplash model =
+viewSplash p =
     let
         name =
-            case model.currentProfile of
-                Just p ->
-                    Maybe.withDefault (Eos.Account.nameToString p.account) p.userName
-
-                Nothing ->
-                    ""
+            Maybe.withDefault (Eos.Account.nameToString p.account) p.userName
     in
     div
-        [ class "bg-black bg-cover h-56 mb-6 flex justify-center items-center"
-        , style "background-image" "url(/images/bg_cafe.png)"
+        [ class "bg-purple-500 bg-contain bg-center bg-no-repeat h-56 mb-6"
+        , style "background-image" "url(/images/cover_pic_payment_history.svg)"
         ]
-        [ h1 [ class "text-white text-center text-5xl mx-3" ] [ text name ]
+        [ h1 [ class "text-white text-center text-2xl pt-6" ] [ text name ]
         ]
 
 
@@ -311,17 +476,22 @@ viewUserAutocomplete guest model =
             [ span [ class "text-green tracking-wide uppercase text-caption block mb-1" ]
                 [ text "Payer" ]
             ]
-        , viewFilterTransfersByAccount guest.shared model False
+        , viewFilterTransfersByAccount guest model False
         ]
 
 
-viewFilterTransfersByAccount : Shared.Shared -> Model -> Bool -> Html Msg
-viewFilterTransfersByAccount shared model isDisabled =
+viewFilterTransfersByAccount : Guest.Model -> Model -> Bool -> Html Msg
+viewFilterTransfersByAccount guest model isDisabled =
     let
         payers =
-            model.transfersToCurrentUser
-                |> List.map .from
-                |> LE.uniqueBy (\profile -> Eos.Account.nameToString profile.account)
+            case model.incomingTransfers of
+                Loaded transfers ->
+                    transfers
+                        |> List.map .from
+                        |> LE.uniqueBy (\profile -> Eos.Account.nameToString profile.account)
+
+                _ ->
+                    []
 
         selectedPayers =
             Maybe.map (\v -> [ v ]) model.selectedPayer
@@ -330,17 +500,114 @@ viewFilterTransfersByAccount shared model isDisabled =
     div []
         [ Html.map SelectMsg
             (Select.view
-                (selectConfiguration shared isDisabled)
+                (selectConfiguration guest.shared isDisabled)
                 model.payerAutocompleteState
                 payers
                 selectedPayers
             )
+        , viewSelectedPayers model guest selectedPayers
+        ]
+
+
+viewSelectedPayers : Model -> Guest.Model -> List Profile -> Html Msg
+viewSelectedPayers model guest selectedPayers =
+    div [ class "flex flex-row mt-3 mb-10 flex-wrap" ]
+        (selectedPayers
+            |> List.map
+                (\p ->
+                    div
+                        [ class "flex justify-between flex-col m-3 items-center" ]
+                        [ viewSelectedPayer guest.shared model p
+                        , div
+                            [ onClick ClearSelectSelection
+                            , class "h-6 w-6 flex items-center mt-4"
+                            ]
+                            [ Icons.trash "" ]
+                        ]
+                )
+        )
+
+
+viewSelectedPayer : Shared -> Model -> Profile -> Html msg
+viewSelectedPayer shared model profile =
+    let
+        accountNameContainer =
+            div [ class "flex items-center bg-black rounded-label p-1" ]
+                [ p [ class "mx-2 pt-caption uppercase font-bold text-white text-caption" ]
+                    [ accountName ]
+                ]
+
+        accountName =
+            case model.recipientProfile of
+                Loaded p ->
+                    if profile.account == p.account then
+                        text (I18Next.t shared.translations "transfer_result.you")
+
+                    else
+                        case profile.userName of
+                            Just u ->
+                                text u
+
+                            Nothing ->
+                                Eos.Account.viewName profile.account
+
+                _ ->
+                    text ""
+    in
+    a
+        [ class "flex flex-col items-center"
+        , href ("/profile/" ++ Eos.Account.nameToString profile.account)
+        ]
+        [ div [ class "w-10 h-10 rounded-full" ]
+            [ Avatar.view shared.endpoints.ipfs profile.avatar "w-10 h-10"
+            ]
+        , div [ class "mt-2" ]
+            [ accountNameContainer ]
+        ]
+
+
+selectConfig : Select.Config msg Profile -> Shared -> Bool -> Select.Config msg Profile
+selectConfig select shared isDisabled =
+    select
+        |> Select.withInputClass "form-input h-12 w-full font-sans placeholder-gray-900"
+        |> Select.withClear False
+        |> Select.withMultiInputItemContainerClass "hidden h-0"
+        |> Select.withNotFound "No matches"
+        |> Select.withNotFoundClass "text-red  border-solid border-gray-100 border rounded z-30 bg-white w-select"
+        |> Select.withNotFoundStyles [ ( "padding", "0 2rem" ) ]
+        |> Select.withDisabled isDisabled
+        |> Select.withHighlightedItemClass "autocomplete-item-highlight"
+        |> Select.withPrompt (t shared.translations "community.actions.form.verifier_placeholder")
+        |> Select.withItemHtml (viewAutoCompleteItem shared)
+        |> Select.withMenuClass "border-t-none border-solid border-gray-100 border rounded-b z-30 bg-white"
+
+
+viewAutoCompleteItem : Shared -> Profile -> Html Never
+viewAutoCompleteItem shared profile =
+    let
+        ipfsUrl =
+            shared.endpoints.ipfs
+    in
+    div [ class "pt-3 pl-3 flex flex-row items-center w-select z-30" ]
+        [ div [ class "pr-3" ] [ Avatar.view ipfsUrl profile.avatar "h-7 w-7" ]
+        , div [ class "flex flex-col font-sans border-b border-gray-500 pb-3 w-full" ]
+            [ span [ class "text-black text-body leading-loose" ]
+                [ text (Eos.Account.nameToString profile.account) ]
+            , span [ class "leading-caption uppercase text-green text-caption" ]
+                [ case profile.userName of
+                    Just name ->
+                        text name
+
+                    Nothing ->
+                        text ""
+                ]
+            ]
         ]
 
 
 selectConfiguration : Shared.Shared -> Bool -> Select.Config Msg Profile
 selectConfiguration shared isDisabled =
-    Profile.selectConfig
+    selectConfig
         (Select.newConfig
             { onSelect = OnSelect
             , toLabel = \p -> Eos.Account.nameToString p.account
@@ -358,13 +625,28 @@ viewDatePicker model =
             [ class "block" ]
             [ span [ class "text-green tracking-wide uppercase text-caption block mb-1" ]
                 [ text "Date" ]
-            , DatePicker.view model.selectedDate settings model.datePicker
-                |> Html.map ToDatePicker
+            ]
+        , div [ class "relative" ]
+            [ DatePicker.view
+                model.selectedDate
+                datePickerSettings
+                model.datePicker
+                |> Html.map SetDatePicker
+            , case model.selectedDate of
+                Just _ ->
+                    button
+                        [ onClick <| ClearSelectedDate
+                        , class "absolute right-0 mr-12 top-0 mt-3"
+                        ]
+                        [ Icons.trash "" ]
+
+                Nothing ->
+                    text ""
             ]
         ]
 
 
-viewPayment guest payment =
+viewTransfer guest payment =
     let
         payer =
             payment.from
@@ -374,7 +656,7 @@ viewPayment guest payment =
 
         time =
             Utils.posixDateTime (Just payment.blockTime)
-                |> Strftime.format "%d %b %Y" Time.utc
+                |> Strftime.format "%d %b %Y, %H:%M" Time.utc
 
         ipfsUrl =
             guest.shared.endpoints.ipfs
@@ -404,22 +686,53 @@ viewPayment guest payment =
         ]
 
 
-viewPayersList : Guest.Model -> Model -> Html msg
-viewPayersList guest model =
-    let
-        transfers =
-            case model.selectedPayer of
-                Just p ->
-                    List.filter (\t -> t.from.account == p.account) model.transfersToCurrentUser
+viewTransfers : Guest.Model -> Model -> Html Msg
+viewTransfers guest model =
+    case model.incomingTransfers of
+        Loaded transfers ->
+            if List.isEmpty transfers then
+                div [ class "text-center my-6" ] [ text "No transfers were found according your criteria." ]
 
-                Nothing ->
-                    model.transfersToCurrentUser
-    in
-    ul [ class "" ]
-        (List.map (viewPayment guest) transfers)
+            else
+                let
+                    visibleTransfers =
+                        case model.selectedPayer of
+                            Just p ->
+                                List.filter (\t -> t.from.account == p.account) transfers
+
+                            Nothing ->
+                                transfers
+                in
+                div []
+                    [ ul [ class "" ]
+                        (List.map (viewTransfer guest) visibleTransfers)
+                    , viewPagination model
+                    ]
+
+        Loading ->
+            div [ class "text-center leading-10 h-48" ]
+                [ div [ class "m-auto spinner" ] []
+                , text "Loading transfers"
+                ]
+
+        Failed err ->
+            div [] [ Page.fullPageGraphQLError "Sorry, something wrong with loading transfers" err ]
 
 
-viewPagination =
-    div [ class "pb-8" ]
-        [ button [ class "button m-auto button-primary w-full sm:w-40" ] [ text "Show More" ]
-        ]
+viewPagination { pageInfo } =
+    case pageInfo of
+        Just pi ->
+            if pi.hasNextPage then
+                div [ class "pb-8" ]
+                    [ button
+                        [ class "button m-auto button-primary w-full sm:w-40"
+                        , onClick ShowMore
+                        ]
+                        [ text "Show More" ]
+                    ]
+
+            else
+                text ""
+
+        Nothing ->
+            text ""

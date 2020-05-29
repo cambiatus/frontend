@@ -120,7 +120,7 @@
 }
 
 .elm-datepicker--today {
-  font-weight: bold;
+  @apply font-bold bg-light-grey;
 }
 
 .elm-datepicker--other-month {
