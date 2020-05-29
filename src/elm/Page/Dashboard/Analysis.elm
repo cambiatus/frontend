@@ -754,21 +754,25 @@ selectConfiguration shared isDisabled =
 
 viewSelectedVerifiers : LoggedIn.Model -> List Profile -> Html Msg
 viewSelectedVerifiers ({ shared } as loggedIn) selectedVerifiers =
-    div [ class "flex flex-row mt-3 mb-10 flex-wrap" ]
-        (selectedVerifiers
-            |> List.map
-                (\p ->
-                    div
-                        [ class "flex justify-between flex-col m-3 items-center" ]
-                        [ Profile.view shared loggedIn.accountName p
-                        , div
-                            [ onClick ClearSelectSelection
-                            , class "h-6 w-6 flex items-center mt-4"
+    if List.isEmpty selectedVerifiers then
+        text ""
+
+    else
+        div [ class "flex flex-row mt-3 mb-10 flex-wrap" ]
+            (selectedVerifiers
+                |> List.map
+                    (\p ->
+                        div
+                            [ class "flex justify-between flex-col m-3 items-center" ]
+                            [ Profile.view shared loggedIn.accountName p
+                            , div
+                                [ onClick ClearSelectSelection
+                                , class "h-6 w-6 flex items-center mt-4"
+                                ]
+                                [ Icons.trash "" ]
                             ]
-                            [ Icons.trash "" ]
-                        ]
-                )
-        )
+                    )
+            )
 
 
 jsAddressToMsg : List String -> Encode.Value -> Maybe Msg
