@@ -4,6 +4,7 @@
 
 module Cambiatus.Object.Claim exposing (..)
 
+import Cambiatus.Enum.ClaimStatus
 import Cambiatus.InputObject
 import Cambiatus.Interface
 import Cambiatus.Object
@@ -71,6 +72,6 @@ id =
     Object.selectionForField "Int" "id" [] Decode.int
 
 
-isVerified : SelectionSet Bool Cambiatus.Object.Claim
-isVerified =
-    Object.selectionForField "Bool" "isVerified" [] Decode.bool
+status : SelectionSet Cambiatus.Enum.ClaimStatus.ClaimStatus Cambiatus.Object.Claim
+status =
+    Object.selectionForField "Enum.ClaimStatus.ClaimStatus" "status" [] Cambiatus.Enum.ClaimStatus.decoder

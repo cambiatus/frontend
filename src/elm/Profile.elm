@@ -125,8 +125,8 @@ decode =
         |> optional "chat_user_id" (nullable string) Nothing
         |> optional "chat_token" (nullable string) Nothing
         |> Decode.hardcoded (Time.millisToPosix 0)
-        |> Decode.at [ "data", "user" ]
         |> Decode.hardcoded []
+        |> Decode.at [ "data", "user" ]
         |> optional "analysisCount" int 0
 
 

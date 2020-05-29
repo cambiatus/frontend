@@ -13,12 +13,12 @@ import Api.Relay
 import Cambiatus.Query
 import Claim
 import Community
-import Eos exposing (Symbol)
+import Eos
 import Eos.Account as Eos
 import Graphql.Http
 import Graphql.OptionalArgument exposing (OptionalArgument(..))
-import Html exposing (Html, a, button, div, input, p, span, text)
-import Html.Attributes exposing (class, id)
+import Html exposing (Html, a, button, div, img, option, p, select, span, text)
+import Html.Attributes exposing (class, id, selected, src, value)
 import Html.Events exposing (onClick)
 import I18Next
 import Icons
@@ -39,10 +39,10 @@ import Utils
 
 
 init : LoggedIn.Model -> ( Model, Cmd Msg )
-init { shared, accountName, selectedCommunity } =
+init ({ shared, selectedCommunity } as loggedIn) =
     ( initModel
     , Cmd.batch
-        [ fetchAnalysis shared selectedCommunity accountName Nothing
+        [ fetchAnalysis loggedIn initFilter Nothing
         , Api.Graphql.query shared (Community.communityQuery selectedCommunity) CompletedCommunityLoad
         ]
     )
@@ -57,6 +57,8 @@ type alias Model =
     , communityStatus : CommunityStatus
     , modalStatus : ModalStatus
     , autoCompleteState : Select.State
+    , reloadOnNextQuery : Bool
+    , filters : Filter
     }
 
 
@@ -66,12 +68,14 @@ initModel =
     , communityStatus = LoadingCommunity
     , modalStatus = ModalClosed
     , autoCompleteState = Select.newState ""
+    , reloadOnNextQuery = False
+    , filters = initFilter
     }
 
 
 type Status
     = Loading
-    | Loaded (Maybe Profile) Filter (List Claim.Model) (Maybe Api.Relay.PageInfo)
+    | Loaded (List Claim.Model) (Maybe Api.Relay.PageInfo)
     | Failed
 
 
@@ -81,12 +85,22 @@ type CommunityStatus
     | FailedCommunity
 
 
-type Filter
+type alias Filter =
+    { profile : Maybe Profile
+    , statusFilter : StatusFilter
+    }
+
+
+initFilter : Filter
+initFilter =
+    { profile = Nothing, statusFilter = All }
+
+
+type StatusFilter
     = All
     | Approved
-    | Disapproved
-    | UnderReview
-    | UnderReviewPending
+    | Rejected
+    | Pending
 
 
 type ModalStatus
@@ -105,23 +119,24 @@ view ({ shared } as loggedIn) model =
         t : String -> String
         t =
             I18Next.t shared.translations
-
-        text_ s =
-            text (t s)
     in
     case model.status of
         Loading ->
             Page.fullPageLoading
 
-        Loaded maybeProfile f claims pageInfo ->
+        Loaded claims pageInfo ->
             div []
-                [ Page.viewHeader loggedIn (t "dashboard.all_analysis.title") Route.Dashboard
+                [ Page.viewHeader loggedIn (t "all_analysis.title") Route.Dashboard
                 , div [ class "container mx-auto px-4 mb-10" ]
-                    [ --viewAutoCompleteProfile loggedIn model maybeProfile
-                      -- , text "filtro do estado do claim"
-                      div [ class "flex flex-wrap -mx-2" ]
-                        (List.map (viewClaim loggedIn f) claims)
-                    , viewPagination loggedIn pageInfo
+                    [ viewFilters loggedIn model
+                    , if List.length claims > 0 then
+                        div []
+                            [ div [ class "flex flex-wrap -mx-2" ] (List.map (viewClaim loggedIn) claims)
+                            , viewPagination loggedIn pageInfo
+                            ]
+
+                      else
+                        viewEmptyResults loggedIn
                     ]
                 , viewAnalysisModal loggedIn model
                 ]
@@ -130,31 +145,108 @@ view ({ shared } as loggedIn) model =
             text ""
 
 
-viewAutoCompleteProfile : LoggedIn.Model -> Model -> Maybe Profile -> Html Msg
-viewAutoCompleteProfile { shared } model maybeProfile =
-    case model.communityStatus of
-        LoadedCommunity community ->
-            let
-                selectedUsers =
-                    Maybe.map (\v -> [ v ]) maybeProfile
-                        |> Maybe.withDefault []
-            in
-            div []
-                [ Html.map SelectMsg
-                    (Select.view
-                        (selectConfiguration shared False)
-                        model.autoCompleteState
-                        community.members
-                        selectedUsers
+viewFilters : LoggedIn.Model -> Model -> Html Msg
+viewFilters ({ shared } as loggedIn) model =
+    let
+        t : String -> String
+        t =
+            I18Next.t shared.translations
+
+        text_ s =
+            text (t s)
+    in
+    div [ class "mt-4 mb-12" ]
+        [ div []
+            [ span [ class "input-label" ]
+                [ text_ "all_analysis.filter.user" ]
+            , case model.communityStatus of
+                LoadedCommunity community ->
+                    let
+                        selectedUsers =
+                            Maybe.map (\v -> [ v ]) model.filters.profile
+                                |> Maybe.withDefault []
+                    in
+                    div []
+                        [ Html.map SelectMsg
+                            (Select.view
+                                (selectConfiguration shared False)
+                                model.autoCompleteState
+                                community.members
+                                selectedUsers
+                            )
+                        , viewSelectedVerifiers loggedIn selectedUsers
+                        ]
+
+                _ ->
+                    text ""
+            ]
+        , div [ class "mt-6" ]
+            [ span [ class "input-label" ] [ text_ "all_analysis.filter.status.label" ]
+            , select
+                [ class "input w-full mb-2 border form-select border-gray-500 rounded-sm"
+                , Html.Events.on "change"
+                    (Decode.map
+                        (\val ->
+                            case val of
+                                "approved" ->
+                                    SelectStatusFilter Approved
+
+                                "rejected" ->
+                                    SelectStatusFilter Rejected
+
+                                "pending" ->
+                                    SelectStatusFilter Pending
+
+                                _ ->
+                                    SelectStatusFilter All
+                        )
+                        Html.Events.targetValue
                     )
                 ]
+                [ option
+                    [ value ""
+                    , selected (model.filters.statusFilter == All)
+                    ]
+                    [ text_ "all_analysis.all" ]
+                , option
+                    [ value "approved"
+                    , selected (model.filters.statusFilter == Approved)
+                    ]
+                    [ text_ "all_analysis.approved" ]
+                , option
+                    [ value "rejected"
+                    , selected (model.filters.statusFilter == Rejected)
+                    ]
+                    [ text_ "all_analysis.disapproved" ]
+                , option
+                    [ value "pending"
+                    , selected (model.filters.statusFilter == Pending)
+                    ]
+                    [ text_ "all_analysis.pending" ]
+                ]
+            ]
+        ]
 
-        _ ->
-            text ""
+
+viewEmptyResults : LoggedIn.Model -> Html Msg
+viewEmptyResults { shared } =
+    let
+        text_ s =
+            text (I18Next.t shared.translations s)
+    in
+    div [ class "w-full text-center" ]
+        [ div [ class "w-full flex justify-center" ]
+            [ img [ src "/images/not_found.svg", class "object-contain h-32 mb-3" ] []
+            ]
+        , div [ class "inline-block text-gray" ]
+            [ text_ "all_analysis.empty"
+            , span [ class "underline text-orange-500", onClick ClearFilters ] [ text_ "all_analysis.clear_filters" ]
+            ]
+        ]
 
 
-viewClaim : LoggedIn.Model -> Filter -> Claim.Model -> Html Msg
-viewClaim ({ shared, accountName, selectedCommunity } as loggedIn) f claim =
+viewClaim : LoggedIn.Model -> Claim.Model -> Html Msg
+viewClaim { shared, accountName, selectedCommunity } claim =
     let
         t =
             I18Next.t shared.translations
@@ -168,16 +260,17 @@ viewClaim ({ shared, accountName, selectedCommunity } as loggedIn) f claim =
                 |> Strftime.format "%d %b %Y" Time.utc
 
         ( msg, textColor ) =
-            if claim.isVerified then
-                ( t "dashboard.all_analysis.approved", "text-green" )
+            case claim.status of
+                Claim.Approved ->
+                    ( t "all_analysis.approved", "text-green" )
 
-            else if Claim.isAlreadyValidated claim accountName then
-                ( t "dashboard.all_analysis.pending", "text-black" )
+                Claim.Rejected ->
+                    ( t "all_analysis.disapproved", "text-red" )
 
-            else
-                ( t "dashboard.all_analysis.disapproved", "text-red" )
+                Claim.Pending ->
+                    ( t "all_analysis.pending", "text-black" )
     in
-    div [ class "w-full sm:w-full md:w-1/2 lg:w-1/3 xl:w-1/4 px-2 mb-4" ]
+    div [ class "w-full md:w-1/2 lg:w-1/3 xl:w-1/4 px-2 mb-4" ]
         [ if Claim.isAlreadyValidated claim accountName then
             div [ class "flex flex-col p-4 my-2 rounded-lg bg-white" ]
                 [ div [ class "flex justify-center mb-8" ]
@@ -200,13 +293,19 @@ viewClaim ({ shared, accountName, selectedCommunity } as loggedIn) f claim =
                     [ class "button button-secondary w-full font-medium mb-2"
                     , Route.href <| Route.Claim selectedCommunity claim.action.objective.id claim.action.id claim.id
                     ]
-                    [ text_ "dashboard.all_analysis.more_details" ]
+                    [ text_ "all_analysis.more_details" ]
                 ]
 
           else
             div [ class "flex flex-col p-4 my-2 rounded-lg bg-white", id <| "claim-" ++ String.fromInt claim.id ]
                 [ div [ class "flex justify-start mb-8" ]
                     [ Profile.view shared accountName claim.claimer
+                    ]
+                , div
+                    [ class "bg-gray-100 flex items-center justify-center h-6 w-32 mb-2" ]
+                    [ p
+                        [ class ("text-caption uppercase " ++ textColor) ]
+                        [ text msg ]
                     ]
                 , div [ class "mb-6" ]
                     [ p [ class "text-body" ]
@@ -250,7 +349,7 @@ viewPagination { shared } maybePageInfo =
                         , class "button button-primary uppercase w-full"
                         , onClick ShowMore
                         ]
-                        [ text_ "dashboard.all_analysis.show_more" ]
+                        [ text_ "all_analysis.show_more" ]
 
                   else
                     text ""
@@ -328,6 +427,9 @@ type Msg
     | OnSelectVerifier (Maybe Profile)
     | CompletedCommunityLoad (Result (Graphql.Http.Error (Maybe Community.Model)) (Maybe Community.Model))
     | ShowMore
+    | ClearSelectSelection
+    | SelectStatusFilter StatusFilter
+    | ClearFilters
 
 
 update : Msg -> Model -> LoggedIn.Model -> UpdateResult
@@ -335,25 +437,26 @@ update msg model loggedIn =
     case msg of
         ClaimsLoaded (Ok results) ->
             case model.status of
-                Loaded filterProfile filterStatus claims _ ->
+                Loaded claims _ ->
+                    let
+                        newClaims =
+                            if model.reloadOnNextQuery then
+                                Claim.paginatedToList results
+
+                            else
+                                claims ++ Claim.paginatedToList results
+                    in
                     { model
-                        | status =
-                            Loaded
-                                filterProfile
-                                filterStatus
-                                (claims ++ Claim.paginatedToList results)
-                                (Claim.paginatedPageInfo results)
+                        | status = Loaded newClaims (Claim.paginatedPageInfo results)
+                        , reloadOnNextQuery = False
                     }
                         |> UR.init
 
                 _ ->
                     { model
                         | status =
-                            Loaded
-                                Nothing
-                                All
-                                (Claim.paginatedToList results)
-                                (Claim.paginatedPageInfo results)
+                            Loaded (Claim.paginatedToList results) (Claim.paginatedPageInfo results)
+                        , reloadOnNextQuery = False
                     }
                         |> UR.init
 
@@ -368,7 +471,7 @@ update msg model loggedIn =
 
         VoteClaim claimId vote ->
             case model.status of
-                Loaded _ _ _ _ ->
+                Loaded _ _ ->
                     let
                         newModel =
                             { model
@@ -405,7 +508,7 @@ update msg model loggedIn =
 
         GotVoteResult claimId (Ok _) ->
             case model.status of
-                Loaded maybeProfile f claims pageInfo ->
+                Loaded claims pageInfo ->
                     let
                         maybeClaim : Maybe Claim.Model
                         maybeClaim =
@@ -424,7 +527,7 @@ update msg model loggedIn =
                                         ++ Eos.symbolToString claim.action.objective.community.symbol
                             in
                             { model
-                                | status = Loaded maybeProfile f claims pageInfo
+                                | status = Loaded claims pageInfo
                             }
                                 |> UR.init
                                 |> UR.addExt (LoggedIn.ShowFeedback LoggedIn.Success (message value))
@@ -439,8 +542,8 @@ update msg model loggedIn =
 
         GotVoteResult _ (Err _) ->
             case model.status of
-                Loaded maybeProfile f claims pageInfo ->
-                    { model | status = Loaded maybeProfile f claims pageInfo }
+                Loaded claims pageInfo ->
+                    { model | status = Loaded claims pageInfo }
                         |> UR.init
 
                 _ ->
@@ -455,34 +558,27 @@ update msg model loggedIn =
                 |> UR.addCmd cmd
 
         OnSelectVerifier maybeProfile ->
-            UR.init model
+            let
+                oldFilters =
+                    model.filters
+            in
+            case model.status of
+                Loaded _ _ ->
+                    let
+                        newModel =
+                            { model
+                                | status = Loading
+                                , filters = { oldFilters | profile = maybeProfile }
+                                , reloadOnNextQuery = True
+                            }
+                    in
+                    newModel
+                        |> UR.init
+                        |> UR.addCmd (fetchAnalysis loggedIn newModel.filters Nothing)
 
-        -- let
-        --     oldForm =
-        --         model.form
-        -- in
-        -- case model.form.verification of
-        --     Automatic ->
-        --         model
-        --             |> UR.init
-        --     Manual selectedVerifiers verificationReward minVotes ->
-        --         { model
-        --             | form =
-        --                 { oldForm
-        --                     | verification =
-        --                         let
-        --                             newVerifiers =
-        --                                 maybeProfile
-        --                                     |> Maybe.map (List.singleton >> List.append (getInput selectedVerifiers))
-        --                                     |> Maybe.withDefault (getInput selectedVerifiers)
-        --                         in
-        --                         Manual
-        --                             (updateInput newVerifiers selectedVerifiers)
-        --                             verificationReward
-        --                             minVotes
-        --                 }
-        --         }
-        --             |> UR.init
+                _ ->
+                    UR.init model
+
         CompletedCommunityLoad (Ok community) ->
             case community of
                 Just cmm ->
@@ -498,7 +594,7 @@ update msg model loggedIn =
 
         ShowMore ->
             case model.status of
-                Loaded _ _ _ pageInfo ->
+                Loaded _ pageInfo ->
                     let
                         cursor : Maybe String
                         cursor =
@@ -506,21 +602,101 @@ update msg model loggedIn =
                     in
                     model
                         |> UR.init
-                        |> UR.addCmd (fetchAnalysis loggedIn.shared loggedIn.selectedCommunity loggedIn.accountName cursor)
+                        |> UR.addCmd (fetchAnalysis loggedIn model.filters cursor)
 
                 _ ->
                     UR.init model
 
+        ClearSelectSelection ->
+            case model.status of
+                Loaded _ _ ->
+                    let
+                        oldFilters =
+                            model.filters
 
-fetchAnalysis : Shared -> Symbol -> Eos.Name -> Maybe String -> Cmd Msg
-fetchAnalysis shared communityId account maybeCursorAfter =
+                        newModel =
+                            { model
+                                | status = Loading
+                                , filters = { oldFilters | profile = Nothing }
+                                , reloadOnNextQuery = True
+                            }
+                    in
+                    newModel
+                        |> UR.init
+                        |> UR.addCmd (fetchAnalysis loggedIn newModel.filters Nothing)
+
+                _ ->
+                    UR.init model
+
+        SelectStatusFilter statusFilter ->
+            let
+                oldFilters =
+                    model.filters
+
+                newModel =
+                    { model
+                        | filters = { oldFilters | statusFilter = statusFilter }
+                        , status = Loading
+                        , reloadOnNextQuery = True
+                    }
+            in
+            newModel
+                |> UR.init
+                |> UR.addCmd (fetchAnalysis loggedIn newModel.filters Nothing)
+
+        ClearFilters ->
+            { model
+                | filters = initFilter
+                , reloadOnNextQuery = True
+                , status = Loading
+            }
+                |> UR.init
+                |> UR.addCmd (fetchAnalysis loggedIn initFilter Nothing)
+
+
+fetchAnalysis : LoggedIn.Model -> Filter -> Maybe String -> Cmd Msg
+fetchAnalysis { accountName, selectedCommunity, shared } { profile, statusFilter } maybeCursorAfter =
     let
+        optionalClaimer =
+            case profile of
+                Just p ->
+                    Present (Eos.nameToString p.account)
+
+                Nothing ->
+                    Absent
+
+        optionalStatus =
+            case statusFilter of
+                All ->
+                    Absent
+
+                Approved ->
+                    Present "approved"
+
+                Rejected ->
+                    Present "rejected"
+
+                Pending ->
+                    Present "pending"
+
+        filterRecord =
+            { claimer = optionalClaimer
+            , status = optionalStatus
+            }
+
+        filter =
+            case ( filterRecord.claimer, filterRecord.status ) of
+                ( Absent, Absent ) ->
+                    Absent
+
+                ( _, _ ) ->
+                    Present filterRecord
+
         args =
             { input =
-                { claimer = Absent
-                , symbol = Present (Eos.symbolToString communityId)
-                , validator = Present (Eos.nameToString account)
-                , all = Present True
+                { symbol = Eos.symbolToString selectedCommunity
+                , account = Eos.nameToString accountName
+                , filter = filter
                 }
             }
 
@@ -543,7 +719,7 @@ fetchAnalysis shared communityId account maybeCursorAfter =
     in
     Api.Graphql.query
         shared
-        (Cambiatus.Query.claims pagination args Claim.claimPaginatedSelectionSet)
+        (Cambiatus.Query.claimsAnalysisHistory pagination args Claim.claimPaginatedSelectionSet)
         ClaimsLoaded
 
 
@@ -551,8 +727,8 @@ fetchAnalysis shared communityId account maybeCursorAfter =
 -- Configure Select
 
 
-filter : Int -> (a -> String) -> String -> List a -> Maybe (List a)
-filter minChars toLabel query items =
+selectFilter : Int -> (a -> String) -> String -> List a -> Maybe (List a)
+selectFilter minChars toLabel query items =
     if String.length query < minChars then
         Nothing
 
@@ -568,12 +744,35 @@ selectConfiguration shared isDisabled =
         (Select.newConfig
             { onSelect = OnSelectVerifier
             , toLabel = \p -> Eos.nameToString p.account
-            , filter = filter 2 (\p -> Eos.nameToString p.account)
+            , filter = selectFilter 2 (\p -> Eos.nameToString p.account)
             }
             |> Select.withMultiSelection True
         )
         shared
         isDisabled
+
+
+viewSelectedVerifiers : LoggedIn.Model -> List Profile -> Html Msg
+viewSelectedVerifiers ({ shared } as loggedIn) selectedVerifiers =
+    if List.isEmpty selectedVerifiers then
+        text ""
+
+    else
+        div [ class "flex flex-row mt-3 mb-10 flex-wrap" ]
+            (selectedVerifiers
+                |> List.map
+                    (\p ->
+                        div
+                            [ class "flex justify-between flex-col m-3 items-center" ]
+                            [ Profile.view shared loggedIn.accountName p
+                            , div
+                                [ onClick ClearSelectSelection
+                                , class "h-6 w-6 flex items-center mt-4"
+                                ]
+                                [ Icons.trash "" ]
+                            ]
+                    )
+            )
 
 
 jsAddressToMsg : List String -> Encode.Value -> Maybe Msg
@@ -629,3 +828,12 @@ msgToString msg =
 
         ShowMore ->
             [ "ShowMore" ]
+
+        ClearSelectSelection ->
+            [ "ClearSelectSelection" ]
+
+        SelectStatusFilter _ ->
+            [ "SelectStatusFilter" ]
+
+        ClearFilters ->
+            [ "ClearFilters" ]

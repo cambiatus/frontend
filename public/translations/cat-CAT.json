@@ -493,7 +493,7 @@
   },
   "dashboard": {
     "back": "Tornar",
-    "transfer": "Trasllat a un company",
+    "transfer": "Transferir a un company",
     "explore": "Sobre aquesta comunitat",
     "invite": "Convida els teus amics",
     "sorry": "ho sentim!",
@@ -542,14 +542,24 @@
       "no": "No, cancel·la",
       "success": "Reclamar que tingui èxit, espereu l’aprovació",
       "failure": "Alguna cosa no va funcionar correctament mentre intenteu processar la vostra reclamació. Torneu-ho a provar més endavant"
-    },
-    "all_analysis": {
-      "title": "Totes les accions per a l'anàlisi",
-      "more_details": "Més detalls",
-      "approved": "Aprovat",
-      "pending": "Sota Revisió",
-      "disapproved": "Rebutjat",
-      "show_more": "mostra els següents 16 articles"
+    }
+  },
+  "all_analysis": {
+    "title": "Totes les accions per a l'anàlisi",
+    "more_details": "Més detalls",
+    "all": "Tot",
+    "approved": "Aprovat",
+    "pending": "Sota Revisió",
+    "disapproved": "Rebutjat",
+    "empty": "Sense resultats, ",
+    "clear_filters": "esborreu els filtres",
+    "show_more": "mostra els següents 16 articles",
+    "filter": {
+      "user": "Usuari",
+      "status": {
+        "label": "Estat de l’acció",
+        "pending_review": "En revisió (el meu vot està pendent)"
+      }
     }
   },
   "claim": {

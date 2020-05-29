@@ -539,14 +539,24 @@
       "no": "No, cancel",
       "success": "Claim successful, please wait for approval",
       "failure": "Something went wrong while trying to process your claim, please try again later"
-    },
-    "all_analysis": {
-      "title": "All actions for analysis",
-      "more_details": "More details",
-      "approved": "Approved",
-      "pending": "Under Review",
-      "disapproved": "Disapproved",
-      "show_more": "Show next 16 items"
+    }
+  },
+  "all_analysis": {
+    "title": "All actions for analysis",
+    "more_details": "More details",
+    "all": "All",
+    "approved": "Approved",
+    "pending": "Under Review",
+    "disapproved": "Disapproved",
+    "empty": "No results, ",
+    "clear_filters": "clear the filters",
+    "show_more": "Show next 16 items",
+    "filter": {
+      "user": "User",
+      "status": {
+        "label": "Action state",
+        "pending_review": "Under Review (my vote is pending)"
+      }
     }
   },
   "claim": {

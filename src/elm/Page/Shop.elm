@@ -278,7 +278,7 @@ viewCard model ({ shared } as loggedIn) card =
                 card.sale.title
     in
     a
-        [ class "w-full sm:w-full md:w-1/2 lg:w-1/3 xl:w-1/4 px-2 mb-6"
+        [ class "w-full md:w-1/2 lg:w-1/3 xl:w-1/4 px-2 mb-6"
         , Route.href (Route.ViewSale (String.fromInt card.sale.id))
         ]
         [ div [ class "md:hidden rounded-lg bg-white h-32 flex" ]

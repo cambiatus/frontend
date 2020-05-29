@@ -82,6 +82,75 @@ encodeChecksInput input =
         [ ( "validator", Encode.string |> Encode.optional input.validator ) ]
 
 
+buildClaimAnalysisHistoryFilter : (ClaimAnalysisHistoryFilterOptionalFields -> ClaimAnalysisHistoryFilterOptionalFields) -> ClaimAnalysisHistoryFilter
+buildClaimAnalysisHistoryFilter fillOptionals =
+    let
+        optionals =
+            fillOptionals
+                { claimer = Absent, status = Absent }
+    in
+    { claimer = optionals.claimer, status = optionals.status }
+
+
+type alias ClaimAnalysisHistoryFilterOptionalFields =
+    { claimer : OptionalArgument String
+    , status : OptionalArgument String
+    }
+
+
+{-| Type for the ClaimAnalysisHistoryFilter input object.
+-}
+type alias ClaimAnalysisHistoryFilter =
+    { claimer : OptionalArgument String
+    , status : OptionalArgument String
+    }
+
+
+{-| Encode a ClaimAnalysisHistoryFilter into a value that can be used as an argument.
+-}
+encodeClaimAnalysisHistoryFilter : ClaimAnalysisHistoryFilter -> Value
+encodeClaimAnalysisHistoryFilter input =
+    Encode.maybeObject
+        [ ( "claimer", Encode.string |> Encode.optional input.claimer ), ( "status", Encode.string |> Encode.optional input.status ) ]
+
+
+buildClaimAnalysisHistoryInput : ClaimAnalysisHistoryInputRequiredFields -> (ClaimAnalysisHistoryInputOptionalFields -> ClaimAnalysisHistoryInputOptionalFields) -> ClaimAnalysisHistoryInput
+buildClaimAnalysisHistoryInput required fillOptionals =
+    let
+        optionals =
+            fillOptionals
+                { filter = Absent }
+    in
+    { account = required.account, filter = optionals.filter, symbol = required.symbol }
+
+
+type alias ClaimAnalysisHistoryInputRequiredFields =
+    { account : String
+    , symbol : String
+    }
+
+
+type alias ClaimAnalysisHistoryInputOptionalFields =
+    { filter : OptionalArgument ClaimAnalysisHistoryFilter }
+
+
+{-| Type for the ClaimAnalysisHistoryInput input object.
+-}
+type alias ClaimAnalysisHistoryInput =
+    { account : String
+    , filter : OptionalArgument ClaimAnalysisHistoryFilter
+    , symbol : String
+    }
+
+
+{-| Encode a ClaimAnalysisHistoryInput into a value that can be used as an argument.
+-}
+encodeClaimAnalysisHistoryInput : ClaimAnalysisHistoryInput -> Value
+encodeClaimAnalysisHistoryInput input =
+    Encode.maybeObject
+        [ ( "account", Encode.string input.account |> Just ), ( "filter", encodeClaimAnalysisHistoryFilter |> Encode.optional input.filter ), ( "symbol", Encode.string input.symbol |> Just ) ]
+
+
 buildClaimInput : ClaimInputRequiredFields -> ClaimInput
 buildClaimInput required =
     { id = required.id }
@@ -105,40 +174,31 @@ encodeClaimInput input =
         [ ( "id", Encode.int input.id |> Just ) ]
 
 
-buildClaimsInput : (ClaimsInputOptionalFields -> ClaimsInputOptionalFields) -> ClaimsInput
-buildClaimsInput fillOptionals =
-    let
-        optionals =
-            fillOptionals
-                { all = Absent, claimer = Absent, symbol = Absent, validator = Absent }
-    in
-    { all = optionals.all, claimer = optionals.claimer, symbol = optionals.symbol, validator = optionals.validator }
+buildClaimsAnalysisInput : ClaimsAnalysisInputRequiredFields -> ClaimsAnalysisInput
+buildClaimsAnalysisInput required =
+    { account = required.account, symbol = required.symbol }
 
 
-type alias ClaimsInputOptionalFields =
-    { all : OptionalArgument Bool
-    , claimer : OptionalArgument String
-    , symbol : OptionalArgument String
-    , validator : OptionalArgument String
+type alias ClaimsAnalysisInputRequiredFields =
+    { account : String
+    , symbol : String
     }
 
 
-{-| Type for the ClaimsInput input object.
+{-| Type for the ClaimsAnalysisInput input object.
 -}
-type alias ClaimsInput =
-    { all : OptionalArgument Bool
-    , claimer : OptionalArgument String
-    , symbol : OptionalArgument String
-    , validator : OptionalArgument String
+type alias ClaimsAnalysisInput =
+    { account : String
+    , symbol : String
     }
 
 
-{-| Encode a ClaimsInput into a value that can be used as an argument.
+{-| Encode a ClaimsAnalysisInput into a value that can be used as an argument.
 -}
-encodeClaimsInput : ClaimsInput -> Value
-encodeClaimsInput input =
+encodeClaimsAnalysisInput : ClaimsAnalysisInput -> Value
+encodeClaimsAnalysisInput input =
     Encode.maybeObject
-        [ ( "all", Encode.bool |> Encode.optional input.all ), ( "claimer", Encode.string |> Encode.optional input.claimer ), ( "symbol", Encode.string |> Encode.optional input.symbol ), ( "validator", Encode.string |> Encode.optional input.validator ) ]
+        [ ( "account", Encode.string input.account |> Just ), ( "symbol", Encode.string input.symbol |> Just ) ]
 
 
 buildInviteInput : (InviteInputOptionalFields -> InviteInputOptionalFields) -> InviteInput

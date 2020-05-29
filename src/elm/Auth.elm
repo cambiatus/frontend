@@ -16,9 +16,11 @@ module Auth exposing
     )
 
 import Api
+import Api.Graphql
 import Asset.Icon as Icon
 import Browser.Events
 import Eos.Account as Eos
+import Graphql.Http
 import Html exposing (Html, a, button, div, h2, img, input, label, li, p, span, strong, text, textarea, ul)
 import Html.Attributes exposing (attribute, autocomplete, class, disabled, for, id, maxlength, placeholder, required, src, title, type_, value)
 import Html.Events exposing (onClick, onInput, onSubmit)
@@ -573,7 +575,7 @@ type Msg
     | GotPrivateKeyLogin (Result String ( Eos.Name, String ))
     | SubmittedLoginPIN
     | GotPinLogin (Result String ( Eos.Name, String ))
-    | CompletedLoadProfile Status Eos.Name (Result Http.Error Profile)
+    | CompletedLoadProfile Status Eos.Name (Result (Graphql.Http.Error (Maybe Profile)) (Maybe Profile))
     | CompletedCreateProfile Status Eos.Name (Result Http.Error Profile)
     | TogglePinVisibility
     | TogglePinConfirmationVisibility
@@ -750,9 +752,8 @@ update msg shared model showAuthModal =
         GotPrivateKeyLogin (Ok ( accountName, privateKey )) ->
             UR.init model
                 |> UR.addCmd
-                    (Api.signIn
-                        shared
-                        accountName
+                    (Api.Graphql.query shared
+                        (Profile.query accountName)
                         (CompletedLoadProfile (LoggedInWithPrivateKey privateKey) accountName)
                     )
 
@@ -792,7 +793,11 @@ update msg shared model showAuthModal =
 
         GotPinLogin (Ok ( accountName, privateKey )) ->
             UR.init model
-                |> UR.addCmd (Api.signIn shared accountName (CompletedLoadProfile (LoggedInWithPin privateKey) accountName))
+                |> UR.addCmd
+                    (Api.Graphql.query shared
+                        (Profile.query accountName)
+                        (CompletedLoadProfile (LoggedInWithPrivateKey privateKey) accountName)
+                    )
 
         GotPinLogin (Err err) ->
             UR.init
@@ -808,29 +813,24 @@ update msg shared model showAuthModal =
                 }
 
         CompletedLoadProfile newStatus _ (Ok profile) ->
-            UR.init { model | status = newStatus }
-                |> UR.addExt (CompletedAuth profile)
+            case profile of
+                Just p ->
+                    UR.init { model | status = newStatus }
+                        |> UR.addExt (CompletedAuth p)
+
+                Nothing ->
+                    UR.init model
 
         CompletedLoadProfile newStatus accountName (Err err) ->
-            case err of
-                Http.BadStatus 404 ->
-                    UR.init model
-                        |> UR.addCmd
-                            (Api.signUp shared
-                                { name = ""
-                                , email = ""
-                                , account = accountName
-                                , invitationId = Nothing
-                                }
-                                (CompletedCreateProfile newStatus accountName)
-                            )
-
-                _ ->
-                    loginFailed err model
+            loginFailedGraphql err model
 
         CompletedCreateProfile newStatus accountName (Ok _) ->
             UR.init model
-                |> UR.addCmd (Api.signIn shared accountName (CompletedLoadProfile newStatus accountName))
+                |> UR.addCmd
+                    (Api.Graphql.query shared
+                        (Profile.query accountName)
+                        (CompletedLoadProfile newStatus accountName)
+                    )
 
         CompletedCreateProfile _ _ (Err err) ->
             loginFailed err model
@@ -851,6 +851,35 @@ update msg shared model showAuthModal =
 
             else
                 UR.init model
+
+
+loginFailedGraphql : Graphql.Http.Error (Maybe Profile) -> Model -> UpdateResult
+loginFailedGraphql httpError model =
+    UR.init
+        { model
+            | loginError =
+                Just "Auth failed"
+            , status =
+                case model.status of
+                    LoggingInWithPrivateKeyAccounts accounts form ->
+                        LoginWithPrivateKeyAccounts accounts form
+
+                    LoggingInWithPin ->
+                        LoginWithPin
+
+                    _ ->
+                        Options LoginStepPassphrase
+        }
+        |> UR.addCmd (Log.graphqlError httpError)
+        |> UR.addPort
+            { responseAddress = Ignored
+            , responseData = Encode.null
+            , data =
+                Encode.object
+                    [ ( "name", Encode.string "logout" )
+                    , ( "container", Encode.string "chat-manager" )
+                    ]
+            }
 
 
 loginFailed : Http.Error -> Model -> UpdateResult
