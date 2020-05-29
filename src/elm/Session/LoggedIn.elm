@@ -483,7 +483,7 @@ communitySelectorModal model =
         viewCommunityItem c =
             div
                 [ class "flex items-center py-4 border-b text-body hover:pointer"
-                , onClick <| SelectCommunity c.id c.shop c.actions
+                , onClick <| SelectCommunity c.id
                 ]
                 [ img [ src (logoUrl c.logo), class "h-16 w-16 mr-5" ] []
                 , text c.name
@@ -686,7 +686,7 @@ type Msg
     | KeyDown String
     | OpenCommunitySelector
     | CloseCommunitySelector
-    | SelectCommunity Symbol Bool Bool
+    | SelectCommunity Symbol
     | HideFeedbackLocal
 
 
@@ -911,27 +911,14 @@ update msg model =
             { model | showCommunitySelector = False }
                 |> UR.init
 
-        SelectCommunity communityId shop actions ->
+        SelectCommunity communityId ->
             { model
                 | selectedCommunity = communityId
                 , showCommunitySelector = False
-                , features =
-                    model.features
-                        |> (if actions then
-                                Feature.add Feature.Actions
-
-                            else
-                                \r -> r
-                           )
-                        |> (if shop then
-                                Feature.add Feature.Shop
-
-                            else
-                                \r -> r
-                           )
             }
                 |> UR.init
                 |> UR.addCmd (Route.replaceUrl model.shared.navKey Route.Dashboard)
+                |> UR.addCmd (Api.Graphql.query shared (Community.communityQuery communityId) CompletedLoadCommunity)
                 |> UR.addPort
                     { responseAddress = msg
                     , responseData = Encode.null
@@ -1110,7 +1097,7 @@ msgToString msg =
         CloseCommunitySelector ->
             [ "CloseCommunitySelector" ]
 
-        SelectCommunity _ _ _ ->
+        SelectCommunity _ ->
             [ "SelectCommunity" ]
 
         HideFeedbackLocal ->
