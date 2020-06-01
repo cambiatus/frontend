@@ -37,7 +37,6 @@ import Cambiatus.Subscription as Subscription
 import Community
 import Eos exposing (Symbol)
 import Eos.Account as Eos
-import Feature exposing (FeatureFlags(..))
 import Flags exposing (Flags)
 import Graphql.Document
 import Graphql.Http
@@ -132,7 +131,8 @@ type alias Model =
     , auth : Auth.Model
     , showCommunitySelector : Bool
     , feedback : FeedbackVisibility
-    , features : FeatureFlags
+    , hasShop : Bool
+    , hasActions : Bool
     }
 
 
@@ -153,7 +153,8 @@ initModel shared authModel accountName selectedCommunity =
     , auth = authModel
     , feedback = Hidden
     , showCommunitySelector = False
-    , features = FeatureFlags []
+    , hasShop = False
+    , hasActions = False
     }
 
 
@@ -566,7 +567,7 @@ viewMainMenu page model =
             , text (t model.shared.translations "menu.dashboard")
             ]
          ]
-            ++ (if model.features |> Feature.has Feature.Shop then
+            ++ (if model.hasShop then
                     [ a
                         [ classList
                             [ ( menuItemClass, True )
@@ -774,22 +775,7 @@ update msg model =
         CompletedLoadSettings (Ok community) ->
             case community of
                 Just comm ->
-                    { model
-                        | features =
-                            model.features
-                                |> (if comm.hasActions then
-                                        Feature.add Feature.Actions
-
-                                    else
-                                        \r -> r
-                                   )
-                                |> (if comm.hasShop then
-                                        Feature.add Feature.Shop
-
-                                    else
-                                        \r -> r
-                                   )
-                    }
+                    { model | hasShop = comm.hasShop, hasActions = comm.hasActions }
                         |> UR.init
 
                 Nothing ->

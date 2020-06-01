@@ -3,7 +3,6 @@ module Page.Community.Settings.Features exposing (Model, Msg, init, msgToString,
 import Api.Graphql
 import Community
 import Eos exposing (Symbol)
-import Feature exposing (Feature, FeatureFlags(..))
 import Graphql.Http
 import Html exposing (Html, div, input, label, span, text)
 import Html.Attributes exposing (checked, class, for, id, name, style, type_)
@@ -26,14 +25,16 @@ initModel : Symbol -> Model
 initModel symbol =
     { status = Loading
     , symbol = symbol
-    , features = FeatureFlags []
+    , hasShop = False
+    , hasActions = False
     }
 
 
 type alias Model =
     { status : Status
     , symbol : Symbol
-    , features : FeatureFlags
+    , hasShop : Bool
+    , hasActions : Bool
     }
 
 
@@ -45,7 +46,8 @@ type Status
 
 type Msg
     = CompletedLoad (Result (Graphql.Http.Error (Maybe Community.Model)) (Maybe Community.Model))
-    | ToggleFeature Feature Bool
+    | ToggleShop Bool
+    | ToggleActions Bool
 
 
 type alias UpdateResult =
@@ -66,8 +68,8 @@ view loggedIn model =
         , div
             [ class "container w-full divide-y"
             ]
-            [ toggleView translations (translate "objectives.title_plural") (model.features |> Feature.has Feature.Actions) (ToggleFeature Feature.Actions) "actions"
-            , toggleView translations (translate "menu.shop") (model.features |> Feature.has Feature.Shop) (ToggleFeature Feature.Shop) "shop"
+            [ toggleView translations (translate "objectives.title_plural") model.hasActions ToggleActions "actions"
+            , toggleView translations (translate "menu.shop") model.hasShop ToggleShop "shop"
             ]
         ]
 
@@ -120,20 +122,8 @@ update msg model _ =
             UR.init
                 { model
                     | status = Loaded community
-                    , features =
-                        model.features
-                            |> (if community.hasActions then
-                                    Feature.add Feature.Actions
-
-                                else
-                                    \r -> r
-                               )
-                            |> (if community.hasShop then
-                                    Feature.add Feature.Shop
-
-                                else
-                                    \r -> r
-                               )
+                    , hasShop = community.hasShop
+                    , hasActions = community.hasActions
                 }
 
         CompletedLoad (Ok Nothing) ->
@@ -143,24 +133,13 @@ update msg model _ =
             UR.init { model | status = LoadingFailed err }
                 |> UR.logGraphqlError msg err
 
-        ToggleFeature feature state ->
+        ToggleShop state ->
             UR.init
-                { model
-                    | features =
-                        model.features
-                            |> toggleFeature state feature
-                }
+                { model | hasShop = state }
 
-
-toggleFeature : Bool -> Feature -> FeatureFlags -> FeatureFlags
-toggleFeature state feature featureFlags =
-    featureFlags
-        |> (if state == True then
-                Feature.add feature
-
-            else
-                Feature.remove feature
-           )
+        ToggleActions state ->
+            UR.init
+                { model | hasActions = state }
 
 
 msgToString : Msg -> List String
@@ -169,5 +148,8 @@ msgToString msg =
         CompletedLoad r ->
             [ "CompletedLoad", UR.resultToString r ]
 
-        ToggleFeature _ _ ->
-            [ "ToggleFeature" ]
+        ToggleShop _  ->
+            [ "ToggleShop" ]
+
+        ToggleActions _  ->
+            [ "ToggleActions" ]
