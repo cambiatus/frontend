@@ -1,4 +1,4 @@
-module Page.PublicProfile exposing (Model, Msg, init, jsAddressToMsg, msgToString, update, view)
+module Page.PublicProfile exposing (Model, Msg, Status, init, initModel, jsAddressToMsg, msgToString, update, view, view_)
 
 import Api.Graphql
 import Avatar
@@ -65,7 +65,7 @@ view loggedIn status =
             Page.fullPageLoading
 
         Loaded profile ->
-            view_ loggedIn profile
+            view_ loggedIn profile True
 
         NotFound ->
             Page.fullPageNotFound (t "error.unknown") (t "error.pageNotFound")
@@ -74,8 +74,8 @@ view loggedIn status =
             Page.fullPageNotFound (t "error.unknown") (Page.errorToString err)
 
 
-view_ : LoggedIn.Model -> Profile -> Html msg
-view_ loggedIn profile =
+view_ : LoggedIn.Model -> Profile -> Bool -> Html msg
+view_ loggedIn profile shouldShowTransfer =
     let
         userName =
             Maybe.withDefault "" profile.userName
@@ -99,24 +99,35 @@ view_ loggedIn profile =
         [ Page.viewHeader loggedIn (t loggedIn.shared.translations "menu.profile") Route.Communities
         , div
             [ class "grid pt-4 gap-4 container mx-auto p-4"
-            , style "grid-template" """
-                                 ". avatar  info    info ."
-                                 ". desc    desc    desc ."
-                                 ". transfer    transfer    transfer ."
-                                 ". extra   extra   extra ." / 1px 84px auto auto 1px
-                                 """
+            , style "grid-template"
+                ("\". avatar  info    info .\""
+                    ++ "\". desc    desc    desc .\""
+                    ++ (if shouldShowTransfer then
+                            "\". transfer    transfer    transfer .\""
+
+                        else
+                            ""
+                       )
+                    ++ "\". extra   extra   extra .\" / 1px 84px auto auto 1px"
+                )
             ]
-            [ div [ style "grid-area" "avatar" ] [ Avatar.view ipfsUrl profile.avatar "w-20 h-20" ]
-            , div [ style "grid-area" "info" ] [ viewUserInfo userName email account ]
-            , div [ style "grid-area" "transfer" ] [ viewTransferButton loggedIn.shared loggedIn.selectedCommunity account ]
-            , div [ style "grid-area" "desc" ] [ viewUserDescription description ]
-            , div [ style "grid-area" "extra" ]
+            ([ div [ style "grid-area" "avatar" ] [ Avatar.view ipfsUrl profile.avatar "w-20 h-20" ]
+             , div [ style "grid-area" "info" ] [ viewUserInfo userName email account ]
+             , div [ style "grid-area" "desc" ] [ viewUserDescription description ]
+             , div [ style "grid-area" "extra" ]
                 [ viewUserExtendedInfo
                     [ ( t loggedIn.shared.translations "profile.locations", [ location ] )
                     , ( t loggedIn.shared.translations "profile.interests", profile.interests )
                     ]
                 ]
-            ]
+             ]
+                ++ [ if shouldShowTransfer then
+                        div [ style "grid-area" "transfer" ] [ viewTransferButton loggedIn.shared loggedIn.selectedCommunity account ]
+
+                     else
+                        div [] []
+                   ]
+            )
         ]
 
 
