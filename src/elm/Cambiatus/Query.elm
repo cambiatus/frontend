@@ -100,6 +100,19 @@ community requiredArgs object_ =
     Object.selectionForCompositeField "community" [ Argument.required "symbol" requiredArgs.symbol Encode.string ] object_ (identity >> Decode.nullable)
 
 
+type alias GetPayersRequiredArguments =
+    { payer : String
+    , recipient : String
+    }
+
+
+{-| List of payers to the given recipient filtered by the part of the account name.
+-}
+getPayers : GetPayersRequiredArguments -> SelectionSet decodesTo Cambiatus.Object.Profile -> SelectionSet (Maybe (List (Maybe decodesTo))) RootQuery
+getPayers requiredArgs object_ =
+    Object.selectionForCompositeField "getPayers" [ Argument.required "payer" requiredArgs.payer Encode.string, Argument.required "recipient" requiredArgs.recipient Encode.string ] object_ (identity >> Decode.nullable >> Decode.list >> Decode.nullable)
+
+
 type alias InviteRequiredArguments =
     { input : Cambiatus.InputObject.InviteInput }
 
@@ -129,6 +142,31 @@ type alias ObjectiveRequiredArguments =
 objective : ObjectiveRequiredArguments -> SelectionSet decodesTo Cambiatus.Object.Objective -> SelectionSet (Maybe decodesTo) RootQuery
 objective requiredArgs object_ =
     Object.selectionForCompositeField "objective" [ Argument.required "input" requiredArgs.input Cambiatus.InputObject.encodeObjectiveInput ] object_ (identity >> Decode.nullable)
+
+
+type alias PaymentHistoryOptionalArguments =
+    { after : OptionalArgument String
+    , before : OptionalArgument String
+    , first : OptionalArgument Int
+    , last : OptionalArgument Int
+    }
+
+
+type alias PaymentHistoryRequiredArguments =
+    { input : Cambiatus.InputObject.PaymentHistoryInput }
+
+
+paymentHistory : (PaymentHistoryOptionalArguments -> PaymentHistoryOptionalArguments) -> PaymentHistoryRequiredArguments -> SelectionSet decodesTo Cambiatus.Object.TransferConnection -> SelectionSet (Maybe decodesTo) RootQuery
+paymentHistory fillInOptionals requiredArgs object_ =
+    let
+        filledInOptionals =
+            fillInOptionals { after = Absent, before = Absent, first = Absent, last = Absent }
+
+        optionalArgs =
+            [ Argument.optional "after" filledInOptionals.after Encode.string, Argument.optional "before" filledInOptionals.before Encode.string, Argument.optional "first" filledInOptionals.first Encode.int, Argument.optional "last" filledInOptionals.last Encode.int ]
+                |> List.filterMap identity
+    in
+    Object.selectionForCompositeField "paymentHistory" (optionalArgs ++ [ Argument.required "input" requiredArgs.input Cambiatus.InputObject.encodePaymentHistoryInput ]) object_ (identity >> Decode.nullable)
 
 
 type alias ProfileRequiredArguments =
