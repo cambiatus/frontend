@@ -53,7 +53,8 @@
         "greater_than_or_equal": "The number must be greater than or equal to {{base}}",
         "length_greater_than_or_equal": "Choose at least {{count}} items",
         "lower_than": "The number must be lower than {{base}}",
-        "lower_than_or_equal": "The number must be lower than or equal to {{base}}"
+        "lower_than_or_equal": "The number must be lower than or equal to {{base}}",
+        "is_odd": "The number must be odd"
       },
       "date": {
         "invalid": "The date is invalid, please use 'mm/dd/aaaa'"
@@ -538,14 +539,24 @@
       "no": "No, cancel",
       "success": "Claim successful, please wait for approval",
       "failure": "Something went wrong while trying to process your claim, please try again later"
-    },
-    "all_analysis": {
-      "title": "All actions for analysis",
-      "more_details": "More details",
-      "approved": "Approved",
-      "pending": "Under Review",
-      "disapproved": "Disapproved",
-      "show_more": "Show next 16 items"
+    }
+  },
+  "all_analysis": {
+    "title": "All actions for analysis",
+    "more_details": "More details",
+    "all": "All",
+    "approved": "Approved",
+    "pending": "Under Review",
+    "disapproved": "Disapproved",
+    "empty": "No results, ",
+    "clear_filters": "clear the filters",
+    "show_more": "Show next 16 items",
+    "filter": {
+      "user": "User",
+      "status": {
+        "label": "Action state",
+        "pending_review": "Under Review (my vote is pending)"
+      }
     }
   },
   "claim": {

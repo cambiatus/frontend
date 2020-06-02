@@ -135,7 +135,7 @@
 /* Select */
 
 .select {
-  @apply h-12 block border font-sans border-gray-500 rounded;
+  @apply h-12 block border border-gray-500 rounded-sm;
 }
 
 /* End of Select */

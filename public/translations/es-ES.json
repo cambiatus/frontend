@@ -53,7 +53,8 @@
         "greater_than_or_equal": "El número debe ser mayor o igual que {{base}}",
         "length_greater_than_or_equal": "Elige al menos {{count}} artículos",
         "lower_than": "El número debe ser inferior a {{base}}",
-        "lower_than_or_equal": "El número debe ser inferior o igual a {{base}}"
+        "lower_than_or_equal": "El número debe ser inferior o igual a {{base}}",
+        "is_odd": "El número debe ser impar"
       },
       "date": {
         "invalid": "La fecha no es válida, utilice 'mm/dd/aaaa'"
@@ -492,7 +493,7 @@
   },
   "dashboard": {
     "back": "Atrás",
-    "transfer": "Transfir a un(a) colega",
+    "transfer": "Transferir a un(a) colega",
     "explore": "Acerca de esta comunidad",
     "invite": "Invita a tus amigas(os)",
     "sorry": "¡Lo sentimos!",
@@ -542,14 +543,24 @@
       "no": "No, cancelar",
       "success": "Reclamación exitosa, espere la aprobación",
       "failure": "Se produjo un error al intentar procesar su reclamo. Vuelva a intentarlo más tarde."
-    },
-    "all_analysis": {
-      "title": "Todas las acciones para el análisis.",
-      "more_details": "Más detalles",
-      "approved": "Aprobada",
-      "pending": "Bajo revisión",
-      "disapproved": "Rechazada",
-      "show_more": "mostrar los siguientes 16 artículos"
+    }
+  },
+  "all_analysis": {
+    "title": "Todas las acciones para el análisis.",
+    "more_details": "Más detalles",
+    "all": "Todas",
+    "approved": "Aprobada",
+    "pending": "Bajo revisión",
+    "disapproved": "Rechazada",
+    "empty": "No hay resultados, ",
+    "clear_filters": "limpiar los filtros",
+    "show_more": "mostrar los siguientes 16 artículos",
+    "filter": {
+      "user": "Usario",
+      "status": {
+        "label": "estado de acción",
+        "pending_review": "Bajo revisión (mi voto está pendiente)"
+      }
     }
   },
   "claim": {

@@ -53,7 +53,8 @@
         "greater_than_or_equal": "O número deve ser maior ou igual a {{base}}",
         "length_greater_than_or_equal": "Escolha ao menos {{count}} itens",
         "lower_than": "O número deve ser menor do que {{base}}",
-        "lower_than_or_equal": "O número deve ser menor ou igual a {{base}}"
+        "lower_than_or_equal": "O número deve ser menor ou igual a {{base}}",
+        "is_odd": "O número deve ser ímpar"
       },
       "date": {
         "invalid": "A data está inválida. Use 'mm/dd/aaaa'"
@@ -544,14 +545,24 @@
       "no": "Não, cancelar",
       "success": "Reinvidicação concluída, aguarde as aprovações",
       "failure": "Algo deu errado ao tentar realizar sua reinvidicação, tente novamente mais tarde"
-    },
-    "all_analysis": {
-      "title": "Todas as ações para análise",
-      "more_details": "Mais detalhes",
-      "approved": "Aprovado",
-      "pending": "Sob análise",
-      "disapproved": "Reprovado",
-      "show_more": "Mostrar próximos 16 items"
+    }
+  },
+  "all_analysis": {
+    "title": "Todas as ações para análise",
+    "more_details": "Mais detalhes",
+    "all": "Todos",
+    "approved": "Aprovado",
+    "pending": "Sob análise",
+    "disapproved": "Reprovado",
+    "empty": "Nenhum resultado, ",
+    "clear_filters": "limpar os filtros",
+    "show_more": "Mostrar próximos 16 items",
+    "filter": {
+      "user": "Usuário",
+      "status": {
+        "label": "Estado da ação",
+        "pending_review": "Sob análise (meu voto está pendente)"
+      }
     }
   },
   "claim": {

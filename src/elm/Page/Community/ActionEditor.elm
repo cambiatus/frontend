@@ -21,6 +21,7 @@ import DataValidator
         , greaterThan
         , greaterThanOrEqual
         , hasErrors
+        , isOdd
         , lengthGreaterThanOrEqual
         , listErrors
         , longerThan
@@ -277,13 +278,14 @@ defaultVerificationReward =
 
 minVotesLimit : Int
 minVotesLimit =
-    2
+    3
 
 
 defaultMinVotes : Validator String
 defaultMinVotes =
     []
         |> greaterThanOrEqual (toFloat minVotesLimit)
+        |> isOdd
         |> newValidator (String.fromInt minVotesLimit) (\s -> Just s) True
 
 

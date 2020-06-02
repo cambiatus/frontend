@@ -87,8 +87,14 @@ fetchTranslations language _ =
 initLogin : Shared -> Auth.Model -> Profile -> ( Model, Cmd Msg )
 initLogin shared authModel profile_ =
     let
+        selectedCommunity : Symbol
+        selectedCommunity =
+            List.head profile_.communities
+                |> Maybe.map .id
+                |> Maybe.withDefault Eos.bespiralSymbol
+
         model =
-            initModel shared authModel profile_.account Eos.bespiralSymbol
+            initModel shared authModel profile_.account selectedCommunity
     in
     ( { model
         | profile = Loaded profile_
@@ -441,6 +447,15 @@ viewCommunitySelector ({ shared } as model) =
                 _ ->
                     Nothing
 
+        hasMultipleCommunities : Bool
+        hasMultipleCommunities =
+            case model.profile of
+                Loaded p ->
+                    List.length p.communities > 1
+
+                _ ->
+                    False
+
         url hash =
             shared.endpoints.ipfs ++ "/" ++ hash
     in
@@ -448,11 +463,15 @@ viewCommunitySelector ({ shared } as model) =
         Just community ->
             button [ class "flex items-center", onClick OpenCommunitySelector ]
                 [ img [ class "h-10", src <| url community.logo ] []
-                , Icons.arrowDown ""
+                , if hasMultipleCommunities then
+                    Icons.arrowDown ""
+
+                  else
+                    text ""
                 ]
 
         Nothing ->
-            a [ Route.href Route.Dashboard ]
+            button [ class "flex items-center", onClick OpenCommunitySelector ]
                 [ img [ class "lg:hidden h-8", src shared.logoMobile ] []
                 , img
                     [ class "hidden lg:block lg:visible h-6"
