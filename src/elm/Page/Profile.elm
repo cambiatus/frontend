@@ -88,11 +88,11 @@ view loggedIn model =
             Page.fullPageError (t loggedIn.shared.translations "profile.title") Http.Timeout
 
         Loaded profile ->
-            view_ loggedIn profile
+            view_ model loggedIn profile
 
 
-view_ : LoggedIn.Model -> Profile -> Html Msg
-view_ loggedIn profile =
+view_ : Model -> LoggedIn.Model -> Profile -> Html Msg
+view_ model loggedIn profile =
     let
         ipfsUrl =
             loggedIn.shared.endpoints.ipfs
@@ -122,7 +122,37 @@ view_ loggedIn profile =
                 , viewAction "Notifications" [ text "hi" ]
                 ]
             ]
+        , viewModal model.pinModal
         ]
+
+
+viewModal : ModalStatus -> Html Msg
+viewModal status =
+    case status of
+        Shown ->
+            div
+                [ class "modal container"
+                , stopPropagationOn "click" (Decode.succeed ( Ignored, True ))
+                , style "align-items" "stretch"
+                ]
+                [ div [ class "modal-bg", onClick ClickedCloseChangePin ] []
+                , div [ class "modal-content overflow-auto" ]
+                    [ div [ class "display flex flex-col justify-around h-full" ]
+                        [ div []
+                            [ p [ class "w-full font-medium text-heading text-2xl mb-2" ] [ text "Change PIN" ]
+                            , p [ class "text-sm" ] [ text "Change your pin!" ]
+                            ]
+                        , div []
+                            [ label [ class "input-label", for "newPin" ] [ text "New security pin" ]
+                            , input [ id "newPin", class "input w-full mb-4", type_ "text" ] []
+                            ]
+                        , button [ class "button button-primary w-full" ] [ text "Change" ]
+                        ]
+                    ]
+                ]
+
+        Hidden ->
+            text ""
 
 
 viewButton : String -> Msg -> Html Msg
