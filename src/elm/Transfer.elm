@@ -58,6 +58,7 @@ type alias Transfer =
     , symbol : Symbol
     , community : Cmm
     , blockTime : DateTime
+    , createdTx : String
     }
 
 
@@ -117,6 +118,7 @@ transferItemSelectionSet =
                 )
             )
         |> with Cambiatus.Object.Transfer.createdAt
+        |> with Cambiatus.Object.Transfer.createdTx
 
 
 transferEdgeSelectionSet : SelectionSet EdgeTransfer Cambiatus.Object.TransferEdge

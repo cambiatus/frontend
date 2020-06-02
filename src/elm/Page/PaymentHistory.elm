@@ -1,26 +1,28 @@
 module Page.PaymentHistory exposing (Model, Msg, init, msgToString, update, view)
 
 import Api.Graphql
-import Api.Relay exposing (Edge, PageConnection)
+import Api.Relay exposing (Edge)
 import Avatar exposing (Avatar)
-import Cambiatus.InputObject exposing (PaymentHistoryInput, PaymentHistoryInputRequiredFields)
 import Cambiatus.Object
 import Cambiatus.Object.Profile as User
 import Cambiatus.Query
 import Cambiatus.Scalar
 import Date exposing (Date)
 import DatePicker exposing (DateEvent(..), defaultSettings, off)
+import Dict exposing (Dict)
 import Eos
 import Eos.Account
 import Graphql.Http
 import Graphql.OptionalArgument exposing (OptionalArgument(..))
 import Graphql.SelectionSet as SelectionSet exposing (SelectionSet)
+import Hashids
 import Html exposing (Html, a, button, div, h1, h2, label, p, span, text, ul)
 import Html.Attributes as Attrs exposing (class, href, style)
 import Html.Events exposing (onClick)
 import I18Next exposing (Translations, t)
 import Icons
 import List.Extra as LE
+import Murmur3
 import Page
 import Profile exposing (Profile)
 import Select
@@ -28,7 +30,7 @@ import Session.Guest as Guest exposing (External(..))
 import Session.Shared as Shared exposing (Shared)
 import Strftime
 import Time exposing (Month(..), Weekday(..))
-import Transfer exposing (ConnectionTransfer, QueryTransfers, Transfer)
+import Transfer exposing (ConnectionTransfer, Transfer)
 import UpdateResult as UR
 import Utils
 
@@ -40,9 +42,10 @@ import Utils
 type Msg
     = NoOp
     | TransfersLoaded (Result (Graphql.Http.Error (Maybe ConnectionTransfer)) (Maybe ConnectionTransfer))
-    | ProfileLoaded (Result (Graphql.Http.Error (Maybe RecipientProfile)) (Maybe RecipientProfile))
-    | OnSelect (Maybe Profile)
-    | SelectMsg (Select.Msg Profile)
+    | ProfileLoaded (Result (Graphql.Http.Error (Maybe ShortProfile)) (Maybe ShortProfile))
+    | OnSelect (Maybe ShortProfile)
+    | SelectMsg (Select.Msg ShortProfile)
+    | PayersFetched (Result (Graphql.Http.Error (Maybe (List (Maybe ShortProfile)))) (Maybe (List (Maybe ShortProfile))))
     | SetDatePicker DatePicker.Msg
     | ClearSelectedDate
     | ClearSelectSelection
@@ -73,6 +76,9 @@ msgToString msg =
         ProfileLoaded r ->
             [ "CompletedProfileLoad", UR.resultToString r ]
 
+        PayersFetched r ->
+            [ "PayersFetched", UR.resultToString r ]
+
         ClearSelectSelection ->
             [ "ClearSelectSelection" ]
 
@@ -95,9 +101,10 @@ msgToString msg =
 
 type alias Model =
     { payerAutocompleteState : Select.State
-    , selectedPayer : Maybe Profile
-    , recipientProfile : QueryStatus (Maybe RecipientProfile) RecipientProfile
+    , selectedPayer : Maybe ShortProfile
+    , recipientProfile : QueryStatus (Maybe ShortProfile) ShortProfile
     , incomingTransfers : QueryStatus (Maybe ConnectionTransfer) (List Transfer)
+    , fetchedPayers : List ShortProfile
     , pageInfo : Maybe Api.Relay.PageInfo
     , selectedDate : Maybe Date
     , datePicker : DatePicker.DatePicker
@@ -110,9 +117,7 @@ type QueryStatus err resp
     | Failed (Graphql.Http.Error err)
 
 
-{-| `RecipientProfile` type is only for the recipient of the payments. Payers have `Profile` types.
--}
-type alias RecipientProfile =
+type alias ShortProfile =
     { userName : Maybe String
     , account : Eos.Account.Name
     , avatar : Avatar
@@ -124,14 +129,26 @@ fetchRecipientProfile shared accountName =
     Api.Graphql.query shared
         (Cambiatus.Query.profile
             { input = { account = Present (Eos.Account.nameToString accountName) } }
-            recipientProfileSelectionSet
+            shortProfileSelectionSet
         )
         ProfileLoaded
 
 
-recipientProfileSelectionSet : SelectionSet RecipientProfile Cambiatus.Object.Profile
-recipientProfileSelectionSet =
-    SelectionSet.map3 RecipientProfile
+fetchPayersAutocomplete : Shared -> String -> String -> Cmd Msg
+fetchPayersAutocomplete shared recipient payer =
+    Api.Graphql.query shared
+        (Cambiatus.Query.getPayers
+            { payer = payer
+            , recipient = recipient
+            }
+            shortProfileSelectionSet
+        )
+        PayersFetched
+
+
+shortProfileSelectionSet : SelectionSet ShortProfile Cambiatus.Object.Profile
+shortProfileSelectionSet =
+    SelectionSet.map3 ShortProfile
         User.name
         (Eos.Account.nameSelectionSet User.account)
         (Avatar.selectionSet User.avatar)
@@ -238,6 +255,7 @@ init guest =
       , selectedDate = Nothing
       , recipientProfile = Loading
       , incomingTransfers = Loading
+      , fetchedPayers = []
       , pageInfo = Nothing
       , datePicker = datePicker
       }
@@ -299,6 +317,33 @@ getTransfers maybeObj =
 update : Msg -> Model -> Guest.Model -> UpdateResult
 update msg model guest =
     case msg of
+        PayersFetched (Ok maybePayers) ->
+            case maybePayers of
+                Just payers ->
+                    let
+                        toList p =
+                            case p of
+                                Just val ->
+                                    [ val ]
+
+                                Nothing ->
+                                    []
+
+                        newModel =
+                            { model | fetchedPayers = List.concat (List.map toList payers) }
+                    in
+                    newModel
+                        |> UR.init
+
+                Nothing ->
+                    model
+                        |> UR.init
+
+        PayersFetched (Err err) ->
+            model
+                |> UR.init
+                |> UR.logGraphqlError msg err
+
         ProfileLoaded (Ok maybeProfile) ->
             case maybeProfile of
                 Just profile ->
@@ -366,9 +411,17 @@ update msg model guest =
                 ( updated, cmd ) =
                     Select.update (selectConfiguration guest.shared False) subMsg model.payerAutocompleteState
             in
-            { model | payerAutocompleteState = updated }
-                |> UR.init
-                |> UR.addCmd cmd
+            case ( model.recipientProfile, Select.queryFromState model.payerAutocompleteState ) of
+                ( Loaded recipient, Just payer ) ->
+                    { model | payerAutocompleteState = updated }
+                        |> UR.init
+                        |> UR.addCmd (fetchPayersAutocomplete guest.shared (Eos.Account.nameToString recipient.account) payer)
+                        |> UR.addCmd cmd
+
+                _ ->
+                    { model | payerAutocompleteState = updated }
+                        |> UR.init
+                        |> UR.addCmd cmd
 
         ClearSelectSelection ->
             let
@@ -428,6 +481,45 @@ type alias UpdateResult =
     UR.UpdateResult Model Msg External
 
 
+salt : Int
+salt =
+    123456
+
+
+alphabet : String
+alphabet =
+    "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890"
+
+
+hashidsCtx : Hashids.Context
+hashidsCtx =
+    Hashids.createHashidsContext (String.fromInt salt) 8 alphabet
+
+
+alphabetEmojiMapper : Dict String String
+alphabetEmojiMapper =
+    let
+        emojis =
+            -- Must be separated by the space
+            "😄 😘 😺 🚀 🚗 🚙 🚚 🌀 🌟 🌴 🌵 🌷 🌸 🌹 🌺 🌻 🌼 🌽 🌿 🍁 🍄 🍅 🍆 🍇 🍈 🍉 🍊 🍌 🍍 🍎 🍏 🍑 🍒 🍓 🍭 🍯 🎀 🎃 🎈 🎨 🎲 🎸 🏡 🐌 🐒 🐚 🐞 🐬 🐱 🐲 🐳 🐴 🐵 🐶 🐸 🐹 💜 😎 🚘 🌳 🍋 🍐"
+    in
+    List.map2 Tuple.pair (String.split "" alphabet) (String.split " " emojis)
+        |> Dict.fromList
+
+
+txToEmoji : String -> String
+txToEmoji tx =
+    tx
+        |> Murmur3.hashString salt
+        -- make 32 bit number
+        |> Hashids.encode hashidsCtx
+        -- make short has from the given alphabet
+        |> String.split ""
+        |> List.map (\n -> Maybe.withDefault "" (Dict.get n alphabetEmojiMapper))
+        -- map hash symbols to emojis
+        |> String.join " "
+
+
 
 -- VIEW
 
@@ -476,23 +568,13 @@ viewUserAutocomplete guest model =
             [ span [ class "text-green tracking-wide uppercase text-caption block mb-1" ]
                 [ text "Payer" ]
             ]
-        , viewFilterTransfersByAccount guest model False
+        , viewPayerAutocomplete guest model False
         ]
 
 
-viewFilterTransfersByAccount : Guest.Model -> Model -> Bool -> Html Msg
-viewFilterTransfersByAccount guest model isDisabled =
+viewPayerAutocomplete : Guest.Model -> Model -> Bool -> Html Msg
+viewPayerAutocomplete guest model isDisabled =
     let
-        payers =
-            case model.incomingTransfers of
-                Loaded transfers ->
-                    transfers
-                        |> List.map .from
-                        |> LE.uniqueBy (\profile -> Eos.Account.nameToString profile.account)
-
-                _ ->
-                    []
-
         selectedPayers =
             Maybe.map (\v -> [ v ]) model.selectedPayer
                 |> Maybe.withDefault []
@@ -502,14 +584,14 @@ viewFilterTransfersByAccount guest model isDisabled =
             (Select.view
                 (selectConfiguration guest.shared isDisabled)
                 model.payerAutocompleteState
-                payers
+                model.fetchedPayers
                 selectedPayers
             )
         , viewSelectedPayers model guest selectedPayers
         ]
 
 
-viewSelectedPayers : Model -> Guest.Model -> List Profile -> Html Msg
+viewSelectedPayers : Model -> Guest.Model -> List ShortProfile -> Html Msg
 viewSelectedPayers model guest selectedPayers =
     div [ class "flex flex-row mt-3 mb-10 flex-wrap" ]
         (selectedPayers
@@ -528,7 +610,7 @@ viewSelectedPayers model guest selectedPayers =
         )
 
 
-viewSelectedPayer : Shared -> Model -> Profile -> Html msg
+viewSelectedPayer : Shared -> Model -> ShortProfile -> Html msg
 viewSelectedPayer shared model profile =
     let
         accountNameContainer =
@@ -566,7 +648,7 @@ viewSelectedPayer shared model profile =
         ]
 
 
-selectConfig : Select.Config msg Profile -> Shared -> Bool -> Select.Config msg Profile
+selectConfig : Select.Config msg ShortProfile -> Shared -> Bool -> Select.Config msg ShortProfile
 selectConfig select shared isDisabled =
     select
         |> Select.withInputClass "form-input h-12 w-full font-sans placeholder-gray-900"
@@ -582,7 +664,7 @@ selectConfig select shared isDisabled =
         |> Select.withMenuClass "border-t-none border-solid border-gray-100 border rounded-b z-30 bg-white"
 
 
-viewAutoCompleteItem : Shared -> Profile -> Html Never
+viewAutoCompleteItem : Shared -> ShortProfile -> Html Never
 viewAutoCompleteItem shared profile =
     let
         ipfsUrl =
@@ -605,7 +687,7 @@ viewAutoCompleteItem shared profile =
         ]
 
 
-selectConfiguration : Shared.Shared -> Bool -> Select.Config Msg Profile
+selectConfiguration : Shared.Shared -> Bool -> Select.Config Msg ShortProfile
 selectConfiguration shared isDisabled =
     selectConfig
         (Select.newConfig
@@ -682,7 +764,8 @@ viewTransfer guest payment =
         , p [ class "text-green text-4xl my-3" ]
             [ text amount ]
         , p [ class "tracking-widest text-2xl" ]
-            [ text "\u{1F916} 🇨🇷 💜 😙 😎 💻 😇 🎃" ]
+            [ text (txToEmoji payment.createdTx)
+            ]
         ]
 
 
@@ -694,18 +777,9 @@ viewTransfers guest model =
                 div [ class "text-center my-6" ] [ text "No transfers were found according your criteria." ]
 
             else
-                let
-                    visibleTransfers =
-                        case model.selectedPayer of
-                            Just p ->
-                                List.filter (\t -> t.from.account == p.account) transfers
-
-                            Nothing ->
-                                transfers
-                in
                 div []
                     [ ul [ class "" ]
-                        (List.map (viewTransfer guest) visibleTransfers)
+                        (List.map (viewTransfer guest) transfers)
                     , viewPagination model
                     ]
 
