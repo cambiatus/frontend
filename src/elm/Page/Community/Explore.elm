@@ -1,23 +1,16 @@
 module Page.Community.Explore exposing (Model, Msg(..), init, msgToString, update, view)
 
-import Api
 import Api.Graphql
-import Asset.Icon as Icon
 import Community exposing (Metadata)
-import Eos exposing (Symbol)
+import Eos
 import Eos.Account as Eos
 import Graphql.Http
-import Html exposing (..)
-import Html.Attributes exposing (class, src, style)
-import Http
+import Html exposing (Html, a, div, i, img, p, text)
+import Html.Attributes exposing (class, src)
 import I18Next exposing (t)
-import Json.Decode as Decode exposing (Decoder, field, int, list, string)
-import Json.Decode.Pipeline exposing (hardcoded, required)
-import Log
 import Page
 import Route
 import Session.LoggedIn as LoggedIn exposing (External(..))
-import Transfer
 import UpdateResult as UR
 
 
@@ -26,8 +19,8 @@ import UpdateResult as UR
 
 
 init : LoggedIn.Model -> ( Model, Cmd Msg )
-init ({ shared } as loggedIn) =
-    ( initModel loggedIn
+init { shared } =
+    ( initModel
     , Api.Graphql.query shared Community.communitiesQuery CompletedCommunitiesLoad
     )
 
@@ -42,8 +35,8 @@ type alias Model =
     }
 
 
-initModel : LoggedIn.Model -> Model
-initModel loggedIn =
+initModel : Model
+initModel =
     { communities = Loading
     , userMessage = Nothing
     }
@@ -183,7 +176,7 @@ type Msg
 
 
 update : Msg -> Model -> LoggedIn.Model -> UpdateResult
-update msg model loggedIn =
+update msg model _ =
     case msg of
         CompletedCommunitiesLoad (Ok communities) ->
             UR.init { model | communities = Loaded communities }

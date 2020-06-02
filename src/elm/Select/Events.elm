@@ -1,16 +1,16 @@
 module Select.Events exposing (onBlurAttribute)
 
-import Html exposing (..)
-import Html.Events exposing (keyCode, on)
+import Html exposing (Attribute)
+import Html.Events exposing (on)
 import Json.Decode as Decode
 import Select.Config exposing (Config)
-import Select.Messages exposing (..)
+import Select.Messages exposing (Msg(..))
 import Select.Models exposing (State)
 import Select.Utils exposing (referenceDataName)
 
 
 onBlurAttribute : Config msg item -> State -> Attribute (Msg item)
-onBlurAttribute config state =
+onBlurAttribute _ state =
     let
         dataDecoder =
             Decode.at [ "relatedTarget", "attributes", referenceDataName, "value" ] Decode.string

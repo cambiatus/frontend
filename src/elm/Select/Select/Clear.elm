@@ -1,7 +1,7 @@
 module Select.Select.Clear exposing (svgPath, view)
 
 import Select.Config exposing (Config)
-import Svg exposing (..)
+import Svg exposing (Svg, g, path, svg)
 import Svg.Attributes as Attrs
 
 

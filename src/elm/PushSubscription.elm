@@ -2,11 +2,11 @@ module PushSubscription exposing (Keys, PushSubscription, activatePushMutation, 
 
 import Cambiatus.Mutation as Mutation
 import Eos.Account as Eos
-import Graphql.Operation exposing (RootMutation, RootQuery)
+import Graphql.Operation exposing (RootMutation)
 import Graphql.OptionalArgument exposing (OptionalArgument(..))
-import Graphql.SelectionSet as SelectionSet exposing (SelectionSet, with)
+import Graphql.SelectionSet as SelectionSet exposing (SelectionSet)
 import Json.Decode as Decode exposing (Decoder, string)
-import Json.Decode.Pipeline exposing (custom, required)
+import Json.Decode.Pipeline exposing (required)
 
 
 type alias Keys =

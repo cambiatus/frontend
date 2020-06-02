@@ -178,7 +178,6 @@ type Status
 
 type Msg
     = Ignored
-    | ChangedRoute (Maybe Route)
     | ChangedUrl Url
     | ClickedLink Browser.UrlRequest
     | GotJavascriptData Value
@@ -231,9 +230,6 @@ update msg model =
     case ( msg, model.status ) of
         ( Ignored, _ ) ->
             ( model, Cmd.none )
-
-        ( ChangedRoute route, _ ) ->
-            changeRouteTo route model
 
         ( ChangedUrl url, _ ) ->
             changeRouteTo (Route.fromUrl url) model
@@ -868,9 +864,6 @@ msgToString msg =
     case msg of
         Ignored ->
             [ "Ignored" ]
-
-        ChangedRoute _ ->
-            [ "ChangedRoute" ]
 
         ChangedUrl _ ->
             [ "ChangedUrl" ]

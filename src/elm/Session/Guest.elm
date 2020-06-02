@@ -1,21 +1,17 @@
 module Session.Guest exposing (External(..), Model, Msg(..), Page(..), addAfterLoginRedirect, init, initModel, msgToString, subscriptions, update, view)
 
-import Api
-import Asset.Icon as Icon
 import Browser.Events
-import Html exposing (..)
-import Html.Attributes exposing (..)
-import Html.Events exposing (onClick, onFocus, onInput, onMouseEnter, onSubmit)
+import Html exposing (Html, button, div, header, img, p, span, text)
+import Html.Attributes exposing (alt, class, classList, src, style, tabindex, type_)
+import Html.Events exposing (onClick, onMouseEnter)
 import Http
-import I18Next exposing (Delims(..), Translations, t, tr)
+import I18Next exposing (Delims(..), Translations)
 import Icons
 import Json.Decode as Decode
-import Log
 import Ports
 import Profile exposing (Profile)
 import Route exposing (Route)
 import Session.Shared as Shared exposing (Shared)
-import Time
 import Translation
 import UpdateResult as UR
 
@@ -31,8 +27,8 @@ init shared =
     )
 
 
-fetchTranslations : String -> Shared -> Cmd Msg
-fetchTranslations language shared =
+fetchTranslations : String -> Cmd Msg
+fetchTranslations language =
     CompletedLoadTranslation language
         |> Translation.get language
 
@@ -63,7 +59,7 @@ initModel shared =
 
 
 subscriptions : Model -> Sub Msg
-subscriptions model =
+subscriptions _ =
     Sub.map KeyDown (Browser.Events.onKeyDown (Decode.field "key" Decode.string))
 
 
@@ -81,7 +77,7 @@ type Page
 
 
 view : (Msg -> msg) -> Page -> Model -> Html msg -> Html msg
-view thisMsg page ({ shared } as model) content =
+view thisMsg _ ({ shared } as model) content =
     case Shared.translationStatus shared of
         Shared.LoadingTranslation ->
             Shared.viewFullLoading
@@ -233,7 +229,7 @@ update msg ({ shared } as model) =
                 |> UR.init
                 |> UR.addCmd (Ports.storeLanguage lang)
 
-        CompletedLoadTranslation lang (Err err) ->
+        CompletedLoadTranslation _ (Err err) ->
             { model | shared = Shared.loadTranslation (Err err) shared }
                 |> UR.init
                 |> UR.logHttpError msg err
@@ -241,7 +237,7 @@ update msg ({ shared } as model) =
         ClickedTryAgainTranslation ->
             { model | shared = Shared.toLoadingTranslation shared }
                 |> UR.init
-                |> UR.addCmd (fetchTranslations (Shared.language shared) shared)
+                |> UR.addCmd (fetchTranslations (Shared.language shared))
 
         ShowLanguageNav b ->
             UR.init { model | showLanguageNav = b }
@@ -252,7 +248,7 @@ update msg ({ shared } as model) =
                 , showLanguageNav = False
             }
                 |> UR.init
-                |> UR.addCmd (fetchTranslations lang shared)
+                |> UR.addCmd (fetchTranslations lang)
 
         KeyDown key ->
             if key == "Esc" || key == "Escape" then

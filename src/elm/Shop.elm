@@ -8,11 +8,8 @@ module Shop exposing
     , salesQuery
     )
 
-import Avatar exposing (Avatar)
 import Cambiatus.Object
-import Cambiatus.Object.Profile as Creator
 import Cambiatus.Object.Sale
-import Cambiatus.Object.SaleHistory
 import Cambiatus.Query
 import Eos exposing (Symbol)
 import Eos.Account as Eos
@@ -43,10 +40,6 @@ type alias Sale =
     , trackStock : Bool
     , creator : Profile
     }
-
-
-type alias SaleAvatar =
-    { avatar : Avatar }
 
 
 type alias SaleId =
