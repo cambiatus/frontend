@@ -52,12 +52,14 @@ init loggedIn =
 
 type alias Model =
     { status : Status
+    , pinModal : ModalStatus
     }
 
 
 initModel : LoggedIn.Model -> Model
 initModel _ =
     { status = Loading
+    , pinModal = Hidden
     }
 
 
@@ -65,6 +67,11 @@ type Status
     = Loading
     | LoadingFailed (Graphql.Http.Error (Maybe Profile))
     | Loaded Profile
+
+
+type ModalStatus
+    = Hidden
+    | Shown
 
 
 
@@ -99,7 +106,12 @@ view_ loggedIn profile =
                     DownloadPdf privateKey
 
                 Nothing ->
-                    Ignored
+                    case loggedIn.shared.maybeAccount of
+                        Just ( _, True ) ->
+                            ClickedViewPrivateKeyAuth
+
+                        _ ->
+                            Ignored
     in
     div [ class "grid gap-6" ]
         [ PublicProfile.view_ loggedIn profile False
@@ -155,6 +167,8 @@ type Msg
     | CompletedProfileLoad (Result (Graphql.Http.Error (Maybe Profile)) (Maybe Profile))
     | ClickedChangePin
     | DownloadPdf String
+    | ClickedCloseChangePin
+    | ClickedViewPrivateKeyAuth
 
 
 update : Msg -> Model -> LoggedIn.Model -> UpdateResult
@@ -174,7 +188,22 @@ update msg model loggedIn =
                 |> UR.logGraphqlError msg err
 
         ClickedChangePin ->
-            UR.init model
+            UR.init { model | pinModal = Shown }
+
+        ClickedCloseChangePin ->
+            UR.init { model | pinModal = Hidden }
+
+        ClickedViewPrivateKeyAuth ->
+            case LoggedIn.maybePrivateKey loggedIn of
+                Nothing ->
+                    UR.init model
+                        |> UR.addExt
+                            (Just ClickedViewPrivateKeyAuth
+                                |> RequiredAuthentication
+                            )
+
+                Just _ ->
+                    UR.init model
 
         DownloadPdf passPhrase ->
             model
@@ -211,3 +240,9 @@ msgToString msg =
 
         ClickedChangePin ->
             [ "ClickedChangePin" ]
+
+        ClickedCloseChangePin ->
+            [ "ClickedCloseChangePin" ]
+
+        ClickedViewPrivateKeyAuth ->
+            [ "ClickedViewPrivateKeyAuth" ]
