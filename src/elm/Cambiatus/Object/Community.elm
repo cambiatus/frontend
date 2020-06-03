@@ -26,7 +26,7 @@ actionCount =
 
 hasActions : SelectionSet Bool Cambiatus.Object.Community
 hasActions =
-    Object.selectionForField "Boolean" "actions" [] Decode.bool
+    Object.selectionForField "Boolean" "has_actions" [] Decode.bool
 
 
 createdAt : SelectionSet Cambiatus.ScalarCodecs.DateTime Cambiatus.Object.Community
@@ -121,7 +121,7 @@ saleCount =
 
 hasShop : SelectionSet Bool Cambiatus.Object.Community
 hasShop =
-    Object.selectionForField "Boolean" "shop" [] Decode.bool
+    Object.selectionForField "Boolean" "has_shop" [] Decode.bool
 
 
 supply : SelectionSet (Maybe Float) Cambiatus.Object.Community
