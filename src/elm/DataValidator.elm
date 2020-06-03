@@ -7,6 +7,7 @@ module DataValidator exposing
     , greaterThan
     , greaterThanOrEqual
     , hasErrors
+    , isOdd
     , lengthGreaterThanOrEqual
     , listErrors
     , longerThan
@@ -183,6 +184,23 @@ negative constraints =
     , defaultError =
         \translations ->
             I18Next.t translations (numTranslation "negative")
+    }
+        :: constraints
+
+
+isOdd : List Constraint -> List Constraint
+isOdd constraints =
+    { test =
+        \v ->
+            case String.toInt v of
+                Nothing ->
+                    False
+
+                Just num ->
+                    modBy 2 num /= 0
+    , defaultError =
+        \translations ->
+            I18Next.t translations (numTranslation "is_odd")
     }
         :: constraints
 
