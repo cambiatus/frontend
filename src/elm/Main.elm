@@ -690,18 +690,18 @@ changeRouteTo maybeRoute model =
                 (updateStatusWith Login GotLoginMsg)
                 maybeRedirect
 
-        Just (Route.PaymentHistory accountName maybeRedirect) ->
+        Just (Route.PaymentHistory accountName) ->
             case session of
                 Page.Guest _ ->
                     withGuest
                         PaymentHistory.initGuest
                         (updateStatusWith PaymentHistory GotPaymentHistoryMsg)
-                        maybeRedirect
+                        Nothing
 
                 Page.LoggedIn _ ->
                     PaymentHistory.initLoggedIn
                         >> updateStatusWith PaymentHistory GotPaymentHistoryMsg model
-                        |> withLoggedIn (Route.PaymentHistory accountName Nothing)
+                        |> withLoggedIn (Route.PaymentHistory accountName)
 
         Just (Route.LoginWithPrivateKey maybeRedirect) ->
             withGuest
