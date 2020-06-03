@@ -1,5 +1,6 @@
 module Transfer exposing
     ( ConnectionTransfer
+    , EdgeTransfer
     , QueryTransfers
     , Transfer
     , communityFilter

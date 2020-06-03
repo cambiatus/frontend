@@ -53,10 +53,10 @@ import Utils
 type Msg
     = NoOp
     | TransfersLoaded (Result (Graphql.Http.Error (Maybe ConnectionTransfer)) (Maybe ConnectionTransfer))
-    | ProfileLoaded (Result (Graphql.Http.Error (Maybe ShortProfile)) (Maybe ShortProfile))
-    | OnSelect (Maybe ShortProfile)
-    | SelectMsg (Select.Msg ShortProfile)
-    | PayersFetched (Result (Graphql.Http.Error (Maybe (List (Maybe ShortProfile)))) (Maybe (List (Maybe ShortProfile))))
+    | RecipientProfileLoaded (Result (Graphql.Http.Error (Maybe Profile)) (Maybe Profile))
+    | OnSelect (Maybe Profile)
+    | SelectMsg (Select.Msg Profile)
+    | PayersFetched (Result (Graphql.Http.Error (Maybe (List (Maybe Profile)))) (Maybe (List (Maybe Profile))))
     | SetDatePicker DatePicker.Msg
     | ClearSelectedDate
     | ClearSelectSelection
@@ -82,10 +82,10 @@ msgToString msg =
             [ "ShowMore" ]
 
         TransfersLoaded result ->
-            resultToString [ "CompletedLoadUserTransfers" ] result
+            resultToString [ "TransfersLoaded" ] result
 
-        ProfileLoaded r ->
-            [ "CompletedProfileLoad", UR.resultToString r ]
+        RecipientProfileLoaded r ->
+            [ "RecipientProfileLoaded", UR.resultToString r ]
 
         PayersFetched r ->
             [ "PayersFetched", UR.resultToString r ]
@@ -112,10 +112,10 @@ msgToString msg =
 
 type alias Model =
     { payerAutocompleteState : Select.State
-    , selectedPayer : Maybe ShortProfile
-    , recipientProfile : QueryStatus (Maybe ShortProfile) ShortProfile
+    , selectedPayer : Maybe Profile
+    , recipientProfile : QueryStatus (Maybe Profile) Profile
     , incomingTransfers : QueryStatus (Maybe ConnectionTransfer) (List Transfer)
-    , fetchedPayers : List ShortProfile
+    , fetchedPayers : List Profile
     , pageInfo : Maybe Api.Relay.PageInfo
     , selectedDate : Maybe Date
     , datePicker : DatePicker.DatePicker
@@ -128,11 +128,19 @@ type QueryStatus err resp
     | Failed (Graphql.Http.Error err)
 
 
-type alias ShortProfile =
+type alias Profile =
     { userName : Maybe String
     , account : Eos.Account.Name
     , avatar : Avatar
     }
+
+
+profileSelectionSet : SelectionSet Profile Cambiatus.Object.Profile
+profileSelectionSet =
+    SelectionSet.map3 Profile
+        User.name
+        (Eos.Account.nameSelectionSet User.account)
+        (Avatar.selectionSet User.avatar)
 
 
 fetchRecipientProfile : Shared -> Eos.Account.Name -> Cmd Msg
@@ -140,9 +148,9 @@ fetchRecipientProfile shared accountName =
     Api.Graphql.query shared
         (Cambiatus.Query.profile
             { input = { account = Present (Eos.Account.nameToString accountName) } }
-            shortProfileSelectionSet
+            profileSelectionSet
         )
-        ProfileLoaded
+        RecipientProfileLoaded
 
 
 fetchPayersAutocomplete : Shared -> String -> String -> Cmd Msg
@@ -152,17 +160,9 @@ fetchPayersAutocomplete shared recipient payer =
             { payer = payer
             , recipient = recipient
             }
-            shortProfileSelectionSet
+            profileSelectionSet
         )
         PayersFetched
-
-
-shortProfileSelectionSet : SelectionSet ShortProfile Cambiatus.Object.Profile
-shortProfileSelectionSet =
-    SelectionSet.map3 ShortProfile
-        User.name
-        (Eos.Account.nameSelectionSet User.account)
-        (Avatar.selectionSet User.avatar)
 
 
 fetchTransfers : Shared -> Model -> Cmd Msg
@@ -228,11 +228,11 @@ incomingTransfersSelectionSet optionalArgsFn input =
         Transfer.transferConnectionSelectionSet
 
 
-datePickerSettings : DatePicker.Settings
-datePickerSettings =
+datePickerSettings : Shared -> DatePicker.Settings
+datePickerSettings shared =
     { defaultSettings
         | changeYear = off
-        , placeholder = "Pick a date..."
+        , placeholder = I18Next.t shared.translations "payment_history.pick_date"
         , inputClassList =
             [ ( "input", True )
             , ( "w-full", True )
@@ -246,6 +246,8 @@ datePickerSettings =
     }
 
 
+{-| Payment History page works for both Guests and Logged In users, so we need dedicated `init` and `update` functions.
+-}
 initLoggedIn : LoggedIn.Model -> ( Model, Cmd Msg )
 initLoggedIn { shared } =
     init shared
@@ -287,26 +289,22 @@ init shared =
     )
 
 
-type alias EdgeTransfer =
-    Edge Transfer
-
-
 getTransfers : Maybe ConnectionTransfer -> List Transfer
 getTransfers maybeObj =
     let
-        toMaybeEdges : Maybe ConnectionTransfer -> Maybe (List (Maybe EdgeTransfer))
+        toMaybeEdges : Maybe ConnectionTransfer -> Maybe (List (Maybe Transfer.EdgeTransfer))
         toMaybeEdges maybeConn =
             Maybe.andThen
                 (\a -> a.edges)
                 maybeConn
 
-        toEdges : Maybe (List (Maybe EdgeTransfer)) -> List (Maybe EdgeTransfer)
+        toEdges : Maybe (List (Maybe Transfer.EdgeTransfer)) -> List (Maybe Transfer.EdgeTransfer)
         toEdges maybeEdges =
             Maybe.withDefault
                 []
                 maybeEdges
 
-        toMaybeNodes : List (Maybe EdgeTransfer) -> List (Maybe Transfer)
+        toMaybeNodes : List (Maybe Transfer.EdgeTransfer) -> List (Maybe Transfer)
         toMaybeNodes edges =
             List.map
                 (\a ->
@@ -365,7 +363,7 @@ update msg model shared =
                 |> UR.init
                 |> UR.logGraphqlError msg err
 
-        ProfileLoaded (Ok maybeProfile) ->
+        RecipientProfileLoaded (Ok maybeProfile) ->
             case maybeProfile of
                 Just profile ->
                     let
@@ -380,7 +378,7 @@ update msg model shared =
                     model
                         |> UR.init
 
-        ProfileLoaded (Err err) ->
+        RecipientProfileLoaded (Err err) ->
             { model | recipientProfile = Failed err }
                 |> UR.init
                 |> UR.logGraphqlError msg err
@@ -460,7 +458,7 @@ update msg model shared =
         SetDatePicker subMsg ->
             let
                 ( newDatePicker, dateEvent ) =
-                    DatePicker.update datePickerSettings subMsg model.datePicker
+                    DatePicker.update (datePickerSettings shared) subMsg model.datePicker
             in
             case dateEvent of
                 Picked newDate ->
@@ -629,7 +627,7 @@ viewPayerAutocomplete shared model isDisabled =
         ]
 
 
-viewSelectedPayers : Model -> Shared -> List ShortProfile -> Html Msg
+viewSelectedPayers : Model -> Shared -> List Profile -> Html Msg
 viewSelectedPayers model shared selectedPayers =
     div [ class "flex flex-row mt-3 mb-10 flex-wrap" ]
         (selectedPayers
@@ -648,7 +646,7 @@ viewSelectedPayers model shared selectedPayers =
         )
 
 
-viewSelectedPayer : Shared -> Model -> ShortProfile -> Html msg
+viewSelectedPayer : Shared -> Model -> Profile -> Html msg
 viewSelectedPayer shared model profile =
     let
         accountNameContainer =
@@ -686,7 +684,7 @@ viewSelectedPayer shared model profile =
         ]
 
 
-selectConfig : Select.Config msg ShortProfile -> Shared -> Bool -> Select.Config msg ShortProfile
+selectConfig : Select.Config msg Profile -> Shared -> Bool -> Select.Config msg Profile
 selectConfig select shared isDisabled =
     select
         |> Select.withInputClass "form-input h-12 w-full font-sans placeholder-gray-900"
@@ -702,7 +700,7 @@ selectConfig select shared isDisabled =
         |> Select.withMenuClass "border-t-none border-solid border-gray-100 border rounded-b z-30 bg-white"
 
 
-viewAutoCompleteItem : Shared -> ShortProfile -> Html Never
+viewAutoCompleteItem : Shared -> Profile -> Html Never
 viewAutoCompleteItem shared profile =
     let
         ipfsUrl =
@@ -725,7 +723,7 @@ viewAutoCompleteItem shared profile =
         ]
 
 
-selectConfiguration : Shared.Shared -> Bool -> Select.Config Msg ShortProfile
+selectConfiguration : Shared.Shared -> Bool -> Select.Config Msg Profile
 selectConfiguration shared isDisabled =
     selectConfig
         (Select.newConfig
@@ -750,7 +748,7 @@ viewDatePicker shared model =
         , div [ class "relative" ]
             [ DatePicker.view
                 model.selectedDate
-                datePickerSettings
+                (datePickerSettings shared)
                 model.datePicker
                 |> Html.map SetDatePicker
             , case model.selectedDate of
