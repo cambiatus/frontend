@@ -1,13 +1,10 @@
 module Page.PaymentHistory exposing
     ( Model
     , Msg
-    , initGuest
-    , initLoggedIn
+    , init
     , msgToString
-    , updateGuest
-    , updateLoggedIn
-    , viewGuest
-    , viewLoggedIn
+    , update
+    , view
     )
 
 import Api.Graphql
@@ -36,8 +33,6 @@ import Murmur3
 import Page
 import Profile exposing (Profile)
 import Select
-import Session.Guest as Guest exposing (External(..))
-import Session.LoggedIn as LoggedIn
 import Session.Shared as Shared exposing (Shared)
 import Strftime
 import Time exposing (Month(..), Weekday(..))
@@ -58,7 +53,7 @@ type Msg
     | SelectMsg (Select.Msg Profile)
     | PayersFetched (Result (Graphql.Http.Error (Maybe (List (Maybe Profile)))) (Maybe (List (Maybe Profile))))
     | SetDatePicker DatePicker.Msg
-    | ClearSelectedDate
+    | ClearDatePicker
     | ClearSelectSelection
     | ShowMore
 
@@ -102,8 +97,8 @@ msgToString msg =
         SetDatePicker _ ->
             [ "ToDatePicker" ]
 
-        ClearSelectedDate ->
-            [ "ClearSelectedDate" ]
+        ClearDatePicker ->
+            [ "ClearDatePicker" ]
 
 
 
@@ -165,6 +160,13 @@ fetchPayersAutocomplete shared recipient payer =
         PayersFetched
 
 
+incomingTransfersSelectionSet optionalArgsFn input =
+    Cambiatus.Query.paymentHistory
+        optionalArgsFn
+        input
+        Transfer.transferConnectionSelectionSet
+
+
 fetchTransfers : Shared -> Model -> Cmd Msg
 fetchTransfers shared model =
     let
@@ -221,13 +223,6 @@ fetchTransfers shared model =
             Cmd.none
 
 
-incomingTransfersSelectionSet optionalArgsFn input =
-    Cambiatus.Query.paymentHistory
-        optionalArgsFn
-        input
-        Transfer.transferConnectionSelectionSet
-
-
 datePickerSettings : Shared -> DatePicker.Settings
 datePickerSettings shared =
     { defaultSettings
@@ -246,20 +241,15 @@ datePickerSettings shared =
     }
 
 
-{-| Payment History page works for both Guests and Logged In users, so we need dedicated `init` and `update` functions.
+{-| A generic representation of `Guest.Model` and `LoggedIn.Model`. We need this since the Payment History page
+works for guests and for logged-in users.
 -}
-initLoggedIn : LoggedIn.Model -> ( Model, Cmd Msg )
-initLoggedIn { shared } =
-    init shared
+type alias SharedModel m =
+    { m | shared : Shared }
 
 
-initGuest : Guest.Model -> ( Model, Cmd Msg )
-initGuest { shared } =
-    init shared
-
-
-init : Shared -> ( Model, Cmd Msg )
-init shared =
+init : SharedModel m -> ( Model, Cmd Msg )
+init { shared } =
     let
         ( datePicker, datePickerCmd ) =
             DatePicker.init
@@ -333,8 +323,8 @@ getTransfers maybeObj =
 -- UPDATE
 
 
-update : Msg -> Model -> Shared -> UR.UpdateResult Model Msg extMsg
-update msg model shared =
+update : Msg -> Model -> SharedModel m -> UR.UpdateResult Model Msg extMsg
+update msg model { shared } =
     case msg of
         PayersFetched (Ok maybePayers) ->
             case maybePayers of
@@ -479,7 +469,7 @@ update msg model shared =
                     { model | datePicker = newDatePicker }
                         |> UR.init
 
-        ClearSelectedDate ->
+        ClearDatePicker ->
             let
                 newModel =
                     { model
@@ -496,14 +486,30 @@ update msg model shared =
                 |> UR.init
 
 
-updateLoggedIn : Msg -> Model -> LoggedIn.Model -> UR.UpdateResult Model Msg (LoggedIn.External Msg)
-updateLoggedIn msg model { shared } =
-    update msg model shared
+
+--updateLoggedIn : Msg -> Model -> LoggedIn.Model -> UR.UpdateResult Model Msg (LoggedIn.External Msg)
+--updateLoggedIn msg model { shared } =
+--    update msg model shared
+--
+--
+--updateGuest : Msg -> Model -> Guest.Model -> UR.UpdateResult Model Msg Guest.External
+--updateGuest msg model { shared } =
+--    update msg model shared
 
 
-updateGuest : Msg -> Model -> Guest.Model -> UR.UpdateResult Model Msg Guest.External
-updateGuest msg model { shared } =
-    update msg model shared
+{-| Convert Transfer identifier (64 symbols) to emoji sequence (8 symbols)
+-}
+transferIdToEmojis : String -> String
+transferIdToEmojis transferId =
+    transferId
+        |> Murmur3.hashString salt
+        -- make 32 bit number
+        |> Hashids.encode hashidsCtx
+        -- make short has from the given alphabet
+        |> String.split ""
+        |> List.map (\n -> Maybe.withDefault "" (Dict.get n alphabetEmojiMapper))
+        -- map hash symbols to emojis
+        |> String.join " "
 
 
 salt : Int
@@ -532,35 +538,12 @@ alphabetEmojiMapper =
         |> Dict.fromList
 
 
-txToEmoji : String -> String
-txToEmoji tx =
-    tx
-        |> Murmur3.hashString salt
-        -- make 32 bit number
-        |> Hashids.encode hashidsCtx
-        -- make short has from the given alphabet
-        |> String.split ""
-        |> List.map (\n -> Maybe.withDefault "" (Dict.get n alphabetEmojiMapper))
-        -- map hash symbols to emojis
-        |> String.join " "
-
-
 
 -- VIEW
 
 
-viewLoggedIn : LoggedIn.Model -> Model -> Html Msg
-viewLoggedIn { shared } model =
-    view shared model
-
-
-viewGuest : Guest.Model -> Model -> Html Msg
-viewGuest { shared } model =
-    view shared model
-
-
-view : Shared -> Model -> Html Msg
-view shared model =
+view : SharedModel m -> Model -> Html Msg
+view { shared } model =
     case model.recipientProfile of
         Loaded profile ->
             div [ class "bg-white" ]
@@ -754,7 +737,7 @@ viewDatePicker shared model =
             , case model.selectedDate of
                 Just _ ->
                     button
-                        [ onClick <| ClearSelectedDate
+                        [ onClick <| ClearDatePicker
                         , class "absolute right-0 mr-12 top-0 mt-3"
                         ]
                         [ Icons.trash "" ]
@@ -802,7 +785,7 @@ viewTransfer shared payment =
         , p [ class "text-green text-4xl my-3" ]
             [ text amount ]
         , p [ class "tracking-widest text-2xl" ]
-            [ text (txToEmoji payment.createdTx)
+            [ text (transferIdToEmojis payment.createdTx)
             ]
         ]
 

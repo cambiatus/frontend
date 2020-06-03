@@ -85,13 +85,16 @@ view : (Msg -> msg) -> Page -> Model -> Html msg -> Html msg
 view thisMsg page ({ shared } as model) content =
     let
         isLeftArtAvailable =
+            -- Some guest pages have the half-width block with the picture and the user quotes
             case page of
-                PaymentHistory ->
-                    -- This page doesn't have left column with art and quote
-                    False
+                Login ->
+                    True
+
+                Register ->
+                    True
 
                 _ ->
-                    True
+                    False
 
         leftColWidth =
             if isLeftArtAvailable then

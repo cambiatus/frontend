@@ -316,12 +316,12 @@ update msg model =
         ( GotPaymentHistoryMsg subMsg, PaymentHistory subModel ) ->
             case model.session of
                 Page.Guest _ ->
-                    PaymentHistory.updateGuest subMsg subModel
+                    PaymentHistory.update subMsg subModel
                         >> updateGuestUResult PaymentHistory GotPaymentHistoryMsg model
                         |> withGuest
 
                 Page.LoggedIn _ ->
-                    PaymentHistory.updateLoggedIn subMsg subModel
+                    PaymentHistory.update subMsg subModel
                         >> updateLoggedInUResult PaymentHistory GotPaymentHistoryMsg model
                         |> withLoggedIn
 
@@ -694,12 +694,12 @@ changeRouteTo maybeRoute model =
             case session of
                 Page.Guest _ ->
                     withGuest
-                        PaymentHistory.initGuest
+                        PaymentHistory.init
                         (updateStatusWith PaymentHistory GotPaymentHistoryMsg)
                         Nothing
 
                 Page.LoggedIn _ ->
-                    PaymentHistory.initLoggedIn
+                    PaymentHistory.init
                         >> updateStatusWith PaymentHistory GotPaymentHistoryMsg model
                         |> withLoggedIn (Route.PaymentHistory accountName)
 
@@ -1024,10 +1024,10 @@ view model =
         PaymentHistory subModel ->
             case model.session of
                 Page.Guest _ ->
-                    viewGuest subModel Guest.PaymentHistory GotPaymentHistoryMsg PaymentHistory.viewGuest
+                    viewGuest subModel Guest.PaymentHistory GotPaymentHistoryMsg PaymentHistory.view
 
                 Page.LoggedIn _ ->
-                    viewLoggedIn subModel LoggedIn.PaymentHistory GotPaymentHistoryMsg PaymentHistory.viewLoggedIn
+                    viewLoggedIn subModel LoggedIn.PaymentHistory GotPaymentHistoryMsg PaymentHistory.view
 
         Register _ subModel ->
             viewGuest subModel Guest.Register GotRegisterMsg Register.view
