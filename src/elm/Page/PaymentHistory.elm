@@ -1,4 +1,14 @@
-module Page.PaymentHistory exposing (Model, Msg, init, msgToString, update, view)
+module Page.PaymentHistory exposing
+    ( Model
+    , Msg
+    , initGuest
+    , initLoggedIn
+    , msgToString
+    , updateGuest
+    , updateLoggedIn
+    , viewGuest
+    , viewLoggedIn
+    )
 
 import Api.Graphql
 import Api.Relay exposing (Edge)
@@ -27,6 +37,7 @@ import Page
 import Profile exposing (Profile)
 import Select
 import Session.Guest as Guest exposing (External(..))
+import Session.LoggedIn as LoggedIn
 import Session.Shared as Shared exposing (Shared)
 import Strftime
 import Time exposing (Month(..), Weekday(..))
@@ -235,8 +246,18 @@ datePickerSettings =
     }
 
 
-init : Guest.Model -> ( Model, Cmd Msg )
-init guest =
+initLoggedIn : LoggedIn.Model -> ( Model, Cmd Msg )
+initLoggedIn { shared } =
+    init shared
+
+
+initGuest : Guest.Model -> ( Model, Cmd Msg )
+initGuest { shared } =
+    init shared
+
+
+init : Shared -> ( Model, Cmd Msg )
+init shared =
     let
         ( datePicker, datePickerCmd ) =
             DatePicker.init
@@ -244,7 +265,7 @@ init guest =
         recipientAccountName =
             let
                 uriLastPart =
-                    String.split "/" guest.shared.url.path
+                    String.split "/" shared.url.path
                         |> LE.last
             in
             Eos.Account.stringToName <|
@@ -261,7 +282,7 @@ init guest =
       }
     , Cmd.batch
         [ Cmd.map SetDatePicker datePickerCmd
-        , fetchRecipientProfile guest.shared recipientAccountName
+        , fetchRecipientProfile shared recipientAccountName
         ]
     )
 
@@ -314,8 +335,8 @@ getTransfers maybeObj =
 -- UPDATE
 
 
-update : Msg -> Model -> Guest.Model -> UpdateResult
-update msg model guest =
+update : Msg -> Model -> Shared -> UR.UpdateResult Model Msg extMsg
+update msg model shared =
     case msg of
         PayersFetched (Ok maybePayers) ->
             case maybePayers of
@@ -353,7 +374,7 @@ update msg model guest =
                     in
                     newModel
                         |> UR.init
-                        |> UR.addCmd (fetchTransfers guest.shared newModel)
+                        |> UR.addCmd (fetchTransfers shared newModel)
 
                 Nothing ->
                     model
@@ -391,7 +412,7 @@ update msg model guest =
         ShowMore ->
             model
                 |> UR.init
-                |> UR.addCmd (fetchTransfers guest.shared model)
+                |> UR.addCmd (fetchTransfers shared model)
 
         OnSelect maybeProfile ->
             let
@@ -404,18 +425,18 @@ update msg model guest =
             in
             newModel
                 |> UR.init
-                |> UR.addCmd (fetchTransfers guest.shared newModel)
+                |> UR.addCmd (fetchTransfers shared newModel)
 
         SelectMsg subMsg ->
             let
                 ( updated, cmd ) =
-                    Select.update (selectConfiguration guest.shared False) subMsg model.payerAutocompleteState
+                    Select.update (selectConfiguration shared False) subMsg model.payerAutocompleteState
             in
             case ( model.recipientProfile, Select.queryFromState model.payerAutocompleteState ) of
                 ( Loaded recipient, Just payer ) ->
                     { model | payerAutocompleteState = updated }
                         |> UR.init
-                        |> UR.addCmd (fetchPayersAutocomplete guest.shared (Eos.Account.nameToString recipient.account) payer)
+                        |> UR.addCmd (fetchPayersAutocomplete shared (Eos.Account.nameToString recipient.account) payer)
                         |> UR.addCmd cmd
 
                 _ ->
@@ -434,7 +455,7 @@ update msg model guest =
             in
             newModel
                 |> UR.init
-                |> UR.addCmd (fetchTransfers guest.shared newModel)
+                |> UR.addCmd (fetchTransfers shared newModel)
 
         SetDatePicker subMsg ->
             let
@@ -454,7 +475,7 @@ update msg model guest =
                     in
                     newModel
                         |> UR.init
-                        |> UR.addCmd (fetchTransfers guest.shared newModel)
+                        |> UR.addCmd (fetchTransfers shared newModel)
 
                 _ ->
                     { model | datePicker = newDatePicker }
@@ -470,15 +491,21 @@ update msg model guest =
             in
             newModel
                 |> UR.init
-                |> UR.addCmd (fetchTransfers guest.shared newModel)
+                |> UR.addCmd (fetchTransfers shared newModel)
 
         NoOp ->
             model
                 |> UR.init
 
 
-type alias UpdateResult =
-    UR.UpdateResult Model Msg External
+updateLoggedIn : Msg -> Model -> LoggedIn.Model -> UR.UpdateResult Model Msg (LoggedIn.External Msg)
+updateLoggedIn msg model { shared } =
+    update msg model shared
+
+
+updateGuest : Msg -> Model -> Guest.Model -> UR.UpdateResult Model Msg Guest.External
+updateGuest msg model { shared } =
+    update msg model shared
 
 
 salt : Int
@@ -524,8 +551,18 @@ txToEmoji tx =
 -- VIEW
 
 
-view : Guest.Model -> Model -> Html Msg
-view guest model =
+viewLoggedIn : LoggedIn.Model -> Model -> Html Msg
+viewLoggedIn { shared } model =
+    view shared model
+
+
+viewGuest : Guest.Model -> Model -> Html Msg
+viewGuest { shared } model =
+    view shared model
+
+
+view : Shared -> Model -> Html Msg
+view shared model =
     case model.recipientProfile of
         Loaded profile ->
             div [ class "bg-white" ]
@@ -534,10 +571,10 @@ view guest model =
                     [ h2 [ class "text-center text-black text-2xl" ]
                         [ text "Payment History" ]
                     , div []
-                        [ viewUserAutocomplete guest model
+                        [ viewUserAutocomplete shared model
                         , viewDatePicker model
                         ]
-                    , viewTransfers guest model
+                    , viewTransfers shared model
                     ]
                 ]
 
@@ -561,19 +598,20 @@ viewSplash p =
         ]
 
 
-viewUserAutocomplete guest model =
+viewUserAutocomplete : Shared -> Model -> Html Msg
+viewUserAutocomplete shared model =
     div [ class "my-4" ]
         [ label
             [ class "block" ]
             [ span [ class "text-green tracking-wide uppercase text-caption block mb-1" ]
                 [ text "Payer" ]
             ]
-        , viewPayerAutocomplete guest model False
+        , viewPayerAutocomplete shared model False
         ]
 
 
-viewPayerAutocomplete : Guest.Model -> Model -> Bool -> Html Msg
-viewPayerAutocomplete guest model isDisabled =
+viewPayerAutocomplete : Shared -> Model -> Bool -> Html Msg
+viewPayerAutocomplete shared model isDisabled =
     let
         selectedPayers =
             Maybe.map (\v -> [ v ]) model.selectedPayer
@@ -582,24 +620,24 @@ viewPayerAutocomplete guest model isDisabled =
     div []
         [ Html.map SelectMsg
             (Select.view
-                (selectConfiguration guest.shared isDisabled)
+                (selectConfiguration shared isDisabled)
                 model.payerAutocompleteState
                 model.fetchedPayers
                 selectedPayers
             )
-        , viewSelectedPayers model guest selectedPayers
+        , viewSelectedPayers model shared selectedPayers
         ]
 
 
-viewSelectedPayers : Model -> Guest.Model -> List ShortProfile -> Html Msg
-viewSelectedPayers model guest selectedPayers =
+viewSelectedPayers : Model -> Shared -> List ShortProfile -> Html Msg
+viewSelectedPayers model shared selectedPayers =
     div [ class "flex flex-row mt-3 mb-10 flex-wrap" ]
         (selectedPayers
             |> List.map
                 (\p ->
                     div
                         [ class "flex justify-between flex-col m-3 items-center" ]
-                        [ viewSelectedPayer guest.shared model p
+                        [ viewSelectedPayer shared model p
                         , div
                             [ onClick ClearSelectSelection
                             , class "h-6 w-6 flex items-center mt-4"
@@ -728,7 +766,8 @@ viewDatePicker model =
         ]
 
 
-viewTransfer guest payment =
+viewTransfer : Shared -> Transfer -> Html Msg
+viewTransfer shared payment =
     let
         payer =
             payment.from
@@ -741,7 +780,7 @@ viewTransfer guest payment =
                 |> Strftime.format "%d %b %Y, %H:%M" Time.utc
 
         ipfsUrl =
-            guest.shared.endpoints.ipfs
+            shared.endpoints.ipfs
 
         avatarImg =
             Avatar.view ipfsUrl payer.avatar "max-w-full max-h-full"
@@ -769,8 +808,8 @@ viewTransfer guest payment =
         ]
 
 
-viewTransfers : Guest.Model -> Model -> Html Msg
-viewTransfers guest model =
+viewTransfers : Shared -> Model -> Html Msg
+viewTransfers shared model =
     case model.incomingTransfers of
         Loaded transfers ->
             if List.isEmpty transfers then
@@ -779,7 +818,7 @@ viewTransfers guest model =
             else
                 div []
                     [ ul [ class "" ]
-                        (List.map (viewTransfer guest) transfers)
+                        (List.map (viewTransfer shared) transfers)
                     , viewPagination model
                     ]
 

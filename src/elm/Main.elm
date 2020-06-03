@@ -314,9 +314,16 @@ update msg model =
                 |> withGuest
 
         ( GotPaymentHistoryMsg subMsg, PaymentHistory subModel ) ->
-            PaymentHistory.update subMsg subModel
-                >> updateGuestUResult PaymentHistory GotPaymentHistoryMsg model
-                |> withGuest
+            case model.session of
+                Page.Guest _ ->
+                    PaymentHistory.updateGuest subMsg subModel
+                        >> updateGuestUResult PaymentHistory GotPaymentHistoryMsg model
+                        |> withGuest
+
+                Page.LoggedIn _ ->
+                    PaymentHistory.updateLoggedIn subMsg subModel
+                        >> updateLoggedInUResult PaymentHistory GotPaymentHistoryMsg model
+                        |> withLoggedIn
 
         ( GotLoginMsg subMsg, Login subModel ) ->
             Login.update subMsg subModel
@@ -684,10 +691,17 @@ changeRouteTo maybeRoute model =
                 maybeRedirect
 
         Just (Route.PaymentHistory accountName maybeRedirect) ->
-            withGuest
-                PaymentHistory.init
-                (updateStatusWith PaymentHistory GotPaymentHistoryMsg)
-                maybeRedirect
+            case session of
+                Page.Guest _ ->
+                    withGuest
+                        PaymentHistory.initGuest
+                        (updateStatusWith PaymentHistory GotPaymentHistoryMsg)
+                        maybeRedirect
+
+                Page.LoggedIn _ ->
+                    PaymentHistory.initLoggedIn
+                        >> updateStatusWith PaymentHistory GotPaymentHistoryMsg model
+                        |> withLoggedIn (Route.PaymentHistory accountName Nothing)
 
         Just (Route.LoginWithPrivateKey maybeRedirect) ->
             withGuest
@@ -1008,7 +1022,12 @@ view model =
             viewPage Guest.Other LoggedIn.Other (\_ -> Ignored) (ComingSoon.view model.session)
 
         PaymentHistory subModel ->
-            viewGuest subModel Guest.PaymentHistory GotPaymentHistoryMsg PaymentHistory.view
+            case model.session of
+                Page.Guest _ ->
+                    viewGuest subModel Guest.PaymentHistory GotPaymentHistoryMsg PaymentHistory.viewGuest
+
+                Page.LoggedIn _ ->
+                    viewLoggedIn subModel LoggedIn.PaymentHistory GotPaymentHistoryMsg PaymentHistory.viewLoggedIn
 
         Register _ subModel ->
             viewGuest subModel Guest.Register GotRegisterMsg Register.view
