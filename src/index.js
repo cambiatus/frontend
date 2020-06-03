@@ -22,6 +22,37 @@ pdfMake.fonts = {
 }
 const { Socket: PhoenixSocket } = require('phoenix')
 
+// Transform `Debug.log` output into nice log object with custom formatter
+// (snippet is taken from https://github.com/MattCheely/elm-app-gen/blob/master/generators/app/templates/parcel/app.js)
+if (process.env.NODE_ENV === 'development') {
+  const ElmDebugger = require('elm-debug-transformer')
+
+  const hasFormatterSupport = () => {
+    const originalFormatters = window.devtoolsFormatters
+    let supported = false
+
+    window.devtoolsFormatters = [
+      {
+        header: function (obj, config) {
+          supported = true
+          return null
+        },
+        hasBody: function (obj) {},
+        body: function (obj, config) {}
+      }
+    ]
+    console.log('elm-debug-transformer: checking for formatter support.', {})
+    window.devtoolsFormatters = originalFormatters
+    return supported
+  }
+
+  if (hasFormatterSupport()) {
+    ElmDebugger.register()
+  } else {
+    ElmDebugger.register({ simple_mode: true })
+  }
+}
+
 // =========================================
 // App startup
 // =========================================
