@@ -53,6 +53,7 @@ init loggedIn =
 type alias Model =
     { status : Status
     , pinModal : ModalStatus
+    , newPin : String
     }
 
 
@@ -60,6 +61,7 @@ initModel : LoggedIn.Model -> Model
 initModel _ =
     { status = Loading
     , pinModal = Hidden
+    , newPin = ""
     }
 
 
@@ -144,9 +146,9 @@ viewModal status =
                             ]
                         , div []
                             [ label [ class "input-label", for "newPin" ] [ text "New security pin" ]
-                            , input [ id "newPin", class "input w-full mb-4", type_ "text" ] []
+                            , input [ id "newPin", class "input w-full mb-4", type_ "text", onInput EnteredPin ] []
                             ]
-                        , button [ class "button button-primary w-full" ] [ text "Change" ]
+                        , button [ class "button button-primary w-full", onClick ChangedPin ] [ text "Change" ]
                         ]
                     ]
                 ]
@@ -199,6 +201,8 @@ type Msg
     | DownloadPdf String
     | ClickedCloseChangePin
     | ClickedViewPrivateKeyAuth
+    | ChangedPin
+    | EnteredPin String
 
 
 update : Msg -> Model -> LoggedIn.Model -> UpdateResult
@@ -219,6 +223,21 @@ update msg model loggedIn =
 
         ClickedChangePin ->
             UR.init { model | pinModal = Shown }
+
+        ChangedPin ->
+            UR.init model
+                |> UR.addPort
+                    { responseAddress = ChangedPin
+                    , responseData = Encode.null
+                    , data =
+                        Encode.object
+                            [ ( "name", Encode.string "loginWithPin" )
+                            , ( "pin", Encode.string model.newPin )
+                            ]
+                    }
+
+        EnteredPin newPin ->
+            UR.init { model | newPin = newPin }
 
         ClickedCloseChangePin ->
             UR.init { model | pinModal = Hidden }
@@ -276,3 +295,9 @@ msgToString msg =
 
         ClickedViewPrivateKeyAuth ->
             [ "ClickedViewPrivateKeyAuth" ]
+
+        ChangedPin ->
+            [ "ChangedPin" ]
+
+        EnteredPin r ->
+            [ "EnteredPin" ]
