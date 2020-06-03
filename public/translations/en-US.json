@@ -619,6 +619,7 @@
     "user": "User",
     "date": "Date",
     "more": "Show More",
-    "no_transfers_found": "No transfers were found according to your criteria."
+    "no_transfers_found": "No transfers were found according to your criteria.",
+    "pick_date": "Pick a date..."
   }
 }

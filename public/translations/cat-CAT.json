@@ -622,6 +622,7 @@
     "user": "Usuari",
     "date": "Data",
     "more": "Mostra més",
-    "no_transfers_found": "No s'ha trobat transferència segons els vostres criteris."
+    "no_transfers_found": "No s'ha trobat transferència segons els vostres criteris.",
+    "pick_date": "Escolliu una data..."
   }
 }

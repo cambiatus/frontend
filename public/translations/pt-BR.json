@@ -623,6 +623,7 @@
     "user": "Usuário",
     "date": "Data",
     "more": "Mostre mais",
-    "no_transfers_found": "Nenhuma transferência foi encontrada de acordo com seus critérios."
+    "no_transfers_found": "Nenhuma transferência foi encontrada de acordo com seus critérios.",
+    "pick_date": "Escolha uma data..."
   }
 }
