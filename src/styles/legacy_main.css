@@ -25,6 +25,7 @@ body,
 }
 
 body {
+    background-color: var(--white);
     font-family: 'Gotham Rounded', 'Lato', 'San Fransico', 'Helvetica', 'Verdana', sans-serif;
     color: var(--black);
 }
