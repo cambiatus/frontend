@@ -970,10 +970,6 @@ type alias UnreadMeta =
     Int
 
 
-
--- { unreads : Int }
-
-
 unreadSelection : SelectionSet UnreadMeta Cambiatus.Object.UnreadNotifications
 unreadSelection =
     Cambiatus.Object.UnreadNotifications.unreads
