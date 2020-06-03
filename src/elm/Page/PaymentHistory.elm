@@ -569,17 +569,17 @@ view shared model =
                 [ viewSplash profile
                 , div [ class "mx-4 max-w-md md:m-auto" ]
                     [ h2 [ class "text-center text-black text-2xl" ]
-                        [ text "Payment History" ]
+                        [ text (I18Next.t shared.translations "payment_history.title") ]
                     , div []
                         [ viewUserAutocomplete shared model
-                        , viewDatePicker model
+                        , viewDatePicker shared model
                         ]
                     , viewTransfers shared model
                     ]
                 ]
 
         Failed err ->
-            div [] [ Page.fullPageGraphQLError "Account not found" err ]
+            div [] [ Page.fullPageGraphQLError (I18Next.t shared.translations "error.accountNotFound") err ]
 
         Loading ->
             Page.fullPageLoading
@@ -604,7 +604,7 @@ viewUserAutocomplete shared model =
         [ label
             [ class "block" ]
             [ span [ class "text-green tracking-wide uppercase text-caption block mb-1" ]
-                [ text "Payer" ]
+                [ text (I18Next.t shared.translations "payment_history.user") ]
             ]
         , viewPayerAutocomplete shared model False
         ]
@@ -739,12 +739,13 @@ selectConfiguration shared isDisabled =
         isDisabled
 
 
-viewDatePicker model =
+viewDatePicker : Shared -> Model -> Html Msg
+viewDatePicker shared model =
     div [ class "my-4" ]
         [ label
             [ class "block" ]
             [ span [ class "text-green tracking-wide uppercase text-caption block mb-1" ]
-                [ text "Date" ]
+                [ text (I18Next.t shared.translations "payment_history.date") ]
             ]
         , div [ class "relative" ]
             [ DatePicker.view
@@ -813,26 +814,26 @@ viewTransfers shared model =
     case model.incomingTransfers of
         Loaded transfers ->
             if List.isEmpty transfers then
-                div [ class "text-center my-6" ] [ text "No transfers were found according your criteria." ]
+                div [ class "text-center my-6" ] [ text (I18Next.t shared.translations "payment_history.no_transfers_found") ]
 
             else
                 div []
                     [ ul [ class "" ]
                         (List.map (viewTransfer shared) transfers)
-                    , viewPagination model
+                    , viewPagination shared model
                     ]
 
         Loading ->
             div [ class "text-center leading-10 h-48" ]
                 [ div [ class "m-auto spinner" ] []
-                , text "Loading transfers"
+                , text (I18Next.t shared.translations "menu.loading")
                 ]
 
         Failed err ->
-            div [] [ Page.fullPageGraphQLError "Sorry, something wrong with loading transfers" err ]
+            div [] [ Page.fullPageGraphQLError (I18Next.t shared.translations "transfer.loading_error") err ]
 
 
-viewPagination { pageInfo } =
+viewPagination shared { pageInfo } =
     case pageInfo of
         Just pi ->
             if pi.hasNextPage then
@@ -841,7 +842,7 @@ viewPagination { pageInfo } =
                         [ class "button m-auto button-primary w-full sm:w-40"
                         , onClick ShowMore
                         ]
-                        [ text "Show More" ]
+                        [ text (I18Next.t shared.translations "payment_history.more") ]
                     ]
 
             else

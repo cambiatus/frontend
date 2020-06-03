@@ -617,5 +617,12 @@
     },
     "you": "tú",
     "my_balance": "Mi balance"
+  },
+  "payment_history": {
+    "title": "Historial de Pagos",
+    "user": "Usuario",
+    "date": "Fecha",
+    "more": "Mostrar más",
+    "no_transfers_found": "No se encontraron transferencias según sus criterios."
   }
 }

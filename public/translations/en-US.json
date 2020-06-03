@@ -613,5 +613,12 @@
     },
     "you": "You",
     "my_balance": "My Balance"
+  },
+  "payment_history": {
+    "title": "Payment History",
+    "user": "User",
+    "date": "Date",
+    "more": "Show More",
+    "no_transfers_found": "No transfers were found according to your criteria."
   }
 }

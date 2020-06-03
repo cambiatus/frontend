@@ -616,5 +616,12 @@
     },
     "you": "vostè",
     "my_balance": "El meu balanç"
+  },
+  "payment_history": {
+    "title": "Historial de pagaments",
+    "user": "Usuari",
+    "date": "Data",
+    "more": "Mostra més",
+    "no_transfers_found": "No s'ha trobat transferència segons els vostres criteris."
   }
 }
