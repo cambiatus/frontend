@@ -8,7 +8,7 @@ module Select.Utils exposing
 import Html exposing (Attribute)
 import Html.Attributes exposing (attribute, style)
 import Select.Config exposing (Config)
-import Select.Models as Models exposing (State)
+import Select.Models exposing (State)
 
 
 referenceDataName : String
@@ -17,7 +17,7 @@ referenceDataName =
 
 
 referenceAttr : Config msg item -> State -> Attribute msg2
-referenceAttr config model =
+referenceAttr _ model =
     attribute referenceDataName model.id
 
 

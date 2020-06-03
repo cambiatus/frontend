@@ -2,27 +2,21 @@ module Page.Shop.Viewer exposing (Model, Msg, init, msgToString, subscriptions, 
 
 import Api
 import Api.Graphql
-import Asset.Icon as Icon
 import Avatar
-import Browser.Navigation as Nav
 import Community exposing (Balance)
-import Dict exposing (Dict)
-import Eos as Eos exposing (Symbol)
+import Eos as Eos
 import Eos.Account as Eos
 import Graphql.Http
-import Html exposing (..)
-import Html.Attributes exposing (..)
-import Html.Events exposing (on, onClick, onInput, onSubmit, targetValue)
-import Html.Lazy as Lazy
+import Html exposing (Html, button, div, img, input, label, p, span, text, textarea)
+import Html.Attributes exposing (class, disabled, for, id, placeholder, required, src, type_, value)
+import Html.Events exposing (onClick, onInput)
 import Http
 import I18Next exposing (Translations, t)
-import Icons
 import Json.Encode as Encode
 import List.Extra as LE
 import Page exposing (Session(..))
 import Profile
 import Route
-import Session.Guest as Guest
 import Session.LoggedIn as LoggedIn exposing (External(..))
 import Session.Shared exposing (Shared)
 import Shop exposing (Sale)
@@ -154,7 +148,6 @@ type Msg
     | ClickedEdit Sale
     | ClickedQuestions Sale
     | ClickedTransfer Sale
-    | GoBack
     | EnteredUnit String
     | EnteredMemo String
 
@@ -174,12 +167,6 @@ update msg model user =
             { model | status = LoadingFailed err }
                 |> UR.init
                 |> UR.logGraphqlError msg err
-
-        GoBack ->
-            model
-                |> UR.init
-                |> UR.addCmd
-                    (Nav.back user.shared.navKey 1)
 
         ClickedQuestions sale ->
             model
@@ -204,7 +191,7 @@ update msg model user =
                 |> UR.addCmd
                     (Route.replaceUrl user.shared.navKey (Route.EditSale idString))
 
-        ClickedBuy sale ->
+        ClickedBuy _ ->
             { model | viewing = EditingTransfer }
                 |> UR.init
 
@@ -214,72 +201,69 @@ update msg model user =
                     validateForm sale model.form
             in
             if isFormValid validatedForm then
-                case LoggedIn.isAuth user of
-                    True ->
-                        let
-                            authorization =
-                                { actor = user.accountName
-                                , permissionName = Eos.samplePermission
-                                }
+                if LoggedIn.isAuth user then
+                    let
+                        authorization =
+                            { actor = user.accountName
+                            , permissionName = Eos.samplePermission
+                            }
 
-                            requiredUnits =
-                                case String.toInt model.form.units of
-                                    Just rU ->
-                                        rU
+                        requiredUnits =
+                            case String.toInt model.form.units of
+                                Just rU ->
+                                    rU
 
-                                    Nothing ->
-                                        1
+                                Nothing ->
+                                    1
 
-                            value =
-                                { amount = sale.price * toFloat requiredUnits
-                                , symbol = sale.symbol
-                                }
+                        value =
+                            { amount = sale.price * toFloat requiredUnits
+                            , symbol = sale.symbol
+                            }
 
-                            unitPrice =
-                                { amount = sale.price
-                                , symbol = sale.symbol
-                                }
-                        in
-                        model
-                            |> UR.init
-                            |> UR.addPort
-                                { responseAddress = ClickedTransfer sale
-                                , responseData = Encode.null
-                                , data =
-                                    Eos.encodeTransaction
-                                        { actions =
-                                            [ { accountName = "bes.token"
-                                              , name = "transfer"
-                                              , authorization = authorization
-                                              , data =
-                                                    { from = user.accountName
-                                                    , to = sale.creatorId
-                                                    , value = value
-                                                    , memo = model.form.memo
-                                                    }
-                                                        |> Transfer.encodeEosActionData
-                                              }
-                                            , { accountName = "bes.cmm"
-                                              , name = "transfersale"
-                                              , authorization = authorization
-                                              , data =
-                                                    { id = sale.id
-                                                    , from = user.accountName
-                                                    , to = sale.creatorId
-                                                    , quantity = unitPrice
-                                                    , units = requiredUnits
-                                                    }
-                                                        |> Shop.encodeTransferSale
-                                              }
-                                            ]
-                                        }
-                                }
-                            |> UR.addCmd (Route.replaceUrl user.shared.navKey (Route.Shop Shop.All))
+                        unitPrice =
+                            { amount = sale.price
+                            , symbol = sale.symbol
+                            }
+                    in
+                    model
+                        |> UR.init
+                        |> UR.addPort
+                            { responseAddress = ClickedTransfer sale
+                            , responseData = Encode.null
+                            , data =
+                                Eos.encodeTransaction
+                                    [ { accountName = "bes.token"
+                                      , name = "transfer"
+                                      , authorization = authorization
+                                      , data =
+                                            { from = user.accountName
+                                            , to = sale.creatorId
+                                            , value = value
+                                            , memo = model.form.memo
+                                            }
+                                                |> Transfer.encodeEosActionData
+                                      }
+                                    , { accountName = "bes.cmm"
+                                      , name = "transfersale"
+                                      , authorization = authorization
+                                      , data =
+                                            { id = sale.id
+                                            , from = user.accountName
+                                            , to = sale.creatorId
+                                            , quantity = unitPrice
+                                            , units = requiredUnits
+                                            }
+                                                |> Shop.encodeTransferSale
+                                      }
+                                    ]
+                            }
+                        |> UR.addCmd (Route.replaceUrl user.shared.navKey (Route.Shop Shop.All))
 
-                    False ->
-                        model
-                            |> UR.init
-                            |> UR.addExt (Just (ClickedTransfer sale) |> RequiredAuthentication)
+                else
+                    model
+                        |> UR.init
+                        |> UR.addExt (Just (ClickedTransfer sale) |> RequiredAuthentication)
 
             else
                 { model | form = validatedForm }
@@ -484,14 +468,14 @@ viewCard ({ shared } as loggedIn) card model =
                         []
 
                   else
-                    viewTransferForm loggedIn card Dict.empty model
+                    viewTransferForm loggedIn card model
                 ]
             ]
         ]
 
 
-viewTransferForm : LoggedIn.Model -> Card -> Dict String FormError -> Model -> Html Msg
-viewTransferForm ({ shared } as loggedIn) card errors model =
+viewTransferForm : LoggedIn.Model -> Card -> Model -> Html Msg
+viewTransferForm { shared } card model =
     let
         accountName =
             Eos.nameToString card.sale.creatorId
@@ -695,21 +679,11 @@ isFormValid form =
 -- UTILS
 
 
-getIpfsUrl : Session -> String
-getIpfsUrl session =
-    case session of
-        Guest s ->
-            s.shared.endpoints.ipfs
-
-        LoggedIn s ->
-            s.shared.endpoints.ipfs
-
-
 msgToString : Msg -> List String
 msgToString msg =
     case msg of
-        CompletedSaleLoad r ->
-            "CompletedSaleLoad" :: []
+        CompletedSaleLoad _ ->
+            [ "CompletedSaleLoad" ]
 
         ClickedBuy _ ->
             [ "ClickedBuy" ]
@@ -723,14 +697,11 @@ msgToString msg =
         ClickedTransfer _ ->
             [ "ClickedTransfer" ]
 
-        GoBack ->
-            [ "GoBack" ]
-
         EnteredUnit u ->
-            "EnteredUnit" :: [ u ]
+            [ "EnteredUnit", u ]
 
         EnteredMemo m ->
-            "EnteredMemo" :: [ m ]
+            [ "EnteredMemo", m ]
 
         CompletedLoadBalances _ ->
             [ "CompletedLoadBalances" ]

@@ -104,7 +104,7 @@ This is the element that wraps the selected item(s) and the input
 
 -}
 
-import Html exposing (..)
+import Html exposing (Html)
 import Select.Config as Config
 import Select.Messages as Messages
 import Select.Models as Models

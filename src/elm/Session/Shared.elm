@@ -14,12 +14,12 @@ module Session.Shared exposing
     )
 
 import Browser.Navigation as Nav
-import Eos exposing (Symbol)
+import Eos
 import Eos.Account as Eos
-import Flags exposing (Endpoints, Environment, Flags, defaultEndpoints)
+import Flags exposing (Endpoints, Environment, Flags)
 import Graphql.Http
-import Html exposing (..)
-import Html.Attributes exposing (..)
+import Html exposing (Html, button, div, img, p, text)
+import Html.Attributes exposing (class, src)
 import Html.Events exposing (onClick)
 import Http
 import I18Next exposing (Translations, initialTranslations, t)
@@ -178,7 +178,7 @@ viewFullLoading =
 
 
 viewFullError : Shared -> Http.Error -> msg -> String -> Html msg
-viewFullError shared err msg msgText =
+viewFullError shared _ msg msgText =
     div [ class "full-page-loading full-spinner-container" ]
         [ p [] [ text msgText ]
         , button [ onClick msg ] [ text (t shared.translations "menu.try_again") ]
@@ -186,7 +186,7 @@ viewFullError shared err msg msgText =
 
 
 viewFullGraphqlError : Shared -> Graphql.Http.Error e -> msg -> String -> Html msg
-viewFullGraphqlError shared err msg msgText =
+viewFullGraphqlError shared _ msg msgText =
     div [ class "full-page-loading full-spinner-container" ]
         [ p [] [ text msgText ]
         , button [ onClick msg ] [ text (t shared.translations "menu.try_again") ]

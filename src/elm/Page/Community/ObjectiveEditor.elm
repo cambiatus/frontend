@@ -311,22 +311,20 @@ update msg model loggedIn =
                                     , responseData = Encode.null
                                     , data =
                                         Eos.encodeTransaction
-                                            { actions =
-                                                [ { accountName = "bes.cmm"
-                                                  , name = "updobjective"
-                                                  , authorization =
-                                                        { actor = loggedIn.accountName
-                                                        , permissionName = Eos.samplePermission
-                                                        }
-                                                  , data =
-                                                        { objectiveId = objectiveId
-                                                        , description = form.description
-                                                        , editor = loggedIn.accountName
-                                                        }
-                                                            |> Community.encodeUpdateObjectiveAction
-                                                  }
-                                                ]
-                                            }
+                                            [ { accountName = "bes.cmm"
+                                              , name = "updobjective"
+                                              , authorization =
+                                                    { actor = loggedIn.accountName
+                                                    , permissionName = Eos.samplePermission
+                                                    }
+                                              , data =
+                                                    { objectiveId = objectiveId
+                                                    , description = form.description
+                                                    , editor = loggedIn.accountName
+                                                    }
+                                                        |> Community.encodeUpdateObjectiveAction
+                                              }
+                                            ]
                                     }
 
                         Nothing ->
@@ -336,22 +334,20 @@ update msg model loggedIn =
                                     , responseData = Encode.null
                                     , data =
                                         Eos.encodeTransaction
-                                            { actions =
-                                                [ { accountName = "bes.cmm"
-                                                  , name = "newobjective"
-                                                  , authorization =
-                                                        { actor = loggedIn.accountName
-                                                        , permissionName = Eos.samplePermission
-                                                        }
-                                                  , data =
-                                                        { symbol = model.community
-                                                        , description = form.description
-                                                        , creator = loggedIn.accountName
-                                                        }
-                                                            |> Community.encodeCreateObjectiveAction
-                                                  }
-                                                ]
-                                            }
+                                            [ { accountName = "bes.cmm"
+                                              , name = "newobjective"
+                                              , authorization =
+                                                    { actor = loggedIn.accountName
+                                                    , permissionName = Eos.samplePermission
+                                                    }
+                                              , data =
+                                                    { symbol = model.community
+                                                    , description = form.description
+                                                    , creator = loggedIn.accountName
+                                                    }
+                                                        |> Community.encodeCreateObjectiveAction
+                                              }
+                                            ]
                                     }
             in
             if LoggedIn.isAuth loggedIn then

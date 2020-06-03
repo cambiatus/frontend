@@ -36,7 +36,7 @@ module UpdateResult exposing
 import Graphql.Http
 import Http
 import Json.Decode as Decode
-import Json.Encode as Encode exposing (Value)
+import Json.Encode exposing (Value)
 import Log exposing (Log)
 import Ports
 

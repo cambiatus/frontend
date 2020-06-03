@@ -8,10 +8,6 @@ port module Ports exposing
     , storeLanguage
     )
 
-import Eos exposing (Symbol)
-import Eos.Account as Eos
-import Json.Decode as Decode
-import Json.Decode.Pipeline as Decode exposing (optional, required)
 import Json.Encode as Encode exposing (Value)
 
 
@@ -63,25 +59,3 @@ port javascriptInPort : (Value -> msg) -> Sub msg
 
 
 port storeLanguage : String -> Cmd msg
-
-
-
---
--- Callbacks
---
--- Helpers
-
-
-decodeAccountNameOrStringError : Value -> Result String ( Eos.Name, Maybe String )
-decodeAccountNameOrStringError value =
-    Decode.decodeValue
-        (Decode.succeed (\accountName maybePrivateKey -> ( accountName, maybePrivateKey ))
-            |> Decode.required "accountName" Eos.nameDecoder
-            |> Decode.optional "privateKey" (Decode.nullable Decode.string) Nothing
-        )
-        value
-        |> Result.mapError
-            (\s ->
-                Decode.decodeValue Decode.string value
-                    |> Result.withDefault "Failed to decode"
-            )

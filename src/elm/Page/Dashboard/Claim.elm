@@ -100,9 +100,6 @@ viewTitle shared claim =
     let
         text_ s =
             text (I18Next.t shared.translations s)
-
-        negativeChecks =
-            List.filter (\ch -> not ch.isApproved) claim.checks
     in
     div [ class "text-heading font-bold text-center mb-8" ]
         [ case claim.status of

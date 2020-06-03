@@ -64,8 +64,7 @@ type alias Transfer =
 
 
 type alias Cmm =
-    { name : String
-    }
+    String
 
 
 type alias EdgeTransfer =
@@ -114,9 +113,7 @@ transferItemSelectionSet =
         |> with (Eos.symbolSelectionSet Cambiatus.Object.Transfer.communityId)
         |> with
             (Cambiatus.Object.Transfer.community
-                (SelectionSet.succeed Cmm
-                    |> with Cambiatus.Object.Community.name
-                )
+                Cambiatus.Object.Community.name
             )
         |> with Cambiatus.Object.Transfer.createdAt
         |> with Cambiatus.Object.Transfer.createdTx

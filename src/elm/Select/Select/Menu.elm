@@ -1,14 +1,13 @@
 module Select.Select.Menu exposing (menu, view, viewClassAttr, viewStyles)
 
-import Html exposing (..)
+import Html exposing (Attribute, Html, div, text)
 import Html.Attributes exposing (class, style)
 import Select.Config exposing (Config)
-import Select.Messages exposing (..)
-import Select.Models as Models exposing (State)
+import Select.Messages exposing (Msg(..))
+import Select.Models exposing (State)
 import Select.Search as Search
 import Select.Select.Item as Item
 import Select.Styles as Styles
-import Select.Utils as Utils
 
 
 view : Config msg item -> State -> List item -> List item -> Html (Msg item)

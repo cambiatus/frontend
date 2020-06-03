@@ -12,30 +12,37 @@ module DateDistance exposing (viewDateDistance)
 import Time exposing (Posix)
 
 
+second : Int
 second =
     1000
 
 
+minute : Int
 minute =
     second * 60
 
 
+hour : Int
 hour =
     minute * 60
 
 
+day : Int
 day =
     hour * 24
 
 
+month : Int
 month =
     day * 30
 
 
+year : Int
 year =
     day * 365
 
 
+toS : Int -> String
 toS =
     String.fromInt
 
