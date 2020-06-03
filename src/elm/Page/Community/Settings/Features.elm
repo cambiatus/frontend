@@ -68,7 +68,7 @@ view loggedIn model =
         , div
             [ class "container w-full divide-y"
             ]
-            [ toggleView translations (translate "objectives.title_plural") model.hasActions ToggleActions "actions"
+            [ toggleView translations (translate "community.objectives.title_plural") model.hasActions ToggleActions "actions"
             , toggleView translations (translate "menu.shop") model.hasShop ToggleShop "shop"
             ]
         ]
@@ -148,8 +148,8 @@ msgToString msg =
         CompletedLoad r ->
             [ "CompletedLoad", UR.resultToString r ]
 
-        ToggleShop _  ->
+        ToggleShop _ ->
             [ "ToggleShop" ]
 
-        ToggleActions _  ->
+        ToggleActions _ ->
             [ "ToggleActions" ]
