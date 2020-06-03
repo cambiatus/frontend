@@ -413,7 +413,7 @@ async function handleJavascriptPort (arg) {
           // Set default selected community
           window.localStorage.setItem(
             SELECTED_COMMUNITY_KEY,
-            flags.selectedCommunity
+            flags().selectedCommunity
           )
 
           devLog('response', response)

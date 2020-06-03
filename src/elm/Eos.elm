@@ -161,6 +161,14 @@ type Symbol
 symbolDecoder : Decoder Symbol
 symbolDecoder =
     Decode.map Symbol Decode.string
+        |> Decode.andThen
+            (\symbol ->
+                if symbolToString symbol == "undefined" then
+                    Decode.fail "Cannot decode 'undefined' symbol, check Javascript"
+
+                else
+                    Decode.succeed symbol
+            )
 
 
 encodeSymbol : Symbol -> Value
