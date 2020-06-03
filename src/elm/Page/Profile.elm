@@ -1,4 +1,13 @@
-module Page.Profile exposing (Model, Msg, init, jsAddressToMsg, msgToString, update, view)
+module Page.Profile exposing
+    ( Model
+    , Msg
+    , init
+    , jsAddressToMsg
+    , msgToString
+    , subscription
+    , update
+    , view
+    )
 
 import Api
 import Api.Graphql
@@ -6,13 +15,13 @@ import Asset.Icon as Icon
 import Avatar exposing (Avatar)
 import Browser.Events
 import Dict exposing (Dict)
-import Eos as Eos exposing (Symbol)
+import Eos as Eos
 import Eos.Account as Eos
 import File exposing (File)
 import Graphql.Http
-import Html exposing (..)
-import Html.Attributes exposing (..)
-import Html.Events exposing (..)
+import Html exposing (Html, br, button, div, h2, h3, h4, img, input, label, p, span, text, textarea)
+import Html.Attributes exposing (accept, class, classList, disabled, for, id, maxlength, multiple, placeholder, required, src, style, title, type_, value)
+import Html.Events exposing (onClick, onInput, onSubmit, stopPropagationOn)
 import Http
 import I18Next exposing (t)
 import Json.Decode as Decode exposing (Value)
@@ -98,7 +107,7 @@ view loggedIn model =
         Loading ->
             Page.fullPageLoading
 
-        LoadingFailed e ->
+        LoadingFailed _ ->
             Page.fullPageError (t loggedIn.shared.translations "profile.title") Http.Timeout
 
         Loaded profile ->
@@ -188,7 +197,7 @@ view_ loggedIn profile model =
                             )
                     ]
                 ]
-            , viewBadges loggedIn model
+            , viewBadges loggedIn
             , div [ class "notification-settings-card", onClick RequestPush ]
                 [ button [ class "btn btn--primary" ]
                     [ text_ notification_prompt ]
@@ -491,8 +500,8 @@ viewAvatar ipfsUrl profile plchldr avatarS =
         ]
 
 
-viewBadges : LoggedIn.Model -> Model -> Html msg
-viewBadges loggedIn model =
+viewBadges : LoggedIn.Model -> Html msg
+viewBadges loggedIn =
     let
         text_ s =
             text (t loggedIn.shared.translations s)
@@ -614,7 +623,7 @@ update msg model loggedIn =
 
         ClickedEditCancel ->
             case model.status of
-                Editing profile avatarS form ->
+                Editing profile _ _ ->
                     UR.init { model | status = Loaded profile }
 
                 _ ->
@@ -749,10 +758,10 @@ update msg model loggedIn =
                             NotAsked ->
                                 NotAsked
 
-                            SendingFailed file err_ ->
+                            SendingFailed file _ ->
                                 SendingFailed file err
 
-                            Sending file progress ->
+                            Sending file _ ->
                                 SendingFailed file err
                     )
 
@@ -911,7 +920,7 @@ updateAvatarStatus transform ({ model } as uResult) =
         LoadingFailed _ ->
             uResult
 
-        Loaded profile ->
+        Loaded _ ->
             uResult
 
         Editing profile avatarS form ->
@@ -944,7 +953,7 @@ jsAddressToMsg addr val =
                 Ok res ->
                     Just (GotPushSub res)
 
-                Err err ->
+                Err _ ->
                     -- TODO: Handle PushSubscription Decode error
                     Nothing
 

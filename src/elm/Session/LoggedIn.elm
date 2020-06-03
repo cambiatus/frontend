@@ -40,7 +40,7 @@ import Flags exposing (Flags)
 import Graphql.Document
 import Graphql.Http
 import Graphql.Operation exposing (RootSubscription)
-import Graphql.SelectionSet as SelectionSet exposing (SelectionSet, with)
+import Graphql.SelectionSet exposing (SelectionSet)
 import Html exposing (Html, a, button, div, footer, img, input, nav, p, span, text)
 import Html.Attributes exposing (class, classList, placeholder, required, src, style, type_, value)
 import Html.Events exposing (onClick, onFocus, onInput, onMouseEnter, onSubmit, stopPropagationOn)
@@ -838,7 +838,7 @@ update msg model =
             UR.init closeAllModals
 
         GotAuthMsg authMsg ->
-            Auth.update authMsg shared model.auth model.showAuthModal
+            Auth.update authMsg shared model.auth
                 |> UR.map
                     (\a -> { model | auth = a })
                     GotAuthMsg
@@ -861,7 +861,7 @@ update msg model =
         CompletedLoadUnread payload ->
             case Decode.decodeValue (unreadCountSubscription model.accountName |> Graphql.Document.decoder) payload of
                 Ok res ->
-                    { model | unreadCount = res.unreads }
+                    { model | unreadCount = res }
                         |> UR.init
 
                 Err _ ->
@@ -967,13 +967,12 @@ isAccount accountName model =
 
 
 type alias UnreadMeta =
-    { unreads : Int }
+    Int
 
 
 unreadSelection : SelectionSet UnreadMeta Cambiatus.Object.UnreadNotifications
 unreadSelection =
-    SelectionSet.succeed UnreadMeta
-        |> with Cambiatus.Object.UnreadNotifications.unreads
+    Cambiatus.Object.UnreadNotifications.unreads
 
 
 unreadCountSubscription : Eos.Name -> SelectionSet UnreadMeta RootSubscription

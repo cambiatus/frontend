@@ -1,4 +1,4 @@
-module Icons exposing (..)
+module Icons exposing (alert, arrowDown, back, close, communities, dashboard, exclamation, flag, heart, languages, notification, profile, remove, search, shop, success, thumbDown, thumbUp, trash)
 
 import Html exposing (Html)
 import Svg exposing (Svg, svg)
@@ -125,6 +125,7 @@ flag class_ =
 exclamation : String -> Svg msg
 exclamation class_ =
     svg [ width "24", height "24", viewBox "0 0 24 24", class class_ ] [ Svg.path [ fillRule "evenodd", clipRule "evenodd", d "M12 1.5C6.20101 1.5 1.5 6.20101 1.5 12C1.5 17.799 6.20101 22.5 12 22.5C17.799 22.5 22.5 17.799 22.5 12C22.5 6.20101 17.799 1.5 12 1.5ZM12 21C7.02944 21 3 16.9706 3 12C3 7.02944 7.02944 3 12 3C16.9706 3 21 7.02944 21 12C21 16.9706 16.9706 21 12 21Z", fill "black" ] [], Svg.path [ fillRule "evenodd", clipRule "evenodd", d "M12.25 5.75C11.8358 5.75 11.5 6.08579 11.5 6.5V13.5C11.5 13.9142 11.8358 14.25 12.25 14.25C12.6642 14.25 13 13.9142 13 13.5V6.5C13 6.08579 12.6642 5.75 12.25 5.75Z", fill "black" ] [], Svg.path [ fillRule "evenodd", clipRule "evenodd", d "M12.25 17C12.6642 17 13 16.6642 13 16.25C13 15.8358 12.6642 15.5 12.25 15.5C11.8358 15.5 11.5 15.8358 11.5 16.25C11.5 16.6642 11.8358 17 12.25 17Z", fill "black" ] [] ]
+
 
 trash : String -> Svg msg
 trash class_ =

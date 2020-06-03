@@ -168,7 +168,7 @@ communitiesQuery =
 
 
 type alias NewCommunity =
-    { title : String }
+    String
 
 
 newCommunitySubscription : Symbol -> SelectionSet NewCommunity RootSubscription
@@ -179,8 +179,7 @@ newCommunitySubscription symbol =
                 |> String.toUpper
 
         selectionSet =
-            SelectionSet.succeed NewCommunity
-                |> with Community.name
+            Community.name
 
         args =
             { input = { symbol = stringSymbol } }
@@ -541,7 +540,7 @@ type alias ActionVerification =
 
 
 type alias ActionVerificationsResponse =
-    { claims : List ClaimResponse }
+    List ClaimResponse
 
 
 type alias ClaimResponse =
@@ -553,8 +552,7 @@ type alias ClaimResponse =
 
 
 type alias CheckResponse =
-    { isVerified : Bool
-    }
+    Bool
 
 
 type alias ActionResponse =
@@ -597,8 +595,7 @@ claimSelectionSet validator =
 
 checkSelectionSet : SelectionSet CheckResponse Cambiatus.Object.Check
 checkSelectionSet =
-    SelectionSet.succeed CheckResponse
-        |> with Check.isVerified
+    Check.isVerified
 
 
 verificationActionSelectionSet : SelectionSet ActionResponse Cambiatus.Object.Action
@@ -632,13 +629,13 @@ toVerifications actionVerificationResponse =
     let
         claimsResponse : List ClaimResponse
         claimsResponse =
-            actionVerificationResponse.claims
+            actionVerificationResponse
 
         toStatus : List CheckResponse -> Tag.TagStatus
         toStatus checks =
             case List.head checks of
                 Just check ->
-                    if check.isVerified == True then
+                    if check then
                         Tag.APPROVED
 
                     else

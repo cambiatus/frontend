@@ -5,8 +5,8 @@ import Auth exposing (viewFieldLabel)
 import Browser.Events
 import Char
 import Eos.Account as Eos
-import Html exposing (..)
-import Html.Attributes exposing (..)
+import Html exposing (Attribute, Html, a, button, div, img, input, label, li, p, span, strong, text, ul)
+import Html.Attributes exposing (attribute, checked, class, disabled, id, maxlength, placeholder, src, style, type_, value)
 import Html.Events exposing (onCheck, onClick, onInput, onSubmit)
 import Http
 import I18Next exposing (t)
@@ -19,7 +19,7 @@ import Session.Guest as Guest exposing (External(..))
 import Session.Shared exposing (Shared)
 import Task
 import UpdateResult as UR
-import Utils exposing (..)
+import Utils exposing (decodeEnterKeyDown)
 import Validate exposing (ifBlank, ifFalse, ifInvalidEmail, ifTrue, validate)
 
 
@@ -476,12 +476,10 @@ type alias UpdateResult =
 
 type Msg
     = UpdateForm FormInputMsg
-    | Ignored
     | ValidateForm Form
     | GotAccountAvailabilityResponse Bool
     | AccountGenerated (Result Decode.Error AccountKeys)
     | CompletedCreateProfile AccountKeys (Result Http.Error Profile)
-    | CompletedLoadProfile AccountKeys (Result Http.Error Profile)
     | AgreedToSave12Words Bool
     | DownloadPdf String
     | PdfDownloaded
@@ -503,10 +501,6 @@ update maybeInvitation msg model guest =
             I18Next.tr shared.translations I18Next.Curly str values
     in
     case msg of
-        Ignored ->
-            model
-                |> UR.init
-
         UpdateForm subMsg ->
             updateForm subMsg model
                 |> UR.init
@@ -651,16 +645,6 @@ update maybeInvitation msg model guest =
                 |> UR.init
                 |> UR.logHttpError msg err
 
-        CompletedLoadProfile _ (Ok profile) ->
-            UR.init model
-                |> UR.addCmd (Route.replaceUrl guest.shared.navKey Route.Dashboard)
-                |> UR.addExt (UpdatedGuest { guest | profile = Just profile })
-
-        CompletedLoadProfile _ (Err err) ->
-            { model | problems = ServerError "Auth failed" :: model.problems }
-                |> UR.init
-                |> UR.logHttpError msg err
-
         AgreedToSave12Words val ->
             { model | hasAgreedToSavePassphrase = val }
                 |> UR.init
@@ -780,9 +764,6 @@ jsAddressToMsg addr val =
 msgToString : Msg -> List String
 msgToString msg =
     case msg of
-        Ignored ->
-            [ "Ignored" ]
-
         UpdateForm _ ->
             [ "UpdateForm" ]
 
@@ -797,9 +778,6 @@ msgToString msg =
 
         CompletedCreateProfile _ r ->
             [ "CompletedCreateProfile", UR.resultToString r ]
-
-        CompletedLoadProfile _ r ->
-            [ "CompletedLoadProfile", UR.resultToString r ]
 
         AgreedToSave12Words _ ->
             [ "AgreedToSave12Words" ]

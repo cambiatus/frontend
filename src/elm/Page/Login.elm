@@ -1,12 +1,9 @@
 module Page.Login exposing (Model, Msg, init, jsAddressToMsg, msgToString, subscriptions, update, view)
 
 import Auth
-import Graphql.Http
-import Html exposing (..)
-import Html.Attributes exposing (..)
-import I18Next exposing (t)
+import Html exposing (Html, div)
+import Html.Attributes exposing (class)
 import Json.Encode exposing (Value)
-import Page
 import Route
 import Session.Guest as Guest exposing (External(..))
 import UpdateResult as UR
@@ -84,7 +81,7 @@ update : Msg -> Model -> Guest.Model -> UpdateResult
 update msg model guest =
     case msg of
         GotAuthMsg authMsg ->
-            Auth.update authMsg guest.shared model.auth False
+            Auth.update authMsg guest.shared model.auth
                 |> UR.map
                     (\a -> { model | auth = a })
                     GotAuthMsg

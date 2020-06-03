@@ -662,17 +662,15 @@ update msg model loggedIn =
                                 , responseData = Encode.null
                                 , data =
                                     Eos.encodeTransaction
-                                        { actions =
-                                            [ { accountName = "bes.cmm"
-                                              , name = "verifyclaim"
-                                              , authorization =
-                                                    { actor = loggedIn.accountName
-                                                    , permissionName = Eos.samplePermission
-                                                    }
-                                              , data = Claim.encodeVerification claimId loggedIn.accountName vote
-                                              }
-                                            ]
-                                        }
+                                        [ { accountName = "bes.cmm"
+                                          , name = "verifyclaim"
+                                          , authorization =
+                                                { actor = loggedIn.accountName
+                                                , permissionName = Eos.samplePermission
+                                                }
+                                          , data = Claim.encodeVerification claimId loggedIn.accountName vote
+                                          }
+                                        ]
                                 }
 
                     else

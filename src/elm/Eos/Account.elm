@@ -1,8 +1,8 @@
 module Eos.Account exposing (Account, Name, Permission, PermissionName, PrivateKey, PublicKey, decoder, encodeName, encodePermissionName, encodePrivateKey, encodePublicKey, nameDecoder, nameMaxChars, nameMinChars, nameQueryUrlParser, nameSelectionSet, nameToString, nameValidationAttrs, permissionDecoder, permissionNameDecoder, privateKeyDecoder, privateKeyToString, publicKeyDecoder, publicKeyToString, samplePermission, stringToName, viewName)
 
-import Graphql.SelectionSet as SelectionSet exposing (SelectionSet, with)
+import Graphql.SelectionSet as SelectionSet exposing (SelectionSet)
 import Html exposing (Html)
-import Html.Attributes exposing (autocomplete, maxlength, minlength, pattern, spellcheck, title, type_)
+import Html.Attributes exposing (autocomplete, maxlength, minlength, pattern, spellcheck, title)
 import Json.Decode as Decode exposing (Decoder)
 import Json.Encode as Encode exposing (Value)
 
