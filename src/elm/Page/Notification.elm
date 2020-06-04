@@ -370,10 +370,14 @@ update msg model loggedIn =
                         CompletedReading
             in
             case data of
-                T _ ->
+                T transfer ->
                     model
                         |> UR.init
                         |> UR.addCmd cmd
+                        |> UR.addCmd
+                            (Route.ViewTransfer transfer.id
+                                |> Route.replaceUrl loggedIn.shared.navKey
+                            )
 
                 M _ ->
                     model
