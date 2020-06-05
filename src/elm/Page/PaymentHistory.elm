@@ -238,7 +238,7 @@ datePickerSettings shared =
 
 
 {-| A generic representation of `Guest.Model` and `LoggedIn.Model`. We need this since the Payment History page
-works for guests and for logged-in users.
+works for guests and for logged-in users and `init`, `update`, and `view` functions have to accept both of these models.
 -}
 type alias SharedModel m =
     { m | shared : Shared }
