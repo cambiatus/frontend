@@ -136,6 +136,7 @@ view thisMsg page ({ shared } as model) content =
                 ]
 
 
+viewLeftCol : String -> Html msg
 viewLeftCol mdWidth =
     div
         -- Left part with background and quote (desktop only)

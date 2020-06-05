@@ -8,7 +8,7 @@ module Page.PaymentHistory exposing
     )
 
 import Api.Graphql
-import Api.Relay exposing (Edge)
+import Api.Relay
 import Avatar exposing (Avatar)
 import Cambiatus.Object
 import Cambiatus.Object.Profile as User
@@ -26,7 +26,7 @@ import Hashids
 import Html exposing (Html, a, button, div, h1, h2, label, p, span, text, ul)
 import Html.Attributes as Attrs exposing (class, href, style)
 import Html.Events exposing (onClick)
-import I18Next exposing (Translations, t)
+import I18Next exposing (t)
 import Icons
 import List.Extra as LE
 import Murmur3
@@ -46,8 +46,7 @@ import Utils
 
 
 type Msg
-    = NoOp
-    | TransfersLoaded (Result (Graphql.Http.Error (Maybe ConnectionTransfer)) (Maybe ConnectionTransfer))
+    = TransfersLoaded (Result (Graphql.Http.Error (Maybe ConnectionTransfer)) (Maybe ConnectionTransfer))
     | RecipientProfileLoaded (Result (Graphql.Http.Error (Maybe Profile)) (Maybe Profile))
     | OnSelect (Maybe Profile)
     | SelectMsg (Select.Msg Profile)
@@ -70,9 +69,6 @@ msgToString msg =
                     ss ++ [ "Err" ]
     in
     case msg of
-        NoOp ->
-            [ "NoOp" ]
-
         ShowMore ->
             [ "ShowMore" ]
 
@@ -481,21 +477,6 @@ update msg model { shared } =
                 |> UR.init
                 |> UR.addCmd (fetchTransfers shared newModel)
 
-        NoOp ->
-            model
-                |> UR.init
-
-
-
---updateLoggedIn : Msg -> Model -> LoggedIn.Model -> UR.UpdateResult Model Msg (LoggedIn.External Msg)
---updateLoggedIn msg model { shared } =
---    update msg model shared
---
---
---updateGuest : Msg -> Model -> Guest.Model -> UR.UpdateResult Model Msg Guest.External
---updateGuest msg model { shared } =
---    update msg model shared
-
 
 {-| Convert Transfer identifier (64 symbols) to emoji sequence (8 symbols)
 -}
@@ -566,6 +547,7 @@ view { shared } model =
             Page.fullPageLoading
 
 
+viewSplash : Profile -> Html msg
 viewSplash p =
     let
         name =
@@ -814,6 +796,7 @@ viewTransfers shared model =
             div [] [ Page.fullPageGraphQLError (I18Next.t shared.translations "transfer.loading_error") err ]
 
 
+viewPagination : Shared -> Model -> Html Msg
 viewPagination shared { pageInfo } =
     case pageInfo of
         Just pi ->
