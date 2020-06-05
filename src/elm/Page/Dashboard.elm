@@ -11,6 +11,7 @@ module Page.Dashboard exposing
 
 import Api
 import Api.Graphql
+import Api.Relay
 import Cambiatus.Query
 import Cambiatus.Scalar exposing (DateTime(..))
 import Claim
@@ -49,13 +50,13 @@ import Utils
 
 
 init : LoggedIn.Model -> ( Model, Cmd Msg )
-init { shared, accountName, selectedCommunity } =
+init ({ shared, accountName, selectedCommunity } as loggedIn) =
     ( initModel
     , Cmd.batch
         [ fetchBalance shared accountName
         , fetchTransfers shared accountName
         , fetchCommunity shared selectedCommunity
-        , fetchAvailableAnalysis shared selectedCommunity accountName
+        , fetchAvailableAnalysis loggedIn Nothing
         , Task.perform GotTime Time.now
         ]
     )
@@ -110,7 +111,7 @@ type Status a
 
 type GraphqlStatus err a
     = LoadingGraphql
-    | LoadedGraphql a
+    | LoadedGraphql a (Maybe Api.Relay.PageInfo)
     | FailedGraphql (Graphql.Http.Error err)
 
 
@@ -328,7 +329,7 @@ viewAnalysisList loggedIn profile model =
         LoadingGraphql ->
             Page.fullPageLoading
 
-        LoadedGraphql claims ->
+        LoadedGraphql claims _ ->
             div [ class "w-full flex" ]
                 [ div
                     [ class "w-full" ]
@@ -448,13 +449,13 @@ viewTransfers loggedIn model =
                         [ text (t "transfer.loading_error") ]
                     ]
 
-            LoadedGraphql [] ->
+            LoadedGraphql [] _ ->
                 Page.viewCardEmpty
                     [ div [ class "text-gray-900 text-sm" ]
                         [ text (t "transfer.no_transfers_yet") ]
                     ]
 
-            LoadedGraphql transfers ->
+            LoadedGraphql transfers _ ->
                 div [ class "rounded-lg bg-white" ]
                     (List.map (\transfer -> viewTransfer loggedIn transfer) transfers)
         ]
@@ -617,8 +618,14 @@ update msg model loggedIn =
                 wrappedClaims =
                     List.map ClaimLoaded (Claim.paginatedToList claims)
             in
-            { model | analysis = LoadedGraphql wrappedClaims }
-                |> UR.init
+            case model.analysis of
+                LoadedGraphql existingClaims _ ->
+                    { model | analysis = LoadedGraphql (existingClaims ++ wrappedClaims) (Claim.paginatedPageInfo claims) }
+                        |> UR.init
+
+                _ ->
+                    { model | analysis = LoadedGraphql wrappedClaims (Claim.paginatedPageInfo claims) }
+                        |> UR.init
 
         ClaimsLoaded (Err err) ->
             { model | analysis = FailedGraphql err }
@@ -626,7 +633,7 @@ update msg model loggedIn =
                 |> UR.logGraphqlError msg err
 
         CompletedLoadUserTransfers (Ok maybeTransfers) ->
-            { model | transfers = LoadedGraphql (Transfer.getTransfers maybeTransfers) }
+            { model | transfers = LoadedGraphql (Transfer.getTransfers maybeTransfers) Nothing }
                 |> UR.init
 
         CompletedLoadUserTransfers (Err err) ->
@@ -644,14 +651,14 @@ update msg model loggedIn =
 
         VoteClaim claimId vote ->
             case model.analysis of
-                LoadedGraphql claims ->
+                LoadedGraphql claims pageInfo ->
                     let
                         newClaims =
                             setClaimStatus claims claimId ClaimLoading
 
                         newModel =
                             { model
-                                | analysis = LoadedGraphql newClaims
+                                | analysis = LoadedGraphql newClaims pageInfo
                                 , voteModalStatus = VoteModalClosed
                             }
                     in
@@ -683,7 +690,7 @@ update msg model loggedIn =
 
         GotVoteResult claimId (Ok _) ->
             case model.analysis of
-                LoadedGraphql claims ->
+                LoadedGraphql claims pageInfo ->
                     let
                         maybeClaim : Maybe Claim.Model
                         maybeClaim =
@@ -700,12 +707,25 @@ update msg model loggedIn =
                                     String.fromFloat claim.action.verifierReward
                                         ++ " "
                                         ++ Eos.symbolToString claim.action.objective.community.symbol
+
+                                cmd =
+                                    case pageInfo of
+                                        Just page ->
+                                            if page.hasNextPage then
+                                                fetchAvailableAnalysis loggedIn page.endCursor
+
+                                            else
+                                                Cmd.none
+
+                                        Nothing ->
+                                            Cmd.none
                             in
                             { model
-                                | analysis = LoadedGraphql (setClaimStatus claims claimId ClaimVoted)
+                                | analysis = LoadedGraphql (setClaimStatus claims claimId ClaimVoted) pageInfo
                             }
                                 |> UR.init
                                 |> UR.addExt (ShowFeedback LoggedIn.Success (message value))
+                                |> UR.addCmd cmd
 
                         Nothing ->
                             model
@@ -716,8 +736,8 @@ update msg model loggedIn =
 
         GotVoteResult claimId (Err _) ->
             case model.analysis of
-                LoadedGraphql claims ->
-                    { model | analysis = LoadedGraphql (setClaimStatus claims claimId ClaimVoteFailed) }
+                LoadedGraphql claims pageInfo ->
+                    { model | analysis = LoadedGraphql (setClaimStatus claims claimId ClaimVoteFailed) pageInfo }
                         |> UR.init
 
                 _ ->
@@ -726,7 +746,7 @@ update msg model loggedIn =
         CommunityLoaded (Ok community) ->
             case community of
                 Just c ->
-                    { model | community = LoadedGraphql c }
+                    { model | community = LoadedGraphql c Nothing }
                         |> UR.init
 
                 Nothing ->
@@ -803,18 +823,38 @@ fetchTransfers shared accountName =
         CompletedLoadUserTransfers
 
 
-fetchAvailableAnalysis : Shared -> Symbol -> Eos.Name -> Cmd Msg
-fetchAvailableAnalysis shared communityId account =
+fetchAvailableAnalysis : LoggedIn.Model -> Maybe String -> Cmd Msg
+fetchAvailableAnalysis { shared, accountName, selectedCommunity } maybeCursor =
     let
         arg =
             { input =
-                { symbol = Eos.symbolToString communityId
-                , account = Eos.nameToString account
+                { symbol = Eos.symbolToString selectedCommunity
+                , account = Eos.nameToString accountName
                 }
             }
 
         pagination =
-            \a -> { a | first = Present 4 }
+            \a ->
+                { a
+                    | first =
+                        case maybeCursor of
+                            Just _ ->
+                                Present 1
+
+                            Nothing ->
+                                Present 4
+                    , after =
+                        Maybe.andThen
+                            (\s ->
+                                if String.isEmpty s then
+                                    Nothing
+
+                                else
+                                    Just (Present s)
+                            )
+                            maybeCursor
+                            |> Maybe.withDefault Absent
+                }
     in
     Api.Graphql.query
         shared
