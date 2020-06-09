@@ -10,6 +10,7 @@ module Page.PaymentHistory exposing
 import Api.Graphql
 import Api.Relay
 import Avatar exposing (Avatar)
+import Cambiatus.Enum.TransferDirection exposing (TransferDirection(..))
 import Cambiatus.Object
 import Cambiatus.Object.Profile as User
 import Cambiatus.Query
@@ -34,6 +35,7 @@ import Page
 import Profile exposing (Profile)
 import Select
 import Session.Shared as Shared exposing (Shared)
+import Simple.Fuzzy
 import Strftime
 import Time exposing (Month(..), Weekday(..))
 import Transfer exposing (ConnectionTransfer, Transfer)
@@ -46,11 +48,10 @@ import Utils
 
 
 type Msg
-    = TransfersLoaded (Result (Graphql.Http.Error (Maybe ConnectionTransfer)) (Maybe ConnectionTransfer))
-    | RecipientProfileLoaded (Result (Graphql.Http.Error (Maybe Profile)) (Maybe Profile))
-    | OnSelect (Maybe Profile)
-    | SelectMsg (Select.Msg Profile)
-    | PayersFetched (Result (Graphql.Http.Error (Maybe (List (Maybe Profile)))) (Maybe (List (Maybe Profile))))
+    = RecipientProfileLoaded (Result (Graphql.Http.Error (Maybe Profile)) (Maybe Profile))
+    | OnSelect (Maybe Payer)
+    | SelectMsg (Select.Msg Payer)
+    | PayersFetched (Result (Graphql.Http.Error (Maybe (List (Maybe Payer)))) (Maybe (List (Maybe Payer))))
     | SetDatePicker DatePicker.Msg
     | ClearDatePicker
     | ClearSelectSelection
@@ -59,21 +60,9 @@ type Msg
 
 msgToString : Msg -> List String
 msgToString msg =
-    let
-        resultToString ss r =
-            case r of
-                Ok _ ->
-                    ss ++ [ "Ok" ]
-
-                Err _ ->
-                    ss ++ [ "Err" ]
-    in
     case msg of
         ShowMore ->
             [ "ShowMore" ]
-
-        TransfersLoaded result ->
-            resultToString [ "TransfersLoaded" ] result
 
         RecipientProfileLoaded r ->
             [ "RecipientProfileLoaded", UR.resultToString r ]
@@ -103,10 +92,10 @@ msgToString msg =
 
 type alias Model =
     { payerAutocompleteState : Select.State
-    , selectedPayer : Maybe Profile
+    , selectedPayer : Maybe Payer
     , recipientProfile : QueryStatus (Maybe Profile) Profile
-    , incomingTransfers : QueryStatus (Maybe ConnectionTransfer) (List Transfer)
-    , fetchedPayers : List Profile
+    , incomingTransfers : Maybe (List Transfer)
+    , fetchedPayers : List Payer
     , pageInfo : Maybe Api.Relay.PageInfo
     , selectedDate : Maybe Date
     , datePicker : DatePicker.DatePicker
@@ -123,48 +112,67 @@ type alias Profile =
     { userName : Maybe String
     , account : Eos.Account.Name
     , avatar : Avatar
+    , transfers : Maybe ConnectionTransfer
     }
 
 
-profileSelectionSet : SelectionSet Profile Cambiatus.Object.Profile
-profileSelectionSet =
-    SelectionSet.map3 Profile
+type alias Payer =
+    { userName : Maybe String
+    , account : Eos.Account.Name
+    , avatar : Avatar
+    }
+
+
+profileSelectionSet : Model -> SelectionSet Profile Cambiatus.Object.Profile
+profileSelectionSet model =
+    SelectionSet.map4 Profile
+        User.name
+        (Eos.Account.nameSelectionSet User.account)
+        (Avatar.selectionSet User.avatar)
+        (transfersSelectionSet model)
+
+
+autocompleteSelectionSet : Model -> SelectionSet Payer Cambiatus.Object.Profile
+autocompleteSelectionSet model =
+    SelectionSet.map3 Payer
         User.name
         (Eos.Account.nameSelectionSet User.account)
         (Avatar.selectionSet User.avatar)
 
 
-fetchRecipientProfile : Shared -> Eos.Account.Name -> Cmd Msg
-fetchRecipientProfile shared accountName =
+fetchProfileWithTransfers : Shared -> Model -> Eos.Account.Name -> Cmd Msg
+fetchProfileWithTransfers shared model accountName =
     Api.Graphql.query shared
         (Cambiatus.Query.profile
             { input = { account = Present (Eos.Account.nameToString accountName) } }
-            profileSelectionSet
+            (profileSelectionSet model)
         )
         RecipientProfileLoaded
 
 
-fetchPayersAutocomplete : Shared -> String -> String -> Cmd Msg
-fetchPayersAutocomplete shared recipient payer =
-    Api.Graphql.query shared
-        (Cambiatus.Query.getPayers
-            { payer = payer
-            , recipient = recipient
-            }
-            profileSelectionSet
-        )
-        PayersFetched
+updateProfileWithTransfers : Shared -> Model -> Cmd Msg
+updateProfileWithTransfers shared model =
+    case model.recipientProfile of
+        Loaded profile ->
+            let
+                input =
+                    { input =
+                        { account = Present (Eos.Account.nameToString profile.account)
+                        }
+                    }
+            in
+            Api.Graphql.query shared
+                (Cambiatus.Query.profile
+                    input
+                    (profileSelectionSet model)
+                )
+                RecipientProfileLoaded
+
+        _ ->
+            Cmd.none
 
 
-incomingTransfersSelectionSet optionalArgsFn input =
-    Cambiatus.Query.paymentHistory
-        optionalArgsFn
-        input
-        Transfer.transferConnectionSelectionSet
-
-
-fetchTransfers : Shared -> Model -> Cmd Msg
-fetchTransfers shared model =
+transfersSelectionSet model =
     let
         endCursor =
             Maybe.andThen .endCursor model.pageInfo
@@ -177,13 +185,6 @@ fetchTransfers shared model =
                 Nothing ->
                     Absent
 
-        pagingFn =
-            \r ->
-                { r
-                    | first = Present 16
-                    , after = afterOption
-                }
-
         optionalDate =
             case model.selectedDate of
                 Just d ->
@@ -192,31 +193,27 @@ fetchTransfers shared model =
                 Nothing ->
                     Absent
 
-        optionalPayer =
+        optionalFromAccount =
             case model.selectedPayer of
                 Just p ->
                     Present (Eos.Account.nameToString p.account)
 
                 Nothing ->
                     Absent
-    in
-    case model.recipientProfile of
-        Loaded rp ->
-            let
-                input =
-                    { input =
-                        { recipient = Eos.Account.nameToString rp.account
-                        , date = optionalDate
-                        , payer = optionalPayer
-                        }
-                    }
-            in
-            Api.Graphql.query shared
-                (incomingTransfersSelectionSet pagingFn input)
-                TransfersLoaded
 
-        _ ->
-            Cmd.none
+        optionalArgsFn =
+            \r ->
+                { r
+                    | first = Present 16
+                    , after = afterOption
+                    , date = optionalDate
+                    , direction = Present Incoming
+                    , secondPartyAccount = optionalFromAccount
+                }
+    in
+    User.transfers
+        optionalArgsFn
+        Transfer.transferConnectionSelectionSet
 
 
 datePickerSettings : Shared -> DatePicker.Settings
@@ -258,19 +255,22 @@ init { shared } =
             in
             Eos.Account.stringToName <|
                 Maybe.withDefault "" uriLastPart
+
+        initModel =
+            { payerAutocompleteState = Select.newState ""
+            , selectedPayer = Nothing
+            , selectedDate = Nothing
+            , recipientProfile = Loading
+            , incomingTransfers = Nothing
+            , fetchedPayers = []
+            , pageInfo = Nothing
+            , datePicker = datePicker
+            }
     in
-    ( { payerAutocompleteState = Select.newState ""
-      , selectedPayer = Nothing
-      , selectedDate = Nothing
-      , recipientProfile = Loading
-      , incomingTransfers = Loading
-      , fetchedPayers = []
-      , pageInfo = Nothing
-      , datePicker = datePicker
-      }
+    ( initModel
     , Cmd.batch
         [ Cmd.map SetDatePicker datePickerCmd
-        , fetchRecipientProfile shared recipientAccountName
+        , fetchProfileWithTransfers shared initModel recipientAccountName
         ]
     )
 
@@ -353,63 +353,55 @@ update msg model { shared } =
             case maybeProfile of
                 Just profile ->
                     let
+                        pageInfo =
+                            Maybe.map .pageInfo profile.transfers
+
+                        newIncomingTransfers =
+                            case model.incomingTransfers of
+                                Just transfers ->
+                                    transfers ++ getTransfers profile.transfers
+
+                                Nothing ->
+                                    getTransfers profile.transfers
+
                         newModel =
-                            { model | recipientProfile = Loaded profile }
+                            { model
+                                | recipientProfile = Loaded profile
+                                , incomingTransfers = Just newIncomingTransfers
+                                , pageInfo = pageInfo
+                            }
                     in
                     newModel
                         |> UR.init
-                        |> UR.addCmd (fetchTransfers shared newModel)
 
                 Nothing ->
                     model
                         |> UR.init
 
         RecipientProfileLoaded (Err err) ->
-            { model | recipientProfile = Failed err }
-                |> UR.init
-                |> UR.logGraphqlError msg err
-
-        TransfersLoaded (Ok maybeTransfers) ->
-            let
-                pageInfo =
-                    Maybe.map .pageInfo maybeTransfers
-
-                newIncomingTransfers =
-                    case model.incomingTransfers of
-                        Loaded it ->
-                            it ++ getTransfers maybeTransfers
-
-                        _ ->
-                            getTransfers maybeTransfers
-            in
             { model
-                | incomingTransfers = Loaded newIncomingTransfers
-                , pageInfo = pageInfo
+                | recipientProfile = Failed err
             }
-                |> UR.init
-
-        TransfersLoaded (Err err) ->
-            { model | incomingTransfers = Failed err }
                 |> UR.init
                 |> UR.logGraphqlError msg err
 
         ShowMore ->
             model
                 |> UR.init
-                |> UR.addCmd (fetchTransfers shared model)
+                |> UR.addCmd (updateProfileWithTransfers shared model)
 
         OnSelect maybeProfile ->
             let
                 newModel =
                     { model
-                        | incomingTransfers = Loading
+                        | incomingTransfers = Nothing
                         , pageInfo = Nothing
                         , selectedPayer = maybeProfile
                     }
             in
             newModel
                 |> UR.init
-                |> UR.addCmd (fetchTransfers shared newModel)
+                |> UR.addCmd (updateProfileWithTransfers shared newModel)
 
         SelectMsg subMsg ->
             let
@@ -420,7 +412,7 @@ update msg model { shared } =
                 ( Loaded recipient, Just payer ) ->
                     { model | payerAutocompleteState = updated }
                         |> UR.init
-                        |> UR.addCmd (fetchPayersAutocomplete shared (Eos.Account.nameToString recipient.account) payer)
+                        --|> UR.addCmd (fetchPayersAutocomplete shared (Eos.Account.nameToString recipient.account) payer)
                         |> UR.addCmd cmd
 
                 _ ->
@@ -432,14 +424,14 @@ update msg model { shared } =
             let
                 newModel =
                     { model
-                        | incomingTransfers = Loading
+                        | incomingTransfers = Nothing
                         , pageInfo = Nothing
                         , selectedPayer = Nothing
                     }
             in
             newModel
                 |> UR.init
-                |> UR.addCmd (fetchTransfers shared newModel)
+                |> UR.addCmd (updateProfileWithTransfers shared newModel)
 
         SetDatePicker subMsg ->
             let
@@ -454,12 +446,12 @@ update msg model { shared } =
                                 | selectedDate = Just newDate
                                 , pageInfo = Nothing
                                 , datePicker = newDatePicker
-                                , incomingTransfers = Loading
+                                , incomingTransfers = Nothing
                             }
                     in
                     newModel
                         |> UR.init
-                        |> UR.addCmd (fetchTransfers shared newModel)
+                        |> UR.addCmd (updateProfileWithTransfers shared newModel)
 
                 _ ->
                     { model | datePicker = newDatePicker }
@@ -469,13 +461,14 @@ update msg model { shared } =
             let
                 newModel =
                     { model
-                        | incomingTransfers = Loading
+                        | incomingTransfers = Nothing
                         , selectedDate = Nothing
+                        , pageInfo = Nothing
                     }
             in
             newModel
                 |> UR.init
-                |> UR.addCmd (fetchTransfers shared newModel)
+                |> UR.addCmd (updateProfileWithTransfers shared newModel)
 
 
 {-| Convert Transfer identifier (64 symbols) to emoji sequence (8 symbols)
@@ -592,7 +585,7 @@ viewPayerAutocomplete shared model isDisabled =
         ]
 
 
-viewSelectedPayers : Model -> Shared -> List Profile -> Html Msg
+viewSelectedPayers : Model -> Shared -> List Payer -> Html Msg
 viewSelectedPayers model shared selectedPayers =
     div [ class "flex flex-row mt-3 mb-10 flex-wrap" ]
         (selectedPayers
@@ -611,7 +604,7 @@ viewSelectedPayers model shared selectedPayers =
         )
 
 
-viewSelectedPayer : Shared -> Model -> Profile -> Html msg
+viewSelectedPayer : Shared -> Model -> Payer -> Html msg
 viewSelectedPayer shared model profile =
     let
         accountNameContainer =
@@ -649,7 +642,7 @@ viewSelectedPayer shared model profile =
         ]
 
 
-selectConfig : Select.Config msg Profile -> Shared -> Bool -> Select.Config msg Profile
+selectConfig : Select.Config msg Payer -> Shared -> Bool -> Select.Config msg Payer
 selectConfig select shared isDisabled =
     select
         |> Select.withInputClass "form-input h-12 w-full font-sans placeholder-gray-900"
@@ -665,7 +658,7 @@ selectConfig select shared isDisabled =
         |> Select.withMenuClass "border-t-none border-solid border-gray-100 border rounded-b z-30 bg-white"
 
 
-viewAutoCompleteItem : Shared -> Profile -> Html Never
+viewAutoCompleteItem : Shared -> Payer -> Html Never
 viewAutoCompleteItem shared profile =
     let
         ipfsUrl =
@@ -688,18 +681,29 @@ viewAutoCompleteItem shared profile =
         ]
 
 
-selectConfiguration : Shared.Shared -> Bool -> Select.Config Msg Profile
+selectConfiguration : Shared.Shared -> Bool -> Select.Config Msg Payer
 selectConfiguration shared isDisabled =
     selectConfig
         (Select.newConfig
             { onSelect = OnSelect
             , toLabel = \p -> Eos.Account.nameToString p.account
-            , filter = Profile.selectFilter 2 (\p -> Eos.Account.nameToString p.account)
+            , filter = selectFilter 2 (\p -> Eos.Account.nameToString p.account)
             }
             |> Select.withInputClass "form-input"
         )
         shared
         isDisabled
+
+
+selectFilter : Int -> (a -> String) -> String -> List a -> Maybe (List a)
+selectFilter minChars toLabel q items =
+    if String.length q < minChars then
+        Nothing
+
+    else
+        items
+            |> Simple.Fuzzy.filter toLabel q
+            |> Just
 
 
 viewDatePicker : Shared -> Model -> Html Msg
@@ -775,7 +779,7 @@ viewTransfer shared payment =
 viewTransfers : Shared -> Model -> Html Msg
 viewTransfers shared model =
     case model.incomingTransfers of
-        Loaded transfers ->
+        Just transfers ->
             if List.isEmpty transfers then
                 div [ class "text-center my-6" ] [ text (I18Next.t shared.translations "payment_history.no_transfers_found") ]
 
@@ -786,14 +790,11 @@ viewTransfers shared model =
                     , viewPagination shared model
                     ]
 
-        Loading ->
+        Nothing ->
             div [ class "text-center leading-10 h-48" ]
                 [ div [ class "m-auto spinner" ] []
                 , text (I18Next.t shared.translations "menu.loading")
                 ]
-
-        Failed err ->
-            div [] [ Page.fullPageGraphQLError (I18Next.t shared.translations "transfer.loading_error") err ]
 
 
 viewPagination : Shared -> Model -> Html Msg
