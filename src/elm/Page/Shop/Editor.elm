@@ -709,12 +709,16 @@ update msg model loggedIn =
                 |> UR.init
 
         EnteredDescription description ->
-            model
-                |> updateForm
-                    (\form ->
-                        { form | description = updateInput description form.description }
-                    )
-                |> UR.init
+            if String.length description > 255 then
+                UR.init model
+
+            else
+                model
+                    |> updateForm
+                        (\form ->
+                            { form | description = updateInput description form.description }
+                        )
+                    |> UR.init
 
         EnteredSymbol symbolStr ->
             let
