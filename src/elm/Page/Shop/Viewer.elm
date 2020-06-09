@@ -7,7 +7,7 @@ import Community exposing (Balance)
 import Eos as Eos
 import Eos.Account as Eos
 import Graphql.Http
-import Html exposing (Html, button, div, img, input, label, p, span, text, textarea)
+import Html exposing (Html, a, button, div, img, input, label, p, span, text, textarea)
 import Html.Attributes exposing (class, disabled, for, id, placeholder, required, src, type_, value)
 import Html.Events exposing (onClick, onInput)
 import Http
@@ -409,7 +409,10 @@ viewCard ({ shared } as loggedIn) card model =
             , div [ class "w-full flex items-center text-sm" ]
                 [ div [ class "mr-4" ] [ Avatar.view shared.endpoints.ipfs card.sale.creator.avatar "h-10 w-10" ]
                 , text_ "shop.sold_by"
-                , p [ class "font-bold ml-1" ]
+                , a
+                    [ class "font-bold ml-1"
+                    , Route.href (Route.PublicProfile <| Eos.nameToString card.sale.creator.account)
+                    ]
                     [ Profile.viewProfileName loggedIn.accountName card.sale.creator shared.translations ]
                 ]
             , div [ class "flex flex-wrap w-full justify-between items-center" ]
