@@ -814,12 +814,6 @@ fetchBalance shared accountName =
 fetchTransfers : Shared -> Eos.Name -> Cmd Msg
 fetchTransfers shared accountName =
     Api.Graphql.query shared
-        -- TODO: try  Transfer.transfersUserQuery
-        --            accountName
-        --            |> withOptionalArgs
-        --                (\args ->
-        --                    { args | first = Present 10 }
-        --                )
         (Transfer.transfersUserQuery
             accountName
             (\args ->
