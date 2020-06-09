@@ -812,7 +812,7 @@ viewTransfers shared model =
 
             else
                 div []
-                    [ ul [ class "" ]
+                    [ ul [ class "pb-6" ]
                         (List.map (viewTransfer shared) transfers)
                     , viewPagination shared model
                     ]
