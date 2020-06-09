@@ -48,8 +48,8 @@ import Utils
 
 
 type Msg
-    = RecipientProfileLoaded (Result (Graphql.Http.Error (Maybe ProfileWithTransfers)) (Maybe ProfileWithTransfers))
-    | PayersLoaded (Result (Graphql.Http.Error (Maybe ProfileWithOnlyAutocomplete)) (Maybe ProfileWithOnlyAutocomplete))
+    = RecipientProfileWithTransfersLoaded (Result (Graphql.Http.Error (Maybe ProfileWithTransfers)) (Maybe ProfileWithTransfers))
+    | AutocompleteProfilesLoaded (Result (Graphql.Http.Error (Maybe ProfileWithOnlyAutocomplete)) (Maybe ProfileWithOnlyAutocomplete))
     | OnSelect (Maybe ProfileBase)
     | SelectMsg (Select.Msg ProfileBase)
     | SetDatePicker DatePicker.Msg
@@ -64,10 +64,10 @@ msgToString msg =
         ShowMore ->
             [ "ShowMore" ]
 
-        RecipientProfileLoaded r ->
+        RecipientProfileWithTransfersLoaded r ->
             [ "RecipientProfileLoaded", UR.resultToString r ]
 
-        PayersLoaded r ->
+        AutocompleteProfilesLoaded r ->
             [ "PayersFetched", UR.resultToString r ]
 
         ClearSelectSelection ->
@@ -94,7 +94,7 @@ type alias Model =
     { payerAutocompleteState : Select.State
     , selectedPayer : Maybe ProfileBase
     , queryStatus : QueryStatus (Maybe ProfileWithTransfers) ProfileWithTransfers
-    , recipientProfile : Maybe ProfileBase
+    , recipientProfile : ProfileBase
     , incomingTransfers : Maybe (List Transfer)
     , fetchedPayers : List ProfileBase
     , pageInfo : Maybe Api.Relay.PageInfo
@@ -131,79 +131,6 @@ type alias ProfileWithOnlyAutocomplete =
 
 profileWithTransfersSelectionSet : Model -> SelectionSet ProfileWithTransfers Cambiatus.Object.Profile
 profileWithTransfersSelectionSet model =
-    SelectionSet.map4 ProfileWithTransfers
-        User.name
-        (Eos.Account.nameSelectionSet User.account)
-        (Avatar.selectionSet User.avatar)
-        (incomingTransfersSelectionSet model)
-
-
-{-| Fetch recipient profile details with incoming transfers
--}
-fetchProfileWithTransfers : Shared -> Model -> Eos.Account.Name -> Cmd Msg
-fetchProfileWithTransfers shared model accountName =
-    Api.Graphql.query shared
-        (Cambiatus.Query.profile
-            { input = { account = Present (Eos.Account.nameToString accountName) } }
-            (profileWithTransfersSelectionSet model)
-        )
-        RecipientProfileLoaded
-
-
-fetchPayersForAutocomplete : Shared -> Model -> String -> Cmd Msg
-fetchPayersForAutocomplete shared model payerAccount =
-    let
-        autocompleteSelectionSet : SelectionSet ProfileBase Cambiatus.Object.Profile
-        autocompleteSelectionSet =
-            SelectionSet.map3 ProfileBase
-                User.name
-                (Eos.Account.nameSelectionSet User.account)
-                (Avatar.selectionSet User.avatar)
-
-        selectionSet : SelectionSet ProfileWithOnlyAutocomplete Cambiatus.Object.Profile
-        selectionSet =
-            SelectionSet.map ProfileWithOnlyAutocomplete
-                (User.getPayersByAccount { account = payerAccount } autocompleteSelectionSet)
-    in
-    case model.recipientProfile of
-        Just p ->
-            Api.Graphql.query shared
-                (Cambiatus.Query.profile
-                    { input =
-                        { account = Present (Eos.Account.nameToString p.account)
-                        }
-                    }
-                    selectionSet
-                )
-                PayersLoaded
-
-        Nothing ->
-            Cmd.none
-
-
-fetchIncomingTransfers : Shared -> Model -> Cmd Msg
-fetchIncomingTransfers shared model =
-    case model.recipientProfile of
-        Just p ->
-            let
-                input =
-                    { input =
-                        { account = Present (Eos.Account.nameToString p.account)
-                        }
-                    }
-            in
-            Api.Graphql.query shared
-                (Cambiatus.Query.profile
-                    input
-                    (profileWithTransfersSelectionSet model)
-                )
-                RecipientProfileLoaded
-
-        Nothing ->
-            Cmd.none
-
-
-incomingTransfersSelectionSet model =
     let
         endCursor =
             Maybe.andThen .endCursor model.pageInfo
@@ -242,9 +169,62 @@ incomingTransfersSelectionSet model =
                     , secondPartyAccount = optionalFromAccount
                 }
     in
-    User.transfers
-        optionalArgsFn
-        Transfer.transferConnectionSelectionSet
+    SelectionSet.map4 ProfileWithTransfers
+        User.name
+        (Eos.Account.nameSelectionSet User.account)
+        (Avatar.selectionSet User.avatar)
+        (User.transfers
+            optionalArgsFn
+            Transfer.transferConnectionSelectionSet
+        )
+
+
+fetchProfileWithTransfers : Shared -> Model -> Cmd Msg
+fetchProfileWithTransfers shared model =
+    let
+        accountName =
+            Eos.Account.nameToString model.recipientProfile.account
+    in
+    Api.Graphql.query shared
+        (Cambiatus.Query.profile
+            { input = { account = Present accountName } }
+            (profileWithTransfersSelectionSet model)
+        )
+        RecipientProfileWithTransfersLoaded
+
+
+fetchPayersForAutocomplete : Shared -> Model -> String -> Cmd Msg
+fetchPayersForAutocomplete shared model payerAccount =
+    let
+        autocompleteSelectionSet : SelectionSet ProfileBase Cambiatus.Object.Profile
+        autocompleteSelectionSet =
+            SelectionSet.map3 ProfileBase
+                User.name
+                (Eos.Account.nameSelectionSet User.account)
+                (Avatar.selectionSet User.avatar)
+
+        selectionSet : SelectionSet ProfileWithOnlyAutocomplete Cambiatus.Object.Profile
+        selectionSet =
+            SelectionSet.map ProfileWithOnlyAutocomplete
+                (User.getPayersByAccount { account = payerAccount } autocompleteSelectionSet)
+
+        accountName =
+            Eos.Account.nameToString model.recipientProfile.account
+    in
+    Api.Graphql.query shared
+        (Cambiatus.Query.profile
+            { input =
+                { account = Present accountName
+                }
+            }
+            selectionSet
+        )
+        AutocompleteProfilesLoaded
+
+
+fetchIncomingTransfers : Shared -> Model -> Cmd Msg
+fetchIncomingTransfers shared model =
+    fetchProfileWithTransfers shared model
 
 
 datePickerSettings : Shared -> DatePicker.Settings
@@ -287,12 +267,16 @@ init { shared } =
             Eos.Account.stringToName <|
                 Maybe.withDefault "" uriLastPart
 
+        recipientProfile : ProfileBase
+        recipientProfile =
+            { userName = Nothing, account = recipientAccountName, avatar = Avatar.empty }
+
         initModel =
             { payerAutocompleteState = Select.newState ""
             , selectedPayer = Nothing
             , selectedDate = Nothing
             , queryStatus = Loading
-            , recipientProfile = Nothing
+            , recipientProfile = recipientProfile
             , incomingTransfers = Nothing
             , fetchedPayers = []
             , pageInfo = Nothing
@@ -302,7 +286,7 @@ init { shared } =
     ( initModel
     , Cmd.batch
         [ Cmd.map SetDatePicker datePickerCmd
-        , fetchProfileWithTransfers shared initModel recipientAccountName
+        , fetchProfileWithTransfers shared initModel
         ]
     )
 
@@ -354,7 +338,7 @@ getTransfers maybeObj =
 update : Msg -> Model -> SharedModel m -> UR.UpdateResult Model Msg extMsg
 update msg model { shared } =
     case msg of
-        PayersLoaded (Ok maybeProfileWithAutocomplete) ->
+        AutocompleteProfilesLoaded (Ok maybeProfileWithAutocomplete) ->
             case maybeProfileWithAutocomplete of
                 Just profile ->
                     let
@@ -384,12 +368,12 @@ update msg model { shared } =
                     model
                         |> UR.init
 
-        PayersLoaded (Err err) ->
+        AutocompleteProfilesLoaded (Err err) ->
             model
                 |> UR.init
                 |> UR.logGraphqlError msg err
 
-        RecipientProfileLoaded (Ok maybeProfile) ->
+        RecipientProfileWithTransfersLoaded (Ok maybeProfile) ->
             case maybeProfile of
                 Just profile ->
                     let
@@ -414,7 +398,7 @@ update msg model { shared } =
                         newModel =
                             { model
                                 | queryStatus = Loaded profile
-                                , recipientProfile = Just recipientProfile
+                                , recipientProfile = recipientProfile
                                 , incomingTransfers = Just newIncomingTransfers
                                 , pageInfo = pageInfo
                             }
@@ -426,7 +410,7 @@ update msg model { shared } =
                     model
                         |> UR.init
 
-        RecipientProfileLoaded (Err err) ->
+        RecipientProfileWithTransfersLoaded (Err err) ->
             { model
                 | queryStatus = Failed err
             }
@@ -656,21 +640,16 @@ viewSelectedPayer : Shared -> Model -> ProfileBase -> Html msg
 viewSelectedPayer shared model profile =
     let
         accountName =
-            case model.recipientProfile of
-                Just p ->
-                    if profile.account == p.account then
-                        text (I18Next.t shared.translations "transfer_result.you")
+            if profile.account == model.recipientProfile.account then
+                text (I18Next.t shared.translations "transfer_result.you")
 
-                    else
-                        case profile.userName of
-                            Just u ->
-                                text u
+            else
+                case profile.userName of
+                    Just u ->
+                        text u
 
-                            Nothing ->
-                                Eos.Account.viewName profile.account
-
-                Nothing ->
-                    text ""
+                    Nothing ->
+                        Eos.Account.viewName profile.account
 
         accountNameContainer =
             div [ class "flex items-center bg-black rounded-label p-1" ]
