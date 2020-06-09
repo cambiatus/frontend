@@ -275,43 +275,6 @@ encodeObjectiveInput input =
         [ ( "id", Encode.int input.id |> Just ) ]
 
 
-buildPaymentHistoryInput : PaymentHistoryInputRequiredFields -> (PaymentHistoryInputOptionalFields -> PaymentHistoryInputOptionalFields) -> PaymentHistoryInput
-buildPaymentHistoryInput required fillOptionals =
-    let
-        optionals =
-            fillOptionals
-                { date = Absent, payer = Absent }
-    in
-    { date = optionals.date, payer = optionals.payer, recipient = required.recipient }
-
-
-type alias PaymentHistoryInputRequiredFields =
-    { recipient : String }
-
-
-type alias PaymentHistoryInputOptionalFields =
-    { date : OptionalArgument Cambiatus.ScalarCodecs.Date
-    , payer : OptionalArgument String
-    }
-
-
-{-| Type for the PaymentHistoryInput input object.
--}
-type alias PaymentHistoryInput =
-    { date : OptionalArgument Cambiatus.ScalarCodecs.Date
-    , payer : OptionalArgument String
-    , recipient : String
-    }
-
-
-{-| Encode a PaymentHistoryInput into a value that can be used as an argument.
--}
-encodePaymentHistoryInput : PaymentHistoryInput -> Value
-encodePaymentHistoryInput input =
-    Encode.maybeObject
-        [ ( "date", (Cambiatus.ScalarCodecs.codecs |> Cambiatus.Scalar.unwrapEncoder .codecDate) |> Encode.optional input.date ), ( "payer", Encode.string |> Encode.optional input.payer ), ( "recipient", Encode.string input.recipient |> Just ) ]
-
-
 buildProfileInput : (ProfileInputOptionalFields -> ProfileInputOptionalFields) -> ProfileInput
 buildProfileInput fillOptionals =
     let
