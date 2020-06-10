@@ -52,9 +52,9 @@ type Msg
     | AutocompleteProfilesLoaded (Result (Graphql.Http.Error (Maybe ProfileWithOnlyAutocomplete)) (Maybe ProfileWithOnlyAutocomplete))
     | OnSelect (Maybe ProfileBase)
     | SelectMsg (Select.Msg ProfileBase)
+    | ClearSelect
     | SetDatePicker DatePicker.Msg
     | ClearDatePicker
-    | ClearSelectSelection
     | ShowMore
 
 
@@ -65,13 +65,13 @@ msgToString msg =
             [ "ShowMore" ]
 
         RecipientProfileWithTransfersLoaded r ->
-            [ "RecipientProfileLoaded", UR.resultToString r ]
+            [ "RecipientProfileWithTransfersLoaded", UR.resultToString r ]
 
         AutocompleteProfilesLoaded r ->
-            [ "PayersFetched", UR.resultToString r ]
+            [ "AutocompleteProfilesLoaded", UR.resultToString r ]
 
-        ClearSelectSelection ->
-            [ "ClearSelectSelection" ]
+        ClearSelect ->
+            [ "ClearSelect" ]
 
         OnSelect _ ->
             [ "OnSelect" ]
@@ -80,7 +80,7 @@ msgToString msg =
             [ "SelectMsg" ]
 
         SetDatePicker _ ->
-            [ "ToDatePicker" ]
+            [ "SetDatePicker" ]
 
         ClearDatePicker ->
             [ "ClearDatePicker" ]
@@ -91,15 +91,15 @@ msgToString msg =
 
 
 type alias Model =
-    { payerAutocompleteState : Select.State
-    , selectedPayer : Maybe ProfileBase
-    , queryStatus : QueryStatus (Maybe ProfileWithTransfers) ProfileWithTransfers
+    { queryStatus : QueryStatus (Maybe ProfileWithTransfers) ProfileWithTransfers
     , recipientProfile : ProfileBase
     , incomingTransfers : Maybe (List Transfer)
-    , fetchedPayers : List ProfileBase
-    , pageInfo : Maybe Api.Relay.PageInfo
-    , selectedDate : Maybe Date
+    , incomingTransfersPageInfo : Maybe Api.Relay.PageInfo
+    , autocompleteProfiles : List ProfileBase
+    , autocompleteState : Select.State
+    , autocompleteSelectedProfile : Maybe ProfileBase
     , datePicker : DatePicker.DatePicker
+    , selectedDate : Maybe Date
     }
 
 
@@ -133,7 +133,7 @@ profileWithTransfersSelectionSet : Model -> SelectionSet ProfileWithTransfers Ca
 profileWithTransfersSelectionSet model =
     let
         endCursor =
-            Maybe.andThen .endCursor model.pageInfo
+            Maybe.andThen .endCursor model.incomingTransfersPageInfo
 
         afterOption =
             case endCursor of
@@ -152,7 +152,7 @@ profileWithTransfersSelectionSet model =
                     Absent
 
         optionalFromAccount =
-            case model.selectedPayer of
+            case model.autocompleteSelectedProfile of
                 Just p ->
                     Present (Eos.Account.nameToString p.account)
 
@@ -193,8 +193,8 @@ fetchProfileWithTransfers shared model =
         RecipientProfileWithTransfersLoaded
 
 
-fetchPayersForAutocomplete : Shared -> Model -> String -> Cmd Msg
-fetchPayersForAutocomplete shared model payerAccount =
+fetchProfilesForAutocomplete : Shared -> Model -> String -> Cmd Msg
+fetchProfilesForAutocomplete shared model payerAccount =
     let
         autocompleteSelectionSet : SelectionSet ProfileBase Cambiatus.Object.Profile
         autocompleteSelectionSet =
@@ -272,15 +272,15 @@ init { shared } =
             { userName = Nothing, account = recipientAccountName, avatar = Avatar.empty }
 
         initModel =
-            { payerAutocompleteState = Select.newState ""
-            , selectedPayer = Nothing
-            , selectedDate = Nothing
-            , queryStatus = Loading
+            { queryStatus = Loading
             , recipientProfile = recipientProfile
             , incomingTransfers = Nothing
-            , fetchedPayers = []
-            , pageInfo = Nothing
+            , incomingTransfersPageInfo = Nothing
+            , autocompleteProfiles = []
+            , autocompleteState = Select.newState ""
+            , autocompleteSelectedProfile = Nothing
             , datePicker = datePicker
+            , selectedDate = Nothing
             }
     in
     ( initModel
@@ -338,18 +338,15 @@ getTransfers maybeObj =
 update : Msg -> Model -> SharedModel m -> UR.UpdateResult Model Msg extMsg
 update msg model { shared } =
     case msg of
-        AutocompleteProfilesLoaded (Ok maybeProfileWithAutocomplete) ->
-            case maybeProfileWithAutocomplete of
-                Just profile ->
+        AutocompleteProfilesLoaded (Ok maybeProfileWithPayers) ->
+            case maybeProfileWithPayers of
+                Just profileWithPayers ->
                     let
+                        payers : List (Maybe ProfileBase)
                         payers =
-                            case profile.getPayersByAccount of
-                                Just l ->
-                                    l
+                            Maybe.withDefault [] profileWithPayers.getPayersByAccount
 
-                                Nothing ->
-                                    []
-
+                        toList : Maybe ProfileBase -> List ProfileBase
                         toList p =
                             case p of
                                 Just val ->
@@ -358,10 +355,13 @@ update msg model { shared } =
                                 Nothing ->
                                     []
 
-                        newModel =
-                            { model | fetchedPayers = List.concat (List.map toList payers) }
+                        profiles : List ProfileBase
+                        profiles =
+                            payers
+                                |> List.map toList
+                                |> List.concat
                     in
-                    newModel
+                    { model | autocompleteProfiles = profiles }
                         |> UR.init
 
                 Nothing ->
@@ -400,7 +400,7 @@ update msg model { shared } =
                                 | queryStatus = Loaded profile
                                 , recipientProfile = recipientProfile
                                 , incomingTransfers = Just newIncomingTransfers
-                                , pageInfo = pageInfo
+                                , incomingTransfersPageInfo = pageInfo
                             }
                     in
                     newModel
@@ -411,9 +411,7 @@ update msg model { shared } =
                         |> UR.init
 
         RecipientProfileWithTransfersLoaded (Err err) ->
-            { model
-                | queryStatus = Failed err
-            }
+            { model | queryStatus = Failed err }
                 |> UR.init
                 |> UR.logGraphqlError msg err
 
@@ -427,8 +425,8 @@ update msg model { shared } =
                 newModel =
                     { model
                         | incomingTransfers = Nothing
-                        , pageInfo = Nothing
-                        , selectedPayer = maybeProfile
+                        , incomingTransfersPageInfo = Nothing
+                        , autocompleteSelectedProfile = maybeProfile
                     }
             in
             newModel
@@ -438,27 +436,27 @@ update msg model { shared } =
         SelectMsg subMsg ->
             let
                 ( updated, cmd ) =
-                    Select.update (selectConfiguration shared False) subMsg model.payerAutocompleteState
+                    Select.update (selectConfiguration shared False) subMsg model.autocompleteState
             in
-            case Select.queryFromState model.payerAutocompleteState of
+            case Select.queryFromState model.autocompleteState of
                 Just payer ->
-                    { model | payerAutocompleteState = updated }
+                    { model | autocompleteState = updated }
                         |> UR.init
-                        |> UR.addCmd (fetchPayersForAutocomplete shared model payer)
+                        |> UR.addCmd (fetchProfilesForAutocomplete shared model payer)
                         |> UR.addCmd cmd
 
                 Nothing ->
-                    { model | payerAutocompleteState = updated }
+                    { model | autocompleteState = updated }
                         |> UR.init
                         |> UR.addCmd cmd
 
-        ClearSelectSelection ->
+        ClearSelect ->
             let
                 newModel =
                     { model
                         | incomingTransfers = Nothing
-                        , pageInfo = Nothing
-                        , selectedPayer = Nothing
+                        , incomingTransfersPageInfo = Nothing
+                        , autocompleteSelectedProfile = Nothing
                     }
             in
             newModel
@@ -476,7 +474,7 @@ update msg model { shared } =
                         newModel =
                             { model
                                 | selectedDate = Just newDate
-                                , pageInfo = Nothing
+                                , incomingTransfersPageInfo = Nothing
                                 , datePicker = newDatePicker
                                 , incomingTransfers = Nothing
                             }
@@ -495,7 +493,7 @@ update msg model { shared } =
                     { model
                         | incomingTransfers = Nothing
                         , selectedDate = Nothing
-                        , pageInfo = Nothing
+                        , incomingTransfersPageInfo = Nothing
                     }
             in
             newModel
@@ -602,15 +600,15 @@ viewPayerAutocomplete : Shared -> Model -> Bool -> Html Msg
 viewPayerAutocomplete shared model isDisabled =
     let
         selectedPayers =
-            Maybe.map (\v -> [ v ]) model.selectedPayer
+            Maybe.map (\v -> [ v ]) model.autocompleteSelectedProfile
                 |> Maybe.withDefault []
     in
     div []
         [ Html.map SelectMsg
             (Select.view
                 (selectConfiguration shared isDisabled)
-                model.payerAutocompleteState
-                model.fetchedPayers
+                model.autocompleteState
+                model.autocompleteProfiles
                 selectedPayers
             )
         , viewSelectedPayers model shared selectedPayers
@@ -627,7 +625,7 @@ viewSelectedPayers model shared selectedPayers =
                         [ class "flex justify-between flex-col m-3 items-center" ]
                         [ viewSelectedPayer shared model p
                         , div
-                            [ onClick ClearSelectSelection
+                            [ onClick ClearSelect
                             , class "h-6 w-6 flex items-center mt-4"
                             ]
                             [ Icons.trash "" ]
@@ -825,8 +823,8 @@ viewTransfers shared model =
 
 
 viewPagination : Shared -> Model -> Html Msg
-viewPagination shared { pageInfo } =
-    case pageInfo of
+viewPagination shared { incomingTransfersPageInfo } =
+    case incomingTransfersPageInfo of
         Just pi ->
             if pi.hasNextPage then
                 div [ class "pb-8" ]
