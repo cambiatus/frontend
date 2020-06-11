@@ -146,8 +146,7 @@ viewLeftCol mdWidth =
         , style "background-size" "auto 80%"
         , style "background-image" "url(images/auth_bg_full.png)"
         ]
-        [-- Use `viewQuote` with actual data here to show the user's quote
-        ]
+        []
 
 
 viewPageHeader : Model -> Shared -> Html Msg
@@ -214,6 +213,9 @@ type alias Quote =
     }
 
 
+{-| This function will be used later, when actual user quotes will be collected.
+See <https://github.com/cambiatus/frontend/issues/238> for details.
+-}
 viewQuote : Quote -> Html msg
 viewQuote { photoSrc, name, occupation, quote } =
     div
