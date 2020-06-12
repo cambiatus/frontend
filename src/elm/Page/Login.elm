@@ -1,6 +1,7 @@
 module Page.Login exposing (Model, Msg, init, jsAddressToMsg, msgToString, subscriptions, update, view)
 
 import Auth
+import Browser exposing (Document)
 import Html exposing (Html, div)
 import Html.Attributes exposing (class)
 import Json.Encode exposing (Value)
@@ -54,15 +55,17 @@ initModel authModel =
 -- VIEW
 
 
-view : Guest.Model -> Model -> Html Msg
+view : Guest.Model -> Model -> Document Msg
 view guest model =
     let
         authView =
             Auth.view False guest.shared model.auth
                 |> List.map (Html.map GotAuthMsg)
     in
-    div [ class "bg-purple-500 flex-grow flex flex-wrap md:block" ]
-        authView
+    Document "Login title"
+        [ div [ class "bg-purple-500 flex-grow flex flex-wrap md:block" ]
+            authView
+        ]
 
 
 
