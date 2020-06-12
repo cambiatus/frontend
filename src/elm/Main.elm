@@ -945,6 +945,12 @@ msgToString msg =
 view : Model -> Html Msg
 view model =
     let
+        viewGuest :
+            subMdl
+            -> Guest.Page
+            -> (subMsg -> Msg)
+            -> (Guest.Model -> subMdl -> Html subMsg)
+            -> Html Msg
         viewGuest subModel page toMsg content =
             case model.session of
                 Page.Guest guest ->
