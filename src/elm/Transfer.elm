@@ -1,5 +1,6 @@
 module Transfer exposing
     ( ConnectionTransfer
+    , EdgeTransfer
     , QueryTransfers
     , Transfer
     , communityFilter
@@ -11,14 +12,15 @@ module Transfer exposing
     , transferItemSelectionSet
     , transferQuery
     , transferSucceedSubscription
-    , transfersQuery
+    , transfersCommunityQuery
+    , transfersUserQuery
     , userFilter
     )
 
 import Api.Relay exposing (Edge, MetadataConnection, PageConnection, PaginationArgs, pageInfoSelectionSet)
 import Cambiatus.Object
 import Cambiatus.Object.Community
-import Cambiatus.Object.Profile
+import Cambiatus.Object.Profile as User
 import Cambiatus.Object.Transfer
 import Cambiatus.Object.TransferConnection
 import Cambiatus.Object.TransferEdge
@@ -26,7 +28,7 @@ import Cambiatus.Query
 import Cambiatus.Scalar exposing (DateTime(..))
 import Cambiatus.Subscription as Subscription
 import Eos exposing (Symbol, symbolToString)
-import Eos.Account as Eos
+import Eos.Account as Eos exposing (Name)
 import Graphql.Operation exposing (RootQuery)
 import Graphql.OptionalArgument exposing (OptionalArgument(..))
 import Graphql.SelectionSet as SelectionSet exposing (SelectionSet, with)
@@ -58,6 +60,7 @@ type alias Transfer =
     , symbol : Symbol
     , community : Cmm
     , blockTime : DateTime
+    , createdTx : String
     }
 
 
@@ -114,6 +117,7 @@ transferItemSelectionSet =
                 Cambiatus.Object.Community.name
             )
         |> with Cambiatus.Object.Transfer.createdAt
+        |> with Cambiatus.Object.Transfer.createdTx
 
 
 transferEdgeSelectionSet : SelectionSet EdgeTransfer Cambiatus.Object.TransferEdge
@@ -137,11 +141,11 @@ metadataConnectionSelectionSet =
         |> with Cambiatus.Object.TransferConnection.fetchedCount
 
 
-profileTransfersSelectionSet : (PaginationArgs -> PaginationArgs) -> SelectionSet QueryTransfers Cambiatus.Object.Profile
+profileTransfersSelectionSet : (User.TransfersOptionalArguments -> User.TransfersOptionalArguments) -> SelectionSet QueryTransfers Cambiatus.Object.Profile
 profileTransfersSelectionSet paginateArgs =
     let
         transfers =
-            Cambiatus.Object.Profile.transfers
+            User.transfers
                 paginateArgs
                 transferConnectionSelectionSet
     in
@@ -161,16 +165,16 @@ communityTransfersSelectionSet paginateArgs =
         |> with transfers
 
 
-transfersQuery : TransferFilter -> (PaginationArgs -> PaginationArgs) -> SelectionSet (Maybe QueryTransfers) RootQuery
-transfersQuery input paginateArgs =
-    case input of
-        RegularUser name ->
-            profileTransfersSelectionSet paginateArgs
-                |> Cambiatus.Query.profile { input = { account = Present (Eos.nameToString name) } }
+transfersUserQuery : Name -> (User.TransfersOptionalArguments -> User.TransfersOptionalArguments) -> SelectionSet (Maybe QueryTransfers) RootQuery
+transfersUserQuery name paginateArgs =
+    profileTransfersSelectionSet paginateArgs
+        |> Cambiatus.Query.profile { input = { account = Present (Eos.nameToString name) } }
 
-        Community symbol ->
-            communityTransfersSelectionSet paginateArgs
-                |> Cambiatus.Query.community { symbol = Eos.symbolToString symbol }
+
+transfersCommunityQuery : Symbol -> (PaginationArgs -> PaginationArgs) -> SelectionSet (Maybe QueryTransfers) RootQuery
+transfersCommunityQuery symbol paginateArgs =
+    communityTransfersSelectionSet paginateArgs
+        |> Cambiatus.Query.community { symbol = Eos.symbolToString symbol }
 
 
 getTransfers : Maybe { t | transfers : Maybe ConnectionTransfer } -> List Transfer

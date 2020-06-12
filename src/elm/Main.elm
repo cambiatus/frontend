@@ -23,6 +23,7 @@ import Page.Dashboard.Claim as Claim
 import Page.Login as Login
 import Page.NotFound as NotFound
 import Page.Notification as Notification
+import Page.PaymentHistory as PaymentHistory
 import Page.Profile as Profile
 import Page.PublicProfile as PublicProfile
 import Page.Register as Register
@@ -150,6 +151,7 @@ type Status
     = Redirect
     | NotFound
     | ComingSoon
+    | PaymentHistory PaymentHistory.Model
     | Community CommunityPage.Model
     | CommunityEditor CommunityEditor.Model
     | Objectives Objectives.Model
@@ -193,6 +195,7 @@ type Msg
     | GotDashboardMsg Dashboard.Msg
     | GotLoginMsg Login.Msg
     | GotPublicProfileMsg PublicProfile.Msg
+    | GotPaymentHistoryMsg PaymentHistory.Msg
     | GotProfileMsg Profile.Msg
     | GotRegisterMsg Register.Msg
     | GotShopMsg Shop.Msg
@@ -306,13 +309,25 @@ update msg model =
                 -- provides the above composed function with the initial guest input
                 |> withGuest
 
+        ( GotPaymentHistoryMsg subMsg, PaymentHistory subModel ) ->
+            case model.session of
+                Page.Guest _ ->
+                    PaymentHistory.update subMsg subModel
+                        >> updateGuestUResult PaymentHistory GotPaymentHistoryMsg model
+                        |> withGuest
+
+                Page.LoggedIn _ ->
+                    PaymentHistory.update subMsg subModel
+                        >> updateLoggedInUResult PaymentHistory GotPaymentHistoryMsg model
+                        |> withLoggedIn
+
         ( GotLoginMsg subMsg, Login subModel ) ->
             Login.update subMsg subModel
                 >> updateGuestUResult Login GotLoginMsg model
                 |> withGuest
 
         ( GotNotificationMsg subMsg, Notification subModel ) ->
-            -- Will return afunction expecting a LoggedIn Model
+            -- Will return a function expecting a LoggedIn Model
             Notification.update subMsg subModel
                 -- will return a function expecting an UpdateResult
                 -- The composition operator will take the result of the above function and use as
@@ -671,6 +686,19 @@ changeRouteTo maybeRoute model =
                 (updateStatusWith Login GotLoginMsg)
                 maybeRedirect
 
+        Just (Route.PaymentHistory accountName) ->
+            case session of
+                Page.Guest _ ->
+                    withGuest
+                        PaymentHistory.init
+                        (updateStatusWith PaymentHistory GotPaymentHistoryMsg)
+                        Nothing
+
+                Page.LoggedIn _ ->
+                    PaymentHistory.init
+                        >> updateStatusWith PaymentHistory GotPaymentHistoryMsg model
+                        |> withLoggedIn (Route.PaymentHistory accountName)
+
         Just (Route.LoginWithPrivateKey maybeRedirect) ->
             withGuest
                 Login.init
@@ -910,6 +938,9 @@ msgToString msg =
         GotPublicProfileMsg subMsg ->
             "GotPublicProfileMsg" :: PublicProfile.msgToString subMsg
 
+        GotPaymentHistoryMsg subMsg ->
+            "GotPaymentHistoryMsg" :: PaymentHistory.msgToString subMsg
+
         GotProfileMsg subMsg ->
             "GotProfileMsg" :: Profile.msgToString subMsg
 
@@ -982,6 +1013,14 @@ view model =
 
         ComingSoon ->
             viewPage Guest.Other LoggedIn.Other (\_ -> Ignored) (ComingSoon.view model.session)
+
+        PaymentHistory subModel ->
+            case model.session of
+                Page.Guest _ ->
+                    viewGuest subModel Guest.PaymentHistory GotPaymentHistoryMsg PaymentHistory.view
+
+                Page.LoggedIn _ ->
+                    viewLoggedIn subModel LoggedIn.PaymentHistory GotPaymentHistoryMsg PaymentHistory.view
 
         Register _ subModel ->
             viewGuest subModel Guest.Register GotRegisterMsg Register.view

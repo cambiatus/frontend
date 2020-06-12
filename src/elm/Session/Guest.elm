@@ -73,11 +73,39 @@ type Page
     = Register
     | Login
     | Shop
+    | PaymentHistory
     | Other
 
 
 view : (Msg -> msg) -> Page -> Model -> Html msg -> Html msg
-view thisMsg _ ({ shared } as model) content =
+view thisMsg page ({ shared } as model) content =
+    let
+        isLeftArtAvailable =
+            -- Some guest pages have the half-width block with the picture and the user quotes
+            case page of
+                Login ->
+                    True
+
+                Register ->
+                    True
+
+                _ ->
+                    False
+
+        leftColWidth =
+            if isLeftArtAvailable then
+                "md:w-2/5"
+
+            else
+                ""
+
+        rightColWidth =
+            if isLeftArtAvailable then
+                "md:w-3/5"
+
+            else
+                "md:w-full"
+    in
     case Shared.translationStatus shared of
         Shared.LoadingTranslation ->
             Shared.viewFullLoading
@@ -92,26 +120,33 @@ view thisMsg _ ({ shared } as model) content =
         _ ->
             div
                 [ class "md:flex" ]
-                [ div
-                    -- Left part with background and quote (desktop only)
-                    [ class "hidden md:block md:visible min-h-screen md:w-2/5"
-                    , class "bg-center bg-no-repeat"
-                    , style "background-color" "#EFF9FB"
-                    , style "background-position" "center bottom"
-                    , style "background-size" "auto 80%"
-                    , style "background-image" "url(images/auth_bg_full.png)"
-                    ]
-                    [-- Use `viewQuote` with actual data here to show the user's quote
-                    ]
+                [ if isLeftArtAvailable then
+                    viewLeftCol leftColWidth
+
+                  else
+                    text ""
                 , div
-                    -- Content: Header, Login/Registration forms
-                    [ class "min-h-stretch flex flex-col md:w-3/5"
+                    [ class "min-h-stretch flex flex-col"
+                    , class rightColWidth
                     ]
                     [ viewPageHeader model shared
                         |> Html.map thisMsg
                     , content
                     ]
                 ]
+
+
+viewLeftCol : String -> Html msg
+viewLeftCol mdWidth =
+    div
+        -- Left part with background and quote (desktop only)
+        [ class "hidden md:block md:visible min-h-screen bg-bottom bg-no-repeat"
+        , class mdWidth
+        , style "background-color" "#EFF9FB"
+        , style "background-size" "auto 80%"
+        , style "background-image" "url(images/auth_bg_full.png)"
+        ]
+        []
 
 
 viewPageHeader : Model -> Shared -> Html Msg
@@ -178,6 +213,9 @@ type alias Quote =
     }
 
 
+{-| This function will be used later, when actual user quotes will be collected.
+See <https://github.com/cambiatus/frontend/issues/238> for details.
+-}
 viewQuote : Quote -> Html msg
 viewQuote { photoSrc, name, occupation, quote } =
     div
