@@ -10,6 +10,7 @@ module Page.Community.ActionEditor exposing
     )
 
 import Api.Graphql
+import Browser exposing (Document)
 import Cambiatus.Enum.VerificationType as VerificationType
 import Cambiatus.Scalar exposing (DateTime(..))
 import Community exposing (Model)
@@ -1068,30 +1069,33 @@ upsertAction loggedIn model isoDate =
 -- VIEW
 
 
-view : LoggedIn.Model -> Model -> Html Msg
+view : LoggedIn.Model -> Model -> Document Msg
 view ({ shared } as loggedIn) model =
     let
         t s =
             I18Next.t shared.translations s
+
+        body =
+            case model.status of
+                Loading ->
+                    Page.fullPageLoading
+
+                Loaded community ->
+                    div [ class "bg-white" ]
+                        [ Page.viewHeader loggedIn (t "community.actions.title") (Route.Objectives model.communityId)
+                        , viewForm loggedIn community model
+                        ]
+
+                LoadFailed err ->
+                    Page.fullPageGraphQLError (t "error.invalidSymbol") err
+
+                NotFound ->
+                    Page.fullPageNotFound (t "community.actions.form.not_found") ""
+
+                Unauthorized ->
+                    Page.fullPageNotFound "not authorized" ""
     in
-    case model.status of
-        Loading ->
-            Page.fullPageLoading
-
-        Loaded community ->
-            div [ class "bg-white" ]
-                [ Page.viewHeader loggedIn (t "community.actions.title") (Route.Objectives model.communityId)
-                , viewForm loggedIn community model
-                ]
-
-        LoadFailed err ->
-            Page.fullPageGraphQLError (t "error.invalidSymbol") err
-
-        NotFound ->
-            Page.fullPageNotFound (t "community.actions.form.not_found") ""
-
-        Unauthorized ->
-            Page.fullPageNotFound "not authorized" ""
+    Document "Action Editor" [ body ]
 
 
 viewForm : LoggedIn.Model -> Community.Model -> Model -> Html Msg

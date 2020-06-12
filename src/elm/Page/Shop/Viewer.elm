@@ -3,6 +3,7 @@ module Page.Shop.Viewer exposing (Model, Msg, init, msgToString, subscriptions, 
 import Api
 import Api.Graphql
 import Avatar
+import Browser exposing (Document)
 import Community exposing (Balance)
 import Eos as Eos
 import Eos.Account as Eos
@@ -334,42 +335,46 @@ cardFromSale sale =
     }
 
 
-view : LoggedIn.Model -> Model -> Html Msg
+view : LoggedIn.Model -> Model -> Document Msg
 view loggedIn model =
-    case model.status of
-        LoadingSale _ ->
-            div []
-                [ Page.viewHeader loggedIn "" (Route.Shop Shop.All)
-                , Page.fullPageLoading
-                ]
-
-        InvalidId invalidId ->
-            div [ class "container mx-auto px-4" ]
-                [ Page.viewHeader loggedIn "" (Route.Shop Shop.All)
-                , div []
-                    [ text (invalidId ++ " is not a valid Sale Id") ]
-                ]
-
-        LoadingFailed e ->
-            Page.fullPageGraphQLError (t loggedIn.shared.translations "shop.title") e
-
-        LoadedSale maybeSale ->
-            case maybeSale of
-                Just sale ->
-                    let
-                        cardData =
-                            cardFromSale sale
-                    in
+    let
+        body =
+            case model.status of
+                LoadingSale _ ->
                     div []
-                        [ Page.viewHeader loggedIn cardData.sale.title (Route.Shop Shop.All)
-                        , div [ class "container mx-auto" ] [ viewCard loggedIn cardData model ]
+                        [ Page.viewHeader loggedIn "" (Route.Shop Shop.All)
+                        , Page.fullPageLoading
                         ]
 
-                Nothing ->
+                InvalidId invalidId ->
                     div [ class "container mx-auto px-4" ]
-                        [ div []
-                            [ text "Could not load the sale" ]
+                        [ Page.viewHeader loggedIn "" (Route.Shop Shop.All)
+                        , div []
+                            [ text (invalidId ++ " is not a valid Sale Id") ]
                         ]
+
+                LoadingFailed e ->
+                    Page.fullPageGraphQLError (t loggedIn.shared.translations "shop.title") e
+
+                LoadedSale maybeSale ->
+                    case maybeSale of
+                        Just sale ->
+                            let
+                                cardData =
+                                    cardFromSale sale
+                            in
+                            div []
+                                [ Page.viewHeader loggedIn cardData.sale.title (Route.Shop Shop.All)
+                                , div [ class "container mx-auto" ] [ viewCard loggedIn cardData model ]
+                                ]
+
+                        Nothing ->
+                            div [ class "container mx-auto px-4" ]
+                                [ div []
+                                    [ text "Could not load the sale" ]
+                                ]
+    in
+    Document "Shop Viewer" [ body ]
 
 
 viewCard : LoggedIn.Model -> Card -> Model -> Html Msg

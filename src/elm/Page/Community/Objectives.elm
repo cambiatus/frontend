@@ -1,6 +1,7 @@
 module Page.Community.Objectives exposing (Model, Msg, init, msgToString, update, view)
 
 import Api.Graphql
+import Browser exposing (Document)
 import Cambiatus.Enum.VerificationType as VerificationType
 import Community exposing (Model, communityQuery)
 import Eos exposing (Symbol)
@@ -63,31 +64,35 @@ type Status
 -- VIEW
 
 
-view : LoggedIn.Model -> Model -> Html Msg
+view : LoggedIn.Model -> Model -> Document Msg
 view ({ shared } as loggedIn) model =
-    case model.status of
-        Loading ->
-            Page.fullPageLoading
+    let
+        body =
+            case model.status of
+                Loading ->
+                    Page.fullPageLoading
 
-        NotFound ->
-            Page.viewCardEmpty [ text "Community not found" ]
+                NotFound ->
+                    Page.viewCardEmpty [ text "Community not found" ]
 
-        Failed e ->
-            Page.fullPageGraphQLError (t shared.translations "community.objectives.title_plural") e
+                Failed e ->
+                    Page.fullPageGraphQLError (t shared.translations "community.objectives.title_plural") e
 
-        Loaded community ->
-            div []
-                [ Page.viewHeader loggedIn (t shared.translations "community.objectives.title_plural") (Route.Community model.communityId)
-                , div [ class "container mx-auto px-4 my-10" ]
-                    [ div [ class "flex justify-end mb-10" ] [ viewNewObjectiveButton loggedIn community ]
-                    , div []
-                        (community.objectives
-                            |> List.sortBy .id
-                            |> List.reverse
-                            |> List.indexedMap (viewObjective loggedIn model community)
-                        )
-                    ]
-                ]
+                Loaded community ->
+                    div []
+                        [ Page.viewHeader loggedIn (t shared.translations "community.objectives.title_plural") (Route.Community model.communityId)
+                        , div [ class "container mx-auto px-4 my-10" ]
+                            [ div [ class "flex justify-end mb-10" ] [ viewNewObjectiveButton loggedIn community ]
+                            , div []
+                                (community.objectives
+                                    |> List.sortBy .id
+                                    |> List.reverse
+                                    |> List.indexedMap (viewObjective loggedIn model community)
+                                )
+                            ]
+                        ]
+    in
+    Document "Objectives" [ body ]
 
 
 viewNewObjectiveButton : LoggedIn.Model -> Community.Model -> Html msg

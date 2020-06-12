@@ -10,6 +10,7 @@ module Page.Dashboard.Analysis exposing
 
 import Api.Graphql
 import Api.Relay
+import Browser exposing (Document)
 import Cambiatus.Query
 import Claim
 import Community
@@ -113,36 +114,39 @@ type ModalStatus
 -- VIEW
 
 
-view : LoggedIn.Model -> Model -> Html Msg
+view : LoggedIn.Model -> Model -> Document Msg
 view ({ shared } as loggedIn) model =
     let
         t : String -> String
         t =
             I18Next.t shared.translations
-    in
-    case model.status of
-        Loading ->
-            Page.fullPageLoading
 
-        Loaded claims pageInfo ->
-            div []
-                [ Page.viewHeader loggedIn (t "all_analysis.title") Route.Dashboard
-                , div [ class "container mx-auto px-4 mb-10" ]
-                    [ viewFilters loggedIn model
-                    , if List.length claims > 0 then
-                        div []
-                            [ div [ class "flex flex-wrap -mx-2" ] (List.map (viewClaim loggedIn) claims)
-                            , viewPagination loggedIn pageInfo
+        body =
+            case model.status of
+                Loading ->
+                    Page.fullPageLoading
+
+                Loaded claims pageInfo ->
+                    div []
+                        [ Page.viewHeader loggedIn (t "all_analysis.title") Route.Dashboard
+                        , div [ class "container mx-auto px-4 mb-10" ]
+                            [ viewFilters loggedIn model
+                            , if List.length claims > 0 then
+                                div []
+                                    [ div [ class "flex flex-wrap -mx-2" ] (List.map (viewClaim loggedIn) claims)
+                                    , viewPagination loggedIn pageInfo
+                                    ]
+
+                              else
+                                viewEmptyResults loggedIn
                             ]
+                        , viewAnalysisModal loggedIn model
+                        ]
 
-                      else
-                        viewEmptyResults loggedIn
-                    ]
-                , viewAnalysisModal loggedIn model
-                ]
-
-        Failed ->
-            text ""
+                Failed ->
+                    text ""
+    in
+    Document "Analysis" [ body ]
 
 
 viewFilters : LoggedIn.Model -> Model -> Html Msg

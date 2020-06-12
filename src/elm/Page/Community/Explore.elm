@@ -1,6 +1,7 @@
 module Page.Community.Explore exposing (Model, Msg(..), init, msgToString, update, view)
 
 import Api.Graphql
+import Browser exposing (Document)
 import Community exposing (Metadata)
 import Eos
 import Eos.Account as Eos
@@ -59,33 +60,37 @@ type Status
 -- VIEW
 
 
-view : LoggedIn.Model -> Model -> Html msg
+view : LoggedIn.Model -> Model -> Document msg
 view loggedIn model =
-    case model.communities of
-        Loading ->
-            Page.fullPageLoading
+    let
+        body =
+            case model.communities of
+                Loading ->
+                    Page.fullPageLoading
 
-        LoadingFailed e ->
-            Page.fullPageGraphQLError (t loggedIn.shared.translations "menu.communities") e
+                LoadingFailed e ->
+                    Page.fullPageGraphQLError (t loggedIn.shared.translations "menu.communities") e
 
-        Loaded communities ->
-            div [ class "container mx-auto px-4" ]
-                [ renderUserMessage model
-                , if loggedIn.shared.allowCommunityCreation then
-                    div
-                        [ class "my-10 w-full flex justify-end" ]
-                        [ a
-                            [ Route.href Route.NewCommunity
-                            , class "button button-primary w-64"
-                            ]
-                            [ text (I18Next.t loggedIn.shared.translations "community.create_button") ]
+                Loaded communities ->
+                    div [ class "container mx-auto px-4" ]
+                        [ renderUserMessage model
+                        , if loggedIn.shared.allowCommunityCreation then
+                            div
+                                [ class "my-10 w-full flex justify-end" ]
+                                [ a
+                                    [ Route.href Route.NewCommunity
+                                    , class "button button-primary w-64"
+                                    ]
+                                    [ text (I18Next.t loggedIn.shared.translations "community.create_button") ]
+                                ]
+
+                          else
+                            text ""
+                        , div [ class "flex flex-wrap -mx-2" ]
+                            (viewCommunities loggedIn (String.toUpper loggedIn.searchText) communities)
                         ]
-
-                  else
-                    text ""
-                , div [ class "flex flex-wrap -mx-2" ]
-                    (viewCommunities loggedIn (String.toUpper loggedIn.searchText) communities)
-                ]
+    in
+    Document "Community Explore" [ body ]
 
 
 renderUserMessage : Model -> Html msg

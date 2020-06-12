@@ -13,6 +13,7 @@ module Page.Community.Editor exposing
 import Api
 import Api.Graphql
 import Asset.Icon as Icon
+import Browser exposing (Document)
 import Browser.Events as Events
 import Community exposing (Model)
 import Dict exposing (Dict)
@@ -208,7 +209,7 @@ encodeFormHelper logoHash { accountName } form =
 -- VIEW
 
 
-view : LoggedIn.Model -> Model -> Html Msg
+view : LoggedIn.Model -> Model -> Document Msg
 view loggedIn model =
     let
         defaultContainer =
@@ -219,41 +220,44 @@ view loggedIn model =
 
         t str =
             I18Next.t shared.translations str
+
+        body =
+            case model of
+                Loading _ ->
+                    Page.fullPageLoading
+
+                LoadingFailed e ->
+                    Page.fullPageGraphQLError (t "community.edit.title") e
+
+                NotFound ->
+                    Page.viewCardEmpty [ text "Community not found" ]
+
+                Unauthorized _ ->
+                    defaultContainer
+                        [ Page.viewTitle (t "community.edit.title")
+                        , div [ class "card" ]
+                            [ text (t "community.edit.unauthorized") ]
+                        ]
+
+                Editing _ problems form ->
+                    viewForm shared True False problems form model
+
+                WaitingEditLogoUpload _ form ->
+                    viewForm shared True True Dict.empty form model
+
+                Saving _ form ->
+                    viewForm shared True True Dict.empty form model
+
+                EditingNew problems form ->
+                    viewForm shared False False problems form model
+
+                WaitingNewLogoUpload form ->
+                    viewForm shared False True Dict.empty form model
+
+                Creating form ->
+                    viewForm shared False True Dict.empty form model
     in
-    case model of
-        Loading _ ->
-            Page.fullPageLoading
-
-        LoadingFailed e ->
-            Page.fullPageGraphQLError (t "community.edit.title") e
-
-        NotFound ->
-            Page.viewCardEmpty [ text "Community not found" ]
-
-        Unauthorized _ ->
-            defaultContainer
-                [ Page.viewTitle (t "community.edit.title")
-                , div [ class "card" ]
-                    [ text (t "community.edit.unauthorized") ]
-                ]
-
-        Editing _ problems form ->
-            viewForm shared True False problems form model
-
-        WaitingEditLogoUpload _ form ->
-            viewForm shared True True Dict.empty form model
-
-        Saving _ form ->
-            viewForm shared True True Dict.empty form model
-
-        EditingNew problems form ->
-            viewForm shared False False problems form model
-
-        WaitingNewLogoUpload form ->
-            viewForm shared False True Dict.empty form model
-
-        Creating form ->
-            viewForm shared False True Dict.empty form model
+    Document "Community Editor" [ body ]
 
 
 viewForm : Shared -> Bool -> Bool -> Dict String FormError -> Form -> Model -> Html Msg

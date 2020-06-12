@@ -13,6 +13,7 @@ import Api
 import Api.Graphql
 import Asset.Icon as Icon
 import Avatar exposing (Avatar)
+import Browser exposing (Document)
 import Browser.Events
 import Dict exposing (Dict)
 import Eos as Eos
@@ -101,23 +102,27 @@ type AvatarStatus
 -- VIEW
 
 
-view : LoggedIn.Model -> Model -> Html Msg
+view : LoggedIn.Model -> Model -> Document Msg
 view loggedIn model =
-    case model.status of
-        Loading ->
-            Page.fullPageLoading
+    let
+        body =
+            case model.status of
+                Loading ->
+                    Page.fullPageLoading
 
-        LoadingFailed _ ->
-            Page.fullPageError (t loggedIn.shared.translations "profile.title") Http.Timeout
+                LoadingFailed _ ->
+                    Page.fullPageError (t loggedIn.shared.translations "profile.title") Http.Timeout
 
-        Loaded profile ->
-            view_ loggedIn profile model
+                Loaded profile ->
+                    view_ loggedIn profile model
 
-        Editing profile avatarS form ->
-            viewForm loggedIn False profile avatarS form
+                Editing profile avatarS form ->
+                    viewForm loggedIn False profile avatarS form
 
-        Saving profile avatarS form ->
-            viewForm loggedIn True profile avatarS form
+                Saving profile avatarS form ->
+                    viewForm loggedIn True profile avatarS form
+    in
+    Document "Profile title" [ body ]
 
 
 view_ : LoggedIn.Model -> Profile -> Model -> Html Msg

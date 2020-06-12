@@ -1,6 +1,7 @@
 module Page.Notification exposing (Model, Msg(..), init, msgToString, update, view)
 
 import Api.Graphql
+import Browser exposing (Document)
 import Eos
 import Eos.Account as Eos
 import FormatNumber exposing (format)
@@ -60,25 +61,28 @@ type Payload
 -- VIEW
 
 
-view : LoggedIn.Model -> Model -> Html Msg
+view : LoggedIn.Model -> Model -> Document Msg
 view loggedIn model =
     let
         t s =
             I18Next.t loggedIn.shared.translations s
+
+        body =
+            case model of
+                Loading ->
+                    Page.fullPageLoading
+
+                Loaded notifications ->
+                    div [ class "container mx-auto px-4 mb-6" ]
+                        [ Page.viewTitle (t "notifications.title")
+                        , if notifications == [] then
+                            viewEmptyNotifications loggedIn.shared
+
+                          else
+                            viewNotifications loggedIn notifications
+                        ]
     in
-    case model of
-        Loading ->
-            Page.fullPageLoading
-
-        Loaded notifications ->
-            div [ class "container mx-auto px-4 mb-6" ]
-                [ Page.viewTitle (t "notifications.title")
-                , if notifications == [] then
-                    viewEmptyNotifications loggedIn.shared
-
-                  else
-                    viewNotifications loggedIn notifications
-                ]
+    Document "Notification" [ body ]
 
 
 viewNotifications : LoggedIn.Model -> List History -> Html Msg

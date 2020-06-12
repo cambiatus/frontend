@@ -10,6 +10,7 @@ module Page.Community.Transfer exposing
     )
 
 import Api.Graphql
+import Browser exposing (Document)
 import Browser.Events
 import Community exposing (Model, communityQuery)
 import Eos exposing (Symbol)
@@ -138,29 +139,33 @@ isFormValid form =
 -- VIEW
 
 
-view : LoggedIn.Model -> Model -> Html Msg
+view : LoggedIn.Model -> Model -> Document Msg
 view ({ shared } as loggedIn) model =
-    case model.status of
-        Loading ->
-            Page.fullPageLoading
+    let
+        body =
+            case model.status of
+                Loading ->
+                    Page.fullPageLoading
 
-        NotFound ->
-            Page.viewCardEmpty [ text "Community not found" ]
+                NotFound ->
+                    Page.viewCardEmpty [ text "Community not found" ]
 
-        Failed e ->
-            Page.fullPageGraphQLError (t shared.translations "community.objectives.title_plural") e
+                Failed e ->
+                    Page.fullPageGraphQLError (t shared.translations "community.objectives.title_plural") e
 
-        Loaded community (EditingTransfer f) ->
-            viewForm loggedIn model f community False
+                Loaded community (EditingTransfer f) ->
+                    viewForm loggedIn model f community False
 
-        Loaded community (CreatingSubscription f) ->
-            viewForm loggedIn model f community True
+                Loaded community (CreatingSubscription f) ->
+                    viewForm loggedIn model f community True
 
-        Loaded community (SendingTransfer f) ->
-            viewForm loggedIn model f community True
+                Loaded community (SendingTransfer f) ->
+                    viewForm loggedIn model f community True
 
-        Loaded community (SendingTransferFailed f) ->
-            viewForm loggedIn model f community False
+                Loaded community (SendingTransferFailed f) ->
+                    viewForm loggedIn model f community False
+    in
+    Document "Transfers" [ body ]
 
 
 viewForm : LoggedIn.Model -> Model -> Form -> Community.Model -> Bool -> Html Msg

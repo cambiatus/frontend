@@ -1,6 +1,7 @@
 module Page.ViewTransfer exposing (Model, Msg, init, msgToString, subscriptions, update, view)
 
 import Api.Graphql
+import Browser exposing (Document)
 import Cambiatus.Scalar exposing (DateTime(..))
 import Eos
 import Eos.Account as Eos
@@ -67,38 +68,41 @@ type Status
 -- VIEW
 
 
-view : LoggedIn.Model -> Model -> Html Msg
+view : LoggedIn.Model -> Model -> Document Msg
 view loggedIn model =
     let
         t =
             I18Next.t loggedIn.shared.translations
-    in
-    case model.status of
-        Loading _ ->
-            Page.fullPageLoading
 
-        LoadFailed error ->
-            div []
-                [ Page.viewHeader loggedIn (t "transfer_result.title") Route.Dashboard
-                , Page.fullPageGraphQLError (t "transfer_result.title") error
-                ]
+        body =
+            case model.status of
+                Loading _ ->
+                    Page.fullPageLoading
 
-        Loaded maybeTransfer state ->
-            case maybeTransfer of
-                Just transfer ->
+                LoadFailed error ->
                     div []
                         [ Page.viewHeader loggedIn (t "transfer_result.title") Route.Dashboard
-                        , div []
-                            [ viewTransfer loggedIn transfer state
-                            , viewDetails loggedIn transfer state
-                            ]
+                        , Page.fullPageGraphQLError (t "transfer_result.title") error
                         ]
 
-                Nothing ->
-                    div [ class "container mx-auto px-4" ]
-                        [ div []
-                            [ text "Could not load the transfer" ]
-                        ]
+                Loaded maybeTransfer state ->
+                    case maybeTransfer of
+                        Just transfer ->
+                            div []
+                                [ Page.viewHeader loggedIn (t "transfer_result.title") Route.Dashboard
+                                , div []
+                                    [ viewTransfer loggedIn transfer state
+                                    , viewDetails loggedIn transfer state
+                                    ]
+                                ]
+
+                        Nothing ->
+                            div [ class "container mx-auto px-4" ]
+                                [ div []
+                                    [ text "Could not load the transfer" ]
+                                ]
+    in
+    Document "Transfer View title" [ body ]
 
 
 viewTransfer : LoggedIn.Model -> Transfer -> State -> Html Msg

@@ -3,6 +3,7 @@ module Page.Shop.Editor exposing (Model, Msg(..), initCreate, initUpdate, jsAddr
 import Api
 import Api.Graphql
 import Asset.Icon as Icon
+import Browser exposing (Document)
 import Browser.Events as Events
 import Community exposing (Balance)
 import DataValidator exposing (Validator, getInput, greaterThanOrEqual, hasErrors, listErrors, longerThan, newValidator, oneOf, updateInput, validate)
@@ -168,7 +169,7 @@ initForm balanceOptions =
 -- VIEW
 
 
-view : LoggedIn.Model -> Model -> Html Msg
+view : LoggedIn.Model -> Model -> Document Msg
 view loggedIn model =
     let
         shared =
@@ -176,37 +177,40 @@ view loggedIn model =
 
         t =
             I18Next.t shared.translations
+
+        body =
+            case model of
+                LoadingBalancesCreate ->
+                    Page.fullPageLoading
+
+                LoadingBalancesUpdate _ ->
+                    Page.fullPageLoading
+
+                LoadingSaleUpdate _ _ ->
+                    Page.fullPageLoading
+
+                LoadBalancesFailed error ->
+                    Page.fullPageError (t "shop.title") error
+
+                LoadSaleFailed error ->
+                    Page.fullPageGraphQLError (t "shop.title") error
+
+                EditingCreate balances imageStatus form ->
+                    viewForm shared balances imageStatus False False Closed form
+
+                Creating balances imageStatus form ->
+                    viewForm shared balances imageStatus False True Closed form
+
+                EditingUpdate balances _ imageStatus confirmDelete form ->
+                    viewForm shared balances imageStatus True False confirmDelete form
+
+                Saving balances _ imageStatus form ->
+                    viewForm shared balances imageStatus True True Closed form
+
+                Deleting balances _ imageStatus form ->
+                    viewForm shared balances imageStatus True True Closed form
     in
-    case model of
-        LoadingBalancesCreate ->
-            Page.fullPageLoading
-
-        LoadingBalancesUpdate _ ->
-            Page.fullPageLoading
-
-        LoadingSaleUpdate _ _ ->
-            Page.fullPageLoading
-
-        LoadBalancesFailed error ->
-            Page.fullPageError (t "shop.title") error
-
-        LoadSaleFailed error ->
-            Page.fullPageGraphQLError (t "shop.title") error
-
-        EditingCreate balances imageStatus form ->
-            viewForm shared balances imageStatus False False Closed form
-
-        Creating balances imageStatus form ->
-            viewForm shared balances imageStatus False True Closed form
-
-        EditingUpdate balances _ imageStatus confirmDelete form ->
-            viewForm shared balances imageStatus True False confirmDelete form
-
-        Saving balances _ imageStatus form ->
-            viewForm shared balances imageStatus True True Closed form
-
-        Deleting balances _ imageStatus form ->
-            viewForm shared balances imageStatus True True Closed form
+    Document "Shop Editor title" [ body ]
 
 
 viewForm : Shared -> List Balance -> ImageStatus -> Bool -> Bool -> DeleteModalStatus -> Form -> Html Msg

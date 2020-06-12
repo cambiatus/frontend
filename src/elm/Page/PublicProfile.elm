@@ -2,6 +2,7 @@ module Page.PublicProfile exposing (Model, Msg, init, jsAddressToMsg, msgToStrin
 
 import Api.Graphql
 import Avatar
+import Browser exposing (Document)
 import Eos exposing (Symbol)
 import Eos.Account as Eos
 import Graphql.Http
@@ -54,24 +55,27 @@ initModel =
     Loading
 
 
-view : LoggedIn.Model -> Model -> Html msg
+view : LoggedIn.Model -> Model -> Document msg
 view loggedIn status =
     let
         t =
             I18Next.t loggedIn.shared.translations
+
+        body =
+            case status of
+                Loading ->
+                    Page.fullPageLoading
+
+                Loaded profile ->
+                    view_ loggedIn profile
+
+                NotFound ->
+                    Page.fullPageNotFound (t "error.unknown") (t "error.pageNotFound")
+
+                LoadingFailed err ->
+                    Page.fullPageNotFound (t "error.unknown") (Page.errorToString err)
     in
-    case status of
-        Loading ->
-            Page.fullPageLoading
-
-        Loaded profile ->
-            view_ loggedIn profile
-
-        NotFound ->
-            Page.fullPageNotFound (t "error.unknown") (t "error.pageNotFound")
-
-        LoadingFailed err ->
-            Page.fullPageNotFound (t "error.unknown") (Page.errorToString err)
+    Document "Public profile" [ body ]
 
 
 view_ : LoggedIn.Model -> Profile -> Html msg

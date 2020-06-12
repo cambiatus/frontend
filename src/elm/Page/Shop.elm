@@ -11,6 +11,7 @@ module Page.Shop exposing
 
 import Api
 import Api.Graphql
+import Browser exposing (Document)
 import Browser.Dom as Dom
 import Community exposing (Balance)
 import Eos as Eos
@@ -146,27 +147,31 @@ type ValidationError
 -- VIEW
 
 
-view : LoggedIn.Model -> Model -> Html Msg
+view : LoggedIn.Model -> Model -> Document Msg
 view loggedIn model =
-    case model.cards of
-        Loading ->
-            div []
-                [ Lazy.lazy viewHeader loggedIn
-                , div [ class "container mx-auto px-4" ]
-                    [ Page.fullPageLoading ]
-                ]
+    let
+        body =
+            case model.cards of
+                Loading ->
+                    div []
+                        [ Lazy.lazy viewHeader loggedIn
+                        , div [ class "container mx-auto px-4" ]
+                            [ Page.fullPageLoading ]
+                        ]
 
-        LoadingFailed e ->
-            Page.fullPageGraphQLError (t loggedIn.shared.translations "shop.title") e
+                LoadingFailed e ->
+                    Page.fullPageGraphQLError (t loggedIn.shared.translations "shop.title") e
 
-        Loaded cards ->
-            div []
-                [ Lazy.lazy viewHeader loggedIn
-                , div [ class "container mx-auto justify-center px-4" ]
-                    [ viewShopFilter loggedIn model.filter
-                    , Lazy.lazy3 viewGrid loggedIn cards model
-                    ]
-                ]
+                Loaded cards ->
+                    div []
+                        [ Lazy.lazy viewHeader loggedIn
+                        , div [ class "container mx-auto justify-center px-4" ]
+                            [ viewShopFilter loggedIn model.filter
+                            , Lazy.lazy3 viewGrid loggedIn cards model
+                            ]
+                        ]
+    in
+    Document "Shop Page title" [ body ]
 
 
 viewHeader : LoggedIn.Model -> Html Msg

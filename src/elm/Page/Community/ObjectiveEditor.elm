@@ -1,6 +1,7 @@
 module Page.Community.ObjectiveEditor exposing (Model, Msg, initEdit, initNew, jsAddressToMsg, msgToString, update, view)
 
 import Api.Graphql
+import Browser exposing (Document)
 import Cambiatus.Object
 import Cambiatus.Object.Community as Community
 import Cambiatus.Object.Objective as Objective
@@ -114,31 +115,35 @@ initObjectiveForm =
 -- VIEW
 
 
-view : LoggedIn.Model -> Model -> Html Msg
+view : LoggedIn.Model -> Model -> Document Msg
 view ({ shared } as loggedIn) model =
-    case model.status of
-        Loading ->
-            Page.fullPageLoading
+    let
+        body =
+            case model.status of
+                Loading ->
+                    Page.fullPageLoading
 
-        NotFound ->
-            Page.fullPageNotFound (t shared.translations "community.objectives.editor.not_found") ""
+                NotFound ->
+                    Page.fullPageNotFound (t shared.translations "community.objectives.editor.not_found") ""
 
-        LoadCommunityFailed err ->
-            Page.fullPageGraphQLError (t shared.translations "community.objectives.editor.error") err
+                LoadCommunityFailed err ->
+                    Page.fullPageGraphQLError (t shared.translations "community.objectives.editor.error") err
 
-        Unauthorized ->
-            text "not allowed to edit"
+                Unauthorized ->
+                    text "not allowed to edit"
 
-        Loaded { symbol } editStatus ->
-            div []
-                [ Page.viewHeader loggedIn (t shared.translations "community.objectives.title") (Route.Objectives symbol)
-                , case editStatus of
-                    NewObjective objForm ->
-                        viewForm loggedIn objForm
+                Loaded { symbol } editStatus ->
+                    div []
+                        [ Page.viewHeader loggedIn (t shared.translations "community.objectives.title") (Route.Objectives symbol)
+                        , case editStatus of
+                            NewObjective objForm ->
+                                viewForm loggedIn objForm
 
-                    EditObjective _ objForm ->
-                        viewForm loggedIn objForm
-                ]
+                            EditObjective _ objForm ->
+                                viewForm loggedIn objForm
+                        ]
+    in
+    Document "Objective editor" [ body ]
 
 
 viewForm : LoggedIn.Model -> ObjectiveForm -> Html Msg

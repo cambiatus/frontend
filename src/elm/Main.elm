@@ -939,6 +939,10 @@ msgToString msg =
 view : Model -> Document Msg
 view model =
     let
+        pageTitle : String -> String
+        pageTitle t =
+            t ++ " - Cambiatus"
+
         viewGuest :
             subMdl
             -> Guest.Page
@@ -952,13 +956,14 @@ view model =
                         { title, body } =
                             content guest subModel
                     in
-                    Document title
+                    Document (pageTitle title)
                         [ Html.map toMsg (div [] body)
                             |> Page.viewGuest GotPageMsg page guest
                         ]
 
                 Page.LoggedIn _ ->
-                    Document "Page.loggedin"
+                    Document
+                        (pageTitle "Page.loggedin")
                         [ text "" ]
 
         viewLoggedIn :
@@ -970,7 +975,8 @@ view model =
         viewLoggedIn subModel page toMsg content =
             case model.session of
                 Page.Guest _ ->
-                    Document "Page.Guest"
+                    Document
+                        (pageTitle "Guest Page")
                         [ text "" ]
 
                 Page.LoggedIn loggedIn ->
@@ -978,7 +984,8 @@ view model =
                         { title, body } =
                             content loggedIn subModel
                     in
-                    Document title
+                    Document
+                        (pageTitle title)
                         [ Html.map toMsg (div [] body)
                             |> Page.viewLoggedIn GotPageMsg page loggedIn
                         ]
@@ -986,13 +993,15 @@ view model =
         viewPage guestPage loggedInPage toMsg content =
             case model.session of
                 Page.Guest guest ->
-                    Document "some title for guest page"
+                    Document
+                        (pageTitle "Some title for guest page")
                         [ Html.map toMsg content
                             |> Page.viewGuest GotPageMsg guestPage guest
                         ]
 
                 Page.LoggedIn loggedIn ->
-                    Document "Some title for loggeIN"
+                    Document
+                        (pageTitle "Some title for logged in page")
                         [ Html.map toMsg content
                             |> Page.viewLoggedIn GotPageMsg loggedInPage loggedIn
                         ]
@@ -1059,7 +1068,9 @@ view model =
             viewLoggedIn subModel LoggedIn.Other GotViewTransferScreenMsg ViewTransfer.view
 
         Invite subModel ->
-            Html.map GotInviteMsg (Invite.view model.session subModel)
+            Document
+                (pageTitle "Invite")
+                [ Html.map GotInviteMsg (Invite.view model.session subModel) ]
 
         Transfer subModel ->
             viewLoggedIn subModel LoggedIn.Other GotTransferMsg Transfer.view
