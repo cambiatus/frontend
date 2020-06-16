@@ -8,6 +8,7 @@ import Graphql.Http
 import Html exposing (Html, a, button, div, li, p, span, text, ul)
 import Html.Attributes exposing (class, style)
 import I18Next exposing (t)
+import Icons
 import Json.Decode exposing (Value)
 import Page
 import Profile exposing (Profile)
@@ -191,15 +192,26 @@ viewUserInfo name email username =
         headerClasses =
             "font-medium text-2xl"
     in
-    ul []
-        [ li [ class headerClasses ]
-            [ text name ]
-        , li
-            [ class contentClasses ]
-            [ text email ]
-        , li
-            [ class contentClasses ]
-            [ text username ]
+    div
+        [ class "grid"
+        , style "grid-template-columns" "1fr 50px"
+        , style "grid-template-areas" """
+                                       "userInfo ."
+                                       "userInfo editButton"
+                                       "userInfo ."
+                                      """
+        ]
+        [ ul [ style "grid-area" "userInfo" ]
+            [ li [ class headerClasses ]
+                [ text name ]
+            , li
+                [ class contentClasses ]
+                [ text email ]
+            , li
+                [ class contentClasses ]
+                [ text username ]
+            ]
+        , div [ style "grid-area" "editButton" ] [ Icons.edit "" ]
         ]
 
 
