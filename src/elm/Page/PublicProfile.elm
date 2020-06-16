@@ -113,7 +113,7 @@ view_ loggedIn profile shouldShowTransfer =
                 )
             ]
             ([ div [ style "grid-area" "avatar" ] [ Avatar.view ipfsUrl profile.avatar "w-20 h-20" ]
-             , div [ style "grid-area" "info" ] [ viewUserInfo userName email account ]
+             , div [ style "grid-area" "info" ] [ viewUserInfo userName email account (not shouldShowTransfer) ]
              , div [ style "grid-area" "desc" ] [ viewUserDescription description ]
              , div [ style "grid-area" "extra" ]
                 [ viewUserExtendedInfo
@@ -183,8 +183,8 @@ viewUserDescription content =
         [ text content ]
 
 
-viewUserInfo : String -> String -> String -> Html msg
-viewUserInfo name email username =
+viewUserInfo : String -> String -> String -> Bool -> Html msg
+viewUserInfo name email username shouldShowEdit =
     let
         contentClasses =
             "text-sm text-gray-900"
@@ -211,7 +211,11 @@ viewUserInfo name email username =
                 [ class contentClasses ]
                 [ text username ]
             ]
-        , div [ style "grid-area" "editButton" ] [ Icons.edit "" ]
+        , if shouldShowEdit then
+            div [ style "grid-area" "editButton" ] [ Icons.edit "" ]
+
+          else
+            div [] []
         ]
 
 
