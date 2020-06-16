@@ -14,7 +14,7 @@ import Html exposing (..)
 import Html.Attributes exposing (..)
 import Html.Events exposing (..)
 import Http
-import I18Next exposing (t)
+import I18Next exposing (Translations, t)
 import Json.Decode as Decode exposing (Value)
 import Json.Encode as Encode
 import Page
@@ -42,6 +42,7 @@ init loggedIn =
     ( initModel loggedIn
     , Cmd.batch
         [ profileQuery
+        , Task.succeed CheckPushPref |> Task.perform identity
         ]
     )
 
@@ -54,6 +55,7 @@ type alias Model =
     { status : Status
     , pinModal : ModalStatus
     , newPin : String
+    , pushNotifications : Bool
     }
 
 
@@ -62,6 +64,7 @@ initModel _ =
     { status = Loading
     , pinModal = Hidden
     , newPin = ""
+    , pushNotifications = False
     }
 
 
@@ -121,7 +124,9 @@ view_ model loggedIn profile =
             [ div [ class "container mx-auto p-4 px-8" ]
                 [ viewAction "My 12 words" [ viewButton "Download" downloadAction ]
                 , viewAction "My security PIN" [ viewButton "Change" ClickedChangePin ]
-                , viewAction "Notifications" [ text "hi" ]
+                , viewAction "Notifications"
+                    [ toggleView loggedIn.shared.translations model.pushNotifications RequestPush "notifications"
+                    ]
                 ]
             ]
         , viewModal model.pinModal
@@ -186,6 +191,36 @@ viewAction label contents =
         ]
 
 
+toggleView : Translations -> Bool -> Msg -> String -> Html Msg
+toggleView translations isEnabled toggleFunction inputId =
+    let
+        translate =
+            t translations
+
+        classes =
+            class "flex items-center"
+
+        statusText =
+            if isEnabled then
+                translate "settings.features.enabled"
+
+            else
+                translate "settings.features.disabled"
+    in
+    div [ class "form-switch inline-block align-middle" ]
+        [ input
+            [ type_ "checkbox"
+            , id inputId
+            , name inputId
+            , class "form-switch-checkbox"
+            , checked isEnabled
+            , onClick toggleFunction
+            ]
+            []
+        , label [ class "form-switch-label", for inputId ] []
+        ]
+
+
 
 -- UPDATE
 
@@ -203,6 +238,9 @@ type Msg
     | ClickedViewPrivateKeyAuth
     | ChangedPin
     | EnteredPin String
+    | GotPushPreference Bool
+    | RequestPush
+    | CheckPushPref
 
 
 update : Msg -> Model -> LoggedIn.Model -> UpdateResult
@@ -267,6 +305,42 @@ update msg model loggedIn =
                             ]
                     }
 
+        GotPushPreference val ->
+            { model | pushNotifications = val }
+                |> UR.init
+
+        CheckPushPref ->
+            model
+                |> UR.init
+                |> UR.addPort
+                    { responseAddress = GotPushPreference False
+                    , responseData = Encode.null
+                    , data =
+                        Encode.object [ ( "name", Encode.string "checkPushPref" ) ]
+                    }
+
+        RequestPush ->
+            if model.pushNotifications then
+                model
+                    |> UR.init
+                    |> UR.addPort
+                        { responseAddress = GotPushPreference False
+                        , responseData = Encode.null
+                        , data =
+                            Encode.object [ ( "name", Encode.string "disablePushPref" ) ]
+                        }
+
+            else
+                model
+                    |> UR.init
+                    |> UR.addPort
+                        { responseAddress = RequestPush
+                        , responseData = Encode.null
+                        , data =
+                            Encode.object
+                                [ ( "name", Encode.string "requestPushPermission" ) ]
+                        }
+
 
 jsAddressToMsg : List String -> Value -> Maybe Msg
 jsAddressToMsg addr val =
@@ -301,3 +375,12 @@ msgToString msg =
 
         EnteredPin r ->
             [ "EnteredPin" ]
+
+        GotPushPreference r ->
+            [ "GotPushPreference" ]
+
+        RequestPush ->
+            [ "RequestPush" ]
+
+        CheckPushPref ->
+            [ "CheckPushPref" ]
