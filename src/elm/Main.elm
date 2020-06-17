@@ -970,15 +970,22 @@ msgToString msg =
 view : Model -> Document Msg
 view model =
     let
+        baseTitle =
+            "Cambiatus"
+
         pageTitle : String -> String
         pageTitle t =
-            t ++ " - Cambiatus"
+            if t == "" then
+                baseTitle
+
+            else
+                t ++ " - " ++ baseTitle
 
         viewGuest :
-            subMdl
+            subModel
             -> Guest.Page
             -> (subMsg -> Msg)
-            -> (Guest.Model -> subMdl -> Document subMsg)
+            -> (Guest.Model -> subModel -> Document subMsg)
             -> Document Msg
         viewGuest subModel page toMsg content =
             case model.session of
@@ -987,27 +994,28 @@ view model =
                         { title, body } =
                             content guest subModel
                     in
-                    Document (pageTitle title)
+                    Document
+                        (pageTitle title)
                         [ Html.map toMsg (div [] body)
                             |> Page.viewGuest GotPageMsg page guest
                         ]
 
                 Page.LoggedIn _ ->
                     Document
-                        (pageTitle "Page.loggedin")
+                        (pageTitle "")
                         [ text "" ]
 
         viewLoggedIn :
-            subMdl
+            subModel
             -> LoggedIn.Page
             -> (subMsg -> Msg)
-            -> (LoggedIn.Model -> subMdl -> Document subMsg)
+            -> (LoggedIn.Model -> subModel -> Document subMsg)
             -> Document Msg
         viewLoggedIn subModel page toMsg content =
             case model.session of
                 Page.Guest _ ->
                     Document
-                        (pageTitle "Guest Page")
+                        (pageTitle "")
                         [ text "" ]
 
                 Page.LoggedIn loggedIn ->
@@ -1025,14 +1033,14 @@ view model =
             case model.session of
                 Page.Guest guest ->
                     Document
-                        (pageTitle "Some title for guest page")
+                        (pageTitle "")
                         [ Html.map toMsg content
                             |> Page.viewGuest GotPageMsg guestPage guest
                         ]
 
                 Page.LoggedIn loggedIn ->
                     Document
-                        (pageTitle "Some title for logged in page")
+                        (pageTitle "")
                         [ Html.map toMsg content
                             |> Page.viewLoggedIn GotPageMsg loggedInPage loggedIn
                         ]
