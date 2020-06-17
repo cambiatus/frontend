@@ -341,6 +341,7 @@ update msg model loggedIn =
                                 (Profile.mutation profile.account (Profile.profileToForm newProfile))
                                 CompletedProfileLoad
                             )
+                        |> UR.addCmd (Route.pushUrl loggedIn.shared.navKey Route.Profile)
                         |> UR.addExt (ShowFeedback Success (t loggedIn.shared.translations "profile.edit_success"))
 
                 _ ->
