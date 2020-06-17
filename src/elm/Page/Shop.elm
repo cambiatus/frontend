@@ -11,34 +11,29 @@ module Page.Shop exposing
 
 import Api
 import Api.Graphql
-import Asset.Icon as Icon
-import Avatar
 import Browser.Dom as Dom
 import Community exposing (Balance)
-import Eos as Eos exposing (Symbol)
+import Eos as Eos
 import Eos.Account as Eos
 import Graphql.Http
-import Html exposing (..)
-import Html.Attributes exposing (..)
-import Html.Events exposing (on, onClick, onInput, onSubmit, targetValue)
+import Html exposing (Html, a, button, div, img, p, text)
+import Html.Attributes exposing (class, classList, src, value)
+import Html.Events exposing (onClick)
 import Html.Lazy as Lazy
 import Http
 import I18Next exposing (t)
 import Icons
-import Json.Decode as Decode exposing (Decoder, Value)
+import Json.Decode exposing (Value)
 import Json.Encode as Encode
 import List.Extra as LE
-import Log
-import Page exposing (Session(..), viewMenuFilter, viewMenuFilterButton, viewMenuFilterTabButton, viewMenuTab)
+import Page exposing (Session(..))
 import Profile exposing (viewProfileNameTag)
-import Route exposing (Route)
-import Session.Guest as Guest
+import Route
 import Session.LoggedIn as LoggedIn exposing (External(..))
-import Session.Shared exposing (Shared)
-import Shop exposing (Filter, Sale, decodeTargetValueToFilter)
+import Shop exposing (Filter, Sale)
 import Task
 import Time exposing (Posix)
-import Transfer exposing (Transfer)
+import Transfer
 import UpdateResult as UR
 
 

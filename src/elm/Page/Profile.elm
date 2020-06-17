@@ -1,30 +1,20 @@
 module Page.Profile exposing (Model, Msg, init, jsAddressToMsg, msgToString, update, view)
 
-import Api
 import Api.Graphql
-import Asset.Icon as Icon
-import Avatar exposing (Avatar)
-import Browser.Events
-import Dict exposing (Dict)
-import Eos as Eos exposing (Symbol)
-import Eos.Account as Eos
-import File exposing (File)
 import Graphql.Http
-import Html exposing (..)
-import Html.Attributes exposing (..)
-import Html.Events exposing (..)
+import Html exposing (Html, button, div, input, label, p, span, text)
+import Html.Attributes exposing (checked, class, for, id, name, style, type_)
+import Html.Events exposing (onClick, onInput, stopPropagationOn)
 import Http
 import I18Next exposing (Translations, t)
 import Json.Decode as Decode exposing (Value)
 import Json.Encode as Encode
 import Page
 import Page.PublicProfile as PublicProfile
-import Profile exposing (Profile, ProfileForm, decode)
-import PushSubscription exposing (PushSubscription)
+import Profile exposing (Profile)
 import Session.LoggedIn as LoggedIn exposing (External(..), FeedbackStatus(..))
 import Task
 import UpdateResult as UR
-import Utils
 
 
 
