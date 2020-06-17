@@ -368,6 +368,11 @@ update msg model =
                 >> updateLoggedInUResult Profile GotProfileMsg model
                 |> withLoggedIn
 
+        ( GotProfileEditorMsg subMsg, ProfileEditor subModel ) ->
+            ProfileEditor.update subMsg subModel
+                >> updateLoggedInUResult ProfileEditor GotProfileEditorMsg model
+                |> withLoggedIn
+
         ( GotShopMsg subMsg, Shop maybeFilter subModel ) ->
             Shop.update subMsg subModel
                 >> updateLoggedInUResult (Shop maybeFilter) GotShopMsg model
