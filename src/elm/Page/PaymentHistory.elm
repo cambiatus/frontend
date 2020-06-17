@@ -10,6 +10,7 @@ module Page.PaymentHistory exposing
 import Api.Graphql
 import Api.Relay
 import Avatar exposing (Avatar)
+import Browser exposing (Document)
 import Cambiatus.Enum.TransferDirection exposing (TransferDirection(..))
 import Cambiatus.Object
 import Cambiatus.Object.Profile as User
@@ -546,28 +547,35 @@ alphabetEmojiMapper =
 -- VIEW
 
 
-view : SharedModel m -> Model -> Html Msg
+view : SharedModel m -> Model -> Document Msg
 view { shared } model =
-    case model.queryStatus of
-        Loaded profile ->
-            div [ class "bg-white" ]
-                [ viewSplash profile
-                , div [ class "mx-4 max-w-md md:m-auto" ]
-                    [ h2 [ class "text-center text-black text-2xl" ]
-                        [ text (I18Next.t shared.translations "payment_history.title") ]
-                    , div []
-                        [ viewUserAutocomplete shared model
-                        , viewDatePicker shared model
+    let
+        body : Html Msg
+        body =
+            case model.queryStatus of
+                Loaded profile ->
+                    div [ class "bg-white" ]
+                        [ viewSplash profile
+                        , div [ class "mx-4 max-w-md md:m-auto" ]
+                            [ h2 [ class "text-center text-black text-2xl" ]
+                                [ text (I18Next.t shared.translations "payment_history.title") ]
+                            , div []
+                                [ viewUserAutocomplete shared model
+                                , viewDatePicker shared model
+                                ]
+                            , viewTransfers shared model
+                            ]
                         ]
-                    , viewTransfers shared model
-                    ]
-                ]
 
-        Failed err ->
-            div [] [ Page.fullPageGraphQLError (I18Next.t shared.translations "error.accountNotFound") err ]
+                Failed err ->
+                    div [] [ Page.fullPageGraphQLError (I18Next.t shared.translations "error.accountNotFound") err ]
 
-        Loading ->
-            Page.fullPageLoading
+                Loading ->
+                    Page.fullPageLoading
+    in
+    { title = I18Next.t shared.translations "payment_history.title"
+    , body = [ body ]
+    }
 
 
 viewSplash : ProfileWithTransfers -> Html msg
