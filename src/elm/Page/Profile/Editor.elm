@@ -1,10 +1,12 @@
 module Page.Profile.Editor exposing (..)
 
+import Api
 import Api.Graphql
-import Avatar
+import Avatar exposing (Avatar)
+import File exposing (File)
 import Graphql.Http
-import Html exposing (Html, button, div, form, input, span, text, textarea)
-import Html.Attributes exposing (class, style, value)
+import Html exposing (Html, button, div, form, input, label, span, text, textarea)
+import Html.Attributes exposing (accept, class, disabled, for, id, multiple, style, title, type_, value)
 import Html.Events exposing (onClick, onInput)
 import Http
 import I18Next exposing (t)
@@ -46,6 +48,7 @@ type alias Model =
     , interests : List String
     , interest : String
     , status : Status
+    , avatar : Maybe Avatar
     }
 
 
@@ -58,6 +61,7 @@ initModel =
     , interests = []
     , interest = ""
     , status = Loading
+    , avatar = Nothing
     }
 
 
@@ -65,6 +69,12 @@ type Status
     = Loading
     | LoadingFailed (Graphql.Http.Error (Maybe Profile))
     | Loaded Profile
+
+
+type AvatarStatus
+    = NotAsked
+    | Sending File Int
+    | SendingFailed File Http.Error
 
 
 
@@ -92,6 +102,14 @@ view_ loggedIn model profile =
 
         text_ s =
             t loggedIn.shared.translations s
+
+        avatar =
+            case model.avatar of
+                Just avatar_ ->
+                    avatar_
+
+                Nothing ->
+                    profile.avatar
     in
     Html.div [ class "bg-white" ]
         [ pageHeader
@@ -108,12 +126,12 @@ view_ loggedIn model profile =
                                        "save save" / 1fr 90px
                                       """
             ]
-            ([ viewAvatar loggedIn profile.avatar
+            ([ viewAvatar loggedIn avatar
              , viewInput (text_ "register.form.name.label") "fullname" FullName model.fullName
              , viewInput (text_ "register.form.email.label") "email" Email model.email
              , viewTextArea (text_ "About Me") "about" About
              , viewInput (text_ "profile.edit.labels.localization") "location" Location model.location
-             , viewButton "Save" Ignored "save"
+             , viewButton "Save" ClickedSave "save"
              , div [ class "flex flex-wrap", style "grid-area" "interestList" ]
                 (model.interests
                     |> List.map viewInterest
@@ -172,7 +190,7 @@ viewButton label msg area =
     button
         [ class "button button-primary w-full"
         , style "grid-area" area
-        , onClick msg
+        , onClickPreventDefault msg
         ]
         [ text label
         ]
@@ -196,7 +214,20 @@ viewTextArea label area field =
 viewAvatar : Session.LoggedIn.Model -> Avatar.Avatar -> Html Msg
 viewAvatar loggedIn url =
     div [ class "m-auto", style "grid-area" "avatar" ]
-        [ Avatar.view loggedIn.shared.endpoints.ipfs url "w-20 h-20"
+        [ input
+            [ id "profile-upload-avatar"
+            , class "profile-img-input"
+            , type_ "file"
+            , accept "image/*"
+            , Page.onFileChange EnteredAvatar
+            , multiple False
+            ]
+            []
+        , label
+            [ for "profile-upload-avatar"
+            , title "Test"
+            ]
+            [ Avatar.view loggedIn.shared.endpoints.ipfs url "w-20 h-20" ]
         ]
 
 
@@ -210,6 +241,9 @@ type Msg
     | OnFieldInput Field String
     | AddInterest
     | RemoveInterest String
+    | ClickedSave
+    | EnteredAvatar (List File)
+    | CompletedAvatarUpload (Result Http.Error Avatar)
 
 
 type Field
@@ -225,7 +259,7 @@ type alias UpdateResult =
 
 
 update : Msg -> Model -> Session.LoggedIn.Model -> UpdateResult
-update msg model _ =
+update msg model loggedIn =
     case msg of
         Ignored ->
             UR.init model
@@ -293,6 +327,62 @@ update msg model _ =
                             |> List.filter (\x -> x /= interest)
                 }
 
+        ClickedSave ->
+            case model.status of
+                Loaded profile ->
+                    let
+                        newProfile =
+                            modelToProfile model profile
+                    in
+                    model
+                        |> UR.init
+                        |> UR.addCmd
+                            (Api.Graphql.mutation loggedIn.shared
+                                (Profile.mutation profile.account (Profile.profileToForm newProfile))
+                                CompletedProfileLoad
+                            )
+                        |> UR.addExt (ShowFeedback Success (t loggedIn.shared.translations "profile.edit_success"))
+
+                _ ->
+                    UR.init model
+                        |> UR.logImpossible msg []
+
+        EnteredAvatar (file :: _) ->
+            let
+                uploadAvatar file_ =
+                    Api.uploadAvatar loggedIn.shared file_ CompletedAvatarUpload
+            in
+            case model.status of
+                Loaded profile ->
+                    model
+                        |> UR.init
+                        |> UR.addCmd (uploadAvatar file)
+
+                _ ->
+                    UR.init model
+                        |> UR.logImpossible msg []
+
+        EnteredAvatar [] ->
+            UR.init model
+
+        CompletedAvatarUpload (Ok a) ->
+            UR.init { model | avatar = Just a }
+
+        CompletedAvatarUpload (Err err) ->
+            UR.init model
+                |> UR.logHttpError msg err
+
+
+modelToProfile : Model -> Profile -> Profile
+modelToProfile model profile =
+    { profile
+        | userName = Just model.fullName
+        , email = Just model.email
+        , localization = Just model.location
+        , interests = model.interests
+        , avatar = Maybe.withDefault profile.avatar model.avatar
+    }
+
 
 msgToString : Msg -> List String
 msgToString msg =
@@ -311,3 +401,12 @@ msgToString msg =
 
         RemoveInterest r ->
             [ "RemoveInterest" ]
+
+        ClickedSave ->
+            [ "ClickedSave" ]
+
+        CompletedAvatarUpload r ->
+            [ "CompletedAvatarUpload" ]
+
+        EnteredAvatar r ->
+            [ "EnteredAvatar" ]
