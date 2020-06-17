@@ -198,6 +198,7 @@ type Page
     | FAQ
     | Profile
     | PublicProfile
+    | ProfileEditor
 
 
 view : (Msg -> msg) -> Page -> Model -> Html msg -> Html msg
