@@ -74,6 +74,19 @@ view loggedIn model =
         t =
             I18Next.t loggedIn.shared.translations
 
+        pageTitle =
+            case model.status of
+                Loaded maybeTransfer _ ->
+                    case maybeTransfer of
+                        Just _ ->
+                            t "transfer_result.title"
+
+                        Nothing ->
+                            ""
+
+                _ ->
+                    ""
+
         body =
             case model.status of
                 Loading _ ->
@@ -102,7 +115,7 @@ view loggedIn model =
                                     [ text "Could not load the transfer" ]
                                 ]
     in
-    Document "Transfer View title" [ body ]
+    Document pageTitle [ body ]
 
 
 viewTransfer : LoggedIn.Model -> Transfer -> State -> Html Msg

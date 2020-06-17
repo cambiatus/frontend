@@ -146,7 +146,7 @@ view ({ shared } as loggedIn) model =
                 Failed ->
                     text ""
     in
-    Document "Analysis" [ body ]
+    Document (t "all_analysis.title") [ body ]
 
 
 viewFilters : LoggedIn.Model -> Model -> Html Msg

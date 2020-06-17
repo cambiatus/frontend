@@ -165,7 +165,7 @@ view ({ shared } as loggedIn) model =
                 Loaded community (SendingTransferFailed f) ->
                     viewForm loggedIn model f community False
     in
-    Document "Transfers" [ body ]
+    Document (t shared.translations "transfer.title") [ body ]
 
 
 viewForm : LoggedIn.Model -> Model -> Form -> Community.Model -> Bool -> Html Msg
