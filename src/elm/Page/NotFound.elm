@@ -1,11 +1,12 @@
 module Page.NotFound exposing (view)
 
+import Browser exposing (Document)
 import Html exposing (Html)
 import I18Next exposing (t)
 import Page
 
 
-view : Page.Session -> Html msg
+view : Page.Session -> Document msg
 view session =
     let
         shared =
@@ -14,4 +15,6 @@ view session =
         text_ =
             t shared.translations
     in
-    Page.fullPageNotFound (text_ "error.pageNotFound") ""
+    Document
+        (t shared.translations "error.pageNotFound")
+        [ Page.fullPageNotFound (text_ "error.pageNotFound") "" ]

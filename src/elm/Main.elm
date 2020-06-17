@@ -1029,31 +1029,44 @@ view model =
                             |> Page.viewLoggedIn GotPageMsg page loggedIn
                         ]
 
+        viewPage :
+            Guest.Page
+            -> LoggedIn.Page
+            -> (subMsg -> Msg)
+            -> Document subMsg
+            -> Document Msg
         viewPage guestPage loggedInPage toMsg content =
+            let
+                { title, body } =
+                    content
+            in
             case model.session of
                 Page.Guest guest ->
                     Document
-                        (fullPageTitle "")
-                        [ Html.map toMsg content
+                        (fullPageTitle title)
+                        [ Html.map toMsg (div [] body)
                             |> Page.viewGuest GotPageMsg guestPage guest
                         ]
 
                 Page.LoggedIn loggedIn ->
                     Document
-                        (fullPageTitle "")
-                        [ Html.map toMsg content
+                        (fullPageTitle title)
+                        [ Html.map toMsg (div [] body)
                             |> Page.viewLoggedIn GotPageMsg loggedInPage loggedIn
                         ]
     in
     case model.status of
         Redirect ->
-            viewPage Guest.Other LoggedIn.Other (\_ -> Ignored) (text "")
+            viewPage Guest.Other LoggedIn.Other (\_ -> Ignored) (Document "" [ text "" ])
 
         NotFound ->
             viewPage Guest.Other LoggedIn.Other (\_ -> Ignored) (NotFound.view model.session)
 
         ComingSoon ->
             viewPage Guest.Other LoggedIn.Other (\_ -> Ignored) (ComingSoon.view model.session)
+
+        Invite subModel ->
+            viewPage Guest.Other LoggedIn.Other GotInviteMsg (Invite.view model.session subModel)
 
         PaymentHistory subModel ->
             case model.session of
@@ -1113,11 +1126,6 @@ view model =
 
         ViewTransfer _ subModel ->
             viewLoggedIn subModel LoggedIn.Other GotViewTransferScreenMsg ViewTransfer.view
-
-        Invite subModel ->
-            Document
-                (fullPageTitle "Invite")
-                [ Html.map GotInviteMsg (Invite.view model.session subModel) ]
 
         Transfer subModel ->
             viewLoggedIn subModel LoggedIn.Other GotTransferMsg Transfer.view
