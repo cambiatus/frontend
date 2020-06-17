@@ -105,6 +105,14 @@ type AvatarStatus
 view : LoggedIn.Model -> Model -> Document Msg
 view loggedIn model =
     let
+        pageTitle =
+            case model.status of
+                Loaded profile ->
+                    Maybe.withDefault "" profile.userName
+
+                _ ->
+                    ""
+
         body =
             case model.status of
                 Loading ->
@@ -122,7 +130,7 @@ view loggedIn model =
                 Saving profile avatarS form ->
                     viewForm loggedIn True profile avatarS form
     in
-    Document "Profile title" [ body ]
+    Document pageTitle [ body ]
 
 
 view_ : LoggedIn.Model -> Profile -> Model -> Html Msg

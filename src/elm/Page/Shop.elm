@@ -150,6 +150,30 @@ type ValidationError
 view : LoggedIn.Model -> Model -> Document Msg
 view loggedIn model =
     let
+        selectedCommunityName =
+            case loggedIn.profile of
+                LoggedIn.Loaded profile ->
+                    let
+                        selectedCommunity =
+                            profile.communities
+                                |> List.filter (\p -> p.id == loggedIn.selectedCommunity)
+                                |> List.head
+                    in
+                    case selectedCommunity of
+                        Just c ->
+                            c.name
+
+                        Nothing ->
+                            Eos.symbolToString loggedIn.selectedCommunity
+
+                _ ->
+                    ""
+
+        pageTitle =
+            selectedCommunityName
+                ++ " "
+                ++ t loggedIn.shared.translations "shop.title"
+
         body =
             case model.cards of
                 Loading ->
@@ -171,7 +195,7 @@ view loggedIn model =
                             ]
                         ]
     in
-    Document "Shop Page title" [ body ]
+    Document pageTitle [ body ]
 
 
 viewHeader : LoggedIn.Model -> Html Msg

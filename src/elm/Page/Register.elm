@@ -182,7 +182,7 @@ view guest model =
                 ]
     in
     Document
-        "Register title"
+        (t "register.registerTab")
         [ if model.accountGenerated then
             div
                 [ class "flex-grow bg-purple-500 flex md:block"

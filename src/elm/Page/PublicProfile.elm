@@ -61,6 +61,14 @@ view loggedIn status =
         t =
             I18Next.t loggedIn.shared.translations
 
+        pageTitle =
+            case status of
+                Loaded profile ->
+                    Maybe.withDefault "" profile.userName
+
+                _ ->
+                    ""
+
         body =
             case status of
                 Loading ->
@@ -75,7 +83,7 @@ view loggedIn status =
                 LoadingFailed err ->
                     Page.fullPageNotFound (t "error.unknown") (Page.errorToString err)
     in
-    Document "Public profile" [ body ]
+    Document pageTitle [ body ]
 
 
 view_ : LoggedIn.Model -> Profile -> Html msg

@@ -178,6 +178,27 @@ view loggedIn model =
         t =
             I18Next.t shared.translations
 
+        isEdit =
+            case model of
+                EditingUpdate _ _ _ _ _ ->
+                    True
+
+                Saving _ _ _ _ ->
+                    True
+
+                Deleting _ _ _ _ ->
+                    True
+
+                _ ->
+                    False
+
+        pageTitle =
+            if isEdit then
+                t "shop.edit_offer"
+
+            else
+                t "shop.create_offer"
+
         body =
             case model of
                 LoadingBalancesCreate ->
@@ -210,7 +231,7 @@ view loggedIn model =
                 Deleting balances _ imageStatus form ->
                     viewForm shared balances imageStatus True True Closed form
     in
-    Document "Shop Editor title" [ body ]
+    Document pageTitle [ body ]
 
 
 viewForm : Shared -> List Balance -> ImageStatus -> Bool -> Bool -> DeleteModalStatus -> Form -> Html Msg

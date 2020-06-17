@@ -92,7 +92,7 @@ view ({ shared } as loggedIn) model =
                             ]
                         ]
     in
-    Document "Objectives" [ body ]
+    Document (t shared.translations "community.objectives.title") [ body ]
 
 
 viewNewObjectiveButton : LoggedIn.Model -> Community.Model -> Html msg

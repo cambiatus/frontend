@@ -90,7 +90,9 @@ view loggedIn model =
                             (viewCommunities loggedIn (String.toUpper loggedIn.searchText) communities)
                         ]
     in
-    Document "Community Explore" [ body ]
+    Document
+        (t loggedIn.shared.translations "menu.communities")
+        [ body ]
 
 
 renderUserMessage : Model -> Html msg

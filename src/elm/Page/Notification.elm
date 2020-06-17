@@ -82,7 +82,9 @@ view loggedIn model =
                             viewNotifications loggedIn notifications
                         ]
     in
-    Document "Notification" [ body ]
+    Document
+        (t "notifications.title")
+        [ body ]
 
 
 viewNotifications : LoggedIn.Model -> List History -> Html Msg

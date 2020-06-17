@@ -73,6 +73,14 @@ view ({ shared } as loggedIn) model =
         t =
             I18Next.t shared.translations
 
+        pageTitle =
+            case model.statusClaim of
+                Loaded claim ->
+                    claim.action.description
+
+                _ ->
+                    ""
+
         body =
             div []
                 [ case model.statusClaim of
@@ -96,7 +104,7 @@ view ({ shared } as loggedIn) model =
                         Page.fullPageGraphQLError (t "error.unknown") err
                 ]
     in
-    Document "Claim" [ body ]
+    Document pageTitle [ body ]
 
 
 viewTitle : Shared -> Claim.Model -> Html msg

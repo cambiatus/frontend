@@ -1094,8 +1094,13 @@ view ({ shared } as loggedIn) model =
 
                 Unauthorized ->
                     Page.fullPageNotFound "not authorized" ""
+
+        pageTitle =
+            t "menu.edit"
+                ++ " "
+                ++ t "community.actions.title"
     in
-    Document "Action Editor" [ body ]
+    Document pageTitle [ body ]
 
 
 viewForm : LoggedIn.Model -> Community.Model -> Model -> Html Msg

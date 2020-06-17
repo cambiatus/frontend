@@ -171,7 +171,7 @@ view loggedIn model =
                 ( _, _ ) ->
                     Page.fullPageNotFound (t "dashboard.sorry") ""
     in
-    Document "Dashboard" [ body ]
+    Document (t "menu.dashboard") [ body ]
 
 
 viewAnalysisModal : LoggedIn.Model -> Model -> Html Msg

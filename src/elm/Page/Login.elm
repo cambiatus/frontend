@@ -4,6 +4,7 @@ import Auth
 import Browser exposing (Document)
 import Html exposing (Html, div)
 import Html.Attributes exposing (class)
+import I18Next
 import Json.Encode exposing (Value)
 import Route
 import Session.Guest as Guest exposing (External(..))
@@ -62,7 +63,8 @@ view guest model =
             Auth.view False guest.shared model.auth
                 |> List.map (Html.map GotAuthMsg)
     in
-    Document "Login title"
+    Document
+        (I18Next.t guest.shared.translations "auth.login.loginTab")
         [ div [ class "bg-purple-500 flex-grow flex flex-wrap md:block" ]
             authView
         ]

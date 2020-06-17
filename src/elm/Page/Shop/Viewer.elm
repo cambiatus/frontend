@@ -338,6 +338,23 @@ cardFromSale sale =
 view : LoggedIn.Model -> Model -> Document Msg
 view loggedIn model =
     let
+        pageTitle =
+            case model.status of
+                LoadedSale maybeSale ->
+                    case maybeSale of
+                        Just sale ->
+                            let
+                                cardData =
+                                    cardFromSale sale
+                            in
+                            cardData.sale.title
+
+                        Nothing ->
+                            t loggedIn.shared.translations "shop.title"
+
+                _ ->
+                    t loggedIn.shared.translations "shop.title"
+
         body =
             case model.status of
                 LoadingSale _ ->
@@ -374,7 +391,7 @@ view loggedIn model =
                                     [ text "Could not load the sale" ]
                                 ]
     in
-    Document "Shop Viewer" [ body ]
+    Document pageTitle [ body ]
 
 
 viewCard : LoggedIn.Model -> Card -> Model -> Html Msg

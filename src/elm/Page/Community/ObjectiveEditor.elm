@@ -142,8 +142,13 @@ view ({ shared } as loggedIn) model =
                             EditObjective _ objForm ->
                                 viewForm loggedIn objForm
                         ]
+
+        pageTitle =
+            t shared.translations "menu.edit"
+                ++ " "
+                ++ t shared.translations "community.objectives.title"
     in
-    Document "Objective editor" [ body ]
+    Document pageTitle [ body ]
 
 
 viewForm : LoggedIn.Model -> ObjectiveForm -> Html Msg

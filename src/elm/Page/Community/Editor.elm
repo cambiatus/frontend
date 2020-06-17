@@ -257,7 +257,7 @@ view loggedIn model =
                 Creating form ->
                     viewForm shared False True Dict.empty form model
     in
-    Document "Community Editor" [ body ]
+    Document (t "community.edit.title") [ body ]
 
 
 viewForm : Shared -> Bool -> Bool -> Dict String FormError -> Form -> Model -> Html Msg
