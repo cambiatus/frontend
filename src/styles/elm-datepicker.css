@@ -1,0 +1,136 @@
+.elm-datepicker--container {
+  @apply relative;
+}
+
+.elm-datepicker--input {
+  background: no-repeat url(/icons/calendar.svg) right center;
+}
+
+.elm-datepicker--input:focus {
+  @apply outline-none;
+}
+
+.elm-datepicker--picker {
+  @apply absolute border-solid border border-purple-500 bg-white z-10 rounded-sm;
+}
+
+.elm-datepicker--picker-header,
+.elm-datepicker--weekdays {
+  @apply bg-gray-100;
+}
+
+.elm-datepicker--picker-header {
+  @apply flex items-center bg-purple-500 text-white;
+}
+
+.elm-datepicker--prev-container,
+.elm-datepicker--next-container {
+  @apply flex-initial cursor-pointer;
+}
+
+.elm-datepicker--month-container {
+  flex: 1 1 auto;
+  padding: 0.5em;
+  display: flex;
+  flex-direction: column;
+}
+
+.elm-datepicker--month,
+.elm-datepicker--year {
+  flex: 1 1 auto;
+  cursor: default;
+  text-align: center;
+}
+
+.elm-datepicker--year {
+  @apply text-sm font-bold;
+}
+
+.elm-datepicker--prev,
+.elm-datepicker--next {
+  border: 6px solid transparent;
+  background-color: inherit;
+  display: block;
+  width: 0;
+  height: 0;
+  padding: 0 0.2em;
+}
+
+.elm-datepicker--prev {
+  border-right-color: white;
+}
+
+.elm-datepicker--prev:hover {
+  border-right-color: #F99D33;
+}
+
+.elm-datepicker--next {
+  border-left-color: white;
+}
+
+.elm-datepicker--next:hover {
+  border-left-color: #F99D33;
+}
+
+.elm-datepicker--table {
+  border-spacing: 0;
+  border-collapse: collapse;
+  font-size: 1em;
+}
+
+.elm-datepicker--table td {
+  width: 2.6em;
+  height: 2.6em;
+  text-align: center;
+}
+
+.elm-datepicker--row {
+  border-top: 1px solid #F2F2F2;
+}
+
+.elm-datepicker--dow {
+  border-bottom: 1px solid #CCC;
+  cursor: default;
+}
+
+.elm-datepicker--day {
+  cursor: pointer;
+}
+
+.elm-datepicker--day:hover {
+  background: #F2F2F2;
+}
+
+.elm-datepicker--disabled {
+  cursor: default;
+  color: #DDD;
+}
+
+.elm-datepicker--disabled:hover {
+  background: inherit;
+}
+
+.elm-datepicker--picked {
+  color: white;
+  background: #45469B;
+}
+
+.elm-datepicker--picked:hover {
+  background: #45469B;
+}
+
+.elm-datepicker--today {
+  @apply font-bold bg-light-grey;
+}
+
+.elm-datepicker--other-month {
+  color: #AAA;
+}
+
+.elm-datepicker--other-month.elm-datepicker--disabled {
+  color: #EEE;
+}
+
+.elm-datepicker--other-month.elm-datepicker--picked {
+  color: white;
+}

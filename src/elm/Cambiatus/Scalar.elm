@@ -2,13 +2,17 @@
 -- https://github.com/dillonkearns/elm-graphql
 
 
-module Cambiatus.Scalar exposing (Codecs, DateTime(..), Id(..), defaultCodecs, defineCodecs, unwrapCodecs, unwrapEncoder)
+module Cambiatus.Scalar exposing (Codecs, Date(..), DateTime(..), Id(..), defaultCodecs, defineCodecs, unwrapCodecs, unwrapEncoder)
 
 import Graphql.Codec exposing (Codec)
 import Graphql.Internal.Builder.Object as Object
 import Graphql.Internal.Encode
 import Json.Decode as Decode exposing (Decoder)
 import Json.Encode as Encode
+
+
+type Date
+    = Date String
 
 
 type DateTime
@@ -20,18 +24,20 @@ type Id
 
 
 defineCodecs :
-    { codecDateTime : Codec valueDateTime
+    { codecDate : Codec valueDate
+    , codecDateTime : Codec valueDateTime
     , codecId : Codec valueId
     }
-    -> Codecs valueDateTime valueId
+    -> Codecs valueDate valueDateTime valueId
 defineCodecs definitions =
     Codecs definitions
 
 
 unwrapCodecs :
-    Codecs valueDateTime valueId
+    Codecs valueDate valueDateTime valueId
     ->
-        { codecDateTime : Codec valueDateTime
+        { codecDate : Codec valueDate
+        , codecDateTime : Codec valueDateTime
         , codecId : Codec valueId
         }
 unwrapCodecs (Codecs unwrappedCodecs) =
@@ -42,19 +48,24 @@ unwrapEncoder getter (Codecs unwrappedCodecs) =
     (unwrappedCodecs |> getter |> .encoder) >> Graphql.Internal.Encode.fromJson
 
 
-type Codecs valueDateTime valueId
-    = Codecs (RawCodecs valueDateTime valueId)
+type Codecs valueDate valueDateTime valueId
+    = Codecs (RawCodecs valueDate valueDateTime valueId)
 
 
-type alias RawCodecs valueDateTime valueId =
-    { codecDateTime : Codec valueDateTime
+type alias RawCodecs valueDate valueDateTime valueId =
+    { codecDate : Codec valueDate
+    , codecDateTime : Codec valueDateTime
     , codecId : Codec valueId
     }
 
 
-defaultCodecs : RawCodecs DateTime Id
+defaultCodecs : RawCodecs Date DateTime Id
 defaultCodecs =
-    { codecDateTime =
+    { codecDate =
+        { encoder = \(Date raw) -> Encode.string raw
+        , decoder = Object.scalarDecoder |> Decode.map Date
+        }
+    , codecDateTime =
         { encoder = \(DateTime raw) -> Encode.string raw
         , decoder = Object.scalarDecoder |> Decode.map DateTime
         }
