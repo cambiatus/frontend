@@ -243,6 +243,7 @@
   "community": {
     "title": "Comunitat",
     "create_button": "Crear comunitat",
+    "not_found": "Comunitat no trobada",
     "create": {
       "title": "Crear comunitat",
       "success": "El perfil s'ha desat correctament",

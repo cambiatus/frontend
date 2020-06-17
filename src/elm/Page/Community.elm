@@ -125,13 +125,27 @@ view loggedIn model =
         text_ s =
             text (t s)
 
+        title =
+            case model.community of
+                Loading ->
+                    t "community.title"
+
+                NotFound ->
+                    t "community.not_found"
+
+                Failed _ ->
+                    t "community.not_found"
+
+                Loaded community _ ->
+                    community.title
+
         body =
             case model.community of
                 Loading ->
                     Page.fullPageLoading
 
                 NotFound ->
-                    Page.viewCardEmpty [ text "Community not found" ]
+                    Page.viewCardEmpty [ text_ "community.not_found" ]
 
                 Failed e ->
                     Page.fullPageGraphQLError (t "community.objectives.title") e
@@ -195,7 +209,7 @@ view loggedIn model =
                             ]
                         ]
     in
-    Document "Community Invite" [ body ]
+    Document title [ body ]
 
 
 
