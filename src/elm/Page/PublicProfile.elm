@@ -69,6 +69,7 @@ view loggedIn status =
                 _ ->
                     ""
 
+        body : Html msg
         body =
             case status of
                 Loading ->

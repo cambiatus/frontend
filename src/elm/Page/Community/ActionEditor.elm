@@ -1075,6 +1075,12 @@ view ({ shared } as loggedIn) model =
         t s =
             I18Next.t shared.translations s
 
+        pageTitle =
+            t "menu.edit"
+                ++ " "
+                ++ t "community.actions.title"
+
+        body : Html Msg
         body =
             case model.status of
                 Loading ->
@@ -1094,11 +1100,6 @@ view ({ shared } as loggedIn) model =
 
                 Unauthorized ->
                     Page.fullPageNotFound "not authorized" ""
-
-        pageTitle =
-            t "menu.edit"
-                ++ " "
-                ++ t "community.actions.title"
     in
     Document pageTitle [ body ]
 

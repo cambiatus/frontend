@@ -125,20 +125,18 @@ view loggedIn model =
         text_ s =
             text (t s)
 
-        title =
+        pageTitle =
             case model.community of
-                Loading ->
-                    t "community.title"
-
-                NotFound ->
-                    t "community.not_found"
-
-                Failed _ ->
-                    t "community.not_found"
-
                 Loaded community _ ->
                     community.title
 
+                Loading ->
+                    t ""
+
+                _ ->
+                    t "community.not_found"
+
+        body : Html Msg
         body =
             case model.community of
                 Loading ->
@@ -209,7 +207,7 @@ view loggedIn model =
                             ]
                         ]
     in
-    Document title [ body ]
+    Document pageTitle [ body ]
 
 
 

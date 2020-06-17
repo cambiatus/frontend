@@ -338,23 +338,23 @@ cardFromSale sale =
 view : LoggedIn.Model -> Model -> Document Msg
 view loggedIn model =
     let
+        shopTitle =
+            t loggedIn.shared.translations "shop.title"
+
         pageTitle =
             case model.status of
                 LoadedSale maybeSale ->
                     case maybeSale of
                         Just sale ->
-                            let
-                                cardData =
-                                    cardFromSale sale
-                            in
-                            cardData.sale.title
+                            sale.title ++ " - " ++ shopTitle
 
                         Nothing ->
-                            t loggedIn.shared.translations "shop.title"
+                            shopTitle
 
                 _ ->
-                    t loggedIn.shared.translations "shop.title"
+                    shopTitle
 
+        body : Html Msg
         body =
             case model.status of
                 LoadingSale _ ->

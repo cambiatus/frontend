@@ -199,6 +199,7 @@ view loggedIn model =
             else
                 t "shop.create_offer"
 
+        body : Html Msg
         body =
             case model of
                 LoadingBalancesCreate ->

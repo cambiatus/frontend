@@ -118,6 +118,12 @@ initObjectiveForm =
 view : LoggedIn.Model -> Model -> Document Msg
 view ({ shared } as loggedIn) model =
     let
+        pageTitle =
+            t shared.translations "menu.edit"
+                ++ " "
+                ++ t shared.translations "community.objectives.title"
+
+        body : Html Msg
         body =
             case model.status of
                 Loading ->
@@ -142,11 +148,6 @@ view ({ shared } as loggedIn) model =
                             EditObjective _ objForm ->
                                 viewForm loggedIn objForm
                         ]
-
-        pageTitle =
-            t shared.translations "menu.edit"
-                ++ " "
-                ++ t shared.translations "community.objectives.title"
     in
     Document pageTitle [ body ]
 

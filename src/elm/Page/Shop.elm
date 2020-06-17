@@ -174,6 +174,7 @@ view loggedIn model =
                 ++ " "
                 ++ t loggedIn.shared.translations "shop.title"
 
+        body : Html Msg
         body =
             case model.cards of
                 Loading ->

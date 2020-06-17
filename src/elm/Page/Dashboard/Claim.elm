@@ -81,6 +81,7 @@ view ({ shared } as loggedIn) model =
                 _ ->
                     ""
 
+        body : Html Msg
         body =
             div []
                 [ case model.statusClaim of

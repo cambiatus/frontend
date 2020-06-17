@@ -550,6 +550,9 @@ alphabetEmojiMapper =
 view : SharedModel m -> Model -> Document Msg
 view { shared } model =
     let
+        pageTitle =
+            I18Next.t shared.translations "payment_history.title"
+
         body : Html Msg
         body =
             case model.queryStatus of
@@ -573,9 +576,7 @@ view { shared } model =
                 Loading ->
                     Page.fullPageLoading
     in
-    { title = I18Next.t shared.translations "payment_history.title"
-    , body = [ body ]
-    }
+    Document pageTitle [ body ]
 
 
 viewSplash : ProfileWithTransfers -> Html msg

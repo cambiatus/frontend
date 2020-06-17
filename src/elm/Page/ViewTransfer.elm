@@ -87,6 +87,7 @@ view loggedIn model =
                 _ ->
                     ""
 
+        body : Html Msg
         body =
             case model.status of
                 Loading _ ->

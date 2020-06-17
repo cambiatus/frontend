@@ -973,13 +973,13 @@ view model =
         baseTitle =
             "Cambiatus"
 
-        pageTitle : String -> String
-        pageTitle t =
-            if t == "" then
+        fullPageTitle : String -> String
+        fullPageTitle subTitle =
+            if subTitle == "" then
                 baseTitle
 
             else
-                t ++ " - " ++ baseTitle
+                subTitle ++ " | " ++ baseTitle
 
         viewGuest :
             subModel
@@ -995,14 +995,14 @@ view model =
                             content guest subModel
                     in
                     Document
-                        (pageTitle title)
+                        (fullPageTitle title)
                         [ Html.map toMsg (div [] body)
                             |> Page.viewGuest GotPageMsg page guest
                         ]
 
                 Page.LoggedIn _ ->
                     Document
-                        (pageTitle "")
+                        (fullPageTitle "")
                         [ text "" ]
 
         viewLoggedIn :
@@ -1015,7 +1015,7 @@ view model =
             case model.session of
                 Page.Guest _ ->
                     Document
-                        (pageTitle "")
+                        (fullPageTitle "")
                         [ text "" ]
 
                 Page.LoggedIn loggedIn ->
@@ -1024,7 +1024,7 @@ view model =
                             content loggedIn subModel
                     in
                     Document
-                        (pageTitle title)
+                        (fullPageTitle title)
                         [ Html.map toMsg (div [] body)
                             |> Page.viewLoggedIn GotPageMsg page loggedIn
                         ]
@@ -1033,14 +1033,14 @@ view model =
             case model.session of
                 Page.Guest guest ->
                     Document
-                        (pageTitle "")
+                        (fullPageTitle "")
                         [ Html.map toMsg content
                             |> Page.viewGuest GotPageMsg guestPage guest
                         ]
 
                 Page.LoggedIn loggedIn ->
                     Document
-                        (pageTitle "")
+                        (fullPageTitle "")
                         [ Html.map toMsg content
                             |> Page.viewLoggedIn GotPageMsg loggedInPage loggedIn
                         ]
@@ -1116,7 +1116,7 @@ view model =
 
         Invite subModel ->
             Document
-                (pageTitle "Invite")
+                (fullPageTitle "Invite")
                 [ Html.map GotInviteMsg (Invite.view model.session subModel) ]
 
         Transfer subModel ->
