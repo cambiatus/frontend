@@ -91,7 +91,7 @@ view ({ shared } as loggedIn) model =
                             ]
                         ]
     in
-    { title = t shared.translations "community.objectives.title"
+    { title = t shared.translations "community.objectives.title_plural"
     , content = content
     }
 
