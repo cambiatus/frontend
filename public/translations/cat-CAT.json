@@ -640,6 +640,7 @@
       "enabled": "Activat",
       "disabled": "Desactivat"
     }
+  }, 
   "payment_history": {
     "title": "Historial de pagaments",
     "user": "Usuari",
