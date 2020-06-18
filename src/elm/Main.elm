@@ -1033,31 +1033,27 @@ view model =
             Guest.Page
             -> LoggedIn.Page
             -> (subMsg -> Msg)
-            -> Document subMsg
+            -> { title : String, content : Html subMsg }
             -> Document Msg
-        viewPage guestPage loggedInPage toMsg content =
-            let
-                { title, body } =
-                    content
-            in
+        viewPage guestPage loggedInPage toMsg { title, content } =
             case model.session of
                 Page.Guest guest ->
                     Document
                         (fullPageTitle title)
-                        [ Html.map toMsg (div [] body)
+                        [ Html.map toMsg content
                             |> Page.viewGuest GotPageMsg guestPage guest
                         ]
 
                 Page.LoggedIn loggedIn ->
                     Document
                         (fullPageTitle title)
-                        [ Html.map toMsg (div [] body)
+                        [ Html.map toMsg content
                             |> Page.viewLoggedIn GotPageMsg loggedInPage loggedIn
                         ]
     in
     case model.status of
         Redirect ->
-            viewPage Guest.Other LoggedIn.Other (\_ -> Ignored) (Document "" [ text "" ])
+            viewPage Guest.Other LoggedIn.Other (\_ -> Ignored) { title = "", content = text "" }
 
         NotFound ->
             viewPage Guest.Other LoggedIn.Other (\_ -> Ignored) (NotFound.view model.session)

@@ -65,13 +65,13 @@ type ModalStatus
     | Open
 
 
-view : Session -> Model -> Document Msg
+view : Session -> Model -> { title : String, content : Html Msg }
 view session model =
     let
         shared =
             toShared session
 
-        pageTitle =
+        title =
             case model.status of
                 Loaded invite ->
                     let
@@ -88,7 +88,7 @@ view session model =
                 _ ->
                     ""
 
-        body =
+        content =
             div [ class "flex flex-col min-h-screen" ]
                 [ div [ class "flex-grow" ]
                     [ case model.status of
@@ -114,7 +114,9 @@ view session model =
                 , viewFooter session
                 ]
     in
-    Document pageTitle [ body ]
+    { title = title
+    , content = content
+    }
 
 
 viewHeader : Html msg
