@@ -1,4 +1,4 @@
-module Page.Profile.Editor exposing (..)
+module Page.Profile.Editor exposing (Model, Msg, init, msgToString, update, view)
 
 import Api
 import Api.Graphql
@@ -6,8 +6,8 @@ import Avatar exposing (Avatar)
 import File exposing (File)
 import Graphql.Http
 import Html exposing (Html, button, div, form, input, label, span, text, textarea)
-import Html.Attributes exposing (accept, class, disabled, for, id, multiple, style, title, type_, value)
-import Html.Events exposing (onClick, onInput)
+import Html.Attributes exposing (accept, class, for, id, multiple, style, title, type_, value)
+import Html.Events exposing (onInput)
 import Http
 import I18Next exposing (t)
 import Icons
