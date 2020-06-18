@@ -142,6 +142,17 @@ view loggedIn model =
     let
         t s =
             I18Next.t loggedIn.shared.translations s
+
+        isCommunityAdmin =
+            case model.community of
+                LoadingGraphql ->
+                    False
+
+                LoadedGraphql community ->
+                    community.creator == loggedIn.accountName
+
+                _ ->
+                    False
     in
     case ( model.balance, loggedIn.profile ) of
         ( Loading, _ ) ->
@@ -159,7 +170,11 @@ view loggedIn model =
                             [ text (profile.userName |> Maybe.withDefault (Eos.nameToString profile.account))
                             ]
                         ]
-                    , a [ Route.href (Route.CommunitySettings loggedIn.selectedCommunity), class "ml-auto" ] [ Icons.settings ]
+                    , if isCommunityAdmin then
+                        a [ Route.href (Route.CommunitySettings loggedIn.selectedCommunity), class "ml-auto" ] [ Icons.settings ]
+
+                      else
+                        div [] []
                     ]
                 , viewBalance loggedIn model balance
                 , viewAnalysisList loggedIn profile model
