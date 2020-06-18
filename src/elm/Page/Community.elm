@@ -153,7 +153,7 @@ view loggedIn model =
                     ]
                 , div [ class "container mx-auto px-4" ]
                     [ viewClaimModal loggedIn model
-                    , if canEdit then
+                    , if canEdit && community.hasObjectives then
                         div [ class "flex justify-between items-center py-2 px-8 sm:px-6 bg-white rounded-lg mt-4" ]
                             [ div []
                                 [ p [ class "font-bold" ] [ text_ "community.objectives.title_plural" ]
