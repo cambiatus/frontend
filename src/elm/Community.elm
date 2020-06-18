@@ -111,7 +111,7 @@ type alias Model =
     , memberCount : Int
     , members : List Profile
     , objectives : List Objective
-    , hasActions : Bool
+    , hasObjectives : Bool
     , hasShop : Bool
     }
 
@@ -444,6 +444,8 @@ type alias CreateCommunityData =
     , description : String
     , inviterReward : Eos.Asset
     , invitedReward : Eos.Asset
+    , hasShop : Eos.EosBool
+    , hasObjectives : Eos.EosBool
     }
 
 
@@ -455,6 +457,8 @@ createCommunityData :
     , description : String
     , inviterReward : Float
     , invitedReward : Float
+    , hasShop : Bool
+    , hasObjectives : Bool
     }
     -> CreateCommunityData
 createCommunityData params =
@@ -474,6 +478,8 @@ createCommunityData params =
         { amount = params.invitedReward
         , symbol = params.symbol
         }
+    , hasShop = params.hasShop |> Eos.boolToEosBool
+    , hasObjectives = params.hasObjectives |> Eos.boolToEosBool
     }
 
 
@@ -487,6 +493,8 @@ encodeCreateCommunityData c =
         , ( "description", Encode.string c.description )
         , ( "inviter_reward", Eos.encodeAsset c.inviterReward )
         , ( "invited_reward", Eos.encodeAsset c.invitedReward )
+        , ( "has_objectives", Eos.encodeEosBool c.hasObjectives )
+        , ( "has_shop", Eos.encodeEosBool c.hasShop )
         ]
 
 

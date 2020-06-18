@@ -100,6 +100,8 @@ type alias Form =
     , logoList : List LogoStatus
     , inviterReward : Float
     , invitedReward : Float
+    , hasShop : Bool
+    , has_objectives : Bool
     }
 
 
@@ -112,6 +114,8 @@ newForm =
     , logoList = defaultLogos
     , inviterReward = 0
     , invitedReward = 10
+    , hasShop = True
+    , has_objectives = True
     }
 
 
@@ -137,6 +141,8 @@ editForm community =
     , logoList = logoList
     , inviterReward = community.inviterReward
     , invitedReward = community.invitedReward
+    , hasShop = community.hasShop
+    , has_objectives = community.hasObjectives
     }
 
 
@@ -207,6 +213,8 @@ encodeFormHelper logoHash { accountName } form =
             , description = form.description
             , inviterReward = form.inviterReward
             , invitedReward = form.invitedReward
+            , hasShop = form.hasShop
+            , hasObjectives = form.has_objectives
             }
                 |> Community.createCommunityData
                 |> Valid

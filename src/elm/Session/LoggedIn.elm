@@ -138,7 +138,7 @@ type alias Model =
     , showCommunitySelector : Bool
     , feedback : FeedbackVisibility
     , hasShop : Bool
-    , hasActions : Bool
+    , hasObjectives : Bool
     }
 
 
@@ -160,7 +160,7 @@ initModel shared authModel accountName selectedCommunity =
     , feedback = Hidden
     , showCommunitySelector = False
     , hasShop = False
-    , hasActions = False
+    , hasObjectives = False
     }
 
 
@@ -794,7 +794,7 @@ update msg model =
         CompletedLoadSettings (Ok community) ->
             case community of
                 Just comm ->
-                    { model | hasShop = comm.hasShop, hasActions = comm.hasActions }
+                    { model | hasShop = comm.hasShop, hasObjectives = comm.hasObjectives }
                         |> UR.init
 
                 Nothing ->
