@@ -357,6 +357,28 @@ async function handleJavascriptPort (arg) {
       app.ports.javascriptInPort.send(response)
       break
     }
+    case 'changePin': {
+      devLog('========================', 'changePin')
+      const newPin = arg.data.pin
+      const accountName = arg.data.accountName
+      const decryptedKey = arg.data.decryptedKey
+      storePin(
+        {
+          accountName: accountName,
+          privateKey: decryptedKey
+        },
+        newPin
+      )
+
+      const response = {
+        address: arg.responseAddress,
+        addressData: arg.responseData,
+        accountName: arg.data.accountName,
+        privateKey: decryptedKey
+      }
+      app.ports.javascriptInPort.send(response)
+      break
+    }
     case 'loginWithPin': {
       devLog('========================', 'loginWithPin')
       const store = JSON.parse(window.localStorage.getItem(USER_KEY))

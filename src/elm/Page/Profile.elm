@@ -1,6 +1,7 @@
 module Page.Profile exposing (Model, Msg, init, jsAddressToMsg, msgToString, update, view)
 
 import Api.Graphql
+import Eos.Account
 import Graphql.Http
 import Html exposing (Html, button, div, input, label, p, span, text)
 import Html.Attributes exposing (checked, class, for, id, name, style, type_)
@@ -266,15 +267,27 @@ update msg model loggedIn =
 
         ChangedPin ->
             UR.init model
-                |> UR.addPort
-                    { responseAddress = ChangedPin
-                    , responseData = Encode.null
-                    , data =
-                        Encode.object
-                            [ ( "name", Encode.string "loginWithPin" )
-                            , ( "pin", Encode.string model.newPin )
-                            ]
-                    }
+                |> (case LoggedIn.maybePrivateKey loggedIn of
+                        Just key ->
+                            UR.addPort
+                                { responseAddress = ClickedCloseChangePin
+                                , responseData = Encode.null
+                                , data =
+                                    Encode.object
+                                        [ ( "name", Encode.string "changePin" )
+                                        , ( "decryptedKey", Encode.string key )
+                                        , ( "pin", Encode.string model.newPin )
+                                        , ( "accountName"
+                                          , loggedIn.accountName
+                                                |> Eos.Account.nameToString
+                                                |> Encode.string
+                                          )
+                                        ]
+                                }
+
+                        Nothing ->
+                            UR.addExt (Just ChangedPin |> LoggedIn.RequiredAuthentication)
+                   )
 
         EnteredPin newPin ->
             UR.init { model | newPin = newPin }
@@ -341,6 +354,12 @@ update msg model loggedIn =
 jsAddressToMsg : List String -> Value -> Maybe Msg
 jsAddressToMsg addr val =
     case addr of
+        "ClickedCloseChangePin" :: [] ->
+            Just ClickedCloseChangePin
+
+        "ChangedPin" :: [] ->
+            Just ChangedPin
+
         _ ->
             Nothing
 
