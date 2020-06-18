@@ -1,4 +1,4 @@
-module Icons exposing (..)
+module Icons exposing (alert, arrowDown, back, close, communities, dashboard, exclamation, flag, heart, languages, notification, profile, remove, search, settings, shop, success, thumbDown, thumbUp, trash)
 
 import Html exposing (Html)
 import Svg exposing (Svg, svg)

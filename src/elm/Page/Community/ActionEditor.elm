@@ -417,7 +417,6 @@ type Msg
     | GotInvalidDate
     | SaveAction Int -- Send the date
     | GotSaveAction (Result Value String)
-    | DismissError
     | PressedEnter Bool
 
 
@@ -953,14 +952,6 @@ update msg model loggedIn =
                 |> UR.logImpossible msg []
                 |> UR.addExt (ShowFeedback Failure (t shared.translations "error.unknown"))
 
-        DismissError ->
-            let
-                oldForm =
-                    model.form
-            in
-            { model | form = { oldForm | saveStatus = NotAsked } }
-                |> UR.init
-
         PressedEnter val ->
             if val then
                 UR.init model
@@ -1046,32 +1037,30 @@ upsertAction loggedIn model isoDate =
             , responseData = Encode.null
             , data =
                 Eos.encodeTransaction
-                    { actions =
-                        [ { accountName = "bes.cmm"
-                          , name = "upsertaction"
-                          , authorization =
-                                { actor = loggedIn.accountName
-                                , permissionName = Eos.samplePermission
-                                }
-                          , data =
-                                { actionId = model.actionId |> Maybe.withDefault 0
-                                , objectiveId = model.objectiveId
-                                , description = getInput model.form.description
-                                , reward = getInput model.form.reward ++ " " ++ Eos.symbolToString model.communityId
-                                , verifierReward = verifierReward
-                                , deadline = isoDate
-                                , usages = usages
-                                , usagesLeft = usagesLeft
-                                , verifications = minVotes
-                                , verificationType = verificationType
-                                , validatorsStr = validatorsStr
-                                , isCompleted = isCompleted
-                                , creator = loggedIn.accountName
-                                }
-                                    |> Community.encodeCreateActionAction
-                          }
-                        ]
-                    }
+                    [ { accountName = "bes.cmm"
+                      , name = "upsertaction"
+                      , authorization =
+                            { actor = loggedIn.accountName
+                            , permissionName = Eos.samplePermission
+                            }
+                      , data =
+                            { actionId = model.actionId |> Maybe.withDefault 0
+                            , objectiveId = model.objectiveId
+                            , description = getInput model.form.description
+                            , reward = getInput model.form.reward ++ " " ++ Eos.symbolToString model.communityId
+                            , verifierReward = verifierReward
+                            , deadline = isoDate
+                            , usages = usages
+                            , usagesLeft = usagesLeft
+                            , verifications = minVotes
+                            , verificationType = verificationType
+                            , validatorsStr = validatorsStr
+                            , isCompleted = isCompleted
+                            , creator = loggedIn.accountName
+                            }
+                                |> Community.encodeCreateActionAction
+                      }
+                    ]
             }
 
 
@@ -1657,9 +1646,6 @@ msgToString msg =
 
         GotSaveAction _ ->
             [ "GotSaveAction" ]
-
-        DismissError ->
-            [ "DismissError" ]
 
         PressedEnter _ ->
             [ "PressedEnter" ]

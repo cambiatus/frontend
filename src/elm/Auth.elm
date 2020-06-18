@@ -15,7 +15,6 @@ module Auth exposing
     , viewFieldLabel
     )
 
-import Api
 import Api.Graphql
 import Asset.Icon as Icon
 import Browser.Events
@@ -24,7 +23,6 @@ import Graphql.Http
 import Html exposing (Html, a, button, div, h2, img, input, label, li, p, span, strong, text, textarea, ul)
 import Html.Attributes exposing (attribute, autocomplete, class, disabled, for, id, maxlength, placeholder, required, src, title, type_, value)
 import Html.Events exposing (onClick, onInput, onSubmit)
-import Http
 import I18Next exposing (t)
 import Json.Decode as Decode
 import Json.Decode.Pipeline as Decode
@@ -281,7 +279,7 @@ view isModal shared model =
         LoginWithPin ->
             case shared.maybeAccount of
                 Just ( accountName, True ) ->
-                    viewLoginWithPin accountName False isModal shared model
+                    viewLoginWithPin accountName False shared model
 
                 _ ->
                     viewLoginSteps isModal shared model LoginStepPassphrase
@@ -289,7 +287,7 @@ view isModal shared model =
         LoggingInWithPin ->
             case shared.maybeAccount of
                 Just ( accountName, True ) ->
-                    viewLoginWithPin accountName True isModal shared model
+                    viewLoginWithPin accountName True shared model
 
                 _ ->
                     viewLoginSteps isModal shared model LoginStepPassphrase
@@ -297,7 +295,7 @@ view isModal shared model =
         LoggedInWithPin _ ->
             case shared.maybeAccount of
                 Just ( accountName, True ) ->
-                    viewLoginWithPin accountName True isModal shared model
+                    viewLoginWithPin accountName True shared model
 
                 _ ->
                     viewLoginSteps isModal shared model LoginStepPassphrase
@@ -484,8 +482,8 @@ viewMultipleAccount accounts form isDisabled shared model =
             accounts
 
 
-viewLoginWithPin : Eos.Name -> Bool -> Bool -> Shared -> Model -> List (Html Msg)
-viewLoginWithPin accountName isDisabled isModal shared model =
+viewLoginWithPin : Eos.Name -> Bool -> Shared -> Model -> List (Html Msg)
+viewLoginWithPin accountName isDisabled shared model =
     let
         text_ s =
             Html.text (t shared.translations s)
@@ -576,7 +574,6 @@ type Msg
     | SubmittedLoginPIN
     | GotPinLogin (Result String ( Eos.Name, String ))
     | CompletedLoadProfile Status Eos.Name (Result (Graphql.Http.Error (Maybe Profile)) (Maybe Profile))
-    | CompletedCreateProfile Status Eos.Name (Result Http.Error Profile)
     | TogglePinVisibility
     | TogglePinConfirmationVisibility
     | KeyPressed Bool
@@ -607,8 +604,8 @@ trimPinNumber desiredLength oldPin newPin =
         correctedPIN
 
 
-update : Msg -> Shared -> Model -> Bool -> UpdateResult
-update msg shared model showAuthModal =
+update : Msg -> Shared -> Model -> UpdateResult
+update msg shared model =
     case msg of
         EnteredPin pin ->
             let
@@ -821,19 +818,8 @@ update msg shared model showAuthModal =
                 Nothing ->
                     UR.init model
 
-        CompletedLoadProfile newStatus accountName (Err err) ->
+        CompletedLoadProfile _ _ (Err err) ->
             loginFailedGraphql err model
-
-        CompletedCreateProfile newStatus accountName (Ok _) ->
-            UR.init model
-                |> UR.addCmd
-                    (Api.Graphql.query shared
-                        (Profile.query accountName)
-                        (CompletedLoadProfile newStatus accountName)
-                    )
-
-        CompletedCreateProfile _ _ (Err err) ->
-            loginFailed err model
 
         TogglePinVisibility ->
             { model | pinVisibility = not model.pinVisibility } |> UR.init
@@ -871,40 +857,6 @@ loginFailedGraphql httpError model =
                         Options LoginStepPassphrase
         }
         |> UR.addCmd (Log.graphqlError httpError)
-        |> UR.addPort
-            { responseAddress = Ignored
-            , responseData = Encode.null
-            , data =
-                Encode.object
-                    [ ( "name", Encode.string "logout" )
-                    , ( "container", Encode.string "chat-manager" )
-                    ]
-            }
-
-
-loginFailed : Http.Error -> Model -> UpdateResult
-loginFailed httpError model =
-    UR.init
-        { model
-            | loginError =
-                case httpError of
-                    Http.BadStatus code ->
-                        Just (String.fromInt code)
-
-                    _ ->
-                        Just "Auth failed"
-            , status =
-                case model.status of
-                    LoggingInWithPrivateKeyAccounts accounts form ->
-                        LoginWithPrivateKeyAccounts accounts form
-
-                    LoggingInWithPin ->
-                        LoginWithPin
-
-                    _ ->
-                        Options LoginStepPassphrase
-        }
-        |> UR.addCmd (Log.httpError httpError)
         |> UR.addPort
             { responseAddress = Ignored
             , responseData = Encode.null
@@ -986,9 +938,6 @@ msgToString msg =
         CompletedLoadProfile _ _ r ->
             [ "CompletedLoadProfile", UR.resultToString r ]
 
-        CompletedCreateProfile _ _ r ->
-            [ "CompletedCreateProfile", UR.resultToString r ]
-
         EnteredPin _ ->
             [ "EnteredPin" ]
 
@@ -1006,7 +955,7 @@ msgToString msg =
 
 
 viewPin : Model -> Shared -> Html Msg
-viewPin ({ form, problems } as model) shared =
+viewPin ({ form } as model) shared =
     let
         pinLabel =
             case shared.maybeAccount of
@@ -1041,7 +990,7 @@ viewPin ({ form, problems } as model) shared =
 
 
 viewPinConfirmation : Model -> Shared -> Html Msg
-viewPinConfirmation ({ form, problems } as model) shared =
+viewPinConfirmation ({ form } as model) shared =
     let
         isPinConfirmError ( problemType, _ ) =
             case problemType of

@@ -214,17 +214,15 @@ saveFeature feature state authorization accountName community =
     , responseData = Json.Encode.null
     , data =
         Eos.encodeTransaction
-            { actions =
-                [ { accountName = "bes.cmm"
-                  , name = "update"
-                  , authorization = authorization
-                  , data =
-                        data
-                            |> Community.createCommunityData
-                            |> Community.encodeCreateCommunityData
-                  }
-                ]
-            }
+            [ { accountName = "bes.cmm"
+              , name = "update"
+              , authorization = authorization
+              , data =
+                    data
+                        |> Community.createCommunityData
+                        |> Community.encodeCreateCommunityData
+              }
+            ]
     }
 
 

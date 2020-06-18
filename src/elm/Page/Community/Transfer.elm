@@ -428,28 +428,26 @@ update msg model ({ shared } as loggedIn) =
                             , responseData = Encode.null
                             , data =
                                 Eos.encodeTransaction
-                                    { actions =
-                                        [ { accountName = "bes.token"
-                                          , name = "transfer"
-                                          , authorization =
-                                                { actor = loggedIn.accountName
-                                                , permissionName = Eos.samplePermission
+                                    [ { accountName = "bes.token"
+                                      , name = "transfer"
+                                      , authorization =
+                                            { actor = loggedIn.accountName
+                                            , permissionName = Eos.samplePermission
+                                            }
+                                      , data =
+                                            { from = loggedIn.accountName
+                                            , to = Eos.nameQueryUrlParser (Eos.nameToString account)
+                                            , value =
+                                                { amount =
+                                                    String.toFloat form.amount
+                                                        |> Maybe.withDefault 0.0
+                                                , symbol = model.communityId
                                                 }
-                                          , data =
-                                                { from = loggedIn.accountName
-                                                , to = Eos.nameQueryUrlParser (Eos.nameToString account)
-                                                , value =
-                                                    { amount =
-                                                        String.toFloat form.amount
-                                                            |> Maybe.withDefault 0.0
-                                                    , symbol = model.communityId
-                                                    }
-                                                , memo = form.memo
-                                                }
-                                                    |> Transfer.encodeEosActionData
-                                          }
-                                        ]
-                                    }
+                                            , memo = form.memo
+                                            }
+                                                |> Transfer.encodeEosActionData
+                                      }
+                                    ]
                             }
 
                 ( Loaded _ (CreatingSubscription _), False ) ->

@@ -11,34 +11,29 @@ module Page.Shop exposing
 
 import Api
 import Api.Graphql
-import Asset.Icon as Icon
-import Avatar
 import Browser.Dom as Dom
 import Community exposing (Balance)
-import Eos as Eos exposing (Symbol)
+import Eos as Eos
 import Eos.Account as Eos
 import Graphql.Http
-import Html exposing (..)
-import Html.Attributes exposing (..)
-import Html.Events exposing (on, onClick, onInput, onSubmit, targetValue)
+import Html exposing (Html, a, button, div, img, p, text)
+import Html.Attributes exposing (class, classList, src, value)
+import Html.Events exposing (onClick)
 import Html.Lazy as Lazy
 import Http
 import I18Next exposing (t)
 import Icons
-import Json.Decode as Decode exposing (Decoder, Value)
+import Json.Decode exposing (Value)
 import Json.Encode as Encode
 import List.Extra as LE
-import Log
-import Page exposing (Session(..), viewMenuFilter, viewMenuFilterButton, viewMenuFilterTabButton, viewMenuTab)
+import Page exposing (Session(..))
 import Profile exposing (viewProfileNameTag)
-import Route exposing (Route)
-import Session.Guest as Guest
+import Route
 import Session.LoggedIn as LoggedIn exposing (External(..))
-import Session.Shared exposing (Shared)
-import Shop exposing (Filter, Sale, decodeTargetValueToFilter)
+import Shop exposing (Filter, Sale)
 import Task
 import Time exposing (Posix)
-import Transfer exposing (Transfer)
+import Transfer
 import UpdateResult as UR
 
 
@@ -50,7 +45,7 @@ init : LoggedIn.Model -> Filter -> ( Model, Cmd Msg )
 init loggedIn filter =
     let
         model =
-            initModel loggedIn filter
+            initModel filter
     in
     ( model
     , Cmd.batch
@@ -69,8 +64,8 @@ init loggedIn filter =
 -- SUBSCRIPTIONS
 
 
-subscriptions : Model -> Sub Msg
-subscriptions model =
+subscriptions : Sub Msg
+subscriptions =
     Sub.none
 
 
@@ -86,8 +81,8 @@ type alias Model =
     }
 
 
-initModel : LoggedIn.Model -> Filter -> Model
-initModel loggedIn filter =
+initModel : Filter -> Model
+initModel filter =
     { date = Nothing
     , cards = Loading
     , balances = []
@@ -201,11 +196,6 @@ viewHeader loggedIn =
 viewShopFilter : LoggedIn.Model -> Filter -> Html Msg
 viewShopFilter loggedIn filter =
     let
-        translations =
-            ( t loggedIn.shared.translations "shop.all_offers"
-            , t loggedIn.shared.translations "shop.my_offers"
-            )
-
         buttonClass =
             "w-1/2 lg:w-56 border border-purple-500 first:rounded-l last:rounded-r px-12 py-2 text-sm font-light text-gray"
     in
@@ -345,16 +335,6 @@ viewCard model ({ shared } as loggedIn) card =
         ]
 
 
-getIpfsUrl : Session -> String
-getIpfsUrl session =
-    case session of
-        Guest s ->
-            s.shared.endpoints.ipfs
-
-        LoggedIn s ->
-            s.shared.endpoints.ipfs
-
-
 
 --- UPDATE
 
@@ -396,74 +376,70 @@ update msg model loggedIn =
                     validateForm card.sale card.form
             in
             if isFormValid newForm then
-                case LoggedIn.isAuth loggedIn of
-                    True ->
-                        let
-                            authorization =
-                                { actor = loggedIn.accountName
-                                , permissionName = Eos.samplePermission
-                                }
+                if LoggedIn.isAuth loggedIn then
+                    let
+                        authorization =
+                            { actor = loggedIn.accountName
+                            , permissionName = Eos.samplePermission
+                            }
 
-                            wantedUnits =
-                                case String.toInt card.form.unit of
-                                    Just quantityInt ->
-                                        quantityInt
+                        wantedUnits =
+                            case String.toInt card.form.unit of
+                                Just quantityInt ->
+                                    quantityInt
 
-                                    -- TODO sort sales without units
-                                    Nothing ->
-                                        1
+                                Nothing ->
+                                    1
 
-                            tAmount =
-                                card.sale.price * toFloat wantedUnits
+                        tAmount =
+                            card.sale.price * toFloat wantedUnits
 
-                            quantity =
-                                { amount = tAmount
-                                , symbol = card.sale.symbol
-                                }
+                        quantity =
+                            { amount = tAmount
+                            , symbol = card.sale.symbol
+                            }
 
-                            from =
-                                loggedIn.accountName
+                        from =
+                            loggedIn.accountName
 
-                            to =
-                                card.sale.creatorId
-                        in
-                        UR.init model
-                            |> UR.addPort
-                                { responseAddress = TransferSuccess cardIndex
-                                , responseData = Encode.null
-                                , data =
-                                    Eos.encodeTransaction
-                                        { actions =
-                                            [ { accountName = "bes.token"
-                                              , name = "transfer"
-                                              , authorization = authorization
-                                              , data =
-                                                    { from = from
-                                                    , to = to
-                                                    , value = quantity
-                                                    , memo = card.form.memo
-                                                    }
-                                                        |> Transfer.encodeEosActionData
-                                              }
-                                            , { accountName = "bes.cmm"
-                                              , name = "transfersale"
-                                              , authorization = authorization
-                                              , data =
-                                                    { id = card.sale.id
-                                                    , from = from
-                                                    , to = to
-                                                    , quantity = quantity
-                                                    , units = wantedUnits
-                                                    }
-                                                        |> Shop.encodeTransferSale
-                                              }
-                                            ]
-                                        }
-                                }
+                        to =
+                            card.sale.creatorId
+                    in
+                    UR.init model
+                        |> UR.addPort
+                            { responseAddress = TransferSuccess cardIndex
+                            , responseData = Encode.null
+                            , data =
+                                Eos.encodeTransaction
+                                    [ { accountName = "bes.token"
+                                      , name = "transfer"
+                                      , authorization = authorization
+                                      , data =
+                                            { from = from
+                                            , to = to
+                                            , value = quantity
+                                            , memo = card.form.memo
+                                            }
+                                                |> Transfer.encodeEosActionData
+                                      }
+                                    , { accountName = "bes.cmm"
+                                      , name = "transfersale"
+                                      , authorization = authorization
+                                      , data =
+                                            { id = card.sale.id
+                                            , from = from
+                                            , to = to
+                                            , quantity = quantity
+                                            , units = wantedUnits
+                                            }
+                                                |> Shop.encodeTransferSale
+                                      }
+                                    ]
+                            }
 
-                    False ->
-                        UR.init model
-                            |> UR.addExt (Just (ClickedSendTransfer card cardIndex) |> RequiredAuthentication)
+                else
+                    UR.init model
+                        |> UR.addExt (Just (ClickedSendTransfer card cardIndex) |> RequiredAuthentication)
 
             else
                 UR.init model

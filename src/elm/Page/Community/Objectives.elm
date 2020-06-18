@@ -1,14 +1,14 @@
 module Page.Community.Objectives exposing (Model, Msg, init, msgToString, update, view)
 
 import Api.Graphql
-import Cambiatus.Enum.VerificationType as VerificationType exposing (VerificationType)
+import Cambiatus.Enum.VerificationType as VerificationType
 import Community exposing (Model, communityQuery)
 import Eos exposing (Symbol)
 import Graphql.Http
-import Html exposing (..)
-import Html.Attributes exposing (class, classList, disabled)
+import Html exposing (Html, a, button, div, p, text)
+import Html.Attributes exposing (class, classList)
 import Html.Events exposing (onClick)
-import I18Next exposing (Delims(..), Translations, t)
+import I18Next exposing (Delims(..), t)
 import Icons
 import Page
 import Profile
@@ -106,10 +106,6 @@ viewNewObjectiveButton ({ shared } as loggedIn) community =
 viewObjective : LoggedIn.Model -> Model -> Community.Model -> Int -> Community.Objective -> Html Msg
 viewObjective ({ shared } as loggedIn) model community index objective =
     let
-        canEdit : Bool
-        canEdit =
-            LoggedIn.isAccount community.creator loggedIn
-
         isOpen : Bool
         isOpen =
             case model.openObjective of
@@ -201,7 +197,7 @@ viewAction ({ shared } as loggedIn) model objectiveId action =
         pastDeadline : Bool
         pastDeadline =
             case action.deadline of
-                Just deadline ->
+                Just _ ->
                     case model.date of
                         Just today ->
                             posixToMillis today > posixToMillis posixDeadline
@@ -271,7 +267,7 @@ viewAction ({ shared } as loggedIn) model objectiveId action =
                           else
                             text ""
                         , case action.deadline of
-                            Just d ->
+                            Just _ ->
                                 p [ classList [ ( "text-red", pastDeadline ) ] ] [ text deadlineStr ]
 
                             Nothing ->

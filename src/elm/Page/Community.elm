@@ -13,7 +13,7 @@ import Api.Graphql
 import Avatar
 import Cambiatus.Enum.VerificationType as VerificationType
 import Cambiatus.Scalar exposing (DateTime(..))
-import Community exposing (ActionVerification, Model)
+import Community exposing (Model)
 import Eos exposing (Symbol)
 import Eos.Account as Eos
 import Graphql.Http
@@ -28,13 +28,11 @@ import Json.Encode as Encode exposing (Value)
 import Page
 import Route
 import Session.LoggedIn as LoggedIn exposing (External(..), FeedbackStatus(..))
-import Session.Shared exposing (Shared)
 import Strftime
 import Task
 import Time exposing (Posix, posixToMillis)
 import UpdateResult as UR
 import Utils
-import View.Tag as Tag
 
 
 
@@ -96,7 +94,6 @@ type LoadStatus
 
 type EditStatus
     = NoEdit
-    | OpenObjective Int
 
 
 type ModalStatus
@@ -181,8 +178,8 @@ view loggedIn model =
                         text ""
                     , if community.hasObjectives then
                         div [ class "bg-white py-6 sm:py-8 px-3 sm:px-6 rounded-lg mt-4" ]
-                            ([ Page.viewTitle (t "community.objectives.title_plural") ]
-                                ++ List.indexedMap (viewObjective loggedIn model community)
+                            (Page.viewTitle (t "community.objectives.title_plural")
+                                :: List.indexedMap (viewObjective loggedIn model community)
                                     community.objectives
                                 ++ [ if canEdit then
                                         viewObjectiveNew loggedIn editStatus community.symbol
@@ -196,80 +193,6 @@ view loggedIn model =
                         div [] []
                     ]
                 ]
-
-
-
--- VIEW VERIFICATIONS
-
-
-viewVerification : Shared -> ActionVerification -> Html Msg
-viewVerification shared verification =
-    let
-        maybeLogo =
-            if String.isEmpty verification.logo then
-                Nothing
-
-            else
-                Just (shared.endpoints.ipfs ++ "/" ++ verification.logo)
-
-        description =
-            verification.description
-
-        date =
-            Just verification.createdAt
-                |> Utils.posixDateTime
-                |> Strftime.format "%d %b %Y" Time.utc
-
-        status =
-            verification.status
-
-        route =
-            case verification.symbol of
-                Just symbol ->
-                    Route.Claim
-                        symbol
-                        verification.objectiveId
-                        verification.actionId
-                        verification.claimId
-
-                Nothing ->
-                    Route.ComingSoon
-    in
-    a
-        [ class "border-b last:border-b-0 border-gray-500 flex items-start lg:items-center hover:bg-gray-100 first-hover:rounded-t-lg last-hover:rounded-b-lg p-4"
-        , Route.href route
-        ]
-        [ div
-            [ class "flex-none" ]
-            [ case maybeLogo of
-                Just logoUrl ->
-                    img
-                        [ class "w-10 h-10 object-scale-down"
-                        , src logoUrl
-                        ]
-                        []
-
-                Nothing ->
-                    div
-                        [ class "w-10 h-10 object-scale-down" ]
-                        []
-            ]
-        , div
-            [ class "flex-col flex-grow-1 pl-4" ]
-            [ p
-                [ class "font-sans text-black text-sm leading-relaxed" ]
-                [ text description ]
-            , p
-                [ class "font-normal font-sans text-gray-900 text-caption uppercase" ]
-                [ text date ]
-            , div
-                [ class "lg:hidden mt-4" ]
-                [ Tag.view status shared.translations ]
-            ]
-        , div
-            [ class "hidden lg:visible lg:flex lg:flex-none pl-4" ]
-            [ Tag.view status shared.translations ]
-        ]
 
 
 
@@ -739,21 +662,19 @@ update msg model loggedIn =
                         , responseData = Encode.null
                         , data =
                             Eos.encodeTransaction
-                                { actions =
-                                    [ { accountName = "bes.cmm"
-                                      , name = "claimaction"
-                                      , authorization =
-                                            { actor = loggedIn.accountName
-                                            , permissionName = Eos.samplePermission
-                                            }
-                                      , data =
-                                            { actionId = actionId
-                                            , maker = loggedIn.accountName
-                                            }
-                                                |> Community.encodeClaimAction
-                                      }
-                                    ]
-                                }
+                                [ { accountName = "bes.cmm"
+                                  , name = "claimaction"
+                                  , authorization =
+                                        { actor = loggedIn.accountName
+                                        , permissionName = Eos.samplePermission
+                                        }
+                                  , data =
+                                        { actionId = actionId
+                                        , maker = loggedIn.accountName
+                                        }
+                                            |> Community.encodeClaimAction
+                                  }
+                                ]
                         }
 
             else

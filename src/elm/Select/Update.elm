@@ -1,7 +1,7 @@
 module Select.Update exposing (update)
 
 import Select.Config exposing (Config)
-import Select.Messages exposing (..)
+import Select.Messages exposing (Msg(..))
 import Select.Models exposing (State)
 import Task
 
@@ -61,23 +61,22 @@ update config msg model =
 
                         Just focusMessage ->
                             Task.succeed Nothing
-                                |> Task.perform (\x -> focusMessage)
+                                |> Task.perform (\_ -> focusMessage)
             in
-            case config.emptySearch of
-                True ->
-                    ( { model | query = Just "" }
-                    , Cmd.batch
-                        [ cmd
-                        , if config.emptySearch then
-                            queryChangeCmd ""
+            if config.emptySearch then
+                ( { model | query = Just "" }
+                , Cmd.batch
+                    [ cmd
+                    , if config.emptySearch then
+                        queryChangeCmd ""
 
-                          else
-                            Cmd.none
-                        ]
-                    )
+                      else
+                        Cmd.none
+                    ]
+                )
 
-                False ->
-                    ( model, cmd )
+            else
+                ( model, cmd )
 
         OnBlur ->
             ( { model | query = Nothing }, Cmd.none )
