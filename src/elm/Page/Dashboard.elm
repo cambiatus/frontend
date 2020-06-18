@@ -12,7 +12,6 @@ module Page.Dashboard exposing
 import Api
 import Api.Graphql
 import Api.Relay
-import Browser exposing (Document)
 import Cambiatus.Query
 import Cambiatus.Scalar exposing (DateTime(..))
 import Claim

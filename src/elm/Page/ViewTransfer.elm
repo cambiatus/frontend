@@ -1,7 +1,6 @@
 module Page.ViewTransfer exposing (Model, Msg, init, msgToString, subscriptions, update, view)
 
 import Api.Graphql
-import Browser exposing (Document)
 import Cambiatus.Scalar exposing (DateTime(..))
 import Eos
 import Eos.Account as Eos

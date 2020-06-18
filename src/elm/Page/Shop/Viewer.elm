@@ -3,7 +3,6 @@ module Page.Shop.Viewer exposing (Model, Msg, init, msgToString, subscriptions, 
 import Api
 import Api.Graphql
 import Avatar
-import Browser exposing (Document)
 import Community exposing (Balance)
 import Eos as Eos
 import Eos.Account as Eos

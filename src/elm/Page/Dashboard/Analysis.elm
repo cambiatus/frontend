@@ -10,7 +10,6 @@ module Page.Dashboard.Analysis exposing
 
 import Api.Graphql
 import Api.Relay
-import Browser exposing (Document)
 import Cambiatus.Query
 import Claim
 import Community

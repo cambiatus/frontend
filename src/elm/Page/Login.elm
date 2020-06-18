@@ -1,7 +1,6 @@
 module Page.Login exposing (Model, Msg, init, jsAddressToMsg, msgToString, subscriptions, update, view)
 
 import Auth
-import Browser exposing (Document)
 import Html exposing (Html, div)
 import Html.Attributes exposing (class)
 import I18Next

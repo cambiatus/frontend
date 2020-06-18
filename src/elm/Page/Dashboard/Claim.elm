@@ -1,7 +1,6 @@
 module Page.Dashboard.Claim exposing (Model, Msg, init, jsAddressToMsg, msgToString, update, view, viewVoters)
 
 import Api.Graphql
-import Browser exposing (Document)
 import Cambiatus.Object.Claim as Claim
 import Cambiatus.Object.Profile as Profile
 import Cambiatus.Query

@@ -13,7 +13,6 @@ import Api
 import Api.Graphql
 import Asset.Icon as Icon
 import Avatar exposing (Avatar)
-import Browser exposing (Document)
 import Browser.Events
 import Dict exposing (Dict)
 import Eos as Eos

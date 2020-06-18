@@ -3,7 +3,6 @@ module Page.Shop.Editor exposing (Model, Msg(..), initCreate, initUpdate, jsAddr
 import Api
 import Api.Graphql
 import Asset.Icon as Icon
-import Browser exposing (Document)
 import Browser.Events as Events
 import Community exposing (Balance)
 import DataValidator exposing (Validator, getInput, greaterThanOrEqual, hasErrors, listErrors, longerThan, newValidator, oneOf, updateInput, validate)

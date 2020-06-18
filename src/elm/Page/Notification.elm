@@ -1,7 +1,6 @@
 module Page.Notification exposing (Model, Msg(..), init, msgToString, update, view)
 
 import Api.Graphql
-import Browser exposing (Document)
 import Eos
 import Eos.Account as Eos
 import FormatNumber exposing (format)

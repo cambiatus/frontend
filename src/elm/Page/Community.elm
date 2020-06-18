@@ -11,7 +11,6 @@ module Page.Community exposing
 
 import Api.Graphql
 import Avatar
-import Browser exposing (Document)
 import Cambiatus.Enum.VerificationType as VerificationType
 import Cambiatus.Scalar exposing (DateTime(..))
 import Community exposing (Model)

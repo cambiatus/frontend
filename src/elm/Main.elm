@@ -4,7 +4,7 @@ import Auth
 import Browser exposing (Document)
 import Browser.Navigation as Nav
 import Flags
-import Html exposing (Html, div, text)
+import Html exposing (Html, text)
 import Json.Decode as Decode exposing (Value)
 import Log
 import Page exposing (Session)

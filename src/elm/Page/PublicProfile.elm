@@ -2,7 +2,6 @@ module Page.PublicProfile exposing (Model, Msg, init, jsAddressToMsg, msgToStrin
 
 import Api.Graphql
 import Avatar
-import Browser exposing (Document)
 import Eos exposing (Symbol)
 import Eos.Account as Eos
 import Graphql.Http

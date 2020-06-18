@@ -10,7 +10,6 @@ module Page.Community.Transfer exposing
     )
 
 import Api.Graphql
-import Browser exposing (Document)
 import Browser.Events
 import Community exposing (Model, communityQuery)
 import Eos exposing (Symbol)

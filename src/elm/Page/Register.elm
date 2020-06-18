@@ -2,7 +2,6 @@ module Page.Register exposing (Model, Msg, init, jsAddressToMsg, msgToString, su
 
 import Api
 import Auth exposing (viewFieldLabel)
-import Browser exposing (Document)
 import Browser.Events
 import Char
 import Eos.Account as Eos

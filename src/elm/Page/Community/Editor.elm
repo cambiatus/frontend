@@ -13,7 +13,6 @@ module Page.Community.Editor exposing
 import Api
 import Api.Graphql
 import Asset.Icon as Icon
-import Browser exposing (Document)
 import Browser.Events as Events
 import Community exposing (Model)
 import Dict exposing (Dict)

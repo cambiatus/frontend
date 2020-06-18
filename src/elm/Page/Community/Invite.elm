@@ -9,7 +9,6 @@ module Page.Community.Invite exposing
 
 import Api
 import Api.Graphql
-import Browser exposing (Document)
 import Community exposing (Invite, inviteQuery)
 import Eos.Account as Eos
 import Graphql.Http

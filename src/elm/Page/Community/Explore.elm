@@ -1,7 +1,6 @@
 module Page.Community.Explore exposing (Model, Msg(..), init, msgToString, update, view)
 
 import Api.Graphql
-import Browser exposing (Document)
 import Community exposing (Metadata)
 import Eos
 import Eos.Account as Eos
