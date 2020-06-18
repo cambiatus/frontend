@@ -1075,7 +1075,15 @@ view ({ shared } as loggedIn) model =
             I18Next.t shared.translations s
 
         title =
-            t "menu.edit"
+            let
+                action =
+                    if model.actionId /= Nothing then
+                        t "menu.edit"
+
+                    else
+                        t "menu.create"
+            in
+            action
                 ++ " "
                 ++ t "community.actions.title"
 
