@@ -9,7 +9,7 @@ import Html exposing (Html, div, input, label, span, text)
 import Html.Attributes exposing (checked, class, for, id, name, style, type_)
 import Html.Events exposing (onCheck)
 import I18Next exposing (Translations, t)
-import Json.Encode as Encode exposing (Value, object, string)
+import Json.Encode
 import Page
 import Ports
 import Route
@@ -211,7 +211,7 @@ saveFeature feature state authorization accountName community =
             }
     in
     { responseAddress = Ignored
-    , responseData = Encode.null
+    , responseData = Json.Encode.null
     , data =
         Eos.encodeTransaction
             { actions =
