@@ -56,18 +56,19 @@ initModel authModel =
 -- VIEW
 
 
-view : Guest.Model -> Model -> Document Msg
+view : Guest.Model -> Model -> { title : String, content : Html Msg }
 view guest model =
     let
         authView =
             Auth.view False guest.shared model.auth
                 |> List.map (Html.map GotAuthMsg)
     in
-    Document
-        (I18Next.t guest.shared.translations "auth.login.loginTab")
-        [ div [ class "bg-purple-500 flex-grow flex flex-wrap md:block" ]
+    { title =
+        I18Next.t guest.shared.translations "auth.login.loginTab"
+    , content =
+        div [ class "bg-purple-500 flex-grow flex flex-wrap md:block" ]
             authView
-        ]
+    }
 
 
 

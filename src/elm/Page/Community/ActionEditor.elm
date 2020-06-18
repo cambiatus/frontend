@@ -1069,19 +1069,18 @@ upsertAction loggedIn model isoDate =
 -- VIEW
 
 
-view : LoggedIn.Model -> Model -> Document Msg
+view : LoggedIn.Model -> Model -> { title : String, content : Html Msg }
 view ({ shared } as loggedIn) model =
     let
         t s =
             I18Next.t shared.translations s
 
-        pageTitle =
+        title =
             t "menu.edit"
                 ++ " "
                 ++ t "community.actions.title"
 
-        body : Html Msg
-        body =
+        content =
             case model.status of
                 Loading ->
                     Page.fullPageLoading
@@ -1101,7 +1100,9 @@ view ({ shared } as loggedIn) model =
                 Unauthorized ->
                     Page.fullPageNotFound "not authorized" ""
     in
-    Document pageTitle [ body ]
+    { title = title
+    , content = content
+    }
 
 
 viewForm : LoggedIn.Model -> Community.Model -> Model -> Html Msg

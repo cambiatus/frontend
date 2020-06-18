@@ -55,13 +55,13 @@ initModel =
     Loading
 
 
-view : LoggedIn.Model -> Model -> Document msg
+view : LoggedIn.Model -> Model -> { title : String, content : Html Msg }
 view loggedIn status =
     let
         t =
             I18Next.t loggedIn.shared.translations
 
-        pageTitle =
+        title =
             case status of
                 Loaded profile ->
                     Maybe.withDefault "" profile.userName
@@ -69,8 +69,7 @@ view loggedIn status =
                 _ ->
                     ""
 
-        body : Html msg
-        body =
+        content =
             case status of
                 Loading ->
                     Page.fullPageLoading
@@ -84,7 +83,9 @@ view loggedIn status =
                 LoadingFailed err ->
                     Page.fullPageNotFound (t "error.unknown") (Page.errorToString err)
     in
-    Document pageTitle [ body ]
+    { title = title
+    , content = content
+    }
 
 
 view_ : LoggedIn.Model -> Profile -> Html msg

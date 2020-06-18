@@ -68,13 +68,13 @@ type Status
 -- VIEW
 
 
-view : LoggedIn.Model -> Model -> Document Msg
+view : LoggedIn.Model -> Model -> { title : String, content : Html Msg }
 view loggedIn model =
     let
         t =
             I18Next.t loggedIn.shared.translations
 
-        pageTitle =
+        title =
             case model.status of
                 Loaded maybeTransfer _ ->
                     case maybeTransfer of
@@ -87,8 +87,7 @@ view loggedIn model =
                 _ ->
                     ""
 
-        body : Html Msg
-        body =
+        content =
             case model.status of
                 Loading _ ->
                     Page.fullPageLoading
@@ -116,7 +115,9 @@ view loggedIn model =
                                     [ text "Could not load the transfer" ]
                                 ]
     in
-    Document pageTitle [ body ]
+    { title = title
+    , content = content
+    }
 
 
 viewTransfer : LoggedIn.Model -> Transfer -> State -> Html Msg

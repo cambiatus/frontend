@@ -60,10 +60,10 @@ type Status
 -- VIEW
 
 
-view : LoggedIn.Model -> Model -> Document msg
+view : LoggedIn.Model -> Model -> { title : String, content : Html Msg }
 view loggedIn model =
     let
-        body =
+        content =
             case model.communities of
                 Loading ->
                     Page.fullPageLoading
@@ -90,9 +90,9 @@ view loggedIn model =
                             (viewCommunities loggedIn (String.toUpper loggedIn.searchText) communities)
                         ]
     in
-    Document
-        (t loggedIn.shared.translations "menu.communities")
-        [ body ]
+    { title = t loggedIn.shared.translations "menu.communities"
+    , content = content
+    }
 
 
 renderUserMessage : Model -> Html msg

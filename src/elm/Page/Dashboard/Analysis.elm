@@ -114,14 +114,14 @@ type ModalStatus
 -- VIEW
 
 
-view : LoggedIn.Model -> Model -> Document Msg
+view : LoggedIn.Model -> Model -> { title : String, content : Html Msg }
 view ({ shared } as loggedIn) model =
     let
         t : String -> String
         t =
             I18Next.t shared.translations
 
-        body =
+        content =
             case model.status of
                 Loading ->
                     Page.fullPageLoading
@@ -146,7 +146,9 @@ view ({ shared } as loggedIn) model =
                 Failed ->
                     text ""
     in
-    Document (t "all_analysis.title") [ body ]
+    { title = t "all_analysis.title"
+    , content = content
+    }
 
 
 viewFilters : LoggedIn.Model -> Model -> Html Msg

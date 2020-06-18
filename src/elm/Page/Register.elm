@@ -132,7 +132,7 @@ decodeAccount =
 -- VIEW
 
 
-view : Guest.Model -> Model -> Document Msg
+view : Guest.Model -> Model -> { title : String, content : Html Msg }
 view guest model =
     let
         shared =
@@ -180,10 +180,72 @@ view guest model =
                     ]
                     [ text_ ("register.form.step" ++ step ++ "_title") ]
                 ]
-    in
-    Document
-        (t "register.registerTab")
-        [ if model.accountGenerated then
+
+        viewCreateAccount =
+            div [ class "flex-grow bg-white flex md:block" ]
+                [ Html.form
+                    [ class "sf-wrapper"
+                    , class "px-4 md:max-w-sm md:mx-auto md:pt-20 md:px-0"
+                    , onSubmit (ValidateForm model.form)
+                    ]
+                    [ div [ class "sf-content" ]
+                        [ viewServerErrors model.problems
+                        , viewTitleForStep 1
+                        , viewField
+                            shared
+                            (Field
+                                "register.form.name"
+                                isDisabled
+                                model.form.username
+                                Username
+                            )
+                            (identity EnteredUsername)
+                            [ maxlength 255 ]
+                            model.problems
+                        , viewField
+                            shared
+                            (Field
+                                "register.form.account"
+                                isDisabled
+                                model.form.account
+                                Account
+                            )
+                            (identity EnteredAccount)
+                            Eos.nameValidationAttrs
+                            model.problems
+                        , viewField
+                            shared
+                            (Field
+                                "register.form.email"
+                                isDisabled
+                                model.form.email
+                                Email
+                            )
+                            (identity EnteredEmail)
+                            [ attribute "inputmode" "email" ]
+                            model.problems
+                        ]
+                    , div [ class "sf-footer" ]
+                        [ p [ class "text-center text-body my-6" ]
+                            [ text_ "register.login"
+                            , a [ Route.href (Route.Login Nothing), class "text-orange-300 underline" ] [ text_ "register.authLink" ]
+                            ]
+                        , button
+                            [ class "button button-primary min-w-full mb-8"
+                            , type_ "submit"
+                            , disabled isDisabled
+                            ]
+                            [ if model.isCheckingAccount then
+                                text_ "register.form.checkingAvailability"
+
+                              else
+                                text_ "register.form.button"
+                            ]
+                        ]
+                    ]
+                ]
+
+        viewAccountGenerated =
             div
                 [ class "flex-grow bg-purple-500 flex md:block"
                 ]
@@ -276,71 +338,16 @@ view guest model =
                         ]
                     ]
                 ]
+    in
+    { title =
+        t "register.registerTab"
+    , content =
+        if model.accountGenerated then
+            viewAccountGenerated
 
-          else
-            div [ class "flex-grow bg-white flex md:block" ]
-                [ Html.form
-                    [ class "sf-wrapper"
-                    , class "px-4 md:max-w-sm md:mx-auto md:pt-20 md:px-0"
-                    , onSubmit (ValidateForm model.form)
-                    ]
-                    [ div [ class "sf-content" ]
-                        [ viewServerErrors model.problems
-                        , viewTitleForStep 1
-                        , viewField
-                            shared
-                            (Field
-                                "register.form.name"
-                                isDisabled
-                                model.form.username
-                                Username
-                            )
-                            (identity EnteredUsername)
-                            [ maxlength 255 ]
-                            model.problems
-                        , viewField
-                            shared
-                            (Field
-                                "register.form.account"
-                                isDisabled
-                                model.form.account
-                                Account
-                            )
-                            (identity EnteredAccount)
-                            Eos.nameValidationAttrs
-                            model.problems
-                        , viewField
-                            shared
-                            (Field
-                                "register.form.email"
-                                isDisabled
-                                model.form.email
-                                Email
-                            )
-                            (identity EnteredEmail)
-                            [ attribute "inputmode" "email" ]
-                            model.problems
-                        ]
-                    , div [ class "sf-footer" ]
-                        [ p [ class "text-center text-body my-6" ]
-                            [ text_ "register.login"
-                            , a [ Route.href (Route.Login Nothing), class "text-orange-300 underline" ] [ text_ "register.authLink" ]
-                            ]
-                        , button
-                            [ class "button button-primary min-w-full mb-8"
-                            , type_ "submit"
-                            , disabled isDisabled
-                            ]
-                            [ if model.isCheckingAccount then
-                                text_ "register.form.checkingAvailability"
-
-                              else
-                                text_ "register.form.button"
-                            ]
-                        ]
-                    ]
-                ]
-        ]
+        else
+            viewCreateAccount
+    }
 
 
 viewServerErrors : List Problem -> Html msg

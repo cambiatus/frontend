@@ -66,14 +66,14 @@ type Status
 -- VIEW
 
 
-view : LoggedIn.Model -> Model -> Document Msg
+view : LoggedIn.Model -> Model -> { title : String, content : Html Msg }
 view ({ shared } as loggedIn) model =
     let
         t : String -> String
         t =
             I18Next.t shared.translations
 
-        pageTitle =
+        title =
             case model.statusClaim of
                 Loaded claim ->
                     claim.action.description
@@ -81,8 +81,7 @@ view ({ shared } as loggedIn) model =
                 _ ->
                     ""
 
-        body : Html Msg
-        body =
+        content =
             div []
                 [ case model.statusClaim of
                     Loading ->
@@ -105,7 +104,9 @@ view ({ shared } as loggedIn) model =
                         Page.fullPageGraphQLError (t "error.unknown") err
                 ]
     in
-    Document pageTitle [ body ]
+    { title = title
+    , content = content
+    }
 
 
 viewTitle : Shared -> Claim.Model -> Html msg

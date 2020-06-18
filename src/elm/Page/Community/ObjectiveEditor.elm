@@ -115,16 +115,15 @@ initObjectiveForm =
 -- VIEW
 
 
-view : LoggedIn.Model -> Model -> Document Msg
+view : LoggedIn.Model -> Model -> { title : String, content : Html Msg }
 view ({ shared } as loggedIn) model =
     let
-        pageTitle =
+        title =
             t shared.translations "menu.edit"
                 ++ " "
                 ++ t shared.translations "community.objectives.title"
 
-        body : Html Msg
-        body =
+        content =
             case model.status of
                 Loading ->
                     Page.fullPageLoading
@@ -149,7 +148,9 @@ view ({ shared } as loggedIn) model =
                                 viewForm loggedIn objForm
                         ]
     in
-    Document pageTitle [ body ]
+    { title = title
+    , content = content
+    }
 
 
 viewForm : LoggedIn.Model -> ObjectiveForm -> Html Msg

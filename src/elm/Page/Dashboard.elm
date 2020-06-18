@@ -139,13 +139,13 @@ type InviteModalStatus
 -- VIEW
 
 
-view : LoggedIn.Model -> Model -> Document Msg
+view : LoggedIn.Model -> Model -> { title : String, content : Html Msg }
 view loggedIn model =
     let
         t s =
             I18Next.t loggedIn.shared.translations s
 
-        body =
+        content =
             case ( model.balance, loggedIn.profile ) of
                 ( Loading, _ ) ->
                     Page.fullPageLoading
@@ -171,7 +171,9 @@ view loggedIn model =
                 ( _, _ ) ->
                     Page.fullPageNotFound (t "dashboard.sorry") ""
     in
-    Document (t "menu.dashboard") [ body ]
+    { title = t "menu.dashboard"
+    , content = content
+    }
 
 
 viewAnalysisModal : LoggedIn.Model -> Model -> Html Msg

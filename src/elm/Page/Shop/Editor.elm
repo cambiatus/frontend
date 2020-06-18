@@ -169,7 +169,7 @@ initForm balanceOptions =
 -- VIEW
 
 
-view : LoggedIn.Model -> Model -> Document Msg
+view : LoggedIn.Model -> Model -> { title : String, content : Html Msg }
 view loggedIn model =
     let
         shared =
@@ -192,15 +192,14 @@ view loggedIn model =
                 _ ->
                     False
 
-        pageTitle =
+        title =
             if isEdit then
                 t "shop.edit_offer"
 
             else
                 t "shop.create_offer"
 
-        body : Html Msg
-        body =
+        content =
             case model of
                 LoadingBalancesCreate ->
                     Page.fullPageLoading
@@ -232,7 +231,9 @@ view loggedIn model =
                 Deleting balances _ imageStatus form ->
                     viewForm shared balances imageStatus True True Closed form
     in
-    Document pageTitle [ body ]
+    { title = title
+    , content = content
+    }
 
 
 viewForm : Shared -> List Balance -> ImageStatus -> Bool -> Bool -> DeleteModalStatus -> Form -> Html Msg

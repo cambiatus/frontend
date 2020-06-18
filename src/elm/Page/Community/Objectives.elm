@@ -64,10 +64,10 @@ type Status
 -- VIEW
 
 
-view : LoggedIn.Model -> Model -> Document Msg
+view : LoggedIn.Model -> Model -> { title : String, content : Html Msg }
 view ({ shared } as loggedIn) model =
     let
-        body =
+        content =
             case model.status of
                 Loading ->
                     Page.fullPageLoading
@@ -92,7 +92,9 @@ view ({ shared } as loggedIn) model =
                             ]
                         ]
     in
-    Document (t shared.translations "community.objectives.title") [ body ]
+    { title = t shared.translations "community.objectives.title"
+    , content = content
+    }
 
 
 viewNewObjectiveButton : LoggedIn.Model -> Community.Model -> Html msg

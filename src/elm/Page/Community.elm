@@ -113,7 +113,7 @@ type alias Member =
 -- VIEW
 
 
-view : LoggedIn.Model -> Model -> Document Msg
+view : LoggedIn.Model -> Model -> { title : String, content : Html Msg }
 view loggedIn model =
     let
         t s =
@@ -125,7 +125,7 @@ view loggedIn model =
         text_ s =
             text (t s)
 
-        pageTitle =
+        title =
             case model.community of
                 Loaded community _ ->
                     community.title
@@ -136,8 +136,7 @@ view loggedIn model =
                 _ ->
                     t "community.not_found"
 
-        body : Html Msg
-        body =
+        content =
             case model.community of
                 Loading ->
                     Page.fullPageLoading
@@ -207,7 +206,9 @@ view loggedIn model =
                             ]
                         ]
     in
-    Document pageTitle [ body ]
+    { title = title
+    , content = content
+    }
 
 
 

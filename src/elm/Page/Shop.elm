@@ -147,7 +147,7 @@ type ValidationError
 -- VIEW
 
 
-view : LoggedIn.Model -> Model -> Document Msg
+view : LoggedIn.Model -> Model -> { title : String, content : Html Msg }
 view loggedIn model =
     let
         selectedCommunityName =
@@ -169,13 +169,12 @@ view loggedIn model =
                 _ ->
                     ""
 
-        pageTitle =
+        title =
             selectedCommunityName
                 ++ " "
                 ++ t loggedIn.shared.translations "shop.title"
 
-        body : Html Msg
-        body =
+        content =
             case model.cards of
                 Loading ->
                     div []
@@ -196,7 +195,9 @@ view loggedIn model =
                             ]
                         ]
     in
-    Document pageTitle [ body ]
+    { title = title
+    , content = content
+    }
 
 
 viewHeader : LoggedIn.Model -> Html Msg

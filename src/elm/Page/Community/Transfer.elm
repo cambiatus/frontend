@@ -139,10 +139,10 @@ isFormValid form =
 -- VIEW
 
 
-view : LoggedIn.Model -> Model -> Document Msg
+view : LoggedIn.Model -> Model -> { title : String, content : Html Msg }
 view ({ shared } as loggedIn) model =
     let
-        body =
+        content =
             case model.status of
                 Loading ->
                     Page.fullPageLoading
@@ -165,7 +165,9 @@ view ({ shared } as loggedIn) model =
                 Loaded community (SendingTransferFailed f) ->
                     viewForm loggedIn model f community False
     in
-    Document (t shared.translations "transfer.title") [ body ]
+    { title = t shared.translations "transfer.title"
+    , content = content
+    }
 
 
 viewForm : LoggedIn.Model -> Model -> Form -> Community.Model -> Bool -> Html Msg

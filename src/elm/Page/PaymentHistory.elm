@@ -10,7 +10,6 @@ module Page.PaymentHistory exposing
 import Api.Graphql
 import Api.Relay
 import Avatar exposing (Avatar)
-import Browser exposing (Document)
 import Cambiatus.Enum.TransferDirection exposing (TransferDirection(..))
 import Cambiatus.Object
 import Cambiatus.Object.Profile as User
@@ -547,14 +546,13 @@ alphabetEmojiMapper =
 -- VIEW
 
 
-view : SharedModel m -> Model -> Document Msg
+view : SharedModel m -> Model -> { title : String, content : Html Msg }
 view { shared } model =
     let
         pageTitle =
             I18Next.t shared.translations "payment_history.title"
 
-        body : Html Msg
-        body =
+        content =
             case model.queryStatus of
                 Loaded profile ->
                     div [ class "bg-white" ]
@@ -576,7 +574,9 @@ view { shared } model =
                 Loading ->
                     Page.fullPageLoading
     in
-    Document pageTitle [ body ]
+    { title = pageTitle
+    , content = content
+    }
 
 
 viewSplash : ProfileWithTransfers -> Html msg

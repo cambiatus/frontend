@@ -209,7 +209,7 @@ encodeFormHelper logoHash { accountName } form =
 -- VIEW
 
 
-view : LoggedIn.Model -> Model -> Document Msg
+view : LoggedIn.Model -> Model -> { title : String, content : Html Msg }
 view loggedIn model =
     let
         defaultContainer =
@@ -221,7 +221,7 @@ view loggedIn model =
         t str =
             I18Next.t shared.translations str
 
-        body =
+        content =
             case model of
                 Loading _ ->
                     Page.fullPageLoading
@@ -257,7 +257,9 @@ view loggedIn model =
                 Creating form ->
                     viewForm shared False True Dict.empty form model
     in
-    Document (t "community.edit.title") [ body ]
+    { title = t "community.edit.title"
+    , content = content
+    }
 
 
 viewForm : Shared -> Bool -> Bool -> Dict String FormError -> Form -> Model -> Html Msg

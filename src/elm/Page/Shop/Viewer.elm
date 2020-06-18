@@ -335,13 +335,13 @@ cardFromSale sale =
     }
 
 
-view : LoggedIn.Model -> Model -> Document Msg
+view : LoggedIn.Model -> Model -> { title : String, content : Html Msg }
 view loggedIn model =
     let
         shopTitle =
             t loggedIn.shared.translations "shop.title"
 
-        pageTitle =
+        title =
             case model.status of
                 LoadedSale maybeSale ->
                     case maybeSale of
@@ -354,8 +354,7 @@ view loggedIn model =
                 _ ->
                     shopTitle
 
-        body : Html Msg
-        body =
+        content =
             case model.status of
                 LoadingSale _ ->
                     div []
@@ -391,7 +390,9 @@ view loggedIn model =
                                     [ text "Could not load the sale" ]
                                 ]
     in
-    Document pageTitle [ body ]
+    { title = title
+    , content = content
+    }
 
 
 viewCard : LoggedIn.Model -> Card -> Model -> Html Msg

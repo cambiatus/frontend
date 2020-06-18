@@ -61,13 +61,13 @@ type Payload
 -- VIEW
 
 
-view : LoggedIn.Model -> Model -> Document Msg
+view : LoggedIn.Model -> Model -> { title : String, content : Html Msg }
 view loggedIn model =
     let
         t s =
             I18Next.t loggedIn.shared.translations s
 
-        body =
+        content =
             case model of
                 Loading ->
                     Page.fullPageLoading
@@ -82,9 +82,9 @@ view loggedIn model =
                             viewNotifications loggedIn notifications
                         ]
     in
-    Document
-        (t "notifications.title")
-        [ body ]
+    { title = t "notifications.title"
+    , content = content
+    }
 
 
 viewNotifications : LoggedIn.Model -> List History -> Html Msg

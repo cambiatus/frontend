@@ -985,47 +985,43 @@ view model =
             subModel
             -> Guest.Page
             -> (subMsg -> Msg)
-            -> (Guest.Model -> subModel -> Document subMsg)
+            -> (Guest.Model -> subModel -> { title : String, content : Html subMsg })
             -> Document Msg
-        viewGuest subModel page toMsg content =
+        viewGuest subModel page toMsg subView =
             case model.session of
                 Page.Guest guest ->
                     let
-                        { title, body } =
-                            content guest subModel
+                        { title, content } =
+                            subView guest subModel
                     in
                     Document
                         (fullPageTitle title)
-                        [ Html.map toMsg (div [] body)
+                        [ Html.map toMsg content
                             |> Page.viewGuest GotPageMsg page guest
                         ]
 
                 Page.LoggedIn _ ->
-                    Document
-                        (fullPageTitle "")
-                        [ text "" ]
+                    Document (fullPageTitle "") [ text "" ]
 
         viewLoggedIn :
             subModel
             -> LoggedIn.Page
             -> (subMsg -> Msg)
-            -> (LoggedIn.Model -> subModel -> Document subMsg)
+            -> (LoggedIn.Model -> subModel -> { title : String, content : Html subMsg })
             -> Document Msg
-        viewLoggedIn subModel page toMsg content =
+        viewLoggedIn subModel page toMsg subView =
             case model.session of
                 Page.Guest _ ->
-                    Document
-                        (fullPageTitle "")
-                        [ text "" ]
+                    Document (fullPageTitle "") [ text "" ]
 
                 Page.LoggedIn loggedIn ->
                     let
-                        { title, body } =
-                            content loggedIn subModel
+                        { title, content } =
+                            subView loggedIn subModel
                     in
                     Document
                         (fullPageTitle title)
-                        [ Html.map toMsg (div [] body)
+                        [ Html.map toMsg content
                             |> Page.viewLoggedIn GotPageMsg page loggedIn
                         ]
 
