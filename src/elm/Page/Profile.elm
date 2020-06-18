@@ -235,6 +235,18 @@ type Msg
 
 update : Msg -> Model -> LoggedIn.Model -> UpdateResult
 update msg model loggedIn =
+    let
+        downloadPdfPort passphrase =
+            UR.addPort
+                { responseAddress = Ignored
+                , responseData = Encode.null
+                , data =
+                    Encode.object
+                        [ ( "name", Encode.string "printAuthPdf" )
+                        , ( "passphrase", Encode.string passphrase )
+                        ]
+                }
+    in
     case msg of
         Ignored ->
             UR.init model
@@ -279,21 +291,15 @@ update msg model loggedIn =
                                 |> RequiredAuthentication
                             )
 
-                Just _ ->
-                    UR.init model
+                Just key ->
+                    model
+                        |> UR.init
+                        |> downloadPdfPort key
 
-        DownloadPdf passPhrase ->
+        DownloadPdf passphrase ->
             model
                 |> UR.init
-                |> UR.addPort
-                    { responseAddress = Ignored
-                    , responseData = Encode.null
-                    , data =
-                        Encode.object
-                            [ ( "name", Encode.string "printAuthPdf" )
-                            , ( "passphrase", Encode.string passPhrase )
-                            ]
-                    }
+                |> downloadPdfPort passphrase
 
         GotPushPreference val ->
             { model | pushNotifications = val }
