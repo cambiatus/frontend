@@ -118,9 +118,23 @@ view : LoggedIn.Model -> Model -> { title : String, content : Html Msg }
 view ({ shared } as loggedIn) model =
     let
         title =
-            t shared.translations "menu.edit"
-                ++ " "
-                ++ t shared.translations "community.objectives.title"
+            case model.status of
+                Loaded _ editStatus ->
+                    let
+                        action =
+                            case editStatus of
+                                NewObjective _ ->
+                                    t shared.translations "menu.create"
+
+                                EditObjective _ _ ->
+                                    t shared.translations "menu.edit"
+                    in
+                    action
+                        ++ " "
+                        ++ t shared.translations "community.objectives.title"
+
+                _ ->
+                    ""
 
         content =
             case model.status of
