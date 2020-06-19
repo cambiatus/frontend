@@ -13,6 +13,7 @@ import Json.Encode as Encode
 import Page
 import Page.PublicProfile as PublicProfile
 import Profile exposing (Profile)
+import PushSubscription exposing (PushSubscription)
 import Session.LoggedIn as LoggedIn exposing (External(..), FeedbackStatus(..))
 import Task
 import UpdateResult as UR
@@ -232,6 +233,8 @@ type Msg
     | GotPushPreference Bool
     | RequestPush
     | CheckPushPref
+    | GotPushSub PushSubscription
+    | CompletedPushUpload (Result (Graphql.Http.Error ()) ())
 
 
 update : Msg -> Model -> LoggedIn.Model -> UpdateResult
@@ -350,6 +353,44 @@ update msg model loggedIn =
                                 [ ( "name", Encode.string "requestPushPermission" ) ]
                         }
 
+        GotPushSub push ->
+            model
+                |> UR.init
+                |> UR.addCmd
+                    (uploadPushSubscription loggedIn push)
+
+        CompletedPushUpload res ->
+            case res of
+                Ok _ ->
+                    model
+                        |> UR.init
+                        |> UR.addPort
+                            { responseAddress = CompletedPushUpload res
+                            , responseData = Encode.null
+                            , data =
+                                Encode.object
+                                    [ ( "name", Encode.string "completedPushUpload" ) ]
+                            }
+
+                Err err ->
+                    model
+                        |> UR.init
+                        |> UR.logGraphqlError msg err
+
+
+decodePushPref : Value -> Maybe Msg
+decodePushPref val =
+    Decode.decodeValue (Decode.field "isSet" Decode.bool) val
+        |> Result.map GotPushPreference
+        |> Result.toMaybe
+
+
+uploadPushSubscription : LoggedIn.Model -> PushSubscription -> Cmd Msg
+uploadPushSubscription { accountName, shared } data =
+    Api.Graphql.mutation shared
+        (PushSubscription.activatePushMutation accountName data)
+        CompletedPushUpload
+
 
 jsAddressToMsg : List String -> Value -> Maybe Msg
 jsAddressToMsg addr val =
@@ -357,8 +398,29 @@ jsAddressToMsg addr val =
         "ClickedCloseChangePin" :: [] ->
             Just ClickedCloseChangePin
 
+        "RequestPush" :: _ ->
+            let
+                push =
+                    Decode.decodeValue (Decode.field "sub" Decode.string) val
+                        |> Result.andThen (Decode.decodeString Decode.value)
+                        |> Result.andThen (Decode.decodeValue PushSubscription.decode)
+            in
+            case push of
+                Ok res ->
+                    Just (GotPushSub res)
+
+                Err _ ->
+                    -- TODO: Handle PushSubscription Decode error
+                    Nothing
+
         "ChangedPin" :: [] ->
             Just ChangedPin
+
+        "GotPushPreference" :: _ ->
+            decodePushPref val
+
+        "CompletedPushUpload" :: _ ->
+            decodePushPref val
 
         _ ->
             Nothing
@@ -399,3 +461,9 @@ msgToString msg =
 
         CheckPushPref ->
             [ "CheckPushPref" ]
+
+        GotPushSub _ ->
+            [ "GotPushSub" ]
+
+        CompletedPushUpload _ ->
+            [ "CompletedPushUpload" ]
