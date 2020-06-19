@@ -95,7 +95,7 @@ view_ model loggedIn profile =
             loggedIn.shared.endpoints.ipfs
 
         text_ str =
-            text (t loggedIn.shared.translations str)
+            t loggedIn.shared.translations str
 
         downloadAction =
             case LoggedIn.maybePrivateKey loggedIn of
@@ -114,19 +114,23 @@ view_ model loggedIn profile =
         [ PublicProfile.view_ loggedIn profile False
         , div [ class "bg-white" ]
             [ div [ class "container mx-auto p-4 px-8" ]
-                [ viewAction "My 12 words" [ viewButton "Download" downloadAction ]
-                , viewAction "My security PIN" [ viewButton "Change" ClickedChangePin ]
-                , viewAction "Notifications"
+                [ viewAction (text_ "profile.12words.title") [ viewButton (text_ "profile.12words.button") downloadAction ]
+                , viewAction (text_ "profile.pin.title") [ viewButton (text_ "profile.pin.button") ClickedChangePin ]
+                , viewAction (text_ "notifications.title")
                     [ toggleView loggedIn.shared.translations model.pushNotifications RequestPush "notifications"
                     ]
                 ]
             ]
-        , viewModal model.pinModal
+        , viewModal model.pinModal loggedIn.shared.translations
         ]
 
 
-viewModal : ModalStatus -> Html Msg
-viewModal status =
+viewModal : ModalStatus -> Translations -> Html Msg
+viewModal status translations =
+    let
+        text_ str =
+            t translations str
+    in
     case status of
         Shown ->
             div
@@ -139,10 +143,10 @@ viewModal status =
                     [ div [ class "display flex flex-col justify-around h-full" ]
                         [ div []
                             [ p [ class "w-full font-medium text-heading text-2xl mb-2" ] [ text "Change PIN" ]
-                            , p [ class "text-sm" ] [ text "Change your pin!" ]
+                            , p [ class "text-sm" ] [ text (text_ "profile.changePin") ]
                             ]
                         , div []
-                            [ label [ class "input-label", for "newPin" ] [ text "New security pin" ]
+                            [ label [ class "input-label", for "newPin" ] [ text (text_ "profile.newPin") ]
                             , input [ id "newPin", class "input w-full mb-4", type_ "text", onInput EnteredPin ] []
                             ]
                         , button [ class "button button-primary w-full", onClick ChangedPin ] [ text "Change" ]

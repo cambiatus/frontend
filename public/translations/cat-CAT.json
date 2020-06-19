@@ -405,6 +405,10 @@
     "edit_success": "El perfil s'ha desat correctament",
     "locations": "Localització",
     "interests": "Interessos",
+    "12words": { "title": "Les meves 12 paraules", "button": "Descarregar" },
+    "pin": { "title": "El meu PIN", "button": "Canviar" },
+    "changePin": "Canvieu el PIN!",
+    "newPin": "Nou PIN de seguretat",
     "actions": {
       "edit": "Editar",
       "viewPrivatekey": "Veure clau privada"

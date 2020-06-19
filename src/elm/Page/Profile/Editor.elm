@@ -9,7 +9,7 @@ import Html exposing (Html, button, div, form, input, label, span, text, textare
 import Html.Attributes exposing (accept, class, for, id, multiple, style, title, type_, value)
 import Html.Events exposing (onInput)
 import Http
-import I18Next exposing (t)
+import I18Next exposing (Translations, t)
 import Icons
 import Json.Decode
 import Page
@@ -127,17 +127,17 @@ view_ loggedIn model profile =
                                       """
             ]
             ([ viewAvatar loggedIn avatar
-             , viewInput (text_ "register.form.name.label") "fullname" FullName model.fullName
-             , viewInput (text_ "register.form.email.label") "email" Email model.email
-             , viewTextArea (text_ "About Me") "about" About
+             , viewInput (text_ "profile.edit.labels.name") "fullname" FullName model.fullName
+             , viewInput (text_ "profile.edit.labels.email") "email" Email model.email
+             , viewTextArea (text_ "profile.edit.labels.bio") "about" About
              , viewInput (text_ "profile.edit.labels.localization") "location" Location model.location
-             , viewButton "Save" ClickedSave "save"
+             , viewButton (text_ "profile.edit.submit") ClickedSave "save"
              , div [ class "flex flex-wrap", style "grid-area" "interestList" ]
                 (model.interests
                     |> List.map viewInterest
                 )
              ]
-                ++ viewInterests model.interest
+                ++ viewInterests model.interest loggedIn.shared.translations
             )
         ]
 
@@ -156,9 +156,9 @@ viewInput label area field currentValue =
         ]
 
 
-viewInterests : String -> List (Html Msg)
-viewInterests interest =
-    [ viewInput "Interests" "interests" Interest interest
+viewInterests : String -> Translations -> List (Html Msg)
+viewInterests interest translations =
+    [ viewInput (t translations "profile.edit.labels.interests") "interests" Interest interest
     , button
         [ class "button-secondary h-12 mt-auto"
         , style "grid-area" "interestButton"
