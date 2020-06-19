@@ -15,7 +15,7 @@ import NoDebug.Log
 import NoDebug.TodoOrToString
 import NoUnused.Modules
 import NoUnused.Variables
-import Review.Rule exposing (Rule)
+import Review.Rule as Rule exposing (Rule)
 
 
 config : List Rule
@@ -25,3 +25,5 @@ config =
     , NoUnused.Variables.rule
     , NoUnused.Modules.rule
     ]
+        -- Ignore generated code
+        |> List.map (Rule.ignoreErrorsForDirectories [ "src/elm/Cambiatus" ])
