@@ -18,7 +18,7 @@
   },
   "husky": {
     "hooks": {
-      "pre-push": "echo \"Checking JS with StandardJS...\" && standard && echo \"Checking Elm with elm-review...\" && yarn review"
+      "pre-push": "echo \"Checking JS with StandardJS...\" && yarn --ignore-engines standard && echo \"Checking Elm with elm-review...\" && yarn --ignore-engines review"
     }
   },
   "standard": {

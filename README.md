@@ -19,34 +19,14 @@ To update the GraphQL Elm files, run:
 yarn generate-graphql
 ```
 
-Add the linter pre-commit hook:
+## Code Quality
 
-```
-vim .git/hooks/pre-commit
-```
+We check JS code with [StandardJS](https://github.com/standard/standard) and Elm code with
+[elm-review](https://github.com/jfmengels/elm-review) before the `git push` using [husky](https://github.com/typicode/husky).
+You can also run `yarn standard` and `yarn review` at any moment to make sure your code is passing the linters.
 
-And add the following:
-
-```shell
-#!/bin/bash
-
-# Ensure all JavaScript files staged for commit pass standard code style
-function xargs-r() {
-  # Portable version of "xargs -r". The -r flag is a GNU extension that
-  # prevents xargs from running if there are no input files.
-  if IFS= read -r -d $'\n' path; then
-    { echo "$path"; cat; } | xargs $@
-  fi
-}
-git diff --name-only --cached --relative | grep '\.jsx\?$' | sed 's/[^[:alnum:]]/\\&/g' | xargs-r -E '' -t node_modules/.bin/standard
-if [[ $? -ne 0 ]]; then
-  echo 'JavaScript Standard Style errors were detected. Aborting commit.'
-  exit 1
-fi
-```
 
 ## Build
-
 
 ```
 yarn install
