@@ -25,6 +25,16 @@ We check JS with [StandardJS](https://github.com/standard/standard) and Elm with
 before the `git push` using [husky](https://github.com/typicode/husky). You can also run `yarn standard` and `yarn review`
 at any moment to make sure your code is passing the linters.
 
+You can also use [`elm-analyse`](https://github.com/stil4m/elm-analyse) to get even more insights about the code.
+This package is not included in the repo, you should [install it manually](https://github.com/stil4m/elm-analyse#install):
+
+```sh
+yarn global add elm-analyse
+
+elm-analyse              # view analyse result in terminal
+elm-analyse -p 3001 -s   # show extended analyse in the browser on `localhost:3001`
+```
+
 
 ## Build
 
