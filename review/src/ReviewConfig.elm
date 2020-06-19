@@ -11,6 +11,7 @@ when inside the directory containing this file.
 
 -}
 
+import NoBooleanCase
 import NoDebug.Log
 import NoDebug.TodoOrToString
 import NoUnused.Modules
@@ -24,6 +25,7 @@ config =
     , NoDebug.TodoOrToString.rule
     , NoUnused.Variables.rule
     , NoUnused.Modules.rule
+    , NoBooleanCase.rule
     ]
         -- Ignore generated code
         |> List.map (Rule.ignoreErrorsForDirectories [ "src/elm/Cambiatus" ])
