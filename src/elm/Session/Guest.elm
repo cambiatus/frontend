@@ -146,7 +146,14 @@ viewLeftCol mdWidth =
         , style "background-size" "auto 80%"
         , style "background-image" "url(images/auth_bg_full.png)"
         ]
-        []
+        [ -- TODO: Replace this placeholder with the actual data
+          viewQuote
+            { photoSrc = "images/woman.png"
+            , name = "Victoria Lane"
+            , occupation = "Founder"
+            , quote = "We are designing for a global user base, we can get feedback not just from drivers we see in San Francisco"
+            }
+        ]
 
 
 viewPageHeader : Model -> Shared -> Html Msg
@@ -213,9 +220,6 @@ type alias Quote =
     }
 
 
-{-| This function will be used later, when actual user quotes will be collected.
-See <https://github.com/cambiatus/frontend/issues/238> for details.
--}
 viewQuote : Quote -> Html msg
 viewQuote { photoSrc, name, occupation, quote } =
     div
