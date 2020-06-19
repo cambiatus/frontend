@@ -10,9 +10,9 @@ import Eos exposing (Symbol)
 import Eos.Account as Eos
 import File exposing (File)
 import Graphql.Http
-import Html exposing (Attribute, Html, button, div, input, label, option, p, select, span, text, textarea)
+import Html exposing (Html, button, div, input, label, option, p, select, span, text, textarea)
 import Html.Attributes exposing (accept, attribute, class, disabled, for, hidden, id, maxlength, multiple, required, selected, style, type_, value)
-import Html.Events exposing (keyCode, on, onClick, onInput)
+import Html.Events exposing (on, onClick, onInput)
 import Http
 import I18Next
 import Icons
@@ -512,11 +512,6 @@ viewFieldErrors errors =
     div
         [ class "form-field-error" ]
         viewErrors
-
-
-onKeyDown : (Int -> msg) -> Attribute msg
-onKeyDown toMsg =
-    on "keydown" (Decode.map toMsg keyCode)
 
 
 
