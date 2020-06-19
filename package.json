@@ -16,6 +16,11 @@
     "test": "npx elm-test",
     "generate-graphql": "npx elm-graphql https://api.cambiatus.io/api/graph --base Cambiatus --output src/elm"
   },
+  "husky": {
+    "hooks": {
+      "pre-commit": "echo \"Running elm-review...\" && yarn review"
+    }
+  },
   "standard": {
     "plugins": [
       "html"
@@ -50,6 +55,7 @@
     "file-loader": "^1.1.6",
     "html-webpack-plugin": "^4.0.0-alpha.2",
     "http-proxy-middleware": "^0.17.4",
+    "hysky": "^1.0.1",
     "mini-css-extract-plugin": "^0.4.0",
     "minimist": "1.2.3",
     "postcss-flexbugs-fixes": "^3.3.0",
@@ -86,6 +92,7 @@
     "elm-webpack-loader": "^6.0.1",
     "eosjs": "^16.0.9",
     "eosjs-ecc": "^4.0.4",
+    "husky": "^4.2.5",
     "pdfmake": "^0.1.64",
     "phoenix": "^1.4.10",
     "postcss": "^7.0.17",
