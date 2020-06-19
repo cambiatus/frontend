@@ -98,7 +98,7 @@ type alias Form =
     , inviterReward : Float
     , invitedReward : Float
     , hasShop : Bool
-    , has_objectives : Bool
+    , hasObjectives : Bool
     }
 
 
@@ -112,7 +112,7 @@ newForm =
     , inviterReward = 0
     , invitedReward = 10
     , hasShop = True
-    , has_objectives = True
+    , hasObjectives = True
     }
 
 
@@ -139,7 +139,7 @@ editForm community =
     , inviterReward = community.inviterReward
     , invitedReward = community.invitedReward
     , hasShop = community.hasShop
-    , has_objectives = community.hasObjectives
+    , hasObjectives = community.hasObjectives
     }
 
 
@@ -206,7 +206,7 @@ encodeFormHelper logoHash { accountName } form =
             , inviterReward = form.inviterReward
             , invitedReward = form.invitedReward
             , hasShop = form.hasShop
-            , hasObjectives = form.has_objectives
+            , hasObjectives = form.hasObjectives
             }
                 |> Community.createCommunityData
                 |> Valid
