@@ -146,9 +146,6 @@ view loggedIn model =
 
         isCommunityAdmin =
             case model.community of
-                LoadingGraphql ->
-                    False
-
                 LoadedGraphql community _ ->
                     community.creator == loggedIn.accountName
 
