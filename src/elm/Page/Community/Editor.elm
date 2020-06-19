@@ -16,7 +16,7 @@ import Asset.Icon as Icon
 import Browser.Events as Events
 import Community exposing (Model)
 import Dict exposing (Dict)
-import Eos as Eos exposing (Symbol)
+import Eos exposing (Symbol)
 import Eos.Account as Eos
 import File exposing (File)
 import Graphql.Document
@@ -27,7 +27,7 @@ import Html.Events exposing (onClick, onInput, onSubmit)
 import Http
 import I18Next
 import Json.Decode as Decode
-import Json.Encode as Encode exposing (Value, object, string)
+import Json.Encode as Encode exposing (Value)
 import List.Extra as List
 import Page
 import Route

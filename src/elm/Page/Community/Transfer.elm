@@ -11,7 +11,7 @@ module Page.Community.Transfer exposing
 
 import Api.Graphql
 import Browser.Events
-import Community exposing (Model, communityQuery)
+import Community exposing (Model)
 import Eos exposing (Symbol)
 import Eos.Account as Eos
 import Graphql.Document

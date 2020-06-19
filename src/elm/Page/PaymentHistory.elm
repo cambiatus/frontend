@@ -32,7 +32,6 @@ import Icons
 import List.Extra as LE
 import Murmur3
 import Page
-import Profile exposing (Profile, selectionSet)
 import Select
 import Session.Shared as Shared exposing (Shared)
 import Simple.Fuzzy

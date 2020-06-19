@@ -9,7 +9,7 @@ module Flags exposing
 
 import Eos exposing (Symbol)
 import Eos.Account as Eos
-import Json.Decode as Decode exposing (Decoder, int, nullable, string)
+import Json.Decode as Decode exposing (Decoder, nullable, string)
 import Json.Decode.Pipeline as Decode exposing (optional, required)
 
 
