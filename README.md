@@ -21,9 +21,9 @@ yarn generate-graphql
 
 ## Code Quality
 
-We check JS code with [StandardJS](https://github.com/standard/standard) and Elm code with
-[elm-review](https://github.com/jfmengels/elm-review) before the `git push` using [husky](https://github.com/typicode/husky).
-You can also run `yarn standard` and `yarn review` at any moment to make sure your code is passing the linters.
+We check JS with [StandardJS](https://github.com/standard/standard) and Elm with [elm-review](https://github.com/jfmengels/elm-review)
+before the `git push` using [husky](https://github.com/typicode/husky). You can also run `yarn standard` and `yarn review`
+at any moment to make sure your code is passing the linters.
 
 
 ## Build
