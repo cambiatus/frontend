@@ -97,11 +97,14 @@ view loggedIn model =
 view_ : Session.LoggedIn.Model -> Model -> Profile -> Html Msg
 view_ loggedIn model profile =
     let
-        pageHeader =
-            Page.viewHeader loggedIn (t loggedIn.shared.translations "menu.profile") Route.Profile
-
         text_ s =
             t loggedIn.shared.translations s
+
+        title =
+            text_ "menu.edit" ++ " " ++ ("menu.profile" |> text_ |> String.toLower)
+
+        pageHeader =
+            Page.viewHeader loggedIn title Route.Profile
 
         avatar =
             case model.avatar of
