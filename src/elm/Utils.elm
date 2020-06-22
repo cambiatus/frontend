@@ -2,7 +2,7 @@ module Utils exposing (decodeDate, decodeEnterKeyDown, decodeTimestamp, posixDat
 
 import Cambiatus.Scalar exposing (DateTime(..))
 import Iso8601
-import Json.Decode as Decode exposing (Decoder, int, string)
+import Json.Decode as Decode exposing (Decoder, string)
 import Time exposing (Posix)
 
 

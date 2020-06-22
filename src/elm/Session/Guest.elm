@@ -1,7 +1,7 @@
 module Session.Guest exposing (External(..), Model, Msg(..), Page(..), addAfterLoginRedirect, init, initModel, msgToString, subscriptions, update, view)
 
 import Browser.Events
-import Html exposing (Html, button, div, header, img, p, span, text)
+import Html exposing (Html, button, div, header, img, text)
 import Html.Attributes exposing (alt, class, classList, src, style, tabindex, type_)
 import Html.Events exposing (onClick, onMouseEnter)
 import Http
@@ -202,40 +202,6 @@ viewPageHeader model shared =
                 ]
                 (Shared.viewLanguageItems shared ClickedLanguage)
             ]
-        ]
-
-
-type alias Quote =
-    { photoSrc : String
-    , name : String
-    , occupation : String
-    , quote : String
-    }
-
-
-{-| This function will be used later, when actual user quotes will be collected.
-See <https://github.com/cambiatus/frontend/issues/238> for details.
--}
-viewQuote : Quote -> Html msg
-viewQuote { photoSrc, name, occupation, quote } =
-    div
-        [ class "md:block md:visible hidden md:p-7"
-        ]
-        [ div [ class "flex mb-3 md:flex-col lg:flex-row lg:items-center" ]
-            [ div [ class "rounded-full overflow-hidden border-white border-2 bg-grey w-14 h-14" ]
-                [ img
-                    [ class "max-w-full max-h-full"
-                    , src photoSrc
-                    ]
-                    []
-                ]
-            , p [ class "lg:ml-3 text-body" ]
-                [ span [ class "block text-2xl text-black" ] [ text name ]
-                , span [ class "text-purple-500 text-xs uppercase" ] [ text occupation ]
-                ]
-            ]
-        , p [ class "text-gray-900 text-body max-w-xl" ]
-            [ text <| "“" ++ quote ++ "”" ]
         ]
 
 

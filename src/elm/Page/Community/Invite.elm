@@ -9,7 +9,7 @@ module Page.Community.Invite exposing
 
 import Api
 import Api.Graphql
-import Community exposing (Invite, inviteQuery)
+import Community exposing (Invite)
 import Eos.Account as Eos
 import Graphql.Http
 import Html exposing (Html, button, div, img, p, span, text)
@@ -64,36 +64,58 @@ type ModalStatus
     | Open
 
 
-view : Session -> Model -> Html Msg
+view : Session -> Model -> { title : String, content : Html Msg }
 view session model =
     let
         shared =
             toShared session
-    in
-    div [ class "flex flex-col min-h-screen" ]
-        [ div [ class "flex-grow" ]
-            [ case model.status of
-                Loading ->
-                    div [] []
 
-                NotFound ->
-                    div [] []
-
-                Failed e ->
-                    Page.fullPageGraphQLError (t shared.translations "") e
-
+        title =
+            case model.status of
                 Loaded invite ->
-                    div []
-                        [ viewHeader
-                        , viewContent shared invite model.invitationId
-                        , viewModal shared model model.invitationId
-                        ]
+                    let
+                        inviter =
+                            invite.creator.userName
+                                |> Maybe.withDefault (Eos.nameToString invite.creator.account)
+                    in
+                    inviter
+                        ++ " "
+                        ++ t shared.translations "community.invitation.title"
+                        ++ " "
+                        ++ invite.community.title
 
-                Error e ->
-                    Page.fullPageError (t shared.translations "") e
-            ]
-        , viewFooter session
-        ]
+                _ ->
+                    ""
+
+        content =
+            div [ class "flex flex-col min-h-screen" ]
+                [ div [ class "flex-grow" ]
+                    [ case model.status of
+                        Loading ->
+                            div [] []
+
+                        NotFound ->
+                            div [] []
+
+                        Failed e ->
+                            Page.fullPageGraphQLError (t shared.translations "") e
+
+                        Loaded invite ->
+                            div []
+                                [ viewHeader
+                                , viewContent shared invite model.invitationId
+                                , viewModal shared model model.invitationId
+                                ]
+
+                        Error e ->
+                            Page.fullPageError (t shared.translations "") e
+                    ]
+                , viewFooter session
+                ]
+    in
+    { title = title
+    , content = content
+    }
 
 
 viewHeader : Html msg
