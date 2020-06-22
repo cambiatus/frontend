@@ -59,33 +59,39 @@ type Status
 -- VIEW
 
 
-view : LoggedIn.Model -> Model -> Html msg
+view : LoggedIn.Model -> Model -> { title : String, content : Html Msg }
 view loggedIn model =
-    case model.communities of
-        Loading ->
-            Page.fullPageLoading
+    let
+        content =
+            case model.communities of
+                Loading ->
+                    Page.fullPageLoading
 
-        LoadingFailed e ->
-            Page.fullPageGraphQLError (t loggedIn.shared.translations "menu.communities") e
+                LoadingFailed e ->
+                    Page.fullPageGraphQLError (t loggedIn.shared.translations "menu.communities") e
 
-        Loaded communities ->
-            div [ class "container mx-auto px-4" ]
-                [ renderUserMessage model
-                , if loggedIn.shared.allowCommunityCreation then
-                    div
-                        [ class "my-10 w-full flex justify-end" ]
-                        [ a
-                            [ Route.href Route.NewCommunity
-                            , class "button button-primary w-64"
-                            ]
-                            [ text (I18Next.t loggedIn.shared.translations "community.create_button") ]
+                Loaded communities ->
+                    div [ class "container mx-auto px-4" ]
+                        [ renderUserMessage model
+                        , if loggedIn.shared.allowCommunityCreation then
+                            div
+                                [ class "my-10 w-full flex justify-end" ]
+                                [ a
+                                    [ Route.href Route.NewCommunity
+                                    , class "button button-primary w-64"
+                                    ]
+                                    [ text (I18Next.t loggedIn.shared.translations "community.create_button") ]
+                                ]
+
+                          else
+                            text ""
+                        , div [ class "flex flex-wrap -mx-2" ]
+                            (viewCommunities loggedIn (String.toUpper loggedIn.searchText) communities)
                         ]
-
-                  else
-                    text ""
-                , div [ class "flex flex-wrap -mx-2" ]
-                    (viewCommunities loggedIn (String.toUpper loggedIn.searchText) communities)
-                ]
+    in
+    { title = t loggedIn.shared.translations "menu.communities"
+    , content = content
+    }
 
 
 renderUserMessage : Model -> Html msg

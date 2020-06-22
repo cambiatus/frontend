@@ -67,38 +67,56 @@ type Status
 -- VIEW
 
 
-view : LoggedIn.Model -> Model -> Html Msg
+view : LoggedIn.Model -> Model -> { title : String, content : Html Msg }
 view loggedIn model =
     let
         t =
             I18Next.t loggedIn.shared.translations
-    in
-    case model.status of
-        Loading _ ->
-            Page.fullPageLoading
 
-        LoadFailed error ->
-            div []
-                [ Page.viewHeader loggedIn (t "transfer_result.title") Route.Dashboard
-                , Page.fullPageGraphQLError (t "transfer_result.title") error
-                ]
+        title =
+            case model.status of
+                Loaded maybeTransfer _ ->
+                    case maybeTransfer of
+                        Just _ ->
+                            t "transfer_result.title"
 
-        Loaded maybeTransfer state ->
-            case maybeTransfer of
-                Just transfer ->
+                        Nothing ->
+                            ""
+
+                _ ->
+                    ""
+
+        content =
+            case model.status of
+                Loading _ ->
+                    Page.fullPageLoading
+
+                LoadFailed error ->
                     div []
                         [ Page.viewHeader loggedIn (t "transfer_result.title") Route.Dashboard
-                        , div []
-                            [ viewTransfer loggedIn transfer state
-                            , viewDetails loggedIn transfer state
-                            ]
+                        , Page.fullPageGraphQLError (t "transfer_result.title") error
                         ]
 
-                Nothing ->
-                    div [ class "container mx-auto px-4" ]
-                        [ div []
-                            [ text "Could not load the transfer" ]
-                        ]
+                Loaded maybeTransfer state ->
+                    case maybeTransfer of
+                        Just transfer ->
+                            div []
+                                [ Page.viewHeader loggedIn (t "transfer_result.title") Route.Dashboard
+                                , div []
+                                    [ viewTransfer loggedIn transfer state
+                                    , viewDetails loggedIn transfer state
+                                    ]
+                                ]
+
+                        Nothing ->
+                            div [ class "container mx-auto px-4" ]
+                                [ div []
+                                    [ text "Could not load the transfer" ]
+                                ]
+    in
+    { title = title
+    , content = content
+    }
 
 
 viewTransfer : LoggedIn.Model -> Transfer -> State -> Html Msg

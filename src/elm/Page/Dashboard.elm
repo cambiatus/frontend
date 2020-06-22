@@ -138,36 +138,41 @@ type InviteModalStatus
 -- VIEW
 
 
-view : LoggedIn.Model -> Model -> Html Msg
+view : LoggedIn.Model -> Model -> { title : String, content : Html Msg }
 view loggedIn model =
     let
         t s =
             I18Next.t loggedIn.shared.translations s
-    in
-    case ( model.balance, loggedIn.profile ) of
-        ( Loading, _ ) ->
-            Page.fullPageLoading
 
-        ( Failed e, _ ) ->
-            Page.fullPageError (t "dashboard.sorry") e
+        content =
+            case ( model.balance, loggedIn.profile ) of
+                ( Loading, _ ) ->
+                    Page.fullPageLoading
 
-        ( Loaded balance, LoggedIn.Loaded profile ) ->
-            div [ class "container mx-auto px-4 mb-10" ]
-                [ div [ class "inline-block text-gray-600 font-light mt-6 mb-4" ]
-                    [ text (t "menu.my_communities")
-                    , span [ class "text-indigo-500 font-medium" ]
-                        [ text (profile.userName |> Maybe.withDefault (Eos.nameToString profile.account))
+                ( Failed e, _ ) ->
+                    Page.fullPageError (t "dashboard.sorry") e
+
+                ( Loaded balance, LoggedIn.Loaded profile ) ->
+                    div [ class "container mx-auto px-4 mb-10" ]
+                        [ div [ class "inline-block text-gray-600 font-light mt-6 mb-4" ]
+                            [ text (t "menu.my_communities")
+                            , span [ class "text-indigo-500 font-medium" ]
+                                [ text (profile.userName |> Maybe.withDefault (Eos.nameToString profile.account))
+                                ]
+                            ]
+                        , viewBalance loggedIn model balance
+                        , viewAnalysisList loggedIn profile model
+                        , viewTransfers loggedIn model
+                        , viewAnalysisModal loggedIn model
+                        , viewInvitationModal loggedIn model
                         ]
-                    ]
-                , viewBalance loggedIn model balance
-                , viewAnalysisList loggedIn profile model
-                , viewTransfers loggedIn model
-                , viewAnalysisModal loggedIn model
-                , viewInvitationModal loggedIn model
-                ]
 
-        ( _, _ ) ->
-            Page.fullPageNotFound (t "dashboard.sorry") ""
+                ( _, _ ) ->
+                    Page.fullPageNotFound (t "dashboard.sorry") ""
+    in
+    { title = t "menu.dashboard"
+    , content = content
+    }
 
 
 viewAnalysisModal : LoggedIn.Model -> Model -> Html Msg

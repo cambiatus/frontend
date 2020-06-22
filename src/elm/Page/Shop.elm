@@ -146,27 +146,57 @@ type ValidationError
 -- VIEW
 
 
-view : LoggedIn.Model -> Model -> Html Msg
+view : LoggedIn.Model -> Model -> { title : String, content : Html Msg }
 view loggedIn model =
-    case model.cards of
-        Loading ->
-            div []
-                [ Lazy.lazy viewHeader loggedIn
-                , div [ class "container mx-auto px-4" ]
-                    [ Page.fullPageLoading ]
-                ]
+    let
+        selectedCommunityName =
+            case loggedIn.profile of
+                LoggedIn.Loaded profile ->
+                    let
+                        selectedCommunity =
+                            profile.communities
+                                |> List.filter (\p -> p.id == loggedIn.selectedCommunity)
+                                |> List.head
+                    in
+                    case selectedCommunity of
+                        Just c ->
+                            c.name
 
-        LoadingFailed e ->
-            Page.fullPageGraphQLError (t loggedIn.shared.translations "shop.title") e
+                        Nothing ->
+                            Eos.symbolToString loggedIn.selectedCommunity
 
-        Loaded cards ->
-            div []
-                [ Lazy.lazy viewHeader loggedIn
-                , div [ class "container mx-auto justify-center px-4" ]
-                    [ viewShopFilter loggedIn model.filter
-                    , Lazy.lazy3 viewGrid loggedIn cards model
-                    ]
-                ]
+                _ ->
+                    ""
+
+        title =
+            selectedCommunityName
+                ++ " "
+                ++ t loggedIn.shared.translations "shop.title"
+
+        content =
+            case model.cards of
+                Loading ->
+                    div []
+                        [ Lazy.lazy viewHeader loggedIn
+                        , div [ class "container mx-auto px-4" ]
+                            [ Page.fullPageLoading ]
+                        ]
+
+                LoadingFailed e ->
+                    Page.fullPageGraphQLError (t loggedIn.shared.translations "shop.title") e
+
+                Loaded cards ->
+                    div []
+                        [ Lazy.lazy viewHeader loggedIn
+                        , div [ class "container mx-auto justify-center px-4" ]
+                            [ viewShopFilter loggedIn model.filter
+                            , Lazy.lazy3 viewGrid loggedIn cards model
+                            ]
+                        ]
+    in
+    { title = title
+    , content = content
+    }
 
 
 viewHeader : LoggedIn.Model -> Html Msg

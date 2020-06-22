@@ -545,28 +545,37 @@ alphabetEmojiMapper =
 -- VIEW
 
 
-view : SharedModel m -> Model -> Html Msg
+view : SharedModel m -> Model -> { title : String, content : Html Msg }
 view { shared } model =
-    case model.queryStatus of
-        Loaded profile ->
-            div [ class "bg-white" ]
-                [ viewSplash profile
-                , div [ class "mx-4 max-w-md md:m-auto" ]
-                    [ h2 [ class "text-center text-black text-2xl" ]
-                        [ text (I18Next.t shared.translations "payment_history.title") ]
-                    , div []
-                        [ viewUserAutocomplete shared model
-                        , viewDatePicker shared model
+    let
+        pageTitle =
+            I18Next.t shared.translations "payment_history.title"
+
+        content =
+            case model.queryStatus of
+                Loaded profile ->
+                    div [ class "bg-white" ]
+                        [ viewSplash profile
+                        , div [ class "mx-4 max-w-md md:m-auto" ]
+                            [ h2 [ class "text-center text-black text-2xl" ]
+                                [ text (I18Next.t shared.translations "payment_history.title") ]
+                            , div []
+                                [ viewUserAutocomplete shared model
+                                , viewDatePicker shared model
+                                ]
+                            , viewTransfers shared model
+                            ]
                         ]
-                    , viewTransfers shared model
-                    ]
-                ]
 
-        Failed err ->
-            div [] [ Page.fullPageGraphQLError (I18Next.t shared.translations "error.accountNotFound") err ]
+                Failed err ->
+                    div [] [ Page.fullPageGraphQLError (I18Next.t shared.translations "error.accountNotFound") err ]
 
-        Loading ->
-            Page.fullPageLoading
+                Loading ->
+                    Page.fullPageLoading
+    in
+    { title = pageTitle
+    , content = content
+    }
 
 
 viewSplash : ProfileWithTransfers -> Html msg

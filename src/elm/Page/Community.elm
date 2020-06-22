@@ -112,7 +112,7 @@ type alias Member =
 -- VIEW
 
 
-view : LoggedIn.Model -> Model -> Html Msg
+view : LoggedIn.Model -> Model -> { title : String, content : Html Msg }
 view loggedIn model =
     let
         t s =
@@ -123,75 +123,91 @@ view loggedIn model =
 
         text_ s =
             text (t s)
-    in
-    case model.community of
-        Loading ->
-            Page.fullPageLoading
 
-        NotFound ->
-            Page.viewCardEmpty [ text "Community not found" ]
+        title =
+            case model.community of
+                Loaded community _ ->
+                    community.title
 
-        Failed e ->
-            Page.fullPageGraphQLError (t "community.objectives.title") e
+                Loading ->
+                    t ""
 
-        Loaded community editStatus ->
-            let
-                canEdit =
-                    LoggedIn.isAccount community.creator loggedIn
-            in
-            div []
-                [ viewHeader loggedIn community
-                , div [ class "bg-white p-20" ]
-                    [ div [ class "flex flex-wrap w-full items-center" ]
-                        [ p [ class "text-4xl font-bold" ]
-                            [ text community.title ]
-                        ]
-                    , p [ class "text-grey-200 text-sm" ] [ text community.description ]
-                    ]
-                , div [ class "container mx-auto px-4" ]
-                    [ viewClaimModal loggedIn model
-                    , if canEdit then
-                        div [ class "flex justify-between items-center py-2 px-8 sm:px-6 bg-white rounded-lg mt-4" ]
-                            [ div []
-                                [ p [ class "font-bold" ] [ text_ "community.objectives.title_plural" ]
-                                , p [ class "text-gray-900 text-caption uppercase" ]
-                                    [ text
-                                        (tr "community.objectives.subtitle"
-                                            [ ( "objectives", List.length community.objectives |> String.fromInt )
-                                            , ( "actions"
-                                              , List.map (\c -> List.length c.actions) community.objectives
-                                                    |> List.foldl (+) 0
-                                                    |> String.fromInt
-                                              )
-                                            ]
-                                        )
-                                    ]
+                _ ->
+                    t "community.not_found"
+
+        content =
+            case model.community of
+                Loading ->
+                    Page.fullPageLoading
+
+                NotFound ->
+                    Page.viewCardEmpty [ text_ "community.not_found" ]
+
+                Failed e ->
+                    Page.fullPageGraphQLError (t "community.objectives.title") e
+
+                Loaded community editStatus ->
+                    let
+                        canEdit =
+                            LoggedIn.isAccount community.creator loggedIn
+                    in
+                    div []
+                        [ viewHeader loggedIn community
+                        , div [ class "bg-white p-20" ]
+                            [ div [ class "flex flex-wrap w-full items-center" ]
+                                [ p [ class "text-4xl font-bold" ]
+                                    [ text community.title ]
                                 ]
-                            , a
-                                [ class "button button-primary"
-                                , Route.href (Route.Objectives community.symbol)
-                                ]
-                                [ text_ "menu.edit" ]
+                            , p [ class "text-grey-200 text-sm" ] [ text community.description ]
                             ]
+                        , div [ class "container mx-auto px-4" ]
+                            [ viewClaimModal loggedIn model
+                            , if canEdit then
+                                div [ class "flex justify-between items-center py-2 px-8 sm:px-6 bg-white rounded-lg mt-4" ]
+                                    [ div []
+                                        [ p [ class "font-bold" ] [ text_ "community.objectives.title_plural" ]
+                                        , p [ class "text-gray-900 text-caption uppercase" ]
+                                            [ text
+                                                (tr "community.objectives.subtitle"
+                                                    [ ( "objectives", List.length community.objectives |> String.fromInt )
+                                                    , ( "actions"
+                                                      , List.map (\c -> List.length c.actions) community.objectives
+                                                            |> List.foldl (+) 0
+                                                            |> String.fromInt
+                                                      )
+                                                    ]
+                                                )
+                                            ]
+                                        ]
+                                    , a
+                                        [ class "button button-primary"
+                                        , Route.href (Route.Objectives community.symbol)
+                                        ]
+                                        [ text_ "menu.edit" ]
+                                    ]
 
-                      else
-                        text ""
-                    , div [ class "bg-white py-6 sm:py-8 px-3 sm:px-6 rounded-lg mt-4" ]
-                        (Page.viewTitle (t "community.objectives.title_plural")
-                            :: List.indexedMap (viewObjective loggedIn model community)
-                                community.objectives
-                            ++ [ if canEdit then
-                                    viewObjectiveNew loggedIn editStatus community.symbol
+                              else
+                                text ""
+                            , div [ class "bg-white py-6 sm:py-8 px-3 sm:px-6 rounded-lg mt-4" ]
+                                (Page.viewTitle (t "community.objectives.title_plural")
+                                    :: List.indexedMap (viewObjective loggedIn model community)
+                                        community.objectives
+                                    ++ [ if canEdit then
+                                            viewObjectiveNew loggedIn editStatus community.symbol
 
-                                 else
-                                    text ""
-                               ]
-                        )
+                                         else
+                                            text ""
+                                       ]
+                                )
 
-                    -- , Transfer.getTransfers (Just community)
-                    --     |> viewSections loggedIn model
-                    ]
-                ]
+                            -- , Transfer.getTransfers (Just community)
+                            --     |> viewSections loggedIn model
+                            ]
+                        ]
+    in
+    { title = title
+    , content = content
+    }
 
 
 

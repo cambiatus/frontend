@@ -1,7 +1,7 @@
 module Main exposing (main)
 
 import Auth
-import Browser
+import Browser exposing (Document)
 import Browser.Navigation as Nav
 import Flags
 import Html exposing (Html, text)
@@ -46,13 +46,7 @@ main =
         { init = init
         , subscriptions = subscriptions
         , update = update
-        , view =
-            \model ->
-                { title = "Cambiatus"
-                , body =
-                    [ view model
-                    ]
-                }
+        , view = view
         , onUrlRequest = ClickedLink
         , onUrlChange = ChangedUrl
         }
@@ -973,46 +967,98 @@ msgToString msg =
 -- VIEW
 
 
-view : Model -> Html Msg
+view : Model -> Document Msg
 view model =
     let
-        viewGuest subModel page toMsg content =
+        baseTitle =
+            "Cambiatus"
+
+        fullPageTitle : String -> String
+        fullPageTitle subTitle =
+            if subTitle == "" then
+                baseTitle
+
+            else
+                subTitle ++ " | " ++ baseTitle
+
+        viewGuest :
+            subModel
+            -> Guest.Page
+            -> (subMsg -> Msg)
+            -> (Guest.Model -> subModel -> { title : String, content : Html subMsg })
+            -> Document Msg
+        viewGuest subModel page toMsg subView =
             case model.session of
                 Page.Guest guest ->
-                    Html.map toMsg (content guest subModel)
-                        |> Page.viewGuest GotPageMsg page guest
+                    let
+                        { title, content } =
+                            subView guest subModel
+                    in
+                    Document
+                        (fullPageTitle title)
+                        [ Html.map toMsg content
+                            |> Page.viewGuest GotPageMsg page guest
+                        ]
 
                 Page.LoggedIn _ ->
-                    text ""
+                    Document (fullPageTitle "") [ text "" ]
 
-        viewLoggedIn subModel page toMsg content =
+        viewLoggedIn :
+            subModel
+            -> LoggedIn.Page
+            -> (subMsg -> Msg)
+            -> (LoggedIn.Model -> subModel -> { title : String, content : Html subMsg })
+            -> Document Msg
+        viewLoggedIn subModel page toMsg subView =
             case model.session of
                 Page.Guest _ ->
-                    text ""
+                    Document (fullPageTitle "") [ text "" ]
 
                 Page.LoggedIn loggedIn ->
-                    Html.map toMsg (content loggedIn subModel)
-                        |> Page.viewLoggedIn GotPageMsg page loggedIn
+                    let
+                        { title, content } =
+                            subView loggedIn subModel
+                    in
+                    Document
+                        (fullPageTitle title)
+                        [ Html.map toMsg content
+                            |> Page.viewLoggedIn GotPageMsg page loggedIn
+                        ]
 
-        viewPage guestPage loggedInPage toMsg content =
+        viewPage :
+            Guest.Page
+            -> LoggedIn.Page
+            -> (subMsg -> Msg)
+            -> { title : String, content : Html subMsg }
+            -> Document Msg
+        viewPage guestPage loggedInPage toMsg { title, content } =
             case model.session of
                 Page.Guest guest ->
-                    Html.map toMsg content
-                        |> Page.viewGuest GotPageMsg guestPage guest
+                    Document
+                        (fullPageTitle title)
+                        [ Html.map toMsg content
+                            |> Page.viewGuest GotPageMsg guestPage guest
+                        ]
 
                 Page.LoggedIn loggedIn ->
-                    Html.map toMsg content
-                        |> Page.viewLoggedIn GotPageMsg loggedInPage loggedIn
+                    Document
+                        (fullPageTitle title)
+                        [ Html.map toMsg content
+                            |> Page.viewLoggedIn GotPageMsg loggedInPage loggedIn
+                        ]
     in
     case model.status of
         Redirect ->
-            viewPage Guest.Other LoggedIn.Other (\_ -> Ignored) (text "")
+            viewPage Guest.Other LoggedIn.Other (\_ -> Ignored) { title = "", content = text "" }
 
         NotFound ->
             viewPage Guest.Other LoggedIn.Other (\_ -> Ignored) (NotFound.view model.session)
 
         ComingSoon ->
             viewPage Guest.Other LoggedIn.Other (\_ -> Ignored) (ComingSoon.view model.session)
+
+        Invite subModel ->
+            viewPage Guest.Other LoggedIn.Other GotInviteMsg (Invite.view model.session subModel)
 
         PaymentHistory subModel ->
             case model.session of
@@ -1072,9 +1118,6 @@ view model =
 
         ViewTransfer _ subModel ->
             viewLoggedIn subModel LoggedIn.Other GotViewTransferScreenMsg ViewTransfer.view
-
-        Invite subModel ->
-            Html.map GotInviteMsg (Invite.view model.session subModel)
 
         Transfer subModel ->
             viewLoggedIn subModel LoggedIn.Other GotTransferMsg Transfer.view
