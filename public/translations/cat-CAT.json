@@ -615,7 +615,11 @@
       "invalid_id": " no és un ID de transferència vàlid"
     },
     "you": "vostè",
-    "my_balance": "El meu balanç"
+    "my_balance": "El meu balanç",
+    "transaction_id": {
+      "title": "identificador de transacció",
+      "body": "Aquesta identificació garanteix l'autenticitat de la transacció si ambdues parts tenen els mateixos emojis."
+    }
   },
   "payment_history": {
     "title": "Historial de pagaments",
