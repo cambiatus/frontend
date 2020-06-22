@@ -26,7 +26,6 @@ import DataValidator
         , listErrors
         , longerThan
         , newValidator
-        , oneOf
         , shorterThan
         , updateInput
         , validate

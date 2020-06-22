@@ -6,7 +6,7 @@ import Cambiatus.Object.Community as Community
 import Cambiatus.Object.Objective as Objective
 import Cambiatus.Query as Query
 import Community
-import Eos as Eos exposing (Symbol, symbolToString)
+import Eos exposing (Symbol, symbolToString)
 import Eos.Account as Eos
 import Graphql.Http
 import Graphql.Operation exposing (RootQuery)

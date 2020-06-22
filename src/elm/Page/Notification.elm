@@ -3,7 +3,7 @@ module Page.Notification exposing (Model, Msg(..), init, msgToString, update, vi
 import Api.Graphql
 import Eos
 import Eos.Account as Eos
-import FormatNumber exposing (format)
+import FormatNumber
 import FormatNumber.Locales exposing (usLocale)
 import Graphql.Http
 import Html exposing (Html, div, img, p, text)

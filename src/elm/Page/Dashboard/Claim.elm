@@ -6,7 +6,7 @@ import Cambiatus.Object.Profile as Profile
 import Cambiatus.Query
 import Cambiatus.Scalar exposing (DateTime(..))
 import Claim
-import Eos exposing (Symbol, symbolToString)
+import Eos exposing (Symbol)
 import Eos.Account as Eos
 import Graphql.Http
 import Graphql.OptionalArgument exposing (OptionalArgument(..))

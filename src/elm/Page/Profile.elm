@@ -15,7 +15,7 @@ import Asset.Icon as Icon
 import Avatar exposing (Avatar)
 import Browser.Events
 import Dict exposing (Dict)
-import Eos as Eos
+import Eos
 import Eos.Account as Eos
 import File exposing (File)
 import Graphql.Http
@@ -27,7 +27,7 @@ import I18Next exposing (t)
 import Json.Decode as Decode exposing (Value)
 import Json.Encode as Encode
 import Page
-import Profile exposing (Profile, ProfileForm, decode)
+import Profile exposing (Profile, ProfileForm)
 import PushSubscription exposing (PushSubscription)
 import Session.LoggedIn as LoggedIn exposing (External(..), FeedbackStatus(..))
 import Task

@@ -13,7 +13,7 @@ import Api
 import Api.Graphql
 import Browser.Dom as Dom
 import Community exposing (Balance)
-import Eos as Eos
+import Eos
 import Eos.Account as Eos
 import Graphql.Http
 import Html exposing (Html, a, button, div, img, p, text)

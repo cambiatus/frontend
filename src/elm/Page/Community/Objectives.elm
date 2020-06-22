@@ -2,7 +2,7 @@ module Page.Community.Objectives exposing (Model, Msg, init, msgToString, update
 
 import Api.Graphql
 import Cambiatus.Enum.VerificationType as VerificationType
-import Community exposing (Model, communityQuery)
+import Community exposing (Model)
 import Eos exposing (Symbol)
 import Graphql.Http
 import Html exposing (Html, a, button, div, p, text)

@@ -16,9 +16,9 @@ import Cambiatus.Query
 import Cambiatus.Scalar exposing (DateTime(..))
 import Claim
 import Community exposing (Balance)
-import Eos as Eos exposing (Symbol)
+import Eos exposing (Symbol)
 import Eos.Account as Eos
-import FormatNumber exposing (format)
+import FormatNumber
 import FormatNumber.Locales exposing (usLocale)
 import Graphql.Http
 import Graphql.OptionalArgument exposing (OptionalArgument(..))
@@ -39,7 +39,7 @@ import Session.Shared exposing (Shared)
 import Strftime
 import Task
 import Time exposing (Posix)
-import Transfer exposing (QueryTransfers, Transfer, userFilter)
+import Transfer exposing (QueryTransfers, Transfer)
 import UpdateResult as UR
 import Url
 import Utils
