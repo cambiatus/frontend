@@ -16,6 +16,11 @@
     "test": "npx elm-test",
     "generate-graphql": "npx elm-graphql https://api.cambiatus.io/api/graph --base Cambiatus --output src/elm"
   },
+  "husky": {
+    "hooks": {
+      "pre-push": "echo \"Checking JS with StandardJS...\" && standard && echo \"Checking Elm with elm-review...\" && yarn review"
+    }
+  },
   "standard": {
     "plugins": [
       "html"
@@ -86,6 +91,7 @@
     "elm-webpack-loader": "^6.0.1",
     "eosjs": "^16.0.9",
     "eosjs-ecc": "^4.0.4",
+    "husky": "^4.2.5",
     "pdfmake": "^0.1.64",
     "phoenix": "^1.4.10",
     "postcss": "^7.0.17",

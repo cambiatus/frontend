@@ -42,7 +42,7 @@ import Graphql.SelectionSet as SelectionSet exposing (SelectionSet, with)
 import Html exposing (Html, a, div, p, span, text)
 import Html.Attributes exposing (class, href, maxlength, minlength, pattern, title, type_)
 import I18Next exposing (Translations, t)
-import Json.Decode as Decode exposing (Decoder, int, list, nullable, string)
+import Json.Decode as Decode exposing (Decoder, int, nullable, string)
 import Json.Decode.Pipeline as Decode exposing (optional, required)
 import Json.Encode as Encode
 import Select
