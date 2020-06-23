@@ -1,7 +1,7 @@
 module Select.Select.Input exposing (onKeyPressAttribute, onKeyUpAttribute, view)
 
 import Array
-import Html as Html exposing (Attribute, Html)
+import Html exposing (Attribute, Html)
 import Html.Attributes
     exposing
         ( attribute

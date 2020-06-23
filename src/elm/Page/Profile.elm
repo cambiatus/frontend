@@ -15,7 +15,7 @@ import Asset.Icon as Icon
 import Avatar exposing (Avatar)
 import Browser.Events
 import Dict exposing (Dict)
-import Eos as Eos
+import Eos
 import Eos.Account as Eos
 import File exposing (File)
 import Graphql.Http
@@ -27,7 +27,7 @@ import I18Next exposing (t)
 import Json.Decode as Decode exposing (Value)
 import Json.Encode as Encode
 import Page
-import Profile exposing (Profile, ProfileForm, decode)
+import Profile exposing (Profile, ProfileForm)
 import PushSubscription exposing (PushSubscription)
 import Session.LoggedIn as LoggedIn exposing (External(..), FeedbackStatus(..))
 import Task
@@ -101,23 +101,37 @@ type AvatarStatus
 -- VIEW
 
 
-view : LoggedIn.Model -> Model -> Html Msg
+view : LoggedIn.Model -> Model -> { title : String, content : Html Msg }
 view loggedIn model =
-    case model.status of
-        Loading ->
-            Page.fullPageLoading
+    let
+        title =
+            case model.status of
+                Loaded profile ->
+                    Maybe.withDefault "" profile.userName
 
-        LoadingFailed _ ->
-            Page.fullPageError (t loggedIn.shared.translations "profile.title") Http.Timeout
+                _ ->
+                    ""
 
-        Loaded profile ->
-            view_ loggedIn profile model
+        content =
+            case model.status of
+                Loading ->
+                    Page.fullPageLoading
 
-        Editing profile avatarS form ->
-            viewForm loggedIn False profile avatarS form
+                LoadingFailed _ ->
+                    Page.fullPageError (t loggedIn.shared.translations "profile.title") Http.Timeout
 
-        Saving profile avatarS form ->
-            viewForm loggedIn True profile avatarS form
+                Loaded profile ->
+                    view_ loggedIn profile model
+
+                Editing profile avatarS form ->
+                    viewForm loggedIn False profile avatarS form
+
+                Saving profile avatarS form ->
+                    viewForm loggedIn True profile avatarS form
+    in
+    { title = title
+    , content = content
+    }
 
 
 view_ : LoggedIn.Model -> Profile -> Model -> Html Msg

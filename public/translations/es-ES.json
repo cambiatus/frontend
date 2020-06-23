@@ -243,6 +243,7 @@
   "community": {
     "title": "Comunidad",
     "create_button": "Crear Comunidad",
+    "not_found": "Comunidad no encontrada",
     "create": {
       "title": "Crear comunidad",
       "success": "Comunidad guardada con éxito",

@@ -1,6 +1,6 @@
 module Api.Graphql exposing (mutation, query)
 
-import Graphql.Http exposing (mutationRequest, queryRequest, send)
+import Graphql.Http
 import Graphql.Operation exposing (RootMutation, RootQuery)
 import Graphql.OptionalArgument exposing (OptionalArgument(..))
 import Graphql.SelectionSet exposing (SelectionSet)

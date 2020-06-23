@@ -3,6 +3,7 @@ module Page.Login exposing (Model, Msg, init, jsAddressToMsg, msgToString, subsc
 import Auth
 import Html exposing (Html, div)
 import Html.Attributes exposing (class)
+import I18Next
 import Json.Encode exposing (Value)
 import Route
 import Session.Guest as Guest exposing (External(..))
@@ -54,15 +55,19 @@ initModel authModel =
 -- VIEW
 
 
-view : Guest.Model -> Model -> Html Msg
+view : Guest.Model -> Model -> { title : String, content : Html Msg }
 view guest model =
     let
         authView =
             Auth.view False guest.shared model.auth
                 |> List.map (Html.map GotAuthMsg)
     in
-    div [ class "bg-purple-500 flex-grow flex flex-wrap md:block" ]
-        authView
+    { title =
+        I18Next.t guest.shared.translations "auth.login.loginTab"
+    , content =
+        div [ class "bg-purple-500 flex-grow flex flex-wrap md:block" ]
+            authView
+    }
 
 
 

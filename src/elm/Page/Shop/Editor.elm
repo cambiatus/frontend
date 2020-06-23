@@ -10,9 +10,9 @@ import Eos exposing (Symbol)
 import Eos.Account as Eos
 import File exposing (File)
 import Graphql.Http
-import Html exposing (Attribute, Html, button, div, input, label, option, p, select, span, text, textarea)
+import Html exposing (Html, button, div, input, label, option, p, select, span, text, textarea)
 import Html.Attributes exposing (accept, attribute, class, disabled, for, hidden, id, maxlength, multiple, required, selected, style, type_, value)
-import Html.Events exposing (keyCode, on, onClick, onInput)
+import Html.Events exposing (on, onClick, onInput)
 import Http
 import I18Next
 import Icons
@@ -168,7 +168,7 @@ initForm balanceOptions =
 -- VIEW
 
 
-view : LoggedIn.Model -> Model -> Html Msg
+view : LoggedIn.Model -> Model -> { title : String, content : Html Msg }
 view loggedIn model =
     let
         shared =
@@ -176,37 +176,63 @@ view loggedIn model =
 
         t =
             I18Next.t shared.translations
+
+        isEdit =
+            case model of
+                EditingUpdate _ _ _ _ _ ->
+                    True
+
+                Saving _ _ _ _ ->
+                    True
+
+                Deleting _ _ _ _ ->
+                    True
+
+                _ ->
+                    False
+
+        title =
+            if isEdit then
+                t "shop.edit_offer"
+
+            else
+                t "shop.create_offer"
+
+        content =
+            case model of
+                LoadingBalancesCreate ->
+                    Page.fullPageLoading
+
+                LoadingBalancesUpdate _ ->
+                    Page.fullPageLoading
+
+                LoadingSaleUpdate _ _ ->
+                    Page.fullPageLoading
+
+                LoadBalancesFailed error ->
+                    Page.fullPageError (t "shop.title") error
+
+                LoadSaleFailed error ->
+                    Page.fullPageGraphQLError (t "shop.title") error
+
+                EditingCreate balances imageStatus form ->
+                    viewForm shared balances imageStatus False False Closed form
+
+                Creating balances imageStatus form ->
+                    viewForm shared balances imageStatus False True Closed form
+
+                EditingUpdate balances _ imageStatus confirmDelete form ->
+                    viewForm shared balances imageStatus True False confirmDelete form
+
+                Saving balances _ imageStatus form ->
+                    viewForm shared balances imageStatus True True Closed form
+
+                Deleting balances _ imageStatus form ->
+                    viewForm shared balances imageStatus True True Closed form
     in
-    case model of
-        LoadingBalancesCreate ->
-            Page.fullPageLoading
-
-        LoadingBalancesUpdate _ ->
-            Page.fullPageLoading
-
-        LoadingSaleUpdate _ _ ->
-            Page.fullPageLoading
-
-        LoadBalancesFailed error ->
-            Page.fullPageError (t "shop.title") error
-
-        LoadSaleFailed error ->
-            Page.fullPageGraphQLError (t "shop.title") error
-
-        EditingCreate balances imageStatus form ->
-            viewForm shared balances imageStatus False False Closed form
-
-        Creating balances imageStatus form ->
-            viewForm shared balances imageStatus False True Closed form
-
-        EditingUpdate balances _ imageStatus confirmDelete form ->
-            viewForm shared balances imageStatus True False confirmDelete form
-
-        Saving balances _ imageStatus form ->
-            viewForm shared balances imageStatus True True Closed form
-
-        Deleting balances _ imageStatus form ->
-            viewForm shared balances imageStatus True True Closed form
+    { title = title
+    , content = content
+    }
 
 
 viewForm : Shared -> List Balance -> ImageStatus -> Bool -> Bool -> DeleteModalStatus -> Form -> Html Msg
@@ -512,11 +538,6 @@ viewFieldErrors errors =
     div
         [ class "form-field-error" ]
         viewErrors
-
-
-onKeyDown : (Int -> msg) -> Attribute msg
-onKeyDown toMsg =
-    on "keydown" (Decode.map toMsg keyCode)
 
 
 
