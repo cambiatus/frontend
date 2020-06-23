@@ -132,6 +132,9 @@ module.exports = {
       },
       width: {
         form: '45.625rem'
+      },
+      opacity: {
+        '10': '0.1'
       }
     }
   },

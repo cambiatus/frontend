@@ -63,24 +63,33 @@ type alias UpdateResult =
     UR.UpdateResult Model Msg (External Msg)
 
 
-view : LoggedIn.Model -> Model -> Html Msg
+view : LoggedIn.Model -> Model -> { title : String, content : Html Msg }
 view loggedIn model =
     let
-        translations =
-            loggedIn.shared.translations
+        title =
+            "Features"
 
-        translate =
-            t translations
+        content =
+            let
+                translations =
+                    loggedIn.shared.translations
+
+                translate =
+                    t translations
+            in
+            div [ class "bg-white flex flex-col items-center" ]
+                [ Page.viewHeader loggedIn "Features" (Route.CommunitySettings model.symbol)
+                , div
+                    [ class "container w-full divide-y"
+                    ]
+                    [ toggleView translations (translate "community.objectives.title_plural") model.hasObjectives ToggleActions "actions"
+                    , toggleView translations (translate "menu.shop") model.hasShop ToggleShop "shop"
+                    ]
+                ]
     in
-    div [ class "bg-white flex flex-col items-center" ]
-        [ Page.viewHeader loggedIn "Features" (Route.CommunitySettings model.symbol)
-        , div
-            [ class "container w-full divide-y"
-            ]
-            [ toggleView translations (translate "community.objectives.title_plural") model.hasObjectives ToggleActions "actions"
-            , toggleView translations (translate "menu.shop") model.hasShop ToggleShop "shop"
-            ]
-        ]
+    { title = title
+    , content = content
+    }
 
 
 toggleView : Translations -> String -> Bool -> (Bool -> Msg) -> String -> Html Msg

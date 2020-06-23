@@ -53,7 +53,7 @@ import Json.Encode as Encode exposing (Value)
 import List.Extra as List
 import Notification exposing (Notification)
 import Ports
-import Profile exposing (Profile, query)
+import Profile exposing (Profile)
 import Route exposing (Route)
 import Session.Shared as Shared exposing (Shared)
 import Shop

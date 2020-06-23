@@ -16,7 +16,7 @@ import Asset.Icon as Icon
 import Browser.Events as Events
 import Community exposing (Model)
 import Dict exposing (Dict)
-import Eos as Eos exposing (Symbol)
+import Eos exposing (Symbol)
 import Eos.Account as Eos
 import File exposing (File)
 import Graphql.Document
@@ -27,7 +27,7 @@ import Html.Events exposing (onClick, onInput, onSubmit)
 import Http
 import I18Next
 import Json.Decode as Decode
-import Json.Encode as Encode exposing (Value, object, string)
+import Json.Encode as Encode exposing (Value)
 import List.Extra as List
 import Page
 import Route
@@ -216,7 +216,7 @@ encodeFormHelper logoHash { accountName } form =
 -- VIEW
 
 
-view : LoggedIn.Model -> Model -> Html Msg
+view : LoggedIn.Model -> Model -> { title : String, content : Html Msg }
 view loggedIn model =
     let
         defaultContainer =
@@ -227,41 +227,46 @@ view loggedIn model =
 
         t str =
             I18Next.t shared.translations str
+
+        content =
+            case model of
+                Loading _ ->
+                    Page.fullPageLoading
+
+                LoadingFailed e ->
+                    Page.fullPageGraphQLError (t "community.edit.title") e
+
+                NotFound ->
+                    Page.viewCardEmpty [ text "Community not found" ]
+
+                Unauthorized _ ->
+                    defaultContainer
+                        [ Page.viewTitle (t "community.edit.title")
+                        , div [ class "card" ]
+                            [ text (t "community.edit.unauthorized") ]
+                        ]
+
+                Editing _ problems form ->
+                    viewForm shared True False problems form model
+
+                WaitingEditLogoUpload _ form ->
+                    viewForm shared True True Dict.empty form model
+
+                Saving _ form ->
+                    viewForm shared True True Dict.empty form model
+
+                EditingNew problems form ->
+                    viewForm shared False False problems form model
+
+                WaitingNewLogoUpload form ->
+                    viewForm shared False True Dict.empty form model
+
+                Creating form ->
+                    viewForm shared False True Dict.empty form model
     in
-    case model of
-        Loading _ ->
-            Page.fullPageLoading
-
-        LoadingFailed e ->
-            Page.fullPageGraphQLError (t "community.edit.title") e
-
-        NotFound ->
-            Page.viewCardEmpty [ text "Community not found" ]
-
-        Unauthorized _ ->
-            defaultContainer
-                [ Page.viewTitle (t "community.edit.title")
-                , div [ class "card" ]
-                    [ text (t "community.edit.unauthorized") ]
-                ]
-
-        Editing _ problems form ->
-            viewForm shared True False problems form model
-
-        WaitingEditLogoUpload _ form ->
-            viewForm shared True True Dict.empty form model
-
-        Saving _ form ->
-            viewForm shared True True Dict.empty form model
-
-        EditingNew problems form ->
-            viewForm shared False False problems form model
-
-        WaitingNewLogoUpload form ->
-            viewForm shared False True Dict.empty form model
-
-        Creating form ->
-            viewForm shared False True Dict.empty form model
+    { title = t "community.edit.title"
+    , content = content
+    }
 
 
 viewForm : Shared -> Bool -> Bool -> Dict String FormError -> Form -> Model -> Html Msg

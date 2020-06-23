@@ -48,34 +48,43 @@ initModel symbol =
     }
 
 
-view : LoggedIn.Model -> Model -> Html Msg
+view : LoggedIn.Model -> Model -> { title : String, content : Html Msg }
 view loggedIn model =
     let
-        translate =
-            t loggedIn.shared.translations
+        title =
+            "Settings"
 
-        headerText =
-            translate "community.edit.title"
+        content =
+            let
+                translate =
+                    t loggedIn.shared.translations
 
-        header =
-            Page.viewHeader loggedIn headerText Route.Dashboard
+                headerText =
+                    translate "community.edit.title"
+
+                header =
+                    Page.viewHeader loggedIn headerText Route.Dashboard
+            in
+            case model.status of
+                Loading ->
+                    div []
+                        [ header
+                        , div [ class "container mx-auto px-4" ]
+                            [ Page.fullPageLoading ]
+                        ]
+
+                Loaded community ->
+                    div []
+                        [ header
+                        , viewSettingsList loggedIn.shared community.symbol
+                        ]
+
+                LoadingFailed e ->
+                    Page.fullPageGraphQLError headerText e
     in
-    case model.status of
-        Loading ->
-            div []
-                [ header
-                , div [ class "container mx-auto px-4" ]
-                    [ Page.fullPageLoading ]
-                ]
-
-        Loaded community ->
-            div []
-                [ header
-                , viewSettingsList loggedIn.shared community.symbol
-                ]
-
-        LoadingFailed e ->
-            Page.fullPageGraphQLError headerText e
+    { title = title
+    , content = content
+    }
 
 
 viewSettingsList : Shared -> Symbol -> Html Msg

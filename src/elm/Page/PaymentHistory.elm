@@ -17,22 +17,19 @@ import Cambiatus.Query
 import Cambiatus.Scalar
 import Date exposing (Date)
 import DatePicker exposing (DateEvent(..), defaultSettings, off)
-import Dict exposing (Dict)
+import Emoji
 import Eos
 import Eos.Account
 import Graphql.Http
 import Graphql.OptionalArgument exposing (OptionalArgument(..))
 import Graphql.SelectionSet as SelectionSet exposing (SelectionSet)
-import Hashids
 import Html exposing (Html, a, button, div, h1, h2, label, p, span, text, ul)
 import Html.Attributes as Attrs exposing (class, href, style)
 import Html.Events exposing (onClick)
 import I18Next exposing (t)
 import Icons
 import List.Extra as LE
-import Murmur3
 import Page
-import Profile exposing (Profile, selectionSet)
 import Select
 import Session.Shared as Shared exposing (Shared)
 import Simple.Fuzzy
@@ -501,73 +498,41 @@ update msg model { shared } =
                 |> UR.addCmd (fetchIncomingTransfers shared newModel)
 
 
-{-| Convert Transfer identifier (64 symbols) to emoji sequence (8 symbols)
--}
-transferIdToEmojis : String -> String
-transferIdToEmojis transferId =
-    transferId
-        |> Murmur3.hashString salt
-        -- make 32 bit number
-        |> Hashids.encode hashidsCtx
-        -- make short has from the given alphabet
-        |> String.split ""
-        |> List.map (\n -> Maybe.withDefault "" (Dict.get n alphabetEmojiMapper))
-        -- map hash symbols to emojis
-        |> String.join " "
-
-
-salt : Int
-salt =
-    123456
-
-
-alphabet : String
-alphabet =
-    "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890"
-
-
-hashidsCtx : Hashids.Context
-hashidsCtx =
-    Hashids.createHashidsContext (String.fromInt salt) 8 alphabet
-
-
-alphabetEmojiMapper : Dict String String
-alphabetEmojiMapper =
-    let
-        emojis =
-            -- Must be separated by the space
-            "😄 😘 😺 🚀 🚗 🚙 🚚 🌀 🌟 🌴 🌵 🌷 🌸 🌹 🌺 🌻 🌼 🌽 🌿 🍁 🍄 🍅 🍆 🍇 🍈 🍉 🍊 🍌 🍍 🍎 🍏 🍑 🍒 🍓 🍭 🍯 🎀 🎃 🎈 🎨 🎲 🎸 🏡 🐌 🐒 🐚 🐞 🐬 🐱 🐲 🐳 🐴 🐵 🐶 🐸 🐹 💜 😎 🚘 🌳 🍋 🍐"
-    in
-    List.map2 Tuple.pair (String.split "" alphabet) (String.split " " emojis)
-        |> Dict.fromList
-
-
 
 -- VIEW
 
 
-view : SharedModel m -> Model -> Html Msg
+view : SharedModel m -> Model -> { title : String, content : Html Msg }
 view { shared } model =
-    case model.queryStatus of
-        Loaded profile ->
-            div [ class "bg-white" ]
-                [ viewSplash profile
-                , div [ class "mx-4 max-w-md md:m-auto" ]
-                    [ h2 [ class "text-center text-black text-2xl" ]
-                        [ text (I18Next.t shared.translations "payment_history.title") ]
-                    , div []
-                        [ viewUserAutocomplete shared model
-                        , viewDatePicker shared model
+    let
+        pageTitle =
+            I18Next.t shared.translations "payment_history.title"
+
+        content =
+            case model.queryStatus of
+                Loaded profile ->
+                    div [ class "bg-white" ]
+                        [ viewSplash profile
+                        , div [ class "mx-4 max-w-md md:m-auto" ]
+                            [ h2 [ class "text-center text-black text-2xl" ]
+                                [ text (I18Next.t shared.translations "payment_history.title") ]
+                            , div []
+                                [ viewUserAutocomplete shared model
+                                , viewDatePicker shared model
+                                ]
+                            , viewTransfers shared model
+                            ]
                         ]
-                    , viewTransfers shared model
-                    ]
-                ]
 
-        Failed err ->
-            div [] [ Page.fullPageGraphQLError (I18Next.t shared.translations "error.accountNotFound") err ]
+                Failed err ->
+                    div [] [ Page.fullPageGraphQLError (I18Next.t shared.translations "error.accountNotFound") err ]
 
-        Loading ->
-            Page.fullPageLoading
+                Loading ->
+                    Page.fullPageLoading
+    in
+    { title = pageTitle
+    , content = content
+    }
 
 
 viewSplash : ProfileWithTransfers -> Html msg
@@ -796,7 +761,7 @@ viewTransfer shared payment =
         , p [ class "text-green text-4xl my-3" ]
             [ text amount ]
         , p [ class "tracking-widest text-2xl" ]
-            [ text (transferIdToEmojis payment.createdTx)
+            [ text (Emoji.encode payment.createdTx)
             ]
         ]
 
