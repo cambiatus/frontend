@@ -4,11 +4,8 @@ import Api.Graphql
 import Community
 import Eos exposing (Symbol)
 import Graphql.Http
-import Graphql.Operation exposing (RootQuery, RootSubscription)
-import Graphql.SelectionSet exposing (SelectionSet)
-import Html exposing (..)
-import Html.Attributes exposing (..)
-import Html.Lazy as Lazy
+import Html exposing (Html, a, button, div, span, text)
+import Html.Attributes exposing (class, style)
 import I18Next exposing (t)
 import Page exposing (viewHeader)
 import Route exposing (Route)
@@ -123,7 +120,7 @@ settingCard title description route =
 
 
 update : Msg -> Model -> LoggedIn.Model -> UpdateResult
-update msg model loggedIn =
+update msg model _ =
     case msg of
         CompletedLoad (Ok (Just community)) ->
             UR.init { model | status = Loaded community }
