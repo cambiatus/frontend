@@ -617,7 +617,11 @@
       "invalid_id": " no es un ID de transferencia válido"
     },
     "you": "tú",
-    "my_balance": "Mi balance"
+    "my_balance": "Mi balance",
+    "transaction_id": {
+      "title": "ID de transacción",
+      "body": "Esta identificación garantiza la autenticidad de la transacción si ambas partes tienen los mismos emojis."
+    }
   },
   "payment_history": {
     "title": "Historial de Pagos",

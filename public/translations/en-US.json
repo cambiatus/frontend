@@ -613,7 +613,11 @@
       "invalid_id": " is not a valid Transfer Id"
     },
     "you": "You",
-    "my_balance": "My Balance"
+    "my_balance": "My Balance",
+    "transaction_id": {
+      "title": "Transaction ID",
+      "body": "This ID guarantees the authenticity of the transaction if both sides have the same emojis."
+    }
   },
   "payment_history": {
     "title": "Payment History",

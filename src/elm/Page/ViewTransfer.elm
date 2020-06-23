@@ -2,6 +2,7 @@ module Page.ViewTransfer exposing (Model, Msg, init, msgToString, subscriptions,
 
 import Api.Graphql
 import Cambiatus.Scalar exposing (DateTime(..))
+import Emoji
 import Eos
 import Eos.Account as Eos
 import Graphql.Http
@@ -120,20 +121,20 @@ view loggedIn model =
 
 
 viewTransfer : LoggedIn.Model -> Transfer -> State -> Html Msg
-viewTransfer loggedIn _ state =
+viewTransfer loggedIn transfer state =
     let
         t =
             I18Next.t loggedIn.shared.translations
     in
     div [ class "flex w-full justify-center bg-green py-8" ]
         [ div [ class "flex-row w-full lg:w-2/3" ]
-            [ div [ class "flex flex-wrap justify-center" ]
+            [ div [ class "flex flex-wrap justify-center items-center" ]
                 [ img
                     [ class "h-64 w-full lg:w-1/3"
                     , src "/images/transfer-doggo.svg"
                     ]
                     []
-                , h2 [ class "w-full lg:w-2/3 mt-8 mb-6 lg:px-8 text-center lg:text-left text-3xl font-medium text-white" ]
+                , h2 [ class "w-full lg:w-2/3 mt-8 lg:px-8 text-center lg:text-left text-3xl font-medium text-white" ]
                     [ text <|
                         case state of
                             Transferred ->
@@ -141,6 +142,15 @@ viewTransfer loggedIn _ state =
 
                             Received ->
                                 t "transfer_result.receive_success"
+                    ]
+                , div
+                    [ class "flex flex-wrap w-full p-4 mt-4 mx-2 bg-black bg-opacity-10 rounded-lg" ]
+                    [ p [ class "w-full text-xs text-white uppercase font-bold" ]
+                        [ text (t "transfer_result.transaction_id.title") ]
+                    , p [ class "w-full text-xs text-white uppercase" ]
+                        [ text (t "transfer_result.transaction_id.body") ]
+                    , p [ class "w-full tracking-widest text-center text-4xl mt-4" ]
+                        [ text (Emoji.encode transfer.createdTx) ]
                     ]
                 ]
             ]
