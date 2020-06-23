@@ -163,6 +163,14 @@ saveFeaturePort loggedIn feature status state =
             { actor = loggedIn.accountName
             , permissionName = Eos.Account.samplePermission
             }
+
+        function =
+            case feature of
+                Shop ->
+                    ToggleShop
+
+                Objectives ->
+                    ToggleActions
     in
     case status of
         Loaded community ->
@@ -170,7 +178,7 @@ saveFeaturePort loggedIn feature status state =
                 UR.addPort (saveFeature feature state authorization loggedIn.accountName community)
 
             else
-                UR.addExt (Just (ToggleShop state) |> LoggedIn.RequiredAuthentication)
+                UR.addExt (Just (function state) |> LoggedIn.RequiredAuthentication)
 
         Loading ->
             UR.addExt (ShowFeedback Failure "Error")
@@ -188,12 +196,12 @@ saveFeature feature state authorization accountName community =
                     state
 
                 Objectives ->
-                    community.hasObjectives
+                    community.hasShop
 
         hasObjectives =
             case feature of
                 Shop ->
-                    community.hasShop
+                    community.hasObjectives
 
                 Objectives ->
                     state
