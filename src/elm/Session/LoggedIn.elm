@@ -75,7 +75,7 @@ init shared accountName flags =
     ( initModel shared authModel accountName flags.selectedCommunity
     , Cmd.batch
         [ Api.Graphql.query shared (Profile.query accountName) CompletedLoadProfile
-        , Api.Graphql.query shared (Community.communityQuery flags.selectedCommunity) CompletedLoadSettings
+        , Api.Graphql.query shared (Community.settingsQuery flags.selectedCommunity) CompletedLoadSettings
         ]
     )
 
@@ -690,7 +690,7 @@ type Msg
     | CompletedLoadTranslation String (Result Http.Error Translations)
     | ClickedTryAgainTranslation
     | CompletedLoadProfile (Result (Graphql.Http.Error (Maybe Profile)) (Maybe Profile))
-    | CompletedLoadSettings (Result (Graphql.Http.Error (Maybe Community.Model)) (Maybe Community.Model))
+    | CompletedLoadSettings (Result (Graphql.Http.Error (Maybe Community.Settings)) (Maybe Community.Settings))
     | ClickedTryAgainProfile Eos.Name
     | ClickedLogout
     | EnteredSearch String
@@ -792,10 +792,10 @@ update msg model =
                 }
                 |> UR.logGraphqlError msg err
 
-        CompletedLoadSettings (Ok community) ->
-            case community of
-                Just comm ->
-                    { model | hasShop = comm.hasShop, hasObjectives = comm.hasObjectives }
+        CompletedLoadSettings (Ok settings_) ->
+            case settings_ of
+                Just settings ->
+                    { model | hasShop = settings.hasShop, hasObjectives = settings.hasObjectives }
                         |> UR.init
 
                 Nothing ->
@@ -924,7 +924,7 @@ update msg model =
             }
                 |> UR.init
                 |> UR.addCmd (Route.replaceUrl model.shared.navKey Route.Dashboard)
-                |> UR.addCmd (Api.Graphql.query shared (Community.communityQuery communityId) CompletedLoadSettings)
+                |> UR.addCmd (Api.Graphql.query shared (Community.settingsQuery communityId) CompletedLoadSettings)
                 |> UR.addPort
                     { responseAddress = msg
                     , responseData = Encode.null

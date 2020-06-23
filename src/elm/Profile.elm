@@ -113,7 +113,7 @@ communityInfoSelectionSet =
         |> with Community.name
         |> with Community.logo
         |> with Community.hasShop
-        |> with Community.hasActions
+        |> with Community.hasObjectives
 
 
 decode : Decoder Profile

@@ -11,6 +11,7 @@ module Community exposing
     , Metadata
     , Model
     , Objective
+    , Settings
     , Transaction
     , Verification(..)
     , Verifiers
@@ -36,6 +37,8 @@ module Community exposing
     , logoUrl
     , newCommunitySubscription
     , objectiveSelectionSet
+    , settingsQuery
+    , settingsSelectionSet
     , toVerifications
     )
 
@@ -156,7 +159,20 @@ communitySelectionSet =
         |> with Community.memberCount
         |> with (Community.members Profile.selectionSet)
         |> with (Community.objectives objectiveSelectionSet)
-        |> with Community.hasActions
+        |> with Community.hasObjectives
+        |> with Community.hasShop
+
+
+type alias Settings =
+    { hasObjectives : Bool
+    , hasShop : Bool
+    }
+
+
+settingsSelectionSet : SelectionSet Settings Cambiatus.Object.Community
+settingsSelectionSet =
+    SelectionSet.succeed Settings
+        |> with Community.hasObjectives
         |> with Community.hasShop
 
 
@@ -207,6 +223,11 @@ type alias WithObjectives =
 communityQuery : Symbol -> SelectionSet (Maybe Model) RootQuery
 communityQuery symbol =
     Query.community { symbol = symbolToString symbol } communitySelectionSet
+
+
+settingsQuery : Symbol -> SelectionSet (Maybe Settings) RootQuery
+settingsQuery symbol =
+    Query.community { symbol = symbolToString symbol } settingsSelectionSet
 
 
 logoUrl : String -> Maybe String -> String
