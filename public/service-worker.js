@@ -1,7 +1,8 @@
-var CACHE_NAME = 'bes-site-cache-v1'
-var urlsToCache = [
-  '/'
-]
+var CACHE_NAME = 'bes-site-cache-v1-hotfix'
+
+// See https://github.com/cambiatus/frontend/issues/252 for the details
+var urlsToCache = []
+self.caches.delete('bes-site-cache-v1')
 
 // install event handler here setup our local landscape
 self.addEventListener('install', function (event) {
