@@ -102,11 +102,11 @@ toggleView translations labelText isEnabled toggleFunction inputId =
     div
         [ class "grid w-full py-4"
         , style "grid-template" """
-                                'label status toggle' 40px / auto 100px 50px
+                                'label status toggle' 40px / auto 80px 50px
                                 """
         ]
         [ span [ classes, style "grid-area" "label" ] [ text labelText ]
-        , span [ classes, class "text-purple-500 font-medium lowercase", style "grid-area" "status" ] [ text statusText ]
+        , span [ classes, class "text-purple-500 font-medium lowercase mr-auto", style "grid-area" "status" ] [ text statusText ]
         , div [ classes ]
             [ div [ class "form-switch inline-block align-middle" ]
                 [ input
