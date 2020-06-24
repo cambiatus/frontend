@@ -96,7 +96,7 @@ toggleView translations labelText isEnabled toggleFunction inputId =
             t translations
 
         classes =
-            class "flex items-center"
+            class "flex items-center text-sm"
 
         statusText =
             if isEnabled then
