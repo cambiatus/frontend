@@ -75,7 +75,7 @@ view loggedIn model =
             t translations
 
         title =
-            "Features"
+            translate "settings.features.title"
 
         content =
             case model.status of
