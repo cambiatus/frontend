@@ -67,11 +67,7 @@ view loggedIn model =
             in
             case model.status of
                 Loading ->
-                    div []
-                        [ header
-                        , div [ class "container mx-auto px-4" ]
-                            [ Page.fullPageLoading ]
-                        ]
+                    Page.fullPageLoading
 
                 Loaded community ->
                     div []
