@@ -52,15 +52,12 @@ view : LoggedIn.Model -> Model -> { title : String, content : Html Msg }
 view loggedIn model =
     let
         title =
-            "Settings"
+            t loggedIn.shared.translations "community.edit.title"
 
         content =
             let
-                translate =
-                    t loggedIn.shared.translations
-
                 headerText =
-                    translate "community.edit.title"
+                    title
 
                 header =
                     Page.viewHeader loggedIn headerText Route.Dashboard
