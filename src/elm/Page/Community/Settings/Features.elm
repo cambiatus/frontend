@@ -98,7 +98,7 @@ view loggedIn model =
 
                 Unauthorized ->
                     div []
-                        [ Page.viewHeader loggedIn title (Route.CommunitySettings model.symbol)
+                        [ Page.viewHeader loggedIn title Route.Dashboard
                         , div [ class "card" ]
                             [ text (translate "community.edit.unauthorized") ]
                         ]
