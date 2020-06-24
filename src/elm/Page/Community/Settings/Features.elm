@@ -46,6 +46,7 @@ type Status
     = Loading
     | LoadingFailed (Graphql.Http.Error (Maybe Community.Model))
     | Loaded Community.Model
+    | Unauthorized
 
 
 type Feature
@@ -67,21 +68,20 @@ type alias UpdateResult =
 view : LoggedIn.Model -> Model -> { title : String, content : Html Msg }
 view loggedIn model =
     let
+        translations =
+            loggedIn.shared.translations
+
+        translate =
+            t translations
+
         title =
             "Features"
 
         content =
             case model.status of
                 Loaded _ ->
-                    let
-                        translations =
-                            loggedIn.shared.translations
-
-                        translate =
-                            t translations
-                    in
                     div [ class "bg-white flex flex-col items-center" ]
-                        [ Page.viewHeader loggedIn "Features" (Route.CommunitySettings model.symbol)
+                        [ Page.viewHeader loggedIn title (Route.CommunitySettings model.symbol)
                         , div
                             [ class "container w-full divide-y"
                             ]
@@ -95,6 +95,13 @@ view loggedIn model =
 
                 Loading ->
                     Page.fullPageLoading
+
+                Unauthorized ->
+                    div []
+                        [ Page.viewHeader loggedIn title (Route.CommunitySettings model.symbol)
+                        , div [ class "card" ]
+                            [ text (translate "community.edit.unauthorized") ]
+                        ]
     in
     { title = title
     , content = content
@@ -146,9 +153,17 @@ update : Msg -> Model -> LoggedIn.Model -> UpdateResult
 update msg model loggedIn =
     case msg of
         CompletedLoad (Ok (Just community)) ->
+            let
+                newStatus =
+                    if community.creator == loggedIn.accountName then
+                        Loaded community
+
+                    else
+                        Unauthorized
+            in
             UR.init
                 { model
-                    | status = Loaded community
+                    | status = newStatus
                     , hasShop = community.hasShop
                     , hasObjectives = community.hasObjectives
                 }
@@ -202,6 +217,9 @@ saveFeaturePort loggedIn feature status state =
             UR.addExt (ShowFeedback Failure "Error")
 
         LoadingFailed _ ->
+            UR.addExt (ShowFeedback Failure "Error")
+
+        Unauthorized ->
             UR.addExt (ShowFeedback Failure "Error")
 
 

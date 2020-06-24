@@ -35,6 +35,7 @@ type Status
     = Loading
     | LoadingFailed (Graphql.Http.Error (Maybe Community.Model))
     | Loaded Community.Model
+    | Unauthorized
 
 
 type Msg
@@ -51,8 +52,11 @@ initModel symbol =
 view : LoggedIn.Model -> Model -> { title : String, content : Html Msg }
 view loggedIn model =
     let
+        translate =
+            t loggedIn.shared.translations
+
         title =
-            t loggedIn.shared.translations "community.edit.title"
+            translate "community.edit.title"
 
         content =
             let
@@ -74,6 +78,13 @@ view loggedIn model =
 
                 LoadingFailed e ->
                     Page.fullPageGraphQLError headerText e
+
+                Unauthorized ->
+                    div []
+                        [ Page.viewHeader loggedIn title Route.Dashboard
+                        , div [ class "card" ]
+                            [ text (translate "community.edit.unauthorized") ]
+                        ]
     in
     { title = title
     , content = content
@@ -122,10 +133,18 @@ settingCard title description route =
 
 
 update : Msg -> Model -> LoggedIn.Model -> UpdateResult
-update msg model _ =
+update msg model loggedIn =
     case msg of
         CompletedLoad (Ok (Just community)) ->
-            UR.init { model | status = Loaded community }
+            let
+                newStatus =
+                    if community.creator == loggedIn.accountName then
+                        Loaded community
+
+                    else
+                        Unauthorized
+            in
+            UR.init { model | status = newStatus }
 
         CompletedLoad (Ok Nothing) ->
             UR.init model
