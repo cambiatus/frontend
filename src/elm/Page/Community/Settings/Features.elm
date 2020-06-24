@@ -8,6 +8,7 @@ import Graphql.Http
 import Html exposing (Html, div, input, label, span, text)
 import Html.Attributes exposing (checked, class, for, id, name, style, type_)
 import Html.Events exposing (onCheck)
+import Http
 import I18Next exposing (Translations, t)
 import Json.Encode
 import Page
@@ -66,25 +67,36 @@ type alias UpdateResult =
 view : LoggedIn.Model -> Model -> { title : String, content : Html Msg }
 view loggedIn model =
     let
-        content =
-            let
-                translations =
-                    loggedIn.shared.translations
+        title =
+            "Features"
 
-                translate =
-                    t translations
-            in
-            div [ class "bg-white flex flex-col items-center" ]
-                [ Page.viewHeader loggedIn "Features" (Route.CommunitySettings model.symbol)
-                , div
-                    [ class "container w-full divide-y"
-                    ]
-                    [ toggleView translations (translate "community.objectives.title_plural") model.hasObjectives ToggleActions "actions"
-                    , toggleView translations (translate "menu.shop") model.hasShop ToggleShop "shop"
-                    ]
-                ]
+        content =
+            case model.status of
+                Loaded _ ->
+                    let
+                        translations =
+                            loggedIn.shared.translations
+
+                        translate =
+                            t translations
+                    in
+                    div [ class "bg-white flex flex-col items-center" ]
+                        [ Page.viewHeader loggedIn "Features" (Route.CommunitySettings model.symbol)
+                        , div
+                            [ class "container w-full divide-y"
+                            ]
+                            [ toggleView translations (translate "community.objectives.title_plural") model.hasObjectives ToggleActions "actions"
+                            , toggleView translations (translate "menu.shop") model.hasShop ToggleShop "shop"
+                            ]
+                        ]
+
+                LoadingFailed _ ->
+                    Page.fullPageError title Http.NetworkError
+
+                Loading ->
+                    Page.fullPageLoading
     in
-    { title = "Features"
+    { title = title
     , content = content
     }
 
