@@ -66,9 +66,6 @@ type alias UpdateResult =
 view : LoggedIn.Model -> Model -> { title : String, content : Html Msg }
 view loggedIn model =
     let
-        title =
-            "Features"
-
         content =
             let
                 translations =
@@ -87,7 +84,7 @@ view loggedIn model =
                     ]
                 ]
     in
-    { title = title
+    { title = "Features"
     , content = content
     }
 
