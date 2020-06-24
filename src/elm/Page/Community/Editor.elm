@@ -199,6 +199,8 @@ encodeFormHelper logoHash { accountName } form =
             , description = form.description
             , inviterReward = form.inviterReward
             , invitedReward = form.invitedReward
+            , hasObjectives = 1
+            , hasShop = 1
             }
                 |> Community.createCommunityData
                 |> Valid
@@ -862,6 +864,8 @@ save msg loggedIn ({ model } as uResult) =
                                                 , description = createAction.description
                                                 , inviterReward = createAction.inviterReward
                                                 , invitedReward = createAction.invitedReward
+                                                , hasObjectives = 1
+                                                , hasShop = 1
                                                 }
                                                     |> Community.encodeUpdateLogoData
                                           }
