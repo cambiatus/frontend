@@ -101,7 +101,7 @@ viewSettingsList shared symbol =
         ]
         [ settingCard (translate "settings.community_info.title") (translate "settings.community_info.description") Route.Dashboard
         , settingCard (translate "settings.currency.title") (Eos.symbolToString symbol) Route.Dashboard
-        , settingCard (translate "settings.actions.title") "" Route.Dashboard
+        , settingCard (translate "settings.actions.title") "" (Route.Objectives symbol)
         , settingCard (translate "settings.team.title") (translate "settings.team.description") Route.Dashboard
         , settingCard (translate "settings.features.title") (translate "settings.features.description") (Route.CommunitySettingsFeatures symbol)
         ]
