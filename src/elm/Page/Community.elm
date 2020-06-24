@@ -160,10 +160,11 @@ view loggedIn model =
                                 ]
                             , p [ class "text-grey-200 text-sm" ] [ text community.description ]
                             ]
-                        , div [ class "container mx-auto px-4" ]
-                            [ viewClaimModal loggedIn model
-                            , if canEdit then
-                                div [ class "flex justify-between items-center py-2 px-8 sm:px-6 bg-white rounded-lg mt-4" ]
+                        , if canEdit && community.hasObjectives then
+                            div [ class "container mx-auto px-4" ]
+                                [ viewClaimModal loggedIn model
+                                , div
+                                    [ class "flex justify-between items-center py-2 px-8 sm:px-6 bg-white rounded-lg mt-4" ]
                                     [ div []
                                         [ p [ class "font-bold" ] [ text_ "community.objectives.title_plural" ]
                                         , p [ class "text-gray-900 text-caption uppercase" ]
@@ -185,11 +186,7 @@ view loggedIn model =
                                         ]
                                         [ text_ "menu.edit" ]
                                     ]
-
-                              else
-                                text ""
-                            , if community.hasObjectives then
-                                div [ class "bg-white py-6 sm:py-8 px-3 sm:px-6 rounded-lg mt-4" ]
+                                , div [ class "bg-white py-6 sm:py-8 px-3 sm:px-6 rounded-lg mt-4" ]
                                     (Page.viewTitle (t "community.objectives.title_plural")
                                         :: List.indexedMap (viewObjective loggedIn model community)
                                             community.objectives
@@ -200,13 +197,10 @@ view loggedIn model =
                                                 text ""
                                            ]
                                     )
+                                ]
 
-                              else
-                                div [] []
-
-                            -- , Transfer.getTransfers (Just community)
-                            --     |> viewSections loggedIn model
-                            ]
+                          else
+                            text ""
                         ]
     in
     { title = title
