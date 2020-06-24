@@ -90,8 +90,8 @@ view loggedIn model =
                             ]
                         ]
 
-                LoadingFailed _ ->
-                    Page.fullPageError title Http.NetworkError
+                LoadingFailed error ->
+                    Page.fullPageGraphQLError title error
 
                 Loading ->
                     Page.fullPageLoading
