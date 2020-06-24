@@ -173,7 +173,7 @@ view loggedIn model =
                                 a [ Route.href (Route.CommunitySettings loggedIn.selectedCommunity), class "ml-auto" ] [ Icons.settings ]
 
                               else
-                                div [] []
+                                text ""
                             ]
                         , viewBalance loggedIn model balance
                         , viewAnalysisList loggedIn profile model
