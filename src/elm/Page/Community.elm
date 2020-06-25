@@ -162,31 +162,7 @@ view loggedIn model =
                             ]
                         , if canEdit && community.hasObjectives then
                             div [ class "container mx-auto px-4" ]
-                                [ viewClaimModal loggedIn model
-                                , div
-                                    [ class "flex justify-between items-center py-2 px-8 sm:px-6 bg-white rounded-lg mt-4" ]
-                                    [ div []
-                                        [ p [ class "font-bold" ] [ text_ "community.objectives.title_plural" ]
-                                        , p [ class "text-gray-900 text-caption uppercase" ]
-                                            [ text
-                                                (tr "community.objectives.subtitle"
-                                                    [ ( "objectives", List.length community.objectives |> String.fromInt )
-                                                    , ( "actions"
-                                                      , List.map (\c -> List.length c.actions) community.objectives
-                                                            |> List.foldl (+) 0
-                                                            |> String.fromInt
-                                                      )
-                                                    ]
-                                                )
-                                            ]
-                                        ]
-                                    , a
-                                        [ class "button button-primary"
-                                        , Route.href (Route.Objectives community.symbol)
-                                        ]
-                                        [ text_ "menu.edit" ]
-                                    ]
-                                , div [ class "bg-white py-6 sm:py-8 px-3 sm:px-6 rounded-lg mt-4" ]
+                                [ div [ class "bg-white py-6 sm:py-8 px-3 sm:px-6 rounded-lg mt-4" ]
                                     (Page.viewTitle (t "community.objectives.title_plural")
                                         :: List.indexedMap (viewObjective loggedIn model community)
                                             community.objectives
