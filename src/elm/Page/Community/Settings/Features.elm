@@ -1,4 +1,4 @@
-module Page.Community.Settings.Features exposing (Model, Msg, init, msgToString, update, view)
+module Page.Community.Settings.Features exposing (Model, Msg, init, jsAddressToMsg, msgToString, update, view)
 
 import Api.Graphql
 import Community
@@ -10,6 +10,7 @@ import Html.Attributes exposing (checked, class, for, id, name, style, type_)
 import Html.Events exposing (onCheck)
 import Http
 import I18Next exposing (Translations, t)
+import Json.Decode as Decode exposing (Value)
 import Json.Encode
 import Page
 import Ports
@@ -58,7 +59,7 @@ type Msg
     = CompletedLoad (Result (Graphql.Http.Error (Maybe Community.Model)) (Maybe Community.Model))
     | ToggleShop Bool
     | ToggleActions Bool
-    | Ignored
+    | SaveSuccess
 
 
 type alias UpdateResult =
@@ -185,8 +186,10 @@ update msg model loggedIn =
                 |> UR.init
                 |> saveFeaturePort loggedIn Objectives model.status state
 
-        Ignored ->
-            UR.init model
+        SaveSuccess ->
+            model
+                |> UR.init
+                |> UR.addExt (ShowFeedback Success "Settings saved successfully")
 
 
 saveFeaturePort : LoggedIn.Model -> Feature -> Status -> Bool -> (UR.UpdateResult Model Msg (External Msg) -> UR.UpdateResult Model Msg (External Msg))
@@ -254,7 +257,7 @@ saveFeature feature state authorization accountName community =
             , hasObjectives = hasObjectives
             }
     in
-    { responseAddress = Ignored
+    { responseAddress = SaveSuccess
     , responseData = Json.Encode.null
     , data =
         Eos.encodeTransaction
@@ -270,6 +273,16 @@ saveFeature feature state authorization accountName community =
     }
 
 
+jsAddressToMsg : List String -> Value -> Maybe Msg
+jsAddressToMsg addr val =
+    case addr of
+        "SaveSuccess" :: _ ->
+            Just SaveSuccess
+
+        _ ->
+            Nothing
+
+
 msgToString : Msg -> List String
 msgToString msg =
     case msg of
@@ -282,5 +295,5 @@ msgToString msg =
         ToggleActions _ ->
             [ "ToggleActions" ]
 
-        Ignored ->
-            [ "Ignored" ]
+        SaveSuccess ->
+            [ "SaveSuccess" ]
