@@ -173,8 +173,8 @@ viewInterests interest translations =
 
 viewInterest : String -> Html Msg
 viewInterest interest =
-    div [ class "bg-green w-24 h-8 rounded-sm text-xs mr-4 mb-1 flex" ]
-        [ span [ class "m-auto leading-none text-white uppercase" ] [ text interest ]
+    div [ class "bg-green px-3 h-8 rounded-sm text-xs mr-4 mb-1 flex" ]
+        [ span [ class "m-auto mr-3 leading-none text-white uppercase" ] [ text interest ]
         , button
             [ class "m-auto"
             , onClickPreventDefault (RemoveInterest interest)
