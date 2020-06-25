@@ -6,7 +6,7 @@ import Eos exposing (Symbol)
 import Eos.Account as Eos
 import Graphql.Http
 import Html exposing (Html, a, button, div, li, p, span, text, ul)
-import Html.Attributes exposing (class, src, style)
+import Html.Attributes exposing (class, style)
 import I18Next exposing (t)
 import Icons
 import Json.Decode exposing (Value)

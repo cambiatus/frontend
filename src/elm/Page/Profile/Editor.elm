@@ -71,12 +71,6 @@ type Status
     | Loaded Profile
 
 
-type AvatarStatus
-    = NotAsked
-    | Sending File Int
-    | SendingFailed File Http.Error
-
-
 
 -- VIEW
 

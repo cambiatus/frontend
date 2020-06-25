@@ -105,9 +105,6 @@ view loggedIn model =
 view_ : Model -> LoggedIn.Model -> Profile -> Html Msg
 view_ model loggedIn profile =
     let
-        ipfsUrl =
-            loggedIn.shared.endpoints.ipfs
-
         text_ str =
             t loggedIn.shared.translations str
 
@@ -203,20 +200,6 @@ viewAction label contents =
 
 toggleView : Translations -> Bool -> Msg -> String -> Html Msg
 toggleView translations isEnabled toggleFunction inputId =
-    let
-        translate =
-            t translations
-
-        classes =
-            class "flex items-center"
-
-        statusText =
-            if isEnabled then
-                translate "settings.features.enabled"
-
-            else
-                translate "settings.features.disabled"
-    in
     div [ class "form-switch inline-block align-middle" ]
         [ input
             [ type_ "checkbox"
