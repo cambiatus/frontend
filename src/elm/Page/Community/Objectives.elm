@@ -358,6 +358,9 @@ update msg model loggedIn =
                             if cmm.creator == loggedIn.accountName then
                                 Loaded cmm
 
+                            else if not cmm.hasObjectives then
+                                NotFound
+
                             else
                                 Unauthorized
                     in
