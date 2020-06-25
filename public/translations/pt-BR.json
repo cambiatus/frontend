@@ -7,7 +7,7 @@
     "dashboard": "Painel",
     "news": "Novidades",
     "learn": "Aprender",
-    "shop": "Loja",
+    "shop": "Ofertas",
     "faq": "FAQ",
     "profile": "Perfil",
     "invite": "Convite",
@@ -449,7 +449,7 @@
   "shop": {
     "filter": "Filtro",
     "units_label": "Quantidade em estoque",
-    "title": "Loja",
+    "title": "Ofertas",
     "subtitle": "Compre e vende em sua comunidade",
     "description": "Aqui você pode usar suas moedas para comprar serviços e produtos ou receber vendendo seus próprios produtos e serviços",
     "all_offers": "Todas as ofertas",
