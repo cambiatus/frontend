@@ -1,22 +1,22 @@
-module Page.Notification exposing (..)
+module Page.Notification exposing (Model, Msg(..), init, msgToString, update, view)
 
 import Api.Graphql
 import Eos
 import Eos.Account as Eos
-import FormatNumber exposing (format)
+import FormatNumber
 import FormatNumber.Locales exposing (usLocale)
 import Graphql.Http
-import Html exposing (..)
+import Html exposing (Html, div, img, p, text)
 import Html.Attributes exposing (class, src)
 import Html.Events exposing (onClick)
-import I18Next exposing (Delims(..), t)
-import Notification exposing (History, NotificationType(..), MintData, SaleHistoryData, TransferData)
+import I18Next exposing (Delims(..))
+import Notification exposing (History, MintData, NotificationType(..), SaleHistoryData, TransferData)
 import Page
-import Route exposing (Route)
+import Route
 import Session.LoggedIn as LoggedIn exposing (External(..))
-import Session.Shared as Shared exposing (Shared)
+import Session.Shared exposing (Shared)
 import Strftime
-import Time exposing (Posix)
+import Time
 import UpdateResult as UR
 import Utils
 
@@ -27,7 +27,7 @@ import Utils
 
 init : LoggedIn.Model -> ( Model, Cmd Msg )
 init ({ shared } as loggedIn) =
-    ( initModel loggedIn
+    ( initModel
     , Api.Graphql.query shared (Notification.notificationHistoryQuery loggedIn.accountName) CompletedLoadNotificationHistory
     )
 
@@ -37,18 +37,16 @@ init ({ shared } as loggedIn) =
 
 
 type alias Model =
-    { status : Status
-    }
+    Status
 
 
-initModel : LoggedIn.Model -> Model
-initModel loggedIn =
-    { status = Loading }
+initModel : Model
+initModel =
+    Loading
 
 
 type Status
     = Loading
-    | LoadingFailed (Graphql.Http.Error (List History))
     | Loaded (List History)
 
 
@@ -62,28 +60,30 @@ type Payload
 -- VIEW
 
 
-view : LoggedIn.Model -> Model -> Html Msg
+view : LoggedIn.Model -> Model -> { title : String, content : Html Msg }
 view loggedIn model =
     let
         t s =
             I18Next.t loggedIn.shared.translations s
+
+        content =
+            case model of
+                Loading ->
+                    Page.fullPageLoading
+
+                Loaded notifications ->
+                    div [ class "container mx-auto px-4 mb-6" ]
+                        [ Page.viewTitle (t "notifications.title")
+                        , if notifications == [] then
+                            viewEmptyNotifications loggedIn.shared
+
+                          else
+                            viewNotifications loggedIn notifications
+                        ]
     in
-    case model.status of
-        Loading ->
-            Page.fullPageLoading
-
-        LoadingFailed e ->
-            Page.fullPageGraphQLError (t "notifications.title") e
-
-        Loaded notifications ->
-            div [ class "container mx-auto px-4 mb-6" ]
-                [ Page.viewTitle (t "notifications.title")
-                , if notifications == [] then
-                    viewEmptyNotifications loggedIn.shared
-
-                  else
-                    viewNotifications loggedIn notifications
-                ]
+    { title = t "notifications.title"
+    , content = content
+    }
 
 
 viewNotifications : LoggedIn.Model -> List History -> Html Msg
@@ -184,6 +184,7 @@ viewNotificationTransfer shared history notification =
             (viewAmount amount notification.symbol)
         ]
 
+
 viewNotificationMint : Shared -> History -> MintData -> Html Msg
 viewNotificationMint shared history notification =
     let
@@ -200,11 +201,10 @@ viewNotificationMint shared history notification =
                 |> Strftime.format "%d %b %Y" Time.utc
 
         description =
-                [ ( "amount", String.fromFloat notification.quantity)
-                , ( "symbol", notification.community.symbol )
-                ]
-                    |> I18Next.tr shared.translations I18Next.Curly "notifications.issue.receive"
-
+            [ ( "amount", String.fromFloat notification.quantity )
+            , ( "symbol", notification.community.symbol )
+            ]
+                |> I18Next.tr shared.translations I18Next.Curly "notifications.issue.receive"
     in
     div
         [ class "flex items-start lg:items-center p-4"
@@ -237,7 +237,6 @@ viewNotificationMint shared history notification =
         ]
 
 
-
 viewNotificationSaleHistory : LoggedIn.Model -> History -> SaleHistoryData -> Html Msg
 viewNotificationSaleHistory ({ shared } as loggedIn) notification sale =
     let
@@ -257,7 +256,7 @@ viewNotificationSaleHistory ({ shared } as loggedIn) notification sale =
         [ class "flex items-start lg:items-center p-4"
         , onClick (MarkAsRead notification.id (S sale))
         ]
-        ([ div
+        (div
             [ class "flex-none" ]
             [ case maybeLogo of
                 Just logoUrl ->
@@ -272,8 +271,7 @@ viewNotificationSaleHistory ({ shared } as loggedIn) notification sale =
                         [ class "w-10 h-10 object-scale-down" ]
                         []
             ]
-         ]
-            ++ viewNotificationSaleHistoryDetail loggedIn sale date
+            :: viewNotificationSaleHistoryDetail loggedIn sale date
         )
 
 
@@ -295,13 +293,6 @@ viewNotificationSaleHistoryDetail ({ shared } as loggedIn) sale date =
                 , ( "sale", sale.sale.title )
                 ]
                     |> I18Next.tr shared.translations I18Next.Curly "notifications.saleHistory.sell"
-
-        amount =
-            if isBuy then
-                -sale.amount
-
-            else
-                sale.amount
     in
     [ div [ class "flex-col flex-grow-1 pl-4" ]
         [ p
@@ -369,7 +360,7 @@ update : Msg -> Model -> LoggedIn.Model -> UpdateResult
 update msg model loggedIn =
     case msg of
         CompletedLoadNotificationHistory (Ok notifications) ->
-            { model | status = Loaded notifications }
+            Loaded notifications
                 |> UR.init
 
         CompletedLoadNotificationHistory (Err err) ->
@@ -384,15 +375,19 @@ update msg model loggedIn =
                         CompletedReading
             in
             case data of
-                T _ ->
+                T transfer ->
                     model
                         |> UR.init
                         |> UR.addCmd cmd
+                        |> UR.addCmd
+                            (Route.ViewTransfer transfer.id
+                                |> Route.replaceUrl loggedIn.shared.navKey
+                            )
 
                 M _ ->
-                  model
-                      |> UR.init
-                      |> UR.addCmd cmd
+                    model
+                        |> UR.init
+                        |> UR.addCmd cmd
 
                 S sale ->
                     model
@@ -404,7 +399,7 @@ update msg model loggedIn =
                             )
 
         CompletedReading (Ok hist) ->
-            case model.status of
+            case model of
                 Loaded histories ->
                     let
                         updatedHistories =
@@ -418,7 +413,7 @@ update msg model loggedIn =
                                 )
                                 histories
                     in
-                    { model | status = Loaded updatedHistories }
+                    Loaded updatedHistories
                         |> UR.init
 
                 _ ->

@@ -6,7 +6,7 @@ import Cambiatus.Object.Community as Community
 import Cambiatus.Object.Objective as Objective
 import Cambiatus.Query as Query
 import Community
-import Eos as Eos exposing (Symbol, symbolToString)
+import Eos exposing (Symbol, symbolToString)
 import Eos.Account as Eos
 import Graphql.Http
 import Graphql.Operation exposing (RootQuery)
@@ -114,31 +114,56 @@ initObjectiveForm =
 -- VIEW
 
 
-view : LoggedIn.Model -> Model -> Html Msg
+view : LoggedIn.Model -> Model -> { title : String, content : Html Msg }
 view ({ shared } as loggedIn) model =
-    case model.status of
-        Loading ->
-            Page.fullPageLoading
+    let
+        title =
+            case model.status of
+                Loaded _ editStatus ->
+                    let
+                        action =
+                            case editStatus of
+                                NewObjective _ ->
+                                    t shared.translations "menu.create"
 
-        NotFound ->
-            Page.fullPageNotFound (t shared.translations "community.objectives.editor.not_found") ""
+                                EditObjective _ _ ->
+                                    t shared.translations "menu.edit"
+                    in
+                    action
+                        ++ " "
+                        ++ t shared.translations "community.objectives.title"
 
-        LoadCommunityFailed err ->
-            Page.fullPageGraphQLError (t shared.translations "community.objectives.editor.error") err
+                _ ->
+                    ""
 
-        Unauthorized ->
-            text "not allowed to edit"
+        content =
+            case model.status of
+                Loading ->
+                    Page.fullPageLoading
 
-        Loaded { symbol } editStatus ->
-            div []
-                [ Page.viewHeader loggedIn (t shared.translations "community.objectives.title") (Route.Objectives symbol)
-                , case editStatus of
-                    NewObjective objForm ->
-                        viewForm loggedIn objForm
+                NotFound ->
+                    Page.fullPageNotFound (t shared.translations "community.objectives.editor.not_found") ""
 
-                    EditObjective _ objForm ->
-                        viewForm loggedIn objForm
-                ]
+                LoadCommunityFailed err ->
+                    Page.fullPageGraphQLError (t shared.translations "community.objectives.editor.error") err
+
+                Unauthorized ->
+                    text "not allowed to edit"
+
+                Loaded { symbol } editStatus ->
+                    div []
+                        [ Page.viewHeader loggedIn (t shared.translations "community.objectives.title") (Route.Objectives symbol)
+                        , case editStatus of
+                            NewObjective objForm ->
+                                viewForm loggedIn objForm
+
+                            EditObjective _ objForm ->
+                                viewForm loggedIn objForm
+                        ]
+    in
+    { title = title
+    , content = content
+    }
 
 
 viewForm : LoggedIn.Model -> ObjectiveForm -> Html Msg
@@ -311,22 +336,20 @@ update msg model loggedIn =
                                     , responseData = Encode.null
                                     , data =
                                         Eos.encodeTransaction
-                                            { actions =
-                                                [ { accountName = "bes.cmm"
-                                                  , name = "updobjective"
-                                                  , authorization =
-                                                        { actor = loggedIn.accountName
-                                                        , permissionName = Eos.samplePermission
-                                                        }
-                                                  , data =
-                                                        { objectiveId = objectiveId
-                                                        , description = form.description
-                                                        , editor = loggedIn.accountName
-                                                        }
-                                                            |> Community.encodeUpdateObjectiveAction
-                                                  }
-                                                ]
-                                            }
+                                            [ { accountName = "bes.cmm"
+                                              , name = "updobjective"
+                                              , authorization =
+                                                    { actor = loggedIn.accountName
+                                                    , permissionName = Eos.samplePermission
+                                                    }
+                                              , data =
+                                                    { objectiveId = objectiveId
+                                                    , description = form.description
+                                                    , editor = loggedIn.accountName
+                                                    }
+                                                        |> Community.encodeUpdateObjectiveAction
+                                              }
+                                            ]
                                     }
 
                         Nothing ->
@@ -336,22 +359,20 @@ update msg model loggedIn =
                                     , responseData = Encode.null
                                     , data =
                                         Eos.encodeTransaction
-                                            { actions =
-                                                [ { accountName = "bes.cmm"
-                                                  , name = "newobjective"
-                                                  , authorization =
-                                                        { actor = loggedIn.accountName
-                                                        , permissionName = Eos.samplePermission
-                                                        }
-                                                  , data =
-                                                        { symbol = model.community
-                                                        , description = form.description
-                                                        , creator = loggedIn.accountName
-                                                        }
-                                                            |> Community.encodeCreateObjectiveAction
-                                                  }
-                                                ]
-                                            }
+                                            [ { accountName = "bes.cmm"
+                                              , name = "newobjective"
+                                              , authorization =
+                                                    { actor = loggedIn.accountName
+                                                    , permissionName = Eos.samplePermission
+                                                    }
+                                              , data =
+                                                    { symbol = model.community
+                                                    , description = form.description
+                                                    , creator = loggedIn.accountName
+                                                    }
+                                                        |> Community.encodeCreateObjectiveAction
+                                              }
+                                            ]
                                     }
             in
             if LoggedIn.isAuth loggedIn then

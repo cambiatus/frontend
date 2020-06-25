@@ -10,9 +10,6 @@ then no search has been done and we shouldn't show the menu.
 matchedItemsWithCutoff : Config msg item -> Maybe String -> List item -> List item -> Maybe (List item)
 matchedItemsWithCutoff config maybeQuery availableItems selectedItems =
     case maybeQuery of
-        Nothing ->
-            Nothing
-
         {- When emptySearch is On, onBlur will set query to Just "" -}
         Just "" ->
             if config.emptySearch then
@@ -27,6 +24,9 @@ matchedItemsWithCutoff config maybeQuery availableItems selectedItems =
             filterItems config availableItems selectedItems
                 |> config.filter query
                 |> Maybe.map (maybeCuttoff config)
+
+        _ ->
+            Nothing
 
 
 {-| If this is a multi select, then we don't want to display the selected items

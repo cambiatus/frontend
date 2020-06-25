@@ -1,10 +1,10 @@
 module Select.Select.Item exposing (baseItemClasses, baseItemStyles, view, viewNotFound)
 
-import Html exposing (..)
-import Html.Attributes exposing (attribute, class, style)
+import Html exposing (Html, div, text)
+import Html.Attributes exposing (class, style)
 import Html.Events exposing (onMouseDown)
 import Select.Config exposing (Config)
-import Select.Messages exposing (..)
+import Select.Messages exposing (Msg(..))
 import Select.Models exposing (State)
 import Select.Styles as Styles
 import Select.Utils exposing (referenceAttr)

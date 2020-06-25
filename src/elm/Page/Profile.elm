@@ -75,17 +75,31 @@ type ModalStatus
 -- VIEW
 
 
-view : LoggedIn.Model -> Model -> Html Msg
+view : LoggedIn.Model -> Model -> { title : String, content : Html Msg }
 view loggedIn model =
-    case model.status of
-        Loading ->
-            Page.fullPageLoading
+    let
+        title =
+            case model.status of
+                Loaded profile ->
+                    Maybe.withDefault "" profile.userName
 
-        LoadingFailed _ ->
-            Page.fullPageError (t loggedIn.shared.translations "profile.title") Http.Timeout
+                _ ->
+                    ""
 
-        Loaded profile ->
-            view_ model loggedIn profile
+        content =
+            case model.status of
+                Loading ->
+                    Page.fullPageLoading
+
+                LoadingFailed _ ->
+                    Page.fullPageError (t loggedIn.shared.translations "profile.title") Http.Timeout
+
+                Loaded profile ->
+                    view_ model loggedIn profile
+    in
+    { title = title
+    , content = content
+    }
 
 
 view_ : Model -> LoggedIn.Model -> Profile -> Html Msg

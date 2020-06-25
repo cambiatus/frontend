@@ -1,14 +1,14 @@
 module Page.Community.Objectives exposing (Model, Msg, init, msgToString, update, view)
 
 import Api.Graphql
-import Cambiatus.Enum.VerificationType as VerificationType exposing (VerificationType)
-import Community exposing (Model, communityQuery)
+import Cambiatus.Enum.VerificationType as VerificationType
+import Community exposing (Model)
 import Eos exposing (Symbol)
 import Graphql.Http
-import Html exposing (..)
-import Html.Attributes exposing (class, classList, disabled)
+import Html exposing (Html, a, button, div, p, text)
+import Html.Attributes exposing (class, classList)
 import Html.Events exposing (onClick)
-import I18Next exposing (Delims(..), Translations, t)
+import I18Next exposing (Delims(..), t)
 import Icons
 import Page
 import Profile
@@ -63,31 +63,37 @@ type Status
 -- VIEW
 
 
-view : LoggedIn.Model -> Model -> Html Msg
+view : LoggedIn.Model -> Model -> { title : String, content : Html Msg }
 view ({ shared } as loggedIn) model =
-    case model.status of
-        Loading ->
-            Page.fullPageLoading
+    let
+        content =
+            case model.status of
+                Loading ->
+                    Page.fullPageLoading
 
-        NotFound ->
-            Page.viewCardEmpty [ text "Community not found" ]
+                NotFound ->
+                    Page.viewCardEmpty [ text "Community not found" ]
 
-        Failed e ->
-            Page.fullPageGraphQLError (t shared.translations "community.objectives.title_plural") e
+                Failed e ->
+                    Page.fullPageGraphQLError (t shared.translations "community.objectives.title_plural") e
 
-        Loaded community ->
-            div []
-                [ Page.viewHeader loggedIn (t shared.translations "community.objectives.title_plural") (Route.Community model.communityId)
-                , div [ class "container mx-auto px-4 my-10" ]
-                    [ div [ class "flex justify-end mb-10" ] [ viewNewObjectiveButton loggedIn community ]
-                    , div []
-                        (community.objectives
-                            |> List.sortBy .id
-                            |> List.reverse
-                            |> List.indexedMap (viewObjective loggedIn model community)
-                        )
-                    ]
-                ]
+                Loaded community ->
+                    div []
+                        [ Page.viewHeader loggedIn (t shared.translations "community.objectives.title_plural") (Route.Community model.communityId)
+                        , div [ class "container mx-auto px-4 my-10" ]
+                            [ div [ class "flex justify-end mb-10" ] [ viewNewObjectiveButton loggedIn community ]
+                            , div []
+                                (community.objectives
+                                    |> List.sortBy .id
+                                    |> List.reverse
+                                    |> List.indexedMap (viewObjective loggedIn model community)
+                                )
+                            ]
+                        ]
+    in
+    { title = t shared.translations "community.objectives.title_plural"
+    , content = content
+    }
 
 
 viewNewObjectiveButton : LoggedIn.Model -> Community.Model -> Html msg
@@ -106,10 +112,6 @@ viewNewObjectiveButton ({ shared } as loggedIn) community =
 viewObjective : LoggedIn.Model -> Model -> Community.Model -> Int -> Community.Objective -> Html Msg
 viewObjective ({ shared } as loggedIn) model community index objective =
     let
-        canEdit : Bool
-        canEdit =
-            LoggedIn.isAccount community.creator loggedIn
-
         isOpen : Bool
         isOpen =
             case model.openObjective of
@@ -201,7 +203,7 @@ viewAction ({ shared } as loggedIn) model objectiveId action =
         pastDeadline : Bool
         pastDeadline =
             case action.deadline of
-                Just deadline ->
+                Just _ ->
                     case model.date of
                         Just today ->
                             posixToMillis today > posixToMillis posixDeadline
@@ -271,7 +273,7 @@ viewAction ({ shared } as loggedIn) model objectiveId action =
                           else
                             text ""
                         , case action.deadline of
-                            Just d ->
+                            Just _ ->
                                 p [ classList [ ( "text-red", pastDeadline ) ] ] [ text deadlineStr ]
 
                             Nothing ->

@@ -1,7 +1,7 @@
 module Main exposing (main)
 
 import Auth
-import Browser
+import Browser exposing (Document)
 import Browser.Navigation as Nav
 import Flags
 import Html exposing (Html, text)
@@ -23,6 +23,7 @@ import Page.Dashboard.Claim as Claim
 import Page.Login as Login
 import Page.NotFound as NotFound
 import Page.Notification as Notification
+import Page.PaymentHistory as PaymentHistory
 import Page.Profile as Profile
 import Page.Profile.Editor as ProfileEditor
 import Page.PublicProfile as PublicProfile
@@ -46,13 +47,7 @@ main =
         { init = init
         , subscriptions = subscriptions
         , update = update
-        , view =
-            \model ->
-                { title = "Cambiatus"
-                , body =
-                    [ view model
-                    ]
-                }
+        , view = view
         , onUrlRequest = ClickedLink
         , onUrlChange = ChangedUrl
         }
@@ -151,6 +146,7 @@ type Status
     = Redirect
     | NotFound
     | ComingSoon
+    | PaymentHistory PaymentHistory.Model
     | Community CommunityPage.Model
     | CommunityEditor CommunityEditor.Model
     | Objectives Objectives.Model
@@ -180,7 +176,6 @@ type Status
 
 type Msg
     = Ignored
-    | ChangedRoute (Maybe Route)
     | ChangedUrl Url
     | ClickedLink Browser.UrlRequest
     | GotJavascriptData Value
@@ -196,6 +191,7 @@ type Msg
     | GotDashboardMsg Dashboard.Msg
     | GotLoginMsg Login.Msg
     | GotPublicProfileMsg PublicProfile.Msg
+    | GotPaymentHistoryMsg PaymentHistory.Msg
     | GotProfileMsg Profile.Msg
     | GotProfileEditorMsg ProfileEditor.Msg
     | GotRegisterMsg Register.Msg
@@ -234,9 +230,6 @@ update msg model =
     case ( msg, model.status ) of
         ( Ignored, _ ) ->
             ( model, Cmd.none )
-
-        ( ChangedRoute route, _ ) ->
-            changeRouteTo route model
 
         ( ChangedUrl url, _ ) ->
             changeRouteTo (Route.fromUrl url) model
@@ -313,13 +306,25 @@ update msg model =
                 -- provides the above composed function with the initial guest input
                 |> withGuest
 
+        ( GotPaymentHistoryMsg subMsg, PaymentHistory subModel ) ->
+            case model.session of
+                Page.Guest _ ->
+                    PaymentHistory.update subMsg subModel
+                        >> updateGuestUResult PaymentHistory GotPaymentHistoryMsg model
+                        |> withGuest
+
+                Page.LoggedIn _ ->
+                    PaymentHistory.update subMsg subModel
+                        >> updateLoggedInUResult PaymentHistory GotPaymentHistoryMsg model
+                        |> withLoggedIn
+
         ( GotLoginMsg subMsg, Login subModel ) ->
             Login.update subMsg subModel
                 >> updateGuestUResult Login GotLoginMsg model
                 |> withGuest
 
         ( GotNotificationMsg subMsg, Notification subModel ) ->
-            -- Will return afunction expecting a LoggedIn Model
+            -- Will return a function expecting a LoggedIn Model
             Notification.update subMsg subModel
                 -- will return a function expecting an UpdateResult
                 -- The composition operator will take the result of the above function and use as
@@ -683,6 +688,19 @@ changeRouteTo maybeRoute model =
                 (updateStatusWith Login GotLoginMsg)
                 maybeRedirect
 
+        Just (Route.PaymentHistory accountName) ->
+            case session of
+                Page.Guest _ ->
+                    withGuest
+                        PaymentHistory.init
+                        (updateStatusWith PaymentHistory GotPaymentHistoryMsg)
+                        Nothing
+
+                Page.LoggedIn _ ->
+                    PaymentHistory.init
+                        >> updateStatusWith PaymentHistory GotPaymentHistoryMsg model
+                        |> withLoggedIn (Route.PaymentHistory accountName)
+
         Just (Route.LoginWithPrivateKey maybeRedirect) ->
             withGuest
                 Login.init
@@ -882,9 +900,6 @@ msgToString msg =
         Ignored ->
             [ "Ignored" ]
 
-        ChangedRoute _ ->
-            [ "ChangedRoute" ]
-
         ChangedUrl _ ->
             [ "ChangedUrl" ]
 
@@ -930,6 +945,9 @@ msgToString msg =
         GotPublicProfileMsg subMsg ->
             "GotPublicProfileMsg" :: PublicProfile.msgToString subMsg
 
+        GotPaymentHistoryMsg subMsg ->
+            "GotPaymentHistoryMsg" :: PaymentHistory.msgToString subMsg
+
         GotProfileMsg subMsg ->
             "GotProfileMsg" :: Profile.msgToString subMsg
 
@@ -965,46 +983,106 @@ msgToString msg =
 -- VIEW
 
 
-view : Model -> Html Msg
+view : Model -> Document Msg
 view model =
     let
-        viewGuest subModel page toMsg content =
+        baseTitle =
+            "Cambiatus"
+
+        fullPageTitle : String -> String
+        fullPageTitle subTitle =
+            if subTitle == "" then
+                baseTitle
+
+            else
+                subTitle ++ " | " ++ baseTitle
+
+        viewGuest :
+            subModel
+            -> Guest.Page
+            -> (subMsg -> Msg)
+            -> (Guest.Model -> subModel -> { title : String, content : Html subMsg })
+            -> Document Msg
+        viewGuest subModel page toMsg subView =
             case model.session of
                 Page.Guest guest ->
-                    Html.map toMsg (content guest subModel)
-                        |> Page.viewGuest GotPageMsg page guest
+                    let
+                        { title, content } =
+                            subView guest subModel
+                    in
+                    Document
+                        (fullPageTitle title)
+                        [ Html.map toMsg content
+                            |> Page.viewGuest GotPageMsg page guest
+                        ]
 
                 Page.LoggedIn _ ->
-                    text ""
+                    Document (fullPageTitle "") [ text "" ]
 
-        viewLoggedIn subModel page toMsg content =
+        viewLoggedIn :
+            subModel
+            -> LoggedIn.Page
+            -> (subMsg -> Msg)
+            -> (LoggedIn.Model -> subModel -> { title : String, content : Html subMsg })
+            -> Document Msg
+        viewLoggedIn subModel page toMsg subView =
             case model.session of
                 Page.Guest _ ->
-                    text ""
+                    Document (fullPageTitle "") [ text "" ]
 
                 Page.LoggedIn loggedIn ->
-                    Html.map toMsg (content loggedIn subModel)
-                        |> Page.viewLoggedIn GotPageMsg page loggedIn
+                    let
+                        { title, content } =
+                            subView loggedIn subModel
+                    in
+                    Document
+                        (fullPageTitle title)
+                        [ Html.map toMsg content
+                            |> Page.viewLoggedIn GotPageMsg page loggedIn
+                        ]
 
-        viewPage guestPage loggedInPage toMsg content =
+        viewPage :
+            Guest.Page
+            -> LoggedIn.Page
+            -> (subMsg -> Msg)
+            -> { title : String, content : Html subMsg }
+            -> Document Msg
+        viewPage guestPage loggedInPage toMsg { title, content } =
             case model.session of
                 Page.Guest guest ->
-                    Html.map toMsg content
-                        |> Page.viewGuest GotPageMsg guestPage guest
+                    Document
+                        (fullPageTitle title)
+                        [ Html.map toMsg content
+                            |> Page.viewGuest GotPageMsg guestPage guest
+                        ]
 
                 Page.LoggedIn loggedIn ->
-                    Html.map toMsg content
-                        |> Page.viewLoggedIn GotPageMsg loggedInPage loggedIn
+                    Document
+                        (fullPageTitle title)
+                        [ Html.map toMsg content
+                            |> Page.viewLoggedIn GotPageMsg loggedInPage loggedIn
+                        ]
     in
     case model.status of
         Redirect ->
-            viewPage Guest.Other LoggedIn.Other (\_ -> Ignored) (text "")
+            viewPage Guest.Other LoggedIn.Other (\_ -> Ignored) { title = "", content = text "" }
 
         NotFound ->
             viewPage Guest.Other LoggedIn.Other (\_ -> Ignored) (NotFound.view model.session)
 
         ComingSoon ->
             viewPage Guest.Other LoggedIn.Other (\_ -> Ignored) (ComingSoon.view model.session)
+
+        Invite subModel ->
+            viewPage Guest.Other LoggedIn.Other GotInviteMsg (Invite.view model.session subModel)
+
+        PaymentHistory subModel ->
+            case model.session of
+                Page.Guest _ ->
+                    viewGuest subModel Guest.PaymentHistory GotPaymentHistoryMsg PaymentHistory.view
+
+                Page.LoggedIn _ ->
+                    viewLoggedIn subModel LoggedIn.PaymentHistory GotPaymentHistoryMsg PaymentHistory.view
 
         Register _ subModel ->
             viewGuest subModel Guest.Register GotRegisterMsg Register.view
@@ -1059,9 +1137,6 @@ view model =
 
         ViewTransfer _ subModel ->
             viewLoggedIn subModel LoggedIn.Other GotViewTransferScreenMsg ViewTransfer.view
-
-        Invite subModel ->
-            Html.map GotInviteMsg (Invite.view model.session subModel)
 
         Transfer subModel ->
             viewLoggedIn subModel LoggedIn.Other GotTransferMsg Transfer.view

@@ -1,6 +1,6 @@
 module Eos exposing (Action, Asset, Authorization, EosBool(..), Network, Symbol, TableQuery, Transaction, bespiralSymbol, boolToEosBool, decodeAmountToFloat, decodeAsset, encodeAction, encodeAsset, encodeAuthorization, encodeEosBool, encodeNetwork, encodeSymbol, encodeTableQuery, encodeTransaction, symbolDecoder, symbolFromString, symbolSelectionSet, symbolToString, symbolUrlParser)
 
-import Eos.Account as Account exposing (Account, PermissionName)
+import Eos.Account as Account exposing (PermissionName)
 import Graphql.SelectionSet as SelectionSet exposing (SelectionSet)
 import Json.Decode as Decode exposing (Decoder)
 import Json.Encode as Encode exposing (Value)
@@ -36,19 +36,14 @@ encodeNetwork network =
 
 
 type alias Transaction =
-    { actions : List Action
-    }
-
-
-
--- TODO: you'll receive one authorization for all the actions, just encode each action with the same authorization
+    List Action
 
 
 encodeTransaction : Transaction -> Value
 encodeTransaction transaction =
     Encode.object
         [ ( "name", Encode.string "eosTransaction" )
-        , ( "actions", Encode.list encodeAction transaction.actions )
+        , ( "actions", Encode.list encodeAction transaction )
         ]
 
 
@@ -166,6 +161,14 @@ type Symbol
 symbolDecoder : Decoder Symbol
 symbolDecoder =
     Decode.map Symbol Decode.string
+        |> Decode.andThen
+            (\symbol ->
+                if symbolToString symbol == "undefined" then
+                    Decode.fail "Cannot decode 'undefined' symbol, check Javascript"
+
+                else
+                    Decode.succeed symbol
+            )
 
 
 encodeSymbol : Symbol -> Value

@@ -6,7 +6,7 @@ import Cambiatus.Object.Profile as Profile
 import Cambiatus.Query
 import Cambiatus.Scalar exposing (DateTime(..))
 import Claim
-import Eos exposing (Symbol, symbolToString)
+import Eos exposing (Symbol)
 import Eos.Account as Eos
 import Graphql.Http
 import Graphql.OptionalArgument exposing (OptionalArgument(..))
@@ -65,34 +65,47 @@ type Status
 -- VIEW
 
 
-view : LoggedIn.Model -> Model -> Html Msg
+view : LoggedIn.Model -> Model -> { title : String, content : Html Msg }
 view ({ shared } as loggedIn) model =
     let
         t : String -> String
         t =
             I18Next.t shared.translations
+
+        title =
+            case model.statusClaim of
+                Loaded claim ->
+                    claim.action.description
+
+                _ ->
+                    ""
+
+        content =
+            div []
+                [ case model.statusClaim of
+                    Loading ->
+                        Page.fullPageLoading
+
+                    Loaded claim ->
+                        div [ class "bg-white py-2" ]
+                            [ Page.viewHeader loggedIn claim.action.description Route.Analysis
+                            , div [ class "mt-10 mb-8" ]
+                                [ Profile.viewLarge shared loggedIn.accountName claim.claimer
+                                ]
+                            , div [ class "mx-auto container px-4" ]
+                                [ viewTitle shared claim
+                                , viewDetails shared model claim
+                                , viewVoters loggedIn claim
+                                ]
+                            ]
+
+                    Failed err ->
+                        Page.fullPageGraphQLError (t "error.unknown") err
+                ]
     in
-    div []
-        [ case model.statusClaim of
-            Loading ->
-                Page.fullPageLoading
-
-            Loaded claim ->
-                div [ class "bg-white py-2" ]
-                    [ Page.viewHeader loggedIn claim.action.description Route.Analysis
-                    , div [ class "mt-10 mb-8" ]
-                        [ Profile.viewLarge shared loggedIn.accountName claim.claimer
-                        ]
-                    , div [ class "mx-auto container px-4" ]
-                        [ viewTitle shared claim
-                        , viewDetails shared model claim
-                        , viewVoters loggedIn claim
-                        ]
-                    ]
-
-            Failed err ->
-                Page.fullPageGraphQLError (t "error.unknown") err
-        ]
+    { title = title
+    , content = content
+    }
 
 
 viewTitle : Shared -> Claim.Model -> Html msg
@@ -100,9 +113,6 @@ viewTitle shared claim =
     let
         text_ s =
             text (I18Next.t shared.translations s)
-
-        negativeChecks =
-            List.filter (\ch -> not ch.isApproved) claim.checks
     in
     div [ class "text-heading font-bold text-center mb-8" ]
         [ case claim.status of

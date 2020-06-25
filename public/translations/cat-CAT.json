@@ -243,6 +243,7 @@
   "community": {
     "title": "Comunitat",
     "create_button": "Crear comunitat",
+    "not_found": "Comunitat no trobada",
     "create": {
       "title": "Crear comunitat",
       "success": "El perfil s'ha desat correctament",
@@ -619,6 +620,18 @@
       "invalid_id": " no és un ID de transferència vàlid"
     },
     "you": "vostè",
-    "my_balance": "El meu balanç"
+    "my_balance": "El meu balanç",
+    "transaction_id": {
+      "title": "identificador de transacció",
+      "body": "Aquesta identificació garanteix l'autenticitat de la transacció si ambdues parts tenen els mateixos emojis."
+    }
+  },
+  "payment_history": {
+    "title": "Historial de pagaments",
+    "user": "Usuari",
+    "date": "Data",
+    "more": "Mostra més",
+    "no_transfers_found": "No s'ha trobat transferència segons els vostres criteris.",
+    "pick_date": "Escolliu una data..."
   }
 }

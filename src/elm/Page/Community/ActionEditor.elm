@@ -26,7 +26,6 @@ import DataValidator
         , listErrors
         , longerThan
         , newValidator
-        , oneOf
         , shorterThan
         , updateInput
         , validate
@@ -417,7 +416,6 @@ type Msg
     | GotInvalidDate
     | SaveAction Int -- Send the date
     | GotSaveAction (Result Value String)
-    | DismissError
     | PressedEnter Bool
 
 
@@ -953,14 +951,6 @@ update msg model loggedIn =
                 |> UR.logImpossible msg []
                 |> UR.addExt (ShowFeedback Failure (t shared.translations "error.unknown"))
 
-        DismissError ->
-            let
-                oldForm =
-                    model.form
-            in
-            { model | form = { oldForm | saveStatus = NotAsked } }
-                |> UR.init
-
         PressedEnter val ->
             if val then
                 UR.init model
@@ -1046,32 +1036,30 @@ upsertAction loggedIn model isoDate =
             , responseData = Encode.null
             , data =
                 Eos.encodeTransaction
-                    { actions =
-                        [ { accountName = "bes.cmm"
-                          , name = "upsertaction"
-                          , authorization =
-                                { actor = loggedIn.accountName
-                                , permissionName = Eos.samplePermission
-                                }
-                          , data =
-                                { actionId = model.actionId |> Maybe.withDefault 0
-                                , objectiveId = model.objectiveId
-                                , description = getInput model.form.description
-                                , reward = getInput model.form.reward ++ " " ++ Eos.symbolToString model.communityId
-                                , verifierReward = verifierReward
-                                , deadline = isoDate
-                                , usages = usages
-                                , usagesLeft = usagesLeft
-                                , verifications = minVotes
-                                , verificationType = verificationType
-                                , validatorsStr = validatorsStr
-                                , isCompleted = isCompleted
-                                , creator = loggedIn.accountName
-                                }
-                                    |> Community.encodeCreateActionAction
-                          }
-                        ]
-                    }
+                    [ { accountName = "bes.cmm"
+                      , name = "upsertaction"
+                      , authorization =
+                            { actor = loggedIn.accountName
+                            , permissionName = Eos.samplePermission
+                            }
+                      , data =
+                            { actionId = model.actionId |> Maybe.withDefault 0
+                            , objectiveId = model.objectiveId
+                            , description = getInput model.form.description
+                            , reward = getInput model.form.reward ++ " " ++ Eos.symbolToString model.communityId
+                            , verifierReward = verifierReward
+                            , deadline = isoDate
+                            , usages = usages
+                            , usagesLeft = usagesLeft
+                            , verifications = minVotes
+                            , verificationType = verificationType
+                            , validatorsStr = validatorsStr
+                            , isCompleted = isCompleted
+                            , creator = loggedIn.accountName
+                            }
+                                |> Community.encodeCreateActionAction
+                      }
+                    ]
             }
 
 
@@ -1079,30 +1067,48 @@ upsertAction loggedIn model isoDate =
 -- VIEW
 
 
-view : LoggedIn.Model -> Model -> Html Msg
+view : LoggedIn.Model -> Model -> { title : String, content : Html Msg }
 view ({ shared } as loggedIn) model =
     let
         t s =
             I18Next.t shared.translations s
+
+        title =
+            let
+                action =
+                    if model.actionId /= Nothing then
+                        t "menu.edit"
+
+                    else
+                        t "menu.create"
+            in
+            action
+                ++ " "
+                ++ t "community.actions.title"
+
+        content =
+            case model.status of
+                Loading ->
+                    Page.fullPageLoading
+
+                Loaded community ->
+                    div [ class "bg-white" ]
+                        [ Page.viewHeader loggedIn (t "community.actions.title") (Route.Objectives model.communityId)
+                        , viewForm loggedIn community model
+                        ]
+
+                LoadFailed err ->
+                    Page.fullPageGraphQLError (t "error.invalidSymbol") err
+
+                NotFound ->
+                    Page.fullPageNotFound (t "community.actions.form.not_found") ""
+
+                Unauthorized ->
+                    Page.fullPageNotFound "not authorized" ""
     in
-    case model.status of
-        Loading ->
-            Page.fullPageLoading
-
-        Loaded community ->
-            div [ class "bg-white" ]
-                [ Page.viewHeader loggedIn (t "community.actions.title") (Route.Objectives model.communityId)
-                , viewForm loggedIn community model
-                ]
-
-        LoadFailed err ->
-            Page.fullPageGraphQLError (t "error.invalidSymbol") err
-
-        NotFound ->
-            Page.fullPageNotFound (t "community.actions.form.not_found") ""
-
-        Unauthorized ->
-            Page.fullPageNotFound "not authorized" ""
+    { title = title
+    , content = content
+    }
 
 
 viewForm : LoggedIn.Model -> Community.Model -> Model -> Html Msg
@@ -1657,9 +1663,6 @@ msgToString msg =
 
         GotSaveAction _ ->
             [ "GotSaveAction" ]
-
-        DismissError ->
-            [ "DismissError" ]
 
         PressedEnter _ ->
             [ "PressedEnter" ]

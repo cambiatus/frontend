@@ -63,7 +63,8 @@ type alias History =
 
 
 type alias TransferData =
-    { amount : Float
+    { id : Int
+    , amount : Float
     , fromId : String
     , toId : String
     , memo : Maybe String
@@ -170,6 +171,7 @@ mintSelectionSet =
 transferSelectionSet : SelectionSet TransferData Cambiatus.Object.Transfer
 transferSelectionSet =
     SelectionSet.succeed TransferData
+        |> with Transfer.id
         |> with Transfer.amount
         |> with Transfer.fromId
         |> with Transfer.toId

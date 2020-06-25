@@ -243,6 +243,7 @@
   "community": {
     "title": "Comunidad",
     "create_button": "Crear Comunidad",
+    "not_found": "Comunidad no encontrada",
     "create": {
       "title": "Crear comunidad",
       "success": "Comunidad guardada con éxito",
@@ -620,6 +621,18 @@
       "invalid_id": " no es un ID de transferencia válido"
     },
     "you": "tú",
-    "my_balance": "Mi balance"
+    "my_balance": "Mi balance",
+    "transaction_id": {
+      "title": "ID de transacción",
+      "body": "Esta identificación garantiza la autenticidad de la transacción si ambas partes tienen los mismos emojis."
+    }
+  },
+  "payment_history": {
+    "title": "Historial de Pagos",
+    "user": "Usuario",
+    "date": "Fecha",
+    "more": "Mostrar más",
+    "no_transfers_found": "No se encontraron transferencias según sus criterios.",
+    "pick_date": "Selecciona una fecha..."
   }
 }

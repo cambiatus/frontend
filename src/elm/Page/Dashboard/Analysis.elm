@@ -113,36 +113,41 @@ type ModalStatus
 -- VIEW
 
 
-view : LoggedIn.Model -> Model -> Html Msg
+view : LoggedIn.Model -> Model -> { title : String, content : Html Msg }
 view ({ shared } as loggedIn) model =
     let
         t : String -> String
         t =
             I18Next.t shared.translations
-    in
-    case model.status of
-        Loading ->
-            Page.fullPageLoading
 
-        Loaded claims pageInfo ->
-            div []
-                [ Page.viewHeader loggedIn (t "all_analysis.title") Route.Dashboard
-                , div [ class "container mx-auto px-4 mb-10" ]
-                    [ viewFilters loggedIn model
-                    , if List.length claims > 0 then
-                        div []
-                            [ div [ class "flex flex-wrap -mx-2" ] (List.map (viewClaim loggedIn) claims)
-                            , viewPagination loggedIn pageInfo
+        content =
+            case model.status of
+                Loading ->
+                    Page.fullPageLoading
+
+                Loaded claims pageInfo ->
+                    div []
+                        [ Page.viewHeader loggedIn (t "all_analysis.title") Route.Dashboard
+                        , div [ class "container mx-auto px-4 mb-10" ]
+                            [ viewFilters loggedIn model
+                            , if List.length claims > 0 then
+                                div []
+                                    [ div [ class "flex flex-wrap -mx-2" ] (List.map (viewClaim loggedIn) claims)
+                                    , viewPagination loggedIn pageInfo
+                                    ]
+
+                              else
+                                viewEmptyResults loggedIn
                             ]
+                        , viewAnalysisModal loggedIn model
+                        ]
 
-                      else
-                        viewEmptyResults loggedIn
-                    ]
-                , viewAnalysisModal loggedIn model
-                ]
-
-        Failed ->
-            text ""
+                Failed ->
+                    text ""
+    in
+    { title = t "all_analysis.title"
+    , content = content
+    }
 
 
 viewFilters : LoggedIn.Model -> Model -> Html Msg
@@ -485,17 +490,15 @@ update msg model loggedIn =
                                 , responseData = Encode.null
                                 , data =
                                     Eos.encodeTransaction
-                                        { actions =
-                                            [ { accountName = "bes.cmm"
-                                              , name = "verifyclaim"
-                                              , authorization =
-                                                    { actor = loggedIn.accountName
-                                                    , permissionName = Eos.samplePermission
-                                                    }
-                                              , data = Claim.encodeVerification claimId loggedIn.accountName vote
-                                              }
-                                            ]
-                                        }
+                                        [ { accountName = "bes.cmm"
+                                          , name = "verifyclaim"
+                                          , authorization =
+                                                { actor = loggedIn.accountName
+                                                , permissionName = Eos.samplePermission
+                                                }
+                                          , data = Claim.encodeVerification claimId loggedIn.accountName vote
+                                          }
+                                        ]
                                 }
 
                     else

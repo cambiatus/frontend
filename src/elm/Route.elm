@@ -21,6 +21,7 @@ type Route
     | Notification
     | ProfileEditor
     | PublicProfile String
+    | PaymentHistory String
     | Profile
     | Dashboard
     | Community Symbol
@@ -77,6 +78,7 @@ parser url =
         , Url.map Logout (s "logout")
         , Url.map ProfileEditor (s "profile" </> s "edit")
         , Url.map PublicProfile (s "profile" </> string)
+        , Url.map PaymentHistory (s "payments" </> string)
         , Url.map Profile (s "profile")
         , Url.map Notification (s "notification")
         , Url.map Dashboard (s "dashboard")
@@ -227,6 +229,9 @@ routeToString route =
 
                 PublicProfile accountName ->
                     ( [ "profile", accountName ], [] )
+
+                PaymentHistory accountName ->
+                    ( [ "payments", accountName ], [] )
 
                 Profile ->
                     ( [ "profile" ], [] )

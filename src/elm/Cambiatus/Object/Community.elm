@@ -54,6 +54,16 @@ description =
     Object.selectionForField "String" "description" [] Decode.string
 
 
+hasActions : SelectionSet Bool Cambiatus.Object.Community
+hasActions =
+    Object.selectionForField "Bool" "hasActions" [] Decode.bool
+
+
+hasShop : SelectionSet Bool Cambiatus.Object.Community
+hasShop =
+    Object.selectionForField "Bool" "hasShop" [] Decode.bool
+
+
 invitedReward : SelectionSet Float Cambiatus.Object.Community
 invitedReward =
     Object.selectionForField "Float" "invitedReward" [] Decode.float

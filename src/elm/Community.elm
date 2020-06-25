@@ -168,7 +168,7 @@ communitiesQuery =
 
 
 type alias NewCommunity =
-    { title : String }
+    String
 
 
 newCommunitySubscription : Symbol -> SelectionSet NewCommunity RootSubscription
@@ -179,8 +179,7 @@ newCommunitySubscription symbol =
                 |> String.toUpper
 
         selectionSet =
-            SelectionSet.succeed NewCommunity
-                |> with Community.name
+            Community.name
 
         args =
             { input = { symbol = stringSymbol } }
@@ -438,6 +437,8 @@ type alias CreateCommunityData =
     , description : String
     , inviterReward : Eos.Asset
     , invitedReward : Eos.Asset
+    , hasObjectives : Int
+    , hasShop : Int
     }
 
 
@@ -449,6 +450,8 @@ createCommunityData :
     , description : String
     , inviterReward : Float
     , invitedReward : Float
+    , hasObjectives : Int
+    , hasShop : Int
     }
     -> CreateCommunityData
 createCommunityData params =
@@ -468,6 +471,8 @@ createCommunityData params =
         { amount = params.invitedReward
         , symbol = params.symbol
         }
+    , hasObjectives = params.hasObjectives
+    , hasShop = params.hasShop
     }
 
 
@@ -481,6 +486,8 @@ encodeCreateCommunityData c =
         , ( "description", Encode.string c.description )
         , ( "inviter_reward", Eos.encodeAsset c.inviterReward )
         , ( "invited_reward", Eos.encodeAsset c.invitedReward )
+        , ( "has_objectives", Encode.int c.hasObjectives )
+        , ( "has_shop", Encode.int c.hasObjectives )
         ]
 
 
@@ -509,6 +516,8 @@ type alias UpdateCommunityData =
     , description : String
     , inviterReward : Eos.Asset
     , invitedReward : Eos.Asset
+    , hasObjectives : Int
+    , hasShop : Int
     }
 
 
@@ -521,6 +530,8 @@ encodeUpdateLogoData c =
         , ( "description", Encode.string c.description )
         , ( "inviter_reward", Eos.encodeAsset c.inviterReward )
         , ( "invited_reward", Eos.encodeAsset c.invitedReward )
+        , ( "has_objective", Encode.int c.hasObjectives )
+        , ( "has_shop", Encode.int c.hasShop )
         ]
 
 
@@ -541,7 +552,7 @@ type alias ActionVerification =
 
 
 type alias ActionVerificationsResponse =
-    { claims : List ClaimResponse }
+    List ClaimResponse
 
 
 type alias ClaimResponse =
@@ -553,8 +564,7 @@ type alias ClaimResponse =
 
 
 type alias CheckResponse =
-    { isVerified : Bool
-    }
+    Bool
 
 
 type alias ActionResponse =
@@ -597,8 +607,7 @@ claimSelectionSet validator =
 
 checkSelectionSet : SelectionSet CheckResponse Cambiatus.Object.Check
 checkSelectionSet =
-    SelectionSet.succeed CheckResponse
-        |> with Check.isVerified
+    Check.isVerified
 
 
 verificationActionSelectionSet : SelectionSet ActionResponse Cambiatus.Object.Action
@@ -632,13 +641,13 @@ toVerifications actionVerificationResponse =
     let
         claimsResponse : List ClaimResponse
         claimsResponse =
-            actionVerificationResponse.claims
+            actionVerificationResponse
 
         toStatus : List CheckResponse -> Tag.TagStatus
         toStatus checks =
             case List.head checks of
                 Just check ->
-                    if check.isVerified == True then
+                    if check then
                         Tag.APPROVED
 
                     else

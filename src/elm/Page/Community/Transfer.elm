@@ -11,7 +11,7 @@ module Page.Community.Transfer exposing
 
 import Api.Graphql
 import Browser.Events
-import Community exposing (Model, communityQuery)
+import Community exposing (Model)
 import Eos exposing (Symbol)
 import Eos.Account as Eos
 import Graphql.Document
@@ -138,29 +138,35 @@ isFormValid form =
 -- VIEW
 
 
-view : LoggedIn.Model -> Model -> Html Msg
+view : LoggedIn.Model -> Model -> { title : String, content : Html Msg }
 view ({ shared } as loggedIn) model =
-    case model.status of
-        Loading ->
-            Page.fullPageLoading
+    let
+        content =
+            case model.status of
+                Loading ->
+                    Page.fullPageLoading
 
-        NotFound ->
-            Page.viewCardEmpty [ text "Community not found" ]
+                NotFound ->
+                    Page.viewCardEmpty [ text "Community not found" ]
 
-        Failed e ->
-            Page.fullPageGraphQLError (t shared.translations "community.objectives.title_plural") e
+                Failed e ->
+                    Page.fullPageGraphQLError (t shared.translations "community.objectives.title_plural") e
 
-        Loaded community (EditingTransfer f) ->
-            viewForm loggedIn model f community False
+                Loaded community (EditingTransfer f) ->
+                    viewForm loggedIn model f community False
 
-        Loaded community (CreatingSubscription f) ->
-            viewForm loggedIn model f community True
+                Loaded community (CreatingSubscription f) ->
+                    viewForm loggedIn model f community True
 
-        Loaded community (SendingTransfer f) ->
-            viewForm loggedIn model f community True
+                Loaded community (SendingTransfer f) ->
+                    viewForm loggedIn model f community True
 
-        Loaded community (SendingTransferFailed f) ->
-            viewForm loggedIn model f community False
+                Loaded community (SendingTransferFailed f) ->
+                    viewForm loggedIn model f community False
+    in
+    { title = t shared.translations "transfer.title"
+    , content = content
+    }
 
 
 viewForm : LoggedIn.Model -> Model -> Form -> Community.Model -> Bool -> Html Msg
@@ -428,28 +434,26 @@ update msg model ({ shared } as loggedIn) =
                             , responseData = Encode.null
                             , data =
                                 Eos.encodeTransaction
-                                    { actions =
-                                        [ { accountName = "bes.token"
-                                          , name = "transfer"
-                                          , authorization =
-                                                { actor = loggedIn.accountName
-                                                , permissionName = Eos.samplePermission
+                                    [ { accountName = "bes.token"
+                                      , name = "transfer"
+                                      , authorization =
+                                            { actor = loggedIn.accountName
+                                            , permissionName = Eos.samplePermission
+                                            }
+                                      , data =
+                                            { from = loggedIn.accountName
+                                            , to = Eos.nameQueryUrlParser (Eos.nameToString account)
+                                            , value =
+                                                { amount =
+                                                    String.toFloat form.amount
+                                                        |> Maybe.withDefault 0.0
+                                                , symbol = model.communityId
                                                 }
-                                          , data =
-                                                { from = loggedIn.accountName
-                                                , to = Eos.nameQueryUrlParser (Eos.nameToString account)
-                                                , value =
-                                                    { amount =
-                                                        String.toFloat form.amount
-                                                            |> Maybe.withDefault 0.0
-                                                    , symbol = model.communityId
-                                                    }
-                                                , memo = form.memo
-                                                }
-                                                    |> Transfer.encodeEosActionData
-                                          }
-                                        ]
-                                    }
+                                            , memo = form.memo
+                                            }
+                                                |> Transfer.encodeEosActionData
+                                      }
+                                    ]
                             }
 
                 ( Loaded _ (CreatingSubscription _), False ) ->

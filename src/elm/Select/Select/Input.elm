@@ -1,7 +1,7 @@
 module Select.Select.Input exposing (onKeyPressAttribute, onKeyUpAttribute, view)
 
 import Array
-import Html as Html exposing (Attribute, Html)
+import Html exposing (Attribute, Html)
 import Html.Attributes
     exposing
         ( attribute
@@ -18,7 +18,7 @@ import Json.Decode as Decode
 import Select.Config exposing (Config)
 import Select.Events exposing (onBlurAttribute)
 import Select.Messages as Msg exposing (Msg)
-import Select.Models as Models exposing (State)
+import Select.Models exposing (State)
 import Select.Search as Search
 import Select.Select.Clear as Clear
 import Select.Select.RemoveItem as RemoveItem
@@ -177,9 +177,9 @@ view config model availableItems selectedItems =
                     maybeMatchedItems
     in
     Html.div
-        ([ class inputControlClass ] ++ inputControlStylesAttrs)
+        (class inputControlClass :: inputControlStylesAttrs)
         [ Html.div
-            ([ class inputWrapperClass ] ++ inputWrapperStylesAttrs)
+            (class inputWrapperClass :: inputWrapperStylesAttrs)
             input
         , underline
         , clear
@@ -249,8 +249,8 @@ multiInput config model availableItems selected maybeMatchedItems =
     in
     [ viewMultiItems selected
     , Html.input
-        (inputAttributes config model availableItems selected maybeMatchedItems
-            ++ [ value val ]
+        (value val
+            :: inputAttributes config model availableItems selected maybeMatchedItems
             ++ (if List.isEmpty selected then
                     [ placeholder config.prompt ]
 
@@ -284,7 +284,7 @@ singleInput config model availableItems selectedItems maybeMatchedItems =
 
 
 inputAttributes : Config msg item -> State -> List item -> List item -> Maybe (List item) -> List (Html.Attribute (Msg item))
-inputAttributes config model availableItems selectedItems maybeMatchedItems =
+inputAttributes config model _ selectedItems maybeMatchedItems =
     let
         inputClasses : String
         inputClasses =
@@ -316,9 +316,6 @@ inputAttributes config model availableItems selectedItems maybeMatchedItems =
         preselectedItem : Maybe item
         preselectedItem =
             case maybeMatchedItems of
-                Nothing ->
-                    Nothing
-
                 Just matchedItems ->
                     if config.isMultiSelect then
                         case model.highlightedItem of
@@ -331,6 +328,9 @@ inputAttributes config model availableItems selectedItems maybeMatchedItems =
 
                     else
                         List.head matchedItems
+
+                _ ->
+                    Nothing
     in
     [ autocomplete False
     , attribute "autocorrect" "off" -- for mobile Safari

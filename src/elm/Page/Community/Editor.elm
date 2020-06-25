@@ -16,18 +16,18 @@ import Asset.Icon as Icon
 import Browser.Events as Events
 import Community exposing (Model)
 import Dict exposing (Dict)
-import Eos as Eos exposing (Symbol)
+import Eos exposing (Symbol)
 import Eos.Account as Eos
 import File exposing (File)
 import Graphql.Document
 import Graphql.Http
 import Html exposing (Html, br, button, div, input, label, span, text, textarea)
-import Html.Attributes exposing (..)
+import Html.Attributes exposing (accept, class, classList, disabled, for, id, maxlength, minlength, multiple, placeholder, required, type_, value)
 import Html.Events exposing (onClick, onInput, onSubmit)
 import Http
 import I18Next
 import Json.Decode as Decode
-import Json.Encode as Encode exposing (Value, object, string)
+import Json.Encode as Encode exposing (Value)
 import List.Extra as List
 import Page
 import Route
@@ -35,7 +35,7 @@ import Session.LoggedIn as LoggedIn exposing (External(..), FeedbackStatus(..))
 import Session.Shared exposing (Shared)
 import Task
 import UpdateResult as UR
-import Utils exposing (..)
+import Utils exposing (decodeEnterKeyDown)
 
 
 
@@ -44,16 +44,14 @@ import Utils exposing (..)
 
 initNew : LoggedIn.Model -> ( Model, Cmd Msg )
 initNew _ =
-    ( { status = EditingNew Dict.empty newForm
-      }
+    ( EditingNew Dict.empty newForm
     , Cmd.none
     )
 
 
 initEdit : LoggedIn.Model -> Symbol -> ( Model, Cmd Msg )
 initEdit { shared } symbol =
-    ( { status = Loading symbol
-      }
+    ( Loading symbol
     , Api.Graphql.query shared (Community.communityQuery symbol) CompletedCommunityLoad
     )
 
@@ -72,8 +70,7 @@ subscriptions _ =
 
 
 type alias Model =
-    { status : Status
-    }
+    Status
 
 
 type
@@ -157,12 +154,7 @@ type LogoStatus
 
 
 type FormError
-    = Required
-    | TooShort Int
-    | TooLong Int
-    | InvalidChar Char
-    | AlreadyTaken
-    | ChooseOrUploadLogo
+    = ChooseOrUploadLogo
     | InternalError
     | InvalidSymbol
 
@@ -207,6 +199,8 @@ encodeFormHelper logoHash { accountName } form =
             , description = form.description
             , inviterReward = form.inviterReward
             , invitedReward = form.invitedReward
+            , hasObjectives = 1
+            , hasShop = 1
             }
                 |> Community.createCommunityData
                 |> Valid
@@ -216,7 +210,7 @@ encodeFormHelper logoHash { accountName } form =
 -- VIEW
 
 
-view : LoggedIn.Model -> Model -> Html Msg
+view : LoggedIn.Model -> Model -> { title : String, content : Html Msg }
 view loggedIn model =
     let
         defaultContainer =
@@ -227,41 +221,46 @@ view loggedIn model =
 
         t str =
             I18Next.t shared.translations str
+
+        content =
+            case model of
+                Loading _ ->
+                    Page.fullPageLoading
+
+                LoadingFailed e ->
+                    Page.fullPageGraphQLError (t "community.edit.title") e
+
+                NotFound ->
+                    Page.viewCardEmpty [ text "Community not found" ]
+
+                Unauthorized _ ->
+                    defaultContainer
+                        [ Page.viewTitle (t "community.edit.title")
+                        , div [ class "card" ]
+                            [ text (t "community.edit.unauthorized") ]
+                        ]
+
+                Editing _ problems form ->
+                    viewForm shared True False problems form model
+
+                WaitingEditLogoUpload _ form ->
+                    viewForm shared True True Dict.empty form model
+
+                Saving _ form ->
+                    viewForm shared True True Dict.empty form model
+
+                EditingNew problems form ->
+                    viewForm shared False False problems form model
+
+                WaitingNewLogoUpload form ->
+                    viewForm shared False True Dict.empty form model
+
+                Creating form ->
+                    viewForm shared False True Dict.empty form model
     in
-    case model.status of
-        Loading _ ->
-            Page.fullPageLoading
-
-        LoadingFailed e ->
-            Page.fullPageGraphQLError (t "community.edit.title") e
-
-        NotFound ->
-            Page.viewCardEmpty [ text "Community not found" ]
-
-        Unauthorized _ ->
-            defaultContainer
-                [ Page.viewTitle (t "community.edit.title")
-                , div [ class "card" ]
-                    [ text (t "community.edit.unauthorized") ]
-                ]
-
-        Editing _ problems form ->
-            viewForm shared True False problems form model
-
-        WaitingEditLogoUpload _ form ->
-            viewForm shared True True Dict.empty form model
-
-        Saving _ form ->
-            viewForm shared True True Dict.empty form model
-
-        EditingNew problems form ->
-            viewForm shared False False problems form model
-
-        WaitingNewLogoUpload form ->
-            viewForm shared False True Dict.empty form model
-
-        Creating form ->
-            viewForm shared False True Dict.empty form model
+    { title = t "community.edit.title"
+    , content = content
+    }
 
 
 viewForm : Shared -> Bool -> Bool -> Dict String FormError -> Form -> Model -> Html Msg
@@ -278,7 +277,7 @@ viewForm shared isEdit isDisabled errors form model =
                 ( t "community.create.title", t "community.create.submit" )
 
         cmd =
-            case model.status of
+            case model of
                 EditingNew _ _ ->
                     NewCommunitySubscription form.symbol
 
@@ -548,26 +547,8 @@ errorToString shared v =
     let
         t s =
             I18Next.t shared.translations s
-
-        tr str values =
-            I18Next.tr shared.translations I18Next.Curly str values
     in
     case v of
-        Required ->
-            t "error.required"
-
-        TooShort i ->
-            tr "error.tooShort" [ ( "minLength", String.fromInt i ) ]
-
-        TooLong i ->
-            tr "error.tooLong" [ ( "maxLength", String.fromInt i ) ]
-
-        InvalidChar c ->
-            tr "error.invalidChar" [ ( "invalidChar", String.fromChar c ) ]
-
-        AlreadyTaken ->
-            t "error.alreadyTaken"
-
         ChooseOrUploadLogo ->
             t "error.chooseOrUploadLogo"
 
@@ -616,19 +597,18 @@ update msg model loggedIn =
                 Just c ->
                     if LoggedIn.isAccount c.creator loggedIn then
                         Editing c Dict.empty (editForm c)
-                            |> updateStatus model
                             |> UR.init
 
                     else
-                        { model | status = Unauthorized c }
+                        Unauthorized c
                             |> UR.init
 
                 Nothing ->
-                    { model | status = NotFound }
+                    NotFound
                         |> UR.init
 
         CompletedCommunityLoad (Err err) ->
-            { model | status = LoadingFailed err }
+            LoadingFailed err
                 |> UR.init
                 |> UR.logGraphqlError msg err
 
@@ -727,7 +707,7 @@ update msg model loggedIn =
                         (UR.init model)
                         |> addHttpError
             in
-            case model.status of
+            case model of
                 WaitingEditLogoUpload _ _ ->
                     save msg loggedIn uResult
 
@@ -738,7 +718,7 @@ update msg model loggedIn =
                     uResult
 
         GotSaveResponse (Ok symbol) ->
-            case model.status of
+            case model of
                 Saving _ _ ->
                     model
                         |> UR.init
@@ -757,15 +737,15 @@ update msg model loggedIn =
                 err =
                     Dict.singleton "form" InternalError
             in
-            case model.status of
+            case model of
                 Saving community form ->
-                    { model | status = Editing community err form }
+                    Editing community err form
                         |> UR.init
                         |> UR.logDebugValue msg val
                         |> UR.addExt (ShowFeedback Failure (t "error.unknown"))
 
                 Creating form ->
-                    { model | status = EditingNew err form }
+                    EditingNew err form
                         |> UR.init
                         |> UR.logDebugValue msg val
                         |> UR.addExt (ShowFeedback Failure (t "error.unknown"))
@@ -777,7 +757,7 @@ update msg model loggedIn =
                         |> UR.addExt (ShowFeedback Failure (t "error.unknown"))
 
         Redirect ->
-            case model.status of
+            case model of
                 Creating form ->
                     let
                         sym =
@@ -814,14 +794,9 @@ update msg model loggedIn =
                 UR.init model
 
 
-updateStatus : Model -> Status -> Model
-updateStatus model status =
-    { model | status = status }
-
-
 updateForm : (Form -> Form) -> UpdateResult -> UpdateResult
 updateForm transform ({ model } as uResult) =
-    case model.status of
+    case model of
         Loading _ ->
             uResult
 
@@ -836,32 +811,26 @@ updateForm transform ({ model } as uResult) =
 
         Editing community errors form ->
             Editing community errors (transform form)
-                |> updateStatus model
                 |> UR.setModel uResult
 
         WaitingEditLogoUpload community form ->
             WaitingEditLogoUpload community (transform form)
-                |> updateStatus model
                 |> UR.setModel uResult
 
         Saving community form ->
             Saving community (transform form)
-                |> updateStatus model
                 |> UR.setModel uResult
 
         EditingNew errors form ->
             EditingNew errors (transform form)
-                |> updateStatus model
                 |> UR.setModel uResult
 
         WaitingNewLogoUpload form ->
             WaitingNewLogoUpload (transform form)
-                |> updateStatus model
                 |> UR.setModel uResult
 
         Creating form ->
             Creating (transform form)
-                |> updateStatus model
                 |> UR.setModel uResult
 
 
@@ -878,7 +847,6 @@ save msg loggedIn ({ model } as uResult) =
                             }
                     in
                     toLoading form
-                        |> updateStatus model
                         |> UR.setModel uResult
                         |> UR.addPort
                             (if isEdit then
@@ -886,22 +854,22 @@ save msg loggedIn ({ model } as uResult) =
                                 , responseData = Encode.string form.symbol
                                 , data =
                                     Eos.encodeTransaction
-                                        { actions =
-                                            [ { accountName = "bes.cmm"
-                                              , name = "update"
-                                              , authorization = authorization
-                                              , data =
-                                                    { asset = createAction.cmmAsset
-                                                    , logo = createAction.logoHash
-                                                    , name = createAction.name
-                                                    , description = createAction.description
-                                                    , inviterReward = createAction.inviterReward
-                                                    , invitedReward = createAction.invitedReward
-                                                    }
-                                                        |> Community.encodeUpdateLogoData
-                                              }
-                                            ]
-                                        }
+                                        [ { accountName = "bes.cmm"
+                                          , name = "update"
+                                          , authorization = authorization
+                                          , data =
+                                                { asset = createAction.cmmAsset
+                                                , logo = createAction.logoHash
+                                                , name = createAction.name
+                                                , description = createAction.description
+                                                , inviterReward = createAction.inviterReward
+                                                , invitedReward = createAction.invitedReward
+                                                , hasObjectives = 1
+                                                , hasShop = 1
+                                                }
+                                                    |> Community.encodeUpdateLogoData
+                                          }
+                                        ]
                                 }
 
                              else
@@ -909,41 +877,37 @@ save msg loggedIn ({ model } as uResult) =
                                 , responseData = Encode.string form.symbol
                                 , data =
                                     Eos.encodeTransaction
-                                        { actions =
-                                            [ { accountName = "bes.cmm"
-                                              , name = "create"
-                                              , authorization = authorization
-                                              , data =
-                                                    createAction
-                                                        |> Community.encodeCreateCommunityData
-                                              }
-                                            , { accountName = "bes.token"
-                                              , name = "create"
-                                              , authorization = authorization
-                                              , data =
-                                                    { creator = loggedIn.accountName
-                                                    , maxSupply = { amount = 21000000.0, symbol = createAction.cmmAsset.symbol }
-                                                    , minBalance = { amount = -1000.0, symbol = createAction.cmmAsset.symbol }
-                                                    , tokenType = "mcc"
-                                                    }
-                                                        |> Community.encodeCreateTokenData
-                                              }
-                                            ]
-                                        }
+                                        [ { accountName = "bes.cmm"
+                                          , name = "create"
+                                          , authorization = authorization
+                                          , data =
+                                                createAction
+                                                    |> Community.encodeCreateCommunityData
+                                          }
+                                        , { accountName = "bes.token"
+                                          , name = "create"
+                                          , authorization = authorization
+                                          , data =
+                                                { creator = loggedIn.accountName
+                                                , maxSupply = { amount = 21000000.0, symbol = createAction.cmmAsset.symbol }
+                                                , minBalance = { amount = -1000.0, symbol = createAction.cmmAsset.symbol }
+                                                , tokenType = "mcc"
+                                                }
+                                                    |> Community.encodeCreateTokenData
+                                          }
+                                        ]
                                 }
                             )
 
                 UploadingLogo ->
                     toUploadingLogo form
-                        |> updateStatus model
                         |> UR.setModel uResult
 
                 Invalid problems ->
                     toError problems form
-                        |> updateStatus model
                         |> UR.setModel uResult
     in
-    case model.status of
+    case model of
         Editing community _ form ->
             save_ form (Saving community) (WaitingEditLogoUpload community) (Editing community) True
 

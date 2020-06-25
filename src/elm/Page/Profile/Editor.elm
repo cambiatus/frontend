@@ -81,17 +81,26 @@ type AvatarStatus
 -- VIEW
 
 
-view : Session.LoggedIn.Model -> Model -> Html Msg
+view : Session.LoggedIn.Model -> Model -> { title : String, content : Html Msg }
 view loggedIn model =
-    case model.status of
-        Loading ->
-            Page.fullPageLoading
+    let
+        title =
+            ""
 
-        LoadingFailed _ ->
-            Page.fullPageError (t loggedIn.shared.translations "profile.title") Http.Timeout
+        content =
+            case model.status of
+                Loading ->
+                    Page.fullPageLoading
 
-        Loaded profile ->
-            view_ loggedIn model profile
+                LoadingFailed _ ->
+                    Page.fullPageError (t loggedIn.shared.translations "profile.title") Http.Timeout
+
+                Loaded profile ->
+                    view_ loggedIn model profile
+    in
+    { title = title
+    , content = content
+    }
 
 
 view_ : Session.LoggedIn.Model -> Model -> Profile -> Html Msg

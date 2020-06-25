@@ -1,10 +1,8 @@
 module Translation exposing (get)
 
-import Api
-import Flags exposing (Endpoints)
 import Http
 import I18Next exposing (Translations)
-import Url.Builder exposing (QueryParameter)
+import Url.Builder
 
 
 get : String -> (Result Http.Error Translations -> msg) -> Cmd msg

@@ -13,7 +13,7 @@ import Api.Graphql
 import Avatar
 import Cambiatus.Enum.VerificationType as VerificationType
 import Cambiatus.Scalar exposing (DateTime(..))
-import Community exposing (ActionVerification, Model)
+import Community exposing (Model)
 import Eos exposing (Symbol)
 import Eos.Account as Eos
 import Graphql.Http
@@ -28,13 +28,11 @@ import Json.Encode as Encode exposing (Value)
 import Page
 import Route
 import Session.LoggedIn as LoggedIn exposing (External(..), FeedbackStatus(..))
-import Session.Shared exposing (Shared)
 import Strftime
 import Task
 import Time exposing (Posix, posixToMillis)
 import UpdateResult as UR
 import Utils
-import View.Tag as Tag
 
 
 
@@ -96,7 +94,6 @@ type LoadStatus
 
 type EditStatus
     = NoEdit
-    | OpenObjective Int
 
 
 type ModalStatus
@@ -115,7 +112,7 @@ type alias Member =
 -- VIEW
 
 
-view : LoggedIn.Model -> Model -> Html Msg
+view : LoggedIn.Model -> Model -> { title : String, content : Html Msg }
 view loggedIn model =
     let
         t s =
@@ -126,149 +123,91 @@ view loggedIn model =
 
         text_ s =
             text (t s)
-    in
-    case model.community of
-        Loading ->
-            Page.fullPageLoading
 
-        NotFound ->
-            Page.viewCardEmpty [ text "Community not found" ]
+        title =
+            case model.community of
+                Loaded community _ ->
+                    community.title
 
-        Failed e ->
-            Page.fullPageGraphQLError (t "community.objectives.title") e
+                Loading ->
+                    t ""
 
-        Loaded community editStatus ->
-            let
-                canEdit =
-                    LoggedIn.isAccount community.creator loggedIn
-            in
-            div []
-                [ viewHeader loggedIn community
-                , div [ class "bg-white p-20" ]
-                    [ div [ class "flex flex-wrap w-full items-center" ]
-                        [ p [ class "text-4xl font-bold" ]
-                            [ text community.title ]
-                        ]
-                    , p [ class "text-grey-200 text-sm" ] [ text community.description ]
-                    ]
-                , div [ class "container mx-auto px-4" ]
-                    [ viewClaimModal loggedIn model
-                    , if canEdit then
-                        div [ class "flex justify-between items-center py-2 px-8 sm:px-6 bg-white rounded-lg mt-4" ]
-                            [ div []
-                                [ p [ class "font-bold" ] [ text_ "community.objectives.title_plural" ]
-                                , p [ class "text-gray-900 text-caption uppercase" ]
-                                    [ text
-                                        (tr "community.objectives.subtitle"
-                                            [ ( "objectives", List.length community.objectives |> String.fromInt )
-                                            , ( "actions"
-                                              , List.map (\c -> List.length c.actions) community.objectives
-                                                    |> List.foldl (+) 0
-                                                    |> String.fromInt
-                                              )
-                                            ]
-                                        )
-                                    ]
+                _ ->
+                    t "community.not_found"
+
+        content =
+            case model.community of
+                Loading ->
+                    Page.fullPageLoading
+
+                NotFound ->
+                    Page.viewCardEmpty [ text_ "community.not_found" ]
+
+                Failed e ->
+                    Page.fullPageGraphQLError (t "community.objectives.title") e
+
+                Loaded community editStatus ->
+                    let
+                        canEdit =
+                            LoggedIn.isAccount community.creator loggedIn
+                    in
+                    div []
+                        [ viewHeader loggedIn community
+                        , div [ class "bg-white p-20" ]
+                            [ div [ class "flex flex-wrap w-full items-center" ]
+                                [ p [ class "text-4xl font-bold" ]
+                                    [ text community.title ]
                                 ]
-                            , a
-                                [ class "button button-primary"
-                                , Route.href (Route.Objectives community.symbol)
-                                ]
-                                [ text_ "menu.edit" ]
+                            , p [ class "text-grey-200 text-sm" ] [ text community.description ]
                             ]
+                        , div [ class "container mx-auto px-4" ]
+                            [ viewClaimModal loggedIn model
+                            , if canEdit then
+                                div [ class "flex justify-between items-center py-2 px-8 sm:px-6 bg-white rounded-lg mt-4" ]
+                                    [ div []
+                                        [ p [ class "font-bold" ] [ text_ "community.objectives.title_plural" ]
+                                        , p [ class "text-gray-900 text-caption uppercase" ]
+                                            [ text
+                                                (tr "community.objectives.subtitle"
+                                                    [ ( "objectives", List.length community.objectives |> String.fromInt )
+                                                    , ( "actions"
+                                                      , List.map (\c -> List.length c.actions) community.objectives
+                                                            |> List.foldl (+) 0
+                                                            |> String.fromInt
+                                                      )
+                                                    ]
+                                                )
+                                            ]
+                                        ]
+                                    , a
+                                        [ class "button button-primary"
+                                        , Route.href (Route.Objectives community.symbol)
+                                        ]
+                                        [ text_ "menu.edit" ]
+                                    ]
 
-                      else
-                        text ""
-                    , div [ class "bg-white py-6 sm:py-8 px-3 sm:px-6 rounded-lg mt-4" ]
-                        ([ Page.viewTitle (t "community.objectives.title_plural") ]
-                            ++ List.indexedMap (viewObjective loggedIn model community)
-                                community.objectives
-                            ++ [ if canEdit then
-                                    viewObjectiveNew loggedIn editStatus community.symbol
+                              else
+                                text ""
+                            , div [ class "bg-white py-6 sm:py-8 px-3 sm:px-6 rounded-lg mt-4" ]
+                                (Page.viewTitle (t "community.objectives.title_plural")
+                                    :: List.indexedMap (viewObjective loggedIn model community)
+                                        community.objectives
+                                    ++ [ if canEdit then
+                                            viewObjectiveNew loggedIn editStatus community.symbol
 
-                                 else
-                                    text ""
-                               ]
-                        )
+                                         else
+                                            text ""
+                                       ]
+                                )
 
-                    -- , Transfer.getTransfers (Just community)
-                    --     |> viewSections loggedIn model
-                    ]
-                ]
-
-
-
--- VIEW VERIFICATIONS
-
-
-viewVerification : Shared -> ActionVerification -> Html Msg
-viewVerification shared verification =
-    let
-        maybeLogo =
-            if String.isEmpty verification.logo then
-                Nothing
-
-            else
-                Just (shared.endpoints.ipfs ++ "/" ++ verification.logo)
-
-        description =
-            verification.description
-
-        date =
-            Just verification.createdAt
-                |> Utils.posixDateTime
-                |> Strftime.format "%d %b %Y" Time.utc
-
-        status =
-            verification.status
-
-        route =
-            case verification.symbol of
-                Just symbol ->
-                    Route.Claim
-                        symbol
-                        verification.objectiveId
-                        verification.actionId
-                        verification.claimId
-
-                Nothing ->
-                    Route.ComingSoon
-    in
-    a
-        [ class "border-b last:border-b-0 border-gray-500 flex items-start lg:items-center hover:bg-gray-100 first-hover:rounded-t-lg last-hover:rounded-b-lg p-4"
-        , Route.href route
-        ]
-        [ div
-            [ class "flex-none" ]
-            [ case maybeLogo of
-                Just logoUrl ->
-                    img
-                        [ class "w-10 h-10 object-scale-down"
-                        , src logoUrl
+                            -- , Transfer.getTransfers (Just community)
+                            --     |> viewSections loggedIn model
+                            ]
                         ]
-                        []
-
-                Nothing ->
-                    div
-                        [ class "w-10 h-10 object-scale-down" ]
-                        []
-            ]
-        , div
-            [ class "flex-col flex-grow-1 pl-4" ]
-            [ p
-                [ class "font-sans text-black text-sm leading-relaxed" ]
-                [ text description ]
-            , p
-                [ class "font-normal font-sans text-gray-900 text-caption uppercase" ]
-                [ text date ]
-            , div
-                [ class "lg:hidden mt-4" ]
-                [ Tag.view status shared.translations ]
-            ]
-        , div
-            [ class "hidden lg:visible lg:flex lg:flex-none pl-4" ]
-            [ Tag.view status shared.translations ]
-        ]
+    in
+    { title = title
+    , content = content
+    }
 
 
 
@@ -738,21 +677,19 @@ update msg model loggedIn =
                         , responseData = Encode.null
                         , data =
                             Eos.encodeTransaction
-                                { actions =
-                                    [ { accountName = "bes.cmm"
-                                      , name = "claimaction"
-                                      , authorization =
-                                            { actor = loggedIn.accountName
-                                            , permissionName = Eos.samplePermission
-                                            }
-                                      , data =
-                                            { actionId = actionId
-                                            , maker = loggedIn.accountName
-                                            }
-                                                |> Community.encodeClaimAction
-                                      }
-                                    ]
-                                }
+                                [ { accountName = "bes.cmm"
+                                  , name = "claimaction"
+                                  , authorization =
+                                        { actor = loggedIn.accountName
+                                        , permissionName = Eos.samplePermission
+                                        }
+                                  , data =
+                                        { actionId = actionId
+                                        , maker = loggedIn.accountName
+                                        }
+                                            |> Community.encodeClaimAction
+                                  }
+                                ]
                         }
 
             else

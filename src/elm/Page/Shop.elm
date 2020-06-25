@@ -13,7 +13,7 @@ import Api
 import Api.Graphql
 import Browser.Dom as Dom
 import Community exposing (Balance)
-import Eos as Eos
+import Eos
 import Eos.Account as Eos
 import Graphql.Http
 import Html exposing (Html, a, button, div, img, p, text)
@@ -45,7 +45,7 @@ init : LoggedIn.Model -> Filter -> ( Model, Cmd Msg )
 init loggedIn filter =
     let
         model =
-            initModel loggedIn filter
+            initModel filter
     in
     ( model
     , Cmd.batch
@@ -64,8 +64,8 @@ init loggedIn filter =
 -- SUBSCRIPTIONS
 
 
-subscriptions : Model -> Sub Msg
-subscriptions model =
+subscriptions : Sub Msg
+subscriptions =
     Sub.none
 
 
@@ -81,8 +81,8 @@ type alias Model =
     }
 
 
-initModel : LoggedIn.Model -> Filter -> Model
-initModel loggedIn filter =
+initModel : Filter -> Model
+initModel filter =
     { date = Nothing
     , cards = Loading
     , balances = []
@@ -146,27 +146,57 @@ type ValidationError
 -- VIEW
 
 
-view : LoggedIn.Model -> Model -> Html Msg
+view : LoggedIn.Model -> Model -> { title : String, content : Html Msg }
 view loggedIn model =
-    case model.cards of
-        Loading ->
-            div []
-                [ Lazy.lazy viewHeader loggedIn
-                , div [ class "container mx-auto px-4" ]
-                    [ Page.fullPageLoading ]
-                ]
+    let
+        selectedCommunityName =
+            case loggedIn.profile of
+                LoggedIn.Loaded profile ->
+                    let
+                        selectedCommunity =
+                            profile.communities
+                                |> List.filter (\p -> p.id == loggedIn.selectedCommunity)
+                                |> List.head
+                    in
+                    case selectedCommunity of
+                        Just c ->
+                            c.name
 
-        LoadingFailed e ->
-            Page.fullPageGraphQLError (t loggedIn.shared.translations "shop.title") e
+                        Nothing ->
+                            Eos.symbolToString loggedIn.selectedCommunity
 
-        Loaded cards ->
-            div []
-                [ Lazy.lazy viewHeader loggedIn
-                , div [ class "container mx-auto justify-center px-4" ]
-                    [ viewShopFilter loggedIn model.filter
-                    , Lazy.lazy3 viewGrid loggedIn cards model
-                    ]
-                ]
+                _ ->
+                    ""
+
+        title =
+            selectedCommunityName
+                ++ " "
+                ++ t loggedIn.shared.translations "shop.title"
+
+        content =
+            case model.cards of
+                Loading ->
+                    div []
+                        [ Lazy.lazy viewHeader loggedIn
+                        , div [ class "container mx-auto px-4" ]
+                            [ Page.fullPageLoading ]
+                        ]
+
+                LoadingFailed e ->
+                    Page.fullPageGraphQLError (t loggedIn.shared.translations "shop.title") e
+
+                Loaded cards ->
+                    div []
+                        [ Lazy.lazy viewHeader loggedIn
+                        , div [ class "container mx-auto justify-center px-4" ]
+                            [ viewShopFilter loggedIn model.filter
+                            , Lazy.lazy3 viewGrid loggedIn cards model
+                            ]
+                        ]
+    in
+    { title = title
+    , content = content
+    }
 
 
 viewHeader : LoggedIn.Model -> Html Msg
@@ -196,11 +226,6 @@ viewHeader loggedIn =
 viewShopFilter : LoggedIn.Model -> Filter -> Html Msg
 viewShopFilter loggedIn filter =
     let
-        translations =
-            ( t loggedIn.shared.translations "shop.all_offers"
-            , t loggedIn.shared.translations "shop.my_offers"
-            )
-
         buttonClass =
             "w-1/2 lg:w-56 border border-purple-500 first:rounded-l last:rounded-r px-12 py-2 text-sm font-light text-gray"
     in
@@ -340,16 +365,6 @@ viewCard model ({ shared } as loggedIn) card =
         ]
 
 
-getIpfsUrl : Session -> String
-getIpfsUrl session =
-    case session of
-        Guest s ->
-            s.shared.endpoints.ipfs
-
-        LoggedIn s ->
-            s.shared.endpoints.ipfs
-
-
 
 --- UPDATE
 
@@ -391,74 +406,70 @@ update msg model loggedIn =
                     validateForm card.sale card.form
             in
             if isFormValid newForm then
-                case LoggedIn.isAuth loggedIn of
-                    True ->
-                        let
-                            authorization =
-                                { actor = loggedIn.accountName
-                                , permissionName = Eos.samplePermission
-                                }
+                if LoggedIn.isAuth loggedIn then
+                    let
+                        authorization =
+                            { actor = loggedIn.accountName
+                            , permissionName = Eos.samplePermission
+                            }
 
-                            wantedUnits =
-                                case String.toInt card.form.unit of
-                                    Just quantityInt ->
-                                        quantityInt
+                        wantedUnits =
+                            case String.toInt card.form.unit of
+                                Just quantityInt ->
+                                    quantityInt
 
-                                    -- TODO sort sales without units
-                                    Nothing ->
-                                        1
+                                Nothing ->
+                                    1
 
-                            tAmount =
-                                card.sale.price * toFloat wantedUnits
+                        tAmount =
+                            card.sale.price * toFloat wantedUnits
 
-                            quantity =
-                                { amount = tAmount
-                                , symbol = card.sale.symbol
-                                }
+                        quantity =
+                            { amount = tAmount
+                            , symbol = card.sale.symbol
+                            }
 
-                            from =
-                                loggedIn.accountName
+                        from =
+                            loggedIn.accountName
 
-                            to =
-                                card.sale.creatorId
-                        in
-                        UR.init model
-                            |> UR.addPort
-                                { responseAddress = TransferSuccess cardIndex
-                                , responseData = Encode.null
-                                , data =
-                                    Eos.encodeTransaction
-                                        { actions =
-                                            [ { accountName = "bes.token"
-                                              , name = "transfer"
-                                              , authorization = authorization
-                                              , data =
-                                                    { from = from
-                                                    , to = to
-                                                    , value = quantity
-                                                    , memo = card.form.memo
-                                                    }
-                                                        |> Transfer.encodeEosActionData
-                                              }
-                                            , { accountName = "bes.cmm"
-                                              , name = "transfersale"
-                                              , authorization = authorization
-                                              , data =
-                                                    { id = card.sale.id
-                                                    , from = from
-                                                    , to = to
-                                                    , quantity = quantity
-                                                    , units = wantedUnits
-                                                    }
-                                                        |> Shop.encodeTransferSale
-                                              }
-                                            ]
-                                        }
-                                }
+                        to =
+                            card.sale.creatorId
+                    in
+                    UR.init model
+                        |> UR.addPort
+                            { responseAddress = TransferSuccess cardIndex
+                            , responseData = Encode.null
+                            , data =
+                                Eos.encodeTransaction
+                                    [ { accountName = "bes.token"
+                                      , name = "transfer"
+                                      , authorization = authorization
+                                      , data =
+                                            { from = from
+                                            , to = to
+                                            , value = quantity
+                                            , memo = card.form.memo
+                                            }
+                                                |> Transfer.encodeEosActionData
+                                      }
+                                    , { accountName = "bes.cmm"
+                                      , name = "transfersale"
+                                      , authorization = authorization
+                                      , data =
+                                            { id = card.sale.id
+                                            , from = from
+                                            , to = to
+                                            , quantity = quantity
+                                            , units = wantedUnits
+                                            }
+                                                |> Shop.encodeTransferSale
+                                      }
+                                    ]
+                            }
 
-                    False ->
-                        UR.init model
-                            |> UR.addExt (Just (ClickedSendTransfer card cardIndex) |> RequiredAuthentication)
+                else
+                    UR.init model
+                        |> UR.addExt (Just (ClickedSendTransfer card cardIndex) |> RequiredAuthentication)
 
             else
                 UR.init model

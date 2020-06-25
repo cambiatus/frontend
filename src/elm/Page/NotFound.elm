@@ -5,7 +5,7 @@ import I18Next exposing (t)
 import Page
 
 
-view : Page.Session -> Html msg
+view : Page.Session -> { title : String, content : Html msg }
 view session =
     let
         shared =
@@ -14,4 +14,8 @@ view session =
         text_ =
             t shared.translations
     in
-    Page.fullPageNotFound (text_ "error.pageNotFound") ""
+    { title =
+        t shared.translations "error.pageNotFound"
+    , content =
+        Page.fullPageNotFound (text_ "error.pageNotFound") ""
+    }

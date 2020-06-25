@@ -5,8 +5,8 @@ import Auth exposing (viewFieldLabel)
 import Browser.Events
 import Char
 import Eos.Account as Eos
-import Html exposing (..)
-import Html.Attributes exposing (..)
+import Html exposing (Attribute, Html, a, button, div, img, input, label, li, p, span, strong, text, ul)
+import Html.Attributes exposing (attribute, checked, class, disabled, id, maxlength, placeholder, src, style, type_, value)
 import Html.Events exposing (onCheck, onClick, onInput, onSubmit)
 import Http
 import I18Next exposing (t)
@@ -19,7 +19,7 @@ import Session.Guest as Guest exposing (External(..))
 import Session.Shared exposing (Shared)
 import Task
 import UpdateResult as UR
-import Utils exposing (..)
+import Utils exposing (decodeEnterKeyDown)
 import Validate exposing (ifBlank, ifFalse, ifInvalidEmail, ifTrue, validate)
 
 
@@ -131,7 +131,7 @@ decodeAccount =
 -- VIEW
 
 
-view : Guest.Model -> Model -> Html Msg
+view : Guest.Model -> Model -> { title : String, content : Html Msg }
 view guest model =
     let
         shared =
@@ -179,164 +179,174 @@ view guest model =
                     ]
                     [ text_ ("register.form.step" ++ step ++ "_title") ]
                 ]
-    in
-    if model.accountGenerated then
-        div
-            [ class "flex-grow bg-purple-500 flex md:block"
-            ]
-            [ div
-                [ class "sf-wrapper"
-                , class "px-4 md:max-w-sm md:mx-auto md:pt-20 md:px-0 text-white text-body"
-                ]
-                [ div [ class "sf-content" ]
-                    [ viewTitleForStep 2
-                    , p
-                        [ class "text-xl mb-3" ]
-                        [ text_ "register.account_created.greet"
-                        , text " "
-                        , strong [] [ text name ]
-                        , text ", "
-                        , text_ "register.account_created.last_step"
-                        ]
-                    , p [ class "mb-3" ]
-                        [ text_ "register.account_created.instructions"
-                        ]
-                    , div [ class "w-1/4 m-auto relative left-1" ]
-                        [ img [ src "images/reg-passphrase-boy.svg" ]
-                            []
-                        , img
-                            [ class "absolute w-1/4 -mt-2 -ml-10"
-                            , src "images/reg-passphrase-boy-hand.svg"
-                            ]
-                            []
-                        ]
-                    , div [ class "bg-white text-black text-2xl mb-12 p-4 rounded-lg" ]
-                        [ p [ class "input-label" ]
-                            [ text_ "register.account_created.twelve_words"
-                            , if model.isPassphraseCopiedToClipboard then
-                                strong [ class "uppercase ml-1" ]
-                                    [ text_ "register.account_created.words_copied"
-                                    , text " ✔"
-                                    ]
 
-                              else
-                                text ""
-                            ]
-                        , p
-                            [ class "pb-2 leading-tight" ]
-                            [ span [ id passphraseTextId ] [ text (words model) ]
-                            , input
-                                -- We use `HTMLInputElement.select()` method in port to select and copy the text. This method
-                                -- works only with `input` and `textarea` elements which has to be presented in DOM (e.g. we can't
-                                -- hide it with `display: hidden`), so we hide it using position and opacity.
-                                [ type_ "text"
-                                , class "absolute opacity-0"
-                                , style "left" "-9999em"
-                                , id passphraseInputId
-                                , value (words model)
-                                ]
-                                []
+        viewCreateAccount =
+            div [ class "flex-grow bg-white flex md:block" ]
+                [ Html.form
+                    [ class "sf-wrapper"
+                    , class "px-4 md:max-w-sm md:mx-auto md:pt-20 md:px-0"
+                    , onSubmit (ValidateForm model.form)
+                    ]
+                    [ div [ class "sf-content" ]
+                        [ viewServerErrors model.problems
+                        , viewTitleForStep 1
+                        , viewField
+                            shared
+                            (Field
+                                "register.form.name"
+                                isDisabled
+                                model.form.username
+                                Username
+                            )
+                            (identity EnteredUsername)
+                            [ maxlength 255 ]
+                            model.problems
+                        , viewField
+                            shared
+                            (Field
+                                "register.form.account"
+                                isDisabled
+                                model.form.account
+                                Account
+                            )
+                            (identity EnteredAccount)
+                            Eos.nameValidationAttrs
+                            model.problems
+                        , viewField
+                            shared
+                            (Field
+                                "register.form.email"
+                                isDisabled
+                                model.form.email
+                                Email
+                            )
+                            (identity EnteredEmail)
+                            [ attribute "inputmode" "email" ]
+                            model.problems
+                        ]
+                    , div [ class "sf-footer" ]
+                        [ p [ class "text-center text-body my-6" ]
+                            [ text_ "register.login"
+                            , a [ Route.href (Route.Login Nothing), class "text-orange-300 underline" ] [ text_ "register.authLink" ]
                             ]
                         , button
-                            [ class "button m-auto button-primary button-sm"
-                            , onClick <| CopyToClipboard passphraseInputId
+                            [ class "button button-primary min-w-full mb-8"
+                            , type_ "submit"
+                            , disabled isDisabled
                             ]
-                            [ text_ "register.account_created.copy" ]
+                            [ if model.isCheckingAccount then
+                                text_ "register.form.checkingAvailability"
+
+                              else
+                                text_ "register.form.button"
+                            ]
                         ]
                     ]
-                , div [ class "sf-footer" ]
-                    [ div [ class "my-4" ]
-                        [ label [ class "form-label block" ]
-                            [ input
-                                [ type_ "checkbox"
-                                , class "form-checkbox mr-2 p-1"
-                                , checked model.hasAgreedToSavePassphrase
-                                , onCheck AgreedToSave12Words
+                ]
+
+        viewAccountGenerated =
+            div
+                [ class "flex-grow bg-purple-500 flex md:block"
+                ]
+                [ div
+                    [ class "sf-wrapper"
+                    , class "px-4 md:max-w-sm md:mx-auto md:pt-20 md:px-0 text-white text-body"
+                    ]
+                    [ div [ class "sf-content" ]
+                        [ viewTitleForStep 2
+                        , p
+                            [ class "text-xl mb-3" ]
+                            [ text_ "register.account_created.greet"
+                            , text " "
+                            , strong [] [ text name ]
+                            , text ", "
+                            , text_ "register.account_created.last_step"
+                            ]
+                        , p [ class "mb-3" ]
+                            [ text_ "register.account_created.instructions"
+                            ]
+                        , div [ class "w-1/4 m-auto relative left-1" ]
+                            [ img [ src "images/reg-passphrase-boy.svg" ]
+                                []
+                            , img
+                                [ class "absolute w-1/4 -mt-2 -ml-10"
+                                , src "images/reg-passphrase-boy-hand.svg"
                                 ]
                                 []
-                            , text_ "register.account_created.i_saved_words"
-                            , text " 💜"
+                            ]
+                        , div [ class "bg-white text-black text-2xl mb-12 p-4 rounded-lg" ]
+                            [ p [ class "input-label" ]
+                                [ text_ "register.account_created.twelve_words"
+                                , if model.isPassphraseCopiedToClipboard then
+                                    strong [ class "uppercase ml-1" ]
+                                        [ text_ "register.account_created.words_copied"
+                                        , text " ✔"
+                                        ]
+
+                                  else
+                                    text ""
+                                ]
+                            , p
+                                [ class "pb-2 leading-tight" ]
+                                [ span [ id passphraseTextId ] [ text (words model) ]
+                                , input
+                                    -- We use `HTMLInputElement.select()` method in port to select and copy the text. This method
+                                    -- works only with `input` and `textarea` elements which has to be presented in DOM (e.g. we can't
+                                    -- hide it with `display: hidden`), so we hide it using position and opacity.
+                                    [ type_ "text"
+                                    , class "absolute opacity-0"
+                                    , style "left" "-9999em"
+                                    , id passphraseInputId
+                                    , value (words model)
+                                    ]
+                                    []
+                                ]
+                            , button
+                                [ class "button m-auto button-primary button-sm"
+                                , onClick <| CopyToClipboard passphraseInputId
+                                ]
+                                [ text_ "register.account_created.copy" ]
                             ]
                         ]
-                    , button
-                        [ onClick <| DownloadPdf (words model)
-                        , class "button button-primary w-full mb-8"
-                        , disabled (not model.hasAgreedToSavePassphrase)
-                        , class <|
-                            if model.hasAgreedToSavePassphrase then
-                                ""
+                    , div [ class "sf-footer" ]
+                        [ div [ class "my-4" ]
+                            [ label [ class "form-label block" ]
+                                [ input
+                                    [ type_ "checkbox"
+                                    , class "form-checkbox mr-2 p-1"
+                                    , checked model.hasAgreedToSavePassphrase
+                                    , onCheck AgreedToSave12Words
+                                    ]
+                                    []
+                                , text_ "register.account_created.i_saved_words"
+                                , text " 💜"
+                                ]
+                            ]
+                        , button
+                            [ onClick <| DownloadPdf (words model)
+                            , class "button button-primary w-full mb-8"
+                            , disabled (not model.hasAgreedToSavePassphrase)
+                            , class <|
+                                if model.hasAgreedToSavePassphrase then
+                                    ""
 
-                            else
-                                "button-disabled text-gray-600"
-                        ]
-                        [ text_ "register.account_created.download" ]
-                    ]
-                ]
-            ]
-
-    else
-        div [ class "flex-grow bg-white flex md:block" ]
-            [ Html.form
-                [ class "sf-wrapper"
-                , class "px-4 md:max-w-sm md:mx-auto md:pt-20 md:px-0"
-                , onSubmit (ValidateForm model.form)
-                ]
-                [ div [ class "sf-content" ]
-                    [ viewServerErrors model.problems
-                    , viewTitleForStep 1
-                    , viewField
-                        shared
-                        (Field
-                            "register.form.name"
-                            isDisabled
-                            model.form.username
-                            Username
-                        )
-                        (identity EnteredUsername)
-                        [ maxlength 255 ]
-                        model.problems
-                    , viewField
-                        shared
-                        (Field
-                            "register.form.account"
-                            isDisabled
-                            model.form.account
-                            Account
-                        )
-                        (identity EnteredAccount)
-                        Eos.nameValidationAttrs
-                        model.problems
-                    , viewField
-                        shared
-                        (Field
-                            "register.form.email"
-                            isDisabled
-                            model.form.email
-                            Email
-                        )
-                        (identity EnteredEmail)
-                        [ attribute "inputmode" "email" ]
-                        model.problems
-                    ]
-                , div [ class "sf-footer" ]
-                    [ p [ class "text-center text-body my-6" ]
-                        [ text_ "register.login"
-                        , a [ Route.href (Route.Login Nothing), class "text-orange-300 underline" ] [ text_ "register.authLink" ]
-                        ]
-                    , button
-                        [ class "button button-primary min-w-full mb-8"
-                        , type_ "submit"
-                        , disabled isDisabled
-                        ]
-                        [ if model.isCheckingAccount then
-                            text_ "register.form.checkingAvailability"
-
-                          else
-                            text_ "register.form.button"
+                                else
+                                    "button-disabled text-gray-600"
+                            ]
+                            [ text_ "register.account_created.download" ]
                         ]
                     ]
                 ]
-            ]
+    in
+    { title =
+        t "register.registerTab"
+    , content =
+        if model.accountGenerated then
+            viewAccountGenerated
+
+        else
+            viewCreateAccount
+    }
 
 
 viewServerErrors : List Problem -> Html msg
@@ -476,12 +486,10 @@ type alias UpdateResult =
 
 type Msg
     = UpdateForm FormInputMsg
-    | Ignored
     | ValidateForm Form
     | GotAccountAvailabilityResponse Bool
     | AccountGenerated (Result Decode.Error AccountKeys)
     | CompletedCreateProfile AccountKeys (Result Http.Error Profile)
-    | CompletedLoadProfile AccountKeys (Result Http.Error Profile)
     | AgreedToSave12Words Bool
     | DownloadPdf String
     | PdfDownloaded
@@ -503,10 +511,6 @@ update maybeInvitation msg model guest =
             I18Next.tr shared.translations I18Next.Curly str values
     in
     case msg of
-        Ignored ->
-            model
-                |> UR.init
-
         UpdateForm subMsg ->
             updateForm subMsg model
                 |> UR.init
@@ -651,16 +655,6 @@ update maybeInvitation msg model guest =
                 |> UR.init
                 |> UR.logHttpError msg err
 
-        CompletedLoadProfile _ (Ok profile) ->
-            UR.init model
-                |> UR.addCmd (Route.replaceUrl guest.shared.navKey Route.Dashboard)
-                |> UR.addExt (UpdatedGuest { guest | profile = Just profile })
-
-        CompletedLoadProfile _ (Err err) ->
-            { model | problems = ServerError "Auth failed" :: model.problems }
-                |> UR.init
-                |> UR.logHttpError msg err
-
         AgreedToSave12Words val ->
             { model | hasAgreedToSavePassphrase = val }
                 |> UR.init
@@ -780,9 +774,6 @@ jsAddressToMsg addr val =
 msgToString : Msg -> List String
 msgToString msg =
     case msg of
-        Ignored ->
-            [ "Ignored" ]
-
         UpdateForm _ ->
             [ "UpdateForm" ]
 
@@ -797,9 +788,6 @@ msgToString msg =
 
         CompletedCreateProfile _ r ->
             [ "CompletedCreateProfile", UR.resultToString r ]
-
-        CompletedLoadProfile _ r ->
-            [ "CompletedLoadProfile", UR.resultToString r ]
 
         AgreedToSave12Words _ ->
             [ "AgreedToSave12Words" ]

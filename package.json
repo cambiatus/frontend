@@ -16,15 +16,15 @@
     "test": "npx elm-test",
     "generate-graphql": "npx elm-graphql https://api.cambiatus.io/api/graph --base Cambiatus --output src/elm"
   },
+  "husky": {
+    "hooks": {
+      "pre-push": "echo \"Checking JS with StandardJS...\" && standard && echo \"Checking Elm with elm-review...\" && yarn review"
+    }
+  },
   "standard": {
-    "plugins": [
-      "html"
-    ],
+    "plugins": ["html"],
     "parser": "babel-eslint",
-    "ignore": [
-      "docker/env-config.js",
-      "scripts/"
-    ]
+    "ignore": ["docker/env-config.js", "scripts/"]
   },
   "devDependencies": {
     "@babel/cli": "7.2.3",
@@ -42,6 +42,7 @@
     "connect-history-api-fallback": "^1.5.0",
     "cosmiconfig": "^5.0.6",
     "dotenv": "^5.0.0",
+    "elm-debug-transformer": "^1.0.4",
     "elm-hot-webpack-loader": "^1.0.2",
     "elm-review": "^2.0.2",
     "eslint": "5.16.0",
@@ -85,6 +86,7 @@
     "elm-webpack-loader": "^6.0.1",
     "eosjs": "^16.0.9",
     "eosjs-ecc": "^4.0.4",
+    "husky": "^4.2.5",
     "pdfmake": "^0.1.64",
     "phoenix": "^1.4.10",
     "postcss": "^7.0.17",
@@ -93,7 +95,7 @@
     "scrypt-async": "^2.0.1",
     "sjcl": "^1.0.8",
     "sw-precache": "^5.2.1",
-    "tailwindcss": "^1.3.5",
+    "tailwindcss": "^1.4.6",
     "tailwindcss-transforms": "^2.2.0",
     "webpack-cli": "^3.3.9"
   }
