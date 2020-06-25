@@ -73,7 +73,7 @@ view loggedIn model =
                 Loaded community ->
                     div []
                         [ header
-                        , viewSettingsList loggedIn.shared community.symbol
+                        , viewSettingsList loggedIn.shared community
                         ]
 
                 LoadingFailed e ->
@@ -91,8 +91,8 @@ view loggedIn model =
     }
 
 
-viewSettingsList : Shared -> Symbol -> Html Msg
-viewSettingsList shared symbol =
+viewSettingsList : Shared -> Community.Model -> Html Msg
+viewSettingsList shared community =
     let
         translate =
             t shared.translations
@@ -103,8 +103,12 @@ viewSettingsList shared symbol =
         , style "grid-template-rows" "auto"
         , style "grid-gap" "16px"
         ]
-        [ settingCard (translate "settings.actions.title") "" (Route.Objectives symbol)
-        , settingCard (translate "settings.features.title") (translate "settings.features.description") (Route.CommunitySettingsFeatures symbol)
+        [ settingCard (translate "settings.features.title") (translate "settings.features.description") (Route.CommunitySettingsFeatures community.symbol)
+        , if community.hasObjectives then
+            settingCard (translate "settings.actions.title") "" (Route.Objectives community.symbol)
+
+          else
+            text ""
         ]
 
 

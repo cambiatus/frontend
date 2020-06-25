@@ -355,11 +355,11 @@ update msg model loggedIn =
                 Just cmm ->
                     let
                         newStatus =
-                            if cmm.creator == loggedIn.accountName then
-                                Loaded cmm
+                            if not cmm.hasObjectives then
+                                Unauthorized
 
-                            else if not cmm.hasObjectives then
-                                NotFound
+                            else if cmm.creator == loggedIn.accountName then
+                                Loaded cmm
 
                             else
                                 Unauthorized
