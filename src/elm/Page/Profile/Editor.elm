@@ -43,7 +43,7 @@ init loggedIn =
 type alias Model =
     { fullName : String
     , email : String
-    , about : String
+    , bio : String
     , location : String
     , interests : List String
     , interest : String
@@ -56,7 +56,7 @@ initModel : Model
 initModel =
     { fullName = ""
     , email = ""
-    , about = ""
+    , bio = ""
     , location = ""
     , interests = []
     , interest = ""
@@ -100,11 +100,11 @@ view loggedIn model =
 view_ : Session.LoggedIn.Model -> Model -> Profile -> Html Msg
 view_ loggedIn model profile =
     let
-        text_ s =
+        tr s =
             t loggedIn.shared.translations s
 
         title =
-            text_ "menu.edit" ++ " " ++ ("menu.profile" |> text_ |> String.toLower)
+            tr "menu.edit" ++ " " ++ ("menu.profile" |> tr |> String.toLower)
 
         pageHeader =
             Page.viewHeader loggedIn title Route.Profile
@@ -125,7 +125,7 @@ view_ loggedIn model profile =
                                        "avatar avatar"
                                        "fullname fullname"
                                        "email email" auto
-                                       "about about"
+                                       "bio bio"
                                        "location location"
                                        "interests interestButton"
                                        "interestList interestList" auto
@@ -133,11 +133,11 @@ view_ loggedIn model profile =
                                       """
             ]
             ([ viewAvatar loggedIn avatar
-             , viewInput (text_ "profile.edit.labels.name") "fullname" FullName model.fullName
-             , viewInput (text_ "profile.edit.labels.email") "email" Email model.email
-             , viewTextArea (text_ "profile.edit.labels.bio") "about" About
-             , viewInput (text_ "profile.edit.labels.localization") "location" Location model.location
-             , viewButton (text_ "profile.edit.submit") ClickedSave "save"
+             , viewInput (tr "profile.edit.labels.name") "fullname" FullName model.fullName
+             , viewInput (tr "profile.edit.labels.email") "email" Email model.email
+             , viewTextArea (tr "profile.edit.labels.bio") "bio" Bio model.bio
+             , viewInput (tr "profile.edit.labels.localization") "location" Location model.location
+             , viewButton (tr "profile.edit.submit") ClickedSave "save"
              , div [ class "flex flex-wrap", style "grid-area" "interestList" ]
                 (model.interests
                     |> List.map viewInterest
@@ -202,10 +202,10 @@ viewButton label msg area =
         ]
 
 
-viewTextArea : String -> String -> Field -> Html Msg
-viewTextArea label area field =
+viewTextArea : String -> String -> Field -> String -> Html Msg
+viewTextArea label gridArea field currentValue =
     div
-        [ style "grid-area" area
+        [ style "grid-area" gridArea
         ]
         [ span [ class "input-label" ]
             [ text label ]
@@ -213,7 +213,7 @@ viewTextArea label area field =
             [ class "w-full input"
             , onInput (OnFieldInput field)
             ]
-            []
+            [ text currentValue ]
         ]
 
 
@@ -255,7 +255,7 @@ type Msg
 type Field
     = FullName
     | Email
-    | About
+    | Bio
     | Location
     | Interest
 
@@ -283,7 +283,7 @@ update msg model loggedIn =
                     | status = Loaded profile
                     , fullName = nullable profile.userName
                     , email = nullable profile.email
-                    , about = nullable profile.bio
+                    , bio = nullable profile.bio
                     , location = nullable profile.localization
                     , interests = profile.interests
                 }
@@ -302,8 +302,8 @@ update msg model loggedIn =
                         Email ->
                             { model | email = data }
 
-                        About ->
-                            { model | about = data }
+                        Bio ->
+                            { model | bio = data }
 
                         Location ->
                             { model | location = data }
@@ -387,6 +387,7 @@ modelToProfile model profile =
         , email = Just model.email
         , localization = Just model.location
         , interests = model.interests
+        , bio = Just model.bio
         , avatar = Maybe.withDefault profile.avatar model.avatar
     }
 
