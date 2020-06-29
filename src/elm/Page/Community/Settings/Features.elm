@@ -58,7 +58,7 @@ type Feature
 type Msg
     = CompletedLoad (Result (Graphql.Http.Error (Maybe Community.Model)) (Maybe Community.Model))
     | ToggleShop Bool
-    | ToggleActions Bool
+    | ToggleObjectives Bool
     | SaveSuccess
 
 
@@ -86,7 +86,7 @@ view loggedIn model =
                         , div
                             [ class "container w-full divide-y"
                             ]
-                            [ toggleView translations (translate "community.objectives.title_plural") model.hasObjectives ToggleActions "actions"
+                            [ toggleView translations (translate "community.objectives.title_plural") model.hasObjectives ToggleObjectives "actions"
                             , toggleView translations (translate "menu.shop") model.hasShop ToggleShop "shop"
                             ]
                         ]
@@ -181,7 +181,7 @@ update msg model loggedIn =
                 |> UR.init
                 |> saveFeaturePort loggedIn Shop model.status state
 
-        ToggleActions state ->
+        ToggleObjectives state ->
             { model | hasObjectives = state }
                 |> UR.init
                 |> saveFeaturePort loggedIn Objectives model.status state
@@ -206,7 +206,7 @@ saveFeaturePort loggedIn feature status state =
                     ToggleShop
 
                 Objectives ->
-                    ToggleActions
+                    ToggleObjectives
     in
     case status of
         Loaded community ->
@@ -292,8 +292,8 @@ msgToString msg =
         ToggleShop _ ->
             [ "ToggleShop" ]
 
-        ToggleActions _ ->
-            [ "ToggleActions" ]
+        ToggleObjectives _ ->
+            [ "ToggleObjectives" ]
 
         SaveSuccess ->
             [ "SaveSuccess" ]
