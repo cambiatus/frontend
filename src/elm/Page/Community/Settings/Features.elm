@@ -8,9 +8,8 @@ import Graphql.Http
 import Html exposing (Html, div, input, label, span, text)
 import Html.Attributes exposing (checked, class, for, id, name, style, type_)
 import Html.Events exposing (onCheck)
-import Http
 import I18Next exposing (Translations, t)
-import Json.Decode as Decode exposing (Value)
+import Json.Decode exposing (Value)
 import Json.Encode
 import Page
 import Ports
@@ -278,7 +277,7 @@ saveFeature feature state authorization accountName community =
 
 
 jsAddressToMsg : List String -> Value -> Maybe Msg
-jsAddressToMsg addr val =
+jsAddressToMsg addr _ =
     case addr of
         "SaveSuccess" :: _ ->
             Just SaveSuccess

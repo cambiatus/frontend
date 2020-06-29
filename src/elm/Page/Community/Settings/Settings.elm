@@ -7,7 +7,7 @@ import Graphql.Http
 import Html exposing (Html, a, button, div, span, text)
 import Html.Attributes exposing (class, style)
 import I18Next exposing (t)
-import Page exposing (viewHeader)
+import Page
 import Route exposing (Route)
 import Session.LoggedIn as LoggedIn exposing (External(..))
 import Session.Shared exposing (Shared)
