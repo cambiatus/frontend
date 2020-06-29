@@ -624,6 +624,7 @@
     }
   },
   "settings": {
+    "success": "Configuraciones guardadas exitosamente",
     "community_info": {
       "title": "Informações da Comunidade",
       "description": "Logo, nome, des crição"

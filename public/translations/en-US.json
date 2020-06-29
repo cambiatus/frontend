@@ -620,6 +620,7 @@
     }
   },
   "settings": {
+    "success": "Settings saved successfully",
     "community_info": {
       "title": "Community Information",
       "description": "Logo, name, description"

@@ -103,17 +103,17 @@ viewSettingsList shared community =
         , style "grid-template-rows" "auto"
         , style "grid-gap" "16px"
         ]
-        [ settingCard (translate "settings.features.title") (translate "settings.features.description") (Route.CommunitySettingsFeatures community.symbol)
+        [ settingCard (translate "settings.features.title") (translate "menu.edit") (translate "settings.features.description") (Route.CommunitySettingsFeatures community.symbol)
         , if community.hasObjectives then
-            settingCard (translate "settings.actions.title") "" (Route.Objectives community.symbol)
+            settingCard (translate "settings.actions.title") (translate "menu.edit") "" (Route.Objectives community.symbol)
 
           else
             text ""
         ]
 
 
-settingCard : String -> String -> Route -> Html Msg
-settingCard title description route =
+settingCard : String -> String -> String -> Route -> Html Msg
+settingCard title action description route =
     div
         [ class "flex flex-col justify-around bg-white w-full h-32 rounded px-4 pt-3 pb-4"
         , style "grid-column" "2 / 3"
@@ -124,7 +124,7 @@ settingCard title description route =
             [ button
                 [ class "w-full bg-orange-300 rounded-lg text-sm uppercase text-white font-medium h-8"
                 ]
-                [ text "Edit" ]
+                [ text action ]
             ]
         ]
 

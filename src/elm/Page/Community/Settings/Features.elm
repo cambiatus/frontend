@@ -152,6 +152,10 @@ toggleView translations labelText isEnabled toggleFunction inputId =
 
 update : Msg -> Model -> LoggedIn.Model -> UpdateResult
 update msg model loggedIn =
+    let
+        translate =
+            t loggedIn.shared.translations
+    in
     case msg of
         CompletedLoad (Ok (Just community)) ->
             let
@@ -189,7 +193,7 @@ update msg model loggedIn =
         SaveSuccess ->
             model
                 |> UR.init
-                |> UR.addExt (ShowFeedback Success "Settings saved successfully")
+                |> UR.addExt (ShowFeedback Success (translate "settings.success"))
 
 
 saveFeaturePort : LoggedIn.Model -> Feature -> Status -> Bool -> (UR.UpdateResult Model Msg (External Msg) -> UR.UpdateResult Model Msg (External Msg))
