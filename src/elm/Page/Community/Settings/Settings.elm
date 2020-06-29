@@ -96,6 +96,9 @@ viewSettingsList shared community =
     let
         translate =
             t shared.translations
+
+        featuresDescription =
+            translate "community.objectives.title_plural" ++ ", " ++ translate "menu.shop"
     in
     div
         [ class "grid my-4"
@@ -103,7 +106,7 @@ viewSettingsList shared community =
         , style "grid-template-rows" "auto"
         , style "grid-gap" "16px"
         ]
-        [ settingCard (translate "settings.features.title") (translate "menu.edit") (translate "settings.features.description") (Route.CommunitySettingsFeatures community.symbol)
+        [ settingCard (translate "settings.features.title") (translate "menu.edit") featuresDescription (Route.CommunitySettingsFeatures community.symbol)
         , if community.hasObjectives then
             settingCard (translate "settings.actions.title") (translate "menu.edit") "" (Route.Objectives community.symbol)
 
