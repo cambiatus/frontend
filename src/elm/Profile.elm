@@ -75,8 +75,8 @@ type alias CommunityInfo =
     { id : Symbol
     , name : String
     , logo : String
-    , shop : Bool
-    , actions : Bool
+    , hasShop : Bool
+    , hasActions : Bool
     }
 
 
