@@ -576,7 +576,7 @@ viewMainMenu page model =
             "w-6 h-6 fill-current hover:text-indigo-500 mr-5"
     in
     nav [ class "h-16 w-full flex overflow-x-auto" ]
-        ([ a
+        [ a
             [ classList
                 [ ( menuItemClass, True )
                 , ( activeClass, isActive page Route.Dashboard )
@@ -586,35 +586,31 @@ viewMainMenu page model =
             [ Icons.dashboard iconClass
             , text (t model.shared.translations "menu.dashboard")
             ]
-         ]
-            ++ (if model.hasShop then
-                    [ a
-                        [ classList
-                            [ ( menuItemClass, True )
-                            , ( activeClass, isActive page (Route.Shop Shop.All) )
-                            ]
-                        , Route.href (Route.Shop Shop.All)
-                        ]
-                        [ Icons.shop iconClass
-                        , text (t model.shared.translations "menu.shop")
-                        ]
+        , if model.hasShop then
+            a
+                [ classList
+                    [ ( menuItemClass, True )
+                    , ( activeClass, isActive page (Route.Shop Shop.All) )
                     ]
+                , Route.href (Route.Shop Shop.All)
+                ]
+                [ Icons.shop iconClass
+                , text (t model.shared.translations "menu.shop")
+                ]
 
-                else
-                    []
-               )
-            ++ [ a
-                    [ classList
-                        [ ( menuItemClass, True )
-                        , ( activeClass, isActive page Route.Communities )
-                        ]
-                    , Route.href Route.Communities
-                    ]
-                    [ Icons.communities iconClass
-                    , text (t model.shared.translations "menu.communities")
-                    ]
-               ]
-        )
+          else
+            text ""
+        , a
+            [ classList
+                [ ( menuItemClass, True )
+                , ( activeClass, isActive page Route.Communities )
+                ]
+            , Route.href Route.Communities
+            ]
+            [ Icons.communities iconClass
+            , text (t model.shared.translations "menu.communities")
+            ]
+        ]
 
 
 isActive : Page -> Route -> Bool
