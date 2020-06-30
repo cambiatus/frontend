@@ -191,5 +191,9 @@ module.exports = {
 
       addUtilities(rotateUtilities)
     }
+  ],
+  purge: [
+    './src/**/*.elm',
+    './src/index.js'
   ]
 }
