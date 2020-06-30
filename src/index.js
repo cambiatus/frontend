@@ -178,10 +178,13 @@ async function storePin (data, pin) {
   // encrypt key using PIN
   const hashedKey = ecc.sha256(data.privateKey)
   const encryptedKey = sjcl.encrypt(pin, data.privateKey)
-  var storeData = {
+  const encryptedPassphrase = sjcl.encrypt(pin, data.passphrase)
+
+  const storeData = {
     accountName: data.accountName,
     encryptedKey: encryptedKey,
-    encryptedKeyIntegrityCheck: hashedKey
+    encryptedKeyIntegrityCheck: hashedKey,
+    encryptedPassphrase: encryptedPassphrase
   }
 
   window.localStorage.removeItem(USER_KEY)
@@ -190,6 +193,21 @@ async function storePin (data, pin) {
 
 function getSelectedCommunity () {
   return window.localStorage.getItem(SELECTED_COMMUNITY_KEY)
+}
+
+function downloadPdf (accountName, passphrase, responseAddress, responseData) {
+  const definition = pdfDefinition(passphrase)
+  const pdf = pdfMake.createPdf(definition)
+
+  pdf.download(accountName + '_cambiatus.pdf')
+
+  const response = {
+    address: responseAddress,
+    addressData: responseData,
+    isDownloaded: true
+  }
+
+  app.ports.javascriptInPort.send(response)
 }
 
 app.ports.javascriptOutPort.subscribe(handleJavascriptPort)
@@ -275,12 +293,8 @@ async function handleJavascriptPort (arg) {
     }
     case 'loginWithPrivateKey': {
       devLog('=========================', 'loginWithPrivateKey')
-      var form = arg.data.form
-      var privateKey = arg.data.form.privateKey
-      privateKey =
-        privateKey.split(' ').length === 12
-          ? ecc.seedPrivate(mnemonic.toSeedHex(form.privateKey))
-          : form.privateKey
+      const passphrase = arg.data.form.passphrase
+      const privateKey = ecc.seedPrivate(mnemonic.toSeedHex(passphrase))
 
       if (ecc.isValidPrivate(privateKey)) {
         const publicKey = ecc.privateToPublic(privateKey)
@@ -349,25 +363,17 @@ async function handleJavascriptPort (arg) {
     }
     case 'loginWithPrivateKeyAccount': {
       devLog('========================', 'loginWithPrivateKeyAccount')
-      var loginForm = arg.data.form
+      const loginForm = arg.data.form
       const accountName = arg.data.accountName
-
-      // check if it is actually 12 words and convert it
-      privateKey =
-        loginForm.privateKey.split(' ').length === 12
-          ? ecc.seedPrivate(mnemonic.toSeedHex(loginForm.privateKey))
-          : loginForm.privateKey
-
-      privateKey = loginForm.privateKey
-      if (loginForm.privateKey.split(' ').length > 1) {
-        privateKey = ecc.seedPrivate(mnemonic.toSeedHex(loginForm.privateKey))
-      }
+      const passphrase = loginForm.passphrase
+      const privateKey = ecc.seedPrivate(mnemonic.toSeedHex(passphrase))
 
       if (loginForm.usePin) {
         storePin(
           {
             accountName: accountName,
-            privateKey: privateKey
+            privateKey: privateKey,
+            passphrase: passphrase
           },
           loginForm.usePin
         )
@@ -385,7 +391,7 @@ async function handleJavascriptPort (arg) {
         address: arg.responseAddress,
         addressData: arg.responseData,
         accountName: accountName,
-        privateKey: loginForm.privateKey
+        privateKey: privateKey
       }
       devLog('response', response)
       app.ports.javascriptInPort.send(response)
@@ -572,19 +578,19 @@ async function handleJavascriptPort (arg) {
       app.ports.javascriptInPort.send(response)
       break
     }
-    case 'printAuthPdf': {
-      devLog('=======================', 'printAuthPdf')
-
-      const definition = pdfDefinition(arg.data.passphrase)
-      const pdf = pdfMake.createPdf(definition)
-      pdf.download('Cambiatus.pdf')
-
-      const response = {
-        address: arg.responseAddress,
-        addressData: arg.responseData,
-        isDownloaded: true
-      }
-      app.ports.javascriptInPort.send(response)
+    case 'downloadAuthPdfFromRegistration': {
+      devLog('=======================', 'downloadAuthPdfFromRegistration')
+      const accountName = arg.data.accountName
+      const passphrase = arg.data.passphrase
+      downloadPdf(accountName, passphrase, arg.responseAddress, arg.responseData)
+      break
+    }
+    case 'downloadAuthPdfFromProfile': {
+      devLog('=======================', 'downloadAuthPdfFromProfile')
+      const store = JSON.parse(window.localStorage.getItem(USER_KEY))
+      const pin = arg.data.pin
+      const decryptedPassphrase = sjcl.decrypt(pin, store.encryptedPassphrase)
+      downloadPdf(store.accountName, decryptedPassphrase, arg.responseAddress, arg.responseData)
       break
     }
     case 'validateDeadline': {

@@ -110,8 +110,8 @@ view_ model loggedIn profile =
 
         downloadAction =
             case LoggedIn.maybePrivateKey loggedIn of
-                Just privateKey ->
-                    DownloadPdf privateKey
+                Just _ ->
+                    DownloadPdf loggedIn.auth.form.enteredPin
 
                 Nothing ->
                     case loggedIn.shared.maybeAccount of
@@ -241,14 +241,14 @@ type Msg
 update : Msg -> Model -> LoggedIn.Model -> UpdateResult
 update msg model loggedIn =
     let
-        downloadPdfPort passphrase =
+        downloadPdfPort pin =
             UR.addPort
                 { responseAddress = Ignored
                 , responseData = Encode.null
                 , data =
                     Encode.object
-                        [ ( "name", Encode.string "printAuthPdf" )
-                        , ( "passphrase", Encode.string passphrase )
+                        [ ( "name", Encode.string "downloadAuthPdfFromProfile" )
+                        , ( "pin", Encode.string pin )
                         ]
                 }
     in
@@ -308,15 +308,15 @@ update msg model loggedIn =
                                 |> RequiredAuthentication
                             )
 
-                Just key ->
+                Just _ ->
                     model
                         |> UR.init
-                        |> downloadPdfPort key
+                        |> downloadPdfPort loggedIn.auth.form.enteredPin
 
-        DownloadPdf passphrase ->
+        DownloadPdf pin ->
             model
                 |> UR.init
-                |> downloadPdfPort passphrase
+                |> downloadPdfPort pin
 
         GotPushPreference val ->
             { model | pushNotifications = val }

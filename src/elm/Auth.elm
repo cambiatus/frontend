@@ -215,7 +215,7 @@ pinValidator =
 encodeLoginFormData : LoginFormData -> Value
 encodeLoginFormData formData =
     Encode.object
-        [ ( "privateKey", Encode.string formData.passphrase )
+        [ ( "passphrase", Encode.string formData.passphrase )
         , ( "usePin"
           , case formData.usePin of
                 Nothing ->
