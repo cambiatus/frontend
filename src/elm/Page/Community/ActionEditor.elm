@@ -1187,7 +1187,7 @@ viewReward { shared } community form =
     div [ class "mb-10" ]
         [ span [ class "input-label" ]
             [ text_ "community.actions.form.reward_label" ]
-        , div [ class "flex sm:w-2/5 h-12 rounded-sm border border-gray-500" ]
+        , div [ class "flex w-2/5 sm-max:w-full md-max:w-full h-12 rounded-sm border border-gray-500" ]
             [ input
                 [ class "block w-4/5 border-none px-4 py-3 outline-none"
                 , classList [ ( "border-red", hasErrors form.reward ) ]
@@ -1232,18 +1232,20 @@ viewValidations { shared } model =
                         , label [ class "form-switch-label", for "expiration-toggle" ] []
                         ]
                     , label [ class "flex text-body text-green", for "expiration-toggle" ]
-                        [ p [ class "font-bold mr-1" ]
-                            [ if model.form.validation == NoValidation then
-                                text_ "community.actions.form.validation_off"
+                        [ p [ class "mr-1" ] 
+                            [ Html.b [] 
+                                [ if model.form.validation == NoValidation then
+                                    text_ "community.actions.form.validation_off"
 
-                              else
-                                text_ "community.actions.form.validation_on"
+                                    else
+                                        text_ "community.actions.form.validation_on"
+                                ]
+                                , if model.form.validation == NoValidation then
+                                    text_ "community.actions.form.validation_detail"
+
+                                else
+                                    text_ "community.actions.form.validation_on_detail"
                             ]
-                        , if model.form.validation == NoValidation then
-                            text_ "community.actions.form.validation_detail"
-
-                          else
-                            text_ "community.actions.form.validation_on_detail"
                         ]
                     ]
                 ]
@@ -1261,9 +1263,11 @@ viewValidations { shared } model =
                     []
                 , label
                     [ for "date", class "flex" ]
-                    [ p [ class "font-bold mr-1" ] [ text_ "community.actions.form.date_validity" ]
-                    , text_ "community.actions.form.date_validity_details"
-                    ]
+                    [ p [ class "mr-1" ] 
+                        [ Html.b [] [ text_ "community.actions.form.date_validity" ]
+                        , text_ "community.actions.form.date_validity_details"
+                        ]
+                    ]    
                 ]
             , case model.form.validation of
                 NoValidation ->
@@ -1273,7 +1277,7 @@ viewValidations { shared } model =
                     case dateValidation of
                         Just validation ->
                             div []
-                                [ span [ class "input-label" ]
+                                [ span [ class "input-label " ]
                                     [ text_ "community.actions.form.date_label" ]
                                 , div [ class "mb-10" ]
                                     [ MaskedDate.input
@@ -1281,7 +1285,7 @@ viewValidations { shared } model =
                                             | pattern = "##/##/####"
                                             , inputCharacter = '#'
                                         }
-                                        [ class "input"
+                                        [ class "input w-2/5 sm-max:w-full md-max:w-full"
                                         , classList [ ( "border-red", hasErrors validation ) ]
                                         , placeholder "mm/dd/yyyy"
                                         ]
@@ -1303,8 +1307,10 @@ viewValidations { shared } model =
                     ]
                     []
                 , label [ for "quantity", class "flex" ]
-                    [ p [ class "font-bold mr-1" ] [ text_ "community.actions.form.quantity_validity" ]
-                    , text_ "community.actions.form.quantity_validity_details"
+                    [ p [ class "mr-1" ] 
+                        [ Html.b [] [ text_ "community.actions.form.quantity_validity" ]
+                        , text_ "community.actions.form.quantity_validity_details"
+                        ]
                     ]
                 ]
             ]
@@ -1320,7 +1326,7 @@ viewValidations { shared } model =
                             , div [ class "mb-10" ]
                                 [ input
                                     [ type_ "number"
-                                    , class "input"
+                                    , class "input w-2/5 sm-max:w-full md-max:w-full"
                                     , classList [ ( "border-red", hasErrors validation ) ]
                                     , value (getInput validation)
                                     , onInput EnteredUsages
@@ -1337,7 +1343,7 @@ viewValidations { shared } model =
                                             [ class "mb-10" ]
                                             [ input
                                                 [ type_ "number"
-                                                , class "input"
+                                                , class "input w-2/5 sm-max:w-full md-max:w-full"
                                                 , classList [ ( "border-red", hasErrors usagesLeftValidation ) ]
                                                 , value (getInput usagesLeftValidation)
                                                 , onInput EnteredUsagesLeft
@@ -1382,8 +1388,11 @@ viewVerifications ({ shared } as loggedIn) model community =
                     [ class "flex ml-3 text-body"
                     , classList [ ( "text-green", model.form.verification == Automatic ) ]
                     ]
-                    [ p [ class "font-bold mr-1" ] [ text_ "community.actions.form.automatic" ]
-                    , text_ "community.actions.form.automatic_detail"
+                    [ p [ class "mr-1" ] 
+                        [ Html.b []
+                            [ text_ "community.actions.form.automatic" ]
+                        , text_ "community.actions.form.automatic_detail"
+                        ]
                     ]
                 ]
             ]
@@ -1402,16 +1411,19 @@ viewVerifications ({ shared } as loggedIn) model community =
                     [ class "flex ml-3 text-body"
                     , classList [ ( "text-green", model.form.verification /= Automatic ) ]
                     ]
-                    [ p [ class "font-bold mr-1" ] [ text_ "community.actions.form.manual" ]
-                    , text_ "community.actions.form.manual_detail"
+                    [ p [ class "mr-1" ] 
+                        [ Html.b [] 
+                            [ text_ "community.actions.form.manual" ]
+                        , text_ "community.actions.form.manual_detail"
+                        ]
                     ]
-                ]
             ]
         , if model.form.verification /= Automatic then
             viewManualVerificationForm loggedIn model community
 
           else
             text ""
+        ]
         ]
 
 
@@ -1429,7 +1441,7 @@ viewManualVerificationForm ({ shared } as loggedIn) model community =
             text ""
 
         Manual selectedVerifiers verificationReward minVotes ->
-            div [ class "w-2/5" ]
+            div [ class "elm-selected-verifiers mt-6 w-2/5 sm-max:w-full md-max:w-full" ]
                 [ span [ class "input-label" ]
                     [ text (tr "community.actions.form.verifiers_label_count" [ ( "count", getInput minVotes ) ]) ]
                 , div []
@@ -1474,7 +1486,7 @@ viewManualVerificationForm ({ shared } as loggedIn) model community =
 
 viewSelectedVerifiers : LoggedIn.Model -> List Profile -> Html Msg
 viewSelectedVerifiers ({ shared } as loggedIn) selectedVerifiers =
-    div [ class "flex flex-row mt-3 mb-10 flex-wrap" ]
+    div [ class "flex flex-row mt-3 mb-6 flex-wrap" ]
         (selectedVerifiers
             |> List.map
                 (\p ->

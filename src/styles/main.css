@@ -232,6 +232,7 @@
   @apply block overflow-hidden cursor-pointer bg-white border-2 border-gray-100 rounded-full h-6;
 
   transition: background-color 0.2s ease-in;
+  min-width: 43px;
 }
 
 .form-switch-label:before {
@@ -249,7 +250,21 @@
 .form-switch-checkbox:checked + .form-switch-label:before {
   @apply right-0 bg-white;
 
-  margin-right: 0.3rem;
+  margin-right: 0.1rem;
+}
+
+#date, 
+#quantity {
+  width: 20px;
+  height: 20px;
+  border: 1px solid #e7e7e7;
+  border-radius: 2px;
+}
+
+#date:checked, 
+#quantity:checked {
+  border: 4px solid white;
+  border-radius: 2px;
 }
 
 .form-error {

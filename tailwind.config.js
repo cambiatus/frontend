@@ -135,6 +135,12 @@ module.exports = {
       },
       opacity: {
         '10': '0.1'
+      },
+      screens: {
+        'sm-max': { 'max': '639px' },
+        'md-max': { 'max': '767px' },
+        'lg-max': { 'max': '1023px' },
+        'xl-max': { 'max': '1279px' }
       }
     }
   },
