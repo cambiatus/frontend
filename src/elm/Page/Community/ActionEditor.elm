@@ -1164,10 +1164,10 @@ viewDescription { shared } form =
             text (t shared.translations s)
     in
     div [ class "mb-10" ]
-        [ span [ class "input-label" ]
+        [ span [ class "input-label flex" ]
             [ text_ "community.actions.form.description_label" ]
         , textarea
-            [ class "w-full input rounded-sm"
+            [ class "input rounded-sm w-2/5 sm-max:w-full md-max:w-full"
             , classList [ ( "border-red", hasErrors form.description ) ]
             , rows 5
             , onInput EnteredDescription
@@ -1328,6 +1328,7 @@ viewValidations { shared } model =
                                     [ type_ "number"
                                     , class "input w-2/5 sm-max:w-full md-max:w-full"
                                     , classList [ ( "border-red", hasErrors validation ) ]
+                                    , placeholder "Type a number"
                                     , value (getInput validation)
                                     , onInput EnteredUsages
                                     ]

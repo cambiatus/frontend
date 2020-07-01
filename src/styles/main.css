@@ -263,7 +263,8 @@
 
 #date:checked, 
 #quantity:checked {
-  border: 4px solid white;
+  background: white;
+  border: 6px solid #8acc9e;
   border-radius: 2px;
 }
 
