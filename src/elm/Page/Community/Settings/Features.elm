@@ -83,7 +83,7 @@ view loggedIn model =
                     div [ class "bg-white flex flex-col items-center" ]
                         [ Page.viewHeader loggedIn title (Route.CommunitySettings model.symbol)
                         , div
-                            [ class "container w-full divide-y"
+                            [ class "container divide-y px-4"
                             ]
                             [ toggleView translations (translate "community.objectives.title_plural") model.hasObjectives ToggleObjectives "actions"
                             , toggleView translations (translate "menu.shop") model.hasShop ToggleShop "shop"
