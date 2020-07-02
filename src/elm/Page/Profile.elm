@@ -121,10 +121,10 @@ view_ model loggedIn profile =
                         _ ->
                             Ignored
     in
-    div [ class "grid gap-6" ]
+    div [ class "grid gap-6 mb-6" ]
         [ PublicProfile.view_ loggedIn profile False
         , div [ class "bg-white" ]
-            [ div [ class "container mx-auto p-4 px-8" ]
+            [ div [ class "container divide-y divide-gray-500 mx-auto px-4" ]
                 [ viewAction (text_ "profile.12words.title") [ viewButton (text_ "profile.12words.button") downloadAction ]
                 , viewAction (text_ "profile.pin.title") [ viewButton (text_ "profile.pin.button") ClickedChangePin ]
                 , viewAction (text_ "notifications.title")
@@ -181,19 +181,11 @@ viewButton label msg =
 
 viewAction : String -> List (Html Msg) -> Html Msg
 viewAction label contents =
-    div
-        [ class "grid grid-cols-2 grid-rows-1"
-        , style "grid-template-areas" "'key value'"
-        ]
-        [ span
-            [ class "text-sm py-2 leading-6"
-            , style "grid-area" "key"
-            ]
+    div [ class "flex items-center justify-between py-4" ]
+        [ span [ class "text-sm leading-6" ]
             [ text label ]
         , span
-            [ class "text-indigo-500 font-medium text-sm text-right py-2 leading-6"
-            , style "grid-area" "value"
-            ]
+            [ class "text-indigo-500 font-medium text-sm text-right leading-6" ]
             contents
         ]
 
