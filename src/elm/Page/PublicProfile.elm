@@ -112,7 +112,7 @@ view_ loggedIn profile shouldShowTransfer =
     div [ class "bg-white" ]
         [ Page.viewHeader loggedIn (t loggedIn.shared.translations "menu.profile") Route.Communities
         , div
-            [ class "grid pt-4 gap-4 container mx-auto p-4"
+            [ class "grid pt-4 gap-4 container mx-auto"
             , style "grid-template"
                 ("\". avatar  info    info .\""
                     ++ "\". desc    desc    desc .\""
@@ -133,10 +133,13 @@ view_ loggedIn profile shouldShowTransfer =
                     [ ( t loggedIn.shared.translations "profile.locations", [ location ] )
                     , ( t loggedIn.shared.translations "profile.interests", profile.interests )
                     ]
+                    shouldShowTransfer
                 ]
              ]
                 ++ [ if shouldShowTransfer then
-                        div [ style "grid-area" "transfer" ] [ viewTransferButton loggedIn.shared loggedIn.selectedCommunity account ]
+                        div [ style "grid-area" "transfer" ]
+                            [ viewTransferButton loggedIn.shared loggedIn.selectedCommunity account
+                            ]
 
                      else
                         div [] []
@@ -145,24 +148,39 @@ view_ loggedIn profile shouldShowTransfer =
         ]
 
 
-viewUserExtendedInfo : List ( String, List String ) -> Html msg
-viewUserExtendedInfo data =
+viewUserExtendedInfo : List ( String, List String ) -> Bool -> Html msg
+viewUserExtendedInfo data shouldShowTransfer =
+    let
+        divideClass =
+            if shouldShowTransfer then
+                "divide-y"
+
+            else
+                ""
+
+        topBorderClass =
+            if shouldShowTransfer then
+                ""
+
+            else
+                "border-t"
+    in
     div
-        [ class "grid divide-y"
+        [ class <| "grid " ++ divideClass
         ]
         (List.map
             (\x ->
                 div
-                    [ class "grid grid-cols-2 grid-rows-1"
+                    [ class <| "grid grid-cols-2 grid-rows-1 py-4 " ++ topBorderClass
                     , style "grid-template-areas" "'key value'"
                     ]
                     [ span
-                        [ class "text-sm py-2 leading-6"
+                        [ class "text-sm leading-6"
                         , style "grid-area" "key"
                         ]
                         [ text (Tuple.first x) ]
                     , span
-                        [ class "text-indigo-500 font-medium text-sm text-right py-2 leading-6"
+                        [ class "text-indigo-500 font-medium text-sm text-right leading-6"
                         , style "grid-area" "value"
                         ]
                         [ text (String.join ", " (Tuple.second x)) ]
@@ -179,14 +197,10 @@ viewTransferButton shared symbol user =
             text (t shared.translations s)
     in
     a
-        [ class "flex justify-center w-full"
+        [ class "button button-primary w-full"
         , Route.href (Route.Transfer symbol (Just user))
         ]
-        [ button
-            [ class "button button-primary w-full"
-            ]
-            [ text_ "transfer.title" ]
-        ]
+        [ text_ "transfer.title" ]
 
 
 viewUserDescription : String -> Html msg
@@ -225,14 +239,19 @@ viewUserInfo name email username shouldShowEdit =
                 [ text username ]
             ]
         , if shouldShowEdit then
-            a
-                [ Route.href Route.ProfileEditor
+            div
+                [ class "text-right"
                 , style "grid-area" "editButton"
                 ]
-                [ Icons.edit "" ]
+                [ a
+                    [ class "inline-block"
+                    , Route.href Route.ProfileEditor
+                    ]
+                    [ Icons.edit "" ]
+                ]
 
           else
-            div [] []
+            text ""
         ]
 
 
