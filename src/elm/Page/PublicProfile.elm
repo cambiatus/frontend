@@ -153,7 +153,7 @@ viewUserExtendedInfo data shouldShowTransfer =
     let
         divideClass =
             if shouldShowTransfer then
-                "divide-y"
+                "divide-y divide-gray-500"
 
             else
                 ""
@@ -163,7 +163,7 @@ viewUserExtendedInfo data shouldShowTransfer =
                 ""
 
             else
-                "border-t"
+                "border-t border-gray-500"
     in
     div
         [ class <| "grid " ++ divideClass

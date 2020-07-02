@@ -622,7 +622,7 @@ isActive page route =
 
 viewFooter : Shared -> Html msg
 viewFooter _ =
-    footer [ class "bg-white w-full flex flex-wrap mx-auto border-t border-grey p-4 pt-6 h-40 bottom-0" ]
+    footer [ class "bg-white w-full flex flex-wrap mx-auto border-t border-grey-500 p-4 pt-6 h-40 bottom-0" ]
         [ p [ class "text-sm flex w-full justify-center items-center" ]
             [ text "Created with"
             , Icons.heart
