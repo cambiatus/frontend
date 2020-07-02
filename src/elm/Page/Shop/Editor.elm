@@ -328,7 +328,6 @@ viewForm shared balances imageStatus isEdit isDisabled deleteModal form =
                     [ div
                         [ class "input-label" ]
                         [ text (t "shop.what_label") ]
-                    , viewFieldErrors (listErrors shared.translations form.title)
                     , input
                         [ class "input w-full"
                         , type_ "text"
@@ -340,12 +339,12 @@ viewForm shared balances imageStatus isEdit isDisabled deleteModal form =
                         , disabled isDisabled
                         ]
                         []
+                    , viewFieldErrors (listErrors shared.translations form.title)
                     ]
                 , formField
                     [ div
                         [ class "input-label" ]
                         [ text (t "shop.description_label") ]
-                    , viewFieldErrors (listErrors shared.translations form.description)
                     , textarea
                         [ class "input w-full"
                         , id (fieldId "description")
@@ -356,13 +355,13 @@ viewForm shared balances imageStatus isEdit isDisabled deleteModal form =
                         , disabled isDisabled
                         ]
                         []
+                    , viewFieldErrors (listErrors shared.translations form.description)
                     ]
                 , div [ class "mt-2" ]
                     [ formField
                         [ label
                             [ class "input-label" ]
                             [ text (t "shop.which_community_label") ]
-                        , viewFieldErrors (listErrors shared.translations form.symbol)
                         , select
                             [ class "input w-full mb-2 form-select select"
                             , id (fieldId "symbol")
@@ -396,6 +395,7 @@ viewForm shared balances imageStatus isEdit isDisabled deleteModal form =
                                     )
                                     balances
                             )
+                        , viewFieldErrors (listErrors shared.translations form.symbol)
                         ]
                     ]
                 , div [ class "mt-2" ]
@@ -403,7 +403,6 @@ viewForm shared balances imageStatus isEdit isDisabled deleteModal form =
                         [ div
                             [ class "input-label" ]
                             [ text (t "shop.track_stock_label") ]
-                        , viewFieldErrors (listErrors shared.translations form.trackStock)
                         , select
                             [ class "form-select select w-1/2"
                             , id (fieldId "trackStock")
@@ -423,13 +422,13 @@ viewForm shared balances imageStatus isEdit isDisabled deleteModal form =
                                 ]
                                 [ text (t "shop.track_stock_no") ]
                             ]
+                        , viewFieldErrors (listErrors shared.translations form.trackStock)
                         ]
                     , if trackStock == Just trackYes then
                         formField
                             [ div
                                 [ class "input-label" ]
                                 [ text (t "shop.units_label") ]
-                            , viewFieldErrors (listErrors shared.translations form.units)
                             , input
                                 [ class "input w-full"
                                 , type_ "number"
@@ -441,6 +440,7 @@ viewForm shared balances imageStatus isEdit isDisabled deleteModal form =
                                 , Html.Attributes.min "0"
                                 ]
                                 []
+                            , viewFieldErrors (listErrors shared.translations form.units)
                             ]
 
                       else
@@ -452,7 +452,6 @@ viewForm shared balances imageStatus isEdit isDisabled deleteModal form =
                         [ span
                             [ class "input-label" ]
                             [ text (t "shop.price_label") ]
-                        , viewFieldErrors (listErrors shared.translations form.price)
                         , input
                             [ class "input w-full"
                             , id (fieldId "price")
@@ -463,6 +462,7 @@ viewForm shared balances imageStatus isEdit isDisabled deleteModal form =
                             , Html.Attributes.min "0"
                             ]
                             []
+                        , viewFieldErrors (listErrors shared.translations form.price)
                         ]
                     ]
                 , case form.error of
@@ -481,6 +481,8 @@ viewForm shared balances imageStatus isEdit isDisabled deleteModal form =
                         ]
                         [ text actionText ]
                     ]
+                    
+                    
                 ]
             ]
         ]
