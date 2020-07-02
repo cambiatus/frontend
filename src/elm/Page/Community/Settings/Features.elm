@@ -123,6 +123,13 @@ toggleView translations labelText isEnabled toggleFunction inputId =
 
             else
                 translate "settings.features.disabled"
+
+        color =
+            if isEnabled then
+                "text-purple-500"
+
+            else
+                "text-grey"
     in
     div
         [ class "grid w-full py-4"
@@ -131,7 +138,7 @@ toggleView translations labelText isEnabled toggleFunction inputId =
                                 """
         ]
         [ span [ classes, style "grid-area" "label" ] [ text labelText ]
-        , span [ classes, class "text-purple-500 font-medium lowercase mr-auto", style "grid-area" "status" ] [ text statusText ]
+        , span [ classes, class ("font-medium lowercase mr-auto " ++ color), style "grid-area" "status" ] [ text statusText ]
         , div [ classes ]
             [ div [ class "form-switch inline-block align-middle" ]
                 [ input
