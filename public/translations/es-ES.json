@@ -623,6 +623,31 @@
       "body": "Esta identificación garantiza la autenticidad de la transacción si ambas partes tienen los mismos emojis."
     }
   },
+  "settings": {
+    "success": "Configuraciones guardadas exitosamente",
+    "community_info": {
+      "title": "Informações da Comunidade",
+      "description": "Logo, nome, des crição"
+    },
+    "currency": {
+      "title": "Moeda",
+      "description": ""
+    },
+    "actions": {
+      "title": "Objetivos e Ações",
+      "description": ""
+    },
+    "teams": {
+      "title": "Tiempo",
+      "description": "Construção de times"
+    },
+    "features": {
+      "title": "Recursos",
+      "description": "Ações, loja",
+      "enabled": "Activado",
+      "disabled": "Desactivado"
+    }
+  },
   "payment_history": {
     "title": "Historial de Pagos",
     "user": "Usuario",

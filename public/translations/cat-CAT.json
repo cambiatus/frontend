@@ -622,6 +622,31 @@
       "body": "Aquesta identificació garanteix l'autenticitat de la transacció si ambdues parts tenen els mateixos emojis."
     }
   },
+  "settings": {
+    "success": "La configuració s'ha desat correctament",
+    "community_info": {
+      "title": "Informació de la Comunitat",
+      "description": "Logo, nome, des crição"
+    },
+    "currency": {
+      "title": "Moeda",
+      "description": ""
+    },
+    "actions": {
+      "title": "Objetius i Ações",
+      "description": ""
+    },
+    "team": {
+      "title": "Temps",
+      "description": "Construcció de temps"
+    },
+    "features": {
+      "title": "Recursos",
+      "description": "Ações, loja",
+      "enabled": "Activat",
+      "disabled": "Desactivat"
+    }
+  }, 
   "payment_history": {
     "title": "Historial de pagaments",
     "user": "Usuari",

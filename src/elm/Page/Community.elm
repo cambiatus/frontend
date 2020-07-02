@@ -118,9 +118,6 @@ view loggedIn model =
         t s =
             I18Next.t loggedIn.shared.translations s
 
-        tr r_id replaces =
-            I18Next.tr loggedIn.shared.translations I18Next.Curly r_id replaces
-
         text_ s =
             text (t s)
 
@@ -160,49 +157,23 @@ view loggedIn model =
                                 ]
                             , p [ class "text-grey-200 text-sm" ] [ text community.description ]
                             ]
-                        , div [ class "container mx-auto px-4" ]
-                            [ viewClaimModal loggedIn model
-                            , if canEdit then
-                                div [ class "flex justify-between items-center py-2 px-8 sm:px-6 bg-white rounded-lg mt-4" ]
-                                    [ div []
-                                        [ p [ class "font-bold" ] [ text_ "community.objectives.title_plural" ]
-                                        , p [ class "text-gray-900 text-caption uppercase" ]
-                                            [ text
-                                                (tr "community.objectives.subtitle"
-                                                    [ ( "objectives", List.length community.objectives |> String.fromInt )
-                                                    , ( "actions"
-                                                      , List.map (\c -> List.length c.actions) community.objectives
-                                                            |> List.foldl (+) 0
-                                                            |> String.fromInt
-                                                      )
-                                                    ]
-                                                )
-                                            ]
-                                        ]
-                                    , a
-                                        [ class "button button-primary"
-                                        , Route.href (Route.Objectives community.symbol)
-                                        ]
-                                        [ text_ "menu.edit" ]
-                                    ]
+                        , if canEdit && community.hasObjectives then
+                            div [ class "container mx-auto px-4" ]
+                                [ div [ class "bg-white py-6 sm:py-8 px-3 sm:px-6 rounded-lg mt-4" ]
+                                    (Page.viewTitle (t "community.objectives.title_plural")
+                                        :: List.indexedMap (viewObjective loggedIn model community)
+                                            community.objectives
+                                        ++ [ if canEdit then
+                                                viewObjectiveNew loggedIn editStatus community.symbol
 
-                              else
-                                text ""
-                            , div [ class "bg-white py-6 sm:py-8 px-3 sm:px-6 rounded-lg mt-4" ]
-                                (Page.viewTitle (t "community.objectives.title_plural")
-                                    :: List.indexedMap (viewObjective loggedIn model community)
-                                        community.objectives
-                                    ++ [ if canEdit then
-                                            viewObjectiveNew loggedIn editStatus community.symbol
+                                             else
+                                                text ""
+                                           ]
+                                    )
+                                ]
 
-                                         else
-                                            text ""
-                                       ]
-                                )
-
-                            -- , Transfer.getTransfers (Just community)
-                            --     |> viewSections loggedIn model
-                            ]
+                          else
+                            text ""
                         ]
     in
     { title = title
@@ -536,68 +507,6 @@ viewHeader { shared } community =
                 ]
             ]
         ]
-
-
-viewClaimModal : LoggedIn.Model -> Model -> Html Msg
-viewClaimModal loggedIn model =
-    case model.modalStatus of
-        Opened isLoading actionId ->
-            let
-                t s =
-                    I18Next.t loggedIn.shared.translations s
-
-                text_ s =
-                    text (t s)
-            in
-            div [ class "modal container" ]
-                [ div [ class "modal-bg", onClick CloseClaimConfirmation ] []
-                , div [ class "modal-content" ]
-                    [ div [ class "w-full" ]
-                        [ p [ class "w-full font-bold text-heading text-2xl mb-4" ]
-                            [ text_ "claim.modal.title" ]
-                        , button
-                            [ if not isLoading then
-                                onClick CloseClaimConfirmation
-
-                              else
-                                onClick NoOp
-                            , disabled isLoading
-                            ]
-                            [ Icons.close "absolute fill-current text-gray-400 top-0 right-0 mx-8 my-4"
-                            ]
-                        , p [ class "text-body w-full font-sans mb-10" ]
-                            [ text_ "dashboard.check_claim.body" ]
-                        ]
-                    , div [ class "w-full md:bg-gray-100 md:flex md:absolute rounded-b-lg md:inset-x-0 md:bottom-0 md:p-4 justify-center" ]
-                        [ div [ class "flex" ]
-                            [ button
-                                [ class "flex-1 block button button-secondary mb-4 button-lg w-full md:w-40 md:mb-0"
-                                , if not isLoading then
-                                    onClick CloseClaimConfirmation
-
-                                  else
-                                    onClick NoOp
-                                , disabled isLoading
-                                ]
-                                [ text_ "dashboard.check_claim.no" ]
-                            , div [ class "w-8" ] []
-                            , button
-                                [ class "flex-1 block button button-primary button-lg w-full md:w-40"
-                                , if not isLoading then
-                                    onClick (ClaimAction actionId)
-
-                                  else
-                                    onClick NoOp
-                                , disabled isLoading
-                                ]
-                                [ text_ "dashboard.check_claim.yes" ]
-                            ]
-                        ]
-                    ]
-                ]
-
-        Closed ->
-            text ""
 
 
 

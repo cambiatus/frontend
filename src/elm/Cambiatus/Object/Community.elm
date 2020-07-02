@@ -54,9 +54,9 @@ description =
     Object.selectionForField "String" "description" [] Decode.string
 
 
-hasActions : SelectionSet Bool Cambiatus.Object.Community
-hasActions =
-    Object.selectionForField "Bool" "hasActions" [] Decode.bool
+hasObjectives : SelectionSet Bool Cambiatus.Object.Community
+hasObjectives =
+    Object.selectionForField "Bool" "hasObjectives" [] Decode.bool
 
 
 hasShop : SelectionSet Bool Cambiatus.Object.Community
