@@ -6,7 +6,7 @@ import Avatar exposing (Avatar)
 import File exposing (File)
 import Graphql.Http
 import Html exposing (Html, button, div, form, input, label, span, text, textarea)
-import Html.Attributes exposing (accept, class, for, id, multiple, style, title, type_, value)
+import Html.Attributes exposing (accept, class, for, id, multiple, style, type_, value)
 import Html.Events exposing (onInput)
 import Http
 import I18Next exposing (Translations, t)
@@ -219,7 +219,10 @@ viewTextArea label gridArea field currentValue =
 
 viewAvatar : Session.LoggedIn.Model -> Avatar.Avatar -> Html Msg
 viewAvatar loggedIn url =
-    div [ class "m-auto", style "grid-area" "avatar" ]
+    div
+        [ class "m-auto relative"
+        , style "grid-area" "avatar"
+        ]
         [ input
             [ id "profile-upload-avatar"
             , class "profile-img-input"
@@ -230,10 +233,10 @@ viewAvatar loggedIn url =
             ]
             []
         , label
-            [ for "profile-upload-avatar"
-            , title "Test"
+            [ for "profile-upload-avatar" ]
+            [ Avatar.view loggedIn.shared.endpoints.ipfs url "w-20 h-20"
+            , span [ class "absolute bottom-0 right-0 bg-orange-300 w-8 h-8 p-2 rounded-full" ] [ Icons.camera ]
             ]
-            [ Avatar.view loggedIn.shared.endpoints.ipfs url "w-20 h-20" ]
         ]
 
 

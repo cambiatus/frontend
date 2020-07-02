@@ -2,6 +2,7 @@ module Icons exposing
     ( alert
     , arrowDown
     , back
+    , camera
     , close
     , communities
     , dashboard
@@ -23,7 +24,7 @@ module Icons exposing
 
 import Html exposing (Html)
 import Svg exposing (Svg, svg)
-import Svg.Attributes exposing (class, clipRule, cx, cy, d, fill, fillRule, height, r, viewBox, width)
+import Svg.Attributes exposing (class, clipPath, clipRule, cx, cy, d, fill, fillRule, height, id, r, stroke, strokeLinecap, strokeLinejoin, strokeWidth, viewBox, width)
 
 
 dashboard : String -> Svg msg
@@ -85,6 +86,28 @@ success classes =
             , d "M13.3238 25C12.7916 24.9995 12.2815 24.7955 11.9054 24.4328L2.5387 15.4087C1.80178 14.6467 1.82353 13.4594 2.58788 12.723C3.35224 11.9866 4.58463 11.9657 5.37547 12.6756L13.3238 20.3332L26.6245 7.519C27.4154 6.80903 28.6478 6.82998 29.4121 7.56638C30.1765 8.30278 30.1982 9.4901 29.4613 10.252L14.7422 24.4328C14.3661 24.7955 13.8559 24.9995 13.3238 25Z"
             ]
             []
+        ]
+
+
+camera : Svg msg
+camera =
+    svg
+        [ fill "none"
+        , viewBox "0 0 16 16"
+        ]
+        [ Svg.clipPath [ id "a" ]
+            [ Svg.path [ d "m0 0h16v16h-16z" ] []
+            ]
+        , Svg.g
+            [ clipPath "url(#a)"
+            , stroke "#fff"
+            , strokeLinecap "round"
+            , strokeLinejoin "round"
+            , strokeWidth "2"
+            ]
+            [ Svg.path [ d "m15.3334 12.6667c0 .3536-.1405.6927-.3906.9428-.25.25-.5892.3905-.9428.3905h-11.99998c-.35362 0-.69276-.1405-.94281-.3905-.250047-.2501-.390523-.5892-.390523-.9428v-7.33337c0-.35362.140476-.69276.390523-.94281.25005-.25004.58919-.39052.94281-.39052h2.66667l1.33333-2h3.99998l1.3334 2h2.6666c.3536 0 .6928.14048.9428.39052.2501.25005.3906.58919.3906.94281z" ] []
+            , Svg.path [ d "m7.99998 11.3333c1.47276 0 2.66662-1.1939 2.66662-2.66663 0-1.47276-1.19386-2.66667-2.66662-2.66667s-2.66667 1.19391-2.66667 2.66667c0 1.47273 1.19391 2.66663 2.66667 2.66663z" ] []
+            ]
         ]
 
 
