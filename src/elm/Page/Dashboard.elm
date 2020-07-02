@@ -152,6 +152,14 @@ view loggedIn model =
                 _ ->
                     False
 
+        areObjectivesEnabled =
+            case model.community of
+                LoadedGraphql community _ ->
+                    community.hasObjectives == True
+
+                _ ->
+                    False
+
         content =
             case ( model.balance, loggedIn.profile ) of
                 ( Loading, _ ) ->
@@ -176,7 +184,11 @@ view loggedIn model =
                                 text ""
                             ]
                         , viewBalance loggedIn model balance
-                        , viewAnalysisList loggedIn profile model
+                        , if areObjectivesEnabled then
+                            viewAnalysisList loggedIn profile model
+
+                          else
+                            text ""
                         , viewTransfers loggedIn model
                         , viewAnalysisModal loggedIn model
                         , viewInvitationModal loggedIn model

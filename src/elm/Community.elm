@@ -80,6 +80,7 @@ type alias DashboardInfo =
     , transferCount : Int
     , actionCount : Int
     , saleCount : Int
+    , hasObjectives : Bool
     , creator : Eos.Name
     }
 
@@ -143,6 +144,7 @@ dashboardSelectionSet =
         |> with Community.transferCount
         |> with Community.actionCount
         |> with Community.saleCount
+        |> with Community.hasObjectives
         |> with (Eos.nameSelectionSet Community.creator)
 
 
