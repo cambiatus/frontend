@@ -16,6 +16,7 @@ import Page
 import Profile exposing (Profile)
 import Route
 import Session.LoggedIn exposing (External(..), FeedbackStatus(..))
+import Session.Shared exposing (Shared)
 import UpdateResult as UR
 
 
@@ -137,7 +138,7 @@ view_ loggedIn model profile =
             ([ viewAvatar loggedIn avatar
              , viewInput (tr "profile.edit.labels.name") "fullname" FullName model.fullName
              , viewInput (tr "profile.edit.labels.email") "email" Email model.email
-             , viewTextArea (tr "profile.edit.labels.bio") "bio" Bio model.bio
+             , viewTextArea (tr "profile.edit.labels.bio") "bio" Bio loggedIn.shared model.bio
              , viewInput (tr "profile.edit.labels.localization") "location" Location model.location
              , viewButton (tr "profile.edit.submit") ClickedSave "save" model.wasSaved
              , div [ class "flex flex-wrap", style "grid-area" "interestList" ]
@@ -212,18 +213,33 @@ viewButton label msg area isDisabled =
         ]
 
 
-viewTextArea : String -> String -> Field -> String -> Html Msg
-viewTextArea label gridArea field currentValue =
+viewTextArea : String -> String -> Field -> Shared -> String -> Html Msg
+viewTextArea lbl gridArea field shared currentValue =
+    let
+        tr : String -> I18Next.Replacements -> String
+        tr =
+            I18Next.tr shared.translations I18Next.Curly
+    in
     div
         [ style "grid-area" gridArea
         ]
-        [ span [ class "input-label" ]
-            [ text label ]
-        , textarea
-            [ class "w-full input"
-            , onInput (OnFieldInput field)
+        [ label [ class "input-label" ] [ text lbl ]
+        , div [ class "relative" ]
+            [ textarea
+                [ class "w-full form-input"
+                , onInput (OnFieldInput field)
+                , value currentValue
+                ]
+                []
+            , div [ class "input-label pr-1 text-right text-purple-100 font-bold mt-1 absolute right-0" ]
+                [ text <|
+                    tr
+                        "edit.input_counter"
+                        [ ( "current", String.fromInt <| String.length currentValue )
+                        , ( "max", "255" )
+                        ]
+                ]
             ]
-            [ text currentValue ]
         ]
 
 
@@ -334,7 +350,18 @@ update msg model loggedIn =
                             { model | email = data }
 
                         Bio ->
-                            { model | bio = data }
+                            let
+                                limit =
+                                    255
+
+                                limitedBio =
+                                    if String.length data < limit then
+                                        data
+
+                                    else
+                                        String.slice 0 limit data
+                            in
+                            { model | bio = limitedBio }
 
                         Location ->
                             { model | location = data }
