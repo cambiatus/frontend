@@ -130,7 +130,19 @@ view_ model loggedIn profile =
                 [ viewAction (text_ "profile.12words.title") [ viewButton (text_ "profile.12words.button") downloadAction ]
                 , viewAction (text_ "profile.pin.title") [ viewButton (text_ "profile.pin.button") ClickedChangePin ]
                 , viewAction (text_ "notifications.title")
-                    [ toggleView loggedIn.shared.translations model.pushNotifications RequestPush "notifications"
+                    [ div
+                        [ class "inline-block mr-2" ]
+                        [ if model.pushNotifications then
+                            label
+                                [ for "notifications"
+                                , class "cursor-pointer text-indigo-500"
+                                ]
+                                [ text "enabled" ]
+
+                          else
+                            label [ for "notifications", class "cursor-pointer text-gray" ] [ text "disabled" ]
+                        ]
+                    , toggleView loggedIn.shared.translations model.pushNotifications RequestPush "notifications"
                     ]
                 ]
             ]
@@ -193,7 +205,7 @@ viewAction label contents =
         [ span [ class "text-sm leading-6" ]
             [ text label ]
         , span
-            [ class "text-indigo-500 font-medium text-sm text-right leading-6" ]
+            [ class "font-medium text-sm text-right leading-6" ]
             contents
         ]
 
