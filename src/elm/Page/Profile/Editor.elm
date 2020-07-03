@@ -6,7 +6,7 @@ import Avatar exposing (Avatar)
 import File exposing (File)
 import Graphql.Http
 import Html exposing (Html, button, div, form, input, label, span, text, textarea)
-import Html.Attributes exposing (accept, class, for, id, multiple, style, type_, value)
+import Html.Attributes exposing (accept, class, disabled, for, id, multiple, style, type_, value)
 import Html.Events exposing (onInput)
 import Http
 import I18Next exposing (Translations, t)
@@ -49,6 +49,7 @@ type alias Model =
     , interest : String
     , status : Status
     , avatar : Maybe Avatar
+    , wasSaved : Bool
     }
 
 
@@ -62,6 +63,7 @@ initModel =
     , interest = ""
     , status = Loading
     , avatar = Nothing
+    , wasSaved = False
     }
 
 
@@ -137,7 +139,7 @@ view_ loggedIn model profile =
              , viewInput (tr "profile.edit.labels.email") "email" Email model.email
              , viewTextArea (tr "profile.edit.labels.bio") "bio" Bio model.bio
              , viewInput (tr "profile.edit.labels.localization") "location" Location model.location
-             , viewButton (tr "profile.edit.submit") ClickedSave "save"
+             , viewButton (tr "profile.edit.submit") ClickedSave "save" model.wasSaved
              , div [ class "flex flex-wrap", style "grid-area" "interestList" ]
                 (model.interests
                     |> List.map viewInterest
@@ -191,12 +193,20 @@ onClickPreventDefault message =
     Html.Events.custom "click" (Json.Decode.succeed { message = message, stopPropagation = True, preventDefault = True })
 
 
-viewButton : String -> Msg -> String -> Html Msg
-viewButton label msg area =
+viewButton : String -> Msg -> String -> Bool -> Html Msg
+viewButton label msg area isDisabled =
     button
         [ class "button button-primary w-full"
+        , class
+            (if isDisabled then
+                "button-disabled"
+
+             else
+                ""
+            )
         , style "grid-area" area
         , onClickPreventDefault msg
+        , disabled isDisabled
         ]
         [ text label
         ]
@@ -233,7 +243,9 @@ viewAvatar loggedIn url =
             ]
             []
         , label
-            [ for "profile-upload-avatar" ]
+            [ for "profile-upload-avatar"
+            , class "block cursor-pointer"
+            ]
             [ Avatar.view loggedIn.shared.endpoints.ipfs url "w-20 h-20"
             , span [ class "absolute bottom-0 right-0 bg-orange-300 w-8 h-8 p-2 rounded-full" ] [ Icons.camera ]
             ]
@@ -280,6 +292,20 @@ update msg model loggedIn =
             let
                 nullable a =
                     Maybe.withDefault "" a
+
+                redirect =
+                    if model.wasSaved then
+                        UR.addCmd (Route.pushUrl loggedIn.shared.navKey Route.Profile)
+
+                    else
+                        UR.addCmd Cmd.none
+
+                showSuccessMsg =
+                    if model.wasSaved then
+                        UR.addExt (ShowFeedback Success (t loggedIn.shared.translations "profile.edit_success"))
+
+                    else
+                        UR.addExt HideFeedback
             in
             UR.init
                 { model
@@ -290,6 +316,8 @@ update msg model loggedIn =
                     , location = nullable profile.localization
                     , interests = profile.interests
                 }
+                |> redirect
+                |> showSuccessMsg
 
         CompletedProfileLoad (Err err) ->
             UR.init { model | status = LoadingFailed err }
@@ -343,15 +371,13 @@ update msg model loggedIn =
                         newProfile =
                             modelToProfile model profile
                     in
-                    model
+                    { model | wasSaved = True }
                         |> UR.init
                         |> UR.addCmd
                             (Api.Graphql.mutation loggedIn.shared
                                 (Profile.mutation profile.account (Profile.profileToForm newProfile))
                                 CompletedProfileLoad
                             )
-                        |> UR.addCmd (Route.pushUrl loggedIn.shared.navKey Route.Profile)
-                        |> UR.addExt (ShowFeedback Success (t loggedIn.shared.translations "profile.edit_success"))
 
                 _ ->
                     UR.init model
