@@ -165,7 +165,7 @@ viewPageHeader model shared =
             [ button
                 [ type_ "button"
                 , tabindex -1
-                , class "flex block relative z-10 items-center px-4 py-2 bg-white text-xs focus:outline-none"
+                , class "flex block relative z-20 items-center px-4 py-2 bg-white text-xs focus:outline-none"
                 , classList
                     [ ( "rounded-tr-lg rounded-tl-lg justify-between lang-menu-open"
                       , model.showLanguageNav

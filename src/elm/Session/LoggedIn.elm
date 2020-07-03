@@ -241,7 +241,7 @@ viewFeedback status message =
                     "bg-red"
     in
     div
-        [ class "sticky z-50 top-0 w-full"
+        [ class "sticky z-10 top-0 w-full"
         , classList [ ( color, True ) ]
         , style "display" "grid"
         , style "grid-template" "\". text x\" 100% / 10% 80% 10%"
@@ -350,7 +350,7 @@ viewHeader ({ shared } as model) profile_ =
                   else
                     text ""
                 ]
-            , div [ class "relative z-10" ]
+            , div [ class "relative z-20" ]
                 [ button
                     [ class "h-12 z-10 bg-gray-200 py-2 px-3 relative hidden lg:visible lg:flex"
                     , classList [ ( "rounded-tr-lg rounded-tl-lg", model.showUserNav ) ]
