@@ -24,7 +24,7 @@ module Icons exposing
 
 import Html exposing (Html)
 import Svg exposing (Svg, svg)
-import Svg.Attributes exposing (class, clipPath, clipRule, cx, cy, d, fill, fillRule, height, id, r, stroke, strokeLinecap, strokeLinejoin, strokeWidth, viewBox, width)
+import Svg.Attributes exposing (class, clipPath, clipRule, cx, cy, d, fill, fillRule, height, id, r, stroke, strokeLinecap, strokeLinejoin, strokeWidth, style, viewBox, width)
 
 
 dashboard : String -> Svg msg
@@ -92,8 +92,8 @@ success classes =
 camera : Svg msg
 camera =
     svg
-        [ fill "none"
-        , viewBox "0 0 16 16"
+        [ viewBox "0 0 16 16"
+        , style "fill: none"
         ]
         [ Svg.clipPath [ id "a" ]
             [ Svg.path [ d "m0 0h16v16h-16z" ] []

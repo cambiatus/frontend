@@ -30,6 +30,10 @@ body {
     color: var(--black);
 }
 
+svg {
+    fill: var(--black);
+}
+
 textarea {
     resize: vertical;
     font-family: 'Roboto', sans-serif;
