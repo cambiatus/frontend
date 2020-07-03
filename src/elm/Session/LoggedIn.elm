@@ -241,7 +241,7 @@ viewFeedback status message =
                     "bg-red"
     in
     div
-        [ class "sticky top-0 w-full"
+        [ class "sticky z-50 top-0 w-full"
         , classList [ ( color, True ) ]
         , style "display" "grid"
         , style "grid-template" "\". text x\" 100% / 10% 80% 10%"
