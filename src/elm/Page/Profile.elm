@@ -8,6 +8,7 @@ import Html.Attributes exposing (checked, class, for, id, name, style, type_)
 import Html.Events exposing (onClick, onInput, stopPropagationOn)
 import Http
 import I18Next exposing (Translations, t)
+import Icons
 import Json.Decode as Decode exposing (Value)
 import Json.Encode as Encode
 import Page
@@ -153,8 +154,14 @@ viewModal status translations =
                 , div [ class "modal-content overflow-auto" ]
                     [ div [ class "display flex flex-col justify-around h-full" ]
                         [ div []
-                            [ p [ class "w-full font-medium text-heading text-2xl mb-2" ] [ text "Change PIN" ]
+                            [ p [ class "w-full font-medium text-heading text-2xl mb-2" ]
+                                [ text "Change PIN"
+                                ]
                             , p [ class "text-sm" ] [ text (text_ "profile.changePin") ]
+                            , button
+                                [ onClick ClickedCloseChangePin ]
+                                [ Icons.close "absolute fill-current text-gray-400 top-0 right-0 mx-4 my-4"
+                                ]
                             ]
                         , div []
                             [ label [ class "input-label", for "newPin" ] [ text (text_ "profile.newPin") ]
