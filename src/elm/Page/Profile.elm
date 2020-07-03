@@ -1,7 +1,6 @@
 module Page.Profile exposing (Model, Msg, init, jsAddressToMsg, msgToString, update, view)
 
 import Api.Graphql
-import Eos.Account
 import Graphql.Http
 import Html exposing (Html, button, div, input, label, p, span, text)
 import Html.Attributes exposing (checked, class, for, id, name, style, type_)
@@ -47,7 +46,8 @@ init loggedIn =
 type alias Model =
     { status : Status
     , pinModal : ModalStatus
-    , newPin : String
+    , oldPin : Maybe String
+    , newPin : Maybe String
     , pushNotifications : Bool
     }
 
@@ -56,7 +56,8 @@ initModel : LoggedIn.Model -> Model
 initModel _ =
     { status = Loading
     , pinModal = Hidden
-    , newPin = ""
+    , oldPin = Nothing
+    , newPin = Nothing
     , pushNotifications = False
     }
 
@@ -167,7 +168,7 @@ viewModal status translations =
                             [ label [ class "input-label", for "newPin" ] [ text (text_ "profile.newPin") ]
                             , input [ id "newPin", class "input w-full mb-4", type_ "text", onInput EnteredPin ] []
                             ]
-                        , button [ class "button button-primary w-full", onClick ChangedPin ] [ text "Change" ]
+                        , button [ class "button button-primary w-full", onClick ChangePinSubmitted ] [ text "Change" ]
                         ]
                     ]
                 ]
@@ -224,12 +225,13 @@ type alias UpdateResult =
 type Msg
     = Ignored
     | CompletedProfileLoad (Result (Graphql.Http.Error (Maybe Profile)) (Maybe Profile))
-    | ClickedChangePin
     | DownloadPdf String
-    | ClickedCloseChangePin
     | ClickedViewPrivateKeyAuth
-    | ChangedPin
+    | ClickedChangePin
+    | ChangePinSubmitted
     | EnteredPin String
+    | ClickedCloseChangePin
+    | PinChanged
     | GotPushPreference Bool
     | RequestPush
     | CheckPushPref
@@ -266,37 +268,57 @@ update msg model loggedIn =
                 |> UR.logGraphqlError msg err
 
         ClickedChangePin ->
-            UR.init { model | pinModal = Shown }
+            if LoggedIn.isAuth loggedIn then
+                UR.init { model | pinModal = Shown }
 
-        ChangedPin ->
+            else
+                UR.init model
+                    |> UR.addExt (Just ClickedChangePin |> RequiredAuthentication)
+
+        ChangePinSubmitted ->
             UR.init model
-                |> (case LoggedIn.maybePrivateKey loggedIn of
-                        Just key ->
-                            UR.addPort
-                                { responseAddress = ClickedCloseChangePin
-                                , responseData = Encode.null
-                                , data =
-                                    Encode.object
-                                        [ ( "name", Encode.string "changePin" )
-                                        , ( "decryptedKey", Encode.string key )
-                                        , ( "pin", Encode.string model.newPin )
-                                        , ( "accountName"
-                                          , loggedIn.accountName
-                                                |> Eos.Account.nameToString
-                                                |> Encode.string
-                                          )
-                                        ]
-                                }
+                |> (if LoggedIn.isAuth loggedIn then
+                        let
+                            oldPin =
+                                case model.oldPin of
+                                    Just pin ->
+                                        pin
 
-                        Nothing ->
-                            UR.addExt (Just ChangedPin |> LoggedIn.RequiredAuthentication)
+                                    Nothing ->
+                                        loggedIn.auth.form.enteredPin
+
+                            newPin =
+                                Maybe.withDefault "" model.newPin
+                        in
+                        UR.addPort
+                            { responseAddress = PinChanged
+                            , responseData = Encode.null
+                            , data =
+                                Encode.object
+                                    [ ( "name", Encode.string "changePin" )
+                                    , ( "oldPin", Encode.string oldPin )
+                                    , ( "newPin", Encode.string newPin )
+                                    ]
+                            }
+
+                    else
+                        UR.addExt (Just ClickedChangePin |> RequiredAuthentication)
                    )
 
         EnteredPin newPin ->
-            UR.init { model | newPin = newPin }
+            UR.init { model | newPin = Just newPin }
 
         ClickedCloseChangePin ->
             UR.init { model | pinModal = Hidden }
+
+        PinChanged ->
+            { model
+                | pinModal = Hidden
+                , oldPin = model.newPin
+                , newPin = Nothing
+            }
+                |> UR.init
+                |> UR.addExt (ShowFeedback Success "PIN has been successfully changed")
 
         ClickedViewPrivateKeyAuth ->
             case LoggedIn.maybePrivateKey loggedIn of
@@ -398,6 +420,9 @@ jsAddressToMsg addr val =
         "ClickedCloseChangePin" :: [] ->
             Just ClickedCloseChangePin
 
+        "PinChanged" :: [] ->
+            Just PinChanged
+
         "RequestPush" :: _ ->
             let
                 push =
@@ -413,8 +438,8 @@ jsAddressToMsg addr val =
                     -- TODO: Handle PushSubscription Decode error
                     Nothing
 
-        "ChangedPin" :: [] ->
-            Just ChangedPin
+        "ChangePinSubmitted" :: [] ->
+            Just ChangePinSubmitted
 
         "GotPushPreference" :: _ ->
             decodePushPref val
@@ -444,11 +469,14 @@ msgToString msg =
         ClickedCloseChangePin ->
             [ "ClickedCloseChangePin" ]
 
+        PinChanged ->
+            [ "PinChanged" ]
+
         ClickedViewPrivateKeyAuth ->
             [ "ClickedViewPrivateKeyAuth" ]
 
-        ChangedPin ->
-            [ "ChangedPin" ]
+        ChangePinSubmitted ->
+            [ "ChangePinSubmitted" ]
 
         EnteredPin r ->
             [ "EnteredPin" ]

@@ -399,16 +399,19 @@ async function handleJavascriptPort (arg) {
     }
     case 'changePin': {
       devLog('========================', 'changePin')
-      const newPin = arg.data.pin
-      const accountName = arg.data.accountName
-      const decryptedKey = arg.data.decryptedKey
-      storePin(
-        {
-          accountName: accountName,
-          privateKey: decryptedKey
-        },
-        newPin
-      )
+
+      const userStorage = JSON.parse(window.localStorage.getItem(USER_KEY))
+      const oldPin = arg.data.oldPin
+      const newPin = arg.data.newPin
+      const decryptedKey = sjcl.decrypt(oldPin, userStorage.encryptedKey)
+
+      const data = {
+        accountName: userStorage.accountName,
+        passphrase: sjcl.decrypt(oldPin, userStorage.encryptedPassphrase),
+        privateKey: decryptedKey
+      }
+
+      await storePin(data, newPin)
 
       const response = {
         address: arg.responseAddress,
