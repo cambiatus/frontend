@@ -73,7 +73,7 @@
 }
 
 .button-primary {
-  @apply bg-orange-300 text-white text-body rounded-super;
+  @apply bg-orange-300 text-white text-body rounded-super font-medium;
 }
 
 .button-primary:hover {
