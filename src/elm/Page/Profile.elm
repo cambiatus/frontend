@@ -146,14 +146,14 @@ view_ model loggedIn profile =
                     ]
                 ]
             ]
-        , viewModal model.pinModal loggedIn.shared.translations
+        , viewNewPinModal model.pinModal loggedIn.shared.translations
         ]
 
 
-viewModal : ModalStatus -> Translations -> Html Msg
-viewModal status translations =
+viewNewPinModal : ModalStatus -> Translations -> Html Msg
+viewNewPinModal status translations =
     let
-        text_ str =
+        tr str =
             t translations str
     in
     case status of
@@ -168,19 +168,19 @@ viewModal status translations =
                     [ div [ class "display flex flex-col justify-around h-full" ]
                         [ div []
                             [ p [ class "w-full font-medium text-heading text-2xl mb-2" ]
-                                [ text "Change PIN"
+                                [ text (tr "profile.changePin")
                                 ]
-                            , p [ class "text-sm" ] [ text (text_ "profile.changePin") ]
+                            , p [ class "text-sm" ] [ text (tr "profile.changePinPrompt") ]
                             , button
                                 [ onClick ClickedCloseChangePin ]
                                 [ Icons.close "absolute fill-current text-gray-400 top-0 right-0 mx-4 my-4"
                                 ]
                             ]
                         , div []
-                            [ label [ class "input-label", for "newPin" ] [ text (text_ "profile.newPin") ]
+                            [ label [ class "input-label", for "newPin" ] [ text (tr "profile.newPin") ]
                             , input [ id "newPin", class "input w-full mb-4", type_ "text", onInput EnteredPin ] []
                             ]
-                        , button [ class "button button-primary w-full", onClick ChangePinSubmitted ] [ text "Change" ]
+                        , button [ class "button button-primary w-full", onClick ChangePinSubmitted ] [ text (tr "profile.pin.button") ]
                         ]
                     ]
                 ]
