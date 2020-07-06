@@ -212,7 +212,7 @@ view thisMsg page ({ shared } as model) content =
             Shared.viewFullError shared
                 err
                 ClickedTryAgainTranslation
-                "An error ocurred while loading translation."
+                "An error occurred while loading translation."
                 |> Html.map thisMsg
 
         ( _, Loading _ ) ->
@@ -222,7 +222,7 @@ view thisMsg page ({ shared } as model) content =
             Shared.viewFullGraphqlError shared
                 err
                 (ClickedTryAgainProfile accountName)
-                "An error ocurred while loading profile."
+                "An error occurred while loading profile."
                 |> Html.map thisMsg
 
         ( _, Loaded profile_ ) ->
