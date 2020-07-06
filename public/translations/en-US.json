@@ -406,7 +406,11 @@
     "locations": "Location",
     "interests": "Interests",
     "12words": { "title": "My 12 words", "button": "Download" },
-    "pin": { "title": "My security PIN", "button": "Change" },
+    "pin": {
+      "title": "My security PIN",
+      "button": "Change",
+      "successMsg": "PIN has been successfully changed."
+    },
     "changePin": "Change PIN",
     "newPin": "New security PIN",
     "changePinPrompt": "Enter your new 6-digit security PIN.",

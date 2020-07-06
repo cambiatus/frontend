@@ -254,6 +254,9 @@ type Msg
 update : Msg -> Model -> LoggedIn.Model -> UpdateResult
 update msg model loggedIn =
     let
+        t =
+            I18Next.t loggedIn.shared.translations
+
         downloadPdfPort pin =
             UR.addPort
                 { responseAddress = Ignored
@@ -330,7 +333,7 @@ update msg model loggedIn =
                 , newPin = Nothing
             }
                 |> UR.init
-                |> UR.addExt (ShowFeedback Success "PIN has been successfully changed")
+                |> UR.addExt (ShowFeedback Success (t "profile.pin.successMsg"))
 
         ClickedViewPrivateKeyAuth ->
             case LoggedIn.maybePrivateKey loggedIn of
