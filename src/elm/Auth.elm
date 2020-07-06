@@ -482,30 +482,31 @@ viewMultipleAccount accounts form isDisabled shared model =
             accounts
 
 
+{-| Popup asking the logged-in user to enter the PIN when needed.
+-}
 viewLoginWithPin : Eos.Name -> Bool -> Shared -> Model -> List (Html Msg)
 viewLoginWithPin accountName isDisabled shared model =
     let
         text_ s =
             Html.text (t shared.translations s)
-
-        tr id_ replaces =
-            I18Next.tr shared.translations I18Next.Curly id_ replaces
     in
-    [ div [ class "card__login-header" ]
-        [ p [ class "card__pin__prompt" ]
-            [ text (tr "auth.loginPin" [ ( "accountName", Eos.nameToString accountName ) ]) ]
+    [ div []
+        [ p [ class "w-full font-medium text-heading text-2xl mb-2" ]
+            [ text_ "auth.login.modalFormTitle"
+            ]
+        , p [ class "text-sm" ]
+            [ text_ "auth.login.enterPinToContinue" ]
         , viewAuthError shared model.loginError
         ]
     , Html.form
-        [ class "card__pin__input__group"
-        , onSubmit SubmittedLoginPIN
+        [ onSubmit SubmittedLoginPIN
         ]
         [ viewPin model shared
         , button
-            [ class "btn btn--primary btn--login flex000"
+            [ class "button button-primary w-full"
             , disabled isDisabled
             ]
-            [ text_ "auth.login.submit" ]
+            [ text_ "auth.login.continue" ]
         ]
     ]
 
@@ -528,6 +529,7 @@ toggleViewPin isVisible showLabel hideLabel msg =
     button
         [ class "absolute mt-3 uppercase text-xs right-0 mr-3 text-orange-300"
         , onClick msg
+        , type_ "button"
         , attribute "tabindex" "-1"
         ]
         [ if isVisible then

@@ -278,7 +278,7 @@ viewHelper thisMsg page profile_ ({ shared } as model) content =
                 onClick ClosedAuthModal
 
             else
-                style "" ""
+                onClick Ignored
     in
     div
         [ class "min-h-screen flex flex-col" ]
@@ -298,23 +298,30 @@ viewHelper thisMsg page profile_ ({ shared } as model) content =
             [ content
             ]
         , viewFooter shared
-        , div [ onClickCloseAny ] [] |> Html.map thisMsg
         , if model.showAuthModal then
             div
-                [ classList
-                    [ ( "modal-old", True )
-                    , ( "fade-in", True )
-                    ]
-                , onClickCloseAny
-                ]
+                [ class "modal container fade-in" ]
                 [ div
-                    [ class "card card--register card--modal"
+                    [ class "modal-bg"
+                    , onClickCloseAny
+                    ]
+                    []
+                , div
+                    [ class "modal-content overflow-auto"
                     , stopPropagationOn "click"
                         (Decode.succeed ( Ignored, True ))
                     ]
-                    (Auth.view True shared model.auth
-                        |> List.map (Html.map GotAuthMsg)
-                    )
+                    [ button
+                        [ class "absolute top-0 right-0 mx-4 my-4"
+                        , onClickCloseAny
+                        ]
+                        [ Icons.close "text-gray-400 fill-current"
+                        ]
+                    , div [ class "display flex flex-col justify-around h-full" ]
+                        (Auth.view True shared model.auth
+                            |> List.map (Html.map GotAuthMsg)
+                        )
+                    ]
                 ]
                 |> Html.map thisMsg
 

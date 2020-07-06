@@ -94,6 +94,9 @@
     "required": "Authentication required for this action",
     "pin_instr": "6 numbers",
     "login": {
+      "modalFormTitle": "Enter your PIN",
+      "enterPinToContinue": "Please, enter your current security PIN to continue.",
+      "continue": "Continue",
       "loginTab": "Login",
       "registerTab": "Create your account",
       "privateKeyMode": {
