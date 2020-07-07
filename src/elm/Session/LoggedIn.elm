@@ -293,7 +293,7 @@ viewHelper thisMsg page profile_ ({ shared } as model) content =
 
             Hidden ->
                 text ""
-        , div [ class "flex-grow" ]
+        , div [ class "flex-grow bg-white xl:bg-gray-500" ]
             [ content
             ]
         , viewFooter shared

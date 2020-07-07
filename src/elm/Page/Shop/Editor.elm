@@ -287,7 +287,7 @@ viewForm shared balances imageStatus isEdit isDisabled deleteModal form =
         [ class "container mx-auto px-4 py-2" ]
         [ div
             [ class "bg-white rounded-lg" ]
-            [ div [ class "px-4 py-6 border-b border-gray-500" ]
+            [ div [ class "px-4 py-6" ]
                 [ div [ class "text-heading font-medium" ] [ text pageTitle ]
                 , if isEdit then
                     button
@@ -306,7 +306,7 @@ viewForm shared balances imageStatus isEdit isDisabled deleteModal form =
                     text ""
                 ]
             , div
-                [ class "shop-editor__image-upload w-full " ]
+                [ class "shop-editor__image-upload w-full px-4" ]
                 [ input
                     [ id (fieldId "image")
                     , class "hidden-img-input"
@@ -343,7 +343,7 @@ viewForm shared balances imageStatus isEdit isDisabled deleteModal form =
                     ]
                 , formField
                     [ div
-                        [ class "input-label" ]
+                        [ class "input-label mt-5" ]
                         [ text (t "shop.description_label") ]
                     , textarea
                         [ class "input w-full"
@@ -398,13 +398,13 @@ viewForm shared balances imageStatus isEdit isDisabled deleteModal form =
                         , viewFieldErrors (listErrors shared.translations form.symbol)
                         ]
                     ]
-                , div [ class "mt-2" ]
+                , div [ class "mt-3" ]
                     [ formField
                         [ div
                             [ class "input-label" ]
                             [ text (t "shop.track_stock_label") ]
                         , select
-                            [ class "form-select select w-1/2"
+                            [ class "form-select select w-full"
                             , id (fieldId "trackStock")
                             , required True
                             , disabled isDisabled
@@ -447,7 +447,7 @@ viewForm shared balances imageStatus isEdit isDisabled deleteModal form =
                         text ""
                     ]
                 , div
-                    [ class "mt-2" ]
+                    [ class "mt-3" ]
                     [ formField
                         [ span
                             [ class "input-label" ]
@@ -476,7 +476,7 @@ viewForm shared balances imageStatus isEdit isDisabled deleteModal form =
                     , disabled (isDisabled || imageStatus == Uploading)
                     ]
                     [ button
-                        [ class "button button-primary"
+                        [ class "button button-primary w-full lg:w-40 xl:w-40"
                         , onClick ClickedSave
                         ]
                         [ text actionText ]
