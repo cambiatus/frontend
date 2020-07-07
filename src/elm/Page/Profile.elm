@@ -4,7 +4,7 @@ import Api.Graphql
 import Graphql.Http
 import Html exposing (Html, button, div, input, label, p, span, text)
 import Html.Attributes exposing (checked, class, for, id, name, style, type_)
-import Html.Events exposing (onClick, onInput, stopPropagationOn)
+import Html.Events exposing (onClick, stopPropagationOn)
 import Http
 import I18Next exposing (Translations, t)
 import Icons
@@ -15,8 +15,10 @@ import Page.PublicProfile as PublicProfile
 import Profile exposing (Profile)
 import PushSubscription exposing (PushSubscription)
 import Session.LoggedIn as LoggedIn exposing (External(..), FeedbackStatus(..))
+import Session.Shared exposing (Shared)
 import Task
 import UpdateResult as UR
+import View.Pin as Pin
 
 
 
@@ -48,6 +50,8 @@ type alias Model =
     , pinModal : ModalStatus
     , oldPin : Maybe String
     , newPin : Maybe String
+    , isNewPinVisible : Bool
+    , newPinErrorMsg : Maybe String
     , pushNotifications : Bool
     }
 
@@ -58,6 +62,8 @@ initModel _ =
     , pinModal = Hidden
     , oldPin = Nothing
     , newPin = Nothing
+    , isNewPinVisible = True
+    , newPinErrorMsg = Nothing
     , pushNotifications = False
     }
 
@@ -146,17 +152,17 @@ view_ model loggedIn profile =
                     ]
                 ]
             ]
-        , viewNewPinModal model.pinModal loggedIn.shared.translations
+        , viewNewPinModal model loggedIn.shared
         ]
 
 
-viewNewPinModal : ModalStatus -> Translations -> Html Msg
-viewNewPinModal status translations =
+viewNewPinModal : Model -> Shared -> Html Msg
+viewNewPinModal model shared =
     let
         tr str =
-            t translations str
+            t shared.translations str
     in
-    case status of
+    case model.pinModal of
         Shown ->
             div
                 [ class "modal container"
@@ -176,9 +182,23 @@ viewNewPinModal status translations =
                                 [ Icons.close "absolute fill-current text-gray-400 top-0 right-0 mx-4 my-4"
                                 ]
                             ]
-                        , div []
-                            [ label [ class "input-label", for "newPin" ] [ text (tr "profile.newPin") ]
-                            , input [ id "newPin", class "input w-full mb-4", type_ "text", onInput EnteredPin ] []
+                        , div [ class "mb-4" ]
+                            [ Pin.view
+                                shared
+                                { labelText = tr "profile.newPin"
+                                , inputId = "pinInput"
+                                , inputValue = Maybe.withDefault "" model.newPin
+                                , onInputMsg = EnteredPin
+                                , onToggleMsg = TogglePinVisibility
+                                , isVisible = True
+                                , errors =
+                                    case model.newPinErrorMsg of
+                                        Just err ->
+                                            [ err ]
+
+                                        Nothing ->
+                                            []
+                                }
                             ]
                         , button [ class "button button-primary w-full", onClick ChangePinSubmitted ] [ text (tr "profile.pin.button") ]
                         ]
@@ -244,6 +264,7 @@ type Msg
     | EnteredPin String
     | ClickedCloseChangePin
     | PinChanged
+    | TogglePinVisibility
     | GotPushPreference Bool
     | RequestPush
     | CheckPushPref
@@ -290,22 +311,26 @@ update msg model loggedIn =
                 UR.init model
                     |> UR.addExt (Just ClickedChangePin |> RequiredAuthentication)
 
+        TogglePinVisibility ->
+            UR.init { model | isNewPinVisible = not model.isNewPinVisible }
+
         ChangePinSubmitted ->
-            UR.init model
-                |> (if LoggedIn.isAuth loggedIn then
-                        let
-                            oldPin =
-                                case model.oldPin of
-                                    Just pin ->
-                                        pin
+            if LoggedIn.isAuth loggedIn then
+                let
+                    oldPin =
+                        case model.oldPin of
+                            Just pin ->
+                                pin
 
-                                    Nothing ->
-                                        loggedIn.auth.form.enteredPin
+                            Nothing ->
+                                loggedIn.auth.form.enteredPin
 
-                            newPin =
-                                Maybe.withDefault "" model.newPin
-                        in
-                        UR.addPort
+                    newPin =
+                        Maybe.withDefault "" model.newPin
+                in
+                if Pin.isValid newPin then
+                    UR.init model
+                        |> UR.addPort
                             { responseAddress = PinChanged
                             , responseData = Encode.null
                             , data =
@@ -316,12 +341,16 @@ update msg model loggedIn =
                                     ]
                             }
 
-                    else
-                        UR.addExt (Just ClickedChangePin |> RequiredAuthentication)
-                   )
+                else
+                    UR.init { model | newPinErrorMsg = Just (t "auth.pin.shouldHaveSixDigitsError") }
+                        |> UR.addCmd Cmd.none
+
+            else
+                UR.init model
+                    |> UR.addExt (Just ClickedChangePin |> RequiredAuthentication)
 
         EnteredPin newPin ->
-            UR.init { model | newPin = Just newPin }
+            UR.init { model | newPinErrorMsg = Nothing, newPin = Just newPin }
 
         ClickedCloseChangePin ->
             UR.init { model | pinModal = Hidden }
@@ -456,6 +485,9 @@ jsAddressToMsg addr val =
         "ChangePinSubmitted" :: [] ->
             Just ChangePinSubmitted
 
+        "TogglePinVisibility" :: [] ->
+            Just TogglePinVisibility
+
         "GotPushPreference" :: _ ->
             decodePushPref val
 
@@ -489,6 +521,9 @@ msgToString msg =
 
         ClickedViewPrivateKeyAuth ->
             [ "ClickedViewPrivateKeyAuth" ]
+
+        TogglePinVisibility ->
+            [ "TogglePinVisibility" ]
 
         ChangePinSubmitted ->
             [ "ChangePinSubmitted" ]
