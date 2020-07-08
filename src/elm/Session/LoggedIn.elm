@@ -34,6 +34,7 @@ import Browser.Events
 import Cambiatus.Object
 import Cambiatus.Object.UnreadNotifications
 import Cambiatus.Subscription as Subscription
+import Community
 import Eos exposing (Symbol)
 import Eos.Account as Eos
 import Flags exposing (Flags)
@@ -74,6 +75,7 @@ init shared accountName flags =
     ( initModel shared authModel accountName flags.selectedCommunity
     , Cmd.batch
         [ Api.Graphql.query shared (Profile.query accountName) CompletedLoadProfile
+        , Api.Graphql.query shared (Community.settingsQuery flags.selectedCommunity) CompletedLoadSettings
         ]
     )
 
@@ -135,6 +137,8 @@ type alias Model =
     , auth : Auth.Model
     , showCommunitySelector : Bool
     , feedback : FeedbackVisibility
+    , hasShop : Bool
+    , hasObjectives : Bool
     }
 
 
@@ -155,6 +159,8 @@ initModel shared authModel accountName selectedCommunity =
     , auth = authModel
     , feedback = Hidden
     , showCommunitySelector = False
+    , hasShop = False
+    , hasObjectives = False
     }
 
 
@@ -588,16 +594,20 @@ viewMainMenu page model =
             [ Icons.dashboard iconClass
             , text (t model.shared.translations "menu.dashboard")
             ]
-        , a
-            [ classList
-                [ ( menuItemClass, True )
-                , ( activeClass, isActive page (Route.Shop Shop.All) )
+        , if model.hasShop then
+            a
+                [ classList
+                    [ ( menuItemClass, True )
+                    , ( activeClass, isActive page (Route.Shop Shop.All) )
+                    ]
+                , Route.href (Route.Shop Shop.All)
                 ]
-            , Route.href (Route.Shop Shop.All)
-            ]
-            [ Icons.shop iconClass
-            , text (t model.shared.translations "menu.shop")
-            ]
+                [ Icons.shop iconClass
+                , text (t model.shared.translations "menu.shop")
+                ]
+
+          else
+            text ""
         , a
             [ classList
                 [ ( menuItemClass, True )
@@ -684,6 +694,7 @@ type Msg
     | CompletedLoadTranslation String (Result Http.Error Translations)
     | ClickedTryAgainTranslation
     | CompletedLoadProfile (Result (Graphql.Http.Error (Maybe Profile)) (Maybe Profile))
+    | CompletedLoadSettings (Result (Graphql.Http.Error (Maybe Community.Settings)) (Maybe Community.Settings))
     | ClickedTryAgainProfile Eos.Name
     | ClickedLogout
     | EnteredSearch String
@@ -784,6 +795,18 @@ update msg model =
                                 model.profile
                 }
                 |> UR.logGraphqlError msg err
+
+        CompletedLoadSettings (Ok settings_) ->
+            case settings_ of
+                Just settings ->
+                    { model | hasShop = settings.hasShop, hasObjectives = settings.hasObjectives }
+                        |> UR.init
+
+                Nothing ->
+                    UR.init model
+
+        CompletedLoadSettings (Err _) ->
+            UR.init model
 
         ClickedTryAgainProfile accountName ->
             UR.init { model | profile = Loading accountName }
@@ -899,9 +922,13 @@ update msg model =
                 |> UR.init
 
         SelectCommunity communityId ->
-            { model | selectedCommunity = communityId, showCommunitySelector = False }
+            { model
+                | selectedCommunity = communityId
+                , showCommunitySelector = False
+            }
                 |> UR.init
                 |> UR.addCmd (Route.replaceUrl model.shared.navKey Route.Dashboard)
+                |> UR.addCmd (Api.Graphql.query shared (Community.settingsQuery communityId) CompletedLoadSettings)
                 |> UR.addPort
                     { responseAddress = msg
                     , responseData = Encode.null
@@ -1027,6 +1054,9 @@ msgToString msg =
 
         CompletedLoadProfile r ->
             [ "CompletedLoadProfile", UR.resultToString r ]
+
+        CompletedLoadSettings r ->
+            [ "CompletedLoadSettings", UR.resultToString r ]
 
         ClickedTryAgainProfile _ ->
             [ "ClickedTryAgainProfile" ]

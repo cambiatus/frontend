@@ -631,6 +631,31 @@
       "body": "This ID guarantees the authenticity of the transaction if both sides have the same emojis."
     }
   },
+  "settings": {
+    "success": "Settings saved successfully",
+    "community_info": {
+      "title": "Community Information",
+      "description": "Logo, name, description"
+    },
+    "currency": {
+      "title": "Currency",
+      "description": ""
+    },
+    "actions": {
+      "title": "Objectives and Actions",
+      "description": ""
+    },
+    "team": {
+      "title": "Team",
+      "description": "Team building"
+    },
+    "features": {
+      "title": "Features",
+      "description": "Actions, shop",
+      "enabled": "Enabled",
+      "disabled": "Disabled"
+    }
+  },
   "payment_history": {
     "title": "Payment History",
     "user": "User",

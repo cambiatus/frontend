@@ -57,6 +57,7 @@ type Status
     | Loaded Community.Model
     | NotFound
     | Failed (Graphql.Http.Error (Maybe Community.Model))
+    | Unauthorized
 
 
 
@@ -66,6 +67,12 @@ type Status
 view : LoggedIn.Model -> Model -> { title : String, content : Html Msg }
 view ({ shared } as loggedIn) model =
     let
+        translate =
+            t shared.translations
+
+        title =
+            translate "community.objectives.title_plural"
+
         content =
             case model.status of
                 Loading ->
@@ -90,8 +97,15 @@ view ({ shared } as loggedIn) model =
                                 )
                             ]
                         ]
+
+                Unauthorized ->
+                    div []
+                        [ Page.viewHeader loggedIn title Route.Dashboard
+                        , div [ class "card" ]
+                            [ text (translate "community.edit.unauthorized") ]
+                        ]
     in
-    { title = t shared.translations "community.objectives.title_plural"
+    { title = title
     , content = content
     }
 
@@ -334,12 +348,23 @@ type Msg
 
 
 update : Msg -> Model -> LoggedIn.Model -> UpdateResult
-update msg model _ =
+update msg model loggedIn =
     case msg of
         CompletedLoad (Ok community) ->
             case community of
                 Just cmm ->
-                    UR.init { model | status = Loaded cmm }
+                    let
+                        newStatus =
+                            if not cmm.hasObjectives then
+                                Unauthorized
+
+                            else if cmm.creator == loggedIn.accountName then
+                                Loaded cmm
+
+                            else
+                                Unauthorized
+                    in
+                    UR.init { model | status = newStatus }
 
                 Nothing ->
                     UR.init { model | status = NotFound }

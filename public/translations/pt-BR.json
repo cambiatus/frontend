@@ -627,6 +627,31 @@
       "body": "Esse ID garante a autenticidade da transação se ambos os lados tiverem os mesmos emojis."
     }
   },
+  "settings": {
+    "success": "Configurações salvas com sucesso",
+    "community_info": {
+      "title": "Informações da Comunidade",
+      "description": "Logo, nome, descrição"
+    },
+    "currency": {
+      "title": "Moeda",
+      "description": ""
+    },
+    "actions": {
+      "title": "Objetivos e Ações",
+      "description": ""
+    },
+    "team": {
+      "title": "Time",
+      "description": "Construção de times"
+    },
+    "features": {
+      "title": "Recursos",
+      "description": "Ações, loja",
+      "enabled": "Habilitado",
+      "disabled": "Desabilitado"
+    }
+  },
   "payment_history": {
     "title": "Histórico de pagamento",
     "user": "Usuário",

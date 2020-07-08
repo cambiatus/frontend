@@ -75,6 +75,8 @@ type alias CommunityInfo =
     { id : Symbol
     , name : String
     , logo : String
+    , hasShop : Bool
+    , hasActions : Bool
     }
 
 
@@ -110,6 +112,8 @@ communityInfoSelectionSet =
         |> with (Eos.symbolSelectionSet Community.symbol)
         |> with Community.name
         |> with Community.logo
+        |> with Community.hasShop
+        |> with Community.hasObjectives
 
 
 decode : Decoder Profile

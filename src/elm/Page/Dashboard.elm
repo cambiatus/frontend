@@ -144,6 +144,22 @@ view loggedIn model =
         t s =
             I18Next.t loggedIn.shared.translations s
 
+        isCommunityAdmin =
+            case model.community of
+                LoadedGraphql community _ ->
+                    community.creator == loggedIn.accountName
+
+                _ ->
+                    False
+
+        areObjectivesEnabled =
+            case model.community of
+                LoadedGraphql community _ ->
+                    community.hasObjectives == True
+
+                _ ->
+                    False
+
         content =
             case ( model.balance, loggedIn.profile ) of
                 ( Loading, _ ) ->
@@ -154,14 +170,25 @@ view loggedIn model =
 
                 ( Loaded balance, LoggedIn.Loaded profile ) ->
                     div [ class "container mx-auto px-4 mb-10" ]
-                        [ div [ class "inline-block text-gray-600 font-light mt-6 mb-4" ]
-                            [ text (t "menu.my_communities")
-                            , span [ class "text-indigo-500 font-medium" ]
-                                [ text (profile.userName |> Maybe.withDefault (Eos.nameToString profile.account))
+                        [ div [ class "flex inline-block text-gray-600 font-light mt-6 mb-4" ]
+                            [ div []
+                                [ text (t "menu.my_communities")
+                                , span [ class "text-indigo-500 font-medium" ]
+                                    [ text (profile.userName |> Maybe.withDefault (Eos.nameToString profile.account))
+                                    ]
                                 ]
+                            , if isCommunityAdmin then
+                                a [ Route.href (Route.CommunitySettings loggedIn.selectedCommunity), class "ml-auto" ] [ Icons.settings ]
+
+                              else
+                                text ""
                             ]
                         , viewBalance loggedIn model balance
-                        , viewAnalysisList loggedIn profile model
+                        , if areObjectivesEnabled then
+                            viewAnalysisList loggedIn profile model
+
+                          else
+                            text ""
                         , viewTransfers loggedIn model
                         , viewAnalysisModal loggedIn model
                         , viewInvitationModal loggedIn model
