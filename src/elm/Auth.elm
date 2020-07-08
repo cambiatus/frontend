@@ -273,24 +273,24 @@ view isModal shared model =
 
         LoginWithPin ->
             case shared.maybeAccount of
-                Just ( accountName, True ) ->
-                    viewLoginWithPin accountName False shared model
+                Just ( _, True ) ->
+                    viewLoginWithPin False shared model
 
                 _ ->
                     viewLoginSteps isModal shared model LoginStepPassphrase
 
         LoggingInWithPin ->
             case shared.maybeAccount of
-                Just ( accountName, True ) ->
-                    viewLoginWithPin accountName True shared model
+                Just ( _, True ) ->
+                    viewLoginWithPin True shared model
 
                 _ ->
                     viewLoginSteps isModal shared model LoginStepPassphrase
 
         LoggedInWithPin _ ->
             case shared.maybeAccount of
-                Just ( accountName, True ) ->
-                    viewLoginWithPin accountName True shared model
+                Just ( _, True ) ->
+                    viewLoginWithPin True shared model
 
                 _ ->
                     viewLoginSteps isModal shared model LoginStepPassphrase
@@ -479,8 +479,8 @@ viewMultipleAccount accounts form isDisabled shared model =
 
 {-| Popup asking the logged-in user to enter the PIN when needed.
 -}
-viewLoginWithPin : Eos.Name -> Bool -> Shared -> Model -> List (Html Msg)
-viewLoginWithPin accountName isDisabled shared model =
+viewLoginWithPin : Bool -> Shared -> Model -> List (Html Msg)
+viewLoginWithPin isDisabled shared model =
     let
         text_ s =
             Html.text (t shared.translations s)
