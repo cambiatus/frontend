@@ -3,7 +3,7 @@ module Page.Profile exposing (Model, Msg, init, jsAddressToMsg, msgToString, upd
 import Api.Graphql
 import Graphql.Http
 import Html exposing (Html, button, div, input, label, p, span, text)
-import Html.Attributes exposing (checked, class, for, id, name, style, type_)
+import Html.Attributes exposing (checked, class, for, id, name, type_)
 import Html.Events exposing (onClick, stopPropagationOn)
 import Http
 import I18Next exposing (Translations, t)
@@ -165,22 +165,22 @@ viewNewPinModal model shared =
     case model.pinModal of
         Shown ->
             div
-                [ class "modal container"
+                [ class "modal container fade-in"
                 , stopPropagationOn "click" (Decode.succeed ( Ignored, True ))
-                , style "align-items" "stretch"
                 ]
                 [ div [ class "modal-bg", onClick ClickedCloseChangePin ] []
                 , div [ class "modal-content overflow-auto" ]
-                    [ div [ class "display flex flex-col justify-around h-full" ]
-                        [ div []
+                    [ button
+                        [ class "absolute top-0 right-0 mx-4 my-4", onClick ClickedCloseChangePin ]
+                        [ Icons.close "fill-current text-gray-400"
+                        ]
+                    , div [ class "display flex flex-col justify-around h-full" ]
+                        [ div
+                            []
                             [ p [ class "w-full font-medium text-heading text-2xl mb-2" ]
                                 [ text (tr "profile.changePin")
                                 ]
                             , p [ class "text-sm" ] [ text (tr "profile.changePinPrompt") ]
-                            , button
-                                [ onClick ClickedCloseChangePin ]
-                                [ Icons.close "absolute fill-current text-gray-400 top-0 right-0 mx-4 my-4"
-                                ]
                             ]
                         , div [ class "mb-4" ]
                             [ Pin.view
