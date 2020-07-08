@@ -82,7 +82,7 @@ view : Session.LoggedIn.Model -> Model -> { title : String, content : Html Msg }
 view loggedIn model =
     let
         title =
-            ""
+            t loggedIn.shared.translations "profile.edit.title"
 
         content =
             case model.status of
@@ -132,7 +132,7 @@ view_ loggedIn model profile =
                                        "location location"
                                        "interests interestButton"
                                        "interestList interestList" auto
-                                       "save save" / 1fr 90px
+                                       "save save" / 1fr auto
                                       """
             ]
             ([ viewAvatar loggedIn avatar
@@ -169,11 +169,11 @@ viewInterests : String -> Translations -> List (Html Msg)
 viewInterests interest translations =
     [ viewInput (t translations "profile.edit.labels.interests") "interests" Interest interest
     , button
-        [ class "button-secondary h-12 mt-auto"
+        [ class "button-secondary px-4 h-12 mt-auto"
         , style "grid-area" "interestButton"
         , onClickPreventDefault AddInterest
         ]
-        [ text "ADD" ]
+        [ text <| String.toUpper (t translations "menu.add") ]
     ]
 
 
