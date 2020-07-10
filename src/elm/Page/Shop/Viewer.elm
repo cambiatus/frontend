@@ -448,11 +448,11 @@ viewCard ({ shared } as loggedIn) card model =
                             [ text (tr "account.my_wallet.your_current_balance" [ ( "balance", currBalance ) ]) ]
                         ]
                     ]
-                , div [ class " mt-6 md:mt-0" ]
+                , div [ class " mt-6 md:mt-0 w-full md:w-40 lg:w-40" ]
                     [ if card.sale.creatorId == loggedIn.accountName then
                         div [ class "flex md:justify-end" ]
                             [ button
-                                [ class "button button-primary w-full"
+                                [ class "button button-primary w-full px-4"
                                 , onClick (ClickedEdit card.sale)
                                 ]
                                 [ text_ "shop.edit" ]
