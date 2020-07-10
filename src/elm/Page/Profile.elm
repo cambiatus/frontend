@@ -1,13 +1,13 @@
 module Page.Profile exposing (Model, Msg, init, jsAddressToMsg, msgToString, update, view)
 
 import Api.Graphql
+import Browser.Dom as Dom
 import Graphql.Http
 import Html exposing (Html, button, div, input, label, p, span, text)
 import Html.Attributes exposing (checked, class, for, id, name, type_)
-import Html.Events exposing (onClick, stopPropagationOn)
+import Html.Events exposing (onClick)
 import Http
-import I18Next exposing (Translations, t)
-import Icons
+import I18Next exposing (t)
 import Json.Decode as Decode exposing (Value)
 import Json.Encode as Encode
 import Page
@@ -18,6 +18,7 @@ import Session.LoggedIn as LoggedIn exposing (External(..), FeedbackStatus(..))
 import Session.Shared exposing (Shared)
 import Task
 import UpdateResult as UR
+import View.Modal as Modal
 import View.Pin as Pin
 
 
@@ -47,24 +48,26 @@ init loggedIn =
 
 type alias Model =
     { status : Status
-    , pinModal : ModalStatus
-    , oldPin : Maybe String
+    , changePinModalVisibility : Modal.Visibility
+    , currentPin : Maybe String
     , newPin : Maybe String
     , isNewPinVisible : Bool
     , newPinErrorMsg : Maybe String
     , pushNotifications : Bool
+    , maybePdfDownloadedSuccessfully : Maybe Bool
     }
 
 
 initModel : LoggedIn.Model -> Model
 initModel _ =
     { status = Loading
-    , pinModal = Hidden
-    , oldPin = Nothing
+    , changePinModalVisibility = Modal.hidden
+    , currentPin = Nothing
     , newPin = Nothing
     , isNewPinVisible = True
     , newPinErrorMsg = Nothing
     , pushNotifications = False
+    , maybePdfDownloadedSuccessfully = Nothing
     }
 
 
@@ -72,11 +75,6 @@ type Status
     = Loading
     | LoadingFailed (Graphql.Http.Error (Maybe Profile))
     | Loaded Profile
-
-
-type ModalStatus
-    = Hidden
-    | Shown
 
 
 
@@ -103,15 +101,15 @@ view loggedIn model =
                     Page.fullPageError (t loggedIn.shared.translations "profile.title") Http.Timeout
 
                 Loaded profile ->
-                    view_ model loggedIn profile
+                    viewProfile model loggedIn profile
     in
     { title = title
     , content = content
     }
 
 
-view_ : Model -> LoggedIn.Model -> Profile -> Html Msg
-view_ model loggedIn profile =
+viewProfile : Model -> LoggedIn.Model -> Profile -> Html Msg
+viewProfile model loggedIn profile =
     let
         text_ str =
             t loggedIn.shared.translations str
@@ -119,7 +117,17 @@ view_ model loggedIn profile =
         downloadAction =
             case LoggedIn.maybePrivateKey loggedIn of
                 Just _ ->
-                    DownloadPdf loggedIn.auth.form.enteredPin
+                    let
+                        currentPin =
+                            case model.currentPin of
+                                -- The case when "Download" PDF button pressed just after changing the PIN
+                                Just pin ->
+                                    pin
+
+                                Nothing ->
+                                    loggedIn.auth.form.enteredPin
+                    in
+                    DownloadPdf currentPin
 
                 Nothing ->
                     case loggedIn.shared.maybeAccount of
@@ -148,12 +156,63 @@ view_ model loggedIn profile =
                           else
                             label [ for "notifications", class "cursor-pointer text-gray" ] [ text "disabled" ]
                         ]
-                    , toggleView loggedIn.shared.translations model.pushNotifications RequestPush "notifications"
+                    , viewToggle model.pushNotifications RequestPush "notifications"
                     ]
                 ]
             ]
         , viewNewPinModal model loggedIn.shared
+        , viewDownloadPdfErrorModal model loggedIn
         ]
+
+
+viewDownloadPdfErrorModal : Model -> LoggedIn.Model -> Html Msg
+viewDownloadPdfErrorModal model loggedIn =
+    let
+        modalVisibility =
+            case model.maybePdfDownloadedSuccessfully of
+                Just isDownloaded ->
+                    if not isDownloaded then
+                        Modal.shown
+
+                    else
+                        Modal.hidden
+
+                Nothing ->
+                    Modal.hidden
+
+        privateKey =
+            case LoggedIn.maybePrivateKey loggedIn of
+                Nothing ->
+                    ""
+
+                Just pk ->
+                    pk
+
+        content =
+            div
+                []
+                [ p
+                    [ class "w-full font-medium text-heading text-2xl mb-2" ]
+                    [ text "Sorry, we can't find your 12 words"
+                    ]
+                , p [ class "my-3" ]
+                    [ text "If you have your 12 words saved earlier, please, use them for further signing in."
+                    ]
+                , p [ class "my-3" ]
+                    [ text """If you completely lost your 12 words, you can contact us and provide this private key
+                                    and we will help you to recover:"""
+                    ]
+                , p [ class "font-bold my-3 text-lg" ]
+                    [ text privateKey
+                    ]
+                ]
+    in
+    Modal.view
+        modalVisibility
+        { closeMsg = ClickedClosePdfDownloadError
+        , ignoreMsg = Ignored
+        , content = content
+        }
 
 
 viewNewPinModal : Model -> Shared -> Html Msg
@@ -161,58 +220,53 @@ viewNewPinModal model shared =
     let
         tr str =
             t shared.translations str
-    in
-    case model.pinModal of
-        Shown ->
-            div
-                [ class "modal container fade-in"
-                , stopPropagationOn "click" (Decode.succeed ( Ignored, True ))
-                ]
-                [ div [ class "modal-bg", onClick ClickedCloseChangePin ] []
-                , div [ class "modal-content overflow-auto" ]
-                    [ button
-                        [ class "absolute top-0 right-0 mx-4 my-4", onClick ClickedCloseChangePin ]
-                        [ Icons.close "fill-current text-gray-400"
-                        ]
-                    , div [ class "display flex flex-col justify-around h-full" ]
-                        [ div
+
+        pinField =
+            Pin.view
+                shared
+                { labelText = tr "profile.newPin"
+                , inputId = "pinInput"
+                , inputValue = Maybe.withDefault "" model.newPin
+                , onInputMsg = EnteredPin
+                , onToggleMsg = TogglePinVisibility
+                , isVisible = True
+                , errors =
+                    case model.newPinErrorMsg of
+                        Just err ->
+                            [ err ]
+
+                        Nothing ->
                             []
-                            [ p [ class "w-full font-medium text-heading text-2xl mb-2" ]
-                                [ text (tr "profile.changePin")
-                                ]
-                            , p [ class "text-sm" ] [ text (tr "profile.changePinPrompt") ]
-                            ]
-                        , div [ class "mb-4" ]
-                            [ Pin.view
-                                shared
-                                { labelText = tr "profile.newPin"
-                                , inputId = "pinInput"
-                                , inputValue = Maybe.withDefault "" model.newPin
-                                , onInputMsg = EnteredPin
-                                , onToggleMsg = TogglePinVisibility
-                                , isVisible = True
-                                , errors =
-                                    case model.newPinErrorMsg of
-                                        Just err ->
-                                            [ err ]
+                }
 
-                                        Nothing ->
-                                            []
-                                }
-                            ]
-                        , button [ class "button button-primary w-full", onClick ChangePinSubmitted ] [ text (tr "profile.pin.button") ]
-                        ]
+        modalContent =
+            div [ class "display flex flex-col justify-around h-full" ]
+                [ div []
+                    [ p [ class "w-full font-medium text-heading text-2xl mb-2" ]
+                        [ text (tr "profile.changePin") ]
+                    , p [ class "text-sm" ]
+                        [ text (tr "profile.changePinPrompt") ]
                     ]
+                , div [ class "mb-4" ] [ pinField ]
+                , button
+                    [ class "button button-primary w-full"
+                    , onClick ChangePinSubmitted
+                    ]
+                    [ text (tr "profile.pin.button") ]
                 ]
-
-        Hidden ->
-            text ""
+    in
+    Modal.view
+        model.changePinModalVisibility
+        { ignoreMsg = Ignored
+        , closeMsg = ClickedCloseChangePin
+        , content = modalContent
+        }
 
 
 viewButton : String -> Msg -> Html Msg
 viewButton label msg =
     button
-        [ class "uppercase border border-solid border-gray-500 rounded-full py-2 px-5 leading-none text-orange-300 font-medium"
+        [ class "button-secondary uppercase button-sm"
         , onClick msg
         ]
         [ text label
@@ -230,8 +284,8 @@ viewAction label contents =
         ]
 
 
-toggleView : Translations -> Bool -> Msg -> String -> Html Msg
-toggleView translations isEnabled toggleFunction inputId =
+viewToggle : Bool -> Msg -> String -> Html Msg
+viewToggle isEnabled toggleFunction inputId =
     div [ class "form-switch inline-block align-middle" ]
         [ input
             [ type_ "checkbox"
@@ -258,6 +312,8 @@ type Msg
     = Ignored
     | CompletedProfileLoad (Result (Graphql.Http.Error (Maybe Profile)) (Maybe Profile))
     | DownloadPdf String
+    | DownloadPdfProcessed Bool
+    | ClickedClosePdfDownloadError
     | ClickedViewPrivateKeyAuth
     | ClickedChangePin
     | ChangePinSubmitted
@@ -280,7 +336,7 @@ update msg model loggedIn =
 
         downloadPdfPort pin =
             UR.addPort
-                { responseAddress = Ignored
+                { responseAddress = DownloadPdfProcessed False
                 , responseData = Encode.null
                 , data =
                     Encode.object
@@ -305,11 +361,19 @@ update msg model loggedIn =
 
         ClickedChangePin ->
             if LoggedIn.isAuth loggedIn then
-                UR.init { model | pinModal = Shown }
+                UR.init { model | changePinModalVisibility = Modal.shown }
+                    |> UR.addCmd
+                        (Dom.focus "pinInput"
+                            |> Task.attempt (\_ -> Ignored)
+                        )
 
             else
                 UR.init model
                     |> UR.addExt (Just ClickedChangePin |> RequiredAuthentication)
+                    |> UR.addCmd
+                        (Dom.focus "pinInput"
+                            |> Task.attempt (\_ -> Ignored)
+                        )
 
         TogglePinVisibility ->
             UR.init { model | isNewPinVisible = not model.isNewPinVisible }
@@ -317,8 +381,8 @@ update msg model loggedIn =
         ChangePinSubmitted ->
             if LoggedIn.isAuth loggedIn then
                 let
-                    oldPin =
-                        case model.oldPin of
+                    currentPin =
+                        case model.currentPin of
                             Just pin ->
                                 pin
 
@@ -336,7 +400,7 @@ update msg model loggedIn =
                             , data =
                                 Encode.object
                                     [ ( "name", Encode.string "changePin" )
-                                    , ( "oldPin", Encode.string oldPin )
+                                    , ( "currentPin", Encode.string currentPin )
                                     , ( "newPin", Encode.string newPin )
                                     ]
                             }
@@ -353,12 +417,12 @@ update msg model loggedIn =
             UR.init { model | newPinErrorMsg = Nothing, newPin = Just newPin }
 
         ClickedCloseChangePin ->
-            UR.init { model | pinModal = Hidden }
+            UR.init { model | changePinModalVisibility = Modal.hidden }
 
         PinChanged ->
             { model
-                | pinModal = Hidden
-                , oldPin = model.newPin
+                | changePinModalVisibility = Modal.hidden
+                , currentPin = model.newPin
                 , newPin = Nothing
             }
                 |> UR.init
@@ -382,6 +446,14 @@ update msg model loggedIn =
             model
                 |> UR.init
                 |> downloadPdfPort pin
+
+        DownloadPdfProcessed isDownloaded ->
+            { model | maybePdfDownloadedSuccessfully = Just isDownloaded }
+                |> UR.init
+
+        ClickedClosePdfDownloadError ->
+            { model | maybePdfDownloadedSuccessfully = Nothing }
+                |> UR.init
 
         GotPushPreference val ->
             { model | pushNotifications = val }
@@ -451,6 +523,13 @@ decodePushPref val =
         |> Result.toMaybe
 
 
+decodeIsPdfDownloaded : Value -> Maybe Msg
+decodeIsPdfDownloaded val =
+    Decode.decodeValue (Decode.field "isDownloaded" Decode.bool) val
+        |> Result.map DownloadPdfProcessed
+        |> Result.toMaybe
+
+
 uploadPushSubscription : LoggedIn.Model -> PushSubscription -> Cmd Msg
 uploadPushSubscription { accountName, shared } data =
     Api.Graphql.mutation shared
@@ -466,6 +545,9 @@ jsAddressToMsg addr val =
 
         "PinChanged" :: [] ->
             Just PinChanged
+
+        "DownloadPdfProcessed" :: _ ->
+            decodeIsPdfDownloaded val
 
         "RequestPush" :: _ ->
             let
@@ -509,6 +591,12 @@ msgToString msg =
 
         DownloadPdf r ->
             [ "DownloadPdf" ]
+
+        DownloadPdfProcessed _ ->
+            [ "DownloadPdfProcessed" ]
+
+        ClickedClosePdfDownloadError ->
+            [ "ClickedClosePdfDownloadError" ]
 
         ClickedChangePin ->
             [ "ClickedChangePin" ]

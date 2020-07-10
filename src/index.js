@@ -178,13 +178,15 @@ async function storePin (data, pin) {
   // encrypt key using PIN
   const hashedKey = ecc.sha256(data.privateKey)
   const encryptedKey = sjcl.encrypt(pin, data.privateKey)
-  const encryptedPassphrase = sjcl.encrypt(pin, data.passphrase)
 
   const storeData = {
     accountName: data.accountName,
     encryptedKey: encryptedKey,
-    encryptedKeyIntegrityCheck: hashedKey,
-    encryptedPassphrase: encryptedPassphrase
+    encryptedKeyIntegrityCheck: hashedKey
+  }
+
+  if (data.passphrase) {
+    storeData.encryptedPassphrase = sjcl.encrypt(pin, data.passphrase)
   }
 
   window.localStorage.removeItem(USER_KEY)
@@ -401,14 +403,20 @@ async function handleJavascriptPort (arg) {
       devLog('========================', 'changePin')
 
       const userStorage = JSON.parse(window.localStorage.getItem(USER_KEY))
-      const oldPin = arg.data.oldPin
+      const currentPin = arg.data.currentPin
       const newPin = arg.data.newPin
-      const decryptedKey = sjcl.decrypt(oldPin, userStorage.encryptedKey)
+      const decryptedKey = sjcl.decrypt(currentPin, userStorage.encryptedKey)
 
       const data = {
         accountName: userStorage.accountName,
-        passphrase: sjcl.decrypt(oldPin, userStorage.encryptedPassphrase),
         privateKey: decryptedKey
+      }
+
+      // `.encryptedPassphrase` property was added in https://github.com/cambiatus/frontend/pull/270 while redesigning
+      // the Profile page. For the users who were already logged-in before these changes were introduced,
+      // this property may not exist.
+      if (userStorage.encryptedPassphrase) {
+        data.passphrase = sjcl.decrypt(currentPin, userStorage.encryptedPassphrase)
       }
 
       await storePin(data, newPin)
@@ -592,8 +600,24 @@ async function handleJavascriptPort (arg) {
       devLog('=======================', 'downloadAuthPdfFromProfile')
       const store = JSON.parse(window.localStorage.getItem(USER_KEY))
       const pin = arg.data.pin
-      const decryptedPassphrase = sjcl.decrypt(pin, store.encryptedPassphrase)
-      downloadPdf(store.accountName, decryptedPassphrase, arg.responseAddress, arg.responseData)
+
+      // `.encryptedPassphrase` property was added in https://github.com/cambiatus/frontend/pull/270 while redesigning
+      // the Profile page. For the users who were already logged-in before these changes were introduced,
+      // this property may not exist. This case is handled by passing `isDownloaded: false` to Elm
+      // for further processing.
+      if (store.encryptedPassphrase) {
+        const decryptedPassphrase = sjcl.decrypt(pin, store.encryptedPassphrase)
+        downloadPdf(store.accountName, decryptedPassphrase, arg.responseAddress, arg.responseData)
+      } else {
+        // The case when there's not passphrase stored in user's browser, only the Private Key
+        const response = {
+          address: arg.responseAddress,
+          addressData: arg.responseData,
+          isDownloaded: false
+        }
+
+        app.ports.javascriptInPort.send(response)
+      }
       break
     }
     case 'validateDeadline': {
