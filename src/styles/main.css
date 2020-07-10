@@ -81,7 +81,7 @@
 }
 
 .button-secondary {
-  @apply bg-white text-orange-300 rounded-full border;
+  @apply bg-white text-orange-300 rounded-full border font-medium;
 }
 
 .button-sm {
