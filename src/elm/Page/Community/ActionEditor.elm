@@ -1496,7 +1496,7 @@ viewFieldErrors errors =
     div [ class "form-field-error" ]
         (List.map
             (\e ->
-                span [ class "field-error" ] [ text e ]
+                span [ class "form-error" ] [ text e ]
             )
             errors
         )

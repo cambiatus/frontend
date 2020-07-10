@@ -11,7 +11,7 @@ import Eos.Account as Eos
 import File exposing (File)
 import Graphql.Http
 import Html exposing (Html, button, div, input, label, option, p, select, span, text, textarea)
-import Html.Attributes exposing (accept, attribute, class, disabled, for, hidden, id, maxlength, multiple, required, selected, style, type_, value)
+import Html.Attributes exposing (accept, attribute, class, classList, disabled, for, hidden, id, maxlength, multiple, required, selected, style, type_, value)
 import Html.Events exposing (on, onClick, onInput)
 import Http
 import I18Next
@@ -284,7 +284,7 @@ viewForm shared balances imageStatus isEdit isDisabled deleteModal form =
                 ( t "menu.create", t "shop.create_offer" )
     in
     div
-        [ class "container mx-auto px-4 py-2" ]
+        [ class "container mx-auto px-4 py-2 max-w-screen-md" ]
         [ div
             [ class "bg-white rounded-lg" ]
             [ div [ class "px-4 py-6" ]
@@ -330,6 +330,7 @@ viewForm shared balances imageStatus isEdit isDisabled deleteModal form =
                         [ text (t "shop.what_label") ]
                     , input
                         [ class "input w-full"
+                        , classList [ ( "border-red", hasErrors form.title ) ]
                         , type_ "text"
                         , id (fieldId "title")
                         , value (getInput form.title)
@@ -343,10 +344,11 @@ viewForm shared balances imageStatus isEdit isDisabled deleteModal form =
                     ]
                 , formField
                     [ div
-                        [ class "input-label mt-5" ]
+                        [ class "input-label mt-3" ]
                         [ text (t "shop.description_label") ]
                     , textarea
-                        [ class "input w-full"
+                        [ class "input w-full mb-0"
+                        , classList [ ( "border-red ", hasErrors form.description ) ]
                         , id (fieldId "description")
                         , value (getInput form.description)
                         , maxlength 255
@@ -363,7 +365,7 @@ viewForm shared balances imageStatus isEdit isDisabled deleteModal form =
                             [ class "input-label" ]
                             [ text (t "shop.which_community_label") ]
                         , select
-                            [ class "input w-full mb-2 form-select select"
+                            [ class "input w-full form-select select"
                             , id (fieldId "symbol")
                             , required True
                             , disabled (isEdit || isDisabled)
@@ -427,10 +429,11 @@ viewForm shared balances imageStatus isEdit isDisabled deleteModal form =
                     , if trackStock == Just trackYes then
                         formField
                             [ div
-                                [ class "input-label" ]
+                                [ class "input-label mt-5" ]
                                 [ text (t "shop.units_label") ]
                             , input
                                 [ class "input w-full"
+                                , classList [ ( "border-red ", hasErrors form.units ) ]
                                 , type_ "number"
                                 , id (fieldId "units")
                                 , value (getInput form.units)
@@ -447,13 +450,14 @@ viewForm shared balances imageStatus isEdit isDisabled deleteModal form =
                         text ""
                     ]
                 , div
-                    [ class "mt-3" ]
+                    [ class "mt-2" ]
                     [ formField
                         [ span
                             [ class "input-label" ]
                             [ text (t "shop.price_label") ]
                         , input
                             [ class "input w-full"
+                            , classList [ ( "border-red ", hasErrors form.price ) ]
                             , id (fieldId "price")
                             , value (getInput form.price)
                             , onInput EnteredPrice
@@ -481,8 +485,6 @@ viewForm shared balances imageStatus isEdit isDisabled deleteModal form =
                         ]
                         [ text actionText ]
                     ]
-                    
-                    
                 ]
             ]
         ]
@@ -532,13 +534,13 @@ viewFieldErrors errors =
             List.map
                 (\error ->
                     span
-                        [ class "field-error" ]
+                        [ class "form-error" ]
                         [ text error ]
                 )
                 errors
     in
     div
-        [ class "form-field-error" ]
+        [ class "form-error" ]
         viewErrors
 
 
