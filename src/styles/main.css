@@ -85,7 +85,7 @@
 }
 
 .button-sm {
-  @apply py-1 px-6 h-8;
+  @apply py-1 px-4 h-8;
 }
 
 .button-lg {

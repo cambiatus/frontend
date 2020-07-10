@@ -1,19 +1,23 @@
-module Page.Profile exposing (Model, Msg, init, jsAddressToMsg, msgToString, update, view)
+module Page.Profile exposing (Model, Msg, init, jsAddressToMsg, msgToString, update, view, viewPublicInfo)
 
 import Api.Graphql
+import Avatar
 import Browser.Dom as Dom
+import Eos exposing (Symbol)
+import Eos.Account as Eos
 import Graphql.Http
-import Html exposing (Html, button, div, input, label, p, span, text)
-import Html.Attributes exposing (checked, class, for, id, name, type_)
+import Html exposing (Html, a, button, div, input, label, li, p, span, text, ul)
+import Html.Attributes exposing (checked, class, classList, for, id, name, type_)
 import Html.Events exposing (onClick)
 import Http
 import I18Next exposing (t)
+import Icons
 import Json.Decode as Decode exposing (Value)
 import Json.Encode as Encode
 import Page
-import Page.PublicProfile as PublicProfile
 import Profile exposing (Profile)
 import PushSubscription exposing (PushSubscription)
+import Route
 import Session.LoggedIn as LoggedIn exposing (External(..), FeedbackStatus(..))
 import Session.Shared exposing (Shared)
 import Task
@@ -48,12 +52,12 @@ init loggedIn =
 
 type alias Model =
     { status : Status
-    , changePinModalVisibility : Modal.Visibility
     , currentPin : Maybe String
+    , newPinModalVisibility : Modal.Visibility
     , newPin : Maybe String
-    , isNewPinVisible : Bool
+    , isNewPinReadable : Bool
     , newPinErrorMsg : Maybe String
-    , pushNotifications : Bool
+    , isPushNotificationsEnabled : Bool
     , maybePdfDownloadedSuccessfully : Maybe Bool
     }
 
@@ -61,12 +65,12 @@ type alias Model =
 initModel : LoggedIn.Model -> Model
 initModel _ =
     { status = Loading
-    , changePinModalVisibility = Modal.hidden
     , currentPin = Nothing
+    , newPinModalVisibility = Modal.hidden
     , newPin = Nothing
-    , isNewPinVisible = True
+    , isNewPinReadable = True
     , newPinErrorMsg = Nothing
-    , pushNotifications = False
+    , isPushNotificationsEnabled = False
     , maybePdfDownloadedSuccessfully = Nothing
     }
 
@@ -101,17 +105,22 @@ view loggedIn model =
                     Page.fullPageError (t loggedIn.shared.translations "profile.title") Http.Timeout
 
                 Loaded profile ->
-                    viewProfile model loggedIn profile
+                    div []
+                        [ Page.viewHeader loggedIn (t loggedIn.shared.translations "menu.profile") Route.Communities
+                        , viewPublicInfo loggedIn profile { hasTransferButton = False, hasEditLink = True }
+                        , viewPrivateInfo loggedIn model
+                        , viewNewPinModal model loggedIn.shared
+                        , viewDownloadPdfErrorModal model loggedIn
+                        ]
     in
     { title = title
     , content = content
     }
 
 
-viewProfile : Model -> LoggedIn.Model -> Profile -> Html Msg
-viewProfile model loggedIn profile =
+viewPrivateInfo loggedIn model =
     let
-        text_ str =
+        tr str =
             t loggedIn.shared.translations str
 
         downloadAction =
@@ -137,32 +146,148 @@ viewProfile model loggedIn profile =
                         _ ->
                             Ignored
     in
-    div [ class "grid gap-6 mb-6" ]
-        [ PublicProfile.view_ loggedIn profile False
-        , div [ class "bg-white" ]
-            [ div [ class "container divide-y divide-gray-500 mx-auto px-4" ]
-                [ viewAction (text_ "profile.12words.title") [ viewButton (text_ "profile.12words.button") downloadAction ]
-                , viewAction (text_ "profile.pin.title") [ viewButton (text_ "profile.pin.button") ClickedChangePin ]
-                , viewAction (text_ "notifications.title")
-                    [ div
-                        [ class "inline-block mr-2" ]
-                        [ if model.pushNotifications then
-                            label
-                                [ for "notifications"
-                                , class "cursor-pointer text-indigo-500"
-                                ]
-                                [ text "enabled" ]
+    div [ class "bg-white mb-6" ]
+        [ ul [ class "container divide-y divide-gray-500 mx-auto px-4" ]
+            [ viewProfileItem
+                (tr "profile.12words.title")
+                (viewButton (tr "profile.12words.button") downloadAction)
+                Center
+            , viewProfileItem
+                (tr "profile.pin.title")
+                (viewButton (tr "profile.pin.button") ClickedChangePin)
+                Center
+            , viewProfileItem
+                (tr "notifications.title")
+                (viewTogglePush loggedIn model)
+                Center
+            ]
+        ]
 
-                          else
-                            label [ for "notifications", class "cursor-pointer text-gray" ] [ text "disabled" ]
-                        ]
-                    , viewToggle model.pushNotifications RequestPush "notifications"
+
+type alias PublicInfoConfig =
+    { hasTransferButton : Bool
+    , hasEditLink : Bool
+    }
+
+
+viewPublicInfo : LoggedIn.Model -> Profile -> PublicInfoConfig -> Html msg
+viewPublicInfo loggedIn profile { hasTransferButton, hasEditLink } =
+    let
+        tr txt =
+            t loggedIn.shared.translations txt
+
+        userName =
+            Maybe.withDefault "" profile.userName
+
+        email =
+            Maybe.withDefault "" profile.email
+
+        bio =
+            Maybe.withDefault "" profile.bio
+
+        location =
+            Maybe.withDefault "" profile.localization
+
+        account =
+            Eos.nameToString profile.account
+
+        ipfsUrl =
+            loggedIn.shared.endpoints.ipfs
+    in
+    div [ class "bg-white mb-6" ]
+        [ div [ class "container p-4 mx-auto" ]
+            [ div
+                [ classList <|
+                    let
+                        hasBottomBorder =
+                            not hasTransferButton
+                    in
+                    [ ( "pb-4", True )
+                    , ( "border-b border-gray-500", hasBottomBorder )
                     ]
                 ]
+                [ div [ class "flex mb-4 items-center flex-wrap" ]
+                    [ Avatar.view ipfsUrl profile.avatar "w-20 h-20 mr-6 xs-max:w-16 xs-max:h-16 xs-max:mr-3"
+                    , div [ class "flex-grow flex items-center justify-between" ]
+                        [ ul [ class "text-sm text-gray-900" ]
+                            [ li [ class "font-medium text-body-black text-2xl xs-max:text-xl" ]
+                                [ text userName ]
+                            , li [] [ text email ]
+                            , li [] [ text account ]
+                            ]
+                        , if hasEditLink then
+                            a
+                                [ class "ml-2"
+                                , Route.href Route.ProfileEditor
+                                ]
+                                [ Icons.edit "" ]
+
+                          else
+                            text ""
+                        ]
+                    ]
+                , p [ class "text-sm text-gray-900" ]
+                    [ text bio ]
+                ]
+            , if hasTransferButton then
+                div []
+                    [ viewTransferButton loggedIn.shared loggedIn.selectedCommunity account
+                    ]
+
+              else
+                text ""
+            , ul [ class "divide-y divide-gray-500" ]
+                [ viewProfileItem
+                    (tr "profile.locations")
+                    (text location)
+                    Center
+                , viewProfileItem
+                    (tr "profile.interests")
+                    (text (String.join ", " profile.interests))
+                    Top
+                ]
             ]
-        , viewNewPinModal model loggedIn.shared
-        , viewDownloadPdfErrorModal model loggedIn
         ]
+
+
+type VerticalAlign
+    = Top
+    | Center
+
+
+viewProfileItem : String -> Html msg -> VerticalAlign -> Html msg
+viewProfileItem lbl content vAlign =
+    let
+        vAlignClass =
+            case vAlign of
+                Top ->
+                    "items-start"
+
+                Center ->
+                    "items-center"
+    in
+    li
+        [ class "flex justify-between py-4"
+        , class vAlignClass
+        ]
+        [ span [ class "text-sm leading-6 mr-4" ]
+            [ text lbl ]
+        , span [ class "text-indigo-500 font-medium text-sm text-right" ]
+            [ content ]
+        ]
+
+
+viewTransferButton : Shared -> Symbol -> String -> Html msg
+viewTransferButton shared symbol user =
+    let
+        text_ s =
+            text (t shared.translations s)
+    in
+    a
+        [ class "button button-primary w-full"
+        , Route.href (Route.Transfer symbol (Just user))
+        ]
+        [ text_ "transfer.title" ]
 
 
 viewDownloadPdfErrorModal : Model -> LoggedIn.Model -> Html Msg
@@ -228,7 +353,7 @@ viewNewPinModal model shared =
                 , inputId = "pinInput"
                 , inputValue = Maybe.withDefault "" model.newPin
                 , onInputMsg = EnteredPin
-                , onToggleMsg = TogglePinVisibility
+                , onToggleMsg = TogglePinReadability
                 , isVisible = True
                 , errors =
                     case model.newPinErrorMsg of
@@ -256,7 +381,7 @@ viewNewPinModal model shared =
                 ]
     in
     Modal.view
-        model.changePinModalVisibility
+        model.newPinModalVisibility
         { ignoreMsg = Ignored
         , closeMsg = ClickedCloseChangePin
         , content = modalContent
@@ -273,30 +398,48 @@ viewButton label msg =
         ]
 
 
-viewAction : String -> List (Html Msg) -> Html Msg
-viewAction label contents =
-    div [ class "flex items-center justify-between py-4" ]
-        [ span [ class "text-sm leading-6" ]
-            [ text label ]
-        , span
-            [ class "font-medium text-sm text-right leading-6" ]
-            contents
-        ]
+viewTogglePush : LoggedIn.Model -> Model -> Html Msg
+viewTogglePush loggedIn model =
+    let
+        tr str =
+            t loggedIn.shared.translations str
 
+        inputId =
+            "notifications"
 
-viewToggle : Bool -> Msg -> String -> Html Msg
-viewToggle isEnabled toggleFunction inputId =
-    div [ class "form-switch inline-block align-middle" ]
-        [ input
-            [ type_ "checkbox"
-            , id inputId
-            , name inputId
-            , class "form-switch-checkbox"
-            , checked isEnabled
-            , onClick toggleFunction
+        lblColor =
+            if model.isPushNotificationsEnabled then
+                "text-indigo-500"
+
+            else
+                "text-gray"
+
+        lblText =
+            if model.isPushNotificationsEnabled then
+                tr "settings.features.enabled"
+
+            else
+                tr "settings.features.disabled"
+    in
+    div []
+        [ label
+            [ for inputId
+            , class "inline-block lowercase mr-2 cursor-pointer"
+            , class lblColor
             ]
-            []
-        , label [ class "form-switch-label", for inputId ] []
+            [ text lblText ]
+        , div [ class "form-switch inline-block align-middle" ]
+            [ input
+                [ type_ "checkbox"
+                , id inputId
+                , name inputId
+                , class "form-switch-checkbox"
+                , checked model.isPushNotificationsEnabled
+                , onClick RequestPush
+                ]
+                []
+            , label [ class "form-switch-label", for inputId ] []
+            ]
         ]
 
 
@@ -320,7 +463,7 @@ type Msg
     | EnteredPin String
     | ClickedCloseChangePin
     | PinChanged
-    | TogglePinVisibility
+    | TogglePinReadability
     | GotPushPreference Bool
     | RequestPush
     | CheckPushPref
@@ -361,7 +504,7 @@ update msg model loggedIn =
 
         ClickedChangePin ->
             if LoggedIn.isAuth loggedIn then
-                UR.init { model | changePinModalVisibility = Modal.shown }
+                UR.init { model | newPinModalVisibility = Modal.shown }
                     |> UR.addCmd
                         (Dom.focus "pinInput"
                             |> Task.attempt (\_ -> Ignored)
@@ -375,8 +518,8 @@ update msg model loggedIn =
                             |> Task.attempt (\_ -> Ignored)
                         )
 
-        TogglePinVisibility ->
-            UR.init { model | isNewPinVisible = not model.isNewPinVisible }
+        TogglePinReadability ->
+            UR.init { model | isNewPinReadable = not model.isNewPinReadable }
 
         ChangePinSubmitted ->
             if LoggedIn.isAuth loggedIn then
@@ -417,11 +560,11 @@ update msg model loggedIn =
             UR.init { model | newPinErrorMsg = Nothing, newPin = Just newPin }
 
         ClickedCloseChangePin ->
-            UR.init { model | changePinModalVisibility = Modal.hidden }
+            UR.init { model | newPinModalVisibility = Modal.hidden }
 
         PinChanged ->
             { model
-                | changePinModalVisibility = Modal.hidden
+                | newPinModalVisibility = Modal.hidden
                 , currentPin = model.newPin
                 , newPin = Nothing
             }
@@ -456,7 +599,7 @@ update msg model loggedIn =
                 |> UR.init
 
         GotPushPreference val ->
-            { model | pushNotifications = val }
+            { model | isPushNotificationsEnabled = val }
                 |> UR.init
 
         CheckPushPref ->
@@ -470,7 +613,7 @@ update msg model loggedIn =
                     }
 
         RequestPush ->
-            if model.pushNotifications then
+            if model.isPushNotificationsEnabled then
                 model
                     |> UR.init
                     |> UR.addPort
@@ -567,8 +710,8 @@ jsAddressToMsg addr val =
         "ChangePinSubmitted" :: [] ->
             Just ChangePinSubmitted
 
-        "TogglePinVisibility" :: [] ->
-            Just TogglePinVisibility
+        "TogglePinReadability" :: [] ->
+            Just TogglePinReadability
 
         "GotPushPreference" :: _ ->
             decodePushPref val
@@ -610,8 +753,8 @@ msgToString msg =
         ClickedViewPrivateKeyAuth ->
             [ "ClickedViewPrivateKeyAuth" ]
 
-        TogglePinVisibility ->
-            [ "TogglePinVisibility" ]
+        TogglePinReadability ->
+            [ "TogglePinReadability" ]
 
         ChangePinSubmitted ->
             [ "ChangePinSubmitted" ]
