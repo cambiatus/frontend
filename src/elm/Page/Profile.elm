@@ -318,16 +318,16 @@ viewDownloadPdfErrorModal model loggedIn =
                 []
                 [ p
                     [ class "w-full font-medium text-heading text-2xl mb-2" ]
+                    -- I'll add the translations after we agreed about this case
                     [ text "Sorry, we can't find your 12 words"
                     ]
                 , p [ class "my-3" ]
-                    [ text "If you have your 12 words saved earlier, please, use them for further signing in."
+                    [ text "Please, check if you have your 12 words saved during the registration process and use them for further signing in."
                     ]
                 , p [ class "my-3" ]
-                    [ text """If you completely lost your 12 words, you can contact us and provide this private key
-                                    and we will help you to recover:"""
+                    [ text "If you completely lost your 12 words, please, contact us and provide this private key and we will help you to recover:"
                     ]
-                , p [ class "font-bold my-3 text-lg" ]
+                , p [ class "font-bold my-3 text-lg text-center border p-4 rounded-sm bg-gray-100" ]
                     [ text privateKey
                     ]
                 ]
