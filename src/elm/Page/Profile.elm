@@ -230,9 +230,7 @@ viewPublicInfo loggedIn profile { hasTransferButton, hasEditLink } =
                     [ text bio ]
                 ]
             , if hasTransferButton then
-                div []
-                    [ viewTransferButton loggedIn.shared loggedIn.selectedCommunity account
-                    ]
+                viewTransferButton loggedIn.shared loggedIn.selectedCommunity account
 
               else
                 text ""
@@ -283,11 +281,13 @@ viewTransferButton shared symbol user =
         text_ s =
             text (t shared.translations s)
     in
-    a
-        [ class "button button-primary w-full"
-        , Route.href (Route.Transfer symbol (Just user))
+    div [ class "mt-3 mb-2" ]
+        [ a
+            [ class "button button-primary w-full"
+            , Route.href (Route.Transfer symbol (Just user))
+            ]
+            [ text_ "transfer.title" ]
         ]
-        [ text_ "transfer.title" ]
 
 
 viewDownloadPdfErrorModal : Model -> LoggedIn.Model -> Html Msg
