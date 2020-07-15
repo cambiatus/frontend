@@ -139,8 +139,8 @@ viewObjective ({ shared } as loggedIn) model community index objective =
             text (t shared.translations s)
     in
     div [ class "p-4 sm:px-6 bg-white rounded mt-4" ]
-        [ div [ class "flex justify-between items-start" ]
-            [ div []
+        [ div [ class "flex space-around items-start" ]
+            [ div [ class "w-11/12 mr-16" ]
                 [ p [ class "text-sm" ] [ text objective.description ]
                 , p [ class "text-gray-900 text-caption uppercase mt-2" ]
                     [ text
@@ -151,13 +151,16 @@ viewObjective ({ shared } as loggedIn) model community index objective =
                         )
                     ]
                 ]
-            , div [ class "flex" ]
+            , div [ class "flex justify-between" ]
                 [ a
-                    [ class "w-full button button-secondary button-sm mr-10 hidden md:flex md:visible"
+                    [ class "w-full sm:w-24 md:w-24 lg:w-24 xl:w-24 px-2 button button-secondary button-sm mb-4 mx-2 px-6"
                     , Route.href (Route.EditObjective model.communityId objective.id)
                     ]
                     [ text_ "menu.edit" ]
-                , button [ onClick (OpenObjective index) ]
+                , button
+                    [ class "h-8"
+                    , onClick (OpenObjective index)
+                    ]
                     [ if isOpen then
                         Icons.arrowDown "rotate-180"
 
@@ -169,7 +172,7 @@ viewObjective ({ shared } as loggedIn) model community index objective =
         , if isOpen then
             div []
                 [ a
-                    [ class "w-full button button-primary button-sm mt-6 mb-8"
+                    [ class "w-full md:w-48 lg:w-48 xl:w-48 px-2 button button-primary button-sm mt-8 mb-4"
                     , Route.href
                         (Route.NewAction community.symbol objective.id)
                     ]
@@ -179,7 +182,7 @@ viewObjective ({ shared } as loggedIn) model community index objective =
                         |> List.map (viewAction loggedIn model objective.id)
                     )
                 , a
-                    [ class "w-full button button-secondary button-sm md:hidden"
+                    [ class "w-full button button-secondary button-sm hidden"
                     , Route.href (Route.EditObjective model.communityId objective.id)
                     ]
                     [ text_ "menu.edit" ]
@@ -188,13 +191,7 @@ viewObjective ({ shared } as loggedIn) model community index objective =
           else
             text ""
         , if not isOpen then
-            div [ class "flex items-center justify-end mt-8 md:hidden" ]
-                [ a
-                    [ class "w-full button button-secondary button-sm"
-                    , Route.href (Route.EditObjective model.communityId objective.id)
-                    ]
-                    [ text_ "menu.edit" ]
-                ]
+            text ""
 
           else
             text ""
@@ -244,91 +241,93 @@ viewAction ({ shared } as loggedIn) model objectiveId action =
         tr r_id replaces =
             I18Next.tr loggedIn.shared.translations I18Next.Curly r_id replaces
     in
-    div [ class "bg-gray-100 my-8 p-4" ]
-        [ Icons.flag "mx-auto mb-4"
-        , p [ class "text-body" ] [ text action.description ]
-        , div [ class "flex flex-wrap my-6 -mx-2 items-center" ]
-            [ div [ class "mx-2 mb-2" ]
-                [ p [ class "input-label" ]
-                    [ text_ "community.actions.reward" ]
-                , p [ class "uppercase text-body" ]
-                    [ String.fromFloat action.reward
-                        ++ " "
-                        ++ Eos.symbolToString model.communityId
-                        |> text
-                    ]
-                ]
-            , if validationType == "CLAIMABLE" then
-                div [ class "mx-2 mb-2" ]
+    div [ class "flex flex-wrap sm:flex-no-wrap md:flex-no-wrap lg:flex-no-wrap xl:flex-no-wrap bg-white mt-8 mb-4" ]
+        [ div [ class "w-full sm:w-10 md:w-10 lg:w-10 xl:w-10 mx-8 mb-4" ] [ Icons.flag "w-full" ]
+        , div []
+            [ p [ class "text-body" ] [ text action.description ]
+            , div [ class "flex flex-wrap my-6 -mx-2 items-center" ]
+                [ div [ class "mx-2 mb-2" ]
                     [ p [ class "input-label" ]
-                        [ text_ "community.actions.validation_reward" ]
+                        [ text_ "community.actions.reward" ]
                     , p [ class "uppercase text-body" ]
-                        [ String.fromFloat action.verificationReward
+                        [ String.fromFloat action.reward
                             ++ " "
                             ++ Eos.symbolToString model.communityId
                             |> text
                         ]
                     ]
-
-              else
-                text ""
-            , if action.deadline == Nothing && action.usages == 0 then
-                text ""
-
-              else
-                div [ class "mx-2 mb-2" ]
-                    [ p [ class "input-label" ]
-                        [ text_ "community.actions.available_until" ]
-                    , p [ class "text-body" ]
-                        [ if action.usages > 0 then
-                            p [ classList [ ( "text-red", action.usagesLeft == 0 ) ] ]
-                                [ text (tr "community.actions.usages" [ ( "usages", usages ), ( "usagesLeft", usagesLeft ) ]) ]
-
-                          else
-                            text ""
-                        , case action.deadline of
-                            Just _ ->
-                                p [ classList [ ( "text-red", pastDeadline ) ] ] [ text deadlineStr ]
-
-                            Nothing ->
-                                text ""
+                , if validationType == "CLAIMABLE" then
+                    div [ class "mx-2 mb-2" ]
+                        [ p [ class "input-label" ]
+                            [ text_ "community.actions.validation_reward" ]
+                        , p [ class "uppercase text-body" ]
+                            [ String.fromFloat action.verificationReward
+                                ++ " "
+                                ++ Eos.symbolToString model.communityId
+                                |> text
+                            ]
                         ]
-                    ]
-            , div [ class "mx-2 mb-2" ]
-                [ if action.isCompleted then
-                    div [ class "tag bg-green" ] [ text_ "community.actions.completed" ]
-
-                  else if isClosed then
-                    div [ class "tag bg-gray-500 text-red" ] [ text_ "community.actions.closed" ]
 
                   else
                     text ""
-                ]
-            ]
-        , div [ class "flex justify-between items-end py-8 flex-col" ]
-            [ div [ class "w-full" ]
-                [ p [ class "input-label mb-4" ] [ text_ "community.actions.verifiers" ]
-                , if validationType == "AUTOMATIC" then
-                    div [ class "flex items-center" ]
-                        [ p [ class "text-body" ] [ text_ "community.actions.automatic_analyzers" ]
-                        , Icons.exclamation "ml-2"
-                        ]
+                , if action.deadline == Nothing && action.usages == 0 then
+                    text ""
 
                   else
-                    div [ class "flex overflow-scroll -mx-2" ]
-                        (List.map
-                            (\u ->
-                                div [ class "mx-2" ]
-                                    [ Profile.view shared loggedIn.accountName u ]
+                    div [ class "mx-2 mb-2" ]
+                        [ p [ class "input-label" ]
+                            [ text_ "community.actions.available_until" ]
+                        , p [ class "text-body" ]
+                            [ if action.usages > 0 then
+                                p [ classList [ ( "text-red", action.usagesLeft == 0 ) ] ]
+                                    [ text (tr "community.actions.usages" [ ( "usages", usages ), ( "usagesLeft", usagesLeft ) ]) ]
+
+                              else
+                                text ""
+                            , case action.deadline of
+                                Just _ ->
+                                    p [ classList [ ( "text-red", pastDeadline ) ] ] [ text deadlineStr ]
+
+                                Nothing ->
+                                    text ""
+                            ]
+                        ]
+                , div [ class "mx-2 mb-2" ]
+                    [ if action.isCompleted then
+                        div [ class "tag bg-green" ] [ text_ "community.actions.completed" ]
+
+                      else if isClosed then
+                        div [ class "tag bg-gray-500 text-red" ] [ text_ "community.actions.closed" ]
+
+                      else
+                        text ""
+                    ]
+                ]
+            , div [ class "flex flex-wrap justify-between items-end" ]
+                [ div [ class "w-full sm:w-4/5 md:w-4/5 lg:w-4/5 xl:w-4/5" ]
+                    [ p [ class "input-label mb-4" ] [ text_ "community.actions.verifiers" ]
+                    , if validationType == "AUTOMATIC" then
+                        div [ class "flex items-center" ]
+                            [ p [ class "text-body" ] [ text_ "community.actions.automatic_analyzers" ]
+                            , Icons.exclamation "ml-2"
+                            ]
+
+                      else
+                        div [ class "flex mr-2" ]
+                            (List.map
+                                (\u ->
+                                    div [ class "mr-4" ]
+                                        [ Profile.view shared loggedIn.accountName u ]
+                                )
+                                action.validators
                             )
-                            action.validators
-                        )
+                    ]
+                , a
+                    [ class "button button-secondary button-sm w-full md:w-40 lg:w-40 xl:w-40 mt-8"
+                    , Route.href (Route.EditAction model.communityId objectiveId action.id)
+                    ]
+                    [ text_ "edit action" ]
                 ]
-            , a
-                [ class "button button-secondary button-sm w-full mt-16"
-                , Route.href (Route.EditAction model.communityId objectiveId action.id)
-                ]
-                [ text_ "menu.edit" ]
             ]
         ]
 
