@@ -15,6 +15,17 @@ jobs:
       - name: Get deps
         run: npm install
 
+      - name: Add `node_modules/.bin` to PATH
+        run: echo ::add-path::$(yarn bin)
+
+      - name: "Check elm-format"
+        uses: sparksp/elm-format-action@v1
+
+      - name: "Check elm-review"
+        uses: sparksp/elm-review-action@v1.0.4
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Build asset
         run: npm build
 
