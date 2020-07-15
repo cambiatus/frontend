@@ -153,10 +153,10 @@ viewObjective ({ shared } as loggedIn) model community index objective =
                 ]
             , div [ class "flex justify-between" ]
                 [ a
-                    [ class "w-full sm:w-24 md:w-24 lg:w-24 xl:w-24 px-2 button button-secondary button-sm mb-4 mx-2 px-6"
+                    [ class "button button-secondary button-sm w-full sm:w-40 mb-4 mx-2 px-4 hidden"
                     , Route.href (Route.EditObjective model.communityId objective.id)
                     ]
-                    [ text_ "menu.edit" ]
+                    [ text_ "edit objective" ]
                 , button
                     [ class "h-8"
                     , onClick (OpenObjective index)
@@ -171,21 +171,23 @@ viewObjective ({ shared } as loggedIn) model community index objective =
             ]
         , if isOpen then
             div []
-                [ a
-                    [ class "w-full md:w-48 lg:w-48 xl:w-48 px-2 button button-primary button-sm mt-8 mb-4"
-                    , Route.href
-                        (Route.NewAction community.symbol objective.id)
+                [ div [ class "flex flex-wrap mt-2" ]
+                    [ a
+                        [ class "button button-secondary button-sm w-full sm:w-48 mt-2 sm:mr-4"
+                        , Route.href (Route.EditObjective model.communityId objective.id)
+                        ]
+                        [ text_ "edit objective" ]
+                    , a
+                        [ class "button button-primary button-sm w-full sm:w-48 px-2 mt-2 mb-4"
+                        , Route.href
+                            (Route.NewAction community.symbol objective.id)
+                        ]
+                        [ text_ "community.actions.new" ]
                     ]
-                    [ text_ "community.actions.new" ]
                 , div []
                     (objective.actions
                         |> List.map (viewAction loggedIn model objective.id)
                     )
-                , a
-                    [ class "w-full button button-secondary button-sm hidden"
-                    , Route.href (Route.EditObjective model.communityId objective.id)
-                    ]
-                    [ text_ "menu.edit" ]
                 ]
 
           else
@@ -241,9 +243,9 @@ viewAction ({ shared } as loggedIn) model objectiveId action =
         tr r_id replaces =
             I18Next.tr loggedIn.shared.translations I18Next.Curly r_id replaces
     in
-    div [ class "flex flex-wrap sm:flex-no-wrap md:flex-no-wrap lg:flex-no-wrap xl:flex-no-wrap bg-white mt-8 mb-4" ]
-        [ div [ class "w-full sm:w-10 md:w-10 lg:w-10 xl:w-10 mx-8 mb-4" ] [ Icons.flag "w-full" ]
-        , div []
+    div [ class "flex flex-wrap sm:flex-no-wrap bg-white mt-8 mb-4" ]
+        [ div [ class "w-full sm:w-10 mx-8 mb-4" ] [ Icons.flag "w-full" ]
+        , div [ class "w-full" ]
             [ p [ class "text-body" ] [ text action.description ]
             , div [ class "flex flex-wrap my-6 -mx-2 items-center" ]
                 [ div [ class "mx-2 mb-2" ]
@@ -304,7 +306,7 @@ viewAction ({ shared } as loggedIn) model objectiveId action =
                     ]
                 ]
             , div [ class "flex flex-wrap justify-between items-end" ]
-                [ div [ class "w-full sm:w-4/5 md:w-4/5 lg:w-4/5 xl:w-4/5" ]
+                [ div [ class "w-full sm:w-4/5" ]
                     [ p [ class "input-label mb-4" ] [ text_ "community.actions.verifiers" ]
                     , if validationType == "AUTOMATIC" then
                         div [ class "flex items-center" ]
@@ -323,7 +325,7 @@ viewAction ({ shared } as loggedIn) model objectiveId action =
                             )
                     ]
                 , a
-                    [ class "button button-secondary button-sm w-full md:w-40 lg:w-40 xl:w-40 mt-8"
+                    [ class "button button-secondary button-sm w-full sm:w-40 mt-8"
                     , Route.href (Route.EditAction model.communityId objectiveId action.id)
                     ]
                     [ text_ "edit action" ]
