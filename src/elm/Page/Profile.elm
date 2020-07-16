@@ -1,4 +1,4 @@
-module Page.Profile exposing (Model, Msg, init, jsAddressToMsg, msgToString, update, view, viewPublicInfo)
+module Page.Profile exposing (Model, Msg, init, jsAddressToMsg, msgToString, update, view, viewPrivateInfo, viewPublicInfo)
 
 import Api.Graphql
 import Avatar
@@ -118,6 +118,7 @@ view loggedIn model =
     }
 
 
+viewPrivateInfo : LoggedIn.Model -> Model -> Html Msg
 viewPrivateInfo loggedIn model =
     let
         tr str =
@@ -731,7 +732,7 @@ msgToString msg =
         CompletedProfileLoad r ->
             [ "CompletedProfileLoad", UR.resultToString r ]
 
-        DownloadPdf r ->
+        DownloadPdf _ ->
             [ "DownloadPdf" ]
 
         DownloadPdfProcessed _ ->
@@ -758,10 +759,10 @@ msgToString msg =
         ChangePinSubmitted ->
             [ "ChangePinSubmitted" ]
 
-        EnteredPin r ->
+        EnteredPin _ ->
             [ "EnteredPin" ]
 
-        GotPushPreference r ->
+        GotPushPreference _ ->
             [ "GotPushPreference" ]
 
         RequestPush ->

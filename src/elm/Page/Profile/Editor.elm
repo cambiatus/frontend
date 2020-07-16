@@ -273,8 +273,7 @@ viewAvatar loggedIn url =
 
 
 type Msg
-    = Ignored
-    | CompletedProfileLoad (Result (Graphql.Http.Error (Maybe Profile)) (Maybe Profile))
+    = CompletedProfileLoad (Result (Graphql.Http.Error (Maybe Profile)) (Maybe Profile))
     | OnFieldInput Field String
     | AddInterest
     | RemoveInterest String
@@ -298,9 +297,6 @@ type alias UpdateResult =
 update : Msg -> Model -> Session.LoggedIn.Model -> UpdateResult
 update msg model loggedIn =
     case msg of
-        Ignored ->
-            UR.init model
-
         CompletedProfileLoad (Ok Nothing) ->
             UR.init model
 
@@ -416,7 +412,7 @@ update msg model loggedIn =
                     Api.uploadAvatar loggedIn.shared file_ CompletedAvatarUpload
             in
             case model.status of
-                Loaded profile ->
+                Loaded _ ->
                     model
                         |> UR.init
                         |> UR.addCmd (uploadAvatar file)
@@ -451,26 +447,23 @@ modelToProfile model profile =
 msgToString : Msg -> List String
 msgToString msg =
     case msg of
-        Ignored ->
-            [ "Ignored" ]
-
-        CompletedProfileLoad r ->
+        CompletedProfileLoad _ ->
             [ "CompletedProfileLoad" ]
 
-        OnFieldInput a f ->
+        OnFieldInput _ _ ->
             [ "OnFieldInput" ]
 
         AddInterest ->
             [ "AddInterest" ]
 
-        RemoveInterest r ->
+        RemoveInterest _ ->
             [ "RemoveInterest" ]
 
         ClickedSave ->
             [ "ClickedSave" ]
 
-        CompletedAvatarUpload r ->
+        CompletedAvatarUpload _ ->
             [ "CompletedAvatarUpload" ]
 
-        EnteredAvatar r ->
+        EnteredAvatar _ ->
             [ "EnteredAvatar" ]
