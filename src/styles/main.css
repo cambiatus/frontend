@@ -250,22 +250,17 @@
 .form-switch-checkbox:checked + .form-switch-label:before {
   @apply right-0 bg-white;
 
-  margin-right: 0.1rem;
+  margin-right: 0.05rem;
 }
 
-#date, 
-#quantity {
-  width: 20px;
-  height: 20px;
-  border: 1px solid #e7e7e7;
-  border-radius: 2px;
+.form-checkbox {
+  @apply w-5 h-5 border border-solid border-gray-500 rounded-sm bg-white;
+   
 }
 
-#date:checked, 
-#quantity:checked {
-  background: white;
-  border: 6px solid #8acc9e;
-  border-radius: 2px;
+.form-checkbox:checked {
+  @apply w-5 h-5 border-4 border-solid border-green rounded-xs bg-white;
+   
 }
 
 .form-error {

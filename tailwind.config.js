@@ -10,7 +10,7 @@ module.exports = {
       default: {
         checkbox: {
           icon:
-            '<svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg"><rect width="12" height="12" rx="2" fill="#8ACC9E"/></svg>'
+            '<svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg"><rect width="12" height="12" rx="2" fill="#ffffff"/></svg>'
         }
       }
     }),
@@ -121,6 +121,7 @@ module.exports = {
         caption: 0.75
       },
       borderRadius: {
+        xs: '0.125rem',
         sm: '0.25rem',
         default: '0.75rem',
         super: '2.5rem'
@@ -135,12 +136,6 @@ module.exports = {
       },
       opacity: {
         '10': '0.1'
-      },
-      screens: {
-        'sm-max': { 'max': '639px' },
-        'md-max': { 'max': '767px' },
-        'lg-max': { 'max': '1023px' },
-        'xl-max': { 'max': '1279px' }
       }
     }
   },
