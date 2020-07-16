@@ -110,7 +110,11 @@
 
 .input {
   /* Form input comes from tailwind/custom-forms */
-  @apply form-input h-12;
+  @apply form-input h-12 text-sm outline-none transition-colors duration-100 text-black;
+}
+
+textarea.input {
+  @apply h-40;
 }
 
 .field-with-error,
@@ -135,10 +139,16 @@
 /* Select */
 
 .select {
-  @apply h-12 block border border-gray-500 rounded-sm;
+  @apply h-12 text-sm block border border-gray-500 rounded-sm text-black outline-none transition-colors duration-100;
 }
 
 /* End of Select */
+
+.input:focus,
+.select:focus {
+  @apply border-purple-500;
+}
+
 
 /* Tooltip */
 
