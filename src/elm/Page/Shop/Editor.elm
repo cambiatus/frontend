@@ -330,7 +330,7 @@ viewForm shared balances imageStatus isEdit isDisabled deleteModal form =
                         [ text (t "shop.what_label") ]
                     , input
                         [ class "input w-full"
-                        , classList [ ( "border-red", hasErrors form.title ) ]
+                        , classList [ ( "field-with-error", hasErrors form.title ) ]
                         , type_ "text"
                         , id (fieldId "title")
                         , value (getInput form.title)
@@ -348,7 +348,7 @@ viewForm shared balances imageStatus isEdit isDisabled deleteModal form =
                         [ text (t "shop.description_label") ]
                     , textarea
                         [ class "input w-full mb-0"
-                        , classList [ ( "border-red ", hasErrors form.description ) ]
+                        , classList [ ( "field-with-error", hasErrors form.description ) ]
                         , id (fieldId "description")
                         , value (getInput form.description)
                         , maxlength 255
@@ -433,7 +433,7 @@ viewForm shared balances imageStatus isEdit isDisabled deleteModal form =
                                 [ text (t "shop.units_label") ]
                             , input
                                 [ class "input w-full"
-                                , classList [ ( "border-red ", hasErrors form.units ) ]
+                                , classList [ ( "field-with-error", hasErrors form.units ) ]
                                 , type_ "number"
                                 , id (fieldId "units")
                                 , value (getInput form.units)
@@ -457,7 +457,7 @@ viewForm shared balances imageStatus isEdit isDisabled deleteModal form =
                             [ text (t "shop.price_label") ]
                         , input
                             [ class "input w-full"
-                            , classList [ ( "border-red ", hasErrors form.price ) ]
+                            , classList [ ( "field-with-error", hasErrors form.price ) ]
                             , id (fieldId "price")
                             , value (getInput form.price)
                             , onInput EnteredPrice
