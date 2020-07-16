@@ -313,6 +313,7 @@
       "subtitle": "{{objectives}} objectius i {{actions}} accions",
       "new": "Crear un objectiu nou",
       "action_count": "{{actions}} accions",
+      "edit": "Edita l'objectiu", 
       "editor": {
         "not_found": "No trobat",
         "error": "Ui! Quelcom ha fallat",
@@ -333,7 +334,7 @@
       "aumatically_verified_by": "Automàticament verificada per",
       "validation_reward": "Recompensa de validació",
       "validation_reward_none": "Cap",
-      "new": "Crear una acció nova",
+      "new": "Crear acció",
       "description_label": "Quines accions has de promoure per a aconseguir aquest objectiu?",
       "reward_label": "Els usuaris guanyaran aquesta recompensa en completar l’acció.",
       "verification_label": "Com serà verificada aquesta acció?",
@@ -350,6 +351,7 @@
       "or": " o ",
       "completed": "Completat",
       "closed": "Tancat",
+      "edit": "Edita l'acció",
       "form": {
         "not_found": "Acció no trobada",
         "description_label": "Descripció",

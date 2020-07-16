@@ -631,13 +631,11 @@ isActive page route =
 
 viewFooter : Shared -> Html msg
 viewFooter _ =
-    footer [ class "bg-white w-full flex flex-wrap justify-center mx-auto border-t border-grey p-4 pt-6 h-40 bottom-0" ]
-        [ div [ class "flex justify-around " ]
-            [ p [ class "text-sm flex w-full justify-center text-center" ]
-                [ text "Created with" ]
-            , div [ class "w-1/5" ] [ Icons.heart ]
-            , p [ class "text-sm flex w-full justify-center text-center" ]
-                [ text "by Satisfied Vagabonds" ]
+    footer [ class "bg-white w-full flex flex-wrap mx-auto border-t border-grey p-4 pt-6 h-40 bottom-0" ]
+        [ p [ class "text-sm flex w-full justify-center items-center" ]
+            [ text "Created with"
+            , Icons.heart
+            , text "by Satisfied Vagabonds"
             ]
         , img
             [ class "h-24 w-full"

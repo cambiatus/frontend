@@ -156,7 +156,7 @@ viewObjective ({ shared } as loggedIn) model community index objective =
                     [ class "button button-secondary button-sm w-full sm:w-40 mb-4 mx-2 px-4 hidden"
                     , Route.href (Route.EditObjective model.communityId objective.id)
                     ]
-                    [ text_ "edit objective" ]
+                    [ text_ "community.objectives.edit" ]
                 , button
                     [ class "h-8"
                     , onClick (OpenObjective index)
@@ -173,12 +173,12 @@ viewObjective ({ shared } as loggedIn) model community index objective =
             div []
                 [ div [ class "flex flex-wrap mt-2" ]
                     [ a
-                        [ class "button button-secondary button-sm w-full sm:w-48 mt-2 sm:mr-4"
+                        [ class "button button-secondary button-sm w-full sm:w-48 mt-2 px-1 sm:mr-4"
                         , Route.href (Route.EditObjective model.communityId objective.id)
                         ]
-                        [ text_ "edit objective" ]
+                        [ text_ "community.objectives.edit" ]
                     , a
-                        [ class "button button-primary button-sm w-full sm:w-48 px-2 mt-2 mb-4"
+                        [ class "button button-primary button-sm w-full sm:w-48 mt-2 px-1 mb-4"
                         , Route.href
                             (Route.NewAction community.symbol objective.id)
                         ]
@@ -328,7 +328,7 @@ viewAction ({ shared } as loggedIn) model objectiveId action =
                     [ class "button button-secondary button-sm w-full sm:w-40 mt-8"
                     , Route.href (Route.EditAction model.communityId objectiveId action.id)
                     ]
-                    [ text_ "edit action" ]
+                    [ text_ "community.actions.edit" ]
                 ]
             ]
         ]
