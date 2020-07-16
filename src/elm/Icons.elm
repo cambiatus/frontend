@@ -179,7 +179,7 @@ trash class_ =
 
 edit : String -> Svg msg
 edit class_ =
-    svg [ fill "none", height "26", viewBox "0 0 24 26", width "24" ]
+    svg [ fill "none", height "26", viewBox "0 0 24 26", width "24", class class_ ]
         [ Svg.path [ clipRule "evenodd", d "M20.3091 24.2273H1.84628V1.77273H12.3085V0H1.84628C0.826607 0 0 0.793677 0 1.77273V24.2273C0 25.2063 0.826607 26 1.84628 26H20.3091C21.3287 26 22.1553 25.2063 22.1553 24.2273V13H20.3091V24.2273Z", fill "#F99D33", fillRule "evenodd" ]
             []
         , Svg.text ""
