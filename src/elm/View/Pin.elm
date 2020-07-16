@@ -1,7 +1,7 @@
-module View.Pin exposing (..)
+module View.Pin exposing (Pin, isValid, view)
 
-import Html exposing (..)
-import Html.Attributes exposing (..)
+import Html exposing (Html, button, div, input, label, li, text, ul)
+import Html.Attributes exposing (attribute, autocomplete, class, for, id, maxlength, placeholder, required, type_, value)
 import Html.Events exposing (onClick, onInput)
 import I18Next
 import Session.Shared exposing (Shared)
@@ -28,8 +28,8 @@ isValid pin =
         hasCorrectLength p =
             String.length p == 6
 
-        hasOnlyDigits p =
-            String.all Char.isDigit p
+        hasOnlyDigits =
+            String.all Char.isDigit
     in
     hasCorrectLength pin && hasOnlyDigits pin
 

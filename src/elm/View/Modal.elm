@@ -1,4 +1,4 @@
-module View.Modal exposing (..)
+module View.Modal exposing (Visibility, hidden, shown, view)
 
 import Html exposing (Html, button, div, text)
 import Html.Attributes exposing (class)
