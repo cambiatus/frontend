@@ -226,7 +226,7 @@ viewTextArea lbl gridArea field shared currentValue =
         [ label [ class "input-label" ] [ text lbl ]
         , div [ class "relative" ]
             [ textarea
-                [ class "w-full form-input"
+                [ class "w-full input"
                 , onInput (OnFieldInput field)
                 , value currentValue
                 ]
