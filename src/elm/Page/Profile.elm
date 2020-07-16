@@ -704,7 +704,6 @@ jsAddressToMsg addr val =
                     Just (GotPushSub res)
 
                 Err _ ->
-                    -- TODO: Handle PushSubscription Decode error
                     Nothing
 
         "ChangePinSubmitted" :: [] ->
