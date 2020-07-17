@@ -365,7 +365,7 @@ viewForm shared balances imageStatus isEdit isDisabled deleteModal form =
                             [ class "input-label" ]
                             [ text (t "shop.which_community_label") ]
                         , select
-                            [ class "input w-full form-select select"
+                            [ class "w-full form-select select"
                             , id (fieldId "symbol")
                             , required True
                             , disabled (isEdit || isDisabled)

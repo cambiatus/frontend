@@ -6,7 +6,7 @@
 }
 
 @font-face {
-  font-family: "Gotham Rounded";
+  font-family: 'Gotham Rounded';
   font-style: italic;
   font-weight: 700;
   src: url('/fonts/gotham-rounded-bold-italic.otf');
@@ -287,9 +287,9 @@
 
 /* End of Sticky Footer */
 
-@import "./elm-datepicker.css";
+@import './elm-datepicker.css';
 
 /* https://tailwindcss.com/docs/extracting-components#extracting-css-components-with-apply */
 @tailwind utilities;
 
-@import "./legacy_main.css";
+@import './legacy_main.css';
