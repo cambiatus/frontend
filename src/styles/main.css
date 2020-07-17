@@ -151,7 +151,7 @@
 }
 
 .tooltip-container p::after {
-  content: " ";
+  content: ' ';
   position: absolute;
   bottom: 100%;
   right: 5%;
@@ -238,7 +238,7 @@
   @apply absolute block bg-gray-900 inset-y-0 w-4 h-4 rounded-full -ml-1 mt-1;
 
   right: 50%;
-  content: "";
+  content: '';
   transition: all 0.2s ease-in;
 }
 
