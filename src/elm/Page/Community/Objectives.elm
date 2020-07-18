@@ -152,12 +152,7 @@ viewObjective ({ shared } as loggedIn) model community index objective =
                     ]
                 ]
             , div [ class "flex justify-between" ]
-                [ a
-                    [ class "button button-secondary button-sm w-full sm:w-40 mb-4 mx-2 px-4 hidden"
-                    , Route.href (Route.EditObjective model.communityId objective.id)
-                    ]
-                    [ text_ "community.objectives.edit" ]
-                , button
+                [ button
                     [ class "h-8"
                     , onClick (OpenObjective index)
                     ]
@@ -189,11 +184,6 @@ viewObjective ({ shared } as loggedIn) model community index objective =
                         |> List.map (viewAction loggedIn model objective.id)
                     )
                 ]
-
-          else
-            text ""
-        , if not isOpen then
-            text ""
 
           else
             text ""
