@@ -1254,8 +1254,9 @@ viewValidations { shared } model =
             [ class "" ]
             [ div [ class "mb-3 flex flex-row text-body items-bottom" ]
                 [ input
-                    [ type_ "checkbox"
-                    , class "form-checkbox mr-2"
+                    [ id "date"
+                    , type_ "checkbox"
+                    , class "form-checkbox h-5 w-5 mr-2"
                     , checked (hasDateValidation model.form.validation)
                     , onCheck ToggleDeadline
                     ]
@@ -1298,8 +1299,9 @@ viewValidations { shared } model =
                             text ""
             , div [ class "mb-6 flex flex-row text-body items-bottom" ]
                 [ input
-                    [ type_ "checkbox"
-                    , class "form-checkbox mr-2"
+                    [ id "quantity"
+                    , type_ "checkbox"
+                    , class "form-checkbox h-5 w-5 mr-2"
                     , checked (hasUnitValidation model.form.validation)
                     , onCheck ToggleUsages
                     ]
@@ -1326,7 +1328,7 @@ viewValidations { shared } model =
                                     [ type_ "number"
                                     , class "input w-full sm:w-2/5"
                                     , classList [ ( "border-red", hasErrors validation ) ]
-                                    , placeholder "Type a number"
+                                    , placeholder (t shared.translations "community.actions.form.usages_placeholder")
                                     , value (getInput validation)
                                     , onInput EnteredUsages
                                     ]

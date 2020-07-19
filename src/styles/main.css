@@ -253,16 +253,6 @@
   margin-right: 0.05rem;
 }
 
-.form-checkbox {
-  @apply w-5 h-5 border border-solid border-gray-500 rounded-sm bg-white;
-   
-}
-
-.form-checkbox:checked {
-  @apply w-5 h-5 border-4 border-solid border-green rounded-xs bg-white;
-   
-}
-
 .form-error {
   /* validation message for the field */
   @apply text-red text-caption uppercase tracking-wide block mt-1;
