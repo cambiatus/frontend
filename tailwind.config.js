@@ -9,12 +9,12 @@ module.exports = {
     customForms: theme => ({
       default: {
         checkbox: {
-        width: theme('spacing.6'),
-        height: theme('spacing.6'),
-        icon: '<svg width="22" height="22" viewBox="0 0 22 22" fill="none" xmlns="http://www.w3.org/2000/svg">' +
-          '<rect x="0.5" y="0.5" width="21" height="21" rx="2.5" fill="white" stroke="#E7E7E7"/>' +
-          '<rect x="5" y="5" width="12" height="12" rx="2" fill="#8ACC9E"/>' +
-          '</svg>'
+          width: theme('spacing.6'),
+          height: theme('spacing.6'),
+          icon: '<svg width="22" height="22" viewBox="0 0 22 22" fill="none" xmlns="http://www.w3.org/2000/svg">' +
+            '<rect x="0.5" y="0.5" width="21" height="21" rx="2.5" fill="white" stroke="#E7E7E7"/>' +
+            '<rect x="5" y="5" width="12" height="12" rx="2" fill="#8ACC9E"/>' +
+            '</svg>'
         },
         radio: {
           width: theme('spacing.6'),
@@ -23,7 +23,7 @@ module.exports = {
             '<circle cx="12" cy="12" r="11.5" fill="white" stroke="#E7E7E7"/>' +
             '<path d="M18 12C18 15.3137 15.3137 18 12 18C8.68629 18 6 15.3137 6 12C6 8.68629 8.68629  6 12 6C15.3137 6 18 8.68629 18 12Z" fill="#8ACC9E"/>' +
             '</svg>'
-      }
+        }
       }
     }),
     // Colors used on the 'Design System'
