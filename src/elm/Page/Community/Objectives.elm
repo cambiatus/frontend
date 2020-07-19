@@ -173,7 +173,7 @@ viewObjective ({ shared } as loggedIn) model community index objective =
                         ]
                         [ text_ "community.objectives.edit" ]
                     , a
-                        [ class "button button-primary button-sm w-full sm:w-48 mt-2 px-1 mb-4"
+                        [ class "button button-secondary button-sm w-full sm:w-48 mt-2 px-1 mb-4"
                         , Route.href
                             (Route.NewAction community.symbol objective.id)
                         ]
@@ -305,7 +305,7 @@ viewAction ({ shared } as loggedIn) model objectiveId action =
                             ]
 
                       else
-                        div [ class "flex mr-2" ]
+                        div [ class "flex mr-2 overflow-x-scroll" ]
                             (List.map
                                 (\u ->
                                     div [ class "mr-4" ]
@@ -315,7 +315,7 @@ viewAction ({ shared } as loggedIn) model objectiveId action =
                             )
                     ]
                 , a
-                    [ class "button button-secondary button-sm w-full sm:w-40 mt-8"
+                    [ class "button button-primary button-sm w-full sm:w-40 mt-8"
                     , Route.href (Route.EditAction model.communityId objectiveId action.id)
                     ]
                     [ text_ "community.actions.edit" ]
