@@ -332,13 +332,18 @@ viewDownloadPdfErrorModal model loggedIn =
                     [ text privateKey
                     ]
                 ]
+
+        downloadPdfModalConfig =
+            Modal.newConfig
+                { noOpMsg = Ignored
+                , closeMsg = ClickedClosePdfDownloadError
+                , visibility = modalVisibility
+                }
+                |> Modal.withHeader ""
+                |> Modal.withBody content
+                |> Modal.withFooter content
     in
-    Modal.view
-        modalVisibility
-        { closeMsg = ClickedClosePdfDownloadError
-        , ignoreMsg = Ignored
-        , content = content
-        }
+    Modal.view downloadPdfModalConfig
 
 
 viewNewPinModal : Model -> Shared -> Html Msg
@@ -365,12 +370,10 @@ viewNewPinModal model shared =
                             []
                 }
 
-        modalContent =
-            div [ class "display flex flex-col justify-around h-full" ]
+        body =
+            div []
                 [ div []
-                    [ p [ class "w-full font-medium text-heading text-2xl mb-2" ]
-                        [ text (tr "profile.changePin") ]
-                    , p [ class "text-sm" ]
+                    [ p [ class "text-sm" ]
                         [ text (tr "profile.changePinPrompt") ]
                     ]
                 , div [ class "mb-4" ] [ pinField ]
@@ -380,13 +383,17 @@ viewNewPinModal model shared =
                     ]
                     [ text (tr "profile.pin.button") ]
                 ]
+
+        changePinModalConfig =
+            Modal.newConfig
+                { noOpMsg = Ignored
+                , closeMsg = ClickedCloseChangePin
+                , visibility = model.newPinModalVisibility
+                }
+                |> Modal.withHeader (tr "profile.changePin")
+                |> Modal.withBody body
     in
-    Modal.view
-        model.newPinModalVisibility
-        { ignoreMsg = Ignored
-        , closeMsg = ClickedCloseChangePin
-        , content = modalContent
-        }
+    Modal.view changePinModalConfig
 
 
 viewButton : String -> Msg -> Html Msg
