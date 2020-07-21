@@ -82,7 +82,8 @@ module.exports = {
         grey: '#D4D4D4',
         'light-grey': '#EEEEEE',
         'text-grey': '#666666',
-        'border-grey': '#E0E0E0'
+        'border-grey': '#E0E0E0',
+        'body-black': '#4a4a4a'
       },
       flexGrow: {
         '1': 1,
@@ -135,6 +136,11 @@ module.exports = {
       },
       opacity: {
         '10': '0.1'
+      },
+      screens: {
+        'xs-max': {
+          'max': '320px'
+        }
       }
     }
   },

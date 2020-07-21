@@ -27,6 +27,7 @@ import Page.NotFound as NotFound
 import Page.Notification as Notification
 import Page.PaymentHistory as PaymentHistory
 import Page.Profile as Profile
+import Page.Profile.Editor as ProfileEditor
 import Page.PublicProfile as PublicProfile
 import Page.Register as Register
 import Page.Shop as Shop
@@ -162,6 +163,7 @@ type Status
     | Login Login.Model
     | PublicProfile PublicProfile.Model
     | Profile Profile.Model
+    | ProfileEditor ProfileEditor.Model
     | Register (Maybe String) Register.Model
     | Shop Shop.Filter Shop.Model
     | ShopEditor (Maybe String) ShopEditor.Model
@@ -197,6 +199,7 @@ type Msg
     | GotPublicProfileMsg PublicProfile.Msg
     | GotPaymentHistoryMsg PaymentHistory.Msg
     | GotProfileMsg Profile.Msg
+    | GotProfileEditorMsg ProfileEditor.Msg
     | GotRegisterMsg Register.Msg
     | GotShopMsg Shop.Msg
     | GotShopEditorMsg ShopEditor.Msg
@@ -374,6 +377,11 @@ update msg model =
         ( GotProfileMsg subMsg, Profile subModel ) ->
             Profile.update subMsg subModel
                 >> updateLoggedInUResult Profile GotProfileMsg model
+                |> withLoggedIn
+
+        ( GotProfileEditorMsg subMsg, ProfileEditor subModel ) ->
+            ProfileEditor.update subMsg subModel
+                >> updateLoggedInUResult ProfileEditor GotProfileEditorMsg model
                 |> withLoggedIn
 
         ( GotCommunitySettingsMsg subMsg, CommunitySettings subModel ) ->
@@ -751,6 +759,11 @@ changeRouteTo maybeRoute model =
                 >> updateStatusWith Profile GotProfileMsg model
                 |> withLoggedIn Route.Profile
 
+        Just Route.ProfileEditor ->
+            ProfileEditor.init
+                >> updateStatusWith ProfileEditor GotProfileEditorMsg model
+                |> withLoggedIn Route.ProfileEditor
+
         Just Route.Dashboard ->
             Dashboard.init
                 >> updateStatusWith Dashboard GotDashboardMsg model
@@ -997,6 +1010,9 @@ msgToString msg =
         GotProfileMsg subMsg ->
             "GotProfileMsg" :: Profile.msgToString subMsg
 
+        GotProfileEditorMsg subMsg ->
+            "GotProfileEditorMsg" :: ProfileEditor.msgToString subMsg
+
         GotRegisterMsg subMsg ->
             "GotRegisterMsg" :: Register.msgToString subMsg
 
@@ -1171,6 +1187,9 @@ view model =
 
         Profile subModel ->
             viewLoggedIn subModel LoggedIn.Profile GotProfileMsg Profile.view
+
+        ProfileEditor subModel ->
+            viewLoggedIn subModel LoggedIn.ProfileEditor GotProfileEditorMsg ProfileEditor.view
 
         Shop _ subModel ->
             viewLoggedIn subModel LoggedIn.Shop GotShopMsg Shop.view

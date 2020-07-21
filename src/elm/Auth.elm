@@ -20,8 +20,8 @@ import Asset.Icon as Icon
 import Browser.Events
 import Eos.Account as Eos
 import Graphql.Http
-import Html exposing (Html, a, button, div, h2, img, input, label, li, p, span, strong, text, textarea, ul)
-import Html.Attributes exposing (attribute, autocomplete, class, disabled, for, id, maxlength, placeholder, required, src, title, type_, value)
+import Html exposing (Html, a, button, div, h2, img, label, li, p, span, strong, text, textarea, ul)
+import Html.Attributes exposing (autocomplete, class, disabled, for, id, required, src, title, type_, value)
 import Html.Events exposing (onClick, onInput, onSubmit)
 import I18Next exposing (t)
 import Json.Decode as Decode
@@ -35,6 +35,7 @@ import Task
 import UpdateResult as UR
 import Utils
 import Validate exposing (Validator, validate)
+import View.Pin as Pin
 
 
 {-| Authentication of a user with Passphrase or Private Key.
@@ -189,19 +190,13 @@ pinValidator =
                 pinConfirmed =
                     form.enteredPinConfirmation
 
-                hasCorrectLength p =
-                    String.length p == 6
-
-                hasOnlyDigits p =
-                    String.all Char.isDigit p
-
                 isPinConfirmedCorrectly =
                     pin == pinConfirmed
             in
-            if not (hasCorrectLength pin) || not (hasOnlyDigits pin) then
+            if not (Pin.isValid pin) then
                 [ ( Pin, "auth.pin.shouldHaveSixDigitsError" ) ]
 
-            else if not (hasCorrectLength pinConfirmed) || not (hasOnlyDigits pinConfirmed) then
+            else if not (Pin.isValid pinConfirmed) then
                 [ ( PinConfirmation, "auth.pin.shouldHaveSixDigitsError" ) ]
 
             else if not isPinConfirmedCorrectly then
@@ -215,7 +210,7 @@ pinValidator =
 encodeLoginFormData : LoginFormData -> Value
 encodeLoginFormData formData =
     Encode.object
-        [ ( "privateKey", Encode.string formData.passphrase )
+        [ ( "passphrase", Encode.string formData.passphrase )
         , ( "usePin"
           , case formData.usePin of
                 Nothing ->
@@ -278,24 +273,24 @@ view isModal shared model =
 
         LoginWithPin ->
             case shared.maybeAccount of
-                Just ( accountName, True ) ->
-                    viewLoginWithPin accountName False shared model
+                Just ( _, True ) ->
+                    viewLoginWithPin False shared model
 
                 _ ->
                     viewLoginSteps isModal shared model LoginStepPassphrase
 
         LoggingInWithPin ->
             case shared.maybeAccount of
-                Just ( accountName, True ) ->
-                    viewLoginWithPin accountName True shared model
+                Just ( _, True ) ->
+                    viewLoginWithPin True shared model
 
                 _ ->
                     viewLoginSteps isModal shared model LoginStepPassphrase
 
         LoggedInWithPin _ ->
             case shared.maybeAccount of
-                Just ( accountName, True ) ->
-                    viewLoginWithPin accountName True shared model
+                Just ( _, True ) ->
+                    viewLoginWithPin True shared model
 
                 _ ->
                     viewLoginSteps isModal shared model LoginStepPassphrase
@@ -482,30 +477,31 @@ viewMultipleAccount accounts form isDisabled shared model =
             accounts
 
 
-viewLoginWithPin : Eos.Name -> Bool -> Shared -> Model -> List (Html Msg)
-viewLoginWithPin accountName isDisabled shared model =
+{-| Popup asking the logged-in user to enter the PIN when needed.
+-}
+viewLoginWithPin : Bool -> Shared -> Model -> List (Html Msg)
+viewLoginWithPin isDisabled shared model =
     let
         text_ s =
             Html.text (t shared.translations s)
-
-        tr id_ replaces =
-            I18Next.tr shared.translations I18Next.Curly id_ replaces
     in
-    [ div [ class "card__login-header" ]
-        [ p [ class "card__pin__prompt" ]
-            [ text (tr "auth.loginPin" [ ( "accountName", Eos.nameToString accountName ) ]) ]
+    [ div []
+        [ p [ class "w-full font-medium text-heading text-2xl mb-2" ]
+            [ text_ "auth.login.modalFormTitle"
+            ]
+        , p [ class "text-sm" ]
+            [ text_ "auth.login.enterPinToContinue" ]
         , viewAuthError shared model.loginError
         ]
     , Html.form
-        [ class "card__pin__input__group"
-        , onSubmit SubmittedLoginPIN
+        [ onSubmit SubmittedLoginPIN
         ]
         [ viewPin model shared
         , button
-            [ class "btn btn--primary btn--login flex000"
+            [ class "button button-primary w-full"
             , disabled isDisabled
             ]
-            [ text_ "auth.login.submit" ]
+            [ text_ "auth.login.continue" ]
         ]
     ]
 
@@ -521,21 +517,6 @@ viewAuthError shared maybeLoginError =
                 [ p [ class "text-white" ]
                     [ text (t shared.translations error) ]
                 ]
-
-
-toggleViewPin : Bool -> String -> String -> Msg -> Html Msg
-toggleViewPin isVisible showLabel hideLabel msg =
-    button
-        [ class "absolute mt-3 uppercase text-xs right-0 mr-3 text-orange-300"
-        , onClick msg
-        , attribute "tabindex" "-1"
-        ]
-        [ if isVisible then
-            text hideLabel
-
-          else
-            text showLabel
-        ]
 
 
 viewFieldLabel : Shared -> String -> String -> Html msg
@@ -961,10 +942,10 @@ viewPin ({ form } as model) shared =
             case shared.maybeAccount of
                 Just _ ->
                     -- Popup with PIN input for logged-in user has different label
-                    "auth.pinPopup"
+                    I18Next.t shared.translations "auth.pinPopup.label"
 
                 Nothing ->
-                    "auth.pin"
+                    I18Next.t shared.translations "auth.pin.label"
 
         isPinError ( problemType, _ ) =
             case problemType of
@@ -976,15 +957,16 @@ viewPin ({ form } as model) shared =
 
         errors =
             List.filter isPinError model.problems
+                |> List.map (\( _, err ) -> err)
     in
-    viewPinField
+    Pin.view
         shared
         { labelText = pinLabel
         , inputId = "pinInput"
         , inputValue = form.enteredPin
-        , onInputMsgConstructor = EnteredPin
+        , onInputMsg = EnteredPin
+        , onToggleMsg = TogglePinVisibility
         , isVisible = model.pinVisibility
-        , toggleVisibilityMsg = TogglePinVisibility
         , errors = errors
         }
 
@@ -1002,81 +984,15 @@ viewPinConfirmation ({ form } as model) shared =
 
         errors =
             List.filter isPinConfirmError model.problems
+                |> List.map (\( _, err ) -> err)
     in
-    viewPinField
+    Pin.view
         shared
-        { labelText = "auth.pinConfirmation"
+        { labelText = I18Next.t shared.translations "auth.pinConfirmation.label"
         , inputId = "pinInputConfirmation"
         , inputValue = form.enteredPinConfirmation
-        , onInputMsgConstructor = EnteredPinConf
+        , onInputMsg = EnteredPinConf
+        , onToggleMsg = TogglePinConfirmationVisibility
         , isVisible = model.pinConfirmationVisibility
-        , toggleVisibilityMsg = TogglePinConfirmationVisibility
         , errors = errors
         }
-
-
-type alias PinFieldData =
-    { labelText : String
-    , inputId : String
-    , inputValue : String
-    , onInputMsgConstructor : String -> Msg
-    , isVisible : Bool
-    , toggleVisibilityMsg : Msg
-    , errors : List ( Field, String )
-    }
-
-
-viewPinField : Shared -> PinFieldData -> Html Msg
-viewPinField shared { labelText, inputId, inputValue, onInputMsgConstructor, isVisible, toggleVisibilityMsg, errors } =
-    let
-        t =
-            I18Next.t shared.translations
-
-        tr : String -> I18Next.Replacements -> String
-        tr =
-            I18Next.tr shared.translations I18Next.Curly
-
-        inputType =
-            if isVisible then
-                -- `"text"` is used here because with `"number"` field restrictions for the PIN
-                -- don't apply after toggling visibility (see `trimPinNumber` function).
-                "text"
-
-            else
-                "password"
-
-        errorClass =
-            if List.length errors > 0 then
-                "field-with-error"
-
-            else
-                ""
-    in
-    div [ class "relative mb-10" ]
-        [ viewFieldLabel shared labelText inputId
-        , input
-            [ class "form-input min-w-full tracking-widest"
-            , class errorClass
-            , type_ inputType
-            , id inputId
-            , placeholder "******"
-            , maxlength 6
-            , value inputValue
-            , onInput onInputMsgConstructor
-            , required True
-            , autocomplete False
-            , attribute "inputmode" "numeric"
-            ]
-            []
-        , div [ class "input-label pr-1 text-right text-white font-bold mt-1 absolute right-0" ]
-            [ text <|
-                tr
-                    "edit.input_counter"
-                    [ ( "current", String.fromInt <| String.length inputValue )
-                    , ( "max", "6" )
-                    ]
-            ]
-        , toggleViewPin isVisible (t "auth.pin.toggle.show") (t "auth.pin.toggle.hide") toggleVisibilityMsg
-        , ul [ class "form-error-on-dark-bg absolute" ]
-            (List.map (\( _, errorDescription ) -> li [] [ text (t errorDescription) ]) errors)
-        ]

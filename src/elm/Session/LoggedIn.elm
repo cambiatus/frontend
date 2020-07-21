@@ -204,6 +204,7 @@ type Page
     | FAQ
     | Profile
     | PublicProfile
+    | ProfileEditor
     | PaymentHistory
 
 
@@ -217,7 +218,7 @@ view thisMsg page ({ shared } as model) content =
             Shared.viewFullError shared
                 err
                 ClickedTryAgainTranslation
-                "An error ocurred while loading translation."
+                "An error occurred while loading translation."
                 |> Html.map thisMsg
 
         ( _, Loading _ ) ->
@@ -227,7 +228,7 @@ view thisMsg page ({ shared } as model) content =
             Shared.viewFullGraphqlError shared
                 err
                 (ClickedTryAgainProfile accountName)
-                "An error ocurred while loading profile."
+                "An error occurred while loading profile."
                 |> Html.map thisMsg
 
         ( _, Loaded profile_ ) ->
@@ -246,7 +247,7 @@ viewFeedback status message =
                     "bg-red"
     in
     div
-        [ class "sticky top-0 w-full"
+        [ class "sticky z-10 top-0 w-full"
         , classList [ ( color, True ) ]
         , style "display" "grid"
         , style "grid-template" "\". text x\" 100% / 10% 80% 10%"
@@ -283,7 +284,7 @@ viewHelper thisMsg page profile_ ({ shared } as model) content =
                 onClick ClosedAuthModal
 
             else
-                style "" ""
+                onClick Ignored
     in
     div
         [ class "min-h-screen flex flex-col" ]
@@ -303,23 +304,30 @@ viewHelper thisMsg page profile_ ({ shared } as model) content =
             [ content
             ]
         , viewFooter shared
-        , div [ onClickCloseAny ] [] |> Html.map thisMsg
         , if model.showAuthModal then
             div
-                [ classList
-                    [ ( "modal-old", True )
-                    , ( "fade-in", True )
-                    ]
-                , onClickCloseAny
-                ]
+                [ class "modal container fade-in" ]
                 [ div
-                    [ class "card card--register card--modal"
+                    [ class "modal-bg"
+                    , onClickCloseAny
+                    ]
+                    []
+                , div
+                    [ class "modal-content overflow-auto"
                     , stopPropagationOn "click"
                         (Decode.succeed ( Ignored, True ))
                     ]
-                    (Auth.view True shared model.auth
-                        |> List.map (Html.map GotAuthMsg)
-                    )
+                    [ button
+                        [ class "absolute top-0 right-0 mx-4 my-4"
+                        , onClickCloseAny
+                        ]
+                        [ Icons.close "text-gray-400 fill-current"
+                        ]
+                    , div [ class "display flex flex-col justify-around h-full" ]
+                        (Auth.view True shared model.auth
+                            |> List.map (Html.map GotAuthMsg)
+                        )
+                    ]
                 ]
                 |> Html.map thisMsg
 
@@ -355,7 +363,7 @@ viewHeader ({ shared } as model) profile_ =
                   else
                     text ""
                 ]
-            , div [ class "relative z-10" ]
+            , div [ class "relative z-20" ]
                 [ button
                     [ class "h-12 z-10 bg-gray-200 py-2 px-3 relative hidden lg:visible lg:flex"
                     , classList [ ( "rounded-tr-lg rounded-tl-lg", model.showUserNav ) ]
@@ -631,7 +639,7 @@ isActive page route =
 
 viewFooter : Shared -> Html msg
 viewFooter _ =
-    footer [ class "bg-white w-full flex flex-wrap mx-auto border-t border-grey p-4 pt-6 h-40 bottom-0" ]
+    footer [ class "bg-white w-full flex flex-wrap mx-auto border-t border-grey-500 p-4 pt-6 h-40 bottom-0" ]
         [ p [ class "text-sm flex w-full justify-center items-center" ]
             [ text "Created with"
             , Icons.heart

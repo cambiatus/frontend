@@ -1,8 +1,31 @@
-module Icons exposing (alert, arrowDown, back, close, communities, dashboard, exclamation, flag, heart, languages, notification, profile, remove, search, settings, shop, success, thumbDown, thumbUp, trash)
+module Icons exposing
+    ( alert
+    , arrowDown
+    , back
+    , camera
+    , close
+    , communities
+    , dashboard
+    , edit
+    , exclamation
+    , flag
+    , heart
+    , languages
+    , notification
+    , profile
+    , remove
+    , search
+    , settings
+    , shop
+    , success
+    , thumbDown
+    , thumbUp
+    , trash
+    )
 
 import Html exposing (Html)
 import Svg exposing (Svg, svg)
-import Svg.Attributes exposing (class, clipRule, cx, cy, d, fill, fillRule, height, r, viewBox, width)
+import Svg.Attributes exposing (class, clipPath, clipRule, cx, cy, d, fill, fillRule, height, id, r, stroke, strokeLinecap, strokeLinejoin, strokeWidth, style, viewBox, width)
 
 
 dashboard : String -> Svg msg
@@ -64,6 +87,28 @@ success classes =
             , d "M13.3238 25C12.7916 24.9995 12.2815 24.7955 11.9054 24.4328L2.5387 15.4087C1.80178 14.6467 1.82353 13.4594 2.58788 12.723C3.35224 11.9866 4.58463 11.9657 5.37547 12.6756L13.3238 20.3332L26.6245 7.519C27.4154 6.80903 28.6478 6.82998 29.4121 7.56638C30.1765 8.30278 30.1982 9.4901 29.4613 10.252L14.7422 24.4328C14.3661 24.7955 13.8559 24.9995 13.3238 25Z"
             ]
             []
+        ]
+
+
+camera : Svg msg
+camera =
+    svg
+        [ viewBox "0 0 16 16"
+        , style "fill: none"
+        ]
+        [ Svg.clipPath [ id "a" ]
+            [ Svg.path [ d "m0 0h16v16h-16z" ] []
+            ]
+        , Svg.g
+            [ clipPath "url(#a)"
+            , stroke "#fff"
+            , strokeLinecap "round"
+            , strokeLinejoin "round"
+            , strokeWidth "2"
+            ]
+            [ Svg.path [ d "m15.3334 12.6667c0 .3536-.1405.6927-.3906.9428-.25.25-.5892.3905-.9428.3905h-11.99998c-.35362 0-.69276-.1405-.94281-.3905-.250047-.2501-.390523-.5892-.390523-.9428v-7.33337c0-.35362.140476-.69276.390523-.94281.25005-.25004.58919-.39052.94281-.39052h2.66667l1.33333-2h3.99998l1.3334 2h2.6666c.3536 0 .6928.14048.9428.39052.2501.25005.3906.58919.3906.94281z" ] []
+            , Svg.path [ d "m7.99998 11.3333c1.47276 0 2.66662-1.1939 2.66662-2.66663 0-1.47276-1.19386-2.66667-2.66662-2.66667s-2.66667 1.19391-2.66667 2.66667c0 1.47273 1.19391 2.66663 2.66667 2.66663z" ] []
+            ]
         ]
 
 
@@ -130,6 +175,18 @@ exclamation class_ =
 trash : String -> Svg msg
 trash class_ =
     svg [ width "24", height "24", viewBox "0 0 24 24", class class_ ] [ Svg.path [ fillRule "evenodd", clipRule "evenOdd", d "M20.3077 5.16788H16.3477C15.6644 3.41192 13.9331 2.25 12 2.25C10.0669 2.25 8.33558 3.41192 7.65231 5.16788H3.69231C3.30996 5.16788 3 5.46885 3 5.84013C3 6.2114 3.30996 6.51237 3.69231 6.51237H4.15385V20.4055C4.15385 21.148 4.77376 21.75 5.53846 21.75H18C18.7647 21.75 19.3846 21.148 19.3846 20.4055V6.51237H20.3077C20.69 6.51237 21 6.2114 21 5.84013C21 5.46885 20.69 5.16788 20.3077 5.16788ZM12 3.5993C13.26 3.5993 14.3538 4.04746 14.8938 5.16788H9.10615C9.64615 4.04298 10.74 3.5993 12 3.5993ZM18 20.4055H16.1538V12.7867C16.1538 12.4154 15.8439 12.1144 15.4615 12.1144C15.0792 12.1144 14.7692 12.4154 14.7692 12.7867V20.4055H12.4615V10.0977C12.4615 9.72643 12.1516 9.42545 11.7692 9.42545C11.3869 9.42545 11.0769 9.72643 11.0769 10.0977V20.4055H8.76923V12.7867C8.76923 12.4154 8.45927 12.1144 8.07692 12.1144C7.69457 12.1144 7.38462 12.4154 7.38462 12.7867V20.4055H5.53846V6.51237H18V20.4055Z", fill "#DB1B1B" ] [] ]
+
+
+edit : String -> Svg msg
+edit class_ =
+    svg [ fill "none", height "26", viewBox "0 0 24 26", width "24", class class_ ]
+        [ Svg.path [ clipRule "evenodd", d "M20.3091 24.2273H1.84628V1.77273H12.3085V0H1.84628C0.826607 0 0 0.793677 0 1.77273V24.2273C0 25.2063 0.826607 26 1.84628 26H20.3091C21.3287 26 22.1553 25.2063 22.1553 24.2273V13H20.3091V24.2273Z", fill "#F99D33", fillRule "evenodd" ]
+            []
+        , Svg.text ""
+        , Svg.path [ clipRule "evenodd", d "M23.46 2.20989L22.1553 0.957161C21.4345 0.265907 20.2668 0.265907 19.5459 0.957161C19.5459 0.957161 9.28678 10.7958 9.13292 11.3926L8.67135 13.1653C8.51335 13.7699 8.69759 14.4096 9.15659 14.8503C9.61558 15.2911 10.2819 15.468 10.9115 15.3163L12.7578 14.8731C13.3732 14.7194 23.46 4.72125 23.46 4.72125C24.18 4.02914 24.18 2.90791 23.46 2.2158V2.20989ZM13.4901 11.7826L12.2285 10.5713L12.1854 10.5358L20.8506 2.2158L22.1553 3.46852L13.4901 11.7826Z", fill "#F99D33", fillRule "evenodd" ]
+            []
+        , Svg.text ""
+        ]
 
 
 settings : Svg msg

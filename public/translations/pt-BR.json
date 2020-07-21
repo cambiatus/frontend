@@ -410,6 +410,10 @@
     "edit_success": "Perfil salvo com sucesso",
     "locations": "Localização",
     "interests": "Interesses",
+    "12words": { "title": "Minhas 12 palavras", "button": "Baixar" },
+    "pin": { "title": "Meu PIN", "button": "Trocar" },
+    "changePin": "Troque seu PIN!",
+    "newPin": "Novo PIN",
     "actions": {
       "edit": "Editar",
       "viewPrivatekey": "Ver chave privada"

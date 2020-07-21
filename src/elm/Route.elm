@@ -19,6 +19,7 @@ type Route
     | LoginWithPrivateKey (Maybe Route)
     | Logout
     | Notification
+    | ProfileEditor
     | PublicProfile String
     | PaymentHistory String
     | Profile
@@ -77,6 +78,7 @@ parser url =
                         (Query.string "redirect")
             )
         , Url.map Logout (s "logout")
+        , Url.map ProfileEditor (s "profile" </> s "edit")
         , Url.map PublicProfile (s "profile" </> string)
         , Url.map PaymentHistory (s "payments" </> string)
         , Url.map Profile (s "profile")
@@ -225,6 +227,9 @@ routeToString route =
 
                 Notification ->
                     ( [ "notification" ], [] )
+
+                ProfileEditor ->
+                    ( [ "profile", "edit" ], [] )
 
                 PublicProfile accountName ->
                     ( [ "profile", accountName ], [] )

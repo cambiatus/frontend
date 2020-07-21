@@ -1,47 +1,29 @@
-module Page.Profile exposing
-    ( Model
-    , Msg
-    , init
-    , jsAddressToMsg
-    , msgToString
-    , subscription
-    , update
-    , view
-    )
+module Page.Profile exposing (Model, Msg, init, jsAddressToMsg, msgToString, update, view, viewPrivateInfo, viewPublicInfo)
 
-import Api
 import Api.Graphql
-import Asset.Icon as Icon
-import Avatar exposing (Avatar)
-import Browser.Events
-import Dict exposing (Dict)
-import Eos
+import Avatar
+import Browser.Dom as Dom
+import Eos exposing (Symbol)
 import Eos.Account as Eos
-import File exposing (File)
 import Graphql.Http
-import Html exposing (Html, br, button, div, h2, h3, h4, img, input, label, p, span, text, textarea)
-import Html.Attributes exposing (accept, class, classList, disabled, for, id, maxlength, multiple, placeholder, required, src, style, title, type_, value)
-import Html.Events exposing (onClick, onInput, onSubmit, stopPropagationOn)
+import Html exposing (Html, a, button, div, input, label, li, p, span, text, ul)
+import Html.Attributes exposing (checked, class, classList, for, id, name, type_)
+import Html.Events exposing (onClick)
 import Http
 import I18Next exposing (t)
+import Icons
 import Json.Decode as Decode exposing (Value)
 import Json.Encode as Encode
 import Page
-import Profile exposing (Profile, ProfileForm)
+import Profile exposing (Profile)
 import PushSubscription exposing (PushSubscription)
+import Route
 import Session.LoggedIn as LoggedIn exposing (External(..), FeedbackStatus(..))
+import Session.Shared exposing (Shared)
 import Task
 import UpdateResult as UR
-import Utils
-
-
-
--- SUBSCRIPTION
-
-
-subscription : Model -> Sub Msg
-subscription _ =
-    Sub.map PressedEnter (Browser.Events.onKeyDown Utils.decodeEnterKeyDown)
+import View.Modal as Modal
+import View.Pin as Pin
 
 
 
@@ -70,16 +52,26 @@ init loggedIn =
 
 type alias Model =
     { status : Status
-    , privateKeyModal : Maybe String
-    , pushNotifications : Bool
+    , currentPin : Maybe String
+    , newPinModalVisibility : Modal.Visibility
+    , newPin : Maybe String
+    , isNewPinReadable : Bool
+    , newPinErrorMsg : Maybe String
+    , isPushNotificationsEnabled : Bool
+    , maybePdfDownloadedSuccessfully : Maybe Bool
     }
 
 
 initModel : LoggedIn.Model -> Model
 initModel _ =
     { status = Loading
-    , privateKeyModal = Nothing
-    , pushNotifications = False
+    , currentPin = Nothing
+    , newPinModalVisibility = Modal.hidden
+    , newPin = Nothing
+    , isNewPinReadable = True
+    , newPinErrorMsg = Nothing
+    , isPushNotificationsEnabled = False
+    , maybePdfDownloadedSuccessfully = Nothing
     }
 
 
@@ -87,14 +79,6 @@ type Status
     = Loading
     | LoadingFailed (Graphql.Http.Error (Maybe Profile))
     | Loaded Profile
-    | Editing Profile AvatarStatus ProfileForm
-    | Saving Profile AvatarStatus ProfileForm
-
-
-type AvatarStatus
-    = NotAsked
-    | Sending File Int
-    | SendingFailed File Http.Error
 
 
 
@@ -121,452 +105,343 @@ view loggedIn model =
                     Page.fullPageError (t loggedIn.shared.translations "profile.title") Http.Timeout
 
                 Loaded profile ->
-                    view_ loggedIn profile model
-
-                Editing profile avatarS form ->
-                    viewForm loggedIn False profile avatarS form
-
-                Saving profile avatarS form ->
-                    viewForm loggedIn True profile avatarS form
+                    div []
+                        [ Page.viewHeader loggedIn (t loggedIn.shared.translations "menu.profile") Route.Communities
+                        , viewPublicInfo loggedIn profile { hasTransferButton = False, hasEditLink = True }
+                        , viewPrivateInfo loggedIn model
+                        , viewNewPinModal model loggedIn.shared
+                        , viewDownloadPdfErrorModal model loggedIn
+                        ]
     in
     { title = title
     , content = content
     }
 
 
-view_ : LoggedIn.Model -> Profile -> Model -> Html Msg
-view_ loggedIn profile model =
+viewPrivateInfo : LoggedIn.Model -> Model -> Html Msg
+viewPrivateInfo loggedIn model =
     let
-        ipfsUrl =
-            loggedIn.shared.endpoints.ipfs
+        tr str =
+            t loggedIn.shared.translations str
 
-        text_ str =
-            text (t loggedIn.shared.translations str)
+        downloadAction =
+            case LoggedIn.maybePrivateKey loggedIn of
+                Just _ ->
+                    let
+                        currentPin =
+                            case model.currentPin of
+                                -- The case when "Download" PDF button pressed just after changing the PIN
+                                Just pin ->
+                                    pin
 
-        notification_prompt =
-            if model.pushNotifications then
-                "Disable Push Notifications"
+                                Nothing ->
+                                    loggedIn.auth.form.enteredPin
+                    in
+                    DownloadPdf currentPin
 
-            else
-                "profile.edit.push_notifications"
-    in
-    div [ class "container mx-auto px-4" ]
-        [ Page.viewTitle (t loggedIn.shared.translations "profile.title")
-        , div [ class "card profile-card" ]
-            [ div [ class "profile-info" ]
-                [ div [ class "profile-img" ]
-                    [ Avatar.view ipfsUrl profile.avatar "profile-img-avatar" ]
-                , div [ class "profile-info-container" ]
-                    [ div [ class "profile-info-meta" ]
-                        [ h3 [ class "profile-name" ]
-                            [ text (Profile.username profile) ]
-                        , span [ class "profile-email" ]
-                            [ text (Maybe.withDefault "" profile.email) ]
-                        , br [] []
-                        , br [] []
-                        , span [ class "profile-email" ]
-                            [ text (Eos.nameToString profile.account) ]
-                        ]
-                    , p [ class "profile-description" ]
-                        [ case profile.bio of
-                            Just bio ->
-                                text bio
-
-                            Nothing ->
-                                span [ class "text-gray" ] [ text_ "profile.edit.placeholders.bio" ]
-                        ]
-                    ]
-                ]
-            , div [ class "profile-location-interest" ]
-                [ div [ class "profile-location" ]
-                    [ h4 [ class "profile-title" ]
-                        [ Icon.location ""
-                        , span [] [ text_ "profile.edit.labels.localization" ]
-                        ]
-                    , case profile.localization of
-                        Just location ->
-                            p [] [ text location ]
-
-                        Nothing ->
-                            p [ class "text-gray" ]
-                                [ text_ "profile.edit.placeholders.localization" ]
-                    ]
-                , div [ class "profile-interests" ]
-                    [ h4 [ class "profile-title" ]
-                        [ Icon.star ""
-                        , span [] [ text_ "profile.edit.labels.interests" ]
-                        ]
-                    , if List.isEmpty profile.interests then
-                        p [ class "text-gray" ]
-                            [ text_ "profile.edit.placeholders.interests" ]
-
-                      else
-                        div [ class "tags" ]
-                            (List.map
-                                (\i ->
-                                    span []
-                                        [ text i ]
-                                )
-                                profile.interests
-                            )
-                    ]
-                ]
-            , viewBadges loggedIn
-            , div [ class "notification-settings-card", onClick RequestPush ]
-                [ button [ class "btn btn--primary" ]
-                    [ text_ notification_prompt ]
-                ]
-            , case LoggedIn.maybePrivateKey loggedIn of
                 Nothing ->
                     case loggedIn.shared.maybeAccount of
                         Just ( _, True ) ->
-                            button
-                                [ classList
-                                    [ ( "key-button", True )
-                                    , ( "circle-background", True )
-                                    , ( "circle-background--primary", True )
-                                    ]
-                                , onClick ClickedViewPrivateKeyAuth
-                                , type_ "button"
-                                , title (t loggedIn.shared.translations "profile.actions.viewPrivatekey")
-                                ]
-                                [ Icon.key "" ]
+                            ClickedViewPrivateKeyAuth
 
                         _ ->
-                            text ""
-
-                Just privateKey ->
-                    div []
-                        [ button
-                            [ classList
-                                [ ( "key-button", True )
-                                , ( "circle-background", True )
-                                , ( "circle-background--primary", True )
-                                ]
-                            , onClick (ClickedViewPrivateKey privateKey)
-                            , type_ "button"
-                            , title (t loggedIn.shared.translations "profile.actions.viewPrivatekey")
-                            ]
-                            [ Icon.key "" ]
-                        , button
-                            [ classList
-                                [ ( "key-button", True )
-                                , ( "circle-background", True )
-                                , ( "circle-background--primary", True )
-                                ]
-                            , onClick (DownloadPdf privateKey)
-                            , type_ "button"
-                            , title (t loggedIn.shared.translations "profile.actions.viewPrivatekey")
-                            ]
-                            [ Icon.key "" ]
-                        ]
-            , button
-                [ classList
-                    [ ( "edit-button", True )
-                    , ( "circle-background", True )
-                    , ( "circle-background--primary", True )
-                    ]
-                , onClick ClickedEdit
-                , type_ "button"
-                , title (t loggedIn.shared.translations "profile.actions.edit")
-                ]
-                [ Icon.edit "" ]
+                            Ignored
+    in
+    div [ class "bg-white mb-6" ]
+        [ ul [ class "container divide-y divide-gray-500 mx-auto px-4" ]
+            [ viewProfileItem
+                (tr "profile.12words.title")
+                (viewButton (tr "profile.12words.button") downloadAction)
+                Center
+            , viewProfileItem
+                (tr "profile.pin.title")
+                (viewButton (tr "profile.pin.button") ClickedChangePin)
+                Center
+            , viewProfileItem
+                (tr "notifications.title")
+                (viewTogglePush loggedIn model)
+                Center
             ]
-        , case model.privateKeyModal of
-            Nothing ->
-                text ""
-
-            Just pk ->
-                div
-                    [ onClick ClickedClosePrivateKey
-                    ]
-                    [ div
-                        [ class "card card--modal"
-                        , stopPropagationOn "click"
-                            (Decode.succeed ( Ignored, True ))
-                        , style "position" "relative"
-                        , style "align-items" "stretch"
-                        ]
-                        [ h2 [ class "card__title" ]
-                            [ text_ "profile.edit.labels.privateKey" ]
-                        , br [] []
-                        , p [] [ text_ "profile.edit.placeholders.privateKey" ]
-                        , br [] []
-                        , p [] [ text pk ]
-                        , button
-                            [ class "card__close-btn"
-                            , onClick ClickedClosePrivateKey
-                            , type_ "button"
-                            ]
-                            [ Icon.close "" ]
-                        ]
-                    ]
         ]
 
 
-viewForm : LoggedIn.Model -> Bool -> Profile -> AvatarStatus -> ProfileForm -> Html Msg
-viewForm loggedIn isDisabled profile avatarS form =
+type alias PublicInfoConfig =
+    { hasTransferButton : Bool
+    , hasEditLink : Bool
+    }
+
+
+viewPublicInfo : LoggedIn.Model -> Profile -> PublicInfoConfig -> Html msg
+viewPublicInfo loggedIn profile { hasTransferButton, hasEditLink } =
     let
+        tr txt =
+            t loggedIn.shared.translations txt
+
+        userName =
+            Maybe.withDefault "" profile.userName
+
+        email =
+            Maybe.withDefault "" profile.email
+
+        bio =
+            Maybe.withDefault "" profile.bio
+
+        location =
+            Maybe.withDefault "" profile.localization
+
+        account =
+            Eos.nameToString profile.account
+
         ipfsUrl =
             loggedIn.shared.endpoints.ipfs
-
-        text_ s =
-            text (t loggedIn.shared.translations s)
-
-        textr_ s m =
-            text (I18Next.tr loggedIn.shared.translations I18Next.Curly s m)
-
-        plcH s =
-            placeholder (t loggedIn.shared.translations s)
     in
-    Html.form
-        [ onSubmit ClickedSave
-        ]
-        [ Page.viewTitle (t loggedIn.shared.translations "profile.title")
-        , div
-            [ class "card profile-card" ]
-            [ div [ class "profile-info" ]
-                [ viewAvatar ipfsUrl profile (t loggedIn.shared.translations "profile.edit.labels.avatar") avatarS
-                , div [ class "profile-info-container" ]
-                    [ div [ class "profile-info-meta" ]
-                        [ h3 [ class "profile-name" ]
-                            [ formField
-                                [ input
-                                    [ type_ "text"
-                                    , class "input profile-input-name"
-                                    , onInput EnteredName
-                                    , value form.name
-                                    , disabled isDisabled
-                                    , plcH "profile.edit.placeholders.name"
-                                    , maxlength 255
-                                    ]
-                                    []
-                                , viewFieldError "name" form.errors
-                                ]
-                            ]
-                        , span [ class "profile-email" ]
-                            [ formField
-                                [ input
-                                    [ type_ "email"
-                                    , class "input"
-                                    , onInput EnteredEmail
-                                    , value form.email
-                                    , disabled isDisabled
-                                    , plcH "profile.edit.placeholders.email"
-                                    ]
-                                    []
-                                , viewFieldError "email" form.errors
-                                ]
-                            ]
-                        ]
-                    , p [ class "profile-description" ]
-                        [ formField
-                            [ textarea
-                                [ class "input"
-                                , onInput EnteredBio
-                                , value form.bio
-                                , disabled isDisabled
-                                , plcH "profile.edit.placeholders.bio"
-                                , maxlength 255
-                                ]
-                                []
-                            , viewFieldError "bio" form.errors
-                            ]
-                        , div [ class "input-counter" ]
-                            [ textr_ "edit.input_counter"
-                                [ ( "current"
-                                  , String.fromInt (String.length form.bio)
-                                  )
-                                , ( "max", "255" )
-                                ]
-                            ]
-                        ]
+    div [ class "bg-white mb-6" ]
+        [ div [ class "container p-4 mx-auto" ]
+            [ div
+                [ classList <|
+                    let
+                        hasBottomBorder =
+                            not hasTransferButton
+                    in
+                    [ ( "pb-4", True )
+                    , ( "border-b border-gray-500", hasBottomBorder )
                     ]
                 ]
-            , div [ class "profile-location-interest" ]
-                [ div [ class "profile-location" ]
-                    [ h4 [ class "profile-title" ]
-                        [ Icon.location ""
-                        , span [] [ text_ "profile.edit.labels.localization" ]
-                        ]
-                    , formField
-                        [ input
-                            [ type_ "text"
-                            , class "input"
-                            , onInput EnteredLocalization
-                            , value form.localization
-                            , disabled isDisabled
-                            , plcH "profile.edit.placeholders.localization"
-                            , maxlength 255
+                [ div [ class "flex mb-4 items-center flex-wrap" ]
+                    [ Avatar.view ipfsUrl profile.avatar "w-20 h-20 mr-6 xs-max:w-16 xs-max:h-16 xs-max:mr-3"
+                    , div [ class "flex-grow flex items-center justify-between" ]
+                        [ ul [ class "text-sm text-gray-900" ]
+                            [ li [ class "font-medium text-body-black text-2xl xs-max:text-xl" ]
+                                [ text userName ]
+                            , li [] [ text email ]
+                            , li [] [ text account ]
                             ]
-                            []
-                        , viewFieldError "localization" form.errors
-                        ]
-                    ]
-                , div [ class "profile-interests" ]
-                    [ h4 [ class "profile-title" ]
-                        [ Icon.star ""
-                        , span [] [ text_ "profile.edit.labels.interests" ]
-                        ]
-                    , formField
-                        [ Html.form
-                            [ onSubmit ClickedAddInterest
-                            , class "input-group"
-                            ]
-                            [ input
-                                [ type_ "text"
-                                , class "input flex100"
-                                , onInput EnteredInterest
-                                , value form.interest
-                                , disabled isDisabled
-                                , plcH "profile.edit.placeholders.interests"
-                                , required True
-                                , maxlength 255
+                        , if hasEditLink then
+                            a
+                                [ class "ml-2"
+                                , Route.href Route.ProfileEditor
                                 ]
-                                []
-                            , button
-                                [ class "btn btn--outline flex000"
-                                , disabled isDisabled
-                                ]
-                                [ text_ "menu.add" ]
-                            ]
-                        , viewFieldError "interests" form.errors
+                                [ Icons.edit "" ]
+
+                          else
+                            text ""
                         ]
-                    , div [ class "form-tags" ]
-                        (List.indexedMap
-                            (\index i ->
-                                div []
-                                    [ span [] [ text i ]
-                                    , button
-                                        [ type_ "button"
-                                        , onClick (ClickedRemoveInterest index)
-                                        ]
-                                        [ Icon.close "" ]
-                                    ]
-                            )
-                            form.interests
-                        )
                     ]
+                , p [ class "text-sm text-gray-900" ]
+                    [ text bio ]
                 ]
-            ]
-        , div [ class "btn-row" ]
-            [ button
-                [ classList
-                    [ ( "btn", True )
-                    , ( "btn--primary", True )
-                    , ( "btn--outline", True )
-                    ]
-                , disabled isDisabled
-                , type_ "button"
-                , onClick ClickedEditCancel
-                ]
-                [ text_ "menu.cancel" ]
-            , button
-                [ classList
-                    [ ( "btn", True )
-                    , ( "btn--primary", True )
-                    ]
-                , disabled isDisabled
-                ]
-                [ text_ "profile.edit.submit" ]
-            ]
-        ]
-
-
-viewAvatar : String -> Profile -> String -> AvatarStatus -> Html Msg
-viewAvatar ipfsUrl profile plchldr avatarS =
-    let
-        isUploading =
-            case avatarS of
-                NotAsked ->
-                    False
-
-                Sending _ _ ->
-                    True
-
-                SendingFailed _ _ ->
-                    False
-    in
-    div []
-        [ input
-            [ id "profile-upload-avatar"
-            , class "profile-img-input"
-            , type_ "file"
-            , accept "image/*"
-            , Page.onFileChange EnteredAvatar
-            , multiple False
-            , disabled isUploading
-            ]
-            []
-        , label
-            [ class "profile-img"
-            , for "profile-upload-avatar"
-            , title plchldr
-            ]
-            [ Avatar.view ipfsUrl profile.avatar "profile-img-avatar"
-            , if isUploading then
-                div [ class "profile-img-loading" ]
-                    [ div [ class "spinner" ] [] ]
+            , if hasTransferButton then
+                viewTransferButton loggedIn.shared loggedIn.selectedCommunity account
 
               else
-                div [ class "profile-img-hover" ] [ Icon.upload "" ]
+                text ""
+            , ul [ class "divide-y divide-gray-500" ]
+                [ viewProfileItem
+                    (tr "profile.locations")
+                    (text location)
+                    Center
+                , viewProfileItem
+                    (tr "profile.interests")
+                    (text (String.join ", " profile.interests))
+                    Top
+                ]
             ]
         ]
 
 
-viewBadges : LoggedIn.Model -> Html msg
-viewBadges loggedIn =
+type VerticalAlign
+    = Top
+    | Center
+
+
+viewProfileItem : String -> Html msg -> VerticalAlign -> Html msg
+viewProfileItem lbl content vAlign =
+    let
+        vAlignClass =
+            case vAlign of
+                Top ->
+                    "items-start"
+
+                Center ->
+                    "items-center"
+    in
+    li
+        [ class "flex justify-between py-4"
+        , class vAlignClass
+        ]
+        [ span [ class "text-sm leading-6 mr-4" ]
+            [ text lbl ]
+        , span [ class "text-indigo-500 font-medium text-sm text-right" ]
+            [ content ]
+        ]
+
+
+viewTransferButton : Shared -> Symbol -> String -> Html msg
+viewTransferButton shared symbol user =
     let
         text_ s =
-            text (t loggedIn.shared.translations s)
+            text (t shared.translations s)
     in
-    div [ class "profile-badges" ]
-        [ h4 [ class "profile-title" ]
-            [ Icon.brightness7 ""
-            , span [] [ text_ "profile.badge.title" ]
+    div [ class "mt-3 mb-2" ]
+        [ a
+            [ class "button button-primary w-full"
+            , Route.href (Route.Transfer symbol (Just user))
             ]
-        , div [ class "profile-badges-list" ]
-            [ div [ class "profile-badges-item profile-badges-item--inactive" ]
-                [ img [ src "images/badges-currency-starter.svg" ]
-                    []
-                , span [] [ text_ "profile.badge.currencyStarter" ]
-                ]
-            , div [ class "profile-badges-item" ]
-                [ img [ src "images/badge-developer.svg" ]
-                    []
-                , span [] [ text_ "profile.badge.developer" ]
-                ]
-            , div [ class "profile-badges-item" ]
-                [ img [ src "images/badge-seed-team.svg" ]
-                    []
-                , span [] [ text_ "profile.badge.seedTeam" ]
-                ]
-            , div [ class "profile-badges-item" ]
-                [ img [ src "images/badges-mentor.svg" ]
-                    []
-                , span [] [ text_ "profile.badge.mentor" ]
-                ]
-            ]
+            [ text_ "transfer.title" ]
         ]
 
 
+viewDownloadPdfErrorModal : Model -> LoggedIn.Model -> Html Msg
+viewDownloadPdfErrorModal model loggedIn =
+    let
+        modalVisibility =
+            case model.maybePdfDownloadedSuccessfully of
+                Just isDownloaded ->
+                    if not isDownloaded then
+                        Modal.shown
 
--- HELPERS
+                    else
+                        Modal.hidden
+
+                Nothing ->
+                    Modal.hidden
+
+        privateKey =
+            case LoggedIn.maybePrivateKey loggedIn of
+                Nothing ->
+                    ""
+
+                Just pk ->
+                    pk
+
+        content =
+            div
+                []
+                [ p
+                    [ class "w-full font-medium text-heading text-2xl mb-2" ]
+                    -- I'll add the translations after we agreed about this case
+                    [ text "Sorry, we can't find your 12 words"
+                    ]
+                , p [ class "my-3" ]
+                    [ text "Please, check if you have your 12 words saved during the registration process and use them for further signing in."
+                    ]
+                , p [ class "my-3" ]
+                    [ text "If you completely lost your 12 words, please, contact us and provide this private key and we will help you to recover:"
+                    ]
+                , p [ class "font-bold my-3 text-lg text-center border p-4 rounded-sm bg-gray-100" ]
+                    [ text privateKey
+                    ]
+                ]
+    in
+    Modal.view
+        modalVisibility
+        { closeMsg = ClickedClosePdfDownloadError
+        , ignoreMsg = Ignored
+        , content = content
+        }
 
 
-formField : List (Html msg) -> Html msg
-formField =
-    div [ class "form-field" ]
+viewNewPinModal : Model -> Shared -> Html Msg
+viewNewPinModal model shared =
+    let
+        tr str =
+            t shared.translations str
+
+        pinField =
+            Pin.view
+                shared
+                { labelText = tr "profile.newPin"
+                , inputId = "pinInput"
+                , inputValue = Maybe.withDefault "" model.newPin
+                , onInputMsg = EnteredPin
+                , onToggleMsg = TogglePinReadability
+                , isVisible = True
+                , errors =
+                    case model.newPinErrorMsg of
+                        Just err ->
+                            [ err ]
+
+                        Nothing ->
+                            []
+                }
+
+        modalContent =
+            div [ class "display flex flex-col justify-around h-full" ]
+                [ div []
+                    [ p [ class "w-full font-medium text-heading text-2xl mb-2" ]
+                        [ text (tr "profile.changePin") ]
+                    , p [ class "text-sm" ]
+                        [ text (tr "profile.changePinPrompt") ]
+                    ]
+                , div [ class "mb-4" ] [ pinField ]
+                , button
+                    [ class "button button-primary w-full"
+                    , onClick ChangePinSubmitted
+                    ]
+                    [ text (tr "profile.pin.button") ]
+                ]
+    in
+    Modal.view
+        model.newPinModalVisibility
+        { ignoreMsg = Ignored
+        , closeMsg = ClickedCloseChangePin
+        , content = modalContent
+        }
 
 
-viewFieldError : String -> Dict String String -> Html msg
-viewFieldError fieldId errors =
-    case Dict.get fieldId errors of
-        Just e ->
-            span [ class "field-error" ] [ text e ]
+viewButton : String -> Msg -> Html Msg
+viewButton label msg =
+    button
+        [ class "button-secondary uppercase button-sm"
+        , onClick msg
+        ]
+        [ text label
+        ]
 
-        Nothing ->
-            text ""
+
+viewTogglePush : LoggedIn.Model -> Model -> Html Msg
+viewTogglePush loggedIn model =
+    let
+        tr str =
+            t loggedIn.shared.translations str
+
+        inputId =
+            "notifications"
+
+        lblColor =
+            if model.isPushNotificationsEnabled then
+                "text-indigo-500"
+
+            else
+                "text-gray"
+
+        lblText =
+            if model.isPushNotificationsEnabled then
+                tr "settings.features.enabled"
+
+            else
+                tr "settings.features.disabled"
+    in
+    div []
+        [ label
+            [ for inputId
+            , class "inline-block lowercase mr-2 cursor-pointer"
+            , class lblColor
+            ]
+            [ text lblText ]
+        , div [ class "form-switch inline-block align-middle" ]
+            [ input
+                [ type_ "checkbox"
+                , id inputId
+                , name inputId
+                , class "form-switch-checkbox"
+                , checked model.isPushNotificationsEnabled
+                , onClick RequestPush
+                ]
+                []
+            , label [ class "form-switch-label", for inputId ] []
+            ]
+        ]
 
 
 
@@ -580,28 +455,21 @@ type alias UpdateResult =
 type Msg
     = Ignored
     | CompletedProfileLoad (Result (Graphql.Http.Error (Maybe Profile)) (Maybe Profile))
-    | ClickedEdit
-    | ClickedEditCancel
-    | ClickedSave
-    | EnteredName String
-    | EnteredEmail String
-    | EnteredBio String
-    | EnteredLocalization String
-    | EnteredInterest String
-    | ClickedAddInterest
-    | ClickedRemoveInterest Int
-    | EnteredAvatar (List File)
-    | CompletedAvatarUpload (Result Http.Error Avatar)
+    | DownloadPdf String
+    | DownloadPdfProcessed Bool
+    | ClickedClosePdfDownloadError
     | ClickedViewPrivateKeyAuth
-    | ClickedViewPrivateKey String
-    | ClickedClosePrivateKey
+    | ClickedChangePin
+    | ChangePinSubmitted
+    | EnteredPin String
+    | ClickedCloseChangePin
+    | PinChanged
+    | TogglePinReadability
+    | GotPushPreference Bool
     | RequestPush
+    | CheckPushPref
     | GotPushSub PushSubscription
     | CompletedPushUpload (Result (Graphql.Http.Error ()) ())
-    | GotPushPreference Bool
-    | CheckPushPref
-    | DownloadPdf String
-    | PressedEnter Bool
 
 
 update : Msg -> Model -> LoggedIn.Model -> UpdateResult
@@ -609,13 +477,23 @@ update msg model loggedIn =
     let
         t =
             I18Next.t loggedIn.shared.translations
+
+        downloadPdfPort pin =
+            UR.addPort
+                { responseAddress = DownloadPdfProcessed False
+                , responseData = Encode.null
+                , data =
+                    Encode.object
+                        [ ( "name", Encode.string "downloadAuthPdfFromProfile" )
+                        , ( "pin", Encode.string pin )
+                        ]
+                }
     in
     case msg of
         Ignored ->
             UR.init model
 
         CompletedProfileLoad (Ok Nothing) ->
-            -- TODO: not found account
             UR.init model
 
         CompletedProfileLoad (Ok (Just profile)) ->
@@ -625,159 +503,74 @@ update msg model loggedIn =
             UR.init { model | status = LoadingFailed err }
                 |> UR.logGraphqlError msg err
 
-        ClickedEdit ->
-            case model.status of
-                Loaded profile ->
-                    { model | status = Editing profile NotAsked (Profile.profileToForm profile) }
-                        |> UR.init
+        ClickedChangePin ->
+            if LoggedIn.isAuth loggedIn then
+                UR.init { model | newPinModalVisibility = Modal.shown }
+                    |> UR.addCmd
+                        (Dom.focus "pinInput"
+                            |> Task.attempt (\_ -> Ignored)
+                        )
 
-                _ ->
+            else
+                UR.init model
+                    |> UR.addExt (Just ClickedChangePin |> RequiredAuthentication)
+                    |> UR.addCmd
+                        (Dom.focus "pinInput"
+                            |> Task.attempt (\_ -> Ignored)
+                        )
+
+        TogglePinReadability ->
+            UR.init { model | isNewPinReadable = not model.isNewPinReadable }
+
+        ChangePinSubmitted ->
+            if LoggedIn.isAuth loggedIn then
+                let
+                    currentPin =
+                        case model.currentPin of
+                            Just pin ->
+                                pin
+
+                            Nothing ->
+                                loggedIn.auth.form.enteredPin
+
+                    newPin =
+                        Maybe.withDefault "" model.newPin
+                in
+                if Pin.isValid newPin then
                     UR.init model
-                        |> UR.logImpossible msg []
+                        |> UR.addPort
+                            { responseAddress = PinChanged
+                            , responseData = Encode.null
+                            , data =
+                                Encode.object
+                                    [ ( "name", Encode.string "changePin" )
+                                    , ( "currentPin", Encode.string currentPin )
+                                    , ( "newPin", Encode.string newPin )
+                                    ]
+                            }
 
-        ClickedEditCancel ->
-            case model.status of
-                Editing profile _ _ ->
-                    UR.init { model | status = Loaded profile }
+                else
+                    UR.init { model | newPinErrorMsg = Just (t "auth.pin.shouldHaveSixDigitsError") }
+                        |> UR.addCmd Cmd.none
 
-                _ ->
-                    UR.init model
-                        |> UR.logImpossible msg []
+            else
+                UR.init model
+                    |> UR.addExt (Just ClickedChangePin |> RequiredAuthentication)
 
-        ClickedSave ->
-            case model.status of
-                Editing profile avatarS form ->
-                    { model | status = Saving profile avatarS form }
-                        |> UR.init
-                        |> UR.addCmd
-                            (Api.Graphql.mutation loggedIn.shared
-                                (Profile.mutation profile.account form)
-                                CompletedProfileLoad
-                            )
-                        |> UR.addExt (ShowFeedback Success (t "profile.edit_success"))
+        EnteredPin newPin ->
+            UR.init { model | newPinErrorMsg = Nothing, newPin = Just newPin }
 
-                _ ->
-                    UR.init model
-                        |> UR.logImpossible msg []
+        ClickedCloseChangePin ->
+            UR.init { model | newPinModalVisibility = Modal.hidden }
 
-        EnteredName s ->
-            UR.init model
-                |> updateForm (\form -> { form | name = s })
-
-        EnteredEmail s ->
-            UR.init model
-                |> updateForm (\form -> { form | email = s })
-
-        EnteredBio s ->
-            UR.init model
-                |> updateForm (\form -> { form | bio = s })
-
-        EnteredLocalization s ->
-            UR.init model
-                |> updateForm (\form -> { form | localization = s })
-
-        EnteredInterest s ->
-            UR.init model
-                |> updateForm (\form -> { form | interest = s })
-
-        ClickedAddInterest ->
-            UR.init model
-                |> updateForm
-                    (\form ->
-                        { form
-                            | interest = ""
-                            , interests =
-                                form.interests
-                                    ++ (String.split "," form.interest
-                                            |> List.map String.trim
-                                       )
-                        }
-                    )
-
-        ClickedRemoveInterest index ->
-            UR.init model
-                |> updateForm
-                    (\form ->
-                        { form
-                            | interests =
-                                List.indexedMap
-                                    (\i intr ->
-                                        if i == index then
-                                            Nothing
-
-                                        else
-                                            Just intr
-                                    )
-                                    form.interests
-                                    |> List.filterMap identity
-                        }
-                    )
-
-        EnteredAvatar (file :: _) ->
-            let
-                uploadAvatar file_ =
-                    Api.uploadAvatar loggedIn.shared file_ CompletedAvatarUpload
-
-                updateAvatar avatarS file_ =
-                    case avatarS of
-                        NotAsked ->
-                            ( Sending file_ 0
-                            , UR.addCmd (uploadAvatar file_)
-                            )
-
-                        SendingFailed _ _ ->
-                            ( Sending file_ 0
-                            , UR.addCmd (uploadAvatar file_)
-                            )
-
-                        Sending file__ progress ->
-                            ( Sending file__ progress
-                            , UR.logImpossible msg []
-                            )
-
-                toUResult model_ toStatus ( avatarS, addOrlog ) =
-                    UR.init { model_ | status = toStatus avatarS }
-                        |> addOrlog
-            in
-            case model.status of
-                Editing profile avatarS form ->
-                    updateAvatar avatarS file
-                        |> toUResult model
-                            (\a -> Editing profile a form)
-
-                Saving profile avatarS form ->
-                    updateAvatar avatarS file
-                        |> toUResult model
-                            (\a -> Saving profile a form)
-
-                _ ->
-                    UR.init model
-                        |> UR.logImpossible msg []
-
-        EnteredAvatar [] ->
-            UR.init model
-
-        CompletedAvatarUpload (Ok a) ->
-            UR.init model
-                |> updateForm (\f -> { f | avatar = Avatar.toMaybeString a })
-                |> updateProfile (\profile -> { profile | avatar = a })
-                |> updateAvatarStatus (\_ -> NotAsked)
-
-        CompletedAvatarUpload (Err err) ->
-            UR.init model
-                |> UR.logHttpError msg err
-                |> updateAvatarStatus
-                    (\avatarStatus ->
-                        case avatarStatus of
-                            NotAsked ->
-                                NotAsked
-
-                            SendingFailed file _ ->
-                                SendingFailed file err
-
-                            Sending file _ ->
-                                SendingFailed file err
-                    )
+        PinChanged ->
+            { model
+                | newPinModalVisibility = Modal.hidden
+                , currentPin = model.newPin
+                , newPin = Nothing
+            }
+                |> UR.init
+                |> UR.addExt (ShowFeedback Success (t "profile.pin.successMsg"))
 
         ClickedViewPrivateKeyAuth ->
             case LoggedIn.maybePrivateKey loggedIn of
@@ -788,17 +581,40 @@ update msg model loggedIn =
                                 |> RequiredAuthentication
                             )
 
-                Just privateKey ->
-                    UR.init { model | privateKeyModal = Just privateKey }
+                Just _ ->
+                    model
+                        |> UR.init
+                        |> downloadPdfPort loggedIn.auth.form.enteredPin
 
-        ClickedViewPrivateKey privateKey ->
-            UR.init { model | privateKeyModal = Just privateKey }
+        DownloadPdf pin ->
+            model
+                |> UR.init
+                |> downloadPdfPort pin
 
-        ClickedClosePrivateKey ->
-            UR.init { model | privateKeyModal = Nothing }
+        DownloadPdfProcessed isDownloaded ->
+            { model | maybePdfDownloadedSuccessfully = Just isDownloaded }
+                |> UR.init
+
+        ClickedClosePdfDownloadError ->
+            { model | maybePdfDownloadedSuccessfully = Nothing }
+                |> UR.init
+
+        GotPushPreference val ->
+            { model | isPushNotificationsEnabled = val }
+                |> UR.init
+
+        CheckPushPref ->
+            model
+                |> UR.init
+                |> UR.addPort
+                    { responseAddress = GotPushPreference False
+                    , responseData = Encode.null
+                    , data =
+                        Encode.object [ ( "name", Encode.string "checkPushPref" ) ]
+                    }
 
         RequestPush ->
-            if model.pushNotifications then
+            if model.isPushNotificationsEnabled then
                 model
                     |> UR.init
                     |> UR.addPort
@@ -843,107 +659,19 @@ update msg model loggedIn =
                         |> UR.init
                         |> UR.logGraphqlError msg err
 
-        GotPushPreference val ->
-            { model | pushNotifications = val }
-                |> UR.init
 
-        CheckPushPref ->
-            model
-                |> UR.init
-                |> UR.addPort
-                    { responseAddress = GotPushPreference False
-                    , responseData = Encode.null
-                    , data =
-                        Encode.object [ ( "name", Encode.string "checkPushPref" ) ]
-                    }
-
-        DownloadPdf passPhrase ->
-            model
-                |> UR.init
-                |> UR.addPort
-                    { responseAddress = Ignored
-                    , responseData = Encode.null
-                    , data =
-                        Encode.object
-                            [ ( "name", Encode.string "printAuthPdf" )
-                            , ( "passphrase", Encode.string passPhrase )
-                            ]
-                    }
-
-        PressedEnter val ->
-            if val then
-                UR.init model
-                    |> UR.addCmd
-                        (Task.succeed ClickedSave
-                            |> Task.perform identity
-                        )
-
-            else
-                UR.init model
+decodePushPref : Value -> Maybe Msg
+decodePushPref val =
+    Decode.decodeValue (Decode.field "isSet" Decode.bool) val
+        |> Result.map GotPushPreference
+        |> Result.toMaybe
 
 
-updateForm : (ProfileForm -> ProfileForm) -> UpdateResult -> UpdateResult
-updateForm transform ({ model } as uResult) =
-    case model.status of
-        Loading ->
-            uResult
-
-        LoadingFailed _ ->
-            uResult
-
-        Loaded _ ->
-            uResult
-
-        Editing profile avatarS form ->
-            { model | status = Editing profile avatarS (transform form) }
-                |> UR.setModel uResult
-
-        Saving profile avatarS form ->
-            { model | status = Saving profile avatarS (transform form) }
-                |> UR.setModel uResult
-
-
-updateProfile : (Profile -> Profile) -> UpdateResult -> UpdateResult
-updateProfile transform ({ model } as uResult) =
-    case model.status of
-        Loading ->
-            uResult
-
-        LoadingFailed _ ->
-            uResult
-
-        Loaded profile ->
-            { model | status = Loaded (transform profile) }
-                |> UR.setModel uResult
-
-        Editing profile avatarS form ->
-            { model | status = Editing (transform profile) avatarS form }
-                |> UR.setModel uResult
-
-        Saving profile avatarS form ->
-            { model | status = Saving (transform profile) avatarS form }
-                |> UR.setModel uResult
-
-
-updateAvatarStatus : (AvatarStatus -> AvatarStatus) -> UpdateResult -> UpdateResult
-updateAvatarStatus transform ({ model } as uResult) =
-    case model.status of
-        Loading ->
-            uResult
-
-        LoadingFailed _ ->
-            uResult
-
-        Loaded _ ->
-            uResult
-
-        Editing profile avatarS form ->
-            { model | status = Editing profile (transform avatarS) form }
-                |> UR.setModel uResult
-
-        Saving profile avatarS form ->
-            { model | status = Saving profile (transform avatarS) form }
-                |> UR.setModel uResult
+decodeIsPdfDownloaded : Value -> Maybe Msg
+decodeIsPdfDownloaded val =
+    Decode.decodeValue (Decode.field "isDownloaded" Decode.bool) val
+        |> Result.map DownloadPdfProcessed
+        |> Result.toMaybe
 
 
 uploadPushSubscription : LoggedIn.Model -> PushSubscription -> Cmd Msg
@@ -956,6 +684,15 @@ uploadPushSubscription { accountName, shared } data =
 jsAddressToMsg : List String -> Value -> Maybe Msg
 jsAddressToMsg addr val =
     case addr of
+        "ClickedCloseChangePin" :: [] ->
+            Just ClickedCloseChangePin
+
+        "PinChanged" :: [] ->
+            Just PinChanged
+
+        "DownloadPdfProcessed" :: _ ->
+            decodeIsPdfDownloaded val
+
         "RequestPush" :: _ ->
             let
                 push =
@@ -968,24 +705,22 @@ jsAddressToMsg addr val =
                     Just (GotPushSub res)
 
                 Err _ ->
-                    -- TODO: Handle PushSubscription Decode error
                     Nothing
 
-        "CompletedPushUpload" :: _ ->
-            decodePushPref val
+        "ChangePinSubmitted" :: [] ->
+            Just ChangePinSubmitted
+
+        "TogglePinReadability" :: [] ->
+            Just TogglePinReadability
 
         "GotPushPreference" :: _ ->
             decodePushPref val
 
+        "CompletedPushUpload" :: _ ->
+            decodePushPref val
+
         _ ->
             Nothing
-
-
-decodePushPref : Value -> Maybe Msg
-decodePushPref val =
-    Decode.decodeValue (Decode.field "isSet" Decode.bool) val
-        |> Result.map GotPushPreference
-        |> Result.toMaybe
 
 
 msgToString : Msg -> List String
@@ -997,68 +732,47 @@ msgToString msg =
         CompletedProfileLoad r ->
             [ "CompletedProfileLoad", UR.resultToString r ]
 
-        ClickedEdit ->
-            [ "ClickedEdit" ]
+        DownloadPdf _ ->
+            [ "DownloadPdf" ]
 
-        ClickedEditCancel ->
-            [ "ClickedEditCancel" ]
+        DownloadPdfProcessed _ ->
+            [ "DownloadPdfProcessed" ]
 
-        ClickedSave ->
-            [ "ClickedSave" ]
+        ClickedClosePdfDownloadError ->
+            [ "ClickedClosePdfDownloadError" ]
 
-        EnteredName _ ->
-            [ "EnteredName" ]
+        ClickedChangePin ->
+            [ "ClickedChangePin" ]
 
-        EnteredEmail _ ->
-            [ "EnteredEmail" ]
+        ClickedCloseChangePin ->
+            [ "ClickedCloseChangePin" ]
 
-        EnteredBio _ ->
-            [ "EnteredBio" ]
-
-        EnteredLocalization _ ->
-            [ "EnteredLocalization" ]
-
-        EnteredInterest _ ->
-            [ "EnteredInterest" ]
-
-        ClickedAddInterest ->
-            [ "ClickedAddInterest" ]
-
-        ClickedRemoveInterest _ ->
-            [ "ClickedRemoveInterest" ]
-
-        EnteredAvatar _ ->
-            [ "EnteredAvatar" ]
-
-        CompletedAvatarUpload r ->
-            [ "CompletedAvatarUpload", UR.resultToString r ]
+        PinChanged ->
+            [ "PinChanged" ]
 
         ClickedViewPrivateKeyAuth ->
             [ "ClickedViewPrivateKeyAuth" ]
 
-        ClickedViewPrivateKey _ ->
-            [ "ClickedViewPrivateKey" ]
+        TogglePinReadability ->
+            [ "TogglePinReadability" ]
 
-        ClickedClosePrivateKey ->
-            [ "ClickedClosePrivateKey" ]
+        ChangePinSubmitted ->
+            [ "ChangePinSubmitted" ]
+
+        EnteredPin _ ->
+            [ "EnteredPin" ]
+
+        GotPushPreference _ ->
+            [ "GotPushPreference" ]
 
         RequestPush ->
             [ "RequestPush" ]
+
+        CheckPushPref ->
+            [ "CheckPushPref" ]
 
         GotPushSub _ ->
             [ "GotPushSub" ]
 
         CompletedPushUpload _ ->
             [ "CompletedPushUpload" ]
-
-        GotPushPreference _ ->
-            [ "GotPushPreference" ]
-
-        CheckPushPref ->
-            [ "CheckPushPref" ]
-
-        DownloadPdf _ ->
-            [ "DownloadPdf" ]
-
-        PressedEnter _ ->
-            [ "PressedEnter" ]

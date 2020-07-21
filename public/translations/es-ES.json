@@ -406,6 +406,10 @@
     "edit_success": "Perfil guardado con éxito",
     "locations": "Localización",
     "interests": "Intereses",
+    "12words": { "title": "Mis 12 palabras", "button": "Descargar" },
+    "pin": { "title": "Mi PIN de seguridad", "button": "Cambiar" },
+    "changePin": "¡Cambia tu pin!",
+    "newPin": "Nuevo PIN de seguridad",
     "actions": {
       "edit": "Editar",
       "viewPrivatekey": "Ver Llave Privada"
