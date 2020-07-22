@@ -334,7 +334,7 @@ viewDownloadPdfErrorModal model loggedIn =
                 ]
 
         downloadPdfModalConfig =
-            Modal.newConfig
+            Modal.initWith
                 { noOpMsg = Ignored
                 , closeMsg = ClickedClosePdfDownloadError
                 , visibility = modalVisibility
@@ -385,7 +385,7 @@ viewNewPinModal model shared =
                 ]
 
         changePinModalConfig =
-            Modal.newConfig
+            Modal.initWith
                 { noOpMsg = Ignored
                 , closeMsg = ClickedCloseChangePin
                 , visibility = model.newPinModalVisibility

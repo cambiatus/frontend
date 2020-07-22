@@ -1,7 +1,7 @@
 module View.Modal exposing
     ( Visibility
     , hidden
-    , newConfig
+    , initWith
     , shown
     , view
     , withBody
@@ -33,19 +33,19 @@ type alias Config msg =
     , footer : Maybe (Html msg)
     , visibility : Visibility
     , closeMsg : msg
-    , ignoreMsg : msg
+    , noOpMsg : msg
     }
 
 
 {-| Returns full config with all required and optional fields
 -}
-newConfig : RequiredConfig msg -> Config msg
-newConfig required =
+initWith : RequiredConfig msg -> Config msg
+initWith required =
     { header = Nothing
     , body = Nothing
     , footer = Nothing
     , closeMsg = required.closeMsg
-    , ignoreMsg = required.noOpMsg
+    , noOpMsg = required.noOpMsg
     , visibility = required.visibility
     }
 
@@ -122,7 +122,7 @@ viewModalDetails cfg =
     in
     div
         [ class "modal container fade-in"
-        , stopPropagationOn "click" (Decode.succeed ( cfg.ignoreMsg, True ))
+        , stopPropagationOn "click" (Decode.succeed ( cfg.noOpMsg, True ))
         ]
         [ div
             [ class "modal-bg"
