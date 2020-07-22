@@ -83,18 +83,18 @@ shown =
 
 
 withHeader : String -> Modal msg -> Modal msg
-withHeader header (Modal cfg) =
-    Modal { cfg | header = Just header }
+withHeader header (Modal options) =
+    Modal { options | header = Just header }
 
 
 withBody : Html msg -> Modal msg -> Modal msg
-withBody body (Modal cfg) =
-    Modal { cfg | body = Just body }
+withBody body (Modal options) =
+    Modal { options | body = Just body }
 
 
 withFooter : Html msg -> Modal msg -> Modal msg
-withFooter footer (Modal cfg) =
-    Modal { cfg | footer = Just footer }
+withFooter footer (Modal options) =
+    Modal { options | footer = Just footer }
 
 
 
@@ -102,20 +102,20 @@ withFooter footer (Modal cfg) =
 
 
 toHtml : Modal msg -> Html msg
-toHtml (Modal cfg) =
-    case cfg.visibility of
+toHtml (Modal options) =
+    case options.visibility of
         Shown ->
-            viewModalDetails cfg
+            viewModalDetails options
 
         Hidden ->
             text ""
 
 
 viewModalDetails : Options msg -> Html msg
-viewModalDetails cfg =
+viewModalDetails options =
     let
         header =
-            case cfg.header of
+            case options.header of
                 Just h ->
                     h3 [ class "w-full font-medium text-heading text-2xl mb-2" ]
                         [ text h ]
@@ -124,16 +124,15 @@ viewModalDetails cfg =
                     text ""
 
         body =
-            case cfg.body of
+            case options.body of
                 Just b ->
-                    div []
-                        [ b ]
+                    b
 
                 Nothing ->
                     text ""
 
         footer =
-            case cfg.footer of
+            case options.footer of
                 Just f ->
                     div [ class "modal-footer" ]
                         [ f ]
@@ -145,14 +144,14 @@ viewModalDetails cfg =
         [ class "modal container fade-in" ]
         [ div
             [ class "modal-bg"
-            , onClick cfg.closeMsg
+            , onClick options.closeMsg
             ]
             []
         , div
             [ class "modal-content overflow-auto" ]
             [ button
                 [ class "absolute top-0 right-0 mx-4 my-4"
-                , onClick cfg.closeMsg
+                , onClick options.closeMsg
                 ]
                 [ Icons.close "text-gray-400 fill-current"
                 ]
