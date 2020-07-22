@@ -3,7 +3,7 @@ module View.Modal exposing
     , hidden
     , initWith
     , shown
-    , view
+    , toHtml
     , withBody
     , withFooter
     , withHeader
@@ -15,17 +15,13 @@ import Html.Events exposing (onClick)
 import Icons
 
 
-{-| Represents minimal (empty) modal dialog.
--}
-type alias RequiredConfig msg =
-    { closeMsg : msg
-    , visibility : Visibility
-    }
+
+-- OPTIONS
 
 
-{-| Represents all possible options for the modal dialog.
+{-| All possible options for the modal dialog.
 -}
-type alias Config msg =
+type alias Options msg =
     { header : Maybe String
     , body : Maybe (Html msg)
     , footer : Maybe (Html msg)
@@ -34,16 +30,37 @@ type alias Config msg =
     }
 
 
-{-| Returns full config with all required and optional fields
+{-| We need at least this options to create a base (empty) modal dialog.
 -}
-initWith : RequiredConfig msg -> Config msg
-initWith required =
-    { header = Nothing
-    , body = Nothing
-    , footer = Nothing
-    , closeMsg = required.closeMsg
-    , visibility = required.visibility
+type alias RequiredOptions msg =
+    { closeMsg : msg
+    , visibility : Visibility
     }
+
+
+
+-- MODAL
+
+
+type Modal msg
+    = Modal (Options msg)
+
+
+{-| Returns full config with all required and optional options.
+-}
+initWith : RequiredOptions msg -> Modal msg
+initWith reqOpts =
+    Modal
+        { header = Nothing
+        , body = Nothing
+        , footer = Nothing
+        , closeMsg = reqOpts.closeMsg
+        , visibility = reqOpts.visibility
+        }
+
+
+
+-- VISIBILITY
 
 
 type Visibility
@@ -61,23 +78,31 @@ shown =
     Shown
 
 
-withHeader : String -> Config msg -> Config msg
-withHeader header cfg =
-    { cfg | header = Just header }
+
+-- WITH*
 
 
-withBody : Html msg -> Config msg -> Config msg
-withBody body cfg =
-    { cfg | body = Just body }
+withHeader : String -> Modal msg -> Modal msg
+withHeader header (Modal cfg) =
+    Modal { cfg | header = Just header }
 
 
-withFooter : Html msg -> Config msg -> Config msg
-withFooter footer cfg =
-    { cfg | footer = Just footer }
+withBody : Html msg -> Modal msg -> Modal msg
+withBody body (Modal cfg) =
+    Modal { cfg | body = Just body }
 
 
-view : Config msg -> Html msg
-view cfg =
+withFooter : Html msg -> Modal msg -> Modal msg
+withFooter footer (Modal cfg) =
+    Modal { cfg | footer = Just footer }
+
+
+
+-- VIEW
+
+
+toHtml : Modal msg -> Html msg
+toHtml (Modal cfg) =
     case cfg.visibility of
         Shown ->
             viewModalDetails cfg
@@ -86,7 +111,7 @@ view cfg =
             text ""
 
 
-viewModalDetails : Config msg -> Html msg
+viewModalDetails : Options msg -> Html msg
 viewModalDetails cfg =
     let
         header =

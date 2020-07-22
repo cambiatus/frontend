@@ -317,12 +317,7 @@ viewDownloadPdfErrorModal model loggedIn =
         content =
             div
                 []
-                [ p
-                    [ class "w-full font-medium text-heading text-2xl mb-2" ]
-                    -- I'll add the translations after we agreed about this case
-                    [ text "Sorry, we can't find your 12 words"
-                    ]
-                , p [ class "my-3" ]
+                [ p [ class "my-3" ]
                     [ text "Please, check if you have your 12 words saved during the registration process and use them for further signing in."
                     ]
                 , p [ class "my-3" ]
@@ -332,17 +327,14 @@ viewDownloadPdfErrorModal model loggedIn =
                     [ text privateKey
                     ]
                 ]
-
-        downloadPdfModalConfig =
-            Modal.initWith
-                { closeMsg = ClickedClosePdfDownloadError
-                , visibility = modalVisibility
-                }
-                |> Modal.withHeader ""
-                |> Modal.withBody content
-                |> Modal.withFooter content
     in
-    Modal.view downloadPdfModalConfig
+    Modal.initWith
+        { closeMsg = ClickedClosePdfDownloadError
+        , visibility = modalVisibility
+        }
+        |> Modal.withHeader "Sorry, we can't find your 12 words"
+        |> Modal.withBody content
+        |> Modal.toHtml
 
 
 viewNewPinModal : Model -> Shared -> Html Msg
@@ -382,16 +374,14 @@ viewNewPinModal model shared =
                     ]
                     [ text (tr "profile.pin.button") ]
                 ]
-
-        changePinModalConfig =
-            Modal.initWith
-                { closeMsg = ClickedCloseChangePin
-                , visibility = model.newPinModalVisibility
-                }
-                |> Modal.withHeader (tr "profile.changePin")
-                |> Modal.withBody body
     in
-    Modal.view changePinModalConfig
+    Modal.initWith
+        { closeMsg = ClickedCloseChangePin
+        , visibility = model.newPinModalVisibility
+        }
+        |> Modal.withHeader (tr "profile.changePin")
+        |> Modal.withBody body
+        |> Modal.toHtml
 
 
 viewButton : String -> Msg -> Html Msg
