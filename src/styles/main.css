@@ -110,7 +110,7 @@
 
 .input {
   /* Form input comes from tailwind/custom-forms */
-  @apply form-input h-12 mb-2;
+  @apply form-input h-12;
 }
 
 .field-with-error,

@@ -3180,7 +3180,6 @@ textarea.form-input {
 
 .shop-editor {
     max-width: 555px;
-    margin: 0 auto;
 }
 
 .shop-editor .card__title {
@@ -3201,7 +3200,6 @@ textarea.form-input {
     background-color: #d8d8d8;
     text-transform: uppercase;
     color: var(--white);
-    margin-bottom: 24px;
     border-radius: 4px;
     font-size: 14px;
     font-weight: 500;
