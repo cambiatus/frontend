@@ -21,7 +21,7 @@ import Icons
 type alias Options msg =
     { header : Maybe String
     , body : Maybe (Html msg)
-    , footer : Maybe (Html msg)
+    , footer : Maybe (List (Html msg))
     , isVisible : Bool
     , closeMsg : msg
     }
@@ -70,7 +70,7 @@ withBody body (Modal options) =
     Modal { options | body = Just body }
 
 
-withFooter : Html msg -> Modal msg -> Modal msg
+withFooter : List (Html msg) -> Modal msg -> Modal msg
 withFooter footer (Modal options) =
     Modal { options | footer = Just footer }
 
@@ -112,7 +112,7 @@ viewModalDetails options =
             case options.footer of
                 Just f ->
                     div [ class "modal-footer" ]
-                        [ f ]
+                        f
 
                 Nothing ->
                     text ""
