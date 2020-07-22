@@ -11,16 +11,14 @@ module View.Modal exposing
 
 import Html exposing (Html, button, div, h3, text)
 import Html.Attributes exposing (class)
-import Html.Events exposing (onClick, stopPropagationOn)
+import Html.Events exposing (onClick)
 import Icons
-import Json.Decode as Decode
 
 
 {-| Represents minimal (empty) modal dialog.
 -}
 type alias RequiredConfig msg =
     { closeMsg : msg
-    , noOpMsg : msg
     , visibility : Visibility
     }
 
@@ -33,7 +31,6 @@ type alias Config msg =
     , footer : Maybe (Html msg)
     , visibility : Visibility
     , closeMsg : msg
-    , noOpMsg : msg
     }
 
 
@@ -45,7 +42,6 @@ initWith required =
     , body = Nothing
     , footer = Nothing
     , closeMsg = required.closeMsg
-    , noOpMsg = required.noOpMsg
     , visibility = required.visibility
     }
 
@@ -121,9 +117,7 @@ viewModalDetails cfg =
                     text ""
     in
     div
-        [ class "modal container fade-in"
-        , stopPropagationOn "click" (Decode.succeed ( cfg.noOpMsg, True ))
-        ]
+        [ class "modal container fade-in" ]
         [ div
             [ class "modal-bg"
             , onClick cfg.closeMsg

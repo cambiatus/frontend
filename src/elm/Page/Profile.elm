@@ -335,8 +335,7 @@ viewDownloadPdfErrorModal model loggedIn =
 
         downloadPdfModalConfig =
             Modal.initWith
-                { noOpMsg = Ignored
-                , closeMsg = ClickedClosePdfDownloadError
+                { closeMsg = ClickedClosePdfDownloadError
                 , visibility = modalVisibility
                 }
                 |> Modal.withHeader ""
@@ -386,8 +385,7 @@ viewNewPinModal model shared =
 
         changePinModalConfig =
             Modal.initWith
-                { noOpMsg = Ignored
-                , closeMsg = ClickedCloseChangePin
+                { closeMsg = ClickedCloseChangePin
                 , visibility = model.newPinModalVisibility
                 }
                 |> Modal.withHeader (tr "profile.changePin")
