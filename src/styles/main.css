@@ -242,6 +242,7 @@ textarea.input {
   @apply block overflow-hidden cursor-pointer bg-white border-2 border-gray-100 rounded-full h-6;
 
   transition: background-color 0.2s ease-in;
+  min-width: 43px;
 }
 
 .form-switch-label:before {
@@ -259,7 +260,7 @@ textarea.input {
 .form-switch-checkbox:checked + .form-switch-label:before {
   @apply right-0 bg-white;
 
-  margin-right: 0.3rem;
+  margin-right: 0.05rem;
 }
 
 .form-error {

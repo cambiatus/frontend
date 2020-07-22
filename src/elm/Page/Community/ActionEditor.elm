@@ -33,7 +33,7 @@ import DataValidator
 import Eos exposing (Symbol)
 import Eos.Account as Eos
 import Graphql.Http
-import Html exposing (Html, button, div, input, label, p, span, text, textarea)
+import Html exposing (Html, b, button, div, input, label, p, span, text, textarea)
 import Html.Attributes exposing (checked, class, classList, for, id, name, placeholder, rows, type_, value)
 import Html.Events exposing (onCheck, onClick, onInput)
 import I18Next exposing (t)
@@ -1167,7 +1167,7 @@ viewDescription { shared } form =
         [ span [ class "input-label" ]
             [ text_ "community.actions.form.description_label" ]
         , textarea
-            [ class "w-full input rounded-sm"
+            [ class "flex input rounded-sm w-full sm:w-2/5"
             , classList [ ( "border-red", hasErrors form.description ) ]
             , rows 5
             , onInput EnteredDescription
@@ -1187,7 +1187,7 @@ viewReward { shared } community form =
     div [ class "mb-10" ]
         [ span [ class "input-label" ]
             [ text_ "community.actions.form.reward_label" ]
-        , div [ class "flex sm:w-2/5 h-12 rounded-sm border border-gray-500" ]
+        , div [ class "flex w-full sm:w-2/5 h-12 rounded-sm border border-gray-500" ]
             [ input
                 [ class "block w-4/5 border-none px-4 py-3 outline-none"
                 , classList [ ( "border-red", hasErrors form.reward ) ]
@@ -1224,7 +1224,7 @@ viewValidations { shared } model =
                             [ type_ "checkbox"
                             , id "expiration-toggle"
                             , name "expiration-toggle"
-                            , class "form-switch-checkbox"
+                            , class "form-switch-checkbox mr-2"
                             , checked (model.form.validation /= NoValidation)
                             , onCheck ToggleValidity
                             ]
@@ -1232,18 +1232,20 @@ viewValidations { shared } model =
                         , label [ class "form-switch-label", for "expiration-toggle" ] []
                         ]
                     , label [ class "flex text-body text-green", for "expiration-toggle" ]
-                        [ p [ class "font-bold mr-1" ]
-                            [ if model.form.validation == NoValidation then
-                                text_ "community.actions.form.validation_off"
+                        [ p [ class "mr-1" ]
+                            [ b []
+                                [ if model.form.validation == NoValidation then
+                                    text_ "community.actions.form.validation_off"
+
+                                  else
+                                    text_ "community.actions.form.validation_on"
+                                ]
+                            , if model.form.validation == NoValidation then
+                                text_ "community.actions.form.validation_detail"
 
                               else
-                                text_ "community.actions.form.validation_on"
+                                text_ "community.actions.form.validation_on_detail"
                             ]
-                        , if model.form.validation == NoValidation then
-                            text_ "community.actions.form.validation_detail"
-
-                          else
-                            text_ "community.actions.form.validation_on_detail"
                         ]
                     ]
                 ]
@@ -1254,15 +1256,17 @@ viewValidations { shared } model =
                 [ input
                     [ id "date"
                     , type_ "checkbox"
-                    , class "form-checkbox mr-2 p-1"
+                    , class "form-checkbox h-5 w-5 mr-2"
                     , checked (hasDateValidation model.form.validation)
                     , onCheck ToggleDeadline
                     ]
                     []
                 , label
                     [ for "date", class "flex" ]
-                    [ p [ class "font-bold mr-1" ] [ text_ "community.actions.form.date_validity" ]
-                    , text_ "community.actions.form.date_validity_details"
+                    [ p [ class "mr-1" ]
+                        [ b [] [ text_ "community.actions.form.date_validity" ]
+                        , text_ "community.actions.form.date_validity_details"
+                        ]
                     ]
                 ]
             , case model.form.validation of
@@ -1281,7 +1285,7 @@ viewValidations { shared } model =
                                             | pattern = "##/##/####"
                                             , inputCharacter = '#'
                                         }
-                                        [ class "input"
+                                        [ class "input w-full sm:w-2/5"
                                         , classList [ ( "border-red", hasErrors validation ) ]
                                         , placeholder "mm/dd/yyyy"
                                         ]
@@ -1297,14 +1301,16 @@ viewValidations { shared } model =
                 [ input
                     [ id "quantity"
                     , type_ "checkbox"
-                    , class "form-checkbox mr-2"
+                    , class "form-checkbox h-5 w-5 mr-2"
                     , checked (hasUnitValidation model.form.validation)
                     , onCheck ToggleUsages
                     ]
                     []
                 , label [ for "quantity", class "flex" ]
-                    [ p [ class "font-bold mr-1" ] [ text_ "community.actions.form.quantity_validity" ]
-                    , text_ "community.actions.form.quantity_validity_details"
+                    [ p [ class "mr-1" ]
+                        [ b [] [ text_ "community.actions.form.quantity_validity" ]
+                        , text_ "community.actions.form.quantity_validity_details"
+                        ]
                     ]
                 ]
             ]
@@ -1320,8 +1326,9 @@ viewValidations { shared } model =
                             , div [ class "mb-10" ]
                                 [ input
                                     [ type_ "number"
-                                    , class "input"
+                                    , class "input w-full sm:w-2/5"
                                     , classList [ ( "border-red", hasErrors validation ) ]
+                                    , placeholder (t shared.translations "community.actions.form.usages_placeholder")
                                     , value (getInput validation)
                                     , onInput EnteredUsages
                                     ]
@@ -1337,7 +1344,7 @@ viewValidations { shared } model =
                                             [ class "mb-10" ]
                                             [ input
                                                 [ type_ "number"
-                                                , class "input"
+                                                , class "input w-full sm:w-2/5"
                                                 , classList [ ( "border-red", hasErrors usagesLeftValidation ) ]
                                                 , value (getInput usagesLeftValidation)
                                                 , onInput EnteredUsagesLeft
@@ -1382,8 +1389,11 @@ viewVerifications ({ shared } as loggedIn) model community =
                     [ class "flex ml-3 text-body"
                     , classList [ ( "text-green", model.form.verification == Automatic ) ]
                     ]
-                    [ p [ class "font-bold mr-1" ] [ text_ "community.actions.form.automatic" ]
-                    , text_ "community.actions.form.automatic_detail"
+                    [ p [ class "mr-1" ]
+                        [ b []
+                            [ text_ "community.actions.form.automatic" ]
+                        , text_ "community.actions.form.automatic_detail"
+                        ]
                     ]
                 ]
             ]
@@ -1402,16 +1412,19 @@ viewVerifications ({ shared } as loggedIn) model community =
                     [ class "flex ml-3 text-body"
                     , classList [ ( "text-green", model.form.verification /= Automatic ) ]
                     ]
-                    [ p [ class "font-bold mr-1" ] [ text_ "community.actions.form.manual" ]
-                    , text_ "community.actions.form.manual_detail"
+                    [ p [ class "mr-1" ]
+                        [ b []
+                            [ text_ "community.actions.form.manual" ]
+                        , text_ "community.actions.form.manual_detail"
+                        ]
                     ]
                 ]
-            ]
-        , if model.form.verification /= Automatic then
-            viewManualVerificationForm loggedIn model community
+            , if model.form.verification /= Automatic then
+                viewManualVerificationForm loggedIn model community
 
-          else
-            text ""
+              else
+                text ""
+            ]
         ]
 
 
@@ -1429,7 +1442,7 @@ viewManualVerificationForm ({ shared } as loggedIn) model community =
             text ""
 
         Manual selectedVerifiers verificationReward minVotes ->
-            div [ class "w-2/5" ]
+            div [ class "mt-6 w-full sm:w-2/5" ]
                 [ span [ class "input-label" ]
                     [ text (tr "community.actions.form.verifiers_label_count" [ ( "count", getInput minVotes ) ]) ]
                 , div []
@@ -1474,7 +1487,7 @@ viewManualVerificationForm ({ shared } as loggedIn) model community =
 
 viewSelectedVerifiers : LoggedIn.Model -> List Profile -> Html Msg
 viewSelectedVerifiers ({ shared } as loggedIn) selectedVerifiers =
-    div [ class "flex flex-row mt-3 mb-10 flex-wrap" ]
+    div [ class "flex flex-row mt-3 mb-6 flex-wrap" ]
         (selectedVerifiers
             |> List.map
                 (\p ->
