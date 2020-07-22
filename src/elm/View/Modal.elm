@@ -84,58 +84,63 @@ view : Config msg -> Html msg
 view cfg =
     case cfg.visibility of
         Shown ->
-            let
-                header =
-                    case cfg.header of
-                        Just h ->
-                            h3 [ class "w-full font-medium text-heading text-2xl mb-2" ]
-                                [ text h ]
-
-                        Nothing ->
-                            text ""
-
-                body =
-                    case cfg.body of
-                        Just b ->
-                            div []
-                                [ b ]
-
-                        Nothing ->
-                            text ""
-
-                footer =
-                    case cfg.footer of
-                        Just f ->
-                            div [ class "modal-footer" ]
-                                [ f ]
-
-                        Nothing ->
-                            text ""
-            in
-            div
-                [ class "modal container fade-in"
-                , stopPropagationOn "click" (Decode.succeed ( cfg.ignoreMsg, True ))
-                ]
-                [ div
-                    [ class "modal-bg"
-                    , onClick cfg.closeMsg
-                    ]
-                    []
-                , div
-                    [ class "modal-content overflow-auto" ]
-                    [ button
-                        [ class "absolute top-0 right-0 mx-4 my-4"
-                        , onClick cfg.closeMsg
-                        ]
-                        [ Icons.close "text-gray-400 fill-current"
-                        ]
-                    , div [ class "display flex flex-col justify-around h-full" ]
-                        [ header
-                        , body
-                        , footer
-                        ]
-                    ]
-                ]
+            viewModalDetails cfg
 
         Hidden ->
             text ""
+
+
+viewModalDetails : Config msg -> Html msg
+viewModalDetails cfg =
+    let
+        header =
+            case cfg.header of
+                Just h ->
+                    h3 [ class "w-full font-medium text-heading text-2xl mb-2" ]
+                        [ text h ]
+
+                Nothing ->
+                    text ""
+
+        body =
+            case cfg.body of
+                Just b ->
+                    div []
+                        [ b ]
+
+                Nothing ->
+                    text ""
+
+        footer =
+            case cfg.footer of
+                Just f ->
+                    div [ class "modal-footer" ]
+                        [ f ]
+
+                Nothing ->
+                    text ""
+    in
+    div
+        [ class "modal container fade-in"
+        , stopPropagationOn "click" (Decode.succeed ( cfg.ignoreMsg, True ))
+        ]
+        [ div
+            [ class "modal-bg"
+            , onClick cfg.closeMsg
+            ]
+            []
+        , div
+            [ class "modal-content overflow-auto" ]
+            [ button
+                [ class "absolute top-0 right-0 mx-4 my-4"
+                , onClick cfg.closeMsg
+                ]
+                [ Icons.close "text-gray-400 fill-current"
+                ]
+            , div [ class "display flex flex-col justify-around h-full" ]
+                [ header
+                , body
+                , footer
+                ]
+            ]
+        ]
