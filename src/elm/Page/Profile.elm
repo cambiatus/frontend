@@ -53,7 +53,7 @@ init loggedIn =
 type alias Model =
     { status : Status
     , currentPin : Maybe String
-    , newPinModalVisibility : Modal.Visibility
+    , isNewPinModalVisible : Bool
     , newPin : Maybe String
     , isNewPinReadable : Bool
     , newPinErrorMsg : Maybe String
@@ -66,7 +66,7 @@ initModel : LoggedIn.Model -> Model
 initModel _ =
     { status = Loading
     , currentPin = Nothing
-    , newPinModalVisibility = Modal.hidden
+    , isNewPinModalVisible = False
     , newPin = Nothing
     , isNewPinReadable = True
     , newPinErrorMsg = Nothing
@@ -297,14 +297,10 @@ viewDownloadPdfErrorModal model loggedIn =
         modalVisibility =
             case model.maybePdfDownloadedSuccessfully of
                 Just isDownloaded ->
-                    if not isDownloaded then
-                        Modal.shown
-
-                    else
-                        Modal.hidden
+                    not isDownloaded
 
                 Nothing ->
-                    Modal.hidden
+                    False
 
         privateKey =
             case LoggedIn.maybePrivateKey loggedIn of
@@ -314,7 +310,7 @@ viewDownloadPdfErrorModal model loggedIn =
                 Just pk ->
                     pk
 
-        content =
+        body =
             div
                 []
                 [ p [ class "my-3" ]
@@ -330,10 +326,10 @@ viewDownloadPdfErrorModal model loggedIn =
     in
     Modal.initWith
         { closeMsg = ClickedClosePdfDownloadError
-        , visibility = modalVisibility
+        , isVisible = modalVisibility
         }
         |> Modal.withHeader "Sorry, we can't find your 12 words"
-        |> Modal.withBody content
+        |> Modal.withBody body
         |> Modal.toHtml
 
 
@@ -377,7 +373,7 @@ viewNewPinModal model shared =
     in
     Modal.initWith
         { closeMsg = ClickedCloseChangePin
-        , visibility = model.newPinModalVisibility
+        , isVisible = model.isNewPinModalVisible
         }
         |> Modal.withHeader (tr "profile.changePin")
         |> Modal.withBody body
@@ -500,7 +496,7 @@ update msg model loggedIn =
 
         ClickedChangePin ->
             if LoggedIn.isAuth loggedIn then
-                UR.init { model | newPinModalVisibility = Modal.shown }
+                UR.init { model | isNewPinModalVisible = True }
                     |> UR.addCmd
                         (Dom.focus "pinInput"
                             |> Task.attempt (\_ -> Ignored)
@@ -556,11 +552,11 @@ update msg model loggedIn =
             UR.init { model | newPinErrorMsg = Nothing, newPin = Just newPin }
 
         ClickedCloseChangePin ->
-            UR.init { model | newPinModalVisibility = Modal.hidden }
+            UR.init { model | isNewPinModalVisible = False }
 
         PinChanged ->
             { model
-                | newPinModalVisibility = Modal.hidden
+                | isNewPinModalVisible = False
                 , currentPin = model.newPin
                 , newPin = Nothing
             }

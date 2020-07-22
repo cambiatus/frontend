@@ -1,8 +1,5 @@
 module View.Modal exposing
-    ( Visibility
-    , hidden
-    , initWith
-    , shown
+    ( initWith
     , toHtml
     , withBody
     , withFooter
@@ -25,16 +22,16 @@ type alias Options msg =
     { header : Maybe String
     , body : Maybe (Html msg)
     , footer : Maybe (Html msg)
-    , visibility : Visibility
+    , isVisible : Bool
     , closeMsg : msg
     }
 
 
-{-| We need at least this options to create a base (empty) modal dialog.
+{-| Minimal options, required to create a modal dialog.
 -}
 type alias RequiredOptions msg =
     { closeMsg : msg
-    , visibility : Visibility
+    , isVisible : Bool
     }
 
 
@@ -55,27 +52,8 @@ initWith reqOpts =
         , body = Nothing
         , footer = Nothing
         , closeMsg = reqOpts.closeMsg
-        , visibility = reqOpts.visibility
+        , isVisible = reqOpts.isVisible
         }
-
-
-
--- VISIBILITY
-
-
-type Visibility
-    = Hidden
-    | Shown
-
-
-hidden : Visibility
-hidden =
-    Hidden
-
-
-shown : Visibility
-shown =
-    Shown
 
 
 
@@ -103,12 +81,11 @@ withFooter footer (Modal options) =
 
 toHtml : Modal msg -> Html msg
 toHtml (Modal options) =
-    case options.visibility of
-        Shown ->
-            viewModalDetails options
+    if options.isVisible then
+        viewModalDetails options
 
-        Hidden ->
-            text ""
+    else
+        text ""
 
 
 viewModalDetails : Options msg -> Html msg
