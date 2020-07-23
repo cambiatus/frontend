@@ -215,7 +215,7 @@ viewAnalysisModal loggedIn model =
                     text (t s)
 
                 body =
-                    p [ class "text-body w-full font-sans mb-10" ]
+                    p [ class "text-body w-full font-sans" ]
                         [ if vote then
                             text_ "claim.modal.message_approve"
 

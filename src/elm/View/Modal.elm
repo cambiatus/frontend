@@ -94,7 +94,7 @@ viewModalDetails options =
         header =
             case options.header of
                 Just h ->
-                    h3 [ class "w-full font-medium text-heading text-2xl mb-2" ]
+                    h3 [ class "modal-header" ]
                         [ text h ]
 
                 Nothing ->
@@ -103,7 +103,8 @@ viewModalDetails options =
         body =
             case options.body of
                 Just b ->
-                    b
+                    div [ class "modal-body" ]
+                        [ b ]
 
                 Nothing ->
                     text ""
@@ -118,7 +119,7 @@ viewModalDetails options =
                     text ""
     in
     div
-        [ class "modal container fade-in" ]
+        [ class "modal fade-in" ]
         [ div
             [ class "modal-bg"
             , onClick options.closeMsg
@@ -132,10 +133,8 @@ viewModalDetails options =
                 ]
                 [ Icons.close "text-gray-400 fill-current"
                 ]
-            , div [ class "display flex flex-col justify-around h-full" ]
-                [ header
-                , body
-                , footer
-                ]
+            , header
+            , body
+            , footer
             ]
         ]

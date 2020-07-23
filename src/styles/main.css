@@ -176,21 +176,29 @@ textarea.input {
 /* Modal */
 
 .modal {
-  @apply z-50 fixed top-1/2;
-
+  @apply z-50 fixed inset-0;
   transition: opacity 0.25s ease;
 }
 
 .modal-bg {
-  @apply bg-black w-full h-full fixed bottom-0 left-0 top-0 right-0 opacity-25;
+  @apply bg-black inset-0 fixed opacity-50;
 }
 
 .modal-content {
-  @apply bg-white bottom-0 right-0 left-0 fixed rounded-t-lg p-4 h-72;
+  @apply bg-white rounded-t-lg absolute bottom-0 w-full;
+}
+
+.modal-header {
+  @apply w-full font-medium text-heading p-4 pb-2;
+}
+
+.modal-body {
+  @apply p-4 pt-0;
+  min-height: 4rem;
 }
 
 .modal-footer {
-  @apply w-full flex flex-wrap rounded-b-lg justify-center items-center;
+  @apply flex flex-wrap justify-center items-center p-4;
 }
 
 .modal-cancel {
@@ -203,11 +211,11 @@ textarea.input {
 
 @screen md {
   .modal-content {
-    @apply max-w-3xl fixed top-modal mx-auto h-64 rounded-lg;
+    @apply max-w-3xl top-modal relative mx-auto rounded-lg;
   }
 
   .modal-footer {
-    @apply bg-gray-100 absolute inset-x-0 bottom-0 p-4;
+    @apply bg-gray-100 rounded-b-lg p-4;
   }
 
   .modal-cancel {
