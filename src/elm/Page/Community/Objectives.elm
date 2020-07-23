@@ -305,7 +305,7 @@ viewAction ({ shared } as loggedIn) model objectiveId action =
                             ]
 
                       else
-                        div [ class "flex mr-2 overflow-x-scroll" ]
+                        div [ class "flex mr-2 overflow-x-auto" ]
                             (List.map
                                 (\u ->
                                     div [ class "mr-4" ]
