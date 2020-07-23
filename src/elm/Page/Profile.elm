@@ -53,7 +53,7 @@ init loggedIn =
 type alias Model =
     { status : Status
     , currentPin : Maybe String
-    , newPinModalVisibility : Modal.Visibility
+    , isNewPinModalVisible : Bool
     , newPin : Maybe String
     , isNewPinReadable : Bool
     , newPinErrorMsg : Maybe String
@@ -66,7 +66,7 @@ initModel : LoggedIn.Model -> Model
 initModel _ =
     { status = Loading
     , currentPin = Nothing
-    , newPinModalVisibility = Modal.hidden
+    , isNewPinModalVisible = False
     , newPin = Nothing
     , isNewPinReadable = True
     , newPinErrorMsg = Nothing
@@ -297,14 +297,10 @@ viewDownloadPdfErrorModal model loggedIn =
         modalVisibility =
             case model.maybePdfDownloadedSuccessfully of
                 Just isDownloaded ->
-                    if not isDownloaded then
-                        Modal.shown
-
-                    else
-                        Modal.hidden
+                    not isDownloaded
 
                 Nothing ->
-                    Modal.hidden
+                    False
 
         privateKey =
             case LoggedIn.maybePrivateKey loggedIn of
@@ -314,31 +310,25 @@ viewDownloadPdfErrorModal model loggedIn =
                 Just pk ->
                     pk
 
-        content =
-            div
-                []
-                [ p
-                    [ class "w-full font-medium text-heading text-2xl mb-2" ]
-                    -- I'll add the translations after we agreed about this case
-                    [ text "Sorry, we can't find your 12 words"
-                    ]
-                , p [ class "my-3" ]
-                    [ text "Please, check if you have your 12 words saved during the registration process and use them for further signing in."
-                    ]
-                , p [ class "my-3" ]
-                    [ text "If you completely lost your 12 words, please, contact us and provide this private key and we will help you to recover:"
-                    ]
-                , p [ class "font-bold my-3 text-lg text-center border p-4 rounded-sm bg-gray-100" ]
-                    [ text privateKey
-                    ]
+        body =
+            [ p [ class "my-3" ]
+                [ text "Please, check if you have your 12 words saved during the registration process and use them for further signing in."
                 ]
+            , p [ class "my-3" ]
+                [ text "If you completely lost your 12 words, please, contact us and provide this private key and we will help you to recover:"
+                ]
+            , p [ class "font-bold my-3 text-lg text-center border p-4 rounded-sm bg-gray-100" ]
+                [ text privateKey
+                ]
+            ]
     in
-    Modal.view
-        modalVisibility
+    Modal.initWith
         { closeMsg = ClickedClosePdfDownloadError
-        , ignoreMsg = Ignored
-        , content = content
+        , isVisible = modalVisibility
         }
+        |> Modal.withHeader "Sorry, we can't find your 12 words"
+        |> Modal.withBody body
+        |> Modal.toHtml
 
 
 viewNewPinModal : Model -> Shared -> Html Msg
@@ -365,28 +355,26 @@ viewNewPinModal model shared =
                             []
                 }
 
-        modalContent =
-            div [ class "display flex flex-col justify-around h-full" ]
-                [ div []
-                    [ p [ class "w-full font-medium text-heading text-2xl mb-2" ]
-                        [ text (tr "profile.changePin") ]
-                    , p [ class "text-sm" ]
-                        [ text (tr "profile.changePinPrompt") ]
-                    ]
-                , div [ class "mb-4" ] [ pinField ]
-                , button
-                    [ class "button button-primary w-full"
-                    , onClick ChangePinSubmitted
-                    ]
-                    [ text (tr "profile.pin.button") ]
+        body =
+            [ div []
+                [ p [ class "text-sm" ]
+                    [ text (tr "profile.changePinPrompt") ]
                 ]
+            , div [ class "mb-4" ] [ pinField ]
+            , button
+                [ class "button button-primary w-full"
+                , onClick ChangePinSubmitted
+                ]
+                [ text (tr "profile.pin.button") ]
+            ]
     in
-    Modal.view
-        model.newPinModalVisibility
-        { ignoreMsg = Ignored
-        , closeMsg = ClickedCloseChangePin
-        , content = modalContent
+    Modal.initWith
+        { closeMsg = ClickedCloseChangePin
+        , isVisible = model.isNewPinModalVisible
         }
+        |> Modal.withHeader (tr "profile.changePin")
+        |> Modal.withBody body
+        |> Modal.toHtml
 
 
 viewButton : String -> Msg -> Html Msg
@@ -505,7 +493,7 @@ update msg model loggedIn =
 
         ClickedChangePin ->
             if LoggedIn.isAuth loggedIn then
-                UR.init { model | newPinModalVisibility = Modal.shown }
+                UR.init { model | isNewPinModalVisible = True }
                     |> UR.addCmd
                         (Dom.focus "pinInput"
                             |> Task.attempt (\_ -> Ignored)
@@ -561,11 +549,11 @@ update msg model loggedIn =
             UR.init { model | newPinErrorMsg = Nothing, newPin = Just newPin }
 
         ClickedCloseChangePin ->
-            UR.init { model | newPinModalVisibility = Modal.hidden }
+            UR.init { model | isNewPinModalVisible = False }
 
         PinChanged ->
             { model
-                | newPinModalVisibility = Modal.hidden
+                | isNewPinModalVisible = False
                 , currentPin = model.newPin
                 , newPin = Nothing
             }
@@ -579,6 +567,10 @@ update msg model loggedIn =
                         |> UR.addExt
                             (Just ClickedViewPrivateKeyAuth
                                 |> RequiredAuthentication
+                            )
+                        |> UR.addCmd
+                            (Dom.focus "pinInput"
+                                |> Task.attempt (\_ -> Ignored)
                             )
 
                 Just _ ->

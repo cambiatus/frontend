@@ -44,7 +44,7 @@ import Graphql.Operation exposing (RootSubscription)
 import Graphql.SelectionSet exposing (SelectionSet)
 import Html exposing (Html, a, button, div, footer, img, input, nav, p, span, text)
 import Html.Attributes exposing (class, classList, placeholder, required, src, style, type_, value)
-import Html.Events exposing (onClick, onFocus, onInput, onMouseEnter, onSubmit, stopPropagationOn)
+import Html.Events exposing (onClick, onFocus, onInput, onMouseEnter, onSubmit)
 import Http
 import I18Next exposing (Delims(..), Translations, t)
 import Icons
@@ -60,6 +60,7 @@ import Shop
 import Task
 import Translation
 import UpdateResult as UR
+import View.Modal as Modal
 
 
 
@@ -269,23 +270,6 @@ viewFeedback status message =
 
 viewHelper : (Msg -> msg) -> Page -> Profile -> Model -> Html msg -> Html msg
 viewHelper thisMsg page profile_ ({ shared } as model) content =
-    let
-        onClickCloseAny =
-            if model.showUserNav then
-                onClick (ShowUserNav False)
-
-            else if model.showNotificationModal then
-                onClick (ShowNotificationModal False)
-
-            else if model.showMainNav then
-                onClick (ShowMainNav False)
-
-            else if model.showAuthModal then
-                onClick ClosedAuthModal
-
-            else
-                onClick Ignored
-    in
     div
         [ class "min-h-screen flex flex-col" ]
         [ div [ class "bg-white" ]
@@ -304,35 +288,16 @@ viewHelper thisMsg page profile_ ({ shared } as model) content =
             [ content
             ]
         , viewFooter shared
-        , if model.showAuthModal then
-            div
-                [ class "modal container fade-in" ]
-                [ div
-                    [ class "modal-bg"
-                    , onClickCloseAny
-                    ]
-                    []
-                , div
-                    [ class "modal-content overflow-auto"
-                    , stopPropagationOn "click"
-                        (Decode.succeed ( Ignored, True ))
-                    ]
-                    [ button
-                        [ class "absolute top-0 right-0 mx-4 my-4"
-                        , onClickCloseAny
-                        ]
-                        [ Icons.close "text-gray-400 fill-current"
-                        ]
-                    , div [ class "display flex flex-col justify-around h-full" ]
-                        (Auth.view True shared model.auth
-                            |> List.map (Html.map GotAuthMsg)
-                        )
-                    ]
-                ]
-                |> Html.map thisMsg
-
-          else
-            text ""
+        , Modal.initWith
+            { closeMsg = ClosedAuthModal
+            , isVisible = model.showAuthModal
+            }
+            |> Modal.withBody
+                (Auth.view True shared model.auth
+                    |> List.map (Html.map GotAuthMsg)
+                )
+            |> Modal.toHtml
+            |> Html.map thisMsg
         , communitySelectorModal model
             |> Html.map thisMsg
         ]
@@ -511,7 +476,7 @@ communitySelectorModal model =
         viewCommunityItem : Profile.CommunityInfo -> Html Msg
         viewCommunityItem c =
             div
-                [ class "flex items-center py-4 border-b text-body hover:pointer"
+                [ class "flex items-center p-4 text-body cursor-pointer hover:text-black hover:bg-gray-100"
                 , onClick <| SelectCommunity c.id
                 ]
                 [ img [ src (logoUrl c.logo), class "h-16 w-16 mr-5" ] []
@@ -525,24 +490,19 @@ communitySelectorModal model =
                     text ""
 
                 else
-                    div [ class "modal container" ]
-                        [ div [ class "modal-bg", onClick CloseCommunitySelector ] []
-                        , div [ class "modal-content overflow-auto", style "height" "65%" ]
-                            [ div [ class "w-full" ]
-                                [ p [ class "w-full font-bold text-heading text-2xl" ]
-                                    [ text_ "menu.community_selector.title" ]
-                                , button
-                                    [ onClick CloseCommunitySelector ]
-                                    [ Icons.close "absolute fill-current text-gray-400 top-0 right-0 m-4"
-                                    ]
-                                , p [ class "text-body w-full font-sans -mt-2 mb-2" ]
-                                    [ text_ "menu.community_selector.body"
-                                    ]
-                                , div [ class "w-full overflow-scroll" ]
-                                    (List.map viewCommunityItem pro.communities)
+                    Modal.initWith
+                        { closeMsg = CloseCommunitySelector
+                        , isVisible = True
+                        }
+                        |> Modal.withHeader (t "menu.community_selector.title")
+                        |> Modal.withBody
+                            [ p []
+                                [ text_ "menu.community_selector.body"
                                 ]
+                            , div [ class "w-full overflow-y-auto divide-y divide-gray-300" ]
+                                (List.map viewCommunityItem pro.communities)
                             ]
-                        ]
+                        |> Modal.toHtml
 
             _ ->
                 text ""
