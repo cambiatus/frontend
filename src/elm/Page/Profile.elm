@@ -571,6 +571,10 @@ update msg model loggedIn =
                             (Just ClickedViewPrivateKeyAuth
                                 |> RequiredAuthentication
                             )
+                        |> UR.addCmd
+                            (Dom.focus "pinInput"
+                                |> Task.attempt (\_ -> Ignored)
+                            )
 
                 Just _ ->
                     model
