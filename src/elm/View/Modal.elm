@@ -6,6 +6,27 @@ module View.Modal exposing
     , withHeader
     )
 
+{-| Modal dialog (popup)
+
+To create one you need to init the popup with required options along with optional parameters via `with*` functions
+and call `toHtml` at the end of the pipeline:
+
+    Modal.initWith
+        -- required options to create a barebone (empty) popup
+        { closeMsg = <Msg from the module, where the popup is used>
+        , isVisible = True|False
+        }
+
+        -- optional params to fill the popup with the actual data
+        |> Modal.withHeader "Some header"
+        |> Modal.withBody [ div [] [...] ]
+        |> Modal.withFooter [ button [] [...] ]
+
+        -- view function to create the actual `Html msg`
+        |> Modal.toHtml
+
+-}
+
 import Html exposing (Html, button, div, h3, text)
 import Html.Attributes exposing (class)
 import Html.Events exposing (onClick)
@@ -27,7 +48,7 @@ type alias Options msg =
     }
 
 
-{-| Minimal options, required to create a modal dialog.
+{-| Minimal options required to create a modal dialog.
 -}
 type alias RequiredOptions msg =
     { closeMsg : msg
@@ -43,16 +64,14 @@ type Modal msg
     = Modal (Options msg)
 
 
-{-| Returns full config with all required and optional options.
--}
 initWith : RequiredOptions msg -> Modal msg
 initWith reqOpts =
     Modal
-        { header = Nothing
+        { closeMsg = reqOpts.closeMsg
+        , isVisible = reqOpts.isVisible
+        , header = Nothing
         , body = Nothing
         , footer = Nothing
-        , closeMsg = reqOpts.closeMsg
-        , isVisible = reqOpts.isVisible
         }
 
 
