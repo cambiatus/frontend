@@ -12,12 +12,11 @@ import Api.Graphql
 import Community exposing (Invite)
 import Eos.Account as Eos
 import Graphql.Http
-import Html exposing (Html, button, div, img, p, span, text)
+import Html exposing (Html, button, div, img, span, text)
 import Html.Attributes exposing (class, src)
 import Html.Events exposing (onClick)
 import Http
 import I18Next exposing (t)
-import Icons
 import Page exposing (Session(..), toShared)
 import Profile exposing (Profile)
 import Route

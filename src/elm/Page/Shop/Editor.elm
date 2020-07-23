@@ -15,7 +15,6 @@ import Html.Attributes exposing (accept, attribute, class, disabled, for, hidden
 import Html.Events exposing (on, onClick, onInput)
 import Http
 import I18Next
-import Icons
 import Json.Decode as Decode
 import Json.Encode as Encode exposing (Value)
 import Page
