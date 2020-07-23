@@ -281,22 +281,13 @@ viewInvitationModal { shared } model =
         body =
             case model.inviteModalStatus of
                 InviteModalClosed ->
-                    [ text "" ]
+                    []
 
                 InviteModalLoading ->
                     [ div [ class "spinner m-auto" ] [] ]
 
                 InviteModalFailed err ->
-                    [ div [ class "flex items-center justify-center text-heading text-red" ]
-                        [ p [ class "text-sm text-red" ] [ text err ] ]
-                    , div [ class "w-full md:bg-gray-100 flex md:absolute rounded-b-lg md:inset-x-0 md:bottom-0 md:p-4 justify-center items-center" ]
-                        [ button
-                            [ class "button button-primary"
-                            , onClick CloseInviteModal
-                            ]
-                            [ text "OK" ]
-                        ]
-                    ]
+                    [ p [ class "text-center text-red" ] [ text err ] ]
 
                 InviteModalLoaded invitationId ->
                     [ div [ class "mt-3 input-label" ]
@@ -330,6 +321,14 @@ viewInvitationModal { shared } model =
                           else
                             text_ "community.invite.copy"
                         ]
+                    ]
+
+                InviteModalFailed _ ->
+                    [ button
+                        [ class "button button-primary"
+                        , onClick CloseInviteModal
+                        ]
+                        [ text_ "menu.close" ]
                     ]
 
                 _ ->
