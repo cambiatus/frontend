@@ -486,7 +486,7 @@ viewLoginWithPin isDisabled shared model =
             Html.text (t shared.translations s)
     in
     [ div []
-        [ p [ class "w-full font-medium text-heading text-2xl mb-2" ]
+        [ p [ class "modal-header px-0" ]
             [ text_ "auth.login.modalFormTitle"
             ]
         , p [ class "text-sm" ]
