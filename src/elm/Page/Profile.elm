@@ -311,18 +311,16 @@ viewDownloadPdfErrorModal model loggedIn =
                     pk
 
         body =
-            div
-                []
-                [ p [ class "my-3" ]
-                    [ text "Please, check if you have your 12 words saved during the registration process and use them for further signing in."
-                    ]
-                , p [ class "my-3" ]
-                    [ text "If you completely lost your 12 words, please, contact us and provide this private key and we will help you to recover:"
-                    ]
-                , p [ class "font-bold my-3 text-lg text-center border p-4 rounded-sm bg-gray-100" ]
-                    [ text privateKey
-                    ]
+            [ p [ class "my-3" ]
+                [ text "Please, check if you have your 12 words saved during the registration process and use them for further signing in."
                 ]
+            , p [ class "my-3" ]
+                [ text "If you completely lost your 12 words, please, contact us and provide this private key and we will help you to recover:"
+                ]
+            , p [ class "font-bold my-3 text-lg text-center border p-4 rounded-sm bg-gray-100" ]
+                [ text privateKey
+                ]
+            ]
     in
     Modal.initWith
         { closeMsg = ClickedClosePdfDownloadError
@@ -358,18 +356,17 @@ viewNewPinModal model shared =
                 }
 
         body =
-            div []
-                [ div []
-                    [ p [ class "text-sm" ]
-                        [ text (tr "profile.changePinPrompt") ]
-                    ]
-                , div [ class "mb-4" ] [ pinField ]
-                , button
-                    [ class "button button-primary w-full"
-                    , onClick ChangePinSubmitted
-                    ]
-                    [ text (tr "profile.pin.button") ]
+            [ div []
+                [ p [ class "text-sm" ]
+                    [ text (tr "profile.changePinPrompt") ]
                 ]
+            , div [ class "mb-4" ] [ pinField ]
+            , button
+                [ class "button button-primary w-full"
+                , onClick ChangePinSubmitted
+                ]
+                [ text (tr "profile.pin.button") ]
+            ]
     in
     Modal.initWith
         { closeMsg = ClickedCloseChangePin

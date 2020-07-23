@@ -293,11 +293,8 @@ viewHelper thisMsg page profile_ ({ shared } as model) content =
             , isVisible = model.showAuthModal
             }
             |> Modal.withBody
-                (div
-                    [ class "display flex flex-col justify-around h-full" ]
-                    (Auth.view True shared model.auth
-                        |> List.map (Html.map GotAuthMsg)
-                    )
+                (Auth.view True shared model.auth
+                    |> List.map (Html.map GotAuthMsg)
                 )
             |> Modal.toHtml
             |> Html.map thisMsg

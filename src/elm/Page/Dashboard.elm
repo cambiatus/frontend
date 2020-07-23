@@ -23,7 +23,7 @@ import FormatNumber.Locales exposing (usLocale)
 import Graphql.Http
 import Graphql.OptionalArgument exposing (OptionalArgument(..))
 import Html exposing (Html, a, button, div, img, input, p, span, text)
-import Html.Attributes exposing (class, classList, disabled, id, src, value)
+import Html.Attributes exposing (class, classList, id, src, style, type_, value)
 import Html.Events exposing (onClick)
 import Http
 import I18Next exposing (Delims(..))
@@ -215,13 +215,12 @@ viewAnalysisModal loggedIn model =
                     text (t s)
 
                 body =
-                    p [ class "text-body w-full font-sans" ]
-                        [ if vote then
-                            text_ "claim.modal.message_approve"
+                    [ if vote then
+                        text_ "claim.modal.message_approve"
 
-                          else
-                            text_ "claim.modal.message_disapprove"
-                        ]
+                      else
+                        text_ "claim.modal.message_disapprove"
+                    ]
 
                 footer =
                     [ button [ class "modal-cancel", onClick CloseModal ]
@@ -267,74 +266,83 @@ viewInvitationModal { shared } model =
 
         url invitationId =
             protocol ++ shared.url.host ++ "/invite/" ++ invitationId
-    in
-    case model.inviteModalStatus of
-        InviteModalClosed ->
-            text ""
 
-        _ ->
-            div [ class "modal container" ]
-                [ div [ class "modal-bg", onClick CloseInviteModal ] []
-                , div [ class "modal-content" ]
-                    [ div [ class "w-full" ]
-                        [ p [ class "text-2xl font-medium mb-4" ]
-                            [ text_ "community.invite.title" ]
-                        , button [ onClick CloseInviteModal ]
-                            [ Icons.close "absolute fill-current text-gray-400 top-0 right-0 mx-8 my-4" ]
-                        , case model.inviteModalStatus of
-                            InviteModalClosed ->
-                                text ""
+        isInviteModalVisible =
+            case model.inviteModalStatus of
+                InviteModalClosed ->
+                    False
 
-                            InviteModalLoading ->
-                                div [ class "flex items-center justify-center" ]
-                                    [ div [ class "spinner spinner--delay" ] [] ]
+                _ ->
+                    True
 
-                            InviteModalFailed err ->
-                                div []
-                                    [ div [ class "flex items-center justify-center text-heading text-red" ]
-                                        [ p [ class "text-sm text-red" ] [ text err ] ]
-                                    , div [ class "w-full md:bg-gray-100 flex md:absolute rounded-b-lg md:inset-x-0 md:bottom-0 md:p-4 justify-center items-center" ]
-                                        [ button
-                                            [ class "button button-primary"
-                                            , onClick CloseInviteModal
-                                            ]
-                                            [ text "OK" ]
-                                        ]
-                                    ]
+        header =
+            t "community.invite.title"
 
-                            InviteModalLoaded invitationId ->
-                                div [ class "flex flex-wrap items-center mt-24 md:mt-0" ]
-                                    [ div [ class "flex flex-col items-left w-full mb-4" ]
-                                        [ span [ class "input-label" ]
-                                            [ text_ "community.invite.label" ]
-                                        , input
-                                            [ class "text-menu border p-2 md:border-none md:text-heading outline-none text-black"
-                                            , id "invitation-id"
-                                            , value (url invitationId)
-                                            , disabled True
-                                            ]
-                                            []
-                                        ]
-                                    , div [ class "w-full md:bg-gray-100 flex md:absolute rounded-b-lg md:inset-x-0 md:bottom-0 md:p-4 justify-center items-center" ]
-                                        [ button
-                                            [ classList
-                                                [ ( "button-primary", not model.copied )
-                                                , ( "button-success", model.copied )
-                                                ]
-                                            , class "button w-full md:w-48"
-                                            , onClick (CopyToClipboard "invitation-id")
-                                            ]
-                                            [ if model.copied then
-                                                text_ "community.invite.copied"
+        body =
+            case model.inviteModalStatus of
+                InviteModalClosed ->
+                    [ text "" ]
 
-                                              else
-                                                text_ "community.invite.copy"
-                                            ]
-                                        ]
-                                    ]
+                InviteModalLoading ->
+                    [ div [ class "spinner m-auto" ] [] ]
+
+                InviteModalFailed err ->
+                    [ div [ class "flex items-center justify-center text-heading text-red" ]
+                        [ p [ class "text-sm text-red" ] [ text err ] ]
+                    , div [ class "w-full md:bg-gray-100 flex md:absolute rounded-b-lg md:inset-x-0 md:bottom-0 md:p-4 justify-center items-center" ]
+                        [ button
+                            [ class "button button-primary"
+                            , onClick CloseInviteModal
+                            ]
+                            [ text "OK" ]
                         ]
                     ]
-                ]
+
+                InviteModalLoaded invitationId ->
+                    [ div [ class "mt-3 input-label" ]
+                        [ text_ "community.invite.label" ]
+                    , p [ class "py-2 md:text-heading text-black" ]
+                        [ text (url invitationId) ]
+                    , input
+                        [ type_ "text"
+                        , class "absolute opacity-0"
+                        , style "left" "-9999em"
+                        , id "invitation-id"
+                        , value (url invitationId)
+                        ]
+                        []
+                    ]
+
+        footer =
+            case model.inviteModalStatus of
+                InviteModalLoaded _ ->
+                    [ button
+                        [ classList
+                            [ ( "button-primary", not model.copied )
+                            , ( "button-success", model.copied )
+                            ]
+                        , class "button w-full md:w-48"
+                        , onClick (CopyToClipboard "invitation-id")
+                        ]
+                        [ if model.copied then
+                            text_ "community.invite.copied"
+
+                          else
+                            text_ "community.invite.copy"
+                        ]
+                    ]
+
+                _ ->
+                    []
+    in
+    Modal.initWith
+        { closeMsg = CloseInviteModal
+        , isVisible = isInviteModalVisible
+        }
+        |> Modal.withHeader header
+        |> Modal.withBody body
+        |> Modal.withFooter footer
+        |> Modal.toHtml
 
 
 viewAnalysisList : LoggedIn.Model -> Profile.Profile -> Model -> Html Msg
@@ -804,7 +812,10 @@ update msg model loggedIn =
 
         CloseInviteModal ->
             UR.init
-                { model | inviteModalStatus = InviteModalClosed }
+                { model
+                    | inviteModalStatus = InviteModalClosed
+                    , copied = False
+                }
 
         CompletedInviteCreation (Ok invitationId) ->
             { model | inviteModalStatus = InviteModalLoaded invitationId }
