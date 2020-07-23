@@ -193,8 +193,9 @@ textarea.input {
 }
 
 .modal-body {
-  @apply p-4 pt-0 text-body;
+  @apply p-4 pt-0 text-body overflow-y-auto;
   min-height: 4rem;
+  max-height: 50vh;
 }
 
 .modal-footer {

@@ -126,7 +126,7 @@ viewModalDetails options =
             ]
             []
         , div
-            [ class "modal-content overflow-auto" ]
+            [ class "modal-content" ]
             [ button
                 [ class "absolute top-0 right-0 mx-4 my-4"
                 , onClick options.closeMsg
