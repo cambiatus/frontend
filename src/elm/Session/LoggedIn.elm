@@ -43,7 +43,7 @@ import Graphql.Http
 import Graphql.Operation exposing (RootSubscription)
 import Graphql.SelectionSet exposing (SelectionSet)
 import Html exposing (Html, a, button, div, footer, img, nav, p, span, text)
-import Html.Attributes exposing (class, classList, src, style, type_, value)
+import Html.Attributes exposing (class, classList, src, style, type_)
 import Html.Events exposing (onClick, onMouseEnter)
 import Http
 import I18Next exposing (Delims(..), Translations, t)
