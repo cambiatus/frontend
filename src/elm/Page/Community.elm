@@ -157,7 +157,7 @@ view loggedIn model =
                                 ]
                             , p [ class "text-grey-200 text-sm" ] [ text community.description ]
                             ]
-                        , if canEdit && community.hasObjectives then
+                        , if community.hasObjectives then
                             div [ class "container mx-auto px-4" ]
                                 [ div [ class "bg-white py-6 sm:py-8 px-3 sm:px-6 rounded-lg mt-4" ]
                                     (Page.viewTitle (t "community.objectives.title_plural")
