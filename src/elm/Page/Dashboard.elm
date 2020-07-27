@@ -162,20 +162,20 @@ view loggedIn model =
                     False
 
         content =
-            case ( model.balance, loggedIn.profile ) of
-                ( Loading, _ ) ->
+            case ( model.balance, loggedIn.profile, model.community ) of
+                ( Loading, _, _ ) ->
                     Page.fullPageLoading
 
-                ( Failed e, _ ) ->
+                ( Failed e, _, _ ) ->
                     Page.fullPageError (t "dashboard.sorry") e
 
-                ( Loaded balance, LoggedIn.Loaded profile ) ->
+                ( Loaded balance, LoggedIn.Loaded profile, LoadedGraphql community _ ) ->
                     div [ class "container mx-auto px-4 mb-10" ]
                         [ div [ class "flex inline-block text-gray-600 font-light mt-6 mb-4" ]
                             [ div []
                                 [ text (t "menu.my_communities")
                                 , span [ class "text-indigo-500 font-medium" ]
-                                    [ text (profile.userName |> Maybe.withDefault (Eos.nameToString profile.account))
+                                    [ text community.name
                                     ]
                                 ]
                             , if isCommunityAdmin then
@@ -195,7 +195,7 @@ view loggedIn model =
                         , viewInvitationModal loggedIn model
                         ]
 
-                ( _, _ ) ->
+                ( _, _, _ ) ->
                     Page.fullPageNotFound (t "dashboard.sorry") ""
     in
     { title = t "menu.dashboard"

@@ -72,7 +72,7 @@ view loggedIn status =
 
                 Loaded profile ->
                     div []
-                        [ Page.viewHeader loggedIn (t "menu.profile") Route.Communities
+                        [ Page.viewHeader loggedIn (t "menu.profile") Route.Dashboard
                         , viewPublicInfo loggedIn profile { hasTransferButton = True, hasEditLink = False }
                         ]
 

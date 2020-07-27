@@ -42,9 +42,9 @@ import Graphql.Document
 import Graphql.Http
 import Graphql.Operation exposing (RootSubscription)
 import Graphql.SelectionSet exposing (SelectionSet)
-import Html exposing (Html, a, button, div, footer, img, input, nav, p, span, text)
-import Html.Attributes exposing (class, classList, placeholder, required, src, style, type_, value)
-import Html.Events exposing (onClick, onFocus, onInput, onMouseEnter, onSubmit)
+import Html exposing (Html, a, button, div, footer, img, nav, p, span, text)
+import Html.Attributes exposing (class, classList, src, style, type_, value)
+import Html.Events exposing (onClick, onMouseEnter)
 import Http
 import I18Next exposing (Delims(..), Translations, t)
 import Icons
@@ -314,7 +314,6 @@ viewHeader ({ shared } as model) profile_ =
     in
     div [ class "flex flex-wrap items-center justify-between px-4 pt-6 pb-4" ]
         [ viewCommunitySelector model
-        , div [ class "hidden lg:block lg:visible lg:w-1/3" ] [ searchBar model ]
         , div [ class "flex items-center float-right" ]
             [ a
                 [ class "outline-none relative mx-6"
@@ -410,7 +409,6 @@ viewHeader ({ shared } as model) profile_ =
                     ]
                 ]
             ]
-        , div [ class "w-full mt-6 lg:hidden" ] [ searchBar model ]
         ]
 
 
@@ -511,26 +509,6 @@ communitySelectorModal model =
         text ""
 
 
-searchBar : Model -> Html Msg
-searchBar ({ shared } as model) =
-    Html.form
-        [ class "h-12 bg-gray-200 rounded-full flex items-center p-4"
-        , onSubmit SubmitedSearch
-        ]
-        [ Icons.search ""
-        , input
-            [ class "bg-gray-200 w-full outline-none pl-3 text-sm"
-            , placeholder (t shared.translations "menu.search")
-            , type_ "text"
-            , value model.searchText
-            , onFocus FocusedSearchInput
-            , onInput EnteredSearch
-            , required True
-            ]
-            []
-        ]
-
-
 viewMainMenu : Page -> Model -> Html Msg
 viewMainMenu page model =
     let
@@ -568,16 +546,6 @@ viewMainMenu page model =
 
           else
             text ""
-        , a
-            [ classList
-                [ ( menuItemClass, True )
-                , ( activeClass, isActive page Route.Communities )
-                ]
-            , Route.href Route.Communities
-            ]
-            [ Icons.communities iconClass
-            , text (t model.shared.translations "menu.communities")
-            ]
         ]
 
 
@@ -585,9 +553,6 @@ isActive : Page -> Route -> Bool
 isActive page route =
     case ( page, route ) of
         ( Dashboard, Route.Dashboard ) ->
-            True
-
-        ( Communities, Route.Communities ) ->
             True
 
         ( Shop, Route.Shop _ ) ->
@@ -662,7 +627,6 @@ type Msg
     | ShowNotificationModal Bool
     | ShowUserNav Bool
     | ShowMainNav Bool
-    | FocusedSearchInput
     | ToggleLanguageItems
     | ClickedLanguage String
     | ClosedAuthModal
@@ -810,10 +774,6 @@ update msg model =
         ShowMainNav b ->
             UR.init { closeAllModals | showMainNav = b }
                 |> UR.addCmd (focusMainContent (not b) "mobile-main-nav")
-
-        FocusedSearchInput ->
-            UR.init model
-                |> UR.addCmd (Route.pushUrl shared.navKey Route.Communities)
 
         ToggleLanguageItems ->
             UR.init { model | showLanguageItems = not model.showLanguageItems }
@@ -1038,9 +998,6 @@ msgToString msg =
 
         ShowMainNav _ ->
             [ "ShowMainNav" ]
-
-        FocusedSearchInput ->
-            [ "FocusedSearchInput" ]
 
         ToggleLanguageItems ->
             [ "ToggleLanguageItems" ]

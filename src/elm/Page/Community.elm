@@ -488,7 +488,7 @@ viewHeader { shared } community =
         [ div [ class "h-16 w-full bg-indigo-500 flex px-4 items-center" ]
             [ a
                 [ class "items-center flex absolute"
-                , Route.href Route.Communities
+                , Route.href Route.Dashboard
                 ]
                 [ Icons.back ""
                 , p [ class "text-white text-sm ml-2" ]

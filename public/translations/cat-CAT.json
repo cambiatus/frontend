@@ -3,7 +3,7 @@
   "back": "Torna",
   "menu": {
     "title": "Menú",
-    "my_communities": "Benvingut de nou, ",
+    "my_communities": "Benvingut a ",
     "dashboard": "Inici",
     "news": "Notícies",
     "learn": "Aprendre",
@@ -651,7 +651,7 @@
       "enabled": "Activat",
       "disabled": "Desactivat"
     }
-  }, 
+  },
   "payment_history": {
     "title": "Historial de pagaments",
     "user": "Usuari",
