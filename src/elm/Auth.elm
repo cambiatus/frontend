@@ -22,7 +22,7 @@ import Browser.Events
 import Eos.Account as Eos
 import Graphql.Http
 import Html exposing (Html, a, button, div, h2, img, label, li, p, span, strong, text, textarea, ul)
-import Html.Attributes exposing (autocomplete, autofocus, class, classList, disabled, for, id, placeholder, required, src, title, type_, value)
+import Html.Attributes exposing (autocomplete, autofocus, class, disabled, for, id, placeholder, required, src, title, type_, value)
 import Html.Events exposing (onClick, onInput, onSubmit)
 import I18Next exposing (t)
 import Json.Decode as Decode
