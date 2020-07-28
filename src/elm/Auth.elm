@@ -21,7 +21,7 @@ import Browser.Events
 import Eos.Account as Eos
 import Graphql.Http
 import Html exposing (Html, a, button, div, h2, img, label, li, p, span, strong, text, textarea, ul)
-import Html.Attributes exposing (autocomplete, class, disabled, for, id, placeholder, required, src, title, type_, value)
+import Html.Attributes exposing (autocomplete, autofocus, class, disabled, for, id, placeholder, required, src, title, type_, value)
 import Html.Events exposing (onClick, onInput, onSubmit)
 import I18Next exposing (t)
 import Json.Decode as Decode
@@ -359,6 +359,7 @@ viewLoginSteps isModal shared model loginStep =
                     [ textarea
                         [ class "form-textarea h-19 min-w-full block"
                         , placeholder (t shared.translations "auth.login.wordsMode.input.placeholder")
+                        , autofocus True
                         , class <|
                             if not (List.isEmpty passphraseErrors) then
                                 "field-with-error"
