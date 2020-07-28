@@ -119,6 +119,7 @@
         }
       },
       "submit": "Sign In",
+      "submitting": "Signing In...",
       "register": "Don't have an account yet? ",
       "registerLink": "Create now"
     },

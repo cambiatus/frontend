@@ -22,7 +22,7 @@ import Browser.Events
 import Eos.Account as Eos
 import Graphql.Http
 import Html exposing (Html, a, button, div, h2, img, label, li, p, span, strong, text, textarea, ul)
-import Html.Attributes exposing (autocomplete, autofocus, class, disabled, for, id, placeholder, required, src, title, type_, value)
+import Html.Attributes exposing (autocomplete, autofocus, class, classList, disabled, for, id, placeholder, required, src, title, type_, value)
 import Html.Events exposing (onClick, onInput, onSubmit)
 import I18Next exposing (t)
 import Json.Decode as Decode
@@ -87,6 +87,7 @@ type alias Model =
     { status : Status
     , loginError : Maybe String
     , form : LoginFormData
+    , isSigningIn : Bool
     , pinVisibility : Bool
     , pinConfirmationVisibility : Bool
     , problems : List ( Field, String )
@@ -98,6 +99,7 @@ initModel =
     { status = Options LoginStepPassphrase
     , loginError = Nothing
     , form = initLoginFormData
+    , isSigningIn = False
     , pinVisibility = True
     , pinConfirmationVisibility = True
     , problems = []
@@ -427,9 +429,17 @@ viewLoginSteps isModal shared model loginStep =
                 [ button
                     [ class buttonClass
                     , class "mt-10"
+                    , disabled model.isSigningIn
                     , onClick (SubmittedLoginPrivateKey model.form)
                     ]
-                    [ text_ "auth.login.submit" ]
+                    [ text_
+                        (if model.isSigningIn then
+                            "auth.login.submitting"
+
+                         else
+                            "auth.login.submit"
+                        )
+                    ]
                 ]
             ]
 
@@ -689,7 +699,10 @@ update msg shared model =
                         newForm =
                             { form | usePin = Just pinString }
                     in
-                    { model | form = newForm }
+                    { model
+                        | form = newForm
+                        , isSigningIn = True
+                    }
                         |> UR.init
                         |> UR.addPort
                             { responseAddress = SubmittedLoginPrivateKey form
@@ -702,7 +715,10 @@ update msg shared model =
                             }
 
                 Err errors ->
-                    { model | problems = errors }
+                    { model
+                        | problems = errors
+                        , isSigningIn = False
+                    }
                         |> UR.init
 
         GotMultipleAccountsLogin _ ->

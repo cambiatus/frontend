@@ -116,6 +116,7 @@
         }
       },
       "submit": "Iniciar sesión",
+      "submitting": "Iniciando sesión...",
       "register": "¿Aún no tienes una cuenta? ",
       "registerLink": "Crea ahora"
     },

@@ -116,6 +116,7 @@
         }
       },
       "submit": "Inicieu la sessió",
+      "submitting": "Inici de sessió...",
       "register": "Encara no teniu cap compte? ",
       "registerLink": "Crea ara"
     },

@@ -121,6 +121,7 @@
         }
       },
       "submit": "Entrar",
+      "submitting": "Entrando...",
       "register": "Ainda não tem uma conta? ",
       "registerLink": "Crie agora"
     },
