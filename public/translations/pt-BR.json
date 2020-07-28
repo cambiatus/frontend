@@ -317,6 +317,7 @@
       "subtitle": "{{objectives}} objetivos e {{actions}} ações",
       "new": "Criar novo objetivo",
       "action_count": "{{actions}} ações",
+      "edit": "Editar objetivo", 
       "editor": {
         "not_found": "Não encontrado",
         "error": "Ops algo deu errado!",
@@ -337,7 +338,7 @@
       "aumatically_verified_by": "Automaticamente verificado por",
       "validation_reward": "Recompensa por validar",
       "validation_reward_none": "Nada",
-      "new": "Criar nova ação",
+      "new": "Criar ação",
       "description_label": "Quais ações precisam ser feitas para alcancar essa meta?",
       "reward_label": "O usuario vai ganhar essa recompensa por completar a ação.",
       "verification_label": "Como essa ação sera verificada?",
@@ -354,6 +355,7 @@
       "or": " ou ",
       "completed": "Completa",
       "closed": "Encerrada",
+      "edit": "Editar ação", 
       "form": {
         "not_found": "Ação não encontrada",
         "description_label": "Descrição",

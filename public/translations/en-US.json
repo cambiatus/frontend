@@ -312,6 +312,7 @@
       "subtitle": "{{objectives}} objectives and {{actions}} actions",
       "new": "Create new objective",
       "action_count": "{{actions}} actions",
+      "edit": "Edit objective", 
       "editor": {
         "not_found": "Not Found",
         "error": "Ops something went wrong!",
@@ -332,7 +333,7 @@
       "aumatically_verified_by": "Automatically verified by",
       "validation_reward": "Validation reward",
       "validation_reward_none": "None",
-      "new": "Create new action",
+      "new": "Create action",
       "description_label": "What actions need to be taken to achieve this goal?",
       "reward_label": "The user will earn this reward by completing the action.",
       "verification_label": "How this action will be verified?",
@@ -349,6 +350,7 @@
       "or": " or ",
       "completed": "Completed",
       "closed": "Closed",
+      "edit": "Edit Action",
       "form": {
         "not_found": "Action not found",
         "description_label": "Description",
