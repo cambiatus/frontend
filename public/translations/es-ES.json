@@ -189,8 +189,8 @@
       "twelve_words": "Tus 12 palabras",
       "private_key": "Tu clave privada",
       "recommendation": "Le recomendamos que guarde esta información haciendo clic en el botón a continuación; si la pierde, no podrá volver a iniciar sesión en su cuenta",
-      "download": "Guardar clave privada y 12 palabras",
-      "instructions": "Guardará la clave privada y las 12 palabras en su computadora en formato PDF."
+      "download": "Crear mi cuenta",
+      "instructions": "Copie y pegue las 12 palabras a continuación en un lugar seguro. Solo tienes esta oportunidad de hacerlo; Si perdió estas palabras, no podrá iniciar sesión en su cuenta nunca más."
     }
   },
   "account": {

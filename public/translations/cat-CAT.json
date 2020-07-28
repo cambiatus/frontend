@@ -189,8 +189,8 @@
       "twelve_words": "Les vostres 12 paraules",
       "private_key": "La vostra clau privada",
       "recommendation": "Us recomanem que deseu aquesta informació fent clic al botó següent, si la perds, no podreu tornar a iniciar la sessió al vostre compte",
-      "download": "Desa la clau privada i 12 paraules",
-      "instructions": "Desa la clau privada i les 12 paraules a l’ordinador en format PDF."
+      "download": "Crear el meu compte",
+      "instructions": "Copieu i enganxeu les 12 paraules següents a un lloc segur. Només teniu aquesta oportunitat de fer-ho; si heu perdut aquestes paraules, ja no podreu iniciar la sessió al vostre compte."
     }
   },
   "account": {
