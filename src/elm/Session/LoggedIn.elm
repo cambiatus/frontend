@@ -567,15 +567,15 @@ viewMainMenu : Page -> Model -> Html Msg
 viewMainMenu page model =
     let
         menuItemClass =
-            "mx-4 w-48 font-sans uppercase flex items-center justify-center leading-tight text-xs text-gray-700 hover:text-indigo-500"
+            "mx-4 w-48 font-sans uppercase sm:flex items-center justify-center leading-tight text-center text-xs text-gray-700 hover:text-indigo-500"
 
         activeClass =
             "border-orange-100 border-b-2 text-indigo-500 font-medium"
 
         iconClass =
-            "w-6 h-6 fill-current hover:text-indigo-500 mr-5"
+            "w-6 h-6 fill-current hover:text-indigo-500 mx-auto sm:mx-0 sm:mr-5 my-2"
     in
-    nav [ class "h-16 w-full flex overflow-x-auto" ]
+    nav [ class "h-16 w-full flex" ]
         [ a
             [ classList
                 [ ( menuItemClass, True )
