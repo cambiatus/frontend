@@ -110,7 +110,7 @@
 
 .input {
   /* Form input comes from tailwind/custom-forms */
-  @apply form-input h-12;
+  @apply form-input h-12 block;
 }
 
 .field-with-error,
@@ -254,7 +254,7 @@
 
 .form-error {
   /* validation message for the field */
-  @apply text-red text-caption uppercase tracking-wide block;
+  @apply text-red text-caption uppercase tracking-wide block mt-1;
 }
 
 .form-error-on-dark-bg {
