@@ -1,7 +1,7 @@
 module Session.Guest exposing (External(..), Model, Msg(..), Page(..), addAfterLoginRedirect, init, initModel, msgToString, subscriptions, update, view)
 
 import Browser.Events
-import Html exposing (Html, button, div, header, img, text)
+import Html exposing (Html, a, button, div, header, img, text)
 import Html.Attributes exposing (alt, class, classList, src, style, tabindex, type_)
 import Html.Events exposing (onClick, onMouseEnter)
 import Http
@@ -153,7 +153,7 @@ viewPageHeader : Model -> Shared -> Html Msg
 viewPageHeader model shared =
     header
         [ class "flex items-center justify-between pl-4 md:pl-6 py-3 bg-white" ]
-        [ div []
+        [ a [ Route.href (Route.Login Nothing) ]
             [ img
                 [ class "h-5"
                 , src shared.logo
