@@ -17,6 +17,7 @@ module Auth exposing
 
 import Api.Graphql
 import Asset.Icon as Icon
+import Browser.Dom as Dom
 import Browser.Events
 import Eos.Account as Eos
 import Graphql.Http
@@ -653,6 +654,10 @@ update msg shared model =
                         , status = Options LoginStepPIN
                     }
                         |> UR.init
+                        |> UR.addCmd
+                            (Dom.focus "pinInput"
+                                |> Task.attempt (\_ -> Ignored)
+                            )
 
                 Err errors ->
                     { model | problems = errors }
