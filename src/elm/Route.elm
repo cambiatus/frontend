@@ -25,7 +25,6 @@ type Route
     | Profile
     | Dashboard
     | Community Symbol
-    | Communities
     | NewCommunity
     | CommunitySettings Symbol
     | CommunitySettingsFeatures Symbol
@@ -84,7 +83,6 @@ parser url =
         , Url.map Profile (s "profile")
         , Url.map Notification (s "notification")
         , Url.map Dashboard (s "dashboard")
-        , Url.map Communities (s "community")
         , Url.map NewCommunity (s "community" </> s "new")
         , Url.map Community (s "community" </> Eos.symbolUrlParser)
         , Url.map EditCommunity (s "community" </> Eos.symbolUrlParser </> s "edit")
@@ -289,9 +287,6 @@ routeToString route =
                       ]
                     , []
                     )
-
-                Communities ->
-                    ( [ "community" ], [] )
 
                 Shop maybeFilter ->
                     ( [ "shop" ]

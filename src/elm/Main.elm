@@ -12,7 +12,6 @@ import Page.ComingSoon as ComingSoon
 import Page.Community as CommunityPage
 import Page.Community.ActionEditor as ActionEditor
 import Page.Community.Editor as CommunityEditor
-import Page.Community.Explore as CommunityExplore
 import Page.Community.Invite as Invite
 import Page.Community.ObjectiveEditor as ObjectiveEditor
 import Page.Community.Objectives as Objectives
@@ -157,7 +156,6 @@ type Status
     | ObjectiveEditor ObjectiveEditor.Model
     | ActionEditor ActionEditor.Model
     | Claim Claim.Model
-    | CommunityExplore CommunityExplore.Model
     | Notification Notification.Model
     | Dashboard Dashboard.Model
     | Login Login.Model
@@ -193,7 +191,6 @@ type Msg
     | GotActionEditorMsg ActionEditor.Msg
     | GotObjectiveEditorMsg ObjectiveEditor.Msg
     | GotVerifyClaimMsg Claim.Msg
-    | GotCommunityExploreMsg CommunityExplore.Msg
     | GotDashboardMsg Dashboard.Msg
     | GotLoginMsg Login.Msg
     | GotPublicProfileMsg PublicProfile.Msg
@@ -357,11 +354,6 @@ update msg model =
         ( GotObjectiveEditorMsg subMsg, ObjectiveEditor subModel ) ->
             ObjectiveEditor.update subMsg subModel
                 >> updateLoggedInUResult ObjectiveEditor GotObjectiveEditorMsg model
-                |> withLoggedIn
-
-        ( GotCommunityExploreMsg subMsg, CommunityExplore subModel ) ->
-            CommunityExplore.update subMsg subModel
-                >> updateLoggedInUResult CommunityExplore GotCommunityExploreMsg model
                 |> withLoggedIn
 
         ( GotDashboardMsg subMsg, Dashboard subModel ) ->
@@ -827,11 +819,6 @@ changeRouteTo maybeRoute model =
                 |> withLoggedIn (Route.Claim communityId objectiveId actionId claimId)
                 |> withFeature .hasObjectives
 
-        Just Route.Communities ->
-            CommunityExplore.init
-                >> updateStatusWith CommunityExplore GotCommunityExploreMsg model
-                |> withLoggedIn Route.Communities
-
         Just (Route.Shop maybeFilter) ->
             (\l -> Shop.init l maybeFilter)
                 >> updateStatusWith (Shop maybeFilter) GotShopMsg model
@@ -988,9 +975,6 @@ msgToString msg =
 
         GotVerifyClaimMsg subMsg ->
             "GotVerifyClaimMsg" :: Claim.msgToString subMsg
-
-        GotCommunityExploreMsg subMsg ->
-            "GotCommunityExploreMsg" :: CommunityExplore.msgToString subMsg
 
         GotNotificationMsg subMsg ->
             "GotNotificationMsg" :: Notification.msgToString subMsg
@@ -1175,9 +1159,6 @@ view model =
 
         Claim subModel ->
             viewLoggedIn subModel LoggedIn.Other GotVerifyClaimMsg Claim.view
-
-        CommunityExplore subModel ->
-            viewLoggedIn subModel LoggedIn.Communities GotCommunityExploreMsg CommunityExplore.view
 
         Dashboard subModel ->
             viewLoggedIn subModel LoggedIn.Dashboard GotDashboardMsg Dashboard.view

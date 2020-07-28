@@ -106,7 +106,7 @@ view loggedIn model =
 
                 Loaded profile ->
                     div []
-                        [ Page.viewHeader loggedIn (t loggedIn.shared.translations "menu.profile") Route.Communities
+                        [ Page.viewHeader loggedIn (t loggedIn.shared.translations "menu.profile") Route.Dashboard
                         , viewPublicInfo loggedIn profile { hasTransferButton = False, hasEditLink = True }
                         , viewPrivateInfo loggedIn model
                         , viewNewPinModal model loggedIn.shared
