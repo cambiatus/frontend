@@ -108,7 +108,9 @@
       },
       "wordsMode": {
         "input": {
+          "description": "Enter your 12 words, that you've copied and pasted on registration.",
           "label": "Your 12 words (you saved when creating your account)",
+          "placeholder": "Type your 12 words here",
           "tooltip": "You can use your PRIVATE KEY too",
           "toggle": "I want to use the Private Key",
           "notPassphraseError": "Please, enter 12 words",

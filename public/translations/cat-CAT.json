@@ -105,7 +105,9 @@
       },
       "wordsMode": {
         "input": {
+          "description": "Escriviu les 12 paraules que heu copiat i enganxat al registre.",
           "label": "Les vostres 12 paraules (heu desat en crear el vostre compte)",
+          "placeholder": "Escriviu les vostres 12 paraules aquí",
           "tooltip": "També podeu fer servir la tecla PRIVADA",
           "toggle": "Vull utilitzar la clau privada",
           "notPassphraseError": "Introduïu 12 paraules",

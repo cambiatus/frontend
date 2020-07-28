@@ -110,7 +110,9 @@
       },
       "wordsMode": {
         "input": {
+          "description": "Digite suas 12 palavras que você copiou e colou no registro.",
           "label": "Suas 12 palavras (você salvou ao criar sua conta)",
+          "placeholder": "Digite suas 12 palavras aqui",
           "tooltip": "Você também pode usar sua CHAVE PRIVADA",
           "toggle": "Eu quero usar a chave privada",
           "notPassphraseError": "Por favor, digite 12 palavras",

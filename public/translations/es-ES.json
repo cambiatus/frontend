@@ -105,7 +105,9 @@
       },
       "wordsMode": {
         "input": {
+          "description": "Ingrese sus 12 palabras, que ha copiado y pegado en el registro.",
           "label": "Sus 12 palabras (que guardó al crear su cuenta)",
+          "placeholder": "Escriba sus 12 palabras aquí",
           "tooltip": "También puedes usar tu CLAVE PRIVADA",
           "toggle": "Quiero usar la clave privada",
           "notPassphraseError": "Por favor, ingrese sus 12 palabras",
