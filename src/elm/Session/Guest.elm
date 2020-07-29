@@ -126,7 +126,7 @@ view thisMsg page ({ shared } as model) content =
                   else
                     text ""
                 , div
-                    [ class "min-h-stretch flex flex-col"
+                    [ class "min-h-screen flex flex-col"
                     , class rightColWidth
                     ]
                     [ viewPageHeader model shared
