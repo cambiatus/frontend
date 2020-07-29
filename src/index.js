@@ -197,23 +197,11 @@ function getSelectedCommunity () {
   return window.localStorage.getItem(SELECTED_COMMUNITY_KEY)
 }
 
-const isMobile = (navigator.userAgent.match(/Android/i) ||
-  navigator.userAgent.match(/webOS/i) ||
-  navigator.userAgent.match(/iPhone/i) ||
-  navigator.userAgent.match(/iPad/i) ||
-  navigator.userAgent.match(/iPod/i) ||
-  navigator.userAgent.match(/BlackBerry/i) ||
-  navigator.userAgent.match(/Windows Phone/i))
-
 function downloadPdf (accountName, passphrase, responseAddress, responseData) {
   const definition = pdfDefinition(passphrase)
   const pdf = pdfMake.createPdf(definition)
 
-  if (isMobile) {
-    pdf.open() // open PDF in new tab on mobile devices
-  } else {
-    pdf.download(accountName + '_cambiatus.pdf')
-  }
+  pdf.download(accountName + '_cambiatus.pdf')
 
   const response = {
     address: responseAddress,
