@@ -1,7 +1,7 @@
 module Session.Guest exposing (External(..), Model, Msg(..), Page(..), addAfterLoginRedirect, init, initModel, msgToString, subscriptions, update, view)
 
 import Browser.Events
-import Html exposing (Html, button, div, header, img, text)
+import Html exposing (Html, a, button, div, header, img, text)
 import Html.Attributes exposing (alt, class, classList, src, style, tabindex, type_)
 import Html.Events exposing (onClick, onMouseEnter)
 import Http
@@ -126,7 +126,7 @@ view thisMsg page ({ shared } as model) content =
                   else
                     text ""
                 , div
-                    [ class "min-h-stretch flex flex-col"
+                    [ class "min-h-screen flex flex-col"
                     , class rightColWidth
                     ]
                     [ viewPageHeader model shared
@@ -153,7 +153,7 @@ viewPageHeader : Model -> Shared -> Html Msg
 viewPageHeader model shared =
     header
         [ class "flex items-center justify-between pl-4 md:pl-6 py-3 bg-white" ]
-        [ div []
+        [ a [ Route.href (Route.Login Nothing) ]
             [ img
                 [ class "h-5"
                 , src shared.logo
@@ -165,7 +165,7 @@ viewPageHeader model shared =
             [ button
                 [ type_ "button"
                 , tabindex -1
-                , class "flex block relative z-10 items-center px-4 py-2 bg-white text-xs focus:outline-none"
+                , class "flex block relative z-20 items-center px-4 py-2 bg-white text-xs focus:outline-none"
                 , classList
                     [ ( "rounded-tr-lg rounded-tl-lg justify-between lang-menu-open"
                       , model.showLanguageNav

@@ -12,18 +12,18 @@ import Api.Graphql
 import Community exposing (Invite)
 import Eos.Account as Eos
 import Graphql.Http
-import Html exposing (Html, button, div, img, p, span, text)
+import Html exposing (Html, button, div, img, span, text)
 import Html.Attributes exposing (class, src)
 import Html.Events exposing (onClick)
 import Http
 import I18Next exposing (t)
-import Icons
 import Page exposing (Session(..), toShared)
 import Profile exposing (Profile)
 import Route
 import Session.LoggedIn as LoggedIn exposing (External)
 import Session.Shared exposing (Shared)
 import UpdateResult as UR
+import View.Modal as Modal
 
 
 init : Session -> String -> ( Model, Cmd Msg )
@@ -183,42 +183,36 @@ viewModal shared model invitationId =
 
         text_ s =
             text (t s)
-    in
-    case model.confirmationModal of
-        Closed ->
-            text ""
 
-        _ ->
-            div [ class "modal container" ]
-                [ div [ class "modal-bg", onClick CloseConfirmationModal ] []
-                , div [ class "modal-content" ]
-                    [ div [ class "w-full" ]
-                        [ p [ class "text-2xl font-bold mb-4" ]
-                            [ text_ "community.invitation.modal.title" ]
-                        , button [ onClick CloseConfirmationModal ]
-                            [ Icons.close "absolute fill-current text-gray-400 top-0 right-0 mx-8 my-4" ]
-                        , div [ class "flex flex-wrap items-center" ]
-                            [ div [ class "flex flex-col items-left mb-4" ]
-                                [ p [ class "" ]
-                                    [ text_ "community.invitation.modal.body" ]
-                                ]
-                            , div [ class "modal-footer" ]
-                                [ button
-                                    [ class "modal-cancel"
-                                    , onClick RejectInvitation
-                                    ]
-                                    [ text_ "community.invitation.modal.no"
-                                    ]
-                                , button
-                                    [ class "modal-accept"
-                                    , onClick (AcceptInvitation invitationId)
-                                    ]
-                                    [ text_ "community.invitation.modal.yes" ]
-                                ]
-                            ]
-                        ]
-                    ]
+        isModalVisible =
+            case model.confirmationModal of
+                Closed ->
+                    False
+
+                Open ->
+                    True
+    in
+    Modal.initWith
+        { closeMsg = CloseConfirmationModal
+        , isVisible = isModalVisible
+        }
+        |> Modal.withHeader (t "community.invitation.modal.title")
+        |> Modal.withBody
+            [ text_ "community.invitation.modal.body" ]
+        |> Modal.withFooter
+            [ button
+                [ class "modal-cancel"
+                , onClick RejectInvitation
                 ]
+                [ text_ "community.invitation.modal.no"
+                ]
+            , button
+                [ class "modal-accept"
+                , onClick (AcceptInvitation invitationId)
+                ]
+                [ text_ "community.invitation.modal.yes" ]
+            ]
+        |> Modal.toHtml
 
 
 viewFooter : Session -> Html msg

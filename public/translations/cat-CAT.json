@@ -3,7 +3,7 @@
   "back": "Torna",
   "menu": {
     "title": "Menú",
-    "my_communities": "Benvingut de nou, ",
+    "my_communities": "Benvingut a ",
     "dashboard": "Inici",
     "news": "Notícies",
     "learn": "Aprendre",
@@ -105,7 +105,9 @@
       },
       "wordsMode": {
         "input": {
+          "description": "Escriviu les 12 paraules que heu copiat i enganxat al registre.",
           "label": "Les vostres 12 paraules (heu desat en crear el vostre compte)",
+          "placeholder": "Escriviu les vostres 12 paraules aquí",
           "tooltip": "També podeu fer servir la tecla PRIVADA",
           "toggle": "Vull utilitzar la clau privada",
           "notPassphraseError": "Introduïu 12 paraules",
@@ -114,6 +116,7 @@
         }
       },
       "submit": "Inicieu la sessió",
+      "submitting": "Inici de sessió...",
       "register": "Encara no teniu cap compte? ",
       "registerLink": "Crea ara"
     },
@@ -189,8 +192,8 @@
       "twelve_words": "Les vostres 12 paraules",
       "private_key": "La vostra clau privada",
       "recommendation": "Us recomanem que deseu aquesta informació fent clic al botó següent, si la perds, no podreu tornar a iniciar la sessió al vostre compte",
-      "download": "Desa la clau privada i 12 paraules",
-      "instructions": "Desa la clau privada i les 12 paraules a l’ordinador en format PDF."
+      "download": "Crear el meu compte",
+      "instructions": "Copieu i enganxeu les 12 paraules següents a un lloc segur. Només teniu aquesta oportunitat de fer-ho; si heu perdut aquestes paraules, ja no podreu iniciar la sessió al vostre compte."
     }
   },
   "account": {
@@ -313,6 +316,7 @@
       "subtitle": "{{objectives}} objectius i {{actions}} accions",
       "new": "Crear un objectiu nou",
       "action_count": "{{actions}} accions",
+      "edit": "Edita l'objectiu", 
       "editor": {
         "not_found": "No trobat",
         "error": "Ui! Quelcom ha fallat",
@@ -333,7 +337,7 @@
       "aumatically_verified_by": "Automàticament verificada per",
       "validation_reward": "Recompensa de validació",
       "validation_reward_none": "Cap",
-      "new": "Crear una acció nova",
+      "new": "Crear acció",
       "description_label": "Quines accions has de promoure per a aconseguir aquest objectiu?",
       "reward_label": "Els usuaris guanyaran aquesta recompensa en completar l’acció.",
       "verification_label": "Com serà verificada aquesta acció?",
@@ -350,6 +354,7 @@
       "or": " o ",
       "completed": "Completat",
       "closed": "Tancat",
+      "edit": "Edita l'acció",
       "form": {
         "not_found": "Acció no trobada",
         "description_label": "Descripció",
@@ -357,8 +362,8 @@
         "validity_label": "Tipus de validesa",
         "validation_on": "La caducitat s'ha activat,",
         "validation_off": "La caducitat es va desactivar,",
-        "validation_detail": "l'acció estarà disponible fins que no se suprimeixi",
-        "validation_on_detail": "l'acció estarà disponible fins a una data, quantitat o totes dues coses",
+        "validation_detail": " l'acció estarà disponible fins que no se suprimeixi",
+        "validation_on_detail": " l'acció estarà disponible fins a una data, quantitat o totes dues coses",
         "verification_label": "Necessita verificació?",
         "verifiers_label": "Trieu els verificadors",
         "verifiers_label_count": "Trieu almenys {{count}} verificadors",
@@ -367,16 +372,17 @@
         "votes_label": "Nombre mínim de vots",
         "tooltip_label": "Què es?",
         "date_validity": "Validesa per data,",
-        "date_validity_details": "l’acció finalitzarà quan arribi a una data concreta",
+        "date_validity_details": " l’acció finalitzarà quan arribi a una data concreta",
         "quantity_validity": "Validesa per quantitat,",
-        "quantity_validity_details": "l’acció finalitzarà quan arribi a un nombre específic d’usos",
+        "quantity_validity_details": " l’acció finalitzarà quan arribi a un nombre específic d’usos",
         "no": "No",
         "yes": "Sí",
         "automatic": "Automàtic,",
-        "automatic_detail": "recompensa l'usuari immediatament quan ho reclama",
+        "automatic_detail": " recompensa l'usuari immediatament quan ho reclama",
         "manual": "Manual,",
-        "manual_detail": "recompensa l’usuari només després d’haver-lo revisat per altres",
+        "manual_detail": " recompensa l’usuari només després d’haver-lo revisat per altres",
         "verifier_placeholder": "Escriviu el nom d’usuari",
+        "usages_placeholder": "Escriviu un número",
         "date_label": "Tria la data",
         "quantity_label": "Tria la quantitat",
         "usages_left_label": "Usos restants",
@@ -406,6 +412,10 @@
     "edit_success": "El perfil s'ha desat correctament",
     "locations": "Localització",
     "interests": "Interessos",
+    "12words": { "title": "Les meves 12 paraules", "button": "Descarregar" },
+    "pin": { "title": "El meu PIN", "button": "Canviar" },
+    "changePin": "Canvieu el PIN!",
+    "newPin": "Nou PIN de seguretat",
     "actions": {
       "edit": "Editar",
       "viewPrivatekey": "Veure clau privada"
@@ -620,6 +630,31 @@
     "transaction_id": {
       "title": "identificador de transacció",
       "body": "Aquesta identificació garanteix l'autenticitat de la transacció si ambdues parts tenen els mateixos emojis."
+    }
+  },
+  "settings": {
+    "success": "La configuració s'ha desat correctament",
+    "community_info": {
+      "title": "Informació de la Comunitat",
+      "description": "Logo, nome, des crição"
+    },
+    "currency": {
+      "title": "Moeda",
+      "description": ""
+    },
+    "actions": {
+      "title": "Objetius i Ações",
+      "description": ""
+    },
+    "team": {
+      "title": "Temps",
+      "description": "Construcció de temps"
+    },
+    "features": {
+      "title": "Recursos",
+      "description": "Ações, loja",
+      "enabled": "Activat",
+      "disabled": "Desactivat"
     }
   },
   "payment_history": {

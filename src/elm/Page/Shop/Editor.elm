@@ -15,7 +15,6 @@ import Html.Attributes exposing (accept, attribute, class, classList, disabled, 
 import Html.Events exposing (on, onClick, onInput)
 import Http
 import I18Next
-import Icons
 import Json.Decode as Decode
 import Json.Encode as Encode exposing (Value)
 import Page
@@ -27,6 +26,7 @@ import Shop exposing (Sale, SaleId)
 import Task
 import UpdateResult as UR
 import Utils exposing (decodeEnterKeyDown)
+import View.Modal as Modal
 
 
 
@@ -485,34 +485,26 @@ viewForm shared balances imageStatus isEdit isDisabled deleteModal form =
 
 viewConfirmDeleteModal : (String -> String) -> Html Msg
 viewConfirmDeleteModal t =
-    div [ class "modal container" ]
-        [ div [ class "modal-bg", onClick ClickedDeleteCancel ] []
-        , div [ class "modal-content" ]
-            [ div [ class "w-full" ]
-                [ p [ class "text-2xl font-medium mb-4" ]
-                    [ text (t "shop.delete_modal.title") ]
-                , button [ onClick ClickedDeleteCancel ]
-                    [ Icons.close "absolute fill-current text-gray-400 top-0 right-0 mx-8 my-4" ]
-                , p [ class "text-body w-full font-sans mb-10" ]
-                    [ text (t "shop.delete_modal.body") ]
+    Modal.initWith
+        { closeMsg = ClickedDeleteCancel
+        , isVisible = True
+        }
+        |> Modal.withHeader (t "shop.delete_modal.title")
+        |> Modal.withBody
+            [ text (t "shop.delete_modal.body") ]
+        |> Modal.withFooter
+            [ button
+                [ class "modal-cancel"
+                , onClick ClickedDeleteCancel
                 ]
-            , div [ class "w-full md:bg-gray-100 md:flex md:absolute rounded-b-lg md:inset-x-0 md:bottom-0 md:p-4 justify-center" ]
-                [ div [ class "md:flex" ]
-                    [ button
-                        [ class "flex-1 block button button-secondary mb-4 button-lg w-full md:w-40 md:mb-0"
-                        , onClick ClickedDeleteCancel
-                        ]
-                        [ text (t "shop.delete_modal.cancel") ]
-                    , div [ class "w-8" ] []
-                    , button
-                        [ class "flex-1 block button button-primary button-lg w-full md:w-40"
-                        , onClick ClickedDeleteConfirm
-                        ]
-                        [ text (t "shop.delete_modal.confirm") ]
-                    ]
+                [ text (t "shop.delete_modal.cancel") ]
+            , button
+                [ class "modal-accept"
+                , onClick ClickedDeleteConfirm
                 ]
+                [ text (t "shop.delete_modal.confirm") ]
             ]
-        ]
+        |> Modal.toHtml
 
 
 formField : List (Html msg) -> Html msg

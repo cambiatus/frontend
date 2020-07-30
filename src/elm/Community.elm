@@ -11,6 +11,7 @@ module Community exposing
     , Metadata
     , Model
     , Objective
+    , Settings
     , Transaction
     , Verification(..)
     , Verifiers
@@ -36,6 +37,8 @@ module Community exposing
     , logoUrl
     , newCommunitySubscription
     , objectiveSelectionSet
+    , settingsQuery
+    , settingsSelectionSet
     , toVerifications
     )
 
@@ -77,6 +80,8 @@ type alias DashboardInfo =
     , transferCount : Int
     , actionCount : Int
     , saleCount : Int
+    , hasObjectives : Bool
+    , creator : Eos.Name
     }
 
 
@@ -110,6 +115,8 @@ type alias Model =
     , memberCount : Int
     , members : List Profile
     , objectives : List Objective
+    , hasObjectives : Bool
+    , hasShop : Bool
     }
 
 
@@ -137,6 +144,8 @@ dashboardSelectionSet =
         |> with Community.transferCount
         |> with Community.actionCount
         |> with Community.saleCount
+        |> with Community.hasObjectives
+        |> with (Eos.nameSelectionSet Community.creator)
 
 
 communitySelectionSet : SelectionSet Model Cambiatus.Object.Community
@@ -152,6 +161,21 @@ communitySelectionSet =
         |> with Community.memberCount
         |> with (Community.members Profile.selectionSet)
         |> with (Community.objectives objectiveSelectionSet)
+        |> with Community.hasObjectives
+        |> with Community.hasShop
+
+
+type alias Settings =
+    { hasObjectives : Bool
+    , hasShop : Bool
+    }
+
+
+settingsSelectionSet : SelectionSet Settings Cambiatus.Object.Community
+settingsSelectionSet =
+    SelectionSet.succeed Settings
+        |> with Community.hasObjectives
+        |> with Community.hasShop
 
 
 
@@ -201,6 +225,11 @@ type alias WithObjectives =
 communityQuery : Symbol -> SelectionSet (Maybe Model) RootQuery
 communityQuery symbol =
     Query.community { symbol = symbolToString symbol } communitySelectionSet
+
+
+settingsQuery : Symbol -> SelectionSet (Maybe Settings) RootQuery
+settingsQuery symbol =
+    Query.community { symbol = symbolToString symbol } settingsSelectionSet
 
 
 logoUrl : String -> Maybe String -> String
@@ -437,8 +466,8 @@ type alias CreateCommunityData =
     , description : String
     , inviterReward : Eos.Asset
     , invitedReward : Eos.Asset
-    , hasObjectives : Int
-    , hasShop : Int
+    , hasShop : Eos.EosBool
+    , hasObjectives : Eos.EosBool
     }
 
 
@@ -450,8 +479,8 @@ createCommunityData :
     , description : String
     , inviterReward : Float
     , invitedReward : Float
-    , hasObjectives : Int
-    , hasShop : Int
+    , hasShop : Bool
+    , hasObjectives : Bool
     }
     -> CreateCommunityData
 createCommunityData params =
@@ -471,8 +500,8 @@ createCommunityData params =
         { amount = params.invitedReward
         , symbol = params.symbol
         }
-    , hasObjectives = params.hasObjectives
-    , hasShop = params.hasShop
+    , hasShop = params.hasShop |> Eos.boolToEosBool
+    , hasObjectives = params.hasObjectives |> Eos.boolToEosBool
     }
 
 
@@ -486,8 +515,8 @@ encodeCreateCommunityData c =
         , ( "description", Encode.string c.description )
         , ( "inviter_reward", Eos.encodeAsset c.inviterReward )
         , ( "invited_reward", Eos.encodeAsset c.invitedReward )
-        , ( "has_objectives", Encode.int c.hasObjectives )
-        , ( "has_shop", Encode.int c.hasObjectives )
+        , ( "has_objectives", Eos.encodeEosBool c.hasObjectives )
+        , ( "has_shop", Eos.encodeEosBool c.hasShop )
         ]
 
 

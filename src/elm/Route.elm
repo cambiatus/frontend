@@ -19,13 +19,15 @@ type Route
     | LoginWithPrivateKey (Maybe Route)
     | Logout
     | Notification
+    | ProfileEditor
     | PublicProfile String
     | PaymentHistory String
     | Profile
     | Dashboard
     | Community Symbol
-    | Communities
     | NewCommunity
+    | CommunitySettings Symbol
+    | CommunitySettingsFeatures Symbol
     | EditCommunity Symbol
     | Objectives Symbol
     | NewObjective Symbol
@@ -75,15 +77,17 @@ parser url =
                         (Query.string "redirect")
             )
         , Url.map Logout (s "logout")
+        , Url.map ProfileEditor (s "profile" </> s "edit")
         , Url.map PublicProfile (s "profile" </> string)
         , Url.map PaymentHistory (s "payments" </> string)
         , Url.map Profile (s "profile")
         , Url.map Notification (s "notification")
         , Url.map Dashboard (s "dashboard")
-        , Url.map Communities (s "community")
         , Url.map NewCommunity (s "community" </> s "new")
         , Url.map Community (s "community" </> Eos.symbolUrlParser)
         , Url.map EditCommunity (s "community" </> Eos.symbolUrlParser </> s "edit")
+        , Url.map CommunitySettings (s "community" </> Eos.symbolUrlParser </> s "settings")
+        , Url.map CommunitySettingsFeatures (s "community" </> Eos.symbolUrlParser </> s "settings" </> s "features")
         , Url.map Objectives (s "community" </> Eos.symbolUrlParser </> s "objectives")
         , Url.map NewObjective (s "community" </> Eos.symbolUrlParser </> s "objectives" </> s "new")
         , Url.map EditObjective (s "community" </> Eos.symbolUrlParser </> s "objectives" </> int </> s "edit")
@@ -222,6 +226,9 @@ routeToString route =
                 Notification ->
                     ( [ "notification" ], [] )
 
+                ProfileEditor ->
+                    ( [ "profile", "edit" ], [] )
+
                 PublicProfile accountName ->
                     ( [ "profile", accountName ], [] )
 
@@ -236,6 +243,12 @@ routeToString route =
 
                 Community symbol ->
                     ( [ "community", Eos.symbolToString symbol ], [] )
+
+                CommunitySettings symbol ->
+                    ( [ "community", Eos.symbolToString symbol, "settings" ], [] )
+
+                CommunitySettingsFeatures symbol ->
+                    ( [ "community", Eos.symbolToString symbol, "settings", "features" ], [] )
 
                 NewCommunity ->
                     ( [ "community", "new" ], [] )
@@ -274,9 +287,6 @@ routeToString route =
                       ]
                     , []
                     )
-
-                Communities ->
-                    ( [ "community" ], [] )
 
                 Shop maybeFilter ->
                     ( [ "shop" ]

@@ -3,7 +3,7 @@
   "back": "Back",
   "menu": {
     "title": "Menu",
-    "my_communities": "Welcome back, ",
+    "my_communities": "Welcome to ",
     "dashboard": "Dashboard",
     "news": "News",
     "learn": "Learn",
@@ -94,6 +94,9 @@
     "required": "Authentication required for this action",
     "pin_instr": "6 numbers",
     "login": {
+      "modalFormTitle": "Enter your PIN",
+      "enterPinToContinue": "Please, enter your current security PIN to continue.",
+      "continue": "Continue",
       "loginTab": "Login",
       "registerTab": "Create your account",
       "privateKeyMode": {
@@ -105,7 +108,9 @@
       },
       "wordsMode": {
         "input": {
+          "description": "Enter your 12 words, that you've copied and pasted on registration.",
           "label": "Your 12 words (you saved when creating your account)",
+          "placeholder": "Type your 12 words here",
           "tooltip": "You can use your PRIVATE KEY too",
           "toggle": "I want to use the Private Key",
           "notPassphraseError": "Please, enter 12 words",
@@ -114,6 +119,7 @@
         }
       },
       "submit": "Sign In",
+      "submitting": "Signing In...",
       "register": "Don't have an account yet? ",
       "registerLink": "Create now"
     },
@@ -185,8 +191,8 @@
       "twelve_words": "Your 12 words",
       "private_key": "Your private key",
       "recommendation": "We recommend you to save this information by clicking the button below, if you lose it you won't be able to login to your account again",
-      "download": "Save your PDF and Create an Account",
-      "instructions": "You must copy and paste on a secure place these 12 words below. We also are going to give you a PDF with these 12 words when you are finishing the register."
+      "download": "Create My Account",
+      "instructions": "Copy and paste the 12 words below in a secure place. You have only this chance to do it; if you lost these words, you can't login into your account never more."
     }
   },
   "account": {
@@ -217,7 +223,7 @@
     "last_title": "Last Transfers",
     "loading_error": "Something went wrong while fetching transfers.",
     "no_transfers_yet": "No transfers yet.",
-    "info": "{{from}} transfered {{value}} to {{to}}",
+    "info": "{{from}} transferred {{value}} to {{to}}",
     "you": "you",
     "title": "Transfer"
   },
@@ -306,9 +312,10 @@
       "title": "Objective",
       "create_success": "Objective successfully created",
       "title_plural": "Objectives and Actions",
-      "subtitle": "{{objectives}} objetives and {{actions}} actions",
+      "subtitle": "{{objectives}} objectives and {{actions}} actions",
       "new": "Create new objective",
       "action_count": "{{actions}} actions",
+      "edit": "Edit objective", 
       "editor": {
         "not_found": "Not Found",
         "error": "Ops something went wrong!",
@@ -329,7 +336,7 @@
       "aumatically_verified_by": "Automatically verified by",
       "validation_reward": "Validation reward",
       "validation_reward_none": "None",
-      "new": "Create new action",
+      "new": "Create action",
       "description_label": "What actions need to be taken to achieve this goal?",
       "reward_label": "The user will earn this reward by completing the action.",
       "verification_label": "How this action will be verified?",
@@ -346,6 +353,7 @@
       "or": " or ",
       "completed": "Completed",
       "closed": "Closed",
+      "edit": "Edit Action",
       "form": {
         "not_found": "Action not found",
         "description_label": "Description",
@@ -353,8 +361,8 @@
         "validity_label": "Validity type",
         "validation_on": "Expiration on,",
         "validation_off": "Expiration off,",
-        "validation_detail": "the action will be available until it is deleted",
-        "validation_on_detail": "the action will be available until a date, quantity or both",
+        "validation_detail": " the action will be available until it is deleted",
+        "validation_on_detail": " the action will be available until a date, quantity or both",
         "verification_label": "Does it need verification?",
         "verifiers_label": "Choose the verifiers",
         "verifiers_label_count": "Choose at least {{count}} verifiers",
@@ -363,16 +371,17 @@
         "votes_label": "Minimum number of votes",
         "tooltip_label": "What is it?",
         "date_validity": "Validity by date,",
-        "date_validity_details": "the action will end when it reaches a specific date",
+        "date_validity_details": " the action will end when it reaches a specific date",
         "quantity_validity": "Validity by quantity,",
-        "quantity_validity_details": "the action will end when it reaches a specific number of usages",
+        "quantity_validity_details": " the action will end when it reaches a specific number of usages",
         "no": "No",
         "yes": "Yes",
         "automatic": "Automatic,",
-        "automatic_detail": "rewards the user immediately when claimed",
+        "automatic_detail": " rewards the user immediately when claimed",
         "manual": "Manual,",
-        "manual_detail": "rewards the user only after reviewed by others",
+        "manual_detail": " rewards the user only after reviewed by others",
         "verifier_placeholder": "Type the username",
+        "usages_placeholder": "Type a number",
         "date_label": "Choose date",
         "quantity_label": "Choose usages",
         "usages_left_label": "Usages left",
@@ -381,11 +390,11 @@
           "description": "Description cannot be empty",
           "reward": "The reward needs to be more than 0",
           "validity": "At least one validity is required if using validity",
-          "usage": "Quantity needs to be atleast 1",
+          "usage": "Quantity needs to be at least 1",
           "empty_verifiers": " You need at least one verifier if using verifiers",
           "less_verifiers": "You need more verifiers for enough votes",
           "minvotes": "You need to at least 1 minimum vote if using verifiers",
-          "verifier_reward": "Verifier reward needs to be atleast 0"
+          "verifier_reward": "Verifier reward needs to be at least 0"
         },
         "success": "The activity was successfully created.",
         "error": "The activity cannot be created. Try later"
@@ -402,6 +411,15 @@
     "edit_success": "Profile saved successfully",
     "locations": "Location",
     "interests": "Interests",
+    "12words": { "title": "My 12 words", "button": "Download" },
+    "pin": {
+      "title": "My security PIN",
+      "button": "Change",
+      "successMsg": "PIN has been successfully changed."
+    },
+    "changePin": "Change PIN",
+    "newPin": "New security PIN",
+    "changePinPrompt": "Enter your new 6-digit security PIN.",
     "actions": {
       "edit": "Edit",
       "viewPrivatekey": "View Private Key"
@@ -617,6 +635,31 @@
     "transaction_id": {
       "title": "Transaction ID",
       "body": "This ID guarantees the authenticity of the transaction if both sides have the same emojis."
+    }
+  },
+  "settings": {
+    "success": "Settings saved successfully",
+    "community_info": {
+      "title": "Community Information",
+      "description": "Logo, name, description"
+    },
+    "currency": {
+      "title": "Currency",
+      "description": ""
+    },
+    "actions": {
+      "title": "Objectives and Actions",
+      "description": ""
+    },
+    "team": {
+      "title": "Team",
+      "description": "Team building"
+    },
+    "features": {
+      "title": "Features",
+      "description": "Actions, shop",
+      "enabled": "Enabled",
+      "disabled": "Disabled"
     }
   },
   "payment_history": {

@@ -34,6 +34,7 @@ import Browser.Events
 import Cambiatus.Object
 import Cambiatus.Object.UnreadNotifications
 import Cambiatus.Subscription as Subscription
+import Community
 import Eos exposing (Symbol)
 import Eos.Account as Eos
 import Flags exposing (Flags)
@@ -41,9 +42,9 @@ import Graphql.Document
 import Graphql.Http
 import Graphql.Operation exposing (RootSubscription)
 import Graphql.SelectionSet exposing (SelectionSet)
-import Html exposing (Html, a, button, div, footer, img, input, nav, p, span, text)
-import Html.Attributes exposing (class, classList, placeholder, required, src, style, type_, value)
-import Html.Events exposing (onClick, onFocus, onInput, onMouseEnter, onSubmit, stopPropagationOn)
+import Html exposing (Html, a, button, div, footer, img, nav, p, span, text)
+import Html.Attributes exposing (class, classList, src, style, type_)
+import Html.Events exposing (onClick, onMouseEnter)
 import Http
 import I18Next exposing (Delims(..), Translations, t)
 import Icons
@@ -59,6 +60,7 @@ import Shop
 import Task
 import Translation
 import UpdateResult as UR
+import View.Modal as Modal
 
 
 
@@ -74,6 +76,7 @@ init shared accountName flags =
     ( initModel shared authModel accountName flags.selectedCommunity
     , Cmd.batch
         [ Api.Graphql.query shared (Profile.query accountName) CompletedLoadProfile
+        , Api.Graphql.query shared (Community.settingsQuery flags.selectedCommunity) CompletedLoadSettings
         ]
     )
 
@@ -135,6 +138,8 @@ type alias Model =
     , auth : Auth.Model
     , showCommunitySelector : Bool
     , feedback : FeedbackVisibility
+    , hasShop : Bool
+    , hasObjectives : Bool
     }
 
 
@@ -155,6 +160,8 @@ initModel shared authModel accountName selectedCommunity =
     , auth = authModel
     , feedback = Hidden
     , showCommunitySelector = False
+    , hasShop = False
+    , hasObjectives = False
     }
 
 
@@ -198,6 +205,7 @@ type Page
     | FAQ
     | Profile
     | PublicProfile
+    | ProfileEditor
     | PaymentHistory
 
 
@@ -211,7 +219,7 @@ view thisMsg page ({ shared } as model) content =
             Shared.viewFullError shared
                 err
                 ClickedTryAgainTranslation
-                "An error ocurred while loading translation."
+                "An error occurred while loading translation."
                 |> Html.map thisMsg
 
         ( _, Loading _ ) ->
@@ -221,7 +229,7 @@ view thisMsg page ({ shared } as model) content =
             Shared.viewFullGraphqlError shared
                 err
                 (ClickedTryAgainProfile accountName)
-                "An error ocurred while loading profile."
+                "An error occurred while loading profile."
                 |> Html.map thisMsg
 
         ( _, Loaded profile_ ) ->
@@ -240,7 +248,7 @@ viewFeedback status message =
                     "bg-red"
     in
     div
-        [ class "sticky top-0 w-full"
+        [ class "sticky z-10 top-0 w-full"
         , classList [ ( color, True ) ]
         , style "display" "grid"
         , style "grid-template" "\". text x\" 100% / 10% 80% 10%"
@@ -262,23 +270,6 @@ viewFeedback status message =
 
 viewHelper : (Msg -> msg) -> Page -> Profile -> Model -> Html msg -> Html msg
 viewHelper thisMsg page profile_ ({ shared } as model) content =
-    let
-        onClickCloseAny =
-            if model.showUserNav then
-                onClick (ShowUserNav False)
-
-            else if model.showNotificationModal then
-                onClick (ShowNotificationModal False)
-
-            else if model.showMainNav then
-                onClick (ShowMainNav False)
-
-            else if model.showAuthModal then
-                onClick ClosedAuthModal
-
-            else
-                style "" ""
-    in
     div
         [ class "min-h-screen flex flex-col" ]
         [ div [ class "bg-white" ]
@@ -297,28 +288,16 @@ viewHelper thisMsg page profile_ ({ shared } as model) content =
             [ content
             ]
         , viewFooter shared
-        , div [ onClickCloseAny ] [] |> Html.map thisMsg
-        , if model.showAuthModal then
-            div
-                [ classList
-                    [ ( "modal-old", True )
-                    , ( "fade-in", True )
-                    ]
-                , onClickCloseAny
-                ]
-                [ div
-                    [ class "card card--register card--modal"
-                    , stopPropagationOn "click"
-                        (Decode.succeed ( Ignored, True ))
-                    ]
-                    (Auth.view True shared model.auth
-                        |> List.map (Html.map GotAuthMsg)
-                    )
-                ]
-                |> Html.map thisMsg
-
-          else
-            text ""
+        , Modal.initWith
+            { closeMsg = ClosedAuthModal
+            , isVisible = model.showAuthModal
+            }
+            |> Modal.withBody
+                (Auth.view True shared model.auth
+                    |> List.map (Html.map GotAuthMsg)
+                )
+            |> Modal.toHtml
+            |> Html.map thisMsg
         , communitySelectorModal model
             |> Html.map thisMsg
         ]
@@ -335,7 +314,6 @@ viewHeader ({ shared } as model) profile_ =
     in
     div [ class "flex flex-wrap items-center justify-between px-4 pt-6 pb-4" ]
         [ viewCommunitySelector model
-        , div [ class "hidden lg:block lg:visible lg:w-1/3" ] [ searchBar model ]
         , div [ class "flex items-center float-right" ]
             [ a
                 [ class "outline-none relative mx-6"
@@ -349,7 +327,7 @@ viewHeader ({ shared } as model) profile_ =
                   else
                     text ""
                 ]
-            , div [ class "relative z-10" ]
+            , div [ class "relative z-20" ]
                 [ button
                     [ class "h-12 z-10 bg-gray-200 py-2 px-3 relative hidden lg:visible lg:flex"
                     , classList [ ( "rounded-tr-lg rounded-tl-lg", model.showUserNav ) ]
@@ -431,7 +409,6 @@ viewHeader ({ shared } as model) profile_ =
                     ]
                 ]
             ]
-        , div [ class "w-full mt-6 lg:hidden" ] [ searchBar model ]
         ]
 
 
@@ -497,7 +474,7 @@ communitySelectorModal model =
         viewCommunityItem : Profile.CommunityInfo -> Html Msg
         viewCommunityItem c =
             div
-                [ class "flex items-center py-4 border-b text-body hover:pointer"
+                [ class "flex items-center p-4 text-body cursor-pointer hover:text-black hover:bg-gray-100"
                 , onClick <| SelectCommunity c.id
                 ]
                 [ img [ src (logoUrl c.logo), class "h-16 w-16 mr-5" ] []
@@ -511,50 +488,25 @@ communitySelectorModal model =
                     text ""
 
                 else
-                    div [ class "modal container" ]
-                        [ div [ class "modal-bg", onClick CloseCommunitySelector ] []
-                        , div [ class "modal-content overflow-auto", style "height" "65%" ]
-                            [ div [ class "w-full" ]
-                                [ p [ class "w-full font-bold text-heading text-2xl" ]
-                                    [ text_ "menu.community_selector.title" ]
-                                , button
-                                    [ onClick CloseCommunitySelector ]
-                                    [ Icons.close "absolute fill-current text-gray-400 top-0 right-0 m-4"
-                                    ]
-                                , p [ class "text-body w-full font-sans -mt-2 mb-2" ]
-                                    [ text_ "menu.community_selector.body"
-                                    ]
-                                , div [ class "w-full overflow-scroll" ]
-                                    (List.map viewCommunityItem pro.communities)
+                    Modal.initWith
+                        { closeMsg = CloseCommunitySelector
+                        , isVisible = True
+                        }
+                        |> Modal.withHeader (t "menu.community_selector.title")
+                        |> Modal.withBody
+                            [ p []
+                                [ text_ "menu.community_selector.body"
                                 ]
+                            , div [ class "w-full overflow-y-auto divide-y divide-gray-300" ]
+                                (List.map viewCommunityItem pro.communities)
                             ]
-                        ]
+                        |> Modal.toHtml
 
             _ ->
                 text ""
 
     else
         text ""
-
-
-searchBar : Model -> Html Msg
-searchBar ({ shared } as model) =
-    Html.form
-        [ class "h-12 bg-gray-200 rounded-full flex items-center p-4"
-        , onSubmit SubmitedSearch
-        ]
-        [ Icons.search ""
-        , input
-            [ class "bg-gray-200 w-full outline-none pl-3 text-sm"
-            , placeholder (t shared.translations "menu.search")
-            , type_ "text"
-            , value model.searchText
-            , onFocus FocusedSearchInput
-            , onInput EnteredSearch
-            , required True
-            ]
-            []
-        ]
 
 
 viewMainMenu : Page -> Model -> Html Msg
@@ -580,26 +532,20 @@ viewMainMenu page model =
             [ Icons.dashboard iconClass
             , text (t model.shared.translations "menu.dashboard")
             ]
-        , a
-            [ classList
-                [ ( menuItemClass, True )
-                , ( activeClass, isActive page (Route.Shop Shop.All) )
+        , if model.hasShop then
+            a
+                [ classList
+                    [ ( menuItemClass, True )
+                    , ( activeClass, isActive page (Route.Shop Shop.All) )
+                    ]
+                , Route.href (Route.Shop Shop.All)
                 ]
-            , Route.href (Route.Shop Shop.All)
-            ]
-            [ Icons.shop iconClass
-            , text (t model.shared.translations "menu.shop")
-            ]
-        , a
-            [ classList
-                [ ( menuItemClass, True )
-                , ( activeClass, isActive page Route.Communities )
+                [ Icons.shop iconClass
+                , text (t model.shared.translations "menu.shop")
                 ]
-            , Route.href Route.Communities
-            ]
-            [ Icons.communities iconClass
-            , text (t model.shared.translations "menu.communities")
-            ]
+
+          else
+            text ""
         ]
 
 
@@ -607,9 +553,6 @@ isActive : Page -> Route -> Bool
 isActive page route =
     case ( page, route ) of
         ( Dashboard, Route.Dashboard ) ->
-            True
-
-        ( Communities, Route.Communities ) ->
             True
 
         ( Shop, Route.Shop _ ) ->
@@ -621,7 +564,7 @@ isActive page route =
 
 viewFooter : Shared -> Html msg
 viewFooter _ =
-    footer [ class "bg-white w-full flex flex-wrap mx-auto border-t border-grey p-4 pt-6 h-40 bottom-0" ]
+    footer [ class "bg-white w-full flex flex-wrap mx-auto border-t border-grey-500 p-4 pt-6 h-40 bottom-0" ]
         [ p [ class "text-sm flex w-full justify-center items-center" ]
             [ text "Created with"
             , Icons.heart
@@ -676,6 +619,7 @@ type Msg
     | CompletedLoadTranslation String (Result Http.Error Translations)
     | ClickedTryAgainTranslation
     | CompletedLoadProfile (Result (Graphql.Http.Error (Maybe Profile)) (Maybe Profile))
+    | CompletedLoadSettings (Result (Graphql.Http.Error (Maybe Community.Settings)) (Maybe Community.Settings))
     | ClickedTryAgainProfile Eos.Name
     | ClickedLogout
     | EnteredSearch String
@@ -683,7 +627,6 @@ type Msg
     | ShowNotificationModal Bool
     | ShowUserNav Bool
     | ShowMainNav Bool
-    | FocusedSearchInput
     | ToggleLanguageItems
     | ClickedLanguage String
     | ClosedAuthModal
@@ -777,6 +720,18 @@ update msg model =
                 }
                 |> UR.logGraphqlError msg err
 
+        CompletedLoadSettings (Ok settings_) ->
+            case settings_ of
+                Just settings ->
+                    { model | hasShop = settings.hasShop, hasObjectives = settings.hasObjectives }
+                        |> UR.init
+
+                Nothing ->
+                    UR.init model
+
+        CompletedLoadSettings (Err _) ->
+            UR.init model
+
         ClickedTryAgainProfile accountName ->
             UR.init { model | profile = Loading accountName }
                 |> UR.addCmd (Api.Graphql.query shared (Profile.query accountName) CompletedLoadProfile)
@@ -819,10 +774,6 @@ update msg model =
         ShowMainNav b ->
             UR.init { closeAllModals | showMainNav = b }
                 |> UR.addCmd (focusMainContent (not b) "mobile-main-nav")
-
-        FocusedSearchInput ->
-            UR.init model
-                |> UR.addCmd (Route.pushUrl shared.navKey Route.Communities)
 
         ToggleLanguageItems ->
             UR.init { model | showLanguageItems = not model.showLanguageItems }
@@ -891,9 +842,13 @@ update msg model =
                 |> UR.init
 
         SelectCommunity communityId ->
-            { model | selectedCommunity = communityId, showCommunitySelector = False }
+            { model
+                | selectedCommunity = communityId
+                , showCommunitySelector = False
+            }
                 |> UR.init
                 |> UR.addCmd (Route.replaceUrl model.shared.navKey Route.Dashboard)
+                |> UR.addCmd (Api.Graphql.query shared (Community.settingsQuery communityId) CompletedLoadSettings)
                 |> UR.addPort
                     { responseAddress = msg
                     , responseData = Encode.null
@@ -1020,6 +975,9 @@ msgToString msg =
         CompletedLoadProfile r ->
             [ "CompletedLoadProfile", UR.resultToString r ]
 
+        CompletedLoadSettings r ->
+            [ "CompletedLoadSettings", UR.resultToString r ]
+
         ClickedTryAgainProfile _ ->
             [ "ClickedTryAgainProfile" ]
 
@@ -1040,9 +998,6 @@ msgToString msg =
 
         ShowMainNav _ ->
             [ "ShowMainNav" ]
-
-        FocusedSearchInput ->
-            [ "FocusedSearchInput" ]
 
         ToggleLanguageItems ->
             [ "ToggleLanguageItems" ]

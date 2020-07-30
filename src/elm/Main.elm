@@ -12,10 +12,11 @@ import Page.ComingSoon as ComingSoon
 import Page.Community as CommunityPage
 import Page.Community.ActionEditor as ActionEditor
 import Page.Community.Editor as CommunityEditor
-import Page.Community.Explore as CommunityExplore
 import Page.Community.Invite as Invite
 import Page.Community.ObjectiveEditor as ObjectiveEditor
 import Page.Community.Objectives as Objectives
+import Page.Community.Settings.Features as CommunitySettingsFeatures
+import Page.Community.Settings.Settings as CommunitySettings
 import Page.Community.Transfer as Transfer
 import Page.Dashboard as Dashboard
 import Page.Dashboard.Analysis as Analysis
@@ -25,6 +26,7 @@ import Page.NotFound as NotFound
 import Page.Notification as Notification
 import Page.PaymentHistory as PaymentHistory
 import Page.Profile as Profile
+import Page.Profile.Editor as ProfileEditor
 import Page.PublicProfile as PublicProfile
 import Page.Register as Register
 import Page.Shop as Shop
@@ -148,16 +150,18 @@ type Status
     | PaymentHistory PaymentHistory.Model
     | Community CommunityPage.Model
     | CommunityEditor CommunityEditor.Model
+    | CommunitySettings CommunitySettings.Model
+    | CommunitySettingsFeatures CommunitySettingsFeatures.Model
     | Objectives Objectives.Model
     | ObjectiveEditor ObjectiveEditor.Model
     | ActionEditor ActionEditor.Model
     | Claim Claim.Model
-    | CommunityExplore CommunityExplore.Model
     | Notification Notification.Model
     | Dashboard Dashboard.Model
     | Login Login.Model
     | PublicProfile PublicProfile.Model
     | Profile Profile.Model
+    | ProfileEditor ProfileEditor.Model
     | Register (Maybe String) Register.Model
     | Shop Shop.Filter Shop.Model
     | ShopEditor (Maybe String) ShopEditor.Model
@@ -181,16 +185,18 @@ type Msg
     | GotNotificationMsg Notification.Msg
     | GotCommunityMsg CommunityPage.Msg
     | GotCommunityEditorMsg CommunityEditor.Msg
+    | GotCommunitySettingsMsg CommunitySettings.Msg
+    | GotCommunitySettingsFeaturesMsg CommunitySettingsFeatures.Msg
     | GotObjectivesMsg Objectives.Msg
     | GotActionEditorMsg ActionEditor.Msg
     | GotObjectiveEditorMsg ObjectiveEditor.Msg
     | GotVerifyClaimMsg Claim.Msg
-    | GotCommunityExploreMsg CommunityExplore.Msg
     | GotDashboardMsg Dashboard.Msg
     | GotLoginMsg Login.Msg
     | GotPublicProfileMsg PublicProfile.Msg
     | GotPaymentHistoryMsg PaymentHistory.Msg
     | GotProfileMsg Profile.Msg
+    | GotProfileEditorMsg ProfileEditor.Msg
     | GotRegisterMsg Register.Msg
     | GotShopMsg Shop.Msg
     | GotShopEditorMsg ShopEditor.Msg
@@ -350,11 +356,6 @@ update msg model =
                 >> updateLoggedInUResult ObjectiveEditor GotObjectiveEditorMsg model
                 |> withLoggedIn
 
-        ( GotCommunityExploreMsg subMsg, CommunityExplore subModel ) ->
-            CommunityExplore.update subMsg subModel
-                >> updateLoggedInUResult CommunityExplore GotCommunityExploreMsg model
-                |> withLoggedIn
-
         ( GotDashboardMsg subMsg, Dashboard subModel ) ->
             Dashboard.update subMsg subModel
                 >> updateLoggedInUResult Dashboard GotDashboardMsg model
@@ -368,6 +369,21 @@ update msg model =
         ( GotProfileMsg subMsg, Profile subModel ) ->
             Profile.update subMsg subModel
                 >> updateLoggedInUResult Profile GotProfileMsg model
+                |> withLoggedIn
+
+        ( GotProfileEditorMsg subMsg, ProfileEditor subModel ) ->
+            ProfileEditor.update subMsg subModel
+                >> updateLoggedInUResult ProfileEditor GotProfileEditorMsg model
+                |> withLoggedIn
+
+        ( GotCommunitySettingsMsg subMsg, CommunitySettings subModel ) ->
+            CommunitySettings.update subMsg subModel
+                >> updateLoggedInUResult CommunitySettings GotCommunitySettingsMsg model
+                |> withLoggedIn
+
+        ( GotCommunitySettingsFeaturesMsg subMsg, CommunitySettingsFeatures subModel ) ->
+            CommunitySettingsFeatures.update subMsg subModel
+                >> updateLoggedInUResult CommunitySettingsFeatures GotCommunitySettingsFeaturesMsg model
                 |> withLoggedIn
 
         ( GotShopMsg subMsg, Shop maybeFilter subModel ) ->
@@ -603,6 +619,22 @@ changeRouteTo maybeRoute model =
                     , Route.replaceUrl shared.navKey redirect
                     )
 
+        withFeature feature fn =
+            case session of
+                Page.Guest guest ->
+                    NotFound
+                        |> updateStatus model
+                        |> noCmd
+
+                Page.LoggedIn loggedIn ->
+                    if feature loggedIn then
+                        fn
+
+                    else
+                        NotFound
+                            |> updateStatus model
+                            |> noCmd
+
         withLoggedIn route fn =
             case session of
                 Page.LoggedIn loggedIn ->
@@ -719,6 +751,11 @@ changeRouteTo maybeRoute model =
                 >> updateStatusWith Profile GotProfileMsg model
                 |> withLoggedIn Route.Profile
 
+        Just Route.ProfileEditor ->
+            ProfileEditor.init
+                >> updateStatusWith ProfileEditor GotProfileEditorMsg model
+                |> withLoggedIn Route.ProfileEditor
+
         Just Route.Dashboard ->
             Dashboard.init
                 >> updateStatusWith Dashboard GotDashboardMsg model
@@ -728,6 +765,16 @@ changeRouteTo maybeRoute model =
             (\l -> CommunityPage.init l symbol)
                 >> updateStatusWith Community GotCommunityMsg model
                 |> withLoggedIn (Route.Community symbol)
+
+        Just (Route.CommunitySettings symbol) ->
+            (\l -> CommunitySettings.init l symbol)
+                >> updateStatusWith CommunitySettings GotCommunitySettingsMsg model
+                |> withLoggedIn (Route.CommunitySettings symbol)
+
+        Just (Route.CommunitySettingsFeatures symbol) ->
+            (\l -> CommunitySettingsFeatures.init l symbol)
+                >> updateStatusWith CommunitySettingsFeatures GotCommunitySettingsFeaturesMsg model
+                |> withLoggedIn (Route.CommunitySettingsFeatures symbol)
 
         Just Route.NewCommunity ->
             CommunityEditor.initNew
@@ -758,41 +805,43 @@ changeRouteTo maybeRoute model =
             (\l -> ActionEditor.initNew l symbol objectiveId)
                 >> updateStatusWith ActionEditor GotActionEditorMsg model
                 |> withLoggedIn (Route.NewAction symbol objectiveId)
+                |> withFeature .hasObjectives
 
         Just (Route.EditAction symbol objectiveId actionId) ->
             (\l -> ActionEditor.initEdit l symbol objectiveId actionId)
                 >> updateStatusWith ActionEditor GotActionEditorMsg model
                 |> withLoggedIn (Route.EditAction symbol objectiveId actionId)
+                |> withFeature .hasObjectives
 
         Just (Route.Claim communityId objectiveId actionId claimId) ->
             (\l -> Claim.init l communityId claimId)
                 >> updateStatusWith Claim GotVerifyClaimMsg model
                 |> withLoggedIn (Route.Claim communityId objectiveId actionId claimId)
-
-        Just Route.Communities ->
-            CommunityExplore.init
-                >> updateStatusWith CommunityExplore GotCommunityExploreMsg model
-                |> withLoggedIn Route.Communities
+                |> withFeature .hasObjectives
 
         Just (Route.Shop maybeFilter) ->
             (\l -> Shop.init l maybeFilter)
                 >> updateStatusWith (Shop maybeFilter) GotShopMsg model
                 |> withLoggedIn (Route.Shop maybeFilter)
+                |> withFeature .hasShop
 
         Just Route.NewSale ->
             ShopEditor.initCreate
                 >> updateStatusWith (ShopEditor Nothing) GotShopEditorMsg model
                 |> withLoggedIn Route.NewSale
+                |> withFeature .hasShop
 
         Just (Route.EditSale saleId) ->
             (\l -> ShopEditor.initUpdate saleId l)
                 >> updateStatusWith (ShopEditor (Just saleId)) GotShopEditorMsg model
                 |> withLoggedIn (Route.EditSale saleId)
+                |> withFeature .hasShop
 
         Just (Route.ViewSale saleId) ->
             (\l -> ShopViewer.init l saleId)
                 >> updateStatusWith (ShopViewer saleId) GotShopViewerMsg model
                 |> withLoggedIn (Route.ViewSale saleId)
+                |> withFeature .hasShop
 
         Just (Route.ViewTransfer transferId) ->
             (\l -> ViewTransfer.init l transferId)
@@ -861,6 +910,10 @@ jsAddressToMsg address val =
             Maybe.map GotProfileMsg
                 (Profile.jsAddressToMsg rAddress val)
 
+        "GotCommunitySettingsFeaturesMsg" :: rAddress ->
+            Maybe.map GotCommunitySettingsFeaturesMsg
+                (CommunitySettingsFeatures.jsAddressToMsg rAddress val)
+
         "GotActionEditor" :: rAddress ->
             Maybe.map GotActionEditorMsg
                 (ActionEditor.jsAddressToMsg rAddress val)
@@ -905,6 +958,12 @@ msgToString msg =
         GotCommunityEditorMsg subMsg ->
             "GotCommunityEditorMsg" :: CommunityEditor.msgToString subMsg
 
+        GotCommunitySettingsMsg subMsg ->
+            "GotCommunitySettingsMsg" :: CommunitySettings.msgToString subMsg
+
+        GotCommunitySettingsFeaturesMsg subMsg ->
+            "GotCommunitySettingsFeaturesMsg" :: CommunitySettingsFeatures.msgToString subMsg
+
         GotObjectivesMsg subMsg ->
             "GotObjectives" :: Objectives.msgToString subMsg
 
@@ -916,9 +975,6 @@ msgToString msg =
 
         GotVerifyClaimMsg subMsg ->
             "GotVerifyClaimMsg" :: Claim.msgToString subMsg
-
-        GotCommunityExploreMsg subMsg ->
-            "GotCommunityExploreMsg" :: CommunityExplore.msgToString subMsg
 
         GotNotificationMsg subMsg ->
             "GotNotificationMsg" :: Notification.msgToString subMsg
@@ -937,6 +993,9 @@ msgToString msg =
 
         GotProfileMsg subMsg ->
             "GotProfileMsg" :: Profile.msgToString subMsg
+
+        GotProfileEditorMsg subMsg ->
+            "GotProfileEditorMsg" :: ProfileEditor.msgToString subMsg
 
         GotRegisterMsg subMsg ->
             "GotRegisterMsg" :: Register.msgToString subMsg
@@ -1080,6 +1139,12 @@ view model =
         Community subModel ->
             viewLoggedIn subModel LoggedIn.Other GotCommunityMsg CommunityPage.view
 
+        CommunitySettings subModel ->
+            viewLoggedIn subModel LoggedIn.Other GotCommunitySettingsMsg CommunitySettings.view
+
+        CommunitySettingsFeatures subModel ->
+            viewLoggedIn subModel LoggedIn.Other GotCommunitySettingsFeaturesMsg CommunitySettingsFeatures.view
+
         CommunityEditor subModel ->
             viewLoggedIn subModel LoggedIn.Other GotCommunityEditorMsg CommunityEditor.view
 
@@ -1095,9 +1160,6 @@ view model =
         Claim subModel ->
             viewLoggedIn subModel LoggedIn.Other GotVerifyClaimMsg Claim.view
 
-        CommunityExplore subModel ->
-            viewLoggedIn subModel LoggedIn.Communities GotCommunityExploreMsg CommunityExplore.view
-
         Dashboard subModel ->
             viewLoggedIn subModel LoggedIn.Dashboard GotDashboardMsg Dashboard.view
 
@@ -1106,6 +1168,9 @@ view model =
 
         Profile subModel ->
             viewLoggedIn subModel LoggedIn.Profile GotProfileMsg Profile.view
+
+        ProfileEditor subModel ->
+            viewLoggedIn subModel LoggedIn.ProfileEditor GotProfileEditorMsg ProfileEditor.view
 
         Shop _ subModel ->
             viewLoggedIn subModel LoggedIn.Shop GotShopMsg Shop.view

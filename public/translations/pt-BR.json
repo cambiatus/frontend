@@ -3,7 +3,7 @@
   "back": "Voltar",
   "menu": {
     "title": "Menu",
-    "my_communities": "Bem vindo de volta, ",
+    "my_communities": "Bem vindo a ",
     "dashboard": "Painel",
     "news": "Novidades",
     "learn": "Aprender",
@@ -110,7 +110,9 @@
       },
       "wordsMode": {
         "input": {
+          "description": "Digite suas 12 palavras que você copiou e colou no registro.",
           "label": "Suas 12 palavras (você salvou ao criar sua conta)",
+          "placeholder": "Digite suas 12 palavras aqui",
           "tooltip": "Você também pode usar sua CHAVE PRIVADA",
           "toggle": "Eu quero usar a chave privada",
           "notPassphraseError": "Por favor, digite 12 palavras",
@@ -119,6 +121,7 @@
         }
       },
       "submit": "Entrar",
+      "submitting": "Entrando...",
       "register": "Ainda não tem uma conta? ",
       "registerLink": "Crie agora"
     },
@@ -194,8 +197,8 @@
       "twelve_words": "Suas 12 palavras",
       "private_key": "Sua chave privada",
       "recommendation": "Recomendamos que você salve essas informações clicando no botão abaixo. Se você perder, não poderá fazer login novamente na sua conta.",
-      "download": "Salvar chave privada e 12 palavras",
-      "instructions": "Você salvará a chave privada e as 12 palavras em seu computador no formato PDF."
+      "download": "Criar a minha conta",
+      "instructions": "Copie e cole as 12 palavras abaixo em um local seguro. Essa é a sua única chance de fazê-lo; em caso de perda das palavras, você não poderá mais recuperar ou acessar sua conta"
     }
   },
   "account": {
@@ -317,6 +320,7 @@
       "subtitle": "{{objectives}} objetivos e {{actions}} ações",
       "new": "Criar novo objetivo",
       "action_count": "{{actions}} ações",
+      "edit": "Editar objetivo", 
       "editor": {
         "not_found": "Não encontrado",
         "error": "Ops algo deu errado!",
@@ -337,7 +341,7 @@
       "aumatically_verified_by": "Automaticamente verificado por",
       "validation_reward": "Recompensa por validar",
       "validation_reward_none": "Nada",
-      "new": "Criar nova ação",
+      "new": "Criar ação",
       "description_label": "Quais ações precisam ser feitas para alcancar essa meta?",
       "reward_label": "O usuario vai ganhar essa recompensa por completar a ação.",
       "verification_label": "Como essa ação sera verificada?",
@@ -354,6 +358,7 @@
       "or": " ou ",
       "completed": "Completa",
       "closed": "Encerrada",
+      "edit": "Editar ação", 
       "form": {
         "not_found": "Ação não encontrada",
         "description_label": "Descrição",
@@ -361,8 +366,8 @@
         "validity_label": "Tipo de validade",
         "validation_on": "Expiração ativada,",
         "validation_off": "Expiração desativada,",
-        "validation_detail": "a ação estará disponível até que seja deletada",
-        "validation_on_detail": "a ação estará disponível até uma data, quantidade ou ambos",
+        "validation_detail": " a ação estará disponível até que seja deletada",
+        "validation_on_detail": " a ação estará disponível até uma data, quantidade ou ambos",
         "verification_label": "Precisa de verificação?",
         "verifiers_label": "Escolha os verificadores",
         "verifiers_label_count": "Escolha ao menos {{count}} verificadores",
@@ -371,16 +376,17 @@
         "votes_label": "Número mínimo de votos",
         "tooltip_label": "O que é isso?",
         "date_validity": "Validade por data,",
-        "date_validity_details": "a ação vai terminar quando atingir uma data específica",
+        "date_validity_details": " a ação vai terminar quando atingir uma data específica",
         "quantity_validity": "Validade por quantidade de usos,",
-        "quantity_validity_details": "a ação vai terminar quando atingir uma determinada quantidade de usos",
+        "quantity_validity_details": " a ação vai terminar quando atingir uma determinada quantidade de usos",
         "no": "Não",
         "yes": "Sim",
         "automatic": "Automático,",
-        "automatic_detail": "recompensa o usuário imediatamente quando feita a reinvidicação",
+        "automatic_detail": " recompensa o usuário imediatamente quando feita a reinvidicação",
         "manual": "Manual,",
-        "manual_detail": "recompensa o usuário somente após revisão e aprovação de outros membros",
+        "manual_detail": " recompensa o usuário somente após revisão e aprovação de outros membros",
         "verifier_placeholder": "Digite o nome de usuário",
+        "usages_placeholder": "Digite um número",
         "date_label": "Escolha a data",
         "quantity_label": "Escolha a quantidade de usos",
         "usages_left_label": "Usos restantes",
@@ -410,6 +416,10 @@
     "edit_success": "Perfil salvo com sucesso",
     "locations": "Localização",
     "interests": "Interesses",
+    "12words": { "title": "Minhas 12 palavras", "button": "Baixar" },
+    "pin": { "title": "Meu PIN", "button": "Trocar" },
+    "changePin": "Troque seu PIN!",
+    "newPin": "Novo PIN",
     "actions": {
       "edit": "Editar",
       "viewPrivatekey": "Ver chave privada"
@@ -621,6 +631,31 @@
     "transaction_id": {
       "title": "ID da transação",
       "body": "Esse ID garante a autenticidade da transação se ambos os lados tiverem os mesmos emojis."
+    }
+  },
+  "settings": {
+    "success": "Configurações salvas com sucesso",
+    "community_info": {
+      "title": "Informações da Comunidade",
+      "description": "Logo, nome, descrição"
+    },
+    "currency": {
+      "title": "Moeda",
+      "description": ""
+    },
+    "actions": {
+      "title": "Objetivos e Ações",
+      "description": ""
+    },
+    "team": {
+      "title": "Time",
+      "description": "Construção de times"
+    },
+    "features": {
+      "title": "Recursos",
+      "description": "Ações, loja",
+      "enabled": "Habilitado",
+      "disabled": "Desabilitado"
     }
   },
   "payment_history": {

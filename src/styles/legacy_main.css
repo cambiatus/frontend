@@ -55,11 +55,6 @@ body:not(:-moz-handler-blocked) fieldset {
     display: table-cell;
 }
 
-button,
-select {
-    font-family: 'Roboto', sans-serif;
-}
-
 /* Helpers */
 
 .text-left {
@@ -218,25 +213,9 @@ select {
 
 
 /* Input */
-
-.input {
-    min-height: 36px;
-    outline: none;
-    border-radius: 8px;
-    border: solid 1px #D4D4D4;
-    padding: 0 12px;
-    transition: border-color .1s ease;
-    font-size: 16px;
-    line-height: 1.5;
-}
-
 .auth__input {
     min-height: 50px;
     border-radius: 3px;
-}
-
-.input:focus {
-    border-color: var(--primary-color);
 }
 
 .input-group {
@@ -269,11 +248,6 @@ select {
 
 .input .elm-select-item:hover {
 	  background-color: #00BDCD;
-}
-
-textarea.input {
-    padding: 6px 12px;
-    height: 150px;
 }
 
 .input--big {

@@ -238,7 +238,7 @@ view guest model =
                                 text_ "register.form.checkingAvailability"
 
                               else
-                                text_ "register.form.button"
+                                text_ "auth.login.continue"
                             ]
                         ]
                     ]
@@ -322,18 +322,23 @@ view guest model =
                                 , text " 💜"
                                 ]
                             ]
-                        , button
-                            [ onClick <| DownloadPdf (words model)
-                            , class "button button-primary w-full mb-8"
-                            , disabled (not model.hasAgreedToSavePassphrase)
-                            , class <|
-                                if model.hasAgreedToSavePassphrase then
-                                    ""
+                        , case pdfData model of
+                            Just data ->
+                                button
+                                    [ onClick <| DownloadPdf data
+                                    , class "button button-primary w-full mb-8"
+                                    , disabled (not model.hasAgreedToSavePassphrase)
+                                    , class <|
+                                        if model.hasAgreedToSavePassphrase then
+                                            ""
 
-                                else
-                                    "button-disabled text-gray-600"
-                            ]
-                            [ text_ "register.account_created.download" ]
+                                        else
+                                            "button-disabled text-gray-600"
+                                    ]
+                                    [ text_ "register.account_created.download" ]
+
+                            Nothing ->
+                                text ""
                         ]
                     ]
                 ]
@@ -466,6 +471,18 @@ accName model =
             ""
 
 
+pdfData : Model -> Maybe PdfData
+pdfData model =
+    Maybe.andThen
+        (\keys ->
+            Just
+                { passphrase = keys.words
+                , accountName = Eos.nameToString keys.accountName
+                }
+        )
+        model.accountKeys
+
+
 words : Model -> String
 words model =
     case model.accountKeys of
@@ -491,11 +508,17 @@ type Msg
     | AccountGenerated (Result Decode.Error AccountKeys)
     | CompletedCreateProfile AccountKeys (Result Http.Error Profile)
     | AgreedToSave12Words Bool
-    | DownloadPdf String
+    | DownloadPdf PdfData
     | PdfDownloaded
     | KeyPressed Bool
     | CopyToClipboard String
     | CopiedToClipboard
+
+
+type alias PdfData =
+    { passphrase : String
+    , accountName : String
+    }
 
 
 update : Maybe String -> Msg -> Model -> Guest.Model -> UpdateResult
@@ -676,7 +699,7 @@ update maybeInvitation msg model guest =
             { model | isPassphraseCopiedToClipboard = True }
                 |> UR.init
 
-        DownloadPdf passPhrase ->
+        DownloadPdf { passphrase, accountName } ->
             model
                 |> UR.init
                 |> UR.addPort
@@ -684,8 +707,9 @@ update maybeInvitation msg model guest =
                     , responseData = Encode.null
                     , data =
                         Encode.object
-                            [ ( "name", Encode.string "printAuthPdf" )
-                            , ( "passphrase", Encode.string passPhrase )
+                            [ ( "name", Encode.string "downloadAuthPdfFromRegistration" )
+                            , ( "accountName", Encode.string accountName )
+                            , ( "passphrase", Encode.string passphrase )
                             ]
                     }
 

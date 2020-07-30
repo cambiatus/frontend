@@ -36,6 +36,7 @@ import Strftime
 import Time
 import UpdateResult as UR
 import Utils
+import View.Modal as Modal
 
 
 init : LoggedIn.Model -> ( Model, Cmd Msg )
@@ -375,37 +376,36 @@ viewAnalysisModal loggedIn model =
                 text_ s =
                     text (t s)
             in
-            div [ class "modal container" ]
-                [ div [ class "modal-bg", onClick CloseModal ] []
-                , div [ class "modal-content" ]
-                    [ div [ class "w-full" ]
-                        [ p [ class "w-full font-bold text-heading text-2xl mb-4" ]
-                            [ text_ "claim.modal.title" ]
-                        , button
-                            [ onClick CloseModal ]
-                            [ Icons.close "absolute fill-current text-gray-400 top-0 right-0 mx-4 my-4"
-                            ]
-                        , p [ class "text-body w-full font-sans mb-10" ]
-                            [ if vote then
-                                text_ "claim.modal.message_approve"
+            Modal.initWith
+                { closeMsg = CloseModal
+                , isVisible = True
+                }
+                |> Modal.withHeader (t "claim.modal.title")
+                |> Modal.withBody
+                    [ if vote then
+                        text_ "claim.modal.message_approve"
 
-                              else
-                                text_ "claim.modal.message_disapprove"
-                            ]
+                      else
+                        text_ "claim.modal.message_disapprove"
+                    ]
+                |> Modal.withFooter
+                    [ button
+                        [ class "modal-cancel"
+                        , onClick CloseModal
                         ]
-                    , div [ class "modal-footer" ]
-                        [ button [ class "modal-cancel", onClick CloseModal ]
-                            [ text_ "claim.modal.secondary" ]
-                        , button [ class "modal-accept", onClick (VoteClaim claimId vote) ]
-                            [ if vote then
-                                text_ "claim.modal.primary_approve"
+                        [ text_ "claim.modal.secondary" ]
+                    , button
+                        [ class "modal-accept"
+                        , onClick (VoteClaim claimId vote)
+                        ]
+                        [ if vote then
+                            text_ "claim.modal.primary_approve"
 
-                              else
-                                text_ "claim.modal.primary_disapprove"
-                            ]
+                          else
+                            text_ "claim.modal.primary_disapprove"
                         ]
                     ]
-                ]
+                |> Modal.toHtml
 
         ModalLoading _ _ ->
             Page.fullPageLoading

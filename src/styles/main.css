@@ -73,7 +73,7 @@
 }
 
 .button-primary {
-  @apply bg-orange-300 text-white text-body rounded-super;
+  @apply bg-orange-300 text-white text-body rounded-super font-medium;
 }
 
 .button-primary:hover {
@@ -81,11 +81,11 @@
 }
 
 .button-secondary {
-  @apply bg-white text-orange-300 rounded-full border;
+  @apply bg-white text-orange-300 rounded-full border font-medium;
 }
 
 .button-sm {
-  @apply py-1 px-6 h-8;
+  @apply py-1 px-4 h-8;
 }
 
 .button-lg {
@@ -110,7 +110,11 @@
 
 .input {
   /* Form input comes from tailwind/custom-forms */
-  @apply form-input h-12;
+  @apply form-input h-12 text-sm outline-none transition-colors duration-100 text-black;
+}
+
+textarea.input {
+  @apply h-40;
 }
 
 .textarea-input {
@@ -139,10 +143,16 @@
 /* Select */
 
 .select {
-  @apply h-12 block border border-gray-500 rounded-sm;
+  @apply h-12 text-sm block border border-gray-500 rounded-sm text-black outline-none transition-colors duration-100;
 }
 
 /* End of Select */
+
+.input:focus,
+.select:focus {
+  @apply border-purple-500;
+}
+
 
 /* Tooltip */
 
@@ -170,21 +180,30 @@
 /* Modal */
 
 .modal {
-  @apply z-50 fixed top-1/2;
-
+  @apply z-50 fixed inset-0;
   transition: opacity 0.25s ease;
 }
 
 .modal-bg {
-  @apply bg-black w-full h-full fixed bottom-0 left-0 top-0 right-0 opacity-25;
+  @apply bg-black inset-0 fixed opacity-50;
 }
 
 .modal-content {
-  @apply bg-white bottom-0 right-0 left-0 fixed rounded-t-lg p-4 h-72;
+  @apply bg-white rounded-t-lg absolute bottom-0 w-full;
+}
+
+.modal-header {
+  @apply w-full font-medium text-heading p-4 pb-2;
+}
+
+.modal-body {
+  @apply p-4 pt-0 text-body overflow-y-auto;
+  min-height: 4rem;
+  max-height: 50vh;
 }
 
 .modal-footer {
-  @apply w-full flex flex-wrap rounded-b-lg justify-center items-center;
+  @apply flex flex-wrap justify-center items-center p-4;
 }
 
 .modal-cancel {
@@ -197,11 +216,11 @@
 
 @screen md {
   .modal-content {
-    @apply max-w-3xl fixed top-modal mx-auto h-64 rounded-lg;
+    @apply max-w-3xl top-modal relative mx-auto rounded-lg;
   }
 
   .modal-footer {
-    @apply bg-gray-100 absolute inset-x-0 bottom-0 p-4;
+    @apply bg-gray-100 rounded-b-lg p-4;
   }
 
   .modal-cancel {
@@ -236,6 +255,7 @@
   @apply block overflow-hidden cursor-pointer bg-white border-2 border-gray-100 rounded-full h-6;
 
   transition: background-color 0.2s ease-in;
+  min-width: 43px;
 }
 
 .form-switch-label:before {
@@ -253,7 +273,7 @@
 .form-switch-checkbox:checked + .form-switch-label:before {
   @apply right-0 bg-white;
 
-  margin-right: 0.3rem;
+  margin-right: 0.05rem;
 }
 
 .form-error {
