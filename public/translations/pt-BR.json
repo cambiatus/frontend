@@ -198,7 +198,7 @@
       "private_key": "Sua chave privada",
       "recommendation": "Recomendamos que você salve essas informações clicando no botão abaixo. Se você perder, não poderá fazer login novamente na sua conta.",
       "download": "Criar a minha conta",
-      "instructions": "Copie e cole as 12 palavras abaixo em um local seguro. Você tem apenas essa chance de fazê-lo; se você perdeu essas palavras, nunca mais poderá acessar sua conta."
+      "instructions": "Copie e cole as 12 palavras abaixo em um local seguro. Essa é a sua única chance de fazê-lo; em caso de perda das palavras, você não poderá mais recuperar ou acessar sua conta"
     }
   },
   "account": {
