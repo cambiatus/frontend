@@ -108,7 +108,9 @@
       },
       "wordsMode": {
         "input": {
+          "description": "Enter your 12 words, that you've copied and pasted on registration.",
           "label": "Your 12 words (you saved when creating your account)",
+          "placeholder": "Type your 12 words here",
           "tooltip": "You can use your PRIVATE KEY too",
           "toggle": "I want to use the Private Key",
           "notPassphraseError": "Please, enter 12 words",
@@ -117,6 +119,7 @@
         }
       },
       "submit": "Sign In",
+      "submitting": "Signing In...",
       "register": "Don't have an account yet? ",
       "registerLink": "Create now"
     },
@@ -188,8 +191,8 @@
       "twelve_words": "Your 12 words",
       "private_key": "Your private key",
       "recommendation": "We recommend you to save this information by clicking the button below, if you lose it you won't be able to login to your account again",
-      "download": "Save your PDF and Create an Account",
-      "instructions": "You must copy and paste on a secure place these 12 words below. We also are going to give you a PDF with these 12 words when you are finishing the register."
+      "download": "Create My Account",
+      "instructions": "Copy and paste the 12 words below in a secure place. You have only this chance to do it; if you lost these words, you can't login into your account never more."
     }
   },
   "account": {
