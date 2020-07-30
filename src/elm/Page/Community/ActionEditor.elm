@@ -1167,7 +1167,7 @@ viewDescription { shared } form =
         [ span [ class "input-label" ]
             [ text_ "community.actions.form.description_label" ]
         , textarea
-            [ class "w-full input rounded-sm"
+            [ class "input textarea-input w-full"
             , classList [ ( "border-red", hasErrors form.description ) ]
             , rows 5
             , onInput EnteredDescription

@@ -113,6 +113,10 @@
   @apply form-input h-12;
 }
 
+.textarea-input {
+  @apply block rounded-sm;
+}
+
 .field-with-error,
 .field-with-error:focus {
   @apply border-red text-red;

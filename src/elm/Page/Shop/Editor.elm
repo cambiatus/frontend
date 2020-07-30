@@ -347,7 +347,7 @@ viewForm shared balances imageStatus isEdit isDisabled deleteModal form =
                         [ class "input-label" ]
                         [ text (t "shop.description_label") ]
                     , textarea
-                        [ class "input w-full"
+                        [ class "input textarea-input w-full"
                         , classList [ ( "field-with-error", hasErrors form.description ) ]
                         , id (fieldId "description")
                         , value (getInput form.description)
