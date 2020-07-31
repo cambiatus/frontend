@@ -238,7 +238,7 @@ view guest model =
                                 text_ "register.form.checkingAvailability"
 
                               else
-                                text_ "register.form.button"
+                                text_ "auth.login.continue"
                             ]
                         ]
                     ]

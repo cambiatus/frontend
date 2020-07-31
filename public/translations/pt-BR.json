@@ -110,7 +110,9 @@
       },
       "wordsMode": {
         "input": {
+          "description": "Digite suas 12 palavras que você copiou e colou no registro.",
           "label": "Suas 12 palavras (você salvou ao criar sua conta)",
+          "placeholder": "Digite suas 12 palavras aqui",
           "tooltip": "Você também pode usar sua CHAVE PRIVADA",
           "toggle": "Eu quero usar a chave privada",
           "notPassphraseError": "Por favor, digite 12 palavras",
@@ -119,6 +121,7 @@
         }
       },
       "submit": "Entrar",
+      "submitting": "Entrando...",
       "register": "Ainda não tem uma conta? ",
       "registerLink": "Crie agora"
     },
@@ -194,8 +197,8 @@
       "twelve_words": "Suas 12 palavras",
       "private_key": "Sua chave privada",
       "recommendation": "Recomendamos que você salve essas informações clicando no botão abaixo. Se você perder, não poderá fazer login novamente na sua conta.",
-      "download": "Salvar chave privada e 12 palavras",
-      "instructions": "Você salvará a chave privada e as 12 palavras em seu computador no formato PDF."
+      "download": "Criar a minha conta",
+      "instructions": "Copie e cole as 12 palavras abaixo em um local seguro. Essa é a sua única chance de fazê-lo; em caso de perda das palavras, você não poderá mais recuperar ou acessar sua conta"
     }
   },
   "account": {
