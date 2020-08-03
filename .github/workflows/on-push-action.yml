@@ -13,7 +13,7 @@ jobs:
           node-version: 12.0.0
 
       - name: Get deps
-        run: npm install
+        run: yarn install --production
 
       - name: Add `node_modules/.bin` to PATH
         run: echo ::add-path::$(yarn bin)
@@ -27,7 +27,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build asset
-        run: npm build
+        run: yarn build
 
       - name: Publish Slack Notification
         uses: rtCamp/action-slack-notify@master
