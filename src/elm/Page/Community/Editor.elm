@@ -398,9 +398,6 @@ viewFieldCurrencySymbol shared isDisabled defVal errors =
 viewFieldLogo : Shared -> Bool -> Int -> List LogoStatus -> Dict String FormError -> Html Msg
 viewFieldLogo shared isDisabled selected logos errors =
     let
-        ipfsUrl =
-            shared.endpoints.ipfs
-
         t =
             I18Next.t shared.translations
 
@@ -429,7 +426,7 @@ viewFieldLogo shared isDisabled selected logos errors =
                     Uploaded hash ->
                         div
                             [ class (logoClass "-img")
-                            , Community.logoBackground ipfsUrl (Just hash)
+                            , Community.logoBackground (Just hash)
                             ]
                             []
                 ]

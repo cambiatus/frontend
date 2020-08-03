@@ -17,7 +17,6 @@ const local = {
     chat: 'http://chat.bespiral.local/chat',
     eosio: 'http://eosio.bespiral.local:8888',
     graphql: 'http://localhost:8080/v1alpha1/graphql',
-    ipfs: 'http://ipfs.bespiral.local/ipfs',
     socket: 'ws://localhost:4000/socket'
   },
   logo: '/images/logo-cambiatus.png',
@@ -49,7 +48,6 @@ const dev = {
     chat: 'https://app.cambiatus.io/chat',
     eosio: 'https://eosio.cambiatus.io',
     graphql: 'https://api.cambiatus.io/api/graph',
-    ipfs: 'https://ipfs.cambiatus.io/ipfs',
     socket: 'wss://api.cambiatus.io/socket'
   },
   logo: '/images/logo-cambiatus.png',
@@ -71,7 +69,6 @@ const chainId = isLocal ? dev.network.chainId : _env_.CHAIN_ID
 const graphqlUrl = isLocal ? dev.endpoints.graphql : _env_.GRAPHQL_URL
 const apiUrl = isLocal ? dev.endpoints.api : _env_.API_URL
 const chatUrl = isLocal ? dev.endpoints.chat : _env_.CHAT_URL
-const ipfsUrl = isLocal ? dev.endpoints.ipfs : _env_.IPFS_URL
 const httpEndpoint = isLocal
   ? dev.eosOptions.httpEndpoint
   : `${chainUrl}:${chainPort}`
@@ -104,7 +101,6 @@ const prod = {
     chat: chatUrl,
     eosio: httpEndpoint,
     graphql: graphqlUrl,
-    ipfs: ipfsUrl,
     socket: socketUrl
   },
   logo: appLogo,

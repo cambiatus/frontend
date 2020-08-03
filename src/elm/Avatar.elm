@@ -36,14 +36,14 @@ encode (Avatar maybeHash) =
             Encode.null
 
 
-view : String -> Avatar -> String -> Html msg
-view url (Avatar maybeHash) cls =
-    case maybeHash of
+view : Avatar -> String -> Html msg
+view (Avatar maybeUrl) cls =
+    case maybeUrl of
         Nothing ->
             Icon.accountCircle cls
 
-        Just hash ->
-            if String.isEmpty (String.trim hash) then
+        Just url ->
+            if String.isEmpty (String.trim url) then
                 Icon.accountCircle cls
 
             else
@@ -52,7 +52,7 @@ view url (Avatar maybeHash) cls =
                     ]
                     [ Html.img
                         [ class ("profile-avatar object-cover " ++ cls)
-                        , src (url ++ "/" ++ hash)
+                        , src url
                         ]
                         []
                     ]

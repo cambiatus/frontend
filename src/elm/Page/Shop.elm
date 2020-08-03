@@ -270,9 +270,6 @@ viewCard model ({ shared } as loggedIn) card =
         image =
             Maybe.withDefault "" card.sale.image
 
-        imageUrl =
-            shared.endpoints.ipfs ++ "/" ++ image
-
         maybeBal =
             LE.find (\bal -> bal.asset.symbol == card.sale.symbol) model.balances
 
@@ -303,7 +300,7 @@ viewCard model ({ shared } as loggedIn) card =
         ]
         [ div [ class "md:hidden rounded-lg bg-white h-32 flex" ]
             [ div [ class "w-1/4" ]
-                [ img [ class "rounded-l-lg object-cover h-32 w-full", src imageUrl ] []
+                [ img [ class "rounded-l-lg object-cover h-32 w-full", src image ] []
                 ]
             , div [ class "px-4 pb-2 flex flex-wrap" ]
                 [ p [ class "font-medium pt-2 w-full" ] [ text card.sale.title ]
@@ -332,7 +329,7 @@ viewCard model ({ shared } as loggedIn) card =
             [ class "hidden md:visible md:flex md:flex-wrap rounded-lg hover:shadow-lg bg-white overflow-hidden"
             ]
             [ div [ class "w-full relative bg-gray-500" ]
-                [ img [ class "w-full h-48 object-cover", src imageUrl ] []
+                [ img [ class "w-full h-48 object-cover", src image ] []
                 , div [ class "absolute right-1 bottom-1 " ]
                     [ Profile.view shared loggedIn.accountName card.sale.creator ]
                 ]

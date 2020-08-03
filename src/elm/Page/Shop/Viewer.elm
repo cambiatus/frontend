@@ -420,7 +420,7 @@ viewCard ({ shared } as loggedIn) card model =
     div [ class "flex flex-wrap" ]
         [ div [ class "w-full md:w-1/2 p-4 flex justify-center" ]
             [ img
-                [ src (shared.endpoints.ipfs ++ "/" ++ Maybe.withDefault "" card.sale.image)
+                [ src (Maybe.withDefault "" card.sale.image)
                 , class "object-scale-down w-full h-64"
                 ]
                 []
@@ -429,7 +429,7 @@ viewCard ({ shared } as loggedIn) card model =
             [ div [ class "font-medium text-3xl w-full" ] [ text card.sale.title ]
             , div [ class "text-gray w-full md:text-sm" ] [ text card.sale.description ]
             , div [ class "w-full flex items-center text-sm" ]
-                [ div [ class "mr-4" ] [ Avatar.view shared.endpoints.ipfs card.sale.creator.avatar "h-10 w-10" ]
+                [ div [ class "mr-4" ] [ Avatar.view card.sale.creator.avatar "h-10 w-10" ]
                 , text_ "shop.sold_by"
                 , a
                     [ class "font-bold ml-1"

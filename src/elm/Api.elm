@@ -154,7 +154,7 @@ signUpWithInvitation shared form toMsg =
 uploadAvatar : Shared -> File -> (Result Http.Error Avatar -> msg) -> Cmd msg
 uploadAvatar shared file toMsg =
     Http.post
-        { url = backendUrl shared [ "ipfs" ] []
+        { url = backendUrl shared [ "upload" ] []
         , body =
             Http.multipartBody
                 [ Http.filePart "file" file ]
@@ -184,7 +184,7 @@ getBalances shared accountName toMsg =
 uploadImage : Shared -> File -> (Result Http.Error String -> msg) -> Cmd msg
 uploadImage shared file toMsg =
     Http.post
-        { url = backendUrl shared [ "ipfs" ] []
+        { url = backendUrl shared [ "upload" ] []
         , body =
             Http.multipartBody
                 [ Http.filePart "file" file ]

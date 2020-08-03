@@ -238,9 +238,6 @@ view loggedIn model =
 viewForm : Shared -> List Balance -> ImageStatus -> Bool -> Bool -> DeleteModalStatus -> Form -> Html Msg
 viewForm shared balances imageStatus isEdit isDisabled deleteModal form =
     let
-        ipfsUrl =
-            shared.endpoints.ipfs
-
         t =
             I18Next.t shared.translations
 
@@ -250,7 +247,7 @@ viewForm shared balances imageStatus isEdit isDisabled deleteModal form =
         imageStyle =
             case getInput form.image of
                 Just hash ->
-                    style "background-image" ("url(" ++ ipfsUrl ++ "/" ++ hash ++ ")")
+                    style "background-image" ("url(" ++ hash ++ ")")
 
                 Nothing ->
                     style "" ""

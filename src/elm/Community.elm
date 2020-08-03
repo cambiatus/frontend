@@ -232,29 +232,24 @@ settingsQuery symbol =
     Query.community { symbol = symbolToString symbol } settingsSelectionSet
 
 
-logoUrl : String -> Maybe String -> String
-logoUrl ipfsUrl maybeHash =
-    case maybeHash of
+logoUrl : Maybe String -> String
+logoUrl maybeUrl =
+    case maybeUrl of
         Nothing ->
-            logoPlaceholder ipfsUrl
+            ""
 
-        Just hash ->
-            if String.isEmpty (String.trim hash) then
-                logoPlaceholder ipfsUrl
+        Just url ->
+            if String.isEmpty (String.trim url) then
+                ""
 
             else
-                ipfsUrl ++ "/" ++ hash
+                url
 
 
-logoBackground : String -> Maybe String -> Html.Attribute msg
-logoBackground ipfsUrl maybeHash =
+logoBackground : Maybe String -> Html.Attribute msg
+logoBackground maybeHash =
     Html.Attributes.style "background-image"
-        ("url(" ++ logoUrl ipfsUrl maybeHash ++ ")")
-
-
-logoPlaceholder : String -> String
-logoPlaceholder ipfsUrl =
-    ipfsUrl ++ "/QmXuf6y8TMGRN96HZEy86c8N9aDseaeyuCQ5qVLqPyd8Ld"
+        ("url(" ++ logoUrl maybeHash ++ ")")
 
 
 
