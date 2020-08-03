@@ -99,6 +99,7 @@
     "account_instr": "Apenas letras de a-z e números de 1-5",
     "pin_instr": "6 números",
     "login": {
+      "continue": "Continuar",
       "loginTab": "Entrar",
       "registerTab": "Crie sua conta",
       "privateKeyMode": {
