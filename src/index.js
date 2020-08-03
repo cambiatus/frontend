@@ -247,7 +247,8 @@ async function handleJavascriptPort (arg) {
     }
     case 'generateAccount': {
       devLog('=========================', 'generateAccount')
-      const [randomWords, hexRandomWords] = mnemonic.generateRandom()
+      const userLang = getUserLanguage()
+      const [randomWords, hexRandomWords] = mnemonic.generateRandom(userLang)
       const privateKey = ecc.seedPrivate(hexRandomWords)
       const publicKey = ecc.privateToPublic(privateKey)
       const data = {
