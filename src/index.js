@@ -60,20 +60,23 @@ const PUSH_PREF = 'bespiral.push.pref'
 const SELECTED_COMMUNITY_KEY = 'bespiral.selected_community'
 const env = process.env.NODE_ENV || 'development'
 const config = configuration[env]
-const urlParams = new URLSearchParams(window.location.search)
-const langParam = urlParams.get('lang')
+
+function getUserLanguage () {
+  const urlParams = new URLSearchParams(window.location.search)
+
+  return urlParams.get('lang') ||
+    window.localStorage.getItem(LANGUAGE_KEY) ||
+    navigator.language ||
+    navigator.userLanguage ||
+    'en-US'
+}
 
 function flags () {
   const user = JSON.parse(window.localStorage.getItem(USER_KEY))
   var flags_ = {
     env: env,
     endpoints: config.endpoints,
-    language:
-      langParam ||
-      window.localStorage.getItem(LANGUAGE_KEY) ||
-      navigator.language ||
-      navigator.userLanguage ||
-      'en-US',
+    language: getUserLanguage(),
     accountName: (user && user.accountName) || null,
     isPinAvailable: !!(user && user.encryptedKey),
     authPreference: window.localStorage.getItem(AUTH_PREF_KEY),
