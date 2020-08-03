@@ -469,11 +469,11 @@ viewForm shared balances imageStatus isEdit isDisabled deleteModal form =
                     Just err ->
                         viewFieldErrors [ err ]
                 , div
-                    [ class "flex align-center justify-center"
+                    [ class "flex align-center justify-center mb-10"
                     , disabled (isDisabled || imageStatus == Uploading)
                     ]
                     [ button
-                        [ class "button button-primary w-full lg:w-40 xl:w-40"
+                        [ class "button button-primary w-full sm:w-40"
                         , onClick ClickedSave
                         ]
                         [ text actionText ]
