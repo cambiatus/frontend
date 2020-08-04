@@ -12,6 +12,14 @@ import { Elm } from './elm/Main.elm'
 import * as Sentry from '@sentry/browser'
 import * as AbsintheSocket from '@absinthe/socket'
 import pdfMake from 'pdfmake/build/pdfmake'
+import pdfFonts from './vfs_fonts'
+pdfMake.vfs = pdfFonts.pdfMake.vfs
+pdfMake.fonts = {
+  Gotham: {
+    normal: 'gotham-rounded-book.otf',
+    bold: 'opensans-bold-no-ligatures.ttf'
+  }
+}
 const { Socket: PhoenixSocket } = require('phoenix')
 
 if (process.env.NODE_ENV === 'development') {
@@ -193,15 +201,6 @@ function getSelectedCommunity () {
 }
 
 function downloadPdf (accountName, passphrase, responseAddress, responseData) {
-  const getLocalFontUrl = filename => window.location.origin + '/fonts/' + filename
-
-  pdfMake.fonts = {
-    Gotham: {
-      normal: getLocalFontUrl('gotham-rounded-book.otf'),
-      bold: getLocalFontUrl('opensans-bold-no-ligatures.ttf')
-    }
-  }
-
   const definition = pdfDefinition(passphrase)
   const pdf = pdfMake.createPdf(definition)
 
