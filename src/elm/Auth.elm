@@ -152,14 +152,6 @@ passphraseValidator =
                 has12words =
                     List.length words == 12
 
-                allWordsConsistOnlyOfLetters : Bool
-                allWordsConsistOnlyOfLetters =
-                    let
-                        onlyLetters s =
-                            String.length (String.filter Char.isAlpha s) == String.length s
-                    in
-                    List.all onlyLetters words
-
                 allWordsHaveAtLeastThreeLetters : Bool
                 allWordsHaveAtLeastThreeLetters =
                     List.all (\w -> String.length w > 2) words
@@ -170,9 +162,6 @@ passphraseValidator =
             {- These rules force user to use 12 words instead of PK. -}
             if not has12words then
                 [ ( Passphrase, trPrefix "notPassphraseError" ) ]
-
-            else if not allWordsConsistOnlyOfLetters then
-                [ ( Passphrase, trPrefix "notLatinLettersError" ) ]
 
             else if not allWordsHaveAtLeastThreeLetters then
                 [ ( Passphrase, trPrefix "atLeastThreeLettersError" ) ]

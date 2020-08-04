@@ -94,6 +94,7 @@
     "required": "Autenticación requerida para esta acción",
     "pin_instr": "6 números",
     "login": {
+      "continue": "Seguir",
       "loginTab": "Iniciar sesión",
       "registerTab": "Crea tu cuenta",
       "privateKeyMode": {

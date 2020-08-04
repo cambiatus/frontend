@@ -69,7 +69,7 @@ module.exports = function (words) {
         text: [{
           text: words,
           fontSize: 18,
-          lineHeight: 1.4,
+          lineHeight: 1.2,
           bold: true
         }]
       },
