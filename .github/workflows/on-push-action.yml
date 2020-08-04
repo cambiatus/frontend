@@ -21,10 +21,10 @@ jobs:
       - name: "Check elm-format"
         uses: sparksp/elm-format-action@v1
 
-      - name: "Check elm-review"
-        uses: sparksp/elm-review-action@v1.0.4
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+#      - name: "Check elm-review"
+#        uses: sparksp/elm-review-action@v1.0.4
+#        env:
+#          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build asset
         run: yarn build
