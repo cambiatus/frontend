@@ -234,13 +234,17 @@ settingsQuery symbol =
 
 logoUrl : Maybe String -> String
 logoUrl maybeUrl =
+    let
+        logoPlaceholder =
+            "/icons/community_placeholder.png"
+    in
     case maybeUrl of
         Nothing ->
-            ""
+            logoPlaceholder
 
         Just url ->
             if String.isEmpty (String.trim url) then
-                ""
+                logoPlaceholder
 
             else
                 url
