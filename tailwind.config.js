@@ -77,7 +77,7 @@ module.exports = {
     fontWeight: {
       light: 300,
       normal: 400,
-      medium: 500,
+      medium: 600,
       bold: 700
     },
     // transform keys
@@ -109,12 +109,12 @@ module.exports = {
         '9': 9
       },
       fontFamily: {
-        sans: ['"Gotham Rounded"', 'sans-serif']
+        sans: ['Nunito', 'sans-serif']
       },
       fontSize: {
         caption: '.625rem',
-        menu: '.8125rem',
-        body: '.875rem',
+        menu: '.9125rem',
+        body: '.9rem',
         heading: '1.375rem',
         'title-h3': '1.875rem',
         'title-h2': '2.375rem',

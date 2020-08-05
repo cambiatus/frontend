@@ -24,19 +24,13 @@ body,
 .main-login-grid {
 }
 
-body {
-    background-color: var(--white);
-    font-family: 'Gotham Rounded', 'Lato', 'San Fransico', 'Helvetica', 'Verdana', sans-serif;
-    color: var(--black);
-}
-
 svg {
     fill: var(--black);
 }
 
 textarea {
     resize: vertical;
-    font-family: 'Roboto', sans-serif;
+    font-family: 'Nunito', sans-serif;
 }
 
 legend {
@@ -1143,7 +1137,7 @@ svg.main-header__info-arrow--up {
 
 .card__community__title {
     font-weight: 500;
-    font-family: "Roboto";
+    font-family: "Nunito";
     height: 20px;
     width: 126px;
     color: #4A4A4A;
@@ -1187,7 +1181,7 @@ svg.main-header__info-arrow--up {
     height: 13px;
     width: 138px;
     color: #666666;
-    font-family: Roboto;
+    font-family: Nunito;
     font-size: 12px;
     line-height: 14px;
 }
@@ -2972,7 +2966,7 @@ textarea.form-input {
 
 .sale__symbol {
     color: #F99D33;
-    font-family: Roboto;
+    font-family: Nunito;
     font-size: 14px;
     line-height: 14px;
     margin: auto 0;
@@ -2982,7 +2976,7 @@ textarea.form-input {
     height: 13px;
     width: 192px;
     color: #666666;
-    font-family: Roboto;
+    font-family: Nunito;
     font-size: 12px;
     line-height: 14px;
 }
@@ -3045,7 +3039,7 @@ textarea.form-input {
 .sale__like__text {
     height: 16px;
     color: #4A4A4A;
-    font-family: Roboto;
+    font-family: Nunito;
     font-size: 14px;
     font-weight: bold;
     line-height: 16px;
@@ -3056,7 +3050,7 @@ textarea.form-input {
 .sale__quantity__title {
     height: 13px;
     color: #4A4A4A;
-    font-family: Roboto;
+    font-family: Nunito;
     font-size: 14px;
     line-height: 16px;
     text-align: left;
@@ -3071,7 +3065,7 @@ textarea.form-input {
 .sale__out__of__stock p {
     height: 16px;
     color: #E02020;
-    font-family: "Roboto";
+    font-family: "Nunito";
     font-weight: 500;
     text-transform: uppercase;
     font-size: 14px;
@@ -3283,7 +3277,7 @@ textarea.form-input {
    height: 13px;
    width: 244px;
    color: #F99D33;
-   font-family: Roboto;
+   font-family: Nunito;
    font-size: 12px;
    line-height: 14px;
    text-decoration: underline;
@@ -3310,7 +3304,7 @@ textarea.form-input {
 .large__card__balance {
    height: 13px;
    color: #666666;
-   font-family: Roboto;
+   font-family: Nunito;
    font-size: 12px;
    font-weight: bold;
    line-height: 14px;
@@ -3475,7 +3469,7 @@ textarea.form-input {
     .sale__symbol {
         height: 14px;
         color: #F99D33;
-        font-family: Roboto;
+        font-family: Nunito;
         font-size: 12px;
         line-height: 14px;
     }
