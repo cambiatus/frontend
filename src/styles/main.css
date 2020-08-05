@@ -3,9 +3,6 @@
 @tailwind components;
 
 /* Typography */
-html {
-  font-size: 16px;
-}
 body {
   background-color: var(--white);
   font-family: 'Nunito', 'Lato', 'San Fransico', 'Helvetica', 'Verdana', sans-serif;
