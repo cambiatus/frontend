@@ -94,6 +94,8 @@
     "required": "Autenticació requerida per a aquesta acció",
     "pin_instr": "6 números",
     "login": {
+      "modalFormTitle": "Introduïu el PIN",
+      "enterPinToContinue": "Introduïu el PIN de seguretat actual per continuar.",
       "continue": "Continuar",
       "loginTab": "Inicieu la sessió",
       "registerTab": "Crea el teu compte",
