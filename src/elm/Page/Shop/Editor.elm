@@ -246,8 +246,8 @@ viewForm shared balances imageStatus isEdit isDisabled deleteModal form =
 
         imageStyle =
             case getInput form.image of
-                Just hash ->
-                    style "background-image" ("url(" ++ hash ++ ")")
+                Just url ->
+                    style "background-image" ("url(" ++ url ++ ")")
 
                 Nothing ->
                     style "" ""
@@ -645,21 +645,21 @@ update msg model loggedIn =
                 |> UR.init
                 |> UR.logGraphqlError msg error
 
-        CompletedImageUpload (Ok hash) ->
+        CompletedImageUpload (Ok url) ->
             case model of
                 EditingCreate balances _ form ->
-                    EditingCreate balances (Uploaded hash) form
+                    EditingCreate balances (Uploaded url) form
                         |> updateForm
                             (\form_ ->
-                                { form_ | image = updateInput (Just hash) form_.image }
+                                { form_ | image = updateInput (Just url) form_.image }
                             )
                         |> UR.init
 
                 EditingUpdate balances sale _ _ form ->
-                    EditingUpdate balances sale (Uploaded hash) Closed form
+                    EditingUpdate balances sale (Uploaded url) Closed form
                         |> updateForm
                             (\form_ ->
-                                { form_ | image = updateInput (Just hash) form_.image }
+                                { form_ | image = updateInput (Just url) form_.image }
                             )
                         |> UR.init
 
@@ -776,11 +776,11 @@ update msg model loggedIn =
                             |> updateForm validateForm
                 in
                 case validatedModel of
-                    EditingCreate balances (Uploaded hash) form ->
+                    EditingCreate balances (Uploaded url) form ->
                         if isValidForm form then
                             performRequest
                                 ClickedSave
-                                (Creating balances (Uploaded hash) form)
+                                (Creating balances (Uploaded url) form)
                                 loggedIn.accountName
                                 "createsale"
                                 (encodeCreateForm loggedIn form)
@@ -815,11 +815,11 @@ update msg model loggedIn =
                             validatedModel
                                 |> UR.init
 
-                    EditingUpdate balances sale (Uploaded hash) _ form ->
+                    EditingUpdate balances sale (Uploaded url) _ form ->
                         if isValidForm form then
                             performRequest
                                 ClickedSave
-                                (Saving balances sale (Uploaded hash) form)
+                                (Saving balances sale (Uploaded url) form)
                                 loggedIn.accountName
                                 "updatesale"
                                 (encodeUpdateForm sale form)
@@ -885,10 +885,10 @@ update msg model loggedIn =
         ClickedDeleteConfirm ->
             if LoggedIn.isAuth loggedIn then
                 case model of
-                    EditingUpdate balances sale (Uploaded hash) _ form ->
+                    EditingUpdate balances sale (Uploaded url) _ form ->
                         performRequest
                             ClickedDeleteConfirm
-                            (Deleting balances sale (Uploaded hash) form)
+                            (Deleting balances sale (Uploaded url) form)
                             loggedIn.accountName
                             "deletesale"
                             (encodeDeleteForm sale)

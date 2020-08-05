@@ -27,10 +27,10 @@ decode =
 
 
 encode : Avatar -> Value
-encode (Avatar maybeHash) =
-    case maybeHash of
-        Just hash ->
-            Encode.string hash
+encode (Avatar maybeUrl) =
+    case maybeUrl of
+        Just url ->
+            Encode.string url
 
         Nothing ->
             Encode.null

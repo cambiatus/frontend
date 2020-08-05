@@ -159,7 +159,7 @@ uploadAvatar shared file toMsg =
             Http.multipartBody
                 [ Http.filePart "file" file ]
         , expect =
-            Decode.at [ "data", "hash" ] Avatar.decode
+            Decode.at [ "data", "url" ] Avatar.decode
                 |> Http.expectJson toMsg
         }
 
@@ -189,7 +189,7 @@ uploadImage shared file toMsg =
             Http.multipartBody
                 [ Http.filePart "file" file ]
         , expect =
-            Decode.at [ "data", "hash" ] Decode.string
+            Decode.at [ "data", "url" ] Decode.string
                 |> Http.expectJson toMsg
         }
 

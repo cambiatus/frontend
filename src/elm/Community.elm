@@ -247,9 +247,9 @@ logoUrl maybeUrl =
 
 
 logoBackground : Maybe String -> Html.Attribute msg
-logoBackground maybeHash =
+logoBackground maybeUrl =
     Html.Attributes.style "background-image"
-        ("url(" ++ logoUrl maybeHash ++ ")")
+        ("url(" ++ logoUrl maybeUrl ++ ")")
 
 
 
@@ -456,7 +456,7 @@ decodeTransaction =
 type alias CreateCommunityData =
     { cmmAsset : Eos.Asset
     , creator : Eos.Name
-    , logoHash : String
+    , logoUrl : String
     , name : String
     , description : String
     , inviterReward : Eos.Asset
@@ -469,7 +469,7 @@ type alias CreateCommunityData =
 createCommunityData :
     { accountName : Eos.Name
     , symbol : Eos.Symbol
-    , logoHash : String
+    , logoUrl : String
     , name : String
     , description : String
     , inviterReward : Float
@@ -484,7 +484,7 @@ createCommunityData params =
         , symbol = params.symbol
         }
     , creator = params.accountName
-    , logoHash = params.logoHash
+    , logoUrl = params.logoUrl
     , name = params.name
     , description = params.description
     , inviterReward =
@@ -505,7 +505,7 @@ encodeCreateCommunityData c =
     Encode.object
         [ ( "cmm_asset", Eos.encodeAsset c.cmmAsset )
         , ( "creator", Eos.encodeName c.creator )
-        , ( "logo", Encode.string c.logoHash )
+        , ( "logo", Encode.string c.logoUrl )
         , ( "name", Encode.string c.name )
         , ( "description", Encode.string c.description )
         , ( "inviter_reward", Eos.encodeAsset c.inviterReward )
