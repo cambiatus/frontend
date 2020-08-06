@@ -1167,7 +1167,7 @@ viewDescription { shared } form =
         [ span [ class "input-label" ]
             [ text_ "community.actions.form.description_label" ]
         , textarea
-            [ class "flex input rounded-sm w-full sm:w-2/5"
+            [ class "input textarea-input w-full"
             , classList [ ( "border-red", hasErrors form.description ) ]
             , rows 5
             , onInput EnteredDescription
@@ -1509,7 +1509,7 @@ viewFieldErrors errors =
     div [ class "form-field-error" ]
         (List.map
             (\e ->
-                span [ class "field-error" ] [ text e ]
+                span [ class "form-error" ] [ text e ]
             )
             errors
         )

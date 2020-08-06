@@ -11,7 +11,7 @@ import Eos.Account as Eos
 import File exposing (File)
 import Graphql.Http
 import Html exposing (Html, button, div, input, label, option, p, select, span, text, textarea)
-import Html.Attributes exposing (accept, attribute, class, disabled, for, hidden, id, maxlength, multiple, required, selected, style, type_, value)
+import Html.Attributes exposing (accept, attribute, class, classList, disabled, for, hidden, id, maxlength, multiple, required, selected, style, type_, value)
 import Html.Events exposing (on, onClick, onInput)
 import Http
 import I18Next
@@ -284,10 +284,10 @@ viewForm shared balances imageStatus isEdit isDisabled deleteModal form =
                 ( t "menu.create", t "shop.create_offer" )
     in
     div
-        [ class "container mx-auto px-4 py-2" ]
+        [ class "container mx-auto px-4 py-2 max-w-screen-md" ]
         [ div
             [ class "bg-white rounded-lg" ]
-            [ div [ class "px-4 py-6 border-b border-gray-500" ]
+            [ div [ class "px-4 py-6" ]
                 [ div [ class "text-heading font-medium" ] [ text pageTitle ]
                 , if isEdit then
                     button
@@ -306,7 +306,7 @@ viewForm shared balances imageStatus isEdit isDisabled deleteModal form =
                     text ""
                 ]
             , div
-                [ class "shop-editor__image-upload w-full " ]
+                [ class "shop-editor__image-upload w-full px-4 mb-10" ]
                 [ input
                     [ id (fieldId "image")
                     , class "hidden-img-input"
@@ -323,14 +323,14 @@ viewForm shared balances imageStatus isEdit isDisabled deleteModal form =
                     ]
                     imageView
                 ]
-            , div [ class "px-4 py-6 flex flex-col" ]
+            , div [ class "px-4 flex flex-col" ]
                 [ formField
                     [ div
                         [ class "input-label" ]
                         [ text (t "shop.what_label") ]
-                    , viewFieldErrors (listErrors shared.translations form.title)
                     , input
                         [ class "input w-full"
+                        , classList [ ( "field-with-error", hasErrors form.title ) ]
                         , type_ "text"
                         , id (fieldId "title")
                         , value (getInput form.title)
@@ -340,14 +340,15 @@ viewForm shared balances imageStatus isEdit isDisabled deleteModal form =
                         , disabled isDisabled
                         ]
                         []
+                    , viewFieldErrors (listErrors shared.translations form.title)
                     ]
                 , formField
                     [ div
                         [ class "input-label" ]
                         [ text (t "shop.description_label") ]
-                    , viewFieldErrors (listErrors shared.translations form.description)
                     , textarea
-                        [ class "input w-full"
+                        [ class "input textarea-input w-full"
+                        , classList [ ( "field-with-error", hasErrors form.description ) ]
                         , id (fieldId "description")
                         , value (getInput form.description)
                         , maxlength 255
@@ -356,114 +357,110 @@ viewForm shared balances imageStatus isEdit isDisabled deleteModal form =
                         , disabled isDisabled
                         ]
                         []
+                    , viewFieldErrors (listErrors shared.translations form.description)
                     ]
-                , div [ class "mt-2" ]
-                    [ formField
-                        [ label
-                            [ class "input-label" ]
-                            [ text (t "shop.which_community_label") ]
-                        , viewFieldErrors (listErrors shared.translations form.symbol)
-                        , select
-                            [ class "input w-full mb-2 form-select select"
-                            , id (fieldId "symbol")
-                            , required True
-                            , disabled (isEdit || isDisabled)
-                            , Html.Events.on "change"
-                                (Decode.map
-                                    (\symbolStr ->
-                                        if String.isEmpty symbolStr then
-                                            EnteredSymbol Nothing
+                , formField
+                    [ div
+                        [ class "input-label" ]
+                        [ text (t "shop.which_community_label") ]
+                    , select
+                        [ class "w-full form-select select"
+                        , id (fieldId "symbol")
+                        , required True
+                        , disabled (isEdit || isDisabled)
+                        , Html.Events.on "change"
+                            (Decode.map
+                                (\symbolStr ->
+                                    if String.isEmpty symbolStr then
+                                        EnteredSymbol Nothing
 
-                                        else
-                                            EnteredSymbol (Just symbolStr)
-                                    )
-                                    Html.Events.targetValue
+                                    else
+                                        EnteredSymbol (Just symbolStr)
                                 )
-                            ]
-                            (option
-                                [ hidden True
-                                , attribute "value" ""
-                                , selected (symbol == Nothing)
-                                ]
-                                [ text (t "shop.choose_community_label") ]
-                                :: List.map
-                                    (\b ->
-                                        option
-                                            [ value (Eos.symbolToString b.asset.symbol)
-                                            , selected (symbol == Just b.asset.symbol)
-                                            ]
-                                            [ text (Eos.symbolToString b.asset.symbol) ]
-                                    )
-                                    balances
+                                Html.Events.targetValue
                             )
                         ]
+                        (option
+                            [ hidden True
+                            , attribute "value" ""
+                            , selected (symbol == Nothing)
+                            ]
+                            [ text (t "shop.choose_community_label") ]
+                            :: List.map
+                                (\b ->
+                                    option
+                                        [ value (Eos.symbolToString b.asset.symbol)
+                                        , selected (symbol == Just b.asset.symbol)
+                                        ]
+                                        [ text (Eos.symbolToString b.asset.symbol) ]
+                                )
+                                balances
+                        )
+                    , viewFieldErrors (listErrors shared.translations form.symbol)
                     ]
-                , div [ class "mt-2" ]
-                    [ formField
+                , formField
+                    [ div
+                        [ class "input-label" ]
+                        [ text (t "shop.track_stock_label") ]
+                    , select
+                        [ class "form-select select w-full"
+                        , id (fieldId "trackStock")
+                        , required True
+                        , disabled isDisabled
+                        , on "change"
+                            (Decode.map EnteredTrackStock Html.Events.targetValue)
+                        ]
+                        [ option
+                            [ value trackYes
+                            , selected (trackStock == Just trackYes)
+                            ]
+                            [ text (t "shop.track_stock_yes") ]
+                        , option
+                            [ value trackNo
+                            , selected (trackStock == Just trackNo)
+                            ]
+                            [ text (t "shop.track_stock_no") ]
+                        ]
+                    , viewFieldErrors (listErrors shared.translations form.trackStock)
+                    ]
+                , if trackStock == Just trackYes then
+                    formField
                         [ div
                             [ class "input-label" ]
-                            [ text (t "shop.track_stock_label") ]
-                        , viewFieldErrors (listErrors shared.translations form.trackStock)
-                        , select
-                            [ class "form-select select w-1/2"
-                            , id (fieldId "trackStock")
-                            , required True
-                            , disabled isDisabled
-                            , on "change"
-                                (Decode.map EnteredTrackStock Html.Events.targetValue)
-                            ]
-                            [ option
-                                [ value trackYes
-                                , selected (trackStock == Just trackYes)
-                                ]
-                                [ text (t "shop.track_stock_yes") ]
-                            , option
-                                [ value trackNo
-                                , selected (trackStock == Just trackNo)
-                                ]
-                                [ text (t "shop.track_stock_no") ]
-                            ]
-                        ]
-                    , if trackStock == Just trackYes then
-                        formField
-                            [ div
-                                [ class "input-label" ]
-                                [ text (t "shop.units_label") ]
-                            , viewFieldErrors (listErrors shared.translations form.units)
-                            , input
-                                [ class "input w-full"
-                                , type_ "number"
-                                , id (fieldId "units")
-                                , value (getInput form.units)
-                                , onInput EnteredUnits
-                                , required True
-                                , disabled isDisabled
-                                , Html.Attributes.min "0"
-                                ]
-                                []
-                            ]
-
-                      else
-                        text ""
-                    ]
-                , div
-                    [ class "mt-2" ]
-                    [ formField
-                        [ span
-                            [ class "input-label" ]
-                            [ text (t "shop.price_label") ]
-                        , viewFieldErrors (listErrors shared.translations form.price)
+                            [ text (t "shop.units_label") ]
                         , input
                             [ class "input w-full"
-                            , id (fieldId "price")
-                            , value (getInput form.price)
-                            , onInput EnteredPrice
+                            , classList [ ( "field-with-error", hasErrors form.units ) ]
+                            , type_ "number"
+                            , id (fieldId "units")
+                            , value (getInput form.units)
+                            , onInput EnteredUnits
                             , required True
                             , disabled isDisabled
                             , Html.Attributes.min "0"
                             ]
                             []
+                        , viewFieldErrors (listErrors shared.translations form.units)
                         ]
+
+                  else
+                    text ""
+                , formField
+                    [ div
+                        [ class "input-label" ]
+                        [ text (t "shop.price_label") ]
+                    , input
+                        [ class "input w-full"
+                        , classList [ ( "field-with-error", hasErrors form.price ) ]
+                        , id (fieldId "price")
+                        , value (getInput form.price)
+                        , onInput EnteredPrice
+                        , required True
+                        , disabled isDisabled
+                        , Html.Attributes.min "0"
+                        ]
+                        []
+                    , viewFieldErrors (listErrors shared.translations form.price)
                     ]
                 , case form.error of
                     Nothing ->
@@ -472,11 +469,11 @@ viewForm shared balances imageStatus isEdit isDisabled deleteModal form =
                     Just err ->
                         viewFieldErrors [ err ]
                 , div
-                    [ class "flex align-center justify-center mt-6"
+                    [ class "flex align-center justify-center mb-10"
                     , disabled (isDisabled || imageStatus == Uploading)
                     ]
                     [ button
-                        [ class "button button-primary"
+                        [ class "button button-primary w-full sm:w-40"
                         , onClick ClickedSave
                         ]
                         [ text actionText ]
@@ -512,7 +509,7 @@ viewConfirmDeleteModal t =
 
 formField : List (Html msg) -> Html msg
 formField =
-    div [ class "mb-2" ]
+    div [ class "mb-10" ]
 
 
 viewFieldErrors : List String -> Html msg
@@ -522,13 +519,13 @@ viewFieldErrors errors =
             List.map
                 (\error ->
                     span
-                        [ class "field-error" ]
+                        [ class "form-error" ]
                         [ text error ]
                 )
                 errors
     in
     div
-        [ class "form-field-error" ]
+        [ class "form-error" ]
         viewErrors
 
 

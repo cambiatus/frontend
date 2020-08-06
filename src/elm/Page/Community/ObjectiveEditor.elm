@@ -180,7 +180,7 @@ viewForm { shared } objForm =
                 [ span [ class "input-label" ]
                     [ text (t shared.translations "community.objectives.editor.description_label") ]
                 , textarea
-                    [ class "form-textarea w-full rounded border"
+                    [ class "input textarea-input w-full"
                     , rows 5
                     , disabled isDisabled
                     , onInput EnteredDescription
