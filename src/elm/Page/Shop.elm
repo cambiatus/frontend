@@ -11,6 +11,7 @@ module Page.Shop exposing
 
 import Api
 import Api.Graphql
+import Array
 import Browser.Dom as Dom
 import Community exposing (Balance)
 import Eos
@@ -18,7 +19,7 @@ import Eos.Account as Eos
 import Graphql.Http
 import Html exposing (Html, a, button, div, img, p, text)
 import Html.Attributes exposing (class, classList, src, value)
-import Html.Events exposing (onClick)
+import Html.Events exposing (on, onClick)
 import Html.Lazy as Lazy
 import Http
 import I18Next exposing (t)
@@ -254,18 +255,18 @@ viewShopFilter loggedIn filter =
 viewGrid : LoggedIn.Model -> List Card -> Model -> Html Msg
 viewGrid loggedIn cards model =
     let
-        v_ viewFn card =
-            viewFn model loggedIn card
+        v_ viewFn index card =
+            viewFn model loggedIn card index
     in
     div [ class "flex flex-wrap -mx-2" ]
-        (List.map
+        (List.indexedMap
             (v_ viewCard)
             cards
         )
 
 
-viewCard : Model -> LoggedIn.Model -> Card -> Html Msg
-viewCard model ({ shared } as loggedIn) card =
+viewCard : Model -> LoggedIn.Model -> Card -> Int -> Html Msg
+viewCard model ({ shared } as loggedIn) card index =
     let
         image =
             Maybe.withDefault "" card.sale.image
@@ -300,7 +301,7 @@ viewCard model ({ shared } as loggedIn) card =
         ]
         [ div [ class "md:hidden rounded-lg bg-white h-32 flex" ]
             [ div [ class "w-1/4" ]
-                [ img [ class "rounded-l-lg object-cover h-32 w-full", src image ] []
+                [ img [ class "rounded-l-lg object-cover h-32 w-full", src image, on "error" (Json.Decode.succeed (OnImageError index)) ] []
                 ]
             , div [ class "px-4 pb-2 flex flex-wrap" ]
                 [ p [ class "font-medium pt-2 w-full" ] [ text card.sale.title ]
@@ -379,6 +380,7 @@ type Msg
     | ClickedFilter Filter
     | TransferSuccess Int
     | CompletedLoadBalances (Result Http.Error (List Balance))
+    | OnImageError Int
 
 
 update : Msg -> Model -> LoggedIn.Model -> UpdateResult
@@ -507,6 +509,36 @@ update msg model loggedIn =
                     model
                         |> UR.init
 
+        OnImageError index ->
+            case model.cards of
+                Loaded cards ->
+                    let
+                        cardArray =
+                            Array.fromList cards
+                    in
+                    case cards |> Array.fromList |> Array.get index of
+                        Just card ->
+                            let
+                                oldSale =
+                                    card.sale
+
+                                newSale =
+                                    { oldSale | image = Just "/icons/shop-placeholder.svg" }
+
+                                newCard =
+                                    { card | sale = newSale }
+
+                                newList =
+                                    Array.set index newCard cardArray
+                            in
+                            { model | cards = Loaded (Array.toList newList) } |> UR.init
+
+                        Nothing ->
+                            UR.logImpossible msg [ "cardOutOfIndex" ] (UR.init model)
+
+                _ ->
+                    model |> UR.init
+
 
 updateCard : Msg -> Int -> (Card -> ( Card, List (UpdateResult -> UpdateResult) )) -> UpdateResult -> UpdateResult
 updateCard msg cardIndex transform ({ model } as uResult) =
@@ -621,3 +653,6 @@ msgToString msg =
 
         CompletedLoadBalances _ ->
             [ "CompletedLoadBalances" ]
+
+        OnImageError _ ->
+            [ "OnImageError" ]
