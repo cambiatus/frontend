@@ -33,6 +33,7 @@ import Task
 import Time exposing (Posix, posixToMillis)
 import UpdateResult as UR
 import Utils
+import View.Modal as Modal
 
 
 
@@ -159,7 +160,8 @@ view loggedIn model =
                             ]
                         , if community.hasObjectives then
                             div [ class "container mx-auto px-4" ]
-                                [ div [ class "bg-white py-6 sm:py-8 px-3 sm:px-6 rounded-lg mt-4" ]
+                                [ viewClaimModal loggedIn model
+                                , div [ class "bg-white py-6 sm:py-8 px-3 sm:px-6 rounded-lg mt-4" ]
                                     (Page.viewTitle (t "community.objectives.title_plural")
                                         :: List.indexedMap (viewObjective loggedIn model community)
                                             community.objectives
@@ -480,6 +482,60 @@ viewAction loggedIn metadata maybeDate action =
                     text ""
                 ]
             ]
+
+
+viewClaimModal : LoggedIn.Model -> Model -> Html Msg
+viewClaimModal loggedIn model =
+    let
+        isModalVisible =
+            case model.modalStatus of
+                Opened _ _ ->
+                    True
+
+                Closed ->
+                    False
+    in
+    case model.modalStatus of
+        Opened isLoading actionId ->
+            let
+                t s =
+                    I18Next.t loggedIn.shared.translations
+                        s
+
+                text_ s =
+                    text (t s)
+            in
+            div []
+                [ Modal.initWith { closeMsg = CloseClaimConfirmation, isVisible = isModalVisible }
+                    |> Modal.withHeader (t "claim.modal.title")
+                    |> Modal.withBody [ text_ "dashboard.check_claim.body" ]
+                    |> Modal.withFooter
+                        [ button
+                            [ class "flex-1 block button button-secondary mb-4 button-lg w-full md:w-40 md:mb-0"
+                            , if not isLoading then
+                                onClick CloseClaimConfirmation
+
+                              else
+                                onClick NoOp
+                            , disabled isLoading
+                            ]
+                            [ text_ "dashboard.check_claim.no" ]
+                        , button
+                            [ class "flex-1 block button button-primary button-lg w-full md:w-40"
+                            , if not isLoading then
+                                onClick (ClaimAction actionId)
+
+                              else
+                                onClick NoOp
+                            , disabled isLoading
+                            ]
+                            [ text_ "dashboard.check_claim.yes" ]
+                        ]
+                    |> Modal.toHtml
+                ]
+
+        Closed ->
+            text ""
 
 
 viewHeader : LoggedIn.Model -> Community.Model -> Html Msg
