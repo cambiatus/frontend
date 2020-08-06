@@ -502,7 +502,7 @@ viewClaimModal loggedIn model =
                     |> Modal.withBody [ text_ "dashboard.check_claim.body" ]
                     |> Modal.withFooter
                         [ button
-                            [ class "flex-1 block button button-secondary mb-4 button-lg w-full md:w-40 md:mb-0"
+                            [ class "modal-cancel"
                             , if not isLoading then
                                 onClick CloseClaimConfirmation
 
@@ -512,7 +512,7 @@ viewClaimModal loggedIn model =
                             ]
                             [ text_ "dashboard.check_claim.no" ]
                         , button
-                            [ class "flex-1 block button button-primary button-lg w-full md:w-40"
+                            [ class "modal-accept"
                             , if not isLoading then
                                 onClick (ClaimAction actionId)
 
