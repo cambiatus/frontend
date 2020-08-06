@@ -486,15 +486,6 @@ viewAction loggedIn metadata maybeDate action =
 
 viewClaimModal : LoggedIn.Model -> Model -> Html Msg
 viewClaimModal loggedIn model =
-    let
-        isModalVisible =
-            case model.modalStatus of
-                Opened _ _ ->
-                    True
-
-                Closed ->
-                    False
-    in
     case model.modalStatus of
         Opened isLoading actionId ->
             let
@@ -506,7 +497,7 @@ viewClaimModal loggedIn model =
                     text (t s)
             in
             div []
-                [ Modal.initWith { closeMsg = CloseClaimConfirmation, isVisible = isModalVisible }
+                [ Modal.initWith { closeMsg = CloseClaimConfirmation, isVisible = True }
                     |> Modal.withHeader (t "claim.modal.title")
                     |> Modal.withBody [ text_ "dashboard.check_claim.body" ]
                     |> Modal.withFooter
