@@ -98,7 +98,7 @@ type EditStatus
 
 
 type ModalStatus
-    = Opened Bool Int -- Action id
+    = Open Bool Int -- Action id
     | Closed
 
 
@@ -487,7 +487,7 @@ viewAction loggedIn metadata maybeDate action =
 viewClaimModal : LoggedIn.Model -> Model -> Html Msg
 viewClaimModal loggedIn model =
     case model.modalStatus of
-        Opened isLoading actionId ->
+        Open isLoading actionId ->
             let
                 t s =
                     I18Next.t loggedIn.shared.translations
@@ -613,7 +613,7 @@ update msg model loggedIn =
                 |> UR.init
 
         OpenClaimConfirmation actionId ->
-            { model | modalStatus = Opened False actionId }
+            { model | modalStatus = Open False actionId }
                 |> UR.init
 
         CloseClaimConfirmation ->
@@ -623,7 +623,7 @@ update msg model loggedIn =
         ClaimAction actionId ->
             let
                 newModel =
-                    { model | modalStatus = Opened True actionId }
+                    { model | modalStatus = Open True actionId }
             in
             if LoggedIn.isAuth loggedIn then
                 newModel
