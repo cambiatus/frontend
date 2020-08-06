@@ -15,8 +15,8 @@ import pdfMake from 'pdfmake/build/pdfmake'
 import pdfFonts from './vfs_fonts'
 pdfMake.vfs = pdfFonts.pdfMake.vfs
 pdfMake.fonts = {
-  Gotham: {
-    normal: 'gotham-rounded-book.otf',
+  Nunito: {
+    normal: 'nunito-regular.ttf',
     bold: 'opensans-bold-no-ligatures.ttf'
   }
 }
