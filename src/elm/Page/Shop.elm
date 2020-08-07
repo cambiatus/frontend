@@ -254,13 +254,9 @@ viewShopFilter loggedIn filter =
 
 viewGrid : LoggedIn.Model -> List Card -> Model -> Html Msg
 viewGrid loggedIn cards model =
-    let
-        v_ viewFn card =
-            viewFn model loggedIn card
-    in
     div [ class "flex flex-wrap -mx-2" ]
         (List.indexedMap
-            (v_ viewCard)
+            (viewCard model loggedIn)
             cards
         )
 
