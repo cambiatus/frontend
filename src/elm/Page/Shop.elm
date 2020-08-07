@@ -255,8 +255,8 @@ viewShopFilter loggedIn filter =
 viewGrid : LoggedIn.Model -> List Card -> Model -> Html Msg
 viewGrid loggedIn cards model =
     let
-        v_ viewFn index card =
-            viewFn model loggedIn card index
+        v_ viewFn card =
+            viewFn model loggedIn card
     in
     div [ class "flex flex-wrap -mx-2" ]
         (List.indexedMap
@@ -265,8 +265,8 @@ viewGrid loggedIn cards model =
         )
 
 
-viewCard : Model -> LoggedIn.Model -> Card -> Int -> Html Msg
-viewCard model ({ shared } as loggedIn) card index =
+viewCard : Model -> LoggedIn.Model -> Int -> Card -> Html Msg
+viewCard model ({ shared } as loggedIn) index card =
     let
         image =
             Maybe.withDefault "" card.sale.image
