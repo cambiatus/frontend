@@ -66,6 +66,10 @@ textarea.input {
   @apply h-40;
 }
 
+.textarea-input {
+  @apply block rounded-sm;
+}
+
 .field-with-error,
 .field-with-error:focus {
   @apply border-red text-red;

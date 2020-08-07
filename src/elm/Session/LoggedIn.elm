@@ -160,7 +160,7 @@ initModel shared authModel accountName selectedCommunity =
     , auth = authModel
     , feedback = Hidden
     , showCommunitySelector = False
-    , hasShop = False
+    , hasShop = True
     , hasObjectives = False
     }
 

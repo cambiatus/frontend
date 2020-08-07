@@ -38,7 +38,7 @@ module.exports = function (words) {
       }]
     },
     defaultStyle: {
-      font: 'Gotham'
+      font: 'Nunito'
     },
     content: [
       {
@@ -56,7 +56,7 @@ module.exports = function (words) {
       {
         // Label for the Passphrase
         color: 'black',
-        margin: [105, 12, 0, 15],
+        margin: [105, 12, 0, 10],
         text: [{
           text: 'YOUR 12 WORDS / SUS 12 PALABRAS / SUAS 12 PALAVRAS',
           fontSize: 10
@@ -69,7 +69,7 @@ module.exports = function (words) {
         text: [{
           text: words,
           fontSize: 18,
-          lineHeight: 1.2,
+          lineHeight: 1.1,
           bold: true
         }]
       },
