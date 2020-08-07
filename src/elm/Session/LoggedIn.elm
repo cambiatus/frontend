@@ -336,7 +336,7 @@ viewHeader ({ shared } as model) profile_ =
                     , onClick (ShowUserNav (not model.showUserNav))
                     , onMouseEnter (ShowUserNav True)
                     ]
-                    [ Avatar.view shared.endpoints.ipfs profile_.avatar "h-8 w-8"
+                    [ Avatar.view profile_.avatar "h-8 w-8"
                     , div [ class "flex flex-wrap text-left pl-2" ]
                         [ p [ class "w-full font-sans uppercase text-gray-900 text-xs overflow-x-hidden" ]
                             [ text (tr "menu.welcome_message" [ ( "user_name", Eos.nameToString profile_.account ) ]) ]
@@ -353,7 +353,7 @@ viewHeader ({ shared } as model) profile_ =
                     , onClick (ShowUserNav (not model.showUserNav))
                     , onMouseEnter (ShowUserNav True)
                     ]
-                    [ Avatar.view shared.endpoints.ipfs profile_.avatar "h-8 w-8"
+                    [ Avatar.view profile_.avatar "h-8 w-8"
                     ]
 
                 -- Invisible button to hide menu when clicking outside
@@ -433,14 +433,11 @@ viewCommunitySelector ({ shared } as model) =
 
                 _ ->
                     False
-
-        url hash =
-            shared.endpoints.ipfs ++ "/" ++ hash
     in
     case findCommunity model.selectedCommunity of
         Just community ->
             button [ class "flex items-center", onClick OpenCommunitySelector ]
-                [ img [ class "h-10", src <| url community.logo ] []
+                [ img [ class "h-10", src community.logo ] []
                 , if hasMultipleCommunities then
                     Icons.arrowDown ""
 
@@ -468,16 +465,13 @@ communitySelectorModal model =
         text_ s =
             text (t s)
 
-        logoUrl hash =
-            model.shared.endpoints.ipfs ++ "/" ++ hash
-
         viewCommunityItem : Profile.CommunityInfo -> Html Msg
         viewCommunityItem c =
             div
                 [ class "flex items-center p-4 text-body cursor-pointer hover:text-black hover:bg-gray-100"
                 , onClick <| SelectCommunity c.id
                 ]
-                [ img [ src (logoUrl c.logo), class "h-16 w-16 mr-5" ] []
+                [ img [ src c.logo, class "h-16 w-16 mr-5" ] []
                 , text c.name
                 ]
     in

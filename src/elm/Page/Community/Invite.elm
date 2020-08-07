@@ -138,7 +138,7 @@ viewContent shared invite invitationId =
         [ div [ class "flex flex-wrap content-end" ]
             [ div [ class "flex items-center justify-center h-24 w-24 rounded-full mx-auto -mt-12 bg-white" ]
                 [ img
-                    [ src (shared.endpoints.ipfs ++ "/" ++ invite.community.logo)
+                    [ src invite.community.logo
                     , class "object-scale-down h-20 w-20"
                     ]
                     []

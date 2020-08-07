@@ -191,9 +191,6 @@ viewPublicInfo loggedIn profile { hasTransferButton, hasEditLink } =
 
         account =
             Eos.nameToString profile.account
-
-        ipfsUrl =
-            loggedIn.shared.endpoints.ipfs
     in
     div [ class "bg-white mb-6" ]
         [ div [ class "container p-4 mx-auto" ]
@@ -208,7 +205,7 @@ viewPublicInfo loggedIn profile { hasTransferButton, hasEditLink } =
                     ]
                 ]
                 [ div [ class "flex mb-4 items-center flex-wrap" ]
-                    [ Avatar.view ipfsUrl profile.avatar "w-20 h-20 mr-6 xs-max:w-16 xs-max:h-16 xs-max:mr-3"
+                    [ Avatar.view profile.avatar "w-20 h-20 mr-6 xs-max:w-16 xs-max:h-16 xs-max:mr-3"
                     , div [ class "flex-grow flex items-center justify-between" ]
                         [ ul [ class "text-sm text-gray-900" ]
                             [ li [ class "font-medium text-body-black text-2xl xs-max:text-xl" ]

@@ -351,9 +351,6 @@ viewAction loggedIn metadata maybeDate action =
             else
                 " w-1/2"
 
-        ipfsUrl =
-            loggedIn.shared.endpoints.ipfs
-
         validatorAvatars =
             List.take 3 action.validators
                 |> List.indexedMap
@@ -367,7 +364,7 @@ viewAction loggedIn metadata maybeDate action =
                                     ""
                         in
                         ("h-10 w-10 border-white border-4 rounded-full bg-white" ++ margin)
-                            |> Avatar.view ipfsUrl v.avatar
+                            |> Avatar.view v.avatar
                     )
                 |> (\vals ->
                         let
@@ -547,7 +544,7 @@ viewHeader { shared } community =
         , div [ class "h-24 lg:h-56 bg-indigo-500 flex flex-wrap content-end" ]
             [ div [ class "h-24 w-24 rounded-full mx-auto pt-12" ]
                 [ img
-                    [ src (shared.endpoints.ipfs ++ "/" ++ community.logo)
+                    [ src community.logo
                     , class "object-scale-down"
                     ]
                     []

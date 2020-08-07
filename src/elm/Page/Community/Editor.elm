@@ -177,8 +177,8 @@ encodeForm loggedIn form =
         Just Uploading ->
             UploadingLogo
 
-        Just (Uploaded logoHash) ->
-            encodeFormHelper logoHash loggedIn form
+        Just (Uploaded logoUrl) ->
+            encodeFormHelper logoUrl loggedIn form
 
         Just (UploadingFailed _) ->
             Invalid (Dict.singleton fieldLogoId ChooseOrUploadLogo)
@@ -188,7 +188,7 @@ encodeForm loggedIn form =
 
 
 encodeFormHelper : String -> LoggedIn.Model -> Form -> FormStatus
-encodeFormHelper logoHash { accountName } form =
+encodeFormHelper logoUrl { accountName } form =
     let
         maybeSymbol =
             Eos.symbolFromString form.symbol
@@ -200,7 +200,7 @@ encodeFormHelper logoHash { accountName } form =
         Just symbol ->
             { accountName = accountName
             , symbol = symbol
-            , logoHash = logoHash
+            , logoUrl = logoUrl
             , name = form.name
             , description = form.description
             , inviterReward = form.inviterReward
@@ -398,9 +398,6 @@ viewFieldCurrencySymbol shared isDisabled defVal errors =
 viewFieldLogo : Shared -> Bool -> Int -> List LogoStatus -> Dict String FormError -> Html Msg
 viewFieldLogo shared isDisabled selected logos errors =
     let
-        ipfsUrl =
-            shared.endpoints.ipfs
-
         t =
             I18Next.t shared.translations
 
@@ -426,10 +423,10 @@ viewFieldLogo shared isDisabled selected logos errors =
                     UploadingFailed _ ->
                         span [] [ text (t "error.unknown") ]
 
-                    Uploaded hash ->
+                    Uploaded url ->
                         div
                             [ class (logoClass "-img")
-                            , Community.logoBackground ipfsUrl (Just hash)
+                            , Community.logoBackground (Just url)
                             ]
                             []
                 ]
@@ -691,12 +688,12 @@ update msg model loggedIn =
         EnteredLogo _ [] ->
             UR.init model
 
-        CompletedLogoUpload index resultHash ->
+        CompletedLogoUpload index resultUrl ->
             let
-                ( newLogoHash, addHttpError ) =
-                    case resultHash of
-                        Ok hash ->
-                            ( Uploaded hash, identity )
+                ( newLogoUrl, addHttpError ) =
+                    case resultUrl of
+                        Ok url ->
+                            ( Uploaded url, identity )
 
                         Err err ->
                             ( UploadingFailed err
@@ -707,7 +704,7 @@ update msg model loggedIn =
                     updateForm
                         (\form ->
                             { form
-                                | logoList = List.setAt index newLogoHash form.logoList
+                                | logoList = List.setAt index newLogoUrl form.logoList
                             }
                         )
                         (UR.init model)
@@ -865,7 +862,7 @@ save msg loggedIn ({ model } as uResult) =
                                           , authorization = authorization
                                           , data =
                                                 { asset = createAction.cmmAsset
-                                                , logo = createAction.logoHash
+                                                , logo = createAction.logoUrl
                                                 , name = createAction.name
                                                 , description = createAction.description
                                                 , inviterReward = createAction.inviterReward

@@ -625,7 +625,7 @@ viewSelectedPayer shared model profile =
         , href ("/profile/" ++ Eos.Account.nameToString profile.account)
         ]
         [ div [ class "w-10 h-10 rounded-full" ]
-            [ Avatar.view shared.endpoints.ipfs profile.avatar "w-10 h-10"
+            [ Avatar.view profile.avatar "w-10 h-10"
             ]
         , div [ class "mt-2" ]
             [ accountNameContainer ]
@@ -650,12 +650,8 @@ selectConfig select shared isDisabled =
 
 viewAutoCompleteItem : Shared -> ProfileBase -> Html Never
 viewAutoCompleteItem shared profile =
-    let
-        ipfsUrl =
-            shared.endpoints.ipfs
-    in
     div [ class "pt-3 pl-3 flex flex-row items-center w-select z-30" ]
-        [ div [ class "pr-3" ] [ Avatar.view ipfsUrl profile.avatar "h-7 w-7" ]
+        [ div [ class "pr-3" ] [ Avatar.view profile.avatar "h-7 w-7" ]
         , div [ class "flex flex-col font-sans border-b border-gray-500 pb-3 w-full" ]
             [ span [ class "text-black text-body leading-loose" ]
                 [ text (Eos.Account.nameToString profile.account) ]
@@ -737,11 +733,8 @@ viewTransfer shared payment =
             Utils.posixDateTime (Just payment.blockTime)
                 |> Strftime.format "%d %b %Y, %H:%M" Time.utc
 
-        ipfsUrl =
-            shared.endpoints.ipfs
-
         avatarImg =
-            Avatar.view ipfsUrl payer.avatar "max-w-full max-h-full"
+            Avatar.view payer.avatar "max-w-full max-h-full"
 
         amount =
             String.concat

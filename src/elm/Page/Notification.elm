@@ -134,7 +134,7 @@ viewNotificationTransfer shared history notification =
                 Nothing
 
             else
-                Just (shared.endpoints.ipfs ++ "/" ++ notification.community.logo)
+                Just notification.community.logo
 
         date =
             Just history.insertedAt
@@ -193,7 +193,7 @@ viewNotificationMint shared history notification =
                 Nothing
 
             else
-                Just (shared.endpoints.ipfs ++ "/" ++ notification.community.logo)
+                Just notification.community.logo
 
         date =
             Just history.insertedAt
@@ -245,7 +245,7 @@ viewNotificationSaleHistory ({ shared } as loggedIn) notification sale =
                 Nothing
 
             else
-                Just (shared.endpoints.ipfs ++ "/" ++ sale.community.logo)
+                Just sale.community.logo
 
         date =
             Just notification.insertedAt
@@ -304,7 +304,7 @@ viewNotificationSaleHistoryDetail ({ shared } as loggedIn) sale date =
         ]
     , div [ class "flex flex-none pl-4" ]
         [ img
-            [ src (shared.endpoints.ipfs ++ "/" ++ Maybe.withDefault "" sale.sale.image)
+            [ src (Maybe.withDefault "" sale.sale.image)
             , class "object-scale-down rounded-full h-10"
             ]
             []

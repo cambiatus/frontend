@@ -262,7 +262,7 @@ viewAvatar loggedIn url =
             [ for "profile-upload-avatar"
             , class "block cursor-pointer"
             ]
-            [ Avatar.view loggedIn.shared.endpoints.ipfs url "w-20 h-20"
+            [ Avatar.view url "w-20 h-20"
             , span [ class "absolute bottom-0 right-0 bg-orange-300 w-8 h-8 p-2 rounded-full" ] [ Icons.camera ]
             ]
         ]
