@@ -518,8 +518,11 @@ update msg model loggedIn =
                                 oldSale =
                                     card.sale
 
+                                icon =
+                                    "/icons/shop-placeholder" ++ (index |> modBy 3 |> String.fromInt) ++ ".svg"
+
                                 newSale =
-                                    { oldSale | image = Just "/icons/shop-placeholder.svg" }
+                                    { oldSale | image = Just icon }
 
                                 newCard =
                                     { card | sale = newSale }
