@@ -66,7 +66,6 @@ type alias Endpoints =
     , api : String
     , chat : String
     , graphql : String
-    , ipfs : String
     }
 
 
@@ -76,7 +75,6 @@ defaultEndpoints =
     , api = "https://api.cambiatus.io"
     , chat = "https://app.cambiatus.io/chat"
     , graphql = "https://api.cambiatus.io/api/graph"
-    , ipfs = "https://ipfs.cambiatus.io/ipfs"
     }
 
 
@@ -87,7 +85,6 @@ decodeEndpoints =
         |> required "api" string
         |> required "chat" string
         |> required "graphql" string
-        |> required "ipfs" string
 
 
 type Environment

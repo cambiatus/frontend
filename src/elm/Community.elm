@@ -232,29 +232,28 @@ settingsQuery symbol =
     Query.community { symbol = symbolToString symbol } settingsSelectionSet
 
 
-logoUrl : String -> Maybe String -> String
-logoUrl ipfsUrl maybeHash =
-    case maybeHash of
+logoUrl : Maybe String -> String
+logoUrl maybeUrl =
+    let
+        logoPlaceholder =
+            "/icons/community_placeholder.png"
+    in
+    case maybeUrl of
         Nothing ->
-            logoPlaceholder ipfsUrl
+            logoPlaceholder
 
-        Just hash ->
-            if String.isEmpty (String.trim hash) then
-                logoPlaceholder ipfsUrl
+        Just url ->
+            if String.isEmpty (String.trim url) then
+                logoPlaceholder
 
             else
-                ipfsUrl ++ "/" ++ hash
+                url
 
 
-logoBackground : String -> Maybe String -> Html.Attribute msg
-logoBackground ipfsUrl maybeHash =
+logoBackground : Maybe String -> Html.Attribute msg
+logoBackground maybeUrl =
     Html.Attributes.style "background-image"
-        ("url(" ++ logoUrl ipfsUrl maybeHash ++ ")")
-
-
-logoPlaceholder : String -> String
-logoPlaceholder ipfsUrl =
-    ipfsUrl ++ "/QmXuf6y8TMGRN96HZEy86c8N9aDseaeyuCQ5qVLqPyd8Ld"
+        ("url(" ++ logoUrl maybeUrl ++ ")")
 
 
 
@@ -461,7 +460,7 @@ decodeTransaction =
 type alias CreateCommunityData =
     { cmmAsset : Eos.Asset
     , creator : Eos.Name
-    , logoHash : String
+    , logoUrl : String
     , name : String
     , description : String
     , inviterReward : Eos.Asset
@@ -474,7 +473,7 @@ type alias CreateCommunityData =
 createCommunityData :
     { accountName : Eos.Name
     , symbol : Eos.Symbol
-    , logoHash : String
+    , logoUrl : String
     , name : String
     , description : String
     , inviterReward : Float
@@ -489,7 +488,7 @@ createCommunityData params =
         , symbol = params.symbol
         }
     , creator = params.accountName
-    , logoHash = params.logoHash
+    , logoUrl = params.logoUrl
     , name = params.name
     , description = params.description
     , inviterReward =
@@ -510,7 +509,7 @@ encodeCreateCommunityData c =
     Encode.object
         [ ( "cmm_asset", Eos.encodeAsset c.cmmAsset )
         , ( "creator", Eos.encodeName c.creator )
-        , ( "logo", Encode.string c.logoHash )
+        , ( "logo", Encode.string c.logoUrl )
         , ( "name", Encode.string c.name )
         , ( "description", Encode.string c.description )
         , ( "inviter_reward", Eos.encodeAsset c.inviterReward )
