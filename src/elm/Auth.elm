@@ -31,7 +31,7 @@ import Json.Encode as Encode exposing (Value)
 import Log
 import Profile exposing (Profile)
 import Route
-import Session.Shared exposing (Shared)
+import Session.Shared exposing (Shared, Translators)
 import Task
 import UpdateResult as UR
 import Utils
@@ -296,12 +296,8 @@ type LoginStep
 viewLoginSteps : Bool -> Shared -> Model -> LoginStep -> List (Html Msg)
 viewLoginSteps isModal shared model loginStep =
     let
-        text_ s =
-            Html.text (t shared.translations s)
-
-        tr : String -> I18Next.Replacements -> String
-        tr =
-            I18Next.tr shared.translations I18Next.Curly
+        { t, tr } =
+            shared.translators
 
         illustration fileName =
             img [ class "h-40 mx-auto mt-8 mb-7", src ("images/" ++ fileName) ] []
@@ -329,7 +325,7 @@ viewLoginSteps isModal shared model loginStep =
                     List.filter isPassphraseError model.problems
 
                 errors =
-                    List.map (\( _, errorDescription ) -> li [] [ text_ errorDescription ]) passphraseErrors
+                    List.map (\( _, errorDescription ) -> li [] [ text (t errorDescription) ]) passphraseErrors
 
                 passphraseWordsCount =
                     model.form.passphrase
@@ -342,15 +338,15 @@ viewLoginSteps isModal shared model loginStep =
                 [ illustration "login_key.svg"
                 , p [ class pClass ]
                     [ span [ class "text-green text-caption tracking-wide uppercase block mb-1" ]
-                        [ text_ "menu.my_communities" ]
+                        [ text (t "menu.my_communities") ]
                     , span [ class "text-white block leading-relaxed" ]
-                        [ text_ "auth.login.wordsMode.input.description" ]
+                        [ text (t "auth.login.wordsMode.input.description") ]
                     ]
-                , viewFieldLabel shared "auth.login.wordsMode.input" passphraseId
+                , viewFieldLabel shared.translators "auth.login.wordsMode.input" passphraseId
                 , div [ class "relative" ]
                     [ textarea
                         [ class "form-textarea h-19 min-w-full block"
-                        , placeholder (t shared.translations "auth.login.wordsMode.input.placeholder")
+                        , placeholder (t "auth.login.wordsMode.input.placeholder")
                         , autofocus True
                         , class <|
                             if not (List.isEmpty passphraseErrors) then
@@ -379,8 +375,10 @@ viewLoginSteps isModal shared model loginStep =
             , div [ class "sf-footer" ]
                 [ if not isModal then
                     p [ class "text-white text-body text-center mt-16 mb-6 block" ]
-                        [ text_ "auth.login.register"
-                        , a [ Route.href (Route.Register Nothing Nothing), class "text-orange-300 underline" ] [ text_ "auth.login.registerLink" ]
+                        [ text (t "auth.login.register")
+                        , a [ Route.href (Route.Register Nothing Nothing), class "text-orange-300 underline" ]
+                            [ text (t "auth.login.registerLink")
+                            ]
                         ]
 
                   else
@@ -389,7 +387,7 @@ viewLoginSteps isModal shared model loginStep =
                     [ class buttonClass
                     , onClick ClickedViewLoginPinStep
                     ]
-                    [ text_ "dashboard.next" ]
+                    [ text (t "dashboard.next") ]
                 ]
             ]
 
@@ -401,15 +399,15 @@ viewLoginSteps isModal shared model loginStep =
             [ div [ class "sf-content" ]
                 [ illustration "login_pin.svg"
                 , p [ class pClass ]
-                    [ text_ (trPrefix "nowCreate")
+                    [ text (t (trPrefix "nowCreate"))
                     , text " "
-                    , strong [] [ text_ (trPrefix "sixDigitPin") ]
+                    , strong [] [ text (t (trPrefix "sixDigitPin")) ]
                     , text ". "
-                    , text_ (trPrefix "thePin")
+                    , text (t <| trPrefix "thePin")
                     , text " "
-                    , strong [] [ text_ (trPrefix "notPassword") ]
+                    , strong [] [ text <| t (trPrefix "notPassword") ]
                     , text " "
-                    , text_ (trPrefix "eachLogin")
+                    , text <| t (trPrefix "eachLogin")
                     ]
                 , viewPin model shared
                 , viewPinConfirmation model shared
@@ -421,13 +419,14 @@ viewLoginSteps isModal shared model loginStep =
                     , disabled model.isSigningIn
                     , onClick (SubmittedLoginPrivateKey model.form)
                     ]
-                    [ text_
-                        (if model.isSigningIn then
-                            "auth.login.submitting"
+                    [ text <|
+                        t
+                            (if model.isSigningIn then
+                                "auth.login.submitting"
 
-                         else
-                            "auth.login.submit"
-                        )
+                             else
+                                "auth.login.submit"
+                            )
                     ]
                 ]
             ]
@@ -486,15 +485,15 @@ viewMultipleAccount accounts form isDisabled shared model =
 viewLoginWithPin : Bool -> Shared -> Model -> List (Html Msg)
 viewLoginWithPin isDisabled shared model =
     let
-        text_ s =
-            Html.text (t shared.translations s)
+        { t } =
+            shared.translators
     in
     [ div []
         [ p [ class "modal-header px-0" ]
-            [ text_ "auth.login.modalFormTitle"
+            [ text <| t "auth.login.modalFormTitle"
             ]
         , p [ class "text-sm" ]
-            [ text_ "auth.login.enterPinToContinue" ]
+            [ text <| t "auth.login.enterPinToContinue" ]
         , viewAuthError shared model.loginError
         ]
     , Html.form
@@ -505,7 +504,7 @@ viewLoginWithPin isDisabled shared model =
             [ class "button button-primary w-full"
             , disabled isDisabled
             ]
-            [ text_ "auth.login.continue" ]
+            [ text <| t "auth.login.continue" ]
         ]
     ]
 
@@ -523,19 +522,14 @@ viewAuthError shared maybeLoginError =
                 ]
 
 
-viewFieldLabel : Shared -> String -> String -> Html msg
-viewFieldLabel { translations } tSuffix id_ =
-    let
-        labelText : String
-        labelText =
-            t translations (tSuffix ++ ".label")
-    in
+viewFieldLabel : Translators -> String -> String -> Html msg
+viewFieldLabel { t, tr } tSuffix id_ =
     label
         [ class "block"
         , for id_
         ]
         [ span [ class "text-green tracking-wide uppercase text-caption block mb-1" ]
-            [ text <| labelText ]
+            [ text <| t (tSuffix ++ ".label") ]
         ]
 
 
@@ -1002,7 +996,7 @@ viewPinConfirmation ({ form } as model) shared =
     in
     Pin.view
         shared
-        { labelText = I18Next.t shared.translations "auth.pinConfirmation.label"
+        { labelText = shared.translators.t "auth.pinConfirmation.label"
         , inputId = "pinInputConfirmation"
         , inputValue = form.enteredPinConfirmation
         , onInputMsg = EnteredPinConf

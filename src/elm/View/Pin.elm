@@ -37,12 +37,8 @@ isValid pin =
 view : Shared -> Config msg -> Html msg
 view shared { labelText, inputId, inputValue, onInputMsg, onToggleMsg, isVisible, errors } =
     let
-        t =
-            I18Next.t shared.translations
-
-        tr : String -> I18Next.Replacements -> String
-        tr =
-            I18Next.tr shared.translations I18Next.Curly
+        { t, tr } =
+            shared.translators
 
         inputType =
             if isVisible then
