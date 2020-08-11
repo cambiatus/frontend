@@ -16,7 +16,7 @@ import Json.Encode as Encode
 import Profile exposing (Profile)
 import Route
 import Session.Guest as Guest exposing (External(..))
-import Session.Shared exposing (Shared, Translators)
+import Session.Shared exposing (Translators)
 import Task
 import UpdateResult as UR
 import Utils exposing (decodeEnterKeyDown)
