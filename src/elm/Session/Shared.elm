@@ -75,7 +75,7 @@ type TranslationStatus
 -- TRANSLATORS
 
 
-{-| Contains functions with bounded translations for translating plain strings and strings with placeholders.
+{-| Contains functions with bounded dictionaries for translating plain strings and strings with placeholders.
 -}
 type alias Translators =
     { t : String -> String
