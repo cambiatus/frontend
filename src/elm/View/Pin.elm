@@ -3,7 +3,6 @@ module View.Pin exposing (Pin, isValid, view)
 import Html exposing (Html, button, div, input, label, li, text, ul)
 import Html.Attributes exposing (attribute, autocomplete, class, for, id, maxlength, placeholder, required, type_, value)
 import Html.Events exposing (onClick, onInput)
-import I18Next
 import Session.Shared exposing (Shared)
 
 
@@ -37,12 +36,8 @@ isValid pin =
 view : Shared -> Config msg -> Html msg
 view shared { labelText, inputId, inputValue, onInputMsg, onToggleMsg, isVisible, errors } =
     let
-        t =
-            I18Next.t shared.translations
-
-        tr : String -> I18Next.Replacements -> String
-        tr =
-            I18Next.tr shared.translations I18Next.Curly
+        { t, tr } =
+            shared.translators
 
         inputType =
             if isVisible then

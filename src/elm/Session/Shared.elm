@@ -1,6 +1,7 @@
 module Session.Shared exposing
     ( Shared
     , TranslationStatus(..)
+    , Translators
     , init
     , langFlag
     , language
@@ -31,6 +32,7 @@ type alias Shared =
     { navKey : Nav.Key
     , language : String
     , translations : Translations
+    , translators : Translators
     , translationsStatus : TranslationStatus
     , environment : Environment
     , maybeAccount : Maybe ( Eos.Name, Bool )
@@ -48,6 +50,7 @@ init ({ environment, maybeAccount, endpoints, allowCommunityCreation } as flags)
     { navKey = navKey
     , language = flags.language
     , translations = initialTranslations
+    , translators = makeTranslators initialTranslations
     , translationsStatus = LoadingTranslation
     , environment = environment
     , maybeAccount = maybeAccount
@@ -66,6 +69,34 @@ type TranslationStatus
     | LoadedTranslation
     | LoadingAnotherTranslation
     | LoadingAnotherTranslationFailed Http.Error
+
+
+
+-- TRANSLATORS
+
+
+{-| Contains functions with bounded dictionaries for translating plain strings and strings with placeholders.
+-}
+type alias Translators =
+    { t : String -> String
+    , tr : String -> I18Next.Replacements -> String
+    }
+
+
+makeTranslators : Translations -> Translators
+makeTranslators translations =
+    let
+        t : String -> String
+        t =
+            I18Next.t translations
+
+        tr : String -> I18Next.Replacements -> String
+        tr =
+            I18Next.tr translations I18Next.Curly
+    in
+    { t = t
+    , tr = tr
+    }
 
 
 
@@ -123,6 +154,7 @@ loadTranslation result shared =
             { shared
                 | language = language_
                 , translations = translations
+                , translators = makeTranslators translations
                 , translationsStatus = LoadedTranslation
             }
 
