@@ -16,7 +16,7 @@ import Json.Encode as Encode
 import Profile exposing (Profile)
 import Route
 import Session.Guest as Guest exposing (External(..))
-import Session.Shared exposing (Shared)
+import Session.Shared exposing (Translators)
 import Task
 import UpdateResult as UR
 import Utils exposing (decodeEnterKeyDown)
@@ -137,17 +137,11 @@ view guest model =
         shared =
             guest.shared
 
-        t str =
-            I18Next.t guest.shared.translations str
-
-        text_ s =
-            text (t s)
+        { t, tr } =
+            shared.translators
 
         isDisabled =
             model.isLoading || model.isCheckingAccount
-
-        tr r_id replaces =
-            I18Next.tr shared.translations I18Next.Curly r_id replaces
 
         name =
             accName model
@@ -177,7 +171,7 @@ view guest model =
                         else
                             "text-white"
                     ]
-                    [ text_ ("register.form.step" ++ step ++ "_title") ]
+                    [ text <| t ("register.form.step" ++ step ++ "_title") ]
                 ]
 
         viewCreateAccount =
@@ -191,7 +185,7 @@ view guest model =
                         [ viewServerErrors model.problems
                         , viewTitleForStep 1
                         , viewField
-                            shared
+                            shared.translators
                             (Field
                                 "register.form.name"
                                 isDisabled
@@ -202,7 +196,7 @@ view guest model =
                             [ maxlength 255 ]
                             model.problems
                         , viewField
-                            shared
+                            shared.translators
                             (Field
                                 "register.form.account"
                                 isDisabled
@@ -213,7 +207,7 @@ view guest model =
                             Eos.nameValidationAttrs
                             model.problems
                         , viewField
-                            shared
+                            shared.translators
                             (Field
                                 "register.form.email"
                                 isDisabled
@@ -226,8 +220,8 @@ view guest model =
                         ]
                     , div [ class "sf-footer" ]
                         [ p [ class "text-center text-body my-6" ]
-                            [ text_ "register.login"
-                            , a [ Route.href (Route.Login Nothing), class "text-orange-300 underline" ] [ text_ "register.authLink" ]
+                            [ text (t "register.login")
+                            , a [ Route.href (Route.Login Nothing), class "text-orange-300 underline" ] [ text (t "register.authLink") ]
                             ]
                         , button
                             [ class "button button-primary min-w-full mb-8"
@@ -235,10 +229,10 @@ view guest model =
                             , disabled isDisabled
                             ]
                             [ if model.isCheckingAccount then
-                                text_ "register.form.checkingAvailability"
+                                text (t "register.form.checkingAvailability")
 
                               else
-                                text_ "auth.login.continue"
+                                text (t "auth.login.continue")
                             ]
                         ]
                     ]
@@ -256,14 +250,14 @@ view guest model =
                         [ viewTitleForStep 2
                         , p
                             [ class "text-xl mb-3" ]
-                            [ text_ "register.account_created.greet"
+                            [ text (t "register.account_created.greet")
                             , text " "
                             , strong [] [ text name ]
                             , text ", "
-                            , text_ "register.account_created.last_step"
+                            , text (t "register.account_created.last_step")
                             ]
                         , p [ class "mb-3" ]
-                            [ text_ "register.account_created.instructions"
+                            [ text (t "register.account_created.instructions")
                             ]
                         , div [ class "w-1/4 m-auto relative left-1" ]
                             [ img [ src "images/reg-passphrase-boy.svg" ]
@@ -276,10 +270,10 @@ view guest model =
                             ]
                         , div [ class "bg-white text-black text-2xl mb-12 p-4 rounded-lg" ]
                             [ p [ class "input-label" ]
-                                [ text_ "register.account_created.twelve_words"
+                                [ text (t "register.account_created.twelve_words")
                                 , if model.isPassphraseCopiedToClipboard then
                                     strong [ class "uppercase ml-1" ]
-                                        [ text_ "register.account_created.words_copied"
+                                        [ text (t "register.account_created.words_copied")
                                         , text " ✔"
                                         ]
 
@@ -305,7 +299,7 @@ view guest model =
                                 [ class "button m-auto button-primary button-sm"
                                 , onClick <| CopyToClipboard passphraseInputId
                                 ]
-                                [ text_ "register.account_created.copy" ]
+                                [ text (t "register.account_created.copy") ]
                             ]
                         ]
                     , div [ class "sf-footer" ]
@@ -318,7 +312,7 @@ view guest model =
                                     , onCheck AgreedToSave12Words
                                     ]
                                     []
-                                , text_ "register.account_created.i_saved_words"
+                                , text (t "register.account_created.i_saved_words")
                                 , text " 💜"
                                 ]
                             ]
@@ -335,7 +329,7 @@ view guest model =
                                         else
                                             "button-disabled text-gray-600"
                                     ]
-                                    [ text_ "register.account_created.download" ]
+                                    [ text (t "register.account_created.download") ]
 
                             Nothing ->
                                 text ""
@@ -384,8 +378,8 @@ type alias Field =
     }
 
 
-viewField : Shared -> Field -> (String -> FormInputMsg) -> List (Attribute FormInputMsg) -> List Problem -> Html Msg
-viewField ({ translations } as shared) { translationSuffix, isDisabled, currentValue, name } msg extraAttrs problems =
+viewField : Translators -> Field -> (String -> FormInputMsg) -> List (Attribute FormInputMsg) -> List Problem -> Html Msg
+viewField ({ t, tr } as translators) { translationSuffix, isDisabled, currentValue, name } msg extraAttrs problems =
     let
         isCurrentFieldNameProblem p =
             case p of
@@ -411,20 +405,16 @@ viewField ({ translations } as shared) { translationSuffix, isDisabled, currentV
 
         id_ =
             translationSuffix
-
-        tr : String -> I18Next.Replacements -> String
-        tr =
-            I18Next.tr shared.translations I18Next.Curly
     in
     div [ class "mb-10 relative" ]
-        [ viewFieldLabel shared translationSuffix id_
+        [ viewFieldLabel translators translationSuffix id_
         , input
             ([ id id_
              , onInput msg
              , class ("input min-w-full" ++ " " ++ errorClass)
              , disabled isDisabled
              , value currentValue
-             , placeholder (t translations (translationSuffix ++ ".placeholder"))
+             , placeholder (t (translationSuffix ++ ".placeholder"))
              ]
                 ++ extraAttrs
             )
@@ -524,14 +514,8 @@ type alias PdfData =
 update : Maybe String -> Msg -> Model -> Guest.Model -> UpdateResult
 update maybeInvitation msg model guest =
     let
-        shared =
-            guest.shared
-
-        t s =
-            I18Next.t shared.translations s
-
-        tr str values =
-            I18Next.tr shared.translations I18Next.Curly str values
+        { t, tr } =
+            guest.shared.translators
     in
     case msg of
         UpdateForm subMsg ->
