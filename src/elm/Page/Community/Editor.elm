@@ -145,11 +145,11 @@ editForm community =
 
 defaultLogos : List LogoStatus
 defaultLogos =
-    [ Uploaded "QmXfNDMypPFQ5ysmR2xQSKJ4tbNW3Ee5YfF7vozJ1hRAbn"
-    , Uploaded "QmYgwc7vNXWwEvLwe9NKcKdYt8mbhFW52Xm9MZYTbV6LBx"
-    , Uploaded "Qma7hrece5teG6D4D5dy7Qof8Acznoutw6Xes1xuCDm75d"
-    , Uploaded "Qmcqdan49Sc49jecs58873z9uXK3acKEXoeHjsvfKWUWCy"
-    , Uploaded "QmeEzsyEN7CxDRN7Q3UgfoQ4dNu7hVLqtd6k3vWLXp3hrY"
+    [ Uploaded "https://cambiatus-uploads.s3.amazonaws.com/cambiatus-uploads/community_1.png"
+    , Uploaded "https://cambiatus-uploads.s3.amazonaws.com/cambiatus-uploads/community_2.png"
+    , Uploaded "https://cambiatus-uploads.s3.amazonaws.com/cambiatus-uploads/community_3.png"
+    , Uploaded "https://cambiatus-uploads.s3.amazonaws.com/cambiatus-uploads/community_4.png"
+    , Uploaded "https://cambiatus-uploads.s3.amazonaws.com/cambiatus-uploads/community_5.png"
     ]
 
 
