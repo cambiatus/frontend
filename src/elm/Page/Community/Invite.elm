@@ -10,9 +10,10 @@ module Page.Community.Invite exposing
 import Api
 import Api.Graphql
 import Community exposing (Invite)
-import Eos.Account as Eos
+import Eos exposing (symbolToString)
+import Eos.Account exposing (nameToString)
 import Graphql.Http
-import Html exposing (Html, button, div, img, span, text)
+import Html exposing (Html, button, div, img, p, span, text)
 import Html.Attributes exposing (class, src)
 import Html.Events exposing (onClick)
 import Http
@@ -98,7 +99,7 @@ view session model =
                     let
                         inviter =
                             invite.creator.userName
-                                |> Maybe.withDefault (Eos.nameToString invite.creator.account)
+                                |> Maybe.withDefault (nameToString invite.creator.account)
                     in
                     inviter
                         ++ " "
@@ -121,9 +122,32 @@ view session model =
                     Page.fullPageGraphQLError (t "") e
 
                 Loaded invite ->
+                    let
+                        userCommunities =
+                            case session of
+                                LoggedIn { profile } ->
+                                    case profile of
+                                        LoggedIn.Loaded p ->
+                                            p.communities
+
+                                        _ ->
+                                            []
+
+                                Guest _ ->
+                                    []
+
+                        isMemberAlready : Bool
+                        isMemberAlready =
+                            -- True if current user is already a member of the inviter's community
+                            let
+                                isMember c =
+                                    symbolToString c.id == symbolToString invite.community.symbol
+                            in
+                            List.any isMember userCommunities
+                    in
                     div []
                         [ viewHeader
-                        , viewContent shared.translators invite model.invitationId
+                        , viewContent shared.translators invite model.invitationId isMemberAlready
                         , viewModal shared.translators model.confirmationModalStatus model.invitationId
                         ]
 
@@ -141,15 +165,46 @@ viewHeader =
         []
 
 
-viewContent : Translators -> Invite -> InvitationId -> Html Msg
-viewContent { t, tr } { creator, community } invitationId =
+viewContent : Translators -> Invite -> InvitationId -> Bool -> Html Msg
+viewContent { t, tr } { creator, community } invitationId isMemberAlready =
     let
         text_ s =
             text (t s)
 
         inviter =
             creator.userName
-                |> Maybe.withDefault (Eos.nameToString creator.account)
+                |> Maybe.withDefault (nameToString creator.account)
+
+        viewNewMemberConfirmation =
+            div []
+                [ div [ class "mt-6 px-4" ]
+                    [ span [ class "mr-1" ] [ text_ "community.invitation.subtitle" ]
+                    , text community.title
+                    , text "?"
+                    ]
+                , div [ class "flex flex-wrap justify-center w-full mt-6" ]
+                    [ button
+                        [ class "button button-secondary w-full md:w-48 uppercase mb-4 md:mr-8"
+                        , onClick OpenConfirmationModal
+                        ]
+                        [ text_ "community.invitation.no" ]
+                    , button
+                        [ class "button button-primary w-full md:w-48 uppercase"
+                        , onClick (AcceptInvitation invitationId)
+                        ]
+                        [ text_ "community.invitation.yes" ]
+                    ]
+                ]
+
+        viewExistingMemberNotice =
+            div [ class "mt-6" ]
+                [ p [] [ text (t "community.invitation.already_member") ]
+                , p [ class "max-w-lg md:mx-auto mt-3" ]
+                    [ text <|
+                        tr "community.invitation.choose_community_tip"
+                            [ ( "communityTitle", community.title ) ]
+                    ]
+                ]
     in
     div [ class "bg-white pb-20" ]
         [ div [ class "flex flex-wrap content-end" ]
@@ -161,9 +216,9 @@ viewContent { t, tr } { creator, community } invitationId =
                     []
                 ]
             ]
-        , div [ class "px-4 text-center" ]
+        , div [ class "px-4 text-center text-heading" ]
             [ div [ class "mt-6" ]
-                [ div [ class "text-heading font" ]
+                [ div [ class "font" ]
                     [ span [ class "font-medium" ]
                         [ text inviter
                         ]
@@ -174,23 +229,11 @@ viewContent { t, tr } { creator, community } invitationId =
                         [ text community.title ]
                     ]
                 ]
-            , div [ class "mt-6 px-4 text-heading" ]
-                [ span [ class "mr-1" ] [ text_ "community.invitation.subtitle" ]
-                , text community.title
-                , text "?"
-                ]
-            , div [ class "flex flex-wrap justify-center w-full mt-6" ]
-                [ button
-                    [ class "button button-secondary w-full md:w-48 uppercase mb-4 md:mr-8"
-                    , onClick OpenConfirmationModal
-                    ]
-                    [ text_ "community.invitation.no" ]
-                , button
-                    [ class "button button-primary w-full md:w-48 uppercase"
-                    , onClick (AcceptInvitation invitationId)
-                    ]
-                    [ text_ "community.invitation.yes" ]
-                ]
+            , if isMemberAlready then
+                viewExistingMemberNotice
+
+              else
+                viewNewMemberConfirmation
             ]
         ]
 

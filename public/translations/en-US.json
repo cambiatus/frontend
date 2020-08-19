@@ -296,6 +296,8 @@
       "subtitle": "Would you like to join",
       "yes": "Yes, join",
       "no": "No, thanks",
+      "already_member": "You are already a member of this community!",
+      "choose_community_tip": "You can always choose {{communityTitle}} from the dropdown in the left upper corner of the website.",
       "modal": {
         "title": "Attention",
         "body": "Don't you really want to join the community?",

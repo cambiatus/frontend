@@ -304,6 +304,8 @@
       "subtitle": "Gostaria de se juntar a",
       "yes": "Sim, participar",
       "no": "Não, obrigado",
+      "already_member": "Você já é membro desta comunidade!",
+      "choose_community_tip": "Você sempre pode escolher {{communityTitle}} no menu suspenso no canto superior esquerdo do site.",
       "modal": {
         "title": "Atenção",
         "body": "Você realmente não deseja participar da comunidade?",

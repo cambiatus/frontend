@@ -300,6 +300,8 @@
       "subtitle": "Voleu unir-vos a",
       "yes": "Sí, uniu-vos",
       "no": "No gràcies",
+      "already_member": "Ja ets membre d'aquesta comunitat!",
+      "choose_community_tip": "Sempre podeu triar {{communityTitle}} des del menú desplegable que hi ha al cantó superior esquerre del lloc web.",
       "modal": {
         "title": "Atenció",
         "body": "De debò no vols unir-te a la comunitat?",
