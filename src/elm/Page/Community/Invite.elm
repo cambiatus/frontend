@@ -113,10 +113,10 @@ view session model =
         content =
             case model.pageStatus of
                 Loading ->
-                    div [] []
+                    text ""
 
                 NotFound ->
-                    div [] []
+                    text ""
 
                 Failed e ->
                     Page.fullPageGraphQLError (t "") e
