@@ -13,9 +13,9 @@ import Community exposing (Invite)
 import Eos exposing (symbolToString)
 import Eos.Account exposing (nameToString)
 import Graphql.Http
-import Html exposing (Html, button, div, img, p, span, text)
-import Html.Attributes exposing (class, src)
-import Html.Events exposing (onClick)
+import Html exposing (Html, a, button, div, form, img, input, label, option, p, select, span, text)
+import Html.Attributes exposing (class, placeholder, src, type_)
+import Html.Events exposing (onClick, onSubmit)
 import Http
 import Page exposing (Session(..), toShared)
 import Profile exposing (Profile)
@@ -147,7 +147,7 @@ view session model =
                 KycForm invite ->
                     let
                         inner =
-                            text "Please fill this form (TBD)"
+                            viewKycForm shared.translators
                     in
                     div []
                         [ viewHeader
@@ -162,6 +162,53 @@ view session model =
     }
 
 
+viewKycForm { t } =
+    div [ class "md:max-w-sm md:mx-auto mt-6" ]
+        [ p []
+            [ text "This community requires it's members to have some more information. Please, fill these fields below." ]
+        , p [ class "mt-2 mb-6" ]
+            [ text "You can always remove this information from your profile if you decide to do so." ]
+        , form
+            [ onSubmit KycFormSubmitted
+            ]
+            [ div [ class "form-field mb-6" ]
+                [ label [ class "input-label block" ]
+                    [ text "document type"
+                    ]
+                , select [ class "form-select" ]
+                    [ option [] [ text "Cedula de identidad" ]
+                    , option [] [ text "DIMEX" ]
+                    , option [] [ text "NITE" ]
+                    ]
+                ]
+            , div [ class "form-field mb-6" ]
+                [ label [ class "input-label block" ]
+                    [ text "Cedula de identidad number" ]
+                , input
+                    [ type_ "text"
+                    , class "form-input"
+                    ]
+                    []
+                ]
+            , div [ class "form-field mb-10" ]
+                [ label [ class "input-label block" ]
+                    [ text "phone number" ]
+                , input
+                    [ type_ "text"
+                    , class "form-input"
+                    , placeholder "(DDD) + Phone number"
+                    ]
+                    []
+                ]
+            , div []
+                [ button
+                    [ class "button w-full button-primary" ]
+                    [ text "Save and Join" ]
+                ]
+            ]
+        ]
+
+
 viewHeader : Html msg
 viewHeader =
     div [ class "w-full h-16 flex px-4 items-center bg-indigo-500" ]
@@ -169,7 +216,7 @@ viewHeader =
 
 
 viewExistingMemberNotice { t, tr } communityTitle =
-    div [ class "mt-6" ]
+    div [ class "mt-6 text-center" ]
         [ p [] [ text (t "community.invitation.already_member") ]
         , p [ class "max-w-lg md:mx-auto mt-3" ]
             [ text <|
@@ -179,13 +226,9 @@ viewExistingMemberNotice { t, tr } communityTitle =
         ]
 
 
-viewKycForm =
-    div [] [ text "KYC fields here" ]
-
-
 viewNewMemberConfirmation { t } invitationId ({ community } as invite) =
     div []
-        [ div [ class "mt-6 px-4" ]
+        [ div [ class "mt-6 px-4 text-center" ]
             [ span [ class "mr-1" ] [ text (t "community.invitation.subtitle") ]
             , text community.title
             , text "?"
@@ -222,9 +265,9 @@ viewContent { t } { creator, community } innerContent =
                     []
                 ]
             ]
-        , div [ class "px-4 text-center text-heading" ]
+        , div [ class "px-4" ]
             [ div [ class "mt-6" ]
-                [ div [ class "font" ]
+                [ div [ class "text-heading text-center" ]
                     [ span [ class "font-medium" ]
                         [ text inviter
                         ]
@@ -289,6 +332,7 @@ type Msg
     | InvitationRejected
     | InvitationAccepted InvitationId Invite
     | CompletedSignIn LoggedIn.Model (Result Http.Error Profile)
+    | KycFormSubmitted
 
 
 update : Session -> Msg -> Model -> UpdateResult
@@ -366,14 +410,14 @@ update session msg model =
                 hasInviteeKycFieldsFilled =
                     -- TODO: check KYC fields in the user profile when the KYC query will be ready
                     False
+
+                allowedToJoinCommunity =
+                    (hasCommunityKycEnabled && hasInviteeKycFieldsFilled)
+                        || not hasCommunityKycEnabled
             in
             case session of
                 LoggedIn loggedIn ->
-                    if hasCommunityKycEnabled && not hasInviteeKycFieldsFilled then
-                        { model | pageStatus = KycForm invite }
-                            |> UR.init
-
-                    else
+                    if allowedToJoinCommunity then
                         model
                             |> UR.init
                             |> UR.addCmd
@@ -383,6 +427,10 @@ update session msg model =
                                     (CompletedSignIn loggedIn)
                                 )
 
+                    else
+                        { model | pageStatus = KycForm invite }
+                            |> UR.init
+
                 Guest guest ->
                     model
                         |> UR.init
@@ -390,6 +438,10 @@ update session msg model =
                             (Route.Register (Just invitationId) Nothing
                                 |> Route.replaceUrl guest.shared.navKey
                             )
+
+        KycFormSubmitted ->
+            -- TODO: validate form, save user's Kyc data and signInInvitation
+            model |> UR.init
 
         CompletedSignIn { shared } (Ok _) ->
             model
@@ -425,6 +477,9 @@ msgToString msg =
 
         InvitationAccepted _ _ ->
             [ "AcceptInvitation" ]
+
+        KycFormSubmitted ->
+            [ "KycFormSubmitted" ]
 
         CompletedSignIn _ _ ->
             [ "CompletedSignIn" ]
