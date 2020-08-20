@@ -38,7 +38,9 @@ type PageStatus
     = Loading
     | NotFound
     | Failed (Graphql.Http.Error (Maybe Invite))
-    | Loaded Invite
+    | JoinConfirmation Invite
+    | AlreadyMemberNotice Invite
+    | KycForm Invite
     | Error Http.Error
 
 
@@ -70,7 +72,7 @@ initModel invitationId =
     }
 
 
-init : Session -> String -> ( Model, Cmd Msg )
+init : Session -> InvitationId -> ( Model, Cmd Msg )
 init session invitationId =
     ( initModel invitationId
     , Api.Graphql.query
@@ -95,7 +97,7 @@ view session model =
 
         title =
             case model.pageStatus of
-                Loaded invite ->
+                JoinConfirmation invite ->
                     let
                         inviter =
                             invite.creator.userName
@@ -121,34 +123,35 @@ view session model =
                 Failed e ->
                     Page.fullPageGraphQLError (t "") e
 
-                Loaded invite ->
+                AlreadyMemberNotice invite ->
                     let
-                        userCommunities =
-                            case session of
-                                LoggedIn { profile } ->
-                                    case profile of
-                                        LoggedIn.Loaded p ->
-                                            p.communities
-
-                                        _ ->
-                                            []
-
-                                Guest _ ->
-                                    []
-
-                        isMemberAlready : Bool
-                        isMemberAlready =
-                            -- True if current user is already a member of the inviter's community
-                            let
-                                isMember c =
-                                    symbolToString c.id == symbolToString invite.community.symbol
-                            in
-                            List.any isMember userCommunities
+                        inner =
+                            viewExistingMemberNotice shared.translators invite.community.title
                     in
                     div []
                         [ viewHeader
-                        , viewContent shared.translators invite model.invitationId isMemberAlready
-                        , viewModal shared.translators model.confirmationModalStatus model.invitationId
+                        , viewContent shared.translators invite inner
+                        ]
+
+                JoinConfirmation invite ->
+                    let
+                        inner =
+                            viewNewMemberConfirmation shared.translators model.invitationId invite
+                    in
+                    div []
+                        [ viewHeader
+                        , viewContent shared.translators invite inner
+                        , viewModal shared.translators model.confirmationModalStatus model.invitationId invite
+                        ]
+
+                KycForm invite ->
+                    let
+                        inner =
+                            text "Please fill this form (TBD)"
+                    in
+                    div []
+                        [ viewHeader
+                        , viewContent shared.translators invite inner
                         ]
 
                 Error e ->
@@ -165,46 +168,49 @@ viewHeader =
         []
 
 
-viewContent : Translators -> Invite -> InvitationId -> Bool -> Html Msg
-viewContent { t, tr } { creator, community } invitationId isMemberAlready =
-    let
-        text_ s =
-            text (t s)
+viewExistingMemberNotice { t, tr } communityTitle =
+    div [ class "mt-6" ]
+        [ p [] [ text (t "community.invitation.already_member") ]
+        , p [ class "max-w-lg md:mx-auto mt-3" ]
+            [ text <|
+                tr "community.invitation.choose_community_tip"
+                    [ ( "communityTitle", communityTitle ) ]
+            ]
+        ]
 
+
+viewKycForm =
+    div [] [ text "KYC fields here" ]
+
+
+viewNewMemberConfirmation { t } invitationId ({ community } as invite) =
+    div []
+        [ div [ class "mt-6 px-4" ]
+            [ span [ class "mr-1" ] [ text (t "community.invitation.subtitle") ]
+            , text community.title
+            , text "?"
+            ]
+        , div [ class "flex flex-wrap justify-center w-full mt-6" ]
+            [ button
+                [ class "button button-secondary w-full md:w-48 uppercase mb-4 md:mr-8"
+                , onClick OpenConfirmationModal
+                ]
+                [ text (t "community.invitation.no") ]
+            , button
+                [ class "button button-primary w-full md:w-48 uppercase"
+                , onClick (InvitationAccepted invitationId invite)
+                ]
+                [ text (t "community.invitation.yes") ]
+            ]
+        ]
+
+
+viewContent : Translators -> Invite -> Html Msg -> Html Msg
+viewContent { t } { creator, community } innerContent =
+    let
         inviter =
             creator.userName
                 |> Maybe.withDefault (nameToString creator.account)
-
-        viewNewMemberConfirmation =
-            div []
-                [ div [ class "mt-6 px-4" ]
-                    [ span [ class "mr-1" ] [ text_ "community.invitation.subtitle" ]
-                    , text community.title
-                    , text "?"
-                    ]
-                , div [ class "flex flex-wrap justify-center w-full mt-6" ]
-                    [ button
-                        [ class "button button-secondary w-full md:w-48 uppercase mb-4 md:mr-8"
-                        , onClick OpenConfirmationModal
-                        ]
-                        [ text_ "community.invitation.no" ]
-                    , button
-                        [ class "button button-primary w-full md:w-48 uppercase"
-                        , onClick (AcceptInvitation invitationId)
-                        ]
-                        [ text_ "community.invitation.yes" ]
-                    ]
-                ]
-
-        viewExistingMemberNotice =
-            div [ class "mt-6" ]
-                [ p [] [ text (t "community.invitation.already_member") ]
-                , p [ class "max-w-lg md:mx-auto mt-3" ]
-                    [ text <|
-                        tr "community.invitation.choose_community_tip"
-                            [ ( "communityTitle", community.title ) ]
-                    ]
-                ]
     in
     div [ class "bg-white pb-20" ]
         [ div [ class "flex flex-wrap content-end" ]
@@ -223,27 +229,20 @@ viewContent { t, tr } { creator, community } invitationId isMemberAlready =
                         [ text inviter
                         ]
                     , text " "
-                    , text_ "community.invitation.title"
+                    , text (t "community.invitation.title")
                     , text " "
                     , span [ class "font-medium" ]
                         [ text community.title ]
                     ]
                 ]
-            , if isMemberAlready then
-                viewExistingMemberNotice
-
-              else
-                viewNewMemberConfirmation
+            , innerContent
             ]
         ]
 
 
-viewModal : Translators -> ModalStatus -> InvitationId -> Html Msg
-viewModal { t } modalStatus invitationId =
+viewModal : Translators -> ModalStatus -> InvitationId -> Invite -> Html Msg
+viewModal { t } modalStatus invitationId invite =
     let
-        text_ s =
-            text (t s)
-
         isModalVisible =
             case modalStatus of
                 Closed ->
@@ -258,19 +257,19 @@ viewModal { t } modalStatus invitationId =
         }
         |> Modal.withHeader (t "community.invitation.modal.title")
         |> Modal.withBody
-            [ text_ "community.invitation.modal.body" ]
+            [ text (t "community.invitation.modal.body") ]
         |> Modal.withFooter
             [ button
                 [ class "modal-cancel"
-                , onClick RejectInvitation
+                , onClick InvitationRejected
                 ]
-                [ text_ "community.invitation.modal.no"
+                [ text (t "community.invitation.modal.no")
                 ]
             , button
                 [ class "modal-accept"
-                , onClick (AcceptInvitation invitationId)
+                , onClick (InvitationAccepted invitationId invite)
                 ]
-                [ text_ "community.invitation.modal.yes" ]
+                [ text (t "community.invitation.modal.yes") ]
             ]
         |> Modal.toHtml
 
@@ -287,16 +286,44 @@ type Msg
     = CompletedLoad (Result (Graphql.Http.Error (Maybe Invite)) (Maybe Invite))
     | OpenConfirmationModal
     | CloseConfirmationModal
-    | RejectInvitation
-    | AcceptInvitation String
+    | InvitationRejected
+    | InvitationAccepted InvitationId Invite
     | CompletedSignIn LoggedIn.Model (Result Http.Error Profile)
 
 
 update : Session -> Msg -> Model -> UpdateResult
 update session msg model =
     case msg of
-        CompletedLoad (Ok (Just invitation)) ->
-            UR.init { model | pageStatus = Loaded invitation }
+        CompletedLoad (Ok (Just invite)) ->
+            let
+                userCommunities =
+                    case session of
+                        LoggedIn { profile } ->
+                            case profile of
+                                LoggedIn.Loaded p ->
+                                    p.communities
+
+                                _ ->
+                                    []
+
+                        _ ->
+                            []
+
+                isAlreadyMember =
+                    let
+                        isMember c =
+                            symbolToString c.id == symbolToString invite.community.symbol
+                    in
+                    List.any isMember userCommunities
+
+                newPageStatus =
+                    if isAlreadyMember then
+                        AlreadyMemberNotice
+
+                    else
+                        JoinConfirmation
+            in
+            UR.init { model | pageStatus = newPageStatus invite }
 
         CompletedLoad (Ok Nothing) ->
             UR.init { model | pageStatus = NotFound }
@@ -314,7 +341,7 @@ update session msg model =
             { model | confirmationModalStatus = Closed }
                 |> UR.init
 
-        RejectInvitation ->
+        InvitationRejected ->
             case session of
                 LoggedIn loggedIn ->
                     model
@@ -330,17 +357,31 @@ update session msg model =
                                 |> Route.replaceUrl guest.shared.navKey
                             )
 
-        AcceptInvitation invitationId ->
+        InvitationAccepted invitationId invite ->
+            let
+                hasCommunityKycEnabled =
+                    -- TODO: Use `community.hasKyc` when it's ready
+                    True
+
+                hasInviteeKycFieldsFilled =
+                    -- TODO: check KYC fields in the user profile when the KYC query will be ready
+                    False
+            in
             case session of
                 LoggedIn loggedIn ->
-                    model
-                        |> UR.init
-                        |> UR.addCmd
-                            (Api.signInInvitation loggedIn.shared
-                                loggedIn.accountName
-                                invitationId
-                                (CompletedSignIn loggedIn)
-                            )
+                    if hasCommunityKycEnabled && not hasInviteeKycFieldsFilled then
+                        { model | pageStatus = KycForm invite }
+                            |> UR.init
+
+                    else
+                        model
+                            |> UR.init
+                            |> UR.addCmd
+                                (Api.signInInvitation loggedIn.shared
+                                    loggedIn.accountName
+                                    invitationId
+                                    (CompletedSignIn loggedIn)
+                                )
 
                 Guest guest ->
                     model
@@ -379,10 +420,10 @@ msgToString msg =
         CloseConfirmationModal ->
             [ "CloseConfirmationModal" ]
 
-        RejectInvitation ->
+        InvitationRejected ->
             [ "RejectInvitation" ]
 
-        AcceptInvitation _ ->
+        InvitationAccepted _ _ ->
             [ "AcceptInvitation" ]
 
         CompletedSignIn _ _ ->
