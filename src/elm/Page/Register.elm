@@ -1,12 +1,15 @@
 module Page.Register exposing (Model, Msg, init, jsAddressToMsg, msgToString, subscriptions, update, view)
 
 import Api
+import Api.Graphql
 import Auth exposing (viewFieldLabel)
 import Browser.Events
 import Char
+import Community exposing (Invite)
 import Eos.Account as Eos
-import Html exposing (Attribute, Html, a, button, div, img, input, label, li, p, span, strong, text, ul)
-import Html.Attributes exposing (attribute, checked, class, disabled, id, maxlength, placeholder, src, style, type_, value)
+import Graphql.Http
+import Html exposing (Attribute, Html, a, button, div, img, input, label, li, option, p, select, span, strong, text, ul)
+import Html.Attributes exposing (attribute, checked, class, disabled, id, maxlength, name, placeholder, src, style, type_, value)
 import Html.Events exposing (onCheck, onClick, onInput, onSubmit)
 import Http
 import I18Next exposing (t)
@@ -16,7 +19,7 @@ import Json.Encode as Encode
 import Profile exposing (Profile)
 import Route
 import Session.Guest as Guest exposing (External(..))
-import Session.Shared exposing (Translators)
+import Session.Shared exposing (Shared, Translators)
 import Task
 import UpdateResult as UR
 import Utils exposing (decodeEnterKeyDown)
@@ -27,10 +30,15 @@ import Validate exposing (ifBlank, ifFalse, ifInvalidEmail, ifTrue, validate)
 -- INIT
 
 
-init : Guest.Model -> ( Model, Cmd Msg )
-init guest =
-    ( initModel guest
-    , Cmd.none
+init : Maybe String -> Guest.Model -> ( Model, Cmd Msg )
+init maybeInvitationId guest =
+    ( initModel maybeInvitationId guest
+    , case maybeInvitationId of
+        Just invitation ->
+            Api.Graphql.query guest.shared (Community.inviteQuery invitation) CompletedLoadInvite
+
+        Nothing ->
+            Cmd.none
     )
 
 
@@ -56,11 +64,20 @@ type alias Model =
     , isPassphraseCopiedToClipboard : Bool
     , accountGenerated : Bool
     , problems : List Problem
+    , accountType : AccountType
+    , status : Status
+    , maybeInvitationId : Maybe String
     }
 
 
-initModel : Guest.Model -> Model
-initModel _ =
+type AccountType
+    = Unspecified
+    | Natural
+    | Juridical
+
+
+initModel : Maybe String -> Guest.Model -> Model
+initModel maybeInvitationId _ =
     { accountKeys = Nothing
     , isLoading = False
     , isCheckingAccount = False
@@ -69,6 +86,9 @@ initModel _ =
     , isPassphraseCopiedToClipboard = False
     , accountGenerated = False
     , problems = []
+    , accountType = Unspecified
+    , status = Loading
+    , maybeInvitationId = maybeInvitationId
     }
 
 
@@ -153,27 +173,6 @@ view guest model =
             -- Passphrase text is duplicated in `input:text` to be able to copy via Browser API
             "passphraseWords"
 
-        viewTitleForStep : Int -> Html msg
-        viewTitleForStep s =
-            let
-                step =
-                    String.fromInt s
-            in
-            p
-                [ class "py-4 mb-4 text-body border-b border-dotted text-grey border-grey-500" ]
-                [ text (tr "register.form.step" [ ( "stepNum", step ) ])
-                , text " / "
-                , strong
-                    [ class <|
-                        if s == 1 then
-                            "text-black"
-
-                        else
-                            "text-white"
-                    ]
-                    [ text <| t ("register.form.step" ++ step ++ "_title") ]
-                ]
-
         viewCreateAccount =
             div [ class "flex-grow bg-white flex md:block" ]
                 [ Html.form
@@ -182,42 +181,27 @@ view guest model =
                     , onSubmit (ValidateForm model.form)
                     ]
                     [ div [ class "sf-content" ]
-                        [ viewServerErrors model.problems
-                        , viewTitleForStep 1
-                        , viewField
-                            shared.translators
-                            (Field
-                                "register.form.name"
-                                isDisabled
-                                model.form.username
-                                Username
-                            )
-                            (identity EnteredUsername)
-                            [ maxlength 255 ]
-                            model.problems
-                        , viewField
-                            shared.translators
-                            (Field
-                                "register.form.account"
-                                isDisabled
-                                model.form.account
-                                Account
-                            )
-                            (identity EnteredAccount)
-                            Eos.nameValidationAttrs
-                            model.problems
-                        , viewField
-                            shared.translators
-                            (Field
-                                "register.form.email"
-                                isDisabled
-                                model.form.email
-                                Email
-                            )
-                            (identity EnteredEmail)
-                            [ attribute "inputmode" "email" ]
-                            model.problems
-                        ]
+                        (case model.maybeInvitationId of
+                            Just _ ->
+                                case model.status of
+                                    Loaded invite ->
+                                        viewNaturalAccountRegister
+                                            shared.translators
+                                            model
+
+                                    Loading ->
+                                        []
+
+                                    -- Debug.todo "Implement loading"
+                                    Failed _ ->
+                                        Debug.todo "Implement error"
+
+                                    NotFound ->
+                                        Debug.todo "Implement not found"
+
+                            Nothing ->
+                                viewDefaultAccountRegister shared.translators model
+                        )
                     , div [ class "sf-footer" ]
                         [ p [ class "text-center text-body my-6" ]
                             [ text (t "register.login")
@@ -247,7 +231,7 @@ view guest model =
                     , class "px-4 md:max-w-sm md:mx-auto md:pt-20 md:px-0 text-white text-body"
                     ]
                     [ div [ class "sf-content" ]
-                        [ viewTitleForStep 2
+                        [ viewTitleForStep shared.translators 2
                         , p
                             [ class "text-xl mb-3" ]
                             [ text (t "register.account_created.greet")
@@ -348,6 +332,134 @@ view guest model =
     }
 
 
+viewTitleForStep : Translators -> Int -> Html msg
+viewTitleForStep translators s =
+    let
+        { t, tr } =
+            translators
+
+        step =
+            String.fromInt s
+    in
+    p
+        [ class "py-4 mb-4 text-body border-b border-dotted text-grey border-grey-500" ]
+        [ text (tr "register.form.step" [ ( "stepNum", step ) ])
+        , text " / "
+        , strong
+            [ class <|
+                if s == 1 then
+                    "text-black"
+
+                else
+                    "text-white"
+            ]
+            [ text <| t ("register.form.step" ++ step ++ "_title") ]
+        ]
+
+
+viewDefaultAccountRegister : Translators -> Model -> List (Html Msg)
+viewDefaultAccountRegister translators model =
+    [ viewServerErrors model.problems
+    , viewTitleForStep translators 1
+    , viewField
+        translators
+        (Field
+            "register.form.name"
+            False
+            model.form.username
+            Username
+        )
+        (identity EnteredUsername)
+        [ maxlength 255 ]
+        model.problems
+    , viewField
+        translators
+        (Field
+            "register.form.account"
+            False
+            model.form.account
+            Account
+        )
+        (identity EnteredAccount)
+        Eos.nameValidationAttrs
+        model.problems
+    , viewField
+        translators
+        (Field
+            "register.form.email"
+            False
+            model.form.email
+            Email
+        )
+        (identity EnteredEmail)
+        [ attribute "inputmode" "email" ]
+        model.problems
+    ]
+
+
+viewNaturalAccountRegister : Translators -> Model -> List (Html Msg)
+viewNaturalAccountRegister translators model =
+    [ viewServerErrors model.problems
+    , viewTitleForStep translators 1
+    , viewSelectField translators
+    , viewField
+        translators
+        (Field
+            "Célula de Identidade"
+            False
+            model.form.username
+            Username
+        )
+        (identity EnteredUsername)
+        [ maxlength 255 ]
+        model.problems
+    , viewField
+        translators
+        (Field
+            "register.form.name"
+            False
+            model.form.account
+            Account
+        )
+        (identity EnteredAccount)
+        Eos.nameValidationAttrs
+        model.problems
+    , viewField
+        translators
+        (Field
+            "register.form.email"
+            False
+            model.form.email
+            Email
+        )
+        (identity EnteredEmail)
+        [ attribute "inputmode" "email" ]
+        model.problems
+    , viewField
+        translators
+        (Field
+            "register.form.phone"
+            False
+            model.form.email
+            Email
+        )
+        (identity EnteredEmail)
+        [ attribute "inputmode" "email" ]
+        model.problems
+    , viewField
+        translators
+        (Field
+            "register.form.account"
+            False
+            model.form.email
+            Email
+        )
+        (identity EnteredEmail)
+        [ attribute "inputmode" "email" ]
+        model.problems
+    ]
+
+
 viewServerErrors : List Problem -> Html msg
 viewServerErrors problems =
     let
@@ -376,6 +488,14 @@ type alias Field =
     , currentValue : String
     , name : ValidatedField
     }
+
+
+viewSelectField : Translators -> Html Msg
+viewSelectField ({ t, tr } as translators) =
+    div [ class "mb10 relative" ]
+        [ viewFieldLabel translators "" ""
+        , select [ name "cars", id "cars" ] [ option [ value "dimex" ] [ text "dimex" ] ]
+        ]
 
 
 viewField : Translators -> Field -> (String -> FormInputMsg) -> List (Attribute FormInputMsg) -> List Problem -> Html Msg
@@ -503,6 +623,14 @@ type Msg
     | KeyPressed Bool
     | CopyToClipboard String
     | CopiedToClipboard
+    | CompletedLoadInvite (Result (Graphql.Http.Error (Maybe Invite)) (Maybe Invite))
+
+
+type Status
+    = Loaded Invite
+    | Loading
+    | Failed (Graphql.Http.Error (Maybe Invite))
+    | NotFound
 
 
 type alias PdfData =
@@ -721,6 +849,17 @@ update maybeInvitation msg model guest =
             else
                 UR.init model
 
+        CompletedLoadInvite (Ok (Just invitation)) ->
+            UR.init { model | status = Loaded invitation }
+
+        CompletedLoadInvite (Ok Nothing) ->
+            UR.init { model | status = NotFound }
+
+        CompletedLoadInvite (Err error) ->
+            { model | status = Failed error }
+                |> UR.init
+                |> UR.logGraphqlError msg error
+
 
 
 --
@@ -814,3 +953,6 @@ msgToString msg =
 
         KeyPressed _ ->
             [ "KeyPressed" ]
+
+        CompletedLoadInvite _ ->
+            [ "CompletedLoadInvite" ]

@@ -702,7 +702,7 @@ changeRouteTo maybeRoute model =
 
         Just (Route.Register invitation maybeRedirect) ->
             withGuest
-                Register.init
+                (Register.init invitation)
                 (updateStatusWith (Register invitation) GotRegisterMsg)
                 maybeRedirect
 
