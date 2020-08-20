@@ -173,6 +173,29 @@
         "tooltip": "",
         "placeholder": "Ex.: arlene_warren@email.com"
       },
+      "phone": {
+        "label": "Telefone",
+        "tooltip": "(DDD) + Telefone",
+        "placeholder": "(DDD) + Telefone"
+      },
+      "document": {
+        "ssn": {
+          "label": "Número de Segurança Social",
+          "placeholder": "Insira os 9 dígitos"
+        },
+        "dimex": {
+          "label": "Número Dimex",
+          "placeholder": "Insira os 13 dígitos"
+        },
+        "nite": {
+          "label": "Número Nite",
+          "placeholder": "Insira os 10 dígitos"
+        }
+      },
+      "types": {
+        "natural": "Pessoa Física",
+        "juridical": "Pessoa Jurídica"
+      },
       "account": {
         "label": "Crie um nome de usuário com exatamente 12 caracteres (somente letras de a-z e números de 1 a 5)",
         "tooltip": "O nome de usuário será como você será conhecido na plataforma pelos outros participantes, deve ter exatamente 12 caracteres.",

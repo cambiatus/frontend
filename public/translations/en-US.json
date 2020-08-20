@@ -168,6 +168,29 @@
         "tooltip": "",
         "placeholder": "Ex.: arlene_warren@email.com"
       },
+      "phone": {
+        "label": "Phone Number",
+        "tooltip": "(DDD) + Phone Number",
+        "placeholder": "(DDD) + Phone Number"
+      },
+      "document": {
+        "ssn": {
+          "label": "Social Security Number",
+          "placeholder": "Enter the 9 digits"
+        },
+        "dimex": {
+          "label": "Dimex Number",
+          "placeholder": "Enter the 13 digits"
+        },
+        "nite": {
+          "label": "Nite Number",
+          "placeholder": "Enter the 10 digits"
+        }
+      },
+      "types": {
+        "natural": "Natural Person",
+        "juridical": "Juridical Person"
+      },
       "account": {
         "label": "Create a username with exactly 12 characters (letters from a-z and numbers from 1-5)",
         "tooltip": "The username will be as you will be known on the platform by the other participants, it must have exact 12 characters.",

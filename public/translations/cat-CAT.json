@@ -173,6 +173,29 @@
         "tooltip": "El nom d'usuari serà tal com els altres participants el coneixeran a la plataforma, ha de tenir 12 caràcters exactes.",
         "placeholder": "Ex.: arlenewa1224"
       },
+      "phone": {
+        "label": "Número de telèfon",
+        "tooltip": "(DDD) + Número de telèfon",
+        "placeholder": "(DDD) + Número de telèfon"
+      },
+      "document": {
+        "ssn": {
+          "label": "número de la Seguretat Social",
+          "placeholder": "introduïu els 9 dígits"
+        },
+        "dimex": {
+          "label": "número dimex",
+          "placeholder": "introduïu els 13 dígits"
+        },
+        "nite": {
+          "label": "número nite",
+          "placeholder": "introduïu els 10 dígits"
+        }
+      },
+      "types": {
+        "natural": "persona física",
+        "juridical": "persona jurídica"
+      },
       "accountCharError": "Hem trobat un caràcter invàlid. Utilitza solament lletres i números de 1-5",
       "pin": "PIN",
       "confirmPin": "Confirma el teu PIN",
