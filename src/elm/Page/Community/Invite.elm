@@ -13,7 +13,7 @@ import Community exposing (Invite)
 import Eos exposing (symbolToString)
 import Eos.Account exposing (nameToString)
 import Graphql.Http
-import Html exposing (Html, a, button, div, form, img, input, label, option, p, select, span, text)
+import Html exposing (Html, button, div, form, img, input, label, option, p, select, span, text)
 import Html.Attributes exposing (class, placeholder, src, type_)
 import Html.Events exposing (onClick, onSubmit)
 import Http
