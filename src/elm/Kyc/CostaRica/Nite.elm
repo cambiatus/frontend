@@ -7,6 +7,12 @@ module Kyc.CostaRica.Nite exposing
     , toString
     )
 
+{-| NITE is Número de Indetificación Tributario Especial.
+
+NITE has 10 digits without any separators: `XXXXXXXXXX`.
+
+-}
+
 import Json.Decode as Decode
 import Json.Encode as Encode exposing (Value)
 import Regex exposing (Regex)

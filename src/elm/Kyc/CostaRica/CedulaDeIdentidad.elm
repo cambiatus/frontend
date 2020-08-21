@@ -1,4 +1,4 @@
-module Kyc.CostaRica.CedulaDeIdentidadNumber exposing
+module Kyc.CostaRica.CedulaDeIdentidad exposing
     ( CedulaDeIdentidadNumber
     , decoder
     , encode
@@ -21,7 +21,7 @@ Cedulas could be created from strings and converted to strings:
 
 -}
 
-import Json.Decode as Decode exposing (Decoder)
+import Json.Decode as Decode
 import Json.Encode as Encode exposing (Value)
 import Regex exposing (Regex)
 

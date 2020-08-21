@@ -17,12 +17,16 @@ import Html exposing (Html, button, div, form, img, input, label, option, p, sel
 import Html.Attributes exposing (attribute, class, placeholder, selected, src, type_, value)
 import Html.Events exposing (onClick, onInput, onSubmit)
 import Http
+import Kyc.CostaRica.CedulaDeIdentidad as CedulaDeIdentidad
+import Kyc.CostaRica.Dimex as Dimex exposing (Dimex(..))
+import Kyc.CostaRica.Nite as Nite
 import Page exposing (Session(..), toShared)
 import Profile exposing (Profile)
 import Route
 import Session.LoggedIn as LoggedIn exposing (External)
 import Session.Shared exposing (Translators)
 import UpdateResult as UR
+import Validate exposing (Validator, ifBlank, validate)
 import View.Modal as Modal
 
 
@@ -55,6 +59,11 @@ type KycDocumentType
     | NITE
 
 
+type Field
+    = DocumentNumber
+    | PhoneNumber
+
+
 
 -- MODEL
 
@@ -71,7 +80,37 @@ type alias KycFormModel =
     { documentType : KycDocumentType
     , documentNumber : String
     , phoneNumber : String
+    , problems : List ( Field, String )
     }
+
+
+kycValidator : KycDocumentType -> Validator ( Field, String ) KycFormModel
+kycValidator documentType =
+    let
+        isValidNumber =
+            case documentType of
+                CedulaDeIdentidad ->
+                    CedulaDeIdentidad.isValid
+
+                DIMEX ->
+                    Dimex.isValid
+
+                NITE ->
+                    Nite.isValid
+
+        ifInvalidNumber : (subject -> String) -> error -> Validator error subject
+        ifInvalidNumber subjectToString error =
+            Validate.ifFalse (\subject -> isValidNumber (subjectToString subject)) error
+    in
+    Validate.all
+        [ Validate.firstError
+            [ ifBlank .documentNumber ( DocumentNumber, "Please enter a document number." )
+            , ifInvalidNumber .documentNumber ( DocumentNumber, "Number is invalid." )
+            ]
+        , Validate.firstError
+            [ ifBlank .phoneNumber ( PhoneNumber, "Please enter a phone number." )
+            ]
+        ]
 
 
 
@@ -101,6 +140,7 @@ initKycForm =
     { documentType = CedulaDeIdentidad
     , documentNumber = ""
     , phoneNumber = ""
+    , problems = []
     }
 
 
@@ -190,14 +230,25 @@ view session model =
 
 
 viewKycForm : Translators -> KycFormModel -> Html Msg
-viewKycForm { t } { documentType, documentNumber } =
+viewKycForm { t } ({ documentType, documentNumber, phoneNumber, problems } as kycForm) =
+    let
+        showProblem field =
+            case List.filter (\( f, e ) -> f == field) problems of
+                h :: _ ->
+                    div [ class "form-error" ]
+                        [ text (Tuple.second h)
+                        ]
+
+                [] ->
+                    text ""
+    in
     div [ class "md:max-w-sm md:mx-auto mt-6" ]
         [ p []
             [ text "This community requires it's members to have some more information. Please, fill these fields below." ]
         , p [ class "mt-2 mb-6" ]
             [ text "You can always remove this information from your profile if you decide to do so." ]
         , form
-            [ onSubmit KycFormSubmitted
+            [ onSubmit (KycFormSubmitted kycForm)
             ]
             [ div [ class "form-field mb-6" ]
                 [ label [ class "input-label block" ]
@@ -248,12 +299,13 @@ viewKycForm { t } { documentType, documentNumber } =
                                 "X-XXXX-XXXX"
 
                             DIMEX ->
-                                "XXXXXXXXXXX"
+                                "XXXXXXXXXXX or XXXXXXXXXXXX"
 
                             NITE ->
                                 "XXXXXXXXXX"
                     ]
                     []
+                , showProblem DocumentNumber
                 ]
             , div [ class "form-field mb-10" ]
                 [ label [ class "input-label block" ]
@@ -261,10 +313,12 @@ viewKycForm { t } { documentType, documentNumber } =
                 , input
                     [ type_ "tel"
                     , class "form-input"
+                    , value phoneNumber
                     , onInput (FormMsg << PhoneNumberEntered)
                     , placeholder "XXXX-XXXX"
                     ]
                     []
+                , showProblem PhoneNumber
                 ]
             , div []
                 [ button
@@ -400,7 +454,7 @@ type Msg
     | InvitationRejected
     | InvitationAccepted InvitationId Invite
     | CompletedSignIn LoggedIn.Model (Result Http.Error Profile)
-    | KycFormSubmitted
+    | KycFormSubmitted KycFormModel
     | FormMsg KycFormMsg
 
 
@@ -428,6 +482,7 @@ updateKycForm kycModel kycMsg =
             { kycModel
                 | documentType = docType
                 , documentNumber = ""
+                , problems = []
             }
 
         DocumentNumberEntered n ->
@@ -462,7 +517,7 @@ updateKycForm kycModel kycMsg =
                                 kycModel.documentNumber
 
                             else
-                                trim 10 kycModel.documentNumber n
+                                trim 12 kycModel.documentNumber n
 
                         NITE ->
                             if String.startsWith "0" n then
@@ -594,9 +649,22 @@ update session msg model =
                                 |> Route.replaceUrl guest.shared.navKey
                             )
 
-        KycFormSubmitted ->
+        KycFormSubmitted form ->
             -- TODO: validate form, save user's Kyc data and signInInvitation
-            model |> UR.init
+            let
+                errors =
+                    case validate (kycValidator form.documentType) form of
+                        Ok _ ->
+                            []
+
+                        Err errs ->
+                            errs
+
+                newForm =
+                    { form | problems = errors }
+            in
+            { model | kycForm = Just newForm }
+                |> UR.init
 
         CompletedSignIn { shared } (Ok _) ->
             model
@@ -633,7 +701,7 @@ msgToString msg =
         InvitationAccepted _ _ ->
             [ "AcceptInvitation" ]
 
-        KycFormSubmitted ->
+        KycFormSubmitted _ ->
             [ "KycFormSubmitted" ]
 
         FormMsg m ->
