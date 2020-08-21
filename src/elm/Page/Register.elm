@@ -9,17 +9,16 @@ import Community exposing (Invite)
 import Eos.Account as Eos
 import Graphql.Http
 import Html exposing (Attribute, Html, a, button, div, img, input, label, li, option, p, select, span, strong, text, ul)
-import Html.Attributes exposing (attribute, checked, class, disabled, id, maxlength, name, placeholder, src, style, type_, value)
+import Html.Attributes exposing (attribute, checked, class, disabled, for, id, maxlength, name, placeholder, src, style, type_, value)
 import Html.Events exposing (onCheck, onClick, onInput, onSubmit)
 import Http
-import I18Next exposing (t)
 import Json.Decode as Decode exposing (Decoder, Value)
 import Json.Decode.Pipeline as Decode
 import Json.Encode as Encode
 import Profile exposing (Profile)
 import Route
 import Session.Guest as Guest exposing (External(..))
-import Session.Shared exposing (Shared, Translators)
+import Session.Shared exposing (Translators)
 import Task
 import UpdateResult as UR
 import Utils exposing (decodeEnterKeyDown)
@@ -157,7 +156,7 @@ view guest model =
         shared =
             guest.shared
 
-        { t, tr } =
+        { t } =
             shared.translators
 
         isDisabled =
@@ -184,7 +183,7 @@ view guest model =
                         (case model.maybeInvitationId of
                             Just _ ->
                                 case model.status of
-                                    Loaded invite ->
+                                    Loaded _ ->
                                         viewNaturalAccountRegister
                                             shared.translators
                                             model
@@ -192,7 +191,6 @@ view guest model =
                                     Loading ->
                                         []
 
-                                    -- Debug.todo "Implement loading"
                                     Failed _ ->
                                         Debug.todo "Implement error"
 
@@ -324,12 +322,100 @@ view guest model =
     { title =
         t "register.registerTab"
     , content =
-        if model.accountGenerated then
-            viewAccountGenerated
+        div [ class "flex-grow bg-white flex md:block" ]
+            (case model.status of
+                Loaded invitation ->
+                    if invitation.community.hasShop == True then
+                        viewKycRegister guest.shared.translators model
 
-        else
-            viewCreateAccount
+                    else
+                        viewDefaultAccountRegister guest.shared.translators model
+
+                Loading ->
+                    []
+
+                _ ->
+                    Debug.todo "Error"
+            )
+
+    -- if model.accountGenerated then
+    --     viewAccountGenerated
+    -- else
+    --     viewCreateAccount
     }
+
+
+viewKycRegister : Translators -> Model -> List (Html Msg)
+viewKycRegister translators model =
+    [ viewAccountTypeSelector translators model ]
+
+
+viewAccountTypeSelector : Translators -> Model -> Html Msg
+viewAccountTypeSelector _ model =
+    div [ class "flex w-full justify-center" ]
+        [ viewAccountTypeRadio
+            { type_ = Natural
+            , label = "Natural"
+            , styles = ""
+            , isSelected = model.accountType == Natural
+            , onClick = AccountTypeSelected
+            }
+        , viewAccountTypeRadio
+            { type_ = Juridical
+            , label = "Juridical"
+            , styles = "ml-4"
+            , isSelected = model.accountType == Juridical
+            , onClick = AccountTypeSelected
+            }
+        ]
+
+
+type alias AccountTypeRadioOptions a =
+    { type_ : AccountType
+    , label : String
+    , styles : String
+    , isSelected : Bool
+    , onClick : AccountType -> a
+    }
+
+
+viewAccountTypeRadio : AccountTypeRadioOptions Msg -> Html Msg
+viewAccountTypeRadio options =
+    let
+        defaultClasses =
+            "w-40 h-10 rounded-sm flex justify-center items-center cursor-pointer "
+
+        ifSelectedClasses =
+            "bg-orange-300 text-white "
+
+        unselectedClasses =
+            "bg-gray-100 text-black "
+
+        finalClasses =
+            defaultClasses
+                ++ (if options.isSelected then
+                        ifSelectedClasses
+
+                    else
+                        unselectedClasses
+                   )
+
+        id =
+            case options.type_ of
+                Natural ->
+                    "natural"
+
+                Juridical ->
+                    "juridical"
+
+                {- Chosen by fair dice roll. Guaranteed to be random. -}
+                Unspecified ->
+                    "4"
+    in
+    div [ class (finalClasses ++ options.styles), onClick (options.onClick options.type_) ]
+        [ label [ class "cursor-pointer", for id ] [ text options.label ]
+        , input [ class "hidden", type_ "radio", checked options.isSelected, onClick (options.onClick options.type_) ] []
+        ]
 
 
 viewTitleForStep : Translators -> Int -> Html msg
@@ -491,7 +577,7 @@ type alias Field =
 
 
 viewSelectField : Translators -> Html Msg
-viewSelectField ({ t, tr } as translators) =
+viewSelectField translators =
     div [ class "mb10 relative" ]
         [ viewFieldLabel translators "" ""
         , select [ name "cars", id "cars" ] [ option [ value "dimex" ] [ text "dimex" ] ]
@@ -624,6 +710,7 @@ type Msg
     | CopyToClipboard String
     | CopiedToClipboard
     | CompletedLoadInvite (Result (Graphql.Http.Error (Maybe Invite)) (Maybe Invite))
+    | AccountTypeSelected AccountType
 
 
 type Status
@@ -646,6 +733,9 @@ update maybeInvitation msg model guest =
             guest.shared.translators
     in
     case msg of
+        AccountTypeSelected type_ ->
+            UR.init { model | accountType = type_ }
+
         UpdateForm subMsg ->
             updateForm subMsg model
                 |> UR.init
@@ -956,3 +1046,6 @@ msgToString msg =
 
         CompletedLoadInvite _ ->
             [ "CompletedLoadInvite" ]
+
+        AccountTypeSelected _ ->
+            [ "AccountTypeSelected" ]
