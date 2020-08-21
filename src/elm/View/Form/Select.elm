@@ -1,4 +1,4 @@
-module View.Select exposing (init, toHtml, withOption)
+module View.Form.Select exposing (init, toHtml, withOption)
 
 import Html exposing (Html, text)
 import Html.Attributes exposing (class, value)
