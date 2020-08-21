@@ -14,8 +14,8 @@ import Eos exposing (symbolToString)
 import Eos.Account exposing (nameToString)
 import Graphql.Http
 import Html exposing (Html, button, div, form, img, input, label, option, p, select, span, text)
-import Html.Attributes exposing (class, placeholder, src, type_)
-import Html.Events exposing (onClick, onSubmit)
+import Html.Attributes exposing (attribute, class, placeholder, selected, src, type_, value)
+import Html.Events exposing (onClick, onInput, onSubmit)
 import Http
 import Page exposing (Session(..), toShared)
 import Profile exposing (Profile)
@@ -49,6 +49,12 @@ type ModalStatus
     | Open
 
 
+type KycDocumentType
+    = CedulaDeIdentidad
+    | DIMEX
+    | NITE
+
+
 
 -- MODEL
 
@@ -57,6 +63,14 @@ type alias Model =
     { pageStatus : PageStatus
     , confirmationModalStatus : ModalStatus
     , invitationId : InvitationId
+    , kycForm : Maybe KycFormModel
+    }
+
+
+type alias KycFormModel =
+    { documentType : KycDocumentType
+    , documentNumber : String
+    , phoneNumber : String
     }
 
 
@@ -69,6 +83,7 @@ initModel invitationId =
     { pageStatus = Loading
     , confirmationModalStatus = Closed
     , invitationId = invitationId
+    , kycForm = Nothing
     }
 
 
@@ -80,6 +95,13 @@ init session invitationId =
         (Community.inviteQuery invitationId)
         CompletedLoad
     )
+
+
+initKycForm =
+    { documentType = CedulaDeIdentidad
+    , documentNumber = ""
+    , phoneNumber = ""
+    }
 
 
 
@@ -147,7 +169,12 @@ view session model =
                 KycForm invite ->
                     let
                         inner =
-                            viewKycForm shared.translators
+                            case model.kycForm of
+                                Just f ->
+                                    viewKycForm shared.translators f
+
+                                Nothing ->
+                                    viewKycForm shared.translators initKycForm
                     in
                     div []
                         [ viewHeader
@@ -162,7 +189,8 @@ view session model =
     }
 
 
-viewKycForm { t } =
+viewKycForm : Translators -> KycFormModel -> Html Msg
+viewKycForm { t } { documentType, documentNumber } =
     div [ class "md:max-w-sm md:mx-auto mt-6" ]
         [ p []
             [ text "This community requires it's members to have some more information. Please, fill these fields below." ]
@@ -175,18 +203,55 @@ viewKycForm { t } =
                 [ label [ class "input-label block" ]
                     [ text "document type"
                     ]
-                , select [ class "form-select" ]
-                    [ option [] [ text "Cedula de identidad" ]
-                    , option [] [ text "DIMEX" ]
-                    , option [] [ text "NITE" ]
+                , select
+                    [ onInput (FormMsg << DocumentTypeChanged)
+                    , selected (documentType == CedulaDeIdentidad)
+                    , class "form-select"
+                    ]
+                    [ option
+                        [ value "Cedula" ]
+                        [ text "Cedula de identidad" ]
+                    , option
+                        [ value "DIMEX"
+                        , selected (documentType == DIMEX)
+                        ]
+                        [ text "DIMEX" ]
+                    , option
+                        [ value "NITE"
+                        , selected (documentType == NITE)
+                        ]
+                        [ text "NITE" ]
                     ]
                 ]
             , div [ class "form-field mb-6" ]
                 [ label [ class "input-label block" ]
-                    [ text "Cedula de identidad number" ]
+                    [ text <|
+                        case documentType of
+                            CedulaDeIdentidad ->
+                                "Cedula de identidad number"
+
+                            DIMEX ->
+                                "Dimex number"
+
+                            NITE ->
+                                "Nite number"
+                    ]
                 , input
                     [ type_ "text"
                     , class "form-input"
+                    , attribute "inputmode" "numeric"
+                    , onInput (FormMsg << DocumentNumberEntered)
+                    , value documentNumber
+                    , placeholder <|
+                        case documentType of
+                            CedulaDeIdentidad ->
+                                "X-XXXX-XXXX"
+
+                            DIMEX ->
+                                "XXXXXXXXXXX"
+
+                            NITE ->
+                                "XXXXXXXXXX"
                     ]
                     []
                 ]
@@ -194,9 +259,10 @@ viewKycForm { t } =
                 [ label [ class "input-label block" ]
                     [ text "phone number" ]
                 , input
-                    [ type_ "text"
+                    [ type_ "tel"
                     , class "form-input"
-                    , placeholder "(DDD) + Phone number"
+                    , onInput (FormMsg << PhoneNumberEntered)
+                    , placeholder "XXXX-XXXX"
                     ]
                     []
                 ]
@@ -215,6 +281,7 @@ viewHeader =
         []
 
 
+viewExistingMemberNotice : Translators -> String -> Html Msg
 viewExistingMemberNotice { t, tr } communityTitle =
     div [ class "mt-6 text-center" ]
         [ p [] [ text (t "community.invitation.already_member") ]
@@ -226,6 +293,7 @@ viewExistingMemberNotice { t, tr } communityTitle =
         ]
 
 
+viewNewMemberConfirmation : Translators -> InvitationId -> Invite -> Html Msg
 viewNewMemberConfirmation { t } invitationId ({ community } as invite) =
     div []
         [ div [ class "mt-6 px-4 text-center" ]
@@ -333,11 +401,98 @@ type Msg
     | InvitationAccepted InvitationId Invite
     | CompletedSignIn LoggedIn.Model (Result Http.Error Profile)
     | KycFormSubmitted
+    | FormMsg KycFormMsg
+
+
+type KycFormMsg
+    = DocumentTypeChanged String
+    | DocumentNumberEntered String
+    | PhoneNumberEntered String
+
+
+updateKycForm kycModel kycMsg =
+    case kycMsg of
+        DocumentTypeChanged val ->
+            let
+                docType =
+                    case val of
+                        "Cedula" ->
+                            CedulaDeIdentidad
+
+                        "DIMEX" ->
+                            DIMEX
+
+                        _ ->
+                            NITE
+            in
+            { kycModel
+                | documentType = docType
+                , documentNumber = ""
+            }
+
+        DocumentNumberEntered n ->
+            let
+                trim : Int -> String -> String -> String
+                trim desiredLength oldNum newNum =
+                    let
+                        corrected =
+                            if String.all Char.isDigit newNum then
+                                newNum
+
+                            else
+                                oldNum
+                    in
+                    if String.length corrected > desiredLength then
+                        String.slice 0 desiredLength corrected
+
+                    else
+                        corrected
+
+                trimmedNumber =
+                    case kycModel.documentType of
+                        CedulaDeIdentidad ->
+                            if String.startsWith "0" n then
+                                kycModel.documentNumber
+
+                            else
+                                trim 9 kycModel.documentNumber n
+
+                        DIMEX ->
+                            if String.startsWith "0" n then
+                                kycModel.documentNumber
+
+                            else
+                                trim 10 kycModel.documentNumber n
+
+                        NITE ->
+                            if String.startsWith "0" n then
+                                kycModel.documentNumber
+
+                            else
+                                trim 10 kycModel.documentNumber n
+            in
+            { kycModel | documentNumber = trimmedNumber }
+
+        _ ->
+            kycModel
 
 
 update : Session -> Msg -> Model -> UpdateResult
 update session msg model =
     case msg of
+        FormMsg kycFormMsg ->
+            let
+                newForm =
+                    case model.kycForm of
+                        Just f ->
+                            updateKycForm f kycFormMsg
+
+                        Nothing ->
+                            updateKycForm initKycForm kycFormMsg
+            in
+            { model | kycForm = Just newForm }
+                |> UR.init
+
         CompletedLoad (Ok (Just invite)) ->
             let
                 userCommunities =
@@ -480,6 +635,9 @@ msgToString msg =
 
         KycFormSubmitted ->
             [ "KycFormSubmitted" ]
+
+        FormMsg m ->
+            [ "FormMsg" ]
 
         CompletedSignIn _ _ ->
             [ "CompletedSignIn" ]
