@@ -1,4 +1,4 @@
-module View.Form.Input exposing (init, toHtml, withCounter)
+module View.Form.Input exposing (init, input, toHtml, withCounter)
 
 import Html exposing (Html, div, input, li, text, ul)
 import Html.Attributes exposing (class, disabled, id, placeholder, value)
