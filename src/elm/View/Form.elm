@@ -18,11 +18,6 @@ type alias InputOptions a =
     }
 
 
-type Problem
-    = InvalidEntry String
-    | ServerError String
-
-
 label : String -> String -> Html a
 label id_ labelText =
     Html.label
