@@ -208,13 +208,12 @@ view session model =
 
                 KycForm invite ->
                     let
-                        inner =
-                            case model.kycForm of
-                                Just f ->
-                                    viewKycForm shared.translators f
+                        formData =
+                            Maybe.withDefault initKycForm model.kycForm
 
-                                Nothing ->
-                                    viewKycForm shared.translators initKycForm
+                        inner =
+                            viewKycForm shared.translators formData
+                                |> Html.map FormMsg
                     in
                     div []
                         [ viewHeader
@@ -229,7 +228,7 @@ view session model =
     }
 
 
-viewKycForm : Translators -> KycFormModel -> Html Msg
+viewKycForm : Translators -> KycFormModel -> Html KycFormMsg
 viewKycForm { t } ({ documentType, documentNumber, phoneNumber, problems } as kycForm) =
     let
         showProblem field =
@@ -255,7 +254,7 @@ viewKycForm { t } ({ documentType, documentNumber, phoneNumber, problems } as ky
                     [ text "document type"
                     ]
                 , select
-                    [ onInput (FormMsg << DocumentTypeChanged)
+                    [ onInput DocumentTypeChanged
                     , selected (documentType == CedulaDeIdentidad)
                     , class "form-select"
                     ]
@@ -291,7 +290,7 @@ viewKycForm { t } ({ documentType, documentNumber, phoneNumber, problems } as ky
                     [ type_ "text"
                     , class "form-input"
                     , attribute "inputmode" "numeric"
-                    , onInput (FormMsg << DocumentNumberEntered)
+                    , onInput DocumentNumberEntered
                     , value documentNumber
                     , placeholder <|
                         case documentType of
@@ -314,7 +313,7 @@ viewKycForm { t } ({ documentType, documentNumber, phoneNumber, problems } as ky
                     [ type_ "tel"
                     , class "form-input"
                     , value phoneNumber
-                    , onInput (FormMsg << PhoneNumberEntered)
+                    , onInput PhoneNumberEntered
                     , placeholder "XXXX-XXXX"
                     ]
                     []
@@ -454,7 +453,6 @@ type Msg
     | InvitationRejected
     | InvitationAccepted InvitationId Invite
     | CompletedSignIn LoggedIn.Model (Result Http.Error Profile)
-    | KycFormSubmitted KycFormModel
     | FormMsg KycFormMsg
 
 
@@ -462,6 +460,7 @@ type KycFormMsg
     = DocumentTypeChanged String
     | DocumentNumberEntered String
     | PhoneNumberEntered String
+    | KycFormSubmitted KycFormModel
 
 
 updateKycForm kycModel kycMsg =
@@ -527,6 +526,22 @@ updateKycForm kycModel kycMsg =
                                 trim 10 kycModel.documentNumber n
             in
             { kycModel | documentNumber = trimmedNumber }
+
+        KycFormSubmitted form ->
+            -- TODO: validate form, save user's Kyc data and signInInvitation
+            let
+                errors =
+                    case validate (kycValidator form.documentType) form of
+                        Ok _ ->
+                            []
+
+                        Err errs ->
+                            errs
+
+                newForm =
+                    { form | problems = errors }
+            in
+            newForm
 
         _ ->
             kycModel
@@ -649,23 +664,6 @@ update session msg model =
                                 |> Route.replaceUrl guest.shared.navKey
                             )
 
-        KycFormSubmitted form ->
-            -- TODO: validate form, save user's Kyc data and signInInvitation
-            let
-                errors =
-                    case validate (kycValidator form.documentType) form of
-                        Ok _ ->
-                            []
-
-                        Err errs ->
-                            errs
-
-                newForm =
-                    { form | problems = errors }
-            in
-            { model | kycForm = Just newForm }
-                |> UR.init
-
         CompletedSignIn { shared } (Ok _) ->
             model
                 |> UR.init
@@ -700,9 +698,6 @@ msgToString msg =
 
         InvitationAccepted _ _ ->
             [ "AcceptInvitation" ]
-
-        KycFormSubmitted _ ->
-            [ "KycFormSubmitted" ]
 
         FormMsg m ->
             [ "FormMsg" ]
