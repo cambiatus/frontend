@@ -222,7 +222,9 @@ viewVoters ({ shared } as loggedIn) claim =
                 [ text_ "claim.approved_by" ]
             , div []
                 [ if List.isEmpty claim.checks then
-                    div [ class "pt-2" ] [ Profile.viewEmpty shared ]
+                    div [ class "flex mb-10" ]
+                        [ div [ class "pt-2" ] [ Profile.viewEmpty shared ]
+                        ]
 
                   else
                     div [ class "flex flex-wrap -mx-2 pt-2" ]
