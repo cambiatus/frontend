@@ -5,6 +5,7 @@ import Html.Attributes exposing (class, disabled, id, placeholder, value)
 import Html.Events exposing (onInput)
 import Session.Shared exposing (Translators)
 import View.Form
+import View.Form.InputCounter
 
 
 type alias InputOptions a =
@@ -55,14 +56,7 @@ toHtml options =
         , input options
         , case options.maximumCounterValue of
             Just number ->
-                div [ class "input-label pr-1 text-right text-purple-100 font-bold mt-1 absolute right-0" ]
-                    [ text <|
-                        options.translators.tr
-                            "edit.input_counter"
-                            [ ( "current", String.fromInt <| String.length options.value )
-                            , ( "max", String.fromInt number )
-                            ]
-                    ]
+                View.Form.InputCounter.view options.translators.tr number options.value
 
             Nothing ->
                 text ""
