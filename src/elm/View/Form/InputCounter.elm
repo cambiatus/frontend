@@ -1,5 +1,8 @@
 module View.Form.InputCounter exposing (..)
 
+{-| Creates a Cambiatus-style input counter.
+-}
+
 import Html exposing (Html, div, text)
 import Html.Attributes exposing (class)
 import I18Next
