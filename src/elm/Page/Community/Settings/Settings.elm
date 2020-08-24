@@ -102,6 +102,7 @@ viewSettingsList shared community =
     in
     div
         [ class "grid my-4"
+        , class "flex container mx-auto"
         , style "grid-template-columns" "0 1fr 0"
         , style "grid-template-rows" "auto"
         , style "grid-gap" "16px"
@@ -119,7 +120,7 @@ settingCard : String -> String -> String -> Route -> Html Msg
 settingCard title action description route =
     div
         [ class "flex flex-col justify-around bg-white w-full h-32 rounded px-4 pt-3 pb-4"
-        , style "grid-column" "2 / 3"
+        , style "grid-column" "1 / 4"
         ]
         [ span [ class "text-sm font-medium" ] [ text title ]
         , span [ class "text-xs text-gray-900 uppercase" ] [ text description ]
