@@ -14,12 +14,13 @@ import Eos exposing (symbolToString)
 import Eos.Account exposing (nameToString)
 import Graphql.Http
 import Html exposing (Html, button, div, form, img, input, label, option, p, select, span, text)
-import Html.Attributes exposing (attribute, class, placeholder, selected, src, type_, value)
+import Html.Attributes exposing (attribute, class, maxlength, placeholder, selected, src, type_, value)
 import Html.Events exposing (onClick, onInput, onSubmit)
 import Http
 import Kyc.CostaRica.CedulaDeIdentidad as CedulaDeIdentidad
-import Kyc.CostaRica.Dimex as Dimex exposing (Dimex(..))
+import Kyc.CostaRica.Dimex as Dimex
 import Kyc.CostaRica.Nite as Nite
+import Kyc.CostaRica.Phone as Phone
 import Page exposing (Session(..), toShared)
 import Profile exposing (Profile)
 import Route
@@ -101,14 +102,19 @@ kycValidator documentType =
         ifInvalidNumber : (subject -> String) -> error -> Validator error subject
         ifInvalidNumber subjectToString error =
             Validate.ifFalse (\subject -> isValidNumber (subjectToString subject)) error
+
+        ifInvalidPhoneNumber : (subject -> String) -> error -> Validator error subject
+        ifInvalidPhoneNumber subjectToString error =
+            Validate.ifFalse (\subject -> Phone.isValid (subjectToString subject)) error
     in
     Validate.all
         [ Validate.firstError
-            [ ifBlank .documentNumber ( DocumentNumber, "Please enter a document number." )
-            , ifInvalidNumber .documentNumber ( DocumentNumber, "Number is invalid." )
+            [ ifBlank .documentNumber ( DocumentNumber, "Please, enter a document number." )
+            , ifInvalidNumber .documentNumber ( DocumentNumber, "Please, use a valid document number." )
             ]
         , Validate.firstError
-            [ ifBlank .phoneNumber ( PhoneNumber, "Please enter a phone number." )
+            [ ifBlank .phoneNumber ( PhoneNumber, "Please, enter a phone number." )
+            , ifInvalidPhoneNumber .phoneNumber ( PhoneNumber, "Please, use a valid phone number." )
             ]
         ]
 
@@ -232,7 +238,7 @@ viewKycForm : Translators -> KycFormModel -> Html KycFormMsg
 viewKycForm { t } ({ documentType, documentNumber, phoneNumber, problems } as kycForm) =
     let
         showProblem field =
-            case List.filter (\( f, e ) -> f == field) problems of
+            case List.filter (\( f, _ ) -> f == field) problems of
                 h :: _ ->
                     div [ class "form-error" ]
                         [ text (Tuple.second h)
@@ -292,6 +298,16 @@ viewKycForm { t } ({ documentType, documentNumber, phoneNumber, problems } as ky
                     , attribute "inputmode" "numeric"
                     , onInput DocumentNumberEntered
                     , value documentNumber
+                    , maxlength <|
+                        case documentType of
+                            CedulaDeIdentidad ->
+                                11
+
+                            DIMEX ->
+                                12
+
+                            NITE ->
+                                10
                     , placeholder <|
                         case documentType of
                             CedulaDeIdentidad ->
@@ -314,6 +330,7 @@ viewKycForm { t } ({ documentType, documentNumber, phoneNumber, problems } as ky
                     , class "form-input"
                     , value phoneNumber
                     , onInput PhoneNumberEntered
+                    , maxlength 9
                     , placeholder "XXXX-XXXX"
                     ]
                     []
@@ -543,8 +560,8 @@ updateKycForm kycModel kycMsg =
             in
             newForm
 
-        _ ->
-            kycModel
+        PhoneNumberEntered p ->
+            { kycModel | phoneNumber = p }
 
 
 update : Session -> Msg -> Model -> UpdateResult
