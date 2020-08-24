@@ -92,7 +92,11 @@ input options =
         []
 
 
-{-| Adds a character counter to your input. For more information, see the InputCounter module
+{-| Adds a character counter to your input. This does not limit the amount of characters automatically.
+Validation must be done in your onInput handler.
+
+For more information, see the InputCounter module
+
 -}
 withCounter : Int -> InputOptions a -> InputOptions a
 withCounter maximum options =
