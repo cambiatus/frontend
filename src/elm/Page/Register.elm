@@ -2,15 +2,14 @@ module Page.Register exposing (Model, Msg, init, jsAddressToMsg, msgToString, su
 
 import Api
 import Api.Graphql
-import Auth exposing (viewFieldLabel)
 import Browser.Events
 import Char
 import Community exposing (Invite)
 import Eos.Account as Eos
 import Graphql.Http
-import Html exposing (Attribute, Html, a, button, div, img, input, label, li, option, p, select, span, strong, text, ul)
-import Html.Attributes exposing (attribute, checked, class, disabled, for, id, maxlength, name, placeholder, src, style, type_, value)
-import Html.Events exposing (onCheck, onClick, onInput, onSubmit)
+import Html exposing (Html, button, div, img, input, label, li, p, span, strong, text, ul)
+import Html.Attributes exposing (checked, class, disabled, for, id, src, style, type_, value)
+import Html.Events exposing (onCheck, onClick)
 import Http
 import Json.Decode as Decode exposing (Decoder, Value)
 import Json.Decode.Pipeline as Decode
@@ -584,14 +583,6 @@ viewServerErrors problems =
 
     else
         ul [ class "bg-red border-lg rounded p-4 mt-2 text-white" ] errorList
-
-
-type alias Field =
-    { translationSuffix : String
-    , isDisabled : Bool
-    , currentValue : String
-    , name : ValidatedField
-    }
 
 
 accName : Model -> String
