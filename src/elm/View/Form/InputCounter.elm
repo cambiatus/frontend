@@ -1,4 +1,4 @@
-module View.Form.InputCounter exposing (..)
+module View.Form.InputCounter exposing (view)
 
 {-| Creates a Cambiatus-style input counter.
 -}
