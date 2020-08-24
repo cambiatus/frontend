@@ -191,8 +191,8 @@
         }
       },
       "types": {
-        "natural": "persona natural",
-        "juridical": "persona jurídica"
+        "natural": "Persona Natural",
+        "juridical": "Persona Jurídica"
       },
       "account": {
         "label": "Crea un nombre de usuario con exactamente 12 caracteres (solo letras de la A a la Z y números del 1 al 5)",

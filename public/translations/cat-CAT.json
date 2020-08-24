@@ -196,8 +196,8 @@
         }
       },
       "types": {
-        "natural": "persona física",
-        "juridical": "persona jurídica"
+        "natural": "Persona Física",
+        "juridical": "Persona Jurídica"
       },
       "accountCharError": "Hem trobat un caràcter invàlid. Utilitza solament lletres i números de 1-5",
       "pin": "PIN",

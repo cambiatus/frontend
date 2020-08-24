@@ -341,18 +341,18 @@ viewKycRegister translators model =
 
 
 viewAccountTypeSelector : Translators -> Model -> Html Msg
-viewAccountTypeSelector _ model =
+viewAccountTypeSelector translators model =
     div [ class "flex w-full justify-center" ]
         [ viewAccountTypeRadio
             { type_ = Natural
-            , label = "Natural"
+            , label = translators.t "register.form.types.natural"
             , styles = ""
             , isSelected = model.accountType == Natural
             , onClick = AccountTypeSelected
             }
         , viewAccountTypeRadio
             { type_ = Juridical
-            , label = "Juridical"
+            , label = translators.t "register.form.types.juridical"
             , styles = "ml-4"
             , isSelected = model.accountType == Juridical
             , onClick = AccountTypeSelected
