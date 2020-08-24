@@ -4,7 +4,11 @@ import Html exposing (Html, span, text)
 import Html.Attributes exposing (class, for)
 
 
-label : String -> String -> Html a
+type alias LabelId =
+    String
+
+
+label : LabelId -> String -> Html a
 label id_ labelText =
     Html.label
         [ class "block"
