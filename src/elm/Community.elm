@@ -558,7 +558,7 @@ encodeUpdateLogoData c =
         , ( "description", Encode.string c.description )
         , ( "inviter_reward", Eos.encodeAsset c.inviterReward )
         , ( "invited_reward", Eos.encodeAsset c.invitedReward )
-        , ( "has_objective", Encode.int c.hasObjectives )
+        , ( "has_objectives", Encode.int c.hasObjectives )
         , ( "has_shop", Encode.int c.hasShop )
         ]
 
