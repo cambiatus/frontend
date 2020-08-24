@@ -453,7 +453,12 @@ viewNaturalAccountRegister translators model =
     in
     [ viewServerErrors model.problems
     , viewTitleForStep translators 1
-    , viewSelectField translators
+    , viewSelectField "Document Type"
+        [ { value = "ssn", label = translators.t "register.form.document.ssn.label" }
+        , { value = "dimex", label = translators.t "register.form.document.dimex.label" }
+        , { value = "nite", label = translators.t "register.form.document.nite.label" }
+        ]
+        translators
     , documentInput translators model formTranslationString
     , nameInput translators model formTranslationString
     , emailInput translators model formTranslationString
@@ -549,12 +554,13 @@ phoneInput translators model formTranslationString =
         |> View.Form.Input.toHtml
 
 
-viewSelectField : Translators -> Html Msg
-viewSelectField translators =
-    View.Form.Select.init "document_select" "Document" SelectedDocument
-        |> View.Form.Select.withOption { value = "dimex", label = "DIMEX" }
-        |> View.Form.Select.withOption { value = "nite", label = "NITE" }
-        |> View.Form.Select.withOption { value = "ssn", label = translators.t "register.form.document.ssn.label" }
+viewSelectField : String -> List { value : String, label : String } -> Translators -> Html Msg
+viewSelectField label options translators =
+    let
+        form =
+            View.Form.Select.init "document_select" label SelectedDocument
+    in
+    List.foldl View.Form.Select.withOption form options
         |> View.Form.Select.toHtml
 
 
