@@ -18,7 +18,7 @@ import Json.Encode as Encode
 import Profile exposing (Profile)
 import Route
 import Session.Guest as Guest exposing (External(..))
-import Session.Shared exposing (Translators)
+import Session.Shared exposing (Translators, viewFullLoading)
 import Task
 import UpdateResult as UR
 import Utils exposing (decodeEnterKeyDown)
@@ -172,54 +172,6 @@ view guest model =
             -- Passphrase text is duplicated in `input:text` to be able to copy via Browser API
             "passphraseWords"
 
-        viewCreateAccount =
-            div [ class "flex-grow bg-white flex md:block" ]
-                [ Html.form
-                    [ class "sf-wrapper"
-                    , class "px-4 md:max-w-sm md:mx-auto md:pt-20 md:px-0"
-                    , onSubmit (ValidateForm model.form)
-                    ]
-                    [ div [ class "sf-content" ]
-                        (case model.maybeInvitationId of
-                            Just _ ->
-                                case model.status of
-                                    Loaded _ ->
-                                        viewNaturalAccountRegister
-                                            shared.translators
-                                            model
-
-                                    Loading ->
-                                        []
-
-                                    Failed _ ->
-                                        Debug.todo "Implement error"
-
-                                    NotFound ->
-                                        Debug.todo "Implement not found"
-
-                            Nothing ->
-                                viewDefaultAccountRegister shared.translators model
-                        )
-                    , div [ class "sf-footer" ]
-                        [ p [ class "text-center text-body my-6" ]
-                            [ text (t "register.login")
-                            , a [ Route.href (Route.Login Nothing), class "text-orange-300 underline" ] [ text (t "register.authLink") ]
-                            ]
-                        , button
-                            [ class "button button-primary min-w-full mb-8"
-                            , type_ "submit"
-                            , disabled isDisabled
-                            ]
-                            [ if model.isCheckingAccount then
-                                text (t "register.form.checkingAvailability")
-
-                              else
-                                text (t "auth.login.continue")
-                            ]
-                        ]
-                    ]
-                ]
-
         viewAccountGenerated =
             div
                 [ class "flex-grow bg-purple-500 flex md:block"
@@ -322,7 +274,7 @@ view guest model =
     { title =
         t "register.registerTab"
     , content =
-        div [ class "flex-grow bg-white flex md:block" ]
+        div [ class "flex flex-grow flex-col bg-white md:block px-4 px-0" ]
             (case model.status of
                 Loaded invitation ->
                     if invitation.community.hasShop == True then
@@ -347,7 +299,39 @@ view guest model =
 
 viewKycRegister : Translators -> Model -> List (Html Msg)
 viewKycRegister translators model =
-    [ viewAccountTypeSelector translators model ]
+    [ viewAccountTypeSelector translators model
+    , div [ class "sf-content" ]
+        (case model.maybeInvitationId of
+            Just _ ->
+                let
+                    selectedForm =
+                        case model.accountType of
+                            Natural ->
+                                viewNaturalAccountRegister translators model
+
+                            Juridical ->
+                                viewJuridicalAccountRegister translators model
+
+                            Unspecified ->
+                                []
+                in
+                case model.status of
+                    Loaded _ ->
+                        selectedForm
+
+                    Loading ->
+                        [ Session.Shared.viewFullLoading ]
+
+                    Failed _ ->
+                        Debug.todo "Implement error"
+
+                    NotFound ->
+                        Debug.todo "Implement not found"
+
+            Nothing ->
+                viewDefaultAccountRegister translators model
+        )
+    ]
 
 
 viewAccountTypeSelector : Translators -> Model -> Html Msg
@@ -481,6 +465,11 @@ viewDefaultAccountRegister translators model =
         [ attribute "inputmode" "email" ]
         model.problems
     ]
+
+
+viewJuridicalAccountRegister : Translators -> Model -> List (Html Msg)
+viewJuridicalAccountRegister translators model =
+    []
 
 
 viewNaturalAccountRegister : Translators -> Model -> List (Html Msg)
