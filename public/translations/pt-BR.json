@@ -181,15 +181,18 @@
       "document": {
         "ssn": {
           "label": "Número de Segurança Social",
-          "placeholder": "Insira os 9 dígitos"
+          "placeholder": "Insira os 9 dígitos",
+          "maximum": "9"
         },
         "dimex": {
           "label": "Número Dimex",
-          "placeholder": "Insira os 13 dígitos"
+          "placeholder": "Insira os 13 dígitos",
+          "maximum": "13"
         },
         "nite": {
           "label": "Número Nite",
-          "placeholder": "Insira os 10 dígitos"
+          "placeholder": "Insira os 10 dígitos",
+          "maximum": "10"
         }
       },
       "types": {

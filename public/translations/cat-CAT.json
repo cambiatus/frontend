@@ -182,14 +182,17 @@
         "ssn": {
           "label": "número de la Seguretat Social",
           "placeholder": "introduïu els 9 dígits"
+          "maximum": "10"
         },
         "dimex": {
           "label": "número dimex",
-          "placeholder": "introduïu els 13 dígits"
+          "placeholder": "introduïu els 13 dígits",
+          "maximum": "13"
         },
         "nite": {
           "label": "número nite",
-          "placeholder": "introduïu els 10 dígits"
+          "placeholder": "introduïu els 10 dígits",
+          "maximum": "10"
         }
       },
       "types": {

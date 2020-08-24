@@ -23,6 +23,8 @@ import Task
 import UpdateResult as UR
 import Utils exposing (decodeEnterKeyDown)
 import Validate exposing (ifBlank, ifFalse, ifInvalidEmail, ifTrue, validate)
+import View.Form.Input
+import View.Form.Select
 
 
 
@@ -66,6 +68,8 @@ type alias Model =
     , accountType : AccountType
     , status : Status
     , maybeInvitationId : Maybe String
+    , selectedDocument : String
+    , documentNumber : String
     }
 
 
@@ -88,6 +92,8 @@ initModel maybeInvitationId _ =
     , accountType = Unspecified
     , status = Loading
     , maybeInvitationId = maybeInvitationId
+    , selectedDocument = "ssn"
+    , documentNumber = ""
     }
 
 
@@ -431,39 +437,6 @@ viewDefaultAccountRegister : Translators -> Model -> List (Html Msg)
 viewDefaultAccountRegister translators model =
     [ viewServerErrors model.problems
     , viewTitleForStep translators 1
-    , viewField
-        translators
-        (Field
-            "register.form.name"
-            False
-            model.form.username
-            Username
-        )
-        (identity EnteredUsername)
-        [ maxlength 255 ]
-        model.problems
-    , viewField
-        translators
-        (Field
-            "register.form.account"
-            False
-            model.form.account
-            Account
-        )
-        (identity EnteredAccount)
-        Eos.nameValidationAttrs
-        model.problems
-    , viewField
-        translators
-        (Field
-            "register.form.email"
-            False
-            model.form.email
-            Email
-        )
-        (identity EnteredEmail)
-        [ attribute "inputmode" "email" ]
-        model.problems
     ]
 
 
@@ -474,65 +447,115 @@ viewJuridicalAccountRegister translators model =
 
 viewNaturalAccountRegister : Translators -> Model -> List (Html Msg)
 viewNaturalAccountRegister translators model =
+    let
+        formTranslationString =
+            "register.form"
+    in
     [ viewServerErrors model.problems
     , viewTitleForStep translators 1
     , viewSelectField translators
-    , viewField
-        translators
-        (Field
-            "Célula de Identidade"
-            False
-            model.form.username
-            Username
-        )
-        (identity EnteredUsername)
-        [ maxlength 255 ]
-        model.problems
-    , viewField
-        translators
-        (Field
-            "register.form.name"
-            False
-            model.form.account
-            Account
-        )
-        (identity EnteredAccount)
-        Eos.nameValidationAttrs
-        model.problems
-    , viewField
-        translators
-        (Field
-            "register.form.email"
-            False
-            model.form.email
-            Email
-        )
-        (identity EnteredEmail)
-        [ attribute "inputmode" "email" ]
-        model.problems
-    , viewField
-        translators
-        (Field
-            "register.form.phone"
-            False
-            model.form.email
-            Email
-        )
-        (identity EnteredEmail)
-        [ attribute "inputmode" "email" ]
-        model.problems
-    , viewField
-        translators
-        (Field
-            "register.form.account"
-            False
-            model.form.email
-            Email
-        )
-        (identity EnteredEmail)
-        [ attribute "inputmode" "email" ]
-        model.problems
+    , documentInput translators model formTranslationString
+    , nameInput translators model formTranslationString
+    , emailInput translators model formTranslationString
+    , phoneInput translators model formTranslationString
+    , accountInput translators model formTranslationString
     ]
+
+
+documentInput : Translators -> Model -> String -> Html Msg
+documentInput translators model formTranslationString =
+    let
+        selectedDocumentTranslationString =
+            formTranslationString ++ ".document." ++ model.selectedDocument
+    in
+    View.Form.Input.init
+        { id = "document"
+        , label = translators.t (selectedDocumentTranslationString ++ ".label")
+        , onInput = EnteredDocument
+        , disabled = False
+        , value = model.documentNumber
+        , placeholder = Just (translators.t (selectedDocumentTranslationString ++ ".placeholder"))
+        , problems = Nothing
+        , translators = translators
+        }
+        |> View.Form.Input.withCounter
+            (selectedDocumentTranslationString
+                ++ ".maximum"
+                |> translators.t
+                |> String.toInt
+                |> Maybe.withDefault 0
+            )
+        |> View.Form.Input.toHtml
+
+
+nameInput : Translators -> Model -> String -> Html Msg
+nameInput translators model formTranslationString =
+    View.Form.Input.init
+        { id = "name"
+        , label = translators.t (formTranslationString ++ ".name.label")
+        , onInput = EnteredDocument
+        , disabled = False
+        , value = model.documentNumber
+        , placeholder = Just (translators.t (formTranslationString ++ ".name.placeholder"))
+        , problems = Nothing
+        , translators = translators
+        }
+        |> View.Form.Input.toHtml
+
+
+accountInput : Translators -> Model -> String -> Html Msg
+accountInput translators model formTranslationString =
+    View.Form.Input.init
+        { id = "account"
+        , label = translators.t (formTranslationString ++ ".account.label")
+        , onInput = EnteredDocument
+        , disabled = False
+        , value = model.documentNumber
+        , placeholder = Just (translators.t (formTranslationString ++ ".account.placeholder"))
+        , problems = Nothing
+        , translators = translators
+        }
+        |> View.Form.Input.withCounter 12
+        |> View.Form.Input.toHtml
+
+
+emailInput : Translators -> Model -> String -> Html Msg
+emailInput translators model formTranslationString =
+    View.Form.Input.init
+        { id = "email"
+        , label = translators.t (formTranslationString ++ ".email.label")
+        , onInput = EnteredDocument
+        , disabled = False
+        , value = model.documentNumber
+        , placeholder = Just (translators.t (formTranslationString ++ ".email.placeholder"))
+        , problems = Nothing
+        , translators = translators
+        }
+        |> View.Form.Input.toHtml
+
+
+phoneInput : Translators -> Model -> String -> Html Msg
+phoneInput translators model formTranslationString =
+    View.Form.Input.init
+        { id = "phone"
+        , label = translators.t (formTranslationString ++ ".phone.label")
+        , onInput = EnteredDocument
+        , disabled = False
+        , value = model.documentNumber
+        , placeholder = Just (translators.t (formTranslationString ++ ".phone.placeholder"))
+        , problems = Nothing
+        , translators = translators
+        }
+        |> View.Form.Input.toHtml
+
+
+viewSelectField : Translators -> Html Msg
+viewSelectField translators =
+    View.Form.Select.init "document_select" "Document" SelectedDocument
+        |> View.Form.Select.withOption { value = "dimex", label = "DIMEX" }
+        |> View.Form.Select.withOption { value = "nite", label = "NITE" }
+        |> View.Form.Select.withOption { value = "ssn", label = translators.t "register.form.document.ssn.label" }
+        |> View.Form.Select.toHtml
 
 
 viewServerErrors : List Problem -> Html msg
@@ -563,87 +586,6 @@ type alias Field =
     , currentValue : String
     , name : ValidatedField
     }
-
-
-viewSelectField : Translators -> Html Msg
-viewSelectField translators =
-    div [ class "mb10 relative" ]
-        [ viewFieldLabel translators "" ""
-        , select [ name "cars", id "cars" ] [ option [ value "dimex" ] [ text "dimex" ] ]
-        ]
-
-
-viewField : Translators -> Field -> (String -> FormInputMsg) -> List (Attribute FormInputMsg) -> List Problem -> Html Msg
-viewField ({ t, tr } as translators) { translationSuffix, isDisabled, currentValue, name } msg extraAttrs problems =
-    let
-        isCurrentFieldNameProblem p =
-            case p of
-                InvalidEntry validatedField _ ->
-                    name == validatedField
-
-                _ ->
-                    False
-
-        fieldProblems =
-            List.filter isCurrentFieldNameProblem problems
-
-        errorClass =
-            case fieldProblems of
-                [] ->
-                    ""
-
-                _ ->
-                    "field-with-error"
-
-        viewFieldErrors =
-            List.map (viewFieldProblem name) problems
-
-        id_ =
-            translationSuffix
-    in
-    div [ class "mb-10 relative" ]
-        [ viewFieldLabel translators translationSuffix id_
-        , input
-            ([ id id_
-             , onInput msg
-             , class ("input min-w-full" ++ " " ++ errorClass)
-             , disabled isDisabled
-             , value currentValue
-             , placeholder (t (translationSuffix ++ ".placeholder"))
-             ]
-                ++ extraAttrs
-            )
-            []
-            |> Html.map UpdateForm
-        , case name of
-            Account ->
-                div [ class "input-label pr-1 text-right text-purple-100 font-bold mt-1 absolute right-0" ]
-                    [ text <|
-                        tr
-                            "edit.input_counter"
-                            [ ( "current", String.fromInt <| String.length currentValue )
-                            , ( "max", "12" )
-                            ]
-                    ]
-
-            _ ->
-                text ""
-        , ul [] viewFieldErrors
-        ]
-
-
-viewFieldProblem : ValidatedField -> Problem -> Html msg
-viewFieldProblem field problem =
-    case problem of
-        ServerError _ ->
-            text ""
-
-        InvalidEntry f str ->
-            if f == field then
-                li [ class "form-error absolute mr-8" ] [ text str ]
-
-            else
-                text ""
 
 
 accName : Model -> String
@@ -687,8 +629,7 @@ type alias UpdateResult =
 
 
 type Msg
-    = UpdateForm FormInputMsg
-    | ValidateForm Form
+    = ValidateForm Form
     | GotAccountAvailabilityResponse Bool
     | AccountGenerated (Result Decode.Error AccountKeys)
     | CompletedCreateProfile AccountKeys (Result Http.Error Profile)
@@ -700,6 +641,8 @@ type Msg
     | CopiedToClipboard
     | CompletedLoadInvite (Result (Graphql.Http.Error (Maybe Invite)) (Maybe Invite))
     | AccountTypeSelected AccountType
+    | EnteredDocument String
+    | SelectedDocument String
 
 
 type Status
@@ -725,9 +668,11 @@ update maybeInvitation msg model guest =
         AccountTypeSelected type_ ->
             UR.init { model | accountType = type_ }
 
-        UpdateForm subMsg ->
-            updateForm subMsg model
-                |> UR.init
+        EnteredDocument document ->
+            UR.init { model | documentNumber = document }
+
+        SelectedDocument document ->
+            UR.init { model | selectedDocument = document }
 
         ValidateForm form ->
             let
@@ -946,32 +891,6 @@ update maybeInvitation msg model guest =
 --
 
 
-type FormInputMsg
-    = EnteredUsername String
-    | EnteredEmail String
-    | EnteredAccount String
-
-
-updateForm : FormInputMsg -> Model -> Model
-updateForm msg ({ form } as model) =
-    let
-        updateModel newForm =
-            { model
-                | form = newForm
-                , problems = []
-            }
-    in
-    case msg of
-        EnteredUsername str ->
-            updateModel { form | username = str }
-
-        EnteredEmail str ->
-            updateModel { form | email = str }
-
-        EnteredAccount str ->
-            updateModel { form | account = str |> String.toLower }
-
-
 jsAddressToMsg : List String -> Value -> Maybe Msg
 jsAddressToMsg addr val =
     case addr of
@@ -1000,9 +919,6 @@ jsAddressToMsg addr val =
 msgToString : Msg -> List String
 msgToString msg =
     case msg of
-        UpdateForm _ ->
-            [ "UpdateForm" ]
-
         ValidateForm _ ->
             [ "ValidateForm" ]
 
@@ -1038,3 +954,9 @@ msgToString msg =
 
         AccountTypeSelected _ ->
             [ "AccountTypeSelected" ]
+
+        EnteredDocument _ ->
+            [ "EnteredDocument" ]
+
+        SelectedDocument _ ->
+            [ "SelectedDocument" ]

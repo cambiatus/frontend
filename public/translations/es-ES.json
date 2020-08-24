@@ -175,16 +175,19 @@
       },
       "document": {
         "ssn": {
-          "label": "Número de seguridad social",
-          "placeholder": "ingrese los 9 dígitos"
+          "label": "Número de cédula de identidad",
+          "placeholder": "Ingrese los 9 dígitos",
+          "maximum": "9"
         },
         "dimex": {
           "label": "número dimex",
-          "placeholder": "ingrese los 13 dígitos"
+          "placeholder": "Ingrese los 13 dígitos",
+          "maximum": "13"
         },
         "nite": {
           "label": "número nite",
-          "placeholder": "ingrese los 10 dígitos"
+          "placeholder": "Ingrese los 10 dígitos",
+          "maximum": "10"
         }
       },
       "types": {

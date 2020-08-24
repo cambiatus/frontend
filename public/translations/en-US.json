@@ -176,15 +176,18 @@
       "document": {
         "ssn": {
           "label": "Social Security Number",
-          "placeholder": "Enter the 9 digits"
+          "placeholder": "Enter the 9 digits",
+          "maximum": "9"
         },
         "dimex": {
           "label": "Dimex Number",
-          "placeholder": "Enter the 13 digits"
+          "placeholder": "Enter the 13 digits",
+          "maximum": "13"
         },
         "nite": {
           "label": "Nite Number",
-          "placeholder": "Enter the 10 digits"
+          "placeholder": "Enter the 10 digits",
+          "maximum": "10"
         }
       },
       "types": {
