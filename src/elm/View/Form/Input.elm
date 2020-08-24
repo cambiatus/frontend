@@ -7,8 +7,6 @@ import Session.Shared exposing (Translators)
 import View.Form
 
 
-{-| Required options for an input
--}
 type alias InputOptions a =
     { label : String
     , id : String
@@ -22,6 +20,8 @@ type alias InputOptions a =
     }
 
 
+{-| Required options for an input
+-}
 type alias RequiredInputOptions a =
     { label : String
     , id : String
