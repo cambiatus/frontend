@@ -11,16 +11,16 @@ module View.Form.Select exposing (init, toHtml, withOption)
 -}
 
 import Html exposing (Html, text)
-import Html.Attributes exposing (class, value)
+import Html.Attributes exposing (class, selected, value)
 import Html.Events exposing (onInput)
 import View.Form
 
 
 {-| Initializes a Cambiatus-style dropdown
 -}
-init : String -> String -> (String -> a) -> Select a
-init id label onInput =
-    { options = [], onInput = onInput, id = id, label = label }
+init : String -> String -> (String -> a) -> String -> Select a
+init id label onInput value =
+    { options = [], onInput = onInput, id = id, label = label, value = value }
 
 
 {-| Adds a new option field to a dropdown
@@ -32,7 +32,17 @@ withOption : Option -> Select a -> Select a
 withOption option select =
     let
         html =
-            Html.option [ value option.value ] [ text option.label ]
+            Html.option
+                [ value option.value
+                , selected
+                    (if select.value == option.value then
+                        True
+
+                     else
+                        False
+                    )
+                ]
+                [ text option.label ]
     in
     { select | options = html :: select.options }
 
@@ -56,6 +66,7 @@ type alias Select a =
     , onInput : String -> a
     , label : String
     , id : String
+    , value : String
     }
 
 
