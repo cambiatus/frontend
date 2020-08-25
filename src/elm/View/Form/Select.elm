@@ -51,7 +51,7 @@ withOption option select =
 -}
 toHtml : Select a -> Html a
 toHtml select =
-    Html.div []
+    Html.div [ class "mb-10" ]
         [ View.Form.label select.id select.label
         , Html.select [ class "form-select select w-full", onInput select.onInput ] select.options
         ]
