@@ -483,14 +483,11 @@ type KycFormMsg
     | KycFormSubmitted KycForm
 
 
-
---updateKycForm : KycForm -> KycFormMsg
-
-
-updateKycForm kycModel kycMsg =
+updateKycForm : KycForm -> KycFormMsg -> KycForm
+updateKycForm kycForm kycMsg =
     case kycMsg of
         DocumentTypeChanged val ->
-            { kycModel
+            { kycForm
                 | document = valToDoc val
                 , documentNumber = ""
                 , problems = []
@@ -515,29 +512,13 @@ updateKycForm kycModel kycMsg =
                         corrected
 
                 trimmedNumber =
-                    case kycModel.document.docType of
-                        CedulaDoc ->
-                            if String.startsWith "0" n then
-                                kycModel.documentNumber
+                    if String.startsWith "0" n then
+                        kycForm.documentNumber
 
-                            else
-                                trim 9 kycModel.documentNumber n
-
-                        DimexDoc ->
-                            if String.startsWith "0" n then
-                                kycModel.documentNumber
-
-                            else
-                                trim 12 kycModel.documentNumber n
-
-                        NiteDoc ->
-                            if String.startsWith "0" n then
-                                kycModel.documentNumber
-
-                            else
-                                trim 10 kycModel.documentNumber n
+                    else
+                        trim kycForm.document.maxLength kycForm.documentNumber n
             in
-            { kycModel | documentNumber = trimmedNumber }
+            { kycForm | documentNumber = trimmedNumber }
 
         KycFormSubmitted form ->
             -- TODO: validate form, save user's Kyc data and signInInvitation
@@ -556,7 +537,7 @@ updateKycForm kycModel kycMsg =
             newForm
 
         PhoneNumberEntered p ->
-            { kycModel | phoneNumber = p }
+            { kycForm | phoneNumber = p }
 
 
 update : Session -> Msg -> Model -> UpdateResult
