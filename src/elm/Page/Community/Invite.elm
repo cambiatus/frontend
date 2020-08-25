@@ -299,10 +299,10 @@ viewKycForm { t } ({ document, documentNumber, phoneNumber, problems } as kycFor
                         ]
                         [ text "Cedula de identidad" ]
                     , option
-                        [ value "DIMEX number"
+                        [ value "DIMEX"
                         , selected (docType == DimexDoc)
                         ]
-                        [ text "DIMEX" ]
+                        [ text "DIMEX number" ]
                     , option
                         [ value "NITE"
                         , selected (docType == NiteDoc)
