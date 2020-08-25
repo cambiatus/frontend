@@ -1,5 +1,5 @@
 module Kyc.CostaRica.Nite exposing
-    ( Nite
+    ( NiteNumber
     , decoder
     , encode
     , fromString
@@ -18,19 +18,19 @@ import Json.Encode as Encode exposing (Value)
 import Regex exposing (Regex)
 
 
-type Nite
-    = Nite String
+type NiteNumber
+    = NiteNumber String
 
 
-toString : Nite -> String
-toString (Nite str) =
+toString : NiteNumber -> String
+toString (NiteNumber str) =
     str
 
 
-fromString : String -> Maybe Nite
+fromString : String -> Maybe NiteNumber
 fromString str =
     if isValid str then
-        Just (Nite str)
+        Just (NiteNumber str)
 
     else
         Nothing
@@ -47,10 +47,10 @@ isValid n =
     Regex.contains validNumber n
 
 
-encode : Nite -> Value
+encode : NiteNumber -> Value
 encode n =
     Encode.string (toString n)
 
 
 decoder =
-    Decode.map Nite Decode.string
+    Decode.map NiteNumber Decode.string

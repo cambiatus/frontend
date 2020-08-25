@@ -45,7 +45,7 @@ type PageStatus
     | Failed (Graphql.Http.Error (Maybe Invite))
     | JoinConfirmation Invite
     | AlreadyMemberNotice Invite
-    | KycForm Invite
+    | KycInfo Invite
     | Error Http.Error
 
 
@@ -54,13 +54,23 @@ type ModalStatus
     | Open
 
 
-type KycDocumentType
-    = CedulaDeIdentidad
-    | DIMEX
-    | NITE
+type CostaRicaDoc
+    = CedulaDoc
+    | DimexDoc
+    | NiteDoc
 
 
-type Field
+type alias Doc =
+    { docType : CostaRicaDoc
+    , isValid : String -> Bool
+    , title : String
+    , value : String
+    , maxLength : Int
+    , pattern : String
+    }
+
+
+type KycFormField
     = DocumentNumber
     | PhoneNumber
 
@@ -73,37 +83,24 @@ type alias Model =
     { pageStatus : PageStatus
     , confirmationModalStatus : ModalStatus
     , invitationId : InvitationId
-    , kycForm : Maybe KycFormModel
+    , kycForm : Maybe KycForm
     }
 
 
-type alias KycFormModel =
-    { documentType : KycDocumentType
+type alias KycForm =
+    { document : Doc
     , documentNumber : String
     , phoneNumber : String
-    , problems : List ( Field, String )
+    , problems : List ( KycFormField, String )
     }
 
 
-kycValidator : KycDocumentType -> Validator ( Field, String ) KycFormModel
-kycValidator documentType =
+kycValidator : (String -> Bool) -> Validator ( KycFormField, String ) KycForm
+kycValidator isValid =
     let
-        isValidNumber =
-            case documentType of
-                CedulaDeIdentidad ->
-                    CedulaDeIdentidad.isValid
-
-                DIMEX ->
-                    Dimex.isValid
-
-                NITE ->
-                    Nite.isValid
-
-        ifInvalidNumber : (subject -> String) -> error -> Validator error subject
         ifInvalidNumber subjectToString error =
-            Validate.ifFalse (\subject -> isValidNumber (subjectToString subject)) error
+            Validate.ifFalse (\subject -> isValid (subjectToString subject)) error
 
-        ifInvalidPhoneNumber : (subject -> String) -> error -> Validator error subject
         ifInvalidPhoneNumber subjectToString error =
             Validate.ifFalse (\subject -> Phone.isValid (subjectToString subject)) error
     in
@@ -142,8 +139,9 @@ init session invitationId =
     )
 
 
+initKycForm : KycForm
 initKycForm =
-    { documentType = CedulaDeIdentidad
+    { document = valToDoc "Cedula"
     , documentNumber = ""
     , phoneNumber = ""
     , problems = []
@@ -212,7 +210,7 @@ view session model =
                         , viewModal shared.translators model.confirmationModalStatus model.invitationId invite
                         ]
 
-                KycForm invite ->
+                KycInfo invite ->
                     let
                         formData =
                             Maybe.withDefault initKycForm model.kycForm
@@ -234,15 +232,48 @@ view session model =
     }
 
 
-viewKycForm : Translators -> KycFormModel -> Html KycFormMsg
-viewKycForm { t } ({ documentType, documentNumber, phoneNumber, problems } as kycForm) =
+valToDoc : String -> Doc
+valToDoc v =
+    case v of
+        "DIMEX" ->
+            { docType = DimexDoc
+            , isValid = Dimex.isValid
+            , title = "DIMEX Number"
+            , value = "DIMEX"
+            , maxLength = 12
+            , pattern = "XXXXXXXXXXX or XXXXXXXXXXXX"
+            }
+
+        "NITE" ->
+            { docType = NiteDoc
+            , isValid = Nite.isValid
+            , title = "NITE Number"
+            , value = "NITE"
+            , maxLength = 10
+            , pattern = "XXXXXXXXXX"
+            }
+
+        _ ->
+            { docType = CedulaDoc
+            , isValid = CedulaDeIdentidad.isValid
+            , title = "Cédula de identidad"
+            , value = "Cedula"
+            , maxLength = 11
+            , pattern = "X-XXXX-XXXX"
+            }
+
+
+viewKycForm : Translators -> KycForm -> Html KycFormMsg
+viewKycForm { t } ({ document, documentNumber, phoneNumber, problems } as kycForm) =
     let
+        { docType, pattern, maxLength, isValid, title } =
+            document
+
         showProblem field =
             case List.filter (\( f, _ ) -> f == field) problems of
                 h :: _ ->
                     div [ class "form-error" ]
-                        [ text (Tuple.second h)
-                        ]
+                        [ text (Tuple.second h) ]
 
                 [] ->
                     text ""
@@ -253,71 +284,43 @@ viewKycForm { t } ({ documentType, documentNumber, phoneNumber, problems } as ky
         , p [ class "mt-2 mb-6" ]
             [ text "You can always remove this information from your profile if you decide to do so." ]
         , form
-            [ onSubmit (KycFormSubmitted kycForm)
-            ]
+            [ onSubmit (KycFormSubmitted kycForm) ]
             [ div [ class "form-field mb-6" ]
                 [ label [ class "input-label block" ]
                     [ text "document type"
                     ]
                 , select
                     [ onInput DocumentTypeChanged
-                    , selected (documentType == CedulaDeIdentidad)
                     , class "form-select"
                     ]
                     [ option
-                        [ value "Cedula" ]
+                        [ value "Cedula"
+                        , selected (docType == CedulaDoc)
+                        ]
                         [ text "Cedula de identidad" ]
                     , option
-                        [ value "DIMEX"
-                        , selected (documentType == DIMEX)
+                        [ value "DIMEX number"
+                        , selected (docType == DimexDoc)
                         ]
                         [ text "DIMEX" ]
                     , option
                         [ value "NITE"
-                        , selected (documentType == NITE)
+                        , selected (docType == NiteDoc)
                         ]
-                        [ text "NITE" ]
+                        [ text "NITE number" ]
                     ]
                 ]
             , div [ class "form-field mb-6" ]
                 [ label [ class "input-label block" ]
-                    [ text <|
-                        case documentType of
-                            CedulaDeIdentidad ->
-                                "Cedula de identidad number"
-
-                            DIMEX ->
-                                "Dimex number"
-
-                            NITE ->
-                                "Nite number"
-                    ]
+                    [ text title ]
                 , input
                     [ type_ "text"
                     , class "form-input"
                     , attribute "inputmode" "numeric"
                     , onInput DocumentNumberEntered
                     , value documentNumber
-                    , maxlength <|
-                        case documentType of
-                            CedulaDeIdentidad ->
-                                11
-
-                            DIMEX ->
-                                12
-
-                            NITE ->
-                                10
-                    , placeholder <|
-                        case documentType of
-                            CedulaDeIdentidad ->
-                                "X-XXXX-XXXX"
-
-                            DIMEX ->
-                                "XXXXXXXXXXX or XXXXXXXXXXXX"
-
-                            NITE ->
-                                "XXXXXXXXXX"
+                    , maxlength maxLength
+                    , placeholder pattern
                     ]
                     []
                 , showProblem DocumentNumber
@@ -477,26 +480,18 @@ type KycFormMsg
     = DocumentTypeChanged String
     | DocumentNumberEntered String
     | PhoneNumberEntered String
-    | KycFormSubmitted KycFormModel
+    | KycFormSubmitted KycForm
+
+
+
+--updateKycForm : KycForm -> KycFormMsg
 
 
 updateKycForm kycModel kycMsg =
     case kycMsg of
         DocumentTypeChanged val ->
-            let
-                docType =
-                    case val of
-                        "Cedula" ->
-                            CedulaDeIdentidad
-
-                        "DIMEX" ->
-                            DIMEX
-
-                        _ ->
-                            NITE
-            in
             { kycModel
-                | documentType = docType
+                | document = valToDoc val
                 , documentNumber = ""
                 , problems = []
             }
@@ -520,22 +515,22 @@ updateKycForm kycModel kycMsg =
                         corrected
 
                 trimmedNumber =
-                    case kycModel.documentType of
-                        CedulaDeIdentidad ->
+                    case kycModel.document.docType of
+                        CedulaDoc ->
                             if String.startsWith "0" n then
                                 kycModel.documentNumber
 
                             else
                                 trim 9 kycModel.documentNumber n
 
-                        DIMEX ->
+                        DimexDoc ->
                             if String.startsWith "0" n then
                                 kycModel.documentNumber
 
                             else
                                 trim 12 kycModel.documentNumber n
 
-                        NITE ->
+                        NiteDoc ->
                             if String.startsWith "0" n then
                                 kycModel.documentNumber
 
@@ -548,7 +543,7 @@ updateKycForm kycModel kycMsg =
             -- TODO: validate form, save user's Kyc data and signInInvitation
             let
                 errors =
-                    case validate (kycValidator form.documentType) form of
+                    case validate (kycValidator form.document.isValid) form of
                         Ok _ ->
                             []
 
@@ -670,7 +665,7 @@ update session msg model =
                                 )
 
                     else
-                        { model | pageStatus = KycForm invite }
+                        { model | pageStatus = KycInfo invite }
                             |> UR.init
 
                 Guest guest ->
@@ -716,7 +711,7 @@ msgToString msg =
         InvitationAccepted _ _ ->
             [ "AcceptInvitation" ]
 
-        FormMsg m ->
+        FormMsg _ ->
             [ "FormMsg" ]
 
         CompletedSignIn _ _ ->

@@ -1,4 +1,4 @@
-module Kyc.CostaRica.Dimex exposing (Dimex, isValid, toString)
+module Kyc.CostaRica.Dimex exposing (DimexNumber, isValid, toString)
 
 {-| DIMEX is Documento de identificación Tributario Especial.
 
@@ -9,12 +9,12 @@ DIMEX could have 11 or 12 digits without any separators: `XXXXXXXXXXX`.
 import Regex exposing (Regex)
 
 
-type Dimex
-    = Dimex String
+type DimexNumber
+    = DimexNumber String
 
 
-toString : Dimex -> String
-toString (Dimex str) =
+toString : DimexNumber -> String
+toString (DimexNumber str) =
     str
 
 
