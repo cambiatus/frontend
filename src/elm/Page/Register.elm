@@ -441,7 +441,52 @@ viewDefaultAccountRegister translators model =
 
 viewJuridicalAccountRegister : Translators -> Model -> List (Html Msg)
 viewJuridicalAccountRegister translators model =
-    []
+    let
+        formTranslationString =
+            "register.form"
+    in
+    [ viewServerErrors model.problems
+    , viewTitleForStep translators 1
+    , viewSelectField (translators.t "register.form.company_type")
+        model.selectedDocument
+        [ { value = "mipyme", label = translators.t "register.form.company.mipyme.label" }
+        , { value = "corporation", label = translators.t "register.form.company.corporation.label" }
+        ]
+        translators
+    , documentInput translators model (formTranslationString ++ ".company.")
+    , View.Form.Input.init
+        { id = "name"
+        , label = "Company Name"
+        , disabled = False
+        , onInput = EnteredDocument
+        , placeholder = Just "Ex.: Cambiatus"
+        , problems = Nothing
+        , translators = translators
+        , value = ""
+        }
+        |> View.Form.Input.toHtml
+    , emailInput translators model formTranslationString
+    , phoneInput translators model formTranslationString
+    , accountInput translators model formTranslationString
+    , viewSelectField (translators.t "register.form.state")
+        model.selectedDocument
+        [ { value = "mipyme", label = translators.t "register.form.company.mipyme.label" }
+        , { value = "corporation", label = translators.t "register.form.company.corporation.label" }
+        ]
+        translators
+    , viewSelectField (translators.t "register.form.city")
+        model.selectedDocument
+        [ { value = "mipyme", label = translators.t "register.form.company.mipyme.label" }
+        , { value = "corporation", label = translators.t "register.form.company.corporation.label" }
+        ]
+        translators
+    , viewSelectField (translators.t "register.form.district")
+        model.selectedDocument
+        [ { value = "mipyme", label = translators.t "register.form.company.mipyme.label" }
+        , { value = "corporation", label = translators.t "register.form.company.corporation.label" }
+        ]
+        translators
+    ]
 
 
 viewNaturalAccountRegister : Translators -> Model -> List (Html Msg)
@@ -459,7 +504,7 @@ viewNaturalAccountRegister translators model =
         , { value = "nite", label = translators.t "register.form.document.nite.label" }
         ]
         translators
-    , documentInput translators model formTranslationString
+    , documentInput translators model (formTranslationString ++ ".document.")
     , nameInput translators model formTranslationString
     , emailInput translators model formTranslationString
     , phoneInput translators model formTranslationString
@@ -471,7 +516,7 @@ documentInput : Translators -> Model -> String -> Html Msg
 documentInput translators model formTranslationString =
     let
         selectedDocumentTranslationString =
-            formTranslationString ++ ".document." ++ model.selectedDocument
+            formTranslationString ++ model.selectedDocument
     in
     View.Form.Input.init
         { id = "document"
@@ -488,7 +533,7 @@ documentInput translators model formTranslationString =
                 ++ ".maximum"
                 |> translators.t
                 |> String.toInt
-                |> Maybe.withDefault 0
+                |> Maybe.withDefault 10
             )
         |> View.Form.Input.toHtml
 
@@ -664,7 +709,20 @@ update maybeInvitation msg model guest =
     in
     case msg of
         AccountTypeSelected type_ ->
-            UR.init { model | accountType = type_ }
+            UR.init
+                { model
+                    | accountType = type_
+                    , selectedDocument =
+                        case type_ of
+                            Natural ->
+                                "ssn"
+
+                            Juridical ->
+                                "mipyme"
+
+                            Unspecified ->
+                                "ssn"
+                }
 
         EnteredDocument document ->
             UR.init { model | documentNumber = document }
