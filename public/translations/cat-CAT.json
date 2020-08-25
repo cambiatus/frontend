@@ -181,7 +181,7 @@
       "document": {
         "ssn": {
           "label": "número de la Seguretat Social",
-          "placeholder": "introduïu els 9 dígits"
+          "placeholder": "introduïu els 9 dígits",
           "maximum": "10"
         },
         "dimex": {
@@ -205,7 +205,22 @@
       "pinCharError": "El teu PIN tan sols ha de contenir números",
       "pinConfirmError": "Si et plau introdueix el mateix PIN que abans",
       "checkingAvailability": "Comprovant disponibilitat del compte",
-      "button": "Crea"
+      "button": "Crea",
+      "company_type": "Tipus d’empresa",
+      "company": {
+        "mipyme": {
+          "name": "MIPYME",
+          "label": "MIPYME"
+        },
+        "corporation": {
+          "label": "Corporació",
+          "name": "Corporació"
+        }
+      },
+      "corporation": "Corporació",
+      "city": "Ciutat",
+      "state": "Estat",
+      "district": "Districte"
     },
     "login": "Ja tens un compte? ",
     "authLink": "Inici de sessió",
@@ -345,7 +360,7 @@
       "subtitle": "{{objectives}} objectius i {{actions}} accions",
       "new": "Crear un objectiu nou",
       "action_count": "{{actions}} accions",
-      "edit": "Edita l'objectiu", 
+      "edit": "Edita l'objectiu",
       "editor": {
         "not_found": "No trobat",
         "error": "Ui! Quelcom ha fallat",
@@ -441,8 +456,14 @@
     "edit_success": "El perfil s'ha desat correctament",
     "locations": "Localització",
     "interests": "Interessos",
-    "12words": { "title": "Les meves 12 paraules", "button": "Descarregar" },
-    "pin": { "title": "El meu PIN", "button": "Canviar" },
+    "12words": {
+      "title": "Les meves 12 paraules",
+      "button": "Descarregar"
+    },
+    "pin": {
+      "title": "El meu PIN",
+      "button": "Canviar"
+    },
     "changePin": "Canvieu el PIN!",
     "newPin": "Nou PIN de seguretat",
     "actions": {

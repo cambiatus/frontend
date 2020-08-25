@@ -201,7 +201,22 @@
       },
       "accountCharError": "Invalid character found. Use only letters and numbers between 1-5",
       "checkingAvailability": "Checking availability of that account",
-      "button": "Create"
+      "button": "Create",
+      "company_type": "Company Type",
+      "company": {
+        "mipyme": {
+          "name": "MIPYME",
+          "label": "MIPYME"
+        },
+        "corporation": {
+          "label": "Large-sized Company",
+          "name": "Corporation"
+        }
+      },
+      "corporation": "Corporation",
+      "city": "City",
+      "state": "State",
+      "district": "District"
     },
     "login": "Already have an account? ",
     "authLink": "Login",
@@ -341,7 +356,7 @@
       "subtitle": "{{objectives}} objectives and {{actions}} actions",
       "new": "Create new objective",
       "action_count": "{{actions}} actions",
-      "edit": "Edit objective", 
+      "edit": "Edit objective",
       "editor": {
         "not_found": "Not Found",
         "error": "Ops something went wrong!",
@@ -437,7 +452,10 @@
     "edit_success": "Profile saved successfully",
     "locations": "Location",
     "interests": "Interests",
-    "12words": { "title": "My 12 words", "button": "Download" },
+    "12words": {
+      "title": "My 12 words",
+      "button": "Download"
+    },
     "pin": {
       "title": "My security PIN",
       "button": "Change",

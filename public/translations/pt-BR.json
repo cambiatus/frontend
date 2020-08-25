@@ -210,7 +210,22 @@
       "pinCharError": "O PIN deve ter apenas numeros",
       "pinConfirmError": "Por favor entre o mesmo PIN",
       "checkingAvailability": "Checando disponibilidade da conta",
-      "button": "Criar"
+      "button": "Criar",
+      "company_type": "Tipo de Empresa",
+      "company": {
+        "mipyme": {
+          "name": "MIPYME",
+          "label": "MIPYME"
+        },
+        "corporation": {
+          "label": "Corporação",
+          "name": "Corporação"
+        }
+      },
+      "corporation": "Corporação",
+      "city": "Cidade",
+      "state": "Estado",
+      "district": "Distrito"
     },
     "login": "Já tem uma conta? ",
     "authLink": "Login",
@@ -349,7 +364,7 @@
       "subtitle": "{{objectives}} objetivos e {{actions}} ações",
       "new": "Criar novo objetivo",
       "action_count": "{{actions}} ações",
-      "edit": "Editar objetivo", 
+      "edit": "Editar objetivo",
       "editor": {
         "not_found": "Não encontrado",
         "error": "Ops algo deu errado!",
@@ -387,7 +402,7 @@
       "or": " ou ",
       "completed": "Completa",
       "closed": "Encerrada",
-      "edit": "Editar ação", 
+      "edit": "Editar ação",
       "form": {
         "not_found": "Ação não encontrada",
         "description_label": "Descrição",
@@ -445,8 +460,14 @@
     "edit_success": "Perfil salvo com sucesso",
     "locations": "Localização",
     "interests": "Interesses",
-    "12words": { "title": "Minhas 12 palavras", "button": "Baixar" },
-    "pin": { "title": "Meu PIN", "button": "Trocar" },
+    "12words": {
+      "title": "Minhas 12 palavras",
+      "button": "Baixar"
+    },
+    "pin": {
+      "title": "Meu PIN",
+      "button": "Trocar"
+    },
     "changePin": "Troque seu PIN!",
     "newPin": "Novo PIN",
     "actions": {

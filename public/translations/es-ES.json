@@ -205,7 +205,22 @@
       "pinCharError": "Tu PIN debe contener solamente numeros",
       "pinConfirmError": "Por favor ingresa el mismo PIN que arriba",
       "checkingAvailability": "Comprobando disponibilidad de la cuenta",
-      "button": "Crear"
+      "button": "Crear",
+      "company_type": "Tipo de Compañía",
+      "company": {
+        "mipyme": {
+          "name": "MIPYME",
+          "label": "MIPYME"
+        },
+        "corporation": {
+          "label": "Gran Empresa",
+          "name": "Gran Empresa"
+        }
+      },
+      "corporation": "Gran Empresa",
+      "city": "Cantón",
+      "state": "Provincia",
+      "district": "Distrito"
     },
     "login": "¿Ya tienes una cuenta? ",
     "authLink": "Iniciar sesión",
@@ -441,8 +456,14 @@
     "edit_success": "Perfil guardado con éxito",
     "locations": "Localización",
     "interests": "Intereses",
-    "12words": { "title": "Mis 12 palabras", "button": "Descargar" },
-    "pin": { "title": "Mi PIN de seguridad", "button": "Cambiar" },
+    "12words": {
+      "title": "Mis 12 palabras",
+      "button": "Descargar"
+    },
+    "pin": {
+      "title": "Mi PIN de seguridad",
+      "button": "Cambiar"
+    },
     "changePin": "¡Cambia tu pin!",
     "newPin": "Nuevo PIN de seguridad",
     "actions": {
