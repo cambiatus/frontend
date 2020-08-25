@@ -64,18 +64,34 @@ type alias Model =
     , isPassphraseCopiedToClipboard : Bool
     , accountGenerated : Bool
     , problems : List Problem
-    , accountType : AccountType
     , status : Status
     , maybeInvitationId : Maybe String
     , selectedDocument : String
     , documentNumber : String
+    , selectedForm : FormType
     }
 
 
 type AccountType
-    = Unspecified
-    | Natural
-    | Juridical
+    = NaturalAccount
+    | JuridicalAccount
+
+
+type FormType
+    = None
+    | Natural NaturalForm
+    | Juridical JuridicalForm
+
+
+type NaturalDocument
+    = SSN
+    | DIMEX
+    | NITE
+
+
+type CompanyType
+    = MIPYME
+    | Corporation
 
 
 initModel : Maybe String -> Guest.Model -> Model
@@ -88,16 +104,54 @@ initModel maybeInvitationId _ =
     , isPassphraseCopiedToClipboard = False
     , accountGenerated = False
     , problems = []
-    , accountType = Unspecified
     , status = Loading
     , maybeInvitationId = maybeInvitationId
     , selectedDocument = "ssn"
     , documentNumber = ""
+    , selectedForm = None
     }
 
 
 
 ---- FORM
+
+
+type alias NaturalForm =
+    { document : String
+    , documentType : NaturalDocument
+    , name : String
+    , email : String
+    , phone : String
+    , username : String
+    , account : String
+    }
+
+
+emptyFormType : FormType
+emptyFormType =
+    Natural
+        { document = ""
+        , documentType = SSN
+        , name = ""
+        , email = ""
+        , phone = ""
+        , username = ""
+        , account = ""
+        }
+
+
+type alias JuridicalForm =
+    { companyType : CompanyType
+    , document : String
+    , name : String
+    , email : String
+    , phone : String
+    , username : String
+    , state : String
+    , city : String
+    , district : String
+    , account : String
+    }
 
 
 type alias Form =
@@ -304,20 +358,20 @@ view guest model =
 
 viewKycRegister : Translators -> Model -> List (Html Msg)
 viewKycRegister translators model =
-    [ viewAccountTypeSelector translators model
+    [ viewFormTypeSelector translators model
     , div [ class "sf-content" ]
         (case model.maybeInvitationId of
             Just _ ->
                 let
                     selectedForm =
-                        case model.accountType of
-                            Natural ->
-                                viewNaturalAccountRegister translators model
+                        case model.selectedForm of
+                            Natural form ->
+                                viewNaturalAccountRegister translators form
 
-                            Juridical ->
-                                viewJuridicalAccountRegister translators model
+                            Juridical form ->
+                                viewJuridicalAccountRegister translators form
 
-                            Unspecified ->
+                            None ->
                                 []
                 in
                 case model.status of
@@ -339,27 +393,39 @@ viewKycRegister translators model =
     ]
 
 
-viewAccountTypeSelector : Translators -> Model -> Html Msg
-viewAccountTypeSelector translators model =
+viewFormTypeSelector : Translators -> Model -> Html Msg
+viewFormTypeSelector translators model =
     div [ class "flex w-full justify-center" ]
-        [ viewAccountTypeRadio
-            { type_ = Natural
+        [ viewFormTypeRadio
+            { type_ = NaturalAccount
             , label = translators.t "register.form.types.natural"
             , styles = ""
-            , isSelected = model.accountType == Natural
+            , isSelected =
+                case model.selectedForm of
+                    Natural _ ->
+                        True
+
+                    _ ->
+                        False
             , onClick = AccountTypeSelected
             }
-        , viewAccountTypeRadio
-            { type_ = Juridical
+        , viewFormTypeRadio
+            { type_ = JuridicalAccount
             , label = translators.t "register.form.types.juridical"
             , styles = "ml-4"
-            , isSelected = model.accountType == Juridical
+            , isSelected =
+                case model.selectedForm of
+                    Juridical _ ->
+                        True
+
+                    _ ->
+                        False
             , onClick = AccountTypeSelected
             }
         ]
 
 
-type alias AccountTypeRadioOptions a =
+type alias FormTypeRadioOptions a =
     { type_ : AccountType
     , label : String
     , styles : String
@@ -368,8 +434,8 @@ type alias AccountTypeRadioOptions a =
     }
 
 
-viewAccountTypeRadio : AccountTypeRadioOptions Msg -> Html Msg
-viewAccountTypeRadio options =
+viewFormTypeRadio : FormTypeRadioOptions Msg -> Html Msg
+viewFormTypeRadio options =
     let
         defaultClasses =
             "w-40 h-10 rounded-sm flex justify-center items-center cursor-pointer "
@@ -391,15 +457,11 @@ viewAccountTypeRadio options =
 
         id =
             case options.type_ of
-                Natural ->
+                NaturalAccount ->
                     "natural"
 
-                Juridical ->
+                JuridicalAccount ->
                     "juridical"
-
-                {- Chosen by fair dice roll. Guaranteed to be random. -}
-                Unspecified ->
-                    "4"
     in
     div [ class (finalClasses ++ options.styles), onClick (options.onClick options.type_) ]
         [ label [ class "cursor-pointer", for id ] [ text options.label ]
@@ -439,21 +501,20 @@ viewDefaultAccountRegister translators model =
     ]
 
 
-viewJuridicalAccountRegister : Translators -> Model -> List (Html Msg)
+viewJuridicalAccountRegister : Translators -> JuridicalForm -> List (Html Msg)
 viewJuridicalAccountRegister translators model =
     let
         formTranslationString =
             "register.form"
     in
-    [ viewServerErrors model.problems
-    , viewTitleForStep translators 1
+    [ viewTitleForStep translators 1
     , viewSelectField (translators.t "register.form.company_type")
-        model.selectedDocument
+        model.document
         [ { value = "mipyme", label = translators.t "register.form.company.mipyme.label" }
         , { value = "corporation", label = translators.t "register.form.company.corporation.label" }
         ]
         translators
-    , documentInput translators model (formTranslationString ++ ".company.")
+    , documentInput translators model.document "corporation" (formTranslationString ++ ".company.")
     , View.Form.Input.init
         { id = "name"
         , label = "Company Name"
@@ -465,23 +526,23 @@ viewJuridicalAccountRegister translators model =
         , value = ""
         }
         |> View.Form.Input.toHtml
-    , emailInput translators model formTranslationString
-    , phoneInput translators model formTranslationString
-    , accountInput translators model formTranslationString
+    , emailInput translators model.email formTranslationString
+    , phoneInput translators model.phone formTranslationString
+    , accountInput translators model.account formTranslationString
     , viewSelectField (translators.t "register.form.state")
-        model.selectedDocument
+        model.document
         [ { value = "mipyme", label = translators.t "register.form.company.mipyme.label" }
         , { value = "corporation", label = translators.t "register.form.company.corporation.label" }
         ]
         translators
     , viewSelectField (translators.t "register.form.city")
-        model.selectedDocument
+        model.document
         [ { value = "mipyme", label = translators.t "register.form.company.mipyme.label" }
         , { value = "corporation", label = translators.t "register.form.company.corporation.label" }
         ]
         translators
     , viewSelectField (translators.t "register.form.district")
-        model.selectedDocument
+        model.document
         [ { value = "mipyme", label = translators.t "register.form.company.mipyme.label" }
         , { value = "corporation", label = translators.t "register.form.company.corporation.label" }
         ]
@@ -489,41 +550,40 @@ viewJuridicalAccountRegister translators model =
     ]
 
 
-viewNaturalAccountRegister : Translators -> Model -> List (Html Msg)
+viewNaturalAccountRegister : Translators -> NaturalForm -> List (Html Msg)
 viewNaturalAccountRegister translators model =
     let
         formTranslationString =
             "register.form"
     in
-    [ viewServerErrors model.problems
-    , viewTitleForStep translators 1
+    [ viewTitleForStep translators 1
     , viewSelectField "Document Type"
-        model.selectedDocument
+        model.document
         [ { value = "ssn", label = translators.t "register.form.document.ssn.label" }
         , { value = "dimex", label = translators.t "register.form.document.dimex.label" }
         , { value = "nite", label = translators.t "register.form.document.nite.label" }
         ]
         translators
-    , documentInput translators model (formTranslationString ++ ".document.")
-    , nameInput translators model formTranslationString
-    , emailInput translators model formTranslationString
-    , phoneInput translators model formTranslationString
-    , accountInput translators model formTranslationString
+    , documentInput translators model.document "" (formTranslationString ++ ".document.")
+    , nameInput translators model.name formTranslationString
+    , emailInput translators model.email formTranslationString
+    , phoneInput translators model.phone formTranslationString
+    , accountInput translators model.account formTranslationString
     ]
 
 
-documentInput : Translators -> Model -> String -> Html Msg
-documentInput translators model formTranslationString =
+documentInput : Translators -> String -> String -> String -> Html Msg
+documentInput translators value documentType formTranslationString =
     let
         selectedDocumentTranslationString =
-            formTranslationString ++ model.selectedDocument
+            formTranslationString ++ documentType
     in
     View.Form.Input.init
         { id = "document"
         , label = translators.t (selectedDocumentTranslationString ++ ".label")
         , onInput = EnteredDocument
         , disabled = False
-        , value = model.documentNumber
+        , value = value
         , placeholder = Just (translators.t (selectedDocumentTranslationString ++ ".placeholder"))
         , problems = Nothing
         , translators = translators
@@ -538,14 +598,14 @@ documentInput translators model formTranslationString =
         |> View.Form.Input.toHtml
 
 
-nameInput : Translators -> Model -> String -> Html Msg
-nameInput translators model formTranslationString =
+nameInput : Translators -> String -> String -> Html Msg
+nameInput translators value formTranslationString =
     View.Form.Input.init
         { id = "name"
         , label = translators.t (formTranslationString ++ ".name.label")
         , onInput = EnteredDocument
         , disabled = False
-        , value = model.documentNumber
+        , value = value
         , placeholder = Just (translators.t (formTranslationString ++ ".name.placeholder"))
         , problems = Nothing
         , translators = translators
@@ -553,14 +613,14 @@ nameInput translators model formTranslationString =
         |> View.Form.Input.toHtml
 
 
-accountInput : Translators -> Model -> String -> Html Msg
-accountInput translators model formTranslationString =
+accountInput : Translators -> String -> String -> Html Msg
+accountInput translators value formTranslationString =
     View.Form.Input.init
         { id = "account"
         , label = translators.t (formTranslationString ++ ".account.label")
         , onInput = EnteredDocument
         , disabled = False
-        , value = model.documentNumber
+        , value = value
         , placeholder = Just (translators.t (formTranslationString ++ ".account.placeholder"))
         , problems = Nothing
         , translators = translators
@@ -569,14 +629,14 @@ accountInput translators model formTranslationString =
         |> View.Form.Input.toHtml
 
 
-emailInput : Translators -> Model -> String -> Html Msg
-emailInput translators model formTranslationString =
+emailInput : Translators -> String -> String -> Html Msg
+emailInput translators value formTranslationString =
     View.Form.Input.init
         { id = "email"
         , label = translators.t (formTranslationString ++ ".email.label")
         , onInput = EnteredDocument
         , disabled = False
-        , value = model.documentNumber
+        , value = value
         , placeholder = Just (translators.t (formTranslationString ++ ".email.placeholder"))
         , problems = Nothing
         , translators = translators
@@ -584,14 +644,14 @@ emailInput translators model formTranslationString =
         |> View.Form.Input.toHtml
 
 
-phoneInput : Translators -> Model -> String -> Html Msg
-phoneInput translators model formTranslationString =
+phoneInput : Translators -> String -> String -> Html Msg
+phoneInput translators value formTranslationString =
     View.Form.Input.init
         { id = "phone"
         , label = translators.t (formTranslationString ++ ".phone.label")
         , onInput = EnteredDocument
         , disabled = False
-        , value = model.documentNumber
+        , value = value
         , placeholder = Just (translators.t (formTranslationString ++ ".phone.placeholder"))
         , problems = Nothing
         , translators = translators
@@ -711,21 +771,58 @@ update maybeInvitation msg model guest =
         AccountTypeSelected type_ ->
             UR.init
                 { model
-                    | accountType = type_
+                    | selectedForm =
+                        case type_ of
+                            NaturalAccount ->
+                                Natural
+                                    { document = ""
+                                    , documentType = SSN
+                                    , email = ""
+                                    , name = ""
+                                    , phone = ""
+                                    , username = ""
+                                    , account = ""
+                                    }
+
+                            JuridicalAccount ->
+                                Juridical
+                                    { companyType = MIPYME
+                                    , document = ""
+                                    , name = ""
+                                    , email = ""
+                                    , phone = ""
+                                    , username = ""
+                                    , state = ""
+                                    , city = ""
+                                    , district = ""
+                                    , account = ""
+                                    }
                     , selectedDocument =
                         case type_ of
-                            Natural ->
+                            NaturalAccount ->
                                 "ssn"
 
-                            Juridical ->
+                            JuridicalAccount ->
                                 "mipyme"
-
-                            Unspecified ->
-                                "ssn"
                 }
 
         EnteredDocument document ->
-            UR.init { model | documentNumber = document }
+            let
+                selectedForm =
+                    model.selectedForm
+
+                newForm =
+                    case selectedForm of
+                        Juridical form ->
+                            Juridical { form | document = document }
+
+                        Natural form ->
+                            Natural { form | document = document }
+
+                        None ->
+                            emptyFormType
+            in
+            UR.init { model | selectedForm = newForm }
 
         SelectedDocument document ->
             UR.init { model | selectedDocument = document }
