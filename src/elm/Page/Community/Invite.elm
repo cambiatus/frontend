@@ -623,7 +623,7 @@ update session msg model =
             let
                 hasCommunityKycEnabled =
                     -- TODO: Use `community.hasKyc` when it's ready
-                    True
+                    False
 
                 hasInviteeKycFieldsFilled =
                     -- TODO: check KYC fields in the user profile when the KYC query will be ready
