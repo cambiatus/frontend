@@ -24,8 +24,6 @@ import Task
 import UpdateResult as UR
 import Utils exposing (decodeEnterKeyDown)
 import Validate exposing (ifBlank, ifFalse, ifInvalidEmail, ifTrue, validate)
-import View.Form.Input
-import View.Form.Select
 
 
 
@@ -449,103 +447,6 @@ viewDefaultAccountRegister translators model =
     [ viewServerErrors model.problems
     , viewTitleForStep translators 1
     ]
-
-
-documentInput : Translators -> (String -> msg) -> String -> String -> String -> Html msg
-documentInput translators onInput value documentType formTranslationString =
-    let
-        selectedDocumentTranslationString =
-            formTranslationString ++ documentType
-    in
-    View.Form.Input.init
-        { id = "document"
-        , label = translators.t (selectedDocumentTranslationString ++ ".label")
-        , onInput = onInput
-        , disabled = False
-        , value = value
-        , placeholder = Just (translators.t (selectedDocumentTranslationString ++ ".placeholder"))
-        , problems = Nothing
-        , translators = translators
-        }
-        |> View.Form.Input.withCounter
-            (selectedDocumentTranslationString
-                ++ ".maximum"
-                |> translators.t
-                |> String.toInt
-                |> Maybe.withDefault 10
-            )
-        |> View.Form.Input.toHtml
-
-
-nameInput : Translators -> String -> (String -> msg) -> String -> Html msg
-nameInput translators value onInput formTranslationString =
-    View.Form.Input.init
-        { id = "name"
-        , label = translators.t (formTranslationString ++ ".name.label")
-        , onInput = onInput
-        , disabled = False
-        , value = value
-        , placeholder = Just (translators.t (formTranslationString ++ ".name.placeholder"))
-        , problems = Nothing
-        , translators = translators
-        }
-        |> View.Form.Input.toHtml
-
-
-accountInput : Translators -> String -> (String -> msg) -> String -> Html msg
-accountInput translators value onInput formTranslationString =
-    View.Form.Input.init
-        { id = "account"
-        , label = translators.t (formTranslationString ++ ".account.label")
-        , onInput = onInput
-        , disabled = False
-        , value = value
-        , placeholder = Just (translators.t (formTranslationString ++ ".account.placeholder"))
-        , problems = Nothing
-        , translators = translators
-        }
-        |> View.Form.Input.withCounter 12
-        |> View.Form.Input.toHtml
-
-
-emailInput : Translators -> String -> (String -> msg) -> String -> Html msg
-emailInput translators value onInput formTranslationString =
-    View.Form.Input.init
-        { id = "email"
-        , label = translators.t (formTranslationString ++ ".email.label")
-        , onInput = onInput
-        , disabled = False
-        , value = value
-        , placeholder = Just (translators.t (formTranslationString ++ ".email.placeholder"))
-        , problems = Nothing
-        , translators = translators
-        }
-        |> View.Form.Input.toHtml
-
-
-phoneInput : Translators -> String -> (String -> msg) -> String -> Html msg
-phoneInput translators value onInput formTranslationString =
-    View.Form.Input.init
-        { id = "phone"
-        , label = translators.t (formTranslationString ++ ".phone.label")
-        , onInput = onInput
-        , disabled = False
-        , value = value
-        , placeholder = Just (translators.t (formTranslationString ++ ".phone.placeholder"))
-        , problems = Nothing
-        , translators = translators
-        }
-        |> View.Form.Input.toHtml
-
-
-viewSelectField : String -> String -> (String -> msg) -> List { value : String, label : String } -> Translators -> Html msg
-viewSelectField label initialValue onInput options translators =
-    let
-        form =
-            View.Form.Select.init "document_select" label onInput initialValue
-    in
-    List.foldl View.Form.Select.withOption form options
-        |> View.Form.Select.toHtml
 
 
 viewServerErrors : List Problem -> Html msg
