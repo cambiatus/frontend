@@ -13,6 +13,10 @@ type Check
     = Check
 
 
+type City
+    = City
+
+
 type Claim
     = Claim
 
@@ -29,12 +33,20 @@ type Community
     = Community
 
 
+type Country
+    = Country
+
+
 type Invite
     = Invite
 
 
 type Mint
     = Mint
+
+
+type Neighborhood
+    = Neighborhood
 
 
 type Network
@@ -67,6 +79,14 @@ type Sale
 
 type SaleHistory
     = SaleHistory
+
+
+type SignUp
+    = SignUp
+
+
+type State
+    = State
 
 
 type Transfer

@@ -201,6 +201,62 @@ encodeClaimsAnalysisInput input =
         [ ( "account", Encode.string input.account |> Just ), ( "symbol", Encode.string input.symbol |> Just ) ]
 
 
+buildCountryInput : CountryInputRequiredFields -> CountryInput
+buildCountryInput required =
+    { name = required.name }
+
+
+type alias CountryInputRequiredFields =
+    { name : String }
+
+
+{-| Type for the CountryInput input object.
+-}
+type alias CountryInput =
+    { name : String }
+
+
+{-| Encode a CountryInput into a value that can be used as an argument.
+-}
+encodeCountryInput : CountryInput -> Value
+encodeCountryInput input =
+    Encode.maybeObject
+        [ ( "name", Encode.string input.name |> Just ) ]
+
+
+buildCreateUserInput : CreateUserInputRequiredFields -> CreateUserInput
+buildCreateUserInput required =
+    { account = required.account, email = required.email, invitationId = required.invitationId, name = required.name, publicKey = required.publicKey }
+
+
+type alias CreateUserInputRequiredFields =
+    { account : String
+    , email : String
+    , invitationId : String
+    , name : String
+    , publicKey : String
+    }
+
+
+{-| Type for the CreateUserInput input object.
+-}
+type alias CreateUserInput =
+    { account : String
+    , email : String
+    , invitationId : String
+    , name : String
+    , publicKey : String
+    }
+
+
+{-| Encode a CreateUserInput into a value that can be used as an argument.
+-}
+encodeCreateUserInput : CreateUserInput -> Value
+encodeCreateUserInput input =
+    Encode.maybeObject
+        [ ( "account", Encode.string input.account |> Just ), ( "email", Encode.string input.email |> Just ), ( "invitationId", Encode.string input.invitationId |> Just ), ( "name", Encode.string input.name |> Just ), ( "publicKey", Encode.string input.publicKey |> Just ) ]
+
+
 buildInviteInput : (InviteInputOptionalFields -> InviteInputOptionalFields) -> InviteInput
 buildInviteInput fillOptionals =
     let
