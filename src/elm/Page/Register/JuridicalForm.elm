@@ -1,8 +1,10 @@
-module Page.Register.JuridicalForm exposing (CompanyType(..), Model, Msg(..), init, update, view)
+module Page.Register.JuridicalForm exposing (CompanyType(..), Model, Msg(..), init, update, validator, view)
 
-import Html exposing (Html)
+import Html exposing (Html, button, text)
+import Html.Events exposing (onClick, onSubmit)
 import Page.Register.Common exposing (..)
 import Session.Shared exposing (Translators)
+import Validate exposing (Validator)
 import View.Form.Input
 
 
@@ -21,7 +23,21 @@ type alias Model =
     , city : String
     , district : String
     , account : String
+    , problems : List ( Field, String )
     }
+
+
+type Field
+    = CompanyType
+    | Document
+    | Name
+    | Email
+    | Phone
+    | Username
+    | State
+    | City
+    | District
+    | Account
 
 
 init : Model
@@ -36,6 +52,7 @@ init =
     , city = ""
     , district = ""
     , account = ""
+    , problems = []
     }
 
 
@@ -59,6 +76,7 @@ type Msg
     | EnteredCity String
     | EnteredDistrict String
     | EnteredAccount String
+    | ValidateForm
 
 
 
@@ -71,7 +89,7 @@ view translators model =
         formTranslationString =
             "register.form"
     in
-    Html.form []
+    Html.form [ onSubmit ValidateForm ]
         [ viewTitleForStep translators 1
         , viewSelectField (translators.t "register.form.company_type")
             model.document
@@ -147,6 +165,7 @@ view translators model =
             , { value = "corporation", label = translators.t "register.form.company.corporation.label" }
             ]
             translators
+        , Html.button [] [ text "Valiasdfasdfadate" ]
         ]
 
 
@@ -197,3 +216,48 @@ update msg form =
 
         EnteredAccount str ->
             { form | account = str }
+
+        ValidateForm ->
+            { form
+                | problems =
+                    case Validate.validate validator form of
+                        Ok _ ->
+                            form.problems
+
+                        Err err ->
+                            err ++ form.problems
+            }
+
+
+validator : Validator ( Field, String ) Model
+validator =
+    Validate.all
+        [ Validate.firstError
+            [ Validate.ifBlank .name ( Name, "required" )
+            ]
+        , Validate.firstError
+            [ Validate.ifBlank .email ( Email, "required" ) ]
+        ]
+
+
+
+-- Validate.all
+--                         [ Validate.firstError
+--                             [ ifBlank .username (InvalidEntry Username (t "error.required")) ]
+--                         , Validate.firstError
+--                             [ ifBlank .email (InvalidEntry Email (t "error.required"))
+--                             , ifInvalidEmail .email (\_ -> InvalidEntry Email (t "error.email"))
+--                             ]
+--                         , Validate.firstError
+--                             [ ifBlank .account (InvalidEntry Account (t "error.required"))
+--                             , ifTrue
+--                                 (\f -> String.length f.account < 12)
+--                                 (InvalidEntry Account (tr "error.tooShort" [ ( "minLength", "12" ) ]))
+--                             , ifTrue
+--                                 (\f -> String.length f.account > 12)
+--                                 (InvalidEntry Account (tr "error.tooLong" [ ( "maxLength", "12" ) ]))
+--                             , ifFalse
+--                                 (\f -> String.all isValidAlphaNum f.account)
+--                                 (InvalidEntry Account (t "register.form.accountCharError"))
+--                             ]
+--                         ]

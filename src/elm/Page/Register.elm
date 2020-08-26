@@ -14,6 +14,7 @@ import Http
 import Json.Decode as Decode exposing (Decoder, Value)
 import Json.Decode.Pipeline as Decode
 import Json.Encode as Encode
+import Page.Register.Common as Common
 import Page.Register.JuridicalForm as JuridicalForm
 import Page.Register.NaturalForm as NaturalForm
 import Profile exposing (Profile)
@@ -23,7 +24,7 @@ import Session.Shared exposing (Translators, viewFullLoading)
 import Task
 import UpdateResult as UR
 import Utils exposing (decodeEnterKeyDown)
-import Validate exposing (ifBlank, ifFalse, ifInvalidEmail, ifTrue, validate)
+import Validate exposing (Valid, ifBlank, ifFalse, ifInvalidEmail, ifTrue, validate)
 
 
 
@@ -67,6 +68,7 @@ type alias Model =
     , maybeInvitationId : Maybe String
     , documentNumber : String
     , selectedForm : FormType
+    , problems2 : List ( Common.Errors, String )
     }
 
 
@@ -94,6 +96,7 @@ initModel maybeInvitationId _ =
     , maybeInvitationId = maybeInvitationId
     , documentNumber = ""
     , selectedForm = None
+    , problems2 = []
     }
 
 
@@ -281,7 +284,7 @@ view guest model =
         t "register.registerTab"
     , content =
         div [ class "flex flex-grow flex-col bg-white md:block px-4 px-0" ]
-            (case model.status of
+            [ case model.status of
                 Loaded invitation ->
                     if invitation.community.hasShop == True then
                         viewKycRegister guest.shared.translators model
@@ -290,11 +293,12 @@ view guest model =
                         viewDefaultAccountRegister guest.shared.translators model
 
                 Loading ->
-                    []
+                    div [] []
 
                 _ ->
                     Debug.todo "Error"
-            )
+            , button [ onClick (ValidateForm model.selectedForm) ] [ text "validate" ]
+            ]
 
     -- if model.accountGenerated then
     --     viewAccountGenerated
@@ -303,42 +307,43 @@ view guest model =
     }
 
 
-viewKycRegister : Translators -> Model -> List (Html Msg)
+viewKycRegister : Translators -> Model -> Html Msg
 viewKycRegister translators model =
-    [ viewFormTypeSelector translators model
-    , div [ class "sf-content" ]
-        [ case model.maybeInvitationId of
-            Just _ ->
-                let
-                    selectedForm =
-                        case model.selectedForm of
-                            Natural form ->
-                                NaturalForm.view translators form |> Html.map NaturalFormMsg
+    div []
+        [ viewFormTypeSelector translators model
+        , div [ class "sf-content" ]
+            [ case model.maybeInvitationId of
+                Just _ ->
+                    let
+                        selectedForm =
+                            case model.selectedForm of
+                                Natural form ->
+                                    NaturalForm.view translators form |> Html.map NaturalFormMsg
 
-                            Juridical form ->
-                                JuridicalForm.view translators form |> Html.map JuridicalFormMsg
+                                Juridical form ->
+                                    JuridicalForm.view translators form |> Html.map JuridicalFormMsg
 
-                            None ->
-                                div [] []
-                in
-                case model.status of
-                    Loaded _ ->
-                        selectedForm
+                                None ->
+                                    div [] []
+                    in
+                    case model.status of
+                        Loaded _ ->
+                            selectedForm
 
-                    Loading ->
-                        Session.Shared.viewFullLoading
+                        Loading ->
+                            Session.Shared.viewFullLoading
 
-                    Failed _ ->
-                        Debug.todo "Implement error"
+                        Failed _ ->
+                            Debug.todo "Implement error"
 
-                    NotFound ->
-                        Debug.todo "Implement not found"
+                        NotFound ->
+                            Debug.todo "Implement not found"
 
-            Nothing ->
-                div [] []
+                Nothing ->
+                    div [] []
+            ]
+            |> Html.map FormMsg
         ]
-        |> Html.map FormMsg
-    ]
 
 
 viewFormTypeSelector : Translators -> Model -> Html Msg
@@ -442,11 +447,12 @@ viewTitleForStep translators s =
         ]
 
 
-viewDefaultAccountRegister : Translators -> Model -> List (Html Msg)
+viewDefaultAccountRegister : Translators -> Model -> Html Msg
 viewDefaultAccountRegister translators model =
-    [ viewServerErrors model.problems
-    , viewTitleForStep translators 1
-    ]
+    div []
+        [ viewServerErrors model.problems
+        , viewTitleForStep translators 1
+        ]
 
 
 viewServerErrors : List Problem -> Html msg
@@ -512,7 +518,7 @@ type alias UpdateResult =
 
 
 type Msg
-    = ValidateForm Form
+    = ValidateForm FormType
     | GotAccountAvailabilityResponse Bool
     | KeyPressed Bool
     | AccountGenerated (Result Decode.Error AccountKeys)
@@ -552,6 +558,28 @@ update maybeInvitation msg model guest =
             guest.shared.translators
     in
     case msg of
+        ValidateForm formType ->
+            UR.init model
+
+        -- UR.init
+        --     { model
+        --         | problems2 =
+        --             case formType of
+        --                 Juridical form ->
+        --                     case validate (JuridicalForm.validator guest.shared.translators) form of
+        --                         Ok _ ->
+        --                             model.problems2
+        --                         Err err ->
+        --                             err ++ model.problems2
+        --                 Natural form ->
+        --                     case validate (NaturalForm.validator guest.shared.translators) form of
+        --                         Ok _ ->
+        --                             model.problems2
+        --                         Err err ->
+        --                             err ++ model.problems2
+        --                 None ->
+        --                     model.problems2
+        --     }
         FormMsg formMsg ->
             case formMsg of
                 JuridicalFormMsg innerMsg ->
@@ -583,71 +611,11 @@ update maybeInvitation msg model guest =
                                     JuridicalForm.init
                 }
 
-        ValidateForm form ->
-            let
-                isLowerThan6 : Char -> Bool
-                isLowerThan6 c =
-                    let
-                        charInt : Int
-                        charInt =
-                            c
-                                |> String.fromChar
-                                |> String.toInt
-                                |> Maybe.withDefault 0
-                    in
-                    compare charInt 6 == Basics.LT
-
-                isValidAlphaNum : Char -> Bool
-                isValidAlphaNum c =
-                    (Char.isUpper c || Char.isLower c || Char.isDigit c) && isLowerThan6 c
-
-                formValidator =
-                    Validate.all
-                        [ Validate.firstError
-                            [ ifBlank .username (InvalidEntry Username (t "error.required")) ]
-                        , Validate.firstError
-                            [ ifBlank .email (InvalidEntry Email (t "error.required"))
-                            , ifInvalidEmail .email (\_ -> InvalidEntry Email (t "error.email"))
-                            ]
-                        , Validate.firstError
-                            [ ifBlank .account (InvalidEntry Account (t "error.required"))
-                            , ifTrue
-                                (\f -> String.length f.account < 12)
-                                (InvalidEntry Account (tr "error.tooShort" [ ( "minLength", "12" ) ]))
-                            , ifTrue
-                                (\f -> String.length f.account > 12)
-                                (InvalidEntry Account (tr "error.tooLong" [ ( "maxLength", "12" ) ]))
-                            , ifFalse
-                                (\f -> String.all isValidAlphaNum f.account)
-                                (InvalidEntry Account (t "register.form.accountCharError"))
-                            ]
-                        ]
-            in
-            case validate formValidator form of
-                Ok _ ->
-                    { model | isCheckingAccount = True }
-                        |> UR.init
-                        |> UR.addPort
-                            { responseAddress = ValidateForm form
-                            , responseData = Encode.null
-                            , data =
-                                Encode.object
-                                    [ ( "name", Encode.string "checkAccountAvailability" )
-
-                                    -- , ( "accountName", Encode.string model.form.account )
-                                    ]
-                            }
-
-                Err problems ->
-                    { model | problems = problems }
-                        |> UR.init
-
         GotAccountAvailabilityResponse isAvailable ->
             if isAvailable then
                 UR.init
                     { model
                         | isLoading = True
-                        , problems = []
                         , isCheckingAccount = False
                     }
                     |> UR.addPort
@@ -676,26 +644,19 @@ update maybeInvitation msg model guest =
                 in
                 UR.init
                     { model
-                        | problems = fieldError :: model.problems
-                        , isCheckingAccount = False
+                        | isCheckingAccount = False
                     }
 
         AccountGenerated (Err v) ->
             UR.init
                 { model
                     | isLoading = False
-                    , problems = ServerError "The server acted in an unexpected way" :: model.problems
                 }
                 |> UR.logDecodeError msg v
 
         CompletedCreateProfile _ (Ok _) ->
             { model | accountGenerated = True }
                 |> UR.init
-
-        CompletedCreateProfile _ (Err err) ->
-            { model | problems = ServerError "Auth failed" :: model.problems }
-                |> UR.init
-                |> UR.logHttpError msg err
 
         AgreedToSave12Words val ->
             { model | hasAgreedToSavePassphrase = val }

@@ -1,4 +1,4 @@
-module Page.Register.Common exposing (documentInput, viewSelectField, viewTitleForStep)
+module Page.Register.Common exposing (Errors(..), documentInput, viewSelectField, viewTitleForStep)
 
 import Html exposing (Html, p, strong, text)
 import Html.Attributes exposing (class)
@@ -66,3 +66,7 @@ documentInput translators onInput value documentType formTranslationString =
                 |> Maybe.withDefault 10
             )
         |> View.Form.Input.toHtml
+
+
+type Errors
+    = InvalidField

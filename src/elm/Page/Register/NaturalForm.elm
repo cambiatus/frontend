@@ -1,9 +1,11 @@
-module Page.Register.NaturalForm exposing (Document(..), Model, Msg(..), init, update, view)
+module Page.Register.NaturalForm exposing (Document(..), Model, Msg(..), init, update, validator, view)
 
-import Html exposing (Html)
+import Html exposing (Html, button, text)
+import Html.Events exposing (onSubmit)
 import Page.Login exposing (Model)
 import Page.Register.Common exposing (..)
 import Session.Shared exposing (Translators)
+import Validate exposing (Validator)
 import View.Form.Input
 
 
@@ -19,7 +21,18 @@ type alias Model =
     , phone : String
     , username : String
     , account : String
+    , problems : List ( Field, String )
     }
+
+
+type Field
+    = Document
+    | DocumentType
+    | Name
+    | Email
+    | Phone
+    | Username
+    | Account
 
 
 init : Model
@@ -31,6 +44,7 @@ init =
     , phone = ""
     , username = ""
     , account = ""
+    , problems = []
     }
 
 
@@ -51,6 +65,7 @@ type Msg
     | EnteredEmail String
     | EnteredPhone String
     | EnteredAccount String
+    | ValidateForm
 
 
 
@@ -63,7 +78,7 @@ view translators model =
         formTranslationString =
             "register.form"
     in
-    Html.form []
+    Html.form [ onSubmit ValidateForm ]
         [ viewTitleForStep translators 1
         , viewSelectField "Document Type"
             model.document
@@ -80,7 +95,7 @@ view translators model =
             , disabled = False
             , onInput = EnteredName
             , placeholder = Just "Ex.: Cambiatus"
-            , problems = Nothing
+            , problems = Just (model.problems |> List.filter (\x -> Tuple.first x == Name) |> List.map (\x -> Tuple.second x))
             , translators = translators
             , value = model.name
             }
@@ -119,6 +134,7 @@ view translators model =
             }
             |> View.Form.Input.withCounter 12
             |> View.Form.Input.toHtml
+        , button [] [ text "Validate" ]
         ]
 
 
@@ -160,3 +176,25 @@ update msg model =
 
         EnteredAccount account ->
             { model | account = account }
+
+        ValidateForm ->
+            { model
+                | problems =
+                    case Validate.validate validator model of
+                        Ok _ ->
+                            model.problems
+
+                        Err err ->
+                            err ++ model.problems
+            }
+
+
+validator : Validator ( Field, String ) Model
+validator =
+    Validate.all
+        [ Validate.firstError
+            [ Validate.ifBlank .name ( Name, "required" )
+            ]
+        , Validate.firstError
+            [ Validate.ifBlank .email ( Email, "required" ) ]
+        ]
