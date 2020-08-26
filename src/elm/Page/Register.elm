@@ -14,6 +14,8 @@ import Http
 import Json.Decode as Decode exposing (Decoder, Value)
 import Json.Decode.Pipeline as Decode
 import Json.Encode as Encode
+import Page.Register.JuridicalForm as JuridicalForm
+import Page.Register.NaturalForm as NaturalForm
 import Profile exposing (Profile)
 import Route
 import Session.Guest as Guest exposing (External(..))
@@ -59,14 +61,12 @@ type alias Model =
     { accountKeys : Maybe AccountKeys
     , isLoading : Bool
     , isCheckingAccount : Bool
-    , form : Form
     , hasAgreedToSavePassphrase : Bool
     , isPassphraseCopiedToClipboard : Bool
     , accountGenerated : Bool
     , problems : List Problem
     , status : Status
     , maybeInvitationId : Maybe String
-    , selectedDocument : String
     , documentNumber : String
     , selectedForm : FormType
     }
@@ -79,19 +79,8 @@ type AccountType
 
 type FormType
     = None
-    | Natural NaturalForm
-    | Juridical JuridicalForm
-
-
-type NaturalDocument
-    = SSN
-    | DIMEX
-    | NITE
-
-
-type CompanyType
-    = MIPYME
-    | Corporation
+    | Natural NaturalForm.Model
+    | Juridical JuridicalForm.Model
 
 
 initModel : Maybe String -> Guest.Model -> Model
@@ -99,14 +88,12 @@ initModel maybeInvitationId _ =
     { accountKeys = Nothing
     , isLoading = False
     , isCheckingAccount = False
-    , form = initForm
     , hasAgreedToSavePassphrase = False
     , isPassphraseCopiedToClipboard = False
     , accountGenerated = False
     , problems = []
     , status = Loading
     , maybeInvitationId = maybeInvitationId
-    , selectedDocument = "ssn"
     , documentNumber = ""
     , selectedForm = None
     }
@@ -114,44 +101,6 @@ initModel maybeInvitationId _ =
 
 
 ---- FORM
-
-
-type alias NaturalForm =
-    { document : String
-    , documentType : NaturalDocument
-    , name : String
-    , email : String
-    , phone : String
-    , username : String
-    , account : String
-    }
-
-
-emptyFormType : FormType
-emptyFormType =
-    Natural
-        { document = ""
-        , documentType = SSN
-        , name = ""
-        , email = ""
-        , phone = ""
-        , username = ""
-        , account = ""
-        }
-
-
-type alias JuridicalForm =
-    { companyType : CompanyType
-    , document : String
-    , name : String
-    , email : String
-    , phone : String
-    , username : String
-    , state : String
-    , city : String
-    , district : String
-    , account : String
-    }
 
 
 type alias Form =
@@ -360,26 +309,26 @@ viewKycRegister : Translators -> Model -> List (Html Msg)
 viewKycRegister translators model =
     [ viewFormTypeSelector translators model
     , div [ class "sf-content" ]
-        (case model.maybeInvitationId of
+        [ case model.maybeInvitationId of
             Just _ ->
                 let
                     selectedForm =
                         case model.selectedForm of
                             Natural form ->
-                                viewNaturalAccountRegister translators form
+                                NaturalForm.view translators form |> Html.map NaturalFormMsg
 
                             Juridical form ->
-                                viewJuridicalAccountRegister translators form
+                                JuridicalForm.view translators form |> Html.map JuridicalFormMsg
 
                             None ->
-                                []
+                                div [] []
                 in
                 case model.status of
                     Loaded _ ->
                         selectedForm
 
                     Loading ->
-                        [ Session.Shared.viewFullLoading ]
+                        Session.Shared.viewFullLoading
 
                     Failed _ ->
                         Debug.todo "Implement error"
@@ -388,8 +337,9 @@ viewKycRegister translators model =
                         Debug.todo "Implement not found"
 
             Nothing ->
-                viewDefaultAccountRegister translators model
-        )
+                div [] []
+        ]
+        |> Html.map FormMsg
     ]
 
 
@@ -501,79 +451,8 @@ viewDefaultAccountRegister translators model =
     ]
 
 
-viewJuridicalAccountRegister : Translators -> JuridicalForm -> List (Html Msg)
-viewJuridicalAccountRegister translators model =
-    let
-        formTranslationString =
-            "register.form"
-    in
-    [ viewTitleForStep translators 1
-    , viewSelectField (translators.t "register.form.company_type")
-        model.document
-        [ { value = "mipyme", label = translators.t "register.form.company.mipyme.label" }
-        , { value = "corporation", label = translators.t "register.form.company.corporation.label" }
-        ]
-        translators
-    , documentInput translators model.document "corporation" (formTranslationString ++ ".company.")
-    , View.Form.Input.init
-        { id = "name"
-        , label = "Company Name"
-        , disabled = False
-        , onInput = EnteredDocument
-        , placeholder = Just "Ex.: Cambiatus"
-        , problems = Nothing
-        , translators = translators
-        , value = ""
-        }
-        |> View.Form.Input.toHtml
-    , emailInput translators model.email formTranslationString
-    , phoneInput translators model.phone formTranslationString
-    , accountInput translators model.account formTranslationString
-    , viewSelectField (translators.t "register.form.state")
-        model.document
-        [ { value = "mipyme", label = translators.t "register.form.company.mipyme.label" }
-        , { value = "corporation", label = translators.t "register.form.company.corporation.label" }
-        ]
-        translators
-    , viewSelectField (translators.t "register.form.city")
-        model.document
-        [ { value = "mipyme", label = translators.t "register.form.company.mipyme.label" }
-        , { value = "corporation", label = translators.t "register.form.company.corporation.label" }
-        ]
-        translators
-    , viewSelectField (translators.t "register.form.district")
-        model.document
-        [ { value = "mipyme", label = translators.t "register.form.company.mipyme.label" }
-        , { value = "corporation", label = translators.t "register.form.company.corporation.label" }
-        ]
-        translators
-    ]
-
-
-viewNaturalAccountRegister : Translators -> NaturalForm -> List (Html Msg)
-viewNaturalAccountRegister translators model =
-    let
-        formTranslationString =
-            "register.form"
-    in
-    [ viewTitleForStep translators 1
-    , viewSelectField "Document Type"
-        model.document
-        [ { value = "ssn", label = translators.t "register.form.document.ssn.label" }
-        , { value = "dimex", label = translators.t "register.form.document.dimex.label" }
-        , { value = "nite", label = translators.t "register.form.document.nite.label" }
-        ]
-        translators
-    , documentInput translators model.document "" (formTranslationString ++ ".document.")
-    , nameInput translators model.name formTranslationString
-    , emailInput translators model.email formTranslationString
-    , phoneInput translators model.phone formTranslationString
-    , accountInput translators model.account formTranslationString
-    ]
-
-
-documentInput : Translators -> String -> String -> String -> Html Msg
-documentInput translators value documentType formTranslationString =
+documentInput : Translators -> (String -> msg) -> String -> String -> String -> Html msg
+documentInput translators onInput value documentType formTranslationString =
     let
         selectedDocumentTranslationString =
             formTranslationString ++ documentType
@@ -581,7 +460,7 @@ documentInput translators value documentType formTranslationString =
     View.Form.Input.init
         { id = "document"
         , label = translators.t (selectedDocumentTranslationString ++ ".label")
-        , onInput = EnteredDocument
+        , onInput = onInput
         , disabled = False
         , value = value
         , placeholder = Just (translators.t (selectedDocumentTranslationString ++ ".placeholder"))
@@ -598,12 +477,12 @@ documentInput translators value documentType formTranslationString =
         |> View.Form.Input.toHtml
 
 
-nameInput : Translators -> String -> String -> Html Msg
-nameInput translators value formTranslationString =
+nameInput : Translators -> String -> (String -> msg) -> String -> Html msg
+nameInput translators value onInput formTranslationString =
     View.Form.Input.init
         { id = "name"
         , label = translators.t (formTranslationString ++ ".name.label")
-        , onInput = EnteredDocument
+        , onInput = onInput
         , disabled = False
         , value = value
         , placeholder = Just (translators.t (formTranslationString ++ ".name.placeholder"))
@@ -613,12 +492,12 @@ nameInput translators value formTranslationString =
         |> View.Form.Input.toHtml
 
 
-accountInput : Translators -> String -> String -> Html Msg
-accountInput translators value formTranslationString =
+accountInput : Translators -> String -> (String -> msg) -> String -> Html msg
+accountInput translators value onInput formTranslationString =
     View.Form.Input.init
         { id = "account"
         , label = translators.t (formTranslationString ++ ".account.label")
-        , onInput = EnteredDocument
+        , onInput = onInput
         , disabled = False
         , value = value
         , placeholder = Just (translators.t (formTranslationString ++ ".account.placeholder"))
@@ -629,12 +508,12 @@ accountInput translators value formTranslationString =
         |> View.Form.Input.toHtml
 
 
-emailInput : Translators -> String -> String -> Html Msg
-emailInput translators value formTranslationString =
+emailInput : Translators -> String -> (String -> msg) -> String -> Html msg
+emailInput translators value onInput formTranslationString =
     View.Form.Input.init
         { id = "email"
         , label = translators.t (formTranslationString ++ ".email.label")
-        , onInput = EnteredDocument
+        , onInput = onInput
         , disabled = False
         , value = value
         , placeholder = Just (translators.t (formTranslationString ++ ".email.placeholder"))
@@ -644,12 +523,12 @@ emailInput translators value formTranslationString =
         |> View.Form.Input.toHtml
 
 
-phoneInput : Translators -> String -> String -> Html Msg
-phoneInput translators value formTranslationString =
+phoneInput : Translators -> String -> (String -> msg) -> String -> Html msg
+phoneInput translators value onInput formTranslationString =
     View.Form.Input.init
         { id = "phone"
         , label = translators.t (formTranslationString ++ ".phone.label")
-        , onInput = EnteredDocument
+        , onInput = onInput
         , disabled = False
         , value = value
         , placeholder = Just (translators.t (formTranslationString ++ ".phone.placeholder"))
@@ -659,11 +538,11 @@ phoneInput translators value formTranslationString =
         |> View.Form.Input.toHtml
 
 
-viewSelectField : String -> String -> List { value : String, label : String } -> Translators -> Html Msg
-viewSelectField label initialValue options translators =
+viewSelectField : String -> String -> (String -> msg) -> List { value : String, label : String } -> Translators -> Html msg
+viewSelectField label initialValue onInput options translators =
     let
         form =
-            View.Form.Select.init "document_select" label SelectedDocument initialValue
+            View.Form.Select.init "document_select" label onInput initialValue
     in
     List.foldl View.Form.Select.withOption form options
         |> View.Form.Select.toHtml
@@ -734,18 +613,22 @@ type alias UpdateResult =
 type Msg
     = ValidateForm Form
     | GotAccountAvailabilityResponse Bool
+    | KeyPressed Bool
     | AccountGenerated (Result Decode.Error AccountKeys)
     | CompletedCreateProfile AccountKeys (Result Http.Error Profile)
     | AgreedToSave12Words Bool
     | DownloadPdf PdfData
     | PdfDownloaded
-    | KeyPressed Bool
     | CopyToClipboard String
     | CopiedToClipboard
     | CompletedLoadInvite (Result (Graphql.Http.Error (Maybe Invite)) (Maybe Invite))
     | AccountTypeSelected AccountType
-    | EnteredDocument String
-    | SelectedDocument String
+    | FormMsg EitherFormMsg
+
+
+type EitherFormMsg
+    = JuridicalFormMsg JuridicalForm.Msg
+    | NaturalFormMsg NaturalForm.Msg
 
 
 type Status
@@ -768,64 +651,36 @@ update maybeInvitation msg model guest =
             guest.shared.translators
     in
     case msg of
+        FormMsg formMsg ->
+            case formMsg of
+                JuridicalFormMsg innerMsg ->
+                    case model.selectedForm of
+                        Juridical form ->
+                            UR.init { model | selectedForm = Juridical (JuridicalForm.update innerMsg form) }
+
+                        _ ->
+                            UR.init model
+
+                NaturalFormMsg innerMsg ->
+                    case model.selectedForm of
+                        Natural form ->
+                            UR.init { model | selectedForm = Natural (NaturalForm.update innerMsg form) }
+
+                        _ ->
+                            UR.init model
+
         AccountTypeSelected type_ ->
             UR.init
                 { model
                     | selectedForm =
                         case type_ of
                             NaturalAccount ->
-                                Natural
-                                    { document = ""
-                                    , documentType = SSN
-                                    , email = ""
-                                    , name = ""
-                                    , phone = ""
-                                    , username = ""
-                                    , account = ""
-                                    }
+                                Natural NaturalForm.init
 
                             JuridicalAccount ->
                                 Juridical
-                                    { companyType = MIPYME
-                                    , document = ""
-                                    , name = ""
-                                    , email = ""
-                                    , phone = ""
-                                    , username = ""
-                                    , state = ""
-                                    , city = ""
-                                    , district = ""
-                                    , account = ""
-                                    }
-                    , selectedDocument =
-                        case type_ of
-                            NaturalAccount ->
-                                "ssn"
-
-                            JuridicalAccount ->
-                                "mipyme"
+                                    JuridicalForm.init
                 }
-
-        EnteredDocument document ->
-            let
-                selectedForm =
-                    model.selectedForm
-
-                newForm =
-                    case selectedForm of
-                        Juridical form ->
-                            Juridical { form | document = document }
-
-                        Natural form ->
-                            Natural { form | document = document }
-
-                        None ->
-                            emptyFormType
-            in
-            UR.init { model | selectedForm = newForm }
-
-        SelectedDocument document ->
-            UR.init { model | selectedDocument = document }
 
         ValidateForm form ->
             let
@@ -877,7 +732,8 @@ update maybeInvitation msg model guest =
                             , data =
                                 Encode.object
                                     [ ( "name", Encode.string "checkAccountAvailability" )
-                                    , ( "accountName", Encode.string model.form.account )
+
+                                    -- , ( "accountName", Encode.string model.form.account )
                                     ]
                             }
 
@@ -907,7 +763,8 @@ update maybeInvitation msg model guest =
                                         Just invitationId ->
                                             Encode.string invitationId
                                   )
-                                , ( "account", Encode.string model.form.account )
+
+                                -- , ( "account", Encode.string model.form.account )
                                 ]
                         }
 
@@ -921,34 +778,6 @@ update maybeInvitation msg model guest =
                         | problems = fieldError :: model.problems
                         , isCheckingAccount = False
                     }
-
-        AccountGenerated (Ok accountKeys) ->
-            UR.init
-                { model
-                    | isLoading = True
-                    , accountKeys = Just accountKeys
-                    , form = initForm
-                }
-                |> UR.addCmd
-                    (case maybeInvitation of
-                        Nothing ->
-                            Api.signUp guest.shared
-                                { name = model.form.username
-                                , email = model.form.email
-                                , account = accountKeys.accountName
-                                , invitationId = maybeInvitation
-                                }
-                                (CompletedCreateProfile accountKeys)
-
-                        Just _ ->
-                            Api.signUpWithInvitation guest.shared
-                                { name = model.form.username
-                                , email = model.form.email
-                                , account = accountKeys.accountName
-                                , invitationId = maybeInvitation
-                                }
-                                (CompletedCreateProfile accountKeys)
-                    )
 
         AccountGenerated (Err v) ->
             UR.init
@@ -1015,17 +844,6 @@ update maybeInvitation msg model guest =
                             -- Go to login page after downloading PDF
                             (Route.replaceUrl guest.shared.navKey (Route.Login Nothing))
 
-        KeyPressed isEnter ->
-            if isEnter then
-                UR.init model
-                    |> UR.addCmd
-                        (Task.succeed (ValidateForm model.form)
-                            |> Task.perform identity
-                        )
-
-            else
-                UR.init model
-
         CompletedLoadInvite (Ok (Just invitation)) ->
             UR.init { model | status = Loaded invitation }
 
@@ -1036,6 +854,9 @@ update maybeInvitation msg model guest =
             { model | status = Failed error }
                 |> UR.init
                 |> UR.logGraphqlError msg error
+
+        _ ->
+            UR.init model
 
 
 
@@ -1072,6 +893,9 @@ jsAddressToMsg addr val =
 msgToString : Msg -> List String
 msgToString msg =
     case msg of
+        FormMsg _ ->
+            [ "FormMsg" ]
+
         ValidateForm _ ->
             [ "ValidateForm" ]
 
@@ -1099,17 +923,11 @@ msgToString msg =
         PdfDownloaded ->
             [ "PdfDownloaded" ]
 
-        KeyPressed _ ->
-            [ "KeyPressed" ]
-
         CompletedLoadInvite _ ->
             [ "CompletedLoadInvite" ]
 
         AccountTypeSelected _ ->
             [ "AccountTypeSelected" ]
 
-        EnteredDocument _ ->
-            [ "EnteredDocument" ]
-
-        SelectedDocument _ ->
-            [ "SelectedDocument" ]
+        KeyPressed _ ->
+            [ "KeyPressed" ]
