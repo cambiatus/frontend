@@ -25,7 +25,7 @@ config =
     [ NoDebug.Log.rule
     , NoDebug.TodoOrToString.rule
     , NoUnused.Variables.rule
-    , NoUnused.Modules.rule
+    --, NoUnused.Modules.rule
     , NoBooleanCase.rule
     , NoExposingEverything.rule
         |> Rule.ignoreErrorsForDirectories [ "tests/" ]
