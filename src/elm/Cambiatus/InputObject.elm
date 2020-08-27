@@ -224,39 +224,6 @@ encodeCountryInput input =
         [ ( "name", Encode.string input.name |> Just ) ]
 
 
-buildCreateUserInput : CreateUserInputRequiredFields -> CreateUserInput
-buildCreateUserInput required =
-    { account = required.account, email = required.email, invitationId = required.invitationId, name = required.name, publicKey = required.publicKey }
-
-
-type alias CreateUserInputRequiredFields =
-    { account : String
-    , email : String
-    , invitationId : String
-    , name : String
-    , publicKey : String
-    }
-
-
-{-| Type for the CreateUserInput input object.
--}
-type alias CreateUserInput =
-    { account : String
-    , email : String
-    , invitationId : String
-    , name : String
-    , publicKey : String
-    }
-
-
-{-| Encode a CreateUserInput into a value that can be used as an argument.
--}
-encodeCreateUserInput : CreateUserInput -> Value
-encodeCreateUserInput input =
-    Encode.maybeObject
-        [ ( "account", Encode.string input.account |> Just ), ( "email", Encode.string input.email |> Just ), ( "invitationId", Encode.string input.invitationId |> Just ), ( "name", Encode.string input.name |> Just ), ( "publicKey", Encode.string input.publicKey |> Just ) ]
-
-
 buildInviteInput : (InviteInputOptionalFields -> InviteInputOptionalFields) -> InviteInput
 buildInviteInput fillOptionals =
     let
@@ -515,6 +482,47 @@ encodeSalesInput : SalesInput -> Value
 encodeSalesInput input =
     Encode.maybeObject
         [ ( "account", Encode.string |> Encode.optional input.account ), ( "all", Encode.string |> Encode.optional input.all ), ( "communities", Encode.string |> Encode.optional input.communities ), ( "communityId", Encode.string |> Encode.optional input.communityId ) ]
+
+
+buildSignUpInput : SignUpInputRequiredFields -> (SignUpInputOptionalFields -> SignUpInputOptionalFields) -> SignUpInput
+buildSignUpInput required fillOptionals =
+    let
+        optionals =
+            fillOptionals
+                { invitationId = Absent }
+    in
+    { account = required.account, email = required.email, invitationId = optionals.invitationId, name = required.name, publicKey = required.publicKey }
+
+
+type alias SignUpInputRequiredFields =
+    { account : String
+    , email : String
+    , name : String
+    , publicKey : String
+    }
+
+
+type alias SignUpInputOptionalFields =
+    { invitationId : OptionalArgument String }
+
+
+{-| Type for the SignUpInput input object.
+-}
+type alias SignUpInput =
+    { account : String
+    , email : String
+    , invitationId : OptionalArgument String
+    , name : String
+    , publicKey : String
+    }
+
+
+{-| Encode a SignUpInput into a value that can be used as an argument.
+-}
+encodeSignUpInput : SignUpInput -> Value
+encodeSignUpInput input =
+    Encode.maybeObject
+        [ ( "account", Encode.string input.account |> Just ), ( "email", Encode.string input.email |> Just ), ( "invitationId", Encode.string |> Encode.optional input.invitationId ), ( "name", Encode.string input.name |> Just ), ( "publicKey", Encode.string input.publicKey |> Just ) ]
 
 
 buildTransferInput : TransferInputRequiredFields -> TransferInput

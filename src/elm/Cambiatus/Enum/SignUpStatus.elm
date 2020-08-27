@@ -10,17 +10,17 @@ import Json.Decode as Decode exposing (Decoder)
 {-|
 
   - Error - Sign up failed
-  - Ok - Sign up succeed
+  - Success - Sign up succeed
 
 -}
 type SignUpStatus
     = Error
-    | Ok
+    | Success
 
 
 list : List SignUpStatus
 list =
-    [ Error, Ok ]
+    [ Error, Success ]
 
 
 decoder : Decoder SignUpStatus
@@ -32,8 +32,8 @@ decoder =
                     "ERROR" ->
                         Decode.succeed Error
 
-                    "OK" ->
-                        Decode.succeed Ok
+                    "SUCCESS" ->
+                        Decode.succeed Success
 
                     _ ->
                         Decode.fail ("Invalid SignUpStatus type, " ++ string ++ " try re-running the @dillonkearns/elm-graphql CLI ")
@@ -48,8 +48,8 @@ toString enum =
         Error ->
             "ERROR"
 
-        Ok ->
-            "OK"
+        Success ->
+            "SUCCESS"
 
 
 {-| Convert from a String representation to an elm representation enum.
@@ -69,8 +69,8 @@ fromString enumString =
         "ERROR" ->
             Just Error
 
-        "OK" ->
-            Just Ok
+        "SUCCESS" ->
+            Just Success
 
         _ ->
             Nothing
