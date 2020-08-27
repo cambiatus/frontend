@@ -10,23 +10,126 @@ module Page.Community.Invite exposing
 import Api
 import Api.Graphql
 import Community exposing (Invite)
-import Eos.Account as Eos
+import Eos exposing (symbolToString)
+import Eos.Account exposing (nameToString)
 import Graphql.Http
-import Html exposing (Html, button, div, img, span, text)
-import Html.Attributes exposing (class, src)
-import Html.Events exposing (onClick)
+import Html exposing (Html, button, div, form, img, input, label, option, p, select, span, text)
+import Html.Attributes exposing (attribute, class, maxlength, placeholder, selected, src, type_, value)
+import Html.Events exposing (onClick, onInput, onSubmit)
 import Http
-import I18Next exposing (t)
+import Kyc.CostaRica.CedulaDeIdentidad as CedulaDeIdentidad
+import Kyc.CostaRica.Dimex as Dimex
+import Kyc.CostaRica.Nite as Nite
+import Kyc.CostaRica.Phone as Phone
 import Page exposing (Session(..), toShared)
 import Profile exposing (Profile)
 import Route
 import Session.LoggedIn as LoggedIn exposing (External)
-import Session.Shared exposing (Shared)
+import Session.Shared exposing (Translators)
 import UpdateResult as UR
+import Validate exposing (Validator, ifBlank, validate)
 import View.Modal as Modal
 
 
-init : Session -> String -> ( Model, Cmd Msg )
+
+-- TYPES
+
+
+type alias InvitationId =
+    String
+
+
+type PageStatus
+    = Loading
+    | NotFound
+    | Failed (Graphql.Http.Error (Maybe Invite))
+    | JoinConfirmation Invite
+    | AlreadyMemberNotice Invite
+    | KycInfo Invite
+    | Error Http.Error
+
+
+type ModalStatus
+    = Closed
+    | Open
+
+
+type CostaRicaDoc
+    = CedulaDoc
+    | DimexDoc
+    | NiteDoc
+
+
+type alias Doc =
+    { docType : CostaRicaDoc
+    , isValid : String -> Bool
+    , title : String
+    , value : String
+    , maxLength : Int
+    , pattern : String
+    }
+
+
+type KycFormField
+    = DocumentNumber
+    | PhoneNumber
+
+
+
+-- MODEL
+
+
+type alias Model =
+    { pageStatus : PageStatus
+    , confirmationModalStatus : ModalStatus
+    , invitationId : InvitationId
+    , kycForm : Maybe KycForm
+    }
+
+
+type alias KycForm =
+    { document : Doc
+    , documentNumber : String
+    , phoneNumber : String
+    , problems : List ( KycFormField, String )
+    }
+
+
+kycValidator : (String -> Bool) -> Validator ( KycFormField, String ) KycForm
+kycValidator isValid =
+    let
+        ifInvalidNumber subjectToString error =
+            Validate.ifFalse (\subject -> isValid (subjectToString subject)) error
+
+        ifInvalidPhoneNumber subjectToString error =
+            Validate.ifFalse (\subject -> Phone.isValid (subjectToString subject)) error
+    in
+    Validate.all
+        [ Validate.firstError
+            [ ifBlank .documentNumber ( DocumentNumber, "Please, enter a document number." )
+            , ifInvalidNumber .documentNumber ( DocumentNumber, "Please, use a valid document number." )
+            ]
+        , Validate.firstError
+            [ ifBlank .phoneNumber ( PhoneNumber, "Please, enter a phone number." )
+            , ifInvalidPhoneNumber .phoneNumber ( PhoneNumber, "Please, use a valid phone number." )
+            ]
+        ]
+
+
+
+-- INIT
+
+
+initModel : String -> Model
+initModel invitationId =
+    { pageStatus = Loading
+    , confirmationModalStatus = Closed
+    , invitationId = invitationId
+    , kycForm = Nothing
+    }
+
+
+init : Session -> InvitationId -> ( Model, Cmd Msg )
 init session invitationId =
     ( initModel invitationId
     , Api.Graphql.query
@@ -36,32 +139,17 @@ init session invitationId =
     )
 
 
-initModel : String -> Model
-initModel invitationId =
-    { status = Loading
-    , confirmationModal = Closed
-    , invitationId = invitationId
+initKycForm : KycForm
+initKycForm =
+    { document = valToDoc "Cedula"
+    , documentNumber = ""
+    , phoneNumber = ""
+    , problems = []
     }
 
 
-type alias Model =
-    { status : Status
-    , confirmationModal : ModalStatus
-    , invitationId : String
-    }
 
-
-type Status
-    = Loading
-    | NotFound
-    | Failed (Graphql.Http.Error (Maybe Invite))
-    | Loaded Invite
-    | Error Http.Error
-
-
-type ModalStatus
-    = Closed
-    | Open
+-- VIEW
 
 
 view : Session -> Model -> { title : String, content : Html Msg }
@@ -70,17 +158,20 @@ view session model =
         shared =
             toShared session
 
+        { t } =
+            shared.translators
+
         title =
-            case model.status of
-                Loaded invite ->
+            case model.pageStatus of
+                JoinConfirmation invite ->
                     let
                         inviter =
                             invite.creator.userName
-                                |> Maybe.withDefault (Eos.nameToString invite.creator.account)
+                                |> Maybe.withDefault (nameToString invite.creator.account)
                     in
                     inviter
                         ++ " "
-                        ++ t shared.translations "community.invitation.title"
+                        ++ t "community.invitation.title"
                         ++ " "
                         ++ invite.community.title
 
@@ -88,34 +179,173 @@ view session model =
                     ""
 
         content =
-            div [ class "flex flex-col min-h-screen" ]
-                [ div [ class "flex-grow" ]
-                    [ case model.status of
-                        Loading ->
-                            div [] []
+            case model.pageStatus of
+                Loading ->
+                    text ""
 
-                        NotFound ->
-                            div [] []
+                NotFound ->
+                    text ""
 
-                        Failed e ->
-                            Page.fullPageGraphQLError (t shared.translations "") e
+                Failed e ->
+                    Page.fullPageGraphQLError (t "") e
 
-                        Loaded invite ->
-                            div []
-                                [ viewHeader
-                                , viewContent shared invite model.invitationId
-                                , viewModal shared model model.invitationId
-                                ]
+                AlreadyMemberNotice invite ->
+                    let
+                        inner =
+                            viewExistingMemberNotice shared.translators invite.community.title
+                    in
+                    div []
+                        [ viewHeader
+                        , viewContent shared.translators invite inner
+                        ]
 
-                        Error e ->
-                            Page.fullPageError (t shared.translations "") e
-                    ]
-                , viewFooter session
-                ]
+                JoinConfirmation invite ->
+                    let
+                        inner =
+                            viewNewMemberConfirmation shared.translators model.invitationId invite
+                    in
+                    div []
+                        [ viewHeader
+                        , viewContent shared.translators invite inner
+                        , viewModal shared.translators model.confirmationModalStatus model.invitationId invite
+                        ]
+
+                KycInfo invite ->
+                    let
+                        formData =
+                            Maybe.withDefault initKycForm model.kycForm
+
+                        inner =
+                            viewKycForm shared.translators formData
+                                |> Html.map FormMsg
+                    in
+                    div []
+                        [ viewHeader
+                        , viewContent shared.translators invite inner
+                        ]
+
+                Error e ->
+                    Page.fullPageError (t "") e
     in
     { title = title
     , content = content
     }
+
+
+valToDoc : String -> Doc
+valToDoc v =
+    case v of
+        "DIMEX" ->
+            { docType = DimexDoc
+            , isValid = Dimex.isValid
+            , title = "DIMEX Number"
+            , value = "DIMEX"
+            , maxLength = 12
+            , pattern = "XXXXXXXXXXX or XXXXXXXXXXXX"
+            }
+
+        "NITE" ->
+            { docType = NiteDoc
+            , isValid = Nite.isValid
+            , title = "NITE Number"
+            , value = "NITE"
+            , maxLength = 10
+            , pattern = "XXXXXXXXXX"
+            }
+
+        _ ->
+            { docType = CedulaDoc
+            , isValid = CedulaDeIdentidad.isValid
+            , title = "Cédula de identidad"
+            , value = "Cedula"
+            , maxLength = 11
+            , pattern = "X-XXXX-XXXX"
+            }
+
+
+viewKycForm : Translators -> KycForm -> Html KycFormMsg
+viewKycForm { t } ({ document, documentNumber, phoneNumber, problems } as kycForm) =
+    let
+        { docType, pattern, maxLength, isValid, title } =
+            document
+
+        showProblem field =
+            case List.filter (\( f, _ ) -> f == field) problems of
+                h :: _ ->
+                    div [ class "form-error" ]
+                        [ text (Tuple.second h) ]
+
+                [] ->
+                    text ""
+    in
+    div [ class "md:max-w-sm md:mx-auto mt-6" ]
+        [ p []
+            [ text "This community requires it's members to have some more information. Please, fill these fields below." ]
+        , p [ class "mt-2 mb-6" ]
+            [ text "You can always remove this information from your profile if you decide to do so." ]
+        , form
+            [ onSubmit (KycFormSubmitted kycForm) ]
+            [ div [ class "form-field mb-6" ]
+                [ label [ class "input-label block" ]
+                    [ text "document type"
+                    ]
+                , select
+                    [ onInput DocumentTypeChanged
+                    , class "form-select"
+                    ]
+                    [ option
+                        [ value "Cedula"
+                        , selected (docType == CedulaDoc)
+                        ]
+                        [ text "Cedula de identidad" ]
+                    , option
+                        [ value "DIMEX"
+                        , selected (docType == DimexDoc)
+                        ]
+                        [ text "DIMEX number" ]
+                    , option
+                        [ value "NITE"
+                        , selected (docType == NiteDoc)
+                        ]
+                        [ text "NITE number" ]
+                    ]
+                ]
+            , div [ class "form-field mb-6" ]
+                [ label [ class "input-label block" ]
+                    [ text title ]
+                , input
+                    [ type_ "text"
+                    , class "form-input"
+                    , attribute "inputmode" "numeric"
+                    , onInput DocumentNumberEntered
+                    , value documentNumber
+                    , maxlength maxLength
+                    , placeholder pattern
+                    ]
+                    []
+                , showProblem DocumentNumber
+                ]
+            , div [ class "form-field mb-10" ]
+                [ label [ class "input-label block" ]
+                    [ text "phone number" ]
+                , input
+                    [ type_ "tel"
+                    , class "form-input"
+                    , value phoneNumber
+                    , onInput PhoneNumberEntered
+                    , maxlength 9
+                    , placeholder "XXXX-XXXX"
+                    ]
+                    []
+                , showProblem PhoneNumber
+                ]
+            , div []
+                [ button
+                    [ class "button w-full button-primary" ]
+                    [ text "Save and Join" ]
+                ]
+            ]
+        ]
 
 
 viewHeader : Html msg
@@ -124,68 +354,81 @@ viewHeader =
         []
 
 
-viewContent : Shared -> Invite -> String -> Html Msg
-viewContent shared invite invitationId =
-    let
-        text_ s =
-            text (I18Next.t shared.translations s)
+viewExistingMemberNotice : Translators -> String -> Html Msg
+viewExistingMemberNotice { t, tr } communityTitle =
+    div [ class "mt-6 text-center" ]
+        [ p [] [ text (t "community.invitation.already_member") ]
+        , p [ class "max-w-lg md:mx-auto mt-3" ]
+            [ text <|
+                tr "community.invitation.choose_community_tip"
+                    [ ( "communityTitle", communityTitle ) ]
+            ]
+        ]
 
+
+viewNewMemberConfirmation : Translators -> InvitationId -> Invite -> Html Msg
+viewNewMemberConfirmation { t } invitationId ({ community } as invite) =
+    div []
+        [ div [ class "mt-6 px-4 text-center" ]
+            [ span [ class "mr-1" ] [ text (t "community.invitation.subtitle") ]
+            , text community.title
+            , text "?"
+            ]
+        , div [ class "flex flex-wrap justify-center w-full mt-6" ]
+            [ button
+                [ class "button button-secondary w-full md:w-48 uppercase mb-4 md:mr-8"
+                , onClick OpenConfirmationModal
+                ]
+                [ text (t "community.invitation.no") ]
+            , button
+                [ class "button button-primary w-full md:w-48 uppercase"
+                , onClick (InvitationAccepted invitationId invite)
+                ]
+                [ text (t "community.invitation.yes") ]
+            ]
+        ]
+
+
+viewContent : Translators -> Invite -> Html Msg -> Html Msg
+viewContent { t } { creator, community } innerContent =
+    let
         inviter =
-            invite.creator.userName
-                |> Maybe.withDefault (Eos.nameToString invite.creator.account)
+            creator.userName
+                |> Maybe.withDefault (nameToString creator.account)
     in
     div [ class "bg-white pb-20" ]
         [ div [ class "flex flex-wrap content-end" ]
             [ div [ class "flex items-center justify-center h-24 w-24 rounded-full mx-auto -mt-12 bg-white" ]
                 [ img
-                    [ src invite.community.logo
+                    [ src community.logo
                     , class "object-scale-down h-20 w-20"
                     ]
                     []
                 ]
             ]
-        , div [ class " px-4" ]
-            [ div [ class "flex mx-auto justify-center justify-center mt-6" ]
-                [ div [ class "inline-block text-center text-heading font" ]
-                    [ span [ class "mr-1 font-medium" ] [ text inviter ]
-                    , text_ "community.invitation.title"
-                    , span [ class "ml-1 font-medium" ] [ text invite.community.title ]
+        , div [ class "px-4" ]
+            [ div [ class "mt-6" ]
+                [ div [ class "text-heading text-center" ]
+                    [ span [ class "font-medium" ]
+                        [ text inviter
+                        ]
+                    , text " "
+                    , text (t "community.invitation.title")
+                    , text " "
+                    , span [ class "font-medium" ]
+                        [ text community.title ]
                     ]
                 ]
-            , div [ class "flex mx-auto justify-center mt-6 px-4" ]
-                [ div [ class "inline-block text-center text-heading" ]
-                    [ span [ class "mr-1" ] [ text_ "community.invitation.subtitle" ]
-                    , text invite.community.title
-                    , text "?"
-                    ]
-                ]
-            , div [ class "flex flex-wrap justify-center w-full mt-6" ]
-                [ button
-                    [ class "button button-sm button-secondary w-full md:w-48 uppercase mb-4 md:mr-8"
-                    , onClick OpenConfirmationModal
-                    ]
-                    [ text_ "community.invitation.no" ]
-                , button
-                    [ class "button button-sm button-primary w-full md:w-48 uppercase"
-                    , onClick (AcceptInvitation invitationId)
-                    ]
-                    [ text_ "community.invitation.yes" ]
-                ]
+            , innerContent
             ]
         ]
 
 
-viewModal : Shared -> Model -> String -> Html Msg
-viewModal shared model invitationId =
+viewModal : Translators -> ModalStatus -> InvitationId -> Invite -> Html Msg
+viewModal { t } modalStatus invitationId invite =
     let
-        t s =
-            I18Next.t shared.translations s
-
-        text_ s =
-            text (t s)
-
         isModalVisible =
-            case model.confirmationModal of
+            case modalStatus of
                 Closed ->
                     False
 
@@ -198,35 +441,21 @@ viewModal shared model invitationId =
         }
         |> Modal.withHeader (t "community.invitation.modal.title")
         |> Modal.withBody
-            [ text_ "community.invitation.modal.body" ]
+            [ text (t "community.invitation.modal.body") ]
         |> Modal.withFooter
             [ button
                 [ class "modal-cancel"
-                , onClick RejectInvitation
+                , onClick InvitationRejected
                 ]
-                [ text_ "community.invitation.modal.no"
+                [ text (t "community.invitation.modal.no")
                 ]
             , button
                 [ class "modal-accept"
-                , onClick (AcceptInvitation invitationId)
+                , onClick (InvitationAccepted invitationId invite)
                 ]
-                [ text_ "community.invitation.modal.yes" ]
+                [ text (t "community.invitation.modal.yes") ]
             ]
         |> Modal.toHtml
-
-
-viewFooter : Session -> Html msg
-viewFooter session =
-    let
-        shared =
-            case session of
-                LoggedIn loggedIn ->
-                    loggedIn.shared
-
-                Guest guest ->
-                    guest.shared
-    in
-    LoggedIn.viewFooter shared
 
 
 
@@ -241,34 +470,140 @@ type Msg
     = CompletedLoad (Result (Graphql.Http.Error (Maybe Invite)) (Maybe Invite))
     | OpenConfirmationModal
     | CloseConfirmationModal
-    | RejectInvitation
-    | AcceptInvitation String
+    | InvitationRejected
+    | InvitationAccepted InvitationId Invite
     | CompletedSignIn LoggedIn.Model (Result Http.Error Profile)
+    | FormMsg KycFormMsg
+
+
+type KycFormMsg
+    = DocumentTypeChanged String
+    | DocumentNumberEntered String
+    | PhoneNumberEntered String
+    | KycFormSubmitted KycForm
+
+
+updateKycForm : KycForm -> KycFormMsg -> KycForm
+updateKycForm kycForm kycMsg =
+    case kycMsg of
+        DocumentTypeChanged val ->
+            { kycForm
+                | document = valToDoc val
+                , documentNumber = ""
+                , problems = []
+            }
+
+        DocumentNumberEntered n ->
+            let
+                trim : Int -> String -> String -> String
+                trim desiredLength oldNum newNum =
+                    let
+                        corrected =
+                            if String.all Char.isDigit newNum then
+                                newNum
+
+                            else
+                                oldNum
+                    in
+                    if String.length corrected > desiredLength then
+                        String.slice 0 desiredLength corrected
+
+                    else
+                        corrected
+
+                trimmedNumber =
+                    if String.startsWith "0" n then
+                        kycForm.documentNumber
+
+                    else
+                        trim kycForm.document.maxLength kycForm.documentNumber n
+            in
+            { kycForm | documentNumber = trimmedNumber }
+
+        KycFormSubmitted form ->
+            -- TODO: validate form, save user's Kyc data and signInInvitation
+            let
+                errors =
+                    case validate (kycValidator form.document.isValid) form of
+                        Ok _ ->
+                            []
+
+                        Err errs ->
+                            errs
+
+                newForm =
+                    { form | problems = errors }
+            in
+            newForm
+
+        PhoneNumberEntered p ->
+            { kycForm | phoneNumber = p }
 
 
 update : Session -> Msg -> Model -> UpdateResult
 update session msg model =
     case msg of
-        CompletedLoad (Ok (Just invitation)) ->
-            UR.init { model | status = Loaded invitation }
+        FormMsg kycFormMsg ->
+            let
+                newForm =
+                    case model.kycForm of
+                        Just f ->
+                            updateKycForm f kycFormMsg
+
+                        Nothing ->
+                            updateKycForm initKycForm kycFormMsg
+            in
+            { model | kycForm = Just newForm }
+                |> UR.init
+
+        CompletedLoad (Ok (Just invite)) ->
+            let
+                userCommunities =
+                    case session of
+                        LoggedIn { profile } ->
+                            case profile of
+                                LoggedIn.Loaded p ->
+                                    p.communities
+
+                                _ ->
+                                    []
+
+                        _ ->
+                            []
+
+                isAlreadyMember =
+                    let
+                        isMember c =
+                            symbolToString c.id == symbolToString invite.community.symbol
+                    in
+                    List.any isMember userCommunities
+
+                newPageStatus =
+                    if isAlreadyMember then
+                        AlreadyMemberNotice
+
+                    else
+                        JoinConfirmation
+            in
+            UR.init { model | pageStatus = newPageStatus invite }
 
         CompletedLoad (Ok Nothing) ->
-            UR.init { model | status = NotFound }
+            UR.init { model | pageStatus = NotFound }
 
         CompletedLoad (Err error) ->
-            { model | status = Failed error }
+            { model | pageStatus = Failed error }
                 |> UR.init
                 |> UR.logGraphqlError msg error
 
         OpenConfirmationModal ->
-            { model | confirmationModal = Open }
+            { model | confirmationModalStatus = Open }
                 |> UR.init
 
         CloseConfirmationModal ->
-            { model | confirmationModal = Closed }
+            { model | confirmationModalStatus = Closed }
                 |> UR.init
 
-        RejectInvitation ->
+        InvitationRejected ->
             case session of
                 LoggedIn loggedIn ->
                     model
@@ -284,17 +619,35 @@ update session msg model =
                                 |> Route.replaceUrl guest.shared.navKey
                             )
 
-        AcceptInvitation invitationId ->
+        InvitationAccepted invitationId invite ->
+            let
+                hasCommunityKycEnabled =
+                    -- TODO: Use `community.hasKyc` when it's ready
+                    False
+
+                hasInviteeKycFieldsFilled =
+                    -- TODO: check KYC fields in the user profile when the KYC query will be ready
+                    False
+
+                allowedToJoinCommunity =
+                    (hasCommunityKycEnabled && hasInviteeKycFieldsFilled)
+                        || not hasCommunityKycEnabled
+            in
             case session of
                 LoggedIn loggedIn ->
-                    model
-                        |> UR.init
-                        |> UR.addCmd
-                            (Api.signInInvitation loggedIn.shared
-                                loggedIn.accountName
-                                invitationId
-                                (CompletedSignIn loggedIn)
-                            )
+                    if allowedToJoinCommunity then
+                        model
+                            |> UR.init
+                            |> UR.addCmd
+                                (Api.signInInvitation loggedIn.shared
+                                    loggedIn.accountName
+                                    invitationId
+                                    (CompletedSignIn loggedIn)
+                                )
+
+                    else
+                        { model | pageStatus = KycInfo invite }
+                            |> UR.init
 
                 Guest guest ->
                     model
@@ -313,8 +666,12 @@ update session msg model =
                     )
 
         CompletedSignIn _ (Err err) ->
-            { model | status = Error err }
+            { model | pageStatus = Error err }
                 |> UR.init
+
+
+
+-- INTEROP
 
 
 msgToString : Msg -> List String
@@ -329,11 +686,14 @@ msgToString msg =
         CloseConfirmationModal ->
             [ "CloseConfirmationModal" ]
 
-        RejectInvitation ->
+        InvitationRejected ->
             [ "RejectInvitation" ]
 
-        AcceptInvitation _ ->
+        InvitationAccepted _ _ ->
             [ "AcceptInvitation" ]
+
+        FormMsg _ ->
+            [ "FormMsg" ]
 
         CompletedSignIn _ _ ->
             [ "CompletedSignIn" ]

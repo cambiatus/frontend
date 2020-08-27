@@ -265,7 +265,16 @@ viewInvitationModal { shared } model =
                     "https://"
 
         url invitationId =
-            protocol ++ shared.url.host ++ "/invite/" ++ invitationId
+            let
+                portStr =
+                    case shared.url.port_ of
+                        Just p ->
+                            ":" ++ String.fromInt p
+
+                        Nothing ->
+                            ""
+            in
+            protocol ++ shared.url.host ++ portStr ++ "/invite/" ++ invitationId
 
         isInviteModalVisible =
             case model.inviteModalStatus of
