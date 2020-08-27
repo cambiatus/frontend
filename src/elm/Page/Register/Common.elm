@@ -1,4 +1,4 @@
-module Page.Register.Common exposing (Errors(..), documentInput, viewSelectField, viewTitleForStep)
+module Page.Register.Common exposing (Errors(..), fieldProblems, viewSelectField, viewTitleForStep)
 
 import Html exposing (Html, p, strong, text)
 import Html.Attributes exposing (class)
@@ -42,30 +42,19 @@ viewTitleForStep translators s =
         ]
 
 
-documentInput : Translators -> (String -> msg) -> String -> String -> String -> Html msg
-documentInput translators onInput value documentType formTranslationString =
+fieldProblems : a -> List ( a, String ) -> Maybe (List String)
+fieldProblems field problems =
     let
-        selectedDocumentTranslationString =
-            formTranslationString ++ documentType
+        list =
+            problems
+                |> List.filter (\x -> Tuple.first x == field)
+                |> List.map (\x -> Tuple.second x)
     in
-    View.Form.Input.init
-        { id = "document"
-        , label = translators.t (selectedDocumentTranslationString ++ ".label")
-        , onInput = onInput
-        , disabled = False
-        , value = value
-        , placeholder = Just (translators.t (selectedDocumentTranslationString ++ ".placeholder"))
-        , problems = Nothing
-        , translators = translators
-        }
-        |> View.Form.Input.withCounter
-            (selectedDocumentTranslationString
-                ++ ".maximum"
-                |> translators.t
-                |> String.toInt
-                |> Maybe.withDefault 10
-            )
-        |> View.Form.Input.toHtml
+    if List.length list > 0 then
+        Just list
+
+    else
+        Nothing
 
 
 type Errors
