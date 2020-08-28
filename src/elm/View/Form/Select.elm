@@ -1,14 +1,17 @@
-module View.Form.Select exposing (init, toHtml, withOption)
+{- module View.Form.Select exposing (init, toHtml, withOption)
 
-{-| Creates a Cambiatus-style dropdown
+   | Creates a Cambiatus-style dropdown
 
-    View.Form.Select.init "country_select" "Country" EnteredCountry
-        |> View.Form.Select.withOption { value = "brasil", label = "Brasil" }
-        |> View.Form.Select.withOption { value = "costa_rica", label = "Costa Rica" }
-        |> View.Form.Select.withOption { value = "argentina", label = "Argentina" }
-        |> View.Form.Select.toHtml
+       View.Form.Select.init "country_select" "Country" EnteredCountry
+           |> View.Form.Select.withOption { value = "brasil", label = "Brasil" }
+           |> View.Form.Select.withOption { value = "costa_rica", label = "Costa Rica" }
+           |> View.Form.Select.withOption { value = "argentina", label = "Argentina" }
+           |> View.Form.Select.toHtml
 
 -}
+
+
+module View.Form.Select exposing (Option, Select, init, toHtml, withOption)
 
 import Html exposing (Html, text)
 import Html.Attributes exposing (class, value)
