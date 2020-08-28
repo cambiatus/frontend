@@ -561,25 +561,6 @@ update maybeInvitation msg model guest =
         ValidateForm formType ->
             UR.init model
 
-        -- UR.init
-        --     { model
-        --         | problems2 =
-        --             case formType of
-        --                 Juridical form ->
-        --                     case validate (JuridicalForm.validator guest.shared.translators) form of
-        --                         Ok _ ->
-        --                             model.problems2
-        --                         Err err ->
-        --                             err ++ model.problems2
-        --                 Natural form ->
-        --                     case validate (NaturalForm.validator guest.shared.translators) form of
-        --                         Ok _ ->
-        --                             model.problems2
-        --                         Err err ->
-        --                             err ++ model.problems2
-        --                 None ->
-        --                     model.problems2
-        --     }
         FormMsg formMsg ->
             case formMsg of
                 JuridicalFormMsg innerMsg ->
