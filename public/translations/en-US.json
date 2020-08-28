@@ -404,6 +404,10 @@
     },
     "verifyClaim": {
       "error": "Something went wrong while trying to process your validation, please try again later"
+    },
+    "kyc": {
+      "title": "KYC",
+      "info": "KYC means Know Your Customer and sometimes Know Your Client. KYC check is the mandatory process of identifying and verifying the identity of the client when opening an account and periodically over time. Before enable this feature, talk with us to understand better."
     }
   },
   "profile": {

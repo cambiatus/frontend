@@ -64,6 +64,11 @@ hasShop =
     Object.selectionForField "Bool" "hasShop" [] Decode.bool
 
 
+hasKyc : SelectionSet Bool Cambiatus.Object.Community
+hasKyc =
+    Object.selectionForField "Bool" "hasKyc" [] Decode.bool
+
+
 invitedReward : SelectionSet Float Cambiatus.Object.Community
 invitedReward =
     Object.selectionForField "Float" "invitedReward" [] Decode.float
