@@ -210,11 +210,15 @@
       "company": {
         "mipyme": {
           "name": "MIPYME",
-          "label": "MIPYME"
+          "label": "MIPYME",
+          "placeholder": "Ingrese los 10 dígitos",
+          "maximum": "10"
         },
         "corporation": {
           "label": "Gran Empresa",
-          "name": "Gran Empresa"
+          "name": "Gran Empresa",
+          "placeholder": "Ingrese los 10 dígitos",
+          "maximum": "10"
         }
       },
       "corporation": "Gran Empresa",

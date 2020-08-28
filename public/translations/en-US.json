@@ -206,11 +206,15 @@
       "company": {
         "mipyme": {
           "name": "MIPYME",
-          "label": "MIPYME"
+          "label": "MIPYME",
+          "placeholder": "Enter the 10 digits",
+          "maximum": "10"
         },
         "corporation": {
           "label": "Large-sized Company",
-          "name": "Corporation"
+          "name": "Corporation",
+          "placeholder": "Enter the 10 digits",
+          "maximum": "10"
         }
       },
       "corporation": "Corporation",

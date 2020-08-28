@@ -215,11 +215,15 @@
       "company": {
         "mipyme": {
           "name": "MIPYME",
-          "label": "MIPYME"
+          "label": "MIPYME",
+          "placeholder": "Entre os 10 dígitos",
+          "maximum": "10"
         },
         "corporation": {
           "label": "Corporação",
-          "name": "Corporação"
+          "name": "Corporação",
+          "placeholder": "Entre os 10 dígitos",
+          "maximum": "10"
         }
       },
       "corporation": "Corporação",
