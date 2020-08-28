@@ -1,7 +1,6 @@
 module Page.Community.Settings.Features exposing (Model, Msg, init, jsAddressToMsg, msgToString, update, view)
 
 import Api.Graphql
-import Cambiatus.Object.Community exposing (hasKyc)
 import Community
 import Eos exposing (Symbol)
 import Eos.Account
