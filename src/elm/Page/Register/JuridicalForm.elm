@@ -130,8 +130,6 @@ view translators model =
                     |> Maybe.withDefault 10
                 )
             |> View.Form.Input.toHtml
-
-        -- , documentInput translators EnteredDocument model.document "corporation" (formTranslationString ++ ".company.")
         , View.Form.Input.init
             { id = "name"
             , label = "Company Name"
