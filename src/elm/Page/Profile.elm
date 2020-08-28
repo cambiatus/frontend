@@ -7,7 +7,7 @@ import Eos exposing (Symbol)
 import Eos.Account as Eos
 import Graphql.Http
 import Html exposing (Html, a, button, div, input, label, li, p, span, text, ul)
-import Html.Attributes exposing (checked, class, classList, for, id, name, style, type_)
+import Html.Attributes exposing (checked, class, classList, for, id, name, type_)
 import Html.Events exposing (onClick)
 import Http
 import I18Next exposing (t)
@@ -20,8 +20,6 @@ import PushSubscription exposing (PushSubscription)
 import Route
 import Session.LoggedIn as LoggedIn exposing (External(..), FeedbackStatus(..))
 import Session.Shared exposing (Shared)
-import Svg exposing (path, svg)
-import Svg.Attributes exposing (d, fill, height, viewBox, width)
 import Task
 import UpdateResult as UR
 import View.Modal as Modal
