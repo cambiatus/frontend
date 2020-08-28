@@ -1,4 +1,4 @@
-module Page.Profile exposing (Model, Msg, init, jsAddressToMsg, msgToString, update, view, viewPrivateInfo, viewPublicInfo)
+module Page.Profile exposing (Model, Msg, init, jsAddressToMsg, msgToString, update, view, viewInfo, viewSettings)
 
 import Api.Graphql
 import Avatar
@@ -7,7 +7,7 @@ import Eos exposing (Symbol)
 import Eos.Account as Eos
 import Graphql.Http
 import Html exposing (Html, a, button, div, input, label, li, p, span, text, ul)
-import Html.Attributes exposing (checked, class, classList, for, id, name, type_)
+import Html.Attributes exposing (checked, class, classList, for, id, name, style, type_)
 import Html.Events exposing (onClick)
 import Http
 import I18Next exposing (t)
@@ -20,6 +20,8 @@ import PushSubscription exposing (PushSubscription)
 import Route
 import Session.LoggedIn as LoggedIn exposing (External(..), FeedbackStatus(..))
 import Session.Shared exposing (Shared)
+import Svg exposing (path, svg)
+import Svg.Attributes exposing (d, fill, height, viewBox, width)
 import Task
 import UpdateResult as UR
 import View.Modal as Modal
@@ -107,8 +109,13 @@ view loggedIn model =
                 Loaded profile ->
                     div []
                         [ Page.viewHeader loggedIn (t loggedIn.shared.translations "menu.profile") Route.Dashboard
-                        , viewPublicInfo loggedIn profile { hasTransferButton = False, hasEditLink = True }
-                        , viewPrivateInfo loggedIn model
+                        , viewInfo loggedIn
+                            profile
+                            { hasTransferButton = False
+                            , hasKyc = True
+                            , hasEditLink = True
+                            }
+                        , viewSettings loggedIn model
                         , viewNewPinModal model loggedIn.shared
                         , viewDownloadPdfErrorModal model loggedIn
                         ]
@@ -118,8 +125,8 @@ view loggedIn model =
     }
 
 
-viewPrivateInfo : LoggedIn.Model -> Model -> Html Msg
-viewPrivateInfo loggedIn model =
+viewSettings : LoggedIn.Model -> Model -> Html Msg
+viewSettings loggedIn model =
     let
         tr str =
             t loggedIn.shared.translations str
@@ -150,29 +157,55 @@ viewPrivateInfo loggedIn model =
     div [ class "bg-white mb-6" ]
         [ ul [ class "container divide-y divide-gray-500 mx-auto px-4" ]
             [ viewProfileItem
-                (tr "profile.12words.title")
+                (text (tr "profile.12words.title"))
                 (viewButton (tr "profile.12words.button") downloadAction)
                 Center
+                Nothing
             , viewProfileItem
-                (tr "profile.pin.title")
+                (text (tr "profile.pin.title"))
                 (viewButton (tr "profile.pin.button") ClickedChangePin)
                 Center
+                Nothing
             , viewProfileItem
-                (tr "notifications.title")
+                (text (tr "notifications.title"))
                 (viewTogglePush loggedIn model)
                 Center
+                Nothing
+
+            -- if community.hasKyc
+            , viewProfileItem
+                (span []
+                    [ text (tr "KYC data")
+                    , span [ class "icon-tooltip inline-block align-center ml-1" ]
+                        [ Icons.question "inline-block"
+                        , p
+                            [ class "icon-tooltip-content" ]
+                            [ text "KYC means Know Your Customer and sometimes Know Your Client. KYC check is the mandatory process of identifying and verifying the identity of the client when opening an account and periodically over time."
+                            ]
+                        ]
+                    ]
+                )
+                (viewDangerButton "Disallow" Ignored)
+                Center
+                (Just
+                    (div [ class "uppercase text-red pt-2 text-xs" ]
+                        [ text "important: if you disallow the use in the app, you will have no access to this community until informing us this data again."
+                        ]
+                    )
+                )
             ]
         ]
 
 
 type alias PublicInfoConfig =
     { hasTransferButton : Bool
+    , hasKyc : Bool
     , hasEditLink : Bool
     }
 
 
-viewPublicInfo : LoggedIn.Model -> Profile -> PublicInfoConfig -> Html msg
-viewPublicInfo loggedIn profile { hasTransferButton, hasEditLink } =
+viewInfo : LoggedIn.Model -> Profile -> PublicInfoConfig -> Html msg
+viewInfo loggedIn profile { hasTransferButton, hasKyc, hasEditLink } =
     let
         tr txt =
             t loggedIn.shared.translations txt
@@ -228,20 +261,42 @@ viewPublicInfo loggedIn profile { hasTransferButton, hasEditLink } =
                     [ text bio ]
                 ]
             , if hasTransferButton then
-                viewTransferButton loggedIn.shared loggedIn.selectedCommunity account
+                viewTransferButton
+                    loggedIn.shared
+                    loggedIn.selectedCommunity
+                    account
 
               else
                 text ""
             , ul [ class "divide-y divide-gray-500" ]
-                [ viewProfileItem
-                    (tr "profile.locations")
+                ([ viewProfileItem
+                    (text (tr "profile.locations"))
                     (text location)
                     Center
-                , viewProfileItem
-                    (tr "profile.interests")
+                    Nothing
+                 , viewProfileItem
+                    (text (tr "profile.interests"))
                     (text (String.join ", " profile.interests))
                     Top
-                ]
+                    Nothing
+                 ]
+                    ++ (if hasKyc then
+                            [ viewProfileItem
+                                (text (tr "Phone Number"))
+                                (text "12341234")
+                                Center
+                                Nothing
+                            , viewProfileItem
+                                (text (tr "Cedula de Identidad"))
+                                (text "12341234")
+                                Center
+                                Nothing
+                            ]
+
+                        else
+                            []
+                       )
+                )
             ]
         ]
 
@@ -251,8 +306,8 @@ type VerticalAlign
     | Center
 
 
-viewProfileItem : String -> Html msg -> VerticalAlign -> Html msg
-viewProfileItem lbl content vAlign =
+viewProfileItem : Html msg -> Html msg -> VerticalAlign -> Maybe (Html msg) -> Html msg
+viewProfileItem lbl content vAlign extraContent =
     let
         vAlignClass =
             case vAlign of
@@ -263,13 +318,22 @@ viewProfileItem lbl content vAlign =
                     "items-center"
     in
     li
-        [ class "flex justify-between py-4"
-        , class vAlignClass
-        ]
-        [ span [ class "text-sm leading-6 mr-4" ]
-            [ text lbl ]
-        , span [ class "text-indigo-500 font-medium text-sm text-right" ]
-            [ content ]
+        [ class "py-4" ]
+        [ div
+            [ class "flex justify-between"
+            , class vAlignClass
+            ]
+            [ span [ class "text-sm leading-6 mr-4" ]
+                [ lbl ]
+            , span [ class "text-indigo-500 font-medium text-sm text-right" ]
+                [ content ]
+            ]
+        , case extraContent of
+            Just extra ->
+                extra
+
+            Nothing ->
+                text ""
         ]
 
 
@@ -378,6 +442,16 @@ viewButton : String -> Msg -> Html Msg
 viewButton label msg =
     button
         [ class "button-secondary uppercase button-sm"
+        , onClick msg
+        ]
+        [ text label
+        ]
+
+
+viewDangerButton : String -> Msg -> Html Msg
+viewDangerButton label msg =
+    button
+        [ class "button-secondary uppercase button-sm text-red border-red"
         , onClick msg
         ]
         [ text label
