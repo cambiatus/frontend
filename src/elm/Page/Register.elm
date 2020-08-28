@@ -311,7 +311,7 @@ viewKycRegister : Translators -> Model -> Html Msg
 viewKycRegister translators model =
     div []
         [ viewFormTypeSelector translators model
-        , div [ class "sf-content" ]
+        , Html.form [ class "sf-content" ]
             [ case model.maybeInvitationId of
                 Just _ ->
                     let
@@ -559,7 +559,34 @@ update maybeInvitation msg model guest =
     in
     case msg of
         ValidateForm formType ->
-            UR.init model
+            let
+                validateForm validator form =
+                    case Validate.validate validator form of
+                        Ok _ ->
+                            form.problems
+
+                        Err err ->
+                            err
+            in
+            { model
+                | selectedForm =
+                    case formType of
+                        Juridical form ->
+                            Juridical
+                                { form
+                                    | problems = validateForm JuridicalForm.validator form
+                                }
+
+                        Natural form ->
+                            Natural
+                                { form
+                                    | problems = validateForm NaturalForm.validator form
+                                }
+
+                        None ->
+                            None
+            }
+                |> UR.init
 
         FormMsg formMsg ->
             case formMsg of

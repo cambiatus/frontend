@@ -1,7 +1,6 @@
 module Page.Register.JuridicalForm exposing (CompanyType(..), Model, Msg(..), init, update, validator, view)
 
-import Html exposing (Html, button, text)
-import Html.Events exposing (onClick, onSubmit)
+import Html exposing (Html)
 import Kyc.CostaRica.Phone as KycPhone
 import Page.Register.Common exposing (..)
 import Session.Shared exposing (Translators)
@@ -87,7 +86,6 @@ type Msg
     | EnteredCity String
     | EnteredDistrict String
     | EnteredAccount String
-    | ValidateForm
 
 
 
@@ -103,7 +101,7 @@ view translators model =
         companyTranslationString =
             formTranslationString ++ ".company." ++ companyTypeToString model.companyType
     in
-    Html.form [ onSubmit ValidateForm ]
+    Html.div []
         [ viewTitleForStep translators 1
         , viewSelectField (translators.t "register.form.company_type")
             (companyTypeToString model.companyType)
@@ -196,7 +194,6 @@ view translators model =
             , { value = "corporation", label = translators.t "register.form.company.corporation.label" }
             ]
             translators
-        , Html.button [] [ text "Valiasdfasdfadate" ]
         ]
 
 
@@ -247,17 +244,6 @@ update msg form =
 
         EnteredAccount str ->
             { form | account = str }
-
-        ValidateForm ->
-            { form
-                | problems =
-                    case Validate.validate validator form of
-                        Ok _ ->
-                            form.problems
-
-                        Err err ->
-                            err
-            }
 
 
 validator : Validator ( Field, String ) Model

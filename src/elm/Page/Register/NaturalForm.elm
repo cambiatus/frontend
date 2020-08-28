@@ -1,7 +1,6 @@
 module Page.Register.NaturalForm exposing (Document(..), Model, Msg(..), init, update, validator, view)
 
-import Html exposing (Html, button, text)
-import Html.Events exposing (onSubmit)
+import Html exposing (Html)
 import Kyc.CostaRica.Phone as KycPhone
 import Page.Login exposing (Model)
 import Page.Register.Common exposing (..)
@@ -79,7 +78,6 @@ type Msg
     | EnteredEmail String
     | EnteredPhone String
     | EnteredAccount String
-    | ValidateForm
 
 
 
@@ -95,7 +93,7 @@ view translators model =
         documentTranslationString =
             formTranslationString ++ ".document." ++ documentTypeToString model.documentType
     in
-    Html.form [ onSubmit ValidateForm ]
+    Html.div []
         [ viewTitleForStep translators 1
         , viewSelectField "Document Type"
             (documentTypeToString model.documentType)
@@ -168,7 +166,6 @@ view translators model =
             }
             |> View.Form.Input.withCounter 12
             |> View.Form.Input.toHtml
-        , button [] [ text "Validate" ]
         ]
 
 
@@ -210,17 +207,6 @@ update msg model =
 
         EnteredAccount account ->
             { model | account = account }
-
-        ValidateForm ->
-            { model
-                | problems =
-                    case Validate.validate validator model of
-                        Ok _ ->
-                            []
-
-                        Err err ->
-                            err
-            }
 
 
 validator : Validator ( Field, String ) Model
