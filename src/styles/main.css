@@ -126,6 +126,41 @@ textarea.input {
 
 /* End of Tooltip */
 
+/* Icon Tooltip */
+.icon-tooltip {
+  @apply relative inline-block;
+}
+
+.icon-tooltip .icon-tooltip-content {
+  @apply invisible absolute bg-black rounded-sm p-2 text-sm text-white;
+  width: 18em;
+  line-height: 1.4;
+  left: -3em;
+  margin-top: 10px;
+}
+
+.icon-tooltip:hover .icon-tooltip-content {
+  @apply visible;
+}
+
+.icon-tooltip::after {
+  visibility: hidden;
+  position: absolute;
+  content: ' ';
+  left: 50%;
+  margin-left: -10px;
+  top: 14px;
+  border-width: 10px;
+  border-style: solid;
+  border-color: transparent transparent black transparent;
+}
+
+.icon-tooltip:hover:after {
+  @apply visible;
+}
+
+/* End of Icon Tooltip */
+
 /* Modal */
 
 .modal {
