@@ -264,7 +264,7 @@ async function handleJavascriptPort (arg) {
         }
       }
 
-      devLog('generateAccount response', response)
+      devLog('generateKeys response', response)
       app.ports.javascriptInPort.send(response)
       break
     }

@@ -1,8 +1,7 @@
-module Page.Register exposing (Model, Msg, init, jsAddressToMsg, msgToString, subscriptions, update, view)
+module Page.Register exposing (Model, Msg, init, jsAddressToMsg, msgToString, update, view)
 
 import Api.Graphql
 import Auth exposing (SignUpResult, viewFieldLabel)
-import Browser.Events
 import Char
 import Eos.Account as Eos
 import Graphql.Http
@@ -15,9 +14,7 @@ import Json.Encode as Encode
 import Route
 import Session.Guest as Guest exposing (External(..))
 import Session.Shared exposing (Translators)
-import Task
 import UpdateResult as UR
-import Utils exposing (decodeEnterKeyDown)
 import Validate exposing (ifBlank, ifFalse, ifInvalidEmail, ifTrue, validate)
 
 
@@ -30,15 +27,6 @@ init guest =
     ( initModel guest
     , Cmd.none
     )
-
-
-
--- SUBSCRIPTIONS
-
-
-subscriptions : Model -> Sub Msg
-subscriptions _ =
-    Sub.map KeyPressed (Browser.Events.onKeyDown decodeEnterKeyDown)
 
 
 
@@ -496,7 +484,6 @@ type Msg
     | AgreedToSave12Words Bool
     | DownloadPdf PdfData
     | PdfDownloaded
-    | KeyPressed Bool
     | CopyToClipboard String
     | CopiedToClipboard
 
@@ -708,17 +695,6 @@ update maybeInvitation msg model guest =
                             -- Go to login page after downloading PDF
                             (Route.replaceUrl guest.shared.navKey (Route.Login Nothing))
 
-        KeyPressed isEnter ->
-            if isEnter then
-                UR.init model
-                    |> UR.addCmd
-                        (Task.succeed (ValidateForm model.form)
-                            |> Task.perform identity
-                        )
-
-            else
-                UR.init model
-
 
 
 --
@@ -809,6 +785,3 @@ msgToString msg =
 
         PdfDownloaded ->
             [ "PdfDownloaded" ]
-
-        KeyPressed _ ->
-            [ "KeyPressed" ]
