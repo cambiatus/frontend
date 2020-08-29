@@ -1,6 +1,6 @@
-{- module View.Form.Input exposing (init, input, toHtml, withCounter)
+module View.Form.Input exposing (init, input, toHtml, withCounter)
 
-   | Creates a Cambiatus-style text input that supports error reporting, placeholders, localization
+{- | Creates a Cambiatus-style text input that supports error reporting, placeholders, localization
    and character counters.
 
        View.Form.Input.init
@@ -17,9 +17,6 @@
            |> View.Form.Input.toHtml
 
 -}
-
-
-module View.Form.Input exposing (InputOptions, RequiredInputOptions, init, input, toHtml, viewFieldProblem, withCounter)
 
 import Html exposing (Html, div, input, li, text, ul)
 import Html.Attributes exposing (class, disabled, id, placeholder, value)
