@@ -1,9 +1,7 @@
 module Page.Register exposing (Model, Msg, init, jsAddressToMsg, msgToString, subscriptions, update, view)
 
-import Api
 import Api.Graphql
 import Browser.Events
-import Char
 import Community exposing (Invite)
 import Eos.Account as Eos
 import Graphql.Http
@@ -21,10 +19,9 @@ import Profile exposing (Profile)
 import Route
 import Session.Guest as Guest exposing (External(..))
 import Session.Shared exposing (Translators, viewFullLoading)
-import Task
 import UpdateResult as UR
 import Utils exposing (decodeEnterKeyDown)
-import Validate exposing (Valid, ifBlank, ifFalse, ifInvalidEmail, ifTrue, validate)
+import Validate exposing (validate)
 
 
 
