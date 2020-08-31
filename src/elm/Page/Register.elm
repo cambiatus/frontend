@@ -9,7 +9,7 @@ import Eos.Account as Eos
 import Graphql.Http
 import Html exposing (Html, button, div, img, input, label, li, p, span, strong, text, ul)
 import Html.Attributes exposing (checked, class, disabled, for, id, src, style, type_, value)
-import Html.Events exposing (onCheck, onClick)
+import Html.Events exposing (onCheck, onClick, onSubmit)
 import Http
 import Json.Decode as Decode exposing (Decoder, Value)
 import Json.Decode.Pipeline as Decode
@@ -283,22 +283,24 @@ view guest model =
     { title =
         t "register.registerTab"
     , content =
-        div [ class "flex flex-grow flex-col bg-white md:block px-4 px-0" ]
-            [ case model.status of
+        Html.form
+            [ class "flex flex-grow flex-col bg-white md:block px-4 px-0"
+            , onSubmit (ValidateForm model.selectedForm)
+            ]
+            (case model.status of
                 Loaded invitation ->
                     if invitation.community.hasShop == True then
-                        viewKycRegister guest.shared.translators model
+                        [ viewKycRegister guest.shared.translators model ]
 
                     else
-                        viewDefaultAccountRegister guest.shared.translators model
+                        [ viewDefaultAccountRegister guest.shared.translators model, button [] [ text "validate" ] ]
 
                 Loading ->
-                    div [] []
+                    []
 
                 _ ->
                     Debug.todo "Error"
-            , button [ onClick (ValidateForm model.selectedForm) ] [ text "validate" ]
-            ]
+            )
 
     -- if model.accountGenerated then
     --     viewAccountGenerated
@@ -312,26 +314,26 @@ viewKycRegister translators model =
     div []
         [ viewFormTypeSelector translators model
         , Html.form [ class "sf-content" ]
-            [ case model.maybeInvitationId of
+            (case model.maybeInvitationId of
                 Just _ ->
                     let
                         selectedForm =
                             case model.selectedForm of
                                 Natural form ->
-                                    NaturalForm.view translators form |> Html.map NaturalFormMsg
+                                    [ NaturalForm.view translators form |> Html.map NaturalFormMsg, viewSubmitButton translators ]
 
                                 Juridical form ->
-                                    JuridicalForm.view translators form |> Html.map JuridicalFormMsg
+                                    [ JuridicalForm.view translators form |> Html.map JuridicalFormMsg, viewSubmitButton translators ]
 
                                 None ->
-                                    div [] []
+                                    []
                     in
                     case model.status of
                         Loaded _ ->
                             selectedForm
 
                         Loading ->
-                            Session.Shared.viewFullLoading
+                            [ Session.Shared.viewFullLoading ]
 
                         Failed _ ->
                             Debug.todo "Implement error"
@@ -340,10 +342,15 @@ viewKycRegister translators model =
                             Debug.todo "Implement not found"
 
                 Nothing ->
-                    div [] []
-            ]
+                    []
+            )
             |> Html.map FormMsg
         ]
+
+
+viewSubmitButton : Translators -> Html msg
+viewSubmitButton translators =
+    button [ class "button button-primary w-full mb-4" ] [ text (translators.t "auth.login.continue") ]
 
 
 viewFormTypeSelector : Translators -> Model -> Html Msg
