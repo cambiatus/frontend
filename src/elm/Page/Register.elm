@@ -13,6 +13,7 @@ import Json.Decode as Decode exposing (Decoder, Value)
 import Json.Decode.Pipeline as Decode
 import Json.Encode as Encode
 import Page.Register.Common as Common
+import Page.Register.DefaultForm as DefaultForm
 import Page.Register.JuridicalForm as JuridicalForm
 import Page.Register.NaturalForm as NaturalForm
 import Profile exposing (Profile)
@@ -78,6 +79,7 @@ type FormType
     = None
     | Natural NaturalForm.Model
     | Juridical JuridicalForm.Model
+    | Default DefaultForm.Model
 
 
 initModel : Maybe String -> Guest.Model -> Model
@@ -89,10 +91,22 @@ initModel maybeInvitationId _ =
     , isPassphraseCopiedToClipboard = False
     , accountGenerated = False
     , problems = []
-    , status = Loading
+    , status =
+        case maybeInvitationId of
+            Just _ ->
+                Loading
+
+            Nothing ->
+                LoadedDefaultCommunity
     , maybeInvitationId = maybeInvitationId
     , documentNumber = ""
-    , selectedForm = None
+    , selectedForm =
+        case maybeInvitationId of
+            Just _ ->
+                None
+
+            Nothing ->
+                Default DefaultForm.init
     , problems2 = []
     }
 
@@ -283,6 +297,15 @@ view guest model =
 
 viewCreateAccount : Translators -> Model -> Html Msg
 viewCreateAccount translators model =
+    let
+        defaultForm =
+            case model.selectedForm of
+                Default form ->
+                    [ DefaultForm.view translators form |> Html.map DefaultFormMsg1, viewFooter translators ]
+
+                _ ->
+                    []
+    in
     Html.form
         [ class "flex flex-grow flex-col bg-white px-4 px-0"
         , onSubmit (ValidateForm model.selectedForm)
@@ -293,7 +316,10 @@ viewCreateAccount translators model =
                     [ viewKycRegister translators model, viewFooter translators ]
 
                 else
-                    [ viewDefaultAccountRegister translators model, viewFooter translators ]
+                    defaultForm
+
+            LoadedDefaultCommunity ->
+                defaultForm
 
             Loading ->
                 []
@@ -330,11 +356,17 @@ viewKycRegister translators model =
                                 Juridical form ->
                                     [ JuridicalForm.view translators form |> Html.map JuridicalFormMsg ]
 
+                                Default form ->
+                                    [ DefaultForm.view translators form |> Html.map DefaultFormMsg ]
+
                                 None ->
                                     []
                     in
                     case model.status of
                         Loaded _ ->
+                            selectedForm
+
+                        LoadedDefaultCommunity ->
                             selectedForm
 
                         Loading ->
@@ -459,14 +491,6 @@ viewTitleForStep translators s =
         ]
 
 
-viewDefaultAccountRegister : Translators -> Model -> Html Msg
-viewDefaultAccountRegister translators model =
-    div []
-        [ viewServerErrors model.problems
-        , viewTitleForStep translators 1
-        ]
-
-
 viewServerErrors : List Problem -> Html msg
 viewServerErrors problems =
     let
@@ -543,11 +567,13 @@ type Msg
     | CompletedLoadInvite (Result (Graphql.Http.Error (Maybe Invite)) (Maybe Invite))
     | AccountTypeSelected AccountType
     | FormMsg EitherFormMsg
+    | DefaultFormMsg1 DefaultForm.Msg
 
 
 type EitherFormMsg
     = JuridicalFormMsg JuridicalForm.Msg
     | NaturalFormMsg NaturalForm.Msg
+    | DefaultFormMsg DefaultForm.Msg
 
 
 type Status
@@ -555,6 +581,7 @@ type Status
     | Loading
     | Failed (Graphql.Http.Error (Maybe Invite))
     | NotFound
+    | LoadedDefaultCommunity
 
 
 type alias PdfData =
@@ -595,6 +622,12 @@ update maybeInvitation msg model guest =
                                     | problems = validateForm NaturalForm.validator form
                                 }
 
+                        Default form ->
+                            Default
+                                { form
+                                    | problems = validateForm DefaultForm.validator form
+                                }
+
                         None ->
                             None
             }
@@ -617,6 +650,22 @@ update maybeInvitation msg model guest =
 
                         _ ->
                             UR.init model
+
+                DefaultFormMsg innerMsg ->
+                    case model.selectedForm of
+                        Default form ->
+                            UR.init { model | selectedForm = Default (DefaultForm.update innerMsg form) }
+
+                        _ ->
+                            UR.init model
+
+        DefaultFormMsg1 formMsg ->
+            case model.selectedForm of
+                Default form ->
+                    UR.init { model | selectedForm = Default (DefaultForm.update formMsg form) }
+
+                _ ->
+                    UR.init model
 
         AccountTypeSelected type_ ->
             UR.init
@@ -813,3 +862,6 @@ msgToString msg =
 
         KeyPressed _ ->
             [ "KeyPressed" ]
+
+        DefaultFormMsg1 _ ->
+            [ "DefaultFormMsg1" ]
