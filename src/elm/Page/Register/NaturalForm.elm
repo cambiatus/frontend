@@ -206,7 +206,14 @@ update msg model =
             { model | phone = phone }
 
         EnteredAccount account ->
-            { model | account = account }
+            { model
+                | account =
+                    if String.length account > 12 then
+                        model.account
+
+                    else
+                        account
+            }
 
 
 validator : Validator ( Field, String ) Model

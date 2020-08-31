@@ -239,7 +239,14 @@ update msg form =
             { form | district = str }
 
         EnteredAccount str ->
-            { form | account = str }
+            { form
+                | account =
+                    if String.length str > 12 then
+                        form.account
+
+                    else
+                        str
+            }
 
 
 validator : Validator ( Field, String ) Model

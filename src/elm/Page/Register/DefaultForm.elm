@@ -100,7 +100,14 @@ update msg form =
             { form | name = name }
 
         EnteredAccount account ->
-            { form | account = account }
+            { form
+                | account =
+                    if String.length account > 12 then
+                        form.account
+
+                    else
+                        account
+            }
 
         EnteredEmail email ->
             { form | email = email }
