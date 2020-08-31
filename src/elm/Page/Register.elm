@@ -7,7 +7,7 @@ import Char
 import Community exposing (Invite)
 import Eos.Account as Eos
 import Graphql.Http
-import Html exposing (Html, button, div, img, input, label, li, p, span, strong, text, ul)
+import Html exposing (Html, a, button, div, img, input, label, li, p, span, strong, text, ul)
 import Html.Attributes exposing (checked, class, disabled, for, id, src, style, type_, value)
 import Html.Events exposing (onCheck, onClick, onSubmit)
 import Http
@@ -284,16 +284,16 @@ view guest model =
         t "register.registerTab"
     , content =
         Html.form
-            [ class "flex flex-grow flex-col bg-white md:block px-4 px-0"
+            [ class "flex flex-grow flex-col bg-white px-4 px-0"
             , onSubmit (ValidateForm model.selectedForm)
             ]
             (case model.status of
                 Loaded invitation ->
                     if invitation.community.hasShop == True then
-                        [ viewKycRegister guest.shared.translators model ]
+                        [ viewKycRegister guest.shared.translators model, viewFooter guest.shared.translators ]
 
                     else
-                        [ viewDefaultAccountRegister guest.shared.translators model, button [] [ text "validate" ] ]
+                        [ viewDefaultAccountRegister guest.shared.translators model, viewFooter guest.shared.translators ]
 
                 Loading ->
                     []
@@ -309,21 +309,32 @@ view guest model =
     }
 
 
+viewFooter : Translators -> Html msg
+viewFooter translators =
+    div [ class "mt-auto flex flex-col justify-between items-center h-32" ]
+        [ span []
+            [ text (translators.t "register.login")
+            , a [ class "underline text-orange-300", Route.href (Route.Login Nothing) ] [ text (translators.t "register.authLink") ]
+            ]
+        , viewSubmitButton translators
+        ]
+
+
 viewKycRegister : Translators -> Model -> Html Msg
 viewKycRegister translators model =
     div []
         [ viewFormTypeSelector translators model
-        , Html.form [ class "sf-content" ]
+        , div [ class "sf-content" ]
             (case model.maybeInvitationId of
                 Just _ ->
                     let
                         selectedForm =
                             case model.selectedForm of
                                 Natural form ->
-                                    [ NaturalForm.view translators form |> Html.map NaturalFormMsg, viewSubmitButton translators ]
+                                    [ NaturalForm.view translators form |> Html.map NaturalFormMsg ]
 
                                 Juridical form ->
-                                    [ JuridicalForm.view translators form |> Html.map JuridicalFormMsg, viewSubmitButton translators ]
+                                    [ JuridicalForm.view translators form |> Html.map JuridicalFormMsg ]
 
                                 None ->
                                     []
