@@ -306,27 +306,29 @@ viewCreateAccount translators model =
                 _ ->
                     []
     in
-    Html.form
-        [ class "flex flex-grow flex-col bg-white px-4 px-0"
-        , onSubmit (ValidateForm model.selectedForm)
-        ]
-        (case model.status of
-            Loaded invitation ->
-                if invitation.community.hasShop == True then
-                    [ viewKycRegister translators model, viewFooter translators ]
+    div [ class "flex justify-center flex-grow bg-white" ]
+        [ Html.form
+            [ class "flex flex-grow flex-col bg-white px-4 px-0 md:max-w-sm sf-wrapper"
+            , onSubmit (ValidateForm model.selectedForm)
+            ]
+            (case model.status of
+                Loaded invitation ->
+                    if invitation.community.hasShop == True then
+                        [ viewKycRegister translators model, viewFooter translators ]
 
-                else
+                    else
+                        defaultForm
+
+                LoadedDefaultCommunity ->
                     defaultForm
 
-            LoadedDefaultCommunity ->
-                defaultForm
+                Loading ->
+                    []
 
-            Loading ->
-                []
-
-            _ ->
-                Debug.todo "Error"
-        )
+                _ ->
+                    Debug.todo "Error"
+            )
+        ]
 
 
 viewFooter : Translators -> Html msg
