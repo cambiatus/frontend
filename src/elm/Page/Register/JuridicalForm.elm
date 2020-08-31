@@ -81,7 +81,6 @@ type Msg
     | EnteredName String
     | EnteredEmail String
     | EnteredPhone String
-    | EnteredUsername String
     | EnteredState String
     | EnteredCity String
     | EnteredDistrict String
@@ -229,9 +228,6 @@ update msg form =
 
         EnteredPhone str ->
             { form | phone = str }
-
-        EnteredUsername str ->
-            { form | username = str }
 
         EnteredState str ->
             { form | state = str }
