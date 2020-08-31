@@ -108,14 +108,6 @@ type alias Form =
     }
 
 
-initForm : Form
-initForm =
-    { username = ""
-    , email = ""
-    , account = ""
-    }
-
-
 type Problem
     = InvalidEntry ValidatedField String
     | ServerError String
