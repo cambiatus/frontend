@@ -283,30 +283,35 @@ view guest model =
     { title =
         t "register.registerTab"
     , content =
-        Html.form
-            [ class "flex flex-grow flex-col bg-white px-4 px-0"
-            , onSubmit (ValidateForm model.selectedForm)
-            ]
-            (case model.status of
-                Loaded invitation ->
-                    if invitation.community.hasShop == True then
-                        [ viewKycRegister guest.shared.translators model, viewFooter guest.shared.translators ]
-
-                    else
-                        [ viewDefaultAccountRegister guest.shared.translators model, viewFooter guest.shared.translators ]
-
-                Loading ->
-                    []
-
-                _ ->
-                    Debug.todo "Error"
-            )
+        viewCreateAccount guest.shared.translators model
 
     -- if model.accountGenerated then
     --     viewAccountGenerated
     -- else
     --     viewCreateAccount
     }
+
+
+viewCreateAccount : Translators -> Model -> Html Msg
+viewCreateAccount translators model =
+    Html.form
+        [ class "flex flex-grow flex-col bg-white px-4 px-0"
+        , onSubmit (ValidateForm model.selectedForm)
+        ]
+        (case model.status of
+            Loaded invitation ->
+                if invitation.community.hasShop == True then
+                    [ viewKycRegister translators model, viewFooter translators ]
+
+                else
+                    [ viewDefaultAccountRegister translators model, viewFooter translators ]
+
+            Loading ->
+                []
+
+            _ ->
+                Debug.todo "Error"
+        )
 
 
 viewFooter : Translators -> Html msg
