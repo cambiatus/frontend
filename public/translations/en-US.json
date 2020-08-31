@@ -85,7 +85,8 @@
     "chooseOrUploadLogo": "Choose or upload a logo.",
     "invalidSymbol": "Invalid symbol.",
     "unknown": "Uoh. Something wrong happened.",
-    "accountNotFound": "Account not found. Are you sure you created your account?"
+    "accountNotFound": "Account not found. Are you sure you created your account?",
+    "phone": "Please use a valid phone number"
   },
   "auth": {
     "title": "Use your private key and PIN or log in by",

@@ -611,23 +611,27 @@ update maybeInvitation msg model guest =
             in
             { model
                 | selectedForm =
+                    let
+                        translators =
+                            guest.shared.translators
+                    in
                     case formType of
                         Juridical form ->
                             Juridical
                                 { form
-                                    | problems = validateForm JuridicalForm.validator form
+                                    | problems = validateForm (JuridicalForm.validator translators) form
                                 }
 
                         Natural form ->
                             Natural
                                 { form
-                                    | problems = validateForm NaturalForm.validator form
+                                    | problems = validateForm (NaturalForm.validator translators) form
                                 }
 
                         Default form ->
                             Default
                                 { form
-                                    | problems = validateForm DefaultForm.validator form
+                                    | problems = validateForm (DefaultForm.validator translators) form
                                 }
 
                         None ->

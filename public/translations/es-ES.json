@@ -85,7 +85,8 @@
     "chooseOrUploadLogo": "Escoje o sube tu propio logo.",
     "invalidSymbol": "Simbolo invalido.",
     "unknown": "Oh oh. Algo salió mal.",
-    "accountNotFound": "Cuenta no encontrada. ¿Estás seguro de haber creado tu cuenta?"
+    "accountNotFound": "Cuenta no encontrada. ¿Estás seguro de haber creado tu cuenta?",
+    "phone": "Utilice un número de teléfono válido"
   },
   "auth": {
     "title": "Use su clave privada y PIN o inicie sesión por",

@@ -249,31 +249,31 @@ update msg form =
             }
 
 
-validator : Validator ( Field, String ) Model
-validator =
+validator : Translators -> Validator ( Field, String ) Model
+validator { t } =
     let
         ifInvalidPhoneNumber subjectToString error =
             Validate.ifFalse (\subject -> KycPhone.isValid (subjectToString subject)) error
     in
     Validate.all
         [ Validate.firstError
-            [ Validate.ifBlank .name ( Name, "required" )
+            [ Validate.ifBlank .name ( Name, t "error.required" )
             ]
         , Validate.firstError
-            [ Validate.ifBlank .document ( Document, "required" )
+            [ Validate.ifBlank .document ( Document, t "error.required" )
             ]
         , Validate.firstError
-            [ Validate.ifBlank .email ( Email, "required" )
-            , Validate.ifInvalidEmail .email (\_ -> ( Email, "invalid e-mail" ))
+            [ Validate.ifBlank .email ( Email, t "error.required" )
+            , Validate.ifInvalidEmail .email (\_ -> ( Email, t "error.email" ))
             ]
         , Validate.firstError
-            [ Validate.ifBlank .account ( Account, "required" )
-            , Validate.ifTrue (\f -> String.length f.account < 12) ( Account, "too short" )
-            , Validate.ifTrue (\f -> String.length f.account > 12) ( Account, "too long" )
-            , Validate.ifFalse (\f -> String.all Char.isAlphaNum f.account) ( Account, "charerror" )
+            [ Validate.ifBlank .account ( Account, t "error.required" )
+            , Validate.ifTrue (\f -> String.length f.account < 12) ( Account, t "error.validator.text.exactly" )
+            , Validate.ifTrue (\f -> String.length f.account > 12) ( Account, t "error.validator.text.exactly" )
+            , Validate.ifFalse (\f -> String.all Char.isAlphaNum f.account) ( Account, t "error.invalidChar" )
             ]
         , Validate.firstError
-            [ Validate.ifBlank .phone ( Phone, "required" )
-            , ifInvalidPhoneNumber .phone ( Phone, "Please, use a valid phone number." )
+            [ Validate.ifBlank .phone ( Phone, t "error.required" )
+            , ifInvalidPhoneNumber .phone ( Phone, t "error.phone" )
             ]
         ]
