@@ -1,7 +1,9 @@
-module Page.Register exposing (Model, Msg, init, jsAddressToMsg, msgToString, subscriptions, update, view)
+module Page.Register exposing (Model, Msg, init, jsAddressToMsg, msgToString, update, view)
 
+import Api
 import Api.Graphql
 import Browser.Events
+import Cambiatus.Mutation
 import Community exposing (Invite)
 import Eos.Account as Eos
 import Graphql.Http
@@ -39,15 +41,6 @@ init maybeInvitationId guest =
         Nothing ->
             Cmd.none
     )
-
-
-
--- SUBSCRIPTIONS
-
-
-subscriptions : Model -> Sub Msg
-subscriptions _ =
-    Sub.map KeyPressed (Browser.Events.onKeyDown decodeEnterKeyDown)
 
 
 
@@ -558,7 +551,6 @@ type alias UpdateResult =
 type Msg
     = ValidateForm FormType
     | GotAccountAvailabilityResponse Bool
-    | KeyPressed Bool
     | AccountGenerated (Result Decode.Error AccountKeys)
     | CompletedCreateProfile AccountKeys (Result Http.Error Profile)
     | AgreedToSave12Words Bool
@@ -608,6 +600,20 @@ update maybeInvitation msg model guest =
 
                         Err err ->
                             err
+
+                account =
+                    case formType of
+                        Juridical form ->
+                            Just form.account
+
+                        Natural form ->
+                            Just form.account
+
+                        Default form ->
+                            Just form.account
+
+                        None ->
+                            Nothing
             in
             { model
                 | selectedForm =
@@ -638,6 +644,15 @@ update maybeInvitation msg model guest =
                             None
             }
                 |> UR.init
+                |> UR.addPort
+                    { responseAddress = ValidateForm formType
+                    , responseData = Encode.null
+                    , data =
+                        Encode.object
+                            [ ( "name", Encode.string "checkAccountAvailability" )
+                            , ( "accountName", Encode.string (Maybe.withDefault "" account) )
+                            ]
+                    }
 
         FormMsg formMsg ->
             case formMsg of
@@ -720,14 +735,34 @@ update maybeInvitation msg model guest =
                 UR.init
                     { model
                         | isCheckingAccount = False
+                        , selectedForm =
+                            case model.selectedForm of
+                                Juridical form ->
+                                    Juridical { form | problems = ( JuridicalForm.Account, t "error.alreadyTaken" ) :: form.problems }
+
+                                Natural form ->
+                                    Natural { form | problems = ( NaturalForm.Account, t "error.alreadyTaken" ) :: form.problems }
+
+                                Default form ->
+                                    Default { form | problems = ( DefaultForm.Account, t "error.alreadyTaken" ) :: form.problems }
+
+                                None ->
+                                    model.selectedForm
                     }
 
         AccountGenerated (Err v) ->
             UR.init
                 { model
                     | isLoading = False
+                    , problems = []
                 }
                 |> UR.logDecodeError msg v
+
+        AccountGenerated (Ok _) ->
+            UR.init model
+
+        CompletedCreateProfile _ (Err _) ->
+            UR.init model
 
         CompletedCreateProfile _ (Ok _) ->
             { model | accountGenerated = True }
@@ -792,9 +827,6 @@ update maybeInvitation msg model guest =
                 |> UR.init
                 |> UR.logGraphqlError msg error
 
-        _ ->
-            UR.init model
-
 
 
 --
@@ -806,14 +838,15 @@ jsAddressToMsg : List String -> Value -> Maybe Msg
 jsAddressToMsg addr val =
     case addr of
         "ValidateForm" :: [] ->
-            Decode.decodeValue
+            Debug.log "jsaddressvalidateform"
+                Decode.decodeValue
                 (Decode.field "isAvailable" Decode.bool)
                 val
                 |> Result.map GotAccountAvailabilityResponse
                 |> Result.toMaybe
 
         "GotAccountAvailabilityResponse" :: _ ->
-            Decode.decodeValue (Decode.field "data" decodeAccount) val
+            Debug.log "hiFromjsAddressToMsg" Decode.decodeValue (Decode.field "data" decodeAccount) val
                 |> AccountGenerated
                 |> Just
 
@@ -865,9 +898,6 @@ msgToString msg =
 
         AccountTypeSelected _ ->
             [ "AccountTypeSelected" ]
-
-        KeyPressed _ ->
-            [ "KeyPressed" ]
 
         DefaultFormMsg1 _ ->
             [ "DefaultFormMsg1" ]

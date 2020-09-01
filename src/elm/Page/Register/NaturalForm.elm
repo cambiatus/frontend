@@ -1,4 +1,4 @@
-module Page.Register.NaturalForm exposing (Document(..), Model, Msg(..), init, update, validator, view)
+module Page.Register.NaturalForm exposing (Document(..), Field(..), Model, Msg(..), init, update, validator, view)
 
 import Html exposing (Html)
 import Kyc.CostaRica.Phone as KycPhone

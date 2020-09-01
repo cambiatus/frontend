@@ -1,4 +1,4 @@
-module Page.Register.DefaultForm exposing (Model, Msg(..), init, update, validator, view)
+module Page.Register.DefaultForm exposing (Field(..), Model, Msg(..), init, update, validator, view)
 
 import Html exposing (Html)
 import Page.Register.Common exposing (fieldProblems, viewTitleForStep)

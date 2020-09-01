@@ -1,4 +1,4 @@
-module Page.Register.JuridicalForm exposing (CompanyType(..), Model, Msg(..), init, update, validator, view)
+module Page.Register.JuridicalForm exposing (CompanyType(..), Field(..), Model, Msg(..), init, update, validator, view)
 
 import Html exposing (Html)
 import Kyc.CostaRica.Phone as KycPhone

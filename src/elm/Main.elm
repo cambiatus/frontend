@@ -107,10 +107,6 @@ subscriptions model =
                 Dashboard.subscriptions subModel
                     |> Sub.map GotDashboardMsg
 
-            Register _ subModel ->
-                Register.subscriptions subModel
-                    |> Sub.map GotRegisterMsg
-
             Community subModel ->
                 CommunityPage.subscriptions subModel
                     |> Sub.map GotCommunityMsg
