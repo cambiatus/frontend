@@ -166,115 +166,6 @@ view guest model =
 
         isDisabled =
             model.isLoading || model.isCheckingAccount
-
-        name =
-            accName model
-
-        passphraseTextId =
-            "passphraseText"
-
-        passphraseInputId =
-            -- Passphrase text is duplicated in `input:text` to be able to copy via Browser API
-            "passphraseWords"
-
-        viewAccountGenerated =
-            div
-                [ class "flex-grow bg-purple-500 flex md:block"
-                ]
-                [ div
-                    [ class "sf-wrapper"
-                    , class "px-4 md:max-w-sm md:mx-auto md:pt-20 md:px-0 text-white text-body"
-                    ]
-                    [ div [ class "sf-content" ]
-                        [ viewTitleForStep shared.translators 2
-                        , p
-                            [ class "text-xl mb-3" ]
-                            [ text (t "register.account_created.greet")
-                            , text " "
-                            , strong [] [ text name ]
-                            , text ", "
-                            , text (t "register.account_created.last_step")
-                            ]
-                        , p [ class "mb-3" ]
-                            [ text (t "register.account_created.instructions")
-                            ]
-                        , div [ class "w-1/4 m-auto relative left-1" ]
-                            [ img [ src "images/reg-passphrase-boy.svg" ]
-                                []
-                            , img
-                                [ class "absolute w-1/4 -mt-2 -ml-10"
-                                , src "images/reg-passphrase-boy-hand.svg"
-                                ]
-                                []
-                            ]
-                        , div [ class "bg-white text-black text-2xl mb-12 p-4 rounded-lg" ]
-                            [ p [ class "input-label" ]
-                                [ text (t "register.account_created.twelve_words")
-                                , if model.isPassphraseCopiedToClipboard then
-                                    strong [ class "uppercase ml-1" ]
-                                        [ text (t "register.account_created.words_copied")
-                                        , text " ✔"
-                                        ]
-
-                                  else
-                                    text ""
-                                ]
-                            , p
-                                [ class "pb-2 leading-tight" ]
-                                [ span [ id passphraseTextId ] [ text (words model) ]
-                                , input
-                                    -- We use `HTMLInputElement.select()` method in port to select and copy the text. This method
-                                    -- works only with `input` and `textarea` elements which has to be presented in DOM (e.g. we can't
-                                    -- hide it with `display: hidden`), so we hide it using position and opacity.
-                                    [ type_ "text"
-                                    , class "absolute opacity-0"
-                                    , style "left" "-9999em"
-                                    , id passphraseInputId
-                                    , value (words model)
-                                    ]
-                                    []
-                                ]
-                            , button
-                                [ class "button m-auto button-primary button-sm"
-                                , onClick <| CopyToClipboard passphraseInputId
-                                ]
-                                [ text (t "register.account_created.copy") ]
-                            ]
-                        ]
-                    , div [ class "sf-footer" ]
-                        [ div [ class "my-4" ]
-                            [ label [ class "form-label block" ]
-                                [ input
-                                    [ type_ "checkbox"
-                                    , class "form-checkbox mr-2 p-1"
-                                    , checked model.hasAgreedToSavePassphrase
-                                    , onCheck AgreedToSave12Words
-                                    ]
-                                    []
-                                , text (t "register.account_created.i_saved_words")
-                                , text " 💜"
-                                ]
-                            ]
-                        , case pdfData model of
-                            Just data ->
-                                button
-                                    [ onClick <| DownloadPdf data
-                                    , class "button button-primary w-full mb-8"
-                                    , disabled (not model.hasAgreedToSavePassphrase)
-                                    , class <|
-                                        if model.hasAgreedToSavePassphrase then
-                                            ""
-
-                                        else
-                                            "button-disabled text-gray-600"
-                                    ]
-                                    [ text (t "register.account_created.download") ]
-
-                            Nothing ->
-                                text ""
-                        ]
-                    ]
-                ]
     in
     { title =
         t "register.registerTab"
@@ -288,40 +179,160 @@ view guest model =
     }
 
 
+viewAccountGenerated : Translators -> Model -> AccountKeys -> Html Msg
+viewAccountGenerated ({ t } as translators) model keys =
+    let
+        name =
+            Eos.nameToString keys.accountName
+
+        k =
+            Debug.log "keys" keys
+
+        passphraseTextId =
+            "passphraseText"
+
+        passphraseInputId =
+            -- Passphrase text is duplicated in `input:text` to be able to copy via Browser API
+            "passphraseWords"
+    in
+    div
+        [ class "flex-grow bg-purple-500 flex md:block"
+        ]
+        [ div
+            [ class "sf-wrapper"
+            , class "px-4 md:max-w-sm md:mx-auto md:pt-20 md:px-0 text-white text-body"
+            ]
+            [ div [ class "sf-content" ]
+                [ viewTitleForStep translators 2
+                , p
+                    [ class "text-xl mb-3" ]
+                    [ text (t "register.account_created.greet")
+                    , text " "
+                    , strong [] [ text name ]
+                    , text ", "
+                    , text (t "register.account_created.last_step")
+                    ]
+                , p [ class "mb-3" ]
+                    [ text (t "register.account_created.instructions")
+                    ]
+                , div [ class "w-1/4 m-auto relative left-1" ]
+                    [ img [ src "images/reg-passphrase-boy.svg" ]
+                        []
+                    , img
+                        [ class "absolute w-1/4 -mt-2 -ml-10"
+                        , src "images/reg-passphrase-boy-hand.svg"
+                        ]
+                        []
+                    ]
+                , div [ class "bg-white text-black text-2xl mb-12 p-4 rounded-lg" ]
+                    [ p [ class "input-label" ]
+                        [ text (t "register.account_created.twelve_words")
+                        , if model.isPassphraseCopiedToClipboard then
+                            strong [ class "uppercase ml-1" ]
+                                [ text (t "register.account_created.words_copied")
+                                , text " ✔"
+                                ]
+
+                          else
+                            text ""
+                        ]
+                    , p
+                        [ class "pb-2 leading-tight" ]
+                        [ span [ id passphraseTextId ] [ text keys.words ]
+                        , input
+                            -- We use `HTMLInputElement.select()` method in port to select and copy the text. This method
+                            -- works only with `input` and `textarea` elements which has to be presented in DOM (e.g. we can't
+                            -- hide it with `display: hidden`), so we hide it using position and opacity.
+                            [ type_ "text"
+                            , class "absolute opacity-0"
+                            , style "left" "-9999em"
+                            , id passphraseInputId
+                            , value keys.words
+                            ]
+                            []
+                        ]
+                    , button
+                        [ class "button m-auto button-primary button-sm"
+                        , onClick <| CopyToClipboard passphraseInputId
+                        ]
+                        [ text (t "register.account_created.copy") ]
+                    ]
+                ]
+            , div [ class "sf-footer" ]
+                [ div [ class "my-4" ]
+                    [ label [ class "form-label block" ]
+                        [ input
+                            [ type_ "checkbox"
+                            , class "form-checkbox mr-2 p-1"
+                            , checked model.hasAgreedToSavePassphrase
+                            , onCheck AgreedToSave12Words
+                            ]
+                            []
+                        , text (t "register.account_created.i_saved_words")
+                        , text " 💜"
+                        ]
+                    ]
+                , case pdfData model of
+                    Just data ->
+                        button
+                            [ onClick <| DownloadPdf data
+                            , class "button button-primary w-full mb-8"
+                            , disabled (not model.hasAgreedToSavePassphrase)
+                            , class <|
+                                if model.hasAgreedToSavePassphrase then
+                                    ""
+
+                                else
+                                    "button-disabled text-gray-600"
+                            ]
+                            [ text (t "register.account_created.download") ]
+
+                    Nothing ->
+                        text ""
+                ]
+            ]
+        ]
+
+
 viewCreateAccount : Translators -> Model -> Html Msg
 viewCreateAccount translators model =
     let
+        formElement element =
+            div [ class "flex justify-center flex-grow bg-white" ]
+                [ Html.form
+                    [ class "flex flex-grow flex-col bg-white px-4 px-0 md:max-w-sm sf-wrapper"
+                    , onSubmit (ValidateForm model.selectedForm)
+                    ]
+                    element
+                ]
+
         defaultForm =
             case model.selectedForm of
                 Default form ->
-                    [ DefaultForm.view translators form |> Html.map DefaultFormMsg1, viewFooter translators ]
+                    formElement [ DefaultForm.view translators form |> Html.map DefaultFormMsg1, viewFooter translators ]
 
                 _ ->
-                    []
+                    div [] []
     in
-    div [ class "flex justify-center flex-grow bg-white" ]
-        [ Html.form
-            [ class "flex flex-grow flex-col bg-white px-4 px-0 md:max-w-sm sf-wrapper"
-            , onSubmit (ValidateForm model.selectedForm)
-            ]
-            (case model.status of
-                Loaded invitation ->
-                    if invitation.community.hasShop == True then
-                        [ viewKycRegister translators model, viewFooter translators ]
+    case model.status of
+        Loaded invitation ->
+            if invitation.community.hasShop == True then
+                formElement [ viewKycRegister translators model, viewFooter translators ]
 
-                    else
-                        defaultForm
+            else
+                defaultForm
 
-                LoadedDefaultCommunity ->
-                    defaultForm
+        LoadedDefaultCommunity ->
+            defaultForm
 
-                Loading ->
-                    []
+        Loading ->
+            div [] []
 
-                _ ->
-                    Debug.todo "Error"
-            )
-        ]
+        Generated keys ->
+            viewAccountGenerated translators model keys
+
+        _ ->
+            Debug.todo "Error"
 
 
 viewFooter : Translators -> Html msg
@@ -372,6 +383,9 @@ viewKycRegister translators model =
 
                         NotFound ->
                             Debug.todo "Implement not found"
+
+                        Generated keys ->
+                            Debug.todo "Account Generated page"
 
                 Nothing ->
                     []
@@ -508,16 +522,6 @@ viewServerErrors problems =
         ul [ class "bg-red border-lg rounded p-4 mt-2 text-white" ] errorList
 
 
-accName : Model -> String
-accName model =
-    case model.accountKeys of
-        Just keys ->
-            Eos.nameToString keys.accountName
-
-        Nothing ->
-            ""
-
-
 pdfData : Model -> Maybe PdfData
 pdfData model =
     Maybe.andThen
@@ -528,16 +532,6 @@ pdfData model =
                 }
         )
         model.accountKeys
-
-
-words : Model -> String
-words model =
-    case model.accountKeys of
-        Just keys ->
-            keys.words
-
-        Nothing ->
-            ""
 
 
 
@@ -576,6 +570,7 @@ type Status
     | Failed (Graphql.Http.Error (Maybe Invite))
     | NotFound
     | LoadedDefaultCommunity
+    | Generated AccountKeys
 
 
 type alias PdfData =
@@ -650,7 +645,7 @@ update maybeInvitation msg model guest =
                     , data =
                         Encode.object
                             [ ( "name", Encode.string "checkAccountAvailability" )
-                            , ( "accountName", Encode.string (Maybe.withDefault "" account) )
+                            , ( "account", Encode.string (Maybe.withDefault "" (Debug.log "account" account)) )
                             ]
                     }
 
@@ -722,8 +717,22 @@ update maybeInvitation msg model guest =
                                         Just invitationId ->
                                             Encode.string invitationId
                                   )
+                                , ( "account"
+                                  , Encode.string
+                                        (case model.selectedForm of
+                                            Juridical form ->
+                                                form.account
 
-                                -- , ( "account", Encode.string model.form.account )
+                                            Natural form ->
+                                                form.account
+
+                                            Default form ->
+                                                form.account
+
+                                            None ->
+                                                ""
+                                        )
+                                  )
                                 ]
                         }
 
@@ -758,8 +767,8 @@ update maybeInvitation msg model guest =
                 }
                 |> UR.logDecodeError msg v
 
-        AccountGenerated (Ok _) ->
-            UR.init model
+        AccountGenerated (Ok account) ->
+            UR.init { model | status = Generated account }
 
         CompletedCreateProfile _ (Err _) ->
             UR.init model
@@ -838,15 +847,14 @@ jsAddressToMsg : List String -> Value -> Maybe Msg
 jsAddressToMsg addr val =
     case addr of
         "ValidateForm" :: [] ->
-            Debug.log "jsaddressvalidateform"
-                Decode.decodeValue
+            Decode.decodeValue
                 (Decode.field "isAvailable" Decode.bool)
                 val
                 |> Result.map GotAccountAvailabilityResponse
                 |> Result.toMaybe
 
         "GotAccountAvailabilityResponse" :: _ ->
-            Debug.log "hiFromjsAddressToMsg" Decode.decodeValue (Decode.field "data" decodeAccount) val
+            Decode.decodeValue (Decode.field "data" decodeAccount) val
                 |> AccountGenerated
                 |> Just
 
