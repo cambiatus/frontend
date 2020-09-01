@@ -257,33 +257,24 @@ saveFeature feature state authorization accountName community =
                 Shop ->
                     state
 
-                Objectives ->
-                    community.hasShop
-
-                Kyc ->
+                _ ->
                     community.hasShop
 
         hasObjectives =
             case feature of
-                Shop ->
-                    community.hasObjectives
-
                 Objectives ->
                     state
 
-                Kyc ->
+                _ ->
                     community.hasObjectives
 
         hasKyc =
             case feature of
-                Shop ->
-                    community.hasKyc
-
-                Objectives ->
-                    community.hasKyc
-
                 Kyc ->
                     state
+
+                _ ->
+                    community.hasKyc
 
         data =
             { accountName = accountName
