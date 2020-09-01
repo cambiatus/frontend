@@ -54,6 +54,11 @@ description =
     Object.selectionForField "String" "description" [] Decode.string
 
 
+hasKyc : SelectionSet Bool Cambiatus.Object.Community
+hasKyc =
+    Object.selectionForField "Bool" "hasKyc" [] Decode.bool
+
+
 hasObjectives : SelectionSet Bool Cambiatus.Object.Community
 hasObjectives =
     Object.selectionForField "Bool" "hasObjectives" [] Decode.bool
