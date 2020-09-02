@@ -59,6 +59,7 @@ type alias Model =
     , newPinErrorMsg : Maybe String
     , isPushNotificationsEnabled : Bool
     , maybePdfDownloadedSuccessfully : Maybe Bool
+    , isDisallowKycModalShowed : Bool
     }
 
 
@@ -72,6 +73,7 @@ initModel _ =
     , newPinErrorMsg = Nothing
     , isPushNotificationsEnabled = False
     , maybePdfDownloadedSuccessfully = Nothing
+    , isDisallowKycModalShowed = False
     }
 
 
@@ -116,11 +118,36 @@ view loggedIn model =
                         , viewSettings loggedIn model
                         , viewNewPinModal model loggedIn.shared
                         , viewDownloadPdfErrorModal model loggedIn
+                        , viewDisallowKycModal model
                         ]
     in
     { title = title
     , content = content
     }
+
+
+viewDisallowKycModal : Model -> Html Msg
+viewDisallowKycModal model =
+    Modal.initWith
+        { closeMsg = ToggleDisallowKycModal
+        , isVisible = model.isDisallowKycModalShowed
+        }
+        |> Modal.withHeader "Disallow KYC data"
+        |> Modal.withBody
+            [ div []
+                [ text "Are you sure want to disallow your KYC data? You will not be able to participate to the community."
+                ]
+            ]
+        |> Modal.withFooter
+            [ button
+                [ class "modal-cancel"
+                , onClick ToggleDisallowKycModal
+                ]
+                [ text "No" ]
+            , button [ class "modal-accept" ]
+                [ text "Yes" ]
+            ]
+        |> Modal.toHtml
 
 
 viewSettings : LoggedIn.Model -> Model -> Html Msg
@@ -183,7 +210,7 @@ viewSettings loggedIn model =
                         ]
                     ]
                 )
-                (viewDangerButton "Disallow" Ignored)
+                (viewDangerButton "Disallow" ToggleDisallowKycModal)
                 Center
                 (Just
                     (div [ class "uppercase text-red pt-2 text-xs" ]
@@ -524,6 +551,7 @@ type Msg
     | TogglePinReadability
     | GotPushPreference Bool
     | RequestPush
+    | ToggleDisallowKycModal
     | CheckPushPref
     | GotPushSub PushSubscription
     | CompletedPushUpload (Result (Graphql.Http.Error ()) ())
@@ -549,6 +577,10 @@ update msg model loggedIn =
     case msg of
         Ignored ->
             UR.init model
+
+        ToggleDisallowKycModal ->
+            { model | isDisallowKycModalShowed = not model.isDisallowKycModalShowed }
+                |> UR.init
 
         CompletedProfileLoad (Ok Nothing) ->
             UR.init model
@@ -789,6 +821,9 @@ msgToString msg =
     case msg of
         Ignored ->
             [ "Ignored" ]
+
+        ToggleDisallowKycModal ->
+            [ "DisallowKycClicked" ]
 
         CompletedProfileLoad r ->
             [ "CompletedProfileLoad", UR.resultToString r ]
