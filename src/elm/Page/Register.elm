@@ -645,7 +645,7 @@ update maybeInvitation msg model guest =
                     , data =
                         Encode.object
                             [ ( "name", Encode.string "checkAccountAvailability" )
-                            , ( "account", Encode.string (Maybe.withDefault "" (Debug.log "account" account)) )
+                            , ( "account", Encode.string (Maybe.withDefault "" account) )
                             ]
                     }
 
