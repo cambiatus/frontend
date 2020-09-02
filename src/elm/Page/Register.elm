@@ -1,25 +1,20 @@
-module Page.Register exposing (Model, Msg, init, jsAddressToMsg, msgToString, subscriptions, update, view)
+module Page.Register exposing (Model, Msg, init, jsAddressToMsg, msgToString, update, view)
 
-import Api
-import Auth exposing (viewFieldLabel)
-import Browser.Events
+import Api.Graphql
+import Auth exposing (SignUpResult, viewFieldLabel)
 import Char
 import Eos.Account as Eos
+import Graphql.Http
 import Html exposing (Attribute, Html, a, button, div, img, input, label, li, p, span, strong, text, ul)
 import Html.Attributes exposing (attribute, checked, class, disabled, id, maxlength, placeholder, src, style, type_, value)
 import Html.Events exposing (onCheck, onClick, onInput, onSubmit)
-import Http
-import I18Next exposing (t)
 import Json.Decode as Decode exposing (Decoder, Value)
 import Json.Decode.Pipeline as Decode
 import Json.Encode as Encode
-import Profile exposing (Profile)
 import Route
 import Session.Guest as Guest exposing (External(..))
 import Session.Shared exposing (Translators)
-import Task
 import UpdateResult as UR
-import Utils exposing (decodeEnterKeyDown)
 import Validate exposing (ifBlank, ifFalse, ifInvalidEmail, ifTrue, validate)
 
 
@@ -32,15 +27,6 @@ init guest =
     ( initModel guest
     , Cmd.none
     )
-
-
-
--- SUBSCRIPTIONS
-
-
-subscriptions : Model -> Sub Msg
-subscriptions _ =
-    Sub.map KeyPressed (Browser.Events.onKeyDown decodeEnterKeyDown)
 
 
 
@@ -110,7 +96,6 @@ type alias AccountKeys =
     { ownerKey : String
     , activeKey : String
     , accountName : Eos.Name
-    , transactionId : String
     , words : String
     , privateKey : String
     }
@@ -122,7 +107,6 @@ decodeAccount =
         |> Decode.required "ownerKey" Decode.string
         |> Decode.required "activeKey" Decode.string
         |> Decode.required "accountName" Eos.nameDecoder
-        |> Decode.required "transactionId" Decode.string
         |> Decode.required "words" Decode.string
         |> Decode.required "privateKey" Decode.string
 
@@ -260,11 +244,11 @@ view guest model =
                             [ text (t "register.account_created.instructions")
                             ]
                         , div [ class "w-1/4 m-auto relative left-1" ]
-                            [ img [ src "images/reg-passphrase-boy.svg" ]
+                            [ img [ src "/images/reg-passphrase-boy.svg" ]
                                 []
                             , img
                                 [ class "absolute w-1/4 -mt-2 -ml-10"
-                                , src "images/reg-passphrase-boy-hand.svg"
+                                , src "/images/reg-passphrase-boy-hand.svg"
                                 ]
                                 []
                             ]
@@ -495,12 +479,11 @@ type Msg
     = UpdateForm FormInputMsg
     | ValidateForm Form
     | GotAccountAvailabilityResponse Bool
-    | AccountGenerated (Result Decode.Error AccountKeys)
-    | CompletedCreateProfile AccountKeys (Result Http.Error Profile)
+    | KeysGenerated (Result Decode.Error AccountKeys)
+    | CompletedSignUp AccountKeys (Result (Graphql.Http.Error (Maybe SignUpResult)) (Maybe SignUpResult))
     | AgreedToSave12Words Bool
     | DownloadPdf PdfData
     | PdfDownloaded
-    | KeyPressed Bool
     | CopyToClipboard String
     | CopiedToClipboard
 
@@ -593,7 +576,7 @@ update maybeInvitation msg model guest =
                         , responseData = Encode.null
                         , data =
                             Encode.object
-                                [ ( "name", Encode.string "generateAccount" )
+                                [ ( "name", Encode.string "generateKeys" )
                                 , ( "invitationId"
                                   , case maybeInvitation of
                                         Nothing ->
@@ -617,7 +600,7 @@ update maybeInvitation msg model guest =
                         , isCheckingAccount = False
                     }
 
-        AccountGenerated (Ok accountKeys) ->
+        KeysGenerated (Ok accountKeys) ->
             UR.init
                 { model
                     | isLoading = True
@@ -627,40 +610,42 @@ update maybeInvitation msg model guest =
                 |> UR.addCmd
                     (case maybeInvitation of
                         Nothing ->
-                            Api.signUp guest.shared
-                                { name = model.form.username
-                                , email = model.form.email
-                                , account = accountKeys.accountName
-                                , invitationId = maybeInvitation
-                                }
-                                (CompletedCreateProfile accountKeys)
+                            Api.Graphql.mutation guest.shared
+                                (Auth.signUp accountKeys.accountName
+                                    model.form.username
+                                    model.form.email
+                                    accountKeys.ownerKey
+                                    Nothing
+                                )
+                                (CompletedSignUp accountKeys)
 
-                        Just _ ->
-                            Api.signUpWithInvitation guest.shared
-                                { name = model.form.username
-                                , email = model.form.email
-                                , account = accountKeys.accountName
-                                , invitationId = maybeInvitation
-                                }
-                                (CompletedCreateProfile accountKeys)
+                        Just invitationId ->
+                            Api.Graphql.mutation guest.shared
+                                (Auth.signUp accountKeys.accountName
+                                    model.form.username
+                                    model.form.email
+                                    accountKeys.ownerKey
+                                    (Just invitationId)
+                                )
+                                (CompletedSignUp accountKeys)
                     )
 
-        AccountGenerated (Err v) ->
+        KeysGenerated (Err v) ->
             UR.init
                 { model
                     | isLoading = False
-                    , problems = ServerError "The server acted in an unexpected way" :: model.problems
+                    , problems = ServerError "Key generation failed" :: model.problems
                 }
                 |> UR.logDecodeError msg v
 
-        CompletedCreateProfile _ (Ok _) ->
+        CompletedSignUp _ (Ok _) ->
             { model | accountGenerated = True }
                 |> UR.init
 
-        CompletedCreateProfile _ (Err err) ->
+        CompletedSignUp _ (Err err) ->
             { model | problems = ServerError "Auth failed" :: model.problems }
                 |> UR.init
-                |> UR.logHttpError msg err
+                |> UR.logGraphqlError msg err
 
         AgreedToSave12Words val ->
             { model | hasAgreedToSavePassphrase = val }
@@ -710,17 +695,6 @@ update maybeInvitation msg model guest =
                             -- Go to login page after downloading PDF
                             (Route.replaceUrl guest.shared.navKey (Route.Login Nothing))
 
-        KeyPressed isEnter ->
-            if isEnter then
-                UR.init model
-                    |> UR.addCmd
-                        (Task.succeed (ValidateForm model.form)
-                            |> Task.perform identity
-                        )
-
-            else
-                UR.init model
-
 
 
 --
@@ -766,7 +740,7 @@ jsAddressToMsg addr val =
 
         "GotAccountAvailabilityResponse" :: _ ->
             Decode.decodeValue (Decode.field "data" decodeAccount) val
-                |> AccountGenerated
+                |> KeysGenerated
                 |> Just
 
         "PdfDownloaded" :: _ ->
@@ -791,11 +765,11 @@ msgToString msg =
         GotAccountAvailabilityResponse _ ->
             [ "GotAccountAvailabilityResponse" ]
 
-        AccountGenerated r ->
-            [ "AccountGenerated", UR.resultToString r ]
+        KeysGenerated r ->
+            [ "KeysGenerated", UR.resultToString r ]
 
-        CompletedCreateProfile _ r ->
-            [ "CompletedCreateProfile", UR.resultToString r ]
+        CompletedSignUp _ _ ->
+            [ "CompletedSignUp" ]
 
         AgreedToSave12Words _ ->
             [ "AgreedToSave12Words" ]
@@ -811,6 +785,3 @@ msgToString msg =
 
         PdfDownloaded ->
             [ "PdfDownloaded" ]
-
-        KeyPressed _ ->
-            [ "KeyPressed" ]

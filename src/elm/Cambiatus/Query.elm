@@ -100,6 +100,17 @@ community requiredArgs object_ =
     Object.selectionForCompositeField "community" [ Argument.required "symbol" requiredArgs.symbol Encode.string ] object_ (identity >> Decode.nullable)
 
 
+type alias CountryRequiredArguments =
+    { input : Cambiatus.InputObject.CountryInput }
+
+
+{-| List of supported countries
+-}
+country : CountryRequiredArguments -> SelectionSet decodesTo Cambiatus.Object.Country -> SelectionSet (Maybe decodesTo) RootQuery
+country requiredArgs object_ =
+    Object.selectionForCompositeField "country" [ Argument.required "input" requiredArgs.input Cambiatus.InputObject.encodeCountryInput ] object_ (identity >> Decode.nullable)
+
+
 type alias InviteRequiredArguments =
     { input : Cambiatus.InputObject.InviteInput }
 
