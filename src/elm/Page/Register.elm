@@ -737,10 +737,6 @@ update maybeInvitation msg model guest =
                         }
 
             else
-                let
-                    fieldError =
-                        InvalidEntry Account (t "error.alreadyTaken")
-                in
                 UR.init
                     { model
                         | isCheckingAccount = False
