@@ -3,10 +3,15 @@ module Page.Register exposing (Model, Msg, init, jsAddressToMsg, msgToString, up
 import Api
 import Api.Graphql
 import Browser.Events
-import Cambiatus.Mutation
+import Cambiatus.Enum.SignUpStatus as SignUpStatus
+import Cambiatus.InputObject as InputObject
+import Cambiatus.Mutation as Mutation
+import Cambiatus.Object as Object
+import Cambiatus.Object.SignUp
 import Community exposing (Invite)
 import Eos.Account as Eos
 import Graphql.Http
+import Graphql.SelectionSet exposing (with)
 import Html exposing (Html, a, button, div, img, input, label, li, p, span, strong, text, ul)
 import Html.Attributes exposing (checked, class, disabled, for, id, src, style, type_, value)
 import Html.Events exposing (onCheck, onClick, onSubmit)
@@ -21,7 +26,7 @@ import Page.Register.NaturalForm as NaturalForm
 import Profile exposing (Profile)
 import Route
 import Session.Guest as Guest exposing (External(..))
-import Session.Shared exposing (Translators, viewFullLoading)
+import Session.Shared exposing (Shared, Translators, viewFullLoading)
 import UpdateResult as UR
 import Utils exposing (decodeEnterKeyDown)
 import Validate exposing (validate)
@@ -49,17 +54,12 @@ init maybeInvitationId guest =
 
 type alias Model =
     { accountKeys : Maybe AccountKeys
-    , isLoading : Bool
-    , isCheckingAccount : Bool
     , hasAgreedToSavePassphrase : Bool
     , isPassphraseCopiedToClipboard : Bool
-    , accountGenerated : Bool
     , problems : List Problem
     , status : Status
     , maybeInvitationId : Maybe String
-    , documentNumber : String
     , selectedForm : FormType
-    , problems2 : List ( Common.Errors, String )
     }
 
 
@@ -78,11 +78,8 @@ type FormType
 initModel : Maybe String -> Guest.Model -> Model
 initModel maybeInvitationId _ =
     { accountKeys = Nothing
-    , isLoading = False
-    , isCheckingAccount = False
     , hasAgreedToSavePassphrase = False
     , isPassphraseCopiedToClipboard = False
-    , accountGenerated = False
     , problems = []
     , status =
         case maybeInvitationId of
@@ -92,7 +89,6 @@ initModel maybeInvitationId _ =
             Nothing ->
                 LoadedDefaultCommunity
     , maybeInvitationId = maybeInvitationId
-    , documentNumber = ""
     , selectedForm =
         case maybeInvitationId of
             Just _ ->
@@ -100,7 +96,6 @@ initModel maybeInvitationId _ =
 
             Nothing ->
                 Default DefaultForm.init
-    , problems2 = []
     }
 
 
@@ -163,9 +158,6 @@ view guest model =
 
         { t } =
             shared.translators
-
-        isDisabled =
-            model.isLoading || model.isCheckingAccount
     in
     { title =
         t "register.registerTab"
@@ -272,23 +264,18 @@ viewAccountGenerated ({ t } as translators) model keys =
                         , text " 💜"
                         ]
                     ]
-                , case pdfData model of
-                    Just data ->
-                        button
-                            [ onClick <| DownloadPdf data
-                            , class "button button-primary w-full mb-8"
-                            , disabled (not model.hasAgreedToSavePassphrase)
-                            , class <|
-                                if model.hasAgreedToSavePassphrase then
-                                    ""
+                , button
+                    [ onClick <| DownloadPdf (pdfData keys)
+                    , class "button button-primary w-full mb-8"
+                    , disabled (not model.hasAgreedToSavePassphrase)
+                    , class <|
+                        if model.hasAgreedToSavePassphrase then
+                            ""
 
-                                else
-                                    "button-disabled text-gray-600"
-                            ]
-                            [ text (t "register.account_created.download") ]
-
-                    Nothing ->
-                        text ""
+                        else
+                            "button-disabled text-gray-600"
+                    ]
+                    [ text (t "register.account_created.download") ]
                 ]
             ]
         ]
@@ -522,16 +509,11 @@ viewServerErrors problems =
         ul [ class "bg-red border-lg rounded p-4 mt-2 text-white" ] errorList
 
 
-pdfData : Model -> Maybe PdfData
-pdfData model =
-    Maybe.andThen
-        (\keys ->
-            Just
-                { passphrase = keys.words
-                , accountName = Eos.nameToString keys.accountName
-                }
-        )
-        model.accountKeys
+pdfData : AccountKeys -> PdfData
+pdfData keys =
+    { passphrase = keys.words
+    , accountName = Eos.nameToString keys.accountName
+    }
 
 
 
@@ -556,6 +538,7 @@ type Msg
     | AccountTypeSelected AccountType
     | FormMsg EitherFormMsg
     | DefaultFormMsg1 DefaultForm.Msg
+    | CompletedSignUp (Result (Graphql.Http.Error (Maybe SignUpResponse)) (Maybe SignUpResponse))
 
 
 type EitherFormMsg
@@ -699,10 +682,7 @@ update maybeInvitation msg model guest =
         GotAccountAvailabilityResponse isAvailable ->
             if isAvailable then
                 UR.init
-                    { model
-                        | isLoading = True
-                        , isCheckingAccount = False
-                    }
+                    model
                     |> UR.addPort
                         { responseAddress = GotAccountAvailabilityResponse False
                         , responseData = Encode.null
@@ -739,8 +719,7 @@ update maybeInvitation msg model guest =
             else
                 UR.init
                     { model
-                        | isCheckingAccount = False
-                        , selectedForm =
+                        | selectedForm =
                             case model.selectedForm of
                                 Juridical form ->
                                     Juridical { form | problems = ( JuridicalForm.Account, t "error.alreadyTaken" ) :: form.problems }
@@ -758,19 +737,19 @@ update maybeInvitation msg model guest =
         AccountGenerated (Err v) ->
             UR.init
                 { model
-                    | isLoading = False
-                    , problems = []
+                    | problems = []
                 }
                 |> UR.logDecodeError msg v
 
         AccountGenerated (Ok account) ->
-            UR.init { model | status = Generated account }
+            { model | status = Generated account }
+                |> UR.init
 
         CompletedCreateProfile _ (Err _) ->
             UR.init model
 
         CompletedCreateProfile _ (Ok _) ->
-            { model | accountGenerated = True }
+            model
                 |> UR.init
 
         AgreedToSave12Words val ->
@@ -809,17 +788,27 @@ update maybeInvitation msg model guest =
                     }
 
         PdfDownloaded ->
-            case model.accountKeys of
-                Nothing ->
-                    model
-                        |> UR.init
+            model
+                |> UR.init
+                |> UR.addCmd
+                    (case model.status of
+                        Generated keys ->
+                            formTypeToCmd guest.shared keys.ownerKey model.selectedForm
 
-                Just _ ->
-                    model
-                        |> UR.init
-                        |> UR.addCmd
-                            -- Go to login page after downloading PDF
-                            (Route.replaceUrl guest.shared.navKey (Route.Login Nothing))
+                        _ ->
+                            Cmd.none
+                    )
+
+        CompletedSignUp (Ok _) ->
+            model
+                |> UR.init
+                |> UR.addCmd
+                    -- Go to login page after downloading PDF
+                    (Route.replaceUrl guest.shared.navKey (Route.Login Nothing))
+
+        CompletedSignUp (Err _) ->
+            model
+                |> UR.init
 
         CompletedLoadInvite (Ok (Just invitation)) ->
             UR.init { model | status = Loaded invitation }
@@ -831,6 +820,44 @@ update maybeInvitation msg model guest =
             { model | status = Failed error }
                 |> UR.init
                 |> UR.logGraphqlError msg error
+
+
+type alias SignUpResponse =
+    { reason : String
+    , status : SignUpStatus.SignUpStatus
+    }
+
+
+formTypeToCmd : Shared -> String -> FormType -> Cmd Msg
+formTypeToCmd shared key formType =
+    let
+        cmd obj =
+            Api.Graphql.mutation shared
+                (Mutation.signUp
+                    { input =
+                        InputObject.buildSignUpInput
+                            obj
+                            (\x -> x)
+                    }
+                    (Graphql.SelectionSet.succeed SignUpResponse
+                        |> with Cambiatus.Object.SignUp.reason
+                        |> with Cambiatus.Object.SignUp.status
+                    )
+                )
+                CompletedSignUp
+    in
+    case formType of
+        Juridical form ->
+            cmd { account = form.account, email = form.email, name = form.name, publicKey = key }
+
+        Natural form ->
+            cmd { account = form.account, email = form.email, name = form.name, publicKey = key }
+
+        Default form ->
+            cmd { account = form.account, email = form.email, name = form.name, publicKey = key }
+
+        None ->
+            Cmd.none
 
 
 
@@ -905,3 +932,6 @@ msgToString msg =
 
         DefaultFormMsg1 _ ->
             [ "DefaultFormMsg1" ]
+
+        CompletedSignUp _ ->
+            [ "CompletedSignUp" ]
