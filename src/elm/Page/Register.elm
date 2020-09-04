@@ -301,7 +301,7 @@ viewCreateAccount translators model =
                     [ class "flex flex-grow flex-col bg-white px-4 px-0 md:max-w-sm sf-wrapper"
                     , onSubmit (ValidateForm model.selectedForm)
                     ]
-                    ([ viewServerError model.serverError ] ++ element)
+                    (viewServerError model.serverError :: element)
                 ]
 
         defaultForm =
