@@ -22,7 +22,7 @@ import Page.Register.NaturalForm as NaturalForm
 import Profile exposing (Profile)
 import Route
 import Session.Guest as Guest exposing (External(..))
-import Session.Shared exposing (Shared, Translators, viewFullLoading)
+import Session.Shared exposing (Shared, Translators)
 import UpdateResult as UR
 import Validate exposing (validate)
 
