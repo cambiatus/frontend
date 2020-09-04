@@ -41,6 +41,17 @@ registerPush requiredArgs object_ =
     Object.selectionForCompositeField "registerPush" [ Argument.required "input" requiredArgs.input Cambiatus.InputObject.encodePushSubscriptionInput ] object_ identity
 
 
+type alias SignUpRequiredArguments =
+    { input : Cambiatus.InputObject.SignUpInput }
+
+
+{-| Creates a new user account
+-}
+signUp : SignUpRequiredArguments -> SelectionSet decodesTo Cambiatus.Object.SignUp -> SelectionSet (Maybe decodesTo) RootMutation
+signUp requiredArgs object_ =
+    Object.selectionForCompositeField "signUp" [ Argument.required "input" requiredArgs.input Cambiatus.InputObject.encodeSignUpInput ] object_ (identity >> Decode.nullable)
+
+
 type alias UpdateProfileRequiredArguments =
     { input : Cambiatus.InputObject.ProfileUpdateInput }
 

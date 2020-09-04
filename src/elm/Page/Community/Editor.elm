@@ -99,6 +99,7 @@ type alias Form =
     , invitedReward : Float
     , hasShop : Bool
     , hasObjectives : Bool
+    , hasKyc : Bool
     }
 
 
@@ -113,6 +114,7 @@ newForm =
     , invitedReward = 10
     , hasShop = True
     , hasObjectives = True
+    , hasKyc = False
     }
 
 
@@ -140,6 +142,7 @@ editForm community =
     , invitedReward = community.invitedReward
     , hasShop = community.hasShop
     , hasObjectives = community.hasObjectives
+    , hasKyc = community.hasKyc
     }
 
 
@@ -207,6 +210,7 @@ encodeFormHelper logoUrl { accountName } form =
             , invitedReward = form.invitedReward
             , hasShop = form.hasShop
             , hasObjectives = form.hasObjectives
+            , hasKyc = form.hasKyc
             }
                 |> Community.createCommunityData
                 |> Valid
@@ -869,6 +873,7 @@ save msg loggedIn ({ model } as uResult) =
                                                 , invitedReward = createAction.invitedReward
                                                 , hasObjectives = 1
                                                 , hasShop = 1
+                                                , hasKyc = 0
                                                 }
                                                     |> Community.encodeUpdateLogoData
                                           }

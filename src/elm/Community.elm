@@ -117,6 +117,7 @@ type alias Model =
     , objectives : List Objective
     , hasObjectives : Bool
     , hasShop : Bool
+    , hasKyc : Bool
     }
 
 
@@ -163,11 +164,13 @@ communitySelectionSet =
         |> with (Community.objectives objectiveSelectionSet)
         |> with Community.hasObjectives
         |> with Community.hasShop
+        |> with Community.hasKyc
 
 
 type alias Settings =
     { hasObjectives : Bool
     , hasShop : Bool
+    , hasKyc : Bool
     }
 
 
@@ -176,6 +179,7 @@ settingsSelectionSet =
     SelectionSet.succeed Settings
         |> with Community.hasObjectives
         |> with Community.hasShop
+        |> with Community.hasKyc
 
 
 
@@ -467,6 +471,7 @@ type alias CreateCommunityData =
     , invitedReward : Eos.Asset
     , hasShop : Eos.EosBool
     , hasObjectives : Eos.EosBool
+    , hasKyc : Eos.EosBool
     }
 
 
@@ -480,6 +485,7 @@ createCommunityData :
     , invitedReward : Float
     , hasShop : Bool
     , hasObjectives : Bool
+    , hasKyc : Bool
     }
     -> CreateCommunityData
 createCommunityData params =
@@ -501,6 +507,7 @@ createCommunityData params =
         }
     , hasShop = params.hasShop |> Eos.boolToEosBool
     , hasObjectives = params.hasObjectives |> Eos.boolToEosBool
+    , hasKyc = params.hasKyc |> Eos.boolToEosBool
     }
 
 
@@ -516,6 +523,7 @@ encodeCreateCommunityData c =
         , ( "invited_reward", Eos.encodeAsset c.invitedReward )
         , ( "has_objectives", Eos.encodeEosBool c.hasObjectives )
         , ( "has_shop", Eos.encodeEosBool c.hasShop )
+        , ( "has_kyc", Eos.encodeEosBool c.hasKyc )
         ]
 
 
@@ -546,6 +554,7 @@ type alias UpdateCommunityData =
     , invitedReward : Eos.Asset
     , hasObjectives : Int
     , hasShop : Int
+    , hasKyc : Int
     }
 
 
@@ -560,6 +569,7 @@ encodeUpdateLogoData c =
         , ( "invited_reward", Eos.encodeAsset c.invitedReward )
         , ( "has_objectives", Encode.int c.hasObjectives )
         , ( "has_shop", Encode.int c.hasShop )
+        , ( "has_kyc", Encode.int c.hasKyc )
         ]
 
 
