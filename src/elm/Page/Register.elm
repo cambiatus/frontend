@@ -330,7 +330,7 @@ viewCreateAccount translators model =
             viewAccountGenerated translators model keys
 
         _ ->
-            Debug.todo "Error"
+            Session.Shared.viewFullLoading
 
 
 viewServerError : Maybe String -> Html msg
