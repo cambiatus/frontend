@@ -1,12 +1,9 @@
 module Page.Register exposing (Model, Msg, init, jsAddressToMsg, msgToString, update, view)
 
-import Api
 import Api.Graphql
-import Browser.Events
 import Cambiatus.Enum.SignUpStatus as SignUpStatus
 import Cambiatus.InputObject as InputObject
 import Cambiatus.Mutation as Mutation
-import Cambiatus.Object as Object
 import Cambiatus.Object.SignUp
 import Community exposing (Invite)
 import Eos.Account as Eos
@@ -19,7 +16,6 @@ import Http
 import Json.Decode as Decode exposing (Decoder, Value)
 import Json.Decode.Pipeline as Decode
 import Json.Encode as Encode
-import Page.Register.Common as Common
 import Page.Register.DefaultForm as DefaultForm
 import Page.Register.JuridicalForm as JuridicalForm
 import Page.Register.NaturalForm as NaturalForm
@@ -28,7 +24,6 @@ import Route
 import Session.Guest as Guest exposing (External(..))
 import Session.Shared exposing (Shared, Translators, viewFullLoading)
 import UpdateResult as UR
-import Utils exposing (decodeEnterKeyDown)
 import Validate exposing (validate)
 
 
