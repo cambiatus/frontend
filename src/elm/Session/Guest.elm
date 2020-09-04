@@ -144,7 +144,7 @@ viewLeftCol mdWidth =
         , class mdWidth
         , style "background-color" "#EFF9FB"
         , style "background-size" "auto 80%"
-        , style "background-image" "url(images/auth_bg_full.png)"
+        , style "background-image" "url(/images/auth_bg_full.png)"
         ]
         []
 

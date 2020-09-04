@@ -9,8 +9,6 @@ module Api exposing
     , getTableRows
     , signIn
     , signInInvitation
-    , signUp
-    , signUpWithInvitation
     , uploadAvatar
     , uploadImage
     )
@@ -24,7 +22,7 @@ import Flags exposing (Endpoints)
 import Http
 import Json.Decode as Decode exposing (Decoder)
 import Json.Encode as Encode exposing (Value)
-import Profile exposing (Profile, ProfileCreate, ProfileForm)
+import Profile exposing (Profile, ProfileForm)
 import Session.Shared exposing (Shared)
 import Url.Builder exposing (QueryParameter)
 
@@ -133,22 +131,6 @@ editProfile shared accountName form toMsg =
             Profile.decode
                 |> Http.expectJson toMsg
         }
-
-
-signUp : Shared -> ProfileCreate -> (Result Http.Error Profile -> msg) -> Cmd msg
-signUp shared form toMsg =
-    Http.post
-        { url = backendUrl shared [ "auth", "sign_up" ] []
-        , body =
-            Profile.encodeProfileCreate form
-                |> Http.jsonBody
-        , expect = Http.expectJson toMsg Profile.decode
-        }
-
-
-signUpWithInvitation : Shared -> ProfileCreate -> (Result Http.Error Profile -> msg) -> Cmd msg
-signUpWithInvitation shared form toMsg =
-    signUp shared form toMsg
 
 
 uploadAvatar : Shared -> File -> (Result Http.Error Avatar -> msg) -> Cmd msg
