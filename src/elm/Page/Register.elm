@@ -836,8 +836,7 @@ update maybeInvitation msg model guest =
                     (Route.replaceUrl guest.shared.navKey (Route.Login Nothing))
 
         CompletedSignUp (Err _) ->
-            model
-                |> UR.init
+            UR.init { model | serverError = Just "Server error" }
 
         CompletedLoadInvite (Ok (Just invitation)) ->
             UR.init { model | status = Loaded invitation }
