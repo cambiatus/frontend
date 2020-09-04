@@ -408,6 +408,10 @@
     },
     "verifyClaim": {
       "error": "S'ha produït un error en intentar processar la convalidació. Torneu-ho a provar més endavant"
+    },
+    "kyc": {
+      "title": "KYC",
+      "info": "La verificació KYC és el procés obligatori d’identificar i verificar la identitat del client quan s’obre un compte i periòdicament amb el temps. Abans d’activar aquesta funció, poseu-vos en contacte amb nosaltres per entendre-ho millor."
     }
   },
   "profile": {

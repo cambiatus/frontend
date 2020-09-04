@@ -412,6 +412,10 @@
     },
     "verifyClaim": {
       "error": "Ocorreu um erro ao tentar processar sua validação. Tente novamente mais tarde"
+    },
+    "kyc": {
+      "title": "KYC",
+      "info": "A verificação KYC é o processo obrigatório de identificação e verificação da identidade do cliente ao abrir uma conta e periodicamente ao longo do tempo. Antes de habilitar este recurso, fale conosco para entender melhor."
     }
   },
   "profile": {

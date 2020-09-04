@@ -77,6 +77,7 @@ type alias CommunityInfo =
     , logo : String
     , hasShop : Bool
     , hasActions : Bool
+    , hasKyc : Bool
     }
 
 
@@ -114,6 +115,7 @@ communityInfoSelectionSet =
         |> with Community.logo
         |> with Community.hasShop
         |> with Community.hasObjectives
+        |> with Community.hasKyc
 
 
 decode : Decoder Profile
