@@ -696,8 +696,7 @@ update maybeInvitation msg model guest =
                                 Natural NaturalForm.init
 
                             JuridicalAccount ->
-                                Juridical
-                                    JuridicalForm.init
+                                Juridical JuridicalForm.init
                 }
 
         GotAccountAvailabilityResponse response ->
