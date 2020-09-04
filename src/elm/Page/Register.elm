@@ -314,7 +314,7 @@ viewCreateAccount translators model =
     in
     case model.status of
         Loaded invitation ->
-            if invitation.community.hasShop == True then
+            if invitation.community.hasKyc == True then
                 formElement [ viewKycRegister translators model, viewFooter translators ]
 
             else

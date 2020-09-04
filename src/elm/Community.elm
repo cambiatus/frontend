@@ -117,6 +117,7 @@ type alias Model =
     , objectives : List Objective
     , hasObjectives : Bool
     , hasShop : Bool
+    , hasKyc : Bool
     }
 
 
@@ -163,6 +164,7 @@ communitySelectionSet =
         |> with (Community.objectives objectiveSelectionSet)
         |> with Community.hasObjectives
         |> with Community.hasShop
+        |> with Community.hasKyc
 
 
 type alias Settings =
