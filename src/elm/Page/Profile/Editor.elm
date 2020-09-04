@@ -121,13 +121,26 @@ view_ loggedIn model profile =
 
                 Nothing ->
                     profile.avatar
+
+        viewFullName =
+            let
+                hasCommunityWithKyc =
+                    profile.communities
+                        -- TODO: use .hasKyc instead of `True` when it's ready
+                        |> List.any (\c -> True)
+            in
+            if hasCommunityWithKyc then
+                viewDisabledInput
+
+            else
+                viewInput
     in
     Html.div [ class "bg-white" ]
         [ pageHeader
         , form
             [ class "pt-4 container mx-auto p-4" ]
             [ viewAvatar avatar
-            , viewInput (t "profile.edit.labels.name") FullName model.fullName
+            , viewFullName (t "profile.edit.labels.name") FullName model.fullName
             , viewInput (t "profile.edit.labels.email") Email model.email
             , viewBio (t "profile.edit.labels.bio") Bio loggedIn.shared.translators model.bio
             , viewInput (t "profile.edit.labels.localization") Location model.location
@@ -137,13 +150,30 @@ view_ loggedIn model profile =
         ]
 
 
+viewDisabledInput : String -> Field -> String -> Html Msg
+viewDisabledInput label field currentValue =
+    makeViewInput True label field currentValue
+
+
 viewInput : String -> Field -> String -> Html Msg
 viewInput label field currentValue =
+    makeViewInput False label field currentValue
+
+
+makeViewInput : Bool -> String -> Field -> String -> Html Msg
+makeViewInput isDisabled label field currentValue =
     div [ class "mb-4" ]
         [ Html.label [ class "input-label" ]
             [ text label ]
         , input
             [ class "w-full input rounded-sm"
+            , class <|
+                if isDisabled then
+                    "bg-gray-200 text-gray-700"
+
+                else
+                    ""
+            , disabled isDisabled
             , onInput (OnFieldInput field)
             , value currentValue
             ]
