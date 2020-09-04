@@ -57,6 +57,7 @@ type alias Model =
     , hasAgreedToSavePassphrase : Bool
     , isPassphraseCopiedToClipboard : Bool
     , problems : List Problem
+    , serverError : Maybe String
     , status : Status
     , maybeInvitationId : Maybe String
     , selectedForm : FormType
@@ -81,6 +82,7 @@ initModel maybeInvitationId _ =
     , hasAgreedToSavePassphrase = False
     , isPassphraseCopiedToClipboard = False
     , problems = []
+    , serverError = Nothing
     , status =
         case maybeInvitationId of
             Just _ ->
@@ -146,6 +148,23 @@ decodeAccount =
         |> Decode.required "privateKey" Decode.string
 
 
+decodeAvailabilityResponse : Decoder (Result String Bool)
+decodeAvailabilityResponse =
+    let
+        toDecoder : Bool -> String -> Decoder (Result String Bool)
+        toDecoder isAvailable error =
+            if String.length error < 0 then
+                Decode.succeed (Result.Ok isAvailable)
+
+            else
+                Decode.succeed (Result.Err error)
+    in
+    Decode.succeed toDecoder
+        |> Decode.required "isAvailable" Decode.bool
+        |> Decode.required "error" Decode.string
+        |> Decode.resolve
+
+
 
 -- VIEW
 
@@ -176,9 +195,6 @@ viewAccountGenerated ({ t } as translators) model keys =
     let
         name =
             Eos.nameToString keys.accountName
-
-        k =
-            Debug.log "keys" keys
 
         passphraseTextId =
             "passphraseText"
@@ -290,7 +306,7 @@ viewCreateAccount translators model =
                     [ class "flex flex-grow flex-col bg-white px-4 px-0 md:max-w-sm sf-wrapper"
                     , onSubmit (ValidateForm model.selectedForm)
                     ]
-                    element
+                    ([ viewServerError model.serverError ] ++ element)
                 ]
 
         defaultForm =
@@ -320,6 +336,16 @@ viewCreateAccount translators model =
 
         _ ->
             Debug.todo "Error"
+
+
+viewServerError : Maybe String -> Html msg
+viewServerError error =
+    case error of
+        Just message ->
+            div [ class "bg-red border-lg rounded p-4 mt-2 text-white" ] [ text message ]
+
+        Nothing ->
+            text ""
 
 
 viewFooter : Translators -> Html msg
@@ -526,7 +552,7 @@ type alias UpdateResult =
 
 type Msg
     = ValidateForm FormType
-    | GotAccountAvailabilityResponse Bool
+    | GotAccountAvailabilityResponse (Result String Bool)
     | AccountGenerated (Result Decode.Error AccountKeys)
     | CompletedCreateProfile AccountKeys (Result Http.Error Profile)
     | AgreedToSave12Words Bool
@@ -679,60 +705,68 @@ update maybeInvitation msg model guest =
                                     JuridicalForm.init
                 }
 
-        GotAccountAvailabilityResponse isAvailable ->
-            if isAvailable then
-                UR.init
-                    model
-                    |> UR.addPort
-                        { responseAddress = GotAccountAvailabilityResponse False
-                        , responseData = Encode.null
-                        , data =
-                            Encode.object
-                                [ ( "name", Encode.string "generateAccount" )
-                                , ( "invitationId"
-                                  , case maybeInvitation of
-                                        Nothing ->
-                                            Encode.null
+        GotAccountAvailabilityResponse response ->
+            case response of
+                Ok isAvailable ->
+                    if isAvailable == True then
+                        model
+                            |> UR.init
+                            |> UR.addPort
+                                { responseAddress = GotAccountAvailabilityResponse (Result.Ok False)
+                                , responseData = Encode.null
+                                , data =
+                                    Encode.object
+                                        [ ( "name", Encode.string "generateAccount" )
+                                        , ( "invitationId"
+                                          , case maybeInvitation of
+                                                Nothing ->
+                                                    Encode.null
 
-                                        Just invitationId ->
-                                            Encode.string invitationId
-                                  )
-                                , ( "account"
-                                  , Encode.string
-                                        (case model.selectedForm of
-                                            Juridical form ->
-                                                form.account
+                                                Just invitationId ->
+                                                    Encode.string invitationId
+                                          )
+                                        , ( "account"
+                                          , Encode.string
+                                                (case model.selectedForm of
+                                                    Juridical form ->
+                                                        form.account
 
-                                            Natural form ->
-                                                form.account
+                                                    Natural form ->
+                                                        form.account
 
-                                            Default form ->
-                                                form.account
+                                                    Default form ->
+                                                        form.account
 
-                                            None ->
-                                                ""
-                                        )
-                                  )
-                                ]
+                                                    None ->
+                                                        ""
+                                                )
+                                          )
+                                        ]
+                                }
+
+                    else
+                        UR.init
+                            { model
+                                | selectedForm =
+                                    case model.selectedForm of
+                                        Juridical form ->
+                                            Juridical { form | problems = ( JuridicalForm.Account, t "error.alreadyTaken" ) :: form.problems }
+
+                                        Natural form ->
+                                            Natural { form | problems = ( NaturalForm.Account, t "error.alreadyTaken" ) :: form.problems }
+
+                                        Default form ->
+                                            Default { form | problems = ( DefaultForm.Account, t "error.alreadyTaken" ) :: form.problems }
+
+                                        None ->
+                                            model.selectedForm
+                            }
+
+                Err error ->
+                    UR.init
+                        { model
+                            | serverError = Just (t "error.unknown")
                         }
-
-            else
-                UR.init
-                    { model
-                        | selectedForm =
-                            case model.selectedForm of
-                                Juridical form ->
-                                    Juridical { form | problems = ( JuridicalForm.Account, t "error.alreadyTaken" ) :: form.problems }
-
-                                Natural form ->
-                                    Natural { form | problems = ( NaturalForm.Account, t "error.alreadyTaken" ) :: form.problems }
-
-                                Default form ->
-                                    Default { form | problems = ( DefaultForm.Account, t "error.alreadyTaken" ) :: form.problems }
-
-                                None ->
-                                    model.selectedForm
-                    }
 
         AccountGenerated (Err v) ->
             UR.init
@@ -870,9 +904,7 @@ jsAddressToMsg : List String -> Value -> Maybe Msg
 jsAddressToMsg addr val =
     case addr of
         "ValidateForm" :: [] ->
-            Decode.decodeValue
-                (Decode.field "isAvailable" Decode.bool)
-                val
+            Decode.decodeValue decodeAvailabilityResponse val
                 |> Result.map GotAccountAvailabilityResponse
                 |> Result.toMaybe
 
