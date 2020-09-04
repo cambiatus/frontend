@@ -124,12 +124,11 @@ view_ loggedIn model profile =
 
         viewFullName =
             let
-                hasCommunityWithKyc =
+                hasCommunitiesWithKycEnabled =
                     profile.communities
-                        -- TODO: use .hasKyc instead of `True` when it's ready
-                        |> List.any (\c -> True)
+                        |> List.any (\c -> c.hasKyc)
             in
-            if hasCommunityWithKyc then
+            if hasCommunitiesWithKycEnabled then
                 viewDisabledInput
 
             else
