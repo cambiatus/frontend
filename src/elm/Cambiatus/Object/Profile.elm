@@ -25,6 +25,11 @@ account =
     Object.selectionForField "String" "account" [] Decode.string
 
 
+address : SelectionSet decodesTo Cambiatus.Object.Address -> SelectionSet (Maybe decodesTo) Cambiatus.Object.Profile
+address object_ =
+    Object.selectionForCompositeField "address" [] object_ (identity >> Decode.nullable)
+
+
 analysisCount : SelectionSet Int Cambiatus.Object.Profile
 analysisCount =
     Object.selectionForField "Int" "analysisCount" [] Decode.int
@@ -94,6 +99,11 @@ interests =
 invitations : SelectionSet (Maybe (List (Maybe String))) Cambiatus.Object.Profile
 invitations =
     Object.selectionForField "(Maybe (List (Maybe String)))" "invitations" [] (Decode.string |> Decode.nullable |> Decode.list |> Decode.nullable)
+
+
+kyc : SelectionSet decodesTo Cambiatus.Object.KycData -> SelectionSet (Maybe decodesTo) Cambiatus.Object.Profile
+kyc object_ =
+    Object.selectionForCompositeField "kyc" [] object_ (identity >> Decode.nullable)
 
 
 location : SelectionSet (Maybe String) Cambiatus.Object.Profile
