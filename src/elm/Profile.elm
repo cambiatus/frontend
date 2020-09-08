@@ -42,9 +42,10 @@ import Graphql.SelectionSet as SelectionSet exposing (SelectionSet, with)
 import Html exposing (Html, a, div, p, span, text)
 import Html.Attributes exposing (class, href, maxlength, minlength, pattern, title, type_)
 import I18Next exposing (Translations, t)
-import Json.Decode as Decode exposing (Decoder, int, nullable, string)
+import Json.Decode as Decode exposing (Decoder, bool, int, nullable, string)
 import Json.Decode.Pipeline as Decode exposing (optional, required)
 import Json.Encode as Encode
+import Kyc exposing (ProfileKyc)
 import Select
 import Session.Shared exposing (Shared)
 import Simple.Fuzzy
@@ -68,6 +69,7 @@ type alias Profile =
     , createdAt : Posix
     , communities : List CommunityInfo
     , analysisCount : Int
+    , kyc : Maybe ProfileKyc
     }
 
 
@@ -105,6 +107,7 @@ selectionSet =
         |> SelectionSet.hardcoded (Time.millisToPosix 0)
         |> with (User.communities communityInfoSelectionSet)
         |> with User.analysisCount
+        |> with (User.kyc Kyc.selectionSet)
 
 
 communityInfoSelectionSet : SelectionSet CommunityInfo Cambiatus.Object.Community
@@ -134,6 +137,7 @@ decode =
         |> Decode.hardcoded []
         |> Decode.at [ "data", "user" ]
         |> optional "analysisCount" int 0
+        |> optional "kyc" (nullable Kyc.decode) Nothing
 
 
 decodeInterests : Decoder (List String)
