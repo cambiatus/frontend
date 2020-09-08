@@ -42,17 +42,17 @@ selectionSet =
                 |> SelectionSet.map .name
             )
         |> with
-            (Address.neighborhood neighborhoodSelectionSet
+            (Address.city citySelectionSet
                 |> SelectionSet.map .name
             )
         |> with
-            (Address.city citySelectionSet
+            (Address.neighborhood neighborhoodSelectionSet
                 |> SelectionSet.map .name
             )
         |> with Address.street
         |> with
             (Address.number
-                |> SelectionSet.map (\n -> Maybe.withDefault "" n)
+                |> SelectionSet.map (Maybe.withDefault "")
             )
         |> with Address.zip
 
