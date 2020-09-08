@@ -20,10 +20,10 @@ import Json.Decode.Pipeline exposing (optional, required)
 
 
 type alias ProfileAddress =
-    { country : AddressCountry
-    , state : AddressState
-    , city : AddressCity
-    , neighborhood : AddressNeighborhood
+    { country : Country
+    , state : State
+    , city : City
+    , neighborhood : Neighborhood
     , street : String
     , number : Maybe String
     , zip : String
@@ -58,19 +58,19 @@ decode =
 -- COUNTRY
 
 
-type alias AddressCountry =
+type alias Country =
     { name : String }
 
 
-countrySelectionSet : SelectionSet AddressCountry Cambiatus.Object.Country
+countrySelectionSet : SelectionSet Country Cambiatus.Object.Country
 countrySelectionSet =
-    SelectionSet.succeed AddressCountry
+    SelectionSet.succeed Country
         |> with Country.name
 
 
-decodeCountry : Decoder AddressCountry
+decodeCountry : Decoder Country
 decodeCountry =
-    Decode.succeed AddressCountry
+    Decode.succeed Country
         |> required "name" string
 
 
@@ -78,19 +78,19 @@ decodeCountry =
 -- STATE
 
 
-type alias AddressState =
+type alias State =
     { name : String }
 
 
-stateSelectionSet : SelectionSet AddressState Cambiatus.Object.State
+stateSelectionSet : SelectionSet State Cambiatus.Object.State
 stateSelectionSet =
-    SelectionSet.succeed AddressState
+    SelectionSet.succeed State
         |> with State.name
 
 
-decodeState : Decoder AddressState
+decodeState : Decoder State
 decodeState =
-    Decode.succeed AddressState
+    Decode.succeed State
         |> required "name" string
 
 
@@ -98,19 +98,19 @@ decodeState =
 -- CITY
 
 
-type alias AddressCity =
+type alias City =
     { name : String }
 
 
-citySelectionSet : SelectionSet AddressCity Cambiatus.Object.City
+citySelectionSet : SelectionSet City Cambiatus.Object.City
 citySelectionSet =
-    SelectionSet.succeed AddressCity
+    SelectionSet.succeed City
         |> with City.name
 
 
-decodeCity : Decoder AddressCity
+decodeCity : Decoder City
 decodeCity =
-    Decode.succeed AddressCity
+    Decode.succeed City
         |> required "name" string
 
 
@@ -118,17 +118,17 @@ decodeCity =
 -- NEIGHBORHOOD
 
 
-type alias AddressNeighborhood =
+type alias Neighborhood =
     { name : String }
 
 
-neighborhoodSelectionSet : SelectionSet AddressNeighborhood Cambiatus.Object.Neighborhood
+neighborhoodSelectionSet : SelectionSet Neighborhood Cambiatus.Object.Neighborhood
 neighborhoodSelectionSet =
-    SelectionSet.succeed AddressNeighborhood
+    SelectionSet.succeed Neighborhood
         |> with Neighborhood.name
 
 
-decodeNeighborhood : Decoder AddressNeighborhood
+decodeNeighborhood : Decoder Neighborhood
 decodeNeighborhood =
-    Decode.succeed AddressNeighborhood
+    Decode.succeed Neighborhood
         |> required "name" string
