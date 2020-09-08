@@ -27,6 +27,7 @@ module Profile exposing
     , viewProfileNameTag
     )
 
+import Address exposing (ProfileAddress)
 import Avatar exposing (Avatar)
 import Cambiatus.Mutation
 import Cambiatus.Object
@@ -70,6 +71,7 @@ type alias Profile =
     , communities : List CommunityInfo
     , analysisCount : Int
     , kyc : Maybe ProfileKyc
+    , address : Maybe ProfileAddress
     }
 
 
@@ -108,6 +110,7 @@ selectionSet =
         |> with (User.communities communityInfoSelectionSet)
         |> with User.analysisCount
         |> with (User.kyc Kyc.selectionSet)
+        |> with (User.address Address.selectionSet)
 
 
 communityInfoSelectionSet : SelectionSet CommunityInfo Cambiatus.Object.Community
@@ -138,6 +141,7 @@ decode =
         |> Decode.at [ "data", "user" ]
         |> optional "analysisCount" int 0
         |> optional "kyc" (nullable Kyc.decode) Nothing
+        |> optional "address" (nullable Address.decode) Nothing
 
 
 decodeInterests : Decoder (List String)
