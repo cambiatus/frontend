@@ -27,7 +27,7 @@ module Profile exposing
     , viewProfileNameTag
     )
 
-import Address exposing (ProfileAddress)
+import Address exposing (Address)
 import Avatar exposing (Avatar)
 import Cambiatus.Mutation
 import Cambiatus.Object
@@ -43,7 +43,7 @@ import Graphql.SelectionSet as SelectionSet exposing (SelectionSet, with)
 import Html exposing (Html, a, div, p, span, text)
 import Html.Attributes exposing (class, href, maxlength, minlength, pattern, title, type_)
 import I18Next exposing (Translations, t)
-import Json.Decode as Decode exposing (Decoder, bool, int, nullable, string)
+import Json.Decode as Decode exposing (Decoder, int, nullable, string)
 import Json.Decode.Pipeline as Decode exposing (optional, required)
 import Json.Encode as Encode
 import Kyc exposing (ProfileKyc)
@@ -71,7 +71,7 @@ type alias Profile =
     , communities : List CommunityInfo
     , analysisCount : Int
     , kyc : Maybe ProfileKyc
-    , address : Maybe ProfileAddress
+    , address : Maybe Address
     }
 
 

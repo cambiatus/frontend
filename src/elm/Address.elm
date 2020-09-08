@@ -1,5 +1,5 @@
 module Address exposing
-    ( ProfileAddress
+    ( Address
     , decode
     , selectionSet
     )
@@ -19,36 +19,48 @@ import Json.Decode.Pipeline exposing (optional, required)
 -- ADDRESS
 
 
-type alias ProfileAddress =
-    { country : Country
-    , state : State
-    , city : City
-    , neighborhood : Neighborhood
+type alias Address =
+    { country : String
+    , state : String
+    , city : String
+    , neighborhood : String
     , street : String
     , number : Maybe String
     , zip : String
     }
 
 
-selectionSet : SelectionSet ProfileAddress Cambiatus.Object.Address
+selectionSet : SelectionSet Address Cambiatus.Object.Address
 selectionSet =
-    SelectionSet.succeed ProfileAddress
-        |> with (Address.country countrySelectionSet)
-        |> with (Address.state stateSelectionSet)
-        |> with (Address.neighborhood neighborhoodSelectionSet)
-        |> with (Address.city citySelectionSet)
+    SelectionSet.succeed Address
+        |> with
+            (Address.country countrySelectionSet
+                |> SelectionSet.map .name
+            )
+        |> with
+            (Address.state stateSelectionSet
+                |> SelectionSet.map .name
+            )
+        |> with
+            (Address.neighborhood neighborhoodSelectionSet
+                |> SelectionSet.map .name
+            )
+        |> with
+            (Address.city citySelectionSet
+                |> SelectionSet.map .name
+            )
         |> with Address.street
         |> with Address.number
         |> with Address.zip
 
 
-decode : Decoder ProfileAddress
+decode : Decoder Address
 decode =
-    Decode.succeed ProfileAddress
-        |> required "country" decodeCountry
-        |> required "state" decodeState
-        |> required "city" decodeCity
-        |> required "neighborhood" decodeNeighborhood
+    Decode.succeed Address
+        |> required "country" string
+        |> required "state" string
+        |> required "city" string
+        |> required "neighborhood" string
         |> required "street" string
         |> optional "number" (nullable string) Nothing
         |> required "zip" string
@@ -68,12 +80,6 @@ countrySelectionSet =
         |> with Country.name
 
 
-decodeCountry : Decoder Country
-decodeCountry =
-    Decode.succeed Country
-        |> required "name" string
-
-
 
 -- STATE
 
@@ -86,12 +92,6 @@ stateSelectionSet : SelectionSet State Cambiatus.Object.State
 stateSelectionSet =
     SelectionSet.succeed State
         |> with State.name
-
-
-decodeState : Decoder State
-decodeState =
-    Decode.succeed State
-        |> required "name" string
 
 
 
@@ -108,12 +108,6 @@ citySelectionSet =
         |> with City.name
 
 
-decodeCity : Decoder City
-decodeCity =
-    Decode.succeed City
-        |> required "name" string
-
-
 
 -- NEIGHBORHOOD
 
@@ -126,9 +120,3 @@ neighborhoodSelectionSet : SelectionSet Neighborhood Cambiatus.Object.Neighborho
 neighborhoodSelectionSet =
     SelectionSet.succeed Neighborhood
         |> with Neighborhood.name
-
-
-decodeNeighborhood : Decoder Neighborhood
-decodeNeighborhood =
-    Decode.succeed Neighborhood
-        |> required "name" string
