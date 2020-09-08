@@ -11,8 +11,8 @@ import Cambiatus.Object.Country as Country
 import Cambiatus.Object.Neighborhood as Neighborhood
 import Cambiatus.Object.State as State
 import Graphql.SelectionSet as SelectionSet exposing (SelectionSet, with)
-import Json.Decode as Decode exposing (Decoder, nullable, string)
-import Json.Decode.Pipeline exposing (optional, required)
+import Json.Decode as Decode exposing (Decoder, string)
+import Json.Decode.Pipeline exposing (required)
 
 
 
