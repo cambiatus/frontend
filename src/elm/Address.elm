@@ -25,7 +25,7 @@ type alias Address =
     , city : String
     , neighborhood : String
     , street : String
-    , number : Maybe String
+    , number : String
     , zip : String
     }
 
@@ -50,7 +50,10 @@ selectionSet =
                 |> SelectionSet.map .name
             )
         |> with Address.street
-        |> with Address.number
+        |> with
+            (Address.number
+                |> SelectionSet.map (\n -> Maybe.withDefault "" n)
+            )
         |> with Address.zip
 
 
@@ -62,7 +65,7 @@ decode =
         |> required "city" string
         |> required "neighborhood" string
         |> required "street" string
-        |> optional "number" (nullable string) Nothing
+        |> required "number" string
         |> required "zip" string
 
 
