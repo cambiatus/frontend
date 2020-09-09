@@ -17,7 +17,7 @@ import Browser.Dom as Dom
 import Eos exposing (Symbol)
 import Eos.Account as Eos
 import Graphql.Http
-import Html exposing (Html, a, button, div, input, label, li, p, span, text, ul)
+import Html exposing (Html, a, br, button, div, input, label, li, p, span, text, ul)
 import Html.Attributes exposing (checked, class, classList, for, id, name, type_)
 import Html.Events exposing (onClick)
 import Http
@@ -269,6 +269,41 @@ viewInfo loggedIn profile pageType =
         account =
             Eos.nameToString profile.account
 
+        viewAddress =
+            case profile.address of
+                Just addr ->
+                    let
+                        fullAddress =
+                            span []
+                                [ text <|
+                                    addr.country
+                                        ++ ", "
+                                        ++ addr.state
+                                        ++ ", "
+                                        ++ addr.city
+                                        ++ ", "
+                                        ++ addr.neighborhood
+                                        ++ ", "
+                                        ++ addr.street
+                                        ++ (if addr.number /= "" then
+                                                ", " ++ addr.number
+
+                                            else
+                                                ""
+                                           )
+                                , br [] []
+                                , text addr.zip
+                                ]
+                    in
+                    viewProfileItem
+                        (text (t "Address"))
+                        fullAddress
+                        Top
+                        Nothing
+
+                Nothing ->
+                    text ""
+
         viewKyc =
             case profile.kyc of
                 Just kyc ->
@@ -364,6 +399,7 @@ viewInfo loggedIn profile pageType =
                     (text location)
                     Center
                     Nothing
+                 , viewAddress
                  , viewProfileItem
                     (text (t "profile.interests"))
                     (text (String.join ", " profile.interests))
