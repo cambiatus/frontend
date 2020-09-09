@@ -112,7 +112,7 @@ view loggedIn model =
                         , viewInfo loggedIn
                             profile
                             { hasTransferButton = False
-                            , hasKyc = True
+                            , isKycVisible = True
                             , hasEditLink = True
                             }
                         , viewSettings loggedIn model
@@ -224,16 +224,16 @@ viewSettings loggedIn model =
 
 type alias PublicInfoConfig =
     { hasTransferButton : Bool
-    , hasKyc : Bool
+    , isKycVisible : Bool
     , hasEditLink : Bool
     }
 
 
 viewInfo : LoggedIn.Model -> Profile -> PublicInfoConfig -> Html msg
-viewInfo loggedIn profile { hasTransferButton, hasKyc, hasEditLink } =
+viewInfo loggedIn profile { hasTransferButton, isKycVisible, hasEditLink } =
     let
-        tr txt =
-            t loggedIn.shared.translations txt
+        { t } =
+            loggedIn.shared.translators
 
         userName =
             Maybe.withDefault "" profile.userName
@@ -249,6 +249,24 @@ viewInfo loggedIn profile { hasTransferButton, hasKyc, hasEditLink } =
 
         account =
             Eos.nameToString profile.account
+
+        viewKyc =
+            case profile.kyc of
+                Just kyc ->
+                    [ viewProfileItem
+                        (text (t "Phone Number"))
+                        (text kyc.phone)
+                        Center
+                        Nothing
+                    , viewProfileItem
+                        (text (t kyc.documentType))
+                        (text kyc.document)
+                        Center
+                        Nothing
+                    ]
+
+                Nothing ->
+                    []
     in
     div [ class "bg-white mb-6" ]
         [ div [ class "container p-4 mx-auto" ]
@@ -295,28 +313,18 @@ viewInfo loggedIn profile { hasTransferButton, hasKyc, hasEditLink } =
                 text ""
             , ul [ class "divide-y divide-gray-500" ]
                 ([ viewProfileItem
-                    (text (tr "profile.locations"))
+                    (text (t "profile.locations"))
                     (text location)
                     Center
                     Nothing
                  , viewProfileItem
-                    (text (tr "profile.interests"))
+                    (text (t "profile.interests"))
                     (text (String.join ", " profile.interests))
                     Top
                     Nothing
                  ]
-                    ++ (if hasKyc then
-                            [ viewProfileItem
-                                (text (tr "Phone Number"))
-                                (text "12341234")
-                                Center
-                                Nothing
-                            , viewProfileItem
-                                (text (tr "Cedula de Identidad"))
-                                (text "12341234")
-                                Center
-                                Nothing
-                            ]
+                    ++ (if isKycVisible then
+                            viewKyc
 
                         else
                             []

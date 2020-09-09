@@ -76,7 +76,7 @@ view loggedIn status =
                         , viewInfo loggedIn
                             profile
                             { hasTransferButton = True
-                            , hasKyc = False
+                            , isKycVisible = False
                             , hasEditLink = False
                             }
                         ]
