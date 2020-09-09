@@ -272,6 +272,59 @@ viewFeedback status message =
 
 viewHelper : (Msg -> msg) -> Page -> Profile -> Model -> Html msg -> Html msg
 viewHelper thisMsg page profile_ ({ shared } as model) content =
+    let
+        { t } =
+            shared.translators
+
+        hasUserKycFilled =
+            case profile_.kyc of
+                Just _ ->
+                    True
+
+                Nothing ->
+                    False
+
+        isPageAlwaysAllowed =
+            case page of
+                -- `False` means that the page is not allowed for the user without
+                -- KYC fields filled if the community has KYC enabled.
+                Dashboard ->
+                    False
+
+                Communities ->
+                    False
+
+                Shop ->
+                    False
+
+                _ ->
+                    True
+
+        isContentAllowed =
+            isPageAlwaysAllowed
+                || not model.hasKyc
+                || (model.hasKyc && hasUserKycFilled)
+
+        viewKycRestriction =
+            div [ class "mx-auto container max-w-sm" ]
+                [ div [ class "my-6 mx-4 text-center" ]
+                    [ p [ class "text-2xl font-bold" ]
+                        [ text (t "community.kyc.restriction.title") ]
+                    , p [ class "mt-2 mb-6" ]
+                        [ text (t "community.kyc.restriction.description") ]
+                    , a
+                        [ class "button button-primary m-auto w-full sm:w-56"
+                        , Route.href Route.ProfileEditor
+                        ]
+                        [ text (t "community.kyc.restriction.link") ]
+                    ]
+                , img
+                    [ class "w-full mx-auto md:w-64 mt-6 mb-8"
+                    , src "/images/not_found.svg"
+                    ]
+                    []
+                ]
+    in
     div
         [ class "min-h-screen flex flex-col" ]
         [ div [ class "bg-white" ]
@@ -287,7 +340,11 @@ viewHelper thisMsg page profile_ ({ shared } as model) content =
             Hidden ->
                 text ""
         , div [ class "flex-grow" ]
-            [ content
+            [ if isContentAllowed then
+                content
+
+              else
+                viewKycRestriction
             ]
         , viewFooter shared
         , Modal.initWith
