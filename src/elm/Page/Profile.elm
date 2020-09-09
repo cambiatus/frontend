@@ -7,8 +7,8 @@ module Page.Profile exposing
     , msgToString
     , update
     , view
-    , viewInfo
     , viewSettings
+    , viewUserInfo
     )
 
 import Api.Graphql
@@ -70,7 +70,7 @@ type alias Model =
     , newPinErrorMsg : Maybe String
     , isPushNotificationsEnabled : Bool
     , maybePdfDownloadedSuccessfully : Maybe Bool
-    , isDisallowKycModalShowed : Bool
+    , isDeleteKycModalShowed : Bool
     }
 
 
@@ -84,7 +84,7 @@ initModel _ =
     , newPinErrorMsg = Nothing
     , isPushNotificationsEnabled = False
     , maybePdfDownloadedSuccessfully = Nothing
-    , isDisallowKycModalShowed = False
+    , isDeleteKycModalShowed = False
     }
 
 
@@ -120,13 +120,13 @@ view loggedIn model =
                 Loaded profile ->
                     div []
                         [ Page.viewHeader loggedIn (t loggedIn.shared.translations "menu.profile") Route.Dashboard
-                        , viewInfo loggedIn
+                        , viewUserInfo loggedIn
                             profile
                             Private
                         , viewSettings loggedIn model profile
                         , viewNewPinModal model loggedIn.shared
                         , viewDownloadPdfErrorModal model loggedIn
-                        , viewDisallowKycModal loggedIn.shared.translators model
+                        , viewDeleteKycModal loggedIn.shared.translators model
                         ]
     in
     { title = title
@@ -134,11 +134,11 @@ view loggedIn model =
     }
 
 
-viewDisallowKycModal : Translators -> Model -> Html Msg
-viewDisallowKycModal { t } model =
+viewDeleteKycModal : Translators -> Model -> Html Msg
+viewDeleteKycModal { t } model =
     Modal.initWith
-        { closeMsg = ToggleDisallowKycModal
-        , isVisible = model.isDisallowKycModalShowed
+        { closeMsg = ToggleDeleteKycModal
+        , isVisible = model.isDeleteKycModalShowed
         }
         |> Modal.withHeader (t "community.kyc.delete.confirmationHeader")
         |> Modal.withBody
@@ -149,7 +149,7 @@ viewDisallowKycModal { t } model =
         |> Modal.withFooter
             [ button
                 [ class "modal-cancel"
-                , onClick ToggleDisallowKycModal
+                , onClick ToggleDeleteKycModal
                 ]
                 [ text (t "community.kyc.delete.cancel") ]
             , button [ class "modal-accept" ]
@@ -202,7 +202,7 @@ viewSettings loggedIn model profile =
                                 ]
                             ]
                         )
-                        (viewDangerButton (t "community.kyc.delete.label") ToggleDisallowKycModal)
+                        (viewDangerButton (t "community.kyc.delete.label") ToggleDeleteKycModal)
                         Center
                         (Just
                             (div [ class "uppercase text-red pt-2 text-xs" ]
@@ -241,8 +241,8 @@ type ProfilePage
     | Public
 
 
-viewInfo : LoggedIn.Model -> Profile -> ProfilePage -> Html msg
-viewInfo loggedIn profile pageType =
+viewUserInfo : LoggedIn.Model -> Profile -> ProfilePage -> Html msg
+viewUserInfo loggedIn profile pageType =
     let
         { t } =
             loggedIn.shared.translators
@@ -636,7 +636,7 @@ type Msg
     | TogglePinReadability
     | GotPushPreference Bool
     | RequestPush
-    | ToggleDisallowKycModal
+    | ToggleDeleteKycModal
     | CheckPushPref
     | GotPushSub PushSubscription
     | CompletedPushUpload (Result (Graphql.Http.Error ()) ())
@@ -663,8 +663,8 @@ update msg model loggedIn =
         Ignored ->
             UR.init model
 
-        ToggleDisallowKycModal ->
-            { model | isDisallowKycModalShowed = not model.isDisallowKycModalShowed }
+        ToggleDeleteKycModal ->
+            { model | isDeleteKycModalShowed = not model.isDeleteKycModalShowed }
                 |> UR.init
 
         CompletedProfileLoad (Ok Nothing) ->
@@ -907,8 +907,8 @@ msgToString msg =
         Ignored ->
             [ "Ignored" ]
 
-        ToggleDisallowKycModal ->
-            [ "DisallowKycClicked" ]
+        ToggleDeleteKycModal ->
+            [ "ToggleDeleteKycModal" ]
 
         CompletedProfileLoad r ->
             [ "CompletedProfileLoad", UR.resultToString r ]
