@@ -253,13 +253,34 @@ viewInfo loggedIn profile { hasTransferButton, isKycVisible, hasEditLink } =
         viewKyc =
             case profile.kyc of
                 Just kyc ->
+                    let
+                        documentLabel =
+                            case kyc.documentType of
+                                "cedula_de_identidad" ->
+                                    "Cédula de identidad"
+
+                                "dimex" ->
+                                    "DIMEX"
+
+                                "nite" ->
+                                    "NITE"
+
+                                "gran_empresa" ->
+                                    "Gran Empresa"
+
+                                "mipyme" ->
+                                    "MIPYME"
+
+                                _ ->
+                                    "Unknown Document"
+                    in
                     [ viewProfileItem
-                        (text (t "Phone Number"))
+                        (text (t "community.kyc.phoneLabel"))
                         (text kyc.phone)
                         Center
                         Nothing
                     , viewProfileItem
-                        (text (t kyc.documentType))
+                        (text documentLabel)
                         (text kyc.document)
                         Center
                         Nothing

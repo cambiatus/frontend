@@ -411,7 +411,8 @@
     },
     "kyc": {
       "title": "KYC",
-      "info": "La verificación KYC es el proceso obligatorio de identificación y verificación de la identidad del cliente al abrir una cuenta y periódicamente a lo largo del tiempo. Antes de habilitar esta función, contáctenos para comprender mejor."
+      "info": "La verificación KYC es el proceso obligatorio de identificación y verificación de la identidad del cliente al abrir una cuenta y periódicamente a lo largo del tiempo. Antes de habilitar esta función, contáctenos para comprender mejor.",
+      "phoneLabel": "Número de teléfono"
     }
   },
   "profile": {
