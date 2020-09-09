@@ -1,5 +1,6 @@
 module Page.Register exposing (Model, Msg, init, jsAddressToMsg, msgToString, update, view)
 
+import Address
 import Api.Graphql
 import Cambiatus.Enum.SignUpStatus as SignUpStatus
 import Cambiatus.InputObject as InputObject
@@ -31,15 +32,23 @@ import Validate exposing (validate)
 -- INIT
 
 
-init : Maybe String -> Guest.Model -> ( Model, Cmd Msg )
-init maybeInvitationId guest =
-    ( initModel maybeInvitationId guest
-    , case maybeInvitationId of
+queries : Maybe String -> Shared -> Cmd Msg
+queries maybeInvitationId shared =
+    case maybeInvitationId of
         Just invitation ->
-            Api.Graphql.query guest.shared (Community.inviteQuery invitation) CompletedLoadInvite
+            Cmd.batch
+                [ Api.Graphql.query shared (Community.inviteQuery invitation) CompletedLoadInvite
+                , Api.Graphql.query shared (Address.countryQuery "Costa Rica") CompletedLoadCountry
+                ]
 
         Nothing ->
             Cmd.none
+
+
+init : Maybe String -> Guest.Model -> ( Model, Cmd Msg )
+init maybeInvitationId guest =
+    ( initModel maybeInvitationId guest
+    , queries maybeInvitationId guest.shared
     )
 
 
@@ -56,6 +65,7 @@ type alias Model =
     , status : Status
     , maybeInvitationId : Maybe String
     , selectedForm : FormType
+    , country : Maybe Address.Country
     }
 
 
@@ -93,6 +103,7 @@ initModel maybeInvitationId _ =
 
             Nothing ->
                 Default DefaultForm.init
+    , country = Nothing
     }
 
 
@@ -313,7 +324,7 @@ viewCreateAccount translators model =
                     div [] []
     in
     case model.status of
-        Loaded invitation ->
+        LoadedAll invitation country ->
             if invitation.community.hasKyc == True then
                 formElement [ viewKycRegister translators model, viewFooter translators ]
 
@@ -324,13 +335,25 @@ viewCreateAccount translators model =
             defaultForm
 
         Loading ->
-            div [] []
+            Session.Shared.viewFullLoading
 
         Generated keys ->
             viewAccountGenerated translators model keys
 
-        _ ->
+        LoadedInvite _ ->
             Session.Shared.viewFullLoading
+
+        LoadedCountry _ ->
+            Session.Shared.viewFullLoading
+
+        FailedInvite _ ->
+            Debug.todo "Implement error"
+
+        FailedCountry _ ->
+            Debug.todo "Implement error"
+
+        NotFound ->
+            Debug.todo "Implement not found"
 
 
 viewServerError : Maybe String -> Html msg
@@ -377,16 +400,25 @@ viewKycRegister translators model =
                                     []
                     in
                     case model.status of
-                        Loaded _ ->
+                        LoadedAll _ _ ->
                             selectedForm
 
                         LoadedDefaultCommunity ->
                             selectedForm
 
+                        LoadedInvite _ ->
+                            [ Session.Shared.viewFullLoading ]
+
+                        LoadedCountry _ ->
+                            [ Session.Shared.viewFullLoading ]
+
                         Loading ->
                             [ Session.Shared.viewFullLoading ]
 
-                        Failed _ ->
+                        FailedCountry _ ->
+                            Debug.todo "Implement error"
+
+                        FailedInvite _ ->
                             Debug.todo "Implement error"
 
                         NotFound ->
@@ -556,6 +588,7 @@ type Msg
     | CopyToClipboard String
     | CopiedToClipboard
     | CompletedLoadInvite (Result (Graphql.Http.Error (Maybe Invite)) (Maybe Invite))
+    | CompletedLoadCountry (Result (Graphql.Http.Error (Maybe Address.Country)) (Maybe Address.Country))
     | AccountTypeSelected AccountType
     | FormMsg EitherFormMsg
     | DefaultFormMsg1 DefaultForm.Msg
@@ -569,9 +602,12 @@ type EitherFormMsg
 
 
 type Status
-    = Loaded Invite
+    = LoadedInvite Invite
+    | LoadedCountry Address.Country
+    | LoadedAll Invite Address.Country
     | Loading
-    | Failed (Graphql.Http.Error (Maybe Invite))
+    | FailedInvite (Graphql.Http.Error (Maybe Invite))
+    | FailedCountry (Graphql.Http.Error (Maybe Address.Country))
     | NotFound
     | LoadedDefaultCommunity
     | Generated AccountKeys
@@ -691,12 +727,15 @@ update maybeInvitation msg model guest =
             UR.init
                 { model
                     | selectedForm =
-                        case type_ of
-                            NaturalAccount ->
+                        case ( type_, model.status ) of
+                            ( NaturalAccount, _ ) ->
                                 Natural NaturalForm.init
 
-                            JuridicalAccount ->
-                                Juridical JuridicalForm.init
+                            ( JuridicalAccount, LoadedAll _ country ) ->
+                                Juridical (JuridicalForm.init country)
+
+                            _ ->
+                                model.selectedForm
                 }
 
         GotAccountAvailabilityResponse response ->
@@ -838,13 +877,48 @@ update maybeInvitation msg model guest =
             UR.init { model | serverError = Just "Server error" }
 
         CompletedLoadInvite (Ok (Just invitation)) ->
-            UR.init { model | status = Loaded invitation }
+            UR.init
+                { model
+                    | status =
+                        case model.status of
+                            LoadedCountry country ->
+                                LoadedAll invitation country
+
+                            NotFound ->
+                                NotFound
+
+                            _ ->
+                                LoadedInvite invitation
+                }
 
         CompletedLoadInvite (Ok Nothing) ->
             UR.init { model | status = NotFound }
 
         CompletedLoadInvite (Err error) ->
-            { model | status = Failed error }
+            { model | status = FailedInvite error }
+                |> UR.init
+                |> UR.logGraphqlError msg error
+
+        CompletedLoadCountry (Ok (Just country)) ->
+            { model
+                | status =
+                    case model.status of
+                        LoadedInvite invitation ->
+                            LoadedAll invitation country
+
+                        NotFound ->
+                            NotFound
+
+                        _ ->
+                            LoadedCountry country
+            }
+                |> UR.init
+
+        CompletedLoadCountry (Ok Nothing) ->
+            UR.init { model | status = NotFound }
+
+        CompletedLoadCountry (Err error) ->
+            { model | status = FailedCountry error }
                 |> UR.init
                 |> UR.logGraphqlError msg error
 
@@ -960,3 +1034,6 @@ msgToString msg =
 
         CompletedSignUp _ ->
             [ "CompletedSignUp" ]
+
+        CompletedLoadCountry _ ->
+            [ "CompletedLoadCountry" ]

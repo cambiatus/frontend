@@ -1,5 +1,6 @@
 module Page.Register.JuridicalForm exposing (CompanyType(..), Field(..), Model, Msg(..), init, update, validator, view)
 
+import Address
 import Html exposing (Html)
 import Kyc.CostaRica.Phone as KycPhone
 import Page.Register.Common exposing (..)
@@ -24,6 +25,10 @@ type alias Model =
     , district : String
     , account : String
     , problems : List ( Field, String )
+    , country : Address.Country
+    , states : List Address.State
+    , cities : List Address.City
+    , districts : List Address.Neighborhood
     }
 
 
@@ -40,8 +45,8 @@ type Field
     | Account
 
 
-init : Model
-init =
+init : Address.Country -> Model
+init country =
     { companyType = MIPYME
     , document = ""
     , name = ""
@@ -53,6 +58,10 @@ init =
     , district = ""
     , account = ""
     , problems = []
+    , country = country
+    , states = country.states
+    , cities = []
+    , districts = []
     }
 
 
@@ -175,25 +184,41 @@ view translators model =
         , viewSelectField (translators.t "register.form.state")
             model.document
             EnteredState
-            [ { value = "mipyme", label = translators.t "register.form.company.mipyme.label" }
-            , { value = "corporation", label = translators.t "register.form.company.corporation.label" }
-            ]
+            (List.map (\state -> { value = state.name, label = state.name }) model.country.states)
             translators
         , viewSelectField (translators.t "register.form.city")
             model.document
             EnteredCity
-            [ { value = "mipyme", label = translators.t "register.form.company.mipyme.label" }
-            , { value = "corporation", label = translators.t "register.form.company.corporation.label" }
-            ]
+            (List.map (\city -> { value = city.name, label = city.name }) model.cities)
             translators
         , viewSelectField (translators.t "register.form.district")
             model.document
             EnteredDistrict
-            [ { value = "mipyme", label = translators.t "register.form.company.mipyme.label" }
-            , { value = "corporation", label = translators.t "register.form.company.corporation.label" }
-            ]
+            (List.map (\district -> { value = district.name, label = district.name }) model.districts)
             translators
         ]
+
+
+getCities : List Address.State -> String -> List Address.City
+getCities states selectedState =
+    let
+        foundState =
+            List.head (List.filter (\state -> state.name == selectedState) states)
+    in
+    foundState
+        |> Maybe.map (\state -> state.cities)
+        |> Maybe.withDefault []
+
+
+getDistricts : List Address.City -> String -> List Address.Neighborhood
+getDistricts cities selectedCity =
+    let
+        foundState =
+            List.head (List.filter (\city -> city.name == selectedCity) cities)
+    in
+    foundState
+        |> Maybe.map (\city -> city.neighborhoods)
+        |> Maybe.withDefault []
 
 
 
@@ -230,10 +255,16 @@ update msg form =
             { form | phone = str }
 
         EnteredState str ->
-            { form | state = str }
+            { form
+                | state = str
+                , cities = getCities form.country.states str
+            }
 
         EnteredCity str ->
-            { form | city = str }
+            { form
+                | city = str
+                , districts = getDistricts form.cities str
+            }
 
         EnteredDistrict str ->
             { form | district = str }
