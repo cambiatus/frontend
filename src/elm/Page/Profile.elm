@@ -115,7 +115,7 @@ view loggedIn model =
                             , isKycVisible = True
                             , hasEditLink = True
                             }
-                        , viewSettings loggedIn model
+                        , viewSettings loggedIn model profile
                         , viewNewPinModal model loggedIn.shared
                         , viewDownloadPdfErrorModal model loggedIn
                         , viewDisallowKycModal loggedIn.shared.translators model
@@ -150,8 +150,8 @@ viewDisallowKycModal { t } model =
         |> Modal.toHtml
 
 
-viewSettings : LoggedIn.Model -> Model -> Html Msg
-viewSettings loggedIn model =
+viewSettings : LoggedIn.Model -> Model -> Profile -> Html Msg
+viewSettings loggedIn model profile =
     let
         { t } =
             loggedIn.shared.translators
@@ -178,6 +178,33 @@ viewSettings loggedIn model =
 
                         _ ->
                             Ignored
+
+        viewKycSettings =
+            case profile.kyc of
+                Just _ ->
+                    viewProfileItem
+                        (span []
+                            [ text (t "community.kyc.dataTitle")
+                            , span [ class "icon-tooltip inline-block align-center ml-1" ]
+                                [ Icons.question "inline-block"
+                                , p
+                                    [ class "icon-tooltip-content" ]
+                                    [ text (t "community.kyc.info")
+                                    ]
+                                ]
+                            ]
+                        )
+                        (viewDangerButton (t "community.kyc.delete.label") ToggleDisallowKycModal)
+                        Center
+                        (Just
+                            (div [ class "uppercase text-red pt-2 text-xs" ]
+                                [ text (t "community.kyc.delete.warning")
+                                ]
+                            )
+                        )
+
+                Nothing ->
+                    text ""
     in
     div [ class "bg-white mb-6" ]
         [ ul [ class "container divide-y divide-gray-500 mx-auto px-4" ]
@@ -196,26 +223,7 @@ viewSettings loggedIn model =
                 (viewTogglePush loggedIn model)
                 Center
                 Nothing
-            , viewProfileItem
-                (span []
-                    [ text (t "community.kyc.dataTitle")
-                    , span [ class "icon-tooltip inline-block align-center ml-1" ]
-                        [ Icons.question "inline-block"
-                        , p
-                            [ class "icon-tooltip-content" ]
-                            [ text (t "community.kyc.info")
-                            ]
-                        ]
-                    ]
-                )
-                (viewDangerButton (t "community.kyc.delete.label") ToggleDisallowKycModal)
-                Center
-                (Just
-                    (div [ class "uppercase text-red pt-2 text-xs" ]
-                        [ text (t "community.kyc.delete.warning")
-                        ]
-                    )
-                )
+            , viewKycSettings
             ]
         ]
 
