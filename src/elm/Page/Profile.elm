@@ -19,7 +19,7 @@ import Profile exposing (Profile)
 import PushSubscription exposing (PushSubscription)
 import Route
 import Session.LoggedIn as LoggedIn exposing (External(..), FeedbackStatus(..))
-import Session.Shared exposing (Shared)
+import Session.Shared exposing (Shared, Translators)
 import Task
 import UpdateResult as UR
 import View.Modal as Modal
@@ -118,7 +118,7 @@ view loggedIn model =
                         , viewSettings loggedIn model
                         , viewNewPinModal model loggedIn.shared
                         , viewDownloadPdfErrorModal model loggedIn
-                        , viewDisallowKycModal model
+                        , viewDisallowKycModal loggedIn.shared.translators model
                         ]
     in
     { title = title
@@ -126,16 +126,16 @@ view loggedIn model =
     }
 
 
-viewDisallowKycModal : Model -> Html Msg
-viewDisallowKycModal model =
+viewDisallowKycModal : Translators -> Model -> Html Msg
+viewDisallowKycModal { t } model =
     Modal.initWith
         { closeMsg = ToggleDisallowKycModal
         , isVisible = model.isDisallowKycModalShowed
         }
-        |> Modal.withHeader "Disallow KYC data"
+        |> Modal.withHeader (t "community.kyc.delete.confirmationHeader")
         |> Modal.withBody
             [ div []
-                [ text "Are you sure want to disallow your KYC data? You will not be able to participate to the community."
+                [ text (t "community.kyc.delete.confirmationBody")
                 ]
             ]
         |> Modal.withFooter
@@ -143,9 +143,9 @@ viewDisallowKycModal model =
                 [ class "modal-cancel"
                 , onClick ToggleDisallowKycModal
                 ]
-                [ text "No" ]
+                [ text (t "community.kyc.delete.cancel") ]
             , button [ class "modal-accept" ]
-                [ text "Yes" ]
+                [ text (t "community.kyc.delete.confirm") ]
             ]
         |> Modal.toHtml
 
@@ -153,8 +153,8 @@ viewDisallowKycModal model =
 viewSettings : LoggedIn.Model -> Model -> Html Msg
 viewSettings loggedIn model =
     let
-        tr str =
-            t loggedIn.shared.translations str
+        { t } =
+            loggedIn.shared.translators
 
         downloadAction =
             case LoggedIn.maybePrivateKey loggedIn of
@@ -182,39 +182,37 @@ viewSettings loggedIn model =
     div [ class "bg-white mb-6" ]
         [ ul [ class "container divide-y divide-gray-500 mx-auto px-4" ]
             [ viewProfileItem
-                (text (tr "profile.12words.title"))
-                (viewButton (tr "profile.12words.button") downloadAction)
+                (text (t "profile.12words.title"))
+                (viewButton (t "profile.12words.button") downloadAction)
                 Center
                 Nothing
             , viewProfileItem
-                (text (tr "profile.pin.title"))
-                (viewButton (tr "profile.pin.button") ClickedChangePin)
+                (text (t "profile.pin.title"))
+                (viewButton (t "profile.pin.button") ClickedChangePin)
                 Center
                 Nothing
             , viewProfileItem
-                (text (tr "notifications.title"))
+                (text (t "notifications.title"))
                 (viewTogglePush loggedIn model)
                 Center
                 Nothing
-
-            -- if community.hasKyc
             , viewProfileItem
                 (span []
-                    [ text (tr "KYC data")
+                    [ text (t "community.kyc.dataTitle")
                     , span [ class "icon-tooltip inline-block align-center ml-1" ]
                         [ Icons.question "inline-block"
                         , p
                             [ class "icon-tooltip-content" ]
-                            [ text "KYC means Know Your Customer and sometimes Know Your Client. KYC check is the mandatory process of identifying and verifying the identity of the client when opening an account and periodically over time."
+                            [ text (t "community.kyc.info")
                             ]
                         ]
                     ]
                 )
-                (viewDangerButton "Disallow" ToggleDisallowKycModal)
+                (viewDangerButton (t "community.kyc.delete.label") ToggleDisallowKycModal)
                 Center
                 (Just
                     (div [ class "uppercase text-red pt-2 text-xs" ]
-                        [ text "important: if you disallow the use in the app, you will have no access to this community until informing us this data again."
+                        [ text (t "community.kyc.delete.warning")
                         ]
                     )
                 )
