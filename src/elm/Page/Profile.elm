@@ -241,13 +241,6 @@ type ProfilePage
     | Public
 
 
-type alias PublicInfoConfig =
-    { hasTransferButton : Bool
-    , isKycVisible : Bool
-    , hasEditLink : Bool
-    }
-
-
 viewInfo : LoggedIn.Model -> Profile -> ProfilePage -> Html msg
 viewInfo loggedIn profile pageType =
     let
