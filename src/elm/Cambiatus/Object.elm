@@ -9,6 +9,10 @@ type Action
     = Action
 
 
+type Address
+    = Address
+
+
 type Check
     = Check
 
@@ -39,6 +43,10 @@ type Country
 
 type Invite
     = Invite
+
+
+type KycData
+    = KycData
 
 
 type Mint
