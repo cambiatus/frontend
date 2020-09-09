@@ -106,9 +106,9 @@ type alias CountryRequiredArguments =
 
 {-| List of supported countries
 -}
-country : CountryRequiredArguments -> SelectionSet decodesTo Cambiatus.Object.Country -> SelectionSet (Maybe decodesTo) RootQuery
+country : CountryRequiredArguments -> SelectionSet decodesTo Cambiatus.Object.Country -> SelectionSet decodesTo RootQuery
 country requiredArgs object_ =
-    Object.selectionForCompositeField "country" [ Argument.required "input" requiredArgs.input Cambiatus.InputObject.encodeCountryInput ] object_ (identity >> Decode.nullable)
+    Object.selectionForCompositeField "country" [ Argument.required "input" requiredArgs.input Cambiatus.InputObject.encodeCountryInput ] object_ identity
 
 
 type alias InviteRequiredArguments =
