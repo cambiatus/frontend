@@ -24,6 +24,6 @@ name =
     Object.selectionForField "String" "name" [] Decode.string
 
 
-states : SelectionSet decodesTo Cambiatus.Object.State -> SelectionSet (List (Maybe decodesTo)) Cambiatus.Object.Country
+states : SelectionSet decodesTo Cambiatus.Object.State -> SelectionSet (List decodesTo) Cambiatus.Object.Country
 states object_ =
-    Object.selectionForCompositeField "states" [] object_ (identity >> Decode.nullable >> Decode.list)
+    Object.selectionForCompositeField "states" [] object_ (identity >> Decode.list)
