@@ -7,7 +7,7 @@ import Html exposing (Html, div)
 import I18Next
 import Json.Decode exposing (Value)
 import Page
-import Page.Profile exposing (viewInfo)
+import Page.Profile exposing (ProfilePage(..), viewInfo)
 import Profile exposing (Profile)
 import Route
 import Session.LoggedIn as LoggedIn exposing (External(..), FeedbackStatus(..))
@@ -75,10 +75,7 @@ view loggedIn status =
                         [ Page.viewHeader loggedIn (t "menu.profile") Route.Dashboard
                         , viewInfo loggedIn
                             profile
-                            { hasTransferButton = True
-                            , isKycVisible = False
-                            , hasEditLink = False
-                            }
+                            Public
                         ]
 
                 NotFound ->

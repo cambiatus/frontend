@@ -1,4 +1,15 @@
-module Page.Profile exposing (Model, Msg, init, jsAddressToMsg, msgToString, update, view, viewInfo, viewSettings)
+module Page.Profile exposing
+    ( Model
+    , Msg
+    , ProfilePage(..)
+    , init
+    , jsAddressToMsg
+    , msgToString
+    , update
+    , view
+    , viewInfo
+    , viewSettings
+    )
 
 import Api.Graphql
 import Avatar
@@ -111,10 +122,7 @@ view loggedIn model =
                         [ Page.viewHeader loggedIn (t loggedIn.shared.translations "menu.profile") Route.Dashboard
                         , viewInfo loggedIn
                             profile
-                            { hasTransferButton = False
-                            , isKycVisible = True
-                            , hasEditLink = True
-                            }
+                            Private
                         , viewSettings loggedIn model profile
                         , viewNewPinModal model loggedIn.shared
                         , viewDownloadPdfErrorModal model loggedIn
@@ -228,6 +236,11 @@ viewSettings loggedIn model profile =
         ]
 
 
+type ProfilePage
+    = Private
+    | Public
+
+
 type alias PublicInfoConfig =
     { hasTransferButton : Bool
     , isKycVisible : Bool
@@ -235,8 +248,8 @@ type alias PublicInfoConfig =
     }
 
 
-viewInfo : LoggedIn.Model -> Profile -> PublicInfoConfig -> Html msg
-viewInfo loggedIn profile { hasTransferButton, isKycVisible, hasEditLink } =
+viewInfo : LoggedIn.Model -> Profile -> ProfilePage -> Html msg
+viewInfo loggedIn profile pageType =
     let
         { t } =
             loggedIn.shared.translators
@@ -301,7 +314,12 @@ viewInfo loggedIn profile { hasTransferButton, isKycVisible, hasEditLink } =
                 [ classList <|
                     let
                         hasBottomBorder =
-                            not hasTransferButton
+                            case pageType of
+                                Private ->
+                                    True
+
+                                Public ->
+                                    False
                     in
                     [ ( "pb-4", True )
                     , ( "border-b border-gray-500", hasBottomBorder )
@@ -316,28 +334,30 @@ viewInfo loggedIn profile { hasTransferButton, isKycVisible, hasEditLink } =
                             , li [] [ text email ]
                             , li [] [ text account ]
                             ]
-                        , if hasEditLink then
-                            a
-                                [ class "ml-2"
-                                , Route.href Route.ProfileEditor
-                                ]
-                                [ Icons.edit "" ]
+                        , case pageType of
+                            Private ->
+                                a
+                                    [ class "ml-2"
+                                    , Route.href Route.ProfileEditor
+                                    ]
+                                    [ Icons.edit "" ]
 
-                          else
-                            text ""
+                            Public ->
+                                text ""
                         ]
                     ]
                 , p [ class "text-sm text-gray-900" ]
                     [ text bio ]
                 ]
-            , if hasTransferButton then
-                viewTransferButton
-                    loggedIn.shared
-                    loggedIn.selectedCommunity
-                    account
+            , case pageType of
+                Public ->
+                    viewTransferButton
+                        loggedIn.shared
+                        loggedIn.selectedCommunity
+                        account
 
-              else
-                text ""
+                Private ->
+                    text ""
             , ul [ class "divide-y divide-gray-500" ]
                 ([ viewProfileItem
                     (text (t "profile.locations"))
@@ -350,11 +370,12 @@ viewInfo loggedIn profile { hasTransferButton, isKycVisible, hasEditLink } =
                     Top
                     Nothing
                  ]
-                    ++ (if isKycVisible then
-                            viewKyc
+                    ++ (case pageType of
+                            Private ->
+                                viewKyc
 
-                        else
-                            []
+                            Public ->
+                                []
                        )
                 )
             ]
