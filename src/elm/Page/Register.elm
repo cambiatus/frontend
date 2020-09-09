@@ -10,22 +10,20 @@ import Community exposing (Invite)
 import Eos.Account as Eos
 import Graphql.Http
 import Graphql.SelectionSet exposing (with)
-import Html exposing (Html, a, button, div, img, input, label, li, p, span, strong, text, ul)
+import Html exposing (Html, a, button, div, img, input, label, p, span, strong, text)
 import Html.Attributes exposing (checked, class, disabled, for, id, src, style, type_, value)
 import Html.Events exposing (onCheck, onClick, onSubmit)
-import Http
 import Json.Decode as Decode exposing (Decoder, Value)
 import Json.Decode.Pipeline as Decode
 import Json.Encode as Encode
 import Page.Register.DefaultForm as DefaultForm
 import Page.Register.JuridicalForm as JuridicalForm
 import Page.Register.NaturalForm as NaturalForm
-import Profile exposing (Profile)
 import Route
 import Session.Guest as Guest exposing (External(..))
 import Session.Shared exposing (Shared, Translators)
 import UpdateResult as UR
-import Validate exposing (validate)
+import Validate
 
 
 
@@ -60,7 +58,6 @@ type alias Model =
     { accountKeys : Maybe AccountKeys
     , hasAgreedToSavePassphrase : Bool
     , isPassphraseCopiedToClipboard : Bool
-    , problems : List Problem
     , serverError : Maybe String
     , status : Status
     , maybeInvitationId : Maybe String
@@ -86,7 +83,6 @@ initModel maybeInvitationId _ =
     { accountKeys = Nothing
     , hasAgreedToSavePassphrase = False
     , isPassphraseCopiedToClipboard = False
-    , problems = []
     , serverError = Nothing
     , status =
         case maybeInvitationId of
@@ -105,28 +101,6 @@ initModel maybeInvitationId _ =
                 Default DefaultForm.init
     , country = Nothing
     }
-
-
-
----- FORM
-
-
-type alias Form =
-    { username : String
-    , email : String
-    , account : String
-    }
-
-
-type Problem
-    = InvalidEntry ValidatedField String
-    | ServerError String
-
-
-type ValidatedField
-    = Username
-    | Email
-    | Account
 
 
 
@@ -324,7 +298,7 @@ viewCreateAccount translators model =
                     div [] []
     in
     case model.status of
-        LoadedAll invitation country ->
+        LoadedAll invitation _ ->
             if invitation.community.hasKyc == True then
                 formElement [ viewKycRegister translators model, viewFooter translators ]
 
@@ -424,7 +398,7 @@ viewKycRegister translators model =
                         NotFound ->
                             Debug.todo "Implement not found"
 
-                        Generated keys ->
+                        Generated _ ->
                             Debug.todo "Account Generated page"
 
                 Nothing ->
@@ -540,28 +514,6 @@ viewTitleForStep translators s =
         ]
 
 
-viewServerErrors : List Problem -> Html msg
-viewServerErrors problems =
-    let
-        errorList =
-            problems
-                |> List.filterMap
-                    (\p ->
-                        case p of
-                            ServerError e ->
-                                Just (li [] [ text e ])
-
-                            _ ->
-                                Nothing
-                    )
-    in
-    if List.isEmpty errorList then
-        text ""
-
-    else
-        ul [ class "bg-red border-lg rounded p-4 mt-2 text-white" ] errorList
-
-
 pdfData : AccountKeys -> PdfData
 pdfData keys =
     { passphrase = keys.words
@@ -581,7 +533,6 @@ type Msg
     = ValidateForm FormType
     | GotAccountAvailabilityResponse (Result String Bool)
     | AccountGenerated (Result Decode.Error AccountKeys)
-    | CompletedCreateProfile AccountKeys (Result Http.Error Profile)
     | AgreedToSave12Words Bool
     | DownloadPdf PdfData
     | PdfDownloaded
@@ -622,7 +573,7 @@ type alias PdfData =
 update : Maybe String -> Msg -> Model -> Guest.Model -> UpdateResult
 update maybeInvitation msg model guest =
     let
-        { t, tr } =
+        { t } =
             guest.shared.translators
     in
     case msg of
@@ -795,7 +746,7 @@ update maybeInvitation msg model guest =
                                             model.selectedForm
                             }
 
-                Err error ->
+                Err _ ->
                     UR.init
                         { model
                             | serverError = Just (t "error.unknown")
@@ -803,20 +754,11 @@ update maybeInvitation msg model guest =
 
         AccountGenerated (Err v) ->
             UR.init
-                { model
-                    | problems = []
-                }
+                model
                 |> UR.logDecodeError msg v
 
         AccountGenerated (Ok account) ->
             { model | status = Generated account }
-                |> UR.init
-
-        CompletedCreateProfile _ (Err _) ->
-            UR.init model
-
-        CompletedCreateProfile _ (Ok _) ->
-            model
                 |> UR.init
 
         AgreedToSave12Words val ->
@@ -1004,9 +946,6 @@ msgToString msg =
 
         AccountGenerated r ->
             [ "AccountGenerated", UR.resultToString r ]
-
-        CompletedCreateProfile _ r ->
-            [ "CompletedCreateProfile", UR.resultToString r ]
 
         AgreedToSave12Words _ ->
             [ "AgreedToSave12Words" ]

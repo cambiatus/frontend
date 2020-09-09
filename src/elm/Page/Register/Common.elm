@@ -3,12 +3,11 @@ module Page.Register.Common exposing (Errors(..), fieldProblems, viewSelectField
 import Html exposing (Html, p, strong, text)
 import Html.Attributes exposing (class)
 import Session.Shared exposing (Translators)
-import View.Form.Input
 import View.Form.Select
 
 
 viewSelectField : String -> String -> (String -> msg) -> List { value : String, label : String } -> Translators -> Html msg
-viewSelectField label initialValue onInput options translators =
+viewSelectField label initialValue onInput options _ =
     let
         form =
             View.Form.Select.init "document_select" label onInput initialValue
