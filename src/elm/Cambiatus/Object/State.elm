@@ -19,9 +19,9 @@ import Graphql.SelectionSet exposing (SelectionSet)
 import Json.Decode as Decode
 
 
-cities : SelectionSet decodesTo Cambiatus.Object.City -> SelectionSet (List (Maybe decodesTo)) Cambiatus.Object.State
+cities : SelectionSet decodesTo Cambiatus.Object.City -> SelectionSet (List decodesTo) Cambiatus.Object.State
 cities object_ =
-    Object.selectionForCompositeField "cities" [] object_ (identity >> Decode.nullable >> Decode.list)
+    Object.selectionForCompositeField "cities" [] object_ (identity >> Decode.list)
 
 
 name : SelectionSet String Cambiatus.Object.State
