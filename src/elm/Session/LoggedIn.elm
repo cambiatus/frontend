@@ -201,14 +201,28 @@ type Page
     = Other
     | Dashboard
     | Communities
+    | Community
+    | CommunitySettings
+    | CommunitySettingsFeatures
+    | CommunityEditor
+    | Objectives
+    | ObjectiveEditor
+    | ActionEditor
+    | Claim
     | News
     | Learn
+    | Notification
     | Shop
+    | ShopEditor
+    | ShopViewer
     | FAQ
     | Profile
     | PublicProfile
     | ProfileEditor
     | PaymentHistory
+    | Transfer
+    | ViewTransfer
+    | Analysis
 
 
 view : (Msg -> msg) -> Page -> Model -> Html msg -> Html msg
@@ -284,24 +298,19 @@ viewHelper thisMsg page profile_ ({ shared } as model) content =
                 Nothing ->
                     False
 
-        isPageAlwaysAllowed =
-            case page of
-                -- `False` means that the page is not allowed for the user without
-                -- KYC fields filled if the community has KYC enabled.
-                Dashboard ->
-                    False
-
-                Communities ->
-                    False
-
-                Shop ->
-                    False
-
-                _ ->
-                    True
+        availableWithoutKyc : List Page
+        availableWithoutKyc =
+            [ Other
+            , Profile
+            , Notification
+            , PublicProfile
+            , ProfileEditor
+            , PaymentHistory
+            , ViewTransfer
+            ]
 
         isContentAllowed =
-            isPageAlwaysAllowed
+            List.member page availableWithoutKyc
                 || not model.hasKyc
                 || (model.hasKyc && hasUserKycFilled)
 

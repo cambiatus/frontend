@@ -1130,31 +1130,31 @@ view model =
             viewGuest subModel Guest.Login GotLoginMsg Login.view
 
         Notification subModel ->
-            viewLoggedIn subModel LoggedIn.Other GotNotificationMsg Notification.view
+            viewLoggedIn subModel LoggedIn.Notification GotNotificationMsg Notification.view
 
         Community subModel ->
-            viewLoggedIn subModel LoggedIn.Other GotCommunityMsg CommunityPage.view
+            viewLoggedIn subModel LoggedIn.Community GotCommunityMsg CommunityPage.view
 
         CommunitySettings subModel ->
-            viewLoggedIn subModel LoggedIn.Other GotCommunitySettingsMsg CommunitySettings.view
+            viewLoggedIn subModel LoggedIn.CommunitySettings GotCommunitySettingsMsg CommunitySettings.view
 
         CommunitySettingsFeatures subModel ->
-            viewLoggedIn subModel LoggedIn.Other GotCommunitySettingsFeaturesMsg CommunitySettingsFeatures.view
+            viewLoggedIn subModel LoggedIn.CommunitySettingsFeatures GotCommunitySettingsFeaturesMsg CommunitySettingsFeatures.view
 
         CommunityEditor subModel ->
-            viewLoggedIn subModel LoggedIn.Other GotCommunityEditorMsg CommunityEditor.view
+            viewLoggedIn subModel LoggedIn.CommunityEditor GotCommunityEditorMsg CommunityEditor.view
 
         Objectives subModel ->
-            viewLoggedIn subModel LoggedIn.Other GotObjectivesMsg Objectives.view
+            viewLoggedIn subModel LoggedIn.Objectives GotObjectivesMsg Objectives.view
 
         ObjectiveEditor subModel ->
-            viewLoggedIn subModel LoggedIn.Other GotObjectiveEditorMsg ObjectiveEditor.view
+            viewLoggedIn subModel LoggedIn.ObjectiveEditor GotObjectiveEditorMsg ObjectiveEditor.view
 
         ActionEditor subModel ->
-            viewLoggedIn subModel LoggedIn.Other GotActionEditorMsg ActionEditor.view
+            viewLoggedIn subModel LoggedIn.ActionEditor GotActionEditorMsg ActionEditor.view
 
         Claim subModel ->
-            viewLoggedIn subModel LoggedIn.Other GotVerifyClaimMsg Claim.view
+            viewLoggedIn subModel LoggedIn.Claim GotVerifyClaimMsg Claim.view
 
         Dashboard subModel ->
             viewLoggedIn subModel LoggedIn.Dashboard GotDashboardMsg Dashboard.view
@@ -1172,16 +1172,16 @@ view model =
             viewLoggedIn subModel LoggedIn.Shop GotShopMsg Shop.view
 
         ShopEditor _ subModel ->
-            viewLoggedIn subModel LoggedIn.Other GotShopEditorMsg ShopEditor.view
+            viewLoggedIn subModel LoggedIn.ShopEditor GotShopEditorMsg ShopEditor.view
 
         ShopViewer _ subModel ->
-            viewLoggedIn subModel LoggedIn.Shop GotShopViewerMsg ShopViewer.view
+            viewLoggedIn subModel LoggedIn.ShopViewer GotShopViewerMsg ShopViewer.view
 
         ViewTransfer _ subModel ->
-            viewLoggedIn subModel LoggedIn.Other GotViewTransferScreenMsg ViewTransfer.view
+            viewLoggedIn subModel LoggedIn.ViewTransfer GotViewTransferScreenMsg ViewTransfer.view
 
         Transfer subModel ->
-            viewLoggedIn subModel LoggedIn.Other GotTransferMsg Transfer.view
+            viewLoggedIn subModel LoggedIn.Transfer GotTransferMsg Transfer.view
 
         Analysis subModel ->
-            viewLoggedIn subModel LoggedIn.Other GotAnalysisMsg Analysis.view
+            viewLoggedIn subModel LoggedIn.Analysis GotAnalysisMsg Analysis.view
