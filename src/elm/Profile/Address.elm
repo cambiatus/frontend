@@ -1,4 +1,4 @@
-module Address exposing
+module Profile.Address exposing
     ( Address
     , decode
     , selectionSet
