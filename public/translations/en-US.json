@@ -407,7 +407,17 @@
     },
     "kyc": {
       "title": "KYC",
-      "info": "KYC means Know Your Customer and sometimes Know Your Client. KYC check is the mandatory process of identifying and verifying the identity of the client when opening an account and periodically over time. Before enabling this feature, talk with us to understand better."
+      "dataTitle": "KYC Data",
+      "info": "KYC means Know Your Customer and sometimes Know Your Client. KYC check is the mandatory process of identifying and verifying the identity of the client when opening an account and periodically over time. Before enabling this feature, talk with us to understand better.",
+      "phoneLabel": "Phone Number",
+      "delete": {
+        "label": "Delete",
+        "confirmationHeader": "Delete your KYC data",
+        "confirmationBody": "After deleting this data you won't be able to participate in some communities. Do you really want to delete your KYC data?",
+        "warning": "Important: After deleting this data you won't be able to participate in some communities.",
+        "confirm": "Yes",
+        "cancel": "No"
+      }
     }
   },
   "profile": {
