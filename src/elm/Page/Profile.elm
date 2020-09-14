@@ -25,6 +25,7 @@ import I18Next exposing (t)
 import Icons
 import Json.Decode as Decode exposing (Value)
 import Json.Encode as Encode
+import Kyc exposing (ProfileKyc)
 import Page
 import Profile exposing (Profile)
 import PushSubscription exposing (PushSubscription)
@@ -641,6 +642,7 @@ type Msg
     | RequestPush
     | ToggleDeleteKycModal
     | DeleteKycAccepted
+    | CompletedDeleteKyc (Result (Graphql.Http.Error (Maybe ProfileKyc)) (Maybe ProfileKyc))
     | CheckPushPref
     | GotPushSub PushSubscription
     | CompletedPushUpload (Result (Graphql.Http.Error ()) ())
@@ -672,8 +674,32 @@ update msg model loggedIn =
                 |> UR.init
 
         DeleteKycAccepted ->
-            model
+            { model
+                | status = Loading
+                , isDeleteKycModalShowed = False
+            }
                 |> UR.init
+                |> UR.addCmd
+                    (deleteKyc loggedIn)
+
+        CompletedDeleteKyc resp ->
+            let
+                profileQuery =
+                    Api.Graphql.query loggedIn.shared
+                        (Profile.query loggedIn.accountName)
+                        CompletedProfileLoad
+            in
+            case resp of
+                Ok _ ->
+                    model
+                        |> UR.init
+                        |> UR.addCmd profileQuery
+
+                Err err ->
+                    model
+                        |> UR.init
+                        |> UR.addCmd profileQuery
+                        |> UR.logGraphqlError msg err
 
         CompletedProfileLoad (Ok Nothing) ->
             UR.init model
@@ -867,6 +893,13 @@ uploadPushSubscription { accountName, shared } data =
         CompletedPushUpload
 
 
+deleteKyc : LoggedIn.Model -> Cmd Msg
+deleteKyc { accountName, shared } =
+    Api.Graphql.mutation shared
+        (Profile.deleteKycMutation accountName)
+        CompletedDeleteKyc
+
+
 jsAddressToMsg : List String -> Value -> Maybe Msg
 jsAddressToMsg addr val =
     case addr of
@@ -920,6 +953,9 @@ msgToString msg =
 
         DeleteKycAccepted ->
             [ "DeleteKycAccepted" ]
+
+        CompletedDeleteKyc _ ->
+            [ "CompletedDeleteKyc" ]
 
         CompletedProfileLoad r ->
             [ "CompletedProfileLoad", UR.resultToString r ]
