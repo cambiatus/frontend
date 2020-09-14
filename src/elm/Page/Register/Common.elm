@@ -1,4 +1,4 @@
-module Page.Register.Common exposing (Errors(..), fieldProblems, viewSelectField, viewTitleForStep)
+module Page.Register.Common exposing (Errors(..), fieldProblems, findId, viewSelectField, viewTitleForStep)
 
 import Html exposing (Html, p, strong, text)
 import Html.Attributes exposing (class)
@@ -54,6 +54,17 @@ fieldProblems field problems =
 
     else
         Nothing
+
+
+findId : String -> List { a | id : String, name : String } -> ( String, String )
+findId str list =
+    ( list
+        |> List.filter (\x -> x.name == str)
+        |> List.map (\x -> x.id)
+        |> List.head
+        |> Maybe.withDefault ""
+    , str
+    )
 
 
 type Errors

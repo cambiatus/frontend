@@ -1,4 +1,4 @@
-module Page.Register.JuridicalForm exposing (CompanyType(..), Field(..), Model, Msg(..), init, update, validator, view)
+module Page.Register.JuridicalForm exposing (CompanyType(..), Field(..), Model, Msg(..), companyTypeToString, init, update, validator, view)
 
 import Address
 import Html exposing (Html)
@@ -20,9 +20,9 @@ type alias Model =
     , email : String
     , phone : String
     , username : String
-    , state : String
-    , city : String
-    , district : String
+    , state : ( String, String )
+    , city : ( String, String )
+    , district : ( String, String )
     , account : String
     , problems : List ( Field, String )
     , country : Address.Country
@@ -53,9 +53,9 @@ init country =
     , email = ""
     , phone = ""
     , username = ""
-    , state = ""
-    , city = ""
-    , district = ""
+    , state = ( "", "" )
+    , city = ( "", "" )
+    , district = ( "", "" )
     , account = ""
     , problems = []
     , country = country
@@ -256,18 +256,18 @@ update msg form =
 
         EnteredState str ->
             { form
-                | state = str
+                | state = findId str form.country.states
                 , cities = getCities form.country.states str
             }
 
         EnteredCity str ->
             { form
-                | city = str
+                | city = findId str form.cities
                 , districts = getDistricts form.cities str
             }
 
         EnteredDistrict str ->
-            { form | district = str }
+            { form | district = findId str form.districts }
 
         EnteredAccount str ->
             { form

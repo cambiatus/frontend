@@ -5,6 +5,8 @@ import Api.Graphql
 import Cambiatus.Enum.SignUpStatus as SignUpStatus
 import Cambiatus.InputObject as InputObject
 import Cambiatus.Mutation as Mutation
+import Cambiatus.Object
+import Cambiatus.Object.KycData
 import Cambiatus.Object.SignUp
 import Community exposing (Invite)
 import Eos.Account as Eos
@@ -537,6 +539,8 @@ type Msg
     | FormMsg EitherFormMsg
     | DefaultFormMsg1 DefaultForm.Msg
     | CompletedSignUp (Result (Graphql.Http.Error (Maybe SignUpResponse)) (Maybe SignUpResponse))
+    | CompletedKycUpsert (Result (Graphql.Http.Error (Maybe ())) (Maybe ()))
+    | CompletedAddressUpsert (Result (Graphql.Http.Error (Maybe ())) (Maybe ()))
 
 
 type EitherFormMsg
@@ -745,7 +749,7 @@ update maybeInvitation msg model guest =
                             | serverError = Just (t "error.unknown")
                         }
 
-        KeysGenerated (Err v) ->
+        AccountGenerated (Err v) ->
             UR.init
                 model
                 |> UR.logDecodeError msg v
@@ -795,7 +799,7 @@ update maybeInvitation msg model guest =
                 |> UR.addCmd
                     (case model.status of
                         Generated keys ->
-                            formTypeToCmd guest.shared keys.ownerKey model.selectedForm
+                            formTypeToAccountCmd guest.shared keys.ownerKey model.selectedForm
 
                         _ ->
                             Cmd.none
@@ -805,10 +809,35 @@ update maybeInvitation msg model guest =
             model
                 |> UR.init
                 |> UR.addCmd
+                    (case model.status of
+                        Generated keys ->
+                            formTypeToKycCmd guest.shared "1" keys.ownerKey model.selectedForm
+
+                        _ ->
+                            Cmd.none
+                    )
+
+        CompletedSignUp (Err _) ->
+            UR.init { model | serverError = Just "Server error" }
+
+        CompletedKycUpsert (Ok _) ->
+            model
+                |> UR.init
+                |> UR.addCmd
                     -- Go to login page after downloading PDF
                     (Route.replaceUrl guest.shared.navKey (Route.Login Nothing))
 
-        CompletedSignUp (Err _) ->
+        CompletedKycUpsert (Err _) ->
+            UR.init { model | serverError = Just "Server error" }
+
+        CompletedAddressUpsert (Ok _) ->
+            model
+                |> UR.init
+                |> UR.addCmd
+                    -- Go to login page after downloading PDF
+                    (Route.replaceUrl guest.shared.navKey (Route.Login Nothing))
+
+        CompletedAddressUpsert (Err _) ->
             UR.init { model | serverError = Just "Server error" }
 
         CompletedLoadInvite (Ok (Just invitation)) ->
@@ -864,8 +893,8 @@ type alias SignUpResponse =
     }
 
 
-formTypeToCmd : Shared -> String -> FormType -> Cmd Msg
-formTypeToCmd shared key formType =
+formTypeToAccountCmd : Shared -> String -> FormType -> Cmd Msg
+formTypeToAccountCmd shared key formType =
     let
         cmd obj =
             Api.Graphql.mutation shared
@@ -896,6 +925,84 @@ formTypeToCmd shared key formType =
             Cmd.none
 
 
+formTypeToKycCmd : Shared -> String -> String -> FormType -> Cmd Msg
+formTypeToKycCmd shared accountId key formType =
+    let
+        cmd : InputObject.KycDataUpdateInputRequiredFields -> Cmd Msg
+        cmd obj =
+            Api.Graphql.mutation shared
+                (Mutation.upsertKyc
+                    { input = InputObject.buildKycDataUpdateInput obj }
+                    Graphql.SelectionSet.empty
+                )
+                CompletedKycUpsert
+    in
+    case formType of
+        Juridical form ->
+            cmd
+                { accountId = accountId
+                , countryId = "1"
+                , document = form.document
+                , documentType = JuridicalForm.companyTypeToString form.companyType
+                , phone = form.phone
+                , userType = "juridical"
+                }
+
+        Natural form ->
+            cmd
+                { accountId = accountId
+                , countryId = "1"
+                , document = form.document
+                , documentType = NaturalForm.documentTypeToString form.documentType
+                , phone = form.phone
+                , userType = "natural"
+                }
+
+        _ ->
+            Cmd.none
+
+
+formTypeToAccressCmd : Shared -> String -> String -> FormType -> Cmd Msg
+formTypeToAccressCmd shared accountId key formType =
+    let
+        cmd : InputObject.AddressUpdateInputRequiredFields -> Maybe InputObject.AddressUpdateInputOptionalFields -> Cmd Msg
+        cmd required optional =
+            Api.Graphql.mutation shared
+                (Mutation.upsertAddress
+                    { input = InputObject.buildAddressUpdateInput required (\x -> x) }
+                    Graphql.SelectionSet.empty
+                )
+                CompletedKycUpsert
+    in
+    case formType of
+        Juridical form ->
+            cmd
+                { accountId = accountId
+                , cityId = ""
+                , countryId = ""
+                , neighborhoodId = ""
+                , stateId = ""
+                , street = ""
+                , zip = ""
+                }
+                Nothing
+
+        Natural form ->
+            cmd
+                { accountId = accountId
+                , cityId = ""
+                , countryId = ""
+                , neighborhoodId = ""
+                , stateId = ""
+                , street = ""
+                , zip = ""
+                }
+                Nothing
+
+        _ ->
+            Cmd.none
+
+
 
 --
 -- Model functions
@@ -912,7 +1019,7 @@ jsAddressToMsg addr val =
 
         "GotAccountAvailabilityResponse" :: _ ->
             Decode.decodeValue (Decode.field "data" decodeAccount) val
-                |> KeysGenerated
+                |> AccountGenerated
                 |> Just
 
         "PdfDownloaded" :: _ ->
@@ -937,8 +1044,8 @@ msgToString msg =
         GotAccountAvailabilityResponse _ ->
             [ "GotAccountAvailabilityResponse" ]
 
-        KeysGenerated r ->
-            [ "KeysGenerated", UR.resultToString r ]
+        AccountGenerated r ->
+            [ "AccountGenerated", UR.resultToString r ]
 
         AgreedToSave12Words _ ->
             [ "AgreedToSave12Words" ]
@@ -969,3 +1076,9 @@ msgToString msg =
 
         CompletedLoadCountry _ ->
             [ "CompletedLoadCountry" ]
+
+        CompletedKycUpsert _ ->
+            [ "CompletedKycUpsert" ]
+
+        CompletedAddressUpsert _ ->
+            [ "CompletedAddressUpsert" ]
