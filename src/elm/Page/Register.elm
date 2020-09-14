@@ -162,11 +162,6 @@ view guest model =
         t "register.registerTab"
     , content =
         viewCreateAccount guest.shared.translators model
-
-    -- if model.accountGenerated then
-    --     viewAccountGenerated
-    -- else
-    --     viewCreateAccount
     }
 
 
