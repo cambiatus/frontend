@@ -3,12 +3,14 @@ module Auth exposing
     , LoginFormData
     , Model
     , Msg
+    , SignUpResult
     , init
     , initRegister
     , isAuth
     , jsAddressToMsg
     , maybePrivateKey
     , msgToString
+    , signUp
     , subscriptions
     , update
     , view
@@ -19,8 +21,15 @@ import Api.Graphql
 import Asset.Icon as Icon
 import Browser.Dom as Dom
 import Browser.Events
+import Cambiatus.Enum.SignUpStatus
+import Cambiatus.Mutation
+import Cambiatus.Object
+import Cambiatus.Object.SignUp as SignUp
 import Eos.Account as Eos
 import Graphql.Http
+import Graphql.Operation exposing (RootMutation)
+import Graphql.OptionalArgument exposing (OptionalArgument(..))
+import Graphql.SelectionSet as SelectionSet exposing (SelectionSet, with)
 import Html exposing (Html, a, button, div, h2, img, label, li, p, span, strong, text, textarea, ul)
 import Html.Attributes exposing (autocomplete, autofocus, class, disabled, for, id, placeholder, required, src, title, type_, value)
 import Html.Events exposing (onClick, onInput, onSubmit)
@@ -523,7 +532,7 @@ viewAuthError shared maybeLoginError =
 
 
 viewFieldLabel : Translators -> String -> String -> Html msg
-viewFieldLabel { t, tr } tSuffix id_ =
+viewFieldLabel { t } tSuffix id_ =
     label
         [ class "block"
         , for id_
@@ -1004,3 +1013,60 @@ viewPinConfirmation ({ form } as model) shared =
         , isVisible = model.pinConfirmationVisibility
         , errors = errors
         }
+
+
+
+-- GraphQL
+
+
+type alias SignUpResult =
+    { status : SignUpStatus
+    , reason : String
+    }
+
+
+type SignUpStatus
+    = Success
+    | Error
+
+
+signUp : Eos.Name -> String -> String -> String -> Maybe String -> SelectionSet (Maybe SignUpResult) RootMutation
+signUp account name email publicKey maybeInvitationId =
+    let
+        accountString =
+            Eos.nameToString account
+    in
+    Cambiatus.Mutation.signUp
+        { input =
+            { account = accountString
+            , name = name
+            , email = email
+            , publicKey = publicKey
+            , invitationId =
+                case maybeInvitationId of
+                    Just i ->
+                        Present i
+
+                    Nothing ->
+                        Absent
+            }
+        }
+        signUpSelectionSet
+
+
+signUpSelectionSet : SelectionSet SignUpResult Cambiatus.Object.SignUp
+signUpSelectionSet =
+    let
+        mapSignUpStatus : Cambiatus.Enum.SignUpStatus.SignUpStatus -> SignUpStatus
+        mapSignUpStatus =
+            \s ->
+                case s of
+                    Cambiatus.Enum.SignUpStatus.Success ->
+                        Success
+
+                    Cambiatus.Enum.SignUpStatus.Error ->
+                        Error
+    in
+    SelectionSet.succeed SignUpResult
+        |> with (SignUp.status |> SelectionSet.map mapSignUpStatus)
+        |> with SignUp.reason

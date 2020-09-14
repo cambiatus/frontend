@@ -1,4 +1,15 @@
-module Page.Profile exposing (Model, Msg, init, jsAddressToMsg, msgToString, update, view, viewPrivateInfo, viewPublicInfo)
+module Page.Profile exposing
+    ( Model
+    , Msg
+    , ProfilePage(..)
+    , init
+    , jsAddressToMsg
+    , msgToString
+    , update
+    , view
+    , viewSettings
+    , viewUserInfo
+    )
 
 import Api.Graphql
 import Avatar
@@ -6,7 +17,7 @@ import Browser.Dom as Dom
 import Eos exposing (Symbol)
 import Eos.Account as Eos
 import Graphql.Http
-import Html exposing (Html, a, button, div, input, label, li, p, span, text, ul)
+import Html exposing (Html, a, br, button, div, input, label, li, p, span, text, ul)
 import Html.Attributes exposing (checked, class, classList, for, id, name, type_)
 import Html.Events exposing (onClick)
 import Http
@@ -19,7 +30,7 @@ import Profile exposing (Profile)
 import PushSubscription exposing (PushSubscription)
 import Route
 import Session.LoggedIn as LoggedIn exposing (External(..), FeedbackStatus(..))
-import Session.Shared exposing (Shared)
+import Session.Shared exposing (Shared, Translators)
 import Task
 import UpdateResult as UR
 import View.Modal as Modal
@@ -59,6 +70,7 @@ type alias Model =
     , newPinErrorMsg : Maybe String
     , isPushNotificationsEnabled : Bool
     , maybePdfDownloadedSuccessfully : Maybe Bool
+    , isDeleteKycModalShowed : Bool
     }
 
 
@@ -72,6 +84,7 @@ initModel _ =
     , newPinErrorMsg = Nothing
     , isPushNotificationsEnabled = False
     , maybePdfDownloadedSuccessfully = Nothing
+    , isDeleteKycModalShowed = False
     }
 
 
@@ -107,10 +120,13 @@ view loggedIn model =
                 Loaded profile ->
                     div []
                         [ Page.viewHeader loggedIn (t loggedIn.shared.translations "menu.profile") Route.Dashboard
-                        , viewPublicInfo loggedIn profile { hasTransferButton = False, hasEditLink = True }
-                        , viewPrivateInfo loggedIn model
+                        , viewUserInfo loggedIn
+                            profile
+                            Private
+                        , viewSettings loggedIn model profile
                         , viewNewPinModal model loggedIn.shared
                         , viewDownloadPdfErrorModal model loggedIn
+                        , viewDeleteKycModal loggedIn.shared.translators model
                         ]
     in
     { title = title
@@ -118,11 +134,35 @@ view loggedIn model =
     }
 
 
-viewPrivateInfo : LoggedIn.Model -> Model -> Html Msg
-viewPrivateInfo loggedIn model =
+viewDeleteKycModal : Translators -> Model -> Html Msg
+viewDeleteKycModal { t } model =
+    Modal.initWith
+        { closeMsg = ToggleDeleteKycModal
+        , isVisible = model.isDeleteKycModalShowed
+        }
+        |> Modal.withHeader (t "community.kyc.delete.confirmationHeader")
+        |> Modal.withBody
+            [ div []
+                [ text (t "community.kyc.delete.confirmationBody")
+                ]
+            ]
+        |> Modal.withFooter
+            [ button
+                [ class "modal-cancel"
+                , onClick ToggleDeleteKycModal
+                ]
+                [ text (t "community.kyc.delete.cancel") ]
+            , button [ class "modal-accept" ]
+                [ text (t "community.kyc.delete.confirm") ]
+            ]
+        |> Modal.toHtml
+
+
+viewSettings : LoggedIn.Model -> Model -> Profile -> Html Msg
+viewSettings loggedIn model profile =
     let
-        tr str =
-            t loggedIn.shared.translations str
+        { t } =
+            loggedIn.shared.translators
 
         downloadAction =
             case LoggedIn.maybePrivateKey loggedIn of
@@ -146,36 +186,66 @@ viewPrivateInfo loggedIn model =
 
                         _ ->
                             Ignored
+
+        viewKycSettings =
+            case profile.kyc of
+                Just _ ->
+                    viewProfileItem
+                        (span []
+                            [ text (t "community.kyc.dataTitle")
+                            , span [ class "icon-tooltip inline-block align-center ml-1" ]
+                                [ Icons.question "inline-block"
+                                , p
+                                    [ class "icon-tooltip-content" ]
+                                    [ text (t "community.kyc.info")
+                                    ]
+                                ]
+                            ]
+                        )
+                        (viewDangerButton (t "community.kyc.delete.label") ToggleDeleteKycModal)
+                        Center
+                        (Just
+                            (div [ class "uppercase text-red pt-2 text-xs" ]
+                                [ text (t "community.kyc.delete.warning")
+                                ]
+                            )
+                        )
+
+                Nothing ->
+                    text ""
     in
     div [ class "bg-white mb-6" ]
         [ ul [ class "container divide-y divide-gray-500 mx-auto px-4" ]
             [ viewProfileItem
-                (tr "profile.12words.title")
-                (viewButton (tr "profile.12words.button") downloadAction)
+                (text (t "profile.12words.title"))
+                (viewButton (t "profile.12words.button") downloadAction)
                 Center
+                Nothing
             , viewProfileItem
-                (tr "profile.pin.title")
-                (viewButton (tr "profile.pin.button") ClickedChangePin)
+                (text (t "profile.pin.title"))
+                (viewButton (t "profile.pin.button") ClickedChangePin)
                 Center
+                Nothing
             , viewProfileItem
-                (tr "notifications.title")
+                (text (t "notifications.title"))
                 (viewTogglePush loggedIn model)
                 Center
+                Nothing
+            , viewKycSettings
             ]
         ]
 
 
-type alias PublicInfoConfig =
-    { hasTransferButton : Bool
-    , hasEditLink : Bool
-    }
+type ProfilePage
+    = Private
+    | Public
 
 
-viewPublicInfo : LoggedIn.Model -> Profile -> PublicInfoConfig -> Html msg
-viewPublicInfo loggedIn profile { hasTransferButton, hasEditLink } =
+viewUserInfo : LoggedIn.Model -> Profile -> ProfilePage -> Html msg
+viewUserInfo loggedIn profile pageType =
     let
-        tr txt =
-            t loggedIn.shared.translations txt
+        { t } =
+            loggedIn.shared.translators
 
         userName =
             Maybe.withDefault "" profile.userName
@@ -191,6 +261,80 @@ viewPublicInfo loggedIn profile { hasTransferButton, hasEditLink } =
 
         account =
             Eos.nameToString profile.account
+
+        viewAddress =
+            case profile.address of
+                Just addr ->
+                    let
+                        fullAddress =
+                            span []
+                                [ text <|
+                                    addr.country
+                                        ++ ", "
+                                        ++ addr.state
+                                        ++ ", "
+                                        ++ addr.city
+                                        ++ ", "
+                                        ++ addr.neighborhood
+                                        ++ ", "
+                                        ++ addr.street
+                                        ++ (if addr.number /= "" then
+                                                ", " ++ addr.number
+
+                                            else
+                                                ""
+                                           )
+                                , br [] []
+                                , text addr.zip
+                                ]
+                    in
+                    viewProfileItem
+                        (text (t "Address"))
+                        fullAddress
+                        Top
+                        Nothing
+
+                Nothing ->
+                    text ""
+
+        viewKyc =
+            case profile.kyc of
+                Just kyc ->
+                    let
+                        documentLabel =
+                            case kyc.documentType of
+                                "cedula_de_identidad" ->
+                                    "Cédula de identidad"
+
+                                "dimex" ->
+                                    "DIMEX"
+
+                                "nite" ->
+                                    "NITE"
+
+                                "gran_empresa" ->
+                                    "Gran Empresa"
+
+                                "mipyme" ->
+                                    "MIPYME"
+
+                                _ ->
+                                    "Unknown Document"
+                    in
+                    [ viewProfileItem
+                        (text (t "community.kyc.phoneLabel"))
+                        (text kyc.phone)
+                        Center
+                        Nothing
+                    , viewProfileItem
+                        (text documentLabel)
+                        (text kyc.document)
+                        Center
+                        Nothing
+                    ]
+
+                Nothing ->
+                    []
     in
     div [ class "bg-white mb-6" ]
         [ div [ class "container p-4 mx-auto" ]
@@ -198,7 +342,12 @@ viewPublicInfo loggedIn profile { hasTransferButton, hasEditLink } =
                 [ classList <|
                     let
                         hasBottomBorder =
-                            not hasTransferButton
+                            case pageType of
+                                Private ->
+                                    True
+
+                                Public ->
+                                    False
                     in
                     [ ( "pb-4", True )
                     , ( "border-b border-gray-500", hasBottomBorder )
@@ -213,35 +362,51 @@ viewPublicInfo loggedIn profile { hasTransferButton, hasEditLink } =
                             , li [] [ text email ]
                             , li [] [ text account ]
                             ]
-                        , if hasEditLink then
-                            a
-                                [ class "ml-2"
-                                , Route.href Route.ProfileEditor
-                                ]
-                                [ Icons.edit "" ]
+                        , case pageType of
+                            Private ->
+                                a
+                                    [ class "ml-2"
+                                    , Route.href Route.ProfileEditor
+                                    ]
+                                    [ Icons.edit "" ]
 
-                          else
-                            text ""
+                            Public ->
+                                text ""
                         ]
                     ]
                 , p [ class "text-sm text-gray-900" ]
                     [ text bio ]
                 ]
-            , if hasTransferButton then
-                viewTransferButton loggedIn.shared loggedIn.selectedCommunity account
+            , case pageType of
+                Public ->
+                    viewTransferButton
+                        loggedIn.shared
+                        loggedIn.selectedCommunity
+                        account
 
-              else
-                text ""
+                Private ->
+                    text ""
             , ul [ class "divide-y divide-gray-500" ]
-                [ viewProfileItem
-                    (tr "profile.locations")
+                ([ viewProfileItem
+                    (text (t "profile.locations"))
                     (text location)
                     Center
-                , viewProfileItem
-                    (tr "profile.interests")
+                    Nothing
+                 , viewAddress
+                 , viewProfileItem
+                    (text (t "profile.interests"))
                     (text (String.join ", " profile.interests))
                     Top
-                ]
+                    Nothing
+                 ]
+                    ++ (case pageType of
+                            Private ->
+                                viewKyc
+
+                            Public ->
+                                []
+                       )
+                )
             ]
         ]
 
@@ -251,8 +416,8 @@ type VerticalAlign
     | Center
 
 
-viewProfileItem : String -> Html msg -> VerticalAlign -> Html msg
-viewProfileItem lbl content vAlign =
+viewProfileItem : Html msg -> Html msg -> VerticalAlign -> Maybe (Html msg) -> Html msg
+viewProfileItem lbl content vAlign extraContent =
     let
         vAlignClass =
             case vAlign of
@@ -263,13 +428,22 @@ viewProfileItem lbl content vAlign =
                     "items-center"
     in
     li
-        [ class "flex justify-between py-4"
-        , class vAlignClass
-        ]
-        [ span [ class "text-sm leading-6 mr-4" ]
-            [ text lbl ]
-        , span [ class "text-indigo-500 font-medium text-sm text-right" ]
-            [ content ]
+        [ class "py-4" ]
+        [ div
+            [ class "flex justify-between"
+            , class vAlignClass
+            ]
+            [ span [ class "text-sm leading-6 mr-4" ]
+                [ lbl ]
+            , span [ class "text-indigo-500 font-medium text-sm text-right" ]
+                [ content ]
+            ]
+        , case extraContent of
+            Just extra ->
+                extra
+
+            Nothing ->
+                text ""
         ]
 
 
@@ -384,6 +558,16 @@ viewButton label msg =
         ]
 
 
+viewDangerButton : String -> Msg -> Html Msg
+viewDangerButton label msg =
+    button
+        [ class "button-secondary uppercase button-sm text-red border-red"
+        , onClick msg
+        ]
+        [ text label
+        ]
+
+
 viewTogglePush : LoggedIn.Model -> Model -> Html Msg
 viewTogglePush loggedIn model =
     let
@@ -452,6 +636,7 @@ type Msg
     | TogglePinReadability
     | GotPushPreference Bool
     | RequestPush
+    | ToggleDeleteKycModal
     | CheckPushPref
     | GotPushSub PushSubscription
     | CompletedPushUpload (Result (Graphql.Http.Error ()) ())
@@ -477,6 +662,10 @@ update msg model loggedIn =
     case msg of
         Ignored ->
             UR.init model
+
+        ToggleDeleteKycModal ->
+            { model | isDeleteKycModalShowed = not model.isDeleteKycModalShowed }
+                |> UR.init
 
         CompletedProfileLoad (Ok Nothing) ->
             UR.init model
@@ -717,6 +906,9 @@ msgToString msg =
     case msg of
         Ignored ->
             [ "Ignored" ]
+
+        ToggleDeleteKycModal ->
+            [ "ToggleDeleteKycModal" ]
 
         CompletedProfileLoad r ->
             [ "CompletedProfileLoad", UR.resultToString r ]

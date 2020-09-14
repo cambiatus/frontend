@@ -45,6 +45,8 @@ import I18Next exposing (Translations, t)
 import Json.Decode as Decode exposing (Decoder, int, nullable, string)
 import Json.Decode.Pipeline as Decode exposing (optional, required)
 import Json.Encode as Encode
+import Kyc exposing (ProfileKyc)
+import Profile.Address as Address exposing (Address)
 import Select
 import Session.Shared exposing (Shared)
 import Simple.Fuzzy
@@ -68,6 +70,8 @@ type alias Profile =
     , createdAt : Posix
     , communities : List CommunityInfo
     , analysisCount : Int
+    , kyc : Maybe ProfileKyc
+    , address : Maybe Address
     }
 
 
@@ -77,6 +81,7 @@ type alias CommunityInfo =
     , logo : String
     , hasShop : Bool
     , hasActions : Bool
+    , hasKyc : Bool
     }
 
 
@@ -104,6 +109,8 @@ selectionSet =
         |> SelectionSet.hardcoded (Time.millisToPosix 0)
         |> with (User.communities communityInfoSelectionSet)
         |> with User.analysisCount
+        |> with (User.kyc Kyc.selectionSet)
+        |> with (User.address Address.selectionSet)
 
 
 communityInfoSelectionSet : SelectionSet CommunityInfo Cambiatus.Object.Community
@@ -114,6 +121,7 @@ communityInfoSelectionSet =
         |> with Community.logo
         |> with Community.hasShop
         |> with Community.hasObjectives
+        |> with Community.hasKyc
 
 
 decode : Decoder Profile
@@ -132,6 +140,8 @@ decode =
         |> Decode.hardcoded []
         |> Decode.at [ "data", "user" ]
         |> optional "analysisCount" int 0
+        |> optional "kyc" (nullable Kyc.decode) Nothing
+        |> optional "address" (nullable Address.decode) Nothing
 
 
 decodeInterests : Decoder (List String)

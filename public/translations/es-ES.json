@@ -454,6 +454,20 @@
     },
     "verifyClaim": {
       "error": "Se produjo un error al intentar procesar la validación. Vuelve a intentarlo más tarde."
+    },
+    "kyc": {
+      "title": "KYC",
+      "dataTitle": "Datos KYC",
+      "info": "La verificación KYC es el proceso obligatorio de identificación y verificación de la identidad del cliente al abrir una cuenta y periódicamente a lo largo del tiempo. Antes de habilitar esta función, contáctenos para comprender mejor.",
+      "phoneLabel": "Número de teléfono",
+      "delete": {
+        "label": "Eliminar",
+        "confirmationHeader": "Elimina tus datos KYC",
+        "confirmationBody": "Después de eliminar estos datos, no podrá participar en algunas comunidades. ¿Realmente desea eliminar sus datos KYC?",
+        "warning": "Importante: Después de eliminar estos datos, no podrá participar en algunas comunidades.",
+        "confirm": "Si",
+        "cancel": "No"
+      }
     }
   },
   "profile": {

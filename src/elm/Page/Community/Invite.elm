@@ -621,17 +621,30 @@ update session msg model =
 
         InvitationAccepted invitationId invite ->
             let
-                hasCommunityKycEnabled =
-                    -- TODO: Use `community.hasKyc` when it's ready
-                    False
+                userKyc =
+                    case session of
+                        LoggedIn { profile } ->
+                            case profile of
+                                LoggedIn.Loaded p ->
+                                    p.kyc
 
-                hasInviteeKycFieldsFilled =
-                    -- TODO: check KYC fields in the user profile when the KYC query will be ready
-                    False
+                                _ ->
+                                    Nothing
+
+                        _ ->
+                            Nothing
+
+                areUserKycFieldsFilled =
+                    case userKyc of
+                        Just _ ->
+                            True
+
+                        Nothing ->
+                            False
 
                 allowedToJoinCommunity =
-                    (hasCommunityKycEnabled && hasInviteeKycFieldsFilled)
-                        || not hasCommunityKycEnabled
+                    (invite.community.hasKyc && areUserKycFieldsFilled)
+                        || not invite.community.hasKyc
             in
             case session of
                 LoggedIn loggedIn ->

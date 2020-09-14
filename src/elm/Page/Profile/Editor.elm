@@ -9,14 +9,13 @@ import Html exposing (Html, button, div, form, input, label, span, text, textare
 import Html.Attributes exposing (accept, class, disabled, for, id, multiple, style, type_, value)
 import Html.Events exposing (onInput)
 import Http
-import I18Next exposing (Translations, t)
 import Icons
 import Json.Decode
 import Page
 import Profile exposing (Profile)
 import Route
 import Session.LoggedIn exposing (External(..), FeedbackStatus(..))
-import Session.Shared exposing (Shared)
+import Session.Shared exposing (Translators)
 import UpdateResult as UR
 
 
@@ -81,8 +80,11 @@ type Status
 view : Session.LoggedIn.Model -> Model -> { title : String, content : Html Msg }
 view loggedIn model =
     let
+        { t } =
+            loggedIn.shared.translators
+
         title =
-            t loggedIn.shared.translations "profile.edit.title"
+            t "profile.edit.title"
 
         content =
             case model.status of
@@ -90,7 +92,7 @@ view loggedIn model =
                     Page.fullPageLoading
 
                 LoadingFailed _ ->
-                    Page.fullPageError (t loggedIn.shared.translations "profile.title") Http.Timeout
+                    Page.fullPageError (t "profile.title") Http.Timeout
 
                 Loaded profile ->
                     view_ loggedIn model profile
@@ -103,11 +105,11 @@ view loggedIn model =
 view_ : Session.LoggedIn.Model -> Model -> Profile -> Html Msg
 view_ loggedIn model profile =
     let
-        tr s =
-            t loggedIn.shared.translations s
+        { t } =
+            loggedIn.shared.translators
 
         title =
-            tr "menu.edit" ++ " " ++ ("menu.profile" |> tr |> String.toLower)
+            t "menu.edit" ++ " " ++ ("menu.profile" |> t |> String.toLower)
 
         pageHeader =
             Page.viewHeader loggedIn title Route.Profile
@@ -119,45 +121,58 @@ view_ loggedIn model profile =
 
                 Nothing ->
                     profile.avatar
+
+        viewFullName =
+            let
+                hasCommunitiesWithKycEnabled =
+                    profile.communities
+                        |> List.any (\c -> c.hasKyc)
+            in
+            if hasCommunitiesWithKycEnabled then
+                viewDisabledInput
+
+            else
+                viewInput
     in
     Html.div [ class "bg-white" ]
         [ pageHeader
         , form
-            [ class "grid pt-4 gap-4 container mx-auto p-4"
-            , style "grid-template" """
-                                       "avatar avatar"
-                                       "fullname fullname"
-                                       "email email" auto
-                                       "bio bio"
-                                       "location location"
-                                       "interests interestButton"
-                                       "interestList interestList" auto
-                                       "save save" / 1fr auto
-                                      """
+            [ class "pt-4 container mx-auto p-4" ]
+            [ viewAvatar avatar
+            , viewFullName (t "profile.edit.labels.name") FullName model.fullName
+            , viewInput (t "profile.edit.labels.email") Email model.email
+            , viewBio (t "profile.edit.labels.bio") Bio loggedIn.shared.translators model.bio
+            , viewInput (t "profile.edit.labels.localization") Location model.location
+            , viewInterests model.interest model.interests loggedIn.shared.translators
+            , viewButton (t "profile.edit.submit") ClickedSave "save" model.wasSaved
             ]
-            ([ viewAvatar loggedIn avatar
-             , viewInput (tr "profile.edit.labels.name") "fullname" FullName model.fullName
-             , viewInput (tr "profile.edit.labels.email") "email" Email model.email
-             , viewTextArea (tr "profile.edit.labels.bio") "bio" Bio loggedIn.shared model.bio
-             , viewInput (tr "profile.edit.labels.localization") "location" Location model.location
-             , viewButton (tr "profile.edit.submit") ClickedSave "save" model.wasSaved
-             , div [ class "flex flex-wrap", style "grid-area" "interestList" ]
-                (model.interests
-                    |> List.map viewInterest
-                )
-             ]
-                ++ viewInterests model.interest loggedIn.shared.translations
-            )
         ]
 
 
-viewInput : String -> String -> Field -> String -> Html Msg
-viewInput label area field currentValue =
-    div [ style "grid-area" area ]
+viewDisabledInput : String -> Field -> String -> Html Msg
+viewDisabledInput label field currentValue =
+    makeViewInput True label field currentValue
+
+
+viewInput : String -> Field -> String -> Html Msg
+viewInput label field currentValue =
+    makeViewInput False label field currentValue
+
+
+makeViewInput : Bool -> String -> Field -> String -> Html Msg
+makeViewInput isDisabled label field currentValue =
+    div [ class "mb-4" ]
         [ Html.label [ class "input-label" ]
             [ text label ]
         , input
             [ class "w-full input rounded-sm"
+            , class <|
+                if isDisabled then
+                    "bg-gray-200 text-gray-700"
+
+                else
+                    ""
+            , disabled isDisabled
             , onInput (OnFieldInput field)
             , value currentValue
             ]
@@ -165,16 +180,29 @@ viewInput label area field currentValue =
         ]
 
 
-viewInterests : String -> Translations -> List (Html Msg)
-viewInterests interest translations =
-    [ viewInput (t translations "profile.edit.labels.interests") "interests" Interest interest
-    , button
-        [ class "button-secondary px-4 h-12 mt-auto"
-        , style "grid-area" "interestButton"
-        , onClickPreventDefault AddInterest
+viewInterests : String -> List String -> Translators -> Html Msg
+viewInterests interest interests { t } =
+    div [ class "mb-4" ]
+        [ Html.label [ class "input-label" ]
+            [ text (t "profile.edit.labels.interests") ]
+        , div [ class "flex mb-4" ]
+            [ input
+                [ class "w-full input rounded-sm"
+                , onInput (OnFieldInput Interest)
+                , value interest
+                ]
+                []
+            , button
+                [ class "button-secondary px-4 h-12 align-bottom ml-4"
+                , onClickPreventDefault AddInterest
+                ]
+                [ text <| String.toUpper (t "menu.add") ]
+            ]
+        , div [ class "flex flex-wrap" ]
+            (interests
+                |> List.map viewInterest
+            )
         ]
-        [ text <| String.toUpper (t translations "menu.add") ]
-    ]
 
 
 viewInterest : String -> Html Msg
@@ -213,16 +241,9 @@ viewButton label msg area isDisabled =
         ]
 
 
-viewTextArea : String -> String -> Field -> Shared -> String -> Html Msg
-viewTextArea lbl gridArea field shared currentValue =
-    let
-        tr : String -> I18Next.Replacements -> String
-        tr =
-            I18Next.tr shared.translations I18Next.Curly
-    in
-    div
-        [ style "grid-area" gridArea
-        ]
+viewBio : String -> Field -> Translators -> String -> Html Msg
+viewBio lbl field { tr } currentValue =
+    div [ class "mb-4" ]
         [ label [ class "input-label" ] [ text lbl ]
         , div [ class "relative" ]
             [ textarea
@@ -243,12 +264,10 @@ viewTextArea lbl gridArea field shared currentValue =
         ]
 
 
-viewAvatar : Session.LoggedIn.Model -> Avatar.Avatar -> Html Msg
-viewAvatar loggedIn url =
+viewAvatar : Avatar.Avatar -> Html Msg
+viewAvatar url =
     div
-        [ class "m-auto relative"
-        , style "grid-area" "avatar"
-        ]
+        [ class "m-auto w-20 relative mb-4" ]
         [ input
             [ id "profile-upload-avatar"
             , class "profile-img-input"
@@ -296,6 +315,10 @@ type alias UpdateResult =
 
 update : Msg -> Model -> Session.LoggedIn.Model -> UpdateResult
 update msg model loggedIn =
+    let
+        { t } =
+            loggedIn.shared.translators
+    in
     case msg of
         CompletedProfileLoad (Ok Nothing) ->
             UR.init model
@@ -314,7 +337,7 @@ update msg model loggedIn =
 
                 showSuccessMsg =
                     if model.wasSaved then
-                        UR.addExt (ShowFeedback Success (t loggedIn.shared.translations "profile.edit_success"))
+                        UR.addExt (ShowFeedback Success (t "profile.edit_success"))
 
                     else
                         UR.addExt HideFeedback

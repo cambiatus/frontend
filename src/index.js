@@ -1,7 +1,6 @@
 import Eos from 'eosjs'
 import ecc from 'eosjs-ecc'
 import sjcl from 'sjcl'
-import axios from 'axios'
 import './styles/main.css'
 import mnemonic from './scripts/mnemonic.js'
 import configuration from './scripts/config.js'
@@ -72,11 +71,13 @@ const config = configuration[env]
 function getUserLanguage () {
   const urlParams = new URLSearchParams(window.location.search)
 
-  return urlParams.get('lang') ||
+  return (
+    urlParams.get('lang') ||
     window.localStorage.getItem(LANGUAGE_KEY) ||
     navigator.language ||
     navigator.userLanguage ||
     'en-US'
+  )
 }
 
 function flags () {
@@ -252,57 +253,27 @@ async function handleJavascriptPort (arg) {
         })
       break
     }
-    case 'generateAccount': {
-      devLog('=========================', 'generateAccount')
+    case 'generateKeys': {
+      devLog('=========================', 'generateKeys')
       const userLang = getUserLanguage()
       const [randomWords, hexRandomWords] = mnemonic.generateRandom(userLang)
       const privateKey = ecc.seedPrivate(hexRandomWords)
       const publicKey = ecc.privateToPublic(privateKey)
-      const data = {
-        account: arg.data.account,
-        ownerKey: publicKey,
-        activeKey: publicKey
+
+      const response = {
+        address: arg.responseAddress,
+        addressData: arg.responseData,
+        data: {
+          ownerKey: publicKey,
+          activeKey: publicKey,
+          accountName: arg.data.account,
+          words: randomWords,
+          privateKey: privateKey
+        }
       }
 
-      if (arg.data.invitationId) {
-        data.invitationId = arg.data.invitationId
-      }
-
-      axios
-        .post(config.endpoints.api + '/api/chain/account', data)
-        .then(res => {
-          eos = Eos(
-            Object.assign(config.eosOptions, {
-              keyProvider: privateKey
-            })
-          )
-
-          const response = {
-            address: arg.responseAddress,
-            addressData: arg.responseData,
-            data: {
-              ownerKey: publicKey,
-              activeKey: publicKey,
-              accountName: res.data.account,
-              transactionId: res.data.transaction_id,
-              words: randomWords,
-              privateKey: privateKey
-            }
-          }
-          devLog('generateAccount succeed', res)
-          devLog('generateAccount response', response)
-          app.ports.javascriptInPort.send(response)
-        })
-        .catch(e => {
-          devLog('generateAccount failed', e)
-          var errorResponse = {
-            address: arg.responseAddress,
-            addressData: arg.responseData,
-            error: e
-          }
-          devLog('generateAccount response', errorResponse)
-          app.ports.javascriptInPort.send(errorResponse)
-        })
+      devLog('generateKeys response', response)
+      app.ports.javascriptInPort.send(response)
       break
     }
     case 'loginWithPrivateKey': {
@@ -428,7 +399,10 @@ async function handleJavascriptPort (arg) {
       // the Profile page. For the users who were already logged-in before these changes were introduced,
       // this property may not exist.
       if (userStorage.encryptedPassphrase) {
-        data.passphrase = sjcl.decrypt(currentPin, userStorage.encryptedPassphrase)
+        data.passphrase = sjcl.decrypt(
+          currentPin,
+          userStorage.encryptedPassphrase
+        )
       }
 
       await storePin(data, newPin)
@@ -605,7 +579,12 @@ async function handleJavascriptPort (arg) {
       devLog('=======================', 'downloadAuthPdfFromRegistration')
       const accountName = arg.data.accountName
       const passphrase = arg.data.passphrase
-      downloadPdf(accountName, passphrase, arg.responseAddress, arg.responseData)
+      downloadPdf(
+        accountName,
+        passphrase,
+        arg.responseAddress,
+        arg.responseData
+      )
       break
     }
     case 'downloadAuthPdfFromProfile': {
@@ -619,7 +598,12 @@ async function handleJavascriptPort (arg) {
       // for further processing.
       if (store.encryptedPassphrase) {
         const decryptedPassphrase = sjcl.decrypt(pin, store.encryptedPassphrase)
-        downloadPdf(store.accountName, decryptedPassphrase, arg.responseAddress, arg.responseData)
+        downloadPdf(
+          store.accountName,
+          decryptedPassphrase,
+          arg.responseAddress,
+          arg.responseData
+        )
       } else {
         // The case when there's not passphrase stored in user's browser, only the Private Key
         const response = {

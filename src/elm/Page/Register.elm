@@ -111,7 +111,6 @@ type alias AccountKeys =
     { ownerKey : String
     , activeKey : String
     , accountName : Eos.Name
-    , transactionId : String
     , words : String
     , privateKey : String
     }
@@ -123,7 +122,6 @@ decodeAccount =
         |> Decode.required "ownerKey" Decode.string
         |> Decode.required "activeKey" Decode.string
         |> Decode.required "accountName" Eos.nameDecoder
-        |> Decode.required "transactionId" Decode.string
         |> Decode.required "words" Decode.string
         |> Decode.required "privateKey" Decode.string
 
@@ -747,7 +745,7 @@ update maybeInvitation msg model guest =
                             | serverError = Just (t "error.unknown")
                         }
 
-        AccountGenerated (Err v) ->
+        KeysGenerated (Err v) ->
             UR.init
                 model
                 |> UR.logDecodeError msg v
@@ -914,7 +912,7 @@ jsAddressToMsg addr val =
 
         "GotAccountAvailabilityResponse" :: _ ->
             Decode.decodeValue (Decode.field "data" decodeAccount) val
-                |> AccountGenerated
+                |> KeysGenerated
                 |> Just
 
         "PdfDownloaded" :: _ ->
@@ -939,8 +937,8 @@ msgToString msg =
         GotAccountAvailabilityResponse _ ->
             [ "GotAccountAvailabilityResponse" ]
 
-        AccountGenerated r ->
-            [ "AccountGenerated", UR.resultToString r ]
+        KeysGenerated r ->
+            [ "KeysGenerated", UR.resultToString r ]
 
         AgreedToSave12Words _ ->
             [ "AgreedToSave12Words" ]

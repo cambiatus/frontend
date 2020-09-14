@@ -31,6 +31,7 @@ initModel symbol =
     , symbol = symbol
     , hasShop = False
     , hasObjectives = False
+    , hasKyc = False
     }
 
 
@@ -39,6 +40,7 @@ type alias Model =
     , symbol : Symbol
     , hasShop : Bool
     , hasObjectives : Bool
+    , hasKyc : Bool
     }
 
 
@@ -52,12 +54,14 @@ type Status
 type Feature
     = Shop
     | Objectives
+    | Kyc
 
 
 type Msg
     = CompletedLoad (Result (Graphql.Http.Error (Maybe Community.Model)) (Maybe Community.Model))
     | ToggleShop Bool
     | ToggleObjectives Bool
+    | ToggleKyc Bool
     | SaveSuccess
 
 
@@ -87,6 +91,7 @@ view loggedIn model =
                             ]
                             [ toggleView translations (translate "community.objectives.title_plural") model.hasObjectives ToggleObjectives "actions"
                             , toggleView translations (translate "menu.shop") model.hasShop ToggleShop "shop"
+                            , toggleView translations (translate "community.kyc.title") model.hasKyc ToggleKyc "kyc"
                             ]
                         ]
 
@@ -177,6 +182,7 @@ update msg model loggedIn =
                     | status = newStatus
                     , hasShop = community.hasShop
                     , hasObjectives = community.hasObjectives
+                    , hasKyc = community.hasKyc
                 }
 
         CompletedLoad (Ok Nothing) ->
@@ -195,6 +201,10 @@ update msg model loggedIn =
             { model | hasObjectives = state }
                 |> UR.init
                 |> saveFeaturePort loggedIn Objectives model.status state
+
+        ToggleKyc _ ->
+            { model | hasKyc = model.hasKyc }
+                |> UR.init
 
         SaveSuccess ->
             model
@@ -217,6 +227,9 @@ saveFeaturePort loggedIn feature status state =
 
                 Objectives ->
                     ToggleObjectives
+
+                Kyc ->
+                    ToggleKyc
     in
     case status of
         Loaded community ->
@@ -244,16 +257,24 @@ saveFeature feature state authorization accountName community =
                 Shop ->
                     state
 
-                Objectives ->
+                _ ->
                     community.hasShop
 
         hasObjectives =
             case feature of
-                Shop ->
-                    community.hasObjectives
-
                 Objectives ->
                     state
+
+                _ ->
+                    community.hasObjectives
+
+        hasKyc =
+            case feature of
+                Kyc ->
+                    state
+
+                _ ->
+                    community.hasKyc
 
         data =
             { accountName = accountName
@@ -265,6 +286,7 @@ saveFeature feature state authorization accountName community =
             , invitedReward = community.invitedReward
             , hasShop = hasShop
             , hasObjectives = hasObjectives
+            , hasKyc = hasKyc
             }
     in
     { responseAddress = SaveSuccess
@@ -304,6 +326,9 @@ msgToString msg =
 
         ToggleObjectives _ ->
             [ "ToggleObjectives" ]
+
+        ToggleKyc _ ->
+            [ "ToggleKyc" ]
 
         SaveSuccess ->
             [ "SaveSuccess" ]

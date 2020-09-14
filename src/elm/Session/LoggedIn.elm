@@ -140,6 +140,7 @@ type alias Model =
     , feedback : FeedbackVisibility
     , hasShop : Bool
     , hasObjectives : Bool
+    , hasKyc : Bool
     }
 
 
@@ -162,6 +163,7 @@ initModel shared authModel accountName selectedCommunity =
     , showCommunitySelector = False
     , hasShop = True
     , hasObjectives = False
+    , hasKyc = False
     }
 
 
@@ -717,7 +719,7 @@ update msg model =
         CompletedLoadSettings (Ok settings_) ->
             case settings_ of
                 Just settings ->
-                    { model | hasShop = settings.hasShop, hasObjectives = settings.hasObjectives }
+                    { model | hasShop = settings.hasShop, hasObjectives = settings.hasObjectives, hasKyc = settings.hasKyc }
                         |> UR.init
 
                 Nothing ->

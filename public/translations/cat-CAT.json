@@ -454,6 +454,20 @@
     },
     "verifyClaim": {
       "error": "S'ha produït un error en intentar processar la convalidació. Torneu-ho a provar més endavant"
+    },
+    "kyc": {
+      "title": "KYC",
+      "dataTitle": "Dades KYC",
+      "info": "La verificació KYC és el procés obligatori d’identificar i verificar la identitat del client quan s’obre un compte i periòdicament amb el temps. Abans d’activar aquesta funció, poseu-vos en contacte amb nosaltres per entendre-ho millor.",
+      "phoneLabel": "Número de telèfon",
+      "delete": {
+        "label": "Suprimeix",
+        "confirmationHeader": "Suprimiu les vostres dades KYC",
+        "confirmationBody": "Després de suprimir aquestes dades, no podreu participar en algunes comunitats. Confirmes que vols suprimir les teves dades KYC?",
+        "warning": "Important: després de suprimir aquestes dades, no podreu participar en algunes comunitats.",
+        "confirm": "Sí",
+        "cancel": "No"
+      }
     }
   },
   "profile": {
