@@ -24,9 +24,9 @@ cities object_ =
     Object.selectionForCompositeField "cities" [] object_ (identity >> Decode.list)
 
 
-id : SelectionSet String Cambiatus.Object.State
+id : SelectionSet Cambiatus.ScalarCodecs.Id Cambiatus.Object.State
 id =
-    Object.selectionForField "String" "id" [] Decode.string
+    Object.selectionForField "ScalarCodecs.Id" "id" [] (Cambiatus.ScalarCodecs.codecs |> Cambiatus.Scalar.unwrapCodecs |> .codecId |> .decoder)
 
 
 name : SelectionSet String Cambiatus.Object.State

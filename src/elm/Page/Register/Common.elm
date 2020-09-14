@@ -1,5 +1,7 @@
 module Page.Register.Common exposing (Errors(..), fieldProblems, findId, viewSelectField, viewTitleForStep)
 
+import Cambiatus.Scalar exposing (Id(..))
+import Cambiatus.ScalarCodecs
 import Html exposing (Html, p, strong, text)
 import Html.Attributes exposing (class)
 import Session.Shared exposing (Translators)
@@ -56,11 +58,15 @@ fieldProblems field problems =
         Nothing
 
 
-findId : String -> List { a | id : String, name : String } -> ( String, String )
+findId : String -> List { a | id : Id, name : String } -> ( String, String )
 findId str list =
+    let
+        getId (Id id) =
+            id
+    in
     ( list
         |> List.filter (\x -> x.name == str)
-        |> List.map (\x -> x.id)
+        |> List.map (\x -> getId x.id)
         |> List.head
         |> Maybe.withDefault ""
     , str

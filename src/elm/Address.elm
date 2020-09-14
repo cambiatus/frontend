@@ -6,34 +6,35 @@ import Cambiatus.Object.Country
 import Cambiatus.Object.Neighborhood
 import Cambiatus.Object.State
 import Cambiatus.Query
+import Cambiatus.Scalar exposing (Id)
 import Graphql.Operation exposing (RootQuery)
 import Graphql.OptionalArgument exposing (OptionalArgument(..))
 import Graphql.SelectionSet exposing (SelectionSet, with)
 
 
 type alias Country =
-    { id : String
+    { id : Id
     , name : String
     , states : List State
     }
 
 
 type alias State =
-    { id : String
+    { id : Id
     , name : String
     , cities : List City
     }
 
 
 type alias City =
-    { id : String
+    { id : Id
     , name : String
     , neighborhoods : List Neighborhood
     }
 
 
 type alias Neighborhood =
-    { id : String
+    { id : Id
     , name : String
     }
 
