@@ -808,7 +808,7 @@ update maybeInvitation msg model guest =
             model
                 |> UR.init
                 |> UR.addCmd
-                    (formTypeToKycCmd guest.shared "1" model.selectedForm)
+                    (formTypeToKycCmd guest.shared model.selectedForm)
 
         CompletedSignUp (Err _) ->
             UR.init { model | serverError = Just "Server error" }
@@ -817,7 +817,7 @@ update maybeInvitation msg model guest =
             model
                 |> UR.init
                 |> UR.addCmd
-                    (formTypeToAddressCmd guest.shared "1" model.selectedForm)
+                    (formTypeToAddressCmd guest.shared model.selectedForm)
 
         CompletedKycUpsert (Err _) ->
             UR.init { model | serverError = Just "Server error" }
@@ -917,8 +917,8 @@ formTypeToAccountCmd shared key formType =
             Cmd.none
 
 
-formTypeToKycCmd : Shared -> String -> FormType -> Cmd Msg
-formTypeToKycCmd shared accountId formType =
+formTypeToKycCmd : Shared -> FormType -> Cmd Msg
+formTypeToKycCmd shared formType =
     let
         cmd : InputObject.KycDataUpdateInputRequiredFields -> Cmd Msg
         cmd obj =
@@ -932,7 +932,7 @@ formTypeToKycCmd shared accountId formType =
     case formType of
         Juridical form ->
             cmd
-                { accountId = accountId
+                { accountId = form.account
                 , countryId = "1"
                 , document = form.document
                 , documentType = JuridicalForm.companyTypeToString form.companyType
@@ -942,7 +942,7 @@ formTypeToKycCmd shared accountId formType =
 
         Natural form ->
             cmd
-                { accountId = accountId
+                { accountId = form.account
                 , countryId = "1"
                 , document = form.document
                 , documentType = NaturalForm.documentTypeToString form.documentType
@@ -954,8 +954,8 @@ formTypeToKycCmd shared accountId formType =
             Cmd.none
 
 
-formTypeToAddressCmd : Shared -> String -> FormType -> Cmd Msg
-formTypeToAddressCmd shared accountId formType =
+formTypeToAddressCmd : Shared -> FormType -> Cmd Msg
+formTypeToAddressCmd shared formType =
     let
         cmd : InputObject.AddressUpdateInputRequiredFields -> InputObject.AddressUpdateInputOptionalFields -> Cmd Msg
         cmd required optional =
@@ -967,7 +967,7 @@ formTypeToAddressCmd shared accountId formType =
                 CompletedKycUpsert
 
         toInput form =
-            { accountId = accountId
+            { accountId = form.account
             , cityId = Tuple.first form.city
             , countryId = "1"
             , neighborhoodId = Tuple.first form.district
