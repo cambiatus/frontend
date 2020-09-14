@@ -1,10 +1,12 @@
-module Page.Register.Common exposing (Errors(..), fieldProblems, findId, viewSelectField, viewTitleForStep)
+module Page.Register.Common exposing (Errors(..), fieldProblems, findId, getCities, getDistricts, ifEmptyTuple, viewSelectField, viewTitleForStep)
 
+import Address
 import Cambiatus.Scalar exposing (Id(..))
 import Cambiatus.ScalarCodecs
 import Html exposing (Html, p, strong, text)
 import Html.Attributes exposing (class)
 import Session.Shared exposing (Translators)
+import Validate exposing (Validator)
 import View.Form.Select
 
 
@@ -71,6 +73,40 @@ findId str list =
         |> Maybe.withDefault ""
     , str
     )
+
+
+getCities : List Address.State -> String -> List Address.City
+getCities states selectedState =
+    let
+        foundState =
+            List.head (List.filter (\state -> state.name == selectedState) states)
+    in
+    foundState
+        |> Maybe.map (\state -> state.cities)
+        |> Maybe.withDefault []
+
+
+getDistricts : List Address.City -> String -> List Address.Neighborhood
+getDistricts cities selectedCity =
+    let
+        foundState =
+            List.head (List.filter (\city -> city.name == selectedCity) cities)
+    in
+    foundState
+        |> Maybe.map (\city -> city.neighborhoods)
+        |> Maybe.withDefault []
+
+
+ifEmptyTuple data error =
+    Validate.ifFalse
+        (\subject ->
+            if Tuple.first (data subject) == "" then
+                False
+
+            else
+                True
+        )
+        error
 
 
 type Errors

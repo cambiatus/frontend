@@ -5,12 +5,11 @@ import Api.Graphql
 import Cambiatus.Enum.SignUpStatus as SignUpStatus
 import Cambiatus.InputObject as InputObject
 import Cambiatus.Mutation as Mutation
-import Cambiatus.Object
-import Cambiatus.Object.KycData
 import Cambiatus.Object.SignUp
 import Community exposing (Invite)
 import Eos.Account as Eos
 import Graphql.Http
+import Graphql.OptionalArgument
 import Graphql.SelectionSet exposing (with)
 import Html exposing (Html, a, button, div, img, input, label, p, span, strong, text)
 import Html.Attributes exposing (checked, class, disabled, for, id, src, style, type_, value)
@@ -676,8 +675,8 @@ update maybeInvitation msg model guest =
                 { model
                     | selectedForm =
                         case ( type_, model.status ) of
-                            ( NaturalAccount, _ ) ->
-                                Natural NaturalForm.init
+                            ( NaturalAccount, LoadedAll _ country ) ->
+                                Natural (NaturalForm.init country)
 
                             ( JuridicalAccount, LoadedAll _ country ) ->
                                 Juridical (JuridicalForm.init country)
@@ -809,13 +808,7 @@ update maybeInvitation msg model guest =
             model
                 |> UR.init
                 |> UR.addCmd
-                    (case model.status of
-                        Generated keys ->
-                            formTypeToKycCmd guest.shared "1" keys.ownerKey model.selectedForm
-
-                        _ ->
-                            Cmd.none
-                    )
+                    (formTypeToKycCmd guest.shared "1" model.selectedForm)
 
         CompletedSignUp (Err _) ->
             UR.init { model | serverError = Just "Server error" }
@@ -824,8 +817,7 @@ update maybeInvitation msg model guest =
             model
                 |> UR.init
                 |> UR.addCmd
-                    -- Go to login page after downloading PDF
-                    (Route.replaceUrl guest.shared.navKey (Route.Login Nothing))
+                    (formTypeToAddressCmd guest.shared "1" model.selectedForm)
 
         CompletedKycUpsert (Err _) ->
             UR.init { model | serverError = Just "Server error" }
@@ -925,8 +917,8 @@ formTypeToAccountCmd shared key formType =
             Cmd.none
 
 
-formTypeToKycCmd : Shared -> String -> String -> FormType -> Cmd Msg
-formTypeToKycCmd shared accountId key formType =
+formTypeToKycCmd : Shared -> String -> FormType -> Cmd Msg
+formTypeToKycCmd shared accountId formType =
     let
         cmd : InputObject.KycDataUpdateInputRequiredFields -> Cmd Msg
         cmd obj =
@@ -962,42 +954,38 @@ formTypeToKycCmd shared accountId key formType =
             Cmd.none
 
 
-formTypeToAccressCmd : Shared -> String -> String -> FormType -> Cmd Msg
-formTypeToAccressCmd shared accountId key formType =
+formTypeToAddressCmd : Shared -> String -> FormType -> Cmd Msg
+formTypeToAddressCmd shared accountId formType =
     let
-        cmd : InputObject.AddressUpdateInputRequiredFields -> Maybe InputObject.AddressUpdateInputOptionalFields -> Cmd Msg
+        cmd : InputObject.AddressUpdateInputRequiredFields -> InputObject.AddressUpdateInputOptionalFields -> Cmd Msg
         cmd required optional =
             Api.Graphql.mutation shared
                 (Mutation.upsertAddress
-                    { input = InputObject.buildAddressUpdateInput required (\x -> x) }
+                    { input = InputObject.buildAddressUpdateInput required (\_ -> optional) }
                     Graphql.SelectionSet.empty
                 )
                 CompletedKycUpsert
+
+        toInput form =
+            { accountId = accountId
+            , cityId = Tuple.first form.city
+            , countryId = "1"
+            , neighborhoodId = Tuple.first form.district
+            , stateId = Tuple.first form.state
+            , street = form.street
+            , zip = form.zip
+            }
     in
     case formType of
         Juridical form ->
             cmd
-                { accountId = accountId
-                , cityId = ""
-                , countryId = ""
-                , neighborhoodId = ""
-                , stateId = ""
-                , street = ""
-                , zip = ""
-                }
-                Nothing
+                (toInput form)
+                { number = Graphql.OptionalArgument.Present form.number }
 
         Natural form ->
             cmd
-                { accountId = accountId
-                , cityId = ""
-                , countryId = ""
-                , neighborhoodId = ""
-                , stateId = ""
-                , street = ""
-                , zip = ""
-                }
-                Nothing
+                (toInput form)
+                { number = Graphql.OptionalArgument.Present form.number }
 
         _ ->
             Cmd.none

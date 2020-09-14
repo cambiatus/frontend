@@ -24,6 +24,9 @@ type alias Model =
     , city : ( String, String )
     , district : ( String, String )
     , account : String
+    , street : String
+    , zip : String
+    , number : String
     , problems : List ( Field, String )
     , country : Address.Country
     , states : List Address.State
@@ -43,6 +46,9 @@ type Field
     | City
     | District
     | Account
+    | Street
+    | Zip
+    | Number
 
 
 init : Address.Country -> Model
@@ -57,6 +63,9 @@ init country =
     , city = ( "", "" )
     , district = ( "", "" )
     , account = ""
+    , street = ""
+    , zip = ""
+    , number = ""
     , problems = []
     , country = country
     , states = country.states
@@ -94,6 +103,9 @@ type Msg
     | EnteredCity String
     | EnteredDistrict String
     | EnteredAccount String
+    | EnteredStreet String
+    | EnteredZip String
+    | EnteredNumber String
 
 
 
@@ -196,29 +208,40 @@ view translators model =
             EnteredDistrict
             (List.map (\district -> { value = district.name, label = district.name }) model.districts)
             translators
+        , View.Form.Input.init
+            { id = "street"
+            , label = translators.t (formTranslationString ++ ".street.label")
+            , onInput = EnteredStreet
+            , disabled = False
+            , value = model.street
+            , placeholder = Just (translators.t (formTranslationString ++ ".street.placeholder"))
+            , problems = fieldProblems Street model.problems
+            , translators = translators
+            }
+            |> View.Form.Input.toHtml
+        , View.Form.Input.init
+            { id = "number"
+            , label = translators.t (formTranslationString ++ ".number.label")
+            , onInput = EnteredNumber
+            , disabled = False
+            , value = model.number
+            , placeholder = Just (translators.t (formTranslationString ++ ".number.placeholder"))
+            , problems = fieldProblems Number model.problems
+            , translators = translators
+            }
+            |> View.Form.Input.toHtml
+        , View.Form.Input.init
+            { id = "zip"
+            , label = translators.t (formTranslationString ++ ".zip.label")
+            , onInput = EnteredZip
+            , disabled = False
+            , value = model.zip
+            , placeholder = Just (translators.t (formTranslationString ++ ".zip.placeholder"))
+            , problems = fieldProblems Zip model.problems
+            , translators = translators
+            }
+            |> View.Form.Input.toHtml
         ]
-
-
-getCities : List Address.State -> String -> List Address.City
-getCities states selectedState =
-    let
-        foundState =
-            List.head (List.filter (\state -> state.name == selectedState) states)
-    in
-    foundState
-        |> Maybe.map (\state -> state.cities)
-        |> Maybe.withDefault []
-
-
-getDistricts : List Address.City -> String -> List Address.Neighborhood
-getDistricts cities selectedCity =
-    let
-        foundState =
-            List.head (List.filter (\city -> city.name == selectedCity) cities)
-    in
-    foundState
-        |> Maybe.map (\city -> city.neighborhoods)
-        |> Maybe.withDefault []
 
 
 
@@ -279,6 +302,15 @@ update msg form =
                         str
             }
 
+        EnteredStreet str ->
+            { form | street = str }
+
+        EnteredZip str ->
+            { form | zip = str }
+
+        EnteredNumber str ->
+            { form | number = str }
+
 
 validator : Translators -> Validator ( Field, String ) Model
 validator { t } =
@@ -287,12 +319,15 @@ validator { t } =
             Validate.ifFalse (\subject -> KycPhone.isValid (subjectToString subject)) error
     in
     Validate.all
-        [ Validate.firstError
-            [ Validate.ifBlank .name ( Name, t "error.required" )
-            ]
-        , Validate.firstError
-            [ Validate.ifBlank .document ( Document, t "error.required" )
-            ]
+        [ Validate.ifBlank .name ( Name, t "error.required" )
+        , Validate.ifBlank .document ( Document, t "error.required" )
+        , Validate.ifBlank .username ( Document, t "error.required" )
+        , Validate.ifBlank .account ( Document, t "error.required" )
+        , Validate.ifBlank .zip ( Document, t "error.required" )
+        , Validate.ifBlank .number ( Document, t "error.required" )
+        , ifEmptyTuple .state ( State, t "error.required" )
+        , ifEmptyTuple .city ( State, t "error.required" )
+        , ifEmptyTuple .district ( State, t "error.required" )
         , Validate.firstError
             [ Validate.ifBlank .email ( Email, t "error.required" )
             , Validate.ifInvalidEmail .email (\_ -> ( Email, t "error.email" ))
