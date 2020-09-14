@@ -54,6 +54,53 @@ encodeActionsInput input =
         [ ( "creator", Encode.string |> Encode.optional input.creator ), ( "isCompleted", Encode.bool |> Encode.optional input.isCompleted ), ( "validator", Encode.string |> Encode.optional input.validator ), ( "verificationType", Encode.enum Cambiatus.Enum.VerificationType.toString |> Encode.optional input.verificationType ) ]
 
 
+buildAddressUpdateInput : AddressUpdateInputRequiredFields -> (AddressUpdateInputOptionalFields -> AddressUpdateInputOptionalFields) -> AddressUpdateInput
+buildAddressUpdateInput required fillOptionals =
+    let
+        optionals =
+            fillOptionals
+                { number = Absent }
+    in
+    { accountId = required.accountId, cityId = required.cityId, countryId = required.countryId, neighborhoodId = required.neighborhoodId, number = optionals.number, stateId = required.stateId, street = required.street, zip = required.zip }
+
+
+type alias AddressUpdateInputRequiredFields =
+    { accountId : String
+    , cityId : String
+    , countryId : String
+    , neighborhoodId : String
+    , stateId : String
+    , street : String
+    , zip : String
+    }
+
+
+type alias AddressUpdateInputOptionalFields =
+    { number : OptionalArgument String }
+
+
+{-| Type for the AddressUpdateInput input object.
+-}
+type alias AddressUpdateInput =
+    { accountId : String
+    , cityId : String
+    , countryId : String
+    , neighborhoodId : String
+    , number : OptionalArgument String
+    , stateId : String
+    , street : String
+    , zip : String
+    }
+
+
+{-| Encode a AddressUpdateInput into a value that can be used as an argument.
+-}
+encodeAddressUpdateInput : AddressUpdateInput -> Value
+encodeAddressUpdateInput input =
+    Encode.maybeObject
+        [ ( "accountId", Encode.string input.accountId |> Just ), ( "cityId", Encode.string input.cityId |> Just ), ( "countryId", Encode.string input.countryId |> Just ), ( "neighborhoodId", Encode.string input.neighborhoodId |> Just ), ( "number", Encode.string |> Encode.optional input.number ), ( "stateId", Encode.string input.stateId |> Just ), ( "street", Encode.string input.street |> Just ), ( "zip", Encode.string input.zip |> Just ) ]
+
+
 buildChecksInput : (ChecksInputOptionalFields -> ChecksInputOptionalFields) -> ChecksInput
 buildChecksInput fillOptionals =
     let
@@ -250,6 +297,41 @@ encodeInviteInput : InviteInput -> Value
 encodeInviteInput input =
     Encode.maybeObject
         [ ( "id", Encode.string |> Encode.optional input.id ) ]
+
+
+buildKycDataUpdateInput : KycDataUpdateInputRequiredFields -> KycDataUpdateInput
+buildKycDataUpdateInput required =
+    { accountId = required.accountId, countryId = required.countryId, document = required.document, documentType = required.documentType, phone = required.phone, userType = required.userType }
+
+
+type alias KycDataUpdateInputRequiredFields =
+    { accountId : String
+    , countryId : String
+    , document : String
+    , documentType : String
+    , phone : String
+    , userType : String
+    }
+
+
+{-| Type for the KycDataUpdateInput input object.
+-}
+type alias KycDataUpdateInput =
+    { accountId : String
+    , countryId : String
+    , document : String
+    , documentType : String
+    , phone : String
+    , userType : String
+    }
+
+
+{-| Encode a KycDataUpdateInput into a value that can be used as an argument.
+-}
+encodeKycDataUpdateInput : KycDataUpdateInput -> Value
+encodeKycDataUpdateInput input =
+    Encode.maybeObject
+        [ ( "accountId", Encode.string input.accountId |> Just ), ( "countryId", Encode.string input.countryId |> Just ), ( "document", Encode.string input.document |> Just ), ( "documentType", Encode.string input.documentType |> Just ), ( "phone", Encode.string input.phone |> Just ), ( "userType", Encode.string input.userType |> Just ) ]
 
 
 buildNewCommunityInput : NewCommunityInputRequiredFields -> NewCommunityInput

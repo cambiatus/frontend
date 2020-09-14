@@ -24,6 +24,11 @@ cities object_ =
     Object.selectionForCompositeField "cities" [] object_ (identity >> Decode.list)
 
 
+id : SelectionSet String Cambiatus.Object.State
+id =
+    Object.selectionForField "String" "id" [] Decode.string
+
+
 name : SelectionSet String Cambiatus.Object.State
 name =
     Object.selectionForField "String" "name" [] Decode.string

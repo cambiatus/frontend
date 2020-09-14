@@ -12,30 +12,36 @@ import Graphql.SelectionSet exposing (SelectionSet, with)
 
 
 type alias Country =
-    { name : String
+    { id : String
+    , name : String
     , states : List State
     }
 
 
 type alias State =
-    { name : String
+    { id : String
+    , name : String
     , cities : List City
     }
 
 
 type alias City =
-    { name : String
+    { id : String
+    , name : String
     , neighborhoods : List Neighborhood
     }
 
 
 type alias Neighborhood =
-    { name : String }
+    { id : String
+    , name : String
+    }
 
 
 countrySelectionSet : SelectionSet Country Cambiatus.Object.Country
 countrySelectionSet =
     Graphql.SelectionSet.succeed Country
+        |> with Cambiatus.Object.Country.id
         |> with Cambiatus.Object.Country.name
         |> with (Cambiatus.Object.Country.states stateSelectionSet)
 
@@ -43,6 +49,7 @@ countrySelectionSet =
 stateSelectionSet : SelectionSet State Cambiatus.Object.State
 stateSelectionSet =
     Graphql.SelectionSet.succeed State
+        |> with Cambiatus.Object.State.id
         |> with Cambiatus.Object.State.name
         |> with (Cambiatus.Object.State.cities citySelectionSet)
 
@@ -50,6 +57,7 @@ stateSelectionSet =
 citySelectionSet : SelectionSet City Cambiatus.Object.City
 citySelectionSet =
     Graphql.SelectionSet.succeed City
+        |> with Cambiatus.Object.City.id
         |> with Cambiatus.Object.City.name
         |> with (Cambiatus.Object.City.neighborhoods neighborhoodSelectionSet)
 
@@ -57,6 +65,7 @@ citySelectionSet =
 neighborhoodSelectionSet : SelectionSet Neighborhood Cambiatus.Object.Neighborhood
 neighborhoodSelectionSet =
     Graphql.SelectionSet.succeed Neighborhood
+        |> with Cambiatus.Object.Neighborhood.id
         |> with Cambiatus.Object.Neighborhood.name
 
 

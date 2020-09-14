@@ -19,6 +19,11 @@ import Graphql.SelectionSet exposing (SelectionSet)
 import Json.Decode as Decode
 
 
+id : SelectionSet String Cambiatus.Object.Country
+id =
+    Object.selectionForField "String" "id" [] Decode.string
+
+
 name : SelectionSet String Cambiatus.Object.Country
 name =
     Object.selectionForField "String" "name" [] Decode.string

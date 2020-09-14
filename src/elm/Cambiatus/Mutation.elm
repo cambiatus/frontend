@@ -61,3 +61,25 @@ type alias UpdateProfileRequiredArguments =
 updateProfile : UpdateProfileRequiredArguments -> SelectionSet decodesTo Cambiatus.Object.Profile -> SelectionSet (Maybe decodesTo) RootMutation
 updateProfile requiredArgs object_ =
     Object.selectionForCompositeField "updateProfile" [ Argument.required "input" requiredArgs.input Cambiatus.InputObject.encodeProfileUpdateInput ] object_ (identity >> Decode.nullable)
+
+
+type alias UpsertAddressRequiredArguments =
+    { input : Cambiatus.InputObject.AddressUpdateInput }
+
+
+{-| Updates user's address if it already exists or inserts a new one if user hasn't it yet.
+-}
+upsertAddress : UpsertAddressRequiredArguments -> SelectionSet decodesTo Cambiatus.Object.Address -> SelectionSet (Maybe decodesTo) RootMutation
+upsertAddress requiredArgs object_ =
+    Object.selectionForCompositeField "upsertAddress" [ Argument.required "input" requiredArgs.input Cambiatus.InputObject.encodeAddressUpdateInput ] object_ (identity >> Decode.nullable)
+
+
+type alias UpsertKycRequiredArguments =
+    { input : Cambiatus.InputObject.KycDataUpdateInput }
+
+
+{-| Updates user's KYC info if it already exists or inserts a new one if user hasn't it yet.
+-}
+upsertKyc : UpsertKycRequiredArguments -> SelectionSet decodesTo Cambiatus.Object.KycData -> SelectionSet (Maybe decodesTo) RootMutation
+upsertKyc requiredArgs object_ =
+    Object.selectionForCompositeField "upsertKyc" [ Argument.required "input" requiredArgs.input Cambiatus.InputObject.encodeKycDataUpdateInput ] object_ (identity >> Decode.nullable)
