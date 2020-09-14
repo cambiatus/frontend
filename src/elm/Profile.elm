@@ -4,6 +4,7 @@ module Profile exposing
     , ProfileCreate
     , ProfileForm
     , decode
+    , deleteKycMutation
     , emptyProfileForm
     , encodeProfileChat
     , encodeProfileCreate
@@ -193,6 +194,20 @@ mutation account form =
             }
         }
         selectionSet
+
+
+deleteKycMutation : Eos.Name -> SelectionSet (Maybe ProfileKyc) RootMutation
+deleteKycMutation account =
+    let
+        nameString =
+            Eos.nameToString account
+    in
+    Cambiatus.Mutation.deleteKyc
+        { input =
+            { accountId = nameString
+            }
+        }
+        Kyc.selectionSet
 
 
 
