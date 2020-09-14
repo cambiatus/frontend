@@ -152,7 +152,10 @@ viewDeleteKycModal { t } model =
                 , onClick ToggleDeleteKycModal
                 ]
                 [ text (t "community.kyc.delete.cancel") ]
-            , button [ class "modal-accept" ]
+            , button
+                [ class "modal-accept"
+                , onClick DeleteKycAccepted
+                ]
                 [ text (t "community.kyc.delete.confirm") ]
             ]
         |> Modal.toHtml
@@ -637,6 +640,7 @@ type Msg
     | GotPushPreference Bool
     | RequestPush
     | ToggleDeleteKycModal
+    | DeleteKycAccepted
     | CheckPushPref
     | GotPushSub PushSubscription
     | CompletedPushUpload (Result (Graphql.Http.Error ()) ())
@@ -665,6 +669,10 @@ update msg model loggedIn =
 
         ToggleDeleteKycModal ->
             { model | isDeleteKycModalShowed = not model.isDeleteKycModalShowed }
+                |> UR.init
+
+        DeleteKycAccepted ->
+            model
                 |> UR.init
 
         CompletedProfileLoad (Ok Nothing) ->
@@ -909,6 +917,9 @@ msgToString msg =
 
         ToggleDeleteKycModal ->
             [ "ToggleDeleteKycModal" ]
+
+        DeleteKycAccepted ->
+            [ "DeleteKycAccepted" ]
 
         CompletedProfileLoad r ->
             [ "CompletedProfileLoad", UR.resultToString r ]
