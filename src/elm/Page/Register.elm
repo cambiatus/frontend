@@ -17,6 +17,7 @@ import Html.Events exposing (onCheck, onClick, onSubmit)
 import Json.Decode as Decode exposing (Decoder, Value)
 import Json.Decode.Pipeline as Decode
 import Json.Encode as Encode
+import Page
 import Page.Register.DefaultForm as DefaultForm
 import Page.Register.JuridicalForm as JuridicalForm
 import Page.Register.NaturalForm as NaturalForm
@@ -315,13 +316,13 @@ viewCreateAccount translators model =
             Session.Shared.viewFullLoading
 
         FailedInvite _ ->
-            Debug.todo "Implement error"
+            Page.fullPageNotFound (translators.t "error.unknown") ""
 
         FailedCountry _ ->
-            Debug.todo "Implement error"
+            Page.fullPageNotFound (translators.t "error.unknown") ""
 
         NotFound ->
-            Debug.todo "Implement not found"
+            Page.fullPageNotFound (translators.t "error.pageNotFound") ""
 
 
 viewServerError : Maybe String -> Html msg
@@ -811,7 +812,7 @@ update maybeInvitation msg model guest =
                     (formTypeToKycCmd guest.shared model.selectedForm)
 
         CompletedSignUp (Err _) ->
-            UR.init { model | serverError = Just "Server error" }
+            UR.init { model | serverError = Just (t "error.unknown") }
 
         CompletedKycUpsert (Ok _) ->
             model
@@ -820,7 +821,7 @@ update maybeInvitation msg model guest =
                     (formTypeToAddressCmd guest.shared model.selectedForm)
 
         CompletedKycUpsert (Err _) ->
-            UR.init { model | serverError = Just "Server error" }
+            UR.init { model | serverError = Just (t "error.unknown") }
 
         CompletedAddressUpsert (Ok _) ->
             model
@@ -830,7 +831,7 @@ update maybeInvitation msg model guest =
                     (Route.replaceUrl guest.shared.navKey (Route.Login Nothing))
 
         CompletedAddressUpsert (Err _) ->
-            UR.init { model | serverError = Just "Server error" }
+            UR.init { model | serverError = Just (t "error.unknown") }
 
         CompletedLoadInvite (Ok (Just invitation)) ->
             UR.init
@@ -843,6 +844,9 @@ update maybeInvitation msg model guest =
                             NotFound ->
                                 NotFound
 
+                            FailedCountry err ->
+                                FailedCountry err
+
                             _ ->
                                 LoadedInvite invitation
                 }
@@ -851,7 +855,10 @@ update maybeInvitation msg model guest =
             UR.init { model | status = NotFound }
 
         CompletedLoadInvite (Err error) ->
-            { model | status = FailedInvite error }
+            { model
+                | status = FailedInvite error
+                , serverError = Just (t "error.unknown")
+            }
                 |> UR.init
                 |> UR.logGraphqlError msg error
 
@@ -861,6 +868,9 @@ update maybeInvitation msg model guest =
                     case model.status of
                         LoadedInvite invitation ->
                             LoadedAll invitation country
+
+                        FailedInvite err ->
+                            FailedInvite err
 
                         NotFound ->
                             NotFound
