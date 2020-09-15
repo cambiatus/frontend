@@ -2,11 +2,10 @@ module Page.Register.Common exposing (Errors(..), fieldProblems, findId, getCiti
 
 import Address
 import Cambiatus.Scalar exposing (Id(..))
-import Cambiatus.ScalarCodecs
 import Html exposing (Html, p, strong, text)
 import Html.Attributes exposing (class)
 import Session.Shared exposing (Translators)
-import Validate exposing (Validator)
+import Validate
 import View.Form.Select
 
 

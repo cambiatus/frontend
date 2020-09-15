@@ -355,13 +355,13 @@ viewKycRegister translators model =
                         selectedForm =
                             case model.selectedForm of
                                 Natural form ->
-                                    [ NaturalForm.view translators form |> Html.map NaturalFormMsg ]
+                                    [ NaturalForm.view translators form |> Html.map NaturalFormMsg |> Html.map FormMsg ]
 
                                 Juridical form ->
-                                    [ JuridicalForm.view translators form |> Html.map JuridicalFormMsg ]
+                                    [ JuridicalForm.view translators form |> Html.map JuridicalFormMsg |> Html.map FormMsg ]
 
                                 Default form ->
-                                    [ DefaultForm.view translators form |> Html.map DefaultFormMsg ]
+                                    [ DefaultForm.view translators form |> Html.map DefaultFormMsg |> Html.map FormMsg ]
 
                                 None ->
                                     []
@@ -383,21 +383,20 @@ viewKycRegister translators model =
                             [ Session.Shared.viewFullLoading ]
 
                         FailedCountry _ ->
-                            Debug.todo "Implement error"
+                            [ Page.fullPageNotFound (translators.t "error.unknown") "" ]
 
                         FailedInvite _ ->
-                            Debug.todo "Implement error"
+                            [ Page.fullPageNotFound (translators.t "error.unknown") "" ]
 
                         NotFound ->
-                            Debug.todo "Implement not found"
+                            [ Page.fullPageNotFound (translators.t "error.pageNotFound") "" ]
 
-                        Generated _ ->
-                            Debug.todo "Account Generated page"
+                        Generated keys ->
+                            [ viewAccountGenerated translators model keys ]
 
                 Nothing ->
                     []
             )
-            |> Html.map FormMsg
         ]
 
 
