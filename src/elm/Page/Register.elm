@@ -21,6 +21,7 @@ import Page
 import Page.Register.DefaultForm as DefaultForm
 import Page.Register.JuridicalForm as JuridicalForm
 import Page.Register.NaturalForm as NaturalForm
+import Result
 import Route
 import Session.Guest as Guest exposing (External(..))
 import Session.Shared exposing (Shared, Translators)
@@ -128,21 +129,18 @@ decodeAccount =
         |> Decode.required "privateKey" Decode.string
 
 
-decodeAvailabilityResponse : Decoder (Result String Bool)
-decodeAvailabilityResponse =
-    let
-        toDecoder : Bool -> String -> Decoder (Result String Bool)
-        toDecoder isAvailable error =
-            if String.length error < 0 then
-                Decode.succeed (Result.Ok isAvailable)
+availabilityResponseDecoder : Decoder Bool
+availabilityResponseDecoder =
+    Decode.field "error" (Decode.nullable Decode.string)
+        |> Decode.andThen
+            (\error ->
+                case error of
+                    Just err ->
+                        Decode.fail err
 
-            else
-                Decode.succeed (Result.Err error)
-    in
-    Decode.succeed toDecoder
-        |> Decode.required "isAvailable" Decode.bool
-        |> Decode.required "error" Decode.string
-        |> Decode.resolve
+                    Nothing ->
+                        Decode.field "isAvailable" Decode.bool
+            )
 
 
 
@@ -526,7 +524,7 @@ type alias UpdateResult =
 
 type Msg
     = ValidateForm FormType
-    | GotAccountAvailabilityResponse (Result String Bool)
+    | GotAccountAvailabilityResponse (Result Decode.Error Bool)
     | AccountGenerated (Result Decode.Error AccountKeys)
     | AgreedToSave12Words Bool
     | DownloadPdf PdfData
@@ -687,43 +685,46 @@ update maybeInvitation msg model guest =
                 }
 
         GotAccountAvailabilityResponse response ->
+            let
+                generateAccountPort =
+                    { responseAddress = GotAccountAvailabilityResponse (Result.Ok False)
+                    , responseData = Encode.null
+                    , data =
+                        Encode.object
+                            [ ( "name", Encode.string "generateKeys" )
+                            , ( "invitationId"
+                              , case maybeInvitation of
+                                    Nothing ->
+                                        Encode.null
+
+                                    Just invitationId ->
+                                        Encode.string invitationId
+                              )
+                            , ( "account"
+                              , Encode.string
+                                    (case model.selectedForm of
+                                        Juridical form ->
+                                            form.account
+
+                                        Natural form ->
+                                            form.account
+
+                                        Default form ->
+                                            form.account
+
+                                        None ->
+                                            ""
+                                    )
+                              )
+                            ]
+                    }
+            in
             case response of
                 Ok isAvailable ->
                     if isAvailable == True then
                         model
                             |> UR.init
-                            |> UR.addPort
-                                { responseAddress = GotAccountAvailabilityResponse (Result.Ok False)
-                                , responseData = Encode.null
-                                , data =
-                                    Encode.object
-                                        [ ( "name", Encode.string "generateAccount" )
-                                        , ( "invitationId"
-                                          , case maybeInvitation of
-                                                Nothing ->
-                                                    Encode.null
-
-                                                Just invitationId ->
-                                                    Encode.string invitationId
-                                          )
-                                        , ( "account"
-                                          , Encode.string
-                                                (case model.selectedForm of
-                                                    Juridical form ->
-                                                        form.account
-
-                                                    Natural form ->
-                                                        form.account
-
-                                                    Default form ->
-                                                        form.account
-
-                                                    None ->
-                                                        ""
-                                                )
-                                          )
-                                        ]
-                                }
+                            |> UR.addPort generateAccountPort
 
                     else
                         UR.init
@@ -744,10 +745,9 @@ update maybeInvitation msg model guest =
                             }
 
                 Err _ ->
-                    UR.init
-                        { model
-                            | serverError = Just (t "error.unknown")
-                        }
+                    model
+                        |> UR.init
+                        |> UR.addPort generateAccountPort
 
         AccountGenerated (Err v) ->
             UR.init
@@ -834,21 +834,30 @@ update maybeInvitation msg model guest =
             UR.init { model | serverError = Just (t "error.unknown") }
 
         CompletedLoadInvite (Ok (Just invitation)) ->
+            let
+                newStatus =
+                    case model.status of
+                        LoadedCountry country ->
+                            LoadedAll invitation country
+
+                        NotFound ->
+                            NotFound
+
+                        FailedCountry err ->
+                            FailedCountry err
+
+                        _ ->
+                            LoadedInvite invitation
+            in
             UR.init
                 { model
-                    | status =
-                        case model.status of
-                            LoadedCountry country ->
-                                LoadedAll invitation country
+                    | status = newStatus
+                    , selectedForm =
+                        if invitation.community.hasKyc == True then
+                            None
 
-                            NotFound ->
-                                NotFound
-
-                            FailedCountry err ->
-                                FailedCountry err
-
-                            _ ->
-                                LoadedInvite invitation
+                        else
+                            Default DefaultForm.init
                 }
 
         CompletedLoadInvite (Ok Nothing) ->
@@ -927,6 +936,11 @@ formTypeToAccountCmd shared key formType =
             Cmd.none
 
 
+redirectCmd : Shared -> Cmd Msg
+redirectCmd shared =
+    Route.replaceUrl shared.navKey (Route.Login Nothing)
+
+
 formTypeToKycCmd : Shared -> FormType -> Cmd Msg
 formTypeToKycCmd shared formType =
     let
@@ -961,7 +975,7 @@ formTypeToKycCmd shared formType =
                 }
 
         _ ->
-            Cmd.none
+            redirectCmd shared
 
 
 formTypeToAddressCmd : Shared -> FormType -> Cmd Msg
@@ -998,7 +1012,7 @@ formTypeToAddressCmd shared formType =
                 { number = Graphql.OptionalArgument.Present form.number }
 
         _ ->
-            Cmd.none
+            redirectCmd shared
 
 
 
@@ -1010,10 +1024,10 @@ formTypeToAddressCmd shared formType =
 jsAddressToMsg : List String -> Value -> Maybe Msg
 jsAddressToMsg addr val =
     case addr of
-        "ValidateForm" :: [] ->
-            Decode.decodeValue decodeAvailabilityResponse val
-                |> Result.map GotAccountAvailabilityResponse
-                |> Result.toMaybe
+        "ValidateForm" :: _ ->
+            Decode.decodeValue availabilityResponseDecoder val
+                |> GotAccountAvailabilityResponse
+                |> Just
 
         "GotAccountAvailabilityResponse" :: _ ->
             Decode.decodeValue (Decode.field "data" decodeAccount) val
