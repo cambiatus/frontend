@@ -93,6 +93,7 @@ type alias KycForm =
     , documentNumber : String
     , phoneNumber : String
     , problems : List ( KycFormField, String )
+    , serverError : Maybe String
     }
 
 
@@ -146,6 +147,7 @@ initKycForm =
     , documentNumber = ""
     , phoneNumber = ""
     , problems = []
+    , serverError = Nothing
     }
 
 
@@ -264,7 +266,7 @@ valToDoc v =
 
 
 viewKycForm : Translators -> KycForm -> Html Msg
-viewKycForm { t } ({ document, documentNumber, phoneNumber, problems } as kycForm) =
+viewKycForm { t } ({ document, documentNumber, phoneNumber, problems, serverError } as kycForm) =
     let
         { docType, pattern, maxLength, isValid, title } =
             document
@@ -286,7 +288,13 @@ viewKycForm { t } ({ document, documentNumber, phoneNumber, problems } as kycFor
         , form
             [ onSubmit (KycFormSubmitted kycForm) ]
             [ div [ class "form-field mb-6" ]
-                [ label [ class "input-label block" ]
+                [ case serverError of
+                    Just e ->
+                        div [ class "bg-red border-lg rounded p-4 mt-2 text-white mb-6" ] [ text e ]
+
+                    Nothing ->
+                        text ""
+                , label [ class "input-label block" ]
                     [ text "document type"
                     ]
                 , select
@@ -579,8 +587,8 @@ update session msg model =
             { model | kycForm = Just newForm }
                 |> UR.init
 
-        KycDataSaved res ->
-            case ( res, session ) of
+        KycDataSaved resp ->
+            case ( resp, session ) of
                 ( Ok (Just _), LoggedIn m ) ->
                     model
                         |> UR.init
@@ -592,8 +600,16 @@ update session msg model =
                             )
 
                 _ ->
-                    -- TODO: show possible server errors
-                    model
+                    let
+                        kycFormWithServerError =
+                            case model.kycForm of
+                                Just f ->
+                                    Just { f | serverError = Just "Sorry, couldn't save the form. Please, check your data and try again." }
+
+                                Nothing ->
+                                    Nothing
+                    in
+                    { model | kycForm = kycFormWithServerError }
                         |> UR.init
 
         CompletedLoad (Ok (Just invite)) ->
