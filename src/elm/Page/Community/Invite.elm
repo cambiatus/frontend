@@ -17,6 +17,7 @@ import Html exposing (Html, button, div, form, img, input, label, option, p, sel
 import Html.Attributes exposing (attribute, class, maxlength, placeholder, selected, src, type_, value)
 import Html.Events exposing (onClick, onInput, onSubmit)
 import Http
+import Kyc exposing (ProfileKyc)
 import Kyc.CostaRica.CedulaDeIdentidad as CedulaDeIdentidad
 import Kyc.CostaRica.Dimex as Dimex
 import Kyc.CostaRica.Nite as Nite
@@ -217,7 +218,6 @@ view session model =
 
                         inner =
                             viewKycForm shared.translators formData
-                                |> Html.map FormMsg
                     in
                     div []
                         [ viewHeader
@@ -239,7 +239,7 @@ valToDoc v =
             { docType = DimexDoc
             , isValid = Dimex.isValid
             , title = "DIMEX Number"
-            , value = "DIMEX"
+            , value = "dimex"
             , maxLength = 12
             , pattern = "XXXXXXXXXXX or XXXXXXXXXXXX"
             }
@@ -248,7 +248,7 @@ valToDoc v =
             { docType = NiteDoc
             , isValid = Nite.isValid
             , title = "NITE Number"
-            , value = "NITE"
+            , value = "nite"
             , maxLength = 10
             , pattern = "XXXXXXXXXX"
             }
@@ -257,13 +257,13 @@ valToDoc v =
             { docType = CedulaDoc
             , isValid = CedulaDeIdentidad.isValid
             , title = "Cédula de identidad"
-            , value = "Cedula"
+            , value = "cedula_de_identidad"
             , maxLength = 11
             , pattern = "X-XXXX-XXXX"
             }
 
 
-viewKycForm : Translators -> KycForm -> Html KycFormMsg
+viewKycForm : Translators -> KycForm -> Html Msg
 viewKycForm { t } ({ document, documentNumber, phoneNumber, problems } as kycForm) =
     let
         { docType, pattern, maxLength, isValid, title } =
@@ -290,7 +290,7 @@ viewKycForm { t } ({ document, documentNumber, phoneNumber, problems } as kycFor
                     [ text "document type"
                     ]
                 , select
-                    [ onInput DocumentTypeChanged
+                    [ onInput (FormMsg << DocumentTypeChanged)
                     , class "form-select"
                     ]
                     [ option
@@ -317,7 +317,7 @@ viewKycForm { t } ({ document, documentNumber, phoneNumber, problems } as kycFor
                     [ type_ "text"
                     , class "form-input"
                     , attribute "inputmode" "numeric"
-                    , onInput DocumentNumberEntered
+                    , onInput (FormMsg << DocumentNumberEntered)
                     , value documentNumber
                     , maxlength maxLength
                     , placeholder pattern
@@ -332,7 +332,7 @@ viewKycForm { t } ({ document, documentNumber, phoneNumber, problems } as kycFor
                     [ type_ "tel"
                     , class "form-input"
                     , value phoneNumber
-                    , onInput PhoneNumberEntered
+                    , onInput (FormMsg << PhoneNumberEntered)
                     , maxlength 9
                     , placeholder "XXXX-XXXX"
                     ]
@@ -470,17 +470,18 @@ type Msg
     = CompletedLoad (Result (Graphql.Http.Error (Maybe Invite)) (Maybe Invite))
     | OpenConfirmationModal
     | CloseConfirmationModal
+    | KycDataSaved (Result (Graphql.Http.Error (Maybe ProfileKyc)) (Maybe ProfileKyc))
     | InvitationRejected
     | InvitationAccepted InvitationId Invite
     | CompletedSignIn LoggedIn.Model (Result Http.Error Profile)
     | FormMsg KycFormMsg
+    | KycFormSubmitted KycForm
 
 
 type KycFormMsg
     = DocumentTypeChanged String
     | DocumentNumberEntered String
     | PhoneNumberEntered String
-    | KycFormSubmitted KycForm
 
 
 updateKycForm : KycForm -> KycFormMsg -> KycForm
@@ -520,8 +521,21 @@ updateKycForm kycForm kycMsg =
             in
             { kycForm | documentNumber = trimmedNumber }
 
+        PhoneNumberEntered p ->
+            { kycForm | phoneNumber = p }
+
+
+saveKycData : LoggedIn.Model -> ProfileKyc -> Cmd Msg
+saveKycData { accountName, shared } data =
+    Api.Graphql.mutation shared
+        (Profile.upsertKycMutation accountName data)
+        KycDataSaved
+
+
+update : Session -> Msg -> Model -> UpdateResult
+update session msg model =
+    case msg of
         KycFormSubmitted form ->
-            -- TODO: validate form, save user's Kyc data and signInInvitation
             let
                 errors =
                     case validate (kycValidator form.document.isValid) form of
@@ -534,15 +548,24 @@ updateKycForm kycForm kycMsg =
                 newForm =
                     { form | problems = errors }
             in
-            newForm
+            case ( errors, session ) of
+                ( [], LoggedIn m ) ->
+                    { model | kycForm = Just newForm }
+                        |> UR.init
+                        |> UR.addCmd
+                            (saveKycData m
+                                { documentType = newForm.document.value
+                                , document = newForm.documentNumber
+                                , userType = "natural"
+                                , phone = newForm.phoneNumber
+                                , isVerified = False
+                                }
+                            )
 
-        PhoneNumberEntered p ->
-            { kycForm | phoneNumber = p }
+                _ ->
+                    { model | kycForm = Just newForm }
+                        |> UR.init
 
-
-update : Session -> Msg -> Model -> UpdateResult
-update session msg model =
-    case msg of
         FormMsg kycFormMsg ->
             let
                 newForm =
@@ -555,6 +578,23 @@ update session msg model =
             in
             { model | kycForm = Just newForm }
                 |> UR.init
+
+        KycDataSaved res ->
+            case ( res, session ) of
+                ( Ok (Just _), LoggedIn m ) ->
+                    model
+                        |> UR.init
+                        |> UR.addCmd
+                            (Api.signInInvitation m.shared
+                                m.accountName
+                                model.invitationId
+                                (CompletedSignIn m)
+                            )
+
+                _ ->
+                    -- TODO: show possible server errors
+                    model
+                        |> UR.init
 
         CompletedLoad (Ok (Just invite)) ->
             let
@@ -693,6 +733,9 @@ msgToString msg =
         CompletedLoad r ->
             [ "CompletedLoad", UR.resultToString r ]
 
+        KycDataSaved r ->
+            [ "KycDataSaved", UR.resultToString r ]
+
         OpenConfirmationModal ->
             [ "OpenConfirmationModal" ]
 
@@ -707,6 +750,9 @@ msgToString msg =
 
         FormMsg _ ->
             [ "FormMsg" ]
+
+        KycFormSubmitted _ ->
+            [ "KycFormSubmitted" ]
 
         CompletedSignIn _ _ ->
             [ "CompletedSignIn" ]
