@@ -179,6 +179,21 @@
         "tooltip": "(DDD) + Número de telèfon",
         "placeholder": "(DDD) + Número de telèfon"
       },
+      "street": {
+        "label": "Carrer",
+        "tooltip": "",
+        "placeholder": ""
+      },
+      "number": {
+        "label": "Número",
+        "tooltip": "",
+        "placeholder": ""
+      },
+      "zip": {
+        "label": "Codi ZIP",
+        "tooltip": "",
+        "placeholder": ""
+      },
       "document": {
         "ssn": {
           "label": "número de la Seguretat Social",

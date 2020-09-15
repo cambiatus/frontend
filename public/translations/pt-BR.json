@@ -179,6 +179,21 @@
         "tooltip": "(DDD) + Telefone",
         "placeholder": "(DDD) + Telefone"
       },
+      "street": {
+        "label": "Rua",
+        "tooltip": "",
+        "placeholder": ""
+      },
+      "number": {
+        "label": "Número",
+        "tooltip": "",
+        "placeholder": ""
+      },
+      "zip": {
+        "label": "CEP",
+        "tooltip": "",
+        "placeholder": ""
+      },
       "document": {
         "ssn": {
           "label": "Número de Segurança Social",
