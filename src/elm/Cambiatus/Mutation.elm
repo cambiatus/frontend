@@ -19,15 +19,26 @@ import Graphql.SelectionSet exposing (SelectionSet)
 import Json.Decode as Decode exposing (Decoder)
 
 
+type alias DeleteAddressRequiredArguments =
+    { input : Cambiatus.InputObject.KycDeletionInput }
+
+
+{-| A mutation to delete user's address data
+-}
+deleteAddress : DeleteAddressRequiredArguments -> SelectionSet decodesTo Cambiatus.Object.Address -> SelectionSet (Maybe decodesTo) RootMutation
+deleteAddress requiredArgs object_ =
+    Object.selectionForCompositeField "deleteAddress" [ Argument.required "input" requiredArgs.input Cambiatus.InputObject.encodeKycDeletionInput ] object_ (identity >> Decode.nullable)
+
+
 type alias DeleteKycRequiredArguments =
-    { input : Cambiatus.InputObject.KycDataDeletion }
+    { input : Cambiatus.InputObject.KycDeletionInput }
 
 
 {-| A mutation to delete user's kyc data
 -}
 deleteKyc : DeleteKycRequiredArguments -> SelectionSet decodesTo Cambiatus.Object.KycData -> SelectionSet (Maybe decodesTo) RootMutation
 deleteKyc requiredArgs object_ =
-    Object.selectionForCompositeField "deleteKyc" [ Argument.required "input" requiredArgs.input Cambiatus.InputObject.encodeKycDataDeletion ] object_ (identity >> Decode.nullable)
+    Object.selectionForCompositeField "deleteKyc" [ Argument.required "input" requiredArgs.input Cambiatus.InputObject.encodeKycDeletionInput ] object_ (identity >> Decode.nullable)
 
 
 type alias ReadNotificationRequiredArguments =
