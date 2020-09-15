@@ -66,10 +66,10 @@ buildAddressUpdateInput required fillOptionals =
 
 type alias AddressUpdateInputRequiredFields =
     { accountId : String
-    , cityId : String
-    , countryId : String
-    , neighborhoodId : String
-    , stateId : String
+    , cityId : Cambiatus.ScalarCodecs.Id
+    , countryId : Cambiatus.ScalarCodecs.Id
+    , neighborhoodId : Cambiatus.ScalarCodecs.Id
+    , stateId : Cambiatus.ScalarCodecs.Id
     , street : String
     , zip : String
     }
@@ -83,11 +83,11 @@ type alias AddressUpdateInputOptionalFields =
 -}
 type alias AddressUpdateInput =
     { accountId : String
-    , cityId : String
-    , countryId : String
-    , neighborhoodId : String
+    , cityId : Cambiatus.ScalarCodecs.Id
+    , countryId : Cambiatus.ScalarCodecs.Id
+    , neighborhoodId : Cambiatus.ScalarCodecs.Id
     , number : OptionalArgument String
-    , stateId : String
+    , stateId : Cambiatus.ScalarCodecs.Id
     , street : String
     , zip : String
     }
@@ -98,7 +98,7 @@ type alias AddressUpdateInput =
 encodeAddressUpdateInput : AddressUpdateInput -> Value
 encodeAddressUpdateInput input =
     Encode.maybeObject
-        [ ( "accountId", Encode.string input.accountId |> Just ), ( "cityId", Encode.string input.cityId |> Just ), ( "countryId", Encode.string input.countryId |> Just ), ( "neighborhoodId", Encode.string input.neighborhoodId |> Just ), ( "number", Encode.string |> Encode.optional input.number ), ( "stateId", Encode.string input.stateId |> Just ), ( "street", Encode.string input.street |> Just ), ( "zip", Encode.string input.zip |> Just ) ]
+        [ ( "accountId", Encode.string input.accountId |> Just ), ( "cityId", (Cambiatus.ScalarCodecs.codecs |> Cambiatus.Scalar.unwrapEncoder .codecId) input.cityId |> Just ), ( "countryId", (Cambiatus.ScalarCodecs.codecs |> Cambiatus.Scalar.unwrapEncoder .codecId) input.countryId |> Just ), ( "neighborhoodId", (Cambiatus.ScalarCodecs.codecs |> Cambiatus.Scalar.unwrapEncoder .codecId) input.neighborhoodId |> Just ), ( "number", Encode.string |> Encode.optional input.number ), ( "stateId", (Cambiatus.ScalarCodecs.codecs |> Cambiatus.Scalar.unwrapEncoder .codecId) input.stateId |> Just ), ( "street", Encode.string input.street |> Just ), ( "zip", Encode.string input.zip |> Just ) ]
 
 
 buildChecksInput : (ChecksInputOptionalFields -> ChecksInputOptionalFields) -> ChecksInput
@@ -299,29 +299,6 @@ encodeInviteInput input =
         [ ( "id", Encode.string |> Encode.optional input.id ) ]
 
 
-buildKycDataDeletion : KycDataDeletionRequiredFields -> KycDataDeletion
-buildKycDataDeletion required =
-    { accountId = required.accountId }
-
-
-type alias KycDataDeletionRequiredFields =
-    { accountId : String }
-
-
-{-| Type for the KycDataDeletion input object.
--}
-type alias KycDataDeletion =
-    { accountId : String }
-
-
-{-| Encode a KycDataDeletion into a value that can be used as an argument.
--}
-encodeKycDataDeletion : KycDataDeletion -> Value
-encodeKycDataDeletion input =
-    Encode.maybeObject
-        [ ( "accountId", Encode.string input.accountId |> Just ) ]
-
-
 buildKycDataUpdateInput : KycDataUpdateInputRequiredFields -> KycDataUpdateInput
 buildKycDataUpdateInput required =
     { accountId = required.accountId, countryId = required.countryId, document = required.document, documentType = required.documentType, phone = required.phone, userType = required.userType }
@@ -329,7 +306,7 @@ buildKycDataUpdateInput required =
 
 type alias KycDataUpdateInputRequiredFields =
     { accountId : String
-    , countryId : String
+    , countryId : Cambiatus.ScalarCodecs.Id
     , document : String
     , documentType : String
     , phone : String
@@ -341,7 +318,7 @@ type alias KycDataUpdateInputRequiredFields =
 -}
 type alias KycDataUpdateInput =
     { accountId : String
-    , countryId : String
+    , countryId : Cambiatus.ScalarCodecs.Id
     , document : String
     , documentType : String
     , phone : String
@@ -354,7 +331,30 @@ type alias KycDataUpdateInput =
 encodeKycDataUpdateInput : KycDataUpdateInput -> Value
 encodeKycDataUpdateInput input =
     Encode.maybeObject
-        [ ( "accountId", Encode.string input.accountId |> Just ), ( "countryId", Encode.string input.countryId |> Just ), ( "document", Encode.string input.document |> Just ), ( "documentType", Encode.string input.documentType |> Just ), ( "phone", Encode.string input.phone |> Just ), ( "userType", Encode.string input.userType |> Just ) ]
+        [ ( "accountId", Encode.string input.accountId |> Just ), ( "countryId", (Cambiatus.ScalarCodecs.codecs |> Cambiatus.Scalar.unwrapEncoder .codecId) input.countryId |> Just ), ( "document", Encode.string input.document |> Just ), ( "documentType", Encode.string input.documentType |> Just ), ( "phone", Encode.string input.phone |> Just ), ( "userType", Encode.string input.userType |> Just ) ]
+
+
+buildKycDeletionInput : KycDeletionInputRequiredFields -> KycDeletionInput
+buildKycDeletionInput required =
+    { accountId = required.accountId }
+
+
+type alias KycDeletionInputRequiredFields =
+    { accountId : String }
+
+
+{-| Type for the KycDeletionInput input object.
+-}
+type alias KycDeletionInput =
+    { accountId : String }
+
+
+{-| Encode a KycDeletionInput into a value that can be used as an argument.
+-}
+encodeKycDeletionInput : KycDeletionInput -> Value
+encodeKycDeletionInput input =
+    Encode.maybeObject
+        [ ( "accountId", Encode.string input.accountId |> Just ) ]
 
 
 buildNewCommunityInput : NewCommunityInputRequiredFields -> NewCommunityInput
