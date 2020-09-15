@@ -1,4 +1,4 @@
-module View.Form.Select exposing (init, toHtml, withOption)
+module View.Form.Select exposing (disable, enable, init, toHtml, withOption)
 
 {- | Creates a Cambiatus-style dropdown
 
@@ -20,7 +20,17 @@ import View.Form
 -}
 init : String -> String -> (String -> a) -> String -> Select a
 init id label onInput value =
-    { options = [], onInput = onInput, id = id, label = label, value = value }
+    { options = [], onInput = onInput, id = id, label = label, value = value, disabled = False }
+
+
+disable : Select a -> Select a
+disable select =
+    { select | disabled = True }
+
+
+enable : Select a -> Select a
+enable select =
+    { select | disabled = False }
 
 
 {-| Adds a new option field to a dropdown
@@ -67,6 +77,7 @@ type alias Select a =
     , label : String
     , id : String
     , value : String
+    , disabled : Bool
     }
 
 

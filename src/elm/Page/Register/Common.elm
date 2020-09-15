@@ -10,13 +10,19 @@ import Validate exposing (Validator)
 import View.Form.Select
 
 
-viewSelectField : String -> String -> (String -> msg) -> List { value : String, label : String } -> Translators -> Html msg
-viewSelectField label initialValue onInput options _ =
+viewSelectField : String -> String -> Bool -> (String -> msg) -> List { value : String, label : String } -> Translators -> Html msg
+viewSelectField label initialValue enabled onInput options _ =
     let
         form =
             View.Form.Select.init "document_select" label onInput initialValue
     in
     List.foldl View.Form.Select.withOption form options
+        |> (if enabled then
+                View.Form.Select.enable
+
+            else
+                View.Form.Select.disable
+           )
         |> View.Form.Select.toHtml
 
 

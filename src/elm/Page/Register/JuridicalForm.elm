@@ -125,6 +125,7 @@ view translators model =
         [ viewTitleForStep translators 1
         , viewSelectField (translators.t "register.form.company_type")
             (companyTypeToString model.companyType)
+            True
             EnteredType
             [ { value = "mipyme", label = translators.t "register.form.company.mipyme.label" }
             , { value = "corporation", label = translators.t "register.form.company.corporation.label" }
@@ -194,17 +195,20 @@ view translators model =
             |> View.Form.Input.withCounter 12
             |> View.Form.Input.toHtml
         , viewSelectField (translators.t "register.form.state")
-            model.document
+            ""
+            True
             EnteredState
             (List.map (\state -> { value = state.name, label = state.name }) model.country.states)
             translators
         , viewSelectField (translators.t "register.form.city")
-            model.document
+            ""
+            (model.state /= ( "", "" ))
             EnteredCity
             (List.map (\city -> { value = city.name, label = city.name }) model.cities)
             translators
         , viewSelectField (translators.t "register.form.district")
-            model.document
+            ""
+            (model.city /= ( "", "" ))
             EnteredDistrict
             (List.map (\district -> { value = district.name, label = district.name }) model.districts)
             translators
