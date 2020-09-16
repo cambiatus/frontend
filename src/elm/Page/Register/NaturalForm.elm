@@ -33,14 +33,14 @@ type Field
     | Account
 
 
-init : Model
-init =
+init : { a | account : Maybe String, email : Maybe String, phone : Maybe String } -> Model
+init options =
     { document = ""
     , documentType = SSN
     , name = ""
-    , email = ""
-    , phone = ""
-    , account = ""
+    , email = Maybe.withDefault "" options.email
+    , phone = Maybe.withDefault "" options.phone
+    , account = Maybe.withDefault "" options.account
     , problems = []
     }
 

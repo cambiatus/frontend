@@ -50,23 +50,23 @@ type Field
     | Number
 
 
-init : Address.Country -> Model
-init country =
+init : { a | account : Maybe String, email : Maybe String, phone : Maybe String, country : Address.Country } -> Model
+init options =
     { companyType = MIPYME
     , document = ""
     , name = ""
-    , email = ""
-    , phone = ""
+    , email = Maybe.withDefault "" options.email
+    , phone = Maybe.withDefault "" options.phone
     , state = ( "", "" )
     , city = ( "", "" )
     , district = ( "", "" )
-    , account = ""
+    , account = Maybe.withDefault "" options.account
     , street = ""
     , zip = ""
     , number = ""
     , problems = []
-    , country = country
-    , states = country.states ++ [ Address.State (Id "") "Select" [] ]
+    , country = options.country
+    , states = options.country.states ++ [ Address.State (Id "") "Select" [] ]
     , cities = []
     , districts = []
     }

@@ -708,12 +708,44 @@ update maybeInvitation msg model guest =
             UR.init
                 { model
                     | selectedForm =
-                        case ( type_, model.status ) of
-                            ( NaturalAccount, LoadedAll _ _ ) ->
-                                Natural NaturalForm.init
+                        case ( type_, model.status, model.selectedForm ) of
+                            ( NaturalAccount, LoadedAll _ _, Juridical form ) ->
+                                Natural
+                                    (NaturalForm.init
+                                        { account = Just form.account
+                                        , email = Just form.email
+                                        , phone = Just form.phone
+                                        }
+                                    )
 
-                            ( JuridicalAccount, LoadedAll _ country ) ->
-                                Juridical (JuridicalForm.init country)
+                            ( JuridicalAccount, LoadedAll _ country, Natural form ) ->
+                                Juridical
+                                    (JuridicalForm.init
+                                        { account = Just form.account
+                                        , email = Just form.email
+                                        , phone = Just form.phone
+                                        , country = country
+                                        }
+                                    )
+
+                            ( NaturalAccount, LoadedAll _ _, _ ) ->
+                                Natural
+                                    (NaturalForm.init
+                                        { account = Nothing
+                                        , email = Nothing
+                                        , phone = Nothing
+                                        }
+                                    )
+
+                            ( JuridicalAccount, LoadedAll _ country, _ ) ->
+                                Juridical
+                                    (JuridicalForm.init
+                                        { account = Nothing
+                                        , email = Nothing
+                                        , phone = Nothing
+                                        , country = country
+                                        }
+                                    )
 
                             _ ->
                                 model.selectedForm
