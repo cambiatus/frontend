@@ -20,7 +20,6 @@ type alias Model =
     , name : String
     , email : String
     , phone : String
-    , username : String
     , state : ( String, String )
     , city : ( String, String )
     , district : ( String, String )
@@ -42,7 +41,6 @@ type Field
     | Name
     | Email
     | Phone
-    | Username
     | State
     | City
     | District
@@ -59,7 +57,6 @@ init country =
     , name = ""
     , email = ""
     , phone = ""
-    , username = ""
     , state = ( "", "" )
     , city = ( "", "" )
     , district = ( "", "" )
@@ -336,7 +333,6 @@ validator { t } =
     Validate.all
         [ Validate.ifBlank .name ( Name, t "error.required" )
         , Validate.ifBlank .document ( Document, t "error.required" )
-        , Validate.ifBlank .username ( Document, t "error.required" )
         , Validate.ifBlank .zip ( Document, t "error.required" )
         , Validate.ifBlank .number ( Document, t "error.required" )
         , ifEmptyTuple .state ( State, t "error.required" )
