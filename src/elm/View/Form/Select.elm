@@ -11,7 +11,7 @@ module View.Form.Select exposing (disable, enable, init, toHtml, withOption)
 -}
 
 import Html exposing (Html, text)
-import Html.Attributes exposing (class, selected, value)
+import Html.Attributes exposing (class, disabled, selected, value)
 import Html.Events exposing (onInput)
 import View.Form
 
@@ -63,7 +63,7 @@ toHtml : Select a -> Html a
 toHtml select =
     Html.div [ class "mb-10" ]
         [ View.Form.label select.id select.label
-        , Html.select [ class "form-select select w-full", onInput select.onInput ] select.options
+        , Html.select [ class "form-select select w-full", onInput select.onInput, disabled select.disabled ] select.options
         ]
 
 
