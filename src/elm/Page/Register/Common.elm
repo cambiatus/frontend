@@ -6,7 +6,6 @@ import Html exposing (Html, p, strong, text)
 import Html.Attributes exposing (class)
 import Session.Shared exposing (Translators)
 import Validate
-import View.Form.Select
 
 
 viewSelectField : String -> String -> Bool -> (String -> msg) -> List { value : String, label : String } -> Translators -> Html msg
