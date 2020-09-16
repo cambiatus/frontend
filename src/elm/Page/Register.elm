@@ -675,7 +675,7 @@ update maybeInvitation msg model guest =
                     | selectedForm =
                         case ( type_, model.status ) of
                             ( NaturalAccount, LoadedAll _ country ) ->
-                                Natural (NaturalForm.init country)
+                                Natural NaturalForm.init
 
                             ( JuridicalAccount, LoadedAll _ country ) ->
                                 Juridical (JuridicalForm.init country)
@@ -989,27 +989,31 @@ formTypeToAddressCmd shared formType =
                     Graphql.SelectionSet.empty
                 )
                 CompletedKycUpsert
-
-        toInput form =
-            { accountId = form.account
-            , cityId = Tuple.first form.city |> Id
-            , countryId = Id "1"
-            , neighborhoodId = Tuple.first form.district |> Id
-            , stateId = Tuple.first form.state |> Id
-            , street = form.street
-            , zip = form.zip
-            }
     in
     case formType of
         Juridical form ->
             cmd
-                (toInput form)
+                { accountId = form.account
+                , cityId = Tuple.first form.city |> Id
+                , countryId = Id "1"
+                , neighborhoodId = Tuple.first form.district |> Id
+                , stateId = Tuple.first form.state |> Id
+                , street = form.street
+                , zip = form.zip
+                }
                 { number = Graphql.OptionalArgument.Present form.number }
 
         Natural form ->
             cmd
-                (toInput form)
-                { number = Graphql.OptionalArgument.Present form.number }
+                { accountId = form.account
+                , cityId = Id ""
+                , countryId = Id ""
+                , neighborhoodId = Id ""
+                , stateId = Id ""
+                , street = ""
+                , zip = ""
+                }
+                { number = Graphql.OptionalArgument.Absent }
 
         _ ->
             redirectCmd shared

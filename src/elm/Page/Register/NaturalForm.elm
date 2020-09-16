@@ -22,17 +22,7 @@ type alias Model =
     , phone : String
     , username : String
     , account : String
-    , street : String
-    , zip : String
-    , number : String
     , problems : List ( Field, String )
-    , state : ( String, String )
-    , city : ( String, String )
-    , district : ( String, String )
-    , country : Address.Country
-    , states : List Address.State
-    , cities : List Address.City
-    , districts : List Address.Neighborhood
     }
 
 
@@ -44,14 +34,10 @@ type Field
     | Phone
     | Username
     | Account
-    | Street
-    | Zip
-    | Number
-    | State
 
 
-init : Address.Country -> Model
-init country =
+init : Model
+init =
     { document = ""
     , documentType = SSN
     , name = ""
@@ -59,17 +45,7 @@ init country =
     , phone = ""
     , username = ""
     , account = ""
-    , street = ""
-    , zip = ""
-    , number = ""
     , problems = []
-    , state = ( "", "" )
-    , city = ( "", "" )
-    , district = ( "", "" )
-    , country = country
-    , states = country.states
-    , cities = []
-    , districts = []
     }
 
 
@@ -103,12 +79,6 @@ type Msg
     | EnteredEmail String
     | EnteredPhone String
     | EnteredAccount String
-    | EnteredCity String
-    | EnteredDistrict String
-    | EnteredState String
-    | EnteredStreet String
-    | EnteredZip String
-    | EnteredNumber String
 
 
 
@@ -199,57 +169,6 @@ view translators model =
             }
             |> View.Form.Input.withCounter 12
             |> View.Form.Input.toHtml
-        , viewSelectField (translators.t "register.form.state")
-            ""
-            True
-            EnteredState
-            (List.map (\state -> { value = state.name, label = state.name }) model.country.states)
-            translators
-        , viewSelectField (translators.t "register.form.city")
-            ""
-            (model.state /= ( "", "" ))
-            EnteredCity
-            (List.map (\city -> { value = city.name, label = city.name }) model.cities)
-            translators
-        , viewSelectField (translators.t "register.form.district")
-            ""
-            (model.city /= ( "", "" ))
-            EnteredDistrict
-            (List.map (\district -> { value = district.name, label = district.name }) model.districts)
-            translators
-        , View.Form.Input.init
-            { id = "street"
-            , label = translators.t (formTranslationString ++ ".street.label")
-            , onInput = EnteredStreet
-            , disabled = False
-            , value = model.street
-            , placeholder = Just (translators.t (formTranslationString ++ ".street.placeholder"))
-            , problems = fieldProblems Street model.problems
-            , translators = translators
-            }
-            |> View.Form.Input.toHtml
-        , View.Form.Input.init
-            { id = "number"
-            , label = translators.t (formTranslationString ++ ".number.label")
-            , onInput = EnteredNumber
-            , disabled = False
-            , value = model.number
-            , placeholder = Just (translators.t (formTranslationString ++ ".number.placeholder"))
-            , problems = fieldProblems Number model.problems
-            , translators = translators
-            }
-            |> View.Form.Input.toHtml
-        , View.Form.Input.init
-            { id = "zip"
-            , label = translators.t (formTranslationString ++ ".zip.label")
-            , onInput = EnteredZip
-            , disabled = False
-            , value = model.zip
-            , placeholder = Just (translators.t (formTranslationString ++ ".zip.placeholder"))
-            , problems = fieldProblems Zip model.problems
-            , translators = translators
-            }
-            |> View.Form.Input.toHtml
         ]
 
 
@@ -306,30 +225,6 @@ update msg model =
                         account
             }
 
-        EnteredState str ->
-            { model
-                | state = findId str model.country.states
-                , cities = getCities model.country.states str
-            }
-
-        EnteredCity str ->
-            { model
-                | city = findId str model.cities
-                , districts = getDistricts model.cities str
-            }
-
-        EnteredDistrict str ->
-            { model | district = findId str model.districts }
-
-        EnteredStreet str ->
-            { model | street = str }
-
-        EnteredZip str ->
-            { model | zip = str }
-
-        EnteredNumber str ->
-            { model | number = str }
-
 
 validator : Translators -> Validator ( Field, String ) Model
 validator { t } =
@@ -342,11 +237,6 @@ validator { t } =
         , Validate.ifBlank .name ( Name, t "error.required" )
         , Validate.ifBlank .username ( Username, t "error.required" )
         , Validate.ifBlank .account ( Username, t "error.required" )
-        , Validate.ifBlank .zip ( Username, t "error.required" )
-        , Validate.ifBlank .number ( Username, t "error.required" )
-        , ifEmptyTuple .state ( State, t "error.required" )
-        , ifEmptyTuple .city ( State, t "error.required" )
-        , ifEmptyTuple .district ( State, t "error.required" )
         , Validate.firstError
             [ Validate.ifBlank .email ( Email, t "error.required" )
             , Validate.ifInvalidEmail .email (\_ -> ( Email, t "error.email" ))
