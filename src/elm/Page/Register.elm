@@ -286,7 +286,7 @@ viewCreateAccount translators model =
         defaultForm =
             case model.selectedForm of
                 Default form ->
-                    formElement [ DefaultForm.view translators form |> Html.map DefaultFormMsg1, viewFooter translators ]
+                    formElement [ DefaultForm.view translators form |> Html.map DefaultFormMsg1, viewFooter model translators ]
 
                 _ ->
                     div [] []
@@ -294,7 +294,7 @@ viewCreateAccount translators model =
     case model.status of
         LoadedAll invitation _ ->
             if invitation.community.hasKyc == True then
-                formElement [ viewKycRegister translators model, viewFooter translators ]
+                formElement [ viewKycRegister translators model, viewFooter model translators ]
 
             else
                 defaultForm
@@ -334,14 +334,22 @@ viewServerError error =
             text ""
 
 
-viewFooter : Translators -> Html msg
-viewFooter translators =
+viewFooter : Model -> Translators -> Html msg
+viewFooter model translators =
     div [ class "mt-auto flex flex-col justify-between items-center h-32" ]
         [ span []
             [ text (translators.t "register.login")
             , a [ class "underline text-orange-300", Route.href (Route.Login Nothing) ] [ text (translators.t "register.authLink") ]
             ]
-        , viewSubmitButton translators
+        , viewSubmitButton
+            (case model.selectedForm of
+                None ->
+                    False
+
+                _ ->
+                    True
+            )
+            translators
         ]
 
 
@@ -401,9 +409,20 @@ viewKycRegister translators model =
         ]
 
 
-viewSubmitButton : Translators -> Html msg
-viewSubmitButton translators =
-    button [ class "button button-primary w-full mb-4" ] [ text (translators.t "auth.login.continue") ]
+viewSubmitButton : Bool -> Translators -> Html msg
+viewSubmitButton isEnabled translators =
+    button
+        [ class "button w-full mb-4"
+        , class
+            (if isEnabled then
+                "button-primary"
+
+             else
+                "button-disabled"
+            )
+        , disabled (not isEnabled)
+        ]
+        [ text (translators.t "auth.login.continue") ]
 
 
 viewFormTypeSelector : Translators -> Model -> Html Msg
