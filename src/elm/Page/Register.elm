@@ -1038,18 +1038,6 @@ formTypeToAddressCmd shared formType =
                 }
                 { number = Graphql.OptionalArgument.Present form.number }
 
-        Natural form ->
-            cmd
-                { accountId = form.account
-                , cityId = Id ""
-                , countryId = Id ""
-                , neighborhoodId = Id ""
-                , stateId = Id ""
-                , street = ""
-                , zip = ""
-                }
-                { number = Graphql.OptionalArgument.Absent }
-
         _ ->
             redirectCmd shared
 
