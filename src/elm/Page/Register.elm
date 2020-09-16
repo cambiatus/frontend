@@ -1023,7 +1023,7 @@ formTypeToAddressCmd shared formType =
                     { input = InputObject.buildAddressUpdateInput required (\_ -> optional) }
                     Graphql.SelectionSet.empty
                 )
-                CompletedKycUpsert
+                CompletedAddressUpsert
     in
     case formType of
         Juridical form ->
