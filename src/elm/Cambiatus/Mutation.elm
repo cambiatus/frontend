@@ -25,7 +25,7 @@ type alias DeleteAddressRequiredArguments =
 
 {-| A mutation to delete user's address data
 -}
-deleteAddress : DeleteAddressRequiredArguments -> SelectionSet decodesTo Cambiatus.Object.Address -> SelectionSet (Maybe decodesTo) RootMutation
+deleteAddress : DeleteAddressRequiredArguments -> SelectionSet decodesTo Cambiatus.Object.DeleteAddress -> SelectionSet (Maybe decodesTo) RootMutation
 deleteAddress requiredArgs object_ =
     Object.selectionForCompositeField "deleteAddress" [ Argument.required "input" requiredArgs.input Cambiatus.InputObject.encodeKycDeletionInput ] object_ (identity >> Decode.nullable)
 
@@ -36,7 +36,7 @@ type alias DeleteKycRequiredArguments =
 
 {-| A mutation to delete user's kyc data
 -}
-deleteKyc : DeleteKycRequiredArguments -> SelectionSet decodesTo Cambiatus.Object.KycData -> SelectionSet (Maybe decodesTo) RootMutation
+deleteKyc : DeleteKycRequiredArguments -> SelectionSet decodesTo Cambiatus.Object.DeleteKyc -> SelectionSet (Maybe decodesTo) RootMutation
 deleteKyc requiredArgs object_ =
     Object.selectionForCompositeField "deleteKyc" [ Argument.required "input" requiredArgs.input Cambiatus.InputObject.encodeKycDeletionInput ] object_ (identity >> Decode.nullable)
 

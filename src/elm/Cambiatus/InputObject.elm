@@ -336,17 +336,17 @@ encodeKycDataUpdateInput input =
 
 buildKycDeletionInput : KycDeletionInputRequiredFields -> KycDeletionInput
 buildKycDeletionInput required =
-    { accountId = required.accountId }
+    { account = required.account }
 
 
 type alias KycDeletionInputRequiredFields =
-    { accountId : String }
+    { account : String }
 
 
 {-| Type for the KycDeletionInput input object.
 -}
 type alias KycDeletionInput =
-    { accountId : String }
+    { account : String }
 
 
 {-| Encode a KycDeletionInput into a value that can be used as an argument.
@@ -354,7 +354,7 @@ type alias KycDeletionInput =
 encodeKycDeletionInput : KycDeletionInput -> Value
 encodeKycDeletionInput input =
     Encode.maybeObject
-        [ ( "accountId", Encode.string input.accountId |> Just ) ]
+        [ ( "account", Encode.string input.account |> Just ) ]
 
 
 buildNewCommunityInput : NewCommunityInputRequiredFields -> NewCommunityInput
