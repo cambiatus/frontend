@@ -8,7 +8,6 @@ import Page.Register.Common exposing (..)
 import Session.Shared exposing (Translators)
 import Validate exposing (Validator)
 import View.Form.Input
-import View.Form.Select
 
 
 
