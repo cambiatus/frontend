@@ -140,7 +140,7 @@ viewLeftCol : String -> Html msg
 viewLeftCol mdWidth =
     div
         -- Left part with background and quote (desktop only)
-        [ class "hidden md:block md:visible min-h-screen bg-bottom bg-no-repeat"
+        [ class "hidden md:block md:visible h-screen sticky top-0 bg-bottom bg-no-repeat"
         , class mdWidth
         , style "background-color" "#EFF9FB"
         , style "background-size" "auto 80%"
