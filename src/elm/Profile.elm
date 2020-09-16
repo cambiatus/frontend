@@ -1,9 +1,12 @@
 module Profile exposing
     ( CommunityInfo
+    , DeleteAddressResult
+    , DeleteKycResult
     , Profile
     , ProfileCreate
     , ProfileForm
     , decode
+    , deleteAddressMutation
     , deleteKycMutation
     , emptyProfileForm
     , encodeProfileChat
@@ -29,9 +32,13 @@ module Profile exposing
     )
 
 import Avatar exposing (Avatar)
+import Cambiatus.Enum.DeleteAddressStatus exposing (DeleteAddressStatus)
+import Cambiatus.Enum.DeleteKycStatus exposing (DeleteKycStatus)
 import Cambiatus.Mutation
 import Cambiatus.Object
 import Cambiatus.Object.Community as Community
+import Cambiatus.Object.DeleteAddress
+import Cambiatus.Object.DeleteKyc
 import Cambiatus.Object.Profile as User
 import Cambiatus.Query
 import Dict exposing (Dict)
@@ -196,7 +203,7 @@ mutation account form =
         selectionSet
 
 
-deleteKycMutation : Eos.Name -> SelectionSet (Maybe ProfileKyc) RootMutation
+deleteKycMutation : Eos.Name -> SelectionSet (Maybe DeleteKycResult) RootMutation
 deleteKycMutation account =
     let
         nameString =
@@ -204,10 +211,42 @@ deleteKycMutation account =
     in
     Cambiatus.Mutation.deleteKyc
         { input =
-            { accountId = nameString
+            { account = nameString
             }
         }
-        Kyc.selectionSet
+        (SelectionSet.succeed DeleteKycResult
+            |> with Cambiatus.Object.DeleteKyc.status
+            |> with Cambiatus.Object.DeleteKyc.reason
+        )
+
+
+type alias DeleteKycResult =
+    { result : DeleteKycStatus
+    , status : String
+    }
+
+
+deleteAddressMutation : Eos.Name -> SelectionSet (Maybe DeleteAddressResult) RootMutation
+deleteAddressMutation account =
+    let
+        nameString =
+            Eos.nameToString account
+    in
+    Cambiatus.Mutation.deleteAddress
+        { input =
+            { account = nameString
+            }
+        }
+        (SelectionSet.succeed DeleteAddressResult
+            |> with Cambiatus.Object.DeleteAddress.status
+            |> with Cambiatus.Object.DeleteAddress.reason
+        )
+
+
+type alias DeleteAddressResult =
+    { result : DeleteAddressStatus
+    , status : String
+    }
 
 
 
