@@ -19,7 +19,6 @@ type alias Model =
     , name : String
     , email : String
     , phone : String
-    , username : String
     , account : String
     , problems : List ( Field, String )
     }
@@ -31,7 +30,6 @@ type Field
     | Name
     | Email
     | Phone
-    | Username
     | Account
 
 
@@ -42,7 +40,6 @@ init =
     , name = ""
     , email = ""
     , phone = ""
-    , username = ""
     , account = ""
     , problems = []
     }
@@ -234,8 +231,7 @@ validator { t } =
     Validate.all
         [ Validate.ifBlank .document ( Document, t "error.required" )
         , Validate.ifBlank .name ( Name, t "error.required" )
-        , Validate.ifBlank .username ( Username, t "error.required" )
-        , Validate.ifBlank .account ( Username, t "error.required" )
+        , Validate.ifBlank .account ( Account, t "error.required" )
         , Validate.firstError
             [ Validate.ifBlank .email ( Email, t "error.required" )
             , Validate.ifInvalidEmail .email (\_ -> ( Email, t "error.email" ))

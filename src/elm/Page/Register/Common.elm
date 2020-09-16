@@ -1,4 +1,4 @@
-module Page.Register.Common exposing (Errors(..), fieldProblems, findId, getCities, getDistricts, ifEmptyTuple, viewSelectField, viewTitleForStep)
+module Page.Register.Common exposing (Errors(..), containsNumberGreaterThan, fieldProblems, findId, getCities, getDistricts, ifEmptyTuple, viewSelectField, viewTitleForStep)
 
 import Address
 import Cambiatus.Scalar exposing (Id(..))
@@ -121,6 +121,16 @@ byId a b =
 
         EQ ->
             EQ
+
+
+containsNumberGreaterThan : Int -> String -> Bool
+containsNumberGreaterThan number str =
+    str
+        |> String.split ""
+        |> List.filterMap String.toInt
+        |> List.filter (\x -> x < 1 || x > number)
+        |> List.length
+        |> (/=) 0
 
 
 ifEmptyTuple data error =

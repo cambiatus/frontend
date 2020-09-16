@@ -337,7 +337,6 @@ validator { t } =
         [ Validate.ifBlank .name ( Name, t "error.required" )
         , Validate.ifBlank .document ( Document, t "error.required" )
         , Validate.ifBlank .username ( Document, t "error.required" )
-        , Validate.ifBlank .account ( Document, t "error.required" )
         , Validate.ifBlank .zip ( Document, t "error.required" )
         , Validate.ifBlank .number ( Document, t "error.required" )
         , ifEmptyTuple .state ( State, t "error.required" )
