@@ -286,7 +286,12 @@ viewCreateAccount translators model =
         defaultForm =
             case model.selectedForm of
                 Default form ->
-                    formElement [ DefaultForm.view translators form |> Html.map DefaultFormMsg1, viewFooter model translators ]
+                    formElement
+                        [ DefaultForm.view translators form
+                            |> Html.map DefaultFormMsg
+                            |> Html.map FormMsg
+                        , viewFooter model translators
+                        ]
 
                 _ ->
                     div [] []
@@ -554,7 +559,6 @@ type Msg
     | CompletedLoadCountry (Result (Graphql.Http.Error (Maybe Address.Country)) (Maybe Address.Country))
     | AccountTypeSelected AccountType
     | FormMsg EitherFormMsg
-    | DefaultFormMsg1 DefaultForm.Msg
     | CompletedSignUp (Result (Graphql.Http.Error (Maybe SignUpResponse)) (Maybe SignUpResponse))
     | CompletedKycUpsert (Result (Graphql.Http.Error (Maybe ())) (Maybe ()))
     | CompletedAddressUpsert (Result (Graphql.Http.Error (Maybe ())) (Maybe ()))
@@ -699,14 +703,6 @@ update maybeInvitation msg model guest =
 
                         _ ->
                             UR.init model
-
-        DefaultFormMsg1 formMsg ->
-            case model.selectedForm of
-                Default form ->
-                    UR.init { model | selectedForm = Default (DefaultForm.update formMsg form) }
-
-                _ ->
-                    UR.init model
 
         AccountTypeSelected type_ ->
             UR.init
@@ -1122,9 +1118,6 @@ msgToString msg =
 
         AccountTypeSelected _ ->
             [ "AccountTypeSelected" ]
-
-        DefaultFormMsg1 _ ->
-            [ "DefaultFormMsg1" ]
 
         CompletedSignUp _ ->
             [ "CompletedSignUp" ]
