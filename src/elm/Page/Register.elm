@@ -709,7 +709,7 @@ update maybeInvitation msg model guest =
                 { model
                     | selectedForm =
                         case ( type_, model.status ) of
-                            ( NaturalAccount, LoadedAll _ country ) ->
+                            ( NaturalAccount, LoadedAll _ _ ) ->
                                 Natural NaturalForm.init
 
                             ( JuridicalAccount, LoadedAll _ country ) ->
