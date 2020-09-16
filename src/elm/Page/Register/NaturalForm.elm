@@ -97,7 +97,7 @@ documentTypeToString document =
 
 
 type Msg
-    = EnteredDocument String
+    = EnteredDocument Int String
     | EnteredDocumentType String
     | EnteredName String
     | EnteredEmail String
@@ -123,6 +123,13 @@ view translators model =
 
         documentTranslationString =
             formTranslationString ++ ".document." ++ documentTypeToString model.documentType
+
+        documentMaximum =
+            documentTranslationString
+                ++ ".maximum"
+                |> translators.t
+                |> String.toInt
+                |> Maybe.withDefault 10
     in
     Html.div []
         [ viewTitleForStep translators 1
@@ -138,20 +145,14 @@ view translators model =
         , View.Form.Input.init
             { id = "document"
             , label = translators.t (documentTranslationString ++ ".label")
-            , onInput = EnteredDocument
+            , onInput = EnteredDocument documentMaximum
             , disabled = False
             , value = model.document
             , placeholder = Just (translators.t (documentTranslationString ++ ".placeholder"))
             , problems = fieldProblems Document model.problems
             , translators = translators
             }
-            |> View.Form.Input.withCounter
-                (documentTranslationString
-                    ++ ".maximum"
-                    |> translators.t
-                    |> String.toInt
-                    |> Maybe.withDefault 10
-                )
+            |> View.Form.Input.withCounter documentMaximum
             |> View.Form.Input.toHtml
         , View.Form.Input.init
             { id = "name"
@@ -262,8 +263,15 @@ update msg model =
         EnteredName name ->
             { model | name = name }
 
-        EnteredDocument document ->
-            { model | document = document }
+        EnteredDocument maximum document ->
+            { model
+                | document =
+                    if String.length document <= maximum then
+                        document
+
+                    else
+                        model.document
+            }
 
         EnteredDocumentType documentType ->
             { model

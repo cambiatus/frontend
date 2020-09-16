@@ -256,7 +256,14 @@ update : Msg -> Model -> Model
 update msg form =
     case msg of
         EnteredDocument document ->
-            { form | document = document }
+            { form
+                | document =
+                    if String.length document <= 10 then
+                        document
+
+                    else
+                        form.document
+            }
 
         EnteredType type_ ->
             { form
