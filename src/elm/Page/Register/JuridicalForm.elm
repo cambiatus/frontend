@@ -1,12 +1,14 @@
 module Page.Register.JuridicalForm exposing (CompanyType(..), Field(..), Model, Msg(..), companyTypeToString, init, update, validator, view)
 
 import Address
+import Cambiatus.Scalar exposing (Id(..))
 import Html exposing (Html)
 import Kyc.CostaRica.Phone as KycPhone
 import Page.Register.Common exposing (..)
 import Session.Shared exposing (Translators)
 import Validate exposing (Validator)
 import View.Form.Input
+import View.Form.Select
 
 
 
@@ -68,7 +70,7 @@ init country =
     , number = ""
     , problems = []
     , country = country
-    , states = country.states
+    , states = country.states ++ [ Address.State (Id "") "Select" [] ]
     , cities = []
     , districts = []
     }
@@ -198,7 +200,7 @@ view translators model =
             ""
             True
             EnteredState
-            (List.map (\state -> { value = state.name, label = state.name }) model.country.states)
+            (List.map (\state -> { value = state.name, label = state.name }) model.states)
             translators
         , viewSelectField (translators.t "register.form.city")
             ""
@@ -292,12 +294,15 @@ update msg form =
             { form
                 | state = findId str form.country.states
                 , cities = getCities form.country.states str
+                , city = ( "", "" )
+                , district = ( "", "" )
             }
 
         EnteredCity str ->
             { form
                 | city = findId str form.cities
                 , districts = getDistricts form.cities str
+                , district = ( "", "" )
             }
 
         EnteredDistrict str ->

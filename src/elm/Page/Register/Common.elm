@@ -89,6 +89,8 @@ getCities states selectedState =
     foundState
         |> Maybe.map (\state -> state.cities)
         |> Maybe.withDefault []
+        |> (::) (Address.City (Id "") "Select" [])
+        |> List.sortWith byId
 
 
 getDistricts : List Address.City -> String -> List Address.Neighborhood
@@ -100,6 +102,25 @@ getDistricts cities selectedCity =
     foundState
         |> Maybe.map (\city -> city.neighborhoods)
         |> Maybe.withDefault []
+        |> (::) (Address.Neighborhood (Id "") "Select")
+        |> List.sortWith byId
+
+
+byId : { a | id : Id } -> { b | id : Id } -> Order
+byId a b =
+    let
+        getId (Id id) =
+            id
+    in
+    case compare (getId a.id) (getId b.id) of
+        LT ->
+            GT
+
+        GT ->
+            LT
+
+        EQ ->
+            EQ
 
 
 ifEmptyTuple data error =
