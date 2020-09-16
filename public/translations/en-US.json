@@ -86,7 +86,8 @@
     "invalidSymbol": "Invalid symbol.",
     "unknown": "Uoh. Something wrong happened.",
     "accountNotFound": "Account not found. Are you sure you created your account?",
-    "phone": "Please use a valid phone number"
+    "phone": "Please use a valid phone number",
+    "zipcode": "Invalid zipcode"
   },
   "auth": {
     "title": "Use your private key and PIN or log in by",
@@ -190,7 +191,7 @@
         "placeholder": ""
       },
       "document": {
-        "ssn": {
+        "cedula_de_identidad": {
           "label": "Social Security Number",
           "placeholder": "Enter the 9 digits",
           "maximum": "9"
@@ -226,7 +227,7 @@
           "placeholder": "Enter the 10 digits",
           "maximum": "10"
         },
-        "corporation": {
+        "gran_empresa": {
           "label": "Large-sized Company Number",
           "name": "Corporation",
           "placeholder": "Enter the 10 digits",

@@ -600,7 +600,7 @@ update maybeInvitation msg model guest =
                 validateForm validator form =
                     case Validate.validate validator form of
                         Ok _ ->
-                            form.problems
+                            []
 
                         Err err ->
                             err
@@ -657,7 +657,7 @@ update maybeInvitation msg model guest =
                         Juridical form ->
                             Juridical
                                 { form
-                                    | problems = validateForm (JuridicalForm.validator translators) form
+                                    | problems = Debug.log "problems" (validateForm (JuridicalForm.validator translators) form)
                                 }
 
                         Natural form ->

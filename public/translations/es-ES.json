@@ -86,7 +86,8 @@
     "invalidSymbol": "Simbolo invalido.",
     "unknown": "Oh oh. Algo salió mal.",
     "accountNotFound": "Cuenta no encontrada. ¿Estás seguro de haber creado tu cuenta?",
-    "phone": "Utilice un número de teléfono válido"
+    "phone": "Utilice un número de teléfono válido",
+    "zipcode": "Código postal no válido"
   },
   "auth": {
     "title": "Use su clave privada y PIN o inicie sesión por",
@@ -190,7 +191,7 @@
         "placeholder": ""
       },
       "document": {
-        "ssn": {
+        "cedula_de_identidad": {
           "label": "Número de cédula de identidad",
           "placeholder": "Ingrese los 9 dígitos",
           "maximum": "9"
@@ -230,7 +231,7 @@
           "placeholder": "Ingrese los 10 dígitos",
           "maximum": "10"
         },
-        "corporation": {
+        "gran_empresa": {
           "label": "Gran Empresa",
           "name": "Corporación Number",
           "placeholder": "Ingrese los 10 dígitos",

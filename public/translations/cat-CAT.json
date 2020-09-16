@@ -86,7 +86,8 @@
     "invalidSymbol": "Símbol invàlid.",
     "unknown": "Oh oh. Alguna cosa ha anat malament.",
     "accountNotFound": "Compte no trobat. Esteu segur que heu creat el vostre compte?",
-    "phone": "Utilitzeu un número de telèfon vàlid"
+    "phone": "Utilitzeu un número de telèfon vàlid",
+    "zipcode": "Codi postal no vàlid"
   },
   "auth": {
     "title": "Utilitzeu la vostra clau privada i el PIN o connecteu-vos per",
@@ -195,7 +196,7 @@
         "placeholder": ""
       },
       "document": {
-        "ssn": {
+        "cedula_de_identidad": {
           "label": "número de la Seguretat Social",
           "placeholder": "introduïu els 9 dígits",
           "maximum": "10"
@@ -230,7 +231,7 @@
           "placeholder": "Introduïu els deu dígits",
           "maximum": "10"
         },
-        "corporation": {
+        "gran_empresa": {
           "label": "Corporació",
           "name": "Corporació Number",
           "placeholder": "Introduïu els deu dígits",
