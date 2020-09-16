@@ -6,6 +6,7 @@ import Cambiatus.Enum.SignUpStatus as SignUpStatus
 import Cambiatus.InputObject as InputObject
 import Cambiatus.Mutation as Mutation
 import Cambiatus.Object.SignUp
+import Cambiatus.Scalar exposing (Id(..))
 import Community exposing (Invite)
 import Eos.Account as Eos
 import Graphql.Http
@@ -956,7 +957,7 @@ formTypeToKycCmd shared formType =
         Juridical form ->
             cmd
                 { accountId = form.account
-                , countryId = "1"
+                , countryId = Id "1"
                 , document = form.document
                 , documentType = JuridicalForm.companyTypeToString form.companyType
                 , phone = form.phone
@@ -966,7 +967,7 @@ formTypeToKycCmd shared formType =
         Natural form ->
             cmd
                 { accountId = form.account
-                , countryId = "1"
+                , countryId = Id "1"
                 , document = form.document
                 , documentType = NaturalForm.documentTypeToString form.documentType
                 , phone = form.phone
@@ -991,10 +992,10 @@ formTypeToAddressCmd shared formType =
 
         toInput form =
             { accountId = form.account
-            , cityId = Tuple.first form.city
-            , countryId = "1"
-            , neighborhoodId = Tuple.first form.district
-            , stateId = Tuple.first form.state
+            , cityId = Tuple.first form.city |> Id
+            , countryId = Id "1"
+            , neighborhoodId = Tuple.first form.district |> Id
+            , stateId = Tuple.first form.state |> Id
             , street = form.street
             , zip = form.zip
             }
