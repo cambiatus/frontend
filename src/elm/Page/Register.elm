@@ -614,13 +614,41 @@ update maybeInvitation msg model guest =
 
                         None ->
                             Nothing
+
+                translators =
+                    guest.shared.translators
+
+                problemCount =
+                    case formType of
+                        Juridical form ->
+                            List.length (validateForm (JuridicalForm.validator translators) form)
+
+                        Natural form ->
+                            List.length (validateForm (NaturalForm.validator translators) form)
+
+                        Default form ->
+                            List.length (validateForm (DefaultForm.validator translators) form)
+
+                        None ->
+                            0
+
+                afterValidationAction =
+                    if problemCount > 0 then
+                        UR.addCmd Cmd.none
+
+                    else
+                        UR.addPort
+                            { responseAddress = ValidateForm formType
+                            , responseData = Encode.null
+                            , data =
+                                Encode.object
+                                    [ ( "name", Encode.string "checkAccountAvailability" )
+                                    , ( "account", Encode.string (Maybe.withDefault "" account) )
+                                    ]
+                            }
             in
             { model
                 | selectedForm =
-                    let
-                        translators =
-                            guest.shared.translators
-                    in
                     case formType of
                         Juridical form ->
                             Juridical
@@ -644,15 +672,7 @@ update maybeInvitation msg model guest =
                             None
             }
                 |> UR.init
-                |> UR.addPort
-                    { responseAddress = ValidateForm formType
-                    , responseData = Encode.null
-                    , data =
-                        Encode.object
-                            [ ( "name", Encode.string "checkAccountAvailability" )
-                            , ( "account", Encode.string (Maybe.withDefault "" account) )
-                            ]
-                    }
+                |> afterValidationAction
 
         FormMsg formMsg ->
             case formMsg of
