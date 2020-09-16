@@ -156,10 +156,10 @@ view translators model =
             |> View.Form.Input.toHtml
         , View.Form.Input.init
             { id = "name"
-            , label = "Company Name"
+            , label = translators.t (formTranslationString ++ ".name.label")
             , disabled = False
             , onInput = EnteredName
-            , placeholder = Just "Ex.: Cambiatus"
+            , placeholder = Just (translators.t (formTranslationString ++ ".name.placeholder"))
             , problems = fieldProblems Name model.problems
             , translators = translators
             , value = model.name
