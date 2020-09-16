@@ -657,7 +657,7 @@ update maybeInvitation msg model guest =
                         Juridical form ->
                             Juridical
                                 { form
-                                    | problems = Debug.log "problems" (validateForm (JuridicalForm.validator translators) form)
+                                    | problems = validateForm (JuridicalForm.validator translators) form
                                 }
 
                         Natural form ->
