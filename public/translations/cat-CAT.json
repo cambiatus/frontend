@@ -226,13 +226,13 @@
       "company": {
         "mipyme": {
           "name": "MIPYME",
-          "label": "MIPYME",
+          "label": "MIPYME Number",
           "placeholder": "Introduïu els deu dígits",
           "maximum": "10"
         },
         "corporation": {
           "label": "Corporació",
-          "name": "Corporació",
+          "name": "Corporació Number",
           "placeholder": "Introduïu els deu dígits",
           "maximum": "10"
         }

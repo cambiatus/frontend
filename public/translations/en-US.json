@@ -222,12 +222,12 @@
       "company": {
         "mipyme": {
           "name": "MIPYME",
-          "label": "MIPYME",
+          "label": "MIPYME Number",
           "placeholder": "Enter the 10 digits",
           "maximum": "10"
         },
         "corporation": {
-          "label": "Large-sized Company",
+          "label": "Large-sized Company Number",
           "name": "Corporation",
           "placeholder": "Enter the 10 digits",
           "maximum": "10"

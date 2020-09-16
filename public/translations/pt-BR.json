@@ -231,13 +231,13 @@
       "company": {
         "mipyme": {
           "name": "MIPYME",
-          "label": "MIPYME",
+          "label": "MIPYME Number",
           "placeholder": "Entre os 10 dígitos",
           "maximum": "10"
         },
         "corporation": {
           "label": "Corporação",
-          "name": "Corporação",
+          "name": "Corporação Number",
           "placeholder": "Entre os 10 dígitos",
           "maximum": "10"
         }
