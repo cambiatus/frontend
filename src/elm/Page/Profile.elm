@@ -676,6 +676,20 @@ update msg model loggedIn =
                 |> UR.addCmd
                     (deleteKyc loggedIn)
 
+        DeleteKycCompleted resp ->
+            case resp of
+                Ok _ ->
+                    model
+                        |> UR.init
+                        |> UR.addCmd (deleteAddress loggedIn)
+
+                Err err ->
+                    -- TODO: add error to the model and show it in the view
+                    model
+                        |> UR.init
+                        |> UR.logGraphqlError msg err
+                        |> UR.addCmd (deleteAddress loggedIn)
+
         DeleteAddressCompleted resp ->
             let
                 reloadProfile =
@@ -694,20 +708,6 @@ update msg model loggedIn =
                         |> UR.init
                         |> UR.logGraphqlError msg err
                         |> UR.addCmd reloadProfile
-
-        DeleteKycCompleted resp ->
-            case resp of
-                Ok _ ->
-                    model
-                        |> UR.init
-                        |> UR.addCmd (deleteAddress loggedIn)
-
-                Err err ->
-                    -- TODO: add error to the model and show it in the view
-                    model
-                        |> UR.init
-                        |> UR.logGraphqlError msg err
-                        |> UR.addCmd (deleteAddress loggedIn)
 
         CompletedProfileLoad (Ok Nothing) ->
             UR.init model
