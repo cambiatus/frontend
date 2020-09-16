@@ -84,7 +84,7 @@ companyTypeToString type_ =
             "mipyme"
 
         Corporation ->
-            "corporation"
+            "gran_empresa"
 
 
 
@@ -126,7 +126,7 @@ view translators model =
             True
             EnteredType
             [ { value = "mipyme", label = translators.t "register.form.company.mipyme.label" }
-            , { value = "corporation", label = translators.t "register.form.company.corporation.label" }
+            , { value = "corporation", label = translators.t "register.form.company.gran_empresa.label" }
             ]
             translators
         , View.Form.Input.init

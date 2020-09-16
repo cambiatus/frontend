@@ -55,7 +55,7 @@ documentTypeToString : Document -> String
 documentTypeToString document =
     case document of
         SSN ->
-            "ssn"
+            "cedula_de_identidad"
 
         DIMEX ->
             "dimex"
