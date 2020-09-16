@@ -1,7 +1,7 @@
 module Page.Register.DefaultForm exposing (Field(..), Model, Msg(..), init, update, validator, view)
 
 import Html exposing (Html)
-import Page.Register.Common exposing (fieldProblems, viewTitleForStep)
+import Page.Register.Common exposing (containsNumberGreaterThan, fieldProblems, viewTitleForStep)
 import Session.Shared exposing (Translators)
 import Validate exposing (Validator)
 import View.Form.Input
@@ -102,7 +102,7 @@ update msg form =
         EnteredAccount account ->
             { form
                 | account =
-                    if String.length account > 12 then
+                    if String.length account > 12 || (account |> containsNumberGreaterThan 5) then
                         form.account
 
                     else

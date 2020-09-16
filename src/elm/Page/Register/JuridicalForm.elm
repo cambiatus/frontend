@@ -310,7 +310,7 @@ update msg form =
         EnteredAccount str ->
             { form
                 | account =
-                    if String.length str > 12 then
+                    if String.length str > 12 || (str |> containsNumberGreaterThan 5) then
                         form.account
 
                     else

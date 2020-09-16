@@ -214,7 +214,7 @@ update msg model =
         EnteredAccount account ->
             { model
                 | account =
-                    if String.length account > 12 then
+                    if String.length account > 12 || (account |> containsNumberGreaterThan 5) then
                         model.account
 
                     else
