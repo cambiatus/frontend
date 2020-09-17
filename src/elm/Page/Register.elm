@@ -454,7 +454,7 @@ viewFormTypeSelector translators model =
             , viewFormTypeRadio
                 { type_ = JuridicalAccount
                 , label = translators.t "register.form.types.juridical"
-                , styles = "ml-4"
+                , styles = "ml-1"
                 , isSelected =
                     case model.selectedForm of
                         Juridical _ ->
