@@ -197,12 +197,12 @@
           "maximum": "9"
         },
         "dimex": {
-          "label": "número dimex",
+          "label": "Número dimex",
           "placeholder": "Ingrese los 13 dígitos",
           "maximum": "13"
         },
         "nite": {
-          "label": "número nite",
+          "label": "Número nite",
           "placeholder": "Ingrese los 10 dígitos",
           "maximum": "10"
         }
