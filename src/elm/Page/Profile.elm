@@ -684,7 +684,6 @@ update msg model loggedIn =
                         |> UR.addCmd (deleteAddress loggedIn)
 
                 Err err ->
-                    -- TODO: add error to the model and show it in the view
                     model
                         |> UR.init
                         |> UR.logGraphqlError msg err
@@ -702,6 +701,7 @@ update msg model loggedIn =
                     model
                         |> UR.init
                         |> UR.addCmd reloadProfile
+                        |> UR.addExt (ShowFeedback Success (t "community.kyc.delete.success"))
 
                 Err err ->
                     model
