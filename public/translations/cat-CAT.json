@@ -177,8 +177,8 @@
       },
       "phone": {
         "label": "Número de telèfon",
-        "tooltip": "(DDD) + Número de telèfon",
-        "placeholder": "(DDD) + Número de telèfon"
+        "tooltip": "Ex.: 12345678",
+        "placeholder": "Ex.: 12345678"
       },
       "street": {
         "label": "Carrer",

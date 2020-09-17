@@ -177,8 +177,8 @@
       },
       "phone": {
         "label": "Telefone",
-        "tooltip": "(DDD) + Telefone",
-        "placeholder": "(DDD) + Telefone"
+        "tooltip": "Ex.: 12345678",
+        "placeholder": "Ex.: 12345678"
       },
       "street": {
         "label": "Rua",

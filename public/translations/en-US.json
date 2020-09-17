@@ -172,8 +172,8 @@
       },
       "phone": {
         "label": "Phone Number",
-        "tooltip": "(DDD) + Phone Number",
-        "placeholder": "(DDD) + Phone Number"
+        "tooltip": "Ex.: 12345678",
+        "placeholder": "Ex.: 12345678"
       },
       "street": {
         "label": "Street",
