@@ -238,6 +238,7 @@
           "maximum": "10"
         }
       },
+      "register_tooltip": "¿Cómo le gustaría registrarse?",
       "corporation": "Gran Empresa",
       "city": "Cantón",
       "state": "Provincia",

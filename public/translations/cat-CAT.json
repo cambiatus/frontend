@@ -238,6 +238,7 @@
           "maximum": "10"
         }
       },
+      "register_tooltip": "Com voleu registrar-vos?",
       "corporation": "Corporació",
       "city": "Ciutat",
       "state": "Estat",

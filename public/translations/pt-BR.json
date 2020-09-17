@@ -243,6 +243,7 @@
           "maximum": "10"
         }
       },
+      "register_tooltip": "Como gostaria de se registrar?",
       "corporation": "Corporação",
       "city": "Cidade",
       "state": "Estado",

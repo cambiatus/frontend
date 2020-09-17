@@ -234,6 +234,7 @@
           "maximum": "10"
         }
       },
+      "register_tooltip": "How would you like to register?",
       "corporation": "Corporation",
       "city": "City",
       "state": "State",
