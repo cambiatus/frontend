@@ -212,7 +212,21 @@ viewSettings loggedIn model profile =
                         )
 
                 Nothing ->
-                    text ""
+                    viewProfileItem
+                        (span []
+                            [ text (t "community.kyc.dataTitle")
+                            , span [ class "icon-tooltip inline-block align-center ml-1" ]
+                                [ Icons.question "inline-block"
+                                , p
+                                    [ class "icon-tooltip-content" ]
+                                    [ text (t "community.kyc.info")
+                                    ]
+                                ]
+                            ]
+                        )
+                        (viewButton (t "menu.add") AddKycClicked)
+                        Center
+                        Nothing
     in
     div [ class "bg-white mb-6" ]
         [ ul [ class "container divide-y divide-gray-500 mx-auto px-4" ]
@@ -637,6 +651,7 @@ type Msg
     | GotPushPreference Bool
     | RequestPush
     | ToggleDeleteKycModal
+    | AddKycClicked
     | CheckPushPref
     | GotPushSub PushSubscription
     | CompletedPushUpload (Result (Graphql.Http.Error ()) ())
@@ -665,6 +680,10 @@ update msg model loggedIn =
 
         ToggleDeleteKycModal ->
             { model | isDeleteKycModalShowed = not model.isDeleteKycModalShowed }
+                |> UR.init
+
+        AddKycClicked ->
+            model
                 |> UR.init
 
         CompletedProfileLoad (Ok Nothing) ->
@@ -909,6 +928,9 @@ msgToString msg =
 
         ToggleDeleteKycModal ->
             [ "ToggleDeleteKycModal" ]
+
+        AddKycClicked ->
+            [ "AddKycClicked" ]
 
         CompletedProfileLoad r ->
             [ "CompletedProfileLoad", UR.resultToString r ]
