@@ -694,7 +694,7 @@ update maybeInvitation msg model guest =
                 JuridicalFormMsg innerMsg ->
                     case model.selectedForm of
                         Juridical form ->
-                            UR.init { model | selectedForm = Juridical (JuridicalForm.update innerMsg form) }
+                            UR.init { model | selectedForm = Juridical (JuridicalForm.update innerMsg form guest.shared.translators) }
 
                         _ ->
                             UR.init model
@@ -737,6 +737,7 @@ update maybeInvitation msg model guest =
                                         , phone = Just form.phone
                                         , country = country
                                         }
+                                        guest.shared.translators
                                     )
 
                             ( NaturalAccount, LoadedAll _ _, _ ) ->
@@ -756,6 +757,7 @@ update maybeInvitation msg model guest =
                                         , phone = Nothing
                                         , country = country
                                         }
+                                        guest.shared.translators
                                     )
 
                             _ ->

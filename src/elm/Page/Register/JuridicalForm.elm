@@ -50,8 +50,8 @@ type Field
     | Number
 
 
-init : { a | account : Maybe String, email : Maybe String, phone : Maybe String, country : Address.Country } -> Model
-init options =
+init : { a | account : Maybe String, email : Maybe String, phone : Maybe String, country : Address.Country } -> Translators -> Model
+init options translators =
     { companyType = MIPYME
     , document = ""
     , name = ""
@@ -66,7 +66,7 @@ init options =
     , number = ""
     , problems = []
     , country = options.country
-    , states = options.country.states ++ [ Address.State (Id "") "Select" [] ]
+    , states = options.country.states ++ [ Address.State (Id "") (translators.t "register.form.select.state") [] ]
     , cities = []
     , districts = []
     }
@@ -250,8 +250,8 @@ view translators model =
 --- UPDATE
 
 
-update : Msg -> Model -> Model
-update msg form =
+update : Msg -> Model -> Translators -> Model
+update msg form translators =
     case msg of
         EnteredDocument document ->
             { form
@@ -296,7 +296,7 @@ update msg form =
         EnteredState str ->
             { form
                 | state = findId str form.country.states
-                , cities = getCities form.country.states str
+                , cities = getCities form.country.states str translators
                 , city = ( "", "" )
                 , district = ( "", "" )
             }
@@ -304,7 +304,7 @@ update msg form =
         EnteredCity str ->
             { form
                 | city = findId str form.cities
-                , districts = getDistricts form.cities str
+                , districts = getDistricts form.cities str translators
                 , district = ( "", "" )
             }
 

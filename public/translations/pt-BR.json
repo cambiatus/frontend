@@ -247,7 +247,12 @@
       "corporation": "Corporação",
       "city": "Cidade",
       "state": "Estado",
-      "district": "Distrito"
+      "district": "Distrito",
+      "select": {
+        "state": "Selecione o Estado",
+        "city": "Selecione a cidade",
+        "district": "Selecione o distrito"
+      }
     },
     "login": "Já tem uma conta? ",
     "authLink": "Login",

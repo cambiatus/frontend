@@ -242,7 +242,12 @@
       "corporation": "Gran Empresa",
       "city": "Cantón",
       "state": "Provincia",
-      "district": "Distrito"
+      "district": "Distrito",
+      "select": {
+        "state": "Seleccione el estado",
+        "city": "Seleccione la ciudad",
+        "district": "Seleccione el distrito"
+      }
     },
     "login": "¿Ya tienes una cuenta? ",
     "authLink": "Iniciar sesión",

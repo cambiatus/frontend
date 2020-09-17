@@ -242,7 +242,12 @@
       "corporation": "Corporació",
       "city": "Ciutat",
       "state": "Estat",
-      "district": "Districte"
+      "district": "Districte",
+      "select": {
+        "state": "Seleccioneu l'estat",
+        "city": "Seleccioneu la ciutat",
+        "district": "Selecciona el districte"
+      }
     },
     "login": "Ja tens un compte? ",
     "authLink": "Inici de sessió",

@@ -3,7 +3,7 @@ module Page.Register.Common exposing (Errors(..), containsLetters, containsNumbe
 import Address
 import Cambiatus.Scalar exposing (Id(..))
 import Html exposing (Html, div, p, strong, text)
-import Html.Attributes exposing (class, style)
+import Html.Attributes exposing (class)
 import Maybe.Extra as MaybeExtra
 import Session.Shared exposing (Translators)
 import Validate
@@ -89,8 +89,8 @@ findId str list =
     )
 
 
-getCities : List Address.State -> String -> List Address.City
-getCities states selectedState =
+getCities : List Address.State -> String -> Translators -> List Address.City
+getCities states selectedState translators =
     let
         foundState =
             List.head (List.filter (\state -> state.name == selectedState) states)
@@ -98,12 +98,12 @@ getCities states selectedState =
     foundState
         |> Maybe.map (\state -> state.cities)
         |> Maybe.withDefault []
-        |> (::) (Address.City (Id "") "Select" [])
+        |> (::) (Address.City (Id "") (translators.t "register.form.select.city") [])
         |> List.sortWith byId
 
 
-getDistricts : List Address.City -> String -> List Address.Neighborhood
-getDistricts cities selectedCity =
+getDistricts : List Address.City -> String -> Translators -> List Address.Neighborhood
+getDistricts cities selectedCity translators =
     let
         foundState =
             List.head (List.filter (\city -> city.name == selectedCity) cities)
@@ -111,7 +111,7 @@ getDistricts cities selectedCity =
     foundState
         |> Maybe.map (\city -> city.neighborhoods)
         |> Maybe.withDefault []
-        |> (::) (Address.Neighborhood (Id "") "Select")
+        |> (::) (Address.Neighborhood (Id "") (translators.t "register.form.select.district"))
         |> List.sortWith byId
 
 

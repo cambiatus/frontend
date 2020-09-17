@@ -238,7 +238,12 @@
       "corporation": "Corporation",
       "city": "City",
       "state": "State",
-      "district": "District"
+      "district": "District",
+      "select": {
+        "state": "Select the state",
+        "city": "Select the city",
+        "district": "Select the district"
+      }
     },
     "login": "Already have an account? ",
     "authLink": "Login",
