@@ -23,6 +23,7 @@ module Profile exposing
     , selectConfig
     , selectFilter
     , selectionSet
+    , upsertKycMutation
     , username
     , view
     , viewEmpty
@@ -41,6 +42,7 @@ import Cambiatus.Object.DeleteAddress
 import Cambiatus.Object.DeleteKyc
 import Cambiatus.Object.Profile as User
 import Cambiatus.Query
+import Cambiatus.Scalar exposing (Id(..))
 import Dict exposing (Dict)
 import Eos exposing (Symbol)
 import Eos.Account as Eos
@@ -247,6 +249,29 @@ type alias DeleteAddressResult =
     { result : DeleteAddressStatus
     , status : String
     }
+
+
+
+-- KYC
+
+
+upsertKycMutation : Eos.Name -> ProfileKyc -> SelectionSet (Maybe ProfileKyc) RootMutation
+upsertKycMutation account data =
+    let
+        nameString =
+            Eos.nameToString account
+    in
+    Cambiatus.Mutation.upsertKyc
+        { input =
+            { accountId = nameString
+            , countryId = Id "1"
+            , documentType = data.documentType
+            , document = data.document
+            , phone = data.phone
+            , userType = "natural"
+            }
+        }
+        Kyc.selectionSet
 
 
 
