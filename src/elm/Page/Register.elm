@@ -278,7 +278,7 @@ viewCreateAccount translators model =
     let
         formElement element =
             Html.form
-                [ class "flex flex-grow flex-col bg-white px-4 px-0 md:max-w-sm sf-wrapper self-center"
+                [ class "flex flex-grow flex-col bg-white px-4 px-0 md:max-w-sm sf-wrapper self-center w-full"
                 , onSubmit (ValidateForm model.selectedForm)
                 ]
                 (viewServerError model.serverError :: element)
