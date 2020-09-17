@@ -178,6 +178,7 @@ view translators model =
             , problems = fieldProblems Phone model.problems
             , translators = translators
             }
+            |> View.Form.Input.withCounter 8
             |> View.Form.Input.toHtml
         , View.Form.Input.init
             { id = "account"
@@ -282,8 +283,15 @@ update msg form =
         EnteredEmail str ->
             { form | email = str }
 
-        EnteredPhone str ->
-            { form | phone = str }
+        EnteredPhone phone ->
+            { form
+                | phone =
+                    if String.length phone <= 8 && not (containsLetters phone) then
+                        phone
+
+                    else
+                        form.phone
+            }
 
         EnteredState str ->
             { form
