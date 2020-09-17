@@ -180,7 +180,7 @@ update msg model =
         EnteredDocument maximum document ->
             { model
                 | document =
-                    if String.length document <= maximum then
+                    if String.length document <= maximum && not (containsLetters document) then
                         document
 
                     else

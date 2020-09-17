@@ -1,9 +1,10 @@
-module Page.Register.Common exposing (Errors(..), containsNumberGreaterThan, fieldProblems, findId, getCities, getDistricts, ifEmptyTuple, viewSelectField, viewTitleForStep)
+module Page.Register.Common exposing (Errors(..), containsLetters, containsNumberGreaterThan, fieldProblems, findId, getCities, getDistricts, ifEmptyTuple, viewSelectField, viewTitleForStep)
 
 import Address
 import Cambiatus.Scalar exposing (Id(..))
 import Html exposing (Html, p, strong, text)
 import Html.Attributes exposing (class)
+import Maybe.Extra as MaybeExtra
 import Session.Shared exposing (Translators)
 import Validate
 import View.Form.Select
@@ -131,6 +132,17 @@ containsNumberGreaterThan number str =
         |> List.filter (\x -> x < 1 || x > number)
         |> List.length
         |> (/=) 0
+
+
+containsLetters : String -> Bool
+containsLetters str =
+    if String.length str == 0 then
+        False
+
+    else
+        str
+            |> String.toInt
+            |> MaybeExtra.isNothing
 
 
 ifEmptyTuple data error =

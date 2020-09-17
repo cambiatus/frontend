@@ -255,7 +255,7 @@ update msg form =
         EnteredDocument document ->
             { form
                 | document =
-                    if String.length document <= 10 then
+                    if String.length document <= 10 && not (containsLetters document) then
                         document
 
                     else
