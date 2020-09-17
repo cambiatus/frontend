@@ -436,7 +436,7 @@ viewSubmitButton isEnabled translators =
 viewFormTypeSelector : Translators -> Model -> Html Msg
 viewFormTypeSelector translators model =
     div []
-        [ View.Form.label "radio" "Would you like to register as?"
+        [ View.Form.primaryLabel "radio" "How would you like to register?"
         , div [ class "flex w-full justify-center" ]
             [ viewFormTypeRadio
                 { type_ = NaturalAccount
