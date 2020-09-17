@@ -87,7 +87,7 @@
     "unknown": "Opa. Algo de errado aconteceu =(.",
     "accountNotFound": "Conta não encontrada. Tem certeza que criou uma conta com essa chave?",
     "phone": "Por favor insira um número de telefone válido",
-    "zip": "CEP inválido"
+    "zipcode": "CEP inválido"
   },
   "auth": {
     "title": "Use sua chave privada e PIN ou faça o login",
