@@ -242,6 +242,7 @@ view translators model =
             , problems = fieldProblems Zip model.problems
             , translators = translators
             }
+            |> View.Form.Input.withCounter 5
             |> View.Form.Input.toHtml
         ]
 
@@ -325,7 +326,14 @@ update msg form translators =
             { form | street = str }
 
         EnteredZip str ->
-            { form | zip = str }
+            { form
+                | zip =
+                    if String.length str <= 5 && not (containsLetters str) then
+                        str
+
+                    else
+                        form.zip
+            }
 
         EnteredNumber str ->
             { form | number = str }
