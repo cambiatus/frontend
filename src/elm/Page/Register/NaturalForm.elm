@@ -102,7 +102,7 @@ view translators model =
             (documentTypeToString model.documentType)
             True
             EnteredDocumentType
-            [ { value = "ssn", label = translators.t "register.form.document.ssn.label" }
+            [ { value = "ssn", label = translators.t "register.form.document.cedula_de_identidad.label" }
             , { value = "dimex", label = translators.t "register.form.document.dimex.label" }
             , { value = "nite", label = translators.t "register.form.document.nite.label" }
             ]
