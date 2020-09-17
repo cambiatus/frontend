@@ -508,7 +508,12 @@ viewFormTypeRadio options =
                 JuridicalAccount ->
                     "juridical"
     in
-    div [ class (finalClasses ++ options.styles), onClick (options.onClick options.type_) ]
+    div
+        [ class (finalClasses ++ options.styles)
+        , onClick (options.onClick options.type_)
+        , style "width" "169px"
+        , style "height" "44px"
+        ]
         [ label [ class "cursor-pointer", for id ] [ text options.label ]
         , input [ class "hidden", type_ "radio", checked options.isSelected, onClick (options.onClick options.type_) ] []
         ]
