@@ -120,8 +120,7 @@ view translators model =
             formTranslationString ++ ".company." ++ companyTypeToString model.companyType
     in
     Html.div []
-        [ viewTitleForStep translators 1
-        , viewSelectField (translators.t "register.form.company_type")
+        [ viewSelectField (translators.t "register.form.company_type")
             (companyTypeToString model.companyType)
             True
             EnteredType

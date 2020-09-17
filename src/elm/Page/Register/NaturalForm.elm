@@ -98,8 +98,7 @@ view translators model =
                 |> Maybe.withDefault 10
     in
     Html.div []
-        [ viewTitleForStep translators 1
-        , viewSelectField "Document Type"
+        [ viewSelectField "Document Type"
             (documentTypeToString model.documentType)
             True
             EnteredDocumentType

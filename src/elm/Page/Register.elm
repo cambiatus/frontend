@@ -28,6 +28,7 @@ import Session.Guest as Guest exposing (External(..))
 import Session.Shared exposing (Shared, Translators)
 import UpdateResult as UR
 import Validate
+import View.Form
 
 
 
@@ -67,6 +68,7 @@ type alias Model =
     , maybeInvitationId : Maybe String
     , selectedForm : FormType
     , country : Maybe Address.Country
+    , step : Int
     }
 
 
@@ -104,6 +106,7 @@ initModel maybeInvitationId _ =
             Nothing ->
                 Default DefaultForm.init
     , country = Nothing
+    , step = 1
     }
 
 
@@ -185,8 +188,7 @@ viewAccountGenerated ({ t } as translators) model keys =
             , class "px-4 md:max-w-sm md:mx-auto md:pt-20 md:px-0 text-white text-body"
             ]
             [ div [ class "sf-content" ]
-                [ viewTitleForStep translators 2
-                , p
+                [ p
                     [ class "text-xl mb-3" ]
                     [ text (t "register.account_created.greet")
                     , text " "
@@ -275,7 +277,7 @@ viewCreateAccount : Translators -> Model -> Html Msg
 viewCreateAccount translators model =
     let
         formElement element =
-            div [ class "flex justify-center flex-grow bg-white" ]
+            div [ class "self-center" ]
                 [ Html.form
                     [ class "flex flex-grow flex-col bg-white px-4 px-0 md:max-w-sm sf-wrapper"
                     , onSubmit (ValidateForm model.selectedForm)
@@ -296,37 +298,40 @@ viewCreateAccount translators model =
                 _ ->
                     div [] []
     in
-    case model.status of
-        LoadedAll invitation _ ->
-            if invitation.community.hasKyc == True then
-                formElement [ viewKycRegister translators model, viewFooter model translators ]
+    div [ class "flex flex-grow bg-white flex-col" ]
+        [ viewTitleForStep translators model.step
+        , case model.status of
+            LoadedAll invitation _ ->
+                if invitation.community.hasKyc == True then
+                    formElement [ viewKycRegister translators model, viewFooter model translators ]
 
-            else
+                else
+                    defaultForm
+
+            LoadedDefaultCommunity ->
                 defaultForm
 
-        LoadedDefaultCommunity ->
-            defaultForm
+            Loading ->
+                Session.Shared.viewFullLoading
 
-        Loading ->
-            Session.Shared.viewFullLoading
+            Generated keys ->
+                viewAccountGenerated translators model keys
 
-        Generated keys ->
-            viewAccountGenerated translators model keys
+            LoadedInvite _ ->
+                Session.Shared.viewFullLoading
 
-        LoadedInvite _ ->
-            Session.Shared.viewFullLoading
+            LoadedCountry _ ->
+                Session.Shared.viewFullLoading
 
-        LoadedCountry _ ->
-            Session.Shared.viewFullLoading
+            FailedInvite _ ->
+                Page.fullPageNotFound (translators.t "error.unknown") ""
 
-        FailedInvite _ ->
-            Page.fullPageNotFound (translators.t "error.unknown") ""
+            FailedCountry _ ->
+                Page.fullPageNotFound (translators.t "error.unknown") ""
 
-        FailedCountry _ ->
-            Page.fullPageNotFound (translators.t "error.unknown") ""
-
-        NotFound ->
-            Page.fullPageNotFound (translators.t "error.pageNotFound") ""
+            NotFound ->
+                Page.fullPageNotFound (translators.t "error.pageNotFound") ""
+        ]
 
 
 viewServerError : Maybe String -> Html msg
@@ -432,33 +437,36 @@ viewSubmitButton isEnabled translators =
 
 viewFormTypeSelector : Translators -> Model -> Html Msg
 viewFormTypeSelector translators model =
-    div [ class "flex w-full justify-center" ]
-        [ viewFormTypeRadio
-            { type_ = NaturalAccount
-            , label = translators.t "register.form.types.natural"
-            , styles = ""
-            , isSelected =
-                case model.selectedForm of
-                    Natural _ ->
-                        True
+    div []
+        [ View.Form.label "radio" "Would you like to register as?"
+        , div [ class "flex w-full justify-center" ]
+            [ viewFormTypeRadio
+                { type_ = NaturalAccount
+                , label = translators.t "register.form.types.natural"
+                , styles = ""
+                , isSelected =
+                    case model.selectedForm of
+                        Natural _ ->
+                            True
 
-                    _ ->
-                        False
-            , onClick = AccountTypeSelected
-            }
-        , viewFormTypeRadio
-            { type_ = JuridicalAccount
-            , label = translators.t "register.form.types.juridical"
-            , styles = "ml-4"
-            , isSelected =
-                case model.selectedForm of
-                    Juridical _ ->
-                        True
+                        _ ->
+                            False
+                , onClick = AccountTypeSelected
+                }
+            , viewFormTypeRadio
+                { type_ = JuridicalAccount
+                , label = translators.t "register.form.types.juridical"
+                , styles = "ml-4"
+                , isSelected =
+                    case model.selectedForm of
+                        Juridical _ ->
+                            True
 
-                    _ ->
-                        False
-            , onClick = AccountTypeSelected
-            }
+                        _ ->
+                            False
+                , onClick = AccountTypeSelected
+                }
+            ]
         ]
 
 
@@ -475,7 +483,7 @@ viewFormTypeRadio : FormTypeRadioOptions Msg -> Html Msg
 viewFormTypeRadio options =
     let
         defaultClasses =
-            "w-40 h-10 rounded-sm flex justify-center items-center cursor-pointer "
+            "w-40 h-10 rounded-sm flex justify-center items-center cursor-pointer mb-4 "
 
         ifSelectedClasses =
             "bg-orange-300 text-white "
@@ -516,7 +524,7 @@ viewTitleForStep translators s =
             String.fromInt s
     in
     p
-        [ class "py-4 mb-4 text-body border-b border-dotted text-grey border-grey-500" ]
+        [ class "ml-4 py-4 mb-4 text-body border-b border-dotted text-grey border-grey-500" ]
         [ text (tr "register.form.step" [ ( "stepNum", step ) ])
         , text " / "
         , strong
