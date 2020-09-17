@@ -425,7 +425,8 @@
         "confirmationBody": "Después de eliminar estos datos, no podrá participar en algunas comunidades. ¿Realmente desea eliminar sus datos KYC?",
         "warning": "Importante: Después de eliminar estos datos, no podrá participar en algunas comunidades.",
         "confirm": "Si",
-        "cancel": "No"
+        "cancel": "No",
+        "success": "Sus datos KYC se eliminaron con éxito."
       }
     }
   },

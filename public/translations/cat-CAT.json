@@ -425,7 +425,8 @@
         "confirmationBody": "Després de suprimir aquestes dades, no podreu participar en algunes comunitats. Confirmes que vols suprimir les teves dades KYC?",
         "warning": "Important: després de suprimir aquestes dades, no podreu participar en algunes comunitats.",
         "confirm": "Sí",
-        "cancel": "No"
+        "cancel": "No",
+        "success": "Les vostres dades KYC s'han suprimit correctament."
       }
     }
   },
