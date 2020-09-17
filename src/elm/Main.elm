@@ -27,6 +27,7 @@ import Page.Notification as Notification
 import Page.PaymentHistory as PaymentHistory
 import Page.Profile as Profile
 import Page.Profile.Editor as ProfileEditor
+import Page.Profile.KycEditor as ProfileKycEditor
 import Page.PublicProfile as PublicProfile
 import Page.Register as Register
 import Page.Shop as Shop
@@ -158,6 +159,7 @@ type Status
     | PublicProfile PublicProfile.Model
     | Profile Profile.Model
     | ProfileEditor ProfileEditor.Model
+    | ProfileKycEditor ProfileKycEditor.Model
     | Register (Maybe String) Register.Model
     | Shop Shop.Filter Shop.Model
     | ShopEditor (Maybe String) ShopEditor.Model
@@ -193,6 +195,7 @@ type Msg
     | GotPaymentHistoryMsg PaymentHistory.Msg
     | GotProfileMsg Profile.Msg
     | GotProfileEditorMsg ProfileEditor.Msg
+    | GotProfileKycEditorMsg ProfileKycEditor.Msg
     | GotRegisterMsg Register.Msg
     | GotShopMsg Shop.Msg
     | GotShopEditorMsg ShopEditor.Msg
@@ -370,6 +373,11 @@ update msg model =
         ( GotProfileEditorMsg subMsg, ProfileEditor subModel ) ->
             ProfileEditor.update subMsg subModel
                 >> updateLoggedInUResult ProfileEditor GotProfileEditorMsg model
+                |> withLoggedIn
+
+        ( GotProfileKycEditorMsg subMsg, ProfileKycEditor subModel ) ->
+            ProfileKycEditor.update subMsg subModel
+                >> updateLoggedInUResult ProfileKycEditor GotProfileKycEditorMsg model
                 |> withLoggedIn
 
         ( GotCommunitySettingsMsg subMsg, CommunitySettings subModel ) ->
@@ -752,6 +760,11 @@ changeRouteTo maybeRoute model =
                 >> updateStatusWith ProfileEditor GotProfileEditorMsg model
                 |> withLoggedIn Route.ProfileEditor
 
+        Just Route.ProfileKycEditor ->
+            ProfileKycEditor.init
+                >> updateStatusWith ProfileKycEditor GotProfileKycEditorMsg model
+                |> withLoggedIn Route.ProfileKycEditor
+
         Just Route.Dashboard ->
             Dashboard.init
                 >> updateStatusWith Dashboard GotDashboardMsg model
@@ -993,6 +1006,9 @@ msgToString msg =
         GotProfileEditorMsg subMsg ->
             "GotProfileEditorMsg" :: ProfileEditor.msgToString subMsg
 
+        GotProfileKycEditorMsg subMsg ->
+            "GotProfileKycEditorMsg" :: ProfileKycEditor.msgToString subMsg
+
         GotRegisterMsg subMsg ->
             "GotRegisterMsg" :: Register.msgToString subMsg
 
@@ -1167,6 +1183,9 @@ view model =
 
         ProfileEditor subModel ->
             viewLoggedIn subModel LoggedIn.ProfileEditor GotProfileEditorMsg ProfileEditor.view
+
+        ProfileKycEditor subModel ->
+            viewLoggedIn subModel LoggedIn.ProfileKycEditor GotProfileKycEditorMsg ProfileKycEditor.view
 
         Shop _ subModel ->
             viewLoggedIn subModel LoggedIn.Shop GotShopMsg Shop.view
