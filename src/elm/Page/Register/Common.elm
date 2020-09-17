@@ -2,8 +2,8 @@ module Page.Register.Common exposing (Errors(..), containsLetters, containsNumbe
 
 import Address
 import Cambiatus.Scalar exposing (Id(..))
-import Html exposing (Html, p, strong, text)
-import Html.Attributes exposing (class)
+import Html exposing (Html, div, p, strong, text)
+import Html.Attributes exposing (class, style)
 import Maybe.Extra as MaybeExtra
 import Session.Shared exposing (Translators)
 import Validate
@@ -16,14 +16,22 @@ viewSelectField label initialValue enabled onInput options problems =
         form =
             View.Form.Select.init "document_select" label onInput initialValue problems
     in
-    List.foldl View.Form.Select.withOption form options
-        |> (if enabled then
-                View.Form.Select.enable
+    div
+        (if enabled then
+            []
 
-            else
-                View.Form.Select.disable
-           )
-        |> View.Form.Select.toHtml
+         else
+            [ class "hidden" ]
+        )
+        [ List.foldl View.Form.Select.withOption form options
+            |> (if enabled then
+                    View.Form.Select.enable
+
+                else
+                    View.Form.Select.disable
+               )
+            |> View.Form.Select.toHtml
+        ]
 
 
 viewTitleForStep : Translators -> Int -> Html msg
