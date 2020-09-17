@@ -202,6 +202,7 @@ update msg model =
 
                         _ ->
                             SSN
+                , document = ""
             }
 
         EnteredEmail email ->
