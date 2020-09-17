@@ -10,11 +10,11 @@ import Validate
 import View.Form.Select
 
 
-viewSelectField : String -> String -> Bool -> (String -> msg) -> List { value : String, label : String } -> Translators -> Html msg
-viewSelectField label initialValue enabled onInput options _ =
+viewSelectField : String -> String -> Bool -> (String -> msg) -> List { value : String, label : String } -> Maybe (List String) -> Html msg
+viewSelectField label initialValue enabled onInput options problems =
     let
         form =
-            View.Form.Select.init "document_select" label onInput initialValue
+            View.Form.Select.init "document_select" label onInput initialValue problems
     in
     List.foldl View.Form.Select.withOption form options
         |> (if enabled then

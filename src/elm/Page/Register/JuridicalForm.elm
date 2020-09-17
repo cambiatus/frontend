@@ -127,7 +127,7 @@ view translators model =
             [ { value = "mipyme", label = translators.t "register.form.company.mipyme.label" }
             , { value = "corporation", label = translators.t "register.form.company.gran_empresa.label" }
             ]
-            translators
+            (fieldProblems CompanyType model.problems)
         , View.Form.Input.init
             { id = "document"
             , label = translators.t (companyTranslationString ++ ".label")
@@ -196,19 +196,19 @@ view translators model =
             True
             EnteredState
             (List.map (\state -> { value = state.name, label = state.name }) model.states)
-            translators
+            (fieldProblems State model.problems)
         , viewSelectField (translators.t "register.form.city")
             ""
             (model.state /= ( "", "" ))
             EnteredCity
             (List.map (\city -> { value = city.name, label = city.name }) model.cities)
-            translators
+            (fieldProblems City model.problems)
         , viewSelectField (translators.t "register.form.district")
             ""
             (model.city /= ( "", "" ))
             EnteredDistrict
             (List.map (\district -> { value = district.name, label = district.name }) model.districts)
-            translators
+            (fieldProblems District model.problems)
         , View.Form.Input.init
             { id = "street"
             , label = translators.t (formTranslationString ++ ".street.label")

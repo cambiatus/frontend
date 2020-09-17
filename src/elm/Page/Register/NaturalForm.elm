@@ -106,7 +106,7 @@ view translators model =
             , { value = "dimex", label = translators.t "register.form.document.dimex.label" }
             , { value = "nite", label = translators.t "register.form.document.nite.label" }
             ]
-            translators
+            (fieldProblems DocumentType model.problems)
         , View.Form.Input.init
             { id = "document"
             , label = translators.t (documentTranslationString ++ ".label")

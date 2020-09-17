@@ -10,7 +10,7 @@ module View.Form.Select exposing (disable, enable, init, toHtml, withOption)
 
 -}
 
-import Html exposing (Html, text)
+import Html exposing (Html, li, text, ul)
 import Html.Attributes exposing (class, disabled, selected, value)
 import Html.Events exposing (onInput)
 import View.Form
@@ -18,9 +18,9 @@ import View.Form
 
 {-| Initializes a Cambiatus-style dropdown
 -}
-init : String -> String -> (String -> a) -> String -> Select a
-init id label onInput value =
-    { options = [], onInput = onInput, id = id, label = label, value = value, disabled = False }
+init : String -> String -> (String -> a) -> String -> Maybe (List String) -> Select a
+init id label onInput value problems =
+    { options = [], onInput = onInput, id = id, label = label, value = value, disabled = False, problems = problems }
 
 
 disable : Select a -> Select a
@@ -64,6 +64,11 @@ toHtml select =
     Html.div [ class "mb-10" ]
         [ View.Form.label select.id select.label
         , Html.select [ class "form-select select w-full", onInput select.onInput, disabled select.disabled ] select.options
+        , ul []
+            (select.problems
+                |> Maybe.withDefault []
+                |> List.map viewFieldProblem
+            )
         ]
 
 
@@ -78,6 +83,7 @@ type alias Select a =
     , id : String
     , value : String
     , disabled : Bool
+    , problems : Maybe (List String)
     }
 
 
@@ -85,3 +91,8 @@ type alias Option =
     { value : String
     , label : String
     }
+
+
+viewFieldProblem : String -> Html a
+viewFieldProblem problem =
+    li [ class "form-error absolute mr-8" ] [ text problem ]
