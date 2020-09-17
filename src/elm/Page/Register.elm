@@ -277,13 +277,11 @@ viewCreateAccount : Translators -> Model -> Html Msg
 viewCreateAccount translators model =
     let
         formElement element =
-            div [ class "self-center" ]
-                [ Html.form
-                    [ class "flex flex-grow flex-col bg-white px-4 px-0 md:max-w-sm sf-wrapper"
-                    , onSubmit (ValidateForm model.selectedForm)
-                    ]
-                    (viewServerError model.serverError :: element)
+            Html.form
+                [ class "flex flex-grow flex-col bg-white px-4 px-0 md:max-w-sm sf-wrapper self-center"
+                , onSubmit (ValidateForm model.selectedForm)
                 ]
+                (viewServerError model.serverError :: element)
 
         defaultForm =
             case model.selectedForm of
