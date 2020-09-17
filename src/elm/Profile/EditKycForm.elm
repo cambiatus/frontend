@@ -1,4 +1,14 @@
-module Profile.EditKycForm exposing (..)
+module Profile.EditKycForm exposing
+    ( CostaRicaDoc(..)
+    , Doc
+    , KycForm
+    , KycFormField(..)
+    , Msg(..)
+    , initKycForm
+    , kycValidator
+    , valToDoc
+    , viewKycForm
+    )
 
 import Html exposing (Html, button, div, form, input, label, option, p, select, text)
 import Html.Attributes exposing (attribute, class, maxlength, placeholder, selected, type_, value)

@@ -1,4 +1,12 @@
-module Page.Profile.KycEditor exposing (..)
+module Page.Profile.KycEditor exposing
+    ( Model
+    , Msg(..)
+    , UpdateResult
+    , init
+    , msgToString
+    , update
+    , view
+    )
 
 import Api
 import Api.Graphql
