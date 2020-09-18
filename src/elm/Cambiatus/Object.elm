@@ -41,6 +41,14 @@ type Country
     = Country
 
 
+type DeleteAddress
+    = DeleteAddress
+
+
+type DeleteKyc
+    = DeleteKyc
+
+
 type Invite
     = Invite
 

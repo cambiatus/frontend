@@ -334,6 +334,29 @@ encodeKycDataUpdateInput input =
         [ ( "accountId", Encode.string input.accountId |> Just ), ( "countryId", (Cambiatus.ScalarCodecs.codecs |> Cambiatus.Scalar.unwrapEncoder .codecId) input.countryId |> Just ), ( "document", Encode.string input.document |> Just ), ( "documentType", Encode.string input.documentType |> Just ), ( "phone", Encode.string input.phone |> Just ), ( "userType", Encode.string input.userType |> Just ) ]
 
 
+buildKycDeletionInput : KycDeletionInputRequiredFields -> KycDeletionInput
+buildKycDeletionInput required =
+    { account = required.account }
+
+
+type alias KycDeletionInputRequiredFields =
+    { account : String }
+
+
+{-| Type for the KycDeletionInput input object.
+-}
+type alias KycDeletionInput =
+    { account : String }
+
+
+{-| Encode a KycDeletionInput into a value that can be used as an argument.
+-}
+encodeKycDeletionInput : KycDeletionInput -> Value
+encodeKycDeletionInput input =
+    Encode.maybeObject
+        [ ( "account", Encode.string input.account |> Just ) ]
+
+
 buildNewCommunityInput : NewCommunityInputRequiredFields -> NewCommunityInput
 buildNewCommunityInput required =
     { symbol = required.symbol }
