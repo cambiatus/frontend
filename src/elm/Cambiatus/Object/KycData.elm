@@ -19,7 +19,9 @@ import Graphql.SelectionSet exposing (SelectionSet)
 import Json.Decode as Decode
 
 
-country : SelectionSet decodesTo Cambiatus.Object.Country -> SelectionSet (Maybe decodesTo) Cambiatus.Object.KycData
+country :
+    SelectionSet decodesTo Cambiatus.Object.Country
+    -> SelectionSet (Maybe decodesTo) Cambiatus.Object.KycData
 country object_ =
     Object.selectionForCompositeField "country" [] object_ (identity >> Decode.nullable)
 

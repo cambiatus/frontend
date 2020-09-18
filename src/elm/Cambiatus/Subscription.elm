@@ -25,28 +25,37 @@ type alias NewcommunityRequiredArguments =
 
 {-| A subscription for new community addition
 -}
-newcommunity : NewcommunityRequiredArguments -> SelectionSet decodesTo Cambiatus.Object.Community -> SelectionSet decodesTo RootSubscription
+newcommunity :
+    NewcommunityRequiredArguments
+    -> SelectionSet decodesTo Cambiatus.Object.Community
+    -> SelectionSet decodesTo RootSubscription
 newcommunity requiredArgs object_ =
     Object.selectionForCompositeField "newcommunity" [ Argument.required "input" requiredArgs.input Cambiatus.InputObject.encodeNewCommunityInput ] object_ identity
 
 
 {-| A subscription for sale history
 -}
-saleHistoryOperation : SelectionSet decodesTo Cambiatus.Object.SaleHistory -> SelectionSet (Maybe decodesTo) RootSubscription
+saleHistoryOperation :
+    SelectionSet decodesTo Cambiatus.Object.SaleHistory
+    -> SelectionSet (Maybe decodesTo) RootSubscription
 saleHistoryOperation object_ =
     Object.selectionForCompositeField "saleHistoryOperation" [] object_ (identity >> Decode.nullable)
 
 
 {-| A subscription to resolve operations on the sales table
 -}
-salesOperation : SelectionSet decodesTo Cambiatus.Object.Sale -> SelectionSet (Maybe decodesTo) RootSubscription
+salesOperation :
+    SelectionSet decodesTo Cambiatus.Object.Sale
+    -> SelectionSet (Maybe decodesTo) RootSubscription
 salesOperation object_ =
     Object.selectionForCompositeField "salesOperation" [] object_ (identity >> Decode.nullable)
 
 
 {-| A subscription for transfers
 -}
-transfers : SelectionSet decodesTo Cambiatus.Object.Transfer -> SelectionSet (Maybe decodesTo) RootSubscription
+transfers :
+    SelectionSet decodesTo Cambiatus.Object.Transfer
+    -> SelectionSet (Maybe decodesTo) RootSubscription
 transfers object_ =
     Object.selectionForCompositeField "transfers" [] object_ (identity >> Decode.nullable)
 
@@ -55,7 +64,10 @@ type alias TransfersucceedRequiredArguments =
     { input : Cambiatus.InputObject.TransferSucceedInput }
 
 
-transfersucceed : TransfersucceedRequiredArguments -> SelectionSet decodesTo Cambiatus.Object.Transfer -> SelectionSet decodesTo RootSubscription
+transfersucceed :
+    TransfersucceedRequiredArguments
+    -> SelectionSet decodesTo Cambiatus.Object.Transfer
+    -> SelectionSet decodesTo RootSubscription
 transfersucceed requiredArgs object_ =
     Object.selectionForCompositeField "transfersucceed" [ Argument.required "input" requiredArgs.input Cambiatus.InputObject.encodeTransferSucceedInput ] object_ identity
 
@@ -66,6 +78,9 @@ type alias UnreadsRequiredArguments =
 
 {-| A subscription for the number of unread notifications
 -}
-unreads : UnreadsRequiredArguments -> SelectionSet decodesTo Cambiatus.Object.UnreadNotifications -> SelectionSet decodesTo RootSubscription
+unreads :
+    UnreadsRequiredArguments
+    -> SelectionSet decodesTo Cambiatus.Object.UnreadNotifications
+    -> SelectionSet decodesTo RootSubscription
 unreads requiredArgs object_ =
     Object.selectionForCompositeField "unreads" [ Argument.required "input" requiredArgs.input Cambiatus.InputObject.encodeUnreadNotificationsSubscriptionInput ] object_ identity
