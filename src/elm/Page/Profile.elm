@@ -26,7 +26,7 @@ import Icons
 import Json.Decode as Decode exposing (Value)
 import Json.Encode as Encode
 import Page
-import Profile exposing (DeleteAddressResult, DeleteKycResult, Profile)
+import Profile exposing (DeleteKycAndAddressResult, Profile)
 import PushSubscription exposing (PushSubscription)
 import Route
 import Session.LoggedIn as LoggedIn exposing (External(..), FeedbackStatus(..), ProfileStatus(..))
@@ -635,8 +635,7 @@ type Msg
     | RequestPush
     | ToggleDeleteKycModal
     | DeleteKycAccepted
-    | DeleteKycCompleted (Result (Graphql.Http.Error (Maybe DeleteKycResult)) (Maybe DeleteKycResult))
-    | DeleteAddressCompleted (Result (Graphql.Http.Error (Maybe DeleteAddressResult)) (Maybe DeleteAddressResult))
+    | DeleteAllCompleted (Result (Graphql.Http.Error DeleteKycAndAddressResult) DeleteKycAndAddressResult)
     | CheckPushPref
     | GotPushSub PushSubscription
     | CompletedPushUpload (Result (Graphql.Http.Error ()) ())
@@ -674,22 +673,9 @@ update msg model loggedIn =
             }
                 |> UR.init
                 |> UR.addCmd
-                    (deleteKyc loggedIn)
+                    (deleteKycAndAddress loggedIn)
 
-        DeleteKycCompleted resp ->
-            case resp of
-                Ok _ ->
-                    model
-                        |> UR.init
-                        |> UR.addCmd (deleteAddress loggedIn)
-
-                Err err ->
-                    model
-                        |> UR.init
-                        |> UR.logGraphqlError msg err
-                        |> UR.addCmd (deleteAddress loggedIn)
-
-        DeleteAddressCompleted resp ->
+        DeleteAllCompleted resp ->
             let
                 reloadProfile =
                     Api.Graphql.query loggedIn.shared
@@ -907,18 +893,11 @@ uploadPushSubscription { accountName, shared } data =
         CompletedPushUpload
 
 
-deleteKyc : LoggedIn.Model -> Cmd Msg
-deleteKyc { accountName, shared } =
+deleteKycAndAddress : LoggedIn.Model -> Cmd Msg
+deleteKycAndAddress { accountName, shared } =
     Api.Graphql.mutation shared
-        (Profile.deleteKycMutation accountName)
-        DeleteKycCompleted
-
-
-deleteAddress : LoggedIn.Model -> Cmd Msg
-deleteAddress { accountName, shared } =
-    Api.Graphql.mutation shared
-        (Profile.deleteAddressMutation accountName)
-        DeleteAddressCompleted
+        (Profile.deleteKycAndAddressMutation accountName)
+        DeleteAllCompleted
 
 
 jsAddressToMsg : List String -> Value -> Maybe Msg
@@ -975,11 +954,8 @@ msgToString msg =
         DeleteKycAccepted ->
             [ "DeleteKycAccepted" ]
 
-        DeleteKycCompleted _ ->
-            [ "DeleteKycCompleted" ]
-
-        DeleteAddressCompleted _ ->
-            [ "DeleteAddressCompleted" ]
+        DeleteAllCompleted _ ->
+            [ "DeleteAllCompleted" ]
 
         CompletedProfileLoad r ->
             [ "CompletedProfileLoad", UR.resultToString r ]

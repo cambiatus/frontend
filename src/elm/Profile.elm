@@ -1,13 +1,11 @@
 module Profile exposing
     ( CommunityInfo
-    , DeleteAddressResult
-    , DeleteKycResult
+    , DeleteKycAndAddressResult
     , Profile
     , ProfileCreate
     , ProfileForm
     , decode
-    , deleteAddressMutation
-    , deleteKycMutation
+    , deleteKycAndAddressMutation
     , emptyProfileForm
     , encodeProfileChat
     , encodeProfileCreate
@@ -205,6 +203,39 @@ mutation account form =
         selectionSet
 
 
+
+-- UPDATE/INSERT KYC
+
+
+upsertKycMutation : Eos.Name -> ProfileKyc -> SelectionSet (Maybe ProfileKyc) RootMutation
+upsertKycMutation account data =
+    let
+        nameString =
+            Eos.nameToString account
+    in
+    Cambiatus.Mutation.upsertKyc
+        { input =
+            { accountId = nameString
+            , countryId = Id "1"
+            , documentType = data.documentType
+            , document = data.document
+            , phone = data.phone
+            , userType = "natural"
+            }
+        }
+        Kyc.selectionSet
+
+
+
+-- DELETE KYC/ADDRESS
+
+
+type alias DeleteKycResult =
+    { result : DeleteKycStatus
+    , status : String
+    }
+
+
 deleteKycMutation : Eos.Name -> SelectionSet (Maybe DeleteKycResult) RootMutation
 deleteKycMutation account =
     let
@@ -222,8 +253,8 @@ deleteKycMutation account =
         )
 
 
-type alias DeleteKycResult =
-    { result : DeleteKycStatus
+type alias DeleteAddressResult =
+    { result : DeleteAddressStatus
     , status : String
     }
 
@@ -245,33 +276,17 @@ deleteAddressMutation account =
         )
 
 
-type alias DeleteAddressResult =
-    { result : DeleteAddressStatus
-    , status : String
+type alias DeleteKycAndAddressResult =
+    { deleteKyc : Maybe DeleteKycResult
+    , deleteAddress : Maybe DeleteAddressResult
     }
 
 
-
--- KYC
-
-
-upsertKycMutation : Eos.Name -> ProfileKyc -> SelectionSet (Maybe ProfileKyc) RootMutation
-upsertKycMutation account data =
-    let
-        nameString =
-            Eos.nameToString account
-    in
-    Cambiatus.Mutation.upsertKyc
-        { input =
-            { accountId = nameString
-            , countryId = Id "1"
-            , documentType = data.documentType
-            , document = data.document
-            , phone = data.phone
-            , userType = "natural"
-            }
-        }
-        Kyc.selectionSet
+deleteKycAndAddressMutation : Eos.Name -> SelectionSet DeleteKycAndAddressResult RootMutation
+deleteKycAndAddressMutation accountName =
+    SelectionSet.map2 DeleteKycAndAddressResult
+        (deleteKycMutation accountName)
+        (deleteAddressMutation accountName)
 
 
 
