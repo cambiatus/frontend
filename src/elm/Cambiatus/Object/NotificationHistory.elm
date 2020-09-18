@@ -34,12 +34,16 @@ isRead =
     Object.selectionForField "Bool" "isRead" [] Decode.bool
 
 
-payload : SelectionSet decodesTo Cambiatus.Union.NotificationType -> SelectionSet decodesTo Cambiatus.Object.NotificationHistory
+payload :
+    SelectionSet decodesTo Cambiatus.Union.NotificationType
+    -> SelectionSet decodesTo Cambiatus.Object.NotificationHistory
 payload object_ =
     Object.selectionForCompositeField "payload" [] object_ identity
 
 
-recipient : SelectionSet decodesTo Cambiatus.Object.Profile -> SelectionSet decodesTo Cambiatus.Object.NotificationHistory
+recipient :
+    SelectionSet decodesTo Cambiatus.Object.Profile
+    -> SelectionSet decodesTo Cambiatus.Object.NotificationHistory
 recipient object_ =
     Object.selectionForCompositeField "recipient" [] object_ identity
 

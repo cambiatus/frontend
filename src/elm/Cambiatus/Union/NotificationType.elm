@@ -32,14 +32,14 @@ fragments :
     Fragments decodesTo
     -> SelectionSet decodesTo Cambiatus.Union.NotificationType
 fragments selections =
-    Object.exhuastiveFragmentSelection
+    Object.exhaustiveFragmentSelection
         [ Object.buildFragment "Transfer" selections.onTransfer
         , Object.buildFragment "SaleHistory" selections.onSaleHistory
         , Object.buildFragment "Mint" selections.onMint
         ]
 
 
-{-| Can be used to create a non-exhuastive set of fragments by using the record
+{-| Can be used to create a non-exhaustive set of fragments by using the record
 update syntax to add `SelectionSet`s for the types you want to handle.
 -}
 maybeFragments : Fragments (Maybe decodesTo)
