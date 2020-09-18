@@ -635,7 +635,7 @@ type Msg
     | RequestPush
     | ToggleDeleteKycModal
     | DeleteKycAccepted
-    | DeleteAllCompleted (Result (Graphql.Http.Error DeleteKycAndAddressResult) DeleteKycAndAddressResult)
+    | DeleteKycAndAddressCompleted (Result (Graphql.Http.Error DeleteKycAndAddressResult) DeleteKycAndAddressResult)
     | CheckPushPref
     | GotPushSub PushSubscription
     | CompletedPushUpload (Result (Graphql.Http.Error ()) ())
@@ -675,7 +675,7 @@ update msg model loggedIn =
                 |> UR.addCmd
                     (deleteKycAndAddress loggedIn)
 
-        DeleteAllCompleted resp ->
+        DeleteKycAndAddressCompleted resp ->
             let
                 reloadProfile =
                     Api.Graphql.query loggedIn.shared
@@ -897,7 +897,7 @@ deleteKycAndAddress : LoggedIn.Model -> Cmd Msg
 deleteKycAndAddress { accountName, shared } =
     Api.Graphql.mutation shared
         (Profile.deleteKycAndAddressMutation accountName)
-        DeleteAllCompleted
+        DeleteKycAndAddressCompleted
 
 
 jsAddressToMsg : List String -> Value -> Maybe Msg
@@ -954,8 +954,8 @@ msgToString msg =
         DeleteKycAccepted ->
             [ "DeleteKycAccepted" ]
 
-        DeleteAllCompleted _ ->
-            [ "DeleteAllCompleted" ]
+        DeleteKycAndAddressCompleted _ ->
+            [ "DeleteKycAndAddressCompleted" ]
 
         CompletedProfileLoad r ->
             [ "CompletedProfileLoad", UR.resultToString r ]
