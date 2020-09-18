@@ -32,7 +32,7 @@ fragments :
     Fragments decodesTo
     -> SelectionSet decodesTo Cambiatus.Union.NotificationType
 fragments selections =
-    Object.exhuastiveFragmentSelection
+    Object.exhaustiveFragmentSelection
         [ Object.buildFragment "Transfer" selections.onTransfer
         , Object.buildFragment "SaleHistory" selections.onSaleHistory
         , Object.buildFragment "Mint" selections.onMint
