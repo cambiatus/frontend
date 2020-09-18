@@ -429,7 +429,8 @@
         "confirmationBody": "Depois de excluir esses dados, você não poderá participar de algumas comunidades. Você realmente deseja excluir seus dados KYC?",
         "warning": "Importante: Depois de excluir esses dados, você não poderá participar de algumas comunidades.",
         "confirm": "Sim",
-        "cancel": "Não"
+        "cancel": "Não",
+        "success": "Seus dados KYC foram excluídos com sucesso."
       }
     }
   },

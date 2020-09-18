@@ -421,7 +421,8 @@
         "confirmationBody": "After deleting this data you won't be able to participate in some communities. Do you really want to delete your KYC data?",
         "warning": "Important: After deleting this data you won't be able to participate in some communities.",
         "confirm": "Yes",
-        "cancel": "No"
+        "cancel": "No",
+        "success": "Your KYC data was successfully deleted."
       }
     }
   },
