@@ -3735,10 +3735,10 @@ elm-debug-transformer@^1.0.4:
   resolved "https://registry.yarnpkg.com/elm-debug-transformer/-/elm-debug-transformer-1.0.4.tgz#fe5f9918bda808d01919a44403bfa98b60e3127c"
   integrity sha512-Vhr7if7RggkVsHeJPtDu0TzY1nk+uXOJsWY3Tp9IKN0mviFbXS0vsiVHLEJwXmS/B7I6sCjKVulqe2Gne06rAg==
 
-elm-format@^0.8.1:
-  version "0.8.2"
-  resolved "https://registry.yarnpkg.com/elm-format/-/elm-format-0.8.2.tgz#402d32b96014476ccf98ab5c92f4d102f933565f"
-  integrity sha512-BRQaVQOGt9gxK1hqSJn1MISxDGdln22PSYzmHMjqpQY3S9OJY/3kPn5HoiH3bHQYQFwC+X0apsMZldK9VxySow==
+elm-format@^0.8.3:
+  version "0.8.3"
+  resolved "https://registry.yarnpkg.com/elm-format/-/elm-format-0.8.3.tgz#74a50a6aba69c757752700f9302ccf463c747453"
+  integrity sha512-shXOgfg8F5hDJagP91zJ3QT0PoMbusPfhgEeu3uRofTaN843cFpjZ8qlQip6pFQxtWyQE/P+NMg3vP6lyWI5Mg==
   dependencies:
     binwrap "^0.2.2"
 
