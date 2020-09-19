@@ -1,13 +1,17 @@
 module Session.Guest exposing (External(..), Model, Msg(..), Page(..), addAfterLoginRedirect, init, initModel, msgToString, subscriptions, update, view)
 
+import Api.Graphql
 import Browser.Events
+import Community exposing (Invite)
+import Graphql.Http
 import Html exposing (Html, a, button, div, header, img, text)
-import Html.Attributes exposing (alt, class, classList, src, style, tabindex, type_)
+import Html.Attributes exposing (class, classList, src, style, tabindex, type_)
 import Html.Events exposing (onClick, onMouseEnter)
 import Http
 import I18Next exposing (Delims(..), Translations)
 import Icons
 import Json.Decode as Decode
+import List
 import Ports
 import Profile exposing (Profile)
 import Route exposing (Route)
@@ -22,9 +26,42 @@ import UpdateResult as UR
 
 init : Shared -> ( Model, Cmd Msg )
 init shared =
-    ( initModel shared
-    , Cmd.none
-    )
+    let
+        defaultModel =
+            initModel shared
+    in
+    case getInvitationId shared.url.path of
+        Just id ->
+            ( defaultModel, Api.Graphql.query shared (Community.inviteQuery id) CompletedLoadInvite )
+
+        Nothing ->
+            ( { defaultModel | community = Default }, Cmd.none )
+
+
+getInvitationId : String -> Maybe String
+getInvitationId str =
+    let
+        getId : List String -> Maybe String
+        getId strings =
+            strings
+                |> List.reverse
+                |> List.head
+                |> Maybe.andThen
+                    (\x ->
+                        if x == "" then
+                            Nothing
+
+                        else
+                            Just x
+                    )
+    in
+    if String.startsWith "/register/" str then
+        str
+            |> String.split "/"
+            |> getId
+
+    else
+        Nothing
 
 
 fetchTranslations : String -> Cmd Msg
@@ -42,7 +79,14 @@ type alias Model =
     , showLanguageNav : Bool
     , afterLoginRedirect : Maybe Route
     , profile : Maybe Profile
+    , community : CommunityStatus
     }
+
+
+type CommunityStatus
+    = Loading
+    | Loaded Community.Model
+    | Default
 
 
 initModel : Shared -> Model
@@ -51,6 +95,13 @@ initModel shared =
     , showLanguageNav = False
     , afterLoginRedirect = Nothing
     , profile = Nothing
+    , community =
+        case getInvitationId shared.url.path of
+            Just _ ->
+                Loading
+
+            Nothing ->
+                Default
     }
 
 
@@ -140,7 +191,7 @@ viewLeftCol : String -> Html msg
 viewLeftCol mdWidth =
     div
         -- Left part with background and quote (desktop only)
-        [ class "hidden md:block md:visible min-h-screen bg-bottom bg-no-repeat"
+        [ class "hidden md:block md:visible h-screen sticky top-0 bg-bottom bg-no-repeat"
         , class mdWidth
         , style "background-color" "#EFF9FB"
         , style "background-size" "auto 80%"
@@ -151,15 +202,38 @@ viewLeftCol mdWidth =
 
 viewPageHeader : Model -> Shared -> Html Msg
 viewPageHeader model shared =
+    let
+        imageElement url =
+            img
+                [ class "h-5"
+                , src url
+                ]
+                []
+
+        loadingSpinner =
+            div [ class "full-spinner-container h-full" ]
+                [ div [ class "spinner spinner--delay" ] [] ]
+
+        logo =
+            case model.community of
+                Loading ->
+                    ""
+
+                Loaded comm ->
+                    comm.logo
+
+                Default ->
+                    shared.logo
+    in
     header
         [ class "flex items-center justify-between pl-4 md:pl-6 py-3 bg-white" ]
         [ a [ Route.href (Route.Login Nothing) ]
-            [ img
-                [ class "h-5"
-                , src shared.logo
-                , alt "Cambiatus"
-                ]
-                []
+            [ case model.community of
+                Loading ->
+                    loadingSpinner
+
+                _ ->
+                    imageElement logo
             ]
         , div [ class "relative z-10" ]
             [ button
@@ -223,6 +297,7 @@ type Msg
     | ShowLanguageNav Bool
     | ClickedLanguage String
     | KeyDown String
+    | CompletedLoadInvite (Result (Graphql.Http.Error (Maybe Invite)) (Maybe Invite))
 
 
 update : Msg -> Model -> UpdateResult
@@ -263,6 +338,13 @@ update msg ({ shared } as model) =
                 model
                     |> UR.init
 
+        CompletedLoadInvite (Ok (Just invitation)) ->
+            { model | community = Loaded invitation.community }
+                |> UR.init
+
+        CompletedLoadInvite _ ->
+            UR.init model
+
 
 
 -- TRANSFORM
@@ -290,3 +372,6 @@ msgToString msg =
 
         KeyDown _ ->
             [ "KeyDown" ]
+
+        CompletedLoadInvite _ ->
+            [ "CompletedLoadInvite" ]

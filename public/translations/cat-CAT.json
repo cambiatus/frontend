@@ -85,7 +85,9 @@
     "chooseOrUploadLogo": "Escull o puja el teu propi logotip.",
     "invalidSymbol": "Símbol invàlid.",
     "unknown": "Oh oh. Alguna cosa ha anat malament.",
-    "accountNotFound": "Compte no trobat. Esteu segur que heu creat el vostre compte?"
+    "accountNotFound": "Compte no trobat. Esteu segur que heu creat el vostre compte?",
+    "phone": "Utilitzeu un número de telèfon vàlid",
+    "zipcode": "Codi postal no vàlid"
   },
   "auth": {
     "title": "Utilitzeu la vostra clau privada i el PIN o connecteu-vos per",
@@ -173,13 +175,79 @@
         "tooltip": "El nom d'usuari serà tal com els altres participants el coneixeran a la plataforma, ha de tenir 12 caràcters exactes.",
         "placeholder": "Ex.: arlenewa1224"
       },
+      "phone": {
+        "label": "Número de telèfon",
+        "tooltip": "Ex.: 12345678",
+        "placeholder": "Ex.: 12345678"
+      },
+      "street": {
+        "label": "Carrer",
+        "tooltip": "",
+        "placeholder": ""
+      },
+      "number": {
+        "label": "Número",
+        "tooltip": "",
+        "placeholder": ""
+      },
+      "zip": {
+        "label": "Codi ZIP",
+        "tooltip": "",
+        "placeholder": ""
+      },
+      "document": {
+        "cedula_de_identidad": {
+          "label": "número de la Seguretat Social",
+          "placeholder": "introduïu els 9 dígits",
+          "maximum": "10"
+        },
+        "dimex": {
+          "label": "número dimex",
+          "placeholder": "introduïu els 13 dígits",
+          "maximum": "13"
+        },
+        "nite": {
+          "label": "número nite",
+          "placeholder": "introduïu els 10 dígits",
+          "maximum": "10"
+        }
+      },
+      "types": {
+        "natural": "Persona Física",
+        "juridical": "Persona Jurídica"
+      },
       "accountCharError": "Hem trobat un caràcter invàlid. Utilitza solament lletres i números de 1-5",
       "pin": "PIN",
       "confirmPin": "Confirma el teu PIN",
       "pinCharError": "El teu PIN tan sols ha de contenir números",
       "pinConfirmError": "Si et plau introdueix el mateix PIN que abans",
       "checkingAvailability": "Comprovant disponibilitat del compte",
-      "button": "Crea"
+      "button": "Crea",
+      "company_type": "Tipus d’empresa",
+      "company": {
+        "mipyme": {
+          "name": "MIPYME",
+          "label": "MIPYME Number",
+          "placeholder": "Introduïu els deu dígits",
+          "maximum": "10"
+        },
+        "gran_empresa": {
+          "label": "Corporació",
+          "name": "Corporació Number",
+          "placeholder": "Introduïu els deu dígits",
+          "maximum": "10"
+        }
+      },
+      "register_tooltip": "Com voleu registrar-vos?",
+      "corporation": "Corporació",
+      "city": "Ciutat",
+      "state": "Estat",
+      "district": "Districte",
+      "select": {
+        "state": "Seleccioneu l'estat",
+        "city": "Seleccioneu la ciutat",
+        "district": "Selecciona el districte"
+      }
     },
     "login": "Ja tens un compte? ",
     "authLink": "Inici de sessió",
@@ -321,7 +389,7 @@
       "subtitle": "{{objectives}} objectius i {{actions}} accions",
       "new": "Crear un objectiu nou",
       "action_count": "{{actions}} accions",
-      "edit": "Edita l'objectiu", 
+      "edit": "Edita l'objectiu",
       "editor": {
         "not_found": "No trobat",
         "error": "Ui! Quelcom ha fallat",
@@ -437,8 +505,14 @@
     "edit_success": "El perfil s'ha desat correctament",
     "locations": "Localització",
     "interests": "Interessos",
-    "12words": { "title": "Les meves 12 paraules", "button": "Descarregar" },
-    "pin": { "title": "El meu PIN", "button": "Canviar" },
+    "12words": {
+      "title": "Les meves 12 paraules",
+      "button": "Descarregar"
+    },
+    "pin": {
+      "title": "El meu PIN",
+      "button": "Canviar"
+    },
     "changePin": "Canvieu el PIN!",
     "newPin": "Nou PIN de seguretat",
     "actions": {

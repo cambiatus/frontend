@@ -85,7 +85,9 @@
     "chooseOrUploadLogo": "Escoje o sube tu propio logo.",
     "invalidSymbol": "Simbolo invalido.",
     "unknown": "Oh oh. Algo salió mal.",
-    "accountNotFound": "Cuenta no encontrada. ¿Estás seguro de haber creado tu cuenta?"
+    "accountNotFound": "Cuenta no encontrada. ¿Estás seguro de haber creado tu cuenta?",
+    "phone": "Utilice un número de teléfono válido",
+    "zipcode": "Código postal no válido"
   },
   "auth": {
     "title": "Use su clave privada y PIN o inicie sesión por",
@@ -168,6 +170,47 @@
         "tooltip": "",
         "placeholder": "Ex.: arlene_warren@email.com"
       },
+      "phone": {
+        "label": "Número de Teléfono",
+        "tooltip": "Ex.: 12345678",
+        "placeholder": "Ex.: 12345678"
+      },
+      "street": {
+        "label": "Calle",
+        "tooltip": "",
+        "placeholder": ""
+      },
+      "number": {
+        "label": "Número",
+        "tooltip": "",
+        "placeholder": ""
+      },
+      "zip": {
+        "label": "Código Postal",
+        "tooltip": "",
+        "placeholder": ""
+      },
+      "document": {
+        "cedula_de_identidad": {
+          "label": "Número de cédula de identidad",
+          "placeholder": "Ingrese los 9 dígitos",
+          "maximum": "9"
+        },
+        "dimex": {
+          "label": "Número dimex",
+          "placeholder": "Ingrese los 13 dígitos",
+          "maximum": "13"
+        },
+        "nite": {
+          "label": "Número nite",
+          "placeholder": "Ingrese los 10 dígitos",
+          "maximum": "10"
+        }
+      },
+      "types": {
+        "natural": "Persona Natural",
+        "juridical": "Persona Jurídica"
+      },
       "account": {
         "label": "Crea un nombre de usuario con exactamente 12 caracteres (solo letras de la A a la Z y números del 1 al 5)",
         "tooltip": "El nombre de usuario será como los demás participantes lo conocerán en la plataforma, debe tener exactamente 12 caracteres.",
@@ -179,7 +222,32 @@
       "pinCharError": "Tu PIN debe contener solamente numeros",
       "pinConfirmError": "Por favor ingresa el mismo PIN que arriba",
       "checkingAvailability": "Comprobando disponibilidad de la cuenta",
-      "button": "Crear"
+      "button": "Crear",
+      "company_type": "Tipo de Compañía",
+      "company": {
+        "mipyme": {
+          "name": "MIPYME",
+          "label": "MIPYME Number",
+          "placeholder": "Ingrese los 10 dígitos",
+          "maximum": "10"
+        },
+        "gran_empresa": {
+          "label": "Gran Empresa",
+          "name": "Corporación Number",
+          "placeholder": "Ingrese los 10 dígitos",
+          "maximum": "10"
+        }
+      },
+      "register_tooltip": "¿Cómo le gustaría registrarse?",
+      "corporation": "Gran Empresa",
+      "city": "Cantón",
+      "state": "Provincia",
+      "district": "Distrito",
+      "select": {
+        "state": "Seleccione el estado",
+        "city": "Seleccione la ciudad",
+        "district": "Seleccione el distrito"
+      }
     },
     "login": "¿Ya tienes una cuenta? ",
     "authLink": "Iniciar sesión",
@@ -437,8 +505,14 @@
     "edit_success": "Perfil guardado con éxito",
     "locations": "Localización",
     "interests": "Intereses",
-    "12words": { "title": "Mis 12 palabras", "button": "Descargar" },
-    "pin": { "title": "Mi PIN de seguridad", "button": "Cambiar" },
+    "12words": {
+      "title": "Mis 12 palabras",
+      "button": "Descargar"
+    },
+    "pin": {
+      "title": "Mi PIN de seguridad",
+      "button": "Cambiar"
+    },
     "changePin": "¡Cambia tu pin!",
     "newPin": "Nuevo PIN de seguridad",
     "actions": {

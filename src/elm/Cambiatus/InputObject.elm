@@ -56,10 +56,7 @@ encodeActionsInput input =
         [ ( "creator", Encode.string |> Encode.optional input.creator ), ( "isCompleted", Encode.bool |> Encode.optional input.isCompleted ), ( "validator", Encode.string |> Encode.optional input.validator ), ( "verificationType", Encode.enum Cambiatus.Enum.VerificationType.toString |> Encode.optional input.verificationType ) ]
 
 
-buildAddressUpdateInput :
-    AddressUpdateInputRequiredFields
-    -> (AddressUpdateInputOptionalFields -> AddressUpdateInputOptionalFields)
-    -> AddressUpdateInput
+buildAddressUpdateInput : AddressUpdateInputRequiredFields -> (AddressUpdateInputOptionalFields -> AddressUpdateInputOptionalFields) -> AddressUpdateInput
 buildAddressUpdateInput required fillOptionals =
     let
         optionals =
@@ -317,6 +314,7 @@ encodeInviteInput : InviteInput -> Value
 encodeInviteInput input =
     Encode.maybeObject
         [ ( "id", Encode.string |> Encode.optional input.id ) ]
+
 
 
 buildKycDataUpdateInput :

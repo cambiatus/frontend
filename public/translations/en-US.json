@@ -85,7 +85,9 @@
     "chooseOrUploadLogo": "Choose or upload a logo.",
     "invalidSymbol": "Invalid symbol.",
     "unknown": "Uoh. Something wrong happened.",
-    "accountNotFound": "Account not found. Are you sure you created your account?"
+    "accountNotFound": "Account not found. Are you sure you created your account?",
+    "phone": "Please use a valid phone number",
+    "zipcode": "Invalid zipcode"
   },
   "auth": {
     "title": "Use your private key and PIN or log in by",
@@ -168,6 +170,47 @@
         "tooltip": "",
         "placeholder": "Ex.: arlene_warren@email.com"
       },
+      "phone": {
+        "label": "Phone Number",
+        "tooltip": "Ex.: 12345678",
+        "placeholder": "Ex.: 12345678"
+      },
+      "street": {
+        "label": "Street",
+        "tooltip": "",
+        "placeholder": ""
+      },
+      "number": {
+        "label": "Number",
+        "tooltip": "",
+        "placeholder": ""
+      },
+      "zip": {
+        "label": "ZIP Code",
+        "tooltip": "",
+        "placeholder": ""
+      },
+      "document": {
+        "cedula_de_identidad": {
+          "label": "Social Security Number",
+          "placeholder": "Enter the 9 digits",
+          "maximum": "9"
+        },
+        "dimex": {
+          "label": "Dimex Number",
+          "placeholder": "Enter the 13 digits",
+          "maximum": "13"
+        },
+        "nite": {
+          "label": "Nite Number",
+          "placeholder": "Enter the 10 digits",
+          "maximum": "10"
+        }
+      },
+      "types": {
+        "natural": "Natural Person",
+        "juridical": "Juridical Person"
+      },
       "account": {
         "label": "Create a username with exactly 12 characters (letters from a-z and numbers from 1-5)",
         "tooltip": "The username will be as you will be known on the platform by the other participants, it must have exact 12 characters.",
@@ -175,7 +218,32 @@
       },
       "accountCharError": "Invalid character found. Use only letters and numbers between 1-5",
       "checkingAvailability": "Checking availability of that account",
-      "button": "Create"
+      "button": "Create",
+      "company_type": "Company Type",
+      "company": {
+        "mipyme": {
+          "name": "MIPYME",
+          "label": "MIPYME Number",
+          "placeholder": "Enter the 10 digits",
+          "maximum": "10"
+        },
+        "gran_empresa": {
+          "label": "Large-sized Company Number",
+          "name": "Corporation",
+          "placeholder": "Enter the 10 digits",
+          "maximum": "10"
+        }
+      },
+      "register_tooltip": "How would you like to register?",
+      "corporation": "Corporation",
+      "city": "City",
+      "state": "State",
+      "district": "District",
+      "select": {
+        "state": "Select the state",
+        "city": "Select the city",
+        "district": "Select the district"
+      }
     },
     "login": "Already have an account? ",
     "authLink": "Login",
@@ -317,7 +385,7 @@
       "subtitle": "{{objectives}} objectives and {{actions}} actions",
       "new": "Create new objective",
       "action_count": "{{actions}} actions",
-      "edit": "Edit objective", 
+      "edit": "Edit objective",
       "editor": {
         "not_found": "Not Found",
         "error": "Ops something went wrong!",
@@ -433,7 +501,10 @@
     "edit_success": "Profile saved successfully",
     "locations": "Location",
     "interests": "Interests",
-    "12words": { "title": "My 12 words", "button": "Download" },
+    "12words": {
+      "title": "My 12 words",
+      "button": "Download"
+    },
     "pin": {
       "title": "My security PIN",
       "button": "Change",
