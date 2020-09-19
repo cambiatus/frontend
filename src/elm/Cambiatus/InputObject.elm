@@ -18,7 +18,9 @@ import Graphql.SelectionSet exposing (SelectionSet)
 import Json.Decode as Decode
 
 
-buildActionsInput : (ActionsInputOptionalFields -> ActionsInputOptionalFields) -> ActionsInput
+buildActionsInput :
+    (ActionsInputOptionalFields -> ActionsInputOptionalFields)
+    -> ActionsInput
 buildActionsInput fillOptionals =
     let
         optionals =
@@ -101,7 +103,9 @@ encodeAddressUpdateInput input =
         [ ( "accountId", Encode.string input.accountId |> Just ), ( "cityId", (Cambiatus.ScalarCodecs.codecs |> Cambiatus.Scalar.unwrapEncoder .codecId) input.cityId |> Just ), ( "countryId", (Cambiatus.ScalarCodecs.codecs |> Cambiatus.Scalar.unwrapEncoder .codecId) input.countryId |> Just ), ( "neighborhoodId", (Cambiatus.ScalarCodecs.codecs |> Cambiatus.Scalar.unwrapEncoder .codecId) input.neighborhoodId |> Just ), ( "number", Encode.string |> Encode.optional input.number ), ( "stateId", (Cambiatus.ScalarCodecs.codecs |> Cambiatus.Scalar.unwrapEncoder .codecId) input.stateId |> Just ), ( "street", Encode.string input.street |> Just ), ( "zip", Encode.string input.zip |> Just ) ]
 
 
-buildChecksInput : (ChecksInputOptionalFields -> ChecksInputOptionalFields) -> ChecksInput
+buildChecksInput :
+    (ChecksInputOptionalFields -> ChecksInputOptionalFields)
+    -> ChecksInput
 buildChecksInput fillOptionals =
     let
         optionals =
@@ -129,7 +133,9 @@ encodeChecksInput input =
         [ ( "validator", Encode.string |> Encode.optional input.validator ) ]
 
 
-buildClaimAnalysisHistoryFilter : (ClaimAnalysisHistoryFilterOptionalFields -> ClaimAnalysisHistoryFilterOptionalFields) -> ClaimAnalysisHistoryFilter
+buildClaimAnalysisHistoryFilter :
+    (ClaimAnalysisHistoryFilterOptionalFields -> ClaimAnalysisHistoryFilterOptionalFields)
+    -> ClaimAnalysisHistoryFilter
 buildClaimAnalysisHistoryFilter fillOptionals =
     let
         optionals =
@@ -161,7 +167,10 @@ encodeClaimAnalysisHistoryFilter input =
         [ ( "claimer", Encode.string |> Encode.optional input.claimer ), ( "status", Encode.string |> Encode.optional input.status ) ]
 
 
-buildClaimAnalysisHistoryInput : ClaimAnalysisHistoryInputRequiredFields -> (ClaimAnalysisHistoryInputOptionalFields -> ClaimAnalysisHistoryInputOptionalFields) -> ClaimAnalysisHistoryInput
+buildClaimAnalysisHistoryInput :
+    ClaimAnalysisHistoryInputRequiredFields
+    -> (ClaimAnalysisHistoryInputOptionalFields -> ClaimAnalysisHistoryInputOptionalFields)
+    -> ClaimAnalysisHistoryInput
 buildClaimAnalysisHistoryInput required fillOptionals =
     let
         optionals =
@@ -198,7 +207,9 @@ encodeClaimAnalysisHistoryInput input =
         [ ( "account", Encode.string input.account |> Just ), ( "filter", encodeClaimAnalysisHistoryFilter |> Encode.optional input.filter ), ( "symbol", Encode.string input.symbol |> Just ) ]
 
 
-buildClaimInput : ClaimInputRequiredFields -> ClaimInput
+buildClaimInput :
+    ClaimInputRequiredFields
+    -> ClaimInput
 buildClaimInput required =
     { id = required.id }
 
@@ -221,7 +232,9 @@ encodeClaimInput input =
         [ ( "id", Encode.int input.id |> Just ) ]
 
 
-buildClaimsAnalysisInput : ClaimsAnalysisInputRequiredFields -> ClaimsAnalysisInput
+buildClaimsAnalysisInput :
+    ClaimsAnalysisInputRequiredFields
+    -> ClaimsAnalysisInput
 buildClaimsAnalysisInput required =
     { account = required.account, symbol = required.symbol }
 
@@ -248,7 +261,9 @@ encodeClaimsAnalysisInput input =
         [ ( "account", Encode.string input.account |> Just ), ( "symbol", Encode.string input.symbol |> Just ) ]
 
 
-buildCountryInput : CountryInputRequiredFields -> CountryInput
+buildCountryInput :
+    CountryInputRequiredFields
+    -> CountryInput
 buildCountryInput required =
     { name = required.name }
 
@@ -271,7 +286,9 @@ encodeCountryInput input =
         [ ( "name", Encode.string input.name |> Just ) ]
 
 
-buildInviteInput : (InviteInputOptionalFields -> InviteInputOptionalFields) -> InviteInput
+buildInviteInput :
+    (InviteInputOptionalFields -> InviteInputOptionalFields)
+    -> InviteInput
 buildInviteInput fillOptionals =
     let
         optionals =
@@ -299,7 +316,10 @@ encodeInviteInput input =
         [ ( "id", Encode.string |> Encode.optional input.id ) ]
 
 
-buildKycDataUpdateInput : KycDataUpdateInputRequiredFields -> KycDataUpdateInput
+
+buildKycDataUpdateInput :
+    KycDataUpdateInputRequiredFields
+    -> KycDataUpdateInput
 buildKycDataUpdateInput required =
     { accountId = required.accountId, countryId = required.countryId, document = required.document, documentType = required.documentType, phone = required.phone, userType = required.userType }
 
@@ -334,7 +354,34 @@ encodeKycDataUpdateInput input =
         [ ( "accountId", Encode.string input.accountId |> Just ), ( "countryId", (Cambiatus.ScalarCodecs.codecs |> Cambiatus.Scalar.unwrapEncoder .codecId) input.countryId |> Just ), ( "document", Encode.string input.document |> Just ), ( "documentType", Encode.string input.documentType |> Just ), ( "phone", Encode.string input.phone |> Just ), ( "userType", Encode.string input.userType |> Just ) ]
 
 
-buildNewCommunityInput : NewCommunityInputRequiredFields -> NewCommunityInput
+buildKycDeletionInput :
+    KycDeletionInputRequiredFields
+    -> KycDeletionInput
+buildKycDeletionInput required =
+    { account = required.account }
+
+
+type alias KycDeletionInputRequiredFields =
+    { account : String }
+
+
+{-| Type for the KycDeletionInput input object.
+-}
+type alias KycDeletionInput =
+    { account : String }
+
+
+{-| Encode a KycDeletionInput into a value that can be used as an argument.
+-}
+encodeKycDeletionInput : KycDeletionInput -> Value
+encodeKycDeletionInput input =
+    Encode.maybeObject
+        [ ( "account", Encode.string input.account |> Just ) ]
+
+
+buildNewCommunityInput :
+    NewCommunityInputRequiredFields
+    -> NewCommunityInput
 buildNewCommunityInput required =
     { symbol = required.symbol }
 
@@ -357,7 +404,9 @@ encodeNewCommunityInput input =
         [ ( "symbol", Encode.string input.symbol |> Just ) ]
 
 
-buildObjectiveInput : ObjectiveInputRequiredFields -> ObjectiveInput
+buildObjectiveInput :
+    ObjectiveInputRequiredFields
+    -> ObjectiveInput
 buildObjectiveInput required =
     { id = required.id }
 
@@ -380,7 +429,9 @@ encodeObjectiveInput input =
         [ ( "id", Encode.int input.id |> Just ) ]
 
 
-buildProfileInput : (ProfileInputOptionalFields -> ProfileInputOptionalFields) -> ProfileInput
+buildProfileInput :
+    (ProfileInputOptionalFields -> ProfileInputOptionalFields)
+    -> ProfileInput
 buildProfileInput fillOptionals =
     let
         optionals =
@@ -408,7 +459,10 @@ encodeProfileInput input =
         [ ( "account", Encode.string |> Encode.optional input.account ) ]
 
 
-buildProfileUpdateInput : ProfileUpdateInputRequiredFields -> (ProfileUpdateInputOptionalFields -> ProfileUpdateInputOptionalFields) -> ProfileUpdateInput
+buildProfileUpdateInput :
+    ProfileUpdateInputRequiredFields
+    -> (ProfileUpdateInputOptionalFields -> ProfileUpdateInputOptionalFields)
+    -> ProfileUpdateInput
 buildProfileUpdateInput required fillOptionals =
     let
         optionals =
@@ -453,7 +507,9 @@ encodeProfileUpdateInput input =
         [ ( "account", Encode.string input.account |> Just ), ( "avatar", Encode.string |> Encode.optional input.avatar ), ( "bio", Encode.string |> Encode.optional input.bio ), ( "email", Encode.string |> Encode.optional input.email ), ( "interests", Encode.string |> Encode.optional input.interests ), ( "location", Encode.string |> Encode.optional input.location ), ( "name", Encode.string |> Encode.optional input.name ) ]
 
 
-buildPushSubscriptionInput : PushSubscriptionInputRequiredFields -> PushSubscriptionInput
+buildPushSubscriptionInput :
+    PushSubscriptionInputRequiredFields
+    -> PushSubscriptionInput
 buildPushSubscriptionInput required =
     { account = required.account, authKey = required.authKey, endpoint = required.endpoint, pKey = required.pKey }
 
@@ -484,7 +540,9 @@ encodePushSubscriptionInput input =
         [ ( "account", Encode.string input.account |> Just ), ( "authKey", Encode.string input.authKey |> Just ), ( "endpoint", Encode.string input.endpoint |> Just ), ( "pKey", Encode.string input.pKey |> Just ) ]
 
 
-buildReadNotificationInput : ReadNotificationInputRequiredFields -> ReadNotificationInput
+buildReadNotificationInput :
+    ReadNotificationInputRequiredFields
+    -> ReadNotificationInput
 buildReadNotificationInput required =
     { id = required.id }
 
@@ -507,7 +565,9 @@ encodeReadNotificationInput input =
         [ ( "id", Encode.int input.id |> Just ) ]
 
 
-buildSaleInput : SaleInputRequiredFields -> SaleInput
+buildSaleInput :
+    SaleInputRequiredFields
+    -> SaleInput
 buildSaleInput required =
     { id = required.id }
 
@@ -530,7 +590,9 @@ encodeSaleInput input =
         [ ( "id", Encode.int input.id |> Just ) ]
 
 
-buildSalesInput : (SalesInputOptionalFields -> SalesInputOptionalFields) -> SalesInput
+buildSalesInput :
+    (SalesInputOptionalFields -> SalesInputOptionalFields)
+    -> SalesInput
 buildSalesInput fillOptionals =
     let
         optionals =
@@ -566,7 +628,10 @@ encodeSalesInput input =
         [ ( "account", Encode.string |> Encode.optional input.account ), ( "all", Encode.string |> Encode.optional input.all ), ( "communities", Encode.string |> Encode.optional input.communities ), ( "communityId", Encode.string |> Encode.optional input.communityId ) ]
 
 
-buildSignUpInput : SignUpInputRequiredFields -> (SignUpInputOptionalFields -> SignUpInputOptionalFields) -> SignUpInput
+buildSignUpInput :
+    SignUpInputRequiredFields
+    -> (SignUpInputOptionalFields -> SignUpInputOptionalFields)
+    -> SignUpInput
 buildSignUpInput required fillOptionals =
     let
         optionals =
@@ -607,7 +672,9 @@ encodeSignUpInput input =
         [ ( "account", Encode.string input.account |> Just ), ( "email", Encode.string input.email |> Just ), ( "invitationId", Encode.string |> Encode.optional input.invitationId ), ( "name", Encode.string input.name |> Just ), ( "publicKey", Encode.string input.publicKey |> Just ) ]
 
 
-buildTransferInput : TransferInputRequiredFields -> TransferInput
+buildTransferInput :
+    TransferInputRequiredFields
+    -> TransferInput
 buildTransferInput required =
     { id = required.id }
 
@@ -630,7 +697,9 @@ encodeTransferInput input =
         [ ( "id", Encode.int input.id |> Just ) ]
 
 
-buildTransferSucceedInput : TransferSucceedInputRequiredFields -> TransferSucceedInput
+buildTransferSucceedInput :
+    TransferSucceedInputRequiredFields
+    -> TransferSucceedInput
 buildTransferSucceedInput required =
     { from = required.from, symbol = required.symbol, to = required.to }
 
@@ -659,7 +728,9 @@ encodeTransferSucceedInput input =
         [ ( "from", Encode.string input.from |> Just ), ( "symbol", Encode.string input.symbol |> Just ), ( "to", Encode.string input.to |> Just ) ]
 
 
-buildUnreadNotificationsSubscriptionInput : UnreadNotificationsSubscriptionInputRequiredFields -> UnreadNotificationsSubscriptionInput
+buildUnreadNotificationsSubscriptionInput :
+    UnreadNotificationsSubscriptionInputRequiredFields
+    -> UnreadNotificationsSubscriptionInput
 buildUnreadNotificationsSubscriptionInput required =
     { account = required.account }
 

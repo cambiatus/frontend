@@ -99,7 +99,9 @@ memberCount =
     Object.selectionForField "Int" "memberCount" [] Decode.int
 
 
-members : SelectionSet decodesTo Cambiatus.Object.Profile -> SelectionSet (List decodesTo) Cambiatus.Object.Community
+members :
+    SelectionSet decodesTo Cambiatus.Object.Profile
+    -> SelectionSet (List decodesTo) Cambiatus.Object.Community
 members object_ =
     Object.selectionForCompositeField "members" [] object_ (identity >> Decode.list)
 
@@ -109,7 +111,9 @@ minBalance =
     Object.selectionForField "(Maybe Float)" "minBalance" [] (Decode.float |> Decode.nullable)
 
 
-mints : SelectionSet decodesTo Cambiatus.Object.Mint -> SelectionSet (List decodesTo) Cambiatus.Object.Community
+mints :
+    SelectionSet decodesTo Cambiatus.Object.Mint
+    -> SelectionSet (List decodesTo) Cambiatus.Object.Community
 mints object_ =
     Object.selectionForCompositeField "mints" [] object_ (identity >> Decode.list)
 
@@ -119,7 +123,9 @@ name =
     Object.selectionForField "String" "name" [] Decode.string
 
 
-objectives : SelectionSet decodesTo Cambiatus.Object.Objective -> SelectionSet (List decodesTo) Cambiatus.Object.Community
+objectives :
+    SelectionSet decodesTo Cambiatus.Object.Objective
+    -> SelectionSet (List decodesTo) Cambiatus.Object.Community
 objectives object_ =
     Object.selectionForCompositeField "objectives" [] object_ (identity >> Decode.list)
 
@@ -152,7 +158,10 @@ type alias TransfersOptionalArguments =
     }
 
 
-transfers : (TransfersOptionalArguments -> TransfersOptionalArguments) -> SelectionSet decodesTo Cambiatus.Object.TransferConnection -> SelectionSet (Maybe decodesTo) Cambiatus.Object.Community
+transfers :
+    (TransfersOptionalArguments -> TransfersOptionalArguments)
+    -> SelectionSet decodesTo Cambiatus.Object.TransferConnection
+    -> SelectionSet (Maybe decodesTo) Cambiatus.Object.Community
 transfers fillInOptionals object_ =
     let
         filledInOptionals =

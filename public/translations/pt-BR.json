@@ -486,13 +486,19 @@
       "dataTitle": "Dados KYC",
       "info": "A verificação KYC é o processo obrigatório de identificação e verificação da identidade do cliente ao abrir uma conta e periodicamente ao longo do tempo. Antes de habilitar este recurso, fale conosco para entender melhor.",
       "phoneLabel": "Número de telefone",
+      "restriction": {
+        "title": "Desculpe, esta página é restrita",
+        "description": "Esta comunidade requer mais algumas informações de seus membros. Para ter acesso completo, por favor, preencha os campos KYC em seu perfil.",
+        "link": "Preencha seus dados KYC"
+      },
       "delete": {
         "label": "Excluir",
         "confirmationHeader": "Exclua seus dados KYC",
         "confirmationBody": "Depois de excluir esses dados, você não poderá participar de algumas comunidades. Você realmente deseja excluir seus dados KYC?",
         "warning": "Importante: Depois de excluir esses dados, você não poderá participar de algumas comunidades.",
         "confirm": "Sim",
-        "cancel": "Não"
+        "cancel": "Não",
+        "success": "Seus dados KYC foram excluídos com sucesso."
       }
     }
   },

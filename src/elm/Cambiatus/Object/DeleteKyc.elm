@@ -2,8 +2,9 @@
 -- https://github.com/dillonkearns/elm-graphql
 
 
-module Cambiatus.Object.Country exposing (..)
+module Cambiatus.Object.DeleteKyc exposing (..)
 
+import Cambiatus.Enum.DeleteKycStatus
 import Cambiatus.InputObject
 import Cambiatus.Interface
 import Cambiatus.Object
@@ -19,18 +20,11 @@ import Graphql.SelectionSet exposing (SelectionSet)
 import Json.Decode as Decode
 
 
-id : SelectionSet Cambiatus.ScalarCodecs.Id Cambiatus.Object.Country
-id =
-    Object.selectionForField "ScalarCodecs.Id" "id" [] (Cambiatus.ScalarCodecs.codecs |> Cambiatus.Scalar.unwrapCodecs |> .codecId |> .decoder)
+reason : SelectionSet String Cambiatus.Object.DeleteKyc
+reason =
+    Object.selectionForField "String" "reason" [] Decode.string
 
 
-name : SelectionSet String Cambiatus.Object.Country
-name =
-    Object.selectionForField "String" "name" [] Decode.string
-
-
-states :
-    SelectionSet decodesTo Cambiatus.Object.State
-    -> SelectionSet (List decodesTo) Cambiatus.Object.Country
-states object_ =
-    Object.selectionForCompositeField "states" [] object_ (identity >> Decode.list)
+status : SelectionSet Cambiatus.Enum.DeleteKycStatus.DeleteKycStatus Cambiatus.Object.DeleteKyc
+status =
+    Object.selectionForField "Enum.DeleteKycStatus.DeleteKycStatus" "status" [] Cambiatus.Enum.DeleteKycStatus.decoder

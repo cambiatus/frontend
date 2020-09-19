@@ -22,9 +22,14 @@
     }
   },
   "standard": {
-    "plugins": ["html"],
+    "plugins": [
+      "html"
+    ],
     "parser": "babel-eslint",
-    "ignore": ["docker/env-config.js", "scripts/"]
+    "ignore": [
+      "docker/env-config.js",
+      "scripts/"
+    ]
   },
   "devDependencies": {
     "@babel/cli": "7.2.3",
@@ -69,7 +74,7 @@
   },
   "dependencies": {
     "@absinthe/socket": "^0.2.1",
-    "@dillonkearns/elm-graphql": "^3.0.1",
+    "@dillonkearns/elm-graphql": "^4.0.3",
     "@sentry/browser": "5.4.0",
     "@tailwindcss/custom-forms": "^0.2.1",
     "axios": "^0.18.0",

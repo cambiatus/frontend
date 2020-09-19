@@ -673,10 +673,10 @@
     lodash "^4.17.13"
     to-fast-properties "^2.0.0"
 
-"@dillonkearns/elm-graphql@^3.0.1":
-  version "3.6.2"
-  resolved "https://registry.yarnpkg.com/@dillonkearns/elm-graphql/-/elm-graphql-3.6.2.tgz#09001d0dcab17f8faaa9fbcd2067b25621afad57"
-  integrity sha512-RVkAbwjuxZYizVUas9WzSRH//bnkgVZok+90lhEC9bcO1yFbvuwyRm4bEeK5nIg/tvHOS4CxDWKq+M6p4vCUVg==
+"@dillonkearns/elm-graphql@^4.0.3":
+  version "4.0.3"
+  resolved "https://registry.yarnpkg.com/@dillonkearns/elm-graphql/-/elm-graphql-4.0.3.tgz#3e4044aaf4ea1a70583350227875d9b90c0380c2"
+  integrity sha512-Dns3JpKX3vneBgh7BZHQJ9YkOPAoJ6aEgM6uhIhuJCSfyg/XkK1erNIgSstlutgPvItju78A/IFxc4Rc1zWB1Q==
   dependencies:
     encoding "^0.1.12"
     glob "^7.1.4"

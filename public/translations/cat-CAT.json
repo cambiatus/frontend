@@ -482,13 +482,19 @@
       "dataTitle": "Dades KYC",
       "info": "La verificació KYC és el procés obligatori d’identificar i verificar la identitat del client quan s’obre un compte i periòdicament amb el temps. Abans d’activar aquesta funció, poseu-vos en contacte amb nosaltres per entendre-ho millor.",
       "phoneLabel": "Número de telèfon",
+      "restriction": {
+        "title": "Aquesta pàgina està restringida",
+        "description": "Aquesta comunitat requereix més informació dels seus membres. Per tenir accés complet, si us plau, als camps KYC complets del vostre perfil.",
+        "link": "Empleneu les vostres dades de KYC"
+      },
       "delete": {
         "label": "Suprimeix",
         "confirmationHeader": "Suprimiu les vostres dades KYC",
         "confirmationBody": "Després de suprimir aquestes dades, no podreu participar en algunes comunitats. Confirmes que vols suprimir les teves dades KYC?",
         "warning": "Important: després de suprimir aquestes dades, no podreu participar en algunes comunitats.",
         "confirm": "Sí",
-        "cancel": "No"
+        "cancel": "No",
+        "success": "Les vostres dades KYC s'han suprimit correctament."
       }
     }
   },

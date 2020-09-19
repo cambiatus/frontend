@@ -19,11 +19,15 @@ import Graphql.SelectionSet exposing (SelectionSet)
 import Json.Decode as Decode
 
 
-edges : SelectionSet decodesTo Cambiatus.Object.ClaimEdge -> SelectionSet (Maybe (List (Maybe decodesTo))) Cambiatus.Object.ClaimConnection
+edges :
+    SelectionSet decodesTo Cambiatus.Object.ClaimEdge
+    -> SelectionSet (Maybe (List (Maybe decodesTo))) Cambiatus.Object.ClaimConnection
 edges object_ =
     Object.selectionForCompositeField "edges" [] object_ (identity >> Decode.nullable >> Decode.list >> Decode.nullable)
 
 
-pageInfo : SelectionSet decodesTo Cambiatus.Object.PageInfo -> SelectionSet decodesTo Cambiatus.Object.ClaimConnection
+pageInfo :
+    SelectionSet decodesTo Cambiatus.Object.PageInfo
+    -> SelectionSet decodesTo Cambiatus.Object.ClaimConnection
 pageInfo object_ =
     Object.selectionForCompositeField "pageInfo" [] object_ identity

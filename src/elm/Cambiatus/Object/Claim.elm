@@ -20,7 +20,9 @@ import Graphql.SelectionSet exposing (SelectionSet)
 import Json.Decode as Decode
 
 
-action : SelectionSet decodesTo Cambiatus.Object.Action -> SelectionSet decodesTo Cambiatus.Object.Claim
+action :
+    SelectionSet decodesTo Cambiatus.Object.Action
+    -> SelectionSet decodesTo Cambiatus.Object.Claim
 action object_ =
     Object.selectionForCompositeField "action" [] object_ identity
 
@@ -29,7 +31,10 @@ type alias ChecksOptionalArguments =
     { input : OptionalArgument Cambiatus.InputObject.ChecksInput }
 
 
-checks : (ChecksOptionalArguments -> ChecksOptionalArguments) -> SelectionSet decodesTo Cambiatus.Object.Check -> SelectionSet (List decodesTo) Cambiatus.Object.Claim
+checks :
+    (ChecksOptionalArguments -> ChecksOptionalArguments)
+    -> SelectionSet decodesTo Cambiatus.Object.Check
+    -> SelectionSet (List decodesTo) Cambiatus.Object.Claim
 checks fillInOptionals object_ =
     let
         filledInOptionals =
@@ -42,7 +47,9 @@ checks fillInOptionals object_ =
     Object.selectionForCompositeField "checks" optionalArgs object_ (identity >> Decode.list)
 
 
-claimer : SelectionSet decodesTo Cambiatus.Object.Profile -> SelectionSet decodesTo Cambiatus.Object.Claim
+claimer :
+    SelectionSet decodesTo Cambiatus.Object.Profile
+    -> SelectionSet decodesTo Cambiatus.Object.Claim
 claimer object_ =
     Object.selectionForCompositeField "claimer" [] object_ identity
 

@@ -2,55 +2,54 @@
 -- https://github.com/dillonkearns/elm-graphql
 
 
-module Cambiatus.Enum.ClaimStatus exposing (..)
+module Cambiatus.Enum.DeleteAddressStatus exposing (..)
 
 import Json.Decode as Decode exposing (Decoder)
 
 
-type ClaimStatus
-    = Approved
-    | Pending
-    | Rejected
+{-| Enum status for deleting Address
+
+  - Error - Address deletion failed
+  - Success - Address deletion succeeded
+
+-}
+type DeleteAddressStatus
+    = Error
+    | Success
 
 
-list : List ClaimStatus
+list : List DeleteAddressStatus
 list =
-    [ Approved, Pending, Rejected ]
+    [ Error, Success ]
 
 
-decoder : Decoder ClaimStatus
+decoder : Decoder DeleteAddressStatus
 decoder =
     Decode.string
         |> Decode.andThen
             (\string ->
                 case string of
-                    "APPROVED" ->
-                        Decode.succeed Approved
+                    "ERROR" ->
+                        Decode.succeed Error
 
-                    "PENDING" ->
-                        Decode.succeed Pending
-
-                    "REJECTED" ->
-                        Decode.succeed Rejected
+                    "SUCCESS" ->
+                        Decode.succeed Success
 
                     _ ->
-                        Decode.fail ("Invalid ClaimStatus type, " ++ string ++ " try re-running the @dillonkearns/elm-graphql CLI ")
+                        Decode.fail ("Invalid DeleteAddressStatus type, " ++ string ++ " try re-running the @dillonkearns/elm-graphql CLI ")
             )
 
 
 {-| Convert from the union type representing the Enum to a string that the GraphQL server will recognize.
 -}
-toString : ClaimStatus -> String
+toString : DeleteAddressStatus -> String
 toString enum =
     case enum of
-        Approved ->
-            "APPROVED"
+        Error ->
+            "ERROR"
 
-        Pending ->
-            "PENDING"
-
-        Rejected ->
-            "REJECTED"
+        Success ->
+            "SUCCESS"
 
 
 {-| Convert from a String representation to an elm representation enum.
@@ -64,17 +63,14 @@ This is the inverse of the Enum `toString` function. So you can call `toString` 
 This can be useful for generating Strings to use for <select> menus to check which item was selected.
 
 -}
-fromString : String -> Maybe ClaimStatus
+fromString : String -> Maybe DeleteAddressStatus
 fromString enumString =
     case enumString of
-        "APPROVED" ->
-            Just Approved
+        "ERROR" ->
+            Just Error
 
-        "PENDING" ->
-            Just Pending
-
-        "REJECTED" ->
-            Just Rejected
+        "SUCCESS" ->
+            Just Success
 
         _ ->
             Nothing
