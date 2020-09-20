@@ -1036,7 +1036,7 @@ upsertAction loggedIn model isoDate =
             , responseData = Encode.null
             , data =
                 Eos.encodeTransaction
-                    [ { accountName = "bes.cmm"
+                    [ { accountName = loggedIn.shared.contracts.community
                       , name = "upsertaction"
                       , authorization =
                             { actor = loggedIn.accountName

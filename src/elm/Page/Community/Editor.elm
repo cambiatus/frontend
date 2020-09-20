@@ -861,7 +861,7 @@ save msg loggedIn ({ model } as uResult) =
                                 , responseData = Encode.string form.symbol
                                 , data =
                                     Eos.encodeTransaction
-                                        [ { accountName = "bes.cmm"
+                                        [ { accountName = loggedIn.shared.contracts.community
                                           , name = "update"
                                           , authorization = authorization
                                           , data =
@@ -885,14 +885,14 @@ save msg loggedIn ({ model } as uResult) =
                                 , responseData = Encode.string form.symbol
                                 , data =
                                     Eos.encodeTransaction
-                                        [ { accountName = "bes.cmm"
+                                        [ { accountName = loggedIn.shared.contracts.community
                                           , name = "create"
                                           , authorization = authorization
                                           , data =
                                                 createAction
                                                     |> Community.encodeCreateCommunityData
                                           }
-                                        , { accountName = "bes.token"
+                                        , { accountName = loggedIn.shared.contracts.token
                                           , name = "create"
                                           , authorization = authorization
                                           , data =

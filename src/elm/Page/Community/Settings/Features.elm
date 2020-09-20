@@ -234,7 +234,7 @@ saveFeaturePort loggedIn feature status state =
     case status of
         Loaded community ->
             if LoggedIn.isAuth loggedIn then
-                UR.addPort (saveFeature feature state authorization loggedIn.accountName community)
+                UR.addPort (saveFeature feature state authorization loggedIn community)
 
             else
                 UR.addExt (Just (function state) |> LoggedIn.RequiredAuthentication)
@@ -249,8 +249,8 @@ saveFeaturePort loggedIn feature status state =
             UR.addExt (ShowFeedback Failure "Error")
 
 
-saveFeature : Feature -> Bool -> Eos.Authorization -> Eos.Account.Name -> Community.Model -> Ports.JavascriptOutModel Msg
-saveFeature feature state authorization accountName community =
+saveFeature : Feature -> Bool -> Eos.Authorization -> LoggedIn.Model ->  Community.Model -> Ports.JavascriptOutModel Msg
+saveFeature feature state authorization {shared, accountName} community =
     let
         hasShop =
             case feature of
@@ -293,7 +293,7 @@ saveFeature feature state authorization accountName community =
     , responseData = Json.Encode.null
     , data =
         Eos.encodeTransaction
-            [ { accountName = "bes.cmm"
+            [ { accountName = shared.contracts.community
               , name = "update"
               , authorization = authorization
               , data =

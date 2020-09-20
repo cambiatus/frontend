@@ -778,7 +778,7 @@ update msg model loggedIn =
                             performRequest
                                 ClickedSave
                                 (Creating balances (Uploaded url) form)
-                                loggedIn.accountName
+                                loggedIn
                                 "createsale"
                                 (encodeCreateForm loggedIn form)
 
@@ -791,7 +791,7 @@ update msg model loggedIn =
                             performRequest
                                 ClickedSave
                                 (Creating balances (UploadFailed error) form)
-                                loggedIn.accountName
+                                loggedIn
                                 "createsale"
                                 (encodeCreateForm loggedIn form)
 
@@ -804,7 +804,7 @@ update msg model loggedIn =
                             performRequest
                                 ClickedSave
                                 (Creating balances NoImage form)
-                                loggedIn.accountName
+                                loggedIn
                                 "createsale"
                                 (encodeCreateForm loggedIn form)
 
@@ -817,7 +817,7 @@ update msg model loggedIn =
                             performRequest
                                 ClickedSave
                                 (Saving balances sale (Uploaded url) form)
-                                loggedIn.accountName
+                                loggedIn
                                 "updatesale"
                                 (encodeUpdateForm sale form)
 
@@ -830,7 +830,7 @@ update msg model loggedIn =
                             performRequest
                                 ClickedSave
                                 (Saving balances sale (UploadFailed error) form)
-                                loggedIn.accountName
+                                loggedIn
                                 "updatesale"
                                 (encodeUpdateForm sale form)
 
@@ -843,7 +843,7 @@ update msg model loggedIn =
                             performRequest
                                 ClickedSave
                                 (Saving balances sale NoImage form)
-                                loggedIn.accountName
+                                loggedIn
                                 "updatesale"
                                 (encodeUpdateForm sale form)
 
@@ -886,7 +886,7 @@ update msg model loggedIn =
                         performRequest
                             ClickedDeleteConfirm
                             (Deleting balances sale (Uploaded url) form)
-                            loggedIn.accountName
+                            loggedIn
                             "deletesale"
                             (encodeDeleteForm sale)
 
@@ -894,7 +894,7 @@ update msg model loggedIn =
                         performRequest
                             ClickedDeleteConfirm
                             (Deleting balances sale (UploadFailed error) form)
-                            loggedIn.accountName
+                            loggedIn
                             "deletesale"
                             (encodeDeleteForm sale)
 
@@ -902,7 +902,7 @@ update msg model loggedIn =
                         performRequest
                             ClickedDeleteConfirm
                             (Deleting balances sale NoImage form)
-                            loggedIn.accountName
+                            loggedIn
                             "deletesale"
                             (encodeDeleteForm sale)
 
@@ -996,8 +996,8 @@ update msg model loggedIn =
                 UR.init model
 
 
-performRequest : Msg -> Status -> Eos.Name -> String -> Value -> UpdateResult
-performRequest msg status account action data =
+performRequest : Msg -> Status -> LoggedIn.Model -> String -> Value -> UpdateResult
+performRequest msg status {shared, accountName} action data =
     status
         |> UR.init
         |> UR.addPort
@@ -1005,10 +1005,10 @@ performRequest msg status account action data =
             , responseData = Encode.null
             , data =
                 Eos.encodeTransaction
-                    [ { accountName = "bes.cmm"
+                    [ { accountName = shared.contracts.community
                       , name = action
                       , authorization =
-                            { actor = account
+                            { actor = accountName
                             , permissionName = Eos.samplePermission
                             }
                       , data = data

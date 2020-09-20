@@ -434,7 +434,7 @@ update msg model ({ shared } as loggedIn) =
                             , responseData = Encode.null
                             , data =
                                 Eos.encodeTransaction
-                                    [ { accountName = "bes.token"
+                                    [ { accountName = loggedIn.shared.contracts.token
                                       , name = "transfer"
                                       , authorization =
                                             { actor = loggedIn.accountName
