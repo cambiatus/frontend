@@ -249,8 +249,8 @@ saveFeaturePort loggedIn feature status state =
             UR.addExt (ShowFeedback Failure "Error")
 
 
-saveFeature : Feature -> Bool -> Eos.Authorization -> LoggedIn.Model ->  Community.Model -> Ports.JavascriptOutModel Msg
-saveFeature feature state authorization {shared, accountName} community =
+saveFeature : Feature -> Bool -> Eos.Authorization -> LoggedIn.Model -> Community.Model -> Ports.JavascriptOutModel Msg
+saveFeature feature state authorization { shared, accountName } community =
     let
         hasShop =
             case feature of
