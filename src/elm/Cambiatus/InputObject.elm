@@ -316,7 +316,6 @@ encodeInviteInput input =
         [ ( "id", Encode.string |> Encode.optional input.id ) ]
 
 
-
 buildKycDataUpdateInput :
     KycDataUpdateInputRequiredFields
     -> KycDataUpdateInput
