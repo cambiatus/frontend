@@ -295,8 +295,19 @@ viewCreateAccount translators model =
 
                 _ ->
                     div [] []
+
+        backgroundColor =
+            case model.step of
+                1 ->
+                    "bg-white"
+
+                2 ->
+                    "bg-purple-500"
+
+                _ ->
+                    "bg-white"
     in
-    div [ class "flex flex-grow bg-white flex-col" ]
+    div [ class ("flex flex-grow flex-col " ++ backgroundColor) ]
         [ viewTitleForStep translators model.step
         , case model.status of
             LoadedAll invitation _ ->
@@ -531,7 +542,12 @@ viewTitleForStep translators s =
         [ text (tr "register.form.step" [ ( "stepNum", step ) ])
         , text " / "
         , strong
-            [ class "text-black"
+            [ class <|
+                if s == 1 then
+                    "text-black"
+
+                else
+                    "text-white"
             ]
             [ text <| t ("register.form.step" ++ step ++ "_title") ]
         ]
