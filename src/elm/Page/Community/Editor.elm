@@ -251,30 +251,30 @@ view loggedIn model =
                         ]
 
                 Editing _ problems form ->
-                    viewForm shared True False problems form model
+                    viewForm loggedIn True False problems form model
 
                 WaitingEditLogoUpload _ form ->
-                    viewForm shared True True Dict.empty form model
+                    viewForm loggedIn True True Dict.empty form model
 
                 Saving _ form ->
-                    viewForm shared True True Dict.empty form model
+                    viewForm loggedIn True True Dict.empty form model
 
                 EditingNew problems form ->
-                    viewForm shared False False problems form model
+                    viewForm loggedIn False False problems form model
 
                 WaitingNewLogoUpload form ->
-                    viewForm shared False True Dict.empty form model
+                    viewForm loggedIn False True Dict.empty form model
 
                 Creating form ->
-                    viewForm shared False True Dict.empty form model
+                    viewForm loggedIn False True Dict.empty form model
     in
     { title = t "community.edit.title"
     , content = content
     }
 
 
-viewForm : Shared -> Bool -> Bool -> Dict String FormError -> Form -> Model -> Html Msg
-viewForm shared isEdit isDisabled errors form model =
+viewForm : LoggedIn.Model -> Bool -> Bool -> Dict String FormError -> Form -> Model -> Html Msg
+viewForm ({ shared } as loggedIn) isEdit isDisabled errors form model =
     let
         t =
             I18Next.t shared.translations
@@ -294,27 +294,29 @@ viewForm shared isEdit isDisabled errors form model =
                 _ ->
                     ClickedSave
     in
-    Html.form
-        [ class "container mx-auto px-4"
-        , onSubmit cmd
-        ]
-        [ Page.viewTitle titleText
-        , div [ class "card card--form" ]
-            [ viewFieldDescription shared isDisabled form.description errors
-            , div [ class "create-community-two-column" ]
-                [ viewFieldCurrencyName shared isDisabled form.name errors
-                , viewFieldCurrencySymbol shared (isEdit || isDisabled) form.symbol errors
-                , viewFieldInviterReward shared isDisabled form.inviterReward errors
-                , viewFieldInvitedReward shared isDisabled form.invitedReward errors
+    div [ class "bg-white mb-10" ]
+        [ Page.viewHeader loggedIn titleText Route.Dashboard
+        , Html.form
+            [ class "container mx-auto px-4"
+            , onSubmit cmd
+            ]
+            [ div [ class "my-10" ]
+                [ viewFieldDescription shared isDisabled form.description errors
+                , div [ class "mt-4 create-community-two-column" ]
+                    [ viewFieldCurrencyName shared isDisabled form.name errors
+                    , viewFieldCurrencySymbol shared (isEdit || isDisabled) form.symbol errors
+                    , viewFieldInviterReward shared isDisabled form.inviterReward errors
+                    , viewFieldInvitedReward shared isDisabled form.invitedReward errors
+                    ]
+                , viewFieldLogo shared isDisabled form.logoSelected form.logoList errors
+                , viewFieldError shared "form" errors
                 ]
-            , viewFieldLogo shared isDisabled form.logoSelected form.logoList errors
-            , viewFieldError shared "form" errors
+            , button
+                [ class "button button-primary w-full"
+                , disabled isDisabled
+                ]
+                [ text actionText ]
             ]
-        , button
-            [ class "btn btn--primary btn--big"
-            , disabled isDisabled
-            ]
-            [ text actionText ]
         ]
 
 
@@ -328,13 +330,13 @@ viewFieldDescription shared isDisabled defVal errors =
             I18Next.t shared.translations
     in
     formField
-        [ label [ for id_ ]
+        [ span [ class "input-label" ]
             [ text (t "community.create.labels.description")
             , br [] []
             , span [] [ text (t "community.create.tooltips.description") ]
             ]
         , textarea
-            [ class "input"
+            [ class "w-full input rounded-sm"
             , id id_
             , value defVal
             , maxlength 255
@@ -356,11 +358,10 @@ viewFieldCurrencyName shared isDisabled defVal errors =
             I18Next.t shared.translations
     in
     formField
-        [ Page.labelWithTooltip id_
-            (t "community.create.labels.currency_name")
-            (t "community.create.tooltips.currency_name")
+        [ span [ class "input-label" ]
+            [ text <| t "community.create.labels.currency_name" ]
         , input
-            [ class "input"
+            [ class "w-full input rounded-sm"
             , id id_
             , value defVal
             , maxlength 255
@@ -380,11 +381,10 @@ viewFieldCurrencySymbol shared isDisabled defVal errors =
             I18Next.t shared.translations
     in
     formField
-        [ Page.labelWithTooltip fieldSymbolId
-            (t "community.create.labels.currency_symbol")
-            (t "community.create.tooltips.currency_symbol")
+        [ span [ class "input-label" ]
+            [ text <| t "community.create.labels.currency_symbol" ]
         , input
-            [ class "input input-symbol"
+            [ class "w-full input rounded-sm"
             , id fieldSymbolId
             , value defVal
             , minlength 3
@@ -392,7 +392,7 @@ viewFieldCurrencySymbol shared isDisabled defVal errors =
             , required True
             , onInput EnteredSymbol
             , disabled isDisabled
-            , placeholder "____"
+            , placeholder "_ _ _ _"
             ]
             []
         , viewFieldError shared fieldSymbolId errors
@@ -435,7 +435,7 @@ viewFieldLogo shared isDisabled selected logos errors =
                             []
                 ]
     in
-    div [ class "create-community-logo-list" ]
+    div [ class "create-community-logo-list mt-8" ]
         (List.indexedMap item logos
             ++ [ div
                     [ classList
@@ -475,11 +475,10 @@ viewFieldInviterReward shared isDisabled defVal errors =
             I18Next.t shared.translations
     in
     formField
-        [ Page.labelWithTooltip id_
-            (t "community.create.labels.inviter_reward")
-            (t "community.create.tooltips.inviter_reward")
+        [ span [ class "input-label" ]
+            [ text <| t "community.create.labels.inviter_reward" ]
         , input
-            [ class "input"
+            [ class "w-full input rounded-sm"
             , id id_
             , value <| String.fromFloat defVal
             , maxlength 255
@@ -502,12 +501,10 @@ viewFieldInvitedReward shared isDisabled defVal errors =
             I18Next.t shared.translations
     in
     formField
-        [ Page.labelWithTooltip id_
-            (t "community.create.labels.invited_reward")
-            (t "community.create.tooltips.invited_reward")
+        [ span [ class "input-label" ]
+            [ text <| t "community.create.labels.invited_reward" ]
         , input
-            [ class "input"
-            , id id_
+            [ class "w-full input rounded-sm"
             , value <| String.fromFloat defVal
             , maxlength 255
             , required True
@@ -873,7 +870,8 @@ save msg loggedIn ({ model } as uResult) =
                                                 , invitedReward = createAction.invitedReward
                                                 , hasObjectives = 1
                                                 , hasShop = 1
-                                                , hasKyc = 0
+
+                                                -- , hasKyc = 0
                                                 }
                                                     |> Community.encodeUpdateLogoData
                                           }
