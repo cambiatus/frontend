@@ -200,11 +200,11 @@ viewAccountGenerated ({ t } as translators) model keys =
                     [ text (t "register.account_created.instructions")
                     ]
                 , div [ class "w-1/4 m-auto relative left-1" ]
-                    [ img [ src "images/reg-passphrase-boy.svg" ]
+                    [ img [ src "/images/reg-passphrase-boy.svg" ]
                         []
                     , img
                         [ class "absolute w-1/4 -mt-2 -ml-10"
-                        , src "images/reg-passphrase-boy-hand.svg"
+                        , src "/images/reg-passphrase-boy-hand.svg"
                         ]
                         []
                     ]
@@ -295,8 +295,16 @@ viewCreateAccount translators model =
 
                 _ ->
                     div [] []
+
+        backgroundColor =
+            case model.step of
+                2 ->
+                    "bg-purple-500"
+
+                _ ->
+                    "bg-white"
     in
-    div [ class "flex flex-grow bg-white flex-col" ]
+    div [ class ("flex flex-grow flex-col " ++ backgroundColor) ]
         [ viewTitleForStep translators model.step
         , case model.status of
             LoadedAll invitation _ ->
@@ -835,7 +843,10 @@ update maybeInvitation msg model guest =
                 |> UR.logDecodeError msg v
 
         AccountGenerated (Ok account) ->
-            { model | status = Generated account }
+            { model
+                | status = Generated account
+                , step = 2
+            }
                 |> UR.init
 
         AgreedToSave12Words val ->
