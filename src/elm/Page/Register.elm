@@ -200,11 +200,11 @@ viewAccountGenerated ({ t } as translators) model keys =
                     [ text (t "register.account_created.instructions")
                     ]
                 , div [ class "w-1/4 m-auto relative left-1" ]
-                    [ img [ src "images/reg-passphrase-boy.svg" ]
+                    [ img [ src "/images/reg-passphrase-boy.svg" ]
                         []
                     , img
                         [ class "absolute w-1/4 -mt-2 -ml-10"
-                        , src "images/reg-passphrase-boy-hand.svg"
+                        , src "/images/reg-passphrase-boy-hand.svg"
                         ]
                         []
                     ]
