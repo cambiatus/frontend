@@ -298,9 +298,6 @@ viewCreateAccount translators model =
 
         backgroundColor =
             case model.step of
-                1 ->
-                    "bg-white"
-
                 2 ->
                     "bg-purple-500"
 
