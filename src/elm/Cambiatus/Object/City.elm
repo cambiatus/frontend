@@ -29,6 +29,8 @@ name =
     Object.selectionForField "String" "name" [] Decode.string
 
 
-neighborhoods : SelectionSet decodesTo Cambiatus.Object.Neighborhood -> SelectionSet (List decodesTo) Cambiatus.Object.City
+neighborhoods :
+    SelectionSet decodesTo Cambiatus.Object.Neighborhood
+    -> SelectionSet (List decodesTo) Cambiatus.Object.City
 neighborhoods object_ =
     Object.selectionForCompositeField "neighborhoods" [] object_ (identity >> Decode.list)

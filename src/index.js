@@ -222,11 +222,12 @@ async function handleJavascriptPort (arg) {
   switch (arg.data.name) {
     case 'checkAccountAvailability': {
       devLog('=========================', 'checkAccountAvailability')
-      var sendResponse = function (isAvailable) {
+      var sendResponse = function (isAvailable, error) {
         const response = {
           address: arg.responseAddress,
           addressData: arg.responseData,
-          isAvailable: isAvailable
+          isAvailable: isAvailable,
+          error: error
         }
         devLog('checkAccountAvailability response', response)
         app.ports.javascriptInPort.send(response)
@@ -237,10 +238,17 @@ async function handleJavascriptPort (arg) {
         .catch(e => {
           // Invalid name exception
           devLog('checkAccountAvailability', e)
-          if (JSON.parse(e.message).error.code === 3010001) {
-            sendResponse(false)
-          } else {
-            sendResponse(true)
+          try {
+            const errorCode = JSON.parse(e.message).error.code
+
+            // Invalid name exception
+            if (errorCode === 3010001) {
+              sendResponse(false)
+            } else {
+              sendResponse(true)
+            }
+          } catch (e) {
+            sendResponse(false, e.message)
           }
         })
       break

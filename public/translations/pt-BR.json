@@ -85,7 +85,9 @@
     "chooseOrUploadLogo": "Escolha ou envie um logo.",
     "invalidSymbol": "Simbolo inválido.",
     "unknown": "Opa. Algo de errado aconteceu =(.",
-    "accountNotFound": "Conta não encontrada. Tem certeza que criou uma conta com essa chave?"
+    "accountNotFound": "Conta não encontrada. Tem certeza que criou uma conta com essa chave?",
+    "phone": "Por favor insira um número de telefone válido",
+    "zipcode": "CEP inválido"
   },
   "auth": {
     "title": "Use sua chave privada e PIN ou faça o login",
@@ -173,6 +175,47 @@
         "tooltip": "",
         "placeholder": "Ex.: arlene_warren@email.com"
       },
+      "phone": {
+        "label": "Telefone",
+        "tooltip": "Ex.: 12345678",
+        "placeholder": "Ex.: 12345678"
+      },
+      "street": {
+        "label": "Rua",
+        "tooltip": "",
+        "placeholder": ""
+      },
+      "number": {
+        "label": "Número",
+        "tooltip": "",
+        "placeholder": ""
+      },
+      "zip": {
+        "label": "CEP",
+        "tooltip": "",
+        "placeholder": ""
+      },
+      "document": {
+        "cedula_de_identidad": {
+          "label": "Número de Segurança Social",
+          "placeholder": "Insira os 9 dígitos",
+          "maximum": "9"
+        },
+        "dimex": {
+          "label": "Número Dimex",
+          "placeholder": "Insira os 13 dígitos",
+          "maximum": "13"
+        },
+        "nite": {
+          "label": "Número Nite",
+          "placeholder": "Insira os 10 dígitos",
+          "maximum": "10"
+        }
+      },
+      "types": {
+        "natural": "Pessoa Física",
+        "juridical": "Pessoa Jurídica"
+      },
       "account": {
         "label": "Crie um nome de usuário com exatamente 12 caracteres (somente letras de a-z e números de 1 a 5)",
         "tooltip": "O nome de usuário será como você será conhecido na plataforma pelos outros participantes, deve ter exatamente 12 caracteres.",
@@ -184,7 +227,32 @@
       "pinCharError": "O PIN deve ter apenas numeros",
       "pinConfirmError": "Por favor entre o mesmo PIN",
       "checkingAvailability": "Checando disponibilidade da conta",
-      "button": "Criar"
+      "button": "Criar",
+      "company_type": "Tipo de Empresa",
+      "company": {
+        "mipyme": {
+          "name": "MIPYME",
+          "label": "MIPYME Number",
+          "placeholder": "Entre os 10 dígitos",
+          "maximum": "10"
+        },
+        "gran_empresa": {
+          "label": "Corporação",
+          "name": "Corporação Number",
+          "placeholder": "Entre os 10 dígitos",
+          "maximum": "10"
+        }
+      },
+      "register_tooltip": "Como gostaria de se registrar?",
+      "corporation": "Corporação",
+      "city": "Cidade",
+      "state": "Estado",
+      "district": "Distrito",
+      "select": {
+        "state": "Selecione o Estado",
+        "city": "Selecione a cidade",
+        "district": "Selecione o distrito"
+      }
     },
     "login": "Já tem uma conta? ",
     "authLink": "Login",
@@ -325,7 +393,7 @@
       "subtitle": "{{objectives}} objetivos e {{actions}} ações",
       "new": "Criar novo objetivo",
       "action_count": "{{actions}} ações",
-      "edit": "Editar objetivo", 
+      "edit": "Editar objetivo",
       "editor": {
         "not_found": "Não encontrado",
         "error": "Ops algo deu errado!",
@@ -363,7 +431,7 @@
       "or": " ou ",
       "completed": "Completa",
       "closed": "Encerrada",
-      "edit": "Editar ação", 
+      "edit": "Editar ação",
       "form": {
         "not_found": "Ação não encontrada",
         "description_label": "Descrição",
@@ -429,7 +497,8 @@
         "confirmationBody": "Depois de excluir esses dados, você não poderá participar de algumas comunidades. Você realmente deseja excluir seus dados KYC?",
         "warning": "Importante: Depois de excluir esses dados, você não poderá participar de algumas comunidades.",
         "confirm": "Sim",
-        "cancel": "Não"
+        "cancel": "Não",
+        "success": "Seus dados KYC foram excluídos com sucesso."
       }
     }
   },
@@ -440,8 +509,14 @@
     "edit_success": "Perfil salvo com sucesso",
     "locations": "Localização",
     "interests": "Interesses",
-    "12words": { "title": "Minhas 12 palavras", "button": "Baixar" },
-    "pin": { "title": "Meu PIN", "button": "Trocar" },
+    "12words": {
+      "title": "Minhas 12 palavras",
+      "button": "Baixar"
+    },
+    "pin": {
+      "title": "Meu PIN",
+      "button": "Trocar"
+    },
     "changePin": "Troque seu PIN!",
     "newPin": "Novo PIN",
     "actions": {

@@ -76,7 +76,7 @@ textarea.input {
 }
 
 .input-counter {
-  @apply text-purple-100 uppercase font-bold float-right mt-1;
+  @apply text-purple-100 uppercase font-bold float-right mt-1 text-caption;
 }
 
 .input-label {

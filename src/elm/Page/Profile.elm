@@ -26,10 +26,10 @@ import Icons
 import Json.Decode as Decode exposing (Value)
 import Json.Encode as Encode
 import Page
-import Profile exposing (Profile)
+import Profile exposing (DeleteKycAndAddressResult, Profile)
 import PushSubscription exposing (PushSubscription)
 import Route
-import Session.LoggedIn as LoggedIn exposing (External(..), FeedbackStatus(..))
+import Session.LoggedIn as LoggedIn exposing (External(..), FeedbackStatus(..), ProfileStatus(..))
 import Session.Shared exposing (Shared, Translators)
 import Task
 import UpdateResult as UR
@@ -62,7 +62,7 @@ init loggedIn =
 
 
 type alias Model =
-    { status : Status
+    { status : ProfileStatus
     , currentPin : Maybe String
     , isNewPinModalVisible : Bool
     , newPin : Maybe String
@@ -75,8 +75,8 @@ type alias Model =
 
 
 initModel : LoggedIn.Model -> Model
-initModel _ =
-    { status = Loading
+initModel loggedIn =
+    { status = Loading loggedIn.accountName
     , currentPin = Nothing
     , isNewPinModalVisible = False
     , newPin = Nothing
@@ -86,12 +86,6 @@ initModel _ =
     , maybePdfDownloadedSuccessfully = Nothing
     , isDeleteKycModalShowed = False
     }
-
-
-type Status
-    = Loading
-    | LoadingFailed (Graphql.Http.Error (Maybe Profile))
-    | Loaded Profile
 
 
 
@@ -111,10 +105,10 @@ view loggedIn model =
 
         content =
             case model.status of
-                Loading ->
+                Loading _ ->
                     Page.fullPageLoading
 
-                LoadingFailed _ ->
+                LoadingFailed _ _ ->
                     Page.fullPageError (t loggedIn.shared.translations "profile.title") Http.Timeout
 
                 Loaded profile ->
@@ -152,7 +146,10 @@ viewDeleteKycModal { t } model =
                 , onClick ToggleDeleteKycModal
                 ]
                 [ text (t "community.kyc.delete.cancel") ]
-            , button [ class "modal-accept" ]
+            , button
+                [ class "modal-accept"
+                , onClick DeleteKycAccepted
+                ]
                 [ text (t "community.kyc.delete.confirm") ]
             ]
         |> Modal.toHtml
@@ -652,6 +649,8 @@ type Msg
     | RequestPush
     | ToggleDeleteKycModal
     | AddKycClicked
+    | DeleteKycAccepted
+    | DeleteKycAndAddressCompleted (Result (Graphql.Http.Error DeleteKycAndAddressResult) DeleteKycAndAddressResult)
     | CheckPushPref
     | GotPushSub PushSubscription
     | CompletedPushUpload (Result (Graphql.Http.Error ()) ())
@@ -686,14 +685,49 @@ update msg model loggedIn =
             model
                 |> UR.init
 
+        DeleteKycAccepted ->
+            { model
+                | status = Loading loggedIn.accountName
+                , isDeleteKycModalShowed = False
+            }
+                |> UR.init
+                |> UR.addCmd
+                    (deleteKycAndAddress loggedIn)
+
+        DeleteKycAndAddressCompleted resp ->
+            let
+                reloadProfile =
+                    Api.Graphql.query loggedIn.shared
+                        (Profile.query loggedIn.accountName)
+                        CompletedProfileLoad
+            in
+            case resp of
+                Ok _ ->
+                    model
+                        |> UR.init
+                        |> UR.addCmd reloadProfile
+                        |> UR.addExt (ShowFeedback Success (t "community.kyc.delete.success"))
+
+                Err err ->
+                    model
+                        |> UR.init
+                        |> UR.logGraphqlError msg err
+                        |> UR.addCmd reloadProfile
+
         CompletedProfileLoad (Ok Nothing) ->
             UR.init model
 
         CompletedProfileLoad (Ok (Just profile)) ->
-            UR.init { model | status = Loaded profile }
+            { model | status = Loaded profile }
+                |> UR.init
+                |> UR.addExt
+                    -- Update global `LoggedIn.Model` to enable restrictions after removing KYC data
+                    (LoggedIn.UpdatedLoggedIn
+                        { loggedIn | profile = Loaded profile }
+                    )
 
         CompletedProfileLoad (Err err) ->
-            UR.init { model | status = LoadingFailed err }
+            UR.init { model | status = LoadingFailed loggedIn.accountName err }
                 |> UR.logGraphqlError msg err
 
         ClickedChangePin ->
@@ -878,6 +912,13 @@ uploadPushSubscription { accountName, shared } data =
         CompletedPushUpload
 
 
+deleteKycAndAddress : LoggedIn.Model -> Cmd Msg
+deleteKycAndAddress { accountName, shared } =
+    Api.Graphql.mutation shared
+        (Profile.deleteKycAndAddressMutation accountName)
+        DeleteKycAndAddressCompleted
+
+
 jsAddressToMsg : List String -> Value -> Maybe Msg
 jsAddressToMsg addr val =
     case addr of
@@ -931,6 +972,12 @@ msgToString msg =
 
         AddKycClicked ->
             [ "AddKycClicked" ]
+
+        DeleteKycAccepted ->
+            [ "DeleteKycAccepted" ]
+
+        DeleteKycAndAddressCompleted _ ->
+            [ "DeleteKycAndAddressCompleted" ]
 
         CompletedProfileLoad r ->
             [ "CompletedProfileLoad", UR.resultToString r ]

@@ -20,7 +20,9 @@ import Graphql.SelectionSet exposing (SelectionSet)
 import Json.Decode as Decode
 
 
-claims : SelectionSet decodesTo Cambiatus.Object.Claim -> SelectionSet (List decodesTo) Cambiatus.Object.Action
+claims :
+    SelectionSet decodesTo Cambiatus.Object.Claim
+    -> SelectionSet (List decodesTo) Cambiatus.Object.Action
 claims object_ =
     Object.selectionForCompositeField "claims" [] object_ (identity >> Decode.list)
 
@@ -45,7 +47,9 @@ createdTx =
     Object.selectionForField "String" "createdTx" [] Decode.string
 
 
-creator : SelectionSet decodesTo Cambiatus.Object.Profile -> SelectionSet decodesTo Cambiatus.Object.Action
+creator :
+    SelectionSet decodesTo Cambiatus.Object.Profile
+    -> SelectionSet decodesTo Cambiatus.Object.Action
 creator object_ =
     Object.selectionForCompositeField "creator" [] object_ identity
 
@@ -75,7 +79,9 @@ isCompleted =
     Object.selectionForField "Bool" "isCompleted" [] Decode.bool
 
 
-objective : SelectionSet decodesTo Cambiatus.Object.Objective -> SelectionSet decodesTo Cambiatus.Object.Action
+objective :
+    SelectionSet decodesTo Cambiatus.Object.Objective
+    -> SelectionSet decodesTo Cambiatus.Object.Action
 objective object_ =
     Object.selectionForCompositeField "objective" [] object_ identity
 
@@ -95,7 +101,9 @@ usagesLeft =
     Object.selectionForField "Int" "usagesLeft" [] Decode.int
 
 
-validators : SelectionSet decodesTo Cambiatus.Object.Profile -> SelectionSet (List decodesTo) Cambiatus.Object.Action
+validators :
+    SelectionSet decodesTo Cambiatus.Object.Profile
+    -> SelectionSet (List decodesTo) Cambiatus.Object.Action
 validators object_ =
     Object.selectionForCompositeField "validators" [] object_ (identity >> Decode.list)
 

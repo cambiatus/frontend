@@ -24,7 +24,9 @@ amount =
     Object.selectionForField "Float" "amount" [] Decode.float
 
 
-community : SelectionSet decodesTo Cambiatus.Object.Community -> SelectionSet decodesTo Cambiatus.Object.SaleHistory
+community :
+    SelectionSet decodesTo Cambiatus.Object.Community
+    -> SelectionSet decodesTo Cambiatus.Object.SaleHistory
 community object_ =
     Object.selectionForCompositeField "community" [] object_ identity
 
@@ -34,7 +36,9 @@ communityId =
     Object.selectionForField "String" "communityId" [] Decode.string
 
 
-from : SelectionSet decodesTo Cambiatus.Object.Profile -> SelectionSet decodesTo Cambiatus.Object.SaleHistory
+from :
+    SelectionSet decodesTo Cambiatus.Object.Profile
+    -> SelectionSet decodesTo Cambiatus.Object.SaleHistory
 from object_ =
     Object.selectionForCompositeField "from" [] object_ identity
 
@@ -49,7 +53,9 @@ id =
     Object.selectionForField "Int" "id" [] Decode.int
 
 
-sale : SelectionSet decodesTo Cambiatus.Object.Sale -> SelectionSet decodesTo Cambiatus.Object.SaleHistory
+sale :
+    SelectionSet decodesTo Cambiatus.Object.Sale
+    -> SelectionSet decodesTo Cambiatus.Object.SaleHistory
 sale object_ =
     Object.selectionForCompositeField "sale" [] object_ identity
 
@@ -59,7 +65,9 @@ saleId =
     Object.selectionForField "Int" "saleId" [] Decode.int
 
 
-to : SelectionSet decodesTo Cambiatus.Object.Profile -> SelectionSet decodesTo Cambiatus.Object.SaleHistory
+to :
+    SelectionSet decodesTo Cambiatus.Object.Profile
+    -> SelectionSet decodesTo Cambiatus.Object.SaleHistory
 to object_ =
     Object.selectionForCompositeField "to" [] object_ identity
 

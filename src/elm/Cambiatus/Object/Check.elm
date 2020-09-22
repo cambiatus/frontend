@@ -19,7 +19,9 @@ import Graphql.SelectionSet exposing (SelectionSet)
 import Json.Decode as Decode
 
 
-claim : SelectionSet decodesTo Cambiatus.Object.Claim -> SelectionSet decodesTo Cambiatus.Object.Check
+claim :
+    SelectionSet decodesTo Cambiatus.Object.Claim
+    -> SelectionSet decodesTo Cambiatus.Object.Check
 claim object_ =
     Object.selectionForCompositeField "claim" [] object_ identity
 
@@ -49,6 +51,8 @@ isVerified =
     Object.selectionForField "Bool" "isVerified" [] Decode.bool
 
 
-validator : SelectionSet decodesTo Cambiatus.Object.Profile -> SelectionSet decodesTo Cambiatus.Object.Check
+validator :
+    SelectionSet decodesTo Cambiatus.Object.Profile
+    -> SelectionSet decodesTo Cambiatus.Object.Check
 validator object_ =
     Object.selectionForCompositeField "validator" [] object_ identity

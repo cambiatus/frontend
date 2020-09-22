@@ -19,17 +19,23 @@ import Graphql.SelectionSet exposing (SelectionSet)
 import Json.Decode as Decode
 
 
-city : SelectionSet decodesTo Cambiatus.Object.City -> SelectionSet decodesTo Cambiatus.Object.Address
+city :
+    SelectionSet decodesTo Cambiatus.Object.City
+    -> SelectionSet decodesTo Cambiatus.Object.Address
 city object_ =
     Object.selectionForCompositeField "city" [] object_ identity
 
 
-country : SelectionSet decodesTo Cambiatus.Object.Country -> SelectionSet decodesTo Cambiatus.Object.Address
+country :
+    SelectionSet decodesTo Cambiatus.Object.Country
+    -> SelectionSet decodesTo Cambiatus.Object.Address
 country object_ =
     Object.selectionForCompositeField "country" [] object_ identity
 
 
-neighborhood : SelectionSet decodesTo Cambiatus.Object.Neighborhood -> SelectionSet decodesTo Cambiatus.Object.Address
+neighborhood :
+    SelectionSet decodesTo Cambiatus.Object.Neighborhood
+    -> SelectionSet decodesTo Cambiatus.Object.Address
 neighborhood object_ =
     Object.selectionForCompositeField "neighborhood" [] object_ identity
 
@@ -39,7 +45,9 @@ number =
     Object.selectionForField "(Maybe String)" "number" [] (Decode.string |> Decode.nullable)
 
 
-state : SelectionSet decodesTo Cambiatus.Object.State -> SelectionSet decodesTo Cambiatus.Object.Address
+state :
+    SelectionSet decodesTo Cambiatus.Object.State
+    -> SelectionSet decodesTo Cambiatus.Object.Address
 state object_ =
     Object.selectionForCompositeField "state" [] object_ identity
 
