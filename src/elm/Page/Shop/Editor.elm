@@ -997,7 +997,7 @@ update msg model loggedIn =
 
 
 performRequest : Msg -> Status -> LoggedIn.Model -> String -> Value -> UpdateResult
-performRequest msg status {shared, accountName} action data =
+performRequest msg status { shared, accountName } action data =
     status
         |> UR.init
         |> UR.addPort

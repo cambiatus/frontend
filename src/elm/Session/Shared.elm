@@ -42,7 +42,7 @@ type alias Shared =
     , now : Posix
     , allowCommunityCreation : Bool
     , url : Url
-    , contracts: { token : String, community: String}
+    , contracts : { token : String, community : String }
     }
 
 
