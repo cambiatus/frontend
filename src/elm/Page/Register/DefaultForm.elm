@@ -1,7 +1,7 @@
 module Page.Register.DefaultForm exposing (Field(..), Model, Msg(..), init, update, validator, view)
 
 import Html exposing (Html)
-import Page.Register.Common exposing (containsNumberGreaterThan, fieldProblems, viewTitleForStep)
+import Page.Register.Common exposing (containsNumberGreaterThan, fieldProblems)
 import Session.Shared exposing (Translators)
 import Validate exposing (Validator)
 import View.Form.Input
@@ -51,8 +51,7 @@ view translators model =
             "register.form"
     in
     Html.div []
-        [ viewTitleForStep translators 1
-        , View.Form.Input.init
+        [ View.Form.Input.init
             { id = "name"
             , label = translators.t (formTranslationString ++ ".name.label")
             , onInput = EnteredName
