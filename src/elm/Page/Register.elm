@@ -39,10 +39,7 @@ queries : Maybe String -> Shared -> Cmd Msg
 queries maybeInvitationId shared =
     case maybeInvitationId of
         Just invitation ->
-            Cmd.batch
-                [ Api.Graphql.query shared (Community.inviteQuery invitation) CompletedLoadInvite
-                , Api.Graphql.query shared (Address.countryQuery "Costa Rica") CompletedLoadCountry
-                ]
+            Api.Graphql.query shared (Community.inviteQuery invitation) CompletedLoadInvite
 
         Nothing ->
             Cmd.none
@@ -557,6 +554,11 @@ pdfData keys =
     }
 
 
+dummyCountry : Address.Country
+dummyCountry =
+    { id = Id "1", name = "Costa Rica", states = [] }
+
+
 
 -- UPDATE
 
@@ -938,18 +940,29 @@ update maybeInvitation msg model guest =
                             FailedCountry err
 
                         _ ->
-                            LoadedInvite invitation
-            in
-            UR.init
-                { model
-                    | status = newStatus
-                    , selectedForm =
-                        if invitation.community.hasKyc == True then
-                            None
+                            if invitation.community.hasKyc then
+                                LoadedInvite invitation
 
-                        else
-                            Default DefaultForm.init
-                }
+                            else
+                                LoadedAll invitation dummyCountry
+            in
+            { model
+                | status = newStatus
+                , selectedForm =
+                    if invitation.community.hasKyc == True then
+                        None
+
+                    else
+                        Default DefaultForm.init
+            }
+                |> UR.init
+                |> UR.addCmd
+                    (if invitation.community.hasKyc then
+                        Api.Graphql.query guest.shared (Address.countryQuery "Costa Rica") CompletedLoadCountry
+
+                     else
+                        Cmd.none
+                    )
 
         CompletedLoadInvite (Ok Nothing) ->
             UR.init { model | status = NotFound }
