@@ -1,8 +1,8 @@
-module Page.Register.Common exposing (Errors(..), containsLetters, containsNumberGreaterThan, fieldProblems, findId, getCities, getDistricts, ifEmptyTuple, viewSelectField, viewTitleForStep)
+module Page.Register.Common exposing (Errors(..), containsLetters, containsNumberGreaterThan, fieldProblems, findId, getCities, getDistricts, ifEmptyTuple, viewSelectField)
 
 import Address
 import Cambiatus.Scalar exposing (Id(..))
-import Html exposing (Html, div, p, strong, text)
+import Html exposing (Html, div)
 import Html.Attributes exposing (class)
 import Maybe.Extra as MaybeExtra
 import Session.Shared exposing (Translators)
@@ -31,31 +31,6 @@ viewSelectField label initialValue enabled onInput options problems =
                     View.Form.Select.disable
                )
             |> View.Form.Select.toHtml
-        ]
-
-
-viewTitleForStep : Translators -> Int -> Html msg
-viewTitleForStep translators s =
-    let
-        { t, tr } =
-            translators
-
-        step =
-            String.fromInt s
-    in
-    p
-        [ class "py-4 mb-4 text-body border-b border-dotted text-grey border-grey-500" ]
-        [ text (tr "register.form.step" [ ( "stepNum", step ) ])
-        , text " / "
-        , strong
-            [ class <|
-                if s == 1 then
-                    "text-black"
-
-                else
-                    "text-white"
-            ]
-            [ text <| t ("register.form.step" ++ step ++ "_title") ]
         ]
 
 
