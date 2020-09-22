@@ -523,8 +523,7 @@ encodeCreateCommunityData c =
         , ( "invited_reward", Eos.encodeAsset c.invitedReward )
         , ( "has_objectives", Eos.encodeEosBool c.hasObjectives )
         , ( "has_shop", Eos.encodeEosBool c.hasShop )
-
-        -- , ( "has_kyc", Eos.encodeEosBool c.hasKyc )
+        , ( "has_kyc", Eos.encodeEosBool c.hasKyc )
         ]
 
 
