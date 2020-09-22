@@ -835,7 +835,10 @@ update maybeInvitation msg model guest =
                 |> UR.logDecodeError msg v
 
         AccountGenerated (Ok account) ->
-            { model | status = Generated account }
+            { model
+                | status = Generated account
+                , step = 2
+            }
                 |> UR.init
 
         AgreedToSave12Words val ->
