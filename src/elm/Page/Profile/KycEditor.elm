@@ -25,6 +25,7 @@ import Kyc.CostaRica.Dimex as Dimex
 import Kyc.CostaRica.Nite as Nite
 import Page exposing (Session)
 import Profile exposing (Profile)
+import Profile.EditKycForm as KycForm exposing (..)
 import Route
 import Session.LoggedIn as LoggedIn exposing (External(..), FeedbackStatus(..))
 import Session.Shared exposing (Translators)
@@ -37,15 +38,16 @@ import UpdateResult as UR
 
 type Msg
     = NoOp
+    | FormMsg KycForm.Msg
 
 
 type alias Model =
-    {}
+    { kycForm : KycForm.Form }
 
 
 init : LoggedIn.Model -> ( Model, Cmd Msg )
 init loggedIn =
-    ( {}
+    ( { kycForm = KycForm.initKycForm }
     , Cmd.none
     )
 
@@ -60,11 +62,21 @@ update msg model loggedIn =
         NoOp ->
             model |> UR.init
 
+        FormMsg m ->
+            model |> UR.init
+
 
 view : LoggedIn.Model -> Model -> { title : String, content : Html Msg }
 view loggedIn model =
+    let
+        content =
+            KycForm.view
+                loggedIn.shared.translators
+                model.kycForm
+                |> Html.map FormMsg
+    in
     { title = "Edit KYC page"
-    , content = text ""
+    , content = content
     }
 
 
@@ -73,3 +85,6 @@ msgToString msg =
     case msg of
         NoOp ->
             [ "NoOp" ]
+
+        FormMsg _ ->
+            [ "FormMsg" ]
