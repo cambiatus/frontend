@@ -62,8 +62,53 @@ update msg model loggedIn =
         NoOp ->
             model |> UR.init
 
-        FormMsg m ->
-            model |> UR.init
+        FormMsg kycFormMsg ->
+            { model | kycForm = updateKycForm model.kycForm kycFormMsg }
+                |> UR.init
+
+
+updateKycForm : KycForm.Form -> KycForm.Msg -> KycForm.Form
+updateKycForm kycForm kycMsg =
+    case kycMsg of
+        DocumentTypeChanged val ->
+            { kycForm
+                | document = valToDoc val
+                , documentNumber = ""
+                , problems = []
+            }
+
+        DocumentNumberEntered n ->
+            let
+                trim : Int -> String -> String -> String
+                trim desiredLength oldNum newNum =
+                    let
+                        corrected =
+                            if String.all Char.isDigit newNum then
+                                newNum
+
+                            else
+                                oldNum
+                    in
+                    if String.length corrected > desiredLength then
+                        String.slice 0 desiredLength corrected
+
+                    else
+                        corrected
+
+                trimmedNumber =
+                    if String.startsWith "0" n then
+                        kycForm.documentNumber
+
+                    else
+                        trim kycForm.document.maxLength kycForm.documentNumber n
+            in
+            { kycForm | documentNumber = trimmedNumber }
+
+        PhoneNumberEntered p ->
+            { kycForm | phoneNumber = p }
+
+        KycFormSubmitted f ->
+            f
 
 
 view : LoggedIn.Model -> Model -> { title : String, content : Html Msg }
