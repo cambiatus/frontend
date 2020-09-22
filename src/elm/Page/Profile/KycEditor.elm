@@ -8,27 +8,9 @@ module Page.Profile.KycEditor exposing
     , view
     )
 
-import Api
-import Api.Graphql
-import Avatar exposing (Avatar)
-import File exposing (File)
-import Graphql.Http
-import Html exposing (Html, button, div, form, input, label, option, p, select, span, text, textarea)
-import Html.Attributes exposing (accept, attribute, class, disabled, for, id, maxlength, multiple, placeholder, selected, style, type_, value)
-import Html.Events exposing (onInput, onSubmit)
-import Http
-import Icons
-import Json.Decode
-import Kyc exposing (ProfileKyc)
-import Kyc.CostaRica.CedulaDeIdentidad as CedulaDeIdentidad
-import Kyc.CostaRica.Dimex as Dimex
-import Kyc.CostaRica.Nite as Nite
-import Page exposing (Session)
-import Profile exposing (Profile)
+import Html exposing (Html, p)
 import Profile.EditKycForm as KycForm exposing (..)
-import Route
 import Session.LoggedIn as LoggedIn exposing (External(..), FeedbackStatus(..))
-import Session.Shared exposing (Translators)
 import UpdateResult as UR
 
 
