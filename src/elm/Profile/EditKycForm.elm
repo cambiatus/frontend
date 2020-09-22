@@ -1,13 +1,13 @@
 module Profile.EditKycForm exposing
     ( CostaRicaDoc(..)
     , Doc
-    , KycForm
+    , Form
     , KycFormField(..)
     , Msg(..)
     , initKycForm
     , kycValidator
     , valToDoc
-    , viewKycForm
+    , view
     )
 
 import Html exposing (Html, button, div, form, input, label, option, p, select, text)
@@ -25,7 +25,7 @@ type Msg
     = DocumentTypeChanged String
     | DocumentNumberEntered String
     | PhoneNumberEntered String
-    | KycFormSubmitted KycForm
+    | KycFormSubmitted Form
 
 
 type CostaRicaDoc
@@ -49,7 +49,7 @@ type KycFormField
     | PhoneNumber
 
 
-type alias KycForm =
+type alias Form =
     { document : Doc
     , documentNumber : String
     , phoneNumber : String
@@ -58,7 +58,7 @@ type alias KycForm =
     }
 
 
-kycValidator : (String -> Bool) -> Validator ( KycFormField, String ) KycForm
+kycValidator : (String -> Bool) -> Validator ( KycFormField, String ) Form
 kycValidator isValid =
     let
         ifInvalidNumber subjectToString error =
@@ -79,7 +79,7 @@ kycValidator isValid =
         ]
 
 
-initKycForm : KycForm
+initKycForm : Form
 initKycForm =
     { document = valToDoc "Cedula"
     , documentNumber = ""
@@ -120,8 +120,8 @@ valToDoc v =
             }
 
 
-viewKycForm : Translators -> KycForm -> Html Msg
-viewKycForm { t } ({ document, documentNumber, phoneNumber, problems, serverError } as kycForm) =
+view : Translators -> Form -> Html Msg
+view { t } ({ document, documentNumber, phoneNumber, problems, serverError } as kycForm) =
     let
         { docType, pattern, maxLength, isValid, title } =
             document
