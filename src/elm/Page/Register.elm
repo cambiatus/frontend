@@ -531,12 +531,7 @@ viewTitleForStep translators s =
         [ text (tr "register.form.step" [ ( "stepNum", step ) ])
         , text " / "
         , strong
-            [ class <|
-                if s == 1 then
-                    "text-black"
-
-                else
-                    "text-white"
+            [ class "text-black"
             ]
             [ text <| t ("register.form.step" ++ step ++ "_title") ]
         ]
