@@ -436,7 +436,7 @@ update msg model loggedIn =
                             , responseData = Encode.null
                             , data =
                                 Eos.encodeTransaction
-                                    [ { accountName = "bes.token"
+                                    [ { accountName = loggedIn.shared.contracts.token
                                       , name = "transfer"
                                       , authorization = authorization
                                       , data =
@@ -447,7 +447,7 @@ update msg model loggedIn =
                                             }
                                                 |> Transfer.encodeEosActionData
                                       }
-                                    , { accountName = "bes.cmm"
+                                    , { accountName = loggedIn.shared.contracts.community
                                       , name = "transfersale"
                                       , authorization = authorization
                                       , data =

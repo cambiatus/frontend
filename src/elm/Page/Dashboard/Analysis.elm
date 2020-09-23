@@ -490,7 +490,7 @@ update msg model loggedIn =
                                 , responseData = Encode.null
                                 , data =
                                     Eos.encodeTransaction
-                                        [ { accountName = "bes.cmm"
+                                        [ { accountName = loggedIn.shared.contracts.community
                                           , name = "verifyclaim"
                                           , authorization =
                                                 { actor = loggedIn.accountName
