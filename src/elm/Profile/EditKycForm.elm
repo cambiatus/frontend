@@ -1,31 +1,40 @@
 module Profile.EditKycForm exposing
     ( CostaRicaDoc(..)
     , Doc
-    , Form
     , KycFormField(..)
+    , Model
     , Msg(..)
     , initKycForm
     , kycValidator
+    , update
     , valToDoc
     , view
     )
 
+import Api.Graphql
+import Graphql.Http
 import Html exposing (Html, button, div, form, input, label, option, p, select, text)
 import Html.Attributes exposing (attribute, class, maxlength, placeholder, selected, type_, value)
 import Html.Events exposing (onInput, onSubmit)
+import Kyc exposing (ProfileKyc)
 import Kyc.CostaRica.CedulaDeIdentidad as CedulaDeIdentidad
 import Kyc.CostaRica.Dimex as Dimex
 import Kyc.CostaRica.Nite as Nite
 import Kyc.CostaRica.Phone as Phone
+import Page exposing (Session(..))
+import Profile
+import Session.LoggedIn as LoggedIn exposing (External)
 import Session.Shared exposing (Translators)
-import Validate exposing (Validator, ifBlank)
+import UpdateResult as UR
+import Validate exposing (Validator, ifBlank, validate)
 
 
 type Msg
     = DocumentTypeChanged String
     | DocumentNumberEntered String
     | PhoneNumberEntered String
-    | KycFormSubmitted Form
+    | KycFormValidated Model
+    | KycDataSaved (Result (Graphql.Http.Error (Maybe ProfileKyc)) (Maybe ProfileKyc))
 
 
 type CostaRicaDoc
@@ -49,7 +58,7 @@ type KycFormField
     | PhoneNumber
 
 
-type alias Form =
+type alias Model =
     { document : Doc
     , documentNumber : String
     , phoneNumber : String
@@ -58,7 +67,7 @@ type alias Form =
     }
 
 
-kycValidator : (String -> Bool) -> Validator ( KycFormField, String ) Form
+kycValidator : (String -> Bool) -> Validator ( KycFormField, String ) Model
 kycValidator isValid =
     let
         ifInvalidNumber subjectToString error =
@@ -79,7 +88,7 @@ kycValidator isValid =
         ]
 
 
-initKycForm : Form
+initKycForm : Model
 initKycForm =
     { document = valToDoc "Cedula"
     , documentNumber = ""
@@ -120,7 +129,7 @@ valToDoc v =
             }
 
 
-view : Translators -> Form -> Html Msg
+view : Translators -> Model -> Html Msg
 view { t } ({ document, documentNumber, phoneNumber, problems, serverError } as kycForm) =
     let
         { docType, pattern, maxLength, isValid, title } =
@@ -141,7 +150,7 @@ view { t } ({ document, documentNumber, phoneNumber, problems, serverError } as 
         , p [ class "mt-2 mb-6" ]
             [ text "You can always remove this information from your profile if you decide to do so." ]
         , form
-            [ onSubmit (KycFormSubmitted kycForm) ]
+            [ onSubmit (KycFormValidated kycForm) ]
             [ div [ class "form-field mb-6" ]
                 [ case serverError of
                     Just e ->
@@ -209,3 +218,82 @@ view { t } ({ document, documentNumber, phoneNumber, problems, serverError } as 
                 ]
             ]
         ]
+
+
+type alias UpdateResult =
+    UR.UpdateResult Model Msg (External Msg)
+
+
+update : Model -> Msg -> Model
+update model msg =
+    case msg of
+        DocumentTypeChanged val ->
+            { model
+                | document = valToDoc val
+                , documentNumber = ""
+                , problems = []
+            }
+
+        DocumentNumberEntered n ->
+            let
+                trim : Int -> String -> String -> String
+                trim desiredLength oldNum newNum =
+                    let
+                        corrected =
+                            if String.all Char.isDigit newNum then
+                                newNum
+
+                            else
+                                oldNum
+                    in
+                    if String.length corrected > desiredLength then
+                        String.slice 0 desiredLength corrected
+
+                    else
+                        corrected
+
+                trimmedNumber =
+                    if String.startsWith "0" n then
+                        model.documentNumber
+
+                    else
+                        trim model.document.maxLength model.documentNumber n
+            in
+            { model | documentNumber = trimmedNumber }
+
+        PhoneNumberEntered p ->
+            { model | phoneNumber = p }
+
+        KycFormValidated form ->
+            let
+                errors =
+                    case validate (kycValidator form.document.isValid) form of
+                        Ok _ ->
+                            []
+
+                        Err errs ->
+                            errs
+
+                newForm =
+                    { form | problems = errors }
+            in
+            newForm
+
+        KycDataSaved resp ->
+            let
+                _ =
+                    Debug.log "data saved" resp
+            in
+            case resp of
+                Ok _ ->
+                    model
+
+                Err err ->
+                    { model | serverError = Just "Sorry, couldn't save the form. Please, check your data and try again." }
+
+
+saveKycData : LoggedIn.Model -> ProfileKyc -> Cmd Msg
+saveKycData { accountName, shared } data =
+    Api.Graphql.mutation shared
+        (Profile.upsertKycMutation accountName data)
+        KycDataSaved
