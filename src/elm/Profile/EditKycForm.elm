@@ -139,11 +139,7 @@ view { t } ({ document, documentNumber, phoneNumber, validationErrors } as kycFo
                     text ""
     in
     div [ class "md:max-w-sm md:mx-auto my-6" ]
-        [ p []
-            [ text "This community requires its members to have some more information. Please, fill these fields below." ]
-        , p [ class "mt-2 mb-6" ]
-            [ text "You can always remove this information from your profile if you decide to do so." ]
-        , form
+        [ form
             [ onSubmit (Submitted kycForm) ]
             [ div [ class "form-field mb-6" ]
                 [ label [ class "input-label block" ]
@@ -202,7 +198,7 @@ view { t } ({ document, documentNumber, phoneNumber, validationErrors } as kycFo
             , div []
                 [ button
                     [ class "button w-full button-primary" ]
-                    [ text "Save and Join" ]
+                    [ text (t "profile.edit.submit") ]
                 ]
             ]
         ]

@@ -153,8 +153,14 @@ view session model =
                             Maybe.withDefault KycForm.init model.kycForm
 
                         inner =
-                            KycForm.view shared.translators formData
-                                |> Html.map FormMsg
+                            div [ class "md:max-w-sm md:mx-auto my-6" ]
+                                [ p []
+                                    [ text "This community requires its members to have some more information. Please, fill these fields below." ]
+                                , p [ class "mt-2 mb-6" ]
+                                    [ text "You can always remove this information from your profile if you decide to do so." ]
+                                , KycForm.view shared.translators formData
+                                    |> Html.map FormMsg
+                                ]
                     in
                     div []
                         [ viewHeader
