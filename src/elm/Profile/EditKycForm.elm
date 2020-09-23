@@ -6,6 +6,7 @@ module Profile.EditKycForm exposing
     , Msg(..)
     , initKycForm
     , kycValidator
+    , saveKycData
     , update
     , valToDoc
     , view
@@ -23,7 +24,7 @@ import Kyc.CostaRica.Nite as Nite
 import Kyc.CostaRica.Phone as Phone
 import Page exposing (Session(..))
 import Profile
-import Session.LoggedIn as LoggedIn exposing (External)
+import Session.LoggedIn as LoggedIn exposing (External(..), FeedbackStatus(..))
 import Session.Shared exposing (Translators)
 import UpdateResult as UR
 import Validate exposing (Validator, ifBlank, validate)
@@ -33,7 +34,8 @@ type Msg
     = DocumentTypeChanged String
     | DocumentNumberEntered String
     | PhoneNumberEntered String
-    | KycFormSubmitted Model
+    | Submitted Model
+    | Saved (Result (Graphql.Http.Error (Maybe ProfileKyc)) (Maybe ProfileKyc))
 
 
 type CostaRicaDoc
@@ -61,7 +63,7 @@ type alias Model =
     { document : Doc
     , documentNumber : String
     , phoneNumber : String
-    , problems : List ( KycFormField, String )
+    , validationErrors : List ( KycFormField, String )
     , serverError : Maybe String
     }
 
@@ -92,7 +94,7 @@ initKycForm =
     { document = valToDoc "Cedula"
     , documentNumber = ""
     , phoneNumber = ""
-    , problems = []
+    , validationErrors = []
     , serverError = Nothing
     }
 
@@ -129,13 +131,13 @@ valToDoc v =
 
 
 view : Translators -> Model -> Html Msg
-view { t } ({ document, documentNumber, phoneNumber, problems, serverError } as kycForm) =
+view { t } ({ document, documentNumber, phoneNumber, validationErrors } as kycForm) =
     let
         { docType, pattern, maxLength, isValid, title } =
             document
 
         showProblem field =
-            case List.filter (\( f, _ ) -> f == field) problems of
+            case List.filter (\( f, _ ) -> f == field) validationErrors of
                 h :: _ ->
                     div [ class "form-error" ]
                         [ text (Tuple.second h) ]
@@ -143,21 +145,15 @@ view { t } ({ document, documentNumber, phoneNumber, problems, serverError } as 
                 [] ->
                     text ""
     in
-    div [ class "md:max-w-sm md:mx-auto mt-6" ]
+    div [ class "md:max-w-sm md:mx-auto my-6" ]
         [ p []
-            [ text "This community requires it's members to have some more information. Please, fill these fields below." ]
+            [ text "This community requires its members to have some more information. Please, fill these fields below." ]
         , p [ class "mt-2 mb-6" ]
             [ text "You can always remove this information from your profile if you decide to do so." ]
         , form
-            [ onSubmit (KycFormSubmitted kycForm) ]
+            [ onSubmit (Submitted kycForm) ]
             [ div [ class "form-field mb-6" ]
-                [ case serverError of
-                    Just e ->
-                        div [ class "bg-red border-lg rounded p-4 mt-2 text-white mb-6" ] [ text e ]
-
-                    Nothing ->
-                        text ""
-                , label [ class "input-label block" ]
+                [ label [ class "input-label block" ]
                     [ text "document type"
                     ]
                 , select
@@ -230,7 +226,7 @@ update model msg =
             { model
                 | document = valToDoc val
                 , documentNumber = ""
-                , problems = []
+                , validationErrors = []
             }
 
         DocumentNumberEntered n ->
@@ -263,10 +259,13 @@ update model msg =
         PhoneNumberEntered p ->
             { model | phoneNumber = p }
 
-        KycFormSubmitted form ->
+        Submitted form ->
             let
+                formValidator =
+                    kycValidator form.document.isValid
+
                 errors =
-                    case validate (kycValidator form.document.isValid) form of
+                    case validate formValidator form of
                         Ok _ ->
                             []
 
@@ -274,6 +273,25 @@ update model msg =
                             errs
 
                 newForm =
-                    { form | problems = errors }
+                    { form | validationErrors = errors }
             in
             newForm
+
+        Saved resp ->
+            case resp of
+                Ok _ ->
+                    model
+
+                Err err ->
+                    let
+                        errorForm =
+                            { model | serverError = Just "Sorry, couldn't save the form. Please, check your data and try again." }
+                    in
+                    errorForm
+
+
+saveKycData : LoggedIn.Model -> ProfileKyc -> Cmd Msg
+saveKycData { accountName, shared } data =
+    Api.Graphql.mutation shared
+        (Profile.upsertKycMutation accountName data)
+        Saved

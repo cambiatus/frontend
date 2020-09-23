@@ -26,7 +26,6 @@ import UpdateResult as UR
 type Msg
     = NoOp
     | FormMsg KycForm.Msg
-    | KycDataSaved (Result (Graphql.Http.Error (Maybe ProfileKyc)) (Maybe ProfileKyc))
 
 
 type alias Model =
@@ -51,58 +50,56 @@ update msg model loggedIn =
             model |> UR.init
 
         FormMsg kycFormMsg ->
+            let
+                newModel =
+                    { model | kycForm = KycForm.update model.kycForm kycFormMsg }
+            in
             case kycFormMsg of
-                KycForm.KycFormSubmitted f ->
-                    let
-                        newModel =
-                            { model | kycForm = KycForm.update model.kycForm kycFormMsg }
-                    in
-                    if List.isEmpty newModel.kycForm.problems then
+                KycForm.Submitted _ ->
+                    if List.isEmpty newModel.kycForm.validationErrors then
                         newModel
                             |> UR.init
                             |> UR.addCmd
-                                (saveKycData loggedIn
+                                (KycForm.saveKycData loggedIn
                                     { documentType = newModel.kycForm.document.value
                                     , document = newModel.kycForm.documentNumber
                                     , userType = "natural"
                                     , phone = newModel.kycForm.phoneNumber
                                     , isVerified = False
                                     }
+                                    |> Cmd.map FormMsg
                                 )
 
                     else
                         newModel
                             |> UR.init
 
-                _ ->
-                    { model | kycForm = KycForm.update model.kycForm kycFormMsg }
-                        |> UR.init
-
-        KycDataSaved resp ->
-            let
-                { t } =
-                    loggedIn.shared.translators
-            in
-            case resp of
-                Ok _ ->
-                    model
-                        |> UR.init
-                        |> UR.addCmd
-                            (Route.Profile
-                                |> Route.replaceUrl loggedIn.shared.navKey
-                            )
-                        |> UR.addExt (ShowFeedback Success (t "KYC were saved. Now you have full access to the community!"))
-
-                Err err ->
+                KycForm.Saved _ ->
                     let
-                        f =
-                            model.kycForm
-
-                        errorForm =
-                            { f | serverError = Just "Sorry, couldn't save the form. Please, check your data and try again." }
+                        { t } =
+                            loggedIn.shared.translators
                     in
-                    { model | kycForm = errorForm }
-                        |> UR.init
+                    case newModel.kycForm.serverError of
+                        Nothing ->
+                            model
+                                |> UR.init
+                                |> UR.addCmd
+                                    (Route.Profile
+                                        |> Route.replaceUrl loggedIn.shared.navKey
+                                    )
+                                |> UR.addExt
+                                    (ShowFeedback
+                                        Success
+                                        (t "KYC were saved. Now you have full access to the community!")
+                                    )
+
+                        Just error ->
+                            newModel
+                                |> UR.init
+                                |> UR.addExt (ShowFeedback Failure error)
+
+                _ ->
+                    newModel |> UR.init
 
 
 view : LoggedIn.Model -> Model -> { title : String, content : Html Msg }
@@ -127,13 +124,3 @@ msgToString msg =
 
         FormMsg _ ->
             [ "FormMsg" ]
-
-        KycDataSaved _ ->
-            [ "KycDataSaved" ]
-
-
-saveKycData : LoggedIn.Model -> ProfileKyc -> Cmd Msg
-saveKycData { accountName, shared } data =
-    Api.Graphql.mutation shared
-        (Profile.upsertKycMutation accountName data)
-        KycDataSaved
