@@ -4,7 +4,7 @@ module Profile.EditKycForm exposing
     , KycFormField(..)
     , Model
     , Msg(..)
-    , initKycForm
+    , init
     , kycValidator
     , saveKycData
     , update
@@ -89,8 +89,8 @@ kycValidator isValid =
         ]
 
 
-initKycForm : Model
-initKycForm =
+init : Model
+init =
     { document = valToDoc "Cedula"
     , documentNumber = ""
     , phoneNumber = ""

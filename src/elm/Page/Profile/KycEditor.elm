@@ -8,11 +8,7 @@ module Page.Profile.KycEditor exposing
     , view
     )
 
-import Api.Graphql
-import Graphql.Http
-import Html exposing (Html, p)
-import Kyc exposing (ProfileKyc)
-import Profile
+import Html exposing (Html)
 import Profile.EditKycForm as KycForm
 import Route
 import Session.LoggedIn as LoggedIn exposing (External(..), FeedbackStatus(..))
@@ -31,9 +27,9 @@ type alias Model =
 -- INIT
 
 
-init : ( Model, Cmd Msg )
-init =
-    ( { kycForm = KycForm.initKycForm }
+init : LoggedIn.Model -> ( Model, Cmd Msg )
+init _ =
+    ( { kycForm = KycForm.init }
     , Cmd.none
     )
 
