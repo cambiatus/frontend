@@ -684,6 +684,10 @@ update msg model loggedIn =
         AddKycClicked ->
             model
                 |> UR.init
+                |> UR.addCmd
+                    (Route.ProfileKycEditor
+                        |> Route.replaceUrl loggedIn.shared.navKey
+                    )
 
         DeleteKycAccepted ->
             { model
