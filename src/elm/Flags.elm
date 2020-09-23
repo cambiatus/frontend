@@ -23,6 +23,8 @@ type alias Flags =
     , now : Int
     , allowCommunityCreation : Bool
     , selectedCommunity : Symbol
+    , tokenContract : String
+    , communityContract : String
     }
 
 
@@ -37,6 +39,8 @@ default =
     , now = 0
     , allowCommunityCreation = True
     , selectedCommunity = Eos.bespiralSymbol
+    , tokenContract = "bes.token"
+    , communityContract = "bes.cmm"
     }
 
 
@@ -59,12 +63,13 @@ decode =
         |> required "now" Decode.int
         |> required "allowCommunityCreation" Decode.bool
         |> required "selectedCommunity" Eos.symbolDecoder
+        |> required "tokenContract" Decode.string
+        |> required "communityContract" Decode.string
 
 
 type alias Endpoints =
     { eosio : String
     , api : String
-    , chat : String
     , graphql : String
     }
 
@@ -73,7 +78,6 @@ defaultEndpoints : Endpoints
 defaultEndpoints =
     { eosio = "https://eosio.cambiatus.io"
     , api = "https://api.cambiatus.io"
-    , chat = "https://app.cambiatus.io/chat"
     , graphql = "https://api.cambiatus.io/api/graph"
     }
 
@@ -83,7 +87,6 @@ decodeEndpoints =
     Decode.succeed Endpoints
         |> required "eosio" string
         |> required "api" string
-        |> required "chat" string
         |> required "graphql" string
 
 

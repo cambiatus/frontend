@@ -82,6 +82,10 @@ const allowCommunityCreation = isLocal
 const selectedCommunity = isLocal
   ? dev.selectedCommunity
   : _env_.SELECTED_COMMUNITY
+const communityContract = isLocal
+  ? dev.communityContract
+  : _env_.COMMUNITY_CONTRACT
+const tokenContract = isLocal ? dev.tokenContract : _env_.TOKEN_CONTRACT
 
 const prod = {
   network: {
@@ -106,8 +110,8 @@ const prod = {
   logo: appLogo,
   logoMobile: appLogoMobile,
   bespiralAccount: 'bespiral',
-  communityContract: 'bes.cmm',
-  tokenContract: 'bes.token',
+  communityContract: communityContract,
+  tokenContract: tokenContract,
   allowCommunityCreation: allowCommunityCreation,
   selectedCommunity: selectedCommunity,
   pushKey: pKey

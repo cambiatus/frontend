@@ -554,7 +554,8 @@ type alias UpdateCommunityData =
     , invitedReward : Eos.Asset
     , hasObjectives : Int
     , hasShop : Int
-    , hasKyc : Int
+
+    -- , hasKyc : Int
     }
 
 
@@ -569,7 +570,8 @@ encodeUpdateLogoData c =
         , ( "invited_reward", Eos.encodeAsset c.invitedReward )
         , ( "has_objectives", Encode.int c.hasObjectives )
         , ( "has_shop", Encode.int c.hasShop )
-        , ( "has_kyc", Encode.int c.hasKyc )
+
+        -- , ( "has_kyc", Encode.int c.hasKyc )
         ]
 
 

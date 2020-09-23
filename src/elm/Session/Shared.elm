@@ -42,11 +42,12 @@ type alias Shared =
     , now : Posix
     , allowCommunityCreation : Bool
     , url : Url
+    , contracts : { token : String, community : String }
     }
 
 
 init : Flags -> Nav.Key -> Url -> Shared
-init ({ environment, maybeAccount, endpoints, allowCommunityCreation } as flags) navKey url =
+init ({ environment, maybeAccount, endpoints, allowCommunityCreation, tokenContract, communityContract } as flags) navKey url =
     { navKey = navKey
     , language = flags.language
     , translations = initialTranslations
@@ -60,6 +61,7 @@ init ({ environment, maybeAccount, endpoints, allowCommunityCreation } as flags)
     , now = Time.millisToPosix flags.now
     , allowCommunityCreation = allowCommunityCreation
     , url = url
+    , contracts = { token = tokenContract, community = communityContract }
     }
 
 
