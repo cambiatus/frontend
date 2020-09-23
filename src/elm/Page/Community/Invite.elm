@@ -13,15 +13,10 @@ import Community exposing (Invite)
 import Eos exposing (symbolToString)
 import Eos.Account exposing (nameToString)
 import Graphql.Http
-import Html exposing (Html, button, div, form, img, input, label, option, p, select, span, text)
-import Html.Attributes exposing (attribute, class, maxlength, placeholder, selected, src, type_, value)
-import Html.Events exposing (onClick, onInput, onSubmit)
+import Html exposing (Html, button, div, img, p, span, text)
+import Html.Attributes exposing (class, src)
+import Html.Events exposing (onClick)
 import Http
-import Kyc exposing (ProfileKyc)
-import Kyc.CostaRica.CedulaDeIdentidad as CedulaDeIdentidad
-import Kyc.CostaRica.Dimex as Dimex
-import Kyc.CostaRica.Nite as Nite
-import Kyc.CostaRica.Phone as Phone
 import Page exposing (Session(..), toShared)
 import Profile exposing (Profile)
 import Profile.EditKycForm as KycForm
@@ -29,7 +24,6 @@ import Route
 import Session.LoggedIn as LoggedIn exposing (External(..), FeedbackStatus(..))
 import Session.Shared exposing (Translators)
 import UpdateResult as UR
-import Validate exposing (Validator, ifBlank, validate)
 import View.Modal as Modal
 
 

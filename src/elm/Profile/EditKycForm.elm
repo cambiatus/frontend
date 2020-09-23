@@ -22,11 +22,9 @@ import Kyc.CostaRica.CedulaDeIdentidad as CedulaDeIdentidad
 import Kyc.CostaRica.Dimex as Dimex
 import Kyc.CostaRica.Nite as Nite
 import Kyc.CostaRica.Phone as Phone
-import Page exposing (Session(..))
 import Profile
 import Session.LoggedIn as LoggedIn exposing (External(..), FeedbackStatus(..))
 import Session.Shared exposing (Translators)
-import UpdateResult as UR
 import Validate exposing (Validator, ifBlank, validate)
 
 
@@ -213,10 +211,6 @@ view { t } ({ document, documentNumber, phoneNumber, validationErrors } as kycFo
                 ]
             ]
         ]
-
-
-type alias UpdateResult =
-    UR.UpdateResult Model Msg (External Msg)
 
 
 update : Model -> Msg -> Model
