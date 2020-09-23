@@ -61,8 +61,8 @@ type alias Model =
     }
 
 
-kycValidator : (String -> Bool) -> Validator ( KycFormField, String ) Model
-kycValidator documentValidator =
+kycValidator : Translators -> (String -> Bool) -> Validator ( KycFormField, String ) Model
+kycValidator { t } documentValidator =
     let
         ifInvalidNumber subjectToString error =
             Validate.ifFalse (\subject -> documentValidator (subjectToString subject)) error
@@ -72,19 +72,19 @@ kycValidator documentValidator =
     in
     Validate.all
         [ Validate.firstError
-            [ ifBlank .documentNumber ( DocumentNumber, "Please, enter a document number." )
-            , ifInvalidNumber .documentNumber ( DocumentNumber, "Please, use a valid document number." )
+            [ ifBlank .documentNumber ( DocumentNumber, t "error.required" )
+            , ifInvalidNumber .documentNumber ( DocumentNumber, t "register.form.document.errorInvalid" )
             ]
         , Validate.firstError
-            [ ifBlank .phoneNumber ( PhoneNumber, "Please, enter a phone number." )
-            , ifInvalidPhoneNumber .phoneNumber ( PhoneNumber, "Please, use a valid phone number." )
+            [ ifBlank .phoneNumber ( PhoneNumber, t "error.required" )
+            , ifInvalidPhoneNumber .phoneNumber ( PhoneNumber, t "error.phone" )
             ]
         ]
 
 
-init : Model
-init =
-    { document = valToDoc "Cedula"
+init : Translators -> Model
+init translators =
+    { document = valToDoc translators "Cedula"
     , documentNumber = ""
     , phoneNumber = ""
     , validationErrors = []
@@ -92,34 +92,34 @@ init =
     }
 
 
-valToDoc : String -> Doc
-valToDoc v =
+valToDoc : Translators -> String -> Doc
+valToDoc { t } v =
     case v of
         "DIMEX" ->
             { docType = DimexDoc
             , isValid = Dimex.isValid
-            , title = "DIMEX Number"
+            , title = t "register.form.document.dimex.label"
             , value = "dimex"
             , maxLength = 12
-            , pattern = "XXXXXXXXXXX or XXXXXXXXXXXX"
+            , pattern = t "register.form.document.dimex.placeholder"
             }
 
         "NITE" ->
             { docType = NiteDoc
             , isValid = Nite.isValid
-            , title = "NITE Number"
+            , title = t "register.form.document.nite.label"
             , value = "nite"
             , maxLength = 10
-            , pattern = "XXXXXXXXXX"
+            , pattern = t "register.form.document.nite.placeholder"
             }
 
         _ ->
             { docType = CedulaDoc
             , isValid = CedulaDeIdentidad.isValid
-            , title = "Cédula de identidad"
+            , title = t "register.form.document.cedula_de_identidad.label"
             , value = "cedula_de_identidad"
             , maxLength = 11
-            , pattern = "X-XXXX-XXXX"
+            , pattern = t "register.form.document.cedula_de_identidad.placeholder"
             }
 
 
@@ -153,17 +153,17 @@ view { t } ({ document, documentNumber, phoneNumber, validationErrors } as kycFo
                         [ value "Cedula"
                         , selected (docType == CedulaDoc)
                         ]
-                        [ text "Cedula de identidad" ]
+                        [ text (t "register.form.document.cedula_de_identidad.label") ]
                     , option
                         [ value "DIMEX"
                         , selected (docType == DimexDoc)
                         ]
-                        [ text "DIMEX number" ]
+                        [ text (t "register.form.document.dimex.label") ]
                     , option
                         [ value "NITE"
                         , selected (docType == NiteDoc)
                         ]
-                        [ text "NITE number" ]
+                        [ text (t "register.form.document.nite.label") ]
                     ]
                 ]
             , div [ class "form-field mb-6" ]
@@ -183,14 +183,14 @@ view { t } ({ document, documentNumber, phoneNumber, validationErrors } as kycFo
                 ]
             , div [ class "form-field mb-10" ]
                 [ label [ class "input-label block" ]
-                    [ text "phone number" ]
+                    [ text (t "register.form.phone.label") ]
                 , input
                     [ type_ "tel"
                     , class "form-input"
                     , value phoneNumber
                     , onInput PhoneNumberEntered
-                    , maxlength 9
-                    , placeholder "XXXX-XXXX"
+                    , maxlength 8
+                    , placeholder (t "register.form.phone.placeholder")
                     ]
                     []
                 , showProblem PhoneNumber
@@ -204,12 +204,16 @@ view { t } ({ document, documentNumber, phoneNumber, validationErrors } as kycFo
         ]
 
 
-update : Model -> Msg -> Model
-update model msg =
+update : Translators -> Model -> Msg -> Model
+update translators model msg =
+    let
+        { t } =
+            translators
+    in
     case msg of
         DocumentTypeChanged val ->
             { model
-                | document = valToDoc val
+                | document = valToDoc translators val
                 , documentNumber = ""
                 , validationErrors = []
             }
@@ -247,7 +251,7 @@ update model msg =
         Submitted m ->
             let
                 formValidator =
-                    kycValidator m.document.isValid
+                    kycValidator translators m.document.isValid
 
                 errors =
                     case validate formValidator m of
@@ -265,7 +269,7 @@ update model msg =
         Saved (Err _) ->
             let
                 errorForm =
-                    { model | serverError = Just "Sorry, couldn't save the form. Please, check your data and try again." }
+                    { model | serverError = Just (t "error.unknown") }
             in
             errorForm
 

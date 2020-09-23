@@ -28,8 +28,8 @@ type alias Model =
 
 
 init : LoggedIn.Model -> ( Model, Cmd Msg )
-init _ =
-    ( { kycForm = KycForm.init }
+init loggedIn =
+    ( { kycForm = KycForm.init loggedIn.shared.translators }
     , Cmd.none
     )
 
@@ -56,7 +56,13 @@ update msg model loggedIn =
         FormMsg kycFormMsg ->
             let
                 newModel =
-                    { model | kycForm = KycForm.update model.kycForm kycFormMsg }
+                    { model
+                        | kycForm =
+                            KycForm.update
+                                loggedIn.shared.translators
+                                model.kycForm
+                                kycFormMsg
+                    }
             in
             case kycFormMsg of
                 KycForm.Submitted _ ->
@@ -94,7 +100,7 @@ update msg model loggedIn =
                                 |> UR.addExt
                                     (ShowFeedback
                                         Success
-                                        (t "KYC were saved. Now you have full access to the community!")
+                                        (t "community.kyc.edit.success")
                                     )
 
                 _ ->
@@ -114,7 +120,7 @@ view loggedIn model =
                 model.kycForm
                 |> Html.map FormMsg
     in
-    { title = "Edit KYC page"
+    { title = "community.kyc.edit.title"
     , content = content
     }
 

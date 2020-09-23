@@ -150,14 +150,16 @@ view session model =
                 KycInfo invite ->
                     let
                         formData =
-                            Maybe.withDefault KycForm.init model.kycForm
+                            Maybe.withDefault
+                                (KycForm.init shared.translators)
+                                model.kycForm
 
                         inner =
                             div [ class "md:max-w-sm md:mx-auto my-6" ]
                                 [ p []
-                                    [ text "This community requires its members to have some more information. Please, fill these fields below." ]
+                                    [ text (t "community.invite.kycRequired") ]
                                 , p [ class "mt-2 mb-6" ]
-                                    [ text "You can always remove this information from your profile if you decide to do so." ]
+                                    [ text (t "community.kyc.edit.canRemove") ]
                                 , KycForm.view shared.translators formData
                                     |> Html.map FormMsg
                                 ]
@@ -310,16 +312,19 @@ update session msg model =
             case session of
                 LoggedIn loggedIn ->
                     let
-                        { t } =
-                            loggedIn.shared.translators
-
                         newForm =
                             case model.kycForm of
                                 Just f ->
-                                    KycForm.update f kycFormMsg
+                                    KycForm.update
+                                        loggedIn.shared.translators
+                                        f
+                                        kycFormMsg
 
                                 Nothing ->
-                                    KycForm.update KycForm.init kycFormMsg
+                                    KycForm.update
+                                        loggedIn.shared.translators
+                                        (KycForm.init loggedIn.shared.translators)
+                                        kycFormMsg
 
                         newModel =
                             { model | kycForm = Just newForm }
@@ -512,10 +517,10 @@ msgToString msg =
             [ "CloseConfirmationModal" ]
 
         InvitationRejected ->
-            [ "RejectInvitation" ]
+            [ "InvitationRejected" ]
 
         InvitationAccepted _ _ ->
-            [ "AcceptInvitation" ]
+            [ "InvitationAccepted" ]
 
         FormMsg _ ->
             [ "FormMsg" ]
