@@ -67,7 +67,6 @@ const PUSH_PREF = 'bespiral.push.pref'
 const SELECTED_COMMUNITY_KEY = 'bespiral.selected_community'
 const env = process.env.NODE_ENV || 'development'
 const config = configuration[env]
-console.log(flags())
 
 function getUserLanguage () {
   const urlParams = new URLSearchParams(window.location.search)
