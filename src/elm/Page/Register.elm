@@ -554,11 +554,6 @@ pdfData keys =
     }
 
 
-dummyCountry : Address.Country
-dummyCountry =
-    { id = Id "1", name = "Costa Rica", states = [] }
-
-
 
 -- UPDATE
 
@@ -594,7 +589,7 @@ type EitherFormMsg
 type Status
     = LoadedInvite Invite
     | LoadedCountry Address.Country
-    | LoadedAll Invite Address.Country
+    | LoadedAll Invite (Maybe Address.Country)
     | Loading
     | FailedInvite (Graphql.Http.Error (Maybe Invite))
     | FailedCountry (Graphql.Http.Error (Maybe Address.Country))
@@ -739,7 +734,7 @@ update maybeInvitation msg model guest =
                                         }
                                     )
 
-                            ( JuridicalAccount, LoadedAll _ country, Natural form ) ->
+                            ( JuridicalAccount, LoadedAll _ (Just country), Natural form ) ->
                                 Juridical
                                     (JuridicalForm.init
                                         { account = Just form.account
@@ -759,7 +754,7 @@ update maybeInvitation msg model guest =
                                         }
                                     )
 
-                            ( JuridicalAccount, LoadedAll _ country, _ ) ->
+                            ( JuridicalAccount, LoadedAll _ (Just country), _ ) ->
                                 Juridical
                                     (JuridicalForm.init
                                         { account = Nothing
@@ -931,7 +926,7 @@ update maybeInvitation msg model guest =
                 newStatus =
                     case model.status of
                         LoadedCountry country ->
-                            LoadedAll invitation country
+                            LoadedAll invitation (Just country)
 
                         NotFound ->
                             NotFound
@@ -944,7 +939,7 @@ update maybeInvitation msg model guest =
                                 LoadedInvite invitation
 
                             else
-                                LoadedAll invitation dummyCountry
+                                LoadedAll invitation Nothing
             in
             { model
                 | status = newStatus
@@ -980,7 +975,7 @@ update maybeInvitation msg model guest =
                 | status =
                     case model.status of
                         LoadedInvite invitation ->
-                            LoadedAll invitation country
+                            LoadedAll invitation (Just country)
 
                         FailedInvite err ->
                             FailedInvite err
