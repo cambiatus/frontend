@@ -98,10 +98,10 @@ type alias KycForm =
 
 
 kycValidator : (String -> Bool) -> Validator ( KycFormField, String ) KycForm
-kycValidator isValid =
+kycValidator validateDocument =
     let
         ifInvalidNumber subjectToString error =
-            Validate.ifFalse (\subject -> isValid (subjectToString subject)) error
+            Validate.ifFalse (\subject -> validateDocument (subjectToString subject)) error
 
         ifInvalidPhoneNumber subjectToString error =
             Validate.ifFalse (\subject -> Phone.isValid (subjectToString subject)) error
@@ -282,7 +282,7 @@ viewKycForm { t } ({ document, documentNumber, phoneNumber, problems, serverErro
     in
     div [ class "md:max-w-sm md:mx-auto mt-6" ]
         [ p []
-            [ text "This community requires it's members to have some more information. Please, fill these fields below." ]
+            [ text "This community requires its members to have some more information. Please, fill these fields below." ]
         , p [ class "mt-2 mb-6" ]
             [ text "You can always remove this information from your profile if you decide to do so." ]
         , form
@@ -545,8 +545,11 @@ update session msg model =
     case msg of
         KycFormSubmitted form ->
             let
+                formValidator =
+                    kycValidator form.document.isValid
+
                 errors =
-                    case validate (kycValidator form.document.isValid) form of
+                    case validate formValidator form of
                         Ok _ ->
                             []
 
