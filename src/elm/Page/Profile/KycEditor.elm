@@ -20,23 +20,30 @@ import UpdateResult as UR
 
 
 
--- INIT
-
-
-type Msg
-    = NoOp
-    | FormMsg KycForm.Msg
+-- MODEL
 
 
 type alias Model =
     { kycForm : KycForm.Model }
 
 
-init : LoggedIn.Model -> ( Model, Cmd Msg )
-init loggedIn =
+
+-- INIT
+
+
+init : ( Model, Cmd Msg )
+init =
     ( { kycForm = KycForm.initKycForm }
     , Cmd.none
     )
+
+
+
+-- UPDATE
+
+
+type Msg
+    = FormMsg KycForm.Msg
 
 
 type alias UpdateResult =
@@ -45,10 +52,11 @@ type alias UpdateResult =
 
 update : Msg -> Model -> LoggedIn.Model -> UpdateResult
 update msg model loggedIn =
+    let
+        { t } =
+            loggedIn.shared.translators
+    in
     case msg of
-        NoOp ->
-            model |> UR.init
-
         FormMsg kycFormMsg ->
             let
                 newModel =
@@ -56,17 +64,16 @@ update msg model loggedIn =
             in
             case kycFormMsg of
                 KycForm.Submitted _ ->
-                    if List.isEmpty newModel.kycForm.validationErrors then
+                    let
+                        isFormValid =
+                            List.isEmpty newModel.kycForm.validationErrors
+                    in
+                    if isFormValid then
                         newModel
                             |> UR.init
                             |> UR.addCmd
                                 (KycForm.saveKycData loggedIn
-                                    { documentType = newModel.kycForm.document.value
-                                    , document = newModel.kycForm.documentNumber
-                                    , userType = "natural"
-                                    , phone = newModel.kycForm.phoneNumber
-                                    , isVerified = False
-                                    }
+                                    newModel.kycForm
                                     |> Cmd.map FormMsg
                                 )
 
@@ -75,11 +82,12 @@ update msg model loggedIn =
                             |> UR.init
 
                 KycForm.Saved _ ->
-                    let
-                        { t } =
-                            loggedIn.shared.translators
-                    in
                     case newModel.kycForm.serverError of
+                        Just error ->
+                            newModel
+                                |> UR.init
+                                |> UR.addExt (ShowFeedback Failure error)
+
                         Nothing ->
                             model
                                 |> UR.init
@@ -93,13 +101,12 @@ update msg model loggedIn =
                                         (t "KYC were saved. Now you have full access to the community!")
                                     )
 
-                        Just error ->
-                            newModel
-                                |> UR.init
-                                |> UR.addExt (ShowFeedback Failure error)
-
                 _ ->
                     newModel |> UR.init
+
+
+
+-- VIEW
 
 
 view : LoggedIn.Model -> Model -> { title : String, content : Html Msg }
@@ -116,11 +123,12 @@ view loggedIn model =
     }
 
 
+
+-- INTEROP
+
+
 msgToString : Msg -> List String
 msgToString msg =
     case msg of
-        NoOp ->
-            [ "NoOp" ]
-
         FormMsg _ ->
             [ "FormMsg" ]

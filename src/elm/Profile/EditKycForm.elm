@@ -259,39 +259,48 @@ update model msg =
         PhoneNumberEntered p ->
             { model | phoneNumber = p }
 
-        Submitted form ->
+        Submitted m ->
             let
                 formValidator =
-                    kycValidator form.document.isValid
+                    kycValidator m.document.isValid
 
                 errors =
-                    case validate formValidator form of
+                    case validate formValidator m of
                         Ok _ ->
                             []
 
                         Err errs ->
                             errs
-
-                newForm =
-                    { form | validationErrors = errors }
             in
-            newForm
+            { m | validationErrors = errors }
 
-        Saved resp ->
-            case resp of
-                Ok _ ->
-                    model
+        Saved (Ok _) ->
+            model
 
-                Err err ->
-                    let
-                        errorForm =
-                            { model | serverError = Just "Sorry, couldn't save the form. Please, check your data and try again." }
-                    in
-                    errorForm
+        Saved (Err _) ->
+            let
+                errorForm =
+                    { model | serverError = Just "Sorry, couldn't save the form. Please, check your data and try again." }
+            in
+            errorForm
 
 
-saveKycData : LoggedIn.Model -> ProfileKyc -> Cmd Msg
-saveKycData { accountName, shared } data =
+modelToProfileKyc : Model -> ProfileKyc
+modelToProfileKyc model =
+    { documentType = model.document.value
+    , document = model.documentNumber
+    , userType = "natural"
+    , phone = model.phoneNumber
+    , isVerified = False
+    }
+
+
+saveKycData : LoggedIn.Model -> Model -> Cmd Msg
+saveKycData { accountName, shared } model =
+    let
+        data =
+            modelToProfileKyc model
+    in
     Api.Graphql.mutation shared
         (Profile.upsertKycMutation accountName data)
         Saved
