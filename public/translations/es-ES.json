@@ -205,7 +205,8 @@
           "label": "Número nite",
           "placeholder": "Ingrese los 10 dígitos",
           "maximum": "10"
-        }
+        },
+        "errorInvalid": "Por favor, utilice un número de documento válido."
       },
       "types": {
         "natural": "Persona Natural",
@@ -361,7 +362,8 @@
       "succeed": "Invitación exitosa",
       "failed": "Invitación fallida",
       "copy": "Copiar",
-      "copied": "Copiado!"
+      "copied": "Copiado!",
+      "kycRequired": "Esta comunidad requiere que sus miembros tengan más información. Por favor, complete estos campos a continuación."
     },
     "invitation": {
       "title": "Te invitó a ser parte de la comunidad",
@@ -495,6 +497,11 @@
         "confirm": "Si",
         "cancel": "No",
         "success": "Sus datos KYC se eliminaron con éxito."
+      },
+      "edit": {
+        "title": "Editar datos KYC",
+        "canRemove": "Siempre puede eliminar esta información de su perfil si decide hacerlo.",
+        "success": "Sus datos KYC se guardaron correctamente."
       }
     }
   },

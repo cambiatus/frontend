@@ -210,7 +210,8 @@
           "label": "número nite",
           "placeholder": "introduïu els 10 dígits",
           "maximum": "10"
-        }
+        },
+        "errorInvalid": "Utilitzeu un número de document vàlid."
       },
       "types": {
         "natural": "Persona Física",
@@ -361,7 +362,8 @@
       "succeed": "Invitació exitosa",
       "failed": "Invitació fallida",
       "copy": "Còpia",
-      "copied": "Copiat!"
+      "copied": "Copiat!",
+      "kycRequired": "Aquesta comunitat requereix que els seus membres tinguin més informació. Empleneu aquests camps a continuació."
     },
     "invitation": {
       "title": "Et va convidar a formar part de la comunitat",
@@ -495,6 +497,11 @@
         "confirm": "Sí",
         "cancel": "No",
         "success": "Les vostres dades KYC s'han suprimit correctament."
+      },
+      "edit": {
+        "title": "Editeu les dades de KYC",
+        "canRemove": "Sempre podeu eliminar aquesta informació del vostre perfil si ho decidiu.",
+        "success": "Les vostres dades KYC s'han desat correctament."
       }
     }
   },
