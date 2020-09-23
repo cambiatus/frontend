@@ -1,14 +1,9 @@
 module Profile.EditKycForm exposing
-    ( CostaRicaDoc(..)
-    , Doc
-    , KycFormField(..)
-    , Model
+    ( Model
     , Msg(..)
     , init
-    , kycValidator
     , saveKycData
     , update
-    , valToDoc
     , view
     )
 
@@ -67,10 +62,10 @@ type alias Model =
 
 
 kycValidator : (String -> Bool) -> Validator ( KycFormField, String ) Model
-kycValidator isValid =
+kycValidator documentValidator =
     let
         ifInvalidNumber subjectToString error =
-            Validate.ifFalse (\subject -> isValid (subjectToString subject)) error
+            Validate.ifFalse (\subject -> documentValidator (subjectToString subject)) error
 
         ifInvalidPhoneNumber subjectToString error =
             Validate.ifFalse (\subject -> Phone.isValid (subjectToString subject)) error
