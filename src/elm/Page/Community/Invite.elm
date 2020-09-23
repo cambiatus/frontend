@@ -151,7 +151,7 @@ view session model =
                     let
                         formData =
                             Maybe.withDefault
-                                (KycForm.init shared.translators)
+                                KycForm.init
                                 model.kycForm
 
                         inner =
@@ -323,7 +323,7 @@ update session msg model =
                                 Nothing ->
                                     KycForm.update
                                         loggedIn.shared.translators
-                                        (KycForm.init loggedIn.shared.translators)
+                                        KycForm.init
                                         kycFormMsg
 
                         newModel =

@@ -196,6 +196,7 @@
         "placeholder": ""
       },
       "document": {
+        "type": "Tipus de Document",
         "cedula_de_identidad": {
           "label": "número de la Seguretat Social",
           "placeholder": "introduïu els 9 dígits",
@@ -203,8 +204,8 @@
         },
         "dimex": {
           "label": "número dimex",
-          "placeholder": "introduïu els 13 dígits",
-          "maximum": "13"
+          "placeholder": "Introduïu els 11 o 12 dígits",
+          "maximum": "12"
         },
         "nite": {
           "label": "número nite",

@@ -43,7 +43,7 @@ type alias Doc =
     , title : String
     , value : String
     , maxLength : Int
-    , pattern : String
+    , placeholderText : String
     }
 
 
@@ -82,9 +82,9 @@ kycValidator { t } documentValidator =
         ]
 
 
-init : Translators -> Model
-init translators =
-    { document = valToDoc translators "Cedula"
+init : Model
+init =
+    { document = valToDoc "Cedula"
     , documentNumber = ""
     , phoneNumber = ""
     , validationErrors = []
@@ -92,41 +92,41 @@ init translators =
     }
 
 
-valToDoc : Translators -> String -> Doc
-valToDoc { t } v =
+valToDoc : String -> Doc
+valToDoc v =
     case v of
         "DIMEX" ->
             { docType = DimexDoc
             , isValid = Dimex.isValid
-            , title = t "register.form.document.dimex.label"
+            , title = "register.form.document.dimex.label"
             , value = "dimex"
             , maxLength = 12
-            , pattern = t "register.form.document.dimex.placeholder"
+            , placeholderText = "register.form.document.dimex.placeholder"
             }
 
         "NITE" ->
             { docType = NiteDoc
             , isValid = Nite.isValid
-            , title = t "register.form.document.nite.label"
+            , title = "register.form.document.nite.label"
             , value = "nite"
             , maxLength = 10
-            , pattern = t "register.form.document.nite.placeholder"
+            , placeholderText = "register.form.document.nite.placeholder"
             }
 
         _ ->
             { docType = CedulaDoc
             , isValid = CedulaDeIdentidad.isValid
-            , title = t "register.form.document.cedula_de_identidad.label"
+            , title = "register.form.document.cedula_de_identidad.label"
             , value = "cedula_de_identidad"
             , maxLength = 11
-            , pattern = t "register.form.document.cedula_de_identidad.placeholder"
+            , placeholderText = "register.form.document.cedula_de_identidad.placeholder"
             }
 
 
 view : Translators -> Model -> Html Msg
 view { t } ({ document, documentNumber, phoneNumber, validationErrors } as kycForm) =
     let
-        { docType, pattern, maxLength, isValid, title } =
+        { docType, placeholderText, maxLength, isValid, title } =
             document
 
         showProblem field =
@@ -138,12 +138,12 @@ view { t } ({ document, documentNumber, phoneNumber, validationErrors } as kycFo
                 [] ->
                     text ""
     in
-    div [ class "md:max-w-sm md:mx-auto my-6" ]
+    div [ class "md:max-w-sm md:mx-auto py-6" ]
         [ form
             [ onSubmit (Submitted kycForm) ]
             [ div [ class "form-field mb-6" ]
                 [ label [ class "input-label block" ]
-                    [ text "document type"
+                    [ text (t "register.form.document.type")
                     ]
                 , select
                     [ onInput DocumentTypeChanged
@@ -168,7 +168,7 @@ view { t } ({ document, documentNumber, phoneNumber, validationErrors } as kycFo
                 ]
             , div [ class "form-field mb-6" ]
                 [ label [ class "input-label block" ]
-                    [ text title ]
+                    [ text (t title) ]
                 , input
                     [ type_ "text"
                     , class "form-input"
@@ -176,7 +176,7 @@ view { t } ({ document, documentNumber, phoneNumber, validationErrors } as kycFo
                     , onInput DocumentNumberEntered
                     , value documentNumber
                     , maxlength maxLength
-                    , placeholder pattern
+                    , placeholder (t placeholderText)
                     ]
                     []
                 , showProblem DocumentNumber
@@ -213,7 +213,7 @@ update translators model msg =
     case msg of
         DocumentTypeChanged val ->
             { model
-                | document = valToDoc translators val
+                | document = valToDoc val
                 , documentNumber = ""
                 , validationErrors = []
             }

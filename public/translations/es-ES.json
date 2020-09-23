@@ -191,6 +191,7 @@
         "placeholder": ""
       },
       "document": {
+        "type": "Tipo de Documento",
         "cedula_de_identidad": {
           "label": "Número de cédula de identidad",
           "placeholder": "Ingrese los 9 dígitos",
@@ -198,8 +199,8 @@
         },
         "dimex": {
           "label": "Número dimex",
-          "placeholder": "Ingrese los 13 dígitos",
-          "maximum": "13"
+          "placeholder": "Ingrese los 11 o 12 dígitos",
+          "maximum": "12"
         },
         "nite": {
           "label": "Número nite",

@@ -8,7 +8,9 @@ module Page.Profile.KycEditor exposing
     , view
     )
 
-import Html exposing (Html)
+import Html exposing (Html, div)
+import Html.Attributes exposing (class)
+import Page
 import Profile.EditKycForm as KycForm
 import Route
 import Session.LoggedIn as LoggedIn exposing (External(..), FeedbackStatus(..))
@@ -28,8 +30,8 @@ type alias Model =
 
 
 init : LoggedIn.Model -> ( Model, Cmd Msg )
-init loggedIn =
-    ( { kycForm = KycForm.init loggedIn.shared.translators }
+init _ =
+    ( { kycForm = KycForm.init }
     , Cmd.none
     )
 
@@ -114,11 +116,19 @@ update msg model loggedIn =
 view : LoggedIn.Model -> Model -> { title : String, content : Html Msg }
 view loggedIn model =
     let
+        { t } =
+            loggedIn.shared.translators
+
         content =
-            KycForm.view
-                loggedIn.shared.translators
-                model.kycForm
-                |> Html.map FormMsg
+            div [ class "bg-white" ]
+                [ Page.viewHeader loggedIn (t "community.kyc.edit.title") Route.Profile
+                , div [ class "px-4" ]
+                    [ KycForm.view
+                        loggedIn.shared.translators
+                        model.kycForm
+                        |> Html.map FormMsg
+                    ]
+                ]
     in
     { title = "community.kyc.edit.title"
     , content = content

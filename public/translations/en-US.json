@@ -191,6 +191,7 @@
         "placeholder": ""
       },
       "document": {
+        "type": "Document Type",
         "cedula_de_identidad": {
           "label": "Social Security Number",
           "placeholder": "Enter the 9 digits",
@@ -198,8 +199,8 @@
         },
         "dimex": {
           "label": "Dimex Number",
-          "placeholder": "Enter the 13 digits",
-          "maximum": "13"
+          "placeholder": "Enter the 11 or 12 digits",
+          "maximum": "12"
         },
         "nite": {
           "label": "Nite Number",
