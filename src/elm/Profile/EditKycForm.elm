@@ -33,8 +33,7 @@ type Msg
     = DocumentTypeChanged String
     | DocumentNumberEntered String
     | PhoneNumberEntered String
-    | KycFormValidated Model
-    | KycDataSaved (Result (Graphql.Http.Error (Maybe ProfileKyc)) (Maybe ProfileKyc))
+    | KycFormSubmitted Model
 
 
 type CostaRicaDoc
@@ -150,7 +149,7 @@ view { t } ({ document, documentNumber, phoneNumber, problems, serverError } as 
         , p [ class "mt-2 mb-6" ]
             [ text "You can always remove this information from your profile if you decide to do so." ]
         , form
-            [ onSubmit (KycFormValidated kycForm) ]
+            [ onSubmit (KycFormSubmitted kycForm) ]
             [ div [ class "form-field mb-6" ]
                 [ case serverError of
                     Just e ->
@@ -264,7 +263,7 @@ update model msg =
         PhoneNumberEntered p ->
             { model | phoneNumber = p }
 
-        KycFormValidated form ->
+        KycFormSubmitted form ->
             let
                 errors =
                     case validate (kycValidator form.document.isValid) form of
@@ -278,22 +277,3 @@ update model msg =
                     { form | problems = errors }
             in
             newForm
-
-        KycDataSaved resp ->
-            let
-                _ =
-                    Debug.log "data saved" resp
-            in
-            case resp of
-                Ok _ ->
-                    model
-
-                Err err ->
-                    { model | serverError = Just "Sorry, couldn't save the form. Please, check your data and try again." }
-
-
-saveKycData : LoggedIn.Model -> ProfileKyc -> Cmd Msg
-saveKycData { accountName, shared } data =
-    Api.Graphql.mutation shared
-        (Profile.upsertKycMutation accountName data)
-        KycDataSaved

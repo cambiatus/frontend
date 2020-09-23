@@ -8,10 +8,13 @@ module Page.Profile.KycEditor exposing
     , view
     )
 
+import Api.Graphql
 import Graphql.Http
 import Html exposing (Html, p)
 import Kyc exposing (ProfileKyc)
+import Profile
 import Profile.EditKycForm as KycForm
+import Route
 import Session.LoggedIn as LoggedIn exposing (External(..), FeedbackStatus(..))
 import UpdateResult as UR
 
@@ -48,12 +51,58 @@ update msg model loggedIn =
             model |> UR.init
 
         FormMsg kycFormMsg ->
-            { model | kycForm = KycForm.update model.kycForm kycFormMsg }
-                |> UR.init
+            case kycFormMsg of
+                KycForm.KycFormSubmitted f ->
+                    let
+                        newModel =
+                            { model | kycForm = KycForm.update model.kycForm kycFormMsg }
+                    in
+                    if List.isEmpty newModel.kycForm.problems then
+                        newModel
+                            |> UR.init
+                            |> UR.addCmd
+                                (saveKycData loggedIn
+                                    { documentType = newModel.kycForm.document.value
+                                    , document = newModel.kycForm.documentNumber
+                                    , userType = "natural"
+                                    , phone = newModel.kycForm.phoneNumber
+                                    , isVerified = False
+                                    }
+                                )
+
+                    else
+                        newModel
+                            |> UR.init
+
+                _ ->
+                    { model | kycForm = KycForm.update model.kycForm kycFormMsg }
+                        |> UR.init
 
         KycDataSaved resp ->
-            model
-                |> UR.init
+            let
+                { t } =
+                    loggedIn.shared.translators
+            in
+            case resp of
+                Ok _ ->
+                    model
+                        |> UR.init
+                        |> UR.addCmd
+                            (Route.Profile
+                                |> Route.replaceUrl loggedIn.shared.navKey
+                            )
+                        |> UR.addExt (ShowFeedback Success (t "KYC were saved. Now you have full access to the community!"))
+
+                Err err ->
+                    let
+                        f =
+                            model.kycForm
+
+                        errorForm =
+                            { f | serverError = Just "Sorry, couldn't save the form. Please, check your data and try again." }
+                    in
+                    { model | kycForm = errorForm }
+                        |> UR.init
 
 
 view : LoggedIn.Model -> Model -> { title : String, content : Html Msg }
@@ -81,3 +130,10 @@ msgToString msg =
 
         KycDataSaved _ ->
             [ "KycDataSaved" ]
+
+
+saveKycData : LoggedIn.Model -> ProfileKyc -> Cmd Msg
+saveKycData { accountName, shared } data =
+    Api.Graphql.mutation shared
+        (Profile.upsertKycMutation accountName data)
+        KycDataSaved
