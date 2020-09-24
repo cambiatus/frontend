@@ -84,7 +84,7 @@ kycValidator { t } documentValidator =
 
 init : Model
 init =
-    { document = valToDoc "Cedula"
+    { document = valToDoc "cedula_de_identidad"
     , documentNumber = ""
     , phoneNumber = ""
     , validationErrors = []
@@ -150,7 +150,7 @@ view { t } ({ document, documentNumber, phoneNumber, validationErrors } as kycFo
                     , class "form-select"
                     ]
                     [ option
-                        [ value "Cedula"
+                        [ value "cedula_de_identidad"
                         , selected (docType == CedulaDoc)
                         ]
                         [ text (t "register.form.document.cedula_de_identidad.label") ]
