@@ -124,13 +124,20 @@ valToDoc v =
 
 
 view : Translators -> Model -> Html Msg
-view { t } ({ document, documentNumber, phoneNumber, validationErrors } as kycForm) =
+view { t } model =
     let
+        { document, documentNumber, phoneNumber, validationErrors } =
+            model
+
         { docType, placeholderText, maxLength, isValid, title } =
             document
 
         showProblem field =
-            case List.filter (\( f, _ ) -> f == field) validationErrors of
+            let
+                isFieldError ( fieldWithError, _ ) =
+                    fieldWithError == field
+            in
+            case List.filter isFieldError validationErrors of
                 h :: _ ->
                     div [ class "form-error" ]
                         [ text (Tuple.second h) ]
@@ -140,7 +147,7 @@ view { t } ({ document, documentNumber, phoneNumber, validationErrors } as kycFo
     in
     div [ class "md:max-w-sm md:mx-auto py-6" ]
         [ form
-            [ onSubmit (Submitted kycForm) ]
+            [ onSubmit (Submitted model) ]
             [ div [ class "form-field mb-6" ]
                 [ label [ class "input-label block" ]
                     [ text (t "register.form.document.type")
