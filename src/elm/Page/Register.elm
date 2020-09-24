@@ -39,10 +39,7 @@ queries : Maybe String -> Shared -> Cmd Msg
 queries maybeInvitationId shared =
     case maybeInvitationId of
         Just invitation ->
-            Cmd.batch
-                [ Api.Graphql.query shared (Community.inviteQuery invitation) CompletedLoadInvite
-                , Api.Graphql.query shared (Address.countryQuery "Costa Rica") CompletedLoadCountry
-                ]
+            Api.Graphql.query shared (Community.inviteQuery invitation) CompletedLoadInvite
 
         Nothing ->
             Cmd.none
@@ -592,7 +589,7 @@ type EitherFormMsg
 type Status
     = LoadedInvite Invite
     | LoadedCountry Address.Country
-    | LoadedAll Invite Address.Country
+    | LoadedAll Invite (Maybe Address.Country)
     | Loading
     | FailedInvite (Graphql.Http.Error (Maybe Invite))
     | FailedCountry (Graphql.Http.Error (Maybe Address.Country))
@@ -737,7 +734,7 @@ update maybeInvitation msg model guest =
                                         }
                                     )
 
-                            ( JuridicalAccount, LoadedAll _ country, Natural form ) ->
+                            ( JuridicalAccount, LoadedAll _ (Just country), Natural form ) ->
                                 Juridical
                                     (JuridicalForm.init
                                         { account = Just form.account
@@ -757,7 +754,7 @@ update maybeInvitation msg model guest =
                                         }
                                     )
 
-                            ( JuridicalAccount, LoadedAll _ country, _ ) ->
+                            ( JuridicalAccount, LoadedAll _ (Just country), _ ) ->
                                 Juridical
                                     (JuridicalForm.init
                                         { account = Nothing
@@ -929,7 +926,7 @@ update maybeInvitation msg model guest =
                 newStatus =
                     case model.status of
                         LoadedCountry country ->
-                            LoadedAll invitation country
+                            LoadedAll invitation (Just country)
 
                         NotFound ->
                             NotFound
@@ -938,18 +935,29 @@ update maybeInvitation msg model guest =
                             FailedCountry err
 
                         _ ->
-                            LoadedInvite invitation
-            in
-            UR.init
-                { model
-                    | status = newStatus
-                    , selectedForm =
-                        if invitation.community.hasKyc == True then
-                            None
+                            if invitation.community.hasKyc then
+                                LoadedInvite invitation
 
-                        else
-                            Default DefaultForm.init
-                }
+                            else
+                                LoadedAll invitation Nothing
+            in
+            { model
+                | status = newStatus
+                , selectedForm =
+                    if invitation.community.hasKyc == True then
+                        None
+
+                    else
+                        Default DefaultForm.init
+            }
+                |> UR.init
+                |> UR.addCmd
+                    (if invitation.community.hasKyc then
+                        Api.Graphql.query guest.shared (Address.countryQuery "Costa Rica") CompletedLoadCountry
+
+                     else
+                        Cmd.none
+                    )
 
         CompletedLoadInvite (Ok Nothing) ->
             UR.init { model | status = NotFound }
@@ -967,7 +975,7 @@ update maybeInvitation msg model guest =
                 | status =
                     case model.status of
                         LoadedInvite invitation ->
-                            LoadedAll invitation country
+                            LoadedAll invitation (Just country)
 
                         FailedInvite err ->
                             FailedInvite err
