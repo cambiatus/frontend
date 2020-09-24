@@ -209,7 +209,21 @@ viewSettings loggedIn model profile =
                         )
 
                 Nothing ->
-                    text ""
+                    viewProfileItem
+                        (span []
+                            [ text (t "community.kyc.dataTitle")
+                            , span [ class "icon-tooltip inline-block align-center ml-1" ]
+                                [ Icons.question "inline-block"
+                                , p
+                                    [ class "icon-tooltip-content" ]
+                                    [ text (t "community.kyc.info")
+                                    ]
+                                ]
+                            ]
+                        )
+                        (viewButton (t "menu.add") AddKycClicked)
+                        Center
+                        Nothing
     in
     div [ class "bg-white mb-6" ]
         [ ul [ class "container divide-y divide-gray-500 mx-auto px-4" ]
@@ -634,6 +648,7 @@ type Msg
     | GotPushPreference Bool
     | RequestPush
     | ToggleDeleteKycModal
+    | AddKycClicked
     | DeleteKycAccepted
     | DeleteKycAndAddressCompleted (Result (Graphql.Http.Error DeleteKycAndAddressResult) DeleteKycAndAddressResult)
     | CheckPushPref
@@ -665,6 +680,14 @@ update msg model loggedIn =
         ToggleDeleteKycModal ->
             { model | isDeleteKycModalShowed = not model.isDeleteKycModalShowed }
                 |> UR.init
+
+        AddKycClicked ->
+            model
+                |> UR.init
+                |> UR.addCmd
+                    (Route.ProfileAddKyc
+                        |> Route.replaceUrl loggedIn.shared.navKey
+                    )
 
         DeleteKycAccepted ->
             { model
@@ -950,6 +973,9 @@ msgToString msg =
 
         ToggleDeleteKycModal ->
             [ "ToggleDeleteKycModal" ]
+
+        AddKycClicked ->
+            [ "AddKycClicked" ]
 
         DeleteKycAccepted ->
             [ "DeleteKycAccepted" ]

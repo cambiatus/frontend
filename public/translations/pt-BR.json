@@ -196,6 +196,7 @@
         "placeholder": ""
       },
       "document": {
+        "type": "Tipo de Documento",
         "cedula_de_identidad": {
           "label": "Número de Segurança Social",
           "placeholder": "Insira os 9 dígitos",
@@ -203,14 +204,15 @@
         },
         "dimex": {
           "label": "Número Dimex",
-          "placeholder": "Insira os 13 dígitos",
-          "maximum": "13"
+          "placeholder": "Insira os 11 ou 12 dígitos",
+          "maximum": "12"
         },
         "nite": {
           "label": "Número Nite",
           "placeholder": "Insira os 10 dígitos",
           "maximum": "10"
-        }
+        },
+        "errorInvalid": "Por favor, use um número de documento válido."
       },
       "types": {
         "natural": "Pessoa Física",
@@ -365,7 +367,8 @@
       "succeed": "Convite enviado com sucesso",
       "failed": "Falha ao enviar convite",
       "copy": "Copiar",
-      "copied": "Copiado!"
+      "copied": "Copiado!",
+      "kycRequired": "Esta comunidade requer que seus membros tenham mais algumas informações. Por favor, preencha os campos abaixo."
     },
     "invitation": {
       "title": "convidou você para fazer parte da comunidade",
@@ -499,6 +502,12 @@
         "confirm": "Sim",
         "cancel": "Não",
         "success": "Seus dados KYC foram excluídos com sucesso."
+      },
+      "add": {
+        "title": "Adicionar dados KYC",
+        "restricted": "Desculpe, você não pode editar seus dados KYC.",
+        "canRemove": "Você sempre pode remover essas informações de seu perfil se decidir fazer isso.",
+        "success": "Seus dados KYC foram salvos com sucesso."
       }
     }
   },

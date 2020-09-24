@@ -219,6 +219,7 @@ type Page
     | Profile
     | PublicProfile
     | ProfileEditor
+    | ProfileAddKyc
     | PaymentHistory
     | Transfer
     | ViewTransfer
@@ -305,6 +306,7 @@ viewHelper thisMsg page profile_ ({ shared } as model) content =
             , Notification
             , PublicProfile
             , ProfileEditor
+            , ProfileAddKyc
             , PaymentHistory
             , ViewTransfer
             ]
@@ -323,7 +325,7 @@ viewHelper thisMsg page profile_ ({ shared } as model) content =
                         [ text (t "community.kyc.restriction.description") ]
                     , a
                         [ class "button button-primary m-auto w-full sm:w-56"
-                        , Route.href Route.ProfileEditor
+                        , Route.href Route.ProfileAddKyc
                         ]
                         [ text (t "community.kyc.restriction.link") ]
                     ]

@@ -191,6 +191,7 @@
         "placeholder": ""
       },
       "document": {
+        "type": "Document Type",
         "cedula_de_identidad": {
           "label": "Social Security Number",
           "placeholder": "Enter the 9 digits",
@@ -198,14 +199,15 @@
         },
         "dimex": {
           "label": "Dimex Number",
-          "placeholder": "Enter the 13 digits",
-          "maximum": "13"
+          "placeholder": "Enter the 11 or 12 digits",
+          "maximum": "12"
         },
         "nite": {
           "label": "Nite Number",
           "placeholder": "Enter the 10 digits",
           "maximum": "10"
-        }
+        },
+        "errorInvalid": "Please, use a valid document number."
       },
       "types": {
         "natural": "Natural Person",
@@ -357,7 +359,8 @@
       "succeed": "Invitation succeed",
       "failed": "Invitation failed",
       "copy": "Copy",
-      "copied": "Copied!"
+      "copied": "Copied!",
+      "kycRequired": "This community requires its members to have some more information. Please, fill these fields below."
     },
     "invitation": {
       "title": "invited you to be part of the community",
@@ -491,6 +494,12 @@
         "confirm": "Yes",
         "cancel": "No",
         "success": "Your KYC data was successfully deleted."
+      },
+      "add": {
+        "title": "Add KYC data",
+        "restricted": "Sorry, you can't edit your KYC data.",
+        "canRemove": "You can always remove this information from your profile if you decide to do so.",
+        "success": "Your KYC data was successfully saved."
       }
     }
   },
