@@ -43,6 +43,7 @@ type alias Shared =
     , allowCommunityCreation : Bool
     , url : Url
     , contracts : { token : String, community : String }
+    , selectedCommunity : Eos.Symbol
     }
 
 
@@ -62,6 +63,7 @@ init ({ environment, maybeAccount, endpoints, allowCommunityCreation, tokenContr
     , allowCommunityCreation = allowCommunityCreation
     , url = url
     , contracts = { token = tokenContract, community = communityContract }
+    , selectedCommunity = flags.selectedCommunity
     }
 
 
