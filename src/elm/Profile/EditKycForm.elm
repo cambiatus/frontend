@@ -195,6 +195,7 @@ view { t } model =
                     [ type_ "tel"
                     , class "form-input"
                     , value phoneNumber
+                    , attribute "inputmode" "numeric"
                     , onInput PhoneNumberEntered
                     , maxlength 8
                     , placeholder (t "register.form.phone.placeholder")
