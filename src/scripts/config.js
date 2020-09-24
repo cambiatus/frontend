@@ -36,11 +36,11 @@ const dev = {
     protocol: 'http',
     host: 'staging.cambiatus.io',
     port: 80,
-    chainId: 'cf057bbfb72640471fd910bcb67639c22df9f92470936cddc1ade0e2f2e7dc4f'
+    chainId: 'fa087d6c692f16e01a9864749829359cd26b48db703377893f32ff1c72673a78'
   },
   eosOptions: {
-    chainId: 'cf057bbfb72640471fd910bcb67639c22df9f92470936cddc1ade0e2f2e7dc4f',
-    debug: false,
+    chainId: 'fa087d6c692f16e01a9864749829359cd26b48db703377893f32ff1c72673a78',
+    debug: true,
     httpEndpoint: 'https://staging.cambiatus.io'
   },
   endpoints: {
@@ -48,12 +48,7 @@ const dev = {
     chat: 'https://app.cambiatus.io/chat',
     eosio: 'https://staging.cambiatus.io/',
     graphql: 'https://staging.cambiatus.io/api/graph',
-    socket: 'wss://staging.cambiatus.io/api/socket'
-    // api: 'https://api.cambiatus.io',
-    // chat: 'https://app.cambiatus.io/chat',
-    // eosio: 'https://eosio.cambiatus.io',
-    // graphql: 'https://api.cambiatus.io/api/graph',
-    // socket: 'wss://api.cambiatus.io/socket'
+    socket: 'wss://staging.cambiatus.io/socket'
   },
   logo: '/images/logo-cambiatus.png',
   logoMobile: '/images/logo-cambiatus-mobile.svg',
