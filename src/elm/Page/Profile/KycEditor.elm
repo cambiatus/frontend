@@ -8,12 +8,16 @@ module Page.Profile.KycEditor exposing
     , view
     )
 
+import Api.Graphql
+import Graphql.Http
 import Html exposing (Html, div)
 import Html.Attributes exposing (class)
+import Http
 import Page
+import Profile exposing (Profile)
 import Profile.EditKycForm as KycForm
 import Route
-import Session.LoggedIn as LoggedIn exposing (External(..), FeedbackStatus(..))
+import Session.LoggedIn as LoggedIn exposing (External(..), FeedbackStatus(..), ProfileStatus(..))
 import UpdateResult as UR
 
 
@@ -22,7 +26,9 @@ import UpdateResult as UR
 
 
 type alias Model =
-    { kycForm : KycForm.Model }
+    { status : ProfileStatus
+    , kycForm : KycForm.Model
+    }
 
 
 
@@ -30,9 +36,17 @@ type alias Model =
 
 
 init : LoggedIn.Model -> ( Model, Cmd Msg )
-init _ =
-    ( { kycForm = KycForm.init }
-    , Cmd.none
+init loggedIn =
+    let
+        profileQuery =
+            Api.Graphql.query loggedIn.shared
+                (Profile.query loggedIn.accountName)
+                CompletedProfileLoad
+    in
+    ( { status = Loading loggedIn.accountName
+      , kycForm = KycForm.init
+      }
+    , profileQuery
     )
 
 
@@ -42,6 +56,7 @@ init _ =
 
 type Msg
     = FormMsg KycForm.Msg
+    | CompletedProfileLoad (Result (Graphql.Http.Error (Maybe Profile)) (Maybe Profile))
 
 
 type alias UpdateResult =
@@ -55,6 +70,35 @@ update msg model loggedIn =
             loggedIn.shared.translators
     in
     case msg of
+        CompletedProfileLoad (Ok Nothing) ->
+            UR.init model
+
+        CompletedProfileLoad (Ok (Just profile)) ->
+            case profile.kyc of
+                Just _ ->
+                    -- Users with already filled KYC data are restricted from seeing this page.
+                    model
+                        |> UR.init
+                        |> UR.addCmd
+                            (Route.Profile
+                                |> Route.replaceUrl loggedIn.shared.navKey
+                            )
+                        |> UR.addExt
+                            (ShowFeedback
+                                Failure
+                                (t "community.kyc.edit.restricted")
+                            )
+
+                Nothing ->
+                    { model
+                        | status = Loaded profile
+                    }
+                        |> UR.init
+
+        CompletedProfileLoad (Err err) ->
+            UR.init { model | status = LoadingFailed loggedIn.accountName err }
+                |> UR.logGraphqlError msg err
+
         FormMsg kycFormMsg ->
             let
                 newModel =
@@ -119,18 +163,29 @@ view loggedIn model =
         { t } =
             loggedIn.shared.translators
 
+        pageTitle =
+            t "community.kyc.edit.title"
+
         content =
-            div [ class "bg-white" ]
-                [ Page.viewHeader loggedIn (t "community.kyc.edit.title") Route.Profile
-                , div [ class "px-4" ]
-                    [ KycForm.view
-                        loggedIn.shared.translators
-                        model.kycForm
-                        |> Html.map FormMsg
-                    ]
-                ]
+            case model.status of
+                Loading _ ->
+                    Page.fullPageLoading
+
+                LoadingFailed _ _ ->
+                    Page.fullPageError pageTitle Http.Timeout
+
+                Loaded _ ->
+                    div [ class "bg-white" ]
+                        [ Page.viewHeader loggedIn pageTitle Route.Profile
+                        , div [ class "px-4" ]
+                            [ KycForm.view
+                                loggedIn.shared.translators
+                                model.kycForm
+                                |> Html.map FormMsg
+                            ]
+                        ]
     in
-    { title = "community.kyc.edit.title"
+    { title = pageTitle
     , content = content
     }
 
@@ -142,5 +197,8 @@ view loggedIn model =
 msgToString : Msg -> List String
 msgToString msg =
     case msg of
+        CompletedProfileLoad r ->
+            [ "CompletedProfileLoad", UR.resultToString r ]
+
         FormMsg _ ->
             [ "FormMsg" ]

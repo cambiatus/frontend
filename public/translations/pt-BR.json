@@ -505,6 +505,7 @@
       },
       "edit": {
         "title": "Editar dados KYC",
+        "restricted": "Desculpe, você não pode editar seus dados KYC.",
         "canRemove": "Você sempre pode remover essas informações de seu perfil se decidir fazer isso.",
         "success": "Seus dados KYC foram salvos com sucesso."
       }

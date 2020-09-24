@@ -501,6 +501,7 @@
       },
       "edit": {
         "title": "Editeu les dades de KYC",
+        "restricted": "No podeu editar les vostres dades KYC.",
         "canRemove": "Sempre podeu eliminar aquesta informació del vostre perfil si ho decidiu.",
         "success": "Les vostres dades KYC s'han desat correctament."
       }
