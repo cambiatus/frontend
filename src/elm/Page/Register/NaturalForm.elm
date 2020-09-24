@@ -36,7 +36,7 @@ type Field
 init : { a | account : Maybe String, email : Maybe String, phone : Maybe String } -> Model
 init options =
     { document = ""
-    , documentType = NITE
+    , documentType = SSN
     , name = ""
     , email = Maybe.withDefault "" options.email
     , phone = Maybe.withDefault "" options.phone

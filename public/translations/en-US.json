@@ -223,7 +223,7 @@
       "company": {
         "mipyme": {
           "name": "MIPYME",
-          "label": "MIPYME Number",
+          "label": "MIPYME",
           "placeholder": "Enter the 10 digits",
           "maximum": "10"
         },

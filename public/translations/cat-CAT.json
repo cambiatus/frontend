@@ -227,7 +227,7 @@
       "company": {
         "mipyme": {
           "name": "MIPYME",
-          "label": "MIPYME Number",
+          "label": "MIPYME",
           "placeholder": "Introduïu els deu dígits",
           "maximum": "10"
         },
