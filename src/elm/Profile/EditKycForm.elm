@@ -118,7 +118,7 @@ valToDoc v =
             , isValid = CedulaDeIdentidad.isValid
             , title = "register.form.document.cedula_de_identidad.label"
             , value = "cedula_de_identidad"
-            , maxLength = 11
+            , maxLength = 9
             , placeholderText = "register.form.document.cedula_de_identidad.placeholder"
             }
 
