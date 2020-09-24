@@ -1007,7 +1007,7 @@ msgToString msg =
             "GotProfileEditorMsg" :: ProfileEditor.msgToString subMsg
 
         GotProfileAddKycMsg subMsg ->
-            "GotProfileKycEditorMsg" :: ProfileAddKyc.msgToString subMsg
+            "GotProfileAddKycMsg" :: ProfileAddKyc.msgToString subMsg
 
         GotRegisterMsg subMsg ->
             "GotRegisterMsg" :: Register.msgToString subMsg
