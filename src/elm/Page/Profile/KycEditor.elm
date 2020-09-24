@@ -86,7 +86,7 @@ update msg model loggedIn =
                         |> UR.addExt
                             (ShowFeedback
                                 Failure
-                                (t "community.kyc.edit.restricted")
+                                (t "community.kyc.add.restricted")
                             )
 
                 Nothing ->
@@ -146,7 +146,7 @@ update msg model loggedIn =
                                 |> UR.addExt
                                     (ShowFeedback
                                         Success
-                                        (t "community.kyc.edit.success")
+                                        (t "community.kyc.add.success")
                                     )
 
                 _ ->
@@ -164,7 +164,7 @@ view loggedIn model =
             loggedIn.shared.translators
 
         pageTitle =
-            t "community.kyc.edit.title"
+            t "community.kyc.add.title"
 
         content =
             case model.status of

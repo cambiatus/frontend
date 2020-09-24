@@ -499,8 +499,8 @@
         "cancel": "No",
         "success": "Sus datos KYC se eliminaron con éxito."
       },
-      "edit": {
-        "title": "Editar datos KYC",
+      "add": {
+        "title": "Agregar datos KYC",
         "restricted": "Lo sentimos, no puede editar sus datos KYC.",
         "canRemove": "Siempre puede eliminar esta información de su perfil si decide hacerlo.",
         "success": "Sus datos KYC se guardaron correctamente."

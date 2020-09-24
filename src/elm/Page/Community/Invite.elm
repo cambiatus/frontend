@@ -159,7 +159,7 @@ view session model =
                                 [ p []
                                     [ text (t "community.invite.kycRequired") ]
                                 , p [ class "mt-2 mb-6" ]
-                                    [ text (t "community.kyc.edit.canRemove") ]
+                                    [ text (t "community.kyc.add.canRemove") ]
                                 , KycForm.view shared.translators formData
                                     |> Html.map FormMsg
                                 ]

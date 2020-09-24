@@ -20,7 +20,7 @@ type Route
     | Logout
     | Notification
     | ProfileEditor
-    | ProfileKycEditor
+    | ProfileAddKyc
     | PublicProfile String
     | PaymentHistory String
     | Profile
@@ -79,7 +79,7 @@ parser url =
             )
         , Url.map Logout (s "logout")
         , Url.map ProfileEditor (s "profile" </> s "edit")
-        , Url.map ProfileKycEditor (s "profile" </> s "edit-kyc")
+        , Url.map ProfileAddKyc (s "profile" </> s "add-kyc")
         , Url.map PublicProfile (s "profile" </> string)
         , Url.map PaymentHistory (s "payments" </> string)
         , Url.map Profile (s "profile")
@@ -231,8 +231,8 @@ routeToString route =
                 ProfileEditor ->
                     ( [ "profile", "edit" ], [] )
 
-                ProfileKycEditor ->
-                    ( [ "profile", "edit-kyc" ], [] )
+                ProfileAddKyc ->
+                    ( [ "profile", "add-kyc" ], [] )
 
                 PublicProfile accountName ->
                     ( [ "profile", accountName ], [] )
