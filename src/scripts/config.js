@@ -40,7 +40,7 @@ const dev = {
   },
   eosOptions: {
     chainId: 'fa087d6c692f16e01a9864749829359cd26b48db703377893f32ff1c72673a78',
-    debug: true,
+    debug: false,
     httpEndpoint: 'https://staging.cambiatus.io'
   },
   endpoints: {
