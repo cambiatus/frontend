@@ -210,10 +210,7 @@ viewVoters ({ shared } as loggedIn) claim =
 
         pendingValidators =
             List.filter
-                (\p ->
-                    List.any (\c -> p.account /= c.account)
-                        (List.map .validator claim.checks)
-                )
+                (\p -> not <| List.member p.account (List.map (\c -> c.validator.account) claim.checks))
                 claim.action.validators
     in
     div []
