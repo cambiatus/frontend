@@ -10,7 +10,7 @@ import Cambiatus.Scalar exposing (Id(..))
 import Community exposing (Invite)
 import Eos.Account as Eos
 import Graphql.Http
-import Graphql.OptionalArgument
+import Graphql.OptionalArgument exposing (OptionalArgument(..))
 import Graphql.SelectionSet exposing (with)
 import Html exposing (Html, a, button, div, img, input, label, p, span, strong, text)
 import Html.Attributes exposing (checked, class, disabled, for, id, src, style, type_, value)
@@ -18,6 +18,7 @@ import Html.Events exposing (onCheck, onClick, onSubmit)
 import Json.Decode as Decode exposing (Decoder, Value)
 import Json.Decode.Pipeline as Decode
 import Json.Encode as Encode
+import Maybe.Extra
 import Page
 import Page.Register.DefaultForm as DefaultForm
 import Page.Register.JuridicalForm as JuridicalForm
@@ -887,7 +888,7 @@ update maybeInvitation msg model guest =
                 |> UR.addCmd
                     (case model.status of
                         Generated keys ->
-                            formTypeToAccountCmd guest.shared keys.ownerKey model.selectedForm
+                            formTypeToAccountCmd guest.shared keys.ownerKey model.maybeInvitationId model.selectedForm
 
                         _ ->
                             Cmd.none
@@ -1003,8 +1004,8 @@ type alias SignUpResponse =
     }
 
 
-formTypeToAccountCmd : Shared -> String -> FormType -> Cmd Msg
-formTypeToAccountCmd shared key formType =
+formTypeToAccountCmd : Shared -> String -> Maybe String -> FormType -> Cmd Msg
+formTypeToAccountCmd shared key invitationId formType =
     let
         cmd obj =
             Api.Graphql.mutation shared
@@ -1012,7 +1013,17 @@ formTypeToAccountCmd shared key formType =
                     { input =
                         InputObject.buildSignUpInput
                             obj
-                            (\x -> x)
+                            (\x ->
+                                { x
+                                    | invitationId =
+                                        case invitationId of
+                                            Just id ->
+                                                Present id
+
+                                            Nothing ->
+                                                Absent
+                                }
+                            )
                     }
                     (Graphql.SelectionSet.succeed SignUpResponse
                         |> with Cambiatus.Object.SignUp.reason
