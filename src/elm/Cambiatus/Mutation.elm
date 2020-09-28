@@ -84,9 +84,9 @@ type alias SignUpRequiredArguments =
 signUp :
     SignUpRequiredArguments
     -> SelectionSet decodesTo Cambiatus.Object.SignUp
-    -> SelectionSet (Maybe decodesTo) RootMutation
+    -> SelectionSet decodesTo RootMutation
 signUp requiredArgs object_ =
-    Object.selectionForCompositeField "signUp" [ Argument.required "input" requiredArgs.input Cambiatus.InputObject.encodeSignUpInput ] object_ (identity >> Decode.nullable)
+    Object.selectionForCompositeField "signUp" [ Argument.required "input" requiredArgs.input Cambiatus.InputObject.encodeSignUpInput ] object_ identity
 
 
 type alias UpdateProfileRequiredArguments =
