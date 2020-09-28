@@ -130,20 +130,6 @@ decodeAccount =
         |> Decode.required "privateKey" Decode.string
 
 
-availabilityResponseDecoder : Decoder Bool
-availabilityResponseDecoder =
-    Decode.field "error" (Decode.nullable Decode.string)
-        |> Decode.andThen
-            (\error ->
-                case error of
-                    Just err ->
-                        Decode.fail err
-
-                    Nothing ->
-                        Decode.field "isAvailable" Decode.bool
-            )
-
-
 
 -- VIEW
 
@@ -165,7 +151,7 @@ view guest model =
 
 
 viewAccountGenerated : Translators -> Model -> AccountKeys -> Html Msg
-viewAccountGenerated ({ t } as translators) model keys =
+viewAccountGenerated { t } model keys =
     let
         name =
             Eos.nameToString keys.accountName
@@ -564,7 +550,7 @@ type alias UpdateResult =
 
 type Msg
     = ValidateForm FormType
-    | GotAccountAvailabilityResponse (Result Decode.Error Bool)
+    | GotAccountAvailabilityResponse Bool
     | AccountGenerated (Result Decode.Error AccountKeys)
     | AgreedToSave12Words Bool
     | DownloadPdf PdfData
@@ -575,7 +561,7 @@ type Msg
     | CompletedLoadCountry (Result (Graphql.Http.Error (Maybe Address.Country)) (Maybe Address.Country))
     | AccountTypeSelected AccountType
     | FormMsg EitherFormMsg
-    | CompletedSignUp (Result (Graphql.Http.Error (Maybe SignUpResponse)) (Maybe SignUpResponse))
+    | CompletedSignUp (Result (Graphql.Http.Error SignUpResponse) SignUpResponse)
     | CompletedKycUpsert (Result (Graphql.Http.Error (Maybe ())) (Maybe ()))
     | CompletedAddressUpsert (Result (Graphql.Http.Error (Maybe ())) (Maybe ()))
 
@@ -621,6 +607,7 @@ update maybeInvitation msg model guest =
                         Err err ->
                             err
 
+                account : Maybe String
                 account =
                     case formType of
                         Juridical form ->
@@ -769,70 +756,54 @@ update maybeInvitation msg model guest =
                                 model.selectedForm
                 }
 
-        GotAccountAvailabilityResponse response ->
-            let
-                generateAccountPort =
-                    { responseAddress = GotAccountAvailabilityResponse (Result.Ok False)
-                    , responseData = Encode.null
-                    , data =
-                        Encode.object
-                            [ ( "name", Encode.string "generateKeys" )
-                            , ( "invitationId"
-                              , case maybeInvitation of
-                                    Nothing ->
-                                        Encode.null
+        GotAccountAvailabilityResponse isAvailable ->
+            if isAvailable then
+                model
+                    |> UR.init
+                    |> UR.addPort
+                        { responseAddress = GotAccountAvailabilityResponse isAvailable
+                        , responseData = Encode.null
+                        , data =
+                            Encode.object
+                                [ ( "name", Encode.string "generateKeys" )
 
-                                    Just invitationId ->
-                                        Encode.string invitationId
-                              )
-                            , ( "account"
-                              , Encode.string
-                                    (case model.selectedForm of
-                                        Juridical form ->
-                                            form.account
+                                -- TODO: Remove this
+                                , ( "account"
+                                  , Encode.string
+                                        (case model.selectedForm of
+                                            Juridical form ->
+                                                form.account
 
-                                        Natural form ->
-                                            form.account
+                                            Natural form ->
+                                                form.account
 
-                                        Default form ->
-                                            form.account
+                                            Default form ->
+                                                form.account
 
-                                        None ->
-                                            ""
-                                    )
-                              )
-                            ]
+                                            None ->
+                                                ""
+                                        )
+                                  )
+                                ]
+                        }
+
+            else
+                UR.init
+                    { model
+                        | selectedForm =
+                            case model.selectedForm of
+                                Juridical form ->
+                                    Juridical { form | problems = ( JuridicalForm.Account, t "error.alreadyTaken" ) :: form.problems }
+
+                                Natural form ->
+                                    Natural { form | problems = ( NaturalForm.Account, t "error.alreadyTaken" ) :: form.problems }
+
+                                Default form ->
+                                    Default { form | problems = ( DefaultForm.Account, t "error.alreadyTaken" ) :: form.problems }
+
+                                None ->
+                                    model.selectedForm
                     }
-            in
-            case response of
-                Ok isAvailable ->
-                    if isAvailable == True then
-                        model
-                            |> UR.init
-                            |> UR.addPort generateAccountPort
-
-                    else
-                        UR.init
-                            { model
-                                | selectedForm =
-                                    case model.selectedForm of
-                                        Juridical form ->
-                                            Juridical { form | problems = ( JuridicalForm.Account, t "error.alreadyTaken" ) :: form.problems }
-
-                                        Natural form ->
-                                            Natural { form | problems = ( NaturalForm.Account, t "error.alreadyTaken" ) :: form.problems }
-
-                                        Default form ->
-                                            Default { form | problems = ( DefaultForm.Account, t "error.alreadyTaken" ) :: form.problems }
-
-                                        None ->
-                                            model.selectedForm
-                            }
-
-                Err _ ->
-                    model
-                        |> UR.init
-                        |> UR.addPort generateAccountPort
 
         AccountGenerated (Err v) ->
             UR.init
@@ -893,11 +864,16 @@ update maybeInvitation msg model guest =
                             Cmd.none
                     )
 
-        CompletedSignUp (Ok _) ->
-            model
-                |> UR.init
-                |> UR.addCmd
-                    (formTypeToKycCmd guest.shared model.selectedForm)
+        CompletedSignUp (Ok response) ->
+            case response.status of
+                SignUpStatus.Success ->
+                    model
+                        |> UR.init
+                        |> UR.addCmd
+                            (formTypeToKycCmd guest.shared model.selectedForm)
+
+                SignUpStatus.Error ->
+                    UR.init { model | serverError = Just (t "error.unknown") }
 
         CompletedSignUp (Err _) ->
             UR.init { model | serverError = Just (t "error.unknown") }
@@ -1126,9 +1102,11 @@ jsAddressToMsg : List String -> Value -> Maybe Msg
 jsAddressToMsg addr val =
     case addr of
         "ValidateForm" :: _ ->
-            Decode.decodeValue availabilityResponseDecoder val
-                |> GotAccountAvailabilityResponse
-                |> Just
+            Decode.decodeValue
+                (Decode.field "isAvailable" Decode.bool)
+                val
+                |> Result.map GotAccountAvailabilityResponse
+                |> Result.toMaybe
 
         "GotAccountAvailabilityResponse" :: _ ->
             Decode.decodeValue (Decode.field "data" decodeAccount) val

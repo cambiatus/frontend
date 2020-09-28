@@ -1030,7 +1030,7 @@ type SignUpStatus
     | Error
 
 
-signUp : Eos.Name -> String -> String -> String -> Maybe String -> SelectionSet (Maybe SignUpResult) RootMutation
+signUp : Eos.Name -> String -> String -> String -> Maybe String -> SelectionSet SignUpResult RootMutation
 signUp account name email publicKey maybeInvitationId =
     let
         accountString =
