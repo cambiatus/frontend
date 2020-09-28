@@ -235,22 +235,15 @@ async function handleJavascriptPort (arg) {
         app.ports.javascriptInPort.send(response)
       }
       eos
-        .getAccount(arg.data.accountName)
+        .getAccount(arg.data.account)
         .then(_ => sendResponse(false))
         .catch(e => {
           // Invalid name exception
           devLog('checkAccountAvailability', e)
-          try {
-            const errorCode = JSON.parse(e.message).error.code
-
-            // Invalid name exception
-            if (errorCode === 3010001) {
-              sendResponse(false)
-            } else {
-              sendResponse(true)
-            }
-          } catch (e) {
-            sendResponse(false, e.message)
+          if (JSON.parse(e.message).error.code === 3010001) {
+            sendResponse(false)
+          } else {
+            sendResponse(true)
           }
         })
       break
