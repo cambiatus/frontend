@@ -18,7 +18,6 @@ import Html.Events exposing (onCheck, onClick, onSubmit)
 import Json.Decode as Decode exposing (Decoder, Value)
 import Json.Decode.Pipeline as Decode
 import Json.Encode as Encode
-import Maybe.Extra
 import Page
 import Page.Register.DefaultForm as DefaultForm
 import Page.Register.JuridicalForm as JuridicalForm
