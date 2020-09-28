@@ -139,7 +139,7 @@ toggleView translations labelText isEnabled toggleFunction inputId =
 
         kycTooltip =
             if inputId == "kyc" then
-                span [ class "icon-tooltip inline-block align-center ml-1" ]
+                span [ class "icon-tooltip ml-1" ]
                     [ Icons.question "inline-block"
                     , div
                         [ class "icon-tooltip-content" ]
