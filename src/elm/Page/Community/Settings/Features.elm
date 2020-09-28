@@ -9,6 +9,7 @@ import Html exposing (Html, div, input, label, span, text)
 import Html.Attributes exposing (checked, class, for, id, name, style, type_)
 import Html.Events exposing (onCheck)
 import I18Next exposing (Translations, t)
+import Icons
 import Json.Decode exposing (Value)
 import Json.Encode
 import Page
@@ -135,6 +136,19 @@ toggleView translations labelText isEnabled toggleFunction inputId =
 
             else
                 "text-grey"
+
+        kycTooltip =
+            if inputId == "kyc" then
+                span [ class "icon-tooltip inline-block align-center ml-1" ]
+                    [ Icons.question "inline-block"
+                    , div
+                        [ class "icon-tooltip-content" ]
+                        [ text (translate "community.kyc.info")
+                        ]
+                    ]
+
+            else
+                text ""
     in
     div
         [ class "grid w-full py-4"
@@ -142,7 +156,7 @@ toggleView translations labelText isEnabled toggleFunction inputId =
                                 'label status toggle' 40px / auto 80px 50px
                                 """
         ]
-        [ span [ classes, style "grid-area" "label" ] [ text labelText ]
+        [ span [ classes, style "grid-area" "label" ] [ text labelText, kycTooltip ]
         , span [ classes, class ("font-medium lowercase mr-auto " ++ color), style "grid-area" "status" ] [ text statusText ]
         , div [ classes ]
             [ div [ class "form-switch inline-block align-middle" ]
