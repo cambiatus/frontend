@@ -185,20 +185,23 @@ viewSettings loggedIn model profile =
                             Ignored
 
         viewKycSettings =
+            let
+                kycLabel =
+                    span [ class "flex items-center" ]
+                        [ text (t "community.kyc.dataTitle")
+                        , span [ class "icon-tooltip ml-1" ]
+                            [ Icons.question "inline-block"
+                            , p
+                                [ class "icon-tooltip-content" ]
+                                [ text (t "community.kyc.info")
+                                ]
+                            ]
+                        ]
+            in
             case profile.kyc of
                 Just _ ->
                     viewProfileItem
-                        (span []
-                            [ text (t "community.kyc.dataTitle")
-                            , span [ class "icon-tooltip inline-block align-center ml-1" ]
-                                [ Icons.question "inline-block"
-                                , p
-                                    [ class "icon-tooltip-content" ]
-                                    [ text (t "community.kyc.info")
-                                    ]
-                                ]
-                            ]
-                        )
+                        kycLabel
                         (viewDangerButton (t "community.kyc.delete.label") ToggleDeleteKycModal)
                         Center
                         (Just
@@ -210,17 +213,7 @@ viewSettings loggedIn model profile =
 
                 Nothing ->
                     viewProfileItem
-                        (span []
-                            [ text (t "community.kyc.dataTitle")
-                            , span [ class "icon-tooltip inline-block align-center ml-1" ]
-                                [ Icons.question "inline-block"
-                                , p
-                                    [ class "icon-tooltip-content" ]
-                                    [ text (t "community.kyc.info")
-                                    ]
-                                ]
-                            ]
-                        )
+                        kycLabel
                         (viewButton (t "menu.add") AddKycClicked)
                         Center
                         Nothing
