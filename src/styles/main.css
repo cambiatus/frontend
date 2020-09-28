@@ -128,7 +128,7 @@ textarea.input {
 
 /* Icon Tooltip */
 .icon-tooltip {
-  @apply relative inline-block;
+  @apply relative inline-block align-middle leading-none;
 }
 
 .icon-tooltip .icon-tooltip-content {
@@ -149,7 +149,7 @@ textarea.input {
   content: ' ';
   left: 50%;
   margin-left: -10px;
-  top: 14px;
+  top: 7px;
   border-width: 10px;
   border-style: solid;
   border-color: transparent transparent black transparent;
