@@ -231,7 +231,7 @@ update msg model =
 
 
 validator : Translators -> Validator ( Field, String ) Model
-validator { t } =
+validator { t, tr } =
     let
         ifInvalidPhoneNumber subjectToString error =
             Validate.ifFalse (\subject -> KycPhone.isValid (subjectToString subject)) error
@@ -246,8 +246,8 @@ validator { t } =
             ]
         , Validate.firstError
             [ Validate.ifBlank .account ( Account, t "error.required" )
-            , Validate.ifTrue (\f -> String.length f.account < 12) ( Account, t "error.validator.text.exactly" )
-            , Validate.ifTrue (\f -> String.length f.account > 12) ( Account, t "error.validator.text.exactly" )
+            , Validate.ifTrue (\f -> String.length f.account < 12) ( Account, tr "error.validator.text.exactly" [ ( "base", "12" ) ] )
+            , Validate.ifTrue (\f -> String.length f.account > 12) ( Account, tr "error.validator.text.exactly" [ ( "base", "12" ) ] )
             , Validate.ifFalse (\f -> String.all Char.isAlphaNum f.account) ( Account, t "error.invalidChar" )
             ]
         , Validate.firstError
