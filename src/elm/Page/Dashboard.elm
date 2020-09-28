@@ -646,15 +646,24 @@ update msg model loggedIn =
                 findBalance balance =
                     balance.asset.symbol == loggedIn.selectedCommunity
 
+                -- Try to find the balance, if not found default to the first balance
                 statusBalance =
                     case List.find findBalance balances of
                         Just b ->
                             Loaded b
 
                         Nothing ->
-                            NotFound
+                            case List.head balances of
+                                Just b ->
+                                    Loaded b
+
+                                Nothing ->
+                                    NotFound
             in
-            UR.init { model | balance = statusBalance }
+            UR.init
+                { model
+                    | balance = statusBalance
+                }
 
         CompletedLoadBalances (Err httpError) ->
             UR.init { model | balance = Failed httpError }
