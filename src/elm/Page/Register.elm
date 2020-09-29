@@ -35,20 +35,22 @@ import View.Form
 -- INIT
 
 
-queries : Maybe InvitationId -> Shared -> Cmd Msg
-queries maybeInvitationId shared =
-    case maybeInvitationId of
-        Just invitation ->
-            Api.Graphql.query shared (Community.inviteQuery invitation) CompletedLoadInvite
-
-        Nothing ->
-            Cmd.none
-
-
 init : Maybe InvitationId -> Guest.Model -> ( Model, Cmd Msg )
 init maybeInvitationId guest =
+    let
+        cmd =
+            case maybeInvitationId of
+                Just invitation ->
+                    Api.Graphql.query
+                        guest.shared
+                        (Community.inviteQuery invitation)
+                        CompletedLoadInvite
+
+                Nothing ->
+                    Cmd.none
+    in
     ( initModel maybeInvitationId guest
-    , queries maybeInvitationId guest.shared
+    , cmd
     )
 
 
