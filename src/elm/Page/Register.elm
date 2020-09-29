@@ -35,7 +35,7 @@ import View.Form
 -- INIT
 
 
-queries : Maybe String -> Shared -> Cmd Msg
+queries : Maybe InvitationId -> Shared -> Cmd Msg
 queries maybeInvitationId shared =
     case maybeInvitationId of
         Just invitation ->
@@ -45,7 +45,7 @@ queries maybeInvitationId shared =
             Cmd.none
 
 
-init : Maybe String -> Guest.Model -> ( Model, Cmd Msg )
+init : Maybe InvitationId -> Guest.Model -> ( Model, Cmd Msg )
 init maybeInvitationId guest =
     ( initModel maybeInvitationId guest
     , queries maybeInvitationId guest.shared
@@ -62,11 +62,15 @@ type alias Model =
     , isPassphraseCopiedToClipboard : Bool
     , serverError : Maybe String
     , status : Status
-    , maybeInvitationId : Maybe String
+    , maybeInvitationId : Maybe InvitationId
     , selectedForm : FormType
     , country : Maybe Address.Country
     , step : Int
     }
+
+
+type alias InvitationId =
+    String
 
 
 type AccountType
@@ -81,7 +85,7 @@ type FormType
     | Default DefaultForm.Model
 
 
-initModel : Maybe String -> Guest.Model -> Model
+initModel : Maybe InvitationId -> Guest.Model -> Model
 initModel maybeInvitationId _ =
     { accountKeys = Nothing
     , hasAgreedToSavePassphrase = False
@@ -979,7 +983,7 @@ type alias SignUpResponse =
     }
 
 
-formTypeToAccountCmd : Shared -> String -> Maybe String -> FormType -> Cmd Msg
+formTypeToAccountCmd : Shared -> String -> Maybe InvitationId -> FormType -> Cmd Msg
 formTypeToAccountCmd shared key invitationId formType =
     let
         cmd obj =
