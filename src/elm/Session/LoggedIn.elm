@@ -102,7 +102,7 @@ initLogin shared authModel profile_ =
     ( { model
         | profile = Loaded profile_
       }
-    , Cmd.none
+    , Api.Graphql.query shared (Community.settingsQuery selectedCommunity) CompletedLoadSettings
     )
 
 
