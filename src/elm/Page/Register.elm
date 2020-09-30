@@ -66,6 +66,7 @@ type alias Model =
     , status : Status
     , maybeInvitationId : Maybe InvitationId
     , selectedForm : FormType
+    , invitation : Maybe Invite
     , country : Maybe Address.Country
     , step : Int
     }
@@ -99,7 +100,7 @@ initModel maybeInvitationId _ =
                 Loading
 
             Nothing ->
-                LoadedDefaultCommunity
+                Loaded
     , maybeInvitationId = maybeInvitationId
     , selectedForm =
         case maybeInvitationId of
@@ -108,6 +109,7 @@ initModel maybeInvitationId _ =
 
             Nothing ->
                 Default DefaultForm.init
+    , invitation = Nothing
     , country = Nothing
     , step = 1
     }
@@ -296,27 +298,27 @@ viewCreateAccount translators model =
     div [ class ("flex flex-grow flex-col " ++ backgroundColor) ]
         [ viewTitleForStep translators model.step
         , case model.status of
-            LoadedAll invitation _ ->
-                if invitation.community.hasKyc then
+            Loaded ->
+                let
+                    hasCommunityKycEnabled =
+                        case model.invitation of
+                            Just i ->
+                                i.community.hasKyc
+
+                            Nothing ->
+                                False
+                in
+                if hasCommunityKycEnabled then
                     formElement [ viewKycRegister translators model, viewFooter model translators ]
 
                 else
                     defaultForm
-
-            LoadedDefaultCommunity ->
-                defaultForm
 
             Loading ->
                 Session.Shared.viewFullLoading
 
             Generated keys ->
                 viewAccountGenerated translators model keys
-
-            LoadedInvite _ ->
-                Session.Shared.viewFullLoading
-
-            LoadedCountry _ ->
-                Session.Shared.viewFullLoading
 
             FailedInvite _ ->
                 Page.fullPageNotFound (translators.t "error.unknown") ""
@@ -381,17 +383,8 @@ viewKycRegister translators model =
                                     []
                     in
                     case model.status of
-                        LoadedAll _ _ ->
+                        Loaded ->
                             selectedForm
-
-                        LoadedDefaultCommunity ->
-                            selectedForm
-
-                        LoadedInvite _ ->
-                            [ Session.Shared.viewFullLoading ]
-
-                        LoadedCountry _ ->
-                            [ Session.Shared.viewFullLoading ]
 
                         Loading ->
                             [ Session.Shared.viewFullLoading ]
@@ -579,14 +572,11 @@ type EitherFormMsg
 
 
 type Status
-    = LoadedInvite Invite
-    | LoadedCountry Address.Country
-    | LoadedAll Invite (Maybe Address.Country)
-    | Loading
+    = Loading
+    | Loaded
     | FailedInvite (Graphql.Http.Error (Maybe Invite))
     | FailedCountry (Graphql.Http.Error (Maybe Address.Country))
     | NotFound
-    | LoadedDefaultCommunity
     | Generated AccountKeys
 
 
@@ -714,53 +704,56 @@ update maybeInvitation msg model guest =
                             UR.init model
 
         AccountTypeSelected type_ ->
-            UR.init
-                { model
-                    | selectedForm =
-                        case ( type_, model.status, model.selectedForm ) of
-                            ( NaturalAccount, LoadedAll _ _, Juridical form ) ->
-                                Natural
-                                    (NaturalForm.init
-                                        { account = Just form.account
-                                        , email = Just form.email
-                                        , phone = Just form.phone
-                                        }
-                                    )
+            let
+                newSelectedForm =
+                    case ( type_, model.country, model.selectedForm ) of
+                        ( NaturalAccount, _, Juridical form ) ->
+                            Natural
+                                (NaturalForm.init
+                                    { account = Just form.account
+                                    , email = Just form.email
+                                    , phone = Just form.phone
+                                    }
+                                )
 
-                            ( JuridicalAccount, LoadedAll _ (Just country), Natural form ) ->
-                                Juridical
-                                    (JuridicalForm.init
-                                        { account = Just form.account
-                                        , email = Just form.email
-                                        , phone = Just form.phone
-                                        , country = country
-                                        }
-                                        guest.shared.translators
-                                    )
+                        ( NaturalAccount, _, _ ) ->
+                            Natural
+                                (NaturalForm.init
+                                    { account = Nothing
+                                    , email = Nothing
+                                    , phone = Nothing
+                                    }
+                                )
 
-                            ( NaturalAccount, LoadedAll _ _, _ ) ->
-                                Natural
-                                    (NaturalForm.init
-                                        { account = Nothing
-                                        , email = Nothing
-                                        , phone = Nothing
-                                        }
-                                    )
+                        ( JuridicalAccount, Just country, Natural form ) ->
+                            Juridical
+                                (JuridicalForm.init
+                                    { account = Just form.account
+                                    , email = Just form.email
+                                    , phone = Just form.phone
+                                    , country = country
+                                    }
+                                    guest.shared.translators
+                                )
 
-                            ( JuridicalAccount, LoadedAll _ (Just country), _ ) ->
-                                Juridical
-                                    (JuridicalForm.init
-                                        { account = Nothing
-                                        , email = Nothing
-                                        , phone = Nothing
-                                        , country = country
-                                        }
-                                        guest.shared.translators
-                                    )
+                        ( JuridicalAccount, Just country, _ ) ->
+                            Juridical
+                                (JuridicalForm.init
+                                    { account = Nothing
+                                    , email = Nothing
+                                    , phone = Nothing
+                                    , country = country
+                                    }
+                                    guest.shared.translators
+                                )
 
-                            _ ->
-                                model.selectedForm
-                }
+                        _ ->
+                            model.selectedForm
+            in
+            { model
+                | selectedForm = newSelectedForm
+            }
+                |> UR.init
 
         GotAccountAvailabilityResponse isAvailable ->
             if isAvailable then
@@ -904,42 +897,26 @@ update maybeInvitation msg model guest =
             UR.init { model | serverError = Just (t "error.unknown") }
 
         CompletedLoadInvite (Ok (Just invitation)) ->
-            let
-                newStatus =
-                    case model.status of
-                        LoadedCountry country ->
-                            LoadedAll invitation (Just country)
+            if invitation.community.hasKyc then
+                { model
+                    | status = Loading -- still need to load country data
+                    , selectedForm = None
+                    , invitation = Just invitation
+                }
+                    |> UR.init
+                    |> UR.addCmd
+                        (Api.Graphql.query
+                            guest.shared
+                            (Address.countryQuery "Costa Rica")
+                            CompletedLoadCountry
+                        )
 
-                        NotFound ->
-                            NotFound
-
-                        FailedCountry err ->
-                            FailedCountry err
-
-                        _ ->
-                            if invitation.community.hasKyc then
-                                LoadedInvite invitation
-
-                            else
-                                LoadedAll invitation Nothing
-            in
-            { model
-                | status = newStatus
-                , selectedForm =
-                    if invitation.community.hasKyc then
-                        None
-
-                    else
-                        Default DefaultForm.init
-            }
-                |> UR.init
-                |> UR.addCmd
-                    (if invitation.community.hasKyc then
-                        Api.Graphql.query guest.shared (Address.countryQuery "Costa Rica") CompletedLoadCountry
-
-                     else
-                        Cmd.none
-                    )
+            else
+                { model
+                    | status = Loaded
+                    , selectedForm = Default DefaultForm.init
+                }
+                    |> UR.init
 
         CompletedLoadInvite (Ok Nothing) ->
             UR.init { model | status = NotFound }
@@ -954,19 +931,8 @@ update maybeInvitation msg model guest =
 
         CompletedLoadCountry (Ok (Just country)) ->
             { model
-                | status =
-                    case model.status of
-                        LoadedInvite invitation ->
-                            LoadedAll invitation (Just country)
-
-                        FailedInvite err ->
-                            FailedInvite err
-
-                        NotFound ->
-                            NotFound
-
-                        _ ->
-                            LoadedCountry country
+                | country = Just country
+                , status = Loaded
             }
                 |> UR.init
 
