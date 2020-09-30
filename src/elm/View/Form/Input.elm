@@ -109,7 +109,7 @@ withCounter maximum options =
 
 viewFieldProblem : String -> Html a
 viewFieldProblem problem =
-    li [ class "form-error absolute mr-8" ] [ text problem ]
+    li [ class "form-error absolute mr-10" ] [ text problem ]
 
 
 type alias InputOptions a =
