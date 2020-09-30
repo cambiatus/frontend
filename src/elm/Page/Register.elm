@@ -297,7 +297,7 @@ viewCreateAccount translators model =
         [ viewTitleForStep translators model.step
         , case model.status of
             LoadedAll invitation _ ->
-                if invitation.community.hasKyc == True then
+                if invitation.community.hasKyc then
                     formElement [ viewKycRegister translators model, viewFooter model translators ]
 
                 else
@@ -926,7 +926,7 @@ update maybeInvitation msg model guest =
             { model
                 | status = newStatus
                 , selectedForm =
-                    if invitation.community.hasKyc == True then
+                    if invitation.community.hasKyc then
                         None
 
                     else
