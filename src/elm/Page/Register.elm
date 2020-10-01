@@ -321,7 +321,7 @@ viewCreateAccount translators model =
                     defaultForm
 
             Loading ->
-                Session.Shared.viewFullLoading
+                viewLoading
 
             Generated keys ->
                 viewAccountGenerated translators model keys
@@ -393,7 +393,7 @@ viewKycRegister translators model =
                             selectedForm
 
                         Loading ->
-                            [ Session.Shared.viewFullLoading ]
+                            [ viewLoading ]
 
                         FailedCountry _ ->
                             [ Page.fullPageNotFound (translators.t "error.unknown") "" ]
@@ -511,6 +511,15 @@ viewFormTypeRadio options =
         [ label [ class "cursor-pointer", for id ] [ text options.label ]
         , input [ class "hidden", type_ "radio", checked options.isSelected, onClick (options.onClick options.type_) ] []
         ]
+
+
+{-| Loading screen on this page differs from `Session.Shared.viewFullLoading`
+since we don't need full width here.
+-}
+viewLoading : Html msg
+viewLoading =
+    div [ class "h-full full-spinner-container" ]
+        [ div [ class "spinner" ] [] ]
 
 
 viewTitleForStep : Translators -> Int -> Html msg
