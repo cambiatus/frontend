@@ -38,19 +38,48 @@ import View.Form
 init : InvitationId -> Guest.Model -> ( Model, Cmd Msg )
 init invitationId guest =
     let
-        cmd =
+        initialStatus =
             case invitationId of
-                Just invitation ->
+                Just _ ->
+                    Loading
+
+                Nothing ->
+                    Loaded
+
+        initialForm =
+            case invitationId of
+                Just _ ->
+                    None
+
+                Nothing ->
+                    DefaultForm DefaultForm.init
+
+        initialModel =
+            { accountKeys = Nothing
+            , hasAgreedToSavePassphrase = False
+            , isPassphraseCopiedToClipboard = False
+            , serverError = Nothing
+            , status = initialStatus
+            , selectedForm = initialForm
+            , invitationId = invitationId
+            , invitation = Nothing
+            , country = Nothing
+            , step = 1
+            }
+
+        loadInvitationData =
+            case invitationId of
+                Just id ->
                     Api.Graphql.query
                         guest.shared
-                        (Community.inviteQuery invitation)
+                        (Community.inviteQuery id)
                         CompletedLoadInvite
 
                 Nothing ->
                     Cmd.none
     in
-    ( initModel invitationId guest
-    , cmd
+    ( initialModel
+    , loadInvitationData
     )
 
 
@@ -90,33 +119,6 @@ type FormType
     | NaturalForm NaturalForm.Model
     | JuridicalForm JuridicalForm.Model
     | DefaultForm DefaultForm.Model
-
-
-initModel : InvitationId -> Guest.Model -> Model
-initModel invitationId _ =
-    { accountKeys = Nothing
-    , hasAgreedToSavePassphrase = False
-    , isPassphraseCopiedToClipboard = False
-    , serverError = Nothing
-    , status =
-        case invitationId of
-            Just _ ->
-                Loading
-
-            Nothing ->
-                Loaded
-    , invitationId = invitationId
-    , selectedForm =
-        case invitationId of
-            Just _ ->
-                None
-
-            Nothing ->
-                DefaultForm DefaultForm.init
-    , invitation = Nothing
-    , country = Nothing
-    , step = 1
-    }
 
 
 
