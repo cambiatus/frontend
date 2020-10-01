@@ -35,11 +35,11 @@ import View.Form
 -- INIT
 
 
-init : Maybe InvitationId -> Guest.Model -> ( Model, Cmd Msg )
-init maybeInvitationId guest =
+init : InvitationId -> Guest.Model -> ( Model, Cmd Msg )
+init invitationId guest =
     let
         cmd =
-            case maybeInvitationId of
+            case invitationId of
                 Just invitation ->
                     Api.Graphql.query
                         guest.shared
@@ -49,7 +49,7 @@ init maybeInvitationId guest =
                 Nothing ->
                     Cmd.none
     in
-    ( initModel maybeInvitationId guest
+    ( initModel invitationId guest
     , cmd
     )
 
@@ -64,7 +64,7 @@ type alias Model =
     , isPassphraseCopiedToClipboard : Bool
     , serverError : Maybe String
     , status : Status
-    , maybeInvitationId : Maybe InvitationId
+    , invitationId : InvitationId
     , selectedForm : FormType
     , invitation : Maybe Invite
     , country : Maybe Address.Country
@@ -73,7 +73,7 @@ type alias Model =
 
 
 type alias InvitationId =
-    String
+    Maybe String
 
 
 type AccountType
@@ -88,22 +88,22 @@ type FormType
     | DefaultForm DefaultForm.Model
 
 
-initModel : Maybe InvitationId -> Guest.Model -> Model
-initModel maybeInvitationId _ =
+initModel : InvitationId -> Guest.Model -> Model
+initModel invitationId _ =
     { accountKeys = Nothing
     , hasAgreedToSavePassphrase = False
     , isPassphraseCopiedToClipboard = False
     , serverError = Nothing
     , status =
-        case maybeInvitationId of
+        case invitationId of
             Just _ ->
                 Loading
 
             Nothing ->
                 Loaded
-    , maybeInvitationId = maybeInvitationId
+    , invitationId = invitationId
     , selectedForm =
-        case maybeInvitationId of
+        case invitationId of
             Just _ ->
                 None
 
@@ -365,7 +365,7 @@ viewKycRegister translators model =
     div []
         [ viewFormTypeSelector translators model
         , div [ class "sf-content" ]
-            (case model.maybeInvitationId of
+            (case model.invitationId of
                 Just _ ->
                     let
                         selectedForm =
@@ -586,8 +586,8 @@ type alias PdfData =
     }
 
 
-update : Maybe String -> Msg -> Model -> Guest.Model -> UpdateResult
-update maybeInvitation msg model guest =
+update : InvitationId -> Msg -> Model -> Guest.Model -> UpdateResult
+update _ msg model guest =
     let
         { t } =
             guest.shared.translators
@@ -857,7 +857,7 @@ update maybeInvitation msg model guest =
                 |> UR.addCmd
                     (case model.status of
                         Generated keys ->
-                            formTypeToAccountCmd guest.shared keys.ownerKey model.maybeInvitationId model.selectedForm
+                            formTypeToAccountCmd guest.shared keys.ownerKey model.invitationId model.selectedForm
 
                         _ ->
                             Cmd.none
@@ -951,7 +951,7 @@ type alias SignUpResponse =
     }
 
 
-formTypeToAccountCmd : Shared -> String -> Maybe InvitationId -> FormType -> Cmd Msg
+formTypeToAccountCmd : Shared -> String -> InvitationId -> FormType -> Cmd Msg
 formTypeToAccountCmd shared key invitationId formType =
     let
         cmd obj =
