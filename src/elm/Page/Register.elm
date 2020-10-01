@@ -36,7 +36,7 @@ import View.Form
 
 
 init : InvitationId -> Guest.Model -> ( Model, Cmd Msg )
-init invitationId guest =
+init invitationId { shared } =
     let
         initialStatus =
             case invitationId of
@@ -71,7 +71,7 @@ init invitationId guest =
             case invitationId of
                 Just id ->
                     Api.Graphql.query
-                        guest.shared
+                        shared
                         (Community.inviteQuery id)
                         CompletedLoadInvite
 
@@ -149,18 +149,15 @@ decodeAccount =
 
 
 view : Guest.Model -> Model -> { title : String, content : Html Msg }
-view guest model =
+view { shared } model =
     let
-        shared =
-            guest.shared
-
         { t } =
             shared.translators
     in
     { title =
         t "register.registerTab"
     , content =
-        viewCreateAccount guest.shared.translators model
+        viewCreateAccount shared.translators model
     }
 
 
@@ -308,14 +305,17 @@ viewCreateAccount translators model =
                 let
                     hasCommunityKycEnabled =
                         case model.invitation of
-                            Just i ->
-                                i.community.hasKyc
+                            Just { community } ->
+                                community.hasKyc
 
                             Nothing ->
                                 False
                 in
                 if hasCommunityKycEnabled then
-                    formElement [ viewKycRegister translators model, viewFooter model translators ]
+                    formElement
+                        [ viewKycRegister translators model
+                        , viewFooter model translators
+                        ]
 
                 else
                     defaultForm
@@ -514,11 +514,8 @@ viewFormTypeRadio options =
 
 
 viewTitleForStep : Translators -> Int -> Html msg
-viewTitleForStep translators s =
+viewTitleForStep { t, tr } s =
     let
-        { t, tr } =
-            translators
-
         step =
             String.fromInt s
     in
@@ -593,10 +590,10 @@ type alias PdfData =
 
 
 update : InvitationId -> Msg -> Model -> Guest.Model -> UpdateResult
-update _ msg model guest =
+update _ msg model { shared } =
     let
         { t } =
-            guest.shared.translators
+            shared.translators
     in
     case msg of
         ValidateForm formType ->
@@ -625,7 +622,7 @@ update _ msg model guest =
                             Nothing
 
                 translators =
-                    guest.shared.translators
+                    shared.translators
 
                 problemCount =
                     case formType of
@@ -688,7 +685,7 @@ update _ msg model guest =
                 JuridicalFormMsg innerMsg ->
                     case model.selectedForm of
                         JuridicalForm form ->
-                            UR.init { model | selectedForm = JuridicalForm (JuridicalForm.update innerMsg form guest.shared.translators) }
+                            UR.init { model | selectedForm = JuridicalForm (JuridicalForm.update innerMsg form shared.translators) }
 
                         _ ->
                             UR.init model
@@ -739,7 +736,7 @@ update _ msg model guest =
                                     , phone = Just form.phone
                                     , country = country
                                     }
-                                    guest.shared.translators
+                                    shared.translators
                                 )
 
                         ( JuridicalAccount, Just country, _ ) ->
@@ -750,7 +747,7 @@ update _ msg model guest =
                                     , phone = Nothing
                                     , country = country
                                     }
-                                    guest.shared.translators
+                                    shared.translators
                                 )
 
                         _ ->
@@ -863,7 +860,10 @@ update _ msg model guest =
                 |> UR.addCmd
                     (case model.status of
                         Generated keys ->
-                            formTypeToAccountCmd guest.shared keys.ownerKey model.invitationId model.selectedForm
+                            formTypeToAccountCmd shared
+                                keys.ownerKey
+                                model.invitationId
+                                model.selectedForm
 
                         _ ->
                             Cmd.none
@@ -875,7 +875,7 @@ update _ msg model guest =
                     model
                         |> UR.init
                         |> UR.addCmd
-                            (formTypeToKycCmd guest.shared model.selectedForm)
+                            (formTypeToKycCmd shared model.selectedForm)
 
                 SignUpStatus.Error ->
                     UR.init { model | serverError = Just (t "error.unknown") }
@@ -887,7 +887,7 @@ update _ msg model guest =
             model
                 |> UR.init
                 |> UR.addCmd
-                    (formTypeToAddressCmd guest.shared model.selectedForm)
+                    (formTypeToAddressCmd shared model.selectedForm)
 
         CompletedKycUpsert (Err _) ->
             UR.init { model | serverError = Just (t "error.unknown") }
@@ -897,7 +897,7 @@ update _ msg model guest =
                 |> UR.init
                 |> UR.addCmd
                     -- Go to login page after downloading PDF
-                    (Route.replaceUrl guest.shared.navKey (Route.Login Nothing))
+                    (Route.replaceUrl shared.navKey (Route.Login Nothing))
 
         CompletedAddressUpsert (Err _) ->
             UR.init { model | serverError = Just (t "error.unknown") }
@@ -912,7 +912,7 @@ update _ msg model guest =
                     |> UR.init
                     |> UR.addCmd
                         (Api.Graphql.query
-                            guest.shared
+                            shared
                             (Address.countryQuery "Costa Rica")
                             CompletedLoadCountry
                         )
