@@ -869,7 +869,7 @@ update _ msg model { shared } =
                 |> UR.addCmd
                     (case model.status of
                         Generated keys ->
-                            formTypeToAccountCmd shared
+                            signUp shared
                                 keys.ownerKey
                                 model.invitationId
                                 model.selectedForm
@@ -884,7 +884,7 @@ update _ msg model { shared } =
                     model
                         |> UR.init
                         |> UR.addCmd
-                            (formTypeToKycCmd shared model.selectedForm)
+                            (saveKycData shared model.selectedForm)
 
                 SignUpStatus.Error ->
                     UR.init { model | serverError = Just (t "error.unknown") }
@@ -896,7 +896,7 @@ update _ msg model { shared } =
             model
                 |> UR.init
                 |> UR.addCmd
-                    (formTypeToAddressCmd shared model.selectedForm)
+                    (saveAddress shared model.selectedForm)
 
         CompletedKycUpsert (Err _) ->
             UR.init { model | serverError = Just (t "error.unknown") }
@@ -966,26 +966,31 @@ type alias SignUpResponse =
     }
 
 
-formTypeToAccountCmd : Shared -> String -> InvitationId -> FormType -> Cmd Msg
-formTypeToAccountCmd shared key invitationId formType =
+signUp : Shared -> String -> InvitationId -> FormType -> Cmd Msg
+signUp shared key invitationId formType =
     let
-        cmd obj =
+        signUpCmd { account, email, name } =
+            let
+                requiredArgs =
+                    { account = account
+                    , email = email
+                    , name = name
+                    , publicKey = key
+                    }
+
+                fillOptionals opts =
+                    { opts
+                        | invitationId =
+                            Maybe.map Present invitationId
+                                |> Maybe.withDefault Absent
+                    }
+            in
             Api.Graphql.mutation shared
                 (Mutation.signUp
                     { input =
                         InputObject.buildSignUpInput
-                            obj
-                            (\x ->
-                                { x
-                                    | invitationId =
-                                        case invitationId of
-                                            Just id ->
-                                                Present id
-
-                                            Nothing ->
-                                                Absent
-                                }
-                            )
+                            requiredArgs
+                            fillOptionals
                     }
                     (Graphql.SelectionSet.succeed SignUpResponse
                         |> with Cambiatus.Object.SignUp.reason
@@ -996,38 +1001,38 @@ formTypeToAccountCmd shared key invitationId formType =
     in
     case formType of
         JuridicalForm form ->
-            cmd { account = form.account, email = form.email, name = form.name, publicKey = key }
+            signUpCmd form
 
         NaturalForm form ->
-            cmd { account = form.account, email = form.email, name = form.name, publicKey = key }
+            signUpCmd form
 
         DefaultForm form ->
-            cmd { account = form.account, email = form.email, name = form.name, publicKey = key }
+            signUpCmd form
 
         None ->
             Cmd.none
 
 
-redirectCmd : Shared -> Cmd Msg
-redirectCmd shared =
+redirectToLogin : Shared -> Cmd Msg
+redirectToLogin shared =
     Route.replaceUrl shared.navKey (Route.Login Nothing)
 
 
-formTypeToKycCmd : Shared -> FormType -> Cmd Msg
-formTypeToKycCmd shared formType =
+saveKycData : Shared -> FormType -> Cmd Msg
+saveKycData shared formType =
     let
-        cmd : InputObject.KycDataUpdateInputRequiredFields -> Cmd Msg
-        cmd obj =
+        saveCmd : InputObject.KycDataUpdateInputRequiredFields -> Cmd Msg
+        saveCmd requiredFields =
             Api.Graphql.mutation shared
                 (Mutation.upsertKyc
-                    { input = InputObject.buildKycDataUpdateInput obj }
+                    { input = InputObject.buildKycDataUpdateInput requiredFields }
                     Graphql.SelectionSet.empty
                 )
                 CompletedKycUpsert
     in
     case formType of
         JuridicalForm form ->
-            cmd
+            saveCmd
                 { accountId = form.account
                 , countryId = Id "1"
                 , document = form.document
@@ -1037,7 +1042,7 @@ formTypeToKycCmd shared formType =
                 }
 
         NaturalForm form ->
-            cmd
+            saveCmd
                 { accountId = form.account
                 , countryId = Id "1"
                 , document = form.document
@@ -1047,14 +1052,14 @@ formTypeToKycCmd shared formType =
                 }
 
         _ ->
-            redirectCmd shared
+            redirectToLogin shared
 
 
-formTypeToAddressCmd : Shared -> FormType -> Cmd Msg
-formTypeToAddressCmd shared formType =
+saveAddress : Shared -> FormType -> Cmd Msg
+saveAddress shared formType =
     let
-        cmd : InputObject.AddressUpdateInputRequiredFields -> InputObject.AddressUpdateInputOptionalFields -> Cmd Msg
-        cmd required optional =
+        saveCmd : InputObject.AddressUpdateInputRequiredFields -> InputObject.AddressUpdateInputOptionalFields -> Cmd Msg
+        saveCmd required optional =
             Api.Graphql.mutation shared
                 (Mutation.upsertAddress
                     { input = InputObject.buildAddressUpdateInput required (\_ -> optional) }
@@ -1064,7 +1069,7 @@ formTypeToAddressCmd shared formType =
     in
     case formType of
         JuridicalForm form ->
-            cmd
+            saveCmd
                 { accountId = form.account
                 , cityId = Tuple.first form.city |> Id
                 , countryId = Id "1"
@@ -1076,7 +1081,7 @@ formTypeToAddressCmd shared formType =
                 { number = Graphql.OptionalArgument.Present form.number }
 
         _ ->
-            redirectCmd shared
+            redirectToLogin shared
 
 
 
