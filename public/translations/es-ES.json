@@ -79,7 +79,7 @@
     "email": "Por favor, utilice un correo electrónico válido.",
     "tooShort": "Muy corto. Debes usar al menos {{minLength}} caracteres.",
     "tooLong": "Muy largo. Debes usar como maximo {{maxLength}} caracteres.",
-    "invalidChar": "Caracter invalido {{invalidChar}}.",
+    "invalidChar": "Carácter invalido. Utilice solo letras de la A a la Z y números del 1 al 5.",
     "alreadyTaken": "Ya esta en uso. Por favor, intenta de nuevo.",
     "notMember": "Este usuario no es miembro.",
     "chooseOrUploadLogo": "Escoje o sube tu propio logo.",
