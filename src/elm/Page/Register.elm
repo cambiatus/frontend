@@ -62,7 +62,7 @@ type alias Model =
     { accountKeys : Maybe AccountKeys
     , hasAgreedToSavePassphrase : Bool
     , isPassphraseCopiedToClipboard : Bool
-    , serverError : Maybe String
+    , serverError : ServerError
     , status : Status
     , invitationId : InvitationId
     , selectedForm : FormType
@@ -70,6 +70,10 @@ type alias Model =
     , country : Maybe Address.Country
     , step : Int
     }
+
+
+type alias ServerError =
+    Maybe String
 
 
 type alias InvitationId =
@@ -331,7 +335,7 @@ viewCreateAccount translators model =
         ]
 
 
-viewServerError : Maybe String -> Html msg
+viewServerError : ServerError -> Html msg
 viewServerError error =
     case error of
         Just message ->
