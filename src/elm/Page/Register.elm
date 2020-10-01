@@ -83,9 +83,9 @@ type AccountType
 
 type FormType
     = None
-    | Natural NaturalForm.Model
-    | Juridical JuridicalForm.Model
-    | Default DefaultForm.Model
+    | NaturalForm NaturalForm.Model
+    | JuridicalForm JuridicalForm.Model
+    | DefaultForm DefaultForm.Model
 
 
 initModel : Maybe InvitationId -> Guest.Model -> Model
@@ -108,7 +108,7 @@ initModel maybeInvitationId _ =
                 None
 
             Nothing ->
-                Default DefaultForm.init
+                DefaultForm DefaultForm.init
     , invitation = Nothing
     , country = Nothing
     , step = 1
@@ -276,7 +276,7 @@ viewCreateAccount translators model =
 
         defaultForm =
             case model.selectedForm of
-                Default form ->
+                DefaultForm form ->
                     formElement
                         [ DefaultForm.view translators form
                             |> Html.map DefaultFormMsg
@@ -370,13 +370,13 @@ viewKycRegister translators model =
                     let
                         selectedForm =
                             case model.selectedForm of
-                                Natural form ->
+                                NaturalForm form ->
                                     [ NaturalForm.view translators form |> Html.map NaturalFormMsg |> Html.map FormMsg ]
 
-                                Juridical form ->
+                                JuridicalForm form ->
                                     [ JuridicalForm.view translators form |> Html.map JuridicalFormMsg |> Html.map FormMsg ]
 
-                                Default form ->
+                                DefaultForm form ->
                                     [ DefaultForm.view translators form |> Html.map DefaultFormMsg |> Html.map FormMsg ]
 
                                 None ->
@@ -434,7 +434,7 @@ viewFormTypeSelector translators model =
                 , styles = ""
                 , isSelected =
                     case model.selectedForm of
-                        Natural _ ->
+                        NaturalForm _ ->
                             True
 
                         _ ->
@@ -447,7 +447,7 @@ viewFormTypeSelector translators model =
                 , styles = "ml-1"
                 , isSelected =
                     case model.selectedForm of
-                        Juridical _ ->
+                        JuridicalForm _ ->
                             True
 
                         _ ->
@@ -606,13 +606,13 @@ update maybeInvitation msg model guest =
                 account : Maybe String
                 account =
                     case formType of
-                        Juridical form ->
+                        JuridicalForm form ->
                             Just form.account
 
-                        Natural form ->
+                        NaturalForm form ->
                             Just form.account
 
-                        Default form ->
+                        DefaultForm form ->
                             Just form.account
 
                         None ->
@@ -623,13 +623,13 @@ update maybeInvitation msg model guest =
 
                 problemCount =
                     case formType of
-                        Juridical form ->
+                        JuridicalForm form ->
                             List.length (validateForm (JuridicalForm.validator translators) form)
 
-                        Natural form ->
+                        NaturalForm form ->
                             List.length (validateForm (NaturalForm.validator translators) form)
 
-                        Default form ->
+                        DefaultForm form ->
                             List.length (validateForm (DefaultForm.validator translators) form)
 
                         None ->
@@ -653,20 +653,20 @@ update maybeInvitation msg model guest =
             { model
                 | selectedForm =
                     case formType of
-                        Juridical form ->
-                            Juridical
+                        JuridicalForm form ->
+                            JuridicalForm
                                 { form
                                     | problems = validateForm (JuridicalForm.validator translators) form
                                 }
 
-                        Natural form ->
-                            Natural
+                        NaturalForm form ->
+                            NaturalForm
                                 { form
                                     | problems = validateForm (NaturalForm.validator translators) form
                                 }
 
-                        Default form ->
-                            Default
+                        DefaultForm form ->
+                            DefaultForm
                                 { form
                                     | problems = validateForm (DefaultForm.validator translators) form
                                 }
@@ -681,24 +681,24 @@ update maybeInvitation msg model guest =
             case formMsg of
                 JuridicalFormMsg innerMsg ->
                     case model.selectedForm of
-                        Juridical form ->
-                            UR.init { model | selectedForm = Juridical (JuridicalForm.update innerMsg form guest.shared.translators) }
+                        JuridicalForm form ->
+                            UR.init { model | selectedForm = JuridicalForm (JuridicalForm.update innerMsg form guest.shared.translators) }
 
                         _ ->
                             UR.init model
 
                 NaturalFormMsg innerMsg ->
                     case model.selectedForm of
-                        Natural form ->
-                            UR.init { model | selectedForm = Natural (NaturalForm.update innerMsg form) }
+                        NaturalForm form ->
+                            UR.init { model | selectedForm = NaturalForm (NaturalForm.update innerMsg form) }
 
                         _ ->
                             UR.init model
 
                 DefaultFormMsg innerMsg ->
                     case model.selectedForm of
-                        Default form ->
-                            UR.init { model | selectedForm = Default (DefaultForm.update innerMsg form) }
+                        DefaultForm form ->
+                            UR.init { model | selectedForm = DefaultForm (DefaultForm.update innerMsg form) }
 
                         _ ->
                             UR.init model
@@ -707,8 +707,8 @@ update maybeInvitation msg model guest =
             let
                 newSelectedForm =
                     case ( type_, model.country, model.selectedForm ) of
-                        ( NaturalAccount, _, Juridical form ) ->
-                            Natural
+                        ( NaturalAccount, _, JuridicalForm form ) ->
+                            NaturalForm
                                 (NaturalForm.init
                                     { account = Just form.account
                                     , email = Just form.email
@@ -717,7 +717,7 @@ update maybeInvitation msg model guest =
                                 )
 
                         ( NaturalAccount, _, _ ) ->
-                            Natural
+                            NaturalForm
                                 (NaturalForm.init
                                     { account = Nothing
                                     , email = Nothing
@@ -725,8 +725,8 @@ update maybeInvitation msg model guest =
                                     }
                                 )
 
-                        ( JuridicalAccount, Just country, Natural form ) ->
-                            Juridical
+                        ( JuridicalAccount, Just country, NaturalForm form ) ->
+                            JuridicalForm
                                 (JuridicalForm.init
                                     { account = Just form.account
                                     , email = Just form.email
@@ -737,7 +737,7 @@ update maybeInvitation msg model guest =
                                 )
 
                         ( JuridicalAccount, Just country, _ ) ->
-                            Juridical
+                            JuridicalForm
                                 (JuridicalForm.init
                                     { account = Nothing
                                     , email = Nothing
@@ -770,13 +770,13 @@ update maybeInvitation msg model guest =
                                 , ( "account"
                                   , Encode.string
                                         (case model.selectedForm of
-                                            Juridical form ->
+                                            JuridicalForm form ->
                                                 form.account
 
-                                            Natural form ->
+                                            NaturalForm form ->
                                                 form.account
 
-                                            Default form ->
+                                            DefaultForm form ->
                                                 form.account
 
                                             None ->
@@ -791,14 +791,14 @@ update maybeInvitation msg model guest =
                     { model
                         | selectedForm =
                             case model.selectedForm of
-                                Juridical form ->
-                                    Juridical { form | problems = ( JuridicalForm.Account, t "error.alreadyTaken" ) :: form.problems }
+                                JuridicalForm form ->
+                                    JuridicalForm { form | problems = ( JuridicalForm.Account, t "error.alreadyTaken" ) :: form.problems }
 
-                                Natural form ->
-                                    Natural { form | problems = ( NaturalForm.Account, t "error.alreadyTaken" ) :: form.problems }
+                                NaturalForm form ->
+                                    NaturalForm { form | problems = ( NaturalForm.Account, t "error.alreadyTaken" ) :: form.problems }
 
-                                Default form ->
-                                    Default { form | problems = ( DefaultForm.Account, t "error.alreadyTaken" ) :: form.problems }
+                                DefaultForm form ->
+                                    DefaultForm { form | problems = ( DefaultForm.Account, t "error.alreadyTaken" ) :: form.problems }
 
                                 None ->
                                     model.selectedForm
@@ -914,7 +914,7 @@ update maybeInvitation msg model guest =
             else
                 { model
                     | status = Loaded
-                    , selectedForm = Default DefaultForm.init
+                    , selectedForm = DefaultForm DefaultForm.init
                 }
                     |> UR.init
 
@@ -980,13 +980,13 @@ formTypeToAccountCmd shared key invitationId formType =
                 CompletedSignUp
     in
     case formType of
-        Juridical form ->
+        JuridicalForm form ->
             cmd { account = form.account, email = form.email, name = form.name, publicKey = key }
 
-        Natural form ->
+        NaturalForm form ->
             cmd { account = form.account, email = form.email, name = form.name, publicKey = key }
 
-        Default form ->
+        DefaultForm form ->
             cmd { account = form.account, email = form.email, name = form.name, publicKey = key }
 
         None ->
@@ -1011,7 +1011,7 @@ formTypeToKycCmd shared formType =
                 CompletedKycUpsert
     in
     case formType of
-        Juridical form ->
+        JuridicalForm form ->
             cmd
                 { accountId = form.account
                 , countryId = Id "1"
@@ -1021,7 +1021,7 @@ formTypeToKycCmd shared formType =
                 , userType = "juridical"
                 }
 
-        Natural form ->
+        NaturalForm form ->
             cmd
                 { accountId = form.account
                 , countryId = Id "1"
@@ -1048,7 +1048,7 @@ formTypeToAddressCmd shared formType =
                 CompletedAddressUpsert
     in
     case formType of
-        Juridical form ->
+        JuridicalForm form ->
             cmd
                 { accountId = form.account
                 , cityId = Tuple.first form.city |> Id
