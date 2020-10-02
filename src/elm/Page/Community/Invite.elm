@@ -227,7 +227,7 @@ viewContent { t } { creator, community } innerContent =
     in
     div [ class "bg-white pb-20" ]
         [ div [ class "flex flex-wrap content-end" ]
-            [ div [ class "flex items-center justify-center h-24 w-24 rounded-full mx-auto -mt-12 bg-white" ]
+            [ div [ class "flex overflow-hidden items-center justify-center h-24 w-24 rounded-full mx-auto -mt-12 bg-white" ]
                 [ img
                     [ src community.logo
                     , class "object-scale-down h-20 w-20"
