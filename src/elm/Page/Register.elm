@@ -881,10 +881,43 @@ update _ msg model { shared } =
         CompletedSignUp (Ok response) ->
             case response.status of
                 SignUpStatus.Success ->
+                    let
+                        kycFormData : Maybe InputObject.KycDataUpdateInputRequiredFields
+                        kycFormData =
+                            case model.selectedForm of
+                                NaturalForm form ->
+                                    Just
+                                        { accountId = form.account
+                                        , countryId = Id "1"
+                                        , document = form.document
+                                        , documentType = NaturalForm.documentTypeToString form.documentType
+                                        , phone = form.phone
+                                        , userType = "natural"
+                                        }
+
+                                JuridicalForm form ->
+                                    Just
+                                        { accountId = form.account
+                                        , countryId = Id "1"
+                                        , document = form.document
+                                        , documentType = JuridicalForm.companyTypeToString form.companyType
+                                        , phone = form.phone
+                                        , userType = "juridical"
+                                        }
+
+                                _ ->
+                                    Nothing
+                    in
                     model
                         |> UR.init
                         |> UR.addCmd
-                            (saveKycData shared model.selectedForm)
+                            (case kycFormData of
+                                Just data ->
+                                    saveKycData shared data
+
+                                Nothing ->
+                                    redirectToLogin shared
+                            )
 
                 SignUpStatus.Error ->
                     UR.init { model | serverError = Just (t "error.unknown") }
@@ -893,10 +926,36 @@ update _ msg model { shared } =
             UR.init { model | serverError = Just (t "error.unknown") }
 
         CompletedKycUpsert (Ok _) ->
+            let
+                addressData : Maybe ( InputObject.AddressUpdateInputRequiredFields, InputObject.AddressUpdateInputOptionalFields )
+                addressData =
+                    case model.selectedForm of
+                        JuridicalForm form ->
+                            Just
+                                ( { accountId = form.account
+                                  , cityId = Tuple.first form.city |> Id
+                                  , countryId = Id "1"
+                                  , neighborhoodId = Tuple.first form.district |> Id
+                                  , stateId = Tuple.first form.state |> Id
+                                  , street = form.street
+                                  , zip = form.zip
+                                  }
+                                , { number = Graphql.OptionalArgument.Present form.number }
+                                )
+
+                        _ ->
+                            Nothing
+            in
             model
                 |> UR.init
                 |> UR.addCmd
-                    (saveAddress shared model.selectedForm)
+                    (case addressData of
+                        Just data ->
+                            saveAddress shared data
+
+                        Nothing ->
+                            redirectToLogin shared
+                    )
 
         CompletedKycUpsert (Err _) ->
             UR.init { model | serverError = Just (t "error.unknown") }
@@ -905,14 +964,20 @@ update _ msg model { shared } =
             model
                 |> UR.init
                 |> UR.addCmd
-                    -- Go to login page after downloading PDF
-                    (Route.replaceUrl shared.navKey (Route.Login Nothing))
+                    (redirectToLogin shared)
 
         CompletedAddressUpsert (Err _) ->
             UR.init { model | serverError = Just (t "error.unknown") }
 
         CompletedLoadInvite (Ok (Just invitation)) ->
             if invitation.community.hasKyc then
+                let
+                    loadCountryData =
+                        Api.Graphql.query
+                            shared
+                            (Address.countryQuery "Costa Rica")
+                            CompletedLoadCountry
+                in
                 { model
                     | status = Loading -- still need to load country data
                     , selectedForm = None
@@ -920,11 +985,7 @@ update _ msg model { shared } =
                 }
                     |> UR.init
                     |> UR.addCmd
-                        (Api.Graphql.query
-                            shared
-                            (Address.countryQuery "Costa Rica")
-                            CompletedLoadCountry
-                        )
+                        loadCountryData
 
             else
                 { model
@@ -1018,76 +1079,31 @@ redirectToLogin shared =
     Route.replaceUrl shared.navKey (Route.Login Nothing)
 
 
-saveKycData : Shared -> FormType -> Cmd Msg
-saveKycData shared formType =
-    let
-        saveCmd : InputObject.KycDataUpdateInputRequiredFields -> Cmd Msg
-        saveCmd requiredFields =
-            Api.Graphql.mutation shared
-                (Mutation.upsertKyc
-                    { input = InputObject.buildKycDataUpdateInput requiredFields }
-                    Graphql.SelectionSet.empty
-                )
-                CompletedKycUpsert
-    in
-    case formType of
-        JuridicalForm form ->
-            saveCmd
-                { accountId = form.account
-                , countryId = Id "1"
-                , document = form.document
-                , documentType = JuridicalForm.companyTypeToString form.companyType
-                , phone = form.phone
-                , userType = "juridical"
-                }
-
-        NaturalForm form ->
-            saveCmd
-                { accountId = form.account
-                , countryId = Id "1"
-                , document = form.document
-                , documentType = NaturalForm.documentTypeToString form.documentType
-                , phone = form.phone
-                , userType = "natural"
-                }
-
-        _ ->
-            redirectToLogin shared
+saveKycData : Shared -> InputObject.KycDataUpdateInputRequiredFields -> Cmd Msg
+saveKycData shared requiredFields =
+    Api.Graphql.mutation shared
+        (Mutation.upsertKyc
+            { input = InputObject.buildKycDataUpdateInput requiredFields }
+            Graphql.SelectionSet.empty
+        )
+        CompletedKycUpsert
 
 
-saveAddress : Shared -> FormType -> Cmd Msg
-saveAddress shared formType =
-    let
-        saveCmd : InputObject.AddressUpdateInputRequiredFields -> InputObject.AddressUpdateInputOptionalFields -> Cmd Msg
-        saveCmd required optional =
-            Api.Graphql.mutation shared
-                (Mutation.upsertAddress
-                    { input = InputObject.buildAddressUpdateInput required (\_ -> optional) }
-                    Graphql.SelectionSet.empty
-                )
-                CompletedAddressUpsert
-    in
-    case formType of
-        JuridicalForm form ->
-            saveCmd
-                { accountId = form.account
-                , cityId = Tuple.first form.city |> Id
-                , countryId = Id "1"
-                , neighborhoodId = Tuple.first form.district |> Id
-                , stateId = Tuple.first form.state |> Id
-                , street = form.street
-                , zip = form.zip
-                }
-                { number = Graphql.OptionalArgument.Present form.number }
-
-        _ ->
-            redirectToLogin shared
+saveAddress :
+    Shared
+    -> ( InputObject.AddressUpdateInputRequiredFields, InputObject.AddressUpdateInputOptionalFields )
+    -> Cmd Msg
+saveAddress shared ( required, optional ) =
+    Api.Graphql.mutation shared
+        (Mutation.upsertAddress
+            { input = InputObject.buildAddressUpdateInput required (\_ -> optional) }
+            Graphql.SelectionSet.empty
+        )
+        CompletedAddressUpsert
 
 
 
---
--- Model functions
---
+-- INTEROP
 
 
 jsAddressToMsg : List String -> Value -> Maybe Msg
