@@ -124,8 +124,12 @@ view translators model =
             (companyTypeToString model.companyType)
             True
             EnteredType
-            [ { value = "mipyme", label = translators.t "register.form.company.mipyme.label" }
-            , { value = "corporation", label = translators.t "register.form.company.gran_empresa.label" }
+            [ { value = companyTypeToString MIPYME
+              , label = translators.t "register.form.company.mipyme.label"
+              }
+            , { value = companyTypeToString Corporation
+              , label = translators.t "register.form.company.gran_empresa.label"
+              }
             ]
             (fieldProblems CompanyType model.problems)
         , View.Form.Input.init
@@ -268,9 +272,6 @@ update msg form translators =
             { form
                 | companyType =
                     case type_ of
-                        "corporation" ->
-                            Corporation
-
                         "mipyme" ->
                             MIPYME
 
