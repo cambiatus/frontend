@@ -102,9 +102,15 @@ view translators model =
             (documentTypeToString model.documentType)
             True
             EnteredDocumentType
-            [ { value = "ssn", label = translators.t "register.form.document.cedula_de_identidad.label" }
-            , { value = "dimex", label = translators.t "register.form.document.dimex.label" }
-            , { value = "nite", label = translators.t "register.form.document.nite.label" }
+            [ { value = documentTypeToString SSN
+              , label = translators.t "register.form.document.cedula_de_identidad.label"
+              }
+            , { value = documentTypeToString DIMEX
+              , label = translators.t "register.form.document.dimex.label"
+              }
+            , { value = documentTypeToString NITE
+              , label = translators.t "register.form.document.nite.label"
+              }
             ]
             (fieldProblems DocumentType model.problems)
         , View.Form.Input.init
@@ -192,9 +198,6 @@ update msg model =
             { model
                 | documentType =
                     case documentType of
-                        "ssn" ->
-                            SSN
-
                         "dimex" ->
                             DIMEX
 
