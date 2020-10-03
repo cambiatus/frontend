@@ -134,7 +134,7 @@ encodeAsset : Asset -> Value
 encodeAsset asset =
     String.fromFloat asset.amount
         ++ " "
-        ++ symbolToString asset.symbol
+        ++ symbolToSymbolCodeString asset.symbol
         |> Encode.string
 
 
