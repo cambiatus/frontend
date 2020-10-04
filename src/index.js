@@ -863,11 +863,7 @@ async function handleJavascriptPort (arg) {
       break
     }
     case 'setSelectedCommunity': {
-      devLog(
-        '=======================',
-        'storeSelectedCommunity',
-        arg.data.selectedCommunity
-      )
+      devLog('=======================', 'storeSelectedCommunity')
 
       window.localStorage.removeItem(SELECTED_COMMUNITY_KEY)
       window.localStorage.setItem(

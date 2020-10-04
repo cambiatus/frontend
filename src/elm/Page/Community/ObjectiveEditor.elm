@@ -329,7 +329,7 @@ update msg model loggedIn =
                     UR.init model
                         |> updateObjective msg (\o -> { o | save = Saving })
 
-                save form isEdit precision =
+                save form isEdit _ =
                     case isEdit of
                         Just objectiveId ->
                             newModel
