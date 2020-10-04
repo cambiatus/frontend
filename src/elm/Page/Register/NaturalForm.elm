@@ -102,9 +102,9 @@ view translators model =
             (documentTypeToString model.documentType)
             True
             EnteredDocumentType
-            [ { value = "ssn", label = translators.t "register.form.document.cedula_de_identidad.label" }
+            [ { value = "nite", label = translators.t "register.form.document.nite.label" }
             , { value = "dimex", label = translators.t "register.form.document.dimex.label" }
-            , { value = "nite", label = translators.t "register.form.document.nite.label" }
+            , { value = "ssn", label = translators.t "register.form.document.cedula_de_identidad.label" }
             ]
             (fieldProblems DocumentType model.problems)
         , View.Form.Input.init

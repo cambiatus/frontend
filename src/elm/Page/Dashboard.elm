@@ -547,7 +547,7 @@ viewTransfer ({ shared } as loggedIn) transfer =
                 [ text (Maybe.withDefault "" transfer.memo) ]
             ]
         , div [ class "flex flex-none pl-4" ]
-            (viewAmount amount (Eos.symbolToString transfer.symbol))
+            (viewAmount amount (Eos.symbolToSymbolCodeString transfer.symbol))
         ]
 
 
