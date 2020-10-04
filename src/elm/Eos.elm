@@ -132,8 +132,30 @@ type alias Asset =
 
 
 assetToString : Asset -> String
-assetToString asset =
-    String.fromFloat asset.amount
+assetToString ({ symbol } as asset) =
+    let
+        amountString =
+            String.fromFloat asset.amount
+
+        value =
+            case String.split "." amountString of
+                [ _, _ ] ->
+                    amountString
+
+                [ _ ] ->
+                    case getSymbolPrecision symbol of
+                        0 ->
+                            amountString
+
+                        p ->
+                            amountString
+                                ++ "."
+                                ++ (List.repeat p "0" |> String.join "")
+
+                _ ->
+                    ""
+    in
+    value
         ++ " "
         ++ symbolToSymbolCodeString asset.symbol
 
@@ -233,6 +255,11 @@ On EOS symbols are displayed like so: `4,EOS` or `0,CMB`
 -}
 type Symbol
     = Symbol String Int
+
+
+getSymbolPrecision : Symbol -> Int
+getSymbolPrecision (Symbol _ precision) =
+    precision
 
 
 symbolDecoder : Decoder Symbol
