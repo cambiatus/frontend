@@ -79,7 +79,7 @@
     "email": "Si us plau, utilitzeu un correu electrònic vàlid.",
     "tooShort": "Molt curta. Has d’emprar com a mínim {{minLength}} caràcters.",
     "tooLong": "Molt llarga. Has d’emprar com a màxim {{maxLength}} caràcters.",
-    "invalidChar": "Caràcter invàlid {{invalidChar}}.",
+    "invalidChar": "Caràcter no vàlid. Utilitzeu només lletres de l'A a Z i números de l'1 al 5.",
     "alreadyTaken": "Ja està en ús. Si et plau, intenta-ho de nou.",
     "notMember": "Aquest usuari no és membre.",
     "chooseOrUploadLogo": "Escull o puja el teu propi logotip.",
