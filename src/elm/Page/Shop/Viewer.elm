@@ -8,7 +8,7 @@ import Eos
 import Eos.Account as Eos
 import Graphql.Http
 import Html exposing (Html, a, button, div, img, input, label, p, span, text, textarea)
-import Html.Attributes exposing (class, disabled, for, id, placeholder, required, src, type_, value)
+import Html.Attributes exposing (autocomplete, class, disabled, for, id, placeholder, required, src, type_, value)
 import Html.Events exposing (onClick, onInput)
 import Http
 import I18Next exposing (Translations, t)
@@ -550,6 +550,7 @@ viewTransferForm { shared } card model =
                     , id fieldId.units
                     , value form.units
                     , onInput EnteredUnit
+                    , autocomplete False
                     , required True
                     , Html.Attributes.min "0"
                     ]
