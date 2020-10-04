@@ -38,7 +38,7 @@ default =
     , logoMobile = "/images/logo-cambiatus-mobile.svg"
     , now = 0
     , allowCommunityCreation = True
-    , selectedCommunity = Eos.bespiralSymbol
+    , selectedCommunity = Eos.cambiatusSymbol
     , tokenContract = "bes.token"
     , communityContract = "bes.cmm"
     }

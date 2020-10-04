@@ -1,7 +1,37 @@
-module Eos exposing (Action, Asset, Authorization, EosBool(..), Network, Symbol, TableQuery, Transaction, bespiralSymbol, boolToEosBool, decodeAmountToFloat, decodeAsset, encodeAction, encodeAsset, encodeAuthorization, encodeEosBool, encodeNetwork, encodeSymbol, encodeTableQuery, encodeTransaction, symbolDecoder, symbolFromString, symbolSelectionSet, symbolToString, symbolUrlParser)
+module Eos exposing
+    ( Action
+    , Asset
+    , Authorization
+    , EosBool(..)
+    , Network
+    , Symbol
+    , TableQuery
+    , Transaction
+    , assetToString
+    , boolToEosBool
+    , cambiatusSymbol
+    , decodeAsset
+    , decodeAssetToFloat
+    , encodeAction
+    , encodeAsset
+    , encodeAuthorization
+    , encodeEosBool
+    , encodeNetwork
+    , encodeSymbol
+    , encodeTableQuery
+    , encodeTransaction
+    , symbolDecoder
+    , symbolFromString
+    , symbolSelectionSet
+    , symbolToString
+    , symbolToSymbolCodeString
+    , symbolUrlParser
+    )
 
+import Cambiatus.Object
+import Cambiatus.Object.Community as Community
 import Eos.Account as Account exposing (PermissionName)
-import Graphql.SelectionSet as SelectionSet exposing (SelectionSet)
+import Graphql.SelectionSet as SelectionSet exposing (SelectionSet, with)
 import Json.Decode as Decode exposing (Decoder)
 import Json.Encode as Encode exposing (Value)
 import Url.Parser
@@ -101,11 +131,38 @@ type alias Asset =
     }
 
 
+assetToString : Asset -> String
+assetToString ({ symbol } as asset) =
+    let
+        amountString =
+            String.fromFloat asset.amount
+
+        value =
+            case String.split "." amountString of
+                [ _, _ ] ->
+                    amountString
+
+                [ _ ] ->
+                    case getSymbolPrecision symbol of
+                        0 ->
+                            amountString
+
+                        p ->
+                            amountString
+                                ++ "."
+                                ++ (List.repeat p "0" |> String.join "")
+
+                _ ->
+                    ""
+    in
+    value
+        ++ " "
+        ++ symbolToSymbolCodeString asset.symbol
+
+
 encodeAsset : Asset -> Value
 encodeAsset asset =
-    String.fromFloat asset.amount
-        ++ " "
-        ++ symbolToString asset.symbol
+    assetToString asset
         |> Encode.string
 
 
@@ -116,12 +173,12 @@ decodeAsset =
             (\s ->
                 let
                     value =
-                        amountToFloat s
+                        assetStringToFloat s
                             |> Maybe.map Decode.succeed
                             |> Maybe.withDefault (Decode.fail "Fail to decode asset amount")
 
                     symbol =
-                        amountToSymbol s
+                        getSymbolFromAssetString s
                             |> Maybe.map Decode.succeed
                             |> Maybe.withDefault (Decode.fail "Fail to decode asset symbol")
                 in
@@ -132,62 +189,138 @@ decodeAsset =
             )
 
 
-decodeAmountToFloat : Decoder Float
-decodeAmountToFloat =
+decodeAssetToFloat : Decoder Float
+decodeAssetToFloat =
     Decode.string
         |> Decode.andThen
             (\s ->
-                amountToFloat s
+                assetStringToFloat s
                     |> Maybe.map Decode.succeed
                     |> Maybe.withDefault (Decode.fail "Fail to decode amount")
             )
 
 
-amountToFloat : String -> Maybe Float
-amountToFloat s =
+assetStringToFloat : String -> Maybe Float
+assetStringToFloat s =
     String.split " " s
         |> List.head
         |> Maybe.andThen String.toFloat
+
+
+getSymbolFromAssetString : String -> Maybe Symbol
+getSymbolFromAssetString s =
+    let
+        assetArr =
+            String.split " " s
+
+        symbol : Maybe String
+        symbol =
+            assetArr |> List.reverse |> List.head
+
+        precision : Maybe Int
+        precision =
+            assetArr
+                |> List.head
+                |> Maybe.andThen (\amount -> Just (String.split "." amount))
+                |> Maybe.andThen
+                    (\amountArr ->
+                        case amountArr of
+                            [ _, p ] ->
+                                Just (String.length p)
+
+                            _ ->
+                                Just 0
+                    )
+    in
+    case ( symbol, precision ) of
+        ( Just symbolString, Just p ) ->
+            Just (Symbol symbolString p)
+
+        _ ->
+            Nothing
 
 
 
 -- SYMBOL
 
 
+{-| Symbol is composed of a 3 to 4 alphanumeric chars long and an integer, used for informing precision
+On EOS symbols are displayed like so: `4,EOS` or `0,CMB`
+
+
+# Definition
+
+@docs Symbol
+
+-}
 type Symbol
-    = Symbol String
+    = Symbol String Int
+
+
+getSymbolPrecision : Symbol -> Int
+getSymbolPrecision (Symbol _ precision) =
+    precision
 
 
 symbolDecoder : Decoder Symbol
 symbolDecoder =
-    Decode.map Symbol Decode.string
+    Decode.string
         |> Decode.andThen
-            (\symbol ->
-                if symbolToString symbol == "undefined" then
+            (\string ->
+                if string == "undefined" then
                     Decode.fail "Cannot decode 'undefined' symbol, check Javascript"
 
                 else
-                    Decode.succeed symbol
+                    case symbolFromString string of
+                        Just symbol ->
+                            Decode.succeed symbol
+
+                        Nothing ->
+                            Decode.fail "Cannot decode given symbol"
             )
 
 
 encodeSymbol : Symbol -> Value
-encodeSymbol (Symbol symbol) =
-    Encode.string symbol
+encodeSymbol symbol =
+    Encode.string (symbolToString symbol)
 
 
 symbolToString : Symbol -> String
-symbolToString (Symbol symbol) =
-    symbol
+symbolToString (Symbol symbol precision) =
+    [ String.fromInt precision, ",", symbol ]
+        |> String.join ""
+
+
+symbolToSymbolCodeString : Symbol -> String
+symbolToSymbolCodeString (Symbol s _) =
+    s
 
 
 symbolFromString : String -> Maybe Symbol
 symbolFromString str =
-    if String.length str == 3 || String.length str == 4 then
-        Just (Symbol (String.toUpper str))
+    let
+        details =
+            String.split "," str |> List.take 2
 
-    else
-        Nothing
+        maybePrecision : Maybe Int
+        maybePrecision =
+            List.head details
+                |> Maybe.andThen String.toInt
+
+        maybeSymbolCode : Maybe String
+        maybeSymbolCode =
+            details |> List.reverse |> List.head
+    in
+    case ( maybeSymbolCode, maybePrecision ) of
+        ( Just symbolCode, Just precision ) ->
+            if String.length symbolCode == 3 || String.length symbolCode == 4 then
+                Just (Symbol (String.toUpper symbolCode) precision)
+
+            else
+                Nothing
+
+        _ ->
+            Nothing
 
 
 symbolUrlParser : Url.Parser.Parser (Symbol -> a) a
@@ -195,26 +328,27 @@ symbolUrlParser =
     Url.Parser.custom "SYMBOL" symbolFromString
 
 
-symbolSelectionSet : SelectionSet String typeLock -> SelectionSet Symbol typeLock
+symbolSelectionSet : SelectionSet Symbol Cambiatus.Object.Community
 symbolSelectionSet =
-    SelectionSet.map Symbol
+    SelectionSet.succeed Symbol
+        |> with
+            (Community.symbol
+                |> SelectionSet.mapOrFail
+                    (\s ->
+                        case String.split "," s |> List.reverse |> List.head of
+                            Just e ->
+                                Ok e
+
+                            Nothing ->
+                                Err "Can't parse symbol"
+                    )
+            )
+        |> with Community.precision
 
 
-bespiralSymbol : Symbol
-bespiralSymbol =
-    Symbol "BES"
-
-
-amountToSymbol : String -> Maybe Symbol
-amountToSymbol s =
-    String.split " " s
-        |> List.reverse
-        |> List.head
-        |> Maybe.andThen symbolFromString
-
-
-
--- EosBool
+cambiatusSymbol : Symbol
+cambiatusSymbol =
+    Symbol "CMB" 0
 
 
 type EosBool

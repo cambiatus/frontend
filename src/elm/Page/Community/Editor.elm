@@ -387,12 +387,12 @@ viewFieldCurrencySymbol shared isDisabled defVal errors =
             [ class "w-full input rounded-sm"
             , id fieldSymbolId
             , value defVal
-            , minlength 3
-            , maxlength 4
+            , minlength 5
+            , maxlength 6
             , required True
             , onInput EnteredSymbol
             , disabled isDisabled
-            , placeholder "_ _ _ _"
+            , placeholder "_ , _ _ _ _"
             ]
             []
         , viewFieldError shared fieldSymbolId errors
