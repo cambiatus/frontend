@@ -7,6 +7,7 @@ module Eos exposing
     , Symbol
     , TableQuery
     , Transaction
+    , assetToString
     , boolToEosBool
     , cambiatusSymbol
     , decodeAsset
@@ -130,11 +131,16 @@ type alias Asset =
     }
 
 
-encodeAsset : Asset -> Value
-encodeAsset asset =
+assetToString : Asset -> String
+assetToString asset =
     String.fromFloat asset.amount
         ++ " "
         ++ symbolToSymbolCodeString asset.symbol
+
+
+encodeAsset : Asset -> Value
+encodeAsset asset =
+    assetToString asset
         |> Encode.string
 
 

@@ -969,10 +969,11 @@ upsertAction loggedIn model isoDate =
         verifierReward =
             case model.form.verification of
                 Automatic ->
-                    "0 " ++ Eos.symbolToString model.communityId
+                    Eos.Asset 0.0 model.communityId |> Eos.assetToString
 
                 Manual _ verificationRewardValidator _ ->
-                    getInput verificationRewardValidator ++ " " ++ Eos.symbolToString model.communityId
+                    Eos.Asset (getInput verificationRewardValidator |> String.toFloat |> Maybe.withDefault 0.0) model.communityId
+                        |> Eos.assetToString
 
         usages =
             case model.form.validation of
@@ -1046,7 +1047,7 @@ upsertAction loggedIn model isoDate =
                             { actionId = model.actionId |> Maybe.withDefault 0
                             , objectiveId = model.objectiveId
                             , description = getInput model.form.description
-                            , reward = getInput model.form.reward ++ " " ++ Eos.symbolToString model.communityId
+                            , reward = Eos.Asset (getInput model.form.reward |> String.toFloat |> Maybe.withDefault 0.0) model.communityId |> Eos.assetToString
                             , verifierReward = verifierReward
                             , deadline = isoDate
                             , usages = usages
