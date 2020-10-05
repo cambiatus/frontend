@@ -1042,6 +1042,7 @@ signUp account name email publicKey maybeInvitationId =
             , name = name
             , email = email
             , publicKey = publicKey
+            , userType = Present ""
             , invitationId =
                 case maybeInvitationId of
                     Just i ->
