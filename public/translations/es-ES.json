@@ -600,7 +600,8 @@
       "quantity_label": "Valor",
       "memo_label": "Comentarios (opcional)",
       "default_memo": "Gracias por tu ayuda",
-      "submit": "Comprar"
+      "submit": "Comprar",
+      "success": "Compra exitosa!"
     },
     "delete": "Eliminar",
     "delete_modal": {

@@ -196,11 +196,9 @@ viewForm ({ shared } as loggedIn) model f community isDisabled =
                 , div [ class "flex h-12 rounded-sm border border-gray-500" ]
                     [ input
                         [ class "block w-4/5 border-none px-4 py-3 outline-none"
-                        , placeholder "0.00"
+                        , placeholder "0"
                         , disabled isDisabled
                         , required True
-
-                        -- , pattern "[0-9]*"
                         , onInput EnteredAmount
                         , value f.amount
                         ]

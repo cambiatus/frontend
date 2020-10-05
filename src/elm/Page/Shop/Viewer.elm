@@ -259,6 +259,7 @@ update msg model user =
                                     ]
                             }
                         |> UR.addCmd (Route.replaceUrl user.shared.navKey (Route.Shop Shop.All))
+                        |> UR.addExt (ShowFeedback LoggedIn.Success (I18Next.t user.shared.translations "shop.transfer.success"))
 
                 else
                     model
@@ -409,7 +410,7 @@ viewCard ({ shared } as loggedIn) card model =
                     0.0
 
         currBalance =
-            String.fromFloat balance ++ " " ++ Eos.symbolToString card.sale.symbol
+            String.fromFloat balance ++ " " ++ Eos.symbolToSymbolCodeString card.sale.symbol
 
         text_ str =
             text (t shared.translations str)
@@ -441,7 +442,7 @@ viewCard ({ shared } as loggedIn) card model =
                 [ div [ class "" ]
                     [ div [ class "flex items-center" ]
                         [ div [ class "text-2xl text-green font-medium" ] [ text (String.fromFloat card.sale.price) ]
-                        , div [ class "uppercase text-sm font-thin ml-2 text-green" ] [ text (Eos.symbolToString card.sale.symbol) ]
+                        , div [ class "uppercase text-sm font-thin ml-2 text-green" ] [ text (Eos.symbolToSymbolCodeString card.sale.symbol) ]
                         ]
                     , div [ class "flex" ]
                         [ div [ class "bg-gray-100 uppercase text-xs px-2" ]
@@ -512,7 +513,7 @@ viewTransferForm { shared } card model =
             I18Next.t shared.translations
 
         saleSymbol =
-            Eos.symbolToString card.sale.symbol
+            Eos.symbolToSymbolCodeString card.sale.symbol
 
         maybeBal =
             LE.find (\bal -> bal.asset.symbol == card.sale.symbol) model.balances

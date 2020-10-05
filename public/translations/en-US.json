@@ -598,7 +598,8 @@
       "quantity_label": "Value",
       "memo_label": "Comments (optional)",
       "default_memo": "Thanks for the help!",
-      "submit": "Buy"
+      "submit": "Buy",
+      "success": "Successful purchase!"
     },
     "delete": "Delete",
     "delete_modal": {
