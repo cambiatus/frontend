@@ -389,7 +389,7 @@ viewForm shared balances imageStatus isEdit isDisabled deleteModal form =
                                         [ value (Eos.symbolToString b.asset.symbol)
                                         , selected (symbol == Just b.asset.symbol)
                                         ]
-                                        [ text (Eos.symbolToString b.asset.symbol) ]
+                                        [ text (Eos.symbolToSymbolCodeString b.asset.symbol) ]
                                 )
                                 balances
                         )
