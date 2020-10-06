@@ -124,7 +124,7 @@ selectionSet =
 communityInfoSelectionSet : SelectionSet CommunityInfo Cambiatus.Object.Community
 communityInfoSelectionSet =
     SelectionSet.succeed CommunityInfo
-        |> with (Eos.symbolSelectionSet Community.symbol)
+        |> with Eos.symbolSelectionSet
         |> with Community.name
         |> with Community.logo
         |> with Community.hasShop

@@ -130,6 +130,11 @@ objectives object_ =
     Object.selectionForCompositeField "objectives" [] object_ (identity >> Decode.list)
 
 
+precision : SelectionSet Int Cambiatus.Object.Community
+precision =
+    Object.selectionForField "Int" "precision" [] Decode.int
+
+
 saleCount : SelectionSet Int Cambiatus.Object.Community
 saleCount =
     Object.selectionForField "Int" "saleCount" [] Decode.int

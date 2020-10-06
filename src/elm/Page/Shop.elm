@@ -164,7 +164,7 @@ view loggedIn model =
                             c.name
 
                         Nothing ->
-                            Eos.symbolToString loggedIn.selectedCommunity
+                            Eos.symbolToSymbolCodeString loggedIn.selectedCommunity
 
                 _ ->
                     ""
@@ -202,7 +202,7 @@ view loggedIn model =
 
 viewHeader : LoggedIn.Model -> Html Msg
 viewHeader loggedIn =
-    div [ class "w-full flex flex-wrap relative bg-indigo-500 p-4 lg:container lg:mx-auto lg:py-12" ]
+    div [ class "w-full flex flex-wrap relative bg-indigo-500 p-4 lg:mx-auto lg:py-12" ]
         [ div [ class "flex w-full container mx-auto" ]
             [ div [ class "w-1/2" ]
                 [ p [ class "text-white w-full text-xl font-medium mb-4 mx-8 text-xs font-light mb-2 uppercase" ]
@@ -279,7 +279,7 @@ viewCard model ({ shared } as loggedIn) index card =
                     0.0
 
         currBalance =
-            String.fromFloat symbolBalance ++ " " ++ Eos.symbolToString card.sale.symbol
+            String.fromFloat symbolBalance ++ " " ++ Eos.symbolToSymbolCodeString card.sale.symbol
 
         tr r_id replaces =
             I18Next.tr shared.translations I18Next.Curly r_id replaces
@@ -313,7 +313,7 @@ viewCard model ({ shared } as loggedIn) index card =
                       else
                         div [ class "flex flex-none w-full items-center" ]
                             [ p [ class "text-green text-2xl font-medium" ] [ text (String.fromFloat card.sale.price) ]
-                            , div [ class "uppercase text-xs ml-2 font-thin font-sans text-green" ] [ text (Eos.symbolToString card.sale.symbol) ]
+                            , div [ class "uppercase text-xs ml-2 font-thin font-sans text-green" ] [ text (Eos.symbolToSymbolCodeString card.sale.symbol) ]
                             ]
                     , div [ class "w-full h-4" ]
                         [ div [ class "bg-gray-100 absolute uppercase text-xs px-2" ]
@@ -349,7 +349,7 @@ viewCard model ({ shared } as loggedIn) index card =
               else
                 div [ class "border-t border-gray-300 flex flex-none w-full px-6 pb-2" ]
                     [ p [ class "text-green text-3xl" ] [ text (String.fromFloat card.sale.price) ]
-                    , div [ class "uppercase text-xs font-thin mt-3 ml-2 font-sans text-green" ] [ text (Eos.symbolToString card.sale.symbol) ]
+                    , div [ class "uppercase text-xs font-thin mt-3 ml-2 font-sans text-green" ] [ text (Eos.symbolToSymbolCodeString card.sale.symbol) ]
                     ]
             , div [ class "px-6 pb-6" ]
                 [ div [ class "bg-gray-200 flex items-center justify-left text-xs px-4" ]

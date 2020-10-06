@@ -83,6 +83,7 @@ type alias Community =
     { symbol : Symbol
     , creator : Eos.Name
     , objectives : List Objective
+    , precision : Int
     }
 
 
@@ -210,9 +211,10 @@ communityQuery : Symbol -> SelectionSet (Maybe Community) RootQuery
 communityQuery symbol =
     Query.community { symbol = symbolToString symbol } <|
         (SelectionSet.succeed Community
-            |> with (Eos.symbolSelectionSet Community.symbol)
+            |> with Eos.symbolSelectionSet
             |> with (Eos.nameSelectionSet Community.creator)
             |> with (Community.objectives objectiveSelectionSet)
+            |> with Community.precision
         )
 
 
@@ -327,7 +329,7 @@ update msg model loggedIn =
                     UR.init model
                         |> updateObjective msg (\o -> { o | save = Saving })
 
-                save form isEdit =
+                save form isEdit _ =
                     case isEdit of
                         Just objectiveId ->
                             newModel
@@ -366,7 +368,7 @@ update msg model loggedIn =
                                                     , permissionName = Eos.samplePermission
                                                     }
                                               , data =
-                                                    { symbol = model.community
+                                                    { asset = Eos.Asset 0 model.community
                                                     , description = form.description
                                                     , creator = loggedIn.accountName
                                                     }
@@ -377,11 +379,11 @@ update msg model loggedIn =
             in
             if LoggedIn.isAuth loggedIn then
                 case model.status of
-                    Loaded _ (NewObjective objForm) ->
-                        save objForm Nothing
+                    Loaded c (NewObjective objForm) ->
+                        save objForm Nothing c.precision
 
-                    Loaded _ (EditObjective objectiveId objForm) ->
-                        save objForm (Just objectiveId)
+                    Loaded c (EditObjective objectiveId objForm) ->
+                        save objForm (Just objectiveId) c.precision
 
                     _ ->
                         newModel

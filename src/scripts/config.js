@@ -25,7 +25,7 @@ const local = {
   communityContract: 'bes.cmm',
   tokenContract: 'bes.token',
   allowCommunityCreation: true,
-  selectedCommunity: 'BES',
+  selectedCommunity: '0,BES',
   pushKey:
     'BDzXEdCCYafisu3jmYxBGDboAfwfIHYzM9BbT2DmL8VzIqSWu5BnW6lC-xEoXExQUS81vwOSPF9w8kpcINWCvUM'
 }
@@ -56,7 +56,7 @@ const dev = {
   communityContract: 'cambiatus.cm',
   tokenContract: 'cambiatus.tk',
   allowCommunityCreation: true,
-  selectedCommunity: 'CMB',
+  selectedCommunity: '0,CMB',
   pushKey:
     'BDzXEdCCYafisu3jmYxBGDboAfwfIHYzM9BbT2DmL8VzIqSWu5BnW6lC-xEoXExQUS81vwOSPF9w8kpcINWCvUM'
 }

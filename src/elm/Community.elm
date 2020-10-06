@@ -115,6 +115,7 @@ type alias Model =
     , memberCount : Int
     , members : List Profile
     , objectives : List Objective
+    , precision : Int
     , hasObjectives : Bool
     , hasShop : Bool
     , hasKyc : Bool
@@ -130,7 +131,7 @@ communitiesSelectionSet =
     SelectionSet.succeed Metadata
         |> with Community.name
         |> with Community.description
-        |> with (Eos.symbolSelectionSet Community.symbol)
+        |> with Eos.symbolSelectionSet
         |> with Community.logo
         |> with (Eos.nameSelectionSet Community.creator)
         |> with Community.memberCount
@@ -154,7 +155,7 @@ communitySelectionSet =
     SelectionSet.succeed Model
         |> with Community.name
         |> with Community.description
-        |> with (Eos.symbolSelectionSet Community.symbol)
+        |> with Eos.symbolSelectionSet
         |> with Community.logo
         |> with (Eos.nameSelectionSet Community.creator)
         |> with Community.inviterReward
@@ -162,6 +163,7 @@ communitySelectionSet =
         |> with Community.memberCount
         |> with (Community.members Profile.selectionSet)
         |> with (Community.objectives objectiveSelectionSet)
+        |> with Community.precision
         |> with Community.hasObjectives
         |> with Community.hasShop
         |> with Community.hasKyc
@@ -284,7 +286,7 @@ objectiveSelectionSet =
 
 
 type alias CreateObjectiveAction =
-    { symbol : Symbol
+    { asset : Eos.Asset
     , description : String
     , creator : Eos.Name
     }
@@ -293,7 +295,7 @@ type alias CreateObjectiveAction =
 encodeCreateObjectiveAction : CreateObjectiveAction -> Value
 encodeCreateObjectiveAction c =
     Encode.object
-        [ ( "cmm_asset", Encode.string ("0 " ++ Eos.symbolToString c.symbol) )
+        [ ( "cmm_asset", Eos.encodeAsset c.asset )
         , ( "description", Encode.string c.description )
         , ( "creator", Eos.encodeName c.creator )
         ]

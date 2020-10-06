@@ -547,7 +547,7 @@ viewTransfer ({ shared } as loggedIn) transfer =
                 [ text (Maybe.withDefault "" transfer.memo) ]
             ]
         , div [ class "flex flex-none pl-4" ]
-            (viewAmount amount (Eos.symbolToString transfer.symbol))
+            (viewAmount amount (Eos.symbolToSymbolCodeString transfer.symbol))
         ]
 
 
@@ -576,7 +576,7 @@ viewBalance loggedIn _ balance =
             text (I18Next.t loggedIn.shared.translations s)
 
         symbolText =
-            Eos.symbolToString balance.asset.symbol
+            Eos.symbolToSymbolCodeString balance.asset.symbol
 
         balanceText =
             String.fromFloat balance.asset.amount ++ " "

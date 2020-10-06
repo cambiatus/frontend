@@ -94,7 +94,7 @@ initLogin shared authModel profile_ =
         selectedCommunity =
             List.head profile_.communities
                 |> Maybe.map .id
-                |> Maybe.withDefault Eos.bespiralSymbol
+                |> Maybe.withDefault Eos.cambiatusSymbol
 
         model =
             initModel shared authModel profile_.account selectedCommunity
@@ -793,8 +793,9 @@ update msg model =
                 Nothing ->
                     UR.init model
 
-        CompletedLoadSettings (Err _) ->
+        CompletedLoadSettings (Err err) ->
             UR.init model
+                |> UR.logGraphqlError msg err
 
         ClickedTryAgainProfile accountName ->
             UR.init { model | profile = Loading accountName }
