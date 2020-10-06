@@ -259,6 +259,7 @@ update msg model user =
                                     ]
                             }
                         |> UR.addCmd (Route.replaceUrl user.shared.navKey (Route.Shop Shop.All))
+                        |> UR.addExt (ShowFeedback LoggedIn.Success (user.shared.translators.t "transfer_result.transfer_success"))
 
                 else
                     model
