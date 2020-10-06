@@ -242,7 +242,7 @@ viewEmptyResults { shared } =
     in
     div [ class "w-full text-center" ]
         [ div [ class "w-full flex justify-center" ]
-            [ img [ src "/images/not_found.svg", class "object-contain h-32 mb-3" ] []
+            [ img [ src "/images/empty-analysis.svg", class "object-contain h-32 mb-3" ] []
             ]
         , div [ class "inline-block text-gray" ]
             [ text_ "all_analysis.empty"
