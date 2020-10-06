@@ -1,7 +1,7 @@
 #================
 # Build Stage
 #================
-FROM node:12.0-alpine as builder
+FROM node:14-alpine as builder
 
 ENV NODE_ENV=production
 
@@ -12,8 +12,6 @@ COPY . .
 
 # Remove host stuff
 RUN rm -Rf node_modules build elm-stuff
-
-RUN npm install yarn --global
 
 RUN yarn install --production
 RUN yarn run build
