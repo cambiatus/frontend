@@ -112,7 +112,7 @@ type AccountType
     | JuridicalAccount Address.Country
 
 
-type FormType
+type FormModel
     = NaturalForm NaturalForm.Model
     | JuridicalForm JuridicalForm.Model
     | DefaultForm DefaultForm.Model
@@ -267,12 +267,13 @@ viewAccountGenerated { t } model keys =
 viewCreateAccount : Translators -> Model -> Html Msg
 viewCreateAccount translators model =
     let
-        formElement element form =
+        form : List (Html Msg) -> FormModel -> Html Msg
+        form formContent formModel =
             Html.form
                 [ class "flex flex-grow flex-col bg-white px-4 px-0 md:max-w-sm sf-wrapper self-center w-full"
-                , onSubmit (ValidateForm form)
+                , onSubmit (ValidateForm formModel)
                 ]
-                (viewServerError model.serverError :: element)
+                (viewServerError model.serverError :: formContent)
 
         backgroundColor =
             case model.step of
@@ -294,20 +295,20 @@ viewCreateAccount translators model =
                     , viewFooter translators False
                     ]
 
-            FormShowed form ->
-                formElement
-                    [ case form of
+            FormShowed formModel ->
+                form
+                    [ case formModel of
                         DefaultForm _ ->
                             text ""
 
                         _ ->
                             viewFormTypeSelector translators model
                     , div [ class "sf-content" ]
-                        [ viewRegistrationForm translators form
+                        [ viewRegistrationForm translators formModel
                         , viewFooter translators True
                         ]
                     ]
-                    form
+                    formModel
 
             Generated keys ->
                 --viewAccountGenerated translators model keys
@@ -343,7 +344,7 @@ viewFooter translators isSubmitEnabled =
         ]
 
 
-viewRegistrationForm : Translators -> FormType -> Html Msg
+viewRegistrationForm : Translators -> FormModel -> Html Msg
 viewRegistrationForm translators currentForm =
     case currentForm of
         NaturalForm form ->
@@ -514,7 +515,7 @@ type alias UpdateResult =
 
 
 type Msg
-    = ValidateForm FormType
+    = ValidateForm FormModel
     | GotAccountAvailabilityResponse Bool
     | AccountGenerated (Result Decode.Error AccountKeys)
     | AgreedToSave12Words Bool
@@ -540,7 +541,7 @@ type EitherFormMsg
 type Status
     = Loading
     | AccountTypeSelectorShowed
-    | FormShowed FormType
+    | FormShowed FormModel
     | ErrorShowed Error
     | NotFound
     | Generated AccountKeys
@@ -557,7 +558,7 @@ type alias PdfData =
     }
 
 
-getSignUpFields : FormType -> SignUpFields
+getSignUpFields : FormModel -> SignUpFields
 getSignUpFields form =
     let
         extract : { f | account : String, name : String, email : String } -> SignUpFields
