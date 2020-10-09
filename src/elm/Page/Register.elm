@@ -267,14 +267,6 @@ viewAccountGenerated { t } model keys =
 viewCreateAccount : Translators -> Model -> Html Msg
 viewCreateAccount translators model =
     let
-        form : List (Html Msg) -> FormModel -> Html Msg
-        form formContent formModel =
-            Html.form
-                [ class "flex flex-grow flex-col bg-white px-4 px-0 md:max-w-sm sf-wrapper self-center w-full"
-                , onSubmit (ValidateForm formModel)
-                ]
-                (viewServerError model.serverError :: formContent)
-
         backgroundColor =
             case model.step of
                 2 ->
@@ -296,8 +288,23 @@ viewCreateAccount translators model =
                     ]
 
             FormShowed formModel ->
-                form
-                    [ case formModel of
+                let
+                    viewServerError : ServerError -> Html msg
+                    viewServerError error =
+                        case error of
+                            Just message ->
+                                div [ class "bg-red border-lg rounded p-4 mt-2 text-white" ]
+                                    [ text message ]
+
+                            Nothing ->
+                                text ""
+                in
+                Html.form
+                    [ class "flex flex-grow flex-col bg-white px-4 px-0 md:max-w-sm sf-wrapper self-center w-full"
+                    , onSubmit (ValidateForm formModel)
+                    ]
+                    [ viewServerError model.serverError
+                    , case formModel of
                         DefaultForm _ ->
                             text ""
 
@@ -308,7 +315,6 @@ viewCreateAccount translators model =
                         , viewFooter translators True
                         ]
                     ]
-                    formModel
 
             Generated keys ->
                 --viewAccountGenerated translators model keys
@@ -320,17 +326,6 @@ viewCreateAccount translators model =
             NotFound ->
                 Page.fullPageNotFound (translators.t "error.pageNotFound") ""
         ]
-
-
-viewServerError : ServerError -> Html msg
-viewServerError error =
-    case error of
-        Just message ->
-            div [ class "bg-red border-lg rounded p-4 mt-2 text-white" ]
-                [ text message ]
-
-        Nothing ->
-            text ""
 
 
 viewFooter : Translators -> Bool -> Html msg
