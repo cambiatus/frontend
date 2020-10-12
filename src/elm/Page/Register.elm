@@ -1,31 +1,54 @@
 module Page.Register exposing (Model, Msg, init, jsAddressToMsg, msgToString, update, view)
 
+import Address
 import Api.Graphql
-import Auth exposing (SignUpResult, viewFieldLabel)
-import Char
+import Cambiatus.Enum.SignUpStatus as SignUpStatus
+import Cambiatus.InputObject as InputObject
+import Cambiatus.Mutation as Mutation
+import Cambiatus.Object.SignUp
+import Cambiatus.Scalar exposing (Id(..))
+import Community exposing (Invite)
 import Eos.Account as Eos
 import Graphql.Http
-import Html exposing (Attribute, Html, a, button, div, img, input, label, li, p, span, strong, text, ul)
-import Html.Attributes exposing (attribute, checked, class, disabled, id, maxlength, placeholder, src, style, type_, value)
-import Html.Events exposing (onCheck, onClick, onInput, onSubmit)
+import Graphql.OptionalArgument exposing (OptionalArgument(..))
+import Graphql.SelectionSet exposing (with)
+import Html exposing (Html, a, button, div, img, input, label, p, span, strong, text)
+import Html.Attributes exposing (checked, class, disabled, for, id, src, style, type_, value)
+import Html.Events exposing (onCheck, onClick, onSubmit)
 import Json.Decode as Decode exposing (Decoder, Value)
 import Json.Decode.Pipeline as Decode
 import Json.Encode as Encode
+import Page
+import Page.Register.DefaultForm as DefaultForm
+import Page.Register.JuridicalForm as JuridicalForm
+import Page.Register.NaturalForm as NaturalForm
+import Result
 import Route
 import Session.Guest as Guest exposing (External(..))
-import Session.Shared exposing (Translators)
+import Session.Shared exposing (Shared, Translators)
 import UpdateResult as UR
-import Validate exposing (ifBlank, ifFalse, ifInvalidEmail, ifTrue, validate)
+import Validate
+import View.Form
 
 
 
 -- INIT
 
 
-init : Guest.Model -> ( Model, Cmd Msg )
-init guest =
-    ( initModel guest
-    , Cmd.none
+queries : Maybe String -> Shared -> Cmd Msg
+queries maybeInvitationId shared =
+    case maybeInvitationId of
+        Just invitation ->
+            Api.Graphql.query shared (Community.inviteQuery invitation) CompletedLoadInvite
+
+        Nothing ->
+            Cmd.none
+
+
+init : Maybe String -> Guest.Model -> ( Model, Cmd Msg )
+init maybeInvitationId guest =
+    ( initModel maybeInvitationId guest
+    , queries maybeInvitationId guest.shared
     )
 
 
@@ -35,57 +58,53 @@ init guest =
 
 type alias Model =
     { accountKeys : Maybe AccountKeys
-    , isLoading : Bool
-    , isCheckingAccount : Bool
-    , form : Form
     , hasAgreedToSavePassphrase : Bool
     , isPassphraseCopiedToClipboard : Bool
-    , accountGenerated : Bool
-    , problems : List Problem
+    , serverError : Maybe String
+    , status : Status
+    , maybeInvitationId : Maybe String
+    , selectedForm : FormType
+    , country : Maybe Address.Country
+    , step : Int
     }
 
 
-initModel : Guest.Model -> Model
-initModel _ =
+type AccountType
+    = NaturalAccount
+    | JuridicalAccount
+
+
+type FormType
+    = None
+    | Natural NaturalForm.Model
+    | Juridical JuridicalForm.Model
+    | Default DefaultForm.Model
+
+
+initModel : Maybe String -> Guest.Model -> Model
+initModel maybeInvitationId _ =
     { accountKeys = Nothing
-    , isLoading = False
-    , isCheckingAccount = False
-    , form = initForm
     , hasAgreedToSavePassphrase = False
     , isPassphraseCopiedToClipboard = False
-    , accountGenerated = False
-    , problems = []
+    , serverError = Nothing
+    , status =
+        case maybeInvitationId of
+            Just _ ->
+                Loading
+
+            Nothing ->
+                LoadedDefaultCommunity
+    , maybeInvitationId = maybeInvitationId
+    , selectedForm =
+        case maybeInvitationId of
+            Just _ ->
+                None
+
+            Nothing ->
+                Default DefaultForm.init
+    , country = Nothing
+    , step = 1
     }
-
-
-
----- FORM
-
-
-type alias Form =
-    { username : String
-    , email : String
-    , account : String
-    }
-
-
-initForm : Form
-initForm =
-    { username = ""
-    , email = ""
-    , account = ""
-    }
-
-
-type Problem
-    = InvalidEntry ValidatedField String
-    | ServerError String
-
-
-type ValidatedField
-    = Username
-    | Email
-    | Account
 
 
 
@@ -121,14 +140,21 @@ view guest model =
         shared =
             guest.shared
 
-        { t, tr } =
+        { t } =
             shared.translators
+    in
+    { title =
+        t "register.registerTab"
+    , content =
+        viewCreateAccount guest.shared.translators model
+    }
 
-        isDisabled =
-            model.isLoading || model.isCheckingAccount
 
+viewAccountGenerated : Translators -> Model -> AccountKeys -> Html Msg
+viewAccountGenerated { t } model keys =
+    let
         name =
-            accName model
+            Eos.nameToString keys.accountName
 
         passphraseTextId =
             "passphraseText"
@@ -136,335 +162,391 @@ view guest model =
         passphraseInputId =
             -- Passphrase text is duplicated in `input:text` to be able to copy via Browser API
             "passphraseWords"
+    in
+    div
+        [ class "flex-grow bg-purple-500 flex md:block"
+        ]
+        [ div
+            [ class "sf-wrapper"
+            , class "px-4 md:max-w-sm md:mx-auto md:pt-20 md:px-0 text-white text-body"
+            ]
+            [ div [ class "sf-content" ]
+                [ p
+                    [ class "text-xl mb-3" ]
+                    [ text (t "register.account_created.greet")
+                    , text " "
+                    , strong [] [ text name ]
+                    , text ", "
+                    , text (t "register.account_created.last_step")
+                    ]
+                , p [ class "mb-3" ]
+                    [ text (t "register.account_created.instructions")
+                    ]
+                , div [ class "w-1/4 m-auto relative left-1" ]
+                    [ img [ src "/images/reg-passphrase-boy.svg" ]
+                        []
+                    , img
+                        [ class "absolute w-1/4 -mt-2 -ml-10"
+                        , src "/images/reg-passphrase-boy-hand.svg"
+                        ]
+                        []
+                    ]
+                , div [ class "bg-white text-black text-2xl mb-12 p-4 rounded-lg" ]
+                    [ p [ class "input-label" ]
+                        [ text (t "register.account_created.twelve_words")
+                        , if model.isPassphraseCopiedToClipboard then
+                            strong [ class "uppercase ml-1" ]
+                                [ text (t "register.account_created.words_copied")
+                                , text " ✔"
+                                ]
 
-        viewTitleForStep : Int -> Html msg
-        viewTitleForStep s =
-            let
-                step =
-                    String.fromInt s
-            in
-            p
-                [ class "py-4 mb-4 text-body border-b border-dotted text-grey border-grey-500" ]
-                [ text (tr "register.form.step" [ ( "stepNum", step ) ])
-                , text " / "
-                , strong
-                    [ class <|
-                        if s == 1 then
-                            "text-black"
+                          else
+                            text ""
+                        ]
+                    , p
+                        [ class "pb-2 leading-tight" ]
+                        [ span [ id passphraseTextId ] [ text keys.words ]
+                        , input
+                            -- We use `HTMLInputElement.select()` method in port to select and copy the text. This method
+                            -- works only with `input` and `textarea` elements which has to be presented in DOM (e.g. we can't
+                            -- hide it with `display: hidden`), so we hide it using position and opacity.
+                            [ type_ "text"
+                            , class "absolute opacity-0"
+                            , style "left" "-9999em"
+                            , id passphraseInputId
+                            , value keys.words
+                            ]
+                            []
+                        ]
+                    , button
+                        [ class "button m-auto button-primary button-sm"
+                        , onClick <| CopyToClipboard passphraseInputId
+                        ]
+                        [ text (t "register.account_created.copy") ]
+                    ]
+                ]
+            , div [ class "sf-footer" ]
+                [ div [ class "my-4" ]
+                    [ label [ class "form-label block" ]
+                        [ input
+                            [ type_ "checkbox"
+                            , class "form-checkbox mr-2 p-1"
+                            , checked model.hasAgreedToSavePassphrase
+                            , onCheck AgreedToSave12Words
+                            ]
+                            []
+                        , text (t "register.account_created.i_saved_words")
+                        , text " 💜"
+                        ]
+                    ]
+                , button
+                    [ onClick <| DownloadPdf (pdfData keys)
+                    , class "button button-primary w-full mb-8"
+                    , disabled (not model.hasAgreedToSavePassphrase)
+                    , class <|
+                        if model.hasAgreedToSavePassphrase then
+                            ""
 
                         else
-                            "text-white"
+                            "button-disabled text-gray-600"
                     ]
-                    [ text <| t ("register.form.step" ++ step ++ "_title") ]
+                    [ text (t "register.account_created.download") ]
                 ]
-
-        viewCreateAccount =
-            div [ class "flex-grow bg-white flex md:block" ]
-                [ Html.form
-                    [ class "sf-wrapper"
-                    , class "px-4 md:max-w-sm md:mx-auto md:pt-20 md:px-0"
-                    , onSubmit (ValidateForm model.form)
-                    ]
-                    [ div [ class "sf-content" ]
-                        [ viewServerErrors model.problems
-                        , viewTitleForStep 1
-                        , viewField
-                            shared.translators
-                            (Field
-                                "register.form.name"
-                                isDisabled
-                                model.form.username
-                                Username
-                            )
-                            (identity EnteredUsername)
-                            [ maxlength 255 ]
-                            model.problems
-                        , viewField
-                            shared.translators
-                            (Field
-                                "register.form.account"
-                                isDisabled
-                                model.form.account
-                                Account
-                            )
-                            (identity EnteredAccount)
-                            Eos.nameValidationAttrs
-                            model.problems
-                        , viewField
-                            shared.translators
-                            (Field
-                                "register.form.email"
-                                isDisabled
-                                model.form.email
-                                Email
-                            )
-                            (identity EnteredEmail)
-                            [ attribute "inputmode" "email" ]
-                            model.problems
-                        ]
-                    , div [ class "sf-footer" ]
-                        [ p [ class "text-center text-body my-6" ]
-                            [ text (t "register.login")
-                            , a [ Route.href (Route.Login Nothing), class "text-orange-300 underline" ] [ text (t "register.authLink") ]
-                            ]
-                        , button
-                            [ class "button button-primary min-w-full mb-8"
-                            , type_ "submit"
-                            , disabled isDisabled
-                            ]
-                            [ if model.isCheckingAccount then
-                                text (t "register.form.checkingAvailability")
-
-                              else
-                                text (t "auth.login.continue")
-                            ]
-                        ]
-                    ]
-                ]
-
-        viewAccountGenerated =
-            div
-                [ class "flex-grow bg-purple-500 flex md:block"
-                ]
-                [ div
-                    [ class "sf-wrapper"
-                    , class "px-4 md:max-w-sm md:mx-auto md:pt-20 md:px-0 text-white text-body"
-                    ]
-                    [ div [ class "sf-content" ]
-                        [ viewTitleForStep 2
-                        , p
-                            [ class "text-xl mb-3" ]
-                            [ text (t "register.account_created.greet")
-                            , text " "
-                            , strong [] [ text name ]
-                            , text ", "
-                            , text (t "register.account_created.last_step")
-                            ]
-                        , p [ class "mb-3" ]
-                            [ text (t "register.account_created.instructions")
-                            ]
-                        , div [ class "w-1/4 m-auto relative left-1" ]
-                            [ img [ src "/images/reg-passphrase-boy.svg" ]
-                                []
-                            , img
-                                [ class "absolute w-1/4 -mt-2 -ml-10"
-                                , src "/images/reg-passphrase-boy-hand.svg"
-                                ]
-                                []
-                            ]
-                        , div [ class "bg-white text-black text-2xl mb-12 p-4 rounded-lg" ]
-                            [ p [ class "input-label" ]
-                                [ text (t "register.account_created.twelve_words")
-                                , if model.isPassphraseCopiedToClipboard then
-                                    strong [ class "uppercase ml-1" ]
-                                        [ text (t "register.account_created.words_copied")
-                                        , text " ✔"
-                                        ]
-
-                                  else
-                                    text ""
-                                ]
-                            , p
-                                [ class "pb-2 leading-tight" ]
-                                [ span [ id passphraseTextId ] [ text (words model) ]
-                                , input
-                                    -- We use `HTMLInputElement.select()` method in port to select and copy the text. This method
-                                    -- works only with `input` and `textarea` elements which has to be presented in DOM (e.g. we can't
-                                    -- hide it with `display: hidden`), so we hide it using position and opacity.
-                                    [ type_ "text"
-                                    , class "absolute opacity-0"
-                                    , style "left" "-9999em"
-                                    , id passphraseInputId
-                                    , value (words model)
-                                    ]
-                                    []
-                                ]
-                            , button
-                                [ class "button m-auto button-primary button-sm"
-                                , onClick <| CopyToClipboard passphraseInputId
-                                ]
-                                [ text (t "register.account_created.copy") ]
-                            ]
-                        ]
-                    , div [ class "sf-footer" ]
-                        [ div [ class "my-4" ]
-                            [ label [ class "form-label block" ]
-                                [ input
-                                    [ type_ "checkbox"
-                                    , class "form-checkbox mr-2 p-1"
-                                    , checked model.hasAgreedToSavePassphrase
-                                    , onCheck AgreedToSave12Words
-                                    ]
-                                    []
-                                , text (t "register.account_created.i_saved_words")
-                                , text " 💜"
-                                ]
-                            ]
-                        , case pdfData model of
-                            Just data ->
-                                button
-                                    [ onClick <| DownloadPdf data
-                                    , class "button button-primary w-full mb-8"
-                                    , disabled (not model.hasAgreedToSavePassphrase)
-                                    , class <|
-                                        if model.hasAgreedToSavePassphrase then
-                                            ""
-
-                                        else
-                                            "button-disabled text-gray-600"
-                                    ]
-                                    [ text (t "register.account_created.download") ]
-
-                            Nothing ->
-                                text ""
-                        ]
-                    ]
-                ]
-    in
-    { title =
-        t "register.registerTab"
-    , content =
-        if model.accountGenerated then
-            viewAccountGenerated
-
-        else
-            viewCreateAccount
-    }
-
-
-viewServerErrors : List Problem -> Html msg
-viewServerErrors problems =
-    let
-        errorList =
-            problems
-                |> List.filterMap
-                    (\p ->
-                        case p of
-                            ServerError e ->
-                                Just (li [] [ text e ])
-
-                            _ ->
-                                Nothing
-                    )
-    in
-    if List.isEmpty errorList then
-        text ""
-
-    else
-        ul [ class "bg-red border-lg rounded p-4 mt-2 text-white" ] errorList
-
-
-type alias Field =
-    { translationSuffix : String
-    , isDisabled : Bool
-    , currentValue : String
-    , name : ValidatedField
-    }
-
-
-viewField : Translators -> Field -> (String -> FormInputMsg) -> List (Attribute FormInputMsg) -> List Problem -> Html Msg
-viewField ({ t, tr } as translators) { translationSuffix, isDisabled, currentValue, name } msg extraAttrs problems =
-    let
-        isCurrentFieldNameProblem p =
-            case p of
-                InvalidEntry validatedField _ ->
-                    name == validatedField
-
-                _ ->
-                    False
-
-        fieldProblems =
-            List.filter isCurrentFieldNameProblem problems
-
-        errorClass =
-            case fieldProblems of
-                [] ->
-                    ""
-
-                _ ->
-                    "field-with-error"
-
-        viewFieldErrors =
-            List.map (viewFieldProblem name) problems
-
-        id_ =
-            translationSuffix
-    in
-    div [ class "mb-10 relative" ]
-        [ viewFieldLabel translators translationSuffix id_
-        , input
-            ([ id id_
-             , onInput msg
-             , class ("input min-w-full" ++ " " ++ errorClass)
-             , disabled isDisabled
-             , value currentValue
-             , placeholder (t (translationSuffix ++ ".placeholder"))
-             ]
-                ++ extraAttrs
-            )
-            []
-            |> Html.map UpdateForm
-        , case name of
-            Account ->
-                div [ class "input-label pr-1 text-right text-purple-100 font-bold mt-1 absolute right-0" ]
-                    [ text <|
-                        tr
-                            "edit.input_counter"
-                            [ ( "current", String.fromInt <| String.length currentValue )
-                            , ( "max", "12" )
-                            ]
-                    ]
-
-            _ ->
-                text ""
-        , ul [] viewFieldErrors
+            ]
         ]
 
 
-viewFieldProblem : ValidatedField -> Problem -> Html msg
-viewFieldProblem field problem =
-    case problem of
-        ServerError _ ->
+viewCreateAccount : Translators -> Model -> Html Msg
+viewCreateAccount translators model =
+    let
+        formElement element =
+            Html.form
+                [ class "flex flex-grow flex-col bg-white px-4 px-0 md:max-w-sm sf-wrapper self-center w-full"
+                , onSubmit (ValidateForm model.selectedForm)
+                ]
+                (viewServerError model.serverError :: element)
+
+        defaultForm =
+            case model.selectedForm of
+                Default form ->
+                    formElement
+                        [ DefaultForm.view translators form
+                            |> Html.map DefaultFormMsg
+                            |> Html.map FormMsg
+                        , viewFooter model translators
+                        ]
+
+                _ ->
+                    div [] []
+
+        backgroundColor =
+            case model.step of
+                2 ->
+                    "bg-purple-500"
+
+                _ ->
+                    "bg-white"
+    in
+    div [ class ("flex flex-grow flex-col " ++ backgroundColor) ]
+        [ viewTitleForStep translators model.step
+        , case model.status of
+            LoadedAll invitation _ ->
+                if invitation.community.hasKyc == True then
+                    formElement [ viewKycRegister translators model, viewFooter model translators ]
+
+                else
+                    defaultForm
+
+            LoadedDefaultCommunity ->
+                defaultForm
+
+            Loading ->
+                viewLoading
+
+            Generated keys ->
+                viewAccountGenerated translators model keys
+
+            LoadedInvite _ ->
+                viewLoading
+
+            LoadedCountry _ ->
+                viewLoading
+
+            FailedInvite _ ->
+                Page.fullPageNotFound (translators.t "error.unknown") ""
+
+            FailedCountry _ ->
+                Page.fullPageNotFound (translators.t "error.unknown") ""
+
+            NotFound ->
+                Page.fullPageNotFound (translators.t "error.pageNotFound") ""
+        ]
+
+
+viewServerError : Maybe String -> Html msg
+viewServerError error =
+    case error of
+        Just message ->
+            div [ class "bg-red border-lg rounded p-4 mt-2 text-white" ] [ text message ]
+
+        Nothing ->
             text ""
 
-        InvalidEntry f str ->
-            if f == field then
-                li [ class "form-error absolute mr-8" ] [ text str ]
 
-            else
-                text ""
+viewFooter : Model -> Translators -> Html msg
+viewFooter model translators =
+    div [ class "mt-auto flex flex-col justify-between items-center h-32" ]
+        [ span []
+            [ text (translators.t "register.login")
+            , a [ class "underline text-orange-300", Route.href (Route.Login Nothing) ] [ text (translators.t "register.authLink") ]
+            ]
+        , viewSubmitButton
+            (case model.selectedForm of
+                None ->
+                    False
+
+                _ ->
+                    True
+            )
+            translators
+        ]
 
 
-accName : Model -> String
-accName model =
-    case model.accountKeys of
-        Just keys ->
-            Eos.nameToString keys.accountName
+viewKycRegister : Translators -> Model -> Html Msg
+viewKycRegister translators model =
+    div []
+        [ viewFormTypeSelector translators model
+        , div [ class "sf-content" ]
+            (case model.maybeInvitationId of
+                Just _ ->
+                    let
+                        selectedForm =
+                            case model.selectedForm of
+                                Natural form ->
+                                    [ NaturalForm.view translators form |> Html.map NaturalFormMsg |> Html.map FormMsg ]
 
-        Nothing ->
-            ""
+                                Juridical form ->
+                                    [ JuridicalForm.view translators form |> Html.map JuridicalFormMsg |> Html.map FormMsg ]
+
+                                Default form ->
+                                    [ DefaultForm.view translators form |> Html.map DefaultFormMsg |> Html.map FormMsg ]
+
+                                None ->
+                                    []
+                    in
+                    case model.status of
+                        LoadedAll _ _ ->
+                            selectedForm
+
+                        LoadedDefaultCommunity ->
+                            selectedForm
+
+                        LoadedInvite _ ->
+                            [ viewLoading ]
+
+                        LoadedCountry _ ->
+                            [ viewLoading ]
+
+                        Loading ->
+                            [ viewLoading ]
+
+                        FailedCountry _ ->
+                            [ Page.fullPageNotFound (translators.t "error.unknown") "" ]
+
+                        FailedInvite _ ->
+                            [ Page.fullPageNotFound (translators.t "error.unknown") "" ]
+
+                        NotFound ->
+                            [ Page.fullPageNotFound (translators.t "error.pageNotFound") "" ]
+
+                        Generated keys ->
+                            [ viewAccountGenerated translators model keys ]
+
+                Nothing ->
+                    []
+            )
+        ]
 
 
-pdfData : Model -> Maybe PdfData
-pdfData model =
-    Maybe.andThen
-        (\keys ->
-            Just
-                { passphrase = keys.words
-                , accountName = Eos.nameToString keys.accountName
+viewSubmitButton : Bool -> Translators -> Html msg
+viewSubmitButton isEnabled translators =
+    button
+        [ class "button w-full mb-4"
+        , class
+            (if isEnabled then
+                "button-primary"
+
+             else
+                "button-disabled"
+            )
+        , disabled (not isEnabled)
+        ]
+        [ text (translators.t "auth.login.continue") ]
+
+
+viewFormTypeSelector : Translators -> Model -> Html Msg
+viewFormTypeSelector translators model =
+    div []
+        [ View.Form.primaryLabel "radio" (translators.t "register.form.register_tooltip")
+        , div [ class "flex w-full justify-center" ]
+            [ viewFormTypeRadio
+                { type_ = NaturalAccount
+                , label = translators.t "register.form.types.natural"
+                , styles = ""
+                , isSelected =
+                    case model.selectedForm of
+                        Natural _ ->
+                            True
+
+                        _ ->
+                            False
+                , onClick = AccountTypeSelected
                 }
-        )
-        model.accountKeys
+            , viewFormTypeRadio
+                { type_ = JuridicalAccount
+                , label = translators.t "register.form.types.juridical"
+                , styles = "ml-1"
+                , isSelected =
+                    case model.selectedForm of
+                        Juridical _ ->
+                            True
+
+                        _ ->
+                            False
+                , onClick = AccountTypeSelected
+                }
+            ]
+        ]
 
 
-words : Model -> String
-words model =
-    case model.accountKeys of
-        Just keys ->
-            keys.words
+type alias FormTypeRadioOptions a =
+    { type_ : AccountType
+    , label : String
+    , styles : String
+    , isSelected : Bool
+    , onClick : AccountType -> a
+    }
 
-        Nothing ->
-            ""
+
+viewFormTypeRadio : FormTypeRadioOptions Msg -> Html Msg
+viewFormTypeRadio options =
+    let
+        defaultClasses =
+            "w-40 h-10 rounded-sm flex justify-center items-center cursor-pointer mb-4 "
+
+        ifSelectedClasses =
+            "bg-orange-300 text-white "
+
+        unselectedClasses =
+            "bg-gray-100 text-black "
+
+        finalClasses =
+            defaultClasses
+                ++ (if options.isSelected then
+                        ifSelectedClasses
+
+                    else
+                        unselectedClasses
+                   )
+
+        id =
+            case options.type_ of
+                NaturalAccount ->
+                    "natural"
+
+                JuridicalAccount ->
+                    "juridical"
+    in
+    div
+        [ class (finalClasses ++ options.styles)
+        , onClick (options.onClick options.type_)
+        , style "width" "169px"
+        , style "height" "44px"
+        ]
+        [ label [ class "cursor-pointer", for id ] [ text options.label ]
+        , input [ class "hidden", type_ "radio", checked options.isSelected, onClick (options.onClick options.type_) ] []
+        ]
+
+
+{-| Loading screen on this page differs from `Session.Shared.viewFullLoading`
+since we don't need full width here.
+-}
+viewLoading : Html msg
+viewLoading =
+    div [ class "h-full full-spinner-container" ]
+        [ div [ class "spinner" ] [] ]
+
+
+viewTitleForStep : Translators -> Int -> Html msg
+viewTitleForStep translators s =
+    let
+        { t, tr } =
+            translators
+
+        step =
+            String.fromInt s
+    in
+    p
+        [ class "ml-4 py-4 mb-4 text-body border-b border-dotted text-grey border-grey-500" ]
+        [ text (tr "register.form.step" [ ( "stepNum", step ) ])
+        , text " / "
+        , strong
+            [ class <|
+                if s == 1 then
+                    "text-black"
+
+                else
+                    "text-white"
+            ]
+            [ text <| t ("register.form.step" ++ step ++ "_title") ]
+        ]
+
+
+pdfData : AccountKeys -> PdfData
+pdfData keys =
+    { passphrase = keys.words
+    , accountName = Eos.nameToString keys.accountName
+    }
 
 
 
@@ -476,16 +558,39 @@ type alias UpdateResult =
 
 
 type Msg
-    = UpdateForm FormInputMsg
-    | ValidateForm Form
+    = ValidateForm FormType
     | GotAccountAvailabilityResponse Bool
-    | KeysGenerated (Result Decode.Error AccountKeys)
-    | CompletedSignUp AccountKeys (Result (Graphql.Http.Error (Maybe SignUpResult)) (Maybe SignUpResult))
+    | AccountGenerated (Result Decode.Error AccountKeys)
     | AgreedToSave12Words Bool
     | DownloadPdf PdfData
     | PdfDownloaded
     | CopyToClipboard String
     | CopiedToClipboard
+    | CompletedLoadInvite (Result (Graphql.Http.Error (Maybe Invite)) (Maybe Invite))
+    | CompletedLoadCountry (Result (Graphql.Http.Error (Maybe Address.Country)) (Maybe Address.Country))
+    | AccountTypeSelected AccountType
+    | FormMsg EitherFormMsg
+    | CompletedSignUp (Result (Graphql.Http.Error SignUpResponse) SignUpResponse)
+    | CompletedKycUpsert (Result (Graphql.Http.Error (Maybe ())) (Maybe ()))
+    | CompletedAddressUpsert (Result (Graphql.Http.Error (Maybe ())) (Maybe ()))
+
+
+type EitherFormMsg
+    = JuridicalFormMsg JuridicalForm.Msg
+    | NaturalFormMsg NaturalForm.Msg
+    | DefaultFormMsg DefaultForm.Msg
+
+
+type Status
+    = LoadedInvite Invite
+    | LoadedCountry Address.Country
+    | LoadedAll Invite (Maybe Address.Country)
+    | Loading
+    | FailedInvite (Graphql.Http.Error (Maybe Invite))
+    | FailedCountry (Graphql.Http.Error (Maybe Address.Country))
+    | NotFound
+    | LoadedDefaultCommunity
+    | Generated AccountKeys
 
 
 type alias PdfData =
@@ -497,155 +602,229 @@ type alias PdfData =
 update : Maybe String -> Msg -> Model -> Guest.Model -> UpdateResult
 update maybeInvitation msg model guest =
     let
-        { t, tr } =
+        { t } =
             guest.shared.translators
     in
     case msg of
-        UpdateForm subMsg ->
-            updateForm subMsg model
-                |> UR.init
-
-        ValidateForm form ->
+        ValidateForm formType ->
             let
-                isLowerThan6 : Char -> Bool
-                isLowerThan6 c =
-                    let
-                        charInt : Int
-                        charInt =
-                            c
-                                |> String.fromChar
-                                |> String.toInt
-                                |> Maybe.withDefault 0
-                    in
-                    compare charInt 6 == Basics.LT
+                validateForm validator form =
+                    case Validate.validate validator form of
+                        Ok _ ->
+                            []
 
-                isValidAlphaNum : Char -> Bool
-                isValidAlphaNum c =
-                    (Char.isUpper c || Char.isLower c || Char.isDigit c) && isLowerThan6 c
+                        Err err ->
+                            err
 
-                formValidator =
-                    Validate.all
-                        [ Validate.firstError
-                            [ ifBlank .username (InvalidEntry Username (t "error.required")) ]
-                        , Validate.firstError
-                            [ ifBlank .email (InvalidEntry Email (t "error.required"))
-                            , ifInvalidEmail .email (\_ -> InvalidEntry Email (t "error.email"))
-                            ]
-                        , Validate.firstError
-                            [ ifBlank .account (InvalidEntry Account (t "error.required"))
-                            , ifTrue
-                                (\f -> String.length f.account < 12)
-                                (InvalidEntry Account (tr "error.tooShort" [ ( "minLength", "12" ) ]))
-                            , ifTrue
-                                (\f -> String.length f.account > 12)
-                                (InvalidEntry Account (tr "error.tooLong" [ ( "maxLength", "12" ) ]))
-                            , ifFalse
-                                (\f -> String.all isValidAlphaNum f.account)
-                                (InvalidEntry Account (t "register.form.accountCharError"))
-                            ]
-                        ]
-            in
-            case validate formValidator form of
-                Ok _ ->
-                    { model | isCheckingAccount = True }
-                        |> UR.init
-                        |> UR.addPort
-                            { responseAddress = ValidateForm form
+                account : Maybe String
+                account =
+                    case formType of
+                        Juridical form ->
+                            Just form.account
+
+                        Natural form ->
+                            Just form.account
+
+                        Default form ->
+                            Just form.account
+
+                        None ->
+                            Nothing
+
+                translators =
+                    guest.shared.translators
+
+                problemCount =
+                    case formType of
+                        Juridical form ->
+                            List.length (validateForm (JuridicalForm.validator translators) form)
+
+                        Natural form ->
+                            List.length (validateForm (NaturalForm.validator translators) form)
+
+                        Default form ->
+                            List.length (validateForm (DefaultForm.validator translators) form)
+
+                        None ->
+                            0
+
+                afterValidationAction =
+                    if problemCount > 0 then
+                        UR.addCmd Cmd.none
+
+                    else
+                        UR.addPort
+                            { responseAddress = ValidateForm formType
                             , responseData = Encode.null
                             , data =
                                 Encode.object
                                     [ ( "name", Encode.string "checkAccountAvailability" )
-                                    , ( "accountName", Encode.string model.form.account )
+                                    , ( "account", Encode.string (Maybe.withDefault "" account) )
                                     ]
                             }
+            in
+            { model
+                | selectedForm =
+                    case formType of
+                        Juridical form ->
+                            Juridical
+                                { form
+                                    | problems = validateForm (JuridicalForm.validator translators) form
+                                }
 
-                Err problems ->
-                    { model | problems = problems }
-                        |> UR.init
+                        Natural form ->
+                            Natural
+                                { form
+                                    | problems = validateForm (NaturalForm.validator translators) form
+                                }
+
+                        Default form ->
+                            Default
+                                { form
+                                    | problems = validateForm (DefaultForm.validator translators) form
+                                }
+
+                        None ->
+                            None
+            }
+                |> UR.init
+                |> afterValidationAction
+
+        FormMsg formMsg ->
+            case formMsg of
+                JuridicalFormMsg innerMsg ->
+                    case model.selectedForm of
+                        Juridical form ->
+                            UR.init { model | selectedForm = Juridical (JuridicalForm.update innerMsg form guest.shared.translators) }
+
+                        _ ->
+                            UR.init model
+
+                NaturalFormMsg innerMsg ->
+                    case model.selectedForm of
+                        Natural form ->
+                            UR.init { model | selectedForm = Natural (NaturalForm.update innerMsg form) }
+
+                        _ ->
+                            UR.init model
+
+                DefaultFormMsg innerMsg ->
+                    case model.selectedForm of
+                        Default form ->
+                            UR.init { model | selectedForm = Default (DefaultForm.update innerMsg form) }
+
+                        _ ->
+                            UR.init model
+
+        AccountTypeSelected type_ ->
+            UR.init
+                { model
+                    | selectedForm =
+                        case ( type_, model.status, model.selectedForm ) of
+                            ( NaturalAccount, LoadedAll _ _, Juridical form ) ->
+                                Natural
+                                    (NaturalForm.init
+                                        { account = Just form.account
+                                        , email = Just form.email
+                                        , phone = Just form.phone
+                                        }
+                                    )
+
+                            ( JuridicalAccount, LoadedAll _ (Just country), Natural form ) ->
+                                Juridical
+                                    (JuridicalForm.init
+                                        { account = Just form.account
+                                        , email = Just form.email
+                                        , phone = Just form.phone
+                                        , country = country
+                                        }
+                                        guest.shared.translators
+                                    )
+
+                            ( NaturalAccount, LoadedAll _ _, _ ) ->
+                                Natural
+                                    (NaturalForm.init
+                                        { account = Nothing
+                                        , email = Nothing
+                                        , phone = Nothing
+                                        }
+                                    )
+
+                            ( JuridicalAccount, LoadedAll _ (Just country), _ ) ->
+                                Juridical
+                                    (JuridicalForm.init
+                                        { account = Nothing
+                                        , email = Nothing
+                                        , phone = Nothing
+                                        , country = country
+                                        }
+                                        guest.shared.translators
+                                    )
+
+                            _ ->
+                                model.selectedForm
+                }
 
         GotAccountAvailabilityResponse isAvailable ->
             if isAvailable then
-                UR.init
-                    { model
-                        | isLoading = True
-                        , problems = []
-                        , isCheckingAccount = False
-                    }
+                model
+                    |> UR.init
                     |> UR.addPort
-                        { responseAddress = GotAccountAvailabilityResponse False
+                        { responseAddress = GotAccountAvailabilityResponse isAvailable
                         , responseData = Encode.null
                         , data =
                             Encode.object
                                 [ ( "name", Encode.string "generateKeys" )
-                                , ( "invitationId"
-                                  , case maybeInvitation of
-                                        Nothing ->
-                                            Encode.null
 
-                                        Just invitationId ->
-                                            Encode.string invitationId
+                                -- TODO: Remove this
+                                , ( "account"
+                                  , Encode.string
+                                        (case model.selectedForm of
+                                            Juridical form ->
+                                                form.account
+
+                                            Natural form ->
+                                                form.account
+
+                                            Default form ->
+                                                form.account
+
+                                            None ->
+                                                ""
+                                        )
                                   )
-                                , ( "account", Encode.string model.form.account )
                                 ]
                         }
 
             else
-                let
-                    fieldError =
-                        InvalidEntry Account (t "error.alreadyTaken")
-                in
                 UR.init
                     { model
-                        | problems = fieldError :: model.problems
-                        , isCheckingAccount = False
+                        | selectedForm =
+                            case model.selectedForm of
+                                Juridical form ->
+                                    Juridical { form | problems = ( JuridicalForm.Account, t "error.alreadyTaken" ) :: form.problems }
+
+                                Natural form ->
+                                    Natural { form | problems = ( NaturalForm.Account, t "error.alreadyTaken" ) :: form.problems }
+
+                                Default form ->
+                                    Default { form | problems = ( DefaultForm.Account, t "error.alreadyTaken" ) :: form.problems }
+
+                                None ->
+                                    model.selectedForm
                     }
 
-        KeysGenerated (Ok accountKeys) ->
+        AccountGenerated (Err v) ->
             UR.init
-                { model
-                    | isLoading = True
-                    , accountKeys = Just accountKeys
-                    , form = initForm
-                }
-                |> UR.addCmd
-                    (case maybeInvitation of
-                        Nothing ->
-                            Api.Graphql.mutation guest.shared
-                                (Auth.signUp accountKeys.accountName
-                                    model.form.username
-                                    model.form.email
-                                    accountKeys.ownerKey
-                                    Nothing
-                                )
-                                (CompletedSignUp accountKeys)
-
-                        Just invitationId ->
-                            Api.Graphql.mutation guest.shared
-                                (Auth.signUp accountKeys.accountName
-                                    model.form.username
-                                    model.form.email
-                                    accountKeys.ownerKey
-                                    (Just invitationId)
-                                )
-                                (CompletedSignUp accountKeys)
-                    )
-
-        KeysGenerated (Err v) ->
-            UR.init
-                { model
-                    | isLoading = False
-                    , problems = ServerError "Key generation failed" :: model.problems
-                }
+                model
                 |> UR.logDecodeError msg v
 
-        CompletedSignUp _ (Ok _) ->
-            { model | accountGenerated = True }
+        AccountGenerated (Ok account) ->
+            { model
+                | status = Generated account
+                , step = 2
+            }
                 |> UR.init
-
-        CompletedSignUp _ (Err err) ->
-            { model | problems = ServerError "Auth failed" :: model.problems }
-                |> UR.init
-                |> UR.logGraphqlError msg err
 
         AgreedToSave12Words val ->
             { model | hasAgreedToSavePassphrase = val }
@@ -683,17 +862,243 @@ update maybeInvitation msg model guest =
                     }
 
         PdfDownloaded ->
-            case model.accountKeys of
-                Nothing ->
-                    model
-                        |> UR.init
+            model
+                |> UR.init
+                |> UR.addCmd
+                    (case model.status of
+                        Generated keys ->
+                            formTypeToAccountCmd guest.shared keys.ownerKey model.maybeInvitationId model.selectedForm
 
-                Just _ ->
+                        _ ->
+                            Cmd.none
+                    )
+
+        CompletedSignUp (Ok response) ->
+            case response.status of
+                SignUpStatus.Success ->
                     model
                         |> UR.init
                         |> UR.addCmd
-                            -- Go to login page after downloading PDF
-                            (Route.replaceUrl guest.shared.navKey (Route.Login Nothing))
+                            (formTypeToKycCmd guest.shared model.selectedForm)
+
+                SignUpStatus.Error ->
+                    UR.init { model | serverError = Just (t "error.unknown") }
+
+        CompletedSignUp (Err _) ->
+            UR.init { model | serverError = Just (t "error.unknown") }
+
+        CompletedKycUpsert (Ok _) ->
+            model
+                |> UR.init
+                |> UR.addCmd
+                    (formTypeToAddressCmd guest.shared model.selectedForm)
+
+        CompletedKycUpsert (Err _) ->
+            UR.init { model | serverError = Just (t "error.unknown") }
+
+        CompletedAddressUpsert (Ok _) ->
+            model
+                |> UR.init
+                |> UR.addCmd
+                    -- Go to login page after downloading PDF
+                    (Route.replaceUrl guest.shared.navKey (Route.Login Nothing))
+
+        CompletedAddressUpsert (Err _) ->
+            UR.init { model | serverError = Just (t "error.unknown") }
+
+        CompletedLoadInvite (Ok (Just invitation)) ->
+            let
+                newStatus =
+                    case model.status of
+                        LoadedCountry country ->
+                            LoadedAll invitation (Just country)
+
+                        NotFound ->
+                            NotFound
+
+                        FailedCountry err ->
+                            FailedCountry err
+
+                        _ ->
+                            if invitation.community.hasKyc then
+                                LoadedInvite invitation
+
+                            else
+                                LoadedAll invitation Nothing
+            in
+            { model
+                | status = newStatus
+                , selectedForm =
+                    if invitation.community.hasKyc == True then
+                        None
+
+                    else
+                        Default DefaultForm.init
+            }
+                |> UR.init
+                |> UR.addCmd
+                    (if invitation.community.hasKyc then
+                        Api.Graphql.query guest.shared (Address.countryQuery "Costa Rica") CompletedLoadCountry
+
+                     else
+                        Cmd.none
+                    )
+
+        CompletedLoadInvite (Ok Nothing) ->
+            UR.init { model | status = NotFound }
+
+        CompletedLoadInvite (Err error) ->
+            { model
+                | status = FailedInvite error
+                , serverError = Just (t "error.unknown")
+            }
+                |> UR.init
+                |> UR.logGraphqlError msg error
+
+        CompletedLoadCountry (Ok (Just country)) ->
+            { model
+                | status =
+                    case model.status of
+                        LoadedInvite invitation ->
+                            LoadedAll invitation (Just country)
+
+                        FailedInvite err ->
+                            FailedInvite err
+
+                        NotFound ->
+                            NotFound
+
+                        _ ->
+                            LoadedCountry country
+            }
+                |> UR.init
+
+        CompletedLoadCountry (Ok Nothing) ->
+            UR.init { model | status = NotFound }
+
+        CompletedLoadCountry (Err error) ->
+            { model | status = FailedCountry error }
+                |> UR.init
+                |> UR.logGraphqlError msg error
+
+
+type alias SignUpResponse =
+    { reason : String
+    , status : SignUpStatus.SignUpStatus
+    }
+
+
+formTypeToAccountCmd : Shared -> String -> Maybe String -> FormType -> Cmd Msg
+formTypeToAccountCmd shared key invitationId formType =
+    let
+        cmd obj =
+            Api.Graphql.mutation shared
+                (Mutation.signUp
+                    { input =
+                        InputObject.buildSignUpInput
+                            obj
+                            (\x ->
+                                { x
+                                    | invitationId =
+                                        case invitationId of
+                                            Just id ->
+                                                Present id
+
+                                            Nothing ->
+                                                Absent
+                                }
+                            )
+                    }
+                    (Graphql.SelectionSet.succeed SignUpResponse
+                        |> with Cambiatus.Object.SignUp.reason
+                        |> with Cambiatus.Object.SignUp.status
+                    )
+                )
+                CompletedSignUp
+    in
+    case formType of
+        Juridical form ->
+            cmd { account = form.account, email = form.email, name = form.name, publicKey = key }
+
+        Natural form ->
+            cmd { account = form.account, email = form.email, name = form.name, publicKey = key }
+
+        Default form ->
+            cmd { account = form.account, email = form.email, name = form.name, publicKey = key }
+
+        None ->
+            Cmd.none
+
+
+redirectCmd : Shared -> Cmd Msg
+redirectCmd shared =
+    Route.replaceUrl shared.navKey (Route.Login Nothing)
+
+
+formTypeToKycCmd : Shared -> FormType -> Cmd Msg
+formTypeToKycCmd shared formType =
+    let
+        cmd : InputObject.KycDataUpdateInputRequiredFields -> Cmd Msg
+        cmd obj =
+            Api.Graphql.mutation shared
+                (Mutation.upsertKyc
+                    { input = InputObject.buildKycDataUpdateInput obj }
+                    Graphql.SelectionSet.empty
+                )
+                CompletedKycUpsert
+    in
+    case formType of
+        Juridical form ->
+            cmd
+                { accountId = form.account
+                , countryId = Id "1"
+                , document = form.document
+                , documentType = JuridicalForm.companyTypeToString form.companyType
+                , phone = form.phone
+                , userType = "juridical"
+                }
+
+        Natural form ->
+            cmd
+                { accountId = form.account
+                , countryId = Id "1"
+                , document = form.document
+                , documentType = NaturalForm.documentTypeToString form.documentType
+                , phone = form.phone
+                , userType = "natural"
+                }
+
+        _ ->
+            redirectCmd shared
+
+
+formTypeToAddressCmd : Shared -> FormType -> Cmd Msg
+formTypeToAddressCmd shared formType =
+    let
+        cmd : InputObject.AddressUpdateInputRequiredFields -> InputObject.AddressUpdateInputOptionalFields -> Cmd Msg
+        cmd required optional =
+            Api.Graphql.mutation shared
+                (Mutation.upsertAddress
+                    { input = InputObject.buildAddressUpdateInput required (\_ -> optional) }
+                    Graphql.SelectionSet.empty
+                )
+                CompletedAddressUpsert
+    in
+    case formType of
+        Juridical form ->
+            cmd
+                { accountId = form.account
+                , cityId = Tuple.first form.city |> Id
+                , countryId = Id "1"
+                , neighborhoodId = Tuple.first form.district |> Id
+                , stateId = Tuple.first form.state |> Id
+                , street = form.street
+                , zip = form.zip
+                }
+                { number = Graphql.OptionalArgument.Present form.number }
+
+        _ ->
+            redirectCmd shared
 
 
 
@@ -702,36 +1107,10 @@ update maybeInvitation msg model guest =
 --
 
 
-type FormInputMsg
-    = EnteredUsername String
-    | EnteredEmail String
-    | EnteredAccount String
-
-
-updateForm : FormInputMsg -> Model -> Model
-updateForm msg ({ form } as model) =
-    let
-        updateModel newForm =
-            { model
-                | form = newForm
-                , problems = []
-            }
-    in
-    case msg of
-        EnteredUsername str ->
-            updateModel { form | username = str }
-
-        EnteredEmail str ->
-            updateModel { form | email = str }
-
-        EnteredAccount str ->
-            updateModel { form | account = str |> String.toLower }
-
-
 jsAddressToMsg : List String -> Value -> Maybe Msg
 jsAddressToMsg addr val =
     case addr of
-        "ValidateForm" :: [] ->
+        "ValidateForm" :: _ ->
             Decode.decodeValue
                 (Decode.field "isAvailable" Decode.bool)
                 val
@@ -740,7 +1119,7 @@ jsAddressToMsg addr val =
 
         "GotAccountAvailabilityResponse" :: _ ->
             Decode.decodeValue (Decode.field "data" decodeAccount) val
-                |> KeysGenerated
+                |> AccountGenerated
                 |> Just
 
         "PdfDownloaded" :: _ ->
@@ -756,8 +1135,8 @@ jsAddressToMsg addr val =
 msgToString : Msg -> List String
 msgToString msg =
     case msg of
-        UpdateForm _ ->
-            [ "UpdateForm" ]
+        FormMsg _ ->
+            [ "FormMsg" ]
 
         ValidateForm _ ->
             [ "ValidateForm" ]
@@ -765,11 +1144,8 @@ msgToString msg =
         GotAccountAvailabilityResponse _ ->
             [ "GotAccountAvailabilityResponse" ]
 
-        KeysGenerated r ->
-            [ "KeysGenerated", UR.resultToString r ]
-
-        CompletedSignUp _ _ ->
-            [ "CompletedSignUp" ]
+        AccountGenerated r ->
+            [ "AccountGenerated", UR.resultToString r ]
 
         AgreedToSave12Words _ ->
             [ "AgreedToSave12Words" ]
@@ -785,3 +1161,21 @@ msgToString msg =
 
         PdfDownloaded ->
             [ "PdfDownloaded" ]
+
+        CompletedLoadInvite _ ->
+            [ "CompletedLoadInvite" ]
+
+        AccountTypeSelected _ ->
+            [ "AccountTypeSelected" ]
+
+        CompletedSignUp _ ->
+            [ "CompletedSignUp" ]
+
+        CompletedLoadCountry _ ->
+            [ "CompletedLoadCountry" ]
+
+        CompletedKycUpsert _ ->
+            [ "CompletedKycUpsert" ]
+
+        CompletedAddressUpsert _ ->
+            [ "CompletedAddressUpsert" ]

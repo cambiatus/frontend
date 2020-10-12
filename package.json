@@ -3,7 +3,7 @@
   "version": "1.7.3",
   "private": true,
   "engines": {
-    "node": "12.0.0"
+    "node": "14.8.0"
   },
   "scripts": {
     "build": "yarn bundle",
@@ -14,7 +14,7 @@
     "repl": "elm repl",
     "reactor": "elm reactor",
     "test": "npx elm-test",
-    "generate-graphql": "npx elm-graphql https://api.cambiatus.io/api/graph --base Cambiatus --output src/elm"
+    "generate-graphql": "npx elm-graphql http://staging.cambiatus.io/api/graph --base Cambiatus --output src/elm"
   },
   "husky": {
     "hooks": {
@@ -69,7 +69,7 @@
   },
   "dependencies": {
     "@absinthe/socket": "^0.2.1",
-    "@dillonkearns/elm-graphql": "^3.0.1",
+    "@dillonkearns/elm-graphql": "^4.0.3",
     "@sentry/browser": "5.4.0",
     "@tailwindcss/custom-forms": "^0.2.1",
     "axios": "^0.18.0",
@@ -80,8 +80,8 @@
     "css-loader": "^0.28.9",
     "elm": "^0.19.1-3",
     "elm-asset-webpack-loader": "^1.1.1",
-    "elm-format": "^0.8.1",
-    "elm-review": "^2.0.2",
+    "elm-format": "^0.8.3",
+    "elm-review": "^2.3.2",
     "elm-test": "^0.19.1",
     "elm-webpack-loader": "^6.0.1",
     "eosjs": "^16.0.9",

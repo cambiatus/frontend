@@ -79,13 +79,15 @@
     "email": "Please, use a valid email.",
     "tooShort": "Too short. Must be at least {{minLength}} characters.",
     "tooLong": "Too long. Must be at most {{maxLength}} characters.",
-    "invalidChar": "Invalid character {{invalidChar}}.",
+    "invalidChar": "Invalid character. Please use only letters from A to Z and numbers from 1 to 5.",
     "alreadyTaken": "This one is already taken. Please, Try another.",
     "notMember": "This user is not a member.",
     "chooseOrUploadLogo": "Choose or upload a logo.",
     "invalidSymbol": "Invalid symbol.",
     "unknown": "Uoh. Something wrong happened.",
-    "accountNotFound": "Account not found. Are you sure you created your account?"
+    "accountNotFound": "Account not found. Are you sure you created your account?",
+    "phone": "Please use a valid phone number",
+    "zipcode": "Invalid zipcode"
   },
   "auth": {
     "title": "Use your private key and PIN or log in by",
@@ -168,6 +170,49 @@
         "tooltip": "",
         "placeholder": "Ex.: arlene_warren@email.com"
       },
+      "phone": {
+        "label": "Phone Number",
+        "tooltip": "Ex.: 12345678",
+        "placeholder": "Ex.: 12345678"
+      },
+      "street": {
+        "label": "Street",
+        "tooltip": "",
+        "placeholder": ""
+      },
+      "number": {
+        "label": "Number",
+        "tooltip": "",
+        "placeholder": ""
+      },
+      "zip": {
+        "label": "ZIP Code",
+        "tooltip": "",
+        "placeholder": ""
+      },
+      "document": {
+        "type": "Document Type",
+        "cedula_de_identidad": {
+          "label": "Social Security Number",
+          "placeholder": "Enter the 9 digits",
+          "maximum": "9"
+        },
+        "dimex": {
+          "label": "Dimex Number",
+          "placeholder": "Enter the 11 or 12 digits",
+          "maximum": "12"
+        },
+        "nite": {
+          "label": "Nite Number",
+          "placeholder": "Enter the 10 digits",
+          "maximum": "10"
+        },
+        "errorInvalid": "Please, use a valid document number."
+      },
+      "types": {
+        "natural": "Natural Person",
+        "juridical": "Juridical Person"
+      },
       "account": {
         "label": "Create a username with exactly 12 characters (letters from a-z and numbers from 1-5)",
         "tooltip": "The username will be as you will be known on the platform by the other participants, it must have exact 12 characters.",
@@ -175,7 +220,32 @@
       },
       "accountCharError": "Invalid character found. Use only letters and numbers between 1-5",
       "checkingAvailability": "Checking availability of that account",
-      "button": "Create"
+      "button": "Create",
+      "company_type": "Company Type",
+      "company": {
+        "mipyme": {
+          "name": "MIPYME",
+          "label": "MIPYME",
+          "placeholder": "Enter the 10 digits",
+          "maximum": "10"
+        },
+        "gran_empresa": {
+          "label": "Large-sized Company Number",
+          "name": "Corporation",
+          "placeholder": "Enter the 10 digits",
+          "maximum": "10"
+        }
+      },
+      "register_tooltip": "How would you like to register?",
+      "corporation": "Corporation",
+      "city": "City",
+      "state": "State",
+      "district": "District",
+      "select": {
+        "state": "Select the state",
+        "city": "Select the city",
+        "district": "Select the district"
+      }
     },
     "login": "Already have an account? ",
     "authLink": "Login",
@@ -289,7 +359,8 @@
       "succeed": "Invitation succeed",
       "failed": "Invitation failed",
       "copy": "Copy",
-      "copied": "Copied!"
+      "copied": "Copied!",
+      "kycRequired": "This community requires its members to have some more information. Please, fill these fields below."
     },
     "invitation": {
       "title": "invited you to be part of the community",
@@ -317,7 +388,7 @@
       "subtitle": "{{objectives}} objectives and {{actions}} actions",
       "new": "Create new objective",
       "action_count": "{{actions}} actions",
-      "edit": "Edit objective", 
+      "edit": "Edit objective",
       "editor": {
         "not_found": "Not Found",
         "error": "Ops something went wrong!",
@@ -404,6 +475,32 @@
     },
     "verifyClaim": {
       "error": "Something went wrong while trying to process your validation, please try again later"
+    },
+    "kyc": {
+      "title": "KYC",
+      "dataTitle": "KYC Data",
+      "info": "KYC means Know Your Customer and sometimes Know Your Client. KYC check is the mandatory process of identifying and verifying the identity of the client when opening an account and periodically over time. Before enabling this feature, talk with us to understand better.",
+      "phoneLabel": "Phone Number",
+      "restriction": {
+        "title": "Sorry, this page is restricted",
+        "description": "This community requires some more information from its members. To have full access, please, full KYC fields in your profile.",
+        "link": "Fill in your KYC data"
+      },
+      "delete": {
+        "label": "Delete",
+        "confirmationHeader": "Delete your KYC data",
+        "confirmationBody": "After deleting this data you won't be able to participate in some communities. Do you really want to delete your KYC data?",
+        "warning": "Important: After deleting this data you won't be able to participate in some communities.",
+        "confirm": "Yes",
+        "cancel": "No",
+        "success": "Your KYC data was successfully deleted."
+      },
+      "add": {
+        "title": "Add KYC data",
+        "restricted": "Sorry, you can't edit your KYC data.",
+        "canRemove": "You can always remove this information from your profile if you decide to do so.",
+        "success": "Your KYC data was successfully saved."
+      }
     }
   },
   "profile": {
@@ -413,7 +510,10 @@
     "edit_success": "Profile saved successfully",
     "locations": "Location",
     "interests": "Interests",
-    "12words": { "title": "My 12 words", "button": "Download" },
+    "12words": {
+      "title": "My 12 words",
+      "button": "Download"
+    },
     "pin": {
       "title": "My security PIN",
       "button": "Change",
@@ -498,7 +598,8 @@
       "quantity_label": "Value",
       "memo_label": "Comments (optional)",
       "default_memo": "Thanks for the help!",
-      "submit": "Buy"
+      "submit": "Buy",
+      "success": "Successful purchase!"
     },
     "delete": "Delete",
     "delete_modal": {

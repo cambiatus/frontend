@@ -17,7 +17,7 @@ import Eos.Account as Eos
 import Graphql.Document
 import Graphql.Http
 import Html exposing (Html, button, div, form, input, span, text, textarea)
-import Html.Attributes exposing (class, disabled, pattern, placeholder, required, rows, type_, value)
+import Html.Attributes exposing (class, disabled, placeholder, required, rows, type_, value)
 import Html.Events exposing (onInput, onSubmit)
 import I18Next exposing (Delims(..), t)
 import Json.Decode as Decode exposing (Value)
@@ -190,23 +190,22 @@ viewForm ({ shared } as loggedIn) model f community isDisabled =
                         (I18Next.tr shared.translations
                             Curly
                             "account.my_wallet.transfer.amount"
-                            [ ( "symbol", Eos.symbolToString community.symbol ) ]
+                            [ ( "symbol", Eos.symbolToSymbolCodeString community.symbol ) ]
                         )
                     ]
                 , div [ class "flex h-12 rounded-sm border border-gray-500" ]
                     [ input
                         [ class "block w-4/5 border-none px-4 py-3 outline-none"
-                        , placeholder "0.00"
+                        , placeholder "0"
                         , disabled isDisabled
                         , required True
-                        , pattern "[0-9]*"
                         , onInput EnteredAmount
                         , value f.amount
                         ]
                         []
                     , span
                         [ class "w-1/5 flex text-white items-center justify-center bg-indigo-500 text-body uppercase rounded-r-sm" ]
-                        [ text (Eos.symbolToString community.symbol) ]
+                        [ text (Eos.symbolToSymbolCodeString community.symbol) ]
                     ]
                 ]
             , div [ class "mb-10" ]
@@ -354,7 +353,7 @@ update msg model ({ shared } as loggedIn) =
                 getNumericValues v =
                     v
                         |> String.toList
-                        |> List.filter Char.isDigit
+                        |> List.filter (\d -> Char.isDigit d || d == '.')
                         |> List.map String.fromChar
                         |> String.join ""
             in
@@ -434,7 +433,7 @@ update msg model ({ shared } as loggedIn) =
                             , responseData = Encode.null
                             , data =
                                 Eos.encodeTransaction
-                                    [ { accountName = "bes.token"
+                                    [ { accountName = loggedIn.shared.contracts.token
                                       , name = "transfer"
                                       , authorization =
                                             { actor = loggedIn.accountName

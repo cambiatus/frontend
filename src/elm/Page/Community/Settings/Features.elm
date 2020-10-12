@@ -9,6 +9,7 @@ import Html exposing (Html, div, input, label, span, text)
 import Html.Attributes exposing (checked, class, for, id, name, style, type_)
 import Html.Events exposing (onCheck)
 import I18Next exposing (Translations, t)
+import Icons
 import Json.Decode exposing (Value)
 import Json.Encode
 import Page
@@ -31,6 +32,7 @@ initModel symbol =
     , symbol = symbol
     , hasShop = False
     , hasObjectives = False
+    , hasKyc = False
     }
 
 
@@ -39,6 +41,7 @@ type alias Model =
     , symbol : Symbol
     , hasShop : Bool
     , hasObjectives : Bool
+    , hasKyc : Bool
     }
 
 
@@ -52,12 +55,14 @@ type Status
 type Feature
     = Shop
     | Objectives
+    | Kyc
 
 
 type Msg
     = CompletedLoad (Result (Graphql.Http.Error (Maybe Community.Model)) (Maybe Community.Model))
     | ToggleShop Bool
     | ToggleObjectives Bool
+    | ToggleKyc Bool
     | SaveSuccess
 
 
@@ -87,6 +92,7 @@ view loggedIn model =
                             ]
                             [ toggleView translations (translate "community.objectives.title_plural") model.hasObjectives ToggleObjectives "actions"
                             , toggleView translations (translate "menu.shop") model.hasShop ToggleShop "shop"
+                            , toggleView translations (translate "community.kyc.title") model.hasKyc ToggleKyc "kyc"
                             ]
                         ]
 
@@ -130,6 +136,19 @@ toggleView translations labelText isEnabled toggleFunction inputId =
 
             else
                 "text-grey"
+
+        kycTooltip =
+            if inputId == "kyc" then
+                span [ class "icon-tooltip ml-1" ]
+                    [ Icons.question "inline-block"
+                    , div
+                        [ class "icon-tooltip-content" ]
+                        [ text (translate "community.kyc.info")
+                        ]
+                    ]
+
+            else
+                text ""
     in
     div
         [ class "grid w-full py-4"
@@ -137,7 +156,7 @@ toggleView translations labelText isEnabled toggleFunction inputId =
                                 'label status toggle' 40px / auto 80px 50px
                                 """
         ]
-        [ span [ classes, style "grid-area" "label" ] [ text labelText ]
+        [ span [ classes, style "grid-area" "label" ] [ text labelText, kycTooltip ]
         , span [ classes, class ("font-medium lowercase mr-auto " ++ color), style "grid-area" "status" ] [ text statusText ]
         , div [ classes ]
             [ div [ class "form-switch inline-block align-middle" ]
@@ -177,6 +196,7 @@ update msg model loggedIn =
                     | status = newStatus
                     , hasShop = community.hasShop
                     , hasObjectives = community.hasObjectives
+                    , hasKyc = community.hasKyc
                 }
 
         CompletedLoad (Ok Nothing) ->
@@ -195,6 +215,10 @@ update msg model loggedIn =
             { model | hasObjectives = state }
                 |> UR.init
                 |> saveFeaturePort loggedIn Objectives model.status state
+
+        ToggleKyc _ ->
+            { model | hasKyc = model.hasKyc }
+                |> UR.init
 
         SaveSuccess ->
             model
@@ -217,11 +241,14 @@ saveFeaturePort loggedIn feature status state =
 
                 Objectives ->
                     ToggleObjectives
+
+                Kyc ->
+                    ToggleKyc
     in
     case status of
         Loaded community ->
             if LoggedIn.isAuth loggedIn then
-                UR.addPort (saveFeature feature state authorization loggedIn.accountName community)
+                UR.addPort (saveFeature feature state authorization loggedIn community)
 
             else
                 UR.addExt (Just (function state) |> LoggedIn.RequiredAuthentication)
@@ -236,24 +263,32 @@ saveFeaturePort loggedIn feature status state =
             UR.addExt (ShowFeedback Failure "Error")
 
 
-saveFeature : Feature -> Bool -> Eos.Authorization -> Eos.Account.Name -> Community.Model -> Ports.JavascriptOutModel Msg
-saveFeature feature state authorization accountName community =
+saveFeature : Feature -> Bool -> Eos.Authorization -> LoggedIn.Model -> Community.Model -> Ports.JavascriptOutModel Msg
+saveFeature feature state authorization { shared, accountName } community =
     let
         hasShop =
             case feature of
                 Shop ->
                     state
 
-                Objectives ->
+                _ ->
                     community.hasShop
 
         hasObjectives =
             case feature of
-                Shop ->
-                    community.hasObjectives
-
                 Objectives ->
                     state
+
+                _ ->
+                    community.hasObjectives
+
+        hasKyc =
+            case feature of
+                Kyc ->
+                    state
+
+                _ ->
+                    community.hasKyc
 
         data =
             { accountName = accountName
@@ -265,13 +300,14 @@ saveFeature feature state authorization accountName community =
             , invitedReward = community.invitedReward
             , hasShop = hasShop
             , hasObjectives = hasObjectives
+            , hasKyc = hasKyc
             }
     in
     { responseAddress = SaveSuccess
     , responseData = Json.Encode.null
     , data =
         Eos.encodeTransaction
-            [ { accountName = "bes.cmm"
+            [ { accountName = shared.contracts.community
               , name = "update"
               , authorization = authorization
               , data =
@@ -304,6 +340,9 @@ msgToString msg =
 
         ToggleObjectives _ ->
             [ "ToggleObjectives" ]
+
+        ToggleKyc _ ->
+            [ "ToggleKyc" ]
 
         SaveSuccess ->
             [ "SaveSuccess" ]

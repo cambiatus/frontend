@@ -26,6 +26,7 @@ import Page.NotFound as NotFound
 import Page.Notification as Notification
 import Page.PaymentHistory as PaymentHistory
 import Page.Profile as Profile
+import Page.Profile.AddKyc as ProfileAddKyc
 import Page.Profile.Editor as ProfileEditor
 import Page.PublicProfile as PublicProfile
 import Page.Register as Register
@@ -158,6 +159,7 @@ type Status
     | PublicProfile PublicProfile.Model
     | Profile Profile.Model
     | ProfileEditor ProfileEditor.Model
+    | ProfileAddKyc ProfileAddKyc.Model
     | Register (Maybe String) Register.Model
     | Shop Shop.Filter Shop.Model
     | ShopEditor (Maybe String) ShopEditor.Model
@@ -193,6 +195,7 @@ type Msg
     | GotPaymentHistoryMsg PaymentHistory.Msg
     | GotProfileMsg Profile.Msg
     | GotProfileEditorMsg ProfileEditor.Msg
+    | GotProfileAddKycMsg ProfileAddKyc.Msg
     | GotRegisterMsg Register.Msg
     | GotShopMsg Shop.Msg
     | GotShopEditorMsg ShopEditor.Msg
@@ -370,6 +373,11 @@ update msg model =
         ( GotProfileEditorMsg subMsg, ProfileEditor subModel ) ->
             ProfileEditor.update subMsg subModel
                 >> updateLoggedInUResult ProfileEditor GotProfileEditorMsg model
+                |> withLoggedIn
+
+        ( GotProfileAddKycMsg subMsg, ProfileAddKyc subModel ) ->
+            ProfileAddKyc.update subMsg subModel
+                >> updateLoggedInUResult ProfileAddKyc GotProfileAddKycMsg model
                 |> withLoggedIn
 
         ( GotCommunitySettingsMsg subMsg, CommunitySettings subModel ) ->
@@ -698,7 +706,7 @@ changeRouteTo maybeRoute model =
 
         Just (Route.Register invitation maybeRedirect) ->
             withGuest
-                Register.init
+                (Register.init invitation)
                 (updateStatusWith (Register invitation) GotRegisterMsg)
                 maybeRedirect
 
@@ -751,6 +759,11 @@ changeRouteTo maybeRoute model =
             ProfileEditor.init
                 >> updateStatusWith ProfileEditor GotProfileEditorMsg model
                 |> withLoggedIn Route.ProfileEditor
+
+        Just Route.ProfileAddKyc ->
+            ProfileAddKyc.init
+                >> updateStatusWith ProfileAddKyc GotProfileAddKycMsg model
+                |> withLoggedIn Route.ProfileAddKyc
 
         Just Route.Dashboard ->
             Dashboard.init
@@ -993,6 +1006,9 @@ msgToString msg =
         GotProfileEditorMsg subMsg ->
             "GotProfileEditorMsg" :: ProfileEditor.msgToString subMsg
 
+        GotProfileAddKycMsg subMsg ->
+            "GotProfileAddKycMsg" :: ProfileAddKyc.msgToString subMsg
+
         GotRegisterMsg subMsg ->
             "GotRegisterMsg" :: Register.msgToString subMsg
 
@@ -1130,31 +1146,31 @@ view model =
             viewGuest subModel Guest.Login GotLoginMsg Login.view
 
         Notification subModel ->
-            viewLoggedIn subModel LoggedIn.Other GotNotificationMsg Notification.view
+            viewLoggedIn subModel LoggedIn.Notification GotNotificationMsg Notification.view
 
         Community subModel ->
-            viewLoggedIn subModel LoggedIn.Other GotCommunityMsg CommunityPage.view
+            viewLoggedIn subModel LoggedIn.Community GotCommunityMsg CommunityPage.view
 
         CommunitySettings subModel ->
-            viewLoggedIn subModel LoggedIn.Other GotCommunitySettingsMsg CommunitySettings.view
+            viewLoggedIn subModel LoggedIn.CommunitySettings GotCommunitySettingsMsg CommunitySettings.view
 
         CommunitySettingsFeatures subModel ->
-            viewLoggedIn subModel LoggedIn.Other GotCommunitySettingsFeaturesMsg CommunitySettingsFeatures.view
+            viewLoggedIn subModel LoggedIn.CommunitySettingsFeatures GotCommunitySettingsFeaturesMsg CommunitySettingsFeatures.view
 
         CommunityEditor subModel ->
-            viewLoggedIn subModel LoggedIn.Other GotCommunityEditorMsg CommunityEditor.view
+            viewLoggedIn subModel LoggedIn.CommunityEditor GotCommunityEditorMsg CommunityEditor.view
 
         Objectives subModel ->
-            viewLoggedIn subModel LoggedIn.Other GotObjectivesMsg Objectives.view
+            viewLoggedIn subModel LoggedIn.Objectives GotObjectivesMsg Objectives.view
 
         ObjectiveEditor subModel ->
-            viewLoggedIn subModel LoggedIn.Other GotObjectiveEditorMsg ObjectiveEditor.view
+            viewLoggedIn subModel LoggedIn.ObjectiveEditor GotObjectiveEditorMsg ObjectiveEditor.view
 
         ActionEditor subModel ->
-            viewLoggedIn subModel LoggedIn.Other GotActionEditorMsg ActionEditor.view
+            viewLoggedIn subModel LoggedIn.ActionEditor GotActionEditorMsg ActionEditor.view
 
         Claim subModel ->
-            viewLoggedIn subModel LoggedIn.Other GotVerifyClaimMsg Claim.view
+            viewLoggedIn subModel LoggedIn.Claim GotVerifyClaimMsg Claim.view
 
         Dashboard subModel ->
             viewLoggedIn subModel LoggedIn.Dashboard GotDashboardMsg Dashboard.view
@@ -1168,20 +1184,23 @@ view model =
         ProfileEditor subModel ->
             viewLoggedIn subModel LoggedIn.ProfileEditor GotProfileEditorMsg ProfileEditor.view
 
+        ProfileAddKyc subModel ->
+            viewLoggedIn subModel LoggedIn.ProfileAddKyc GotProfileAddKycMsg ProfileAddKyc.view
+
         Shop _ subModel ->
             viewLoggedIn subModel LoggedIn.Shop GotShopMsg Shop.view
 
         ShopEditor _ subModel ->
-            viewLoggedIn subModel LoggedIn.Other GotShopEditorMsg ShopEditor.view
+            viewLoggedIn subModel LoggedIn.ShopEditor GotShopEditorMsg ShopEditor.view
 
         ShopViewer _ subModel ->
-            viewLoggedIn subModel LoggedIn.Shop GotShopViewerMsg ShopViewer.view
+            viewLoggedIn subModel LoggedIn.ShopViewer GotShopViewerMsg ShopViewer.view
 
         ViewTransfer _ subModel ->
-            viewLoggedIn subModel LoggedIn.Other GotViewTransferScreenMsg ViewTransfer.view
+            viewLoggedIn subModel LoggedIn.ViewTransfer GotViewTransferScreenMsg ViewTransfer.view
 
         Transfer subModel ->
-            viewLoggedIn subModel LoggedIn.Other GotTransferMsg Transfer.view
+            viewLoggedIn subModel LoggedIn.Transfer GotTransferMsg Transfer.view
 
         Analysis subModel ->
-            viewLoggedIn subModel LoggedIn.Other GotAnalysisMsg Analysis.view
+            viewLoggedIn subModel LoggedIn.Analysis GotAnalysisMsg Analysis.view

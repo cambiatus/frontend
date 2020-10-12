@@ -171,7 +171,7 @@ view loggedIn model =
 
                 ( Loaded balance, LoggedIn.Loaded profile, LoadedGraphql community _ ) ->
                     div [ class "container mx-auto px-4 mb-10" ]
-                        [ div [ class "flex inline-block text-gray-600 font-light mt-6 mb-4" ]
+                        [ div [ class "flex inline-block text-gray-600 font-light mt-6 mb-5" ]
                             [ div []
                                 [ text (t "menu.my_communities")
                                 , span [ class "text-indigo-500 font-medium" ]
@@ -547,7 +547,7 @@ viewTransfer ({ shared } as loggedIn) transfer =
                 [ text (Maybe.withDefault "" transfer.memo) ]
             ]
         , div [ class "flex flex-none pl-4" ]
-            (viewAmount amount (Eos.symbolToString transfer.symbol))
+            (viewAmount amount (Eos.symbolToSymbolCodeString transfer.symbol))
         ]
 
 
@@ -576,7 +576,7 @@ viewBalance loggedIn _ balance =
             text (I18Next.t loggedIn.shared.translations s)
 
         symbolText =
-            Eos.symbolToString balance.asset.symbol
+            Eos.symbolToSymbolCodeString balance.asset.symbol
 
         balanceText =
             String.fromFloat balance.asset.amount ++ " "
@@ -646,15 +646,24 @@ update msg model loggedIn =
                 findBalance balance =
                     balance.asset.symbol == loggedIn.selectedCommunity
 
+                -- Try to find the balance, if not found default to the first balance
                 statusBalance =
                     case List.find findBalance balances of
                         Just b ->
                             Loaded b
 
                         Nothing ->
-                            NotFound
+                            case List.head balances of
+                                Just b ->
+                                    Loaded b
+
+                                Nothing ->
+                                    NotFound
             in
-            UR.init { model | balance = statusBalance }
+            UR.init
+                { model
+                    | balance = statusBalance
+                }
 
         CompletedLoadBalances (Err httpError) ->
             UR.init { model | balance = Failed httpError }
@@ -716,7 +725,7 @@ update msg model loggedIn =
                                 , responseData = Encode.null
                                 , data =
                                     Eos.encodeTransaction
-                                        [ { accountName = "bes.cmm"
+                                        [ { accountName = loggedIn.shared.contracts.community
                                           , name = "verifyclaim"
                                           , authorization =
                                                 { actor = loggedIn.accountName

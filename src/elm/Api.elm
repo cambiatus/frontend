@@ -154,7 +154,7 @@ getBalances : Shared -> Eos.Name -> (Result Http.Error (List Balance) -> msg) ->
 getBalances shared accountName toMsg =
     let
         query =
-            Eos.TableQuery "bes.token" (Eos.nameToString accountName) "accounts" 1000
+            Eos.TableQuery shared.contracts.token (Eos.nameToString accountName) "accounts" 1000
     in
     Http.post
         { url = blockchainUrl shared [ "chain", "get_table_rows" ] []

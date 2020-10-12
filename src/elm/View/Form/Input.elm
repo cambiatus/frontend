@@ -1,20 +1,20 @@
 module View.Form.Input exposing (init, input, toHtml, withCounter)
 
-{-| Creates a Cambiatus-style text input that supports error reporting, placeholders, localization
-and character counters.
+{- | Creates a Cambiatus-style text input that supports error reporting, placeholders, localization
+   and character counters.
 
-    View.Form.Input.init
-        { label = "Username"
-        , id = "username_input"
-        , onInput = EnteredUsername
-        , disabled = False
-        , value = model.username
-        , placeholder = "Enter your username"
-        , problems = model.username\_problems
-        , translators = shared.translators
-        }
-        |> View.Form.Input.withCounter 12
-        |> View.Form.Input.toHtml
+       View.Form.Input.init
+           { label = "Username"
+           , id = "username_input"
+           , onInput = EnteredUsername
+           , disabled = False
+           , value = model.username
+           , placeholder = "Enter your username"
+           , problems = model.username\_problems
+           , translators = shared.translators
+           }
+           |> View.Form.Input.withCounter 12
+           |> View.Form.Input.toHtml
 
 -}
 
@@ -109,7 +109,7 @@ withCounter maximum options =
 
 viewFieldProblem : String -> Html a
 viewFieldProblem problem =
-    li [ class "form-error absolute mr-8" ] [ text problem ]
+    li [ class "form-error absolute mr-10" ] [ text problem ]
 
 
 type alias InputOptions a =

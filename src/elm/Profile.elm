@@ -1,9 +1,11 @@
 module Profile exposing
     ( CommunityInfo
+    , DeleteKycAndAddressResult
     , Profile
     , ProfileCreate
     , ProfileForm
     , decode
+    , deleteKycAndAddressMutation
     , emptyProfileForm
     , encodeProfileChat
     , encodeProfileCreate
@@ -19,6 +21,7 @@ module Profile exposing
     , selectConfig
     , selectFilter
     , selectionSet
+    , upsertKycMutation
     , username
     , view
     , viewEmpty
@@ -28,11 +31,16 @@ module Profile exposing
     )
 
 import Avatar exposing (Avatar)
+import Cambiatus.Enum.DeleteAddressStatus exposing (DeleteAddressStatus)
+import Cambiatus.Enum.DeleteKycStatus exposing (DeleteKycStatus)
 import Cambiatus.Mutation
 import Cambiatus.Object
 import Cambiatus.Object.Community as Community
+import Cambiatus.Object.DeleteAddress
+import Cambiatus.Object.DeleteKyc
 import Cambiatus.Object.Profile as User
 import Cambiatus.Query
+import Cambiatus.Scalar exposing (Id(..))
 import Dict exposing (Dict)
 import Eos exposing (Symbol)
 import Eos.Account as Eos
@@ -45,6 +53,8 @@ import I18Next exposing (Translations, t)
 import Json.Decode as Decode exposing (Decoder, int, nullable, string)
 import Json.Decode.Pipeline as Decode exposing (optional, required)
 import Json.Encode as Encode
+import Kyc exposing (ProfileKyc)
+import Profile.Address as Address exposing (Address)
 import Select
 import Session.Shared exposing (Shared)
 import Simple.Fuzzy
@@ -68,6 +78,8 @@ type alias Profile =
     , createdAt : Posix
     , communities : List CommunityInfo
     , analysisCount : Int
+    , kyc : Maybe ProfileKyc
+    , address : Maybe Address
     }
 
 
@@ -77,6 +89,7 @@ type alias CommunityInfo =
     , logo : String
     , hasShop : Bool
     , hasActions : Bool
+    , hasKyc : Bool
     }
 
 
@@ -104,16 +117,19 @@ selectionSet =
         |> SelectionSet.hardcoded (Time.millisToPosix 0)
         |> with (User.communities communityInfoSelectionSet)
         |> with User.analysisCount
+        |> with (User.kyc Kyc.selectionSet)
+        |> with (User.address Address.selectionSet)
 
 
 communityInfoSelectionSet : SelectionSet CommunityInfo Cambiatus.Object.Community
 communityInfoSelectionSet =
     SelectionSet.succeed CommunityInfo
-        |> with (Eos.symbolSelectionSet Community.symbol)
+        |> with Eos.symbolSelectionSet
         |> with Community.name
         |> with Community.logo
         |> with Community.hasShop
         |> with Community.hasObjectives
+        |> with Community.hasKyc
 
 
 decode : Decoder Profile
@@ -132,6 +148,8 @@ decode =
         |> Decode.hardcoded []
         |> Decode.at [ "data", "user" ]
         |> optional "analysisCount" int 0
+        |> optional "kyc" (nullable Kyc.decode) Nothing
+        |> optional "address" (nullable Address.decode) Nothing
 
 
 decodeInterests : Decoder (List String)
@@ -183,6 +201,92 @@ mutation account form =
             }
         }
         selectionSet
+
+
+
+-- UPDATE/INSERT KYC
+
+
+upsertKycMutation : Eos.Name -> ProfileKyc -> SelectionSet (Maybe ProfileKyc) RootMutation
+upsertKycMutation account data =
+    let
+        nameString =
+            Eos.nameToString account
+    in
+    Cambiatus.Mutation.upsertKyc
+        { input =
+            { accountId = nameString
+            , countryId = Id "1"
+            , documentType = data.documentType
+            , document = data.document
+            , phone = data.phone
+            , userType = "natural"
+            }
+        }
+        Kyc.selectionSet
+
+
+
+-- DELETE KYC/ADDRESS
+
+
+type alias DeleteKycResult =
+    { result : DeleteKycStatus
+    , status : String
+    }
+
+
+deleteKycMutation : Eos.Name -> SelectionSet (Maybe DeleteKycResult) RootMutation
+deleteKycMutation account =
+    let
+        nameString =
+            Eos.nameToString account
+    in
+    Cambiatus.Mutation.deleteKyc
+        { input =
+            { account = nameString
+            }
+        }
+        (SelectionSet.succeed DeleteKycResult
+            |> with Cambiatus.Object.DeleteKyc.status
+            |> with Cambiatus.Object.DeleteKyc.reason
+        )
+
+
+type alias DeleteAddressResult =
+    { result : DeleteAddressStatus
+    , status : String
+    }
+
+
+deleteAddressMutation : Eos.Name -> SelectionSet (Maybe DeleteAddressResult) RootMutation
+deleteAddressMutation account =
+    let
+        nameString =
+            Eos.nameToString account
+    in
+    Cambiatus.Mutation.deleteAddress
+        { input =
+            { account = nameString
+            }
+        }
+        (SelectionSet.succeed DeleteAddressResult
+            |> with Cambiatus.Object.DeleteAddress.status
+            |> with Cambiatus.Object.DeleteAddress.reason
+        )
+
+
+type alias DeleteKycAndAddressResult =
+    { deleteKyc : Maybe DeleteKycResult
+    , deleteAddress : Maybe DeleteAddressResult
+    }
+
+
+deleteKycAndAddressMutation : Eos.Name -> SelectionSet DeleteKycAndAddressResult RootMutation
+deleteKycAndAddressMutation accountName =
+    SelectionSet.map2 DeleteKycAndAddressResult
+        (deleteKycMutation accountName)
+        (deleteAddressMutation accountName)
 
 
 

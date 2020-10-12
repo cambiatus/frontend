@@ -23,7 +23,10 @@ type alias ActionsOptionalArguments =
     { input : OptionalArgument Cambiatus.InputObject.ActionsInput }
 
 
-actions : (ActionsOptionalArguments -> ActionsOptionalArguments) -> SelectionSet decodesTo Cambiatus.Object.Action -> SelectionSet (List decodesTo) Cambiatus.Object.Objective
+actions :
+    (ActionsOptionalArguments -> ActionsOptionalArguments)
+    -> SelectionSet decodesTo Cambiatus.Object.Action
+    -> SelectionSet (List decodesTo) Cambiatus.Object.Objective
 actions fillInOptionals object_ =
     let
         filledInOptionals =
@@ -36,7 +39,9 @@ actions fillInOptionals object_ =
     Object.selectionForCompositeField "actions" optionalArgs object_ (identity >> Decode.list)
 
 
-community : SelectionSet decodesTo Cambiatus.Object.Community -> SelectionSet decodesTo Cambiatus.Object.Objective
+community :
+    SelectionSet decodesTo Cambiatus.Object.Community
+    -> SelectionSet decodesTo Cambiatus.Object.Objective
 community object_ =
     Object.selectionForCompositeField "community" [] object_ identity
 
@@ -61,7 +66,9 @@ createdTx =
     Object.selectionForField "String" "createdTx" [] Decode.string
 
 
-creator : SelectionSet decodesTo Cambiatus.Object.Profile -> SelectionSet decodesTo Cambiatus.Object.Objective
+creator :
+    SelectionSet decodesTo Cambiatus.Object.Profile
+    -> SelectionSet decodesTo Cambiatus.Object.Objective
 creator object_ =
     Object.selectionForCompositeField "creator" [] object_ identity
 

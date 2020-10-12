@@ -94,7 +94,7 @@ initLogin shared authModel profile_ =
         selectedCommunity =
             List.head profile_.communities
                 |> Maybe.map .id
-                |> Maybe.withDefault Eos.bespiralSymbol
+                |> Maybe.withDefault Eos.cambiatusSymbol
 
         model =
             initModel shared authModel profile_.account selectedCommunity
@@ -102,7 +102,7 @@ initLogin shared authModel profile_ =
     ( { model
         | profile = Loaded profile_
       }
-    , Cmd.none
+    , Api.Graphql.query shared (Community.settingsQuery selectedCommunity) CompletedLoadSettings
     )
 
 
@@ -140,6 +140,7 @@ type alias Model =
     , feedback : FeedbackVisibility
     , hasShop : Bool
     , hasObjectives : Bool
+    , hasKyc : Bool
     }
 
 
@@ -162,6 +163,7 @@ initModel shared authModel accountName selectedCommunity =
     , showCommunitySelector = False
     , hasShop = True
     , hasObjectives = False
+    , hasKyc = False
     }
 
 
@@ -199,14 +201,29 @@ type Page
     = Other
     | Dashboard
     | Communities
+    | Community
+    | CommunitySettings
+    | CommunitySettingsFeatures
+    | CommunityEditor
+    | Objectives
+    | ObjectiveEditor
+    | ActionEditor
+    | Claim
     | News
     | Learn
+    | Notification
     | Shop
+    | ShopEditor
+    | ShopViewer
     | FAQ
     | Profile
     | PublicProfile
     | ProfileEditor
+    | ProfileAddKyc
     | PaymentHistory
+    | Transfer
+    | ViewTransfer
+    | Analysis
 
 
 view : (Msg -> msg) -> Page -> Model -> Html msg -> Html msg
@@ -270,6 +287,55 @@ viewFeedback status message =
 
 viewHelper : (Msg -> msg) -> Page -> Profile -> Model -> Html msg -> Html msg
 viewHelper thisMsg page profile_ ({ shared } as model) content =
+    let
+        { t } =
+            shared.translators
+
+        hasUserKycFilled =
+            case profile_.kyc of
+                Just _ ->
+                    True
+
+                Nothing ->
+                    False
+
+        availableWithoutKyc : List Page
+        availableWithoutKyc =
+            [ Other
+            , Profile
+            , Notification
+            , PublicProfile
+            , ProfileEditor
+            , ProfileAddKyc
+            , PaymentHistory
+            , ViewTransfer
+            ]
+
+        isContentAllowed =
+            List.member page availableWithoutKyc
+                || not model.hasKyc
+                || (model.hasKyc && hasUserKycFilled)
+
+        viewKycRestriction =
+            div [ class "mx-auto container max-w-sm" ]
+                [ div [ class "my-6 mx-4 text-center" ]
+                    [ p [ class "text-2xl font-bold" ]
+                        [ text (t "community.kyc.restriction.title") ]
+                    , p [ class "mt-2 mb-6" ]
+                        [ text (t "community.kyc.restriction.description") ]
+                    , a
+                        [ class "button button-primary m-auto w-full sm:w-56"
+                        , Route.href Route.ProfileAddKyc
+                        ]
+                        [ text (t "community.kyc.restriction.link") ]
+                    ]
+                , img
+                    [ class "w-full mx-auto md:w-64 mt-6 mb-8"
+                    , src "/images/not_found.svg"
+                    ]
+                    []
+                ]
+    in
     div
         [ class "min-h-screen flex flex-col" ]
         [ div [ class "bg-white" ]
@@ -285,7 +351,11 @@ viewHelper thisMsg page profile_ ({ shared } as model) content =
             Hidden ->
                 text ""
         , div [ class "flex-grow" ]
-            [ content
+            [ if isContentAllowed then
+                content
+
+              else
+                viewKycRestriction
             ]
         , viewFooter shared
         , Modal.initWith
@@ -717,14 +787,15 @@ update msg model =
         CompletedLoadSettings (Ok settings_) ->
             case settings_ of
                 Just settings ->
-                    { model | hasShop = settings.hasShop, hasObjectives = settings.hasObjectives }
+                    { model | hasShop = settings.hasShop, hasObjectives = settings.hasObjectives, hasKyc = settings.hasKyc }
                         |> UR.init
 
                 Nothing ->
                     UR.init model
 
-        CompletedLoadSettings (Err _) ->
+        CompletedLoadSettings (Err err) ->
             UR.init model
+                |> UR.logGraphqlError msg err
 
         ClickedTryAgainProfile accountName ->
             UR.init { model | profile = Loading accountName }

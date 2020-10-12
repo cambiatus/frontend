@@ -79,13 +79,15 @@
     "email": "Si us plau, utilitzeu un correu electrònic vàlid.",
     "tooShort": "Molt curta. Has d’emprar com a mínim {{minLength}} caràcters.",
     "tooLong": "Molt llarga. Has d’emprar com a màxim {{maxLength}} caràcters.",
-    "invalidChar": "Caràcter invàlid {{invalidChar}}.",
+    "invalidChar": "Caràcter no vàlid. Utilitzeu només lletres de l'A a Z i números de l'1 al 5.",
     "alreadyTaken": "Ja està en ús. Si et plau, intenta-ho de nou.",
     "notMember": "Aquest usuari no és membre.",
     "chooseOrUploadLogo": "Escull o puja el teu propi logotip.",
     "invalidSymbol": "Símbol invàlid.",
     "unknown": "Oh oh. Alguna cosa ha anat malament.",
-    "accountNotFound": "Compte no trobat. Esteu segur que heu creat el vostre compte?"
+    "accountNotFound": "Compte no trobat. Esteu segur que heu creat el vostre compte?",
+    "phone": "Utilitzeu un número de telèfon vàlid",
+    "zipcode": "Codi postal no vàlid"
   },
   "auth": {
     "title": "Utilitzeu la vostra clau privada i el PIN o connecteu-vos per",
@@ -173,13 +175,81 @@
         "tooltip": "El nom d'usuari serà tal com els altres participants el coneixeran a la plataforma, ha de tenir 12 caràcters exactes.",
         "placeholder": "Ex.: arlenewa1224"
       },
+      "phone": {
+        "label": "Número de telèfon",
+        "tooltip": "Ex.: 12345678",
+        "placeholder": "Ex.: 12345678"
+      },
+      "street": {
+        "label": "Carrer",
+        "tooltip": "",
+        "placeholder": ""
+      },
+      "number": {
+        "label": "Número",
+        "tooltip": "",
+        "placeholder": ""
+      },
+      "zip": {
+        "label": "Codi ZIP",
+        "tooltip": "",
+        "placeholder": ""
+      },
+      "document": {
+        "type": "Tipus de Document",
+        "cedula_de_identidad": {
+          "label": "número de la Seguretat Social",
+          "placeholder": "introduïu els 9 dígits",
+          "maximum": "10"
+        },
+        "dimex": {
+          "label": "número dimex",
+          "placeholder": "Introduïu els 11 o 12 dígits",
+          "maximum": "12"
+        },
+        "nite": {
+          "label": "número nite",
+          "placeholder": "introduïu els 10 dígits",
+          "maximum": "10"
+        },
+        "errorInvalid": "Utilitzeu un número de document vàlid."
+      },
+      "types": {
+        "natural": "Persona Física",
+        "juridical": "Persona Jurídica"
+      },
       "accountCharError": "Hem trobat un caràcter invàlid. Utilitza solament lletres i números de 1-5",
       "pin": "PIN",
       "confirmPin": "Confirma el teu PIN",
       "pinCharError": "El teu PIN tan sols ha de contenir números",
       "pinConfirmError": "Si et plau introdueix el mateix PIN que abans",
       "checkingAvailability": "Comprovant disponibilitat del compte",
-      "button": "Crea"
+      "button": "Crea",
+      "company_type": "Tipus d’empresa",
+      "company": {
+        "mipyme": {
+          "name": "MIPYME",
+          "label": "MIPYME",
+          "placeholder": "Introduïu els deu dígits",
+          "maximum": "10"
+        },
+        "gran_empresa": {
+          "label": "Corporació",
+          "name": "Corporació Number",
+          "placeholder": "Introduïu els deu dígits",
+          "maximum": "10"
+        }
+      },
+      "register_tooltip": "Com voleu registrar-vos?",
+      "corporation": "Corporació",
+      "city": "Ciutat",
+      "state": "Estat",
+      "district": "Districte",
+      "select": {
+        "state": "Seleccioneu l'estat",
+        "city": "Seleccioneu la ciutat",
+        "district": "Selecciona el districte"
+      }
     },
     "login": "Ja tens un compte? ",
     "authLink": "Inici de sessió",
@@ -293,7 +363,8 @@
       "succeed": "Invitació exitosa",
       "failed": "Invitació fallida",
       "copy": "Còpia",
-      "copied": "Copiat!"
+      "copied": "Copiat!",
+      "kycRequired": "Aquesta comunitat requereix que els seus membres tinguin més informació. Empleneu aquests camps a continuació."
     },
     "invitation": {
       "title": "Et va convidar a formar part de la comunitat",
@@ -321,7 +392,7 @@
       "subtitle": "{{objectives}} objectius i {{actions}} accions",
       "new": "Crear un objectiu nou",
       "action_count": "{{actions}} accions",
-      "edit": "Edita l'objectiu", 
+      "edit": "Edita l'objectiu",
       "editor": {
         "not_found": "No trobat",
         "error": "Ui! Quelcom ha fallat",
@@ -408,6 +479,32 @@
     },
     "verifyClaim": {
       "error": "S'ha produït un error en intentar processar la convalidació. Torneu-ho a provar més endavant"
+    },
+    "kyc": {
+      "title": "KYC",
+      "dataTitle": "Dades KYC",
+      "info": "La verificació KYC és el procés obligatori d’identificar i verificar la identitat del client quan s’obre un compte i periòdicament amb el temps. Abans d’activar aquesta funció, poseu-vos en contacte amb nosaltres per entendre-ho millor.",
+      "phoneLabel": "Número de telèfon",
+      "restriction": {
+        "title": "Aquesta pàgina està restringida",
+        "description": "Aquesta comunitat requereix més informació dels seus membres. Per tenir accés complet, si us plau, als camps KYC complets del vostre perfil.",
+        "link": "Empleneu les vostres dades de KYC"
+      },
+      "delete": {
+        "label": "Suprimeix",
+        "confirmationHeader": "Suprimiu les vostres dades KYC",
+        "confirmationBody": "Després de suprimir aquestes dades, no podreu participar en algunes comunitats. Confirmes que vols suprimir les teves dades KYC?",
+        "warning": "Important: després de suprimir aquestes dades, no podreu participar en algunes comunitats.",
+        "confirm": "Sí",
+        "cancel": "No",
+        "success": "Les vostres dades KYC s'han suprimit correctament."
+      },
+      "add": {
+        "title": "Afegiu dades KYC",
+        "restricted": "No podeu editar les vostres dades KYC.",
+        "canRemove": "Sempre podeu eliminar aquesta informació del vostre perfil si ho decidiu.",
+        "success": "Les vostres dades KYC s'han desat correctament."
+      }
     }
   },
   "profile": {
@@ -417,8 +514,14 @@
     "edit_success": "El perfil s'ha desat correctament",
     "locations": "Localització",
     "interests": "Interessos",
-    "12words": { "title": "Les meves 12 paraules", "button": "Descarregar" },
-    "pin": { "title": "El meu PIN", "button": "Canviar" },
+    "12words": {
+      "title": "Les meves 12 paraules",
+      "button": "Descarregar"
+    },
+    "pin": {
+      "title": "El meu PIN",
+      "button": "Canviar"
+    },
     "changePin": "Canvieu el PIN!",
     "newPin": "Nou PIN de seguretat",
     "actions": {
@@ -497,7 +600,8 @@
       "quantity_label": "Valor",
       "memo_label": "Comentaris (opcional)",
       "default_memo": "Gràcies per la teva ajuda",
-      "submit": "Compra ara"
+      "submit": "Compra ara",
+      "success": "Compra satisfactòria!"
     },
     "delete": "Eliminar",
     "delete_modal": {

@@ -9,6 +9,10 @@ type Action
     = Action
 
 
+type Address
+    = Address
+
+
 type Check
     = Check
 
@@ -37,8 +41,20 @@ type Country
     = Country
 
 
+type DeleteAddress
+    = DeleteAddress
+
+
+type DeleteKyc
+    = DeleteKyc
+
+
 type Invite
     = Invite
+
+
+type KycData
+    = KycData
 
 
 type Mint

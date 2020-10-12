@@ -24,7 +24,9 @@ amount =
     Object.selectionForField "Float" "amount" [] Decode.float
 
 
-community : SelectionSet decodesTo Cambiatus.Object.Community -> SelectionSet decodesTo Cambiatus.Object.Transfer
+community :
+    SelectionSet decodesTo Cambiatus.Object.Community
+    -> SelectionSet decodesTo Cambiatus.Object.Transfer
 community object_ =
     Object.selectionForCompositeField "community" [] object_ identity
 
@@ -54,7 +56,9 @@ createdTx =
     Object.selectionForField "String" "createdTx" [] Decode.string
 
 
-from : SelectionSet decodesTo Cambiatus.Object.Profile -> SelectionSet decodesTo Cambiatus.Object.Transfer
+from :
+    SelectionSet decodesTo Cambiatus.Object.Profile
+    -> SelectionSet decodesTo Cambiatus.Object.Transfer
 from object_ =
     Object.selectionForCompositeField "from" [] object_ identity
 
@@ -74,7 +78,9 @@ memo =
     Object.selectionForField "(Maybe String)" "memo" [] (Decode.string |> Decode.nullable)
 
 
-to : SelectionSet decodesTo Cambiatus.Object.Profile -> SelectionSet decodesTo Cambiatus.Object.Transfer
+to :
+    SelectionSet decodesTo Cambiatus.Object.Profile
+    -> SelectionSet decodesTo Cambiatus.Object.Transfer
 to object_ =
     Object.selectionForCompositeField "to" [] object_ identity
 

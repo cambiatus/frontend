@@ -233,12 +233,12 @@ viewAction ({ shared } as loggedIn) model objectiveId action =
         tr r_id replaces =
             I18Next.tr loggedIn.shared.translations I18Next.Curly r_id replaces
     in
-    div [ class "flex flex-wrap sm:flex-no-wrap bg-white mt-8 mb-4" ]
-        [ div [ class "w-full sm:w-10 mx-8 mb-4" ] [ Icons.flag "w-full" ]
+    div [ class "flex flex-wrap sm:flex-no-wrap mt-8 mb-4 relative bg-purple-500 rounded-lg px-4 py-5" ]
+        [ div [ class "absolute top-0 left-0 right-0 -mt-6" ] [ Icons.flag "w-full" ]
         , div [ class "w-full" ]
-            [ p [ class "text-body" ] [ text action.description ]
+            [ p [ class "text-white" ] [ text action.description ]
             , div [ class "flex flex-wrap my-6 -mx-2 items-center" ]
-                [ div [ class "mx-2 mb-2" ]
+                [ div [ class "mx-2 mb-2 text-white" ]
                     [ p [ class "input-label" ]
                         [ text_ "community.actions.reward" ]
                     , p [ class "uppercase text-body" ]
@@ -252,7 +252,7 @@ viewAction ({ shared } as loggedIn) model objectiveId action =
                     div [ class "mx-2 mb-2" ]
                         [ p [ class "input-label" ]
                             [ text_ "community.actions.validation_reward" ]
-                        , p [ class "uppercase text-body" ]
+                        , p [ class "uppercase text-body text-white" ]
                             [ String.fromFloat action.verificationReward
                                 ++ " "
                                 ++ Eos.symbolToString model.communityId
@@ -271,14 +271,14 @@ viewAction ({ shared } as loggedIn) model objectiveId action =
                             [ text_ "community.actions.available_until" ]
                         , p [ class "text-body" ]
                             [ if action.usages > 0 then
-                                p [ classList [ ( "text-red", action.usagesLeft == 0 ) ] ]
+                                p [ classList [ ( "text-red", action.usagesLeft == 0 ), ( "text-white", action.usagesLeft /= 1 ) ] ]
                                     [ text (tr "community.actions.usages" [ ( "usages", usages ), ( "usagesLeft", usagesLeft ) ]) ]
 
                               else
                                 text ""
                             , case action.deadline of
                                 Just _ ->
-                                    p [ classList [ ( "text-red", pastDeadline ) ] ] [ text deadlineStr ]
+                                    p [ classList [ ( "text-red", pastDeadline ), ( "text-white", not pastDeadline ) ] ] [ text deadlineStr ]
 
                                 Nothing ->
                                     text ""

@@ -19,11 +19,18 @@ import Graphql.SelectionSet exposing (SelectionSet)
 import Json.Decode as Decode
 
 
+id : SelectionSet Cambiatus.ScalarCodecs.Id Cambiatus.Object.City
+id =
+    Object.selectionForField "ScalarCodecs.Id" "id" [] (Cambiatus.ScalarCodecs.codecs |> Cambiatus.Scalar.unwrapCodecs |> .codecId |> .decoder)
+
+
 name : SelectionSet String Cambiatus.Object.City
 name =
     Object.selectionForField "String" "name" [] Decode.string
 
 
-neighborhoods : SelectionSet decodesTo Cambiatus.Object.Neighborhood -> SelectionSet (List (Maybe decodesTo)) Cambiatus.Object.City
+neighborhoods :
+    SelectionSet decodesTo Cambiatus.Object.Neighborhood
+    -> SelectionSet (List decodesTo) Cambiatus.Object.City
 neighborhoods object_ =
-    Object.selectionForCompositeField "neighborhoods" [] object_ (identity >> Decode.nullable >> Decode.list)
+    Object.selectionForCompositeField "neighborhoods" [] object_ (identity >> Decode.list)

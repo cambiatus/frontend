@@ -25,7 +25,7 @@ const local = {
   communityContract: 'bes.cmm',
   tokenContract: 'bes.token',
   allowCommunityCreation: true,
-  selectedCommunity: 'BES',
+  selectedCommunity: '0,BES',
   pushKey:
     'BDzXEdCCYafisu3jmYxBGDboAfwfIHYzM9BbT2DmL8VzIqSWu5BnW6lC-xEoXExQUS81vwOSPF9w8kpcINWCvUM'
 }
@@ -34,29 +34,29 @@ const dev = {
   network: {
     blockchain: 'eos',
     protocol: 'http',
-    host: 'eosio.cambiatus.io',
+    host: 'staging.cambiatus.io',
     port: 80,
-    chainId: 'cf057bbfb72640471fd910bcb67639c22df9f92470936cddc1ade0e2f2e7dc4f'
+    chainId: 'fa087d6c692f16e01a9864749829359cd26b48db703377893f32ff1c72673a78'
   },
   eosOptions: {
-    chainId: 'cf057bbfb72640471fd910bcb67639c22df9f92470936cddc1ade0e2f2e7dc4f',
+    chainId: 'fa087d6c692f16e01a9864749829359cd26b48db703377893f32ff1c72673a78',
     debug: false,
-    httpEndpoint: 'https://eosio.cambiatus.io'
+    httpEndpoint: 'https://staging.cambiatus.io'
   },
   endpoints: {
-    api: 'https://api.cambiatus.io',
+    api: 'https://staging.cambiatus.io',
     chat: 'https://app.cambiatus.io/chat',
-    eosio: 'https://eosio.cambiatus.io',
-    graphql: 'https://api.cambiatus.io/api/graph',
-    socket: 'wss://api.cambiatus.io/socket'
+    eosio: 'https://staging.cambiatus.io/',
+    graphql: 'https://staging.cambiatus.io/api/graph',
+    socket: 'wss://staging.cambiatus.io/socket'
   },
   logo: '/images/logo-cambiatus.png',
   logoMobile: '/images/logo-cambiatus-mobile.svg',
-  bespiralAccount: 'bespiral',
-  communityContract: 'bes.cmm',
-  tokenContract: 'bes.token',
+  bespiralAccount: 'cambiatus',
+  communityContract: 'cambiatus.cm',
+  tokenContract: 'cambiatus.tk',
   allowCommunityCreation: true,
-  selectedCommunity: 'BES',
+  selectedCommunity: '0,CMB',
   pushKey:
     'BDzXEdCCYafisu3jmYxBGDboAfwfIHYzM9BbT2DmL8VzIqSWu5BnW6lC-xEoXExQUS81vwOSPF9w8kpcINWCvUM'
 }
@@ -82,6 +82,10 @@ const allowCommunityCreation = isLocal
 const selectedCommunity = isLocal
   ? dev.selectedCommunity
   : _env_.SELECTED_COMMUNITY
+const communityContract = isLocal
+  ? dev.communityContract
+  : _env_.COMMUNITY_CONTRACT
+const tokenContract = isLocal ? dev.tokenContract : _env_.TOKEN_CONTRACT
 
 const prod = {
   network: {
@@ -106,8 +110,8 @@ const prod = {
   logo: appLogo,
   logoMobile: appLogoMobile,
   bespiralAccount: 'bespiral',
-  communityContract: 'bes.cmm',
-  tokenContract: 'bes.token',
+  communityContract: communityContract,
+  tokenContract: tokenContract,
   allowCommunityCreation: allowCommunityCreation,
   selectedCommunity: selectedCommunity,
   pushKey: pKey

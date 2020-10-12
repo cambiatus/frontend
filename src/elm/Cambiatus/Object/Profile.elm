@@ -25,6 +25,13 @@ account =
     Object.selectionForField "String" "account" [] Decode.string
 
 
+address :
+    SelectionSet decodesTo Cambiatus.Object.Address
+    -> SelectionSet (Maybe decodesTo) Cambiatus.Object.Profile
+address object_ =
+    Object.selectionForCompositeField "address" [] object_ (identity >> Decode.nullable)
+
+
 analysisCount : SelectionSet Int Cambiatus.Object.Profile
 analysisCount =
     Object.selectionForField "Int" "analysisCount" [] Decode.int
@@ -50,7 +57,9 @@ chatUserId =
     Object.selectionForField "(Maybe String)" "chatUserId" [] (Decode.string |> Decode.nullable)
 
 
-communities : SelectionSet decodesTo Cambiatus.Object.Community -> SelectionSet (List decodesTo) Cambiatus.Object.Profile
+communities :
+    SelectionSet decodesTo Cambiatus.Object.Community
+    -> SelectionSet (List decodesTo) Cambiatus.Object.Profile
 communities object_ =
     Object.selectionForCompositeField "communities" [] object_ (identity >> Decode.list)
 
@@ -81,7 +90,10 @@ type alias GetPayersByAccountRequiredArguments =
 
 {-| List of payers to the given recipient fetched by the part of the account name.
 -}
-getPayersByAccount : GetPayersByAccountRequiredArguments -> SelectionSet decodesTo Cambiatus.Object.Profile -> SelectionSet (Maybe (List (Maybe decodesTo))) Cambiatus.Object.Profile
+getPayersByAccount :
+    GetPayersByAccountRequiredArguments
+    -> SelectionSet decodesTo Cambiatus.Object.Profile
+    -> SelectionSet (Maybe (List (Maybe decodesTo))) Cambiatus.Object.Profile
 getPayersByAccount requiredArgs object_ =
     Object.selectionForCompositeField "getPayersByAccount" [ Argument.required "account" requiredArgs.account Encode.string ] object_ (identity >> Decode.nullable >> Decode.list >> Decode.nullable)
 
@@ -96,6 +108,13 @@ invitations =
     Object.selectionForField "(Maybe (List (Maybe String)))" "invitations" [] (Decode.string |> Decode.nullable |> Decode.list |> Decode.nullable)
 
 
+kyc :
+    SelectionSet decodesTo Cambiatus.Object.KycData
+    -> SelectionSet (Maybe decodesTo) Cambiatus.Object.Profile
+kyc object_ =
+    Object.selectionForCompositeField "kyc" [] object_ (identity >> Decode.nullable)
+
+
 location : SelectionSet (Maybe String) Cambiatus.Object.Profile
 location =
     Object.selectionForField "(Maybe String)" "location" [] (Decode.string |> Decode.nullable)
@@ -106,7 +125,9 @@ name =
     Object.selectionForField "(Maybe String)" "name" [] (Decode.string |> Decode.nullable)
 
 
-network : SelectionSet decodesTo Cambiatus.Object.Network -> SelectionSet (Maybe (List (Maybe decodesTo))) Cambiatus.Object.Profile
+network :
+    SelectionSet decodesTo Cambiatus.Object.Network
+    -> SelectionSet (Maybe (List (Maybe decodesTo))) Cambiatus.Object.Profile
 network object_ =
     Object.selectionForCompositeField "network" [] object_ (identity >> Decode.nullable >> Decode.list >> Decode.nullable)
 
@@ -128,7 +149,10 @@ type alias TransfersOptionalArguments =
   - secondPartyAccount - Account name of the other participant of the transfer.
 
 -}
-transfers : (TransfersOptionalArguments -> TransfersOptionalArguments) -> SelectionSet decodesTo Cambiatus.Object.TransferConnection -> SelectionSet (Maybe decodesTo) Cambiatus.Object.Profile
+transfers :
+    (TransfersOptionalArguments -> TransfersOptionalArguments)
+    -> SelectionSet decodesTo Cambiatus.Object.TransferConnection
+    -> SelectionSet (Maybe decodesTo) Cambiatus.Object.Profile
 transfers fillInOptionals object_ =
     let
         filledInOptionals =

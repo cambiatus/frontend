@@ -740,7 +740,7 @@ viewTransfer shared payment =
             String.concat
                 [ String.fromFloat payment.value
                 , " "
-                , Eos.symbolToString payment.symbol
+                , Eos.symbolToSymbolCodeString payment.symbol
                 ]
     in
     div

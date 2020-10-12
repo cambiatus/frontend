@@ -115,8 +115,10 @@ type alias Model =
     , memberCount : Int
     , members : List Profile
     , objectives : List Objective
+    , precision : Int
     , hasObjectives : Bool
     , hasShop : Bool
+    , hasKyc : Bool
     }
 
 
@@ -129,7 +131,7 @@ communitiesSelectionSet =
     SelectionSet.succeed Metadata
         |> with Community.name
         |> with Community.description
-        |> with (Eos.symbolSelectionSet Community.symbol)
+        |> with Eos.symbolSelectionSet
         |> with Community.logo
         |> with (Eos.nameSelectionSet Community.creator)
         |> with Community.memberCount
@@ -153,7 +155,7 @@ communitySelectionSet =
     SelectionSet.succeed Model
         |> with Community.name
         |> with Community.description
-        |> with (Eos.symbolSelectionSet Community.symbol)
+        |> with Eos.symbolSelectionSet
         |> with Community.logo
         |> with (Eos.nameSelectionSet Community.creator)
         |> with Community.inviterReward
@@ -161,13 +163,16 @@ communitySelectionSet =
         |> with Community.memberCount
         |> with (Community.members Profile.selectionSet)
         |> with (Community.objectives objectiveSelectionSet)
+        |> with Community.precision
         |> with Community.hasObjectives
         |> with Community.hasShop
+        |> with Community.hasKyc
 
 
 type alias Settings =
     { hasObjectives : Bool
     , hasShop : Bool
+    , hasKyc : Bool
     }
 
 
@@ -176,6 +181,7 @@ settingsSelectionSet =
     SelectionSet.succeed Settings
         |> with Community.hasObjectives
         |> with Community.hasShop
+        |> with Community.hasKyc
 
 
 
@@ -280,7 +286,7 @@ objectiveSelectionSet =
 
 
 type alias CreateObjectiveAction =
-    { symbol : Symbol
+    { asset : Eos.Asset
     , description : String
     , creator : Eos.Name
     }
@@ -289,7 +295,7 @@ type alias CreateObjectiveAction =
 encodeCreateObjectiveAction : CreateObjectiveAction -> Value
 encodeCreateObjectiveAction c =
     Encode.object
-        [ ( "cmm_asset", Encode.string ("0 " ++ Eos.symbolToString c.symbol) )
+        [ ( "cmm_asset", Eos.encodeAsset c.asset )
         , ( "description", Encode.string c.description )
         , ( "creator", Eos.encodeName c.creator )
         ]
@@ -467,6 +473,7 @@ type alias CreateCommunityData =
     , invitedReward : Eos.Asset
     , hasShop : Eos.EosBool
     , hasObjectives : Eos.EosBool
+    , hasKyc : Eos.EosBool
     }
 
 
@@ -480,6 +487,7 @@ createCommunityData :
     , invitedReward : Float
     , hasShop : Bool
     , hasObjectives : Bool
+    , hasKyc : Bool
     }
     -> CreateCommunityData
 createCommunityData params =
@@ -501,6 +509,7 @@ createCommunityData params =
         }
     , hasShop = params.hasShop |> Eos.boolToEosBool
     , hasObjectives = params.hasObjectives |> Eos.boolToEosBool
+    , hasKyc = params.hasKyc |> Eos.boolToEosBool
     }
 
 
@@ -516,6 +525,7 @@ encodeCreateCommunityData c =
         , ( "invited_reward", Eos.encodeAsset c.invitedReward )
         , ( "has_objectives", Eos.encodeEosBool c.hasObjectives )
         , ( "has_shop", Eos.encodeEosBool c.hasShop )
+        , ( "has_kyc", Eos.encodeEosBool c.hasKyc )
         ]
 
 
@@ -546,6 +556,8 @@ type alias UpdateCommunityData =
     , invitedReward : Eos.Asset
     , hasObjectives : Int
     , hasShop : Int
+
+    -- , hasKyc : Int
     }
 
 
@@ -560,6 +572,8 @@ encodeUpdateLogoData c =
         , ( "invited_reward", Eos.encodeAsset c.invitedReward )
         , ( "has_objectives", Encode.int c.hasObjectives )
         , ( "has_shop", Encode.int c.hasShop )
+
+        -- , ( "has_kyc", Encode.int c.hasKyc )
         ]
 
 

@@ -19,7 +19,9 @@ import Graphql.SelectionSet exposing (SelectionSet)
 import Json.Decode as Decode
 
 
-community : SelectionSet decodesTo Cambiatus.Object.Community -> SelectionSet decodesTo Cambiatus.Object.Mint
+community :
+    SelectionSet decodesTo Cambiatus.Object.Community
+    -> SelectionSet decodesTo Cambiatus.Object.Mint
 community object_ =
     Object.selectionForCompositeField "community" [] object_ identity
 
@@ -54,6 +56,8 @@ quantity =
     Object.selectionForField "Float" "quantity" [] Decode.float
 
 
-to : SelectionSet decodesTo Cambiatus.Object.Profile -> SelectionSet decodesTo Cambiatus.Object.Mint
+to :
+    SelectionSet decodesTo Cambiatus.Object.Profile
+    -> SelectionSet decodesTo Cambiatus.Object.Mint
 to object_ =
     Object.selectionForCompositeField "to" [] object_ identity

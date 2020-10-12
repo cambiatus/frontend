@@ -93,7 +93,9 @@ function flags () {
     logoMobile: config.logoMobile,
     now: Date.now(),
     allowCommunityCreation: config.allowCommunityCreation,
-    selectedCommunity: getSelectedCommunity() || config.selectedCommunity
+    selectedCommunity: getSelectedCommunity() || config.selectedCommunity,
+    tokenContract: config.tokenContract,
+    communityContract: config.communityContract
   }
   devLog('flags', flags_)
   return flags_
@@ -222,17 +224,18 @@ async function handleJavascriptPort (arg) {
   switch (arg.data.name) {
     case 'checkAccountAvailability': {
       devLog('=========================', 'checkAccountAvailability')
-      var sendResponse = function (isAvailable) {
+      var sendResponse = function (isAvailable, error) {
         const response = {
           address: arg.responseAddress,
           addressData: arg.responseData,
-          isAvailable: isAvailable
+          isAvailable: isAvailable,
+          error: error
         }
         devLog('checkAccountAvailability response', response)
         app.ports.javascriptInPort.send(response)
       }
       eos
-        .getAccount(arg.data.accountName)
+        .getAccount(arg.data.account)
         .then(_ => sendResponse(false))
         .catch(e => {
           // Invalid name exception
