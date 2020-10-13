@@ -1,12 +1,16 @@
 window._env_ = {
-  CHAIN_URL: %CHAIN_URL,
-  CHAIN_PORT: %CHAIN_PORT,
-  CHAIN_ID: %CHAIN_ID,
-  API_URL: %API_URL,
-  GRAPHQL_URL: %GRAPHQL_URL,
-  SOCKET_URL: %SOCKET_URL
-	PUSH_KEY: %PUSH_KEY,
-  LOGO: %LOGO,
-  ALLOW_COMMUNITY_CREATION: %ALLOW_COMMUNITY_CREATION,
-  SELECTED_COMMUNITY: %SELECTED_COMMUNITY
+  CHAIN_URL: 'https://staging.cambiatus.io',
+  CHAIN_PORT: '443',
+  CHAIN_ID: 'fa087d6c692f16e01a9864749829359cd26b48db703377893f32ff1c72673a78',
+  API_URL: 'https://staging.cambiatus.io',
+  GRAPHQL_URL: 'https://staging.cambiatus.io/api/graph',
+  CHAT_URL: '',
+  SOCKET_URL: 'wss://staging.cambiatus.io/socket',
+  PUSH_KEY: 'BFTq_CZbfDupUW8_7O6sI9dyyqq92hPOMtCG6ZCcWW4HxWt2htDMyREBw4fW6pOjeWbcPirnoq6l3l50EJHfmCQ',
+  LOGO: '/images/logo-cambiatus.svg',
+  LOGO_MOBILE: '/images/logo-cambiatus-mobile.svg',
+  ALLOW_COMMUNITY_CREATION: 'true',
+  SELECTED_COMMUNITY: '0,CMB',
+  COMMUNITY_CONTRACT: 'cambiatus.cm',
+  TOKEN_CONTRACT: 'cambiatus.tk'
 }
