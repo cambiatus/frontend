@@ -237,40 +237,65 @@ viewClaimCard { claim, selectedCommunity, shared, accountName, openConfirmationM
             Just dateTime
                 |> Utils.posixDateTime
                 |> Strftime.format "%d %b %Y" Time.utc
+
+        ( claimStatus, textColor ) =
+            case claim.status of
+                Approved ->
+                    ( t "all_analysis.approved", "text-green" )
+
+                Rejected ->
+                    ( t "all_analysis.disapproved", "text-red" )
+
+                Pending ->
+                    ( t "all_analysis.pending", "text-black" )
+
+        claimRoute =
+            Route.Claim
+                selectedCommunity
+                claim.action.objective.id
+                claim.action.id
+                claim.id
     in
-    -- TODO: handle case when claim is already voted (need on Analysis page)
-    div [ class "w-full md:w-1/2 lg:w-1/3 xl:w-1/4 px-2 mb-4" ]
+    div [ class "w-full sm:w-1/2 lg:w-1/3 xl:w-1/4 px-2 mb-4" ]
         [ div
-            [ class " flex flex-col p-4 my-2 rounded-lg bg-white"
+            [ class "flex flex-col p-4 my-2 rounded-lg bg-white hover:shadow"
             , id ("claim" ++ String.fromInt claim.id)
             ]
-            [ a
-                [ Route.href <|
-                    Route.Claim selectedCommunity claim.action.objective.id claim.action.id claim.id
-                ]
-                [ div [ class "flex justify-start mb-8" ]
-                    [ Profile.view shared accountName claim.claimer
+            [ a [ Route.href claimRoute ]
+                [ div [ class "flex justify-center mb-8" ]
+                    [ Profile.view shared accountName claim.claimer ]
+                , div [ class "bg-gray-100 flex items-center justify-center h-6 w-32 mb-2" ]
+                    [ p
+                        [ class ("text-caption uppercase " ++ textColor) ]
+                        [ text claimStatus ]
                     ]
                 , div [ class "mb-6" ]
                     [ p [ class "text-body" ]
                         [ text claim.action.description ]
                     , p
                         [ class "text-gray-900 text-caption uppercase" ]
-                        [ text <| date claim.createdAt ]
+                        [ text (date claim.createdAt) ]
                     ]
                 ]
-            , div [ class "flex" ]
-                [ button
-                    [ class "flex-1 button button-secondary font-medium text-red"
-                    , onClick (openConfirmationModalMsg claim.id False)
+            , if isAlreadyValidated claim accountName then
+                a
+                    [ class "button button-secondary w-full font-medium mb-2"
+                    , Route.href claimRoute
                     ]
-                    [ text <| t "dashboard.reject" ]
-                , div [ class "w-4" ] []
-                , button
-                    [ class "flex-1 button button-primary font-medium"
-                    , onClick (openConfirmationModalMsg claim.id True)
+                    [ text (t "all_analysis.more_details") ]
+
+              else
+                div [ class "flex justify-between space-x-4" ]
+                    [ button
+                        [ class "button button-danger"
+                        , onClick (openConfirmationModalMsg claim.id False)
+                        ]
+                        [ text (t "dashboard.reject") ]
+                    , button
+                        [ class "button button-primary"
+                        , onClick (openConfirmationModalMsg claim.id True)
+                        ]
+                        [ text (t "dashboard.verify") ]
                     ]
-                    [ text <| t "dashboard.verify" ]
-                ]
             ]
         ]

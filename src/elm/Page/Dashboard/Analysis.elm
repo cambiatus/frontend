@@ -127,13 +127,23 @@ view ({ shared } as loggedIn) model =
                     Page.fullPageLoading
 
                 Loaded claims pageInfo ->
+                    let
+                        viewClaim claim =
+                            Claim.viewClaimCard
+                                { claim = claim
+                                , selectedCommunity = loggedIn.selectedCommunity
+                                , shared = shared
+                                , accountName = loggedIn.accountName
+                                , openConfirmationModalMsg = OpenModal
+                                }
+                    in
                     div []
                         [ Page.viewHeader loggedIn (t "all_analysis.title") Route.Dashboard
                         , div [ class "container mx-auto px-4 mb-10" ]
                             [ viewFilters loggedIn model
                             , if List.length claims > 0 then
                                 div []
-                                    [ div [ class "flex flex-wrap -mx-2" ] (List.map (viewClaim loggedIn) claims)
+                                    [ div [ class "flex flex-wrap -mx-2" ] (List.map viewClaim claims)
                                     , viewPagination loggedIn pageInfo
                                     ]
 
@@ -248,92 +258,6 @@ viewEmptyResults { shared } =
             [ text_ "all_analysis.empty"
             , span [ class "underline text-orange-500", onClick ClearFilters ] [ text_ "all_analysis.clear_filters" ]
             ]
-        ]
-
-
-viewClaim : LoggedIn.Model -> Claim.Model -> Html Msg
-viewClaim { shared, accountName, selectedCommunity } claim =
-    let
-        t =
-            I18Next.t shared.translations
-
-        text_ s =
-            text (I18Next.t shared.translations s)
-
-        date dateTime =
-            Just dateTime
-                |> Utils.posixDateTime
-                |> Strftime.format "%d %b %Y" Time.utc
-
-        ( msg, textColor ) =
-            case claim.status of
-                Claim.Approved ->
-                    ( t "all_analysis.approved", "text-green" )
-
-                Claim.Rejected ->
-                    ( t "all_analysis.disapproved", "text-red" )
-
-                Claim.Pending ->
-                    ( t "all_analysis.pending", "text-black" )
-    in
-    div [ class "w-full md:w-1/2 lg:w-1/3 xl:w-1/4 px-2 mb-4" ]
-        [ if Claim.isAlreadyValidated claim accountName then
-            div [ class "flex flex-col p-4 my-2 rounded-lg bg-white" ]
-                [ div [ class "flex justify-center mb-8" ]
-                    [ Profile.view shared accountName claim.claimer
-                    ]
-                , div [ class "mb-6" ]
-                    [ div
-                        [ class "bg-gray-100 flex items-center justify-center h-6 w-32 mb-2" ]
-                        [ p
-                            [ class ("text-caption uppercase " ++ textColor) ]
-                            [ text msg ]
-                        ]
-                    , p [ class "text-body mb-2" ]
-                        [ text claim.action.description ]
-                    , p
-                        [ class "text-gray-900 text-caption uppercase" ]
-                        [ text <| date claim.createdAt ]
-                    ]
-                , a
-                    [ class "button button-secondary w-full font-medium mb-2"
-                    , Route.href <| Route.Claim selectedCommunity claim.action.objective.id claim.action.id claim.id
-                    ]
-                    [ text_ "all_analysis.more_details" ]
-                ]
-
-          else
-            div [ class "flex flex-col p-4 my-2 rounded-lg bg-white", id <| "claim-" ++ String.fromInt claim.id ]
-                [ div [ class "flex justify-start mb-8" ]
-                    [ Profile.view shared accountName claim.claimer
-                    ]
-                , div
-                    [ class "bg-gray-100 flex items-center justify-center h-6 w-32 mb-2" ]
-                    [ p
-                        [ class ("text-caption uppercase " ++ textColor) ]
-                        [ text msg ]
-                    ]
-                , div [ class "mb-6" ]
-                    [ p [ class "text-body" ]
-                        [ text claim.action.description ]
-                    , p
-                        [ class "text-gray-900 text-caption uppercase" ]
-                        [ text <| date claim.createdAt ]
-                    ]
-                , div [ class "flex" ]
-                    [ button
-                        [ class "flex-1 button button-secondary font-medium text-red"
-                        , onClick (OpenModal claim.id False)
-                        ]
-                        [ text_ "dashboard.reject" ]
-                    , div [ class "w-4" ] []
-                    , button
-                        [ class "flex-1 button button-primary font-medium"
-                        , onClick (OpenModal claim.id True)
-                        ]
-                        [ text_ "dashboard.verify" ]
-                    ]
-                ]
         ]
 
 
