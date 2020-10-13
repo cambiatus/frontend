@@ -33,6 +33,10 @@ body {
   @apply bg-white text-orange-300 rounded-full border font-medium;
 }
 
+.button-secondary:hover {
+  @apply border-orange-300;
+}
+
 .button-sm {
   @apply py-1 px-4 h-8;
 }
@@ -47,6 +51,14 @@ body {
 
 .button-disabled:hover {
   @apply bg-gray-500;
+}
+
+.button-danger {
+  @apply button-secondary text-red;
+}
+
+.button-danger:hover {
+  @apply border-red;
 }
 
 .button-success {
