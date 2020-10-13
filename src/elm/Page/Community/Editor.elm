@@ -97,6 +97,7 @@ type alias Form =
     , logoList : List LogoStatus
     , inviterReward : Float
     , invitedReward : Float
+    , minBalance : Float
     , hasShop : Bool
     , hasObjectives : Bool
     , hasKyc : Bool
@@ -112,6 +113,7 @@ newForm =
     , logoList = defaultLogos
     , inviterReward = 0
     , invitedReward = 10
+    , minBalance = -10
     , hasShop = True
     , hasObjectives = True
     , hasKyc = False
@@ -140,6 +142,7 @@ editForm community =
     , logoList = logoList
     , inviterReward = community.inviterReward
     , invitedReward = community.invitedReward
+    , minBalance = community.minBalance |> Maybe.withDefault -100
     , hasShop = community.hasShop
     , hasObjectives = community.hasObjectives
     , hasKyc = community.hasKyc
@@ -208,6 +211,7 @@ encodeFormHelper logoUrl { accountName } form =
             , description = form.description
             , inviterReward = form.inviterReward
             , invitedReward = form.invitedReward
+            , minBalance = form.minBalance
             , hasShop = form.hasShop
             , hasObjectives = form.hasObjectives
             , hasKyc = form.hasKyc
@@ -307,6 +311,7 @@ viewForm ({ shared } as loggedIn) isEdit isDisabled errors form model =
                     , viewFieldCurrencySymbol shared (isEdit || isDisabled) form.symbol errors
                     , viewFieldInviterReward shared isDisabled form.inviterReward errors
                     , viewFieldInvitedReward shared isDisabled form.invitedReward errors
+                    , viewFieldMinBalance shared isDisabled form.minBalance errors
                     ]
                 , viewFieldLogo shared isDisabled form.logoSelected form.logoList errors
                 , viewFieldError shared "form" errors
@@ -516,6 +521,30 @@ viewFieldInvitedReward shared isDisabled defVal errors =
         ]
 
 
+viewFieldMinBalance : Shared -> Bool -> Float -> Dict String FormError -> Html Msg
+viewFieldMinBalance shared isDisabled defVal errors =
+    let
+        id_ =
+            "min-balance"
+
+        t =
+            I18Next.t shared.translations
+    in
+    formField
+        [ span [ class "input-label" ] [ text <| t "community.create.labels.min_balance" ]
+        , input
+            [ class "w-full input rounded-sm"
+            , value <| String.fromFloat defVal
+            , maxlength 255
+            , required True
+            , onInput EnteredMinBalance
+            , disabled isDisabled
+            ]
+            []
+        , viewFieldError shared id_ errors
+        ]
+
+
 fieldLogoId : String
 fieldLogoId =
     "community-editor-logo-upload"
@@ -578,6 +607,7 @@ type Msg
     | EnteredSymbol String
     | EnteredInviterReward String
     | EnteredInvitedReward String
+    | EnteredMinBalance String
     | ClickedLogo Int
     | EnteredLogo Int (List File)
     | CompletedLogoUpload Int (Result Http.Error String)
@@ -631,6 +661,10 @@ update msg model loggedIn =
         EnteredInvitedReward input ->
             UR.init model
                 |> updateForm (\form -> { form | invitedReward = Maybe.withDefault form.invitedReward <| String.toFloat input })
+
+        EnteredMinBalance input ->
+            UR.init model
+                |> updateForm (\f -> { f | minBalance = Maybe.withDefault f.minBalance <| String.toFloat input })
 
         EnteredSymbol input ->
             UR.init model
@@ -896,7 +930,7 @@ save msg loggedIn ({ model } as uResult) =
                                           , data =
                                                 { creator = loggedIn.accountName
                                                 , maxSupply = { amount = 21000000.0, symbol = createAction.cmmAsset.symbol }
-                                                , minBalance = { amount = -1000.0, symbol = createAction.cmmAsset.symbol }
+                                                , minBalance = createAction.minBalance
                                                 , tokenType = "mcc"
                                                 }
                                                     |> Community.encodeCreateTokenData
@@ -989,6 +1023,9 @@ msgToString msg =
 
         EnteredInviterReward _ ->
             [ "EnteredInviterReward" ]
+
+        EnteredMinBalance _ ->
+            [ "EnteredMinBalance" ]
 
         ClickedLogo _ ->
             [ "ClickedLogo" ]

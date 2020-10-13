@@ -112,6 +112,7 @@ type alias Model =
     , creator : Eos.Name
     , inviterReward : Float
     , invitedReward : Float
+    , minBalance : Maybe Float
     , memberCount : Int
     , members : List Profile
     , objectives : List Objective
@@ -160,6 +161,7 @@ communitySelectionSet =
         |> with (Eos.nameSelectionSet Community.creator)
         |> with Community.inviterReward
         |> with Community.invitedReward
+        |> with Community.minBalance
         |> with Community.memberCount
         |> with (Community.members Profile.selectionSet)
         |> with (Community.objectives objectiveSelectionSet)
@@ -471,6 +473,7 @@ type alias CreateCommunityData =
     , description : String
     , inviterReward : Eos.Asset
     , invitedReward : Eos.Asset
+    , minBalance : Eos.Asset
     , hasShop : Eos.EosBool
     , hasObjectives : Eos.EosBool
     , hasKyc : Eos.EosBool
@@ -485,6 +488,7 @@ createCommunityData :
     , description : String
     , inviterReward : Float
     , invitedReward : Float
+    , minBalance : Float
     , hasShop : Bool
     , hasObjectives : Bool
     , hasKyc : Bool
@@ -505,6 +509,10 @@ createCommunityData params =
         }
     , invitedReward =
         { amount = params.invitedReward
+        , symbol = params.symbol
+        }
+    , minBalance =
+        { amount = params.minBalance
         , symbol = params.symbol
         }
     , hasShop = params.hasShop |> Eos.boolToEosBool
