@@ -8,6 +8,7 @@ module Claim exposing
     , paginatedPageInfo
     , paginatedToList
     , selectionSet
+    , viewClaimCard
     )
 
 import Api.Relay exposing (Edge, PageConnection)
@@ -21,12 +22,20 @@ import Cambiatus.Object.ClaimConnection
 import Cambiatus.Object.ClaimEdge
 import Cambiatus.Scalar exposing (DateTime(..))
 import Community exposing (Objective)
-import Eos
-import Eos.Account as Eos
+import Eos exposing (Symbol)
+import Eos.Account
 import Graphql.OptionalArgument exposing (OptionalArgument(..))
 import Graphql.SelectionSet as SelectionSet exposing (SelectionSet, with)
+import Html exposing (Html, a, button, div, p, text)
+import Html.Attributes exposing (class, id)
+import Html.Events exposing (onClick)
 import Json.Encode as Encode
 import Profile exposing (Profile)
+import Route
+import Session.Shared exposing (Shared)
+import Strftime
+import Time
+import Utils
 
 
 type alias Model =
@@ -64,12 +73,12 @@ type alias Action =
     }
 
 
-isAlreadyValidated : Model -> Eos.Name -> Bool
+isAlreadyValidated : Model -> Eos.Account.Name -> Bool
 isAlreadyValidated claim user =
     claim.status /= Pending || List.any (\c -> c.validator.account == user) claim.checks
 
 
-encodeVerification : Int -> Eos.Name -> Bool -> Encode.Value
+encodeVerification : Int -> Eos.Account.Name -> Bool -> Encode.Value
 encodeVerification claimId validator vote =
     let
         encodedClaimId : Encode.Value
@@ -78,7 +87,7 @@ encodeVerification claimId validator vote =
 
         encodedVerifier : Encode.Value
         encodedVerifier =
-            Eos.encodeName validator
+            Eos.Account.encodeName validator
 
         encodedVote : Encode.Value
         encodedVote =
@@ -201,3 +210,67 @@ paginatedPageInfo maybePaginated =
     Maybe.map
         (\a -> a.pageInfo)
         maybePaginated
+
+
+
+-- CLAIM CARD
+
+
+type alias ClaimCardOptions msg =
+    { claim : Model
+    , selectedCommunity : Symbol
+    , shared : Shared
+    , accountName : Eos.Account.Name
+    , openConfirmationModalMsg : Int -> Bool -> msg
+    }
+
+
+{-| Claim card with a short claim overview. Used on Dashboard and Analysis pages.
+-}
+viewClaimCard : ClaimCardOptions msg -> Html msg
+viewClaimCard { claim, selectedCommunity, shared, accountName, openConfirmationModalMsg } =
+    let
+        { t } =
+            shared.translators
+
+        date dateTime =
+            Just dateTime
+                |> Utils.posixDateTime
+                |> Strftime.format "%d %b %Y" Time.utc
+    in
+    -- TODO: handle case when claim is already voted (need on Analysis page)
+    div [ class "w-full md:w-1/2 lg:w-1/3 xl:w-1/4 px-2 mb-4" ]
+        [ div
+            [ class " flex flex-col p-4 my-2 rounded-lg bg-white"
+            , id ("claim" ++ String.fromInt claim.id)
+            ]
+            [ a
+                [ Route.href <|
+                    Route.Claim selectedCommunity claim.action.objective.id claim.action.id claim.id
+                ]
+                [ div [ class "flex justify-start mb-8" ]
+                    [ Profile.view shared accountName claim.claimer
+                    ]
+                , div [ class "mb-6" ]
+                    [ p [ class "text-body" ]
+                        [ text claim.action.description ]
+                    , p
+                        [ class "text-gray-900 text-caption uppercase" ]
+                        [ text <| date claim.createdAt ]
+                    ]
+                ]
+            , div [ class "flex" ]
+                [ button
+                    [ class "flex-1 button button-secondary font-medium text-red"
+                    , onClick (openConfirmationModalMsg claim.id False)
+                    ]
+                    [ text <| t "dashboard.reject" ]
+                , div [ class "w-4" ] []
+                , button
+                    [ class "flex-1 button button-primary font-medium"
+                    , onClick (openConfirmationModalMsg claim.id True)
+                    ]
+                    [ text <| t "dashboard.verify" ]
+                ]
+            ]
+        ]

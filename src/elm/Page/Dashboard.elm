@@ -415,53 +415,15 @@ viewAnalysisList loggedIn profile model =
 
 viewAnalysis : LoggedIn.Model -> ClaimStatus -> Html Msg
 viewAnalysis ({ shared, selectedCommunity } as loggedIn) claimStatus =
-    let
-        text_ s =
-            text (I18Next.t shared.translations s)
-
-        date dateTime =
-            Just dateTime
-                |> Utils.posixDateTime
-                |> Strftime.format "%d %b %Y" Time.utc
-    in
     case claimStatus of
         ClaimLoaded claim ->
-            div
-                [ class "w-full md:w-1/2 lg:w-1/3 xl:w-1/4 px-2 mb-4"
-                ]
-                [ div
-                    [ class " flex flex-col p-4 my-2 rounded-lg bg-white"
-                    , id ("claim" ++ String.fromInt claim.id)
-                    ]
-                    [ a
-                        [ Route.href <| Route.Claim selectedCommunity claim.action.objective.id claim.action.id claim.id
-                        ]
-                        [ div [ class "flex justify-start mb-8" ]
-                            [ Profile.view shared loggedIn.accountName claim.claimer
-                            ]
-                        , div [ class "mb-6" ]
-                            [ p [ class "text-body" ]
-                                [ text claim.action.description ]
-                            , p
-                                [ class "text-gray-900 text-caption uppercase" ]
-                                [ text <| date claim.createdAt ]
-                            ]
-                        ]
-                    , div [ class "flex" ]
-                        [ button
-                            [ class "flex-1 button button-secondary font-medium text-red"
-                            , onClick (OpenModal claim.id False)
-                            ]
-                            [ text_ "dashboard.reject" ]
-                        , div [ class "w-4" ] []
-                        , button
-                            [ class "flex-1 button button-primary font-medium"
-                            , onClick (OpenModal claim.id True)
-                            ]
-                            [ text_ "dashboard.verify" ]
-                        ]
-                    ]
-                ]
+            Claim.viewClaimCard
+                { claim = claim
+                , selectedCommunity = selectedCommunity
+                , shared = shared
+                , accountName = loggedIn.accountName
+                , openConfirmationModalMsg = OpenModal
+                }
 
         ClaimLoading _ ->
             div [ class "w-full md:w-1/2 lg:w-1/3 xl:w-1/4 px-2 mb-4" ]
