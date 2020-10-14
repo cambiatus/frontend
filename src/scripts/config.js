@@ -1,35 +1,4 @@
 /* global _env_ */
-const local = {
-  network: {
-    blockchain: 'eos',
-    protocol: 'http',
-    host: 'localhost',
-    port: 8888,
-    chainId: 'cf057bbfb72640471fd910bcb67639c22df9f92470936cddc1ade0e2f2e7dc4f'
-  },
-  eosOptions: {
-    chainId: 'cf057bbfb72640471fd910bcb67639c22df9f92470936cddc1ade0e2f2e7dc4f',
-    debug: false,
-    httpEndpoint: `http://localhost:8888`
-  },
-  endpoints: {
-    api: 'http://localhost:4000/api',
-    chat: 'http://chat.bespiral.local/chat',
-    eosio: 'http://eosio.bespiral.local:8888',
-    graphql: 'http://localhost:8080/v1alpha1/graphql',
-    socket: 'ws://localhost:4000/socket'
-  },
-  logo: '/images/logo-cambiatus.png',
-  logoMobile: '/images/logo-cambiatus-mobile.svg',
-  bespiralAccount: 'bespiral',
-  communityContract: 'bes.cmm',
-  tokenContract: 'bes.token',
-  allowCommunityCreation: true,
-  selectedCommunity: '0,BES',
-  pushKey:
-    'BDzXEdCCYafisu3jmYxBGDboAfwfIHYzM9BbT2DmL8VzIqSWu5BnW6lC-xEoXExQUS81vwOSPF9w8kpcINWCvUM'
-}
-
 const dev = {
   network: {
     blockchain: 'eos',
@@ -119,6 +88,5 @@ const prod = {
 
 export default {
   development: dev,
-  local: local,
   production: prod
 }
