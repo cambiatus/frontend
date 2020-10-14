@@ -52,5 +52,6 @@ encode n =
     Encode.string (toString n)
 
 
+decoder : Decode.Decoder NiteNumber
 decoder =
     Decode.map NiteNumber Decode.string

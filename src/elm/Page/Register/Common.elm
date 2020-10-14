@@ -128,6 +128,7 @@ containsLetters str =
             |> MaybeExtra.isNothing
 
 
+ifEmptyTuple : (a -> ( String, b )) -> c -> Validate.Validator c a
 ifEmptyTuple data error =
     Validate.ifFalse
         (\subject ->
