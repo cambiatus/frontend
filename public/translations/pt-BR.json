@@ -604,7 +604,15 @@
       "memo_label": "Comentários (opcional)",
       "default_memo": "Obrigado pela ajuda!",
       "submit": "Comprar",
-      "success": "Compra bem sucedida!"
+      "success": "Compra bem sucedida!",
+      "errors": {
+        "unitEmpty": "Unidade não pode estar vazia",
+        "unitTooLow": "A unidade é muito baixa, deve ser pelo menos 1",
+        "unitTooHigh": "Unidades insuficientes disponíveis",
+        "unitNotOnlyNumbers": "Somente números são permitidos",
+        "memoEmpty": "O memorando não pode estar vazio",
+        "memoTooLong": "O memorando é muito longo, o máximo é 256 caracteres"
+      }
     },
     "delete": "Excluir",
     "delete_modal": {
