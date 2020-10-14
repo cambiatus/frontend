@@ -601,7 +601,15 @@
       "memo_label": "Comentaris (opcional)",
       "default_memo": "Gràcies per la teva ajuda",
       "submit": "Compra ara",
-      "success": "Compra satisfactòria!"
+      "success": "Compra satisfactòria!",
+      "errors": {
+        "unitEmpty": "La unitat no pot estar buida",
+        "unitTooLow": "La unitat és massa baixa, ha de ser com a mínim 1",
+        "unitTooHigh": "No hi ha prou unitats disponibles",
+        "unitNotOnlyNumbers": "Només es permeten números",
+        "memoEmpty": "La nota no pot estar buida",
+        "memoTooLong": "La nota és massa llarga i el màxim de 256 caràcters"
+      }
     },
     "delete": "Eliminar",
     "delete_modal": {

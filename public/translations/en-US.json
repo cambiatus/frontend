@@ -599,7 +599,15 @@
       "memo_label": "Comments (optional)",
       "default_memo": "Thanks for the help!",
       "submit": "Buy",
-      "success": "Successful purchase!"
+      "success": "Successful purchase!",
+      "errors": {
+        "unitEmpty": "Unit cannot be empty",
+        "unitTooLow": "Unit is too low, must be at least 1",
+        "unitTooHigh": "Not enough units available",
+        "unitNotOnlyNumbers": "Only numbers are allowed",
+        "memoEmpty": "Memo cannot be empty",
+        "memoTooLong": "Memo is too long, max is 256 characters"
+      }
     },
     "delete": "Delete",
     "delete_modal": {
