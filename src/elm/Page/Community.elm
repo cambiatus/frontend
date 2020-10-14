@@ -385,7 +385,7 @@ viewAction loggedIn metadata maybeDate action =
                    )
 
         rewardStr =
-            String.fromFloat action.reward ++ " " ++ Eos.symbolToString metadata.symbol
+            String.fromFloat action.reward ++ " " ++ Eos.symbolToSymbolCodeString metadata.symbol
 
         ( usages, usagesLeft ) =
             ( String.fromInt action.usages, String.fromInt action.usagesLeft )

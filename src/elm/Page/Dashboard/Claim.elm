@@ -179,7 +179,7 @@ viewDetails shared model claim =
                         [ class "pt-2 text-body"
                         , classList [ ( "text-red line-through", isRejected ) ]
                         ]
-                        [ text (String.fromFloat claim.action.reward ++ " " ++ Eos.symbolToString model.communityId) ]
+                        [ text (String.fromFloat claim.action.reward ++ " " ++ Eos.symbolToSymbolCodeString model.communityId) ]
                     ]
                 ]
             ]
@@ -197,7 +197,7 @@ viewDetails shared model claim =
                 [ text_ "claim.your_reward" ]
             , p
                 [ class "pt-2 text-body" ]
-                [ text (String.fromFloat claim.action.verifierReward ++ " " ++ Eos.symbolToString model.communityId) ]
+                [ text (String.fromFloat claim.action.verifierReward ++ " " ++ Eos.symbolToSymbolCodeString model.communityId) ]
             ]
         ]
 

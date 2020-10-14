@@ -1200,7 +1200,7 @@ viewReward { shared } community form =
                 []
             , span
                 [ class "w-1/5 flex text-white items-center justify-center bg-indigo-500 text-body uppercase rounded-r-sm" ]
-                [ text (Eos.symbolToString community.symbol) ]
+                [ text (Eos.symbolToSymbolCodeString community.symbol) ]
             ]
         , viewFieldErrors (listErrors shared.translations form.reward)
         ]
@@ -1465,7 +1465,7 @@ viewManualVerificationForm ({ shared } as loggedIn) model community =
                             []
                         , span
                             [ class "w-1/5 flex input-token rounded-r-sm" ]
-                            [ text (Eos.symbolToString community.symbol) ]
+                            [ text (Eos.symbolToSymbolCodeString community.symbol) ]
                         ]
                     , viewFieldErrors (listErrors shared.translations verificationReward)
                     ]
