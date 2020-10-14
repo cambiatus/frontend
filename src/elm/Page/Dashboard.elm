@@ -36,13 +36,11 @@ import Profile
 import Route
 import Session.LoggedIn as LoggedIn exposing (External(..))
 import Session.Shared exposing (Shared)
-import Strftime
 import Task
 import Time exposing (Posix)
 import Transfer exposing (QueryTransfers, Transfer)
 import UpdateResult as UR
 import Url
-import Utils
 import View.Modal as Modal
 
 

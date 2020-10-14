@@ -18,7 +18,7 @@ import Eos.Account as Eos
 import Graphql.Http
 import Graphql.OptionalArgument exposing (OptionalArgument(..))
 import Html exposing (Html, a, button, div, img, option, p, select, span, text)
-import Html.Attributes exposing (class, id, selected, src, value)
+import Html.Attributes exposing (class, selected, src, value)
 import Html.Events exposing (onClick)
 import I18Next
 import Icons
@@ -32,10 +32,7 @@ import Select
 import Session.LoggedIn as LoggedIn exposing (External)
 import Session.Shared exposing (Shared)
 import Simple.Fuzzy
-import Strftime
-import Time
 import UpdateResult as UR
-import Utils
 import View.Modal as Modal
 
 
