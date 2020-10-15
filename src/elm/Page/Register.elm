@@ -991,7 +991,7 @@ type alias SignUpResponse =
 formTypeToAccountCmd : Shared -> String -> Maybe String -> FormType -> Cmd Msg
 formTypeToAccountCmd shared key invitationId formType =
     let
-        cmd obj =
+        cmd obj userType =
             Api.Graphql.mutation shared
                 (Mutation.signUp
                     { input =
@@ -1006,6 +1006,7 @@ formTypeToAccountCmd shared key invitationId formType =
 
                                             Nothing ->
                                                 Absent
+                                    , userType = Present userType
                                 }
                             )
                     }
@@ -1018,13 +1019,13 @@ formTypeToAccountCmd shared key invitationId formType =
     in
     case formType of
         Juridical form ->
-            cmd { account = form.account, email = form.email, name = form.name, publicKey = key }
+            cmd { account = form.account, email = form.email, name = form.name, publicKey = key } "juridical"
 
         Natural form ->
-            cmd { account = form.account, email = form.email, name = form.name, publicKey = key }
+            cmd { account = form.account, email = form.email, name = form.name, publicKey = key } "natural"
 
         Default form ->
-            cmd { account = form.account, email = form.email, name = form.name, publicKey = key }
+            cmd { account = form.account, email = form.email, name = form.name, publicKey = key } "natural"
 
         None ->
             Cmd.none

@@ -561,7 +561,7 @@ viewTransferForm { shared } card model =
 
                   else
                     span [ class "field-error" ]
-                        [ text (getValidationMessage form.unitValidation) ]
+                        [ text <| t (getValidationMessage form.unitValidation) ]
                 ]
             , formField
                 [ label [ for fieldId.price ]
@@ -599,7 +599,7 @@ viewTransferForm { shared } card model =
 
                   else
                     span [ class "field-error" ]
-                        [ text (getValidationMessage form.memoValidation) ]
+                        [ text <| t (getValidationMessage form.memoValidation) ]
                 ]
             ]
         ]
@@ -618,22 +618,22 @@ getValidationMessage validation =
         Invalid error ->
             case error of
                 UnitEmpty ->
-                    "Unit cannot be empty"
+                    "shop.transfer.errors.unitEmpty"
 
                 UnitTooLow ->
-                    "Unit is too low, must be at least 1"
+                    "shop.transfer.errors.unitTooLow"
 
                 UnitTooHigh ->
-                    "Not enough units available"
+                    "shop.transfer.errors.unitTooHigh"
 
                 UnitNotOnlyNumbers ->
-                    "Only numbers are allowed"
+                    "shop.transfer.errors.unitNotOnlyNumbers"
 
                 MemoEmpty ->
-                    "Memo cannot be empty"
+                    "shop.transfer.errors.memoEmpty"
 
                 MemoTooLong ->
-                    "Memo is too long, max is 256 characters"
+                    "shop.transfer.errors.memoTooLong"
 
 
 formField : List (Html msg) -> Html msg

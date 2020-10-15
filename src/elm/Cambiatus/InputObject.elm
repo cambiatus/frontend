@@ -638,9 +638,9 @@ buildSignUpInput required fillOptionals =
     let
         optionals =
             fillOptionals
-                { invitationId = Absent }
+                { invitationId = Absent, userType = Absent }
     in
-    { account = required.account, email = required.email, invitationId = optionals.invitationId, name = required.name, publicKey = required.publicKey }
+    { account = required.account, email = required.email, invitationId = optionals.invitationId, name = required.name, publicKey = required.publicKey, userType = optionals.userType }
 
 
 type alias SignUpInputRequiredFields =
@@ -652,7 +652,9 @@ type alias SignUpInputRequiredFields =
 
 
 type alias SignUpInputOptionalFields =
-    { invitationId : OptionalArgument String }
+    { invitationId : OptionalArgument String
+    , userType : OptionalArgument String
+    }
 
 
 {-| Type for the SignUpInput input object.
@@ -663,6 +665,7 @@ type alias SignUpInput =
     , invitationId : OptionalArgument String
     , name : String
     , publicKey : String
+    , userType : OptionalArgument String
     }
 
 
@@ -671,7 +674,7 @@ type alias SignUpInput =
 encodeSignUpInput : SignUpInput -> Value
 encodeSignUpInput input =
     Encode.maybeObject
-        [ ( "account", Encode.string input.account |> Just ), ( "email", Encode.string input.email |> Just ), ( "invitationId", Encode.string |> Encode.optional input.invitationId ), ( "name", Encode.string input.name |> Just ), ( "publicKey", Encode.string input.publicKey |> Just ) ]
+        [ ( "account", Encode.string input.account |> Just ), ( "email", Encode.string input.email |> Just ), ( "invitationId", Encode.string |> Encode.optional input.invitationId ), ( "name", Encode.string input.name |> Just ), ( "publicKey", Encode.string input.publicKey |> Just ), ( "userType", Encode.string |> Encode.optional input.userType ) ]
 
 
 buildTransferInput :
