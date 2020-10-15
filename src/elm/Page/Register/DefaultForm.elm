@@ -2,6 +2,7 @@ module Page.Register.DefaultForm exposing (Field(..), Model, Msg(..), init, upda
 
 import Html exposing (Html)
 import Page.Register.Common exposing (containsNumberGreaterThan, fieldProblems)
+import Regex
 import Session.Shared exposing (Translators)
 import Validate exposing (Validator)
 import View.Form.Input
@@ -99,17 +100,50 @@ update msg form =
             { form | name = name }
 
         EnteredAccount account ->
+            let
+                ( updatedAccountName, updatedFormProblems ) =
+                    validateAccountName account form
+            in
             { form
-                | account =
-                    if String.length account > 12 || (account |> containsNumberGreaterThan 5) then
-                        form.account
-
-                    else
-                        account
+                | account = updatedAccountName
+                , problems = updatedFormProblems
             }
 
         EnteredEmail email ->
             { form | email = email }
+
+
+validateAccountName : String -> Model -> ( String, List ( Field, String ) )
+validateAccountName enteredAccountName { account, problems } =
+    let
+        formProblemsWithoutAccount =
+            problems
+                |> List.filter (\( field, _ ) -> field /= Account)
+
+        preparedAccountName =
+            enteredAccountName
+                |> String.trim
+                |> String.toLower
+                |> String.left 12
+
+        validAccountName : Regex.Regex
+        validAccountName =
+            Maybe.withDefault Regex.never <|
+                Regex.fromString "^[a-z1-5]{0,12}$"
+
+        isAccountNameValid : Bool
+        isAccountNameValid =
+            preparedAccountName
+                |> Regex.contains validAccountName
+    in
+    if isAccountNameValid then
+        ( preparedAccountName, formProblemsWithoutAccount )
+
+    else
+        ( account
+        , formProblemsWithoutAccount
+            ++ [ ( Account, "'" ++ String.right 1 enteredAccountName ++ "error.invalidChar" ) ]
+        )
 
 
 validator : Translators -> Validator ( Field, String ) Model
