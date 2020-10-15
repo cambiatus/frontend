@@ -45,9 +45,9 @@ yarn build
 
 ## Configurations
 
-Our app have a somewhat complex configuration stack, allowing the app to run without anychanges, connecting to the staging environmnent. Here is an outline of all the configuration files and how the interact:
+Our app have a somewhat complex configuration stack, allowing the app to run without any changes, connecting to the staging environmnent. Here is an outline of all the configuration files and how the interact:
 
-- `src/scripts/config.js` is the bottom level config. All the defaults are stored here for `DEV`, `PROD`, and `LOCAL` environments.
+- `src/scripts/config.js` is the bottom level config. All the defaults are stored here for `DEV` and `PROD` environments.
 - `env-config.js` is the config for the dev/prod/demo servers. This file overwrites the defaults from the `config.js` above. Currently, this file _is not used_ in the local dev environment, on the localhost it won't be loaded correctly. In the repo, this file contains the data for the Staging server (in Demo it will be different, in Muda, it will be different, etc.).
 - `src/elm/Flags.elm` is the Elm configuration file. We start our Elm app and send a port with all that comes from `src/scripts/config.js`. Since we need to decode JSON values on Elm, it comes with some default values so the app won't fail to load, we default it to some values specified there.
 
