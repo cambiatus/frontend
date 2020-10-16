@@ -721,6 +721,7 @@
     "disapprove": "Desaprovar",
     "approve": "Aprovar",
     "no_results_found": "Sense resultats",
+    "voteTitle": "Aproveu o rebutgeu aquesta acció?",
     "modal": {
       "title": "Sota Revisió",
       "message_disapprove": "Realment voleu rebutjar aquesta reclamació?",

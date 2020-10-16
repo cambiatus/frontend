@@ -111,7 +111,7 @@ view ({ shared } as loggedIn) model =
                                     viewVoteButtons =
                                         div [ class "mb-8 border-t pt-8" ]
                                             [ h3 [ class "font-bold mb-6 text-center" ]
-                                                [ text "Are you approve or disapprove this action?" ]
+                                                [ text <| t "claim.voteTitle" ]
                                             , div [ class "flex justify-around sm:justify-center sm:space-x-3" ]
                                                 [ button
                                                     [ class "button button-secondary text-red"
