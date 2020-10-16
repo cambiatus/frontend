@@ -1,6 +1,7 @@
 module Page.Dashboard.Claim exposing (Model, Msg, init, jsAddressToMsg, msgToString, update, view, viewVoters)
 
 import Api.Graphql
+import Browser.Events exposing (onClick)
 import Cambiatus.Object.Claim as Claim
 import Cambiatus.Object.Profile as Profile
 import Cambiatus.Query
@@ -10,7 +11,7 @@ import Eos exposing (Symbol)
 import Eos.Account as Eos
 import Graphql.Http
 import Graphql.OptionalArgument exposing (OptionalArgument(..))
-import Html exposing (Html, div, p, span, text)
+import Html exposing (Html, button, div, h3, p, span, text)
 import Html.Attributes exposing (class, classList)
 import I18Next
 import Json.Encode as Encode
@@ -87,7 +88,7 @@ view ({ shared } as loggedIn) model =
                         Page.fullPageLoading
 
                     Loaded claim ->
-                        div [ class "bg-white py-2" ]
+                        div [ class "bg-gray-100 py-2" ]
                             [ Page.viewHeader loggedIn claim.action.description Route.Analysis
                             , div [ class "mt-10 mb-8" ]
                                 [ Profile.viewLarge shared loggedIn.accountName claim.claimer
@@ -272,10 +273,32 @@ viewVoters ({ shared } as loggedIn) claim =
                         ]
 
                   else
-                    div [ class "flex flex-row flex-wrap" ]
+                    div [ class "flex flex-row flex-wrap space-x-6" ]
                         (List.map (\v -> Profile.view shared loggedIn.accountName v) pendingValidators)
                 ]
             ]
+        , if Claim.isValidated claim loggedIn.accountName then
+            text ""
+
+          else
+            div [ class "mb-8 border-t pt-8" ]
+                [ h3 [ class "font-bold mb-6 text-center" ]
+                    [ text "Are you approve or disapprove this action?" ]
+                , div [ class "flex justify-around sm:justify-center sm:space-x-3" ]
+                    [ button
+                        [ class "button button-secondary text-red"
+
+                        --, onClick (ConfirmVoteOpen claim.id False)
+                        ]
+                        [ text_ "dashboard.reject" ]
+                    , button
+                        [ class "button button-primary"
+
+                        --, onClick (ConfirmVoteOpen claim.id True)
+                        ]
+                        [ text_ "dashboard.verify" ]
+                    ]
+                ]
         ]
 
 
