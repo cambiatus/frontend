@@ -4,7 +4,7 @@ module Claim exposing
     , Paginated
     , claimPaginatedSelectionSet
     , encodeVerification
-    , isAlreadyValidated
+    , isValidated
     , paginatedPageInfo
     , paginatedToList
     , selectionSet
@@ -75,8 +75,8 @@ type alias Action =
     }
 
 
-isAlreadyValidated : Model -> Eos.Account.Name -> Bool
-isAlreadyValidated claim user =
+isValidated : Model -> Eos.Account.Name -> Bool
+isValidated claim user =
     claim.status /= Pending || List.any (\c -> c.validator.account == user) claim.checks
 
 
@@ -287,7 +287,7 @@ viewClaimCard { claim, selectedCommunity, shared, accountName, openConfirmationM
                         [ text (date claim.createdAt) ]
                     ]
                 ]
-            , if isAlreadyValidated claim accountName then
+            , if isValidated claim accountName then
                 a
                     [ class "button button-secondary w-full font-medium mb-2"
                     , Route.href claimRoute
