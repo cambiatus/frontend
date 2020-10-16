@@ -75,5 +75,6 @@ encode n =
     Encode.string (toString n)
 
 
+decoder : Decode.Decoder CedulaDeIdentidadNumber
 decoder =
     Decode.map CedulaDeIdentidadNumber Decode.string
