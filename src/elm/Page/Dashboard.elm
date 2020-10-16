@@ -13,7 +13,6 @@ import Api
 import Api.Graphql
 import Api.Relay
 import Cambiatus.Query
-import Cambiatus.Scalar exposing (DateTime(..))
 import Claim
 import Community exposing (Balance)
 import Eos exposing (Symbol)
@@ -35,7 +34,7 @@ import Page
 import Profile
 import Route
 import Session.LoggedIn as LoggedIn exposing (External(..))
-import Session.Shared exposing (Shared, Translators)
+import Session.Shared exposing (Shared)
 import Task
 import Time exposing (Posix)
 import Transfer exposing (QueryTransfers, Transfer)

@@ -30,10 +30,9 @@ import Profile exposing (Profile)
 import Route
 import Select
 import Session.LoggedIn as LoggedIn exposing (External)
-import Session.Shared exposing (Shared, Translators)
+import Session.Shared exposing (Shared)
 import Simple.Fuzzy
 import UpdateResult as UR
-import View.Modal as Modal
 
 
 init : LoggedIn.Model -> ( Model, Cmd Msg )
