@@ -191,7 +191,13 @@ view loggedIn model =
                         , viewTransfers loggedIn model
                         , case model.voteModalStatus of
                             VoteModalOpened claimId vote ->
-                                viewAnalysisModal loggedIn.shared.translators claimId vote
+                                Claim.viewVoteClaimModal
+                                    loggedIn.shared.translators
+                                    { voteMsg = VoteClaim
+                                    , closeMsg = CloseModal
+                                    , claimId = claimId
+                                    , isApproving = vote
+                                    }
 
                             VoteModalClosed ->
                                 text ""
@@ -204,42 +210,6 @@ view loggedIn model =
     { title = t "menu.dashboard"
     , content = content
     }
-
-
-viewAnalysisModal : Translators -> Int -> Bool -> Html Msg
-viewAnalysisModal { t } claimId isApproving =
-    let
-        text_ s =
-            text (t s)
-
-        body =
-            [ if isApproving then
-                text_ "claim.modal.message_approve"
-
-              else
-                text_ "claim.modal.message_disapprove"
-            ]
-
-        footer =
-            [ button [ class "modal-cancel", onClick CloseModal ]
-                [ text_ "claim.modal.secondary" ]
-            , button [ class "modal-accept", onClick (VoteClaim claimId isApproving) ]
-                [ if isApproving then
-                    text_ "claim.modal.primary_approve"
-
-                  else
-                    text_ "claim.modal.primary_disapprove"
-                ]
-            ]
-    in
-    Modal.initWith
-        { closeMsg = CloseModal
-        , isVisible = True
-        }
-        |> Modal.withHeader (t "claim.modal.title")
-        |> Modal.withBody body
-        |> Modal.withFooter footer
-        |> Modal.toHtml
 
 
 viewInvitationModal : LoggedIn.Model -> Model -> Html Msg

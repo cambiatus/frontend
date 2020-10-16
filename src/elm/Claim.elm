@@ -9,6 +9,7 @@ module Claim exposing
     , paginatedToList
     , selectionSet
     , viewClaimCard
+    , viewVoteClaimModal
     )
 
 import Api.Relay exposing (Edge, PageConnection)
@@ -32,10 +33,11 @@ import Html.Events exposing (onClick)
 import Json.Encode as Encode
 import Profile exposing (Profile)
 import Route
-import Session.Shared exposing (Shared)
+import Session.Shared exposing (Shared, Translators)
 import Strftime
 import Time
 import Utils
+import View.Modal as Modal
 
 
 type alias Model =
@@ -225,6 +227,14 @@ type alias ClaimCardOptions msg =
     }
 
 
+type alias VoteClaimModalOptions msg =
+    { voteMsg : Int -> Bool -> msg
+    , closeMsg : msg
+    , claimId : Int
+    , isApproving : Bool
+    }
+
+
 {-| Claim card with a short claim overview. Used on Dashboard and Analysis pages.
 -}
 viewClaimCard : ClaimCardOptions msg -> Html msg
@@ -299,3 +309,39 @@ viewClaimCard { claim, selectedCommunity, shared, accountName, openConfirmationM
                     ]
             ]
         ]
+
+
+viewVoteClaimModal : Translators -> VoteClaimModalOptions msg -> Html msg
+viewVoteClaimModal { t } { voteMsg, closeMsg, claimId, isApproving } =
+    let
+        text_ s =
+            text (t s)
+
+        body =
+            [ if isApproving then
+                text_ "claim.modal.message_approve"
+
+              else
+                text_ "claim.modal.message_disapprove"
+            ]
+
+        footer =
+            [ button [ class "modal-cancel", onClick closeMsg ]
+                [ text_ "claim.modal.secondary" ]
+            , button [ class "modal-accept", onClick (voteMsg claimId isApproving) ]
+                [ if isApproving then
+                    text_ "claim.modal.primary_approve"
+
+                  else
+                    text_ "claim.modal.primary_disapprove"
+                ]
+            ]
+    in
+    Modal.initWith
+        { closeMsg = closeMsg
+        , isVisible = True
+        }
+        |> Modal.withHeader (t "claim.modal.title")
+        |> Modal.withBody body
+        |> Modal.withFooter footer
+        |> Modal.toHtml
