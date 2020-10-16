@@ -30,7 +30,7 @@ import Profile exposing (Profile)
 import Route
 import Select
 import Session.LoggedIn as LoggedIn exposing (External)
-import Session.Shared exposing (Shared)
+import Session.Shared exposing (Shared, Translators)
 import Simple.Fuzzy
 import UpdateResult as UR
 import View.Modal as Modal
@@ -147,7 +147,15 @@ view ({ shared } as loggedIn) model =
                               else
                                 viewEmptyResults loggedIn
                             ]
-                        , viewAnalysisModal loggedIn model
+                        , case model.modalStatus of
+                            ModalOpened claimId vote ->
+                                viewAnalysisModal loggedIn.shared.translators claimId vote
+
+                            ModalLoading _ _ ->
+                                Page.fullPageLoading
+
+                            ModalClosed ->
+                                text ""
                         ]
 
                 Failed ->
@@ -286,53 +294,40 @@ viewPagination { shared } maybePageInfo =
             text ""
 
 
-viewAnalysisModal : LoggedIn.Model -> Model -> Html Msg
-viewAnalysisModal loggedIn model =
-    case model.modalStatus of
-        ModalOpened claimId vote ->
-            let
-                t s =
-                    I18Next.t loggedIn.shared.translations s
+viewAnalysisModal : Translators -> Int -> Bool -> Html Msg
+viewAnalysisModal { t } claimId isApproving =
+    let
+        text_ s =
+            text (t s)
 
-                text_ s =
-                    text (t s)
-            in
-            Modal.initWith
-                { closeMsg = CloseModal
-                , isVisible = True
-                }
-                |> Modal.withHeader (t "claim.modal.title")
-                |> Modal.withBody
-                    [ if vote then
-                        text_ "claim.modal.message_approve"
+        body =
+            [ if isApproving then
+                text_ "claim.modal.message_approve"
 
-                      else
-                        text_ "claim.modal.message_disapprove"
-                    ]
-                |> Modal.withFooter
-                    [ button
-                        [ class "modal-cancel"
-                        , onClick CloseModal
-                        ]
-                        [ text_ "claim.modal.secondary" ]
-                    , button
-                        [ class "modal-accept"
-                        , onClick (VoteClaim claimId vote)
-                        ]
-                        [ if vote then
-                            text_ "claim.modal.primary_approve"
+              else
+                text_ "claim.modal.message_disapprove"
+            ]
 
-                          else
-                            text_ "claim.modal.primary_disapprove"
-                        ]
-                    ]
-                |> Modal.toHtml
+        footer =
+            [ button [ class "modal-cancel", onClick CloseModal ]
+                [ text_ "claim.modal.secondary" ]
+            , button [ class "modal-accept", onClick (VoteClaim claimId isApproving) ]
+                [ if isApproving then
+                    text_ "claim.modal.primary_approve"
 
-        ModalLoading _ _ ->
-            Page.fullPageLoading
-
-        ModalClosed ->
-            text ""
+                  else
+                    text_ "claim.modal.primary_disapprove"
+                ]
+            ]
+    in
+    Modal.initWith
+        { closeMsg = CloseModal
+        , isVisible = True
+        }
+        |> Modal.withHeader (t "claim.modal.title")
+        |> Modal.withBody body
+        |> Modal.withFooter footer
+        |> Modal.toHtml
 
 
 
