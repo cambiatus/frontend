@@ -313,14 +313,24 @@ update msg form translators =
         EnteredDistrict str ->
             { form | district = findId str form.districts }
 
-        EnteredAccount str ->
-            { form
-                | account =
-                    if String.length str > 12 || (str |> containsNumberGreaterThan 5) then
-                        form.account
+        EnteredAccount account ->
+            let
+                formProblemsWithoutAccount =
+                    form.problems
+                        |> List.filter (\( field, _ ) -> field /= Account)
 
-                    else
-                        str
+                ( preparedAccountName, errorMsg ) =
+                    validateAccountName translators account form.account
+            in
+            { form
+                | account = preparedAccountName
+                , problems =
+                    case errorMsg of
+                        Nothing ->
+                            formProblemsWithoutAccount
+
+                        Just e ->
+                            formProblemsWithoutAccount ++ [ ( Account, e ) ]
             }
 
         EnteredStreet str ->
