@@ -602,8 +602,11 @@ type alias PdfData =
 update : Maybe String -> Msg -> Model -> Guest.Model -> UpdateResult
 update maybeInvitation msg model guest =
     let
-        { t } =
+        translators =
             guest.shared.translators
+
+        { t } =
+            translators
     in
     case msg of
         ValidateForm formType ->
@@ -630,9 +633,6 @@ update maybeInvitation msg model guest =
 
                         None ->
                             Nothing
-
-                translators =
-                    guest.shared.translators
 
                 problemCount =
                     case formType of
@@ -695,7 +695,7 @@ update maybeInvitation msg model guest =
                 JuridicalFormMsg innerMsg ->
                     case model.selectedForm of
                         Juridical form ->
-                            UR.init { model | selectedForm = Juridical (JuridicalForm.update innerMsg form guest.shared.translators) }
+                            UR.init { model | selectedForm = Juridical (JuridicalForm.update innerMsg form translators) }
 
                         _ ->
                             UR.init model
@@ -711,7 +711,12 @@ update maybeInvitation msg model guest =
                 DefaultFormMsg innerMsg ->
                     case model.selectedForm of
                         Default form ->
-                            UR.init { model | selectedForm = Default (DefaultForm.update innerMsg form) }
+                            UR.init
+                                { model
+                                    | selectedForm =
+                                        DefaultForm.update translators innerMsg form
+                                            |> Default
+                                }
 
                         _ ->
                             UR.init model

@@ -93,57 +93,55 @@ view translators model =
 --- UPDATE
 
 
-update : Msg -> Model -> Model
-update msg form =
+update : Translators -> Msg -> Model -> Model
+update { tr } msg form =
     case msg of
         EnteredName name ->
             { form | name = name }
 
         EnteredAccount account ->
             let
-                ( updatedAccountName, updatedFormProblems ) =
-                    validateAccountName account form
+                formProblemsWithoutAccount =
+                    form.problems
+                        |> List.filter (\( field, _ ) -> field /= Account)
+
+                preparedAccountName =
+                    account
+                        |> String.trim
+                        |> String.toLower
+                        |> String.left 12
+
+                validAccountName : Regex.Regex
+                validAccountName =
+                    Maybe.withDefault Regex.never <|
+                        Regex.fromString "^[a-z1-5]{0,12}$"
+
+                isAccountNameValid : Bool
+                isAccountNameValid =
+                    preparedAccountName
+                        |> Regex.contains validAccountName
             in
-            { form
-                | account = updatedAccountName
-                , problems = updatedFormProblems
-            }
+            if isAccountNameValid then
+                { form
+                    | account = preparedAccountName
+                    , problems = formProblemsWithoutAccount
+                }
+
+            else
+                let
+                    lastEnteredChar =
+                        String.right 1 preparedAccountName
+
+                    errorMsg =
+                        tr "error.notAllowedChar" [ ( "char", lastEnteredChar ) ]
+                in
+                { form
+                    | account = form.account
+                    , problems = formProblemsWithoutAccount ++ [ ( Account, errorMsg ) ]
+                }
 
         EnteredEmail email ->
             { form | email = email }
-
-
-validateAccountName : String -> Model -> ( String, List ( Field, String ) )
-validateAccountName enteredAccountName { account, problems } =
-    let
-        formProblemsWithoutAccount =
-            problems
-                |> List.filter (\( field, _ ) -> field /= Account)
-
-        preparedAccountName =
-            enteredAccountName
-                |> String.trim
-                |> String.toLower
-                |> String.left 12
-
-        validAccountName : Regex.Regex
-        validAccountName =
-            Maybe.withDefault Regex.never <|
-                Regex.fromString "^[a-z1-5]{0,12}$"
-
-        isAccountNameValid : Bool
-        isAccountNameValid =
-            preparedAccountName
-                |> Regex.contains validAccountName
-    in
-    if isAccountNameValid then
-        ( preparedAccountName, formProblemsWithoutAccount )
-
-    else
-        ( account
-        , formProblemsWithoutAccount
-            ++ [ ( Account, "'" ++ String.right 1 enteredAccountName ++ "error.invalidChar" ) ]
-        )
 
 
 validator : Translators -> Validator ( Field, String ) Model
