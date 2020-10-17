@@ -255,8 +255,8 @@ view translators model =
 --- UPDATE
 
 
-update : Msg -> Model -> Translators -> Model
-update msg form translators =
+update : Translators -> Msg -> Model -> Model
+update translators msg form =
     case msg of
         EnteredDocument document ->
             { form

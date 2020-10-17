@@ -695,7 +695,12 @@ update maybeInvitation msg model guest =
                 JuridicalFormMsg innerMsg ->
                     case model.selectedForm of
                         Juridical form ->
-                            UR.init { model | selectedForm = Juridical (JuridicalForm.update innerMsg form translators) }
+                            UR.init
+                                { model
+                                    | selectedForm =
+                                        JuridicalForm.update translators innerMsg form
+                                            |> Juridical
+                                }
 
                         _ ->
                             UR.init model
