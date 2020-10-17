@@ -703,7 +703,12 @@ update maybeInvitation msg model guest =
                 NaturalFormMsg innerMsg ->
                     case model.selectedForm of
                         Natural form ->
-                            UR.init { model | selectedForm = Natural (NaturalForm.update innerMsg form) }
+                            UR.init
+                                { model
+                                    | selectedForm =
+                                        NaturalForm.update translators innerMsg form
+                                            |> Natural
+                                }
 
                         _ ->
                             UR.init model

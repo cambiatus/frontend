@@ -178,8 +178,8 @@ view translators model =
 --- UPDATE
 
 
-update : Msg -> Model -> Model
-update msg model =
+update : Translators -> Msg -> Model -> Model
+update translators msg model =
     case msg of
         EnteredName name ->
             { model | name = name }
@@ -223,13 +223,23 @@ update msg model =
             }
 
         EnteredAccount account ->
-            { model
-                | account =
-                    if String.length account > 12 || (account |> containsNumberGreaterThan 5) then
-                        model.account
+            let
+                formProblemsWithoutAccount =
+                    model.problems
+                        |> List.filter (\( field, _ ) -> field /= Account)
 
-                    else
-                        account
+                ( preparedAccountName, errorMsg ) =
+                    validateAccountName translators account model.account
+            in
+            { model
+                | account = preparedAccountName
+                , problems =
+                    case errorMsg of
+                        Nothing ->
+                            formProblemsWithoutAccount
+
+                        Just e ->
+                            formProblemsWithoutAccount ++ [ ( Account, e ) ]
             }
 
 
