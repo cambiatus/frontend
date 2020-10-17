@@ -1,8 +1,7 @@
 module Page.Register.DefaultForm exposing (Field(..), Model, Msg(..), init, update, validator, view)
 
 import Html exposing (Html)
-import Page.Register.Common exposing (containsNumberGreaterThan, fieldProblems)
-import Regex
+import Page.Register.Common exposing (fieldProblems, validateAccountName)
 import Session.Shared exposing (Translators)
 import Validate exposing (Validator)
 import View.Form.Input
@@ -94,7 +93,7 @@ view translators model =
 
 
 update : Translators -> Msg -> Model -> Model
-update { tr } msg form =
+update translators msg form =
     case msg of
         EnteredName name ->
             { form | name = name }
@@ -105,40 +104,19 @@ update { tr } msg form =
                     form.problems
                         |> List.filter (\( field, _ ) -> field /= Account)
 
-                preparedAccountName =
-                    account
-                        |> String.trim
-                        |> String.toLower
-                        |> String.left 12
-
-                validAccountName : Regex.Regex
-                validAccountName =
-                    Maybe.withDefault Regex.never <|
-                        Regex.fromString "^[a-z1-5]{0,12}$"
-
-                isAccountNameValid : Bool
-                isAccountNameValid =
-                    preparedAccountName
-                        |> Regex.contains validAccountName
+                ( preparedAccountName, errorMsg ) =
+                    validateAccountName translators account form.account
             in
-            if isAccountNameValid then
-                { form
-                    | account = preparedAccountName
-                    , problems = formProblemsWithoutAccount
-                }
+            { form
+                | account = preparedAccountName
+                , problems =
+                    case errorMsg of
+                        Nothing ->
+                            formProblemsWithoutAccount
 
-            else
-                let
-                    lastEnteredChar =
-                        String.right 1 preparedAccountName
-
-                    errorMsg =
-                        tr "error.notAllowedChar" [ ( "char", lastEnteredChar ) ]
-                in
-                { form
-                    | account = form.account
-                    , problems = formProblemsWithoutAccount ++ [ ( Account, errorMsg ) ]
-                }
+                        Just e ->
+                            formProblemsWithoutAccount ++ [ ( Account, e ) ]
+            }
 
         EnteredEmail email ->
             { form | email = email }
