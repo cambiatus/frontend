@@ -1,10 +1,11 @@
-module Page.Register.Common exposing (Errors(..), containsLetters, containsNumberGreaterThan, fieldProblems, findId, getCities, getDistricts, ifEmptyTuple, viewSelectField)
+module Page.Register.Common exposing (Errors(..), containsLetters, containsNumberGreaterThan, fieldProblems, findId, getCities, getDistricts, ifEmptyTuple, validateAccountName, viewSelectField)
 
 import Address
 import Cambiatus.Scalar exposing (Id(..))
 import Html exposing (Html, div)
 import Html.Attributes exposing (class)
 import Maybe.Extra as MaybeExtra
+import Regex
 import Session.Shared exposing (Translators)
 import Validate
 import View.Form.Select
@@ -143,3 +144,38 @@ ifEmptyTuple data error =
 
 type Errors
     = InvalidField
+
+
+validateAccountName : Translators -> String -> String -> ( String, Maybe String )
+validateAccountName { tr } enteredAccountName currentAccountName =
+    let
+        preparedAccountName =
+            enteredAccountName
+                |> String.trim
+                |> String.toLower
+                |> String.left 12
+
+        validAccountName : Regex.Regex
+        validAccountName =
+            Maybe.withDefault Regex.never <|
+                Regex.fromString "^[a-z1-5]{0,12}$"
+
+        isAccountNameValid : Bool
+        isAccountNameValid =
+            preparedAccountName
+                |> Regex.contains validAccountName
+    in
+    if isAccountNameValid then
+        ( preparedAccountName
+        , Nothing
+        )
+
+    else
+        let
+            invalidSymbol =
+                String.right 1 preparedAccountName
+        in
+        -- Leave account name unchanged if there's an error:
+        ( currentAccountName
+        , Just <| tr "error.notAllowedChar" [ ( "char", invalidSymbol ) ]
+        )
