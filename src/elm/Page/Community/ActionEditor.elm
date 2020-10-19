@@ -1376,7 +1376,7 @@ viewVerifications ({ shared } as loggedIn) model community =
                 [ text_ "community.actions.form.verification_label" ]
             ]
         , div [ class "mb-6" ]
-            [ label [ class "inline-flex items-center" ]
+            [ label [ class "inline-flex items-top" ]
                 [ input
                     [ type_ "radio"
                     , class "form-radio h-5 w-5 text-green"
@@ -1387,7 +1387,7 @@ viewVerifications ({ shared } as loggedIn) model community =
                     ]
                     []
                 , span
-                    [ class "flex ml-3 text-body"
+                    [ class "flex ml-2 text-body"
                     , classList [ ( "text-green", model.form.verification == Automatic ) ]
                     ]
                     [ p [ class "mr-1" ]
@@ -1399,7 +1399,7 @@ viewVerifications ({ shared } as loggedIn) model community =
                 ]
             ]
         , div [ class "mb-6" ]
-            [ label [ class "inline-flex items-center" ]
+            [ label [ class "inline-flex items-top" ]
                 [ input
                     [ type_ "radio"
                     , class "form-radio h-5 w-5 text-green"
@@ -1410,7 +1410,7 @@ viewVerifications ({ shared } as loggedIn) model community =
                     ]
                     []
                 , span
-                    [ class "flex ml-3 text-body"
+                    [ class "flex ml-2 text-body"
                     , classList [ ( "text-green", model.form.verification /= Automatic ) ]
                     ]
                     [ p [ class "mr-1" ]
