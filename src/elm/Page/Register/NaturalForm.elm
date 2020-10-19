@@ -1,8 +1,8 @@
 module Page.Register.NaturalForm exposing (Document(..), Field(..), Model, Msg(..), documentTypeToString, init, update, validator, view)
 
 import Html exposing (Html)
+import Html.Attributes exposing (autocomplete, classList)
 import Kyc.CostaRica.Phone as KycPhone
-import Page.Login exposing (Model)
 import Page.Register.Common exposing (..)
 import Session.Shared exposing (Translators)
 import Validate exposing (Validator)
@@ -20,7 +20,7 @@ type alias Model =
     , email : String
     , phone : String
     , account : String
-    , problems : List ( Field, String )
+    , problems : List ( Field, String, ProblemEvent )
     }
 
 
@@ -169,6 +169,18 @@ view translators model =
             , problems = fieldProblems Account model.problems
             , translators = translators
             }
+            |> (let
+                    hasErrors =
+                        List.any (\( f, _, evt ) -> f == Account && evt == OnInput) model.problems
+                in
+                View.Form.Input.withAttrs
+                    [ autocomplete False
+                    , classList
+                        [ ( "shake-invalid", hasErrors )
+                        , ( "field-with-error", hasErrors )
+                        ]
+                    ]
+               )
             |> View.Form.Input.withCounter 12
             |> View.Form.Input.toHtml
         ]
@@ -226,7 +238,7 @@ update translators msg model =
             let
                 formProblemsWithoutAccount =
                     model.problems
-                        |> List.filter (\( field, _ ) -> field /= Account)
+                        |> List.filter (\( field, _, _ ) -> field /= Account)
 
                 ( preparedAccountName, errorMsg ) =
                     validateAccountName translators account model.account
@@ -239,32 +251,32 @@ update translators msg model =
                             formProblemsWithoutAccount
 
                         Just e ->
-                            formProblemsWithoutAccount ++ [ ( Account, e ) ]
+                            formProblemsWithoutAccount ++ [ ( Account, e, OnInput ) ]
             }
 
 
-validator : Translators -> Validator ( Field, String ) Model
+validator : Translators -> Validator ( Field, String, ProblemEvent ) Model
 validator { t, tr } =
     let
         ifInvalidPhoneNumber subjectToString error =
             Validate.ifFalse (\subject -> KycPhone.isValid (subjectToString subject)) error
     in
     Validate.all
-        [ Validate.ifBlank .document ( Document, t "error.required" )
-        , Validate.ifBlank .name ( Name, t "error.required" )
-        , Validate.ifBlank .account ( Account, t "error.required" )
+        [ Validate.ifBlank .document ( Document, t "error.required", OnSubmit )
+        , Validate.ifBlank .name ( Name, t "error.required", OnSubmit )
+        , Validate.ifBlank .account ( Account, t "error.required", OnSubmit )
         , Validate.firstError
-            [ Validate.ifBlank .email ( Email, t "error.required" )
-            , Validate.ifInvalidEmail .email (\_ -> ( Email, t "error.email" ))
+            [ Validate.ifBlank .email ( Email, t "error.required", OnSubmit )
+            , Validate.ifInvalidEmail .email (\_ -> ( Email, t "error.email", OnSubmit ))
             ]
         , Validate.firstError
-            [ Validate.ifBlank .account ( Account, t "error.required" )
-            , Validate.ifTrue (\f -> String.length f.account < 12) ( Account, tr "error.validator.text.exactly" [ ( "base", "12" ) ] )
-            , Validate.ifTrue (\f -> String.length f.account > 12) ( Account, tr "error.validator.text.exactly" [ ( "base", "12" ) ] )
-            , Validate.ifFalse (\f -> String.all Char.isAlphaNum f.account) ( Account, t "error.invalidChar" )
+            [ Validate.ifBlank .account ( Account, t "error.required", OnSubmit )
+            , Validate.ifTrue (\f -> String.length f.account < 12) ( Account, tr "error.validator.text.exactly" [ ( "base", "12" ) ], OnSubmit )
+            , Validate.ifTrue (\f -> String.length f.account > 12) ( Account, tr "error.validator.text.exactly" [ ( "base", "12" ) ], OnSubmit )
+            , Validate.ifFalse (\f -> String.all Char.isAlphaNum f.account) ( Account, t "error.invalidChar", OnSubmit )
             ]
         , Validate.firstError
-            [ Validate.ifBlank .phone ( Phone, t "error.required" )
-            , ifInvalidPhoneNumber .phone ( Phone, t "error.phone" )
+            [ Validate.ifBlank .phone ( Phone, t "error.required", OnSubmit )
+            , ifInvalidPhoneNumber .phone ( Phone, t "error.phone", OnSubmit )
             ]
         ]

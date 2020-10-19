@@ -1,4 +1,4 @@
-module Page.Register.Common exposing (Errors(..), containsLetters, containsNumberGreaterThan, fieldProblems, findId, getCities, getDistricts, ifEmptyTuple, validateAccountName, viewSelectField)
+module Page.Register.Common exposing (Errors(..), ProblemEvent(..), containsLetters, containsNumberGreaterThan, fieldProblems, findId, getCities, getDistricts, ifEmptyTuple, validateAccountName, viewSelectField)
 
 import Address
 import Cambiatus.Scalar exposing (Id(..))
@@ -35,13 +35,18 @@ viewSelectField label initialValue enabled onInput options problems =
         ]
 
 
-fieldProblems : a -> List ( a, String ) -> Maybe (List String)
+type ProblemEvent
+    = OnInput
+    | OnSubmit
+
+
+fieldProblems : a -> List ( a, String, ProblemEvent ) -> Maybe (List String)
 fieldProblems field problems =
     let
         list =
             problems
-                |> List.filter (\x -> Tuple.first x == field)
-                |> List.map (\x -> Tuple.second x)
+                |> List.filter (\( f, _, _ ) -> f == field)
+                |> List.map (\( _, msg, _ ) -> msg)
     in
     if List.length list > 0 then
         Just list

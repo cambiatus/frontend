@@ -19,6 +19,7 @@ import Json.Decode as Decode exposing (Decoder, Value)
 import Json.Decode.Pipeline as Decode
 import Json.Encode as Encode
 import Page
+import Page.Register.Common exposing (ProblemEvent(..))
 import Page.Register.DefaultForm as DefaultForm
 import Page.Register.JuridicalForm as JuridicalForm
 import Page.Register.NaturalForm as NaturalForm
@@ -817,13 +818,13 @@ update maybeInvitation msg model guest =
                         | selectedForm =
                             case model.selectedForm of
                                 Juridical form ->
-                                    Juridical { form | problems = ( JuridicalForm.Account, t "error.alreadyTaken" ) :: form.problems }
+                                    Juridical { form | problems = ( JuridicalForm.Account, t "error.alreadyTaken", OnSubmit ) :: form.problems }
 
                                 Natural form ->
-                                    Natural { form | problems = ( NaturalForm.Account, t "error.alreadyTaken" ) :: form.problems }
+                                    Natural { form | problems = ( NaturalForm.Account, t "error.alreadyTaken", OnSubmit ) :: form.problems }
 
                                 Default form ->
-                                    Default { form | problems = ( DefaultForm.Account, t "error.alreadyTaken" ) :: form.problems }
+                                    Default { form | problems = ( DefaultForm.Account, t "error.alreadyTaken", OnSubmit ) :: form.problems }
 
                                 None ->
                                     model.selectedForm
