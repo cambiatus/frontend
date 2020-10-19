@@ -434,6 +434,10 @@ type Msg
     | PressedEnter Bool
 
 
+type alias VerificationNumber =
+    Int
+
+
 update : Msg -> Model -> LoggedIn.Model -> UpdateResult
 update msg model loggedIn =
     let
