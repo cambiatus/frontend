@@ -1444,7 +1444,14 @@ viewManualVerificationForm ({ shared } as loggedIn) model community =
 
         Manual selectedVerifiers verificationReward minVotes ->
             div [ class "mt-6 w-full sm:w-2/5" ]
-                [ span [ class "input-label" ]
+                [ div [ class "mb-6" ]
+                    [ label [ class "input-label block" ]
+                        [ text_ "community.actions.form.votes_label" ]
+                    , div [ class "space-x-4" ] <|
+                        List.map (viewVotesCount (getInput minVotes)) [ 3, 5, 7, 9 ]
+                    , viewFieldErrors (listErrors shared.translations minVotes)
+                    ]
+                , span [ class "input-label" ]
                     [ text (tr "community.actions.form.verifiers_label_count" [ ( "count", getInput minVotes ) ]) ]
                 , div []
                     [ viewVerifierSelect shared model False
@@ -1469,21 +1476,36 @@ viewManualVerificationForm ({ shared } as loggedIn) model community =
                         ]
                     , viewFieldErrors (listErrors shared.translations verificationReward)
                     ]
-                , div [ class "flex flex-row justify-between" ]
-                    [ p [ class "input-label" ]
-                        [ text_ "community.actions.form.votes_label" ]
-                    ]
-                , div []
-                    [ input
-                        [ class "w-full input border rounded-sm"
-                        , type_ "number"
-                        , onInput EnteredMinVotes
-                        , value (getInput minVotes)
-                        ]
-                        []
-                    , viewFieldErrors (listErrors shared.translations minVotes)
-                    ]
                 ]
+
+
+viewVotesCount : String -> Int -> Html Msg
+viewVotesCount selectedCount count =
+    let
+        countStr =
+            String.fromInt count
+
+        isChecked =
+            selectedCount == countStr
+    in
+    label
+        [ class "rounded-full relative overflow-hidden inline-block text-center leading-8 w-8"
+        , classList
+            [ ( "bg-orange-300 text-white border-orange-300", isChecked )
+            , ( "hover:border-orange-300 cursor-pointer hover:text-orange-500 border border-grey-500", not isChecked )
+            ]
+        ]
+        [ text countStr
+        , input
+            [ type_ "radio"
+            , class "absolute left-0 opacity-0 cursor-pointer"
+            , name "min_votes"
+            , checked isChecked
+            , onInput EnteredMinVotes
+            , value countStr
+            ]
+            []
+        ]
 
 
 viewSelectedVerifiers : LoggedIn.Model -> List Profile -> Html Msg
