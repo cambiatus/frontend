@@ -115,7 +115,18 @@ type ActionValidation
 
 type Verification
     = Automatic
-    | Manual (Validator (List Profile)) (Validator String) (Validator String) -- Manual: users list, verification reward and min votes
+      -- users list, verification reward, min votes, photo proof
+    | Manual (Validator (List Profile)) (Validator String) (Validator String) (Maybe PhotoProof)
+
+
+type PhotoProof
+    = Enabled ProofNumberToggle
+    | Disabled
+
+
+type ProofNumberToggle
+    = WithProofNumber
+    | WithoutProofNumber
 
 
 type SaveStatus
@@ -203,6 +214,8 @@ editForm form action =
                     (defaultVerifiersValidator verificators (getInput newVerifications) |> updateInput verificators)
                     (defaultVerificationReward |> updateInput (String.fromFloat action.verificationReward))
                     newVerifications
+                    -- TODO: Use photo validation data from the action
+                    Nothing
     in
     { form
         | description = updateInput action.description form.description
@@ -313,8 +326,8 @@ validateForm form =
                 Automatic ->
                     Automatic
 
-                Manual profiles verificationReward minVotes ->
-                    Manual (validate profiles) (validate verificationReward) (validate minVotes)
+                Manual profiles verificationReward minVotes photoProof ->
+                    Manual (validate profiles) (validate verificationReward) (validate minVotes) photoProof
     in
     { form
         | description = validate form.description
@@ -329,7 +342,7 @@ isFormValid form =
     let
         verificationHasErrors =
             case form.verification of
-                Manual profiles verificationReward minVotes ->
+                Manual profiles verificationReward minVotes _ ->
                     hasErrors minVotes
                         || hasErrors profiles
                         || hasErrors verificationReward
@@ -407,6 +420,8 @@ type Msg
     | EnteredMinVotes String
     | ToggleValidity Bool
     | ToggleDeadline Bool
+    | TogglePhotoProof Bool
+    | TogglePhotoProofNumber Bool
     | ToggleUsages Bool
     | MarkAsCompleted
     | SetVerification String
@@ -510,7 +525,7 @@ update msg model loggedIn =
                     model
                         |> UR.init
 
-                Manual selectedVerifiers verificationReward minVotes ->
+                Manual selectedVerifiers verificationReward minVotes photoProof ->
                     { model
                         | form =
                             { oldForm
@@ -525,6 +540,7 @@ update msg model loggedIn =
                                         (updateInput newVerifiers selectedVerifiers)
                                         verificationReward
                                         minVotes
+                                        photoProof
                             }
                     }
                         |> UR.init
@@ -539,7 +555,7 @@ update msg model loggedIn =
                         Automatic ->
                             model.form.verification
 
-                        Manual selectedVerifiers a b ->
+                        Manual selectedVerifiers a b photoProof ->
                             let
                                 newVerifiers =
                                     List.filter
@@ -550,6 +566,7 @@ update msg model loggedIn =
                                 (updateInput newVerifiers selectedVerifiers)
                                 a
                                 b
+                                photoProof
             in
             { model | form = { oldForm | verification = verification } }
                 |> UR.init
@@ -658,8 +675,8 @@ update msg model loggedIn =
                         |> UR.init
                         |> UR.logImpossible msg []
 
-                Manual listProfile verifierReward minVotes ->
-                    { model | form = { oldForm | verification = Manual listProfile (updateInput val verifierReward) minVotes } }
+                Manual listProfile verifierReward minVotes photoProof ->
+                    { model | form = { oldForm | verification = Manual listProfile (updateInput val verifierReward) minVotes photoProof } }
                         |> UR.init
 
         EnteredMinVotes val ->
@@ -673,7 +690,7 @@ update msg model loggedIn =
                         |> UR.init
                         |> UR.logImpossible msg []
 
-                Manual listProfile verifierReward minVotes ->
+                Manual listProfile verifierReward minVotes photoProof ->
                     let
                         newMinVotes =
                             updateInput val minVotes
@@ -682,7 +699,7 @@ update msg model loggedIn =
                             -- Update min. verifiers quantity
                             defaultVerifiersValidator (getInput listProfile) val
                     in
-                    { model | form = { oldForm | verification = Manual newVerifiers verifierReward newMinVotes } }
+                    { model | form = { oldForm | verification = Manual newVerifiers verifierReward newMinVotes photoProof } }
                         |> UR.init
 
         ValidateForm ->
@@ -766,6 +783,51 @@ update msg model loggedIn =
             model
                 |> UR.init
 
+        TogglePhotoProof isPhotoProofEnabled ->
+            let
+                oldForm =
+                    model.form
+
+                newPhotoProofState =
+                    if isPhotoProofEnabled then
+                        Just (Enabled WithoutProofNumber)
+
+                    else
+                        Nothing
+            in
+            case model.form.verification of
+                Automatic ->
+                    model
+                        |> UR.init
+                        |> UR.logImpossible msg []
+
+                Manual listProfile verifierReward minVotes _ ->
+                    { model | form = { oldForm | verification = Manual listProfile verifierReward minVotes newPhotoProofState } }
+                        |> UR.init
+
+        TogglePhotoProofNumber isProofNumberEnabled ->
+            let
+                oldForm =
+                    model.form
+            in
+            case model.form.verification of
+                Automatic ->
+                    model
+                        |> UR.init
+                        |> UR.logImpossible msg []
+
+                Manual listProfile verifierReward minVotes _ ->
+                    let
+                        newPhotoValidationState =
+                            if isProofNumberEnabled then
+                                Just (Enabled WithProofNumber)
+
+                            else
+                                Just (Enabled WithoutProofNumber)
+                    in
+                    { model | form = { oldForm | verification = Manual listProfile verifierReward minVotes newPhotoValidationState } }
+                        |> UR.init
+
         ToggleDeadline bool ->
             let
                 oldForm =
@@ -845,7 +907,7 @@ update msg model loggedIn =
                                 Automatic
 
                             else
-                                Manual (defaultVerifiersValidator [] (getInput defaultMinVotes)) defaultVerificationReward defaultMinVotes
+                                Manual (defaultVerifiersValidator [] (getInput defaultMinVotes)) defaultVerificationReward defaultMinVotes Nothing
                     }
             }
                 |> UR.init
@@ -971,7 +1033,7 @@ upsertAction loggedIn model isoDate =
                 Automatic ->
                     Eos.Asset 0.0 model.communityId |> Eos.assetToString
 
-                Manual _ verificationRewardValidator _ ->
+                Manual _ verificationRewardValidator _ _ ->
                     Eos.Asset (getInput verificationRewardValidator |> String.toFloat |> Maybe.withDefault 0.0) model.communityId
                         |> Eos.assetToString
 
@@ -999,7 +1061,7 @@ upsertAction loggedIn model isoDate =
                 Automatic ->
                     "0"
 
-                Manual _ _ minVotesValidator ->
+                Manual _ _ minVotesValidator _ ->
                     getInput minVotesValidator
 
         validators =
@@ -1007,7 +1069,7 @@ upsertAction loggedIn model isoDate =
                 Automatic ->
                     []
 
-                Manual list _ _ ->
+                Manual list _ _ _ ->
                     getInput list
 
         validatorsStr =
@@ -1020,7 +1082,7 @@ upsertAction loggedIn model isoDate =
                 Automatic ->
                     "automatic"
 
-                Manual _ _ _ ->
+                Manual _ _ _ _ ->
                     "claimable"
 
         isCompleted =
@@ -1442,8 +1504,25 @@ viewManualVerificationForm ({ shared } as loggedIn) model community =
         Automatic ->
             text ""
 
-        Manual selectedVerifiers verificationReward minVotes ->
-            div [ class "mt-6 w-full sm:w-2/5" ]
+        Manual selectedVerifiers verificationReward minVotes photoProof ->
+            let
+                isPhotoProofEnabled =
+                    case photoProof of
+                        Just (Enabled _) ->
+                            True
+
+                        _ ->
+                            False
+
+                isProofNumberEnabled =
+                    case photoProof of
+                        Just (Enabled WithProofNumber) ->
+                            True
+
+                        _ ->
+                            False
+            in
+            div [ class "mt-6 ml-8 sm:w-2/5" ]
                 [ div [ class "mb-6" ]
                     [ label [ class "input-label block" ]
                         [ text_ "community.actions.form.votes_label" ]
@@ -1475,6 +1554,45 @@ viewManualVerificationForm ({ shared } as loggedIn) model community =
                             [ text (Eos.symbolToSymbolCodeString community.symbol) ]
                         ]
                     , viewFieldErrors (listErrors shared.translations verificationReward)
+                    , div [ class "mt-8" ]
+                        [ label [ class "flex text-body block" ]
+                            [ input
+                                [ type_ "checkbox"
+                                , class "form-checkbox h-5 w-5 mr-2"
+                                , checked isPhotoProofEnabled
+                                , onCheck TogglePhotoProof
+                                ]
+                                []
+                            , span []
+                                [ b [ class "block" ] [ text "Photo validation" ]
+                                , text "The users must send a photo performing the task for the claim to be valid."
+                                ]
+                            ]
+                        , if isPhotoProofEnabled then
+                            div [ class "mt-6" ]
+                                [ label [ class "flex text-body block" ]
+                                    [ input
+                                        [ type_ "checkbox"
+                                        , class "form-checkbox h-5 w-5 mr-2"
+                                        , checked isProofNumberEnabled
+                                        , onCheck TogglePhotoProofNumber
+                                        ]
+                                        []
+                                    , span []
+                                        [ b [ class "block" ] [ text "Verification number" ]
+                                        , text "Users will have to send a unique verification code with the photo in order for the claim to be valid."
+                                        ]
+                                    ]
+                                , div []
+                                    [ label [ class "input-label" ]
+                                        [ text "Write here instructions for the users" ]
+                                    , textarea [ class "w-full form-input" ] []
+                                    ]
+                                ]
+
+                          else
+                            text ""
+                        ]
                     ]
                 ]
 
@@ -1582,7 +1700,7 @@ viewVerifierSelect shared model isDisabled =
         Automatic ->
             text ""
 
-        Manual selectedUsers _ _ ->
+        Manual selectedUsers _ _ _ ->
             div []
                 [ Html.map SelectMsg
                     (Select.view (selectConfiguration shared isDisabled)
@@ -1672,6 +1790,12 @@ msgToString msg =
 
         ToggleUsages _ ->
             [ "ToggleDeadline" ]
+
+        TogglePhotoProof _ ->
+            [ "TogglePhotoValidation" ]
+
+        TogglePhotoProofNumber _ ->
+            [ "TogglePhotoWithNumberValidation" ]
 
         EnteredVerifierReward _ ->
             [ "EnteredVerifierReward" ]
