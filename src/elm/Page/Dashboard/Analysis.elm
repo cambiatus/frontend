@@ -125,13 +125,7 @@ view ({ shared } as loggedIn) model =
                 Loaded claims pageInfo ->
                     let
                         viewClaim claim =
-                            Claim.viewClaimCard
-                                { claim = claim
-                                , selectedCommunity = loggedIn.selectedCommunity
-                                , shared = shared
-                                , accountName = loggedIn.accountName
-                                , openConfirmationModalMsg = OpenModal
-                                }
+                            Claim.viewClaimCard loggedIn OpenModal claim
                     in
                     div []
                         [ Page.viewHeader loggedIn (t "all_analysis.title") Route.Dashboard

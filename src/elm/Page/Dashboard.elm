@@ -381,13 +381,7 @@ viewAnalysis : LoggedIn.Model -> ClaimStatus -> Html Msg
 viewAnalysis ({ shared, selectedCommunity } as loggedIn) claimStatus =
     case claimStatus of
         ClaimLoaded claim ->
-            Claim.viewClaimCard
-                { claim = claim
-                , selectedCommunity = selectedCommunity
-                , shared = shared
-                , accountName = loggedIn.accountName
-                , openConfirmationModalMsg = OpenModal
-                }
+            Claim.viewClaimCard loggedIn OpenModal claim
 
         ClaimLoading _ ->
             div [ class "w-full md:w-1/2 lg:w-1/3 xl:w-1/4 px-2 mb-4" ]

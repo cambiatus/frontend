@@ -33,6 +33,7 @@ import Html.Events exposing (onClick)
 import Json.Encode as Encode
 import Profile exposing (Profile)
 import Route
+import Session.LoggedIn as LoggedIn
 import Session.Shared exposing (Shared, Translators)
 import Strftime
 import Time
@@ -218,15 +219,6 @@ paginatedPageInfo maybePaginated =
 -- CLAIM CARD
 
 
-type alias ClaimCardOptions msg =
-    { claim : Model
-    , selectedCommunity : Symbol
-    , shared : Shared
-    , accountName : Eos.Account.Name
-    , openConfirmationModalMsg : Int -> Bool -> msg
-    }
-
-
 type alias VoteClaimModalOptions msg =
     { voteMsg : Int -> Bool -> msg
     , closeMsg : msg
@@ -237,8 +229,8 @@ type alias VoteClaimModalOptions msg =
 
 {-| Claim card with a short claim overview. Used on Dashboard and Analysis pages.
 -}
-viewClaimCard : ClaimCardOptions msg -> Html msg
-viewClaimCard { claim, selectedCommunity, shared, accountName, openConfirmationModalMsg } =
+viewClaimCard : LoggedIn.Model -> (Int -> Bool -> msg) -> Model -> Html msg
+viewClaimCard { selectedCommunity, shared, accountName } openConfirmationModalMsg claim =
     let
         { t } =
             shared.translators
