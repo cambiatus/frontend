@@ -52,7 +52,7 @@ init ({ shared, selectedCommunity } as loggedIn) =
 type alias Model =
     { status : Status
     , communityStatus : CommunityStatus
-    , modalStatus : Claim.ModalStatus
+    , claimModalStatus : Claim.ModalStatus
     , isPhotoModalShowed : Bool
     , autoCompleteState : Select.State
     , reloadOnNextQuery : Bool
@@ -64,7 +64,7 @@ initModel : Model
 initModel =
     { status = Loading
     , communityStatus = LoadingCommunity
-    , modalStatus = Claim.Closed
+    , claimModalStatus = Claim.Closed
     , isPhotoModalShowed = False
     , autoCompleteState = Select.newState ""
     , reloadOnNextQuery = False
@@ -137,7 +137,7 @@ view ({ shared } as loggedIn) model =
                               else
                                 viewEmptyResults loggedIn
                             ]
-                        , case model.modalStatus of
+                        , case model.claimModalStatus of
                             Claim.VoteModal claimId vote ->
                                 Claim.viewVoteClaimModal
                                     loggedIn.shared.translators
@@ -351,10 +351,10 @@ update msg model loggedIn =
         ClaimMsg claimMsg ->
             case claimMsg of
                 Claim.OpenVoteModal claimId vote ->
-                    { model | modalStatus = Claim.VoteModal claimId vote } |> UR.init
+                    { model | claimModalStatus = Claim.VoteModal claimId vote } |> UR.init
 
                 Claim.CloseClaimModals ->
-                    { model | modalStatus = Claim.Closed, isPhotoModalShowed = False } |> UR.init
+                    { model | claimModalStatus = Claim.Closed, isPhotoModalShowed = False } |> UR.init
 
                 Claim.OpenPhotoModal ->
                     { model | isPhotoModalShowed = True } |> UR.init
@@ -365,7 +365,7 @@ update msg model loggedIn =
                     let
                         newModel =
                             { model
-                                | modalStatus = Claim.Loading
+                                | claimModalStatus = Claim.Loading
                             }
                     in
                     if LoggedIn.isAuth loggedIn then
