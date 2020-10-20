@@ -9,6 +9,7 @@ module Claim exposing
     , paginatedToList
     , selectionSet
     , viewClaimCard
+    , viewPhotoModal
     , viewVoteClaimModal
     )
 
@@ -27,8 +28,8 @@ import Eos
 import Eos.Account
 import Graphql.OptionalArgument exposing (OptionalArgument(..))
 import Graphql.SelectionSet as SelectionSet exposing (SelectionSet, with)
-import Html exposing (Html, a, button, div, p, text)
-import Html.Attributes exposing (class, id)
+import Html exposing (Html, a, button, div, img, label, p, strong, text)
+import Html.Attributes exposing (class, classList, id, src, style)
 import Html.Events exposing (onClick)
 import Json.Encode as Encode
 import Profile exposing (Profile)
@@ -229,8 +230,8 @@ type alias VoteClaimModalOptions msg =
 
 {-| Claim card with a short claim overview. Used on Dashboard and Analysis pages.
 -}
-viewClaimCard : LoggedIn.Model -> (Int -> Bool -> msg) -> Model -> Html msg
-viewClaimCard { selectedCommunity, shared, accountName } openConfirmationModalMsg claim =
+viewClaimCard : LoggedIn.Model -> (Int -> Bool -> msg) -> msg -> Model -> Html msg
+viewClaimCard { selectedCommunity, shared, accountName } openConfirmationModalMsg openPhotoMsg claim =
     let
         { t } =
             shared.translators
@@ -257,15 +258,40 @@ viewClaimCard { selectedCommunity, shared, accountName } openConfirmationModalMs
                 claim.action.objective.id
                 claim.action.id
                 claim.id
+
+        hasPhotoProof =
+            -- TODO: replace this placeholder with the real data
+            claim.id == 35
     in
     div [ class "w-full sm:w-1/2 lg:w-1/3 xl:w-1/4 px-2 mb-4" ]
         [ div
             [ class "flex flex-col p-4 my-2 rounded-lg bg-white hover:shadow"
             , id ("claim" ++ String.fromInt claim.id)
             ]
-            [ a [ Route.href claimRoute ]
-                [ div [ class "flex justify-center mb-8" ]
-                    [ Profile.view shared accountName claim.claimer ]
+            [ -- a [ Route.href claimRoute ]
+              div []
+                [ div
+                    [ class "flex mb-8"
+                    , classList
+                        [ ( "justify-center", not <| hasPhotoProof )
+                        , ( "justify-between", hasPhotoProof )
+                        ]
+                    ]
+                    [ Profile.view shared accountName claim.claimer
+                    , if hasPhotoProof then
+                        div
+                            [ class "cursor-pointer w-24 h-16 flex items-center justify-center overflow-hidden rounded-sm hover:shadow-outline"
+                            ]
+                            [ img
+                                [ onClick openPhotoMsg
+                                , src "/trash.png"
+                                ]
+                                []
+                            ]
+
+                      else
+                        text ""
+                    ]
                 , div [ class "bg-gray-100 flex items-center justify-center h-6 w-32 mb-2" ]
                     [ p
                         [ class ("text-caption uppercase " ++ textColor) ]
@@ -301,6 +327,41 @@ viewClaimCard { selectedCommunity, shared, accountName } openConfirmationModalMs
                     ]
             ]
         ]
+
+
+viewPhotoModal : Translators -> msg -> Html msg
+viewPhotoModal { t } closeMsg =
+    let
+        body =
+            [ div [ class "md:flex md:justify-start md:space-x-4" ]
+                [ img [ style "max-height" "42vh", src "/trash.png" ] []
+                , div []
+                    [ label [ class "mt-6 md:mt-0 input-label md:text-xl block" ]
+                        [ text "verification number"
+                        ]
+                    , strong [ class "text-xl md:text-3xl" ] [ text "82378463" ]
+                    ]
+                ]
+            ]
+
+        footer =
+            [ button
+                [ class "modal-cancel"
+                ]
+                [ text "Disapprove" ]
+            , button [ class "modal-accept" ]
+                [ text "Approve"
+                ]
+            ]
+    in
+    Modal.initWith
+        { closeMsg = closeMsg
+        , isVisible = True
+        }
+        |> Modal.withHeader (t "dashboard.claim")
+        |> Modal.withBody body
+        |> Modal.withFooter footer
+        |> Modal.toHtml
 
 
 viewVoteClaimModal : Translators -> VoteClaimModalOptions msg -> Html msg

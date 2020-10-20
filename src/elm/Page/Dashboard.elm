@@ -82,6 +82,7 @@ type alias Model =
     , transfers : GraphqlStatus (Maybe QueryTransfers) (List Transfer)
     , inviteModalStatus : InviteModalStatus
     , voteModalStatus : VoteModalStatus
+    , isPhotoModalShowed : Bool
     , copied : Bool
     }
 
@@ -96,6 +97,7 @@ initModel =
     , transfers = LoadingGraphql
     , inviteModalStatus = InviteModalClosed
     , voteModalStatus = VoteModalClosed
+    , isPhotoModalShowed = False
     , copied = False
     }
 
@@ -122,6 +124,7 @@ type ClaimStatus
 
 type VoteModalStatus
     = VoteModalClosed
+    | VoteModalLoading Int Bool
     | VoteModalOpened Int Bool
 
 
@@ -193,14 +196,22 @@ view loggedIn model =
                                 Claim.viewVoteClaimModal
                                     loggedIn.shared.translators
                                     { voteMsg = VoteClaim
-                                    , closeMsg = CloseModal
+                                    , closeMsg = CloseVoteModal
                                     , claimId = claimId
                                     , isApproving = vote
                                     }
 
+                            VoteModalLoading _ _ ->
+                                Page.fullPageLoading
+
                             VoteModalClosed ->
                                 text ""
                         , viewInvitationModal loggedIn model
+                        , if model.isPhotoModalShowed then
+                            Claim.viewPhotoModal loggedIn.shared.translators ClosePhotoModal
+
+                          else
+                            text ""
                         ]
 
                 ( _, _, _ ) ->
@@ -381,7 +392,7 @@ viewAnalysis : LoggedIn.Model -> ClaimStatus -> Html Msg
 viewAnalysis ({ shared, selectedCommunity } as loggedIn) claimStatus =
     case claimStatus of
         ClaimLoaded claim ->
-            Claim.viewClaimCard loggedIn OpenModal claim
+            Claim.viewClaimCard loggedIn OpenVoteModal OpenPhotoModal claim
 
         ClaimLoading _ ->
             div [ class "w-full md:w-1/2 lg:w-1/3 xl:w-1/4 px-2 mb-4" ]
@@ -544,8 +555,10 @@ type Msg
     | CompletedLoadUserTransfers (Result (Graphql.Http.Error (Maybe QueryTransfers)) (Maybe QueryTransfers))
     | ClaimsLoaded (Result (Graphql.Http.Error (Maybe Claim.Paginated)) (Maybe Claim.Paginated))
     | CommunityLoaded (Result (Graphql.Http.Error (Maybe Community.DashboardInfo)) (Maybe Community.DashboardInfo))
-    | OpenModal Int Bool
-    | CloseModal
+    | OpenVoteModal Int Bool
+    | CloseVoteModal
+    | OpenPhotoModal
+    | ClosePhotoModal
     | VoteClaim Int Bool
     | GotVoteResult Int (Result Value String)
     | CreateInvite
@@ -617,13 +630,19 @@ update msg model loggedIn =
                 |> UR.init
                 |> UR.logGraphqlError msg err
 
-        OpenModal claimId vote ->
+        OpenVoteModal claimId vote ->
             { model | voteModalStatus = VoteModalOpened claimId vote }
                 |> UR.init
 
-        CloseModal ->
+        CloseVoteModal ->
             { model | voteModalStatus = VoteModalClosed }
                 |> UR.init
+
+        OpenPhotoModal ->
+            { model | isPhotoModalShowed = True } |> UR.init
+
+        ClosePhotoModal ->
+            { model | isPhotoModalShowed = False } |> UR.init
 
         VoteClaim claimId vote ->
             case model.analysis of
@@ -948,11 +967,17 @@ msgToString msg =
         ClaimsLoaded result ->
             resultToString [ "ClaimsLoaded" ] result
 
-        OpenModal claimId _ ->
-            [ "OpenConfirmationModal", String.fromInt claimId ]
+        OpenVoteModal claimId _ ->
+            [ "OpenVoteModal", String.fromInt claimId ]
 
-        CloseModal ->
-            [ "CloseModal" ]
+        CloseVoteModal ->
+            [ "CloseVoteModal" ]
+
+        OpenPhotoModal ->
+            [ "OpenPhotoModal" ]
+
+        ClosePhotoModal ->
+            [ "ClosePhotoModal" ]
 
         VoteClaim claimId _ ->
             [ "VoteClaim", String.fromInt claimId ]
