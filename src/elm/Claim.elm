@@ -1,6 +1,7 @@
 module Claim exposing
     ( ClaimStatus(..)
     , Model
+    , Msg(..)
     , Paginated
     , claimPaginatedSelectionSet
     , encodeVerification
@@ -226,6 +227,13 @@ type alias VoteClaimModalOptions msg =
     , claimId : Int
     , isApproving : Bool
     }
+
+
+type Msg
+    = OpenVoteModal Int Bool
+    | CloseVoteModal
+    | OpenPhotoModal
+    | ClosePhotoModal
 
 
 {-| Claim card with a short claim overview. Used on Dashboard and Analysis pages.

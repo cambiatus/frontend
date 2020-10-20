@@ -196,7 +196,7 @@ view loggedIn model =
                                 Claim.viewVoteClaimModal
                                     loggedIn.shared.translators
                                     { voteMsg = VoteClaim
-                                    , closeMsg = CloseVoteModal
+                                    , closeMsg = ClaimMsg Claim.CloseVoteModal
                                     , claimId = claimId
                                     , isApproving = vote
                                     }
@@ -208,7 +208,7 @@ view loggedIn model =
                                 text ""
                         , viewInvitationModal loggedIn model
                         , if model.isPhotoModalShowed then
-                            Claim.viewPhotoModal loggedIn.shared.translators ClosePhotoModal
+                            Claim.viewPhotoModal loggedIn.shared.translators (ClaimMsg Claim.ClosePhotoModal)
 
                           else
                             text ""
@@ -392,7 +392,8 @@ viewAnalysis : LoggedIn.Model -> ClaimStatus -> Html Msg
 viewAnalysis ({ shared, selectedCommunity } as loggedIn) claimStatus =
     case claimStatus of
         ClaimLoaded claim ->
-            Claim.viewClaimCard loggedIn OpenVoteModal OpenPhotoModal claim
+            Claim.viewClaimCard loggedIn Claim.OpenVoteModal Claim.OpenPhotoModal claim
+                |> Html.map ClaimMsg
 
         ClaimLoading _ ->
             div [ class "w-full md:w-1/2 lg:w-1/3 xl:w-1/4 px-2 mb-4" ]
@@ -555,10 +556,7 @@ type Msg
     | CompletedLoadUserTransfers (Result (Graphql.Http.Error (Maybe QueryTransfers)) (Maybe QueryTransfers))
     | ClaimsLoaded (Result (Graphql.Http.Error (Maybe Claim.Paginated)) (Maybe Claim.Paginated))
     | CommunityLoaded (Result (Graphql.Http.Error (Maybe Community.DashboardInfo)) (Maybe Community.DashboardInfo))
-    | OpenVoteModal Int Bool
-    | CloseVoteModal
-    | OpenPhotoModal
-    | ClosePhotoModal
+    | ClaimMsg Claim.Msg
     | VoteClaim Int Bool
     | GotVoteResult Int (Result Value String)
     | CreateInvite
@@ -630,19 +628,21 @@ update msg model loggedIn =
                 |> UR.init
                 |> UR.logGraphqlError msg err
 
-        OpenVoteModal claimId vote ->
-            { model | voteModalStatus = VoteModalOpened claimId vote }
-                |> UR.init
+        ClaimMsg m ->
+            case m of
+                Claim.OpenVoteModal claimId vote ->
+                    { model | voteModalStatus = VoteModalOpened claimId vote }
+                        |> UR.init
 
-        CloseVoteModal ->
-            { model | voteModalStatus = VoteModalClosed }
-                |> UR.init
+                Claim.CloseVoteModal ->
+                    { model | voteModalStatus = VoteModalClosed }
+                        |> UR.init
 
-        OpenPhotoModal ->
-            { model | isPhotoModalShowed = True } |> UR.init
+                Claim.OpenPhotoModal ->
+                    { model | isPhotoModalShowed = True } |> UR.init
 
-        ClosePhotoModal ->
-            { model | isPhotoModalShowed = False } |> UR.init
+                Claim.ClosePhotoModal ->
+                    { model | isPhotoModalShowed = False } |> UR.init
 
         VoteClaim claimId vote ->
             case model.analysis of
@@ -967,17 +967,11 @@ msgToString msg =
         ClaimsLoaded result ->
             resultToString [ "ClaimsLoaded" ] result
 
-        OpenVoteModal claimId _ ->
-            [ "OpenVoteModal", String.fromInt claimId ]
-
-        CloseVoteModal ->
-            [ "CloseVoteModal" ]
-
-        OpenPhotoModal ->
-            [ "OpenPhotoModal" ]
-
-        ClosePhotoModal ->
-            [ "ClosePhotoModal" ]
+        ClaimMsg _ ->
+            -- TODO: Do we need claim id here like it was before?
+            --OpenVoteModal claimId _ ->
+            --    [ "OpenVoteModal", String.fromInt claimId ]
+            [ "ClaimMsg" ]
 
         VoteClaim claimId _ ->
             [ "VoteClaim", String.fromInt claimId ]

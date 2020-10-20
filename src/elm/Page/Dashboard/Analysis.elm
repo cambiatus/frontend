@@ -127,7 +127,8 @@ view ({ shared } as loggedIn) model =
                 Loaded claims pageInfo ->
                     let
                         viewClaim claim =
-                            Claim.viewClaimCard loggedIn OpenVoteModal OpenPhotoModal claim
+                            Claim.viewClaimCard loggedIn Claim.OpenVoteModal Claim.OpenPhotoModal claim
+                                |> Html.map ClaimMsg
                     in
                     div []
                         [ Page.viewHeader loggedIn (t "all_analysis.title") Route.Dashboard
@@ -147,7 +148,7 @@ view ({ shared } as loggedIn) model =
                                 Claim.viewVoteClaimModal
                                     loggedIn.shared.translators
                                     { voteMsg = VoteClaim
-                                    , closeMsg = CloseVoteModal
+                                    , closeMsg = ClaimMsg Claim.CloseVoteModal
                                     , claimId = claimId
                                     , isApproving = vote
                                     }
@@ -158,7 +159,7 @@ view ({ shared } as loggedIn) model =
                             VoteModalClosed ->
                                 text ""
                         , if model.isPhotoModalShowed then
-                            Claim.viewPhotoModal shared.translators ClosePhotoModal
+                            Claim.viewPhotoModal shared.translators (ClaimMsg Claim.ClosePhotoModal)
 
                           else
                             text ""
@@ -310,10 +311,7 @@ type alias UpdateResult =
 
 type Msg
     = ClaimsLoaded (Result (Graphql.Http.Error (Maybe Claim.Paginated)) (Maybe Claim.Paginated))
-    | OpenVoteModal Int Bool
-    | CloseVoteModal
-    | OpenPhotoModal
-    | ClosePhotoModal
+    | ClaimMsg Claim.Msg
     | VoteClaim Int Bool
     | GotVoteResult Int (Result Decode.Value String)
     | SelectMsg (Select.Msg Profile)
@@ -356,17 +354,19 @@ update msg model loggedIn =
         ClaimsLoaded (Err _) ->
             { model | status = Failed } |> UR.init
 
-        OpenVoteModal claimId vote ->
-            { model | modalStatus = VoteModalOpen claimId vote } |> UR.init
+        ClaimMsg claimMsg ->
+            case claimMsg of
+                Claim.OpenVoteModal claimId vote ->
+                    { model | modalStatus = VoteModalOpen claimId vote } |> UR.init
 
-        CloseVoteModal ->
-            { model | modalStatus = VoteModalClosed } |> UR.init
+                Claim.CloseVoteModal ->
+                    { model | modalStatus = VoteModalClosed } |> UR.init
 
-        OpenPhotoModal ->
-            { model | isPhotoModalShowed = True } |> UR.init
+                Claim.OpenPhotoModal ->
+                    { model | isPhotoModalShowed = True } |> UR.init
 
-        ClosePhotoModal ->
-            { model | isPhotoModalShowed = False } |> UR.init
+                Claim.ClosePhotoModal ->
+                    { model | isPhotoModalShowed = False } |> UR.init
 
         VoteClaim claimId vote ->
             case model.status of
@@ -702,17 +702,8 @@ msgToString msg =
         ClaimsLoaded r ->
             [ "ChecksLoaded", UR.resultToString r ]
 
-        OpenVoteModal _ _ ->
-            [ "OpenModal" ]
-
-        CloseVoteModal ->
-            [ "CloseModal" ]
-
-        OpenPhotoModal ->
-            [ "OpenPhotoModal" ]
-
-        ClosePhotoModal ->
-            [ "ClosePhotoModal" ]
+        ClaimMsg _ ->
+            [ "ClaimMsg" ]
 
         VoteClaim claimId _ ->
             [ "VoteClaim", String.fromInt claimId ]
