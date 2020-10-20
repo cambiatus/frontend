@@ -53,7 +53,6 @@ type alias Model =
     { status : Status
     , communityStatus : CommunityStatus
     , claimModalStatus : Claim.ModalStatus
-    , isPhotoModalShowed : Bool
     , autoCompleteState : Select.State
     , reloadOnNextQuery : Bool
     , filters : Filter
@@ -65,7 +64,6 @@ initModel =
     { status = Loading
     , communityStatus = LoadingCommunity
     , claimModalStatus = Claim.Closed
-    , isPhotoModalShowed = False
     , autoCompleteState = Select.newState ""
     , reloadOnNextQuery = False
     , filters = initFilter
@@ -152,11 +150,12 @@ view ({ shared } as loggedIn) model =
 
                             _ ->
                                 text ""
-                        , if model.isPhotoModalShowed then
-                            Claim.viewPhotoModal shared.translators (ClaimMsg Claim.CloseClaimModals)
+                        , case model.claimModalStatus of
+                            Claim.PhotoModal ->
+                                Claim.viewPhotoModal shared.translators (ClaimMsg Claim.CloseClaimModals)
 
-                          else
-                            text ""
+                            _ ->
+                                text ""
                         ]
 
                 Failed ->
@@ -348,16 +347,9 @@ update msg model loggedIn =
         ClaimsLoaded (Err _) ->
             { model | status = Failed } |> UR.init
 
-        ClaimMsg claimMsg ->
-            case claimMsg of
-                Claim.OpenVoteModal claimId vote ->
-                    { model | claimModalStatus = Claim.VoteModal claimId vote } |> UR.init
-
-                Claim.CloseClaimModals ->
-                    { model | claimModalStatus = Claim.Closed, isPhotoModalShowed = False } |> UR.init
-
-                Claim.OpenPhotoModal ->
-                    { model | isPhotoModalShowed = True } |> UR.init
+        ClaimMsg m ->
+            Claim.updateClaimModalStatus m model
+                |> UR.init
 
         VoteClaim claimId vote ->
             case model.status of

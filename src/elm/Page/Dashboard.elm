@@ -82,7 +82,6 @@ type alias Model =
     , transfers : GraphqlStatus (Maybe QueryTransfers) (List Transfer)
     , inviteModalStatus : InviteModalStatus
     , claimModalStatus : Claim.ModalStatus
-    , isPhotoModalShowed : Bool
     , copied : Bool
     }
 
@@ -97,7 +96,6 @@ initModel =
     , transfers = LoadingGraphql
     , inviteModalStatus = InviteModalClosed
     , claimModalStatus = Claim.Closed
-    , isPhotoModalShowed = False
     , copied = False
     }
 
@@ -201,11 +199,12 @@ view loggedIn model =
                             _ ->
                                 text ""
                         , viewInvitationModal loggedIn model
-                        , if model.isPhotoModalShowed then
-                            Claim.viewPhotoModal loggedIn.shared.translators (ClaimMsg Claim.CloseClaimModals)
+                        , case model.claimModalStatus of
+                            Claim.PhotoModal ->
+                                Claim.viewPhotoModal loggedIn.shared.translators (ClaimMsg Claim.CloseClaimModals)
 
-                          else
-                            text ""
+                            _ ->
+                                text ""
                         ]
 
                 ( _, _, _ ) ->
@@ -623,17 +622,8 @@ update msg model loggedIn =
                 |> UR.logGraphqlError msg err
 
         ClaimMsg m ->
-            case m of
-                Claim.OpenVoteModal claimId vote ->
-                    { model | claimModalStatus = Claim.VoteModal claimId vote }
-                        |> UR.init
-
-                Claim.CloseClaimModals ->
-                    { model | claimModalStatus = Claim.Closed, isPhotoModalShowed = False }
-                        |> UR.init
-
-                Claim.OpenPhotoModal ->
-                    { model | isPhotoModalShowed = True } |> UR.init
+            Claim.updateClaimModalStatus m model
+                |> UR.init
 
         VoteClaim claimId vote ->
             case model.analysis of

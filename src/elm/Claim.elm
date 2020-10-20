@@ -10,6 +10,7 @@ module Claim exposing
     , paginatedPageInfo
     , paginatedToList
     , selectionSet
+    , updateClaimModalStatus
     , viewClaimCard
     , viewPhotoModal
     , viewVoteClaimModal
@@ -243,6 +244,19 @@ type Msg
     | OpenPhotoModal
 
 
+updateClaimModalStatus : Msg -> { m | claimModalStatus : ModalStatus } -> { m | claimModalStatus : ModalStatus }
+updateClaimModalStatus msg model =
+    case msg of
+        OpenVoteModal claimId vote ->
+            { model | claimModalStatus = VoteModal claimId vote }
+
+        CloseClaimModals ->
+            { model | claimModalStatus = Closed }
+
+        OpenPhotoModal ->
+            { model | claimModalStatus = PhotoModal }
+
+
 {-| Claim card with a short claim overview. Used on Dashboard and Analysis pages.
 -}
 viewClaimCard : LoggedIn.Model -> (Int -> Bool -> msg) -> msg -> Model -> Html msg
@@ -276,7 +290,7 @@ viewClaimCard { selectedCommunity, shared, accountName } openConfirmationModalMs
 
         hasPhotoProof =
             -- TODO: replace this placeholder with the real data
-            claim.id == 35
+            claim.id == 17
     in
     div [ class "w-full sm:w-1/2 lg:w-1/3 xl:w-1/4 px-2 mb-4" ]
         [ div
