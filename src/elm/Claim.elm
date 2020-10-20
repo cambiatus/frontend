@@ -23,7 +23,7 @@ import Cambiatus.Object.ClaimConnection
 import Cambiatus.Object.ClaimEdge
 import Cambiatus.Scalar exposing (DateTime(..))
 import Community exposing (Objective)
-import Eos exposing (Symbol)
+import Eos
 import Eos.Account
 import Graphql.OptionalArgument exposing (OptionalArgument(..))
 import Graphql.SelectionSet as SelectionSet exposing (SelectionSet, with)
@@ -34,7 +34,7 @@ import Json.Encode as Encode
 import Profile exposing (Profile)
 import Route
 import Session.LoggedIn as LoggedIn
-import Session.Shared exposing (Shared, Translators)
+import Session.Shared exposing (Translators)
 import Strftime
 import Time
 import Utils
