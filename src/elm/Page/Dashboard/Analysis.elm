@@ -142,7 +142,7 @@ view ({ shared } as loggedIn) model =
                                 Claim.viewVoteClaimModal
                                     loggedIn.shared.translators
                                     { voteMsg = VoteClaim
-                                    , closeMsg = ClaimMsg Claim.CloseVoteModal
+                                    , closeMsg = ClaimMsg Claim.CloseClaimModals
                                     , claimId = claimId
                                     , isApproving = vote
                                     }
@@ -153,7 +153,7 @@ view ({ shared } as loggedIn) model =
                             _ ->
                                 text ""
                         , if model.isPhotoModalShowed then
-                            Claim.viewPhotoModal shared.translators (ClaimMsg Claim.ClosePhotoModal)
+                            Claim.viewPhotoModal shared.translators (ClaimMsg Claim.CloseClaimModals)
 
                           else
                             text ""
@@ -353,14 +353,11 @@ update msg model loggedIn =
                 Claim.OpenVoteModal claimId vote ->
                     { model | modalStatus = Claim.VoteModal claimId vote } |> UR.init
 
-                Claim.CloseVoteModal ->
-                    { model | modalStatus = Claim.Closed } |> UR.init
+                Claim.CloseClaimModals ->
+                    { model | modalStatus = Claim.Closed, isPhotoModalShowed = False } |> UR.init
 
                 Claim.OpenPhotoModal ->
                     { model | isPhotoModalShowed = True } |> UR.init
-
-                Claim.ClosePhotoModal ->
-                    { model | isPhotoModalShowed = False } |> UR.init
 
         VoteClaim claimId vote ->
             case model.status of

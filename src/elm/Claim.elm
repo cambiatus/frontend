@@ -239,9 +239,8 @@ type alias VoteClaimModalOptions msg =
 
 type Msg
     = OpenVoteModal Int Bool
-    | CloseVoteModal
+    | CloseClaimModals
     | OpenPhotoModal
-    | ClosePhotoModal
 
 
 {-| Claim card with a short claim overview. Used on Dashboard and Analysis pages.
