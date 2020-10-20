@@ -1,5 +1,6 @@
 module Claim exposing
     ( ClaimStatus(..)
+    , ModalStatus(..)
     , Model
     , Msg(..)
     , Paginated
@@ -51,6 +52,13 @@ type alias Model =
     , checks : List Check
     , createdAt : DateTime
     }
+
+
+type ModalStatus
+    = Loading
+    | VoteModal Int Bool
+    | PhotoModal
+    | Closed
 
 
 type ClaimStatus

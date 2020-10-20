@@ -52,7 +52,7 @@ init ({ shared, selectedCommunity } as loggedIn) =
 type alias Model =
     { status : Status
     , communityStatus : CommunityStatus
-    , modalStatus : VoteModalStatus
+    , modalStatus : Claim.ModalStatus
     , isPhotoModalShowed : Bool
     , autoCompleteState : Select.State
     , reloadOnNextQuery : Bool
@@ -64,7 +64,7 @@ initModel : Model
 initModel =
     { status = Loading
     , communityStatus = LoadingCommunity
-    , modalStatus = VoteModalClosed
+    , modalStatus = Claim.Closed
     , isPhotoModalShowed = False
     , autoCompleteState = Select.newState ""
     , reloadOnNextQuery = False
@@ -100,12 +100,6 @@ type StatusFilter
     | Approved
     | Rejected
     | Pending
-
-
-type VoteModalStatus
-    = VoteModalClosed
-    | VoteModalLoading Int Bool
-    | VoteModalOpen Int Bool
 
 
 
@@ -144,7 +138,7 @@ view ({ shared } as loggedIn) model =
                                 viewEmptyResults loggedIn
                             ]
                         , case model.modalStatus of
-                            VoteModalOpen claimId vote ->
+                            Claim.VoteModal claimId vote ->
                                 Claim.viewVoteClaimModal
                                     loggedIn.shared.translators
                                     { voteMsg = VoteClaim
@@ -153,10 +147,10 @@ view ({ shared } as loggedIn) model =
                                     , isApproving = vote
                                     }
 
-                            VoteModalLoading _ _ ->
+                            Claim.Loading ->
                                 Page.fullPageLoading
 
-                            VoteModalClosed ->
+                            _ ->
                                 text ""
                         , if model.isPhotoModalShowed then
                             Claim.viewPhotoModal shared.translators (ClaimMsg Claim.ClosePhotoModal)
@@ -357,10 +351,10 @@ update msg model loggedIn =
         ClaimMsg claimMsg ->
             case claimMsg of
                 Claim.OpenVoteModal claimId vote ->
-                    { model | modalStatus = VoteModalOpen claimId vote } |> UR.init
+                    { model | modalStatus = Claim.VoteModal claimId vote } |> UR.init
 
                 Claim.CloseVoteModal ->
-                    { model | modalStatus = VoteModalClosed } |> UR.init
+                    { model | modalStatus = Claim.Closed } |> UR.init
 
                 Claim.OpenPhotoModal ->
                     { model | isPhotoModalShowed = True } |> UR.init
@@ -374,7 +368,7 @@ update msg model loggedIn =
                     let
                         newModel =
                             { model
-                                | modalStatus = VoteModalLoading claimId vote
+                                | modalStatus = Claim.Loading
                             }
                     in
                     if LoggedIn.isAuth loggedIn then

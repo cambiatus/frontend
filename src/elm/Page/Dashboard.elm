@@ -81,7 +81,7 @@ type alias Model =
     , lastSocket : String
     , transfers : GraphqlStatus (Maybe QueryTransfers) (List Transfer)
     , inviteModalStatus : InviteModalStatus
-    , voteModalStatus : VoteModalStatus
+    , claimModalStatus : Claim.ModalStatus
     , isPhotoModalShowed : Bool
     , copied : Bool
     }
@@ -96,7 +96,7 @@ initModel =
     , lastSocket = ""
     , transfers = LoadingGraphql
     , inviteModalStatus = InviteModalClosed
-    , voteModalStatus = VoteModalClosed
+    , claimModalStatus = Claim.Closed
     , isPhotoModalShowed = False
     , copied = False
     }
@@ -120,12 +120,6 @@ type ClaimStatus
     | ClaimLoading Claim.Model
     | ClaimVoted Claim.Model
     | ClaimVoteFailed Claim.Model
-
-
-type VoteModalStatus
-    = VoteModalClosed
-    | VoteModalLoading Int Bool
-    | VoteModalOpened Int Bool
 
 
 type InviteModalStatus
@@ -191,8 +185,8 @@ view loggedIn model =
                           else
                             text ""
                         , viewTransfers loggedIn model
-                        , case model.voteModalStatus of
-                            VoteModalOpened claimId vote ->
+                        , case model.claimModalStatus of
+                            Claim.VoteModal claimId vote ->
                                 Claim.viewVoteClaimModal
                                     loggedIn.shared.translators
                                     { voteMsg = VoteClaim
@@ -201,10 +195,10 @@ view loggedIn model =
                                     , isApproving = vote
                                     }
 
-                            VoteModalLoading _ _ ->
+                            Claim.Loading ->
                                 Page.fullPageLoading
 
-                            VoteModalClosed ->
+                            _ ->
                                 text ""
                         , viewInvitationModal loggedIn model
                         , if model.isPhotoModalShowed then
@@ -631,11 +625,11 @@ update msg model loggedIn =
         ClaimMsg m ->
             case m of
                 Claim.OpenVoteModal claimId vote ->
-                    { model | voteModalStatus = VoteModalOpened claimId vote }
+                    { model | claimModalStatus = Claim.VoteModal claimId vote }
                         |> UR.init
 
                 Claim.CloseVoteModal ->
-                    { model | voteModalStatus = VoteModalClosed }
+                    { model | claimModalStatus = Claim.Closed }
                         |> UR.init
 
                 Claim.OpenPhotoModal ->
@@ -654,7 +648,7 @@ update msg model loggedIn =
                         newModel =
                             { model
                                 | analysis = LoadedGraphql newClaims pageInfo
-                                , voteModalStatus = VoteModalClosed
+                                , claimModalStatus = Claim.Closed
                             }
                     in
                     if LoggedIn.isAuth loggedIn then
