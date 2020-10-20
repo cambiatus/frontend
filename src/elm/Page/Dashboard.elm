@@ -201,7 +201,8 @@ view loggedIn model =
                         , viewInvitationModal loggedIn model
                         , case model.claimModalStatus of
                             Claim.PhotoModal ->
-                                Claim.viewPhotoModal loggedIn.shared.translators (ClaimMsg Claim.CloseClaimModals)
+                                Claim.viewPhotoModal loggedIn.shared.translators
+                                    |> Html.map ClaimMsg
 
                             _ ->
                                 text ""

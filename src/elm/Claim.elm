@@ -358,8 +358,8 @@ viewClaimCard { selectedCommunity, shared, accountName } openConfirmationModalMs
         ]
 
 
-viewPhotoModal : Translators -> msg -> Html msg
-viewPhotoModal { t } closeMsg =
+viewPhotoModal : Translators -> Html Msg
+viewPhotoModal { t } =
     let
         body =
             [ div [ class "md:flex md:justify-start md:space-x-4" ]
@@ -384,7 +384,7 @@ viewPhotoModal { t } closeMsg =
             ]
     in
     Modal.initWith
-        { closeMsg = closeMsg
+        { closeMsg = CloseClaimModals
         , isVisible = True
         }
         |> Modal.withHeader (t "dashboard.claim")
