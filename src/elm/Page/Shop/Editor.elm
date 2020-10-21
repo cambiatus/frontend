@@ -231,7 +231,18 @@ view loggedIn model =
                     viewForm shared balances imageStatus True True Closed form
     in
     { title = title
-    , content = content
+    , content =
+        case loggedIn.hasShop of
+            LoggedIn.FeatureLoaded True ->
+                content
+
+            LoggedIn.FeatureLoaded False ->
+                Page.fullPageNotFound
+                    (t "error.pageNotFound")
+                    (t "shop.disabled.description")
+
+            LoggedIn.FeatureLoading ->
+                Page.fullPageLoading
     }
 
 

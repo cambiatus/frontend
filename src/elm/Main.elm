@@ -623,22 +623,6 @@ changeRouteTo maybeRoute model =
                     , Route.replaceUrl shared.navKey redirect
                     )
 
-        withFeature feature fn =
-            case session of
-                Page.Guest guest ->
-                    NotFound
-                        |> updateStatus model
-                        |> noCmd
-
-                Page.LoggedIn loggedIn ->
-                    if feature loggedIn then
-                        fn
-
-                    else
-                        NotFound
-                            |> updateStatus model
-                            |> noCmd
-
         withLoggedIn route fn =
             case session of
                 Page.LoggedIn loggedIn ->
@@ -814,43 +798,36 @@ changeRouteTo maybeRoute model =
             (\l -> ActionEditor.initNew l symbol objectiveId)
                 >> updateStatusWith ActionEditor GotActionEditorMsg model
                 |> withLoggedIn (Route.NewAction symbol objectiveId)
-                |> withFeature .hasObjectives
 
         Just (Route.EditAction symbol objectiveId actionId) ->
             (\l -> ActionEditor.initEdit l symbol objectiveId actionId)
                 >> updateStatusWith ActionEditor GotActionEditorMsg model
                 |> withLoggedIn (Route.EditAction symbol objectiveId actionId)
-                |> withFeature .hasObjectives
 
         Just (Route.Claim communityId objectiveId actionId claimId) ->
             (\l -> Claim.init l communityId claimId)
                 >> updateStatusWith Claim GotVerifyClaimMsg model
                 |> withLoggedIn (Route.Claim communityId objectiveId actionId claimId)
-                |> withFeature .hasObjectives
 
         Just (Route.Shop maybeFilter) ->
             (\l -> Shop.init l maybeFilter)
                 >> updateStatusWith (Shop maybeFilter) GotShopMsg model
                 |> withLoggedIn (Route.Shop maybeFilter)
-                |> withFeature .hasShop
 
         Just Route.NewSale ->
             ShopEditor.initCreate
                 >> updateStatusWith (ShopEditor Nothing) GotShopEditorMsg model
                 |> withLoggedIn Route.NewSale
-                |> withFeature .hasShop
 
         Just (Route.EditSale saleId) ->
             (\l -> ShopEditor.initUpdate saleId l)
                 >> updateStatusWith (ShopEditor (Just saleId)) GotShopEditorMsg model
                 |> withLoggedIn (Route.EditSale saleId)
-                |> withFeature .hasShop
 
         Just (Route.ViewSale saleId) ->
             (\l -> ShopViewer.init l saleId)
                 >> updateStatusWith (ShopViewer saleId) GotShopViewerMsg model
                 |> withLoggedIn (Route.ViewSale saleId)
-                |> withFeature .hasShop
 
         Just (Route.ViewTransfer transferId) ->
             (\l -> ViewTransfer.init l transferId)

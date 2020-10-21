@@ -404,6 +404,9 @@
         "description_label": "Qual o seu objetivo?",
         "description_placeholder": "Defina uma meta que ajude a resolver o problema da comunidade.",
         "submit": "Salvar"
+      },
+      "disabled": {
+        "description": "Reivindicações, ações e objetivos estão desativados nesta comunidade."
       }
     },
     "actions": {
@@ -621,6 +624,9 @@
       "body": "Tem certeza de que deseja excluir este item?",
       "confirm": "Sim",
       "cancel": "Não"
+    },
+    "disabled": {
+      "description": "A loja está desativada nesta comunidade."
     }
   },
   "dashboard": {

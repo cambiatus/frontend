@@ -400,6 +400,9 @@
         "description_label": "¿Cual es tu objetivo?",
         "description_placeholder": "Define un objetivo que atienda el problema que enfrenta tu comunidad.",
         "submit": "Salvar"
+      },
+      "disabled": {
+        "description": "Las reclamaciones, las acciones y los objetivos están deshabilitados en esta comunidad."
       }
     },
     "actions": {
@@ -618,6 +621,9 @@
       "body": "¿Estás seguro de que quieres eliminar este item?",
       "confirm": "Sí",
       "cancel": "No"
+    },
+    "disabled": {
+      "description": "La tienda está deshabilitada en esta comunidad."
     }
   },
   "dashboard": {
