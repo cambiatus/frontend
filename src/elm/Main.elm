@@ -623,7 +623,7 @@ changeRouteTo maybeRoute model =
                     , Route.replaceUrl shared.navKey redirect
                     )
 
-        withFeature : (LoggedIn.Model -> Bool) -> ( Model, Cmd msg ) -> ( Model, Cmd msg )
+        withFeature : (LoggedIn.Model -> LoggedIn.FeatureStatus) -> ( Model, Cmd msg ) -> ( Model, Cmd msg )
         withFeature feature fn =
             case session of
                 Page.Guest guest ->
@@ -632,13 +632,14 @@ changeRouteTo maybeRoute model =
                         |> noCmd
 
                 Page.LoggedIn loggedIn ->
-                    if feature loggedIn then
-                        fn
+                    case feature loggedIn of
+                        LoggedIn.FeatureLoaded True ->
+                            fn
 
-                    else
-                        NotFound
-                            |> updateStatus model
-                            |> noCmd
+                        _ ->
+                            NotFound
+                                |> updateStatus model
+                                |> noCmd
 
         withLoggedIn route fn =
             case session of
