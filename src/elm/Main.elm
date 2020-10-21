@@ -626,7 +626,7 @@ changeRouteTo maybeRoute model =
         withFeature : (LoggedIn.Model -> LoggedIn.FeatureStatus) -> ( Model, Cmd msg ) -> ( Model, Cmd msg )
         withFeature feature fn =
             case session of
-                Page.Guest guest ->
+                Page.Guest _ ->
                     NotFound
                         |> updateStatus model
                         |> noCmd
@@ -816,19 +816,16 @@ changeRouteTo maybeRoute model =
             (\l -> ActionEditor.initNew l symbol objectiveId)
                 >> updateStatusWith ActionEditor GotActionEditorMsg model
                 |> withLoggedIn (Route.NewAction symbol objectiveId)
-                |> withFeature .hasObjectives
 
         Just (Route.EditAction symbol objectiveId actionId) ->
             (\l -> ActionEditor.initEdit l symbol objectiveId actionId)
                 >> updateStatusWith ActionEditor GotActionEditorMsg model
                 |> withLoggedIn (Route.EditAction symbol objectiveId actionId)
-                |> withFeature .hasObjectives
 
         Just (Route.Claim communityId objectiveId actionId claimId) ->
             (\l -> Claim.init l communityId claimId)
                 >> updateStatusWith Claim GotVerifyClaimMsg model
                 |> withLoggedIn (Route.Claim communityId objectiveId actionId claimId)
-                |> withFeature .hasObjectives
 
         Just (Route.Shop maybeFilter) ->
             (\l -> Shop.init l maybeFilter)

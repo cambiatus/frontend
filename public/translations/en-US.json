@@ -396,6 +396,9 @@
         "description_label": "What is your objective?",
         "description_placeholder": "Set a goal that helps resolve the community problem.",
         "submit": "Save"
+      },
+      "disabled": {
+        "description": "Claims, Actions, and Objectives are disabled in this community."
       }
     },
     "actions": {

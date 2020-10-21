@@ -400,6 +400,9 @@
         "description_label": "Quin és el teu objectiu?",
         "description_placeholder": "Defineix un objectiu que resolgui el problema al que s’enfronta la teva comunitat.",
         "submit": "Guardar"
+      },
+      "disabled": {
+        "description": "Les reclamacions, les accions i els objectius estan desactivats en aquesta comunitat."
       }
     },
     "actions": {

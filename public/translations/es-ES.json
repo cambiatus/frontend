@@ -400,6 +400,9 @@
         "description_label": "¿Cual es tu objetivo?",
         "description_placeholder": "Define un objetivo que atienda el problema que enfrenta tu comunidad.",
         "submit": "Salvar"
+      },
+      "disabled": {
+        "description": "Las reclamaciones, las acciones y los objetivos están deshabilitados en esta comunidad."
       }
     },
     "actions": {
