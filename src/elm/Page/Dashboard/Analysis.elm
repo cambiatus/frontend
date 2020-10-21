@@ -140,18 +140,23 @@ view ({ shared } as loggedIn) model =
                               else
                                 viewEmptyResults loggedIn
                             ]
-                        , case model.modalStatus of
-                            ModalOpened claimId vote ->
+                        , let
+                            viewVoteModal claimId isApproving isLoading =
                                 Claim.viewVoteClaimModal
                                     loggedIn.shared.translators
                                     { voteMsg = VoteClaim
                                     , closeMsg = CloseModal
                                     , claimId = claimId
-                                    , isApproving = vote
+                                    , isApproving = isApproving
+                                    , isLoading = isLoading
                                     }
+                          in
+                          case model.modalStatus of
+                            ModalOpened claimId vote ->
+                                viewVoteModal claimId vote False
 
-                            ModalLoading _ _ ->
-                                Page.fullPageLoading
+                            ModalLoading claimId vote ->
+                                viewVoteModal claimId vote True
 
                             ModalClosed ->
                                 text ""

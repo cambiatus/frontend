@@ -28,7 +28,7 @@ import Eos.Account
 import Graphql.OptionalArgument exposing (OptionalArgument(..))
 import Graphql.SelectionSet as SelectionSet exposing (SelectionSet, with)
 import Html exposing (Html, a, button, div, p, text)
-import Html.Attributes exposing (class, id)
+import Html.Attributes exposing (class, classList, disabled, id)
 import Html.Events exposing (onClick)
 import Json.Encode as Encode
 import Profile exposing (Profile)
@@ -224,6 +224,7 @@ type alias VoteClaimModalOptions msg =
     , closeMsg : msg
     , claimId : Int
     , isApproving : Bool
+    , isLoading : Bool
     }
 
 
@@ -304,7 +305,7 @@ viewClaimCard { selectedCommunity, shared, accountName } openConfirmationModalMs
 
 
 viewVoteClaimModal : Translators -> VoteClaimModalOptions msg -> Html msg
-viewVoteClaimModal { t } { voteMsg, closeMsg, claimId, isApproving } =
+viewVoteClaimModal { t } { voteMsg, closeMsg, claimId, isApproving, isLoading } =
     let
         text_ s =
             text (t s)
@@ -318,9 +319,19 @@ viewVoteClaimModal { t } { voteMsg, closeMsg, claimId, isApproving } =
             ]
 
         footer =
-            [ button [ class "modal-cancel", onClick closeMsg ]
+            [ button
+                [ class "modal-cancel"
+                , onClick closeMsg
+                , classList [ ( "button-disabled", isLoading ) ]
+                , disabled isLoading
+                ]
                 [ text_ "claim.modal.secondary" ]
-            , button [ class "modal-accept", onClick (voteMsg claimId isApproving) ]
+            , button
+                [ class "modal-accept"
+                , classList [ ( "button-disabled", isLoading ) ]
+                , disabled isLoading
+                , onClick (voteMsg claimId isApproving)
+                ]
                 [ if isApproving then
                     text_ "claim.modal.primary_approve"
 

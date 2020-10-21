@@ -188,15 +188,20 @@ view loggedIn model =
                           else
                             text ""
                         , viewTransfers loggedIn model
-                        , case model.voteModalStatus of
-                            VoteModalOpened claimId vote ->
+                        , let
+                            viewVoteModal claimId isApproving isLoading =
                                 Claim.viewVoteClaimModal
                                     loggedIn.shared.translators
                                     { voteMsg = VoteClaim
                                     , closeMsg = CloseModal
                                     , claimId = claimId
-                                    , isApproving = vote
+                                    , isApproving = isApproving
+                                    , isLoading = isLoading
                                     }
+                          in
+                          case model.voteModalStatus of
+                            VoteModalOpened claimId vote ->
+                                viewVoteModal claimId vote False
 
                             VoteModalClosed ->
                                 text ""
