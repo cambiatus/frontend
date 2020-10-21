@@ -619,6 +619,9 @@
       "body": "Are you sure you want to delete this item?",
       "confirm": "Yes",
       "cancel": "No"
+    },
+    "disabled": {
+      "description": "Shop is disabled in this community."
     }
   },
   "dashboard": {

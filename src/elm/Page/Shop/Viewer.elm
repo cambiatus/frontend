@@ -338,8 +338,11 @@ cardFromSale sale =
 view : LoggedIn.Model -> Model -> { title : String, content : Html Msg }
 view loggedIn model =
     let
+        { t } =
+            loggedIn.shared.translators
+
         shopTitle =
-            t loggedIn.shared.translations "shop.title"
+            t "shop.title"
 
         title =
             case model.status of
@@ -370,7 +373,7 @@ view loggedIn model =
                         ]
 
                 LoadingFailed e ->
-                    Page.fullPageGraphQLError (t loggedIn.shared.translations "shop.title") e
+                    Page.fullPageGraphQLError (t "shop.title") e
 
                 LoadedSale maybeSale ->
                     case maybeSale of
@@ -391,7 +394,18 @@ view loggedIn model =
                                 ]
     in
     { title = title
-    , content = content
+    , content =
+        case loggedIn.hasShop of
+            LoggedIn.FeatureLoaded True ->
+                content
+
+            LoggedIn.FeatureLoaded False ->
+                Page.fullPageNotFound
+                    (t "error.pageNotFound")
+                    (t "shop.disabled.description")
+
+            LoggedIn.FeatureLoading ->
+                Page.fullPageLoading
     }
 
 

@@ -621,6 +621,9 @@
       "body": "Estàs segur de que vols eliminar aquest ítem?",
       "confirm": "Si",
       "cancel": "No"
+    },
+    "disabled": {
+      "description": "La botiga està desactivada en aquesta comunitat."
     }
   },
   "dashboard": {

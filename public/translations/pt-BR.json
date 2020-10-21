@@ -624,6 +624,9 @@
       "body": "Tem certeza de que deseja excluir este item?",
       "confirm": "Sim",
       "cancel": "Não"
+    },
+    "disabled": {
+      "description": "A loja está desativada nesta comunidade."
     }
   },
   "dashboard": {

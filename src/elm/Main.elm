@@ -623,24 +623,6 @@ changeRouteTo maybeRoute model =
                     , Route.replaceUrl shared.navKey redirect
                     )
 
-        withFeature : (LoggedIn.Model -> LoggedIn.FeatureStatus) -> ( Model, Cmd msg ) -> ( Model, Cmd msg )
-        withFeature feature fn =
-            case session of
-                Page.Guest _ ->
-                    NotFound
-                        |> updateStatus model
-                        |> noCmd
-
-                Page.LoggedIn loggedIn ->
-                    case feature loggedIn of
-                        LoggedIn.FeatureLoaded True ->
-                            fn
-
-                        _ ->
-                            NotFound
-                                |> updateStatus model
-                                |> noCmd
-
         withLoggedIn route fn =
             case session of
                 Page.LoggedIn loggedIn ->
@@ -831,25 +813,21 @@ changeRouteTo maybeRoute model =
             (\l -> Shop.init l maybeFilter)
                 >> updateStatusWith (Shop maybeFilter) GotShopMsg model
                 |> withLoggedIn (Route.Shop maybeFilter)
-                |> withFeature .hasShop
 
         Just Route.NewSale ->
             ShopEditor.initCreate
                 >> updateStatusWith (ShopEditor Nothing) GotShopEditorMsg model
                 |> withLoggedIn Route.NewSale
-                |> withFeature .hasShop
 
         Just (Route.EditSale saleId) ->
             (\l -> ShopEditor.initUpdate saleId l)
                 >> updateStatusWith (ShopEditor (Just saleId)) GotShopEditorMsg model
                 |> withLoggedIn (Route.EditSale saleId)
-                |> withFeature .hasShop
 
         Just (Route.ViewSale saleId) ->
             (\l -> ShopViewer.init l saleId)
                 >> updateStatusWith (ShopViewer saleId) GotShopViewerMsg model
                 |> withLoggedIn (Route.ViewSale saleId)
-                |> withFeature .hasShop
 
         Just (Route.ViewTransfer transferId) ->
             (\l -> ViewTransfer.init l transferId)

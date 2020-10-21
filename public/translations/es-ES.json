@@ -621,6 +621,9 @@
       "body": "¿Estás seguro de que quieres eliminar este item?",
       "confirm": "Sí",
       "cancel": "No"
+    },
+    "disabled": {
+      "description": "La tienda está deshabilitada en esta comunidad."
     }
   },
   "dashboard": {
