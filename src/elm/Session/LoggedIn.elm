@@ -317,16 +317,6 @@ viewHelper thisMsg page profile_ ({ shared } as model) content =
             , ViewTransfer
             ]
 
-        isContentAllowed =
-            case model.hasKyc of
-                FeatureLoaded isKycEnabled ->
-                    List.member page availableWithoutKyc
-                        || not isKycEnabled
-                        || (isKycEnabled && hasUserKycFilled)
-
-                _ ->
-                    False
-
         viewKycRestriction =
             div [ class "mx-auto container max-w-sm" ]
                 [ div [ class "my-6 mx-4 text-center" ]
@@ -362,11 +352,23 @@ viewHelper thisMsg page profile_ ({ shared } as model) content =
             Hidden ->
                 text ""
         , div [ class "flex-grow" ]
-            [ if isContentAllowed then
-                content
+            [ case model.hasKyc of
+                FeatureLoading ->
+                    div [ class "full-spinner-container h-full" ]
+                        [ div [ class "spinner spinner--delay mt-8" ] [] ]
 
-              else
-                viewKycRestriction
+                FeatureLoaded isKycEnabled ->
+                    let
+                        isContentAllowed =
+                            List.member page availableWithoutKyc
+                                || not isKycEnabled
+                                || (isKycEnabled && hasUserKycFilled)
+                    in
+                    if isContentAllowed then
+                        content
+
+                    else
+                        viewKycRestriction
             ]
         , viewFooter shared
         , Modal.initWith
