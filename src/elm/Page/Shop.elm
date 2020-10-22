@@ -150,6 +150,9 @@ type ValidationError
 view : LoggedIn.Model -> Model -> { title : String, content : Html Msg }
 view loggedIn model =
     let
+        { t } =
+            loggedIn.shared.translators
+
         selectedCommunityName =
             case loggedIn.profile of
                 LoggedIn.Loaded profile ->
@@ -172,7 +175,7 @@ view loggedIn model =
         title =
             selectedCommunityName
                 ++ " "
-                ++ t loggedIn.shared.translations "shop.title"
+                ++ t "shop.title"
 
         content =
             case model.cards of
@@ -184,7 +187,7 @@ view loggedIn model =
                         ]
 
                 LoadingFailed e ->
-                    Page.fullPageGraphQLError (t loggedIn.shared.translations "shop.title") e
+                    Page.fullPageGraphQLError (t "shop.title") e
 
                 Loaded cards ->
                     div []
@@ -196,7 +199,18 @@ view loggedIn model =
                         ]
     in
     { title = title
-    , content = content
+    , content =
+        case loggedIn.hasShop of
+            LoggedIn.FeatureLoaded True ->
+                content
+
+            LoggedIn.FeatureLoaded False ->
+                Page.fullPageNotFound
+                    (t "error.pageNotFound")
+                    (t "shop.disabled.description")
+
+            LoggedIn.FeatureLoading ->
+                Page.fullPageLoading
     }
 
 

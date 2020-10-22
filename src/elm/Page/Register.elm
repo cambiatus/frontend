@@ -19,6 +19,7 @@ import Json.Decode as Decode exposing (Decoder, Value)
 import Json.Decode.Pipeline as Decode
 import Json.Encode as Encode
 import Page
+import Page.Register.Common exposing (ProblemEvent(..))
 import Page.Register.DefaultForm as DefaultForm
 import Page.Register.JuridicalForm as JuridicalForm
 import Page.Register.NaturalForm as NaturalForm
@@ -602,8 +603,11 @@ type alias PdfData =
 update : Maybe String -> Msg -> Model -> Guest.Model -> UpdateResult
 update maybeInvitation msg model guest =
     let
-        { t } =
+        translators =
             guest.shared.translators
+
+        { t } =
+            translators
     in
     case msg of
         ValidateForm formType ->
@@ -630,9 +634,6 @@ update maybeInvitation msg model guest =
 
                         None ->
                             Nothing
-
-                translators =
-                    guest.shared.translators
 
                 problemCount =
                     case formType of
@@ -695,7 +696,12 @@ update maybeInvitation msg model guest =
                 JuridicalFormMsg innerMsg ->
                     case model.selectedForm of
                         Juridical form ->
-                            UR.init { model | selectedForm = Juridical (JuridicalForm.update innerMsg form guest.shared.translators) }
+                            UR.init
+                                { model
+                                    | selectedForm =
+                                        JuridicalForm.update translators innerMsg form
+                                            |> Juridical
+                                }
 
                         _ ->
                             UR.init model
@@ -703,7 +709,12 @@ update maybeInvitation msg model guest =
                 NaturalFormMsg innerMsg ->
                     case model.selectedForm of
                         Natural form ->
-                            UR.init { model | selectedForm = Natural (NaturalForm.update innerMsg form) }
+                            UR.init
+                                { model
+                                    | selectedForm =
+                                        NaturalForm.update translators innerMsg form
+                                            |> Natural
+                                }
 
                         _ ->
                             UR.init model
@@ -711,7 +722,12 @@ update maybeInvitation msg model guest =
                 DefaultFormMsg innerMsg ->
                     case model.selectedForm of
                         Default form ->
-                            UR.init { model | selectedForm = Default (DefaultForm.update innerMsg form) }
+                            UR.init
+                                { model
+                                    | selectedForm =
+                                        DefaultForm.update translators innerMsg form
+                                            |> Default
+                                }
 
                         _ ->
                             UR.init model
@@ -802,13 +818,13 @@ update maybeInvitation msg model guest =
                         | selectedForm =
                             case model.selectedForm of
                                 Juridical form ->
-                                    Juridical { form | problems = ( JuridicalForm.Account, t "error.alreadyTaken" ) :: form.problems }
+                                    Juridical { form | problems = ( JuridicalForm.Account, t "error.alreadyTaken", OnSubmit ) :: form.problems }
 
                                 Natural form ->
-                                    Natural { form | problems = ( NaturalForm.Account, t "error.alreadyTaken" ) :: form.problems }
+                                    Natural { form | problems = ( NaturalForm.Account, t "error.alreadyTaken", OnSubmit ) :: form.problems }
 
                                 Default form ->
-                                    Default { form | problems = ( DefaultForm.Account, t "error.alreadyTaken" ) :: form.problems }
+                                    Default { form | problems = ( DefaultForm.Account, t "error.alreadyTaken", OnSubmit ) :: form.problems }
 
                                 None ->
                                     model.selectedForm

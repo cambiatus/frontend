@@ -1,7 +1,8 @@
 module Page.Register.DefaultForm exposing (Field(..), Model, Msg(..), init, update, validator, view)
 
 import Html exposing (Html)
-import Page.Register.Common exposing (containsNumberGreaterThan, fieldProblems)
+import Html.Attributes exposing (autocomplete, classList)
+import Page.Register.Common exposing (ProblemEvent(..), fieldProblems, validateAccountName)
 import Session.Shared exposing (Translators)
 import Validate exposing (Validator)
 import View.Form.Input
@@ -15,7 +16,7 @@ type alias Model =
     { name : String
     , account : String
     , email : String
-    , problems : List ( Field, String )
+    , problems : List ( Field, String, ProblemEvent )
     }
 
 
@@ -72,6 +73,18 @@ view translators model =
             , problems = fieldProblems Account model.problems
             , translators = translators
             }
+            |> (let
+                    hasErrors =
+                        List.any (\( f, _, evt ) -> f == Account && evt == OnInput) model.problems
+                in
+                View.Form.Input.withAttrs
+                    [ autocomplete False
+                    , classList
+                        [ ( "shake-invalid", hasErrors )
+                        , ( "field-with-error", hasErrors )
+                        ]
+                    ]
+               )
             |> View.Form.Input.withCounter 12
             |> View.Form.Input.toHtml
         , View.Form.Input.init
@@ -92,40 +105,50 @@ view translators model =
 --- UPDATE
 
 
-update : Msg -> Model -> Model
-update msg form =
+update : Translators -> Msg -> Model -> Model
+update translators msg form =
     case msg of
         EnteredName name ->
             { form | name = name }
 
         EnteredAccount account ->
-            { form
-                | account =
-                    if String.length account > 12 || (account |> containsNumberGreaterThan 5) then
-                        form.account
+            let
+                formProblemsWithoutAccount =
+                    form.problems
+                        |> List.filter (\( field, _, _ ) -> field /= Account)
 
-                    else
-                        account
+                ( preparedAccountName, errorMsg ) =
+                    validateAccountName translators account form.account
+            in
+            { form
+                | account = preparedAccountName
+                , problems =
+                    case errorMsg of
+                        Nothing ->
+                            formProblemsWithoutAccount
+
+                        Just e ->
+                            formProblemsWithoutAccount ++ [ ( Account, e, OnInput ) ]
             }
 
         EnteredEmail email ->
             { form | email = email }
 
 
-validator : Translators -> Validator ( Field, String ) Model
+validator : Translators -> Validator ( Field, String, ProblemEvent ) Model
 validator { t, tr } =
     Validate.all
         [ Validate.firstError
-            [ Validate.ifBlank .name ( Name, t "error.required" )
+            [ Validate.ifBlank .name ( Name, t "error.required", OnSubmit )
             ]
         , Validate.firstError
-            [ Validate.ifBlank .email ( Email, t "error.required" )
-            , Validate.ifInvalidEmail .email (\_ -> ( Email, t "error.email" ))
+            [ Validate.ifBlank .email ( Email, t "error.required", OnSubmit )
+            , Validate.ifInvalidEmail .email (\_ -> ( Email, t "error.email", OnSubmit ))
             ]
         , Validate.firstError
-            [ Validate.ifBlank .account ( Account, t "error.required" )
-            , Validate.ifTrue (\f -> String.length f.account < 12) ( Account, tr "error.validator.text.exactly" [ ( "base", "12" ) ] )
-            , Validate.ifTrue (\f -> String.length f.account > 12) ( Account, tr "error.validator.text.exactly" [ ( "base", "12" ) ] )
-            , Validate.ifFalse (\f -> String.all Char.isAlphaNum f.account) ( Account, t "error.invalidChar" )
+            [ Validate.ifBlank .account ( Account, t "error.required", OnSubmit )
+            , Validate.ifTrue (\f -> String.length f.account < 12) ( Account, tr "error.validator.text.exactly" [ ( "base", "12" ) ], OnSubmit )
+            , Validate.ifTrue (\f -> String.length f.account > 12) ( Account, tr "error.validator.text.exactly" [ ( "base", "12" ) ], OnSubmit )
+            , Validate.ifFalse (\f -> String.all Char.isAlphaNum f.account) ( Account, t "error.invalidChar", OnSubmit )
             ]
         ]
