@@ -102,15 +102,21 @@ view ({ shared } as loggedIn) model =
                                 ]
                             , div [ class "mx-auto container px-4" ]
                                 [ viewTitle shared claim
-                                , viewPhotoThumbnail
+                                , viewPhotoThumbnail claim.id
                                 , viewDetails shared model claim
                                 , viewVoters loggedIn claim
                                 ]
-                            , if model.isValidated || not isCurrentUserValidator then
-                                text ""
+                            , case model.claimModalStatus of
+                                Claim.PhotoModal claimId ->
+                                    Claim.viewPhotoModal shared.translators claimId
+                                        |> Html.map ClaimMsg
 
-                              else
-                                viewVoteButtons shared.translators claim.id model.claimModalStatus
+                                _ ->
+                                    if model.isValidated || not isCurrentUserValidator then
+                                        text ""
+
+                                    else
+                                        viewVoteButtons shared.translators claim.id model.claimModalStatus
                             ]
 
                     Failed err ->
@@ -133,11 +139,11 @@ view ({ shared } as loggedIn) model =
     }
 
 
-viewPhotoThumbnail =
+viewPhotoThumbnail claimId =
     div [ class "mb-8 flex" ]
         [ div [ class "claim-photo-thumb" ]
             [ img
-                [ onClick (ClaimMsg <| Claim.OpenPhotoModal)
+                [ onClick (ClaimMsg <| Claim.OpenPhotoModal claimId)
                 , src "/trash.png"
                 ]
                 []
@@ -181,18 +187,14 @@ viewVoteButtons ({ t } as translators) claimId modalStatus =
                 [ text <| t "dashboard.verify" ]
             ]
         , case modalStatus of
-            Claim.Closed ->
-                text ""
-
             Claim.Loading _ isApproving ->
                 viewVoteModal isApproving True
 
             Claim.VoteModal _ isApproving ->
                 viewVoteModal isApproving False
 
-            Claim.PhotoModal ->
-                Claim.viewPhotoModal translators
-                    |> Html.map ClaimMsg
+            _ ->
+                text ""
         ]
 
 
