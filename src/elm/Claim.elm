@@ -32,7 +32,7 @@ import Eos.Account
 import Graphql.OptionalArgument exposing (OptionalArgument(..))
 import Graphql.SelectionSet as SelectionSet exposing (SelectionSet, with)
 import Html exposing (Html, a, button, div, img, label, p, strong, text)
-import Html.Attributes exposing (class, classList, id, src, style)
+import Html.Attributes exposing (class, classList, disabled, id, src, style)
 import Html.Events exposing (onClick)
 import Json.Encode as Encode
 import Profile exposing (Profile)
@@ -56,7 +56,7 @@ type alias Model =
 
 
 type ModalStatus
-    = Loading
+    = Loading Int Bool
     | VoteModal Int Bool
     | PhotoModal
     | Closed
@@ -235,6 +235,7 @@ type alias VoteClaimModalOptions msg =
     , closeMsg : msg
     , claimId : Int
     , isApproving : Bool
+    , isInProgress : Bool
     }
 
 
@@ -394,7 +395,7 @@ viewPhotoModal { t } =
 
 
 viewVoteClaimModal : Translators -> VoteClaimModalOptions msg -> Html msg
-viewVoteClaimModal { t } { voteMsg, closeMsg, claimId, isApproving } =
+viewVoteClaimModal { t } { voteMsg, closeMsg, claimId, isApproving, isInProgress } =
     let
         text_ s =
             text (t s)
@@ -408,9 +409,19 @@ viewVoteClaimModal { t } { voteMsg, closeMsg, claimId, isApproving } =
             ]
 
         footer =
-            [ button [ class "modal-cancel", onClick closeMsg ]
+            [ button
+                [ class "modal-cancel"
+                , onClick closeMsg
+                , classList [ ( "button-disabled", isInProgress ) ]
+                , disabled isInProgress
+                ]
                 [ text_ "claim.modal.secondary" ]
-            , button [ class "modal-accept", onClick (voteMsg claimId isApproving) ]
+            , button
+                [ class "modal-accept"
+                , classList [ ( "button-disabled", isInProgress ) ]
+                , disabled isInProgress
+                , onClick (voteMsg claimId isApproving)
+                ]
                 [ if isApproving then
                     text_ "claim.modal.primary_approve"
 

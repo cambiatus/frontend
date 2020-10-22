@@ -135,22 +135,24 @@ view ({ shared } as loggedIn) model =
                               else
                                 viewEmptyResults loggedIn
                             ]
-                        , case model.claimModalStatus of
-                            Claim.VoteModal claimId vote ->
+                        , let
+                            viewVoteModal claimId isApproving isLoading =
                                 Claim.viewVoteClaimModal
                                     loggedIn.shared.translators
                                     { voteMsg = VoteClaim
                                     , closeMsg = ClaimMsg Claim.CloseClaimModals
                                     , claimId = claimId
-                                    , isApproving = vote
+                                    , isApproving = isApproving
+                                    , isInProgress = isLoading
                                     }
+                          in
+                          case model.claimModalStatus of
+                            Claim.VoteModal claimId vote ->
+                                viewVoteModal claimId vote False
 
-                            Claim.Loading ->
-                                Page.fullPageLoading
+                            Claim.Loading claimId vote ->
+                                viewVoteModal claimId vote True
 
-                            _ ->
-                                text ""
-                        , case model.claimModalStatus of
                             Claim.PhotoModal ->
                                 Claim.viewPhotoModal loggedIn.shared.translators
                                     |> Html.map ClaimMsg
@@ -358,7 +360,7 @@ update msg model loggedIn =
                     let
                         newModel =
                             { model
-                                | claimModalStatus = Claim.Loading
+                                | claimModalStatus = Claim.Loading claimId vote
                             }
                     in
                     if LoggedIn.isAuth loggedIn then

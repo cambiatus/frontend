@@ -16,7 +16,7 @@ import Page
 import Profile
 import Route
 import Session.LoggedIn as LoggedIn exposing (External)
-import Session.Shared exposing (Shared)
+import Session.Shared exposing (Shared, Translators)
 import Strftime
 import Time
 import UpdateResult as UR
@@ -36,8 +36,8 @@ init { shared } communityId claimId =
 
 type ModalStatus
     = ModalClosed
-    | ModalLoading Int Bool
-    | ModalOpened Int Bool
+    | ModalLoading Bool
+    | ModalOpened Bool
 
 
 
@@ -49,6 +49,7 @@ type alias Model =
     , claimId : Int
     , statusClaim : Status
     , modalStatus : ModalStatus
+    , isValidated : Bool
     }
 
 
@@ -58,6 +59,7 @@ initModel communityId claimId =
     , claimId = claimId
     , statusClaim = Loading
     , modalStatus = ModalClosed
+    , isValidated = False
     }
 
 
@@ -93,6 +95,12 @@ view ({ shared } as loggedIn) model =
                         Page.fullPageLoading
 
                     Loaded claim ->
+                        let
+                            isCurrentUserValidator =
+                                claim.action.validators
+                                    |> List.any
+                                        (\v -> v.account == loggedIn.accountName)
+                        in
                         div [ class "bg-gray-100 py-2" ]
                             [ Page.viewHeader loggedIn claim.action.description Route.Analysis
                             , div [ class "mt-10 mb-8" ]
@@ -103,47 +111,11 @@ view ({ shared } as loggedIn) model =
                                 , viewDetails shared model claim
                                 , viewVoters loggedIn claim
                                 ]
-                            , if Claim.isValidated claim loggedIn.accountName then
+                            , if model.isValidated || not isCurrentUserValidator then
                                 text ""
 
                               else
-                                let
-                                    viewVoteButtons =
-                                        div [ class "mb-8 border-t pt-8" ]
-                                            [ h3 [ class "font-bold mb-6 text-center" ]
-                                                [ text <| t "claim.voteTitle" ]
-                                            , div [ class "flex justify-around sm:justify-center sm:space-x-3" ]
-                                                [ button
-                                                    [ class "button button-secondary text-red"
-                                                    , onClick (OpenModal claim.id False)
-                                                    ]
-                                                    [ text <| t "dashboard.reject" ]
-                                                , button
-                                                    [ class "button button-primary"
-                                                    , onClick (OpenModal claim.id True)
-                                                    ]
-                                                    [ text <| t "dashboard.verify" ]
-                                                ]
-                                            ]
-                                in
-                                case model.modalStatus of
-                                    ModalClosed ->
-                                        viewVoteButtons
-
-                                    ModalOpened claimId vote ->
-                                        div []
-                                            [ viewVoteButtons
-                                            , Claim.viewVoteClaimModal
-                                                loggedIn.shared.translators
-                                                { voteMsg = VoteClaim
-                                                , closeMsg = CloseModal
-                                                , claimId = claimId
-                                                , isApproving = vote
-                                                }
-                                            ]
-
-                                    ModalLoading _ _ ->
-                                        Page.fullPageLoading
+                                viewVoteButtons shared.translators claim.id model.modalStatus
                             ]
 
                     Failed err ->
@@ -164,6 +136,47 @@ view ({ shared } as loggedIn) model =
             LoggedIn.FeatureLoading ->
                 Page.fullPageLoading
     }
+
+
+viewVoteButtons : Translators -> Int -> ModalStatus -> Html Msg
+viewVoteButtons ({ t } as translators) claimId modalStatus =
+    let
+        viewVoteModal : Bool -> Bool -> Html Msg
+        viewVoteModal isApproving isInProgress =
+            Claim.viewVoteClaimModal
+                translators
+                { voteMsg = VoteClaim
+                , closeMsg = CloseModal
+                , claimId = claimId
+                , isApproving = isApproving
+                , isInProgress = isInProgress
+                }
+    in
+    div [ class "mb-8 border-t pt-8" ]
+        [ h3 [ class "font-bold mb-6 text-center" ]
+            [ text <| t "claim.voteTitle" ]
+        , div [ class "flex justify-around sm:justify-center sm:space-x-3" ]
+            [ button
+                [ class "button button-secondary text-red"
+                , onClick (OpenModal False)
+                ]
+                [ text <| t "dashboard.reject" ]
+            , button
+                [ class "button button-primary"
+                , onClick (OpenModal True)
+                ]
+                [ text <| t "dashboard.verify" ]
+            ]
+        , case modalStatus of
+            ModalClosed ->
+                text ""
+
+            ModalLoading isApproving ->
+                viewVoteModal isApproving True
+
+            ModalOpened isApproving ->
+                viewVoteModal isApproving False
+        ]
 
 
 viewTitle : Shared -> Claim.Model -> Html msg
@@ -349,15 +362,22 @@ type Msg
     = ClaimLoaded (Result (Graphql.Http.Error Claim.Model) Claim.Model)
     | VoteClaim Int Bool
     | GotVoteResult Int (Result Decode.Value String)
-    | OpenModal Int Bool
+    | OpenModal Bool
     | CloseModal
 
 
 update : Msg -> Model -> LoggedIn.Model -> UpdateResult
 update msg model loggedIn =
+    let
+        { t, tr } =
+            loggedIn.shared.translators
+    in
     case msg of
         ClaimLoaded (Ok response) ->
-            { model | statusClaim = Loaded response }
+            { model
+                | statusClaim = Loaded response
+                , isValidated = Claim.isValidated response loggedIn.accountName
+            }
                 |> UR.init
 
         ClaimLoaded (Err err) ->
@@ -365,8 +385,8 @@ update msg model loggedIn =
                 |> UR.init
                 |> UR.logGraphqlError msg err
 
-        OpenModal claimId vote ->
-            { model | modalStatus = ModalOpened claimId vote } |> UR.init
+        OpenModal vote ->
+            { model | modalStatus = ModalOpened vote } |> UR.init
 
         CloseModal ->
             { model | modalStatus = ModalClosed } |> UR.init
@@ -377,7 +397,7 @@ update msg model loggedIn =
                     let
                         newModel =
                             { model
-                                | modalStatus = ModalLoading claimId vote
+                                | modalStatus = ModalLoading vote
                             }
                     in
                     if LoggedIn.isAuth loggedIn then
@@ -406,13 +426,13 @@ update msg model loggedIn =
                     model
                         |> UR.init
 
-        GotVoteResult claimId (Ok _) ->
+        GotVoteResult _ (Ok _) ->
             case model.statusClaim of
                 Loaded claim ->
                     let
                         message val =
                             [ ( "value", val ) ]
-                                |> I18Next.tr loggedIn.shared.translations I18Next.Curly "claim.reward"
+                                |> tr "claim.reward"
 
                         value =
                             String.fromFloat claim.action.verifierReward
@@ -420,19 +440,17 @@ update msg model loggedIn =
                                 ++ Eos.symbolToString claim.action.objective.community.symbol
                     in
                     { model
-                        | statusClaim = Loading
+                        | modalStatus = ModalClosed
+                        , isValidated = True
                     }
                         |> UR.init
                         |> UR.addExt (LoggedIn.ShowFeedback LoggedIn.Success (message value))
-                        |> UR.addCmd (fetchClaim claimId loggedIn.shared)
 
                 _ ->
                     { model
-                        | statusClaim = Loading
-                        , modalStatus = ModalClosed
+                        | modalStatus = ModalClosed
                     }
                         |> UR.init
-                        |> UR.addCmd (fetchClaim claimId loggedIn.shared)
 
         GotVoteResult _ (Err v) ->
             case model.statusClaim of
@@ -443,6 +461,7 @@ update msg model loggedIn =
                     }
                         |> UR.init
                         |> UR.logDebugValue msg v
+                        |> UR.addExt (LoggedIn.ShowFeedback LoggedIn.Failure (t "community.verifyClaim.error"))
 
                 _ ->
                     model
@@ -498,7 +517,7 @@ msgToString msg =
         GotVoteResult _ r ->
             [ "GotVoteResult", UR.resultToString r ]
 
-        OpenModal _ _ ->
+        OpenModal _ ->
             [ "OpenModal" ]
 
         CloseModal ->
