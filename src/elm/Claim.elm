@@ -291,7 +291,7 @@ viewClaimCard { selectedCommunity, shared, accountName } openConfirmationModalMs
 
         hasPhotoProof =
             -- TODO: replace this placeholder with the real data
-            claim.id == 17
+            claim.id == 41
     in
     div [ class "w-full sm:w-1/2 lg:w-1/3 xl:w-1/4 px-2 mb-4" ]
         [ div
@@ -309,15 +309,8 @@ viewClaimCard { selectedCommunity, shared, accountName } openConfirmationModalMs
                     ]
                     [ Profile.view shared accountName claim.claimer
                     , if hasPhotoProof then
-                        div
-                            [ class "cursor-pointer w-24 h-16 flex items-center justify-center overflow-hidden rounded-sm hover:shadow-outline"
-                            ]
-                            [ img
-                                [ onClick openPhotoMsg
-                                , src "/trash.png"
-                                ]
-                                []
-                            ]
+                        div [ class "claim-photo-thumb" ]
+                            [ img [ onClick openPhotoMsg, src "/trash.png" ] [] ]
 
                       else
                         text ""
