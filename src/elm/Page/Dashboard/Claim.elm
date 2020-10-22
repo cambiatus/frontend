@@ -96,16 +96,10 @@ view ({ shared } as loggedIn) model =
 
                     Loaded claim ->
                         let
-                            viewVoteModal : Bool -> Bool -> Html Msg
-                            viewVoteModal isApproving isLoading =
-                                Claim.viewVoteClaimModal
-                                    loggedIn.shared.translators
-                                    { voteMsg = VoteClaim
-                                    , closeMsg = CloseModal
-                                    , claimId = claim.id
-                                    , isApproving = isApproving
-                                    , isLoading = isLoading
-                                    }
+                            isCurrentUserValidator =
+                                claim.action.validators
+                                    |> List.any
+                                        (\v -> v.account == loggedIn.accountName)
                         in
                         div [ class "bg-gray-100 py-2" ]
                             [ Page.viewHeader loggedIn claim.action.description Route.Analysis
@@ -117,20 +111,11 @@ view ({ shared } as loggedIn) model =
                                 , viewDetails shared model claim
                                 , viewVoters loggedIn claim
                                 ]
-                            , if model.isValidated then
+                            , if model.isValidated || not isCurrentUserValidator then
                                 text ""
 
                               else
-                                viewVoteButtons shared.translators
-                            , case model.modalStatus of
-                                ModalClosed ->
-                                    text ""
-
-                                ModalLoading isApproving ->
-                                    viewVoteModal isApproving True
-
-                                ModalOpened isApproving ->
-                                    viewVoteModal isApproving False
+                                viewVoteButtons shared.translators claim.id model.modalStatus
                             ]
 
                     Failed err ->
@@ -153,8 +138,20 @@ view ({ shared } as loggedIn) model =
     }
 
 
-viewVoteButtons : Translators -> Html Msg
-viewVoteButtons { t } =
+viewVoteButtons : Translators -> Int -> ModalStatus -> Html Msg
+viewVoteButtons ({ t } as translators) claimId modalStatus =
+    let
+        viewVoteModal : Bool -> Bool -> Html Msg
+        viewVoteModal isApproving isInProgress =
+            Claim.viewVoteClaimModal
+                translators
+                { voteMsg = VoteClaim
+                , closeMsg = CloseModal
+                , claimId = claimId
+                , isApproving = isApproving
+                , isInProgress = isInProgress
+                }
+    in
     div [ class "mb-8 border-t pt-8" ]
         [ h3 [ class "font-bold mb-6 text-center" ]
             [ text <| t "claim.voteTitle" ]
@@ -170,6 +167,15 @@ viewVoteButtons { t } =
                 ]
                 [ text <| t "dashboard.verify" ]
             ]
+        , case modalStatus of
+            ModalClosed ->
+                text ""
+
+            ModalLoading isApproving ->
+                viewVoteModal isApproving True
+
+            ModalOpened isApproving ->
+                viewVoteModal isApproving False
         ]
 
 

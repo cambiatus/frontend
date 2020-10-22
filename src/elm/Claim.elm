@@ -224,7 +224,7 @@ type alias VoteClaimModalOptions msg =
     , closeMsg : msg
     , claimId : Int
     , isApproving : Bool
-    , isLoading : Bool
+    , isInProgress : Bool
     }
 
 
@@ -305,7 +305,7 @@ viewClaimCard { selectedCommunity, shared, accountName } openConfirmationModalMs
 
 
 viewVoteClaimModal : Translators -> VoteClaimModalOptions msg -> Html msg
-viewVoteClaimModal { t } { voteMsg, closeMsg, claimId, isApproving, isLoading } =
+viewVoteClaimModal { t } { voteMsg, closeMsg, claimId, isApproving, isInProgress } =
     let
         text_ s =
             text (t s)
@@ -322,14 +322,14 @@ viewVoteClaimModal { t } { voteMsg, closeMsg, claimId, isApproving, isLoading } 
             [ button
                 [ class "modal-cancel"
                 , onClick closeMsg
-                , classList [ ( "button-disabled", isLoading ) ]
-                , disabled isLoading
+                , classList [ ( "button-disabled", isInProgress ) ]
+                , disabled isInProgress
                 ]
                 [ text_ "claim.modal.secondary" ]
             , button
                 [ class "modal-accept"
-                , classList [ ( "button-disabled", isLoading ) ]
-                , disabled isLoading
+                , classList [ ( "button-disabled", isInProgress ) ]
+                , disabled isInProgress
                 , onClick (voteMsg claimId isApproving)
                 ]
                 [ if isApproving then

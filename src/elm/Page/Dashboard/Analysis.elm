@@ -148,7 +148,7 @@ view ({ shared } as loggedIn) model =
                                     , closeMsg = CloseModal
                                     , claimId = claimId
                                     , isApproving = isApproving
-                                    , isLoading = isLoading
+                                    , isInProgress = isLoading
                                     }
                           in
                           case model.modalStatus of

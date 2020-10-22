@@ -196,7 +196,7 @@ view loggedIn model =
                                     , closeMsg = CloseModal
                                     , claimId = claimId
                                     , isApproving = isApproving
-                                    , isLoading = isLoading
+                                    , isInProgress = isLoading
                                     }
                           in
                           case model.voteModalStatus of
