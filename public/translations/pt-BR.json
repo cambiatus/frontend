@@ -729,6 +729,7 @@
     "disapprove": "Reprovar",
     "approve": "Aprovar",
     "no_results_found": "Nenhum resultado encontrado",
+    "voteTitle": "Você aprova ou desaprova esta ação?",
     "modal": {
       "title": "Sob análise",
       "message_disapprove": "Você realmente deseja reprovar esta reivindicação?",

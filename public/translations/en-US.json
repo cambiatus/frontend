@@ -727,6 +727,7 @@
     "disapprove": "Disapprove",
     "approve": "Approve",
     "no_results_found": "No results found",
+    "voteTitle": "Do you approve or disapprove of this action?",
     "modal": {
       "title": "Under Review",
       "message_disapprove": "Do you really want to disapprove this action?",

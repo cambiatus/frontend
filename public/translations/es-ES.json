@@ -729,6 +729,7 @@
     "disapprove": "Desaprobar",
     "approve": "Aprobar",
     "no_results_found": "No se han encontrado resultados",
+    "voteTitle": "¿Aprueba o desaprueba esta acción?",
     "modal": {
       "title": "Bajo Revisión",
       "message_disapprove": "Realmente quiere desaprobar este reclamo?",
