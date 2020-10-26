@@ -95,7 +95,7 @@ view ({ shared } as loggedIn) model =
                                     |> List.any
                                         (\v -> v.account == loggedIn.accountName)
                         in
-                        div [ class "bg-gray-100 py-2" ]
+                        div [ class "bg-gray-100" ]
                             [ Page.viewHeader loggedIn claim.action.description Route.Analysis
                             , div [ class "mt-10 mb-8" ]
                                 [ Profile.viewLarge shared loggedIn.accountName claim.claimer
