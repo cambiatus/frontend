@@ -118,6 +118,9 @@ initObjectiveForm =
 view : LoggedIn.Model -> Model -> { title : String, content : Html Msg }
 view ({ shared } as loggedIn) model =
     let
+        { t } =
+            shared.translators
+
         title =
             case model.status of
                 Loaded _ editStatus ->
@@ -125,14 +128,14 @@ view ({ shared } as loggedIn) model =
                         action =
                             case editStatus of
                                 NewObjective _ ->
-                                    t shared.translations "menu.create"
+                                    t "menu.create"
 
                                 EditObjective _ _ ->
-                                    t shared.translations "menu.edit"
+                                    t "menu.edit"
                     in
                     action
                         ++ " "
-                        ++ t shared.translations "community.objectives.title"
+                        ++ t "community.objectives.title"
 
                 _ ->
                     ""
@@ -143,17 +146,17 @@ view ({ shared } as loggedIn) model =
                     Page.fullPageLoading
 
                 NotFound ->
-                    Page.fullPageNotFound (t shared.translations "community.objectives.editor.not_found") ""
+                    Page.fullPageNotFound (t "community.objectives.editor.not_found") ""
 
                 LoadCommunityFailed err ->
-                    Page.fullPageGraphQLError (t shared.translations "community.objectives.editor.error") err
+                    Page.fullPageGraphQLError (t "community.objectives.editor.error") err
 
                 Unauthorized ->
                     text "not allowed to edit"
 
                 Loaded { symbol } editStatus ->
                     div []
-                        [ Page.viewHeader loggedIn (t shared.translations "community.objectives.title") (Route.Objectives symbol)
+                        [ Page.viewHeader loggedIn (t "community.objectives.title") (Route.Objectives symbol)
                         , case editStatus of
                             NewObjective objForm ->
                                 viewForm loggedIn objForm
@@ -163,7 +166,18 @@ view ({ shared } as loggedIn) model =
                         ]
     in
     { title = title
-    , content = content
+    , content =
+        case loggedIn.hasObjectives of
+            LoggedIn.FeatureLoaded True ->
+                content
+
+            LoggedIn.FeatureLoaded False ->
+                Page.fullPageNotFound
+                    (t "error.pageNotFound")
+                    (t "community.objectives.disabled.description")
+
+            LoggedIn.FeatureLoading ->
+                Page.fullPageLoading
     }
 
 

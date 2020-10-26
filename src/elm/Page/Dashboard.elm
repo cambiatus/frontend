@@ -13,7 +13,6 @@ import Api
 import Api.Graphql
 import Api.Relay
 import Cambiatus.Query
-import Cambiatus.Scalar exposing (DateTime(..))
 import Claim
 import Community exposing (Balance)
 import Eos exposing (Symbol)
@@ -36,13 +35,11 @@ import Profile
 import Route
 import Session.LoggedIn as LoggedIn exposing (External(..))
 import Session.Shared exposing (Shared)
-import Strftime
 import Task
 import Time exposing (Posix)
 import Transfer exposing (QueryTransfers, Transfer)
 import UpdateResult as UR
 import Url
-import Utils
 import View.Modal as Modal
 
 
@@ -191,7 +188,23 @@ view loggedIn model =
                           else
                             text ""
                         , viewTransfers loggedIn model
-                        , viewAnalysisModal loggedIn model
+                        , let
+                            viewVoteModal claimId isApproving isLoading =
+                                Claim.viewVoteClaimModal
+                                    loggedIn.shared.translators
+                                    { voteMsg = VoteClaim
+                                    , closeMsg = CloseModal
+                                    , claimId = claimId
+                                    , isApproving = isApproving
+                                    , isInProgress = isLoading
+                                    }
+                          in
+                          case model.voteModalStatus of
+                            VoteModalOpened claimId vote ->
+                                viewVoteModal claimId vote False
+
+                            VoteModalClosed ->
+                                text ""
                         , viewInvitationModal loggedIn model
                         ]
 
@@ -201,50 +214,6 @@ view loggedIn model =
     { title = t "menu.dashboard"
     , content = content
     }
-
-
-viewAnalysisModal : LoggedIn.Model -> Model -> Html Msg
-viewAnalysisModal loggedIn model =
-    case model.voteModalStatus of
-        VoteModalOpened claimId vote ->
-            let
-                t s =
-                    I18Next.t loggedIn.shared.translations s
-
-                text_ s =
-                    text (t s)
-
-                body =
-                    [ if vote then
-                        text_ "claim.modal.message_approve"
-
-                      else
-                        text_ "claim.modal.message_disapprove"
-                    ]
-
-                footer =
-                    [ button [ class "modal-cancel", onClick CloseModal ]
-                        [ text_ "claim.modal.secondary" ]
-                    , button [ class "modal-accept", onClick (VoteClaim claimId vote) ]
-                        [ if vote then
-                            text_ "claim.modal.primary_approve"
-
-                          else
-                            text_ "claim.modal.primary_disapprove"
-                        ]
-                    ]
-            in
-            Modal.initWith
-                { closeMsg = CloseModal
-                , isVisible = True
-                }
-                |> Modal.withHeader (t "claim.modal.title")
-                |> Modal.withBody body
-                |> Modal.withFooter footer
-                |> Modal.toHtml
-
-        VoteModalClosed ->
-            text ""
 
 
 viewInvitationModal : LoggedIn.Model -> Model -> Html Msg
@@ -415,53 +384,9 @@ viewAnalysisList loggedIn profile model =
 
 viewAnalysis : LoggedIn.Model -> ClaimStatus -> Html Msg
 viewAnalysis ({ shared, selectedCommunity } as loggedIn) claimStatus =
-    let
-        text_ s =
-            text (I18Next.t shared.translations s)
-
-        date dateTime =
-            Just dateTime
-                |> Utils.posixDateTime
-                |> Strftime.format "%d %b %Y" Time.utc
-    in
     case claimStatus of
         ClaimLoaded claim ->
-            div
-                [ class "w-full md:w-1/2 lg:w-1/3 xl:w-1/4 px-2 mb-4"
-                ]
-                [ div
-                    [ class " flex flex-col p-4 my-2 rounded-lg bg-white"
-                    , id ("claim" ++ String.fromInt claim.id)
-                    ]
-                    [ a
-                        [ Route.href <| Route.Claim selectedCommunity claim.action.objective.id claim.action.id claim.id
-                        ]
-                        [ div [ class "flex justify-start mb-8" ]
-                            [ Profile.view shared loggedIn.accountName claim.claimer
-                            ]
-                        , div [ class "mb-6" ]
-                            [ p [ class "text-body" ]
-                                [ text claim.action.description ]
-                            , p
-                                [ class "text-gray-900 text-caption uppercase" ]
-                                [ text <| date claim.createdAt ]
-                            ]
-                        ]
-                    , div [ class "flex" ]
-                        [ button
-                            [ class "flex-1 button button-secondary font-medium text-red"
-                            , onClick (OpenModal claim.id False)
-                            ]
-                            [ text_ "dashboard.reject" ]
-                        , div [ class "w-4" ] []
-                        , button
-                            [ class "flex-1 button button-primary font-medium"
-                            , onClick (OpenModal claim.id True)
-                            ]
-                            [ text_ "dashboard.verify" ]
-                        ]
-                    ]
-                ]
+            Claim.viewClaimCard loggedIn OpenModal claim
 
         ClaimLoading _ ->
             div [ class "w-full md:w-1/2 lg:w-1/3 xl:w-1/4 px-2 mb-4" ]

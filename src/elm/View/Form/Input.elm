@@ -1,4 +1,4 @@
-module View.Form.Input exposing (init, input, toHtml, withCounter)
+module View.Form.Input exposing (init, input, toHtml, withAttrs, withCounter)
 
 {- | Creates a Cambiatus-style text input that supports error reporting, placeholders, localization
    and character counters.
@@ -53,6 +53,7 @@ init options =
     , problems = options.problems
     , maximumCounterValue = Nothing
     , translators = options.translators
+    , extraAttrs = []
     }
 
 
@@ -82,13 +83,15 @@ toHtml options =
 input : InputOptions a -> Html a
 input options =
     Html.input
-        [ id options.id
-        , onInput options.onInput
-        , class "input min-w-full"
-        , disabled options.disabled
-        , value options.value
-        , placeholder (Maybe.withDefault "" options.placeholder)
-        ]
+        ([ id options.id
+         , onInput options.onInput
+         , class "input min-w-full"
+         , disabled options.disabled
+         , value options.value
+         , placeholder (Maybe.withDefault "" options.placeholder)
+         ]
+            ++ options.extraAttrs
+        )
         []
 
 
@@ -101,6 +104,11 @@ For more information, see the InputCounter module
 withCounter : Int -> InputOptions a -> InputOptions a
 withCounter maximum options =
     { options | maximumCounterValue = Just maximum }
+
+
+withAttrs : List (Html.Attribute a) -> InputOptions a -> InputOptions a
+withAttrs attrs options =
+    { options | extraAttrs = attrs }
 
 
 
@@ -122,4 +130,5 @@ type alias InputOptions a =
     , problems : Maybe (List String)
     , translators : Translators
     , maximumCounterValue : Maybe Int
+    , extraAttrs : List (Html.Attribute a)
     }

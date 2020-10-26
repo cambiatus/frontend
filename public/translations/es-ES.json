@@ -80,6 +80,7 @@
     "tooShort": "Muy corto. Debes usar al menos {{minLength}} caracteres.",
     "tooLong": "Muy largo. Debes usar como maximo {{maxLength}} caracteres.",
     "invalidChar": "Carácter invalido. Utilice solo letras de la A a la Z y números del 1 al 5.",
+    "notAllowedChar": "'{{char}}' no está permitido. Utilice solo letras de la A a la Z y números del 1 al 5.",
     "alreadyTaken": "Ya esta en uso. Por favor, intenta de nuevo.",
     "notMember": "Este usuario no es miembro.",
     "chooseOrUploadLogo": "Escoje o sube tu propio logo.",
@@ -399,6 +400,9 @@
         "description_label": "¿Cual es tu objetivo?",
         "description_placeholder": "Define un objetivo que atienda el problema que enfrenta tu comunidad.",
         "submit": "Salvar"
+      },
+      "disabled": {
+        "description": "Las reclamaciones, las acciones y los objetivos están deshabilitados en esta comunidad."
       }
     },
     "actions": {
@@ -617,6 +621,9 @@
       "body": "¿Estás seguro de que quieres eliminar este item?",
       "confirm": "Sí",
       "cancel": "No"
+    },
+    "disabled": {
+      "description": "La tienda está deshabilitada en esta comunidad."
     }
   },
   "dashboard": {
@@ -722,6 +729,7 @@
     "disapprove": "Desaprobar",
     "approve": "Aprobar",
     "no_results_found": "No se han encontrado resultados",
+    "voteTitle": "¿Aprueba o desaprueba esta acción?",
     "modal": {
       "title": "Bajo Revisión",
       "message_disapprove": "Realmente quiere desaprobar este reclamo?",

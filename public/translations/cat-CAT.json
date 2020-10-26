@@ -80,6 +80,7 @@
     "tooShort": "Molt curta. Has d’emprar com a mínim {{minLength}} caràcters.",
     "tooLong": "Molt llarga. Has d’emprar com a màxim {{maxLength}} caràcters.",
     "invalidChar": "Caràcter no vàlid. Utilitzeu només lletres de l'A a Z i números de l'1 al 5.",
+    "notAllowedChar": "'{{char}}' no està permès. Utilitzeu només lletres de l'A a Z i números de l'1 al 5.",
     "alreadyTaken": "Ja està en ús. Si et plau, intenta-ho de nou.",
     "notMember": "Aquest usuari no és membre.",
     "chooseOrUploadLogo": "Escull o puja el teu propi logotip.",
@@ -399,6 +400,9 @@
         "description_label": "Quin és el teu objectiu?",
         "description_placeholder": "Defineix un objectiu que resolgui el problema al que s’enfronta la teva comunitat.",
         "submit": "Guardar"
+      },
+      "disabled": {
+        "description": "Les reclamacions, les accions i els objectius estan desactivats en aquesta comunitat."
       }
     },
     "actions": {
@@ -617,6 +621,9 @@
       "body": "Estàs segur de que vols eliminar aquest ítem?",
       "confirm": "Si",
       "cancel": "No"
+    },
+    "disabled": {
+      "description": "La botiga està desactivada en aquesta comunitat."
     }
   },
   "dashboard": {
@@ -721,6 +728,7 @@
     "disapprove": "Desaprovar",
     "approve": "Aprovar",
     "no_results_found": "Sense resultats",
+    "voteTitle": "Aproveu o rebutgeu aquesta acció?",
     "modal": {
       "title": "Sota Revisió",
       "message_disapprove": "Realment voleu rebutjar aquesta reclamació?",

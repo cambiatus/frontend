@@ -4,10 +4,12 @@ module Claim exposing
     , Paginated
     , claimPaginatedSelectionSet
     , encodeVerification
-    , isAlreadyValidated
+    , isValidated
     , paginatedPageInfo
     , paginatedToList
     , selectionSet
+    , viewClaimCard
+    , viewVoteClaimModal
     )
 
 import Api.Relay exposing (Edge, PageConnection)
@@ -22,11 +24,21 @@ import Cambiatus.Object.ClaimEdge
 import Cambiatus.Scalar exposing (DateTime(..))
 import Community exposing (Objective)
 import Eos
-import Eos.Account as Eos
+import Eos.Account
 import Graphql.OptionalArgument exposing (OptionalArgument(..))
 import Graphql.SelectionSet as SelectionSet exposing (SelectionSet, with)
+import Html exposing (Html, a, button, div, p, text)
+import Html.Attributes exposing (class, classList, disabled, id)
+import Html.Events exposing (onClick)
 import Json.Encode as Encode
 import Profile exposing (Profile)
+import Route
+import Session.LoggedIn as LoggedIn
+import Session.Shared exposing (Translators)
+import Strftime
+import Time
+import Utils
+import View.Modal as Modal
 
 
 type alias Model =
@@ -64,12 +76,12 @@ type alias Action =
     }
 
 
-isAlreadyValidated : Model -> Eos.Name -> Bool
-isAlreadyValidated claim user =
+isValidated : Model -> Eos.Account.Name -> Bool
+isValidated claim user =
     claim.status /= Pending || List.any (\c -> c.validator.account == user) claim.checks
 
 
-encodeVerification : Int -> Eos.Name -> Bool -> Encode.Value
+encodeVerification : Int -> Eos.Account.Name -> Bool -> Encode.Value
 encodeVerification claimId validator vote =
     let
         encodedClaimId : Encode.Value
@@ -78,7 +90,7 @@ encodeVerification claimId validator vote =
 
         encodedVerifier : Encode.Value
         encodedVerifier =
-            Eos.encodeName validator
+            Eos.Account.encodeName validator
 
         encodedVote : Encode.Value
         encodedVote =
@@ -201,3 +213,138 @@ paginatedPageInfo maybePaginated =
     Maybe.map
         (\a -> a.pageInfo)
         maybePaginated
+
+
+
+-- CLAIM CARD
+
+
+type alias VoteClaimModalOptions msg =
+    { voteMsg : Int -> Bool -> msg
+    , closeMsg : msg
+    , claimId : Int
+    , isApproving : Bool
+    , isInProgress : Bool
+    }
+
+
+{-| Claim card with a short claim overview. Used on Dashboard and Analysis pages.
+-}
+viewClaimCard : LoggedIn.Model -> (Int -> Bool -> msg) -> Model -> Html msg
+viewClaimCard { selectedCommunity, shared, accountName } openConfirmationModalMsg claim =
+    let
+        { t } =
+            shared.translators
+
+        date dateTime =
+            Just dateTime
+                |> Utils.posixDateTime
+                |> Strftime.format "%d %b %Y" Time.utc
+
+        ( claimStatus, textColor ) =
+            case claim.status of
+                Approved ->
+                    ( t "all_analysis.approved", "text-green" )
+
+                Rejected ->
+                    ( t "all_analysis.disapproved", "text-red" )
+
+                Pending ->
+                    ( t "all_analysis.pending", "text-black" )
+
+        claimRoute =
+            Route.Claim
+                selectedCommunity
+                claim.action.objective.id
+                claim.action.id
+                claim.id
+    in
+    div [ class "w-full sm:w-1/2 lg:w-1/3 xl:w-1/4 px-2 mb-4" ]
+        [ div
+            [ class "flex flex-col p-4 my-2 rounded-lg bg-white hover:shadow"
+            , id ("claim" ++ String.fromInt claim.id)
+            ]
+            [ a [ Route.href claimRoute ]
+                [ div [ class "flex justify-center mb-8" ]
+                    [ Profile.view shared accountName claim.claimer ]
+                , div [ class "bg-gray-100 flex items-center justify-center h-6 w-32 mb-2" ]
+                    [ p
+                        [ class ("text-caption uppercase " ++ textColor) ]
+                        [ text claimStatus ]
+                    ]
+                , div [ class "mb-6" ]
+                    [ p [ class "text-body" ]
+                        [ text claim.action.description ]
+                    , p
+                        [ class "text-gray-900 text-caption uppercase" ]
+                        [ text (date claim.createdAt) ]
+                    ]
+                ]
+            , if isValidated claim accountName then
+                a
+                    [ class "button button-secondary w-full font-medium mb-2"
+                    , Route.href claimRoute
+                    ]
+                    [ text (t "all_analysis.more_details") ]
+
+              else
+                div [ class "flex justify-between space-x-4" ]
+                    [ button
+                        [ class "button button-danger"
+                        , onClick (openConfirmationModalMsg claim.id False)
+                        ]
+                        [ text (t "dashboard.reject") ]
+                    , button
+                        [ class "button button-primary"
+                        , onClick (openConfirmationModalMsg claim.id True)
+                        ]
+                        [ text (t "dashboard.verify") ]
+                    ]
+            ]
+        ]
+
+
+viewVoteClaimModal : Translators -> VoteClaimModalOptions msg -> Html msg
+viewVoteClaimModal { t } { voteMsg, closeMsg, claimId, isApproving, isInProgress } =
+    let
+        text_ s =
+            text (t s)
+
+        body =
+            [ if isApproving then
+                text_ "claim.modal.message_approve"
+
+              else
+                text_ "claim.modal.message_disapprove"
+            ]
+
+        footer =
+            [ button
+                [ class "modal-cancel"
+                , onClick closeMsg
+                , classList [ ( "button-disabled", isInProgress ) ]
+                , disabled isInProgress
+                ]
+                [ text_ "claim.modal.secondary" ]
+            , button
+                [ class "modal-accept"
+                , classList [ ( "button-disabled", isInProgress ) ]
+                , disabled isInProgress
+                , onClick (voteMsg claimId isApproving)
+                ]
+                [ if isApproving then
+                    text_ "claim.modal.primary_approve"
+
+                  else
+                    text_ "claim.modal.primary_disapprove"
+                ]
+            ]
+    in
+    Modal.initWith
+        { closeMsg = closeMsg
+        , isVisible = True
+        }
+        |> Modal.withHeader (t "claim.modal.title")
+        |> Modal.withBody body
+        |> Modal.withFooter footer
+        |> Modal.toHtml

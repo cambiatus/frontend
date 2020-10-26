@@ -1,6 +1,7 @@
 module Session.LoggedIn exposing
     ( External(..)
     , ExternalMsg(..)
+    , FeatureStatus(..)
     , FeedbackStatus(..)
     , FeedbackVisibility(..)
     , Model
@@ -138,10 +139,15 @@ type alias Model =
     , auth : Auth.Model
     , showCommunitySelector : Bool
     , feedback : FeedbackVisibility
-    , hasShop : Bool
-    , hasObjectives : Bool
-    , hasKyc : Bool
+    , hasShop : FeatureStatus
+    , hasObjectives : FeatureStatus
+    , hasKyc : FeatureStatus
     }
+
+
+type FeatureStatus
+    = FeatureLoaded Bool
+    | FeatureLoading
 
 
 initModel : Shared -> Auth.Model -> Eos.Name -> Symbol -> Model
@@ -161,9 +167,9 @@ initModel shared authModel accountName selectedCommunity =
     , auth = authModel
     , feedback = Hidden
     , showCommunitySelector = False
-    , hasShop = True
-    , hasObjectives = False
-    , hasKyc = False
+    , hasShop = FeatureLoading
+    , hasObjectives = FeatureLoading
+    , hasKyc = FeatureLoading
     }
 
 
@@ -311,11 +317,6 @@ viewHelper thisMsg page profile_ ({ shared } as model) content =
             , ViewTransfer
             ]
 
-        isContentAllowed =
-            List.member page availableWithoutKyc
-                || not model.hasKyc
-                || (model.hasKyc && hasUserKycFilled)
-
         viewKycRestriction =
             div [ class "mx-auto container max-w-sm" ]
                 [ div [ class "my-6 mx-4 text-center" ]
@@ -351,11 +352,23 @@ viewHelper thisMsg page profile_ ({ shared } as model) content =
             Hidden ->
                 text ""
         , div [ class "flex-grow" ]
-            [ if isContentAllowed then
-                content
+            [ case model.hasKyc of
+                FeatureLoading ->
+                    div [ class "full-spinner-container h-full" ]
+                        [ div [ class "spinner spinner--delay mt-8" ] [] ]
 
-              else
-                viewKycRestriction
+                FeatureLoaded isKycEnabled ->
+                    let
+                        isContentAllowed =
+                            List.member page availableWithoutKyc
+                                || not isKycEnabled
+                                || (isKycEnabled && hasUserKycFilled)
+                    in
+                    if isContentAllowed then
+                        content
+
+                    else
+                        viewKycRestriction
             ]
         , viewFooter shared
         , Modal.initWith
@@ -596,20 +609,21 @@ viewMainMenu page model =
             [ Icons.dashboard iconClass
             , text (t model.shared.translations "menu.dashboard")
             ]
-        , if model.hasShop then
-            a
-                [ classList
-                    [ ( menuItemClass, True )
-                    , ( activeClass, isActive page (Route.Shop Shop.All) )
+        , case model.hasShop of
+            FeatureLoaded True ->
+                a
+                    [ classList
+                        [ ( menuItemClass, True )
+                        , ( activeClass, isActive page (Route.Shop Shop.All) )
+                        ]
+                    , Route.href (Route.Shop Shop.All)
                     ]
-                , Route.href (Route.Shop Shop.All)
-                ]
-                [ Icons.shop iconClass
-                , text (t model.shared.translations "menu.shop")
-                ]
+                    [ Icons.shop iconClass
+                    , text (t model.shared.translations "menu.shop")
+                    ]
 
-          else
-            text ""
+            _ ->
+                text ""
         ]
 
 
@@ -787,7 +801,11 @@ update msg model =
         CompletedLoadSettings (Ok settings_) ->
             case settings_ of
                 Just settings ->
-                    { model | hasShop = settings.hasShop, hasObjectives = settings.hasObjectives, hasKyc = settings.hasKyc }
+                    { model
+                        | hasShop = FeatureLoaded settings.hasShop
+                        , hasObjectives = FeatureLoaded settings.hasObjectives
+                        , hasKyc = FeatureLoaded settings.hasKyc
+                    }
                         |> UR.init
 
                 Nothing ->

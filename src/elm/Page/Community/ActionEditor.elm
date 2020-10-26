@@ -1170,7 +1170,18 @@ view ({ shared } as loggedIn) model =
                     Page.fullPageNotFound "not authorized" ""
     in
     { title = title
-    , content = content
+    , content =
+        case loggedIn.hasObjectives of
+            LoggedIn.FeatureLoaded True ->
+                content
+
+            LoggedIn.FeatureLoaded False ->
+                Page.fullPageNotFound
+                    (t "error.pageNotFound")
+                    (t "community.objectives.disabled.description")
+
+            LoggedIn.FeatureLoading ->
+                Page.fullPageLoading
     }
 
 

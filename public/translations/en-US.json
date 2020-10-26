@@ -80,6 +80,7 @@
     "tooShort": "Too short. Must be at least {{minLength}} characters.",
     "tooLong": "Too long. Must be at most {{maxLength}} characters.",
     "invalidChar": "Invalid character. Please use only letters from A to Z and numbers from 1 to 5.",
+    "notAllowedChar": "'{{char}}' is not allowed. Please use only letters from A to Z and numbers from 1 to 5.",
     "alreadyTaken": "This one is already taken. Please, Try another.",
     "notMember": "This user is not a member.",
     "chooseOrUploadLogo": "Choose or upload a logo.",
@@ -395,6 +396,9 @@
         "description_label": "What is your objective?",
         "description_placeholder": "Set a goal that helps resolve the community problem.",
         "submit": "Save"
+      },
+      "disabled": {
+        "description": "Claims, Actions, and Objectives are disabled in this community."
       }
     },
     "actions": {
@@ -615,6 +619,9 @@
       "body": "Are you sure you want to delete this item?",
       "confirm": "Yes",
       "cancel": "No"
+    },
+    "disabled": {
+      "description": "Shop is disabled in this community."
     }
   },
   "dashboard": {
@@ -720,6 +727,7 @@
     "disapprove": "Disapprove",
     "approve": "Approve",
     "no_results_found": "No results found",
+    "voteTitle": "Do you approve or disapprove of this action?",
     "modal": {
       "title": "Under Review",
       "message_disapprove": "Do you really want to disapprove this action?",
