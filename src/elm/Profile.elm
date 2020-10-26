@@ -31,13 +31,10 @@ module Profile exposing
     )
 
 import Avatar exposing (Avatar)
-import Cambiatus.Enum.DeleteAddressStatus exposing (DeleteAddressStatus)
-import Cambiatus.Enum.DeleteKycStatus exposing (DeleteKycStatus)
 import Cambiatus.Mutation
 import Cambiatus.Object
 import Cambiatus.Object.Community as Community
-import Cambiatus.Object.DeleteAddress
-import Cambiatus.Object.DeleteKyc
+import Cambiatus.Object.DeleteKycAddress
 import Cambiatus.Object.Profile as User
 import Cambiatus.Query
 import Cambiatus.Scalar exposing (Id(..))
@@ -231,7 +228,7 @@ upsertKycMutation account data =
 
 
 type alias DeleteKycResult =
-    { result : DeleteKycStatus
+    { result : String
     , status : String
     }
 
@@ -248,13 +245,13 @@ deleteKycMutation account =
             }
         }
         (SelectionSet.succeed DeleteKycResult
-            |> with Cambiatus.Object.DeleteKyc.status
-            |> with Cambiatus.Object.DeleteKyc.reason
+            |> with Cambiatus.Object.DeleteKycAddress.status
+            |> with Cambiatus.Object.DeleteKycAddress.reason
         )
 
 
 type alias DeleteAddressResult =
-    { result : DeleteAddressStatus
+    { result : String
     , status : String
     }
 
@@ -271,8 +268,8 @@ deleteAddressMutation account =
             }
         }
         (SelectionSet.succeed DeleteAddressResult
-            |> with Cambiatus.Object.DeleteAddress.status
-            |> with Cambiatus.Object.DeleteAddress.reason
+            |> with Cambiatus.Object.DeleteKycAddress.status
+            |> with Cambiatus.Object.DeleteKycAddress.reason
         )
 
 
