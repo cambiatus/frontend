@@ -1,4 +1,4 @@
-module View.Form exposing (label, primaryLabel)
+module View.Form exposing (label, noGrammarly, primaryLabel)
 
 import Html exposing (Html, span, text)
 import Html.Attributes exposing (class, for)
@@ -28,3 +28,8 @@ label id_ labelText =
         [ span [ class "text-green tracking-wide uppercase text-caption block mb-1" ]
             [ text labelText ]
         ]
+
+
+noGrammarly : Html.Attribute msg
+noGrammarly =
+    Html.Attributes.attribute "data-gramm_editor" "false"
