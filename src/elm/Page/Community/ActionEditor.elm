@@ -345,6 +345,7 @@ validateForm form =
         , reward = validate form.reward
         , validation = validation
         , verification = verification
+        , instructions = validate form.instructions
     }
 
 
