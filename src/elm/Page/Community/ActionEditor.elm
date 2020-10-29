@@ -53,6 +53,7 @@ import Task
 import Time
 import UpdateResult as UR
 import Utils
+import View.Form.InputCounter
 
 
 
@@ -144,6 +145,7 @@ type alias Form =
     , isCompleted : Bool
     , deadlineState : MaskedDate.State
     , saveStatus : SaveStatus
+    , instructions : Validator String
     }
 
 
@@ -157,6 +159,7 @@ initForm =
     , isCompleted = False
     , deadlineState = MaskedDate.initialState
     , saveStatus = NotAsked
+    , instructions = defaultInstructions
     }
 
 
@@ -229,6 +232,14 @@ editForm form action =
 
 defaultDescription : Validator String
 defaultDescription =
+    []
+        |> longerThan 10
+        |> shorterThan 256
+        |> newValidator "" (\v -> Just v) True
+
+
+defaultInstructions : Validator String
+defaultInstructions =
     []
         |> longerThan 10
         |> shorterThan 256
@@ -411,6 +422,7 @@ type Msg
     | OnRemoveVerifier Profile
     | SelectMsg (Select.Msg Profile)
     | EnteredDescription String
+    | EnteredInstructions String
     | EnteredReward String
     | EnteredDeadline String
     | DeadlineChanged MaskedDate.State
@@ -586,6 +598,14 @@ update msg model loggedIn =
                     model.form
             in
             { model | form = { oldForm | description = updateInput val model.form.description } }
+                |> UR.init
+
+        EnteredInstructions val ->
+            let
+                oldForm =
+                    model.form
+            in
+            { model | form = { oldForm | instructions = updateInput val model.form.instructions } }
                 |> UR.init
 
         EnteredReward val ->
@@ -1597,7 +1617,16 @@ viewManualVerificationForm ({ shared } as loggedIn) model community =
                                 , div []
                                     [ label [ class "input-label" ]
                                         [ text "Write here instructions for the users" ]
-                                    , textarea [ class "w-full form-input" ] []
+                                    , textarea
+                                        [ class "input textarea-input w-full"
+                                        , classList [ ( "border-red", hasErrors model.form.instructions ) ]
+                                        , rows 5
+                                        , onInput EnteredInstructions
+                                        , value (getInput model.form.instructions)
+                                        ]
+                                        []
+                                    , View.Form.InputCounter.view shared.translators.tr 256 (getInput model.form.instructions)
+                                    , viewFieldErrors (listErrors shared.translations model.form.instructions)
                                     ]
                                 ]
 
@@ -1771,6 +1800,9 @@ msgToString msg =
 
         EnteredDescription _ ->
             [ "EnteredDescription" ]
+
+        EnteredInstructions _ ->
+            [ "EnteredInstructions" ]
 
         EnteredReward _ ->
             [ "EnteredReward" ]
