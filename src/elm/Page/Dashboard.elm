@@ -397,7 +397,7 @@ viewAnalysis : LoggedIn.Model -> ClaimStatus -> Html Msg
 viewAnalysis ({ shared, selectedCommunity } as loggedIn) claimStatus =
     case claimStatus of
         ClaimLoaded claim ->
-            Claim.viewClaimCard loggedIn Claim.OpenVoteModal Claim.OpenPhotoModal claim
+            Claim.viewClaimCard loggedIn claim
                 |> Html.map ClaimMsg
 
         ClaimLoading _ ->

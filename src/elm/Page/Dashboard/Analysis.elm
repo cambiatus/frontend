@@ -119,7 +119,7 @@ view ({ shared } as loggedIn) model =
                 Loaded claims pageInfo ->
                     let
                         viewClaim claim =
-                            Claim.viewClaimCard loggedIn Claim.OpenVoteModal Claim.OpenPhotoModal claim
+                            Claim.viewClaimCard loggedIn claim
                                 |> Html.map ClaimMsg
                     in
                     div []

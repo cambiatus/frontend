@@ -260,8 +260,8 @@ updateClaimModalStatus msg model =
 
 {-| Claim card with a short claim overview. Used on Dashboard and Analysis pages.
 -}
-viewClaimCard : LoggedIn.Model -> (Int -> Bool -> msg) -> (Model -> msg) -> Model -> Html msg
-viewClaimCard { selectedCommunity, shared, accountName } openConfirmationModalMsg openPhotoMsg claim =
+viewClaimCard : LoggedIn.Model -> Model -> Html Msg
+viewClaimCard { selectedCommunity, shared, accountName } claim =
     let
         { t } =
             shared.translators
@@ -310,7 +310,7 @@ viewClaimCard { selectedCommunity, shared, accountName } openConfirmationModalMs
                     [ Profile.view shared accountName claim.claimer
                     , if hasPhotoProof then
                         div [ class "claim-photo-thumb" ]
-                            [ img [ onClick (openPhotoMsg claim), src "http://cambiatus.miskov.ru/trash.png" ] [] ]
+                            [ img [ onClick (OpenPhotoModal claim), src "http://cambiatus.miskov.ru/trash.png" ] [] ]
 
                       else
                         text ""
@@ -339,12 +339,12 @@ viewClaimCard { selectedCommunity, shared, accountName } openConfirmationModalMs
                 div [ class "flex justify-between space-x-4" ]
                     [ button
                         [ class "button button-danger"
-                        , onClick (openConfirmationModalMsg claim.id False)
+                        , onClick (OpenVoteModal claim.id False)
                         ]
                         [ text (t "dashboard.reject") ]
                     , button
                         [ class "button button-primary"
-                        , onClick (openConfirmationModalMsg claim.id True)
+                        , onClick (OpenVoteModal claim.id True)
                         ]
                         [ text (t "dashboard.verify") ]
                     ]
