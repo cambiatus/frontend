@@ -145,7 +145,7 @@ viewPhotoThumbnail claim =
         [ div [ class "claim-photo-thumb" ]
             [ img
                 [ onClick (ClaimMsg <| Claim.OpenPhotoModal claim)
-                , src "/trash.png"
+                , src "http://cambiatus.miskov.ru/trash.png"
                 ]
                 []
             ]

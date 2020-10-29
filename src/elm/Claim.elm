@@ -310,7 +310,7 @@ viewClaimCard { selectedCommunity, shared, accountName } openConfirmationModalMs
                     [ Profile.view shared accountName claim.claimer
                     , if hasPhotoProof then
                         div [ class "claim-photo-thumb" ]
-                            [ img [ onClick (openPhotoMsg claim), src "/trash.png" ] [] ]
+                            [ img [ onClick (openPhotoMsg claim), src "http://cambiatus.miskov.ru/trash.png" ] [] ]
 
                       else
                         text ""
@@ -360,7 +360,7 @@ viewPhotoModal loggedIn claim =
 
         body =
             [ div [ class "md:flex md:justify-start md:space-x-4" ]
-                [ img [ style "max-height" "42vh", src "/trash.png" ] []
+                [ img [ style "max-height" "42vh", src "http://cambiatus.miskov.ru/trash.png" ] []
                 , div []
                     [ label [ class "mt-6 md:mt-0 input-label md:text-xl block" ]
                         [ text "verification number"
