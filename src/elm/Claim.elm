@@ -344,27 +344,27 @@ viewClaimCard { selectedCommunity, shared, accountName } claim =
                     [ class "text-gray-900 text-caption uppercase" ]
                     [ text (date claim.createdAt) ]
                 ]
-            ]
-        , if isValidated claim accountName then
-            a
-                [ class "button button-secondary w-full font-medium mb-2"
-                , Route.href claimRoute
-                ]
-                [ text (t "all_analysis.more_details") ]
+            , if isValidated claim accountName then
+                a
+                    [ class "button button-secondary w-full font-medium mb-2"
+                    , Route.href claimRoute
+                    ]
+                    [ text (t "all_analysis.more_details") ]
 
-          else
-            div [ class "flex justify-between space-x-4" ]
-                [ button
-                    [ class "button button-danger"
-                    , onClick (OpenVoteModal claim.id False)
+              else
+                div [ class "flex justify-between space-x-4" ]
+                    [ button
+                        [ class "button button-danger"
+                        , Utils.onClickNoBubble (OpenVoteModal claim.id False)
+                        ]
+                        [ text (t "dashboard.reject") ]
+                    , button
+                        [ class "button button-primary"
+                        , Utils.onClickNoBubble (OpenVoteModal claim.id True)
+                        ]
+                        [ text (t "dashboard.verify") ]
                     ]
-                    [ text (t "dashboard.reject") ]
-                , button
-                    [ class "button button-primary"
-                    , onClick (OpenVoteModal claim.id True)
-                    ]
-                    [ text (t "dashboard.verify") ]
-                ]
+            ]
         ]
 
 
