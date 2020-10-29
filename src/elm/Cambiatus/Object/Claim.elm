@@ -79,6 +79,16 @@ id =
     Object.selectionForField "Int" "id" [] Decode.int
 
 
+proofCode : SelectionSet (Maybe String) Cambiatus.Object.Claim
+proofCode =
+    Object.selectionForField "(Maybe String)" "proofCode" [] (Decode.string |> Decode.nullable)
+
+
+proofPhoto : SelectionSet (Maybe String) Cambiatus.Object.Claim
+proofPhoto =
+    Object.selectionForField "(Maybe String)" "proofPhoto" [] (Decode.string |> Decode.nullable)
+
+
 status : SelectionSet Cambiatus.Enum.ClaimStatus.ClaimStatus Cambiatus.Object.Claim
 status =
     Object.selectionForField "Enum.ClaimStatus.ClaimStatus" "status" [] Cambiatus.Enum.ClaimStatus.decoder

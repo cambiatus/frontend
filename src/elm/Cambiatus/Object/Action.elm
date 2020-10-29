@@ -69,6 +69,16 @@ description =
     Object.selectionForField "String" "description" [] Decode.string
 
 
+hasProofCode : SelectionSet (Maybe Bool) Cambiatus.Object.Action
+hasProofCode =
+    Object.selectionForField "(Maybe Bool)" "hasProofCode" [] (Decode.bool |> Decode.nullable)
+
+
+hasProofPhoto : SelectionSet (Maybe Bool) Cambiatus.Object.Action
+hasProofPhoto =
+    Object.selectionForField "(Maybe Bool)" "hasProofPhoto" [] (Decode.bool |> Decode.nullable)
+
+
 id : SelectionSet Int Cambiatus.Object.Action
 id =
     Object.selectionForField "Int" "id" [] Decode.int
@@ -84,6 +94,11 @@ objective :
     -> SelectionSet decodesTo Cambiatus.Object.Action
 objective object_ =
     Object.selectionForCompositeField "objective" [] object_ identity
+
+
+photoProofInstructions : SelectionSet (Maybe String) Cambiatus.Object.Action
+photoProofInstructions =
+    Object.selectionForField "(Maybe String)" "photoProofInstructions" [] (Decode.string |> Decode.nullable)
 
 
 reward : SelectionSet Float Cambiatus.Object.Action
