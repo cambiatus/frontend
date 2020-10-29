@@ -268,6 +268,10 @@ updateClaimModalStatus msg model =
             model
 
 
+{-| This is a temporary function, will be removed after implementing
+the backend part for Claims with photos.
+-}
+tempHasPhotoProof : Model -> Bool
 tempHasPhotoProof claim =
     -- TODO: replace this placeholder with the real data
     claim.id == 41 || claim.id == 47

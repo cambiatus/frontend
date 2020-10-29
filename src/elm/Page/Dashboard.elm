@@ -394,7 +394,7 @@ viewVoteConfirmationModal loggedIn claimModalStatus =
 
 
 viewAnalysis : LoggedIn.Model -> ClaimStatus -> Html Msg
-viewAnalysis ({ shared, selectedCommunity } as loggedIn) claimStatus =
+viewAnalysis loggedIn claimStatus =
     case claimStatus of
         ClaimLoaded claim ->
             Claim.viewClaimCard loggedIn claim
