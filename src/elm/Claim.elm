@@ -58,7 +58,7 @@ type alias Model =
 type ModalStatus
     = Loading Int Bool
     | VoteConfirmationModal Int Bool
-    | PhotoModal Int
+    | PhotoModal Model
     | Closed
 
 
@@ -242,7 +242,7 @@ type alias VoteClaimModalOptions msg =
 type Msg
     = OpenVoteModal Int Bool
     | CloseClaimModals
-    | OpenPhotoModal Int
+    | OpenPhotoModal Model
 
 
 updateClaimModalStatus : Msg -> { m | claimModalStatus : ModalStatus } -> { m | claimModalStatus : ModalStatus }
@@ -260,7 +260,7 @@ updateClaimModalStatus msg model =
 
 {-| Claim card with a short claim overview. Used on Dashboard and Analysis pages.
 -}
-viewClaimCard : LoggedIn.Model -> (Int -> Bool -> msg) -> (Int -> msg) -> Model -> Html msg
+viewClaimCard : LoggedIn.Model -> (Int -> Bool -> msg) -> (Model -> msg) -> Model -> Html msg
 viewClaimCard { selectedCommunity, shared, accountName } openConfirmationModalMsg openPhotoMsg claim =
     let
         { t } =
@@ -310,7 +310,7 @@ viewClaimCard { selectedCommunity, shared, accountName } openConfirmationModalMs
                     [ Profile.view shared accountName claim.claimer
                     , if hasPhotoProof then
                         div [ class "claim-photo-thumb" ]
-                            [ img [ onClick (openPhotoMsg claim.id), src "/trash.png" ] [] ]
+                            [ img [ onClick (openPhotoMsg claim), src "/trash.png" ] [] ]
 
                       else
                         text ""
@@ -352,9 +352,12 @@ viewClaimCard { selectedCommunity, shared, accountName } openConfirmationModalMs
         ]
 
 
-viewPhotoModal : Translators -> Int -> Html Msg
-viewPhotoModal { t } claimId =
+viewPhotoModal : LoggedIn.Model -> Model -> Html Msg
+viewPhotoModal loggedIn claim =
     let
+        { t } =
+            loggedIn.shared.translators
+
         body =
             [ div [ class "md:flex md:justify-start md:space-x-4" ]
                 [ img [ style "max-height" "42vh", src "/trash.png" ] []
@@ -367,18 +370,24 @@ viewPhotoModal { t } claimId =
                 ]
             ]
 
-        footer =
-            [ button
-                [ class "button button-secondary text-red"
-                , onClick (OpenVoteModal claimId False)
-                ]
-                [ text <| t "dashboard.reject" ]
-            , button
-                [ class "button button-primary"
-                , onClick (OpenVoteModal claimId True)
-                ]
-                [ text <| t "dashboard.verify" ]
-            ]
+        withPhotoModalFooter =
+            if isValidated claim loggedIn.accountName then
+                -- Don't show footer if the Claim is already validated by the current user
+                identity
+
+            else
+                Modal.withFooter
+                    [ button
+                        [ class "modal-cancel"
+                        , onClick (OpenVoteModal claim.id False)
+                        ]
+                        [ text <| t "dashboard.reject" ]
+                    , button
+                        [ class "modal-accept"
+                        , onClick (OpenVoteModal claim.id True)
+                        ]
+                        [ text <| t "dashboard.verify" ]
+                    ]
     in
     Modal.initWith
         { closeMsg = CloseClaimModals
@@ -386,7 +395,7 @@ viewPhotoModal { t } claimId =
         }
         |> Modal.withHeader (t "dashboard.claim")
         |> Modal.withBody body
-        |> Modal.withFooter footer
+        |> withPhotoModalFooter
         |> Modal.toHtml
 
 

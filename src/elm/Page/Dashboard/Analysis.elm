@@ -153,8 +153,8 @@ view ({ shared } as loggedIn) model =
                             Claim.Loading claimId vote ->
                                 viewVoteModal claimId vote True
 
-                            Claim.PhotoModal claimId ->
-                                Claim.viewPhotoModal loggedIn.shared.translators claimId
+                            Claim.PhotoModal claim ->
+                                Claim.viewPhotoModal loggedIn claim
                                     |> Html.map ClaimMsg
 
                             _ ->

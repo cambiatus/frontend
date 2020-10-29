@@ -357,7 +357,7 @@ viewAnalysisList loggedIn profile model =
                         in
                         div [ class "flex flex-wrap -mx-2" ] <|
                             List.append pendingClaims
-                                [ viewVoteConfirmationModal loggedIn.shared.translators model.claimModalStatus ]
+                                [ viewVoteConfirmationModal loggedIn model.claimModalStatus ]
                     ]
                 ]
 
@@ -365,12 +365,12 @@ viewAnalysisList loggedIn profile model =
             div [] [ Page.fullPageGraphQLError "Failed load" err ]
 
 
-viewVoteConfirmationModal : Translators -> Claim.ModalStatus -> Html Msg
-viewVoteConfirmationModal translators claimModalStatus =
+viewVoteConfirmationModal : LoggedIn.Model -> Claim.ModalStatus -> Html Msg
+viewVoteConfirmationModal loggedIn claimModalStatus =
     let
         viewVoteModal claimId isApproving isLoading =
             Claim.viewVoteClaimModal
-                translators
+                loggedIn.shared.translators
                 { voteMsg = VoteClaim
                 , closeMsg = ClaimMsg Claim.CloseClaimModals
                 , claimId = claimId
@@ -385,8 +385,8 @@ viewVoteConfirmationModal translators claimModalStatus =
         Claim.Loading claimId vote ->
             viewVoteModal claimId vote True
 
-        Claim.PhotoModal claimId ->
-            Claim.viewPhotoModal translators claimId
+        Claim.PhotoModal claim ->
+            Claim.viewPhotoModal loggedIn claim
                 |> Html.map ClaimMsg
 
         Claim.Closed ->

@@ -102,13 +102,13 @@ view ({ shared } as loggedIn) model =
                                 ]
                             , div [ class "mx-auto container px-4" ]
                                 [ viewTitle shared claim
-                                , viewPhotoThumbnail claim.id
+                                , viewPhotoThumbnail claim
                                 , viewDetails shared model claim
                                 , viewVoters loggedIn claim
                                 ]
                             , case model.claimModalStatus of
-                                Claim.PhotoModal claimId ->
-                                    Claim.viewPhotoModal shared.translators claimId
+                                Claim.PhotoModal c ->
+                                    Claim.viewPhotoModal loggedIn c
                                         |> Html.map ClaimMsg
 
                                 _ ->
@@ -139,11 +139,12 @@ view ({ shared } as loggedIn) model =
     }
 
 
-viewPhotoThumbnail claimId =
+viewPhotoThumbnail : Claim.Model -> Html Msg
+viewPhotoThumbnail claim =
     div [ class "mb-8 flex" ]
         [ div [ class "claim-photo-thumb" ]
             [ img
-                [ onClick (ClaimMsg <| Claim.OpenPhotoModal claimId)
+                [ onClick (ClaimMsg <| Claim.OpenPhotoModal claim)
                 , src "/trash.png"
                 ]
                 []
