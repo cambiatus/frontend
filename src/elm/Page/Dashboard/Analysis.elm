@@ -351,8 +351,18 @@ update msg model loggedIn =
             { model | status = Failed } |> UR.init
 
         ClaimMsg m ->
+            let
+                claimCmd =
+                    case m of
+                        Claim.RouteOpened r ->
+                            Route.replaceUrl loggedIn.shared.navKey r
+
+                        _ ->
+                            Cmd.none
+            in
             Claim.updateClaimModalStatus m model
                 |> UR.init
+                |> UR.addCmd claimCmd
 
         VoteClaim claimId vote ->
             case model.status of

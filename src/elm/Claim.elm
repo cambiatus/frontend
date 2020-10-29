@@ -37,7 +37,7 @@ import Html.Attributes exposing (class, classList, disabled, id, src, style)
 import Html.Events exposing (onClick)
 import Json.Encode as Encode
 import Profile exposing (Profile)
-import Route
+import Route exposing (Route)
 import Session.LoggedIn as LoggedIn
 import Session.Shared exposing (Translators)
 import Strftime
@@ -244,6 +244,7 @@ type Msg
     = OpenVoteModal Int Bool
     | CloseClaimModals
     | OpenPhotoModal Model
+    | RouteOpened Route
 
 
 updateClaimModalStatus : Msg -> { m | claimModalStatus : ModalStatus } -> { m | claimModalStatus : ModalStatus }
@@ -257,6 +258,9 @@ updateClaimModalStatus msg model =
 
         OpenPhotoModal claimId ->
             { model | claimModalStatus = PhotoModal claimId }
+
+        RouteOpened _ ->
+            model
 
 
 tempHasPhotoProof claim =
@@ -297,60 +301,65 @@ viewClaimCard { selectedCommunity, shared, accountName } claim =
     in
     div [ class "w-full sm:w-1/2 lg:w-1/3 xl:w-1/4 px-2 mb-4" ]
         [ div
-            [ class "flex flex-col p-4 my-2 rounded-lg bg-white hover:shadow"
+            [ class "flex flex-col p-4 my-2 rounded-lg bg-white hover:shadow cursor-pointer"
             , id ("claim" ++ String.fromInt claim.id)
-            ]
-            [ -- a [ Route.href claimRoute ]
-              div []
-                [ div
-                    [ class "flex mb-8"
-                    , classList
-                        [ ( "justify-center", not <| tempHasPhotoProof claim )
-                        , ( "justify-between", tempHasPhotoProof claim )
-                        ]
-                    ]
-                    [ Profile.view shared accountName claim.claimer
-                    , if tempHasPhotoProof claim then
-                        div [ class "claim-photo-thumb" ]
-                            [ img [ onClick (OpenPhotoModal claim), src "http://cambiatus.miskov.ru/trash.png" ] [] ]
 
-                      else
-                        text ""
-                    ]
-                , div [ class "bg-gray-100 flex items-center justify-center h-6 w-32 mb-2" ]
-                    [ p
-                        [ class ("text-caption uppercase " ++ textColor) ]
-                        [ text claimStatus ]
-                    ]
-                , div [ class "mb-6" ]
-                    [ p [ class "text-body" ]
-                        [ text claim.action.description ]
-                    , p
-                        [ class "text-gray-900 text-caption uppercase" ]
-                        [ text (date claim.createdAt) ]
+            -- We can't just use `a` with `href` here because there are other `a`-nodes inside.
+            , onClick <| RouteOpened claimRoute
+            ]
+            [ div
+                [ class "flex mb-8"
+                , classList
+                    [ ( "justify-center", not <| tempHasPhotoProof claim )
+                    , ( "justify-between", tempHasPhotoProof claim )
                     ]
                 ]
-            , if isValidated claim accountName then
-                a
-                    [ class "button button-secondary w-full font-medium mb-2"
-                    , Route.href claimRoute
-                    ]
-                    [ text (t "all_analysis.more_details") ]
+                [ Profile.view shared accountName claim.claimer
+                , if tempHasPhotoProof claim then
+                    div [ class "claim-photo-thumb" ]
+                        [ img
+                            [ Utils.onClickNoBubble (OpenPhotoModal claim)
+                            , src "http://cambiatus.miskov.ru/trash.png"
+                            ]
+                            []
+                        ]
 
-              else
-                div [ class "flex justify-between space-x-4" ]
-                    [ button
-                        [ class "button button-danger"
-                        , onClick (OpenVoteModal claim.id False)
-                        ]
-                        [ text (t "dashboard.reject") ]
-                    , button
-                        [ class "button button-primary"
-                        , onClick (OpenVoteModal claim.id True)
-                        ]
-                        [ text (t "dashboard.verify") ]
-                    ]
+                  else
+                    text ""
+                ]
+            , div [ class "bg-gray-100 flex items-center justify-center h-6 w-32 mb-2" ]
+                [ p
+                    [ class ("text-caption uppercase " ++ textColor) ]
+                    [ text claimStatus ]
+                ]
+            , div [ class "mb-6" ]
+                [ p [ class "text-body" ]
+                    [ text claim.action.description ]
+                , p
+                    [ class "text-gray-900 text-caption uppercase" ]
+                    [ text (date claim.createdAt) ]
+                ]
             ]
+        , if isValidated claim accountName then
+            a
+                [ class "button button-secondary w-full font-medium mb-2"
+                , Route.href claimRoute
+                ]
+                [ text (t "all_analysis.more_details") ]
+
+          else
+            div [ class "flex justify-between space-x-4" ]
+                [ button
+                    [ class "button button-danger"
+                    , onClick (OpenVoteModal claim.id False)
+                    ]
+                    [ text (t "dashboard.reject") ]
+                , button
+                    [ class "button button-primary"
+                    , onClick (OpenVoteModal claim.id True)
+                    ]
+                    [ text (t "dashboard.verify") ]
+                ]
         ]
 
 

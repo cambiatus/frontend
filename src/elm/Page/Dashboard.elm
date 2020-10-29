@@ -34,7 +34,7 @@ import Page
 import Profile
 import Route
 import Session.LoggedIn as LoggedIn exposing (External(..))
-import Session.Shared exposing (Shared, Translators)
+import Session.Shared exposing (Shared)
 import Task
 import Time exposing (Posix)
 import Transfer exposing (QueryTransfers, Transfer)
@@ -634,8 +634,18 @@ update msg model loggedIn =
                 |> UR.logGraphqlError msg err
 
         ClaimMsg m ->
+            let
+                claimCmd =
+                    case m of
+                        Claim.RouteOpened r ->
+                            Route.replaceUrl loggedIn.shared.navKey r
+
+                        _ ->
+                            Cmd.none
+            in
             Claim.updateClaimModalStatus m model
                 |> UR.init
+                |> UR.addCmd claimCmd
 
         VoteClaim claimId vote ->
             case model.analysis of
