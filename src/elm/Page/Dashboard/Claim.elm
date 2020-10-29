@@ -89,12 +89,6 @@ view ({ shared } as loggedIn) model =
                         Page.fullPageLoading
 
                     Loaded claim ->
-                        let
-                            isCurrentUserValidator =
-                                claim.action.validators
-                                    |> List.any
-                                        (\v -> v.account == loggedIn.accountName)
-                        in
                         div [ class "bg-gray-100" ]
                             [ Page.viewHeader loggedIn claim.action.description Route.Analysis
                             , div [ class "mt-10 mb-8" ]
@@ -116,11 +110,11 @@ view ({ shared } as loggedIn) model =
                                         |> Html.map ClaimMsg
 
                                 _ ->
-                                    if model.isValidated || not isCurrentUserValidator then
-                                        text ""
+                                    if Claim.isVotable claim loggedIn.accountName then
+                                        viewVoteButtons shared.translators claim.id model.claimModalStatus
 
                                     else
-                                        viewVoteButtons shared.translators claim.id model.claimModalStatus
+                                        text ""
                             ]
 
                     Failed err ->

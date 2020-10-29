@@ -8,6 +8,8 @@ module Claim exposing
     , claimPaginatedSelectionSet
     , encodeVerification
     , isValidated
+    , isValidator
+    , isVotable
     , paginatedPageInfo
     , paginatedToList
     , selectionSet
@@ -96,6 +98,19 @@ type alias Action =
 isValidated : Model -> Eos.Account.Name -> Bool
 isValidated claim user =
     claim.status /= Pending || List.any (\c -> c.validator.account == user) claim.checks
+
+
+isValidator : Eos.Account.Name -> Model -> Bool
+isValidator accountName claim =
+    claim.action.validators
+        |> List.any
+            (\v -> v.account == accountName)
+
+
+isVotable : Model -> Eos.Account.Name -> Bool
+isVotable claim accountName =
+    isValidator accountName claim
+        && not (isValidated claim accountName)
 
 
 encodeVerification : ClaimId -> Eos.Account.Name -> Bool -> Encode.Value
@@ -391,11 +406,7 @@ viewPhotoModal loggedIn claim =
             ]
 
         withPhotoModalFooter =
-            if isValidated claim loggedIn.accountName then
-                -- Don't show footer if the Claim is already validated by the current user
-                identity
-
-            else
+            if isVotable claim loggedIn.accountName then
                 Modal.withFooter
                     [ button
                         [ class "modal-cancel"
@@ -408,6 +419,11 @@ viewPhotoModal loggedIn claim =
                         ]
                         [ text <| t "dashboard.verify" ]
                     ]
+
+            else
+                -- Don't show footer if the Claim is already validated by the current user
+                -- or if current user is not a validator.
+                identity
     in
     Modal.initWith
         { closeMsg = CloseClaimModals
