@@ -34,7 +34,7 @@ import Page
 import Profile
 import Route
 import Session.LoggedIn as LoggedIn exposing (External(..))
-import Session.Shared exposing (Shared)
+import Session.Shared exposing (Shared, Translators)
 import Task
 import Time exposing (Posix)
 import Transfer exposing (QueryTransfers, Transfer)
@@ -183,30 +183,6 @@ view loggedIn model =
                           else
                             text ""
                         , viewTransfers loggedIn model
-                        , let
-                            viewVoteModal claimId isApproving isLoading =
-                                Claim.viewVoteClaimModal
-                                    loggedIn.shared.translators
-                                    { voteMsg = VoteClaim
-                                    , closeMsg = ClaimMsg Claim.CloseClaimModals
-                                    , claimId = claimId
-                                    , isApproving = isApproving
-                                    , isInProgress = isLoading
-                                    }
-                          in
-                          case model.claimModalStatus of
-                            Claim.VoteConfirmationModal claimId vote ->
-                                viewVoteModal claimId vote False
-
-                            Claim.Loading claimId vote ->
-                                viewVoteModal claimId vote True
-
-                            Claim.PhotoModal claimId ->
-                                Claim.viewPhotoModal loggedIn.shared.translators claimId
-                                    |> Html.map ClaimMsg
-
-                            Claim.Closed ->
-                                text ""
                         , viewInvitationModal loggedIn model
                         ]
 
@@ -375,13 +351,46 @@ viewAnalysisList loggedIn profile model =
                             ]
 
                       else
-                        div [ class "flex flex-wrap -mx-2" ]
-                            (List.map (viewAnalysis loggedIn) claims)
+                        let
+                            pendingClaims =
+                                List.map (viewAnalysis loggedIn) claims
+                        in
+                        div [ class "flex flex-wrap -mx-2" ] <|
+                            List.append pendingClaims
+                                [ viewVoteConfirmationModal loggedIn.shared.translators model.claimModalStatus ]
                     ]
                 ]
 
         FailedGraphql err ->
             div [] [ Page.fullPageGraphQLError "Failed load" err ]
+
+
+viewVoteConfirmationModal : Translators -> Claim.ModalStatus -> Html Msg
+viewVoteConfirmationModal translators claimModalStatus =
+    let
+        viewVoteModal claimId isApproving isLoading =
+            Claim.viewVoteClaimModal
+                translators
+                { voteMsg = VoteClaim
+                , closeMsg = ClaimMsg Claim.CloseClaimModals
+                , claimId = claimId
+                , isApproving = isApproving
+                , isInProgress = isLoading
+                }
+    in
+    case claimModalStatus of
+        Claim.VoteConfirmationModal claimId vote ->
+            viewVoteModal claimId vote False
+
+        Claim.Loading claimId vote ->
+            viewVoteModal claimId vote True
+
+        Claim.PhotoModal claimId ->
+            Claim.viewPhotoModal translators claimId
+                |> Html.map ClaimMsg
+
+        Claim.Closed ->
+            text ""
 
 
 viewAnalysis : LoggedIn.Model -> ClaimStatus -> Html Msg
