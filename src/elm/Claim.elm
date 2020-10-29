@@ -1,14 +1,22 @@
 module Claim exposing
-    ( ClaimStatus(..)
+    ( ClaimId
+    , ClaimStatus(..)
+    , ModalStatus(..)
     , Model
+    , Msg(..)
     , Paginated
     , claimPaginatedSelectionSet
     , encodeVerification
     , isValidated
+    , isValidator
+    , isVotable
     , paginatedPageInfo
     , paginatedToList
     , selectionSet
+    , tempHasPhotoProof
+    , updateClaimModalStatus
     , viewClaimCard
+    , viewPhotoModal
     , viewVoteClaimModal
     )
 
@@ -27,12 +35,12 @@ import Eos
 import Eos.Account
 import Graphql.OptionalArgument exposing (OptionalArgument(..))
 import Graphql.SelectionSet as SelectionSet exposing (SelectionSet, with)
-import Html exposing (Html, a, button, div, p, text)
-import Html.Attributes exposing (class, classList, disabled, id)
+import Html exposing (Html, a, button, div, img, label, p, strong, text)
+import Html.Attributes exposing (class, classList, disabled, id, src, style)
 import Html.Events exposing (onClick)
 import Json.Encode as Encode
 import Profile exposing (Profile)
-import Route
+import Route exposing (Route)
 import Session.LoggedIn as LoggedIn
 import Session.Shared exposing (Translators)
 import Strftime
@@ -42,7 +50,7 @@ import View.Modal as Modal
 
 
 type alias Model =
-    { id : Int
+    { id : ClaimId
     , status : ClaimStatus
     , claimer : Profile
     , action : Action
@@ -51,10 +59,21 @@ type alias Model =
     }
 
 
+type ModalStatus
+    = Loading ClaimId Bool
+    | VoteConfirmationModal ClaimId Bool
+    | PhotoModal Model
+    | Closed
+
+
 type ClaimStatus
     = Approved
     | Rejected
     | Pending
+
+
+type alias ClaimId =
+    Int
 
 
 type alias Check =
@@ -81,7 +100,20 @@ isValidated claim user =
     claim.status /= Pending || List.any (\c -> c.validator.account == user) claim.checks
 
 
-encodeVerification : Int -> Eos.Account.Name -> Bool -> Encode.Value
+isValidator : Eos.Account.Name -> Model -> Bool
+isValidator accountName claim =
+    claim.action.validators
+        |> List.any
+            (\v -> v.account == accountName)
+
+
+isVotable : Model -> Eos.Account.Name -> Bool
+isVotable claim accountName =
+    isValidator accountName claim
+        && not (isValidated claim accountName)
+
+
+encodeVerification : ClaimId -> Eos.Account.Name -> Bool -> Encode.Value
 encodeVerification claimId validator vote =
     let
         encodedClaimId : Encode.Value
@@ -220,18 +252,50 @@ paginatedPageInfo maybePaginated =
 
 
 type alias VoteClaimModalOptions msg =
-    { voteMsg : Int -> Bool -> msg
+    { voteMsg : ClaimId -> Bool -> msg
     , closeMsg : msg
-    , claimId : Int
+    , claimId : ClaimId
     , isApproving : Bool
     , isInProgress : Bool
     }
 
 
+type Msg
+    = OpenVoteModal ClaimId Bool
+    | CloseClaimModals
+    | OpenPhotoModal Model
+    | RouteOpened Route
+
+
+updateClaimModalStatus : Msg -> { m | claimModalStatus : ModalStatus } -> { m | claimModalStatus : ModalStatus }
+updateClaimModalStatus msg model =
+    case msg of
+        OpenVoteModal claimId vote ->
+            { model | claimModalStatus = VoteConfirmationModal claimId vote }
+
+        CloseClaimModals ->
+            { model | claimModalStatus = Closed }
+
+        OpenPhotoModal claimId ->
+            { model | claimModalStatus = PhotoModal claimId }
+
+        RouteOpened _ ->
+            model
+
+
+{-| This is a temporary function, will be removed after implementing
+the backend part for Claims with photos.
+-}
+tempHasPhotoProof : Model -> Bool
+tempHasPhotoProof claim =
+    -- TODO: replace this placeholder with the real data
+    claim.id == 41 || claim.id == 47
+
+
 {-| Claim card with a short claim overview. Used on Dashboard and Analysis pages.
 -}
-viewClaimCard : LoggedIn.Model -> (Int -> Bool -> msg) -> Model -> Html msg
-viewClaimCard { selectedCommunity, shared, accountName } openConfirmationModalMsg claim =
+viewClaimCard : LoggedIn.Model -> Model -> Html Msg
+viewClaimCard { selectedCommunity, shared, accountName } claim =
     let
         { t } =
             shared.translators
@@ -261,24 +325,43 @@ viewClaimCard { selectedCommunity, shared, accountName } openConfirmationModalMs
     in
     div [ class "w-full sm:w-1/2 lg:w-1/3 xl:w-1/4 px-2 mb-4" ]
         [ div
-            [ class "flex flex-col p-4 my-2 rounded-lg bg-white hover:shadow"
+            [ class "flex flex-col p-4 my-2 rounded-lg bg-white hover:shadow cursor-pointer"
             , id ("claim" ++ String.fromInt claim.id)
+
+            -- We can't just use `a` with `href` here because there are other `a`-nodes inside.
+            , onClick <| RouteOpened claimRoute
             ]
-            [ a [ Route.href claimRoute ]
-                [ div [ class "flex justify-center mb-8" ]
-                    [ Profile.view shared accountName claim.claimer ]
-                , div [ class "bg-gray-100 flex items-center justify-center h-6 w-32 mb-2" ]
-                    [ p
-                        [ class ("text-caption uppercase " ++ textColor) ]
-                        [ text claimStatus ]
+            [ div
+                [ class "flex mb-8"
+                , classList
+                    [ ( "justify-center", not <| tempHasPhotoProof claim )
+                    , ( "justify-between", tempHasPhotoProof claim )
                     ]
-                , div [ class "mb-6" ]
-                    [ p [ class "text-body" ]
-                        [ text claim.action.description ]
-                    , p
-                        [ class "text-gray-900 text-caption uppercase" ]
-                        [ text (date claim.createdAt) ]
-                    ]
+                ]
+                [ Profile.view shared accountName claim.claimer
+                , if tempHasPhotoProof claim then
+                    div [ class "claim-photo-thumb" ]
+                        [ img
+                            [ Utils.onClickNoBubble (OpenPhotoModal claim)
+                            , src "http://cambiatus.miskov.ru/trash.png"
+                            ]
+                            []
+                        ]
+
+                  else
+                    text ""
+                ]
+            , div [ class "bg-gray-100 flex items-center justify-center h-6 w-32 mb-2" ]
+                [ p
+                    [ class ("text-caption uppercase " ++ textColor) ]
+                    [ text claimStatus ]
+                ]
+            , div [ class "mb-6" ]
+                [ p [ class "text-body" ]
+                    [ text claim.action.description ]
+                , p
+                    [ class "text-gray-900 text-caption uppercase" ]
+                    [ text (date claim.createdAt) ]
                 ]
             , if isValidated claim accountName then
                 a
@@ -291,17 +374,65 @@ viewClaimCard { selectedCommunity, shared, accountName } openConfirmationModalMs
                 div [ class "flex justify-between space-x-4" ]
                     [ button
                         [ class "button button-danger"
-                        , onClick (openConfirmationModalMsg claim.id False)
+                        , Utils.onClickNoBubble (OpenVoteModal claim.id False)
                         ]
                         [ text (t "dashboard.reject") ]
                     , button
                         [ class "button button-primary"
-                        , onClick (openConfirmationModalMsg claim.id True)
+                        , Utils.onClickNoBubble (OpenVoteModal claim.id True)
                         ]
                         [ text (t "dashboard.verify") ]
                     ]
             ]
         ]
+
+
+viewPhotoModal : LoggedIn.Model -> Model -> Html Msg
+viewPhotoModal loggedIn claim =
+    let
+        { t } =
+            loggedIn.shared.translators
+
+        body =
+            [ div [ class "md:flex md:justify-start md:space-x-4" ]
+                [ img [ style "max-height" "42vh", src "http://cambiatus.miskov.ru/trash.png" ] []
+                , div []
+                    [ label [ class "mt-6 md:mt-0 input-label md:text-xl block" ]
+                        [ text "verification number"
+                        ]
+                    , strong [ class "text-xl md:text-3xl" ] [ text "82378463" ]
+                    ]
+                ]
+            ]
+
+        withPhotoModalFooter =
+            if isVotable claim loggedIn.accountName then
+                Modal.withFooter
+                    [ button
+                        [ class "modal-cancel"
+                        , onClick (OpenVoteModal claim.id False)
+                        ]
+                        [ text <| t "dashboard.reject" ]
+                    , button
+                        [ class "modal-accept"
+                        , onClick (OpenVoteModal claim.id True)
+                        ]
+                        [ text <| t "dashboard.verify" ]
+                    ]
+
+            else
+                -- Don't show footer if the Claim is already validated by the current user
+                -- or if current user is not a validator.
+                identity
+    in
+    Modal.initWith
+        { closeMsg = CloseClaimModals
+        , isVisible = True
+        }
+        |> Modal.withHeader (t "dashboard.claim")
+        |> Modal.withBody body
+        |> withPhotoModalFooter
+        |> Modal.toHtml
 
 
 viewVoteClaimModal : Translators -> VoteClaimModalOptions msg -> Html msg

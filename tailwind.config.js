@@ -97,6 +97,9 @@ module.exports = {
         'border-grey': '#E0E0E0',
         'body-black': '#4a4a4a'
       },
+      boxShadow: {
+        outline: '0 0 0 3px rgb(250, 177, 92, 0.75)'
+      },
       flexGrow: {
         '1': 1,
         '2': 2,

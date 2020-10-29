@@ -332,6 +332,16 @@ textarea.input {
 
 /* End of Sticky Footer */
 
+/* Claims */
+.claim-photo-thumb {
+  @apply cursor-pointer w-24 h-16 flex items-center justify-center overflow-hidden rounded-sm;
+}
+
+.claim-photo-thumb:hover {
+  @apply shadow-outline;
+}
+/* End of Claims */
+
 @import './elm-datepicker.css';
 
 /* https://tailwindcss.com/docs/extracting-components#extracting-css-components-with-apply */

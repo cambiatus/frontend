@@ -17,7 +17,7 @@ import Eos
 import Eos.Account as Eos
 import Graphql.Http
 import Graphql.OptionalArgument exposing (OptionalArgument(..))
-import Html exposing (Html, a, button, div, img, option, p, select, span, text)
+import Html exposing (Html, button, div, img, option, select, span, text)
 import Html.Attributes exposing (class, selected, src, value)
 import Html.Events exposing (onClick)
 import I18Next
@@ -52,7 +52,7 @@ init ({ shared, selectedCommunity } as loggedIn) =
 type alias Model =
     { status : Status
     , communityStatus : CommunityStatus
-    , modalStatus : ModalStatus
+    , claimModalStatus : Claim.ModalStatus
     , autoCompleteState : Select.State
     , reloadOnNextQuery : Bool
     , filters : Filter
@@ -63,7 +63,7 @@ initModel : Model
 initModel =
     { status = Loading
     , communityStatus = LoadingCommunity
-    , modalStatus = ModalClosed
+    , claimModalStatus = Claim.Closed
     , autoCompleteState = Select.newState ""
     , reloadOnNextQuery = False
     , filters = initFilter
@@ -100,12 +100,6 @@ type StatusFilter
     | Pending
 
 
-type ModalStatus
-    = ModalClosed
-    | ModalLoading Int Bool
-    | ModalOpened Int Bool
-
-
 
 -- VIEW
 
@@ -125,7 +119,8 @@ view ({ shared } as loggedIn) model =
                 Loaded claims pageInfo ->
                     let
                         viewClaim claim =
-                            Claim.viewClaimCard loggedIn OpenModal claim
+                            Claim.viewClaimCard loggedIn claim
+                                |> Html.map ClaimMsg
                     in
                     div []
                         [ Page.viewHeader loggedIn (t "all_analysis.title") Route.Dashboard
@@ -145,20 +140,24 @@ view ({ shared } as loggedIn) model =
                                 Claim.viewVoteClaimModal
                                     loggedIn.shared.translators
                                     { voteMsg = VoteClaim
-                                    , closeMsg = CloseModal
+                                    , closeMsg = ClaimMsg Claim.CloseClaimModals
                                     , claimId = claimId
                                     , isApproving = isApproving
                                     , isInProgress = isLoading
                                     }
                           in
-                          case model.modalStatus of
-                            ModalOpened claimId vote ->
+                          case model.claimModalStatus of
+                            Claim.VoteConfirmationModal claimId vote ->
                                 viewVoteModal claimId vote False
 
-                            ModalLoading claimId vote ->
+                            Claim.Loading claimId vote ->
                                 viewVoteModal claimId vote True
 
-                            ModalClosed ->
+                            Claim.PhotoModal claim ->
+                                Claim.viewPhotoModal loggedIn claim
+                                    |> Html.map ClaimMsg
+
+                            _ ->
                                 text ""
                         ]
 
@@ -308,10 +307,9 @@ type alias UpdateResult =
 
 type Msg
     = ClaimsLoaded (Result (Graphql.Http.Error (Maybe Claim.Paginated)) (Maybe Claim.Paginated))
-    | OpenModal Int Bool
-    | CloseModal
-    | VoteClaim Int Bool
-    | GotVoteResult Int (Result Decode.Value String)
+    | ClaimMsg Claim.Msg
+    | VoteClaim Claim.ClaimId Bool
+    | GotVoteResult Claim.ClaimId (Result Decode.Value String)
     | SelectMsg (Select.Msg Profile)
     | OnSelectVerifier (Maybe Profile)
     | CompletedCommunityLoad (Result (Graphql.Http.Error (Maybe Community.Model)) (Maybe Community.Model))
@@ -352,11 +350,19 @@ update msg model loggedIn =
         ClaimsLoaded (Err _) ->
             { model | status = Failed } |> UR.init
 
-        OpenModal claimId vote ->
-            { model | modalStatus = ModalOpened claimId vote } |> UR.init
+        ClaimMsg m ->
+            let
+                claimCmd =
+                    case m of
+                        Claim.RouteOpened r ->
+                            Route.replaceUrl loggedIn.shared.navKey r
 
-        CloseModal ->
-            { model | modalStatus = ModalClosed } |> UR.init
+                        _ ->
+                            Cmd.none
+            in
+            Claim.updateClaimModalStatus m model
+                |> UR.init
+                |> UR.addCmd claimCmd
 
         VoteClaim claimId vote ->
             case model.status of
@@ -364,7 +370,7 @@ update msg model loggedIn =
                     let
                         newModel =
                             { model
-                                | modalStatus = ModalLoading claimId vote
+                                | claimModalStatus = Claim.Loading claimId vote
                             }
                     in
                     if LoggedIn.isAuth loggedIn then
@@ -692,11 +698,8 @@ msgToString msg =
         ClaimsLoaded r ->
             [ "ChecksLoaded", UR.resultToString r ]
 
-        OpenModal _ _ ->
-            [ "OpenModal" ]
-
-        CloseModal ->
-            [ "CloseModal" ]
+        ClaimMsg _ ->
+            [ "ClaimMsg" ]
 
         VoteClaim claimId _ ->
             [ "VoteClaim", String.fromInt claimId ]
