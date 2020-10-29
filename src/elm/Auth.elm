@@ -45,6 +45,7 @@ import Task
 import UpdateResult as UR
 import Utils
 import Validate exposing (Validator, validate)
+import View.Form
 import View.Pin as Pin
 
 
@@ -356,6 +357,7 @@ viewLoginSteps isModal shared model loginStep =
                     [ textarea
                         [ class "form-textarea h-19 min-w-full block"
                         , placeholder (t "auth.login.wordsMode.input.placeholder")
+                        , View.Form.noGrammarly
                         , autofocus True
                         , class <|
                             if not (List.isEmpty passphraseErrors) then
