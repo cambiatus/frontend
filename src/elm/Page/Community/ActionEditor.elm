@@ -1214,20 +1214,20 @@ viewForm ({ shared } as loggedIn) community model =
             , viewReward loggedIn community model.form
             , viewValidations loggedIn model
             , viewVerifications loggedIn model community
-            , div [ class "flex align-center justify-between mt-20 mb-12" ]
+            , div [ class "sm:flex sm:align-center mt-18 mb-12" ]
                 [ button
-                    [ class "button button-primary"
+                    [ class "button button-primary w-full sm:w-48"
                     , onClick ValidateForm
                     ]
                     [ if model.actionId /= Nothing then
-                        text (t shared.translations "menu.edit")
+                        text (t shared.translations "menu.save")
 
                       else
                         text (t shared.translations "menu.create")
                     ]
                 , case model.actionId of
                     Just _ ->
-                        button [ class "button button-secondary", onClick MarkAsCompleted ]
+                        button [ class "button button-secondary w-full mt-4 sm:w-48 sm:mt-0 sm:ml-4", onClick MarkAsCompleted ]
                             [ text (t shared.translations "community.actions.form.mark_completed") ]
 
                     Nothing ->
