@@ -562,8 +562,8 @@ type Msg
     | ClaimsLoaded (Result (Graphql.Http.Error (Maybe Claim.Paginated)) (Maybe Claim.Paginated))
     | CommunityLoaded (Result (Graphql.Http.Error (Maybe Community.DashboardInfo)) (Maybe Community.DashboardInfo))
     | ClaimMsg Claim.Msg
-    | VoteClaim Int Bool
-    | GotVoteResult Int (Result Value String)
+    | VoteClaim Claim.ClaimId Bool
+    | GotVoteResult Claim.ClaimId (Result Value String)
     | CreateInvite
     | CloseInviteModal
     | CompletedInviteCreation (Result Http.Error String)
@@ -871,7 +871,7 @@ fetchCommunity shared selectedCommunity =
         CommunityLoaded
 
 
-setClaimStatus : List ClaimStatus -> Int -> (Claim.Model -> ClaimStatus) -> List ClaimStatus
+setClaimStatus : List ClaimStatus -> Claim.ClaimId -> (Claim.Model -> ClaimStatus) -> List ClaimStatus
 setClaimStatus claims claimId status =
     claims
         |> List.map
@@ -896,7 +896,7 @@ setClaimStatus claims claimId status =
             )
 
 
-findClaim : List ClaimStatus -> Int -> Maybe Claim.Model
+findClaim : List ClaimStatus -> Claim.ClaimId -> Maybe Claim.Model
 findClaim claims claimId =
     claims
         |> List.map unwrapClaimStatus

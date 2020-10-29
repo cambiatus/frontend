@@ -308,8 +308,8 @@ type alias UpdateResult =
 type Msg
     = ClaimsLoaded (Result (Graphql.Http.Error (Maybe Claim.Paginated)) (Maybe Claim.Paginated))
     | ClaimMsg Claim.Msg
-    | VoteClaim Int Bool
-    | GotVoteResult Int (Result Decode.Value String)
+    | VoteClaim Claim.ClaimId Bool
+    | GotVoteResult Claim.ClaimId (Result Decode.Value String)
     | SelectMsg (Select.Msg Profile)
     | OnSelectVerifier (Maybe Profile)
     | CompletedCommunityLoad (Result (Graphql.Http.Error (Maybe Community.Model)) (Maybe Community.Model))

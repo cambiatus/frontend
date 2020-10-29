@@ -27,7 +27,7 @@ import Utils
 -- INIT
 
 
-init : LoggedIn.Model -> Symbol -> Int -> ( Model, Cmd Msg )
+init : LoggedIn.Model -> Symbol -> Claim.ClaimId -> ( Model, Cmd Msg )
 init { shared } communityId claimId =
     ( initModel communityId claimId
     , fetchClaim claimId shared
@@ -40,14 +40,14 @@ init { shared } communityId claimId =
 
 type alias Model =
     { communityId : Symbol
-    , claimId : Int
+    , claimId : Claim.ClaimId
     , statusClaim : Status
     , claimModalStatus : Claim.ModalStatus
     , isValidated : Bool
     }
 
 
-initModel : Symbol -> Int -> Model
+initModel : Symbol -> Claim.ClaimId -> Model
 initModel communityId claimId =
     { communityId = communityId
     , claimId = claimId
@@ -162,7 +162,7 @@ viewPhotoThumbnail claim =
         ]
 
 
-viewVoteButtons : Translators -> Int -> Claim.ModalStatus -> Html Msg
+viewVoteButtons : Translators -> Claim.ClaimId -> Claim.ModalStatus -> Html Msg
 viewVoteButtons ({ t } as translators) claimId modalStatus =
     let
         viewVoteModal : Bool -> Bool -> Html Msg
@@ -384,8 +384,8 @@ type alias UpdateResult =
 
 type Msg
     = ClaimLoaded (Result (Graphql.Http.Error Claim.Model) Claim.Model)
-    | VoteClaim Int Bool
-    | GotVoteResult Int (Result Decode.Value String)
+    | VoteClaim Claim.ClaimId Bool
+    | GotVoteResult Claim.ClaimId (Result Decode.Value String)
     | ClaimMsg Claim.Msg
 
 
@@ -494,7 +494,7 @@ update msg model loggedIn =
 -- HELPERS
 
 
-fetchClaim : Int -> Shared -> Cmd Msg
+fetchClaim : Claim.ClaimId -> Shared -> Cmd Msg
 fetchClaim claimId shared =
     Api.Graphql.query
         shared

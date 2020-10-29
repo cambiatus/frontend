@@ -1,5 +1,6 @@
 module Claim exposing
-    ( ClaimStatus(..)
+    ( ClaimId
+    , ClaimStatus(..)
     , ModalStatus(..)
     , Model
     , Msg(..)
@@ -47,7 +48,7 @@ import View.Modal as Modal
 
 
 type alias Model =
-    { id : Int
+    { id : ClaimId
     , status : ClaimStatus
     , claimer : Profile
     , action : Action
@@ -57,8 +58,8 @@ type alias Model =
 
 
 type ModalStatus
-    = Loading Int Bool
-    | VoteConfirmationModal Int Bool
+    = Loading ClaimId Bool
+    | VoteConfirmationModal ClaimId Bool
     | PhotoModal Model
     | Closed
 
@@ -67,6 +68,10 @@ type ClaimStatus
     = Approved
     | Rejected
     | Pending
+
+
+type alias ClaimId =
+    Int
 
 
 type alias Check =
@@ -93,7 +98,7 @@ isValidated claim user =
     claim.status /= Pending || List.any (\c -> c.validator.account == user) claim.checks
 
 
-encodeVerification : Int -> Eos.Account.Name -> Bool -> Encode.Value
+encodeVerification : ClaimId -> Eos.Account.Name -> Bool -> Encode.Value
 encodeVerification claimId validator vote =
     let
         encodedClaimId : Encode.Value
@@ -232,16 +237,16 @@ paginatedPageInfo maybePaginated =
 
 
 type alias VoteClaimModalOptions msg =
-    { voteMsg : Int -> Bool -> msg
+    { voteMsg : ClaimId -> Bool -> msg
     , closeMsg : msg
-    , claimId : Int
+    , claimId : ClaimId
     , isApproving : Bool
     , isInProgress : Bool
     }
 
 
 type Msg
-    = OpenVoteModal Int Bool
+    = OpenVoteModal ClaimId Bool
     | CloseClaimModals
     | OpenPhotoModal Model
     | RouteOpened Route
