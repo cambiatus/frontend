@@ -57,7 +57,7 @@ type alias Model =
 
 type ModalStatus
     = Loading Int Bool
-    | VoteModal Int Bool
+    | VoteConfirmationModal Int Bool
     | PhotoModal Int
     | Closed
 
@@ -249,7 +249,7 @@ updateClaimModalStatus : Msg -> { m | claimModalStatus : ModalStatus } -> { m | 
 updateClaimModalStatus msg model =
     case msg of
         OpenVoteModal claimId vote ->
-            { model | claimModalStatus = VoteModal claimId vote }
+            { model | claimModalStatus = VoteConfirmationModal claimId vote }
 
         CloseClaimModals ->
             { model | claimModalStatus = Closed }
@@ -291,7 +291,7 @@ viewClaimCard { selectedCommunity, shared, accountName } openConfirmationModalMs
 
         hasPhotoProof =
             -- TODO: replace this placeholder with the real data
-            claim.id == 41
+            claim.id == 41 || claim.id == 47
     in
     div [ class "w-full sm:w-1/2 lg:w-1/3 xl:w-1/4 px-2 mb-4" ]
         [ div

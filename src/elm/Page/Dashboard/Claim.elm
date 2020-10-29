@@ -190,7 +190,7 @@ viewVoteButtons ({ t } as translators) claimId modalStatus =
             Claim.Loading _ isApproving ->
                 viewVoteModal isApproving True
 
-            Claim.VoteModal _ isApproving ->
+            Claim.VoteConfirmationModal _ isApproving ->
                 viewVoteModal isApproving False
 
             _ ->

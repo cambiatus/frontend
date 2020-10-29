@@ -147,7 +147,7 @@ view ({ shared } as loggedIn) model =
                                     }
                           in
                           case model.claimModalStatus of
-                            Claim.VoteModal claimId vote ->
+                            Claim.VoteConfirmationModal claimId vote ->
                                 viewVoteModal claimId vote False
 
                             Claim.Loading claimId vote ->
