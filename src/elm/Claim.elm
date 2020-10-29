@@ -10,6 +10,7 @@ module Claim exposing
     , paginatedPageInfo
     , paginatedToList
     , selectionSet
+    , tempHasPhotoProof
     , updateClaimModalStatus
     , viewClaimCard
     , viewPhotoModal
@@ -258,6 +259,11 @@ updateClaimModalStatus msg model =
             { model | claimModalStatus = PhotoModal claimId }
 
 
+tempHasPhotoProof claim =
+    -- TODO: replace this placeholder with the real data
+    claim.id == 41 || claim.id == 47
+
+
 {-| Claim card with a short claim overview. Used on Dashboard and Analysis pages.
 -}
 viewClaimCard : LoggedIn.Model -> Model -> Html Msg
@@ -288,10 +294,6 @@ viewClaimCard { selectedCommunity, shared, accountName } claim =
                 claim.action.objective.id
                 claim.action.id
                 claim.id
-
-        hasPhotoProof =
-            -- TODO: replace this placeholder with the real data
-            claim.id == 41 || claim.id == 47
     in
     div [ class "w-full sm:w-1/2 lg:w-1/3 xl:w-1/4 px-2 mb-4" ]
         [ div
@@ -303,12 +305,12 @@ viewClaimCard { selectedCommunity, shared, accountName } claim =
                 [ div
                     [ class "flex mb-8"
                     , classList
-                        [ ( "justify-center", not <| hasPhotoProof )
-                        , ( "justify-between", hasPhotoProof )
+                        [ ( "justify-center", not <| tempHasPhotoProof claim )
+                        , ( "justify-between", tempHasPhotoProof claim )
                         ]
                     ]
                     [ Profile.view shared accountName claim.claimer
-                    , if hasPhotoProof then
+                    , if tempHasPhotoProof claim then
                         div [ class "claim-photo-thumb" ]
                             [ img [ onClick (OpenPhotoModal claim), src "http://cambiatus.miskov.ru/trash.png" ] [] ]
 

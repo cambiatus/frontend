@@ -102,7 +102,11 @@ view ({ shared } as loggedIn) model =
                                 ]
                             , div [ class "mx-auto container px-4" ]
                                 [ viewTitle shared claim
-                                , viewPhotoThumbnail claim
+                                , if Claim.tempHasPhotoProof claim then
+                                    viewPhotoThumbnail claim
+
+                                  else
+                                    text ""
                                 , viewDetails shared model claim
                                 , viewVoters loggedIn claim
                                 ]
