@@ -447,6 +447,52 @@ type Msg
     | PressedEnter Bool
 
 
+
+---- ACTION CREATE
+
+
+type alias CreateActionAction =
+    { actionId : Int
+    , objectiveId : Int
+    , description : String
+    , reward : String
+    , verifierReward : String
+    , deadline : Int
+    , usages : String
+    , usagesLeft : String
+    , verifications : String
+    , verificationType : String
+    , validatorsStr : String
+    , isCompleted : Int
+    , creator : Eos.Name
+    , hasProofPhoto : Bool
+    , hasProofCode : Bool
+    , photoProofInstructions : String
+    }
+
+
+encodeCreateActionAction : CreateActionAction -> Value
+encodeCreateActionAction c =
+    Encode.object
+        [ ( "action_id", Encode.int c.actionId )
+        , ( "objective_id", Encode.int c.objectiveId )
+        , ( "description", Encode.string c.description )
+        , ( "reward", Encode.string c.reward )
+        , ( "verifier_reward", Encode.string c.verifierReward )
+        , ( "deadline", Encode.int c.deadline )
+        , ( "usages", Encode.string c.usages )
+        , ( "usages_left", Encode.string c.usagesLeft )
+        , ( "verifications", Encode.string c.verifications )
+        , ( "verification_type", Encode.string c.verificationType )
+        , ( "validators_str", Encode.string c.validatorsStr )
+        , ( "is_completed", Encode.int c.isCompleted )
+        , ( "creator", Eos.encodeName c.creator )
+        , ( "has_proof_photo", Eos.encodeEosBool <| Eos.boolToEosBool c.hasProofPhoto )
+        , ( "has_proof_code", Eos.encodeEosBool <| Eos.boolToEosBool c.hasProofCode )
+        , ( "photo_proof_instructions", Encode.string c.photoProofInstructions )
+        ]
+
+
 update : Msg -> Model -> LoggedIn.Model -> UpdateResult
 update msg model loggedIn =
     let
@@ -605,8 +651,15 @@ update msg model loggedIn =
             let
                 oldForm =
                     model.form
+
+                limitedInstructions =
+                    if String.length val < 255 then
+                        val
+
+                    else
+                        String.slice 0 255 val
             in
-            { model | form = { oldForm | instructions = updateInput val model.form.instructions } }
+            { model | form = { oldForm | instructions = updateInput limitedInstructions model.form.instructions } }
                 |> UR.init
 
         EnteredReward val ->
@@ -1017,7 +1070,7 @@ update msg model loggedIn =
         GotSaveAction (Ok _) ->
             model
                 |> UR.init
-                |> UR.addCmd (Route.replaceUrl loggedIn.shared.navKey (Route.Community model.communityId))
+                |> UR.addCmd (Route.replaceUrl loggedIn.shared.navKey (Route.Objectives model.communityId))
                 |> UR.addExt (ShowFeedback Success (t shared.translations "community.actions.create_success"))
 
         GotSaveAction (Err val) ->
@@ -1112,6 +1165,29 @@ upsertAction loggedIn model isoDate =
 
             else
                 0
+
+        hasProofPhoto =
+            case model.form.verification of
+                Manual _ _ _ (Just (Enabled _)) ->
+                    True
+
+                _ ->
+                    False
+
+        hasProofCode =
+            case model.form.verification of
+                Manual _ _ _ (Just (Enabled WithProofNumber)) ->
+                    True
+
+                _ ->
+                    False
+
+        instructions =
+            if hasProofPhoto then
+                getInput model.form.instructions
+
+            else
+                ""
     in
     model
         |> UR.init
@@ -1140,8 +1216,11 @@ upsertAction loggedIn model isoDate =
                             , validatorsStr = validatorsStr
                             , isCompleted = isCompleted
                             , creator = loggedIn.accountName
+                            , hasProofPhoto = hasProofPhoto
+                            , hasProofCode = hasProofCode
+                            , photoProofInstructions = instructions
                             }
-                                |> Community.encodeCreateActionAction
+                                |> encodeCreateActionAction
                       }
                     ]
             }

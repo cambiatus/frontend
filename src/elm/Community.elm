@@ -25,7 +25,6 @@ module Community exposing
     , decodeBalance
     , decodeTransaction
     , encodeClaimAction
-    , encodeCreateActionAction
     , encodeCreateCommunityData
     , encodeCreateObjectiveAction
     , encodeCreateTokenData
@@ -365,46 +364,6 @@ type alias Verifiers =
     { verifiers : List String
     , reward : Float
     }
-
-
-
----- ACTION CREATE
-
-
-type alias CreateActionAction =
-    { actionId : Int
-    , objectiveId : Int
-    , description : String
-    , reward : String
-    , verifierReward : String
-    , deadline : Int
-    , usages : String
-    , usagesLeft : String
-    , verifications : String
-    , verificationType : String
-    , validatorsStr : String
-    , isCompleted : Int
-    , creator : Eos.Name
-    }
-
-
-encodeCreateActionAction : CreateActionAction -> Value
-encodeCreateActionAction c =
-    Encode.object
-        [ ( "action_id", Encode.int c.actionId )
-        , ( "objective_id", Encode.int c.objectiveId )
-        , ( "description", Encode.string c.description )
-        , ( "reward", Encode.string c.reward )
-        , ( "verifier_reward", Encode.string c.verifierReward )
-        , ( "deadline", Encode.int c.deadline )
-        , ( "usages", Encode.string c.usages )
-        , ( "usages_left", Encode.string c.usagesLeft )
-        , ( "verifications", Encode.string c.verifications )
-        , ( "verification_type", Encode.string c.verificationType )
-        , ( "validators_str", Encode.string c.validatorsStr )
-        , ( "is_completed", Encode.int c.isCompleted )
-        , ( "creator", Eos.encodeName c.creator )
-        ]
 
 
 
