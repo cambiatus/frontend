@@ -81,7 +81,7 @@ type alias Model =
     , lastSocket : String
     , transfers : GraphqlStatus (Maybe QueryTransfers) (List Transfer)
     , inviteModalStatus : InviteModalStatus
-    , voteModalStatus : VoteModalStatus
+    , claimModalStatus : Claim.ModalStatus
     , copied : Bool
     }
 
@@ -95,7 +95,7 @@ initModel =
     , lastSocket = ""
     , transfers = LoadingGraphql
     , inviteModalStatus = InviteModalClosed
-    , voteModalStatus = VoteModalClosed
+    , claimModalStatus = Claim.Closed
     , copied = False
     }
 
@@ -118,11 +118,6 @@ type ClaimStatus
     | ClaimLoading Claim.Model
     | ClaimVoted Claim.Model
     | ClaimVoteFailed Claim.Model
-
-
-type VoteModalStatus
-    = VoteModalClosed
-    | VoteModalOpened Int Bool
 
 
 type InviteModalStatus
@@ -188,23 +183,6 @@ view loggedIn model =
                           else
                             text ""
                         , viewTransfers loggedIn model
-                        , let
-                            viewVoteModal claimId isApproving isLoading =
-                                Claim.viewVoteClaimModal
-                                    loggedIn.shared.translators
-                                    { voteMsg = VoteClaim
-                                    , closeMsg = CloseModal
-                                    , claimId = claimId
-                                    , isApproving = isApproving
-                                    , isInProgress = isLoading
-                                    }
-                          in
-                          case model.voteModalStatus of
-                            VoteModalOpened claimId vote ->
-                                viewVoteModal claimId vote False
-
-                            VoteModalClosed ->
-                                text ""
                         , viewInvitationModal loggedIn model
                         ]
 
@@ -373,8 +351,13 @@ viewAnalysisList loggedIn profile model =
                             ]
 
                       else
-                        div [ class "flex flex-wrap -mx-2" ]
-                            (List.map (viewAnalysis loggedIn) claims)
+                        let
+                            pendingClaims =
+                                List.map (viewAnalysis loggedIn) claims
+                        in
+                        div [ class "flex flex-wrap -mx-2" ] <|
+                            List.append pendingClaims
+                                [ viewVoteConfirmationModal loggedIn model.claimModalStatus ]
                     ]
                 ]
 
@@ -382,11 +365,40 @@ viewAnalysisList loggedIn profile model =
             div [] [ Page.fullPageGraphQLError "Failed load" err ]
 
 
+viewVoteConfirmationModal : LoggedIn.Model -> Claim.ModalStatus -> Html Msg
+viewVoteConfirmationModal loggedIn claimModalStatus =
+    let
+        viewVoteModal claimId isApproving isLoading =
+            Claim.viewVoteClaimModal
+                loggedIn.shared.translators
+                { voteMsg = VoteClaim
+                , closeMsg = ClaimMsg Claim.CloseClaimModals
+                , claimId = claimId
+                , isApproving = isApproving
+                , isInProgress = isLoading
+                }
+    in
+    case claimModalStatus of
+        Claim.VoteConfirmationModal claimId vote ->
+            viewVoteModal claimId vote False
+
+        Claim.Loading claimId vote ->
+            viewVoteModal claimId vote True
+
+        Claim.PhotoModal claim ->
+            Claim.viewPhotoModal loggedIn claim
+                |> Html.map ClaimMsg
+
+        Claim.Closed ->
+            text ""
+
+
 viewAnalysis : LoggedIn.Model -> ClaimStatus -> Html Msg
-viewAnalysis ({ shared, selectedCommunity } as loggedIn) claimStatus =
+viewAnalysis loggedIn claimStatus =
     case claimStatus of
         ClaimLoaded claim ->
-            Claim.viewClaimCard loggedIn OpenModal claim
+            Claim.viewClaimCard loggedIn claim
+                |> Html.map ClaimMsg
 
         ClaimLoading _ ->
             div [ class "w-full md:w-1/2 lg:w-1/3 xl:w-1/4 px-2 mb-4" ]
@@ -549,10 +561,9 @@ type Msg
     | CompletedLoadUserTransfers (Result (Graphql.Http.Error (Maybe QueryTransfers)) (Maybe QueryTransfers))
     | ClaimsLoaded (Result (Graphql.Http.Error (Maybe Claim.Paginated)) (Maybe Claim.Paginated))
     | CommunityLoaded (Result (Graphql.Http.Error (Maybe Community.DashboardInfo)) (Maybe Community.DashboardInfo))
-    | OpenModal Int Bool
-    | CloseModal
-    | VoteClaim Int Bool
-    | GotVoteResult Int (Result Value String)
+    | ClaimMsg Claim.Msg
+    | VoteClaim Claim.ClaimId Bool
+    | GotVoteResult Claim.ClaimId (Result Value String)
     | CreateInvite
     | CloseInviteModal
     | CompletedInviteCreation (Result Http.Error String)
@@ -622,13 +633,19 @@ update msg model loggedIn =
                 |> UR.init
                 |> UR.logGraphqlError msg err
 
-        OpenModal claimId vote ->
-            { model | voteModalStatus = VoteModalOpened claimId vote }
-                |> UR.init
+        ClaimMsg m ->
+            let
+                claimCmd =
+                    case m of
+                        Claim.RouteOpened r ->
+                            Route.replaceUrl loggedIn.shared.navKey r
 
-        CloseModal ->
-            { model | voteModalStatus = VoteModalClosed }
+                        _ ->
+                            Cmd.none
+            in
+            Claim.updateClaimModalStatus m model
                 |> UR.init
+                |> UR.addCmd claimCmd
 
         VoteClaim claimId vote ->
             case model.analysis of
@@ -640,7 +657,7 @@ update msg model loggedIn =
                         newModel =
                             { model
                                 | analysis = LoadedGraphql newClaims pageInfo
-                                , voteModalStatus = VoteModalClosed
+                                , claimModalStatus = Claim.Closed
                             }
                     in
                     if LoggedIn.isAuth loggedIn then
@@ -854,7 +871,7 @@ fetchCommunity shared selectedCommunity =
         CommunityLoaded
 
 
-setClaimStatus : List ClaimStatus -> Int -> (Claim.Model -> ClaimStatus) -> List ClaimStatus
+setClaimStatus : List ClaimStatus -> Claim.ClaimId -> (Claim.Model -> ClaimStatus) -> List ClaimStatus
 setClaimStatus claims claimId status =
     claims
         |> List.map
@@ -879,7 +896,7 @@ setClaimStatus claims claimId status =
             )
 
 
-findClaim : List ClaimStatus -> Int -> Maybe Claim.Model
+findClaim : List ClaimStatus -> Claim.ClaimId -> Maybe Claim.Model
 findClaim claims claimId =
     claims
         |> List.map unwrapClaimStatus
@@ -953,11 +970,11 @@ msgToString msg =
         ClaimsLoaded result ->
             resultToString [ "ClaimsLoaded" ] result
 
-        OpenModal claimId _ ->
-            [ "OpenConfirmationModal", String.fromInt claimId ]
-
-        CloseModal ->
-            [ "CloseModal" ]
+        ClaimMsg _ ->
+            -- TODO: Do we need claim id here like it was before?
+            --OpenVoteModal claimId _ ->
+            --    [ "OpenVoteModal", String.fromInt claimId ]
+            [ "ClaimMsg" ]
 
         VoteClaim claimId _ ->
             [ "VoteClaim", String.fromInt claimId ]

@@ -1,6 +1,8 @@
-module Utils exposing (decodeDate, decodeEnterKeyDown, decodeTimestamp, posixDateTime)
+module Utils exposing (decodeDate, decodeEnterKeyDown, decodeTimestamp, onClickNoBubble, posixDateTime)
 
 import Cambiatus.Scalar exposing (DateTime(..))
+import Html
+import Html.Events
 import Iso8601
 import Json.Decode as Decode exposing (Decoder, string)
 import Time exposing (Posix)
@@ -68,3 +70,14 @@ decodeEnterKeyDown =
             (\cd ->
                 Decode.succeed <| isEnter cd
             )
+
+
+onClickNoBubble : msg -> Html.Attribute msg
+onClickNoBubble message =
+    Html.Events.custom "click"
+        (Decode.succeed
+            { message = message
+            , stopPropagation = True
+            , preventDefault = False
+            }
+        )
