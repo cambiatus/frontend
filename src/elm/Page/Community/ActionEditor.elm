@@ -1138,9 +1138,6 @@ upsertAction loggedIn model isoDate =
 
         usages =
             case model.form.validation of
-                NoValidation ->
-                    "0"
-
                 Validations _ (Just usageValidator) ->
                     getInput usageValidator
 
