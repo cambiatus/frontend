@@ -404,6 +404,7 @@
     "actions": {
       "title": "Action",
       "create_success": "Action created with success",
+      "save_success": "The action was successfully saved",
       "last_title": "Last Actions",
       "loading_error": "Something went wrong while fetching actions.",
       "no_actions_yet": "No actions yet.",

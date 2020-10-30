@@ -1090,7 +1090,7 @@ update msg model ({ shared } as loggedIn) =
             model
                 |> UR.init
                 |> UR.addCmd (Route.replaceUrl loggedIn.shared.navKey (Route.Objectives model.communityId))
-                |> UR.addExt (ShowFeedback Success (t "community.actions.create_success"))
+                |> UR.addExt (ShowFeedback Success (t "community.actions.save_success"))
 
         GotSaveAction (Err val) ->
             let

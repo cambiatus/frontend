@@ -408,6 +408,7 @@
     "actions": {
       "title": "Acció",
       "create_success": "Acció creada amb èxit",
+      "save_success": "L'acció s'ha desat correctament",
       "last_title": "Darreres accions",
       "loading_error": "Alguna cosa ha sortit malament mentre recuperàvem les accions.",
       "no_actions_yet": "Encara no hi ha accions.",
