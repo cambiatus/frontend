@@ -1152,7 +1152,7 @@ upsertAction loggedIn model isoDate =
                 Nothing ->
                     usages
 
-        minVotes_ =
+        minVotes =
             case model.form.verification of
                 Automatic ->
                     "0"
@@ -1233,7 +1233,7 @@ upsertAction loggedIn model isoDate =
                             , deadline = isoDate
                             , usages = usages
                             , usagesLeft = usagesLeft
-                            , verifications = minVotes_
+                            , verifications = minVotes
                             , verificationType = verificationType
                             , validatorsStr = validatorsStr
                             , isCompleted = isCompleted
