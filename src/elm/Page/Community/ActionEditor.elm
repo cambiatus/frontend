@@ -35,7 +35,6 @@ import Graphql.Http
 import Html exposing (Html, b, button, div, input, label, p, span, text, textarea)
 import Html.Attributes exposing (checked, class, classList, for, id, name, placeholder, rows, type_, value)
 import Html.Events exposing (onCheck, onClick, onInput)
-import I18Next exposing (t)
 import Icons
 import Json.Decode as Json exposing (Value)
 import Json.Encode as Encode
@@ -500,10 +499,10 @@ encodeCreateActionAction c =
 
 
 update : Msg -> Model -> LoggedIn.Model -> UpdateResult
-update msg model loggedIn =
+update msg model ({ shared } as loggedIn) =
     let
-        shared =
-            loggedIn.shared
+        { t } =
+            shared.translators
     in
     case msg of
         CompletedCommunityLoad (Err err) ->
@@ -1087,7 +1086,7 @@ update msg model loggedIn =
                                         (Just
                                             (addConstraints
                                                 [ { test = \_ -> False
-                                                  , defaultError = \_ -> t shared.translations "error.validator.date.invalid"
+                                                  , defaultError = \_ -> t "error.validator.date.invalid"
                                                   }
                                                 ]
                                                 (updateInput (getInput dateValidation) defaultDateValidator)
@@ -1145,7 +1144,7 @@ update msg model loggedIn =
             model
                 |> UR.init
                 |> UR.addCmd (Route.replaceUrl loggedIn.shared.navKey (Route.Objectives model.communityId))
-                |> UR.addExt (ShowFeedback Success (t shared.translations "community.actions.create_success"))
+                |> UR.addExt (ShowFeedback Success (t "community.actions.create_success"))
 
         GotSaveAction (Err val) ->
             let
@@ -1153,13 +1152,13 @@ update msg model loggedIn =
                     model.form
 
                 newModel =
-                    { model | form = { oldForm | saveStatus = Failed (t shared.translations "error.unknown") } }
+                    { model | form = { oldForm | saveStatus = Failed (t "error.unknown") } }
             in
             newModel
                 |> UR.init
                 |> UR.logDebugValue msg val
                 |> UR.logImpossible msg []
-                |> UR.addExt (ShowFeedback Failure (t shared.translations "error.unknown"))
+                |> UR.addExt (ShowFeedback Failure (t "error.unknown"))
 
         PressedEnter val ->
             if val then
@@ -1317,8 +1316,8 @@ upsertAction loggedIn model isoDate =
 view : LoggedIn.Model -> Model -> { title : String, content : Html Msg }
 view ({ shared } as loggedIn) model =
     let
-        t s =
-            I18Next.t shared.translations s
+        { t } =
+            shared.translators
 
         title =
             let
@@ -1371,6 +1370,10 @@ view ({ shared } as loggedIn) model =
 
 viewForm : LoggedIn.Model -> Community.Model -> Model -> Html Msg
 viewForm ({ shared } as loggedIn) community model =
+    let
+        { t } =
+            shared.translators
+    in
     div [ class "container mx-auto" ]
         [ div [ class "py-6 px-4" ]
             [ viewLoading model
@@ -1384,15 +1387,15 @@ viewForm ({ shared } as loggedIn) community model =
                     , onClick ValidateForm
                     ]
                     [ if model.actionId /= Nothing then
-                        text (t shared.translations "menu.save")
+                        text (t "menu.save")
 
                       else
-                        text (t shared.translations "menu.create")
+                        text (t "menu.create")
                     ]
                 , case model.actionId of
                     Just _ ->
                         button [ class "button button-secondary w-full mt-4 sm:w-48 sm:mt-0 sm:ml-4", onClick MarkAsCompleted ]
-                            [ text (t shared.translations "community.actions.form.mark_completed") ]
+                            [ text (t "community.actions.form.mark_completed") ]
 
                     Nothing ->
                         text ""
@@ -1418,8 +1421,11 @@ viewLoading model =
 viewDescription : LoggedIn.Model -> Form -> Html Msg
 viewDescription { shared } form =
     let
+        { t } =
+            shared.translators
+
         text_ s =
-            text (t shared.translations s)
+            text (t s)
     in
     div [ class "mb-10" ]
         [ span [ class "input-label" ]
@@ -1440,8 +1446,11 @@ viewDescription { shared } form =
 viewReward : LoggedIn.Model -> Community.Model -> Form -> Html Msg
 viewReward { shared } community form =
     let
+        { t } =
+            shared.translators
+
         text_ s =
-            text (t shared.translations s)
+            text (t s)
     in
     div [ class "mb-10" ]
         [ span [ class "input-label" ]
@@ -1467,8 +1476,11 @@ viewReward { shared } community form =
 viewValidations : LoggedIn.Model -> Model -> Html Msg
 viewValidations { shared } model =
     let
+        { t } =
+            shared.translators
+
         text_ s =
-            text (t shared.translations s)
+            text (t s)
 
         dateOptions =
             MaskedDate.defaultOptions EnteredDeadline DeadlineChanged
@@ -1587,7 +1599,7 @@ viewValidations { shared } model =
                                     [ type_ "number"
                                     , class "input w-full sm:w-2/5"
                                     , classList [ ( "border-red", hasErrors validation ) ]
-                                    , placeholder (t shared.translations "community.actions.form.usages_placeholder")
+                                    , placeholder (t "community.actions.form.usages_placeholder")
                                     , value (getInput validation)
                                     , onInput EnteredUsages
                                     ]
@@ -1625,8 +1637,11 @@ viewValidations { shared } model =
 viewVerifications : LoggedIn.Model -> Model -> Community.Model -> Html Msg
 viewVerifications ({ shared } as loggedIn) model community =
     let
+        { t } =
+            shared.translators
+
         text_ s =
-            text (t shared.translations s)
+            text (t s)
     in
     div [ class "mb-10" ]
         [ div [ class "flex flex-row justify-between mb-6" ]
@@ -1690,11 +1705,11 @@ viewVerifications ({ shared } as loggedIn) model community =
 viewManualVerificationForm : LoggedIn.Model -> Model -> Community.Model -> Html Msg
 viewManualVerificationForm ({ shared } as loggedIn) model community =
     let
-        text_ s =
-            text (t shared.translations s)
+        { t, tr } =
+            shared.translators
 
-        tr r_id replaces =
-            I18Next.tr shared.translations I18Next.Curly r_id replaces
+        text_ s =
+            text (t s)
     in
     case model.form.verification of
         Automatic ->
