@@ -365,12 +365,12 @@ validateForm form =
                 Automatic ->
                     Automatic
 
-                Manual { verifiersValidator, verifierRewardValidator, minVotesValidator, photoProof } ->
+                Manual m ->
                     Manual
-                        { verifiersValidator = validate verifiersValidator
-                        , verifierRewardValidator = validate verifierRewardValidator
-                        , minVotesValidator = validate minVotesValidator
-                        , photoProof = photoProof
+                        { m
+                            | verifiersValidator = validate m.verifiersValidator
+                            , verifierRewardValidator = validate m.verifierRewardValidator
+                            , minVotesValidator = validate m.minVotesValidator
                         }
     in
     { form
@@ -1188,31 +1188,21 @@ upsertAction loggedIn model isoDate =
             else
                 0
 
-        hasProofPhoto =
-            case model.form.verification of
-                Manual { photoProof } ->
-                    case photoProof of
-                        Enabled _ ->
-                            True
-
-                        Disabled ->
-                            False
-
-                _ ->
-                    False
-
-        hasProofCode =
+        ( hasProofPhoto, hasProofCode ) =
             case model.form.verification of
                 Manual { photoProof } ->
                     case photoProof of
                         Enabled WithProofNumber ->
-                            True
+                            ( True, True )
 
-                        _ ->
-                            False
+                        Enabled WithoutProofNumber ->
+                            ( True, False )
+
+                        Disabled ->
+                            ( False, False )
 
                 _ ->
-                    False
+                    ( False, False )
 
         instructions =
             if hasProofPhoto then
