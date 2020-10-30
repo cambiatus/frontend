@@ -1718,8 +1718,8 @@ viewManualVerificationForm ({ shared } as loggedIn) model community =
                                 ]
                                 []
                             , span []
-                                [ b [ class "block" ] [ text "Photo validation" ]
-                                , text "The users must send a photo performing the task for the claim to be valid."
+                                [ b [ class "block" ] [ text (t "community.actions.form.photo_validation") ]
+                                , text (t "community.actions.form.photo_validation_hint")
                                 ]
                             ]
                         , if isPhotoProofEnabled then
@@ -1733,13 +1733,13 @@ viewManualVerificationForm ({ shared } as loggedIn) model community =
                                         ]
                                         []
                                     , span []
-                                        [ b [ class "block" ] [ text "Verification number" ]
-                                        , text "Users will have to send a unique verification code with the photo in order for the claim to be valid."
+                                        [ b [ class "block" ] [ text (t "community.actions.form.verification_number") ]
+                                        , text (t "community.actions.form.verification_number_hint")
                                         ]
                                     ]
-                                , div []
+                                , div [ class "mt-6" ]
                                     [ label [ class "input-label" ]
-                                        [ text "Write here instructions for the users" ]
+                                        [ text (t "community.actions.form.verification_instructions") ]
                                     , textarea
                                         [ class "input textarea-input w-full"
                                         , classList [ ( "border-red", hasErrors model.form.instructions ) ]

@@ -466,6 +466,11 @@
         "usages_placeholder": "Escribe un número",
         "date_label": "Elige fecha",
         "quantity_label": "Elige cantidad",
+        "photo_validation": "Validación de fotos",
+        "photo_validation_hint": "Los usuarios deben enviar una foto realizando la tarea para que el reclamo sea válido.",
+        "verification_number": "Numero de verificación",
+        "verification_number_hint": "Los usuarios deberán enviar un código de verificación único con la foto para que el reclamo sea válido.",
+        "verification_instructions": "Escriba aquí las instrucciones para los usuarios",
         "usages_left_label": "Usos restantes",
         "mark_completed": "Marcar como completado",
         "errors": {
