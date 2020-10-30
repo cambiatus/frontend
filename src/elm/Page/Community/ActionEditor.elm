@@ -120,11 +120,11 @@ type Verification
 
 
 type PhotoProof
-    = Enabled ProofNumberToggle
+    = Enabled ProofNumberPresence
     | Disabled
 
 
-type ProofNumberToggle
+type ProofNumberPresence
     = WithProofNumber
     | WithoutProofNumber
 
