@@ -138,7 +138,16 @@ viewObjective ({ shared } as loggedIn) model community index objective =
         text_ s =
             text (t shared.translations s)
     in
-    div [ class "p-4 sm:px-6 bg-white rounded mt-4" ]
+    div
+        [ class "p-4 sm:px-6 bg-white rounded mt-4 hover:shadow"
+        , classList [ ( "cursor-pointer", not isOpen ) ]
+        , onClick <|
+            if isOpen then
+                NoOps
+
+            else
+                OpenObjective index
+        ]
         [ div [ class "flex space-around items-start" ]
             [ div [ class "w-11/12 mr-16" ]
                 [ p [ class "text-sm" ] [ text objective.description ]
@@ -154,7 +163,7 @@ viewObjective ({ shared } as loggedIn) model community index objective =
             , div [ class "flex justify-between" ]
                 [ button
                     [ class "h-8"
-                    , onClick (OpenObjective index)
+                    , Utils.onClickNoBubble (OpenObjective index)
                     ]
                     [ if isOpen then
                         Icons.arrowDown "rotate-180"
@@ -336,6 +345,7 @@ type Msg
     = CompletedLoad (Result (Graphql.Http.Error (Maybe Community.Model)) (Maybe Community.Model))
     | GotTime Posix
     | OpenObjective Int
+    | NoOps
 
 
 update : Msg -> Model -> LoggedIn.Model -> UpdateResult
@@ -377,6 +387,9 @@ update msg model loggedIn =
                 { model | openObjective = Just index }
                     |> UR.init
 
+        NoOps ->
+            model |> UR.init
+
 
 msgToString : Msg -> List String
 msgToString msg =
@@ -389,3 +402,6 @@ msgToString msg =
 
         OpenObjective _ ->
             [ "OpenObjective" ]
+
+        NoOps ->
+            [ "NoOps" ]
