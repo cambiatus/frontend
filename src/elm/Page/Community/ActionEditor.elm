@@ -212,13 +212,35 @@ editForm form action =
                 let
                     newVerifications =
                         defaultMinVotes |> updateInput (String.fromInt action.verifications)
+
+                    photoProof =
+                        case ( action.hasProofPhoto, action.hasProofCode ) of
+                            ( Just True, Just True ) ->
+                                Just (Enabled WithProofNumber)
+
+                            ( Just True, _ ) ->
+                                Just (Enabled WithoutProofNumber)
+
+                            ( Just False, _ ) ->
+                                Just Disabled
+
+                            _ ->
+                                Nothing
                 in
                 Manual
                     { verifiers = defaultVerifiersValidator verificators (getInput newVerifications) |> updateInput verificators
                     , verificationReward = defaultVerificationReward |> updateInput (String.fromFloat action.verificationReward)
                     , minVotes = newVerifications
-                    , photoProof = Nothing
+                    , photoProof = photoProof
                     }
+
+        instructions =
+            case action.photoProofInstructions of
+                Just i ->
+                    updateInput i form.instructions
+
+                Nothing ->
+                    form.instructions
     in
     { form
         | description = updateInput action.description form.description
@@ -227,6 +249,7 @@ editForm form action =
         , verification = verification
         , usagesLeft = Just (updateInput (String.fromInt action.usagesLeft) defaultUsagesLeftValidator)
         , isCompleted = action.isCompleted
+        , instructions = instructions
     }
 
 
