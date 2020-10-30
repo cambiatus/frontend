@@ -387,10 +387,10 @@ isFormValid form =
     let
         verificationHasErrors =
             case form.verification of
-                Manual { verifiersValidator, verifierRewardValidator, minVotesValidator } ->
-                    hasErrors minVotesValidator
-                        || hasErrors verifiersValidator
-                        || hasErrors verifierRewardValidator
+                Manual m ->
+                    hasErrors m.minVotesValidator
+                        || hasErrors m.verifiersValidator
+                        || hasErrors m.verifierRewardValidator
 
                 Automatic ->
                     -- Automatic verification never has validation errors
@@ -611,31 +611,27 @@ update msg model ({ shared } as loggedIn) =
                         |> UR.logImpossible msg []
 
         OnSelectVerifier maybeProfile ->
-            case model.form.verification of
-                Automatic ->
-                    model
-                        |> UR.init
+            let
+                verification =
+                    case model.form.verification of
+                        Automatic ->
+                            model.form.verification
 
-                Manual { verifiersValidator, verifierRewardValidator, minVotesValidator, photoProof } ->
-                    { model
-                        | form =
-                            { oldForm
-                                | verification =
-                                    let
-                                        newVerifiers =
-                                            maybeProfile
-                                                |> Maybe.map (List.singleton >> List.append (getInput verifiersValidator))
-                                                |> Maybe.withDefault (getInput verifiersValidator)
-                                    in
-                                    Manual
-                                        { verifiersValidator = updateInput newVerifiers verifiersValidator
-                                        , verifierRewardValidator = verifierRewardValidator
-                                        , minVotesValidator = minVotesValidator
-                                        , photoProof = photoProof
-                                        }
-                            }
-                    }
-                        |> UR.init
+                        Manual m ->
+                            let
+                                newVerifiers : List Profile
+                                newVerifiers =
+                                    maybeProfile
+                                        |> Maybe.map (List.singleton >> List.append (getInput m.verifiersValidator))
+                                        |> Maybe.withDefault (getInput m.verifiersValidator)
+                            in
+                            Manual
+                                { m
+                                    | verifiersValidator = updateInput newVerifiers m.verifiersValidator
+                                }
+            in
+            { model | form = { oldForm | verification = verification } }
+                |> UR.init
 
         OnRemoveVerifier profile ->
             let
@@ -646,6 +642,7 @@ update msg model ({ shared } as loggedIn) =
 
                         Manual m ->
                             let
+                                newVerifiers : List Profile
                                 newVerifiers =
                                     List.filter
                                         (\currVerifier -> currVerifier.account /= profile.account)
@@ -763,53 +760,45 @@ update msg model ({ shared } as loggedIn) =
                         |> UR.init
 
         EnteredVerifierReward val ->
-            case model.form.verification of
-                Automatic ->
-                    model
-                        |> UR.init
-                        |> UR.logImpossible msg []
+            let
+                verification =
+                    case model.form.verification of
+                        Automatic ->
+                            model.form.verification
 
-                Manual m ->
-                    { model
-                        | form =
-                            { oldForm
-                                | verification =
-                                    Manual
-                                        { m
-                                            | verifierRewardValidator = updateInput val m.verifierRewardValidator
-                                        }
-                            }
-                    }
-                        |> UR.init
+                        Manual m ->
+                            Manual
+                                { m
+                                    | verifierRewardValidator = updateInput val m.verifierRewardValidator
+                                }
+            in
+            { model | form = { oldForm | verification = verification } }
+                |> UR.init
 
         EnteredMinVotes val ->
-            case model.form.verification of
-                Automatic ->
-                    model
-                        |> UR.init
-                        |> UR.logImpossible msg []
+            let
+                verification =
+                    case model.form.verification of
+                        Automatic ->
+                            model.form.verification
 
-                Manual m ->
-                    let
-                        newMinVotes =
-                            updateInput val m.minVotesValidator
+                        Manual m ->
+                            let
+                                newMinVotes =
+                                    updateInput val m.minVotesValidator
 
-                        newVerifiers =
-                            -- Update min. verifiers quantity
-                            defaultVerifiersValidator (getInput m.verifiersValidator) val
-                    in
-                    { model
-                        | form =
-                            { oldForm
-                                | verification =
-                                    Manual
-                                        { m
-                                            | verifiersValidator = newVerifiers
-                                            , minVotesValidator = newMinVotes
-                                        }
-                            }
-                    }
-                        |> UR.init
+                                newVerifiers =
+                                    -- Update min. verifiers quantity
+                                    defaultVerifiersValidator (getInput m.verifiersValidator) val
+                            in
+                            Manual
+                                { m
+                                    | verifiersValidator = newVerifiers
+                                    , minVotesValidator = newMinVotes
+                                }
+            in
+            { model | form = { oldForm | verification = verification } }
+                |> UR.init
 
         ValidateForm ->
             let
@@ -890,59 +879,45 @@ update msg model ({ shared } as loggedIn) =
 
         TogglePhotoProof isPhotoProofEnabled ->
             let
-                newPhotoProofState =
-                    if isPhotoProofEnabled then
-                        Enabled WithoutProofNumber
+                verification =
+                    case model.form.verification of
+                        Automatic ->
+                            model.form.verification
 
-                    else
-                        Disabled
+                        Manual m ->
+                            let
+                                newPhotoProof =
+                                    if isPhotoProofEnabled then
+                                        Enabled WithoutProofNumber
+
+                                    else
+                                        Disabled
+                            in
+                            Manual { m | photoProof = newPhotoProof }
             in
-            case model.form.verification of
-                Automatic ->
-                    model
-                        |> UR.init
-                        |> UR.logImpossible msg []
-
-                Manual m ->
-                    { model
-                        | form =
-                            { oldForm
-                                | verification =
-                                    Manual
-                                        { m
-                                            | photoProof = newPhotoProofState
-                                        }
-                            }
-                    }
-                        |> UR.init
+            { model | form = { oldForm | verification = verification } }
+                |> UR.init
 
         TogglePhotoProofNumber isProofNumberEnabled ->
-            case model.form.verification of
-                Automatic ->
-                    model
-                        |> UR.init
-                        |> UR.logImpossible msg []
+            let
+                verification =
+                    case model.form.verification of
+                        Automatic ->
+                            model.form.verification
 
-                Manual m ->
-                    let
-                        newPhotoValidationState =
-                            if isProofNumberEnabled then
-                                Enabled WithProofNumber
+                        Manual m ->
+                            let
+                                newPhotoProof =
+                                    if isProofNumberEnabled then
+                                        Enabled WithProofNumber
 
-                            else
-                                Enabled WithoutProofNumber
-                    in
-                    { model
-                        | form =
-                            { oldForm
-                                | verification =
-                                    Manual
-                                        { m
-                                            | photoProof = newPhotoValidationState
-                                        }
-                            }
-                    }
-                        |> UR.init
+                                    else
+                                        Enabled WithoutProofNumber
+                            in
+                            Manual { m | photoProof = newPhotoProof }
+            in
+            { model | form = { oldForm | verification = verification } }
+                |> UR.init
 
         ToggleDeadline bool ->
             let
@@ -1005,22 +980,20 @@ update msg model ({ shared } as loggedIn) =
                 |> UR.init
 
         SetVerification val ->
-            { model
-                | form =
-                    { oldForm
-                        | verification =
-                            if val == "automatic" then
-                                Automatic
+            let
+                verification =
+                    if val == "automatic" then
+                        Automatic
 
-                            else
-                                Manual
-                                    { verifiersValidator = defaultVerifiersValidator [] (getInput defaultMinVotes)
-                                    , verifierRewardValidator = defaultVerificationReward
-                                    , minVotesValidator = defaultMinVotes
-                                    , photoProof = Disabled
-                                    }
-                    }
-            }
+                    else
+                        Manual
+                            { verifiersValidator = defaultVerifiersValidator [] (getInput defaultMinVotes)
+                            , verifierRewardValidator = defaultVerificationReward
+                            , minVotesValidator = defaultMinVotes
+                            , photoProof = Disabled
+                            }
+            in
+            { model | form = { oldForm | verification = verification } }
                 |> UR.init
 
         MarkAsCompleted ->
@@ -1032,33 +1005,31 @@ update msg model ({ shared } as loggedIn) =
 
         GotInvalidDate ->
             let
+                newValidation =
+                    case model.form.validation of
+                        NoValidation ->
+                            NoValidation
+
+                        Validations (Just dateValidation) usageValidation ->
+                            Validations
+                                (Just
+                                    (addConstraints
+                                        [ { test = \_ -> False
+                                          , defaultError = \_ -> t "error.validator.date.invalid"
+                                          }
+                                        ]
+                                        (updateInput (getInput dateValidation) defaultDateValidator)
+                                    )
+                                )
+                                usageValidation
+
+                        Validations dateValidation usageValidation ->
+                            Validations dateValidation usageValidation
+
                 newForm =
-                    { oldForm
-                        | validation =
-                            case model.form.validation of
-                                NoValidation ->
-                                    NoValidation
-
-                                Validations (Just dateValidation) usageValidation ->
-                                    Validations
-                                        (Just
-                                            (addConstraints
-                                                [ { test = \_ -> False
-                                                  , defaultError = \_ -> t "error.validator.date.invalid"
-                                                  }
-                                                ]
-                                                (updateInput (getInput dateValidation) defaultDateValidator)
-                                            )
-                                        )
-                                        usageValidation
-
-                                Validations dateValidation usageValidation ->
-                                    Validations dateValidation usageValidation
-                    }
+                    { oldForm | validation = newValidation }
             in
-            { model
-                | form = validateForm newForm
-            }
+            { model | form = validateForm newForm }
                 |> UR.init
 
         GotValidDate isoDate ->
