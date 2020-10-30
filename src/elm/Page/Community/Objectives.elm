@@ -308,7 +308,7 @@ viewAction ({ shared } as loggedIn) model objectiveId action =
                         div [ class "flex mr-2 overflow-x-auto" ]
                             (List.map
                                 (\u ->
-                                    div [ class "mr-4" ]
+                                    div [ class "mr-4 action-verifier" ]
                                         [ Profile.view shared loggedIn.accountName u ]
                                 )
                                 action.validators
