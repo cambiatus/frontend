@@ -116,7 +116,7 @@ type Verification
         { verifiers : Validator (List Profile)
         , verificationReward : Validator String
         , minVotes : Validator String
-        , photoProof : Maybe PhotoProof
+        , photoProof : PhotoProof
         }
 
 
@@ -216,16 +216,13 @@ editForm form action =
                     photoProof =
                         case ( action.hasProofPhoto, action.hasProofCode ) of
                             ( Just True, Just True ) ->
-                                Just (Enabled WithProofNumber)
+                                Enabled WithProofNumber
 
                             ( Just True, _ ) ->
-                                Just (Enabled WithoutProofNumber)
+                                Enabled WithoutProofNumber
 
-                            ( Just False, _ ) ->
-                                Just Disabled
-
-                            _ ->
-                                Nothing
+                            ( _, _ ) ->
+                                Disabled
                 in
                 Manual
                     { verifiers = defaultVerifiersValidator verificators (getInput newVerifications) |> updateInput verificators
@@ -933,10 +930,10 @@ update msg model ({ shared } as loggedIn) =
 
                 newPhotoProofState =
                     if isPhotoProofEnabled then
-                        Just (Enabled WithoutProofNumber)
+                        Enabled WithoutProofNumber
 
                     else
-                        Nothing
+                        Disabled
             in
             case model.form.verification of
                 Automatic ->
@@ -974,10 +971,10 @@ update msg model ({ shared } as loggedIn) =
                     let
                         newPhotoValidationState =
                             if isProofNumberEnabled then
-                                Just (Enabled WithProofNumber)
+                                Enabled WithProofNumber
 
                             else
-                                Just (Enabled WithoutProofNumber)
+                                Enabled WithoutProofNumber
                     in
                     { model
                         | form =
@@ -1076,7 +1073,7 @@ update msg model ({ shared } as loggedIn) =
                                     { verifiers = defaultVerifiersValidator [] (getInput defaultMinVotes)
                                     , verificationReward = defaultVerificationReward
                                     , minVotes = defaultMinVotes
-                                    , photoProof = Nothing
+                                    , photoProof = Disabled
                                     }
                     }
             }
@@ -1266,10 +1263,10 @@ upsertAction loggedIn model isoDate =
             case model.form.verification of
                 Manual { photoProof } ->
                     case photoProof of
-                        Just (Enabled _) ->
+                        Enabled _ ->
                             True
 
-                        _ ->
+                        Disabled ->
                             False
 
                 _ ->
@@ -1279,7 +1276,7 @@ upsertAction loggedIn model isoDate =
             case model.form.verification of
                 Manual { photoProof } ->
                     case photoProof of
-                        Just (Enabled WithProofNumber) ->
+                        Enabled WithProofNumber ->
                             True
 
                         _ ->
@@ -1742,7 +1739,7 @@ viewManualVerificationForm ({ shared } as loggedIn) model community =
             let
                 isPhotoProofEnabled =
                     case photoProof of
-                        Just (Enabled _) ->
+                        Enabled _ ->
                             True
 
                         _ ->
@@ -1750,7 +1747,7 @@ viewManualVerificationForm ({ shared } as loggedIn) model community =
 
                 isProofNumberEnabled =
                     case photoProof of
-                        Just (Enabled WithProofNumber) ->
+                        Enabled WithProofNumber ->
                             True
 
                         _ ->
