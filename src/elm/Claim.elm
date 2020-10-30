@@ -8,6 +8,7 @@ module Claim exposing
     , claimPaginatedSelectionSet
     , encodeClaimAction
     , encodeVerification
+    , generateVerificationCode
     , hasPhotoProof
     , isValidated
     , isValidator
@@ -44,6 +45,7 @@ import Profile exposing (Profile)
 import Route exposing (Route)
 import Session.LoggedIn as LoggedIn
 import Session.Shared exposing (Translators)
+import Sha256 exposing (sha256)
 import Strftime
 import Time
 import Utils
@@ -163,6 +165,13 @@ encodeVerification claimId validator vote =
         , ( "verifier", encodedVerifier )
         , ( "vote", encodedVote )
         ]
+
+
+generateVerificationCode : Int -> Eos.Account.Name -> Time.Posix -> String
+generateVerificationCode actionId makerAccount proofTime =
+    (String.fromInt actionId ++ Eos.Account.nameToString makerAccount ++ (Time.posixToMillis proofTime |> String.fromInt))
+        |> sha256
+        |> String.slice 0 6
 
 
 

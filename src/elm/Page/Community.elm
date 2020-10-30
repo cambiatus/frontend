@@ -151,7 +151,16 @@ view loggedIn model =
                             LoggedIn.isAccount community.creator loggedIn
                     in
                     div []
-                        [ div [ class "bg-white border-t border-gray-300" ]
+                        [ div [ class "text-xlg" ]
+                            [ -- TODO: There is a sample on how to get the Time as a Int.
+                              -- TODO: you can then use the function Claim.generateVerificationCode to
+                              -- TODO: get the verification code to be displayed. Remember it only lasts for 30 minutes
+                              text <|
+                                String.fromInt <|
+                                    Time.posixToMillis <|
+                                        Maybe.withDefault (Time.millisToPosix 0) model.date
+                            ]
+                        , div [ class "bg-white border-t border-gray-300" ]
                             [ div [ class "container p-4 mx-auto" ]
                                 [ Page.viewTitle "This action requires proof of achievement"
                                 , p [ class "mb-4" ]
