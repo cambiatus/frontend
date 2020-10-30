@@ -117,7 +117,12 @@ type ActionValidation
 type Verification
     = Automatic
       -- users list, verification reward, min votes, photo proof
-    | Manual (Validator (List Profile)) (Validator String) (Validator String) (Maybe PhotoProof)
+    | Manual
+        { verifiers : Validator (List Profile)
+        , verificationReward : Validator String
+        , minVotes : Validator String
+        , photoProof : Maybe PhotoProof
+        }
 
 
 type PhotoProof
@@ -214,11 +219,11 @@ editForm form action =
                         defaultMinVotes |> updateInput (String.fromInt action.verifications)
                 in
                 Manual
-                    (defaultVerifiersValidator verificators (getInput newVerifications) |> updateInput verificators)
-                    (defaultVerificationReward |> updateInput (String.fromFloat action.verificationReward))
-                    newVerifications
-                    -- TODO: Use photo validation data from the action
-                    Nothing
+                    { verifiers = defaultVerifiersValidator verificators (getInput newVerifications) |> updateInput verificators
+                    , verificationReward = defaultVerificationReward |> updateInput (String.fromFloat action.verificationReward)
+                    , minVotes = newVerifications
+                    , photoProof = Nothing
+                    }
     in
     { form
         | description = updateInput action.description form.description
@@ -337,8 +342,13 @@ validateForm form =
                 Automatic ->
                     Automatic
 
-                Manual profiles verificationReward minVotes photoProof ->
-                    Manual (validate profiles) (validate verificationReward) (validate minVotes) photoProof
+                Manual { verifiers, verificationReward, minVotes, photoProof } ->
+                    Manual
+                        { verifiers = validate verifiers
+                        , verificationReward = validate verificationReward
+                        , minVotes = validate minVotes
+                        , photoProof = photoProof
+                        }
     in
     { form
         | description = validate form.description
@@ -354,9 +364,9 @@ isFormValid form =
     let
         verificationHasErrors =
             case form.verification of
-                Manual profiles verificationReward minVotes _ ->
+                Manual { verifiers, verificationReward, minVotes } ->
                     hasErrors minVotes
-                        || hasErrors profiles
+                        || hasErrors verifiers
                         || hasErrors verificationReward
 
                 Automatic ->
@@ -584,7 +594,7 @@ update msg model loggedIn =
                     model
                         |> UR.init
 
-                Manual selectedVerifiers verificationReward minVotes photoProof ->
+                Manual { verifiers, verificationReward, minVotes, photoProof } ->
                     { model
                         | form =
                             { oldForm
@@ -592,14 +602,15 @@ update msg model loggedIn =
                                     let
                                         newVerifiers =
                                             maybeProfile
-                                                |> Maybe.map (List.singleton >> List.append (getInput selectedVerifiers))
-                                                |> Maybe.withDefault (getInput selectedVerifiers)
+                                                |> Maybe.map (List.singleton >> List.append (getInput verifiers))
+                                                |> Maybe.withDefault (getInput verifiers)
                                     in
                                     Manual
-                                        (updateInput newVerifiers selectedVerifiers)
-                                        verificationReward
-                                        minVotes
-                                        photoProof
+                                        { verifiers = updateInput newVerifiers verifiers
+                                        , verificationReward = verificationReward
+                                        , minVotes = minVotes
+                                        , photoProof = photoProof
+                                        }
                             }
                     }
                         |> UR.init
@@ -614,18 +625,19 @@ update msg model loggedIn =
                         Automatic ->
                             model.form.verification
 
-                        Manual selectedVerifiers a b photoProof ->
+                        Manual { verifiers, verificationReward, minVotes, photoProof } ->
                             let
                                 newVerifiers =
                                     List.filter
                                         (\currVerifier -> currVerifier.account /= profile.account)
-                                        (getInput selectedVerifiers)
+                                        (getInput verifiers)
                             in
                             Manual
-                                (updateInput newVerifiers selectedVerifiers)
-                                a
-                                b
-                                photoProof
+                                { verifiers = updateInput newVerifiers verifiers
+                                , verificationReward = verificationReward
+                                , minVotes = minVotes
+                                , photoProof = photoProof
+                                }
             in
             { model | form = { oldForm | verification = verification } }
                 |> UR.init
@@ -749,8 +761,19 @@ update msg model loggedIn =
                         |> UR.init
                         |> UR.logImpossible msg []
 
-                Manual listProfile verifierReward minVotes photoProof ->
-                    { model | form = { oldForm | verification = Manual listProfile (updateInput val verifierReward) minVotes photoProof } }
+                Manual { verifiers, verificationReward, minVotes, photoProof } ->
+                    { model
+                        | form =
+                            { oldForm
+                                | verification =
+                                    Manual
+                                        { verifiers = verifiers
+                                        , verificationReward = updateInput val verificationReward
+                                        , minVotes = minVotes
+                                        , photoProof = photoProof
+                                        }
+                            }
+                    }
                         |> UR.init
 
         EnteredMinVotes val ->
@@ -764,16 +787,27 @@ update msg model loggedIn =
                         |> UR.init
                         |> UR.logImpossible msg []
 
-                Manual listProfile verifierReward minVotes photoProof ->
+                Manual { verifiers, verificationReward, minVotes, photoProof } ->
                     let
                         newMinVotes =
                             updateInput val minVotes
 
                         newVerifiers =
                             -- Update min. verifiers quantity
-                            defaultVerifiersValidator (getInput listProfile) val
+                            defaultVerifiersValidator (getInput verifiers) val
                     in
-                    { model | form = { oldForm | verification = Manual newVerifiers verifierReward newMinVotes photoProof } }
+                    { model
+                        | form =
+                            { oldForm
+                                | verification =
+                                    Manual
+                                        { verifiers = newVerifiers
+                                        , verificationReward = verificationReward
+                                        , minVotes = newMinVotes
+                                        , photoProof = photoProof
+                                        }
+                            }
+                    }
                         |> UR.init
 
         ValidateForm ->
@@ -875,8 +909,19 @@ update msg model loggedIn =
                         |> UR.init
                         |> UR.logImpossible msg []
 
-                Manual listProfile verifierReward minVotes _ ->
-                    { model | form = { oldForm | verification = Manual listProfile verifierReward minVotes newPhotoProofState } }
+                Manual { verifiers, verificationReward, minVotes } ->
+                    { model
+                        | form =
+                            { oldForm
+                                | verification =
+                                    Manual
+                                        { verifiers = verifiers
+                                        , verificationReward = verificationReward
+                                        , minVotes = minVotes
+                                        , photoProof = newPhotoProofState
+                                        }
+                            }
+                    }
                         |> UR.init
 
         TogglePhotoProofNumber isProofNumberEnabled ->
@@ -890,7 +935,7 @@ update msg model loggedIn =
                         |> UR.init
                         |> UR.logImpossible msg []
 
-                Manual listProfile verifierReward minVotes _ ->
+                Manual { verifiers, verificationReward, minVotes } ->
                     let
                         newPhotoValidationState =
                             if isProofNumberEnabled then
@@ -899,7 +944,18 @@ update msg model loggedIn =
                             else
                                 Just (Enabled WithoutProofNumber)
                     in
-                    { model | form = { oldForm | verification = Manual listProfile verifierReward minVotes newPhotoValidationState } }
+                    { model
+                        | form =
+                            { oldForm
+                                | verification =
+                                    Manual
+                                        { verifiers = verifiers
+                                        , verificationReward = verificationReward
+                                        , minVotes = minVotes
+                                        , photoProof = newPhotoValidationState
+                                        }
+                            }
+                    }
                         |> UR.init
 
         ToggleDeadline bool ->
@@ -981,7 +1037,12 @@ update msg model loggedIn =
                                 Automatic
 
                             else
-                                Manual (defaultVerifiersValidator [] (getInput defaultMinVotes)) defaultVerificationReward defaultMinVotes Nothing
+                                Manual
+                                    { verifiers = defaultVerifiersValidator [] (getInput defaultMinVotes)
+                                    , verificationReward = defaultVerificationReward
+                                    , minVotes = defaultMinVotes
+                                    , photoProof = Nothing
+                                    }
                     }
             }
                 |> UR.init
@@ -1107,8 +1168,8 @@ upsertAction loggedIn model isoDate =
                 Automatic ->
                     Eos.Asset 0.0 model.communityId |> Eos.assetToString
 
-                Manual _ verificationRewardValidator _ _ ->
-                    Eos.Asset (getInput verificationRewardValidator |> String.toFloat |> Maybe.withDefault 0.0) model.communityId
+                Manual { verificationReward } ->
+                    Eos.Asset (getInput verificationReward |> String.toFloat |> Maybe.withDefault 0.0) model.communityId
                         |> Eos.assetToString
 
         usages =
@@ -1130,21 +1191,21 @@ upsertAction loggedIn model isoDate =
                 Nothing ->
                     usages
 
-        minVotes =
+        minVotes_ =
             case model.form.verification of
                 Automatic ->
                     "0"
 
-                Manual _ _ minVotesValidator _ ->
-                    getInput minVotesValidator
+                Manual { minVotes } ->
+                    getInput minVotes
 
         validators =
             case model.form.verification of
                 Automatic ->
                     []
 
-                Manual list _ _ _ ->
-                    getInput list
+                Manual { verifiers } ->
+                    getInput verifiers
 
         validatorsStr =
             validators
@@ -1156,7 +1217,7 @@ upsertAction loggedIn model isoDate =
                 Automatic ->
                     "automatic"
 
-                Manual _ _ _ _ ->
+                Manual _ ->
                     "claimable"
 
         isCompleted =
@@ -1168,16 +1229,26 @@ upsertAction loggedIn model isoDate =
 
         hasProofPhoto =
             case model.form.verification of
-                Manual _ _ _ (Just (Enabled _)) ->
-                    True
+                Manual { photoProof } ->
+                    case photoProof of
+                        Just (Enabled _) ->
+                            True
+
+                        _ ->
+                            False
 
                 _ ->
                     False
 
         hasProofCode =
             case model.form.verification of
-                Manual _ _ _ (Just (Enabled WithProofNumber)) ->
-                    True
+                Manual { photoProof } ->
+                    case photoProof of
+                        Just (Enabled WithProofNumber) ->
+                            True
+
+                        _ ->
+                            False
 
                 _ ->
                     False
@@ -1211,7 +1282,7 @@ upsertAction loggedIn model isoDate =
                             , deadline = isoDate
                             , usages = usages
                             , usagesLeft = usagesLeft
-                            , verifications = minVotes
+                            , verifications = minVotes_
                             , verificationType = verificationType
                             , validatorsStr = validatorsStr
                             , isCompleted = isCompleted
@@ -1615,7 +1686,7 @@ viewManualVerificationForm ({ shared } as loggedIn) model community =
         Automatic ->
             text ""
 
-        Manual selectedVerifiers verificationReward minVotes photoProof ->
+        Manual { verifiers, verificationReward, minVotes, photoProof } ->
             let
                 isPhotoProofEnabled =
                     case photoProof of
@@ -1645,8 +1716,8 @@ viewManualVerificationForm ({ shared } as loggedIn) model community =
                     [ text (tr "community.actions.form.verifiers_label_count" [ ( "count", getInput minVotes ) ]) ]
                 , div []
                     [ viewVerifierSelect shared model False
-                    , viewFieldErrors (listErrors shared.translations selectedVerifiers)
-                    , viewSelectedVerifiers loggedIn (getInput selectedVerifiers)
+                    , viewFieldErrors (listErrors shared.translations verifiers)
+                    , viewSelectedVerifiers loggedIn (getInput verifiers)
                     ]
                 , span [ class "input-label" ]
                     [ text_ "community.actions.form.verifiers_reward_label" ]
@@ -1820,13 +1891,13 @@ viewVerifierSelect shared model isDisabled =
         Automatic ->
             text ""
 
-        Manual selectedUsers _ _ _ ->
+        Manual { verifiers } ->
             div []
                 [ Html.map SelectMsg
                     (Select.view (selectConfiguration shared isDisabled)
                         model.multiSelectState
                         users
-                        (getInput selectedUsers)
+                        (getInput verifiers)
                     )
                 ]
 
