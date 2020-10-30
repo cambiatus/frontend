@@ -139,32 +139,27 @@ viewObjective ({ shared } as loggedIn) model community index objective =
             text (t shared.translations s)
     in
     div
-        [ class "p-4 sm:px-6 bg-white rounded mt-4 hover:shadow"
-        , classList [ ( "cursor-pointer", not isOpen ) ]
-        , onClick <|
-            if isOpen then
-                NoOps
-
-            else
-                OpenObjective index
-        ]
-        [ div [ class "flex space-around items-start" ]
-            [ div [ class "w-11/12 mr-16" ]
-                [ p [ class "text-sm" ] [ text objective.description ]
-                , p [ class "text-gray-900 text-caption uppercase mt-2" ]
-                    [ text
-                        (I18Next.tr shared.translations
-                            Curly
-                            "community.objectives.action_count"
-                            [ ( "actions", objective.actions |> List.length |> String.fromInt ) ]
-                        )
-                    ]
+        [ class "bg-white rounded mt-4 hover:shadow" ]
+        [ div [ class "" ]
+            [ -- Clickable header
+              div
+                [ class "p-4 sm:px-6 cursor-pointer rounded flex justify-between"
+                , classList [ ( "pb-0", isOpen ) ]
+                , onClick (OpenObjective index)
                 ]
-            , div [ class "flex justify-between" ]
-                [ button
-                    [ class "h-8"
-                    , Utils.onClickNoBubble (OpenObjective index)
+                [ div []
+                    [ p [ class "text-sm" ] [ text objective.description ]
+                    , p [ class "text-gray-900 text-caption uppercase mt-2" ]
+                        [ text
+                            (I18Next.tr shared.translations
+                                Curly
+                                "community.objectives.action_count"
+                                [ ( "actions", objective.actions |> List.length |> String.fromInt ) ]
+                            )
+                        ]
                     ]
+                , button
+                    [ class "h-8" ]
                     [ if isOpen then
                         Icons.arrowDown "rotate-180"
 
@@ -174,7 +169,7 @@ viewObjective ({ shared } as loggedIn) model community index objective =
                 ]
             ]
         , if isOpen then
-            div []
+            div [ class "p-4 sm:px-6 pt-0" ]
                 [ div [ class "flex flex-wrap mt-2" ]
                     [ a
                         [ class "button button-secondary button-sm w-full sm:w-48 mt-2 px-1 sm:mr-4"
@@ -345,7 +340,6 @@ type Msg
     = CompletedLoad (Result (Graphql.Http.Error (Maybe Community.Model)) (Maybe Community.Model))
     | GotTime Posix
     | OpenObjective Int
-    | NoOps
 
 
 update : Msg -> Model -> LoggedIn.Model -> UpdateResult
@@ -387,9 +381,6 @@ update msg model loggedIn =
                 { model | openObjective = Just index }
                     |> UR.init
 
-        NoOps ->
-            model |> UR.init
-
 
 msgToString : Msg -> List String
 msgToString msg =
@@ -402,6 +393,3 @@ msgToString msg =
 
         OpenObjective _ ->
             [ "OpenObjective" ]
-
-        NoOps ->
-            [ "NoOps" ]
