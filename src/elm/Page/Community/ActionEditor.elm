@@ -194,8 +194,8 @@ editForm form action =
             else
                 NoValidation
 
-        verificators : List Profile
-        verificators =
+        verifiers : List Profile
+        verifiers =
             if VerificationType.toString action.verificationType == "AUTOMATIC" then
                 []
 
@@ -209,8 +209,17 @@ editForm form action =
 
             else
                 let
-                    newVerifications =
-                        defaultMinVotes |> updateInput (String.fromInt action.verifications)
+                    minVotesValidator =
+                        defaultMinVotes
+                            |> updateInput (String.fromInt action.verifications)
+
+                    verifiersValidator =
+                        defaultVerifiersValidator verifiers (getInput minVotesValidator)
+                            |> updateInput verifiers
+
+                    verifierRewardValidator =
+                        defaultVerificationReward
+                            |> updateInput (String.fromFloat action.verificationReward)
 
                     photoProof =
                         case ( action.hasProofPhoto, action.hasProofCode ) of
@@ -224,9 +233,9 @@ editForm form action =
                                 Disabled
                 in
                 Manual
-                    { verifiersValidator = defaultVerifiersValidator verificators (getInput newVerifications) |> updateInput verificators
-                    , verifierRewardValidator = defaultVerificationReward |> updateInput (String.fromFloat action.verificationReward)
-                    , minVotesValidator = newVerifications
+                    { verifiersValidator = verifiersValidator
+                    , verifierRewardValidator = verifierRewardValidator
+                    , minVotesValidator = minVotesValidator
                     , photoProof = photoProof
                     }
 
