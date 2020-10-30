@@ -150,32 +150,61 @@ view loggedIn model =
                             LoggedIn.isAccount community.creator loggedIn
                     in
                     div []
-                        [ viewHeader loggedIn community
-                        , div [ class "bg-white p-20" ]
-                            [ div [ class "flex flex-wrap w-full items-center" ]
-                                [ p [ class "text-4xl font-bold" ]
-                                    [ text community.title ]
+                        [ div [ class "bg-white border-t border-gray-300" ]
+                            [ div [ class "container p-4 mx-auto" ]
+                                [ Page.viewTitle "This action requires proof of achievement"
+                                , p [ class "mb-4" ]
+                                    [ text "Take a picture of the garbage bag you separated, in this photo the number below should be written, you can write on the bag or on a piece of paper."
+                                    ]
+                                , div [ class "mb-4" ]
+                                    [ span [ class "input-label block" ]
+                                        [ text "verification number" ]
+                                    , p [ class "text-xl font-bold" ] [ text "82378463" ]
+                                    ]
+                                , div [ class "mb-4" ]
+                                    [ span [ class "input-label block" ]
+                                        [ text "photo" ]
+                                    , div [ class "relative bg-purple-500 w-full h-56 rounded-sm flex justify-center items-center" ]
+                                        [ div [ class "w-10" ]
+                                            [ Icons.camera
+                                            , span [ class "absolute bottom-0 right-0 mr-4 mb-4 bg-orange-300 w-8 h-8 p-2 rounded-full" ] [ Icons.camera ]
+                                            ]
+                                        ]
+                                    ]
+                                , div []
+                                    [ button [ class "modal-cancel" ] [ text "Cancel" ]
+                                    , button [ class "modal-accept" ] [ text "Send" ]
+                                    ]
                                 ]
-                            , p [ class "text-grey-200 text-sm" ] [ text community.description ]
                             ]
-                        , if community.hasObjectives then
-                            div [ class "container mx-auto px-4" ]
-                                [ viewClaimModal loggedIn model
-                                , div [ class "bg-white py-6 sm:py-8 px-3 sm:px-6 rounded-lg mt-4" ]
-                                    (Page.viewTitle (t "community.objectives.title_plural")
-                                        :: List.indexedMap (viewObjective loggedIn model community)
-                                            community.objectives
-                                        ++ [ if canEdit then
-                                                viewObjectiveNew loggedIn editStatus community.symbol
-
-                                             else
-                                                text ""
-                                           ]
-                                    )
+                        , div []
+                            [ viewHeader loggedIn community
+                            , div [ class "bg-white p-20" ]
+                                [ div [ class "flex flex-wrap w-full items-center" ]
+                                    [ p [ class "text-4xl font-bold" ]
+                                        [ text community.title ]
+                                    ]
+                                , p [ class "text-grey-200 text-sm" ] [ text community.description ]
                                 ]
+                            , if community.hasObjectives then
+                                div [ class "container mx-auto px-4" ]
+                                    [ viewClaimModal loggedIn model
+                                    , div [ class "bg-white py-6 sm:py-8 px-3 sm:px-6 rounded-lg mt-4" ]
+                                        (Page.viewTitle (t "community.objectives.title_plural")
+                                            :: List.indexedMap (viewObjective loggedIn model community)
+                                                community.objectives
+                                            ++ [ if canEdit then
+                                                    viewObjectiveNew loggedIn editStatus community.symbol
 
-                          else
-                            text ""
+                                                 else
+                                                    text ""
+                                               ]
+                                        )
+                                    ]
+
+                              else
+                                text ""
+                            ]
                         ]
     in
     { title = title
