@@ -408,6 +408,7 @@
     "actions": {
       "title": "Acció",
       "create_success": "Acció creada amb èxit",
+      "save_success": "L'acció s'ha desat correctament",
       "last_title": "Darreres accions",
       "loading_error": "Alguna cosa ha sortit malament mentre recuperàvem les accions.",
       "no_actions_yet": "Encara no hi ha accions.",
@@ -465,6 +466,11 @@
         "usages_placeholder": "Escriviu un número",
         "date_label": "Tria la data",
         "quantity_label": "Tria la quantitat",
+        "photo_validation": "Validació de fotos",
+        "photo_validation_hint": "Els usuaris han d'enviar una foto realitzant la tasca perquè la reclamació sigui vàlida.",
+        "verification_number": "Número de verificació",
+        "verification_number_hint": "Els usuaris hauran d’enviar un codi de verificació únic amb la foto perquè la reclamació sigui vàlida.",
+        "verification_instructions": "Escriviu aquí instruccions per als usuaris",
         "usages_left_label": "Usos restants",
         "mark_completed": "Marca com a completat",
         "errors": {
