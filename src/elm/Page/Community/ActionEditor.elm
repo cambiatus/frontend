@@ -1,8 +1,7 @@
 module Page.Community.ActionEditor exposing
     ( Model
     , Msg
-    , initEdit
-    , initNew
+    , init
     , jsAddressToMsg
     , msgToString
     , update
@@ -60,29 +59,26 @@ import View.Form.InputCounter
 -- INIT
 
 
-initNew : LoggedIn.Model -> Symbol -> Int -> ( Model, Cmd Msg )
-initNew loggedIn symbol objId =
-    ( { status = Loading
-      , communityId = symbol
-      , objectiveId = objId
-      , actionId = Nothing
-      , form = initForm
-      , multiSelectState = Select.newState ""
-      }
-    , Api.Graphql.query loggedIn.shared (Community.communityQuery symbol) CompletedCommunityLoad
-    )
+type alias ObjectiveId =
+    Int
 
 
-initEdit : LoggedIn.Model -> Symbol -> Int -> Int -> ( Model, Cmd Msg )
-initEdit loggedIn symbol objectiveId actionId =
+type alias ActionId =
+    Int
+
+
+init : LoggedIn.Model -> Symbol -> ObjectiveId -> Maybe ActionId -> ( Model, Cmd Msg )
+init loggedIn symbol objectiveId actionId =
     ( { status = Loading
       , communityId = symbol
       , objectiveId = objectiveId
-      , actionId = Just actionId
+      , actionId = actionId
       , form = initForm
       , multiSelectState = Select.newState ""
       }
-    , Api.Graphql.query loggedIn.shared (Community.communityQuery symbol) CompletedCommunityLoad
+    , Api.Graphql.query loggedIn.shared
+        (Community.communityQuery symbol)
+        CompletedCommunityLoad
     )
 
 
@@ -93,8 +89,8 @@ initEdit loggedIn symbol objectiveId actionId =
 type alias Model =
     { status : Status
     , communityId : Symbol
-    , objectiveId : Int
-    , actionId : Maybe Int
+    , objectiveId : ObjectiveId
+    , actionId : Maybe ActionId
     , form : Form
     , multiSelectState : Select.State
     }
@@ -462,8 +458,8 @@ type Msg
 
 
 type alias CreateActionAction =
-    { actionId : Int
-    , objectiveId : Int
+    { actionId : ActionId
+    , objectiveId : ObjectiveId
     , description : String
     , reward : String
     , verifierReward : String
