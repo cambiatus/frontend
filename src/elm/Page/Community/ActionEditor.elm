@@ -651,8 +651,20 @@ update msg model loggedIn =
             let
                 oldForm =
                     model.form
+
+                limitedDescription =
+                    if String.length val < 255 then
+                        val
+
+                    else
+                        String.slice 0 255 val
             in
-            { model | form = { oldForm | description = updateInput val model.form.description } }
+            { model
+                | form =
+                    { oldForm
+                        | description = updateInput limitedDescription model.form.description
+                    }
+            }
                 |> UR.init
 
         EnteredInstructions val ->
@@ -667,7 +679,12 @@ update msg model loggedIn =
                     else
                         String.slice 0 255 val
             in
-            { model | form = { oldForm | instructions = updateInput limitedInstructions model.form.instructions } }
+            { model
+                | form =
+                    { oldForm
+                        | instructions = updateInput limitedInstructions model.form.instructions
+                    }
+            }
                 |> UR.init
 
         EnteredReward val ->
@@ -1415,6 +1432,7 @@ viewDescription { shared } form =
             , value (getInput form.description)
             ]
             []
+        , View.Form.InputCounter.view shared.translators.tr 256 (getInput form.description)
         , viewFieldErrors (listErrors shared.translations form.description)
         ]
 
