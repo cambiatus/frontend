@@ -13,6 +13,7 @@ import Api.Graphql
 import Avatar
 import Cambiatus.Enum.VerificationType as VerificationType
 import Cambiatus.Scalar exposing (DateTime(..))
+import Claim
 import Community exposing (Model)
 import Eos exposing (Symbol)
 import Eos.Account as Eos
@@ -98,7 +99,7 @@ type EditStatus
 
 
 type ModalStatus
-    = Open Bool Int -- Action id
+    = Open Bool Community.Action
     | Closed
 
 
@@ -486,7 +487,7 @@ viewAction loggedIn metadata maybeDate action =
                                         NoOp
 
                                      else
-                                        OpenClaimConfirmation action.id
+                                        OpenClaimConfirmation action
                                     )
                                 ]
                                 [ text_ claimText ]
@@ -500,7 +501,7 @@ viewAction loggedIn metadata maybeDate action =
                 [ if validationType == "CLAIMABLE" then
                     button
                         [ class ("h-10 uppercase rounded-lg ml-1" ++ claimColors ++ claimSize)
-                        , onClick (OpenClaimConfirmation action.id)
+                        , onClick (OpenClaimConfirmation action)
                         ]
                         [ text_ claimText ]
 
@@ -513,7 +514,7 @@ viewAction loggedIn metadata maybeDate action =
 viewClaimModal : LoggedIn.Model -> Model -> Html Msg
 viewClaimModal loggedIn model =
     case model.modalStatus of
-        Open isLoading actionId ->
+        Open isLoading action ->
             let
                 t s =
                     I18Next.t loggedIn.shared.translations
@@ -540,7 +541,7 @@ viewClaimModal loggedIn model =
                         , button
                             [ class "modal-accept"
                             , if not isLoading then
-                                onClick (ClaimAction actionId)
+                                onClick (ClaimAction action)
 
                               else
                                 onClick NoOp
@@ -598,9 +599,9 @@ type Msg
     | ClickedOpenObjective Int
     | ClickedCloseObjective
       -- Action
-    | OpenClaimConfirmation Int
+    | OpenClaimConfirmation Community.Action
     | CloseClaimConfirmation
-    | ClaimAction Int
+    | ClaimAction Community.Action
     | GotClaimActionResponse (Result Value String)
 
 
@@ -638,24 +639,33 @@ update msg model loggedIn =
             { model | openObjective = Nothing }
                 |> UR.init
 
-        OpenClaimConfirmation actionId ->
-            { model | modalStatus = Open False actionId }
+        OpenClaimConfirmation action ->
+            { model | modalStatus = Open False action }
                 |> UR.init
 
         CloseClaimConfirmation ->
             { model | modalStatus = Closed }
                 |> UR.init
 
-        ClaimAction actionId ->
+        ClaimAction action ->
             let
                 newModel =
-                    { model | modalStatus = Open True actionId }
+                    { model | modalStatus = Open True action }
+
+                proofPhoto =
+                    case action.hasProofPhoto of
+                        Just hasProofPhoto ->
+                            -- TODO: Attach photo
+                            ""
+
+                        Nothing ->
+                            ""
             in
             if LoggedIn.isAuth loggedIn then
                 newModel
                     |> UR.init
                     |> UR.addPort
-                        { responseAddress = ClaimAction actionId
+                        { responseAddress = ClaimAction action
                         , responseData = Encode.null
                         , data =
                             Eos.encodeTransaction
@@ -666,15 +676,15 @@ update msg model loggedIn =
                                         , permissionName = Eos.samplePermission
                                         }
                                   , data =
-                                        { actionId = actionId
+                                        { actionId = action.id
                                         , maker = loggedIn.accountName
 
                                         -- TODO: Use real data
-                                        , proofPhoto = ""
+                                        , proofPhoto = proofPhoto
                                         , proofCode = ""
                                         , proofTime = 0
                                         }
-                                            |> Community.encodeClaimAction
+                                            |> Claim.encodeClaimAction
                                   }
                                 ]
                         }
@@ -682,7 +692,7 @@ update msg model loggedIn =
             else
                 newModel
                     |> UR.init
-                    |> UR.addExt (Just (ClaimAction actionId) |> RequiredAuthentication)
+                    |> UR.addExt (Just (ClaimAction action) |> RequiredAuthentication)
 
         GotClaimActionResponse (Ok _) ->
             { model

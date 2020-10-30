@@ -96,7 +96,7 @@ view ({ shared } as loggedIn) model =
                                 ]
                             , div [ class "mx-auto container px-4" ]
                                 [ viewTitle shared claim
-                                , if Claim.tempHasPhotoProof claim then
+                                , if Claim.hasPhotoProof claim then
                                     viewPhotoThumbnail claim
 
                                   else

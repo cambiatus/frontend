@@ -24,7 +24,6 @@ module Community exposing
     , dashboardSelectionSet
     , decodeBalance
     , decodeTransaction
-    , encodeClaimAction
     , encodeCreateCommunityData
     , encodeCreateObjectiveAction
     , encodeCreateTokenData
@@ -370,30 +369,6 @@ type alias Verifiers =
     { verifiers : List String
     , reward : Float
     }
-
-
-
--- Claim Action
-
-
-type alias ClaimAction =
-    { actionId : Int
-    , maker : Eos.Name
-    , proofPhoto : String
-    , proofCode : String
-    , proofTime : Int
-    }
-
-
-encodeClaimAction : ClaimAction -> Value
-encodeClaimAction c =
-    Encode.object
-        [ ( "action_id", Encode.int c.actionId )
-        , ( "maker", Eos.encodeName c.maker )
-        , ( "proof_photo", Encode.string c.proofPhoto )
-        , ( "proof_code", Encode.string c.proofCode )
-        , ( "proof_time", Encode.int c.proofTime )
-        ]
 
 
 

@@ -6,14 +6,15 @@ module Claim exposing
     , Msg(..)
     , Paginated
     , claimPaginatedSelectionSet
+    , encodeClaimAction
     , encodeVerification
+    , hasPhotoProof
     , isValidated
     , isValidator
     , isVotable
     , paginatedPageInfo
     , paginatedToList
     , selectionSet
-    , tempHasPhotoProof
     , updateClaimModalStatus
     , viewClaimCard
     , viewPhotoModal
@@ -92,7 +93,34 @@ type alias Action =
     , verificationType : VerificationType
     , objective : Objective
     , createdAt : DateTime
+    , hasProofPhoto : Bool
+    , hasProofCode : Bool
+    , instructions : Maybe String
     }
+
+
+
+-- Claim Action
+
+
+type alias ClaimAction =
+    { actionId : Int
+    , maker : Eos.Account.Name
+    , proofPhoto : String
+    , proofCode : String
+    , proofTime : Int
+    }
+
+
+encodeClaimAction : ClaimAction -> Encode.Value
+encodeClaimAction c =
+    Encode.object
+        [ ( "action_id", Encode.int c.actionId )
+        , ( "maker", Eos.Account.encodeName c.maker )
+        , ( "proof_photo", Encode.string c.proofPhoto )
+        , ( "proof_code", Encode.string c.proofCode )
+        , ( "proof_time", Encode.int c.proofTime )
+        ]
 
 
 isValidated : Model -> Eos.Account.Name -> Bool
@@ -195,6 +223,9 @@ actionSelectionSet =
         |> with Action.verificationType
         |> with (Action.objective Community.objectiveSelectionSet)
         |> with Action.createdAt
+        |> with (SelectionSet.map (Maybe.withDefault False) Action.hasProofPhoto)
+        |> with (SelectionSet.map (Maybe.withDefault False) Action.hasProofCode)
+        |> with Action.photoProofInstructions
 
 
 checkSelectionSet : SelectionSet Check Cambiatus.Object.Check
@@ -286,10 +317,9 @@ updateClaimModalStatus msg model =
 {-| This is a temporary function, will be removed after implementing
 the backend part for Claims with photos.
 -}
-tempHasPhotoProof : Model -> Bool
-tempHasPhotoProof claim =
-    -- TODO: replace this placeholder with the real data
-    claim.id == 41 || claim.id == 47
+hasPhotoProof : Model -> Bool
+hasPhotoProof claim =
+    claim.action.hasProofPhoto
 
 
 {-| Claim card with a short claim overview. Used on Dashboard and Analysis pages.
@@ -334,12 +364,12 @@ viewClaimCard { selectedCommunity, shared, accountName } claim =
             [ div
                 [ class "flex mb-8"
                 , classList
-                    [ ( "justify-center", not <| tempHasPhotoProof claim )
-                    , ( "justify-between", tempHasPhotoProof claim )
+                    [ ( "justify-center", not <| hasPhotoProof claim )
+                    , ( "justify-between", hasPhotoProof claim )
                     ]
                 ]
                 [ Profile.view shared accountName claim.claimer
-                , if tempHasPhotoProof claim then
+                , if hasPhotoProof claim then
                     div [ class "claim-photo-thumb" ]
                         [ img
                             [ Utils.onClickNoBubble (OpenPhotoModal claim)
