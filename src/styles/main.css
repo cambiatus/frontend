@@ -332,6 +332,12 @@ textarea.input {
 
 /* End of Sticky Footer */
 
+/* Objectives */
+.action-verifier svg {
+  fill: #EEEEEE;
+}
+/* End of Objectives */
+
 /* Claims */
 .claim-photo-thumb {
   @apply cursor-pointer w-24 h-16 flex items-center justify-center overflow-hidden rounded-sm;

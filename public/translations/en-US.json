@@ -404,6 +404,7 @@
     "actions": {
       "title": "Action",
       "create_success": "Action created with success",
+      "save_success": "The action was successfully saved",
       "last_title": "Last Actions",
       "loading_error": "Something went wrong while fetching actions.",
       "no_actions_yet": "No actions yet.",
@@ -461,6 +462,11 @@
         "usages_placeholder": "Type a number",
         "date_label": "Choose date",
         "quantity_label": "Choose usages",
+        "photo_validation": "Photo validation",
+        "photo_validation_hint": "Users must send a photo performing the task for the claim to be valid.",
+        "verification_number": "Verification number",
+        "verification_number_hint": "Users will have to send a unique verification code with the photo in order for the claim to be valid.",
+        "verification_instructions": "Write here instructions for the users",
         "usages_left_label": "Usages left",
         "mark_completed": "Mark as completed",
         "errors": {
