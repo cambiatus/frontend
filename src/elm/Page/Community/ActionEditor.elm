@@ -635,18 +635,16 @@ update msg model ({ shared } as loggedIn) =
                         Automatic ->
                             model.form.verification
 
-                        Manual { verifiersValidator, verifierRewardValidator, minVotesValidator, photoProof } ->
+                        Manual m ->
                             let
                                 newVerifiers =
                                     List.filter
                                         (\currVerifier -> currVerifier.account /= profile.account)
-                                        (getInput verifiersValidator)
+                                        (getInput m.verifiersValidator)
                             in
                             Manual
-                                { verifiersValidator = updateInput newVerifiers verifiersValidator
-                                , verifierRewardValidator = verifierRewardValidator
-                                , minVotesValidator = minVotesValidator
-                                , photoProof = photoProof
+                                { m
+                                    | verifiersValidator = updateInput newVerifiers m.verifiersValidator
                                 }
             in
             { model | form = { oldForm | verification = verification } }
@@ -762,16 +760,14 @@ update msg model ({ shared } as loggedIn) =
                         |> UR.init
                         |> UR.logImpossible msg []
 
-                Manual { verifiersValidator, verifierRewardValidator, minVotesValidator, photoProof } ->
+                Manual m ->
                     { model
                         | form =
                             { oldForm
                                 | verification =
                                     Manual
-                                        { verifiersValidator = verifiersValidator
-                                        , verifierRewardValidator = updateInput val verifierRewardValidator
-                                        , minVotesValidator = minVotesValidator
-                                        , photoProof = photoProof
+                                        { m
+                                            | verifierRewardValidator = updateInput val m.verifierRewardValidator
                                         }
                             }
                     }
@@ -784,24 +780,23 @@ update msg model ({ shared } as loggedIn) =
                         |> UR.init
                         |> UR.logImpossible msg []
 
-                Manual { verifiersValidator, verifierRewardValidator, minVotesValidator, photoProof } ->
+                Manual m ->
                     let
                         newMinVotes =
-                            updateInput val minVotesValidator
+                            updateInput val m.minVotesValidator
 
                         newVerifiers =
                             -- Update min. verifiers quantity
-                            defaultVerifiersValidator (getInput verifiersValidator) val
+                            defaultVerifiersValidator (getInput m.verifiersValidator) val
                     in
                     { model
                         | form =
                             { oldForm
                                 | verification =
                                     Manual
-                                        { verifiersValidator = newVerifiers
-                                        , verifierRewardValidator = verifierRewardValidator
-                                        , minVotesValidator = newMinVotes
-                                        , photoProof = photoProof
+                                        { m
+                                            | verifiersValidator = newVerifiers
+                                            , minVotesValidator = newMinVotes
                                         }
                             }
                     }
@@ -899,16 +894,14 @@ update msg model ({ shared } as loggedIn) =
                         |> UR.init
                         |> UR.logImpossible msg []
 
-                Manual { verifiersValidator, verifierRewardValidator, minVotesValidator } ->
+                Manual m ->
                     { model
                         | form =
                             { oldForm
                                 | verification =
                                     Manual
-                                        { verifiersValidator = verifiersValidator
-                                        , verifierRewardValidator = verifierRewardValidator
-                                        , minVotesValidator = minVotesValidator
-                                        , photoProof = newPhotoProofState
+                                        { m
+                                            | photoProof = newPhotoProofState
                                         }
                             }
                     }
@@ -921,7 +914,7 @@ update msg model ({ shared } as loggedIn) =
                         |> UR.init
                         |> UR.logImpossible msg []
 
-                Manual { verifiersValidator, verifierRewardValidator, minVotesValidator } ->
+                Manual m ->
                     let
                         newPhotoValidationState =
                             if isProofNumberEnabled then
@@ -935,10 +928,8 @@ update msg model ({ shared } as loggedIn) =
                             { oldForm
                                 | verification =
                                     Manual
-                                        { verifiersValidator = verifiersValidator
-                                        , verifierRewardValidator = verifierRewardValidator
-                                        , minVotesValidator = minVotesValidator
-                                        , photoProof = newPhotoValidationState
+                                        { m
+                                            | photoProof = newPhotoValidationState
                                         }
                             }
                     }
