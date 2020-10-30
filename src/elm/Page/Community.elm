@@ -668,6 +668,11 @@ update msg model loggedIn =
                                   , data =
                                         { actionId = actionId
                                         , maker = loggedIn.accountName
+
+                                        -- TODO: Use real data
+                                        , proofPhoto = ""
+                                        , proofCode = ""
+                                        , proofTime = 0
                                         }
                                             |> Community.encodeClaimAction
                                   }
