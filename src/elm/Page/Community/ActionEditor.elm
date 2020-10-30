@@ -111,11 +111,10 @@ type ActionValidation
 
 type Verification
     = Automatic
-      -- users list, verification reward, min votes, photo proof
     | Manual
-        { verifiers : Validator (List Profile)
-        , verificationReward : Validator String
-        , minVotes : Validator String
+        { verifiersValidator : Validator (List Profile)
+        , verifierRewardValidator : Validator String
+        , minVotesValidator : Validator String
         , photoProof : PhotoProof
         }
 
@@ -225,9 +224,9 @@ editForm form action =
                                 Disabled
                 in
                 Manual
-                    { verifiers = defaultVerifiersValidator verificators (getInput newVerifications) |> updateInput verificators
-                    , verificationReward = defaultVerificationReward |> updateInput (String.fromFloat action.verificationReward)
-                    , minVotes = newVerifications
+                    { verifiersValidator = defaultVerifiersValidator verificators (getInput newVerifications) |> updateInput verificators
+                    , verifierRewardValidator = defaultVerificationReward |> updateInput (String.fromFloat action.verificationReward)
+                    , minVotesValidator = newVerifications
                     , photoProof = photoProof
                     }
 
@@ -357,11 +356,11 @@ validateForm form =
                 Automatic ->
                     Automatic
 
-                Manual { verifiers, verificationReward, minVotes, photoProof } ->
+                Manual { verifiersValidator, verifierRewardValidator, minVotesValidator, photoProof } ->
                     Manual
-                        { verifiers = validate verifiers
-                        , verificationReward = validate verificationReward
-                        , minVotes = validate minVotes
+                        { verifiersValidator = validate verifiersValidator
+                        , verifierRewardValidator = validate verifierRewardValidator
+                        , minVotesValidator = validate minVotesValidator
                         , photoProof = photoProof
                         }
     in
@@ -379,10 +378,10 @@ isFormValid form =
     let
         verificationHasErrors =
             case form.verification of
-                Manual { verifiers, verificationReward, minVotes } ->
-                    hasErrors minVotes
-                        || hasErrors verifiers
-                        || hasErrors verificationReward
+                Manual { verifiersValidator, verifierRewardValidator, minVotesValidator } ->
+                    hasErrors minVotesValidator
+                        || hasErrors verifiersValidator
+                        || hasErrors verifierRewardValidator
 
                 Automatic ->
                     -- Automatic verification never has validation errors
@@ -609,7 +608,7 @@ update msg model ({ shared } as loggedIn) =
                     model
                         |> UR.init
 
-                Manual { verifiers, verificationReward, minVotes, photoProof } ->
+                Manual { verifiersValidator, verifierRewardValidator, minVotesValidator, photoProof } ->
                     { model
                         | form =
                             { oldForm
@@ -617,13 +616,13 @@ update msg model ({ shared } as loggedIn) =
                                     let
                                         newVerifiers =
                                             maybeProfile
-                                                |> Maybe.map (List.singleton >> List.append (getInput verifiers))
-                                                |> Maybe.withDefault (getInput verifiers)
+                                                |> Maybe.map (List.singleton >> List.append (getInput verifiersValidator))
+                                                |> Maybe.withDefault (getInput verifiersValidator)
                                     in
                                     Manual
-                                        { verifiers = updateInput newVerifiers verifiers
-                                        , verificationReward = verificationReward
-                                        , minVotes = minVotes
+                                        { verifiersValidator = updateInput newVerifiers verifiersValidator
+                                        , verifierRewardValidator = verifierRewardValidator
+                                        , minVotesValidator = minVotesValidator
                                         , photoProof = photoProof
                                         }
                             }
@@ -640,17 +639,17 @@ update msg model ({ shared } as loggedIn) =
                         Automatic ->
                             model.form.verification
 
-                        Manual { verifiers, verificationReward, minVotes, photoProof } ->
+                        Manual { verifiersValidator, verifierRewardValidator, minVotesValidator, photoProof } ->
                             let
                                 newVerifiers =
                                     List.filter
                                         (\currVerifier -> currVerifier.account /= profile.account)
-                                        (getInput verifiers)
+                                        (getInput verifiersValidator)
                             in
                             Manual
-                                { verifiers = updateInput newVerifiers verifiers
-                                , verificationReward = verificationReward
-                                , minVotes = minVotes
+                                { verifiersValidator = updateInput newVerifiers verifiersValidator
+                                , verifierRewardValidator = verifierRewardValidator
+                                , minVotesValidator = minVotesValidator
                                 , photoProof = photoProof
                                 }
             in
@@ -793,15 +792,15 @@ update msg model ({ shared } as loggedIn) =
                         |> UR.init
                         |> UR.logImpossible msg []
 
-                Manual { verifiers, verificationReward, minVotes, photoProof } ->
+                Manual { verifiersValidator, verifierRewardValidator, minVotesValidator, photoProof } ->
                     { model
                         | form =
                             { oldForm
                                 | verification =
                                     Manual
-                                        { verifiers = verifiers
-                                        , verificationReward = updateInput val verificationReward
-                                        , minVotes = minVotes
+                                        { verifiersValidator = verifiersValidator
+                                        , verifierRewardValidator = updateInput val verifierRewardValidator
+                                        , minVotesValidator = minVotesValidator
                                         , photoProof = photoProof
                                         }
                             }
@@ -819,23 +818,23 @@ update msg model ({ shared } as loggedIn) =
                         |> UR.init
                         |> UR.logImpossible msg []
 
-                Manual { verifiers, verificationReward, minVotes, photoProof } ->
+                Manual { verifiersValidator, verifierRewardValidator, minVotesValidator, photoProof } ->
                     let
                         newMinVotes =
-                            updateInput val minVotes
+                            updateInput val minVotesValidator
 
                         newVerifiers =
                             -- Update min. verifiers quantity
-                            defaultVerifiersValidator (getInput verifiers) val
+                            defaultVerifiersValidator (getInput verifiersValidator) val
                     in
                     { model
                         | form =
                             { oldForm
                                 | verification =
                                     Manual
-                                        { verifiers = newVerifiers
-                                        , verificationReward = verificationReward
-                                        , minVotes = newMinVotes
+                                        { verifiersValidator = newVerifiers
+                                        , verifierRewardValidator = verifierRewardValidator
+                                        , minVotesValidator = newMinVotes
                                         , photoProof = photoProof
                                         }
                             }
@@ -941,15 +940,15 @@ update msg model ({ shared } as loggedIn) =
                         |> UR.init
                         |> UR.logImpossible msg []
 
-                Manual { verifiers, verificationReward, minVotes } ->
+                Manual { verifiersValidator, verifierRewardValidator, minVotesValidator } ->
                     { model
                         | form =
                             { oldForm
                                 | verification =
                                     Manual
-                                        { verifiers = verifiers
-                                        , verificationReward = verificationReward
-                                        , minVotes = minVotes
+                                        { verifiersValidator = verifiersValidator
+                                        , verifierRewardValidator = verifierRewardValidator
+                                        , minVotesValidator = minVotesValidator
                                         , photoProof = newPhotoProofState
                                         }
                             }
@@ -967,7 +966,7 @@ update msg model ({ shared } as loggedIn) =
                         |> UR.init
                         |> UR.logImpossible msg []
 
-                Manual { verifiers, verificationReward, minVotes } ->
+                Manual { verifiersValidator, verifierRewardValidator, minVotesValidator } ->
                     let
                         newPhotoValidationState =
                             if isProofNumberEnabled then
@@ -981,9 +980,9 @@ update msg model ({ shared } as loggedIn) =
                             { oldForm
                                 | verification =
                                     Manual
-                                        { verifiers = verifiers
-                                        , verificationReward = verificationReward
-                                        , minVotes = minVotes
+                                        { verifiersValidator = verifiersValidator
+                                        , verifierRewardValidator = verifierRewardValidator
+                                        , minVotesValidator = minVotesValidator
                                         , photoProof = newPhotoValidationState
                                         }
                             }
@@ -1070,9 +1069,9 @@ update msg model ({ shared } as loggedIn) =
 
                             else
                                 Manual
-                                    { verifiers = defaultVerifiersValidator [] (getInput defaultMinVotes)
-                                    , verificationReward = defaultVerificationReward
-                                    , minVotes = defaultMinVotes
+                                    { verifiersValidator = defaultVerifiersValidator [] (getInput defaultMinVotes)
+                                    , verifierRewardValidator = defaultVerificationReward
+                                    , minVotesValidator = defaultMinVotes
                                     , photoProof = Disabled
                                     }
                     }
@@ -1200,8 +1199,8 @@ upsertAction loggedIn model isoDate =
                 Automatic ->
                     Eos.Asset 0.0 model.communityId |> Eos.assetToString
 
-                Manual { verificationReward } ->
-                    Eos.Asset (getInput verificationReward |> String.toFloat |> Maybe.withDefault 0.0) model.communityId
+                Manual { verifierRewardValidator } ->
+                    Eos.Asset (getInput verifierRewardValidator |> String.toFloat |> Maybe.withDefault 0.0) model.communityId
                         |> Eos.assetToString
 
         usages =
@@ -1228,16 +1227,16 @@ upsertAction loggedIn model isoDate =
                 Automatic ->
                     "0"
 
-                Manual { minVotes } ->
-                    getInput minVotes
+                Manual { minVotesValidator } ->
+                    getInput minVotesValidator
 
         validators =
             case model.form.verification of
                 Automatic ->
                     []
 
-                Manual { verifiers } ->
-                    getInput verifiers
+                Manual { verifiersValidator } ->
+                    getInput verifiersValidator
 
         validatorsStr =
             validators
@@ -1735,7 +1734,7 @@ viewManualVerificationForm ({ shared } as loggedIn) model community =
         Automatic ->
             text ""
 
-        Manual { verifiers, verificationReward, minVotes, photoProof } ->
+        Manual { verifiersValidator, verifierRewardValidator, minVotesValidator, photoProof } ->
             let
                 isPhotoProofEnabled =
                     case photoProof of
@@ -1758,15 +1757,15 @@ viewManualVerificationForm ({ shared } as loggedIn) model community =
                     [ label [ class "input-label block" ]
                         [ text_ "community.actions.form.votes_label" ]
                     , div [ class "space-x-4" ] <|
-                        List.map (viewVotesCount (getInput minVotes)) [ 3, 5, 7, 9 ]
-                    , viewFieldErrors (listErrors shared.translations minVotes)
+                        List.map (viewVotesCount (getInput minVotesValidator)) [ 3, 5, 7, 9 ]
+                    , viewFieldErrors (listErrors shared.translations minVotesValidator)
                     ]
                 , span [ class "input-label" ]
-                    [ text (tr "community.actions.form.verifiers_label_count" [ ( "count", getInput minVotes ) ]) ]
+                    [ text (tr "community.actions.form.verifiers_label_count" [ ( "count", getInput minVotesValidator ) ]) ]
                 , div []
                     [ viewVerifierSelect shared model False
-                    , viewFieldErrors (listErrors shared.translations verifiers)
-                    , viewSelectedVerifiers loggedIn (getInput verifiers)
+                    , viewFieldErrors (listErrors shared.translations verifiersValidator)
+                    , viewSelectedVerifiers loggedIn (getInput verifiersValidator)
                     ]
                 , span [ class "input-label" ]
                     [ text_ "community.actions.form.verifiers_reward_label" ]
@@ -1777,14 +1776,14 @@ viewManualVerificationForm ({ shared } as loggedIn) model community =
                             , type_ "number"
                             , placeholder "0.00"
                             , onInput EnteredVerifierReward
-                            , value (getInput verificationReward)
+                            , value (getInput verifierRewardValidator)
                             ]
                             []
                         , span
                             [ class "w-1/5 flex input-token rounded-r-sm" ]
                             [ text (Eos.symbolToSymbolCodeString community.symbol) ]
                         ]
-                    , viewFieldErrors (listErrors shared.translations verificationReward)
+                    , viewFieldErrors (listErrors shared.translations verifierRewardValidator)
                     , div [ class "mt-8" ]
                         [ label [ class "flex text-body block" ]
                             [ input
@@ -1940,13 +1939,13 @@ viewVerifierSelect shared model isDisabled =
         Automatic ->
             text ""
 
-        Manual { verifiers } ->
+        Manual { verifiersValidator } ->
             div []
                 [ Html.map SelectMsg
                     (Select.view (selectConfiguration shared isDisabled)
                         model.multiSelectState
                         users
-                        (getInput verifiers)
+                        (getInput verifiersValidator)
                     )
                 ]
 
