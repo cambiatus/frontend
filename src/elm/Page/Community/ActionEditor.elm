@@ -522,6 +522,9 @@ update msg model ({ shared } as loggedIn) =
     let
         { t } =
             shared.translators
+
+        oldForm =
+            model.form
     in
     case msg of
         CompletedCommunityLoad (Err err) ->
@@ -599,10 +602,6 @@ update msg model ({ shared } as loggedIn) =
                         |> UR.logImpossible msg []
 
         OnSelectVerifier maybeProfile ->
-            let
-                oldForm =
-                    model.form
-            in
             case model.form.verification of
                 Automatic ->
                     model
@@ -631,9 +630,6 @@ update msg model ({ shared } as loggedIn) =
 
         OnRemoveVerifier profile ->
             let
-                oldForm =
-                    model.form
-
                 verification =
                     case model.form.verification of
                         Automatic ->
@@ -667,9 +663,6 @@ update msg model ({ shared } as loggedIn) =
 
         EnteredDescription val ->
             let
-                oldForm =
-                    model.form
-
                 limitedDescription =
                     if String.length val < 255 then
                         val
@@ -687,9 +680,6 @@ update msg model ({ shared } as loggedIn) =
 
         EnteredInstructions val ->
             let
-                oldForm =
-                    model.form
-
                 limitedInstructions =
                     if String.length val < 255 then
                         val
@@ -706,18 +696,10 @@ update msg model ({ shared } as loggedIn) =
                 |> UR.init
 
         EnteredReward val ->
-            let
-                oldForm =
-                    model.form
-            in
             { model | form = { oldForm | reward = updateInput val model.form.reward } }
                 |> UR.init
 
         EnteredDeadline val ->
-            let
-                oldForm =
-                    model.form
-            in
             case model.form.validation of
                 NoValidation ->
                     model
@@ -741,10 +723,6 @@ update msg model ({ shared } as loggedIn) =
                                 |> UR.logImpossible msg []
 
         EnteredUsages val ->
-            let
-                oldForm =
-                    model.form
-            in
             case model.form.validation of
                 NoValidation ->
                     model
@@ -768,10 +746,6 @@ update msg model ({ shared } as loggedIn) =
                                 |> UR.logImpossible msg []
 
         EnteredUsagesLeft val ->
-            let
-                oldForm =
-                    model.form
-            in
             case model.form.usagesLeft of
                 Just validator ->
                     { model | form = { oldForm | usagesLeft = Just (updateInput val validator) } }
@@ -782,10 +756,6 @@ update msg model ({ shared } as loggedIn) =
                         |> UR.init
 
         EnteredVerifierReward val ->
-            let
-                oldForm =
-                    model.form
-            in
             case model.form.verification of
                 Automatic ->
                     model
@@ -808,10 +778,6 @@ update msg model ({ shared } as loggedIn) =
                         |> UR.init
 
         EnteredMinVotes val ->
-            let
-                oldForm =
-                    model.form
-            in
             case model.form.verification of
                 Automatic ->
                     model
@@ -892,10 +858,6 @@ update msg model ({ shared } as loggedIn) =
                                 |> UR.init
 
         DeadlineChanged state ->
-            let
-                oldForm =
-                    model.form
-            in
             case model.form.validation of
                 NoValidation ->
                     model
@@ -924,9 +886,6 @@ update msg model ({ shared } as loggedIn) =
 
         TogglePhotoProof isPhotoProofEnabled ->
             let
-                oldForm =
-                    model.form
-
                 newPhotoProofState =
                     if isPhotoProofEnabled then
                         Enabled WithoutProofNumber
@@ -956,10 +915,6 @@ update msg model ({ shared } as loggedIn) =
                         |> UR.init
 
         TogglePhotoProofNumber isProofNumberEnabled ->
-            let
-                oldForm =
-                    model.form
-            in
             case model.form.verification of
                 Automatic ->
                     model
@@ -991,9 +946,6 @@ update msg model ({ shared } as loggedIn) =
 
         ToggleDeadline bool ->
             let
-                oldForm =
-                    model.form
-
                 deadlineValidation =
                     if bool then
                         Just defaultDateValidator
@@ -1024,9 +976,6 @@ update msg model ({ shared } as loggedIn) =
 
         ToggleUsages bool ->
             let
-                oldForm =
-                    model.form
-
                 usagesValidation =
                     if bool then
                         Just defaultUsagesValidator
@@ -1056,10 +1005,6 @@ update msg model ({ shared } as loggedIn) =
                 |> UR.init
 
         SetVerification val ->
-            let
-                oldForm =
-                    model.form
-            in
             { model
                 | form =
                     { oldForm
@@ -1080,9 +1025,6 @@ update msg model ({ shared } as loggedIn) =
 
         MarkAsCompleted ->
             let
-                oldForm =
-                    model.form
-
                 newModel =
                     { model | form = { oldForm | isCompleted = True } }
             in
@@ -1090,9 +1032,6 @@ update msg model ({ shared } as loggedIn) =
 
         GotInvalidDate ->
             let
-                oldForm =
-                    model.form
-
                 newForm =
                     { oldForm
                         | validation =
@@ -1142,9 +1081,6 @@ update msg model ({ shared } as loggedIn) =
 
         SaveAction isoDate ->
             let
-                oldForm =
-                    model.form
-
                 newModel =
                     { model | form = { oldForm | saveStatus = Saving } }
             in
@@ -1167,9 +1103,6 @@ update msg model ({ shared } as loggedIn) =
 
         GotSaveAction (Err val) ->
             let
-                oldForm =
-                    model.form
-
                 newModel =
                     { model | form = { oldForm | saveStatus = Failed (t "error.unknown") } }
             in
