@@ -201,19 +201,19 @@ view loggedIn model =
 viewAddPhoto { t } action =
     div [ class "bg-white border-t border-gray-300" ]
         [ div [ class "container p-4 mx-auto" ]
-            [ Page.viewTitle "This action requires proof of achievement"
+            [ Page.viewTitle (t "community.actions.proof.title")
             , p [ class "mb-4" ]
                 [ text <|
                     Maybe.withDefault "" action.photoProofInstructions
                 ]
             , div [ class "mb-4" ]
                 [ span [ class "input-label block" ]
-                    [ text "verification number" ]
+                    [ text (t "community.actions.form.verification_number") ]
                 , p [ class "text-xl font-bold" ] [ text "82378463" ]
                 ]
             , div [ class "mb-4" ]
                 [ span [ class "input-label block" ]
-                    [ text "photo" ]
+                    [ text (t "community.actions.proof.photo") ]
                 , div [ class "relative bg-purple-500 w-full h-56 rounded-sm flex justify-center items-center" ]
                     [ div [ class "w-10" ]
                         [ Icons.camera

@@ -432,6 +432,10 @@
       "completed": "Completed",
       "closed": "Closed",
       "edit": "Edit Action",
+      "proof": {
+        "title": "This action requires proof of achievement",
+        "photo": "Photo"
+      },
       "form": {
         "not_found": "Action not found",
         "description_label": "Description",

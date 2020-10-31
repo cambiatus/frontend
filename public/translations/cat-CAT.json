@@ -436,6 +436,10 @@
       "completed": "Completat",
       "closed": "Tancat",
       "edit": "Edita l'acció",
+      "proof": {
+        "title": "Aquesta acció requereix proves d’assoliment",
+        "photo": "Foto"
+      },
       "form": {
         "not_found": "Acció no trobada",
         "description_label": "Descripció",
