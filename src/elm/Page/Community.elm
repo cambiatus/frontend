@@ -9,6 +9,7 @@ module Page.Community exposing
     , view
     )
 
+import Api
 import Api.Graphql
 import Avatar
 import Cambiatus.Enum.VerificationType as VerificationType
@@ -17,11 +18,13 @@ import Claim
 import Community exposing (Model)
 import Eos exposing (Symbol)
 import Eos.Account as Eos
+import File exposing (File)
 import Graphql.Http
 import Graphql.OptionalArgument exposing (OptionalArgument(..))
-import Html exposing (Html, a, button, div, hr, img, p, span, text)
-import Html.Attributes exposing (class, classList, disabled, src)
+import Html exposing (Html, a, button, div, hr, img, input, label, p, span, text)
+import Html.Attributes exposing (accept, class, classList, disabled, multiple, src, type_)
 import Html.Events exposing (onClick)
+import Http
 import I18Next exposing (t)
 import Icons
 import Json.Decode as Decode
@@ -71,6 +74,7 @@ type alias Model =
     , openObjective : Maybe Int
     , modalStatus : ModalStatus
     , addPhotoStatus : AddPhotoStatus
+    , proofPhoto : Maybe String
     , invitations : String
     , symbol : Symbol
     }
@@ -89,6 +93,7 @@ initModel _ symbol =
     , openObjective = Nothing
     , modalStatus = Closed
     , addPhotoStatus = AddPhotoClosed
+    , proofPhoto = Nothing
     , invitations = ""
     , symbol = symbol
     }
@@ -214,13 +219,7 @@ viewAddPhoto { t } action =
             , div [ class "mb-4" ]
                 [ span [ class "input-label block" ]
                     [ text (t "community.actions.proof.photo") ]
-                , div [ class "relative bg-purple-500 w-full h-56 rounded-sm flex justify-center items-center" ]
-                    [ div [ class "w-10" ]
-                        [ Icons.camera
-                        , span [ class "absolute bottom-0 right-0 mr-4 mb-4 bg-orange-300 w-8 h-8 p-2 rounded-full" ]
-                            [ Icons.camera ]
-                        ]
-                    ]
+                , viewPhotoUploader
                 ]
             , div [ class "md:flex" ]
                 [ button
@@ -652,6 +651,8 @@ type Msg
     | CloseClaimConfirmation
     | OpenAddPhotoProof Community.Action
     | CloseAddPhotoProof
+    | EnteredPhoto (List File)
+    | CompletedPhotoUpload (Result Http.Error String)
     | ClaimAction Community.Action
     | GotClaimActionResponse (Result Value String)
 
@@ -710,6 +711,27 @@ update msg model loggedIn =
                     }
                         |> UR.init
 
+        EnteredPhoto (file :: _) ->
+            let
+                uploadImage =
+                    Api.uploadImage loggedIn.shared file CompletedPhotoUpload
+            in
+            model
+                |> UR.init
+                |> UR.addCmd uploadImage
+
+        EnteredPhoto [] ->
+            UR.init model
+
+        CompletedPhotoUpload (Ok url) ->
+            { model | proofPhoto = Just url }
+                |> UR.init
+
+        CompletedPhotoUpload (Err error) ->
+            model
+                |> UR.init
+                |> UR.logHttpError msg error
+
         CloseClaimConfirmation ->
             { model | modalStatus = Closed }
                 |> UR.init
@@ -724,6 +746,7 @@ update msg model loggedIn =
                     { model | modalStatus = Open True action }
 
                 proofPhoto =
+                    -- TODO: Show error feedback msg if action.hasPhotoProof and there's no photo added
                     case action.hasProofPhoto of
                         Just hasProofPhoto ->
                             -- TODO: Attach photo
@@ -780,6 +803,25 @@ update msg model loggedIn =
                 |> UR.addExt (ShowFeedback LoggedIn.Failure (t "dashboard.check_claim.failure"))
 
 
+viewPhotoUploader : Html Msg
+viewPhotoUploader =
+    label
+        [ class "relative bg-purple-500 w-full h-56 rounded-sm flex justify-center items-center cursor-pointer" ]
+        [ input
+            [ class "hidden-img-input"
+            , type_ "file"
+            , accept "image/*"
+            , Page.onFileChange EnteredPhoto
+            , multiple False
+            ]
+            []
+        , div [ class "w-10" ] [ Icons.camera ]
+
+        -- TODO: Show orange icon only if photo is uploaded
+        , span [ class "absolute bottom-0 right-0 mr-4 mb-4 bg-orange-300 w-8 h-8 p-2 rounded-full" ] [ Icons.camera ]
+        ]
+
+
 jsAddressToMsg : List String -> Value -> Maybe Msg
 jsAddressToMsg addr val =
     case addr of
@@ -821,6 +863,12 @@ msgToString msg =
 
         CloseAddPhotoProof ->
             [ "CloseAddPhotoProof" ]
+
+        EnteredPhoto _ ->
+            [ "EnteredPhoto" ]
+
+        CompletedPhotoUpload r ->
+            [ "CompletedPhotoUpload", UR.resultToString r ]
 
         OpenClaimConfirmation _ ->
             [ "OpenClaimConfirmation" ]
