@@ -230,8 +230,7 @@ viewAddPhoto { t } action =
                     [ text (t "menu.cancel") ]
                 , button
                     [ class "modal-accept"
-
-                    --, onClick
+                    , onClick (ClaimAction action)
                     ]
                     [ text (t "menu.send") ]
                 ]
