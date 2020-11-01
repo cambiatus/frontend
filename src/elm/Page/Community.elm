@@ -15,7 +15,7 @@ import Avatar
 import Cambiatus.Enum.VerificationType as VerificationType
 import Cambiatus.Scalar exposing (DateTime(..))
 import Claim
-import Community exposing (Model)
+import Community exposing (Action, Model)
 import Eos exposing (Symbol)
 import Eos.Account as Eos
 import File exposing (File)
@@ -32,6 +32,7 @@ import Json.Encode as Encode exposing (Value)
 import Page
 import Route
 import Session.LoggedIn as LoggedIn exposing (External(..), FeedbackStatus(..))
+import Session.Shared exposing (Shared)
 import Strftime
 import Task
 import Time exposing (Posix, posixToMillis)
@@ -75,6 +76,7 @@ type alias Model =
     , modalStatus : ModalStatus
     , addPhotoStatus : AddPhotoStatus
     , proofPhoto : Maybe String
+    , proofPhotoStatus : ImageStatus
     , invitations : String
     , symbol : Symbol
     }
@@ -94,6 +96,7 @@ initModel _ symbol =
     , modalStatus = Closed
     , addPhotoStatus = AddPhotoClosed
     , proofPhoto = Nothing
+    , proofPhotoStatus = NoImage
     , invitations = ""
     , symbol = symbol
     }
@@ -110,7 +113,9 @@ type EditStatus
     = NoEdit
 
 
-type ModalStatus
+type
+    ModalStatus
+    -- TODO: Use `Loading` and `Active` instead of Bool
     = Open Bool Community.Action
     | Closed
 
@@ -120,6 +125,13 @@ type alias Member =
     , accountName : String
     , nameWithAt : String
     }
+
+
+type ImageStatus
+    = NoImage
+    | Uploading
+    | UploadFailed Http.Error
+    | Uploaded String
 
 
 
@@ -163,18 +175,9 @@ view loggedIn model =
                             LoggedIn.isAccount community.creator loggedIn
                     in
                     div []
-                        [ div [ class "text-xlg" ]
-                            [ -- TODO: There is a sample on how to get the Time as a Int.
-                              -- TODO: you can then use the function Claim.generateVerificationCode to
-                              -- TODO: get the verification code to be displayed. Remember it only lasts for 30 minutes
-                              text <|
-                                String.fromInt <|
-                                    Time.posixToMillis <|
-                                        Maybe.withDefault (Time.millisToPosix 0) model.date
-                            ]
-                        , case model.addPhotoStatus of
+                        [ case model.addPhotoStatus of
                             AddPhotoOpen action ->
-                                viewAddPhoto loggedIn.shared.translators action
+                                viewAddPhoto model loggedIn action
 
                             AddPhotoClosed ->
                                 div []
@@ -212,7 +215,18 @@ view loggedIn model =
     }
 
 
-viewAddPhoto { t } action =
+viewAddPhoto : Model -> LoggedIn.Model -> Action -> Html Msg
+viewAddPhoto model { accountName, shared } action =
+    let
+        { t } =
+            shared.translators
+
+        proofCode =
+            Claim.generateVerificationCode
+                action.id
+                accountName
+                (Maybe.withDefault (Time.millisToPosix 0) model.date)
+    in
     div [ class "bg-white border-t border-gray-300" ]
         [ div [ class "container p-4 mx-auto" ]
             [ Page.viewTitle (t "community.actions.proof.title")
@@ -223,12 +237,21 @@ viewAddPhoto { t } action =
             , div [ class "mb-4" ]
                 [ span [ class "input-label block" ]
                     [ text (t "community.actions.form.verification_number") ]
-                , p [ class "text-xl font-bold" ] [ text "82378463" ]
+                , p [ class "text-xl font-bold" ]
+                    [ text proofCode ]
+
+                -- TODO: There is a sample on how to get the Time as a Int.
+                -- TODO: you can then use the function Claim.generateVerificationCode to
+                -- TODO: get the verification code to be displayed. Remember it only lasts for 30 minutes
+                --,text <|
+                --  String.fromInt <|
+                --      Time.posixToMillis <|
+                --          Maybe.withDefault (Time.millisToPosix 0) model.date
                 ]
             , div [ class "mb-4" ]
                 [ span [ class "input-label block" ]
                     [ text (t "community.actions.proof.photo") ]
-                , viewPhotoUploader
+                , viewPhotoUploader shared model
                 ]
             , div [ class "md:flex" ]
                 [ button
@@ -280,16 +303,16 @@ viewObjective loggedIn model metadata index objective =
     in
     div [ class "my-2" ]
         [ div
-            [ class "px-3 py-4 bg-indigo-500 flex flex-col sm:flex-row sm:items-center sm:h-10"
+            [ class "px-3 py-4 bg-indigo-500 flex flex-col sm:flex-row sm:items-center sm:h-10 cursor-pointer"
+            , if isOpen then
+                onClick ClickedCloseObjective
+
+              else
+                onClick (ClickedOpenObjective index)
             ]
             [ div [ class "sm:flex-grow-7 sm:w-5/12" ]
                 [ div
                     [ class "truncate overflow-hidden whitespace-no-wrap text-white font-medium text-sm overflow-hidden sm:flex-grow-8 sm:leading-normal sm:text-lg"
-                    , if isOpen then
-                        onClick ClickedCloseObjective
-
-                      else
-                        onClick (ClickedOpenObjective index)
                     ]
                     [ text objective.description ]
                 ]
@@ -725,7 +748,7 @@ update msg model loggedIn =
                 uploadImage =
                     Api.uploadImage loggedIn.shared file CompletedPhotoUpload
             in
-            model
+            { model | proofPhotoStatus = Uploading }
                 |> UR.init
                 |> UR.addCmd uploadImage
 
@@ -733,7 +756,9 @@ update msg model loggedIn =
             UR.init model
 
         CompletedPhotoUpload (Ok url) ->
-            { model | proofPhoto = Just url }
+            { model
+                | proofPhotoStatus = Uploaded url
+            }
                 |> UR.init
 
         CompletedPhotoUpload (Err error) ->
@@ -754,14 +779,31 @@ update msg model loggedIn =
                 newModel =
                     { model | modalStatus = Open True action }
 
+                proofCode =
+                    case action.hasProofCode of
+                        Just True ->
+                            -- TODO: Generate code
+                            "CODE"
+
+                        _ ->
+                            ""
+
+                proofTime =
+                    -- TODO: Generate time
+                    0
+
                 proofPhoto =
                     -- TODO: Show error feedback msg if action.hasPhotoProof and there's no photo added
                     case action.hasProofPhoto of
-                        Just hasProofPhoto ->
-                            -- TODO: Attach photo
-                            ""
+                        Just True ->
+                            case model.proofPhotoStatus of
+                                Uploaded url ->
+                                    url
 
-                        Nothing ->
+                                _ ->
+                                    ""
+
+                        _ ->
                             ""
             in
             if LoggedIn.isAuth loggedIn then
@@ -781,11 +823,9 @@ update msg model loggedIn =
                                   , data =
                                         { actionId = action.id
                                         , maker = loggedIn.accountName
-
-                                        -- TODO: Use real data
                                         , proofPhoto = proofPhoto
-                                        , proofCode = ""
-                                        , proofTime = 0
+                                        , proofCode = proofCode
+                                        , proofTime = proofTime
                                         }
                                             |> Claim.encodeClaimAction
                                   }
@@ -812,10 +852,14 @@ update msg model loggedIn =
                 |> UR.addExt (ShowFeedback LoggedIn.Failure (t "dashboard.check_claim.failure"))
 
 
-viewPhotoUploader : Html Msg
-viewPhotoUploader =
+viewPhotoUploader : Shared -> Model -> Html Msg
+viewPhotoUploader shared model =
+    let
+        { t } =
+            shared.translators
+    in
     label
-        [ class "relative bg-purple-500 w-full h-56 rounded-sm flex justify-center items-center cursor-pointer" ]
+        [ class "relative bg-purple-500 w-full md:w-2/3 h-56 rounded-sm flex justify-center items-center cursor-pointer" ]
         [ input
             [ class "hidden-img-input"
             , type_ "file"
@@ -824,10 +868,23 @@ viewPhotoUploader =
             , multiple False
             ]
             []
-        , div [ class "w-10" ] [ Icons.camera ]
+        , div []
+            [ case model.proofPhotoStatus of
+                Uploading ->
+                    div [ class "spinner spinner-light" ] []
+
+                Uploaded url ->
+                    div []
+                        [ img [ src url ] []
+                        , span [ class "absolute bottom-0 right-0 mr-4 mb-4 bg-orange-300 w-8 h-8 p-2 rounded-full" ]
+                            [ Icons.camera ]
+                        ]
+
+                _ ->
+                    div [ class "w-10" ] [ Icons.camera ]
+            ]
 
         -- TODO: Show orange icon only if photo is uploaded
-        , span [ class "absolute bottom-0 right-0 mr-4 mb-4 bg-orange-300 w-8 h-8 p-2 rounded-full" ] [ Icons.camera ]
         ]
 
 
