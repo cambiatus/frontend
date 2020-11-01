@@ -338,6 +338,11 @@ textarea.input {
 }
 /* End of Objectives */
 
+.spinner-light {
+  border-color: white;
+  border-right-color: transparent;
+}
+
 /* Claims */
 .claim-photo-thumb {
   @apply cursor-pointer w-24 h-16 flex items-center justify-center overflow-hidden rounded-sm;
