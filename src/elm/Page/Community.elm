@@ -714,7 +714,8 @@ update msg model loggedIn =
         GotProofTime actionId posix ->
             let
                 proofTime =
-                    Time.posixToMillis posix
+                    -- Timestamp in seconds
+                    Time.posixToMillis posix // 1000
 
                 proofCode =
                     Claim.generateVerificationCode actionId
