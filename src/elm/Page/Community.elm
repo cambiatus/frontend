@@ -77,6 +77,8 @@ type alias Model =
     , addPhotoStatus : AddPhotoStatus
     , proofPhoto : Maybe String
     , proofPhotoStatus : ImageStatus
+    , proofTime : Maybe Int
+    , proofCode : Maybe String
     , invitations : String
     , symbol : Symbol
     }
@@ -97,8 +99,20 @@ initModel _ symbol =
     , addPhotoStatus = AddPhotoClosed
     , proofPhoto = Nothing
     , proofPhotoStatus = NoImage
+    , proofTime = Nothing
+    , proofCode = Nothing
     , invitations = ""
     , symbol = symbol
+    }
+
+
+{-| TODO: Probably it's better to use `Maybe ProofFields` in model instead of all proof fields separately
+-}
+type alias ProofFields =
+    { proofPhoto : String
+    , proofPhotoStatus : ImageStatus
+    , proofPosixTime : Posix
+    , proofCode : String
     }
 
 
@@ -220,12 +234,6 @@ viewAddPhoto model { accountName, shared } action =
     let
         { t } =
             shared.translators
-
-        proofCode =
-            Claim.generateVerificationCode
-                action.id
-                accountName
-                (Maybe.withDefault (Time.millisToPosix 0) model.date)
     in
     div [ class "bg-white border-t border-gray-300" ]
         [ div [ class "container p-4 mx-auto" ]
@@ -238,7 +246,7 @@ viewAddPhoto model { accountName, shared } action =
                 [ span [ class "input-label block" ]
                     [ text (t "community.actions.form.verification_number") ]
                 , p [ class "text-xl font-bold" ]
-                    [ text proofCode ]
+                    [ text <| Maybe.withDefault "No code found" model.proofCode ]
 
                 -- TODO: There is a sample on how to get the Time as a Int.
                 -- TODO: you can then use the function Claim.generateVerificationCode to
@@ -683,6 +691,7 @@ type Msg
     | CloseClaimConfirmation
     | OpenAddPhotoProof Community.Action
     | CloseAddPhotoProof
+    | GotProofTime Int Posix
     | EnteredPhoto (List File)
     | CompletedPhotoUpload (Result Http.Error String)
     | ClaimAction Community.Action
@@ -701,6 +710,22 @@ update msg model loggedIn =
 
         GotTime date ->
             UR.init { model | date = Just date }
+
+        GotProofTime actionId posix ->
+            let
+                proofTime =
+                    Time.posixToMillis posix
+
+                proofCode =
+                    Claim.generateVerificationCode actionId
+                        loggedIn.accountName
+                        posix
+            in
+            UR.init
+                { model
+                    | proofTime = Just proofTime
+                    , proofCode = Just proofCode
+                }
 
         CompletedLoadCommunity (Ok community) ->
             case community of
@@ -735,6 +760,7 @@ update msg model loggedIn =
                         , modalStatus = Closed
                     }
                         |> UR.init
+                        |> UR.addCmd (Task.perform (GotProofTime action.id) Time.now)
 
                 _ ->
                     { model
@@ -771,7 +797,10 @@ update msg model loggedIn =
                 |> UR.init
 
         CloseAddPhotoProof ->
-            { model | addPhotoStatus = AddPhotoClosed }
+            { model
+                | addPhotoStatus = AddPhotoClosed
+                , proofTime = Nothing
+            }
                 |> UR.init
 
         ClaimAction action ->
@@ -780,20 +809,12 @@ update msg model loggedIn =
                     { model | modalStatus = Open True action }
 
                 proofCode =
-                    case action.hasProofCode of
-                        Just True ->
-                            -- TODO: Generate code
-                            "CODE"
-
-                        _ ->
-                            ""
+                    Maybe.withDefault "" model.proofCode
 
                 proofTime =
-                    -- TODO: Generate time
-                    0
+                    Maybe.withDefault 0 model.proofTime
 
                 proofPhoto =
-                    -- TODO: Show error feedback msg if action.hasPhotoProof and there's no photo added
                     case action.hasProofPhoto of
                         Just True ->
                             case model.proofPhotoStatus of
@@ -914,6 +935,9 @@ msgToString msg =
 
         GotTime _ ->
             [ "GotTime" ]
+
+        GotProofTime _ _ ->
+            [ "GotProofTime" ]
 
         CompletedLoadCommunity r ->
             [ "CompletedLoadCommunity", UR.resultToString r ]
