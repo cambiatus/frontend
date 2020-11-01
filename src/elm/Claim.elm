@@ -171,7 +171,7 @@ generateVerificationCode : Int -> Eos.Account.Name -> Time.Posix -> String
 generateVerificationCode actionId makerAccount proofTime =
     (String.fromInt actionId ++ Eos.Account.nameToString makerAccount ++ (Time.posixToMillis proofTime |> String.fromInt))
         |> sha256
-        |> String.slice 0 6
+        |> String.slice 0 8
 
 
 
