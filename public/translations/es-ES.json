@@ -436,6 +436,10 @@
       "completed": "Terminada",
       "closed": "Cerrada",
       "edit": "Editar acción",
+      "proof": {
+        "title": "Esta acción requiere prueba de logro",
+        "photo": "Foto"
+      },
       "form": {
         "not_found": "Acción no encontrada",
         "description_label": "Descripción",

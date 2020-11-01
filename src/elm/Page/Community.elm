@@ -9,6 +9,7 @@ module Page.Community exposing
     , view
     )
 
+import Api
 import Api.Graphql
 import Avatar
 import Cambiatus.Enum.VerificationType as VerificationType
@@ -17,11 +18,13 @@ import Claim
 import Community exposing (Model)
 import Eos exposing (Symbol)
 import Eos.Account as Eos
+import File exposing (File)
 import Graphql.Http
 import Graphql.OptionalArgument exposing (OptionalArgument(..))
-import Html exposing (Html, a, button, div, hr, img, p, span, text)
-import Html.Attributes exposing (class, classList, disabled, src)
+import Html exposing (Html, a, button, div, hr, img, input, label, p, span, text)
+import Html.Attributes exposing (accept, class, classList, disabled, multiple, src, type_)
 import Html.Events exposing (onClick)
+import Http
 import I18Next exposing (t)
 import Icons
 import Json.Decode as Decode
@@ -70,9 +73,16 @@ type alias Model =
     , members : List Member
     , openObjective : Maybe Int
     , modalStatus : ModalStatus
+    , addPhotoStatus : AddPhotoStatus
+    , proofPhoto : Maybe String
     , invitations : String
     , symbol : Symbol
     }
+
+
+type AddPhotoStatus
+    = AddPhotoOpen Community.Action
+    | AddPhotoClosed
 
 
 initModel : LoggedIn.Model -> Symbol -> Model
@@ -82,6 +92,8 @@ initModel _ symbol =
     , members = []
     , openObjective = Nothing
     , modalStatus = Closed
+    , addPhotoStatus = AddPhotoClosed
+    , proofPhoto = Nothing
     , invitations = ""
     , symbol = symbol
     }
@@ -160,66 +172,78 @@ view loggedIn model =
                                     Time.posixToMillis <|
                                         Maybe.withDefault (Time.millisToPosix 0) model.date
                             ]
-                        , div [ class "bg-white border-t border-gray-300" ]
-                            [ div [ class "container p-4 mx-auto" ]
-                                [ Page.viewTitle "This action requires proof of achievement"
-                                , p [ class "mb-4" ]
-                                    [ text "Take a picture of the garbage bag you separated, in this photo the number below should be written, you can write on the bag or on a piece of paper."
-                                    ]
-                                , div [ class "mb-4" ]
-                                    [ span [ class "input-label block" ]
-                                        [ text "verification number" ]
-                                    , p [ class "text-xl font-bold" ] [ text "82378463" ]
-                                    ]
-                                , div [ class "mb-4" ]
-                                    [ span [ class "input-label block" ]
-                                        [ text "photo" ]
-                                    , div [ class "relative bg-purple-500 w-full h-56 rounded-sm flex justify-center items-center" ]
-                                        [ div [ class "w-10" ]
-                                            [ Icons.camera
-                                            , span [ class "absolute bottom-0 right-0 mr-4 mb-4 bg-orange-300 w-8 h-8 p-2 rounded-full" ] [ Icons.camera ]
+                        , case model.addPhotoStatus of
+                            AddPhotoOpen action ->
+                                viewAddPhoto loggedIn.shared.translators action
+
+                            AddPhotoClosed ->
+                                div []
+                                    [ viewHeader loggedIn community
+                                    , div [ class "bg-white p-20" ]
+                                        [ div [ class "flex flex-wrap w-full items-center" ]
+                                            [ p [ class "text-4xl font-bold" ]
+                                                [ text community.title ]
                                             ]
+                                        , p [ class "text-grey-200 text-sm" ] [ text community.description ]
                                         ]
-                                    ]
-                                , div []
-                                    [ button [ class "modal-cancel" ] [ text "Cancel" ]
-                                    , button [ class "modal-accept" ] [ text "Send" ]
-                                    ]
-                                ]
-                            ]
-                        , div []
-                            [ viewHeader loggedIn community
-                            , div [ class "bg-white p-20" ]
-                                [ div [ class "flex flex-wrap w-full items-center" ]
-                                    [ p [ class "text-4xl font-bold" ]
-                                        [ text community.title ]
-                                    ]
-                                , p [ class "text-grey-200 text-sm" ] [ text community.description ]
-                                ]
-                            , if community.hasObjectives then
-                                div [ class "container mx-auto px-4" ]
-                                    [ viewClaimModal loggedIn model
-                                    , div [ class "bg-white py-6 sm:py-8 px-3 sm:px-6 rounded-lg mt-4" ]
-                                        (Page.viewTitle (t "community.objectives.title_plural")
-                                            :: List.indexedMap (viewObjective loggedIn model community)
-                                                community.objectives
-                                            ++ [ if canEdit then
-                                                    viewObjectiveNew loggedIn editStatus community.symbol
+                                    , if community.hasObjectives then
+                                        div [ class "container mx-auto px-4" ]
+                                            [ viewClaimModal loggedIn model
+                                            , div [ class "bg-white py-6 sm:py-8 px-3 sm:px-6 rounded-lg mt-4" ]
+                                                (Page.viewTitle (t "community.objectives.title_plural")
+                                                    :: List.indexedMap (viewObjective loggedIn model community)
+                                                        community.objectives
+                                                    ++ [ if canEdit then
+                                                            viewObjectiveNew loggedIn editStatus community.symbol
 
-                                                 else
-                                                    text ""
-                                               ]
-                                        )
-                                    ]
+                                                         else
+                                                            text ""
+                                                       ]
+                                                )
+                                            ]
 
-                              else
-                                text ""
-                            ]
+                                      else
+                                        text ""
+                                    ]
                         ]
     in
     { title = title
     , content = content
     }
+
+
+viewAddPhoto { t } action =
+    div [ class "bg-white border-t border-gray-300" ]
+        [ div [ class "container p-4 mx-auto" ]
+            [ Page.viewTitle (t "community.actions.proof.title")
+            , p [ class "mb-4" ]
+                [ text <|
+                    Maybe.withDefault "" action.photoProofInstructions
+                ]
+            , div [ class "mb-4" ]
+                [ span [ class "input-label block" ]
+                    [ text (t "community.actions.form.verification_number") ]
+                , p [ class "text-xl font-bold" ] [ text "82378463" ]
+                ]
+            , div [ class "mb-4" ]
+                [ span [ class "input-label block" ]
+                    [ text (t "community.actions.proof.photo") ]
+                , viewPhotoUploader
+                ]
+            , div [ class "md:flex" ]
+                [ button
+                    [ class "modal-cancel"
+                    , onClick CloseAddPhotoProof
+                    ]
+                    [ text (t "menu.cancel") ]
+                , button
+                    [ class "modal-accept"
+                    , onClick (ClaimAction action)
+                    ]
+                    [ text (t "menu.send") ]
+                ]
+            ]
+        ]
 
 
 
@@ -525,15 +549,42 @@ viewClaimModal loggedIn model =
     case model.modalStatus of
         Open isLoading action ->
             let
+                hasProofPhoto =
+                    Maybe.withDefault False action.hasProofPhoto
+
                 t s =
                     I18Next.t loggedIn.shared.translations
                         s
 
                 text_ s =
                     text (t s)
+
+                acceptMsg =
+                    case ( isLoading, hasProofPhoto ) of
+                        ( True, _ ) ->
+                            NoOp
+
+                        ( False, False ) ->
+                            ClaimAction action
+
+                        ( False, True ) ->
+                            OpenAddPhotoProof action
+
+                acceptButtonText =
+                    t "dashboard.check_claim.yes"
+                        ++ (if hasProofPhoto then
+                                -- Conventionally, the three dots mean that there will be an extra step (photo uploading)
+                                "..."
+
+                            else
+                                ""
+                           )
             in
             div []
-                [ Modal.initWith { closeMsg = CloseClaimConfirmation, isVisible = True }
+                [ Modal.initWith
+                    { closeMsg = CloseClaimConfirmation
+                    , isVisible = True
+                    }
                     |> Modal.withHeader (t "claim.modal.title")
                     |> Modal.withBody [ text_ "dashboard.check_claim.body" ]
                     |> Modal.withFooter
@@ -549,14 +600,11 @@ viewClaimModal loggedIn model =
                             [ text_ "dashboard.check_claim.no" ]
                         , button
                             [ class "modal-accept"
-                            , if not isLoading then
-                                onClick (ClaimAction action)
-
-                              else
-                                onClick NoOp
+                            , onClick acceptMsg
                             , disabled isLoading
                             ]
-                            [ text_ "dashboard.check_claim.yes" ]
+                            [ text acceptButtonText
+                            ]
                         ]
                     |> Modal.toHtml
                 ]
@@ -610,6 +658,10 @@ type Msg
       -- Action
     | OpenClaimConfirmation Community.Action
     | CloseClaimConfirmation
+    | OpenAddPhotoProof Community.Action
+    | CloseAddPhotoProof
+    | EnteredPhoto (List File)
+    | CompletedPhotoUpload (Result Http.Error String)
     | ClaimAction Community.Action
     | GotClaimActionResponse (Result Value String)
 
@@ -652,8 +704,49 @@ update msg model loggedIn =
             { model | modalStatus = Open False action }
                 |> UR.init
 
+        OpenAddPhotoProof action ->
+            case action.hasProofPhoto of
+                Just True ->
+                    { model
+                        | addPhotoStatus = AddPhotoOpen action
+                        , modalStatus = Closed
+                    }
+                        |> UR.init
+
+                _ ->
+                    { model
+                        | modalStatus = Open False action
+                        , addPhotoStatus = AddPhotoClosed
+                    }
+                        |> UR.init
+
+        EnteredPhoto (file :: _) ->
+            let
+                uploadImage =
+                    Api.uploadImage loggedIn.shared file CompletedPhotoUpload
+            in
+            model
+                |> UR.init
+                |> UR.addCmd uploadImage
+
+        EnteredPhoto [] ->
+            UR.init model
+
+        CompletedPhotoUpload (Ok url) ->
+            { model | proofPhoto = Just url }
+                |> UR.init
+
+        CompletedPhotoUpload (Err error) ->
+            model
+                |> UR.init
+                |> UR.logHttpError msg error
+
         CloseClaimConfirmation ->
             { model | modalStatus = Closed }
+                |> UR.init
+
+        CloseAddPhotoProof ->
+            { model | addPhotoStatus = AddPhotoClosed }
                 |> UR.init
 
         ClaimAction action ->
@@ -662,6 +755,7 @@ update msg model loggedIn =
                     { model | modalStatus = Open True action }
 
                 proofPhoto =
+                    -- TODO: Show error feedback msg if action.hasPhotoProof and there's no photo added
                     case action.hasProofPhoto of
                         Just hasProofPhoto ->
                             -- TODO: Attach photo
@@ -718,6 +812,25 @@ update msg model loggedIn =
                 |> UR.addExt (ShowFeedback LoggedIn.Failure (t "dashboard.check_claim.failure"))
 
 
+viewPhotoUploader : Html Msg
+viewPhotoUploader =
+    label
+        [ class "relative bg-purple-500 w-full h-56 rounded-sm flex justify-center items-center cursor-pointer" ]
+        [ input
+            [ class "hidden-img-input"
+            , type_ "file"
+            , accept "image/*"
+            , Page.onFileChange EnteredPhoto
+            , multiple False
+            ]
+            []
+        , div [ class "w-10" ] [ Icons.camera ]
+
+        -- TODO: Show orange icon only if photo is uploaded
+        , span [ class "absolute bottom-0 right-0 mr-4 mb-4 bg-orange-300 w-8 h-8 p-2 rounded-full" ] [ Icons.camera ]
+        ]
+
+
 jsAddressToMsg : List String -> Value -> Maybe Msg
 jsAddressToMsg addr val =
     case addr of
@@ -753,6 +866,18 @@ msgToString msg =
 
         ClickedCloseObjective ->
             [ "ClickedCloseObjective" ]
+
+        OpenAddPhotoProof _ ->
+            [ "OpenAddPhotoProof" ]
+
+        CloseAddPhotoProof ->
+            [ "CloseAddPhotoProof" ]
+
+        EnteredPhoto _ ->
+            [ "EnteredPhoto" ]
+
+        CompletedPhotoUpload r ->
+            [ "CompletedPhotoUpload", UR.resultToString r ]
 
         OpenClaimConfirmation _ ->
             [ "OpenClaimConfirmation" ]

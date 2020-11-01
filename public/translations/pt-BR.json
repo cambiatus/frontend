@@ -440,6 +440,10 @@
       "completed": "Completa",
       "closed": "Encerrada",
       "edit": "Editar ação",
+      "proof": {
+        "title": "Esta ação requer prova de realização",
+        "photo": "Foto"
+      },
       "form": {
         "not_found": "Ação não encontrada",
         "description_label": "Descrição",
