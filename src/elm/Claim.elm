@@ -59,6 +59,7 @@ type alias Model =
     , action : Action
     , checks : List Check
     , createdAt : DateTime
+    , proofPhoto : Maybe String
     }
 
 
@@ -208,6 +209,7 @@ selectionSet =
         |> with (Claim.action actionSelectionSet)
         |> with (Claim.checks (\_ -> { input = Absent }) checkSelectionSet)
         |> with Claim.createdAt
+        |> with Claim.proofPhoto
 
 
 claimStatusMap : ClaimStatus.ClaimStatus -> ClaimStatus
@@ -383,11 +385,16 @@ viewClaimCard { selectedCommunity, shared, accountName } claim =
                 [ Profile.view shared accountName claim.claimer
                 , if hasPhotoProof claim then
                     div [ class "claim-photo-thumb" ]
-                        [ img
-                            [ Utils.onClickNoBubble (OpenPhotoModal claim)
-                            , src "http://cambiatus.miskov.ru/trash.png"
-                            ]
-                            []
+                        [ case claim.proofPhoto of
+                            Just url ->
+                                img
+                                    [ Utils.onClickNoBubble (OpenPhotoModal claim)
+                                    , src url
+                                    ]
+                                    []
+
+                            Nothing ->
+                                text ""
                         ]
 
                   else
@@ -437,7 +444,17 @@ viewPhotoModal loggedIn claim =
 
         body =
             [ div [ class "md:flex md:justify-start md:space-x-4" ]
-                [ img [ style "max-height" "42vh", src "http://cambiatus.miskov.ru/trash.png" ] []
+                [ case claim.proofPhoto of
+                    Just url ->
+                        img
+                            [ style "max-height" "42vh"
+                            , Utils.onClickNoBubble (OpenPhotoModal claim)
+                            , src url
+                            ]
+                            []
+
+                    Nothing ->
+                        text ""
                 , div []
                     [ label [ class "mt-6 md:mt-0 input-label md:text-xl block" ]
                         [ text "verification number"

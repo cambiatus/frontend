@@ -141,11 +141,16 @@ viewPhotoThumbnail : Claim.Model -> Html Msg
 viewPhotoThumbnail claim =
     div [ class "mb-8 flex" ]
         [ div [ class "claim-photo-thumb" ]
-            [ img
-                [ onClick (ClaimMsg <| Claim.OpenPhotoModal claim)
-                , src "http://cambiatus.miskov.ru/trash.png"
-                ]
-                []
+            [ case claim.proofPhoto of
+                Just url ->
+                    img
+                        [ onClick (ClaimMsg <| Claim.OpenPhotoModal claim)
+                        , src url
+                        ]
+                        []
+
+                Nothing ->
+                    text ""
             ]
         , div [ class "ml-4" ]
             [ label [ class "input-label block" ]
