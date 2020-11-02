@@ -12,6 +12,7 @@ import * as Sentry from '@sentry/browser'
 import * as AbsintheSocket from '@absinthe/socket'
 import pdfMake from 'pdfmake/build/pdfmake'
 import pdfFonts from './vfs_fonts'
+import { nameToUint64 } from 'eosjs-account-name'
 pdfMake.vfs = pdfFonts.pdfMake.vfs
 pdfMake.fonts = {
   Nunito: {
@@ -616,7 +617,7 @@ async function handleJavascriptPort (arg) {
       const response = {
         address: arg.responseAddress,
         addressData: arg.responseData,
-        unit64name: window.nameToUint64(arg.data.accountName)
+        unit64name: nameToUint64(arg.data.accountName)
       }
       app.ports.javascriptInPort.send(response)
       break

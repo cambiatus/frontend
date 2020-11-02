@@ -69,6 +69,7 @@
   },
   "dependencies": {
     "@absinthe/socket": "^0.2.1",
+    "@babel/plugin-syntax-bigint": "^7.8.3",
     "@dillonkearns/elm-graphql": "^4.0.3",
     "@sentry/browser": "5.4.0",
     "@tailwindcss/custom-forms": "^0.2.1",
@@ -85,6 +86,7 @@
     "elm-test": "^0.19.1",
     "elm-webpack-loader": "^6.0.1",
     "eosjs": "^16.0.9",
+    "eosjs-account-name": "^2.1.1",
     "eosjs-ecc": "^4.0.4",
     "husky": "^4.2.5",
     "pdfmake": "^0.1.64",
