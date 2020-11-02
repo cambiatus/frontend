@@ -85,7 +85,7 @@ type alias Model =
     , proofCode : Maybe String
     , proofTime : Maybe Int
     , secondsAfterClaim : Maybe Int
-    , proofCodeValidityDuration : Int -- in seconds
+    , proofCodeValiditySeconds : Int
     , invitations : String
     , symbol : Symbol
     }
@@ -109,7 +109,7 @@ initModel _ symbol =
     , proofTime = Nothing
     , proofCode = Nothing
     , secondsAfterClaim = Nothing
-    , proofCodeValidityDuration = 30 * 60
+    , proofCodeValiditySeconds = 30 * 60
     , invitations = ""
     , symbol = symbol
     }
@@ -238,7 +238,7 @@ viewAddPhoto model { accountName, shared } action =
             Maybe.withDefault 0 model.secondsAfterClaim
 
         remainingSeconds =
-            model.proofCodeValidityDuration - secondsPassed
+            model.proofCodeValiditySeconds - secondsPassed
 
         timerMinutes =
             remainingSeconds // 60
@@ -283,7 +283,7 @@ viewAddPhoto model { accountName, shared } action =
             , div [ class "md:flex" ]
                 [ button
                     [ class "modal-cancel"
-                    , onClick CloseAddPhotoProof
+                    , onClick (CloseAddPhotoProof CancelClicked)
                     ]
                     [ text (t "menu.cancel") ]
                 , button
@@ -709,13 +709,18 @@ type Msg
     | OpenClaimConfirmation Community.Action
     | CloseClaimConfirmation
     | OpenAddPhotoProof Community.Action
-    | CloseAddPhotoProof
+    | CloseAddPhotoProof ReasonToClosePhotoProof
     | GotProofTime Int Posix
     | Tick Time.Posix
     | EnteredPhoto (List File)
     | CompletedPhotoUpload (Result Http.Error String)
     | ClaimAction Community.Action
     | GotClaimActionResponse (Result Value String)
+
+
+type ReasonToClosePhotoProof
+    = CancelClicked
+    | TimerExpired
 
 
 update : Msg -> Model -> LoggedIn.Model -> UpdateResult
@@ -732,19 +737,24 @@ update msg model loggedIn =
             UR.init { model | date = Just date }
 
         Tick timer ->
-            let
-                secondsAfterClaim =
-                    case model.proofTime of
-                        Just proofTime ->
-                            (Time.posixToMillis timer // 1000)
-                                - proofTime
-                                |> Just
+            case model.proofTime of
+                Just proofTime ->
+                    let
+                        secondsAfterClaim =
+                            (Time.posixToMillis timer // 1000) - proofTime
 
-                        Nothing ->
-                            Nothing
-            in
-            { model | secondsAfterClaim = secondsAfterClaim }
-                |> UR.init
+                        isProofCodeActive =
+                            (model.proofCodeValiditySeconds - secondsAfterClaim) > 0
+                    in
+                    if isProofCodeActive then
+                        { model | secondsAfterClaim = Just secondsAfterClaim }
+                            |> UR.init
+
+                    else
+                        update (CloseAddPhotoProof TimerExpired) model loggedIn
+
+                Nothing ->
+                    model |> UR.init
 
         GotProofTime actionId posix ->
             let
@@ -833,7 +843,7 @@ update msg model loggedIn =
             { model | modalStatus = Closed }
                 |> UR.init
 
-        CloseAddPhotoProof ->
+        CloseAddPhotoProof reason ->
             { model
                 | addPhotoStatus = AddPhotoClosed
                 , proofTime = Nothing
@@ -841,6 +851,14 @@ update msg model loggedIn =
                 , secondsAfterClaim = Nothing
             }
                 |> UR.init
+                |> UR.addExt
+                    (case reason of
+                        TimerExpired ->
+                            ShowFeedback LoggedIn.Failure "Time for claiming is expired"
+
+                        CancelClicked ->
+                            HideFeedback
+                    )
 
         ClaimAction action ->
             let
@@ -993,7 +1011,7 @@ msgToString msg =
         OpenAddPhotoProof _ ->
             [ "OpenAddPhotoProof" ]
 
-        CloseAddPhotoProof ->
+        CloseAddPhotoProof _ ->
             [ "CloseAddPhotoProof" ]
 
         EnteredPhoto _ ->
