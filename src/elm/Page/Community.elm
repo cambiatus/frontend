@@ -33,6 +33,7 @@ import Page
 import Route
 import Session.LoggedIn as LoggedIn exposing (External(..), FeedbackStatus(..))
 import Session.Shared exposing (Shared)
+import Sha256 exposing (sha256)
 import Strftime
 import Task
 import Time exposing (Posix, posixToMillis)
@@ -76,6 +77,7 @@ subscriptions model =
 type alias Model =
     { date : Maybe Posix
     , community : LoadStatus
+    , actionId : Maybe Int
     , members : List Member
     , openObjective : Maybe Int
     , modalStatus : ModalStatus
@@ -84,6 +86,7 @@ type alias Model =
     , proofPhotoStatus : ImageStatus
     , proofCode : Maybe String
     , proofTime : Maybe Int
+    , unit64name : Maybe String
     , secondsAfterClaim : Maybe Int
     , proofCodeValiditySeconds : Int
     , invitations : String
@@ -101,6 +104,7 @@ initModel _ symbol =
     { date = Nothing
     , community = Loading
     , members = []
+    , actionId = Nothing
     , openObjective = Nothing
     , modalStatus = Closed
     , addPhotoStatus = AddPhotoClosed
@@ -108,6 +112,7 @@ initModel _ symbol =
     , proofPhotoStatus = NoImage
     , proofTime = Nothing
     , proofCode = Nothing
+    , unit64name = Nothing
     , secondsAfterClaim = Nothing
     , proofCodeValiditySeconds = 30 * 60
     , invitations = ""
@@ -711,10 +716,12 @@ type Msg
     | OpenAddPhotoProof Community.Action
     | CloseAddPhotoProof ReasonToClosePhotoProof
     | GotProofTime Int Posix
+    | GotUnit64Name (Result Value String)
     | Tick Time.Posix
     | EnteredPhoto (List File)
     | CompletedPhotoUpload (Result Http.Error String)
     | ClaimAction Community.Action
+    | GetUnit64Name String
     | GotClaimActionResponse (Result Value String)
 
 
@@ -735,6 +742,27 @@ update msg model loggedIn =
 
         GotTime date ->
             UR.init { model | date = Just date }
+
+        GetUnit64Name _ ->
+            model |> UR.init
+
+        GotUnit64Name (Ok unit64name) ->
+            let
+                proofCode =
+                    String.fromInt (Maybe.withDefault 0 model.actionId)
+                        ++ unit64name
+                        ++ String.fromInt (Maybe.withDefault 0 model.proofTime)
+                        |> sha256
+                        |> String.slice 0 8
+            in
+            UR.init
+                { model
+                    | proofCode = Just proofCode
+                    , unit64name = Just unit64name
+                }
+
+        GotUnit64Name (Err _) ->
+            UR.init model
 
         Tick timer ->
             case model.proofTime of
@@ -761,18 +789,22 @@ update msg model loggedIn =
                 proofTime =
                     -- Timestamp in seconds
                     Time.posixToMillis posix // 1000
-
-                proofCode =
-                    Claim.generateVerificationCode actionId
-                        loggedIn.accountName
-                        proofTime
             in
             UR.init
                 { model
-                    | proofCode = Just proofCode
+                    | actionId = Just actionId
                     , proofTime = Just proofTime
                     , secondsAfterClaim = Just 0
                 }
+                |> UR.addPort
+                    { responseAddress = GetUnit64Name (Eos.nameToString loggedIn.accountName)
+                    , responseData = Encode.null
+                    , data =
+                        Encode.object
+                            [ ( "name", Encode.string "accountNameToUnit64" )
+                            , ( "accountName", Encode.string (Eos.nameToString loggedIn.accountName) )
+                            ]
+                    }
 
         CompletedLoadCommunity (Ok community) ->
             case community of
@@ -917,7 +949,14 @@ update msg model loggedIn =
 
         GotClaimActionResponse (Ok _) ->
             { model
+              -- TODO: Make it better
                 | modalStatus = Closed
+                , addPhotoStatus = AddPhotoClosed
+                , unit64name = Nothing
+                , proofCode = Nothing
+                , proofPhotoStatus = NoImage
+                , proofPhoto = Nothing
+                , proofTime = Nothing
             }
                 |> UR.init
                 |> UR.addExt (ShowFeedback LoggedIn.Success (t "dashboard.check_claim.success"))
@@ -980,6 +1019,17 @@ jsAddressToMsg addr val =
                 |> Result.map (Just << GotClaimActionResponse)
                 |> Result.withDefault Nothing
 
+        "GetUnit64Name" :: [] ->
+            Decode.decodeValue
+                (Decode.oneOf
+                    [ Decode.field "unit64name" Decode.string |> Decode.map Ok
+                    , Decode.succeed (Err val)
+                    ]
+                )
+                val
+                |> Result.map (Just << GotUnit64Name)
+                |> Result.withDefault Nothing
+
         _ ->
             Nothing
 
@@ -1028,6 +1078,12 @@ msgToString msg =
 
         ClaimAction _ ->
             [ "ClaimAction" ]
+
+        GetUnit64Name _ ->
+            [ "GetUnit64Name" ]
+
+        GotUnit64Name n ->
+            [ "GotClaimActionResponse", UR.resultToString n ]
 
         GotClaimActionResponse r ->
             [ "GotClaimActionResponse", UR.resultToString r ]
