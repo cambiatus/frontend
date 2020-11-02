@@ -882,9 +882,12 @@ update msg model loggedIn =
 
         CloseAddPhotoProof reason ->
             { model
+              -- TODO: too much fields, clean this up
                 | addPhotoStatus = AddPhotoClosed
                 , proofTime = Nothing
                 , proofCode = Nothing
+                , proofPhoto = Nothing
+                , proofPhotoStatus = NoImage
                 , secondsAfterClaim = Nothing
             }
                 |> UR.init
@@ -976,7 +979,17 @@ update msg model loggedIn =
 viewPhotoUploader : Model -> Html Msg
 viewPhotoUploader model =
     label
-        [ class "relative bg-purple-500 w-full md:w-2/3 h-56 rounded-sm flex justify-center items-center cursor-pointer" ]
+        ([ class "relative bg-purple-500 w-full md:w-2/3 h-56 rounded-sm flex justify-center items-center cursor-pointer" ]
+            ++ (case model.proofPhotoStatus of
+                    Uploaded url ->
+                        [ class " bg-no-repeat bg-center bg-cover"
+                        , style "background-image" ("url(" ++ url ++ ")")
+                        ]
+
+                    _ ->
+                        []
+               )
+        )
         [ input
             [ class "hidden-img-input"
             , type_ "file"
@@ -990,16 +1003,9 @@ viewPhotoUploader model =
                 Uploading ->
                     div [ class "spinner spinner-light" ] []
 
-                Uploaded url ->
-                    div [ class "" ]
-                        [ div
-                            [ class "min-w-full min-h-full top-0 left-0 right-0 bg-no-repeat bg-center bg-cover"
-                            , style "background-image" ("url(" ++ url ++ ")")
-                            ]
-                            []
-                        , span [ class "absolute bottom-0 right-0 mr-4 mb-4 bg-orange-300 w-8 h-8 p-2 rounded-full" ]
-                            [ Icons.camera ]
-                        ]
+                Uploaded _ ->
+                    span [ class "absolute bottom-0 right-0 mr-4 mb-4 bg-orange-300 w-8 h-8 p-2 rounded-full" ]
+                        [ Icons.camera ]
 
                 _ ->
                     div [ class "w-10" ] [ Icons.camera ]

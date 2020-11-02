@@ -448,12 +448,14 @@ viewPhotoModal loggedIn claim =
             [ div [ class "md:flex md:justify-start md:space-x-4" ]
                 [ case claim.proofPhoto of
                     Just url ->
-                        img
-                            [ style "max-height" "42vh"
-                            , Utils.onClickNoBubble (OpenPhotoModal claim)
-                            , src url
+                        div [ class "w-1/2" ]
+                            [ img
+                                [ style "max-height" "42vh"
+                                , Utils.onClickNoBubble (OpenPhotoModal claim)
+                                , src url
+                                ]
+                                []
                             ]
-                            []
 
                     Nothing ->
                         text ""
