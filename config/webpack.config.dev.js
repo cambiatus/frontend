@@ -142,9 +142,6 @@ module.exports = {
                   }
                 ]
               ],
-              plugins: [
-                '@babel/plugin-syntax-bigint'
-              ],
               cacheDirectory: true,
               highlightCode: true
             }
