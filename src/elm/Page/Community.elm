@@ -13,16 +13,14 @@ import Api
 import Api.Graphql
 import Avatar
 import Cambiatus.Enum.VerificationType as VerificationType
-import Cambiatus.Scalar exposing (DateTime(..))
 import Claim
 import Community exposing (Action, Model)
 import Eos exposing (Symbol)
 import Eos.Account as Eos
 import File exposing (File)
 import Graphql.Http
-import Graphql.OptionalArgument exposing (OptionalArgument(..))
 import Html exposing (Html, a, button, div, hr, img, input, label, p, span, text)
-import Html.Attributes exposing (accept, class, classList, disabled, multiple, src, type_)
+import Html.Attributes exposing (accept, class, classList, disabled, multiple, src, style, type_)
 import Html.Events exposing (onClick)
 import Http
 import I18Next exposing (t)
@@ -32,7 +30,6 @@ import Json.Encode as Encode exposing (Value)
 import Page
 import Route
 import Session.LoggedIn as LoggedIn exposing (External(..), FeedbackStatus(..))
-import Session.Shared exposing (Shared)
 import Sha256 exposing (sha256)
 import Strftime
 import Task
@@ -234,7 +231,7 @@ view loggedIn model =
 
 
 viewAddPhoto : Model -> LoggedIn.Model -> Action -> Html Msg
-viewAddPhoto model { accountName, shared } action =
+viewAddPhoto model { shared } action =
     let
         { t } =
             shared.translators
@@ -254,7 +251,7 @@ viewAddPhoto model { accountName, shared } action =
             , div [ class "mb-4" ]
                 [ span [ class "input-label block" ]
                     [ text (t "community.actions.proof.photo") ]
-                , viewPhotoUploader shared model
+                , viewPhotoUploader model
                 ]
             , div [ class "md:flex" ]
                 [ button
@@ -272,6 +269,7 @@ viewAddPhoto model { accountName, shared } action =
         ]
 
 
+viewProofCode : Model -> Html msg
 viewProofCode model =
     let
         secondsPassed =
@@ -872,7 +870,9 @@ update msg model loggedIn =
                 |> UR.init
 
         CompletedPhotoUpload (Err error) ->
-            model
+            { model
+                | proofPhotoStatus = UploadFailed error
+            }
                 |> UR.init
                 |> UR.logHttpError msg error
 
@@ -973,12 +973,8 @@ update msg model loggedIn =
                 |> UR.addExt (ShowFeedback LoggedIn.Failure (t "dashboard.check_claim.failure"))
 
 
-viewPhotoUploader : Shared -> Model -> Html Msg
-viewPhotoUploader shared model =
-    let
-        { t } =
-            shared.translators
-    in
+viewPhotoUploader : Model -> Html Msg
+viewPhotoUploader model =
     label
         [ class "relative bg-purple-500 w-full md:w-2/3 h-56 rounded-sm flex justify-center items-center cursor-pointer" ]
         [ input
@@ -995,8 +991,12 @@ viewPhotoUploader shared model =
                     div [ class "spinner spinner-light" ] []
 
                 Uploaded url ->
-                    div []
-                        [ img [ src url ] []
+                    div [ class "" ]
+                        [ div
+                            [ class "min-w-full min-h-full top-0 left-0 right-0 bg-no-repeat bg-center bg-cover"
+                            , style "background-image" ("url(" ++ url ++ ")")
+                            ]
+                            []
                         , span [ class "absolute bottom-0 right-0 mr-4 mb-4 bg-orange-300 w-8 h-8 p-2 rounded-full" ]
                             [ Icons.camera ]
                         ]
