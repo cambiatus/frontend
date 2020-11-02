@@ -60,6 +60,7 @@ type alias Model =
     , checks : List Check
     , createdAt : DateTime
     , proofPhoto : Maybe String
+    , proofCode : Maybe String
     }
 
 
@@ -210,6 +211,7 @@ selectionSet =
         |> with (Claim.checks (\_ -> { input = Absent }) checkSelectionSet)
         |> with Claim.createdAt
         |> with Claim.proofPhoto
+        |> with Claim.proofCode
 
 
 claimStatusMap : ClaimStatus.ClaimStatus -> ClaimStatus
@@ -459,7 +461,7 @@ viewPhotoModal loggedIn claim =
                     [ label [ class "mt-6 md:mt-0 input-label md:text-xl block" ]
                         [ text "verification number"
                         ]
-                    , strong [ class "text-xl md:text-3xl" ] [ text "82378463" ]
+                    , strong [ class "text-xl md:text-3xl" ] [ text (Maybe.withDefault "" claim.proofCode) ]
                     ]
                 ]
             ]

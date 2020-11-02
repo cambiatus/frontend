@@ -156,7 +156,7 @@ viewPhotoThumbnail claim =
             [ label [ class "input-label block" ]
                 [ text "verification number"
                 ]
-            , strong [ class "text-lg block" ] [ text "82378463" ]
+            , strong [ class "text-lg block" ] [ text (Maybe.withDefault "" claim.proofCode) ]
             ]
         ]
 
