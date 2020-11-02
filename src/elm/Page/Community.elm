@@ -1004,8 +1004,6 @@ viewPhotoUploader shared model =
                 _ ->
                     div [ class "w-10" ] [ Icons.camera ]
             ]
-
-        -- TODO: Show orange icon only if photo is uploaded
         ]
 
 
