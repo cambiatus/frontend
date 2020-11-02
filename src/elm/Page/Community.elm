@@ -238,7 +238,42 @@ viewAddPhoto model { accountName, shared } action =
     let
         { t } =
             shared.translators
+    in
+    div [ class "bg-white border-t border-gray-300" ]
+        [ div [ class "container p-4 mx-auto" ]
+            [ Page.viewTitle (t "community.actions.proof.title")
+            , p [ class "mb-4" ]
+                [ text <|
+                    Maybe.withDefault "" action.photoProofInstructions
+                ]
+            , div [ class "mb-4" ]
+                [ span [ class "input-label block" ]
+                    [ text (t "community.actions.form.verification_number") ]
+                , viewProofCode model
+                ]
+            , div [ class "mb-4" ]
+                [ span [ class "input-label block" ]
+                    [ text (t "community.actions.proof.photo") ]
+                , viewPhotoUploader shared model
+                ]
+            , div [ class "md:flex" ]
+                [ button
+                    [ class "modal-cancel"
+                    , onClick (CloseAddPhotoProof CancelClicked)
+                    ]
+                    [ text (t "menu.cancel") ]
+                , button
+                    [ class "modal-accept"
+                    , onClick (ClaimAction action)
+                    ]
+                    [ text (t "menu.send") ]
+                ]
+            ]
+        ]
 
+
+viewProofCode model =
+    let
         secondsPassed =
             Maybe.withDefault 0 model.secondsAfterClaim
 
@@ -261,42 +296,13 @@ viewAddPhoto model { accountName, shared } action =
         timer =
             toString timerMinutes ++ ":" ++ toString timerSeconds
     in
-    div [ class "bg-white border-t border-gray-300" ]
-        [ div [ class "container p-4 mx-auto" ]
-            [ Page.viewTitle (t "community.actions.proof.title")
-            , p [ class "mb-4" ]
-                [ text <|
-                    Maybe.withDefault "" action.photoProofInstructions
-                ]
-            , div [ class "mb-4" ]
-                [ span [ class "input-label block" ]
-                    [ text (t "community.actions.form.verification_number") ]
-                , p []
-                    [ div [ class "text-xl font-bold sm:inline" ] [ text <| Maybe.withDefault "No code found" model.proofCode ]
-                    , span [ class "whitespace-no-wrap text-body rounded-full bg-lightred px-2 py-1 sm:ml-2 text-white" ]
-                        [ text "the code is valid for"
-                        , text " "
-                        , text timer
-                        ]
-                    ]
-                ]
-            , div [ class "mb-4" ]
-                [ span [ class "input-label block" ]
-                    [ text (t "community.actions.proof.photo") ]
-                , viewPhotoUploader shared model
-                ]
-            , div [ class "md:flex" ]
-                [ button
-                    [ class "modal-cancel"
-                    , onClick (CloseAddPhotoProof CancelClicked)
-                    ]
-                    [ text (t "menu.cancel") ]
-                , button
-                    [ class "modal-accept"
-                    , onClick (ClaimAction action)
-                    ]
-                    [ text (t "menu.send") ]
-                ]
+    p []
+        [ div [ class "text-xl font-bold sm:inline" ]
+            [ text <| Maybe.withDefault "No code found" model.proofCode ]
+        , span [ class "whitespace-no-wrap text-body rounded-full bg-lightred px-2 py-1 sm:ml-2 text-white" ]
+            [ text "the code is valid for"
+            , text " "
+            , text timer
             ]
         ]
 
@@ -758,7 +764,6 @@ update msg model loggedIn =
             UR.init
                 { model
                     | proofCode = Just proofCode
-                    , unit64name = Just unit64name
                 }
 
         GotUnit64Name (Err _) ->
@@ -952,7 +957,6 @@ update msg model loggedIn =
               -- TODO: Make it better
                 | modalStatus = Closed
                 , addPhotoStatus = AddPhotoClosed
-                , unit64name = Nothing
                 , proofCode = Nothing
                 , proofPhotoStatus = NoImage
                 , proofPhoto = Nothing
