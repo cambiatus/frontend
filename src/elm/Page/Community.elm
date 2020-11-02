@@ -60,8 +60,13 @@ init ({ shared } as loggedIn) symbol =
 
 
 subscriptions : Model -> Sub Msg
-subscriptions _ =
-    Sub.none
+subscriptions model =
+    case ( model.proofTime, model.secondsAfterClaim ) of
+        ( Just _, Just _ ) ->
+            Time.every 1000 Tick
+
+        _ ->
+            Sub.none
 
 
 
@@ -77,8 +82,10 @@ type alias Model =
     , addPhotoStatus : AddPhotoStatus
     , proofPhoto : Maybe String
     , proofPhotoStatus : ImageStatus
-    , proofTime : Maybe Int
     , proofCode : Maybe String
+    , proofTime : Maybe Int
+    , secondsAfterClaim : Maybe Int
+    , proofCodeValidityDuration : Int -- in seconds
     , invitations : String
     , symbol : Symbol
     }
@@ -101,18 +108,10 @@ initModel _ symbol =
     , proofPhotoStatus = NoImage
     , proofTime = Nothing
     , proofCode = Nothing
+    , secondsAfterClaim = Nothing
+    , proofCodeValidityDuration = 30 * 60
     , invitations = ""
     , symbol = symbol
-    }
-
-
-{-| TODO: Probably it's better to use `Maybe ProofFields` in model instead of all proof fields separately
--}
-type alias ProofFields =
-    { proofPhoto : String
-    , proofPhotoStatus : ImageStatus
-    , proofPosixTime : Posix
-    , proofCode : String
     }
 
 
@@ -234,6 +233,28 @@ viewAddPhoto model { accountName, shared } action =
     let
         { t } =
             shared.translators
+
+        secondsPassed =
+            Maybe.withDefault 0 model.secondsAfterClaim
+
+        remainingSeconds =
+            model.proofCodeValidityDuration - secondsPassed
+
+        timerMinutes =
+            remainingSeconds // 60
+
+        timerSeconds =
+            remainingSeconds - (timerMinutes * 60)
+
+        toString timeVal =
+            if timeVal < 10 then
+                "0" ++ String.fromInt timeVal
+
+            else
+                String.fromInt timeVal
+
+        timer =
+            toString timerMinutes ++ ":" ++ toString timerSeconds
     in
     div [ class "bg-white border-t border-gray-300" ]
         [ div [ class "container p-4 mx-auto" ]
@@ -245,16 +266,14 @@ viewAddPhoto model { accountName, shared } action =
             , div [ class "mb-4" ]
                 [ span [ class "input-label block" ]
                     [ text (t "community.actions.form.verification_number") ]
-                , p [ class "text-xl font-bold" ]
-                    [ text <| Maybe.withDefault "No code found" model.proofCode ]
-
-                -- TODO: There is a sample on how to get the Time as a Int.
-                -- TODO: you can then use the function Claim.generateVerificationCode to
-                -- TODO: get the verification code to be displayed. Remember it only lasts for 30 minutes
-                --,text <|
-                --  String.fromInt <|
-                --      Time.posixToMillis <|
-                --          Maybe.withDefault (Time.millisToPosix 0) model.date
+                , p []
+                    [ div [ class "text-xl font-bold sm:inline" ] [ text <| Maybe.withDefault "No code found" model.proofCode ]
+                    , span [ class "whitespace-no-wrap text-body rounded-full bg-lightred px-2 py-1 sm:ml-2 text-white" ]
+                        [ text "the code is valid for"
+                        , text " "
+                        , text timer
+                        ]
+                    ]
                 ]
             , div [ class "mb-4" ]
                 [ span [ class "input-label block" ]
@@ -692,6 +711,7 @@ type Msg
     | OpenAddPhotoProof Community.Action
     | CloseAddPhotoProof
     | GotProofTime Int Posix
+    | Tick Time.Posix
     | EnteredPhoto (List File)
     | CompletedPhotoUpload (Result Http.Error String)
     | ClaimAction Community.Action
@@ -711,6 +731,21 @@ update msg model loggedIn =
         GotTime date ->
             UR.init { model | date = Just date }
 
+        Tick timer ->
+            let
+                secondsAfterClaim =
+                    case model.proofTime of
+                        Just proofTime ->
+                            (Time.posixToMillis timer // 1000)
+                                - proofTime
+                                |> Just
+
+                        Nothing ->
+                            Nothing
+            in
+            { model | secondsAfterClaim = secondsAfterClaim }
+                |> UR.init
+
         GotProofTime actionId posix ->
             let
                 proofTime =
@@ -720,12 +755,13 @@ update msg model loggedIn =
                 proofCode =
                     Claim.generateVerificationCode actionId
                         loggedIn.accountName
-                        posix
+                        proofTime
             in
             UR.init
                 { model
-                    | proofTime = Just proofTime
-                    , proofCode = Just proofCode
+                    | proofCode = Just proofCode
+                    , proofTime = Just proofTime
+                    , secondsAfterClaim = Just 0
                 }
 
         CompletedLoadCommunity (Ok community) ->
@@ -801,6 +837,8 @@ update msg model loggedIn =
             { model
                 | addPhotoStatus = AddPhotoClosed
                 , proofTime = Nothing
+                , proofCode = Nothing
+                , secondsAfterClaim = Nothing
             }
                 |> UR.init
 
@@ -936,6 +974,9 @@ msgToString msg =
 
         GotTime _ ->
             [ "GotTime" ]
+
+        Tick _ ->
+            [ "Tick" ]
 
         GotProofTime _ _ ->
             [ "GotProofTime" ]
