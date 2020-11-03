@@ -632,13 +632,6 @@ viewClaimModal loggedIn model =
 
                 acceptButtonText =
                     t "dashboard.check_claim.yes"
-                        ++ (if hasProofPhoto then
-                                -- Conventionally, the three dots mean that there will be an extra step (photo uploading)
-                                "..."
-
-                            else
-                                ""
-                           )
             in
             div []
                 [ Modal.initWith
