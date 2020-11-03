@@ -439,6 +439,7 @@
       "proof": {
         "title": "Aquesta acció requereix proves d’assoliment",
         "photo": "Foto",
+        "photo_full": "veure imatge completa",
         "upload_photo_hint": "Toca per fer una foto",
         "code_period_label": "el codi és vàlid per a"
       },

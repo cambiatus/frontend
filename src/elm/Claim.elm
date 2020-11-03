@@ -38,8 +38,9 @@ import Eos.Account
 import Graphql.OptionalArgument exposing (OptionalArgument(..))
 import Graphql.SelectionSet as SelectionSet exposing (SelectionSet, with)
 import Html exposing (Html, a, button, div, img, label, p, strong, text)
-import Html.Attributes exposing (class, classList, disabled, id, src, style)
+import Html.Attributes exposing (class, classList, disabled, href, id, src, style, target)
 import Html.Events exposing (onClick)
+import Icons
 import Json.Encode as Encode
 import Profile exposing (Profile)
 import Route exposing (Route)
@@ -448,19 +449,26 @@ viewPhotoModal loggedIn claim =
             [ div [ class "md:flex md:justify-start md:space-x-4" ]
                 [ case claim.proofPhoto of
                     Just url ->
-                        div [ class "w-1/2" ]
+                        div [ class "sm:w-1/2" ]
                             [ img
                                 [ style "max-height" "42vh"
-                                , Utils.onClickNoBubble (OpenPhotoModal claim)
                                 , src url
                                 ]
                                 []
+                            , a
+                                [ class "underline inline-block py-1 text-gray"
+                                , href url
+                                , target "_blank"
+                                ]
+                                [ text "view full image"
+                                , Icons.external "inline-block ml-1 h-3 fill-current"
+                                ]
                             ]
 
                     Nothing ->
                         text ""
                 , div []
-                    [ label [ class "mt-6 md:mt-0 input-label md:text-xl block" ]
+                    [ label [ class "mt-4 md:mt-0 input-label md:text-xl block" ]
                         [ text (t "community.actions.form.verification_number")
                         ]
                     , strong [ class "text-xl md:text-3xl" ] [ text (Maybe.withDefault "" claim.proofCode) ]
