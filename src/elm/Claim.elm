@@ -460,7 +460,7 @@ viewPhotoModal loggedIn claim =
                                 , href url
                                 , target "_blank"
                                 ]
-                                [ text "view full image"
+                                [ text (t "community.actions.proof.photo_full")
                                 , Icons.external "inline-block ml-1 h-3 fill-current"
                                 ]
                             ]
