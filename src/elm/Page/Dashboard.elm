@@ -570,10 +570,10 @@ viewAmount amount symbol =
 
 
 viewBalance : LoggedIn.Model -> Model -> Balance -> Html Msg
-viewBalance loggedIn _ balance =
+viewBalance ({ shared } as loggedIn) _ balance =
     let
-        text_ s =
-            text (I18Next.t loggedIn.shared.translations s)
+        text_ =
+            text << shared.translators.t
 
         symbolText =
             Eos.symbolToSymbolCodeString balance.asset.symbol
@@ -600,7 +600,9 @@ viewBalance loggedIn _ balance =
                 [ class "flex w-full items-center justify-between h-12 text-gray border-b"
                 , Route.href <| Route.Community loggedIn.selectedCommunity
                 ]
-                [ text_ "dashboard.explore", Icons.arrowDown "rotate--90" ]
+                [ text <| shared.translators.tr "dashboard.explore" [ ( "symbol", Eos.symbolToSymbolCodeString loggedIn.selectedCommunity ) ]
+                , Icons.arrowDown "rotate--90"
+                ]
             , button
                 [ class "flex w-full items-center justify-between h-12 text-gray"
                 , onClick CreateInvite
