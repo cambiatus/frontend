@@ -439,7 +439,8 @@
       "proof": {
         "title": "Esta acción requiere prueba de logro",
         "photo": "Foto",
-        "upload_photo_hint": "Toca para tomar una foto"
+        "upload_photo_hint": "Toca para tomar una foto",
+        "code_period_label": "el código es válido para"
       },
       "form": {
         "not_found": "Acción no encontrada",

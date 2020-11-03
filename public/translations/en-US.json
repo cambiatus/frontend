@@ -435,7 +435,8 @@
       "proof": {
         "title": "This action requires proof of achievement",
         "photo": "Photo",
-        "upload_photo_hint": "Tap to take a photo"
+        "upload_photo_hint": "Tap to take a photo",
+        "code_period_label": "the code is valid for"
       },
       "form": {
         "not_found": "Action not found",

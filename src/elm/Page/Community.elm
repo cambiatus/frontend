@@ -245,12 +245,12 @@ viewAddPhoto model { shared } action =
                     Maybe.withDefault "" action.photoProofInstructions
                 ]
             , div [ class "mb-4" ]
-                [ span [ class "input-label block" ]
+                [ span [ class "input-label block mb-1" ]
                     [ text (t "community.actions.form.verification_number") ]
-                , viewProofCode model
+                , viewProofCode shared.translators model
                 ]
             , div [ class "mb-4" ]
-                [ span [ class "input-label block" ]
+                [ span [ class "input-label block mb-2" ]
                     [ text (t "community.actions.proof.photo") ]
                 , viewPhotoUploader shared.translators model
                 ]
@@ -270,14 +270,14 @@ viewAddPhoto model { shared } action =
         ]
 
 
-viewProofCode : Model -> Html msg
-viewProofCode model =
+viewProofCode : Translators -> Model -> Html msg
+viewProofCode { t } { secondsAfterClaim, proofCodeValiditySeconds, proofCode } =
     let
         secondsPassed =
-            Maybe.withDefault 0 model.secondsAfterClaim
+            Maybe.withDefault 0 secondsAfterClaim
 
         remainingSeconds =
-            model.proofCodeValiditySeconds - secondsPassed
+            proofCodeValiditySeconds - secondsPassed
 
         timerMinutes =
             remainingSeconds // 60
@@ -295,15 +295,20 @@ viewProofCode model =
         timer =
             toString timerMinutes ++ ":" ++ toString timerSeconds
     in
-    p []
-        [ div [ class "text-xl font-bold sm:inline" ]
-            [ text <| Maybe.withDefault "No code found" model.proofCode ]
-        , span [ class "whitespace-no-wrap text-body rounded-full bg-lightred px-2 py-1 sm:ml-2 text-white" ]
-            [ text "the code is valid for"
-            , text " "
-            , text timer
-            ]
-        ]
+    case proofCode of
+        Just code ->
+            p []
+                [ div [ class "text-xl font-bold inline-block align-middle" ]
+                    [ text code ]
+                , span [ class "whitespace-no-wrap text-body rounded-full bg-lightred px-3 py-1 ml-2 text-white" ]
+                    [ text (t "community.actions.proof.code_period_label")
+                    , text " "
+                    , text timer
+                    ]
+                ]
+
+        _ ->
+            text ""
 
 
 
