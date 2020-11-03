@@ -239,7 +239,7 @@ viewAddPhoto model { shared } action =
     in
     div [ class "bg-white border-t border-gray-300" ]
         [ div [ class "container p-4 mx-auto" ]
-            [ Page.viewTitle (t "community.actions.proof.title")
+            [ div [ class "heading-bold leading-7 font-bold" ] [ text <| t "community.actions.proof.title" ]
             , p [ class "mb-4" ]
                 [ text <|
                     Maybe.withDefault "" action.photoProofInstructions
@@ -298,7 +298,7 @@ viewProofCode { t } { secondsAfterClaim, proofCodeValiditySeconds, proofCode } =
     case proofCode of
         Just code ->
             p []
-                [ div [ class "text-xl font-bold inline-block align-middle" ]
+                [ div [ class "text-2xl text-black font-bold inline-block align-middle" ]
                     [ text code ]
                 , span [ class "whitespace-no-wrap text-body rounded-full bg-lightred px-3 py-1 ml-2 text-white" ]
                     [ text (t "community.actions.proof.code_period_label")
