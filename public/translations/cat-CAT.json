@@ -438,7 +438,8 @@
       "edit": "Edita l'acció",
       "proof": {
         "title": "Aquesta acció requereix proves d’assoliment",
-        "photo": "Foto"
+        "photo": "Foto",
+        "upload_photo_hint": "Toca per fer una foto"
       },
       "form": {
         "not_found": "Acció no trobada",

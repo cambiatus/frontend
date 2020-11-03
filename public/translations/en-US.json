@@ -434,7 +434,8 @@
       "edit": "Edit Action",
       "proof": {
         "title": "This action requires proof of achievement",
-        "photo": "Photo"
+        "photo": "Photo",
+        "upload_photo_hint": "Tap to take a photo"
       },
       "form": {
         "not_found": "Action not found",

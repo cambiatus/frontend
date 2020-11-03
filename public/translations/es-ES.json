@@ -438,7 +438,8 @@
       "edit": "Editar acción",
       "proof": {
         "title": "Esta acción requiere prueba de logro",
-        "photo": "Foto"
+        "photo": "Foto",
+        "upload_photo_hint": "Toca para tomar una foto"
       },
       "form": {
         "not_found": "Acción no encontrada",

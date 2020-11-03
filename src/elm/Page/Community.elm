@@ -30,6 +30,7 @@ import Json.Encode as Encode exposing (Value)
 import Page
 import Route
 import Session.LoggedIn as LoggedIn exposing (External(..), FeedbackStatus(..))
+import Session.Shared exposing (Translators)
 import Sha256 exposing (sha256)
 import Strftime
 import Task
@@ -251,7 +252,7 @@ viewAddPhoto model { shared } action =
             , div [ class "mb-4" ]
                 [ span [ class "input-label block" ]
                     [ text (t "community.actions.proof.photo") ]
-                , viewPhotoUploader model
+                , viewPhotoUploader shared.translators model
                 ]
             , div [ class "md:flex" ]
                 [ button
@@ -976,8 +977,8 @@ update msg model loggedIn =
                 |> UR.addExt (ShowFeedback LoggedIn.Failure (t "dashboard.check_claim.failure"))
 
 
-viewPhotoUploader : Model -> Html Msg
-viewPhotoUploader model =
+viewPhotoUploader : Translators -> Model -> Html Msg
+viewPhotoUploader { t } model =
     label
         ([ class "relative bg-purple-500 w-full md:w-2/3 h-56 rounded-sm flex justify-center items-center cursor-pointer" ]
             ++ (case model.proofPhotoStatus of
@@ -1008,7 +1009,10 @@ viewPhotoUploader model =
                         [ Icons.camera ]
 
                 _ ->
-                    div [ class "w-10" ] [ Icons.camera ]
+                    div [ class "text-white text-body font-bold text-center" ]
+                        [ div [ class "w-10 mx-auto mb-2" ] [ Icons.camera ]
+                        , div [] [ text (t "community.actions.proof.upload_photo_hint") ]
+                        ]
             ]
         ]
 
