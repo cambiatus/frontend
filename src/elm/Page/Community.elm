@@ -20,7 +20,7 @@ import Eos.Account as Eos
 import File exposing (File)
 import Graphql.Http
 import Html exposing (Html, a, button, div, hr, img, input, label, p, span, text)
-import Html.Attributes exposing (accept, class, classList, disabled, multiple, src, style, type_)
+import Html.Attributes exposing (accept, class, classList, disabled, id, multiple, src, style, type_)
 import Html.Events exposing (onClick)
 import Http
 import I18Next exposing (t)
@@ -190,7 +190,7 @@ view loggedIn model =
                         canEdit =
                             LoggedIn.isAccount community.creator loggedIn
                     in
-                    div []
+                    div [ id "communityPage" ]
                         [ case model.addPhotoStatus of
                             AddPhotoOpen action ->
                                 viewAddPhoto model loggedIn action
@@ -844,6 +844,15 @@ update msg model loggedIn =
                     }
                         |> UR.init
                         |> UR.addCmd (Task.perform (GotProofTime action.id) Time.now)
+                        |> UR.addPort
+                            { responseAddress = NoOp
+                            , responseData = Encode.null
+                            , data =
+                                Encode.object
+                                    [ ( "id", Encode.string "communityPage" )
+                                    , ( "name", Encode.string "scrollIntoView" )
+                                    ]
+                            }
 
                 _ ->
                     { model

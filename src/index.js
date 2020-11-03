@@ -621,6 +621,11 @@ async function handleJavascriptPort (arg) {
       app.ports.javascriptInPort.send(response)
       break
     }
+    case 'scrollIntoView': {
+      devLog('=======================', 'scrollIntoView')
+      document.getElementById(arg.data.id).scrollIntoView(true)
+      break
+    }
     case 'validateDeadline': {
       devLog('=============================', 'validatingDate')
 
