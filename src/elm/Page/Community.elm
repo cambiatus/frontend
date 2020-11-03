@@ -198,12 +198,14 @@ view loggedIn model =
                             AddPhotoClosed ->
                                 div []
                                     [ viewHeader loggedIn community
-                                    , div [ class "bg-white p-20" ]
-                                        [ div [ class "flex flex-wrap w-full items-center" ]
-                                            [ p [ class "text-4xl font-bold" ]
-                                                [ text community.title ]
+                                    , div [ class "bg-white pt-20 pb-10 sm:pb-20" ]
+                                        [ div [ class "container mx-auto" ]
+                                            [ div [ class "px-4 text-center" ]
+                                                [ p [ class "text-3xl text-black sm:text-4xl leading-tight font-bold mb-4" ]
+                                                    [ text community.title ]
+                                                , p [ class "text-grey-200 text-sm" ] [ text community.description ]
+                                                ]
                                             ]
-                                        , p [ class "text-grey-200 text-sm" ] [ text community.description ]
                                         ]
                                     , if community.hasObjectives then
                                         div [ class "container mx-auto px-4" ]
@@ -686,7 +688,7 @@ viewHeader { shared } community =
                 ]
             , p [ class "text-white mx-auto" ] [ text community.title ]
             ]
-        , div [ class "h-24 lg:h-56 bg-indigo-500 flex flex-wrap content-end" ]
+        , div [ class "h-24 bg-indigo-500 flex flex-wrap content-end" ]
             [ div [ class "h-24 w-24 rounded-full mx-auto pt-12" ]
                 [ img
                     [ src community.logo
