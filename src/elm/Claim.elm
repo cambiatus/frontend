@@ -461,7 +461,7 @@ viewPhotoModal loggedIn claim =
                         text ""
                 , div []
                     [ label [ class "mt-6 md:mt-0 input-label md:text-xl block" ]
-                        [ text "verification number"
+                        [ text (t "community.actions.form.verification_number")
                         ]
                     , strong [ class "text-xl md:text-3xl" ] [ text (Maybe.withDefault "" claim.proofCode) ]
                     ]

@@ -97,7 +97,7 @@ view ({ shared } as loggedIn) model =
                             , div [ class "mx-auto container px-4" ]
                                 [ viewTitle shared claim
                                 , if Claim.hasPhotoProof claim then
-                                    viewPhotoThumbnail claim
+                                    viewPhotoThumbnail shared.translators claim
 
                                   else
                                     text ""
@@ -137,8 +137,8 @@ view ({ shared } as loggedIn) model =
     }
 
 
-viewPhotoThumbnail : Claim.Model -> Html Msg
-viewPhotoThumbnail claim =
+viewPhotoThumbnail : Translators -> Claim.Model -> Html Msg
+viewPhotoThumbnail { t } claim =
     div [ class "mb-8 flex" ]
         [ div [ class "claim-photo-thumb" ]
             [ case claim.proofPhoto of
@@ -154,7 +154,7 @@ viewPhotoThumbnail claim =
             ]
         , div [ class "ml-4" ]
             [ label [ class "input-label block" ]
-                [ text "verification number"
+                [ text (t "community.actions.form.verification_number")
                 ]
             , strong [ class "text-lg block" ] [ text (Maybe.withDefault "" claim.proofCode) ]
             ]

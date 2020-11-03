@@ -476,7 +476,7 @@
         "quantity_label": "Escolha a quantidade de usos",
         "photo_validation": "Validação de foto",
         "photo_validation_hint": "Os usuários devem enviar uma foto realizando a tarefa para que o sinistro seja válido.",
-        "verification_number": "Número de Verificação",
+        "verification_number": "Código de verificação",
         "verification_number_hint": "Os usuários terão que enviar um código de verificação exclusivo com a foto para que a reclamação seja válida.",
         "verification_instructions": "Escreva aqui instruções para os usuários",
         "usages_left_label": "Usos restantes",
