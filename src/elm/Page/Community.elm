@@ -57,7 +57,6 @@ initModel : LoggedIn.Model -> Symbol -> Model
 initModel _ symbol =
     { date = Nothing
     , showedOnPage = Loading
-    , members = []
     , actionId = Nothing
     , openObjective = Nothing
     , claimConfirmationModalStatus = Closed
@@ -94,7 +93,6 @@ type alias Model =
     { date : Maybe Posix
     , showedOnPage : LoadStatus
     , actionId : Maybe Int
-    , members : List Member
     , openObjective : Maybe Int
     , claimConfirmationModalStatus : ClaimConfirmationModalStatus
     , proofPhotoStatus : ProofPhotoStatus
