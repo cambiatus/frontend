@@ -22,14 +22,9 @@
     }
   },
   "standard": {
-    "plugins": [
-      "html"
-    ],
+    "plugins": ["html"],
     "parser": "babel-eslint",
-    "ignore": [
-      "docker/env-config.js",
-      "scripts/"
-    ]
+    "ignore": ["docker/env-config.js", "scripts/"]
   },
   "devDependencies": {
     "@babel/cli": "7.2.3",
@@ -90,7 +85,6 @@
     "elm-test": "^0.19.1",
     "elm-webpack-loader": "^6.0.1",
     "eosjs": "^16.0.9",
-    "eosjs-account-name": "^2.1.1",
     "eosjs-ecc": "^4.0.4",
     "husky": "^4.2.5",
     "pdfmake": "^0.1.64",
