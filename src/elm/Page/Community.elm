@@ -188,7 +188,9 @@ view loggedIn model =
                         canEdit =
                             LoggedIn.isAccount community.creator loggedIn
                     in
-                    div [ id "communityPage" ]
+                    div
+                        [ id "communityPage" -- used to scroll into view with port
+                        ]
                         [ case model.addPhotoStatus of
                             ClaimWithPhotoOpen action ->
                                 viewClaimWithPhoto model loggedIn action
