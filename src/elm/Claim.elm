@@ -9,7 +9,6 @@ module Claim exposing
     , encodeClaimAction
     , encodeVerification
     , generateVerificationCode
-    , hasPhotoProof
     , isValidated
     , isValidator
     , isVotable
@@ -211,8 +210,21 @@ selectionSet =
         |> with (Claim.action actionSelectionSet)
         |> with (Claim.checks (\_ -> { input = Absent }) checkSelectionSet)
         |> with Claim.createdAt
-        |> with Claim.proofPhoto
-        |> with Claim.proofCode
+        |> with (SelectionSet.map emptyStringToNothing Claim.proofPhoto)
+        |> with (SelectionSet.map emptyStringToNothing Claim.proofCode)
+
+
+emptyStringToNothing : Maybe String -> Maybe String
+emptyStringToNothing s =
+    case s of
+        Just "" ->
+            Nothing
+
+        Just nonEmpty ->
+            Just nonEmpty
+
+        Nothing ->
+            Nothing
 
 
 claimStatusMap : ClaimStatus.ClaimStatus -> ClaimStatus
@@ -331,14 +343,6 @@ updateClaimModalStatus msg model =
             model
 
 
-{-| This is a temporary function, will be removed after implementing
-the backend part for Claims with photos.
--}
-hasPhotoProof : Model -> Bool
-hasPhotoProof claim =
-    claim.action.hasProofPhoto
-
-
 {-| Claim card with a short claim overview. Used on Dashboard and Analysis pages.
 -}
 viewClaimCard : LoggedIn.Model -> Model -> Html Msg
@@ -380,28 +384,26 @@ viewClaimCard { selectedCommunity, shared, accountName } claim =
             ]
             [ div
                 [ class "flex mb-8"
-                , classList
-                    [ ( "justify-center", not <| hasPhotoProof claim )
-                    , ( "justify-between", hasPhotoProof claim )
-                    ]
+                , case claim.proofPhoto of
+                    Just _ ->
+                        class "justify-between"
+
+                    Nothing ->
+                        class "justify-center"
                 ]
                 [ Profile.view shared accountName claim.claimer
-                , if hasPhotoProof claim then
-                    div [ class "claim-photo-thumb" ]
-                        [ case claim.proofPhoto of
-                            Just url ->
-                                img
-                                    [ Utils.onClickNoBubble (OpenPhotoModal claim)
-                                    , src url
-                                    ]
-                                    []
+                , case claim.proofPhoto of
+                    Just url ->
+                        div [ class "claim-photo-thumb" ]
+                            [ img
+                                [ Utils.onClickNoBubble (OpenPhotoModal claim)
+                                , src url
+                                ]
+                                []
+                            ]
 
-                            Nothing ->
-                                text ""
-                        ]
-
-                  else
-                    text ""
+                    Nothing ->
+                        text ""
                 ]
             , div [ class "bg-gray-100 flex items-center justify-center h-6 w-32 mb-2" ]
                 [ p

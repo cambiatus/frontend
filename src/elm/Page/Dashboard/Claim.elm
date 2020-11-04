@@ -96,11 +96,7 @@ view ({ shared } as loggedIn) model =
                                 ]
                             , div [ class "mx-auto container px-4" ]
                                 [ viewTitle shared claim
-                                , if Claim.hasPhotoProof claim then
-                                    viewPhotoThumbnail shared.translators claim
-
-                                  else
-                                    text ""
+                                , viewProofs shared.translators claim
                                 , viewDetails shared model claim
                                 , viewVoters loggedIn claim
                                 ]
@@ -137,28 +133,36 @@ view ({ shared } as loggedIn) model =
     }
 
 
-viewPhotoThumbnail : Translators -> Claim.Model -> Html Msg
-viewPhotoThumbnail { t } claim =
-    div [ class "mb-8 flex" ]
-        [ div [ class "claim-photo-thumb" ]
-            [ case claim.proofPhoto of
-                Just url ->
-                    img
+viewProofs : Translators -> Claim.Model -> Html Msg
+viewProofs { t } claim =
+    let
+        viewProofCode =
+            case claim.proofCode of
+                Just proofCode ->
+                    div [ class "ml-4" ]
+                        [ label [ class "input-label block" ]
+                            [ text (t "community.actions.form.verification_number") ]
+                        , strong [ class "text-lg block" ] [ text proofCode ]
+                        ]
+
+                Nothing ->
+                    text ""
+    in
+    case claim.proofPhoto of
+        Just url ->
+            div [ class "mb-8 flex" ]
+                [ div [ class "claim-photo-thumb" ]
+                    [ img
                         [ onClick (ClaimMsg <| Claim.OpenPhotoModal claim)
                         , src url
                         ]
                         []
-
-                Nothing ->
-                    text ""
-            ]
-        , div [ class "ml-4" ]
-            [ label [ class "input-label block" ]
-                [ text (t "community.actions.form.verification_number")
+                    ]
+                , viewProofCode
                 ]
-            , strong [ class "text-lg block" ] [ text (Maybe.withDefault "" claim.proofCode) ]
-            ]
-        ]
+
+        Nothing ->
+            text ""
 
 
 viewVoteButtons : Translators -> Claim.ClaimId -> Claim.ModalStatus -> Html Msg
