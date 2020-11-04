@@ -71,7 +71,7 @@ initModel _ _ =
 subscriptions : Model -> Sub Msg
 subscriptions model =
     case model.proofs of
-        Just (ProofWithPhotoAndCode _ _) ->
+        Just (Proof _ (CodeParts _)) ->
             Time.every 1000 Tick
 
         _ ->
@@ -93,16 +93,17 @@ type alias Model =
 
 
 type Proof
-    = ProofWithPhoto ProofPhotoStatus
-    | ProofWithPhotoAndCode ProofPhotoStatus ProofCode
+    = Proof ProofPhotoStatus ProofCode
 
 
-type alias ProofCode =
-    { code : Maybe String
-    , claimTimestamp : Int
-    , secondsAfterClaim : Int
-    , availabilityPeriod : Int
-    }
+type ProofCode
+    = NoCode
+    | CodeParts
+        { code : Maybe String
+        , claimTimestamp : Int
+        , secondsAfterClaim : Int
+        , availabilityPeriod : Int
+        }
 
 
 type LoadStatus
@@ -260,7 +261,7 @@ viewClaimWithPhoto model { shared } action =
                     Maybe.withDefault "" action.photoProofInstructions
                 ]
             , case model.proofs of
-                Just (ProofWithPhotoAndCode _ { code, secondsAfterClaim, availabilityPeriod }) ->
+                Just (Proof _ (CodeParts { code, secondsAfterClaim, availabilityPeriod })) ->
                     case code of
                         Just c ->
                             viewProofCode
@@ -278,13 +279,10 @@ viewClaimWithPhoto model { shared } action =
                 [ span [ class "input-label block mb-2" ]
                     [ text (t "community.actions.proof.photo") ]
                 , case model.proofs of
-                    Just (ProofWithPhoto proofPhoto) ->
+                    Just (Proof proofPhoto _) ->
                         viewPhotoUploader shared.translators proofPhoto
 
-                    Just (ProofWithPhotoAndCode proofPhoto _) ->
-                        viewPhotoUploader shared.translators proofPhoto
-
-                    Nothing ->
+                    _ ->
                         text ""
                 ]
             , div [ class "md:flex" ]
@@ -751,14 +749,18 @@ update msg model loggedIn =
 
         GotUnit64Name (Ok unit64name) ->
             case ( model.proofs, model.actionId ) of
-                ( Just (ProofWithPhotoAndCode proofPhoto proofCode), Just actionId ) ->
+                ( Just (Proof proofPhoto (CodeParts proofCode)), Just actionId ) ->
                     let
+                        verificationCode =
+                            Claim.generateVerificationCode actionId unit64name proofCode.claimTimestamp
+
                         newProofCode =
-                            { proofCode
-                                | code = Just (Claim.generateVerificationCode actionId unit64name proofCode.claimTimestamp)
-                            }
+                            CodeParts
+                                { proofCode
+                                    | code = Just verificationCode
+                                }
                     in
-                    { model | proofs = Just (ProofWithPhotoAndCode proofPhoto newProofCode) }
+                    { model | proofs = Just (Proof proofPhoto newProofCode) }
                         |> UR.init
 
                 _ ->
@@ -770,20 +772,21 @@ update msg model loggedIn =
 
         Tick timer ->
             case model.proofs of
-                Just (ProofWithPhotoAndCode proofPhoto ({ code, claimTimestamp, availabilityPeriod } as proofCode)) ->
+                Just (Proof proofPhoto (CodeParts proofCode)) ->
                     let
                         secondsAfterClaim =
-                            (Time.posixToMillis timer // 1000) - claimTimestamp
+                            (Time.posixToMillis timer // 1000) - proofCode.claimTimestamp
 
                         isProofCodeActive =
-                            (availabilityPeriod - secondsAfterClaim) > 0
+                            (proofCode.availabilityPeriod - secondsAfterClaim) > 0
                     in
                     if isProofCodeActive then
                         let
                             newProofCode =
-                                { proofCode | secondsAfterClaim = secondsAfterClaim }
+                                CodeParts
+                                    { proofCode | secondsAfterClaim = secondsAfterClaim }
                         in
-                        { model | proofs = Just (ProofWithPhotoAndCode proofPhoto newProofCode) }
+                        { model | proofs = Just (Proof proofPhoto newProofCode) }
                             |> UR.init
 
                     else
@@ -795,15 +798,16 @@ update msg model loggedIn =
         GotProofTime actionId posix ->
             let
                 initProofCode =
-                    { code = Nothing
-                    , claimTimestamp = Time.posixToMillis posix // 1000
-                    , secondsAfterClaim = 0
-                    , availabilityPeriod = 30 * 60
-                    }
+                    CodeParts
+                        { code = Nothing
+                        , claimTimestamp = Time.posixToMillis posix // 1000
+                        , secondsAfterClaim = 0
+                        , availabilityPeriod = 30 * 60
+                        }
             in
             { model
                 | actionId = Just actionId
-                , proofs = Just (ProofWithPhotoAndCode NoPhoto initProofCode)
+                , proofs = Just (Proof NoPhoto initProofCode)
             }
                 |> UR.init
                 |> UR.addPort
@@ -890,11 +894,8 @@ update msg model loggedIn =
 
                 newProofs =
                     case model.proofs of
-                        Just (ProofWithPhotoAndCode _ proofCode) ->
-                            Just (ProofWithPhotoAndCode Uploading proofCode)
-
-                        Just (ProofWithPhoto _) ->
-                            Just (ProofWithPhoto Uploading)
+                        Just (Proof _ proofCode) ->
+                            Just (Proof Uploading proofCode)
 
                         _ ->
                             Nothing
@@ -912,11 +913,8 @@ update msg model loggedIn =
             let
                 newProofs =
                     case model.proofs of
-                        Just (ProofWithPhotoAndCode _ proofCode) ->
-                            Just (ProofWithPhotoAndCode (Uploaded url) proofCode)
-
-                        Just (ProofWithPhoto _) ->
-                            Just (ProofWithPhoto (Uploaded url))
+                        Just (Proof _ proofCode) ->
+                            Just (Proof (Uploaded url) proofCode)
 
                         _ ->
                             Nothing
@@ -928,11 +926,8 @@ update msg model loggedIn =
             let
                 newProofs =
                     case model.proofs of
-                        Just (ProofWithPhotoAndCode _ proofCode) ->
-                            Just (ProofWithPhotoAndCode (UploadFailed error) proofCode)
-
-                        Just (ProofWithPhoto _) ->
-                            Just (ProofWithPhoto (UploadFailed error))
+                        Just (Proof _ proofCode) ->
+                            Just (Proof (UploadFailed error) proofCode)
 
                         _ ->
                             Nothing
@@ -974,11 +969,8 @@ update msg model loggedIn =
 
                 ( proofPhotoUrl, proofCode_, proofTime ) =
                     case model.proofs of
-                        Just (ProofWithPhotoAndCode (Uploaded url) { code, claimTimestamp }) ->
+                        Just (Proof (Uploaded url) (CodeParts { code, claimTimestamp })) ->
                             ( url, Maybe.withDefault "" code, claimTimestamp )
-
-                        Just (ProofWithPhoto (Uploaded url)) ->
-                            ( url, "", 0 )
 
                         _ ->
                             ( "", "", 0 )
