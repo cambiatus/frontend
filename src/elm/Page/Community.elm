@@ -97,7 +97,7 @@ type Proof
 
 
 type ProofCode
-    = NoCode
+    = NoCodeRequired
     | CodeParts
         { code : Maybe String
         , claimTimestamp : Int
@@ -129,7 +129,7 @@ type ClaimConfirmationModalStatus
 
 
 type ProofPhotoStatus
-    = NoPhoto
+    = NoPhotoAdded
     | Uploading
     | UploadFailed Http.Error
     | Uploaded String
@@ -797,7 +797,7 @@ update msg model loggedIn =
 
         GotProofTime actionId posix ->
             let
-                initProofCode =
+                initProofCodeParts =
                     CodeParts
                         { code = Nothing
                         , claimTimestamp = Time.posixToMillis posix // 1000
@@ -807,7 +807,7 @@ update msg model loggedIn =
             in
             { model
                 | actionId = Just actionId
-                , proofs = Just (Proof NoPhoto initProofCode)
+                , proofs = Just (Proof NoPhotoAdded initProofCodeParts)
             }
                 |> UR.init
                 |> UR.addPort
@@ -864,6 +864,7 @@ update msg model loggedIn =
                             _ ->
                                 model.showedOnPage
                     , claimConfirmationModalStatus = Closed
+                    , proofs = Just (Proof NoPhotoAdded NoCodeRequired)
                 }
                     |> UR.init
                     |> UR.addCmd
@@ -971,6 +972,9 @@ update msg model loggedIn =
                     case model.proofs of
                         Just (Proof (Uploaded url) (CodeParts { code, claimTimestamp })) ->
                             ( url, Maybe.withDefault "" code, claimTimestamp )
+
+                        Just (Proof (Uploaded url) NoCodeRequired) ->
+                            ( url, "", 0 )
 
                         _ ->
                             ( "", "", 0 )
