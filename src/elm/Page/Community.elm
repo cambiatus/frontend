@@ -56,12 +56,11 @@ init ({ shared } as loggedIn) symbol =
 initModel : LoggedIn.Model -> Symbol -> Model
 initModel _ symbol =
     { date = Nothing
-    , community = Loading
+    , showedOnPage = Loading
     , members = []
     , actionId = Nothing
     , openObjective = Nothing
     , claimConfirmationModalStatus = Closed
-    , addPhotoStatus = ClaimWithPhotoClosed
     , proofPhotoStatus = NoPhoto
     , proofTime = Nothing
     , proofCode = Nothing
@@ -93,12 +92,11 @@ subscriptions model =
 
 type alias Model =
     { date : Maybe Posix
-    , community : LoadStatus
+    , showedOnPage : LoadStatus
     , actionId : Maybe Int
     , members : List Member
     , openObjective : Maybe Int
     , claimConfirmationModalStatus : ClaimConfirmationModalStatus
-    , addPhotoStatus : ClaimWithPhotoStatus
     , proofPhotoStatus : ProofPhotoStatus
     , proofCode : Maybe String
     , proofTime : Maybe Int
@@ -110,16 +108,20 @@ type alias Model =
     }
 
 
-type ClaimWithPhotoStatus
-    = ClaimWithPhotoOpen Community.Action
-    | ClaimWithPhotoClosed
-
-
 type LoadStatus
     = Loading
-    | Loaded Community.Model EditStatus
+    | Loaded Community.Model PageStatus
     | NotFound
     | Failed (Graphql.Http.Error (Maybe Community.Model))
+
+
+type PageStatus
+    = Objectives EditStatus
+    | ClaimWithProofsShowed Community.Action
+
+
+type alias OpenObjective =
+    Int
 
 
 type EditStatus
@@ -160,7 +162,7 @@ view loggedIn model =
             text (t s)
 
         title =
-            case model.community of
+            case model.showedOnPage of
                 Loaded community _ ->
                     community.title
 
@@ -171,7 +173,7 @@ view loggedIn model =
                     t "community.not_found"
 
         content =
-            case model.community of
+            case model.showedOnPage of
                 Loading ->
                     Page.fullPageLoading
 
@@ -181,53 +183,53 @@ view loggedIn model =
                 Failed e ->
                     Page.fullPageGraphQLError (t "community.objectives.title") e
 
-                Loaded community editStatus ->
-                    let
-                        canEdit =
-                            LoggedIn.isAccount community.creator loggedIn
-                    in
-                    div
-                        [ id "communityPage" -- used to scroll into view with port
-                        ]
-                        [ case model.addPhotoStatus of
-                            ClaimWithPhotoOpen action ->
-                                viewClaimWithPhoto model loggedIn action
-
-                            ClaimWithPhotoClosed ->
-                                div []
-                                    [ viewHeader loggedIn community
-                                    , div [ class "bg-white pt-20 pb-10 sm:pb-20" ]
-                                        [ div [ class "container mx-auto" ]
-                                            [ div [ class "px-4 text-center" ]
-                                                [ p [ class "text-3xl text-black sm:text-4xl leading-tight font-bold mb-4" ]
-                                                    [ text community.title ]
-                                                , p [ class "text-grey-200 text-sm" ] [ text community.description ]
-                                                ]
+                Loaded community pageStatus ->
+                    case pageStatus of
+                        Objectives editStatus ->
+                            let
+                                canEdit =
+                                    LoggedIn.isAccount community.creator loggedIn
+                            in
+                            div []
+                                [ viewHeader loggedIn community
+                                , div [ class "bg-white pt-20 pb-10 sm:pb-20" ]
+                                    [ div [ class "container mx-auto" ]
+                                        [ div [ class "px-4 text-center" ]
+                                            [ p [ class "text-3xl text-black sm:text-4xl leading-tight font-bold mb-4" ]
+                                                [ text community.title ]
+                                            , p [ class "text-grey-200 text-sm" ] [ text community.description ]
                                             ]
                                         ]
-                                    , if community.hasObjectives then
-                                        div [ class "container mx-auto px-4" ]
-                                            [ viewClaimConfirmation loggedIn model
-                                            , div [ class "bg-white py-6 sm:py-8 px-3 sm:px-6 rounded-lg mt-4" ]
-                                                (Page.viewTitle (t "community.objectives.title_plural")
-                                                    :: List.indexedMap (viewObjective loggedIn model community)
-                                                        community.objectives
-                                                    ++ [ if canEdit then
-                                                            viewObjectiveNew loggedIn editStatus community.symbol
-
-                                                         else
-                                                            text ""
-                                                       ]
-                                                )
-                                            ]
-
-                                      else
-                                        text ""
                                     ]
-                        ]
+                                , if community.hasObjectives then
+                                    div [ class "container mx-auto px-4" ]
+                                        [ viewClaimConfirmation loggedIn model
+                                        , div [ class "bg-white py-6 sm:py-8 px-3 sm:px-6 rounded-lg mt-4" ]
+                                            (Page.viewTitle (t "community.objectives.title_plural")
+                                                :: List.indexedMap (viewObjective loggedIn model community)
+                                                    community.objectives
+                                                ++ [ if canEdit then
+                                                        viewObjectiveNew loggedIn editStatus community.symbol
+
+                                                     else
+                                                        text ""
+                                                   ]
+                                            )
+                                        ]
+
+                                  else
+                                    text ""
+                                ]
+
+                        ClaimWithProofsShowed action ->
+                            viewClaimWithPhoto model loggedIn action
     in
     { title = title
-    , content = content
+    , content =
+        div
+            -- id is used to scroll into view with port
+            [ id "communityPage" ]
+            [ content ]
     }
 
 
@@ -809,13 +811,17 @@ update msg model loggedIn =
         CompletedLoadCommunity (Ok community) ->
             case community of
                 Just c ->
-                    UR.init { model | community = Loaded c NoEdit }
+                    { model
+                        | showedOnPage = Loaded c (Objectives NoEdit)
+                    }
+                        |> UR.init
 
                 Nothing ->
-                    UR.init { model | community = NotFound }
+                    { model | showedOnPage = NotFound }
+                        |> UR.init
 
         CompletedLoadCommunity (Err err) ->
-            { model | community = Failed err }
+            { model | showedOnPage = Failed err }
                 |> UR.init
                 |> UR.logGraphqlError msg err
 
@@ -838,7 +844,13 @@ update msg model loggedIn =
             in
             if action.hasProofPhoto then
                 { model
-                    | addPhotoStatus = ClaimWithPhotoOpen action
+                    | showedOnPage =
+                        case model.showedOnPage of
+                            Loaded community pageStatus ->
+                                Loaded community (ClaimWithProofsShowed action)
+
+                            _ ->
+                                model.showedOnPage
                     , claimConfirmationModalStatus = Closed
                 }
                     |> UR.init
@@ -860,10 +872,7 @@ update msg model loggedIn =
                         }
 
             else
-                { model
-                    | claimConfirmationModalStatus = Open action
-                    , addPhotoStatus = ClaimWithPhotoClosed
-                }
+                model
                     |> UR.init
 
         EnteredPhoto (file :: _) ->
@@ -898,7 +907,13 @@ update msg model loggedIn =
         CloseAddPhotoProof reason ->
             { model
               -- TODO: too much fields, clean this up
-                | addPhotoStatus = ClaimWithPhotoClosed
+                | showedOnPage =
+                    case model.showedOnPage of
+                        Loaded community (ClaimWithProofsShowed _) ->
+                            Loaded community (Objectives NoEdit)
+
+                        _ ->
+                            model.showedOnPage
                 , proofTime = Nothing
                 , claimConfirmationModalStatus = Closed
                 , proofCode = Nothing
@@ -973,7 +988,13 @@ update msg model loggedIn =
             { model
               -- TODO: Make it better
                 | claimConfirmationModalStatus = Closed
-                , addPhotoStatus = ClaimWithPhotoClosed
+                , showedOnPage =
+                    case model.showedOnPage of
+                        Loaded community (ClaimWithProofsShowed _) ->
+                            Loaded community (Objectives NoEdit)
+
+                        _ ->
+                            model.showedOnPage
                 , proofCode = Nothing
                 , proofPhotoStatus = NoPhoto
                 , proofTime = Nothing
