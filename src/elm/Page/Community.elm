@@ -63,7 +63,7 @@ initModel _ symbol =
     , claimConfirmationModalStatus = Closed
     , addPhotoStatus = ClaimWithPhotoClosed
     , proofPhoto = Nothing
-    , proofPhotoStatus = NoImage
+    , proofPhotoStatus = NoPhoto
     , proofTime = Nothing
     , proofCode = Nothing
     , unit64name = Nothing
@@ -142,7 +142,7 @@ type alias Member =
 
 
 type ProofPhotoStatus
-    = NoImage
+    = NoPhoto
     | Uploading
     | UploadFailed Http.Error
     | Uploaded String
@@ -903,7 +903,7 @@ update msg model loggedIn =
                 , claimConfirmationModalStatus = Closed
                 , proofCode = Nothing
                 , proofPhoto = Nothing
-                , proofPhotoStatus = NoImage
+                , proofPhotoStatus = NoPhoto
                 , secondsAfterClaim = Nothing
             }
                 |> UR.init
@@ -976,7 +976,7 @@ update msg model loggedIn =
                 | claimConfirmationModalStatus = Closed
                 , addPhotoStatus = ClaimWithPhotoClosed
                 , proofCode = Nothing
-                , proofPhotoStatus = NoImage
+                , proofPhotoStatus = NoPhoto
                 , proofPhoto = Nothing
                 , proofTime = Nothing
             }
