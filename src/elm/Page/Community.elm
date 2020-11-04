@@ -66,7 +66,6 @@ initModel _ symbol =
     , unit64name = Nothing
     , secondsAfterClaim = Nothing
     , proofCodeValiditySeconds = 30 * 60
-    , invitations = ""
     }
 
 
@@ -100,7 +99,6 @@ type alias Model =
     , unit64name : Maybe String
     , secondsAfterClaim : Maybe Int
     , proofCodeValiditySeconds : Int
-    , invitations : String
     }
 
 
