@@ -56,7 +56,7 @@ init ({ shared } as loggedIn) symbol =
 initModel : LoggedIn.Model -> Symbol -> Model
 initModel _ _ =
     { date = Nothing
-    , showedOnPage = Loading
+    , pageStatus = Loading
     , actionId = Nothing
     , openObjective = Nothing
     , claimConfirmationModalStatus = Closed
@@ -84,7 +84,7 @@ subscriptions model =
 
 type alias Model =
     { date : Maybe Posix
-    , showedOnPage : LoadStatus
+    , pageStatus : PageStatus
     , actionId : Maybe Int
     , openObjective : Maybe Int
     , claimConfirmationModalStatus : ClaimConfirmationModalStatus
@@ -106,16 +106,16 @@ type ProofCode
         }
 
 
-type LoadStatus
+type PageStatus
     = Loading
-    | Loaded Community.Model PageStatus
+    | Loaded Community.Model ActiveSection
     | NotFound
     | Failed (Graphql.Http.Error (Maybe Community.Model))
 
 
-type PageStatus
+type ActiveSection
     = Objectives EditStatus
-    | ClaimWithProofsShowed Community.Action
+    | ClaimWithProofs Community.Action
 
 
 type EditStatus
@@ -149,7 +149,7 @@ view loggedIn model =
             text (t s)
 
         title =
-            case model.showedOnPage of
+            case model.pageStatus of
                 Loaded community _ ->
                     community.title
 
@@ -160,7 +160,7 @@ view loggedIn model =
                     t "community.not_found"
 
         content =
-            case model.showedOnPage of
+            case model.pageStatus of
                 Loading ->
                     Page.fullPageLoading
 
@@ -208,7 +208,7 @@ view loggedIn model =
                                     text ""
                                 ]
 
-                        ClaimWithProofsShowed action ->
+                        ClaimWithProofs action ->
                             viewClaimWithPhoto model loggedIn action
     in
     { title = title
@@ -288,7 +288,7 @@ viewClaimWithPhoto model { shared } action =
             , div [ class "md:flex" ]
                 [ button
                     [ class "modal-cancel"
-                    , onClick (CloseAddPhotoProof CancelClicked)
+                    , onClick (CloseProofSection CancelClicked)
                     ]
                     [ text (t "menu.cancel") ]
                 , button
@@ -682,7 +682,7 @@ viewClaimConfirmation loggedIn model =
             let
                 acceptMsg =
                     if action.hasProofPhoto then
-                        OpenAddPhotoProof action
+                        OpenProofSection action
 
                     else
                         ClaimAction action
@@ -694,6 +694,49 @@ viewClaimConfirmation loggedIn model =
 
         Closed ->
             text ""
+
+
+viewPhotoUploader : Translators -> ProofPhotoStatus -> Html Msg
+viewPhotoUploader { t } proofPhotoStatus =
+    let
+        uploadedAttrs =
+            case proofPhotoStatus of
+                Uploaded url ->
+                    [ class " bg-no-repeat bg-center bg-cover"
+                    , style "background-image" ("url(" ++ url ++ ")")
+                    ]
+
+                _ ->
+                    []
+    in
+    label
+        (class "relative bg-purple-500 w-full md:w-2/3 h-56 rounded-sm flex justify-center items-center cursor-pointer"
+            :: uploadedAttrs
+        )
+        [ input
+            [ class "hidden-img-input"
+            , type_ "file"
+            , accept "image/*"
+            , Page.onFileChange EnteredPhoto
+            , multiple False
+            ]
+            []
+        , div []
+            [ case proofPhotoStatus of
+                Uploading ->
+                    div [ class "spinner spinner-light" ] []
+
+                Uploaded _ ->
+                    span [ class "absolute bottom-0 right-0 mr-4 mb-4 bg-orange-300 w-8 h-8 p-2 rounded-full" ]
+                        [ Icons.camera ]
+
+                _ ->
+                    div [ class "text-white text-body font-bold text-center" ]
+                        [ div [ class "w-10 mx-auto mb-2" ] [ Icons.camera ]
+                        , div [] [ text (t "community.actions.proof.upload_photo_hint") ]
+                        ]
+            ]
+        ]
 
 
 
@@ -714,19 +757,20 @@ type Msg
       -- Action
     | OpenClaimConfirmation Community.Action
     | CloseClaimConfirmation
-    | OpenAddPhotoProof Community.Action
-    | CloseAddPhotoProof ReasonToClosePhotoProof
+    | ClaimAction Community.Action
+    | GotClaimActionResponse (Result Value String)
+      -- Proofs
+    | OpenProofSection Community.Action
+    | CloseProofSection ReasonToCloseProofSection
     | GotProofTime Int Posix
+    | GetUnit64Name String
     | GotUnit64Name (Result Value String)
     | Tick Time.Posix
     | EnteredPhoto (List File)
     | CompletedPhotoUpload (Result Http.Error String)
-    | ClaimAction Community.Action
-    | GetUnit64Name String
-    | GotClaimActionResponse (Result Value String)
 
 
-type ReasonToClosePhotoProof
+type ReasonToCloseProofSection
     = CancelClicked
     | TimerExpired
 
@@ -790,7 +834,7 @@ update msg model loggedIn =
                             |> UR.init
 
                     else
-                        update (CloseAddPhotoProof TimerExpired) model loggedIn
+                        update (CloseProofSection TimerExpired) model loggedIn
 
                 _ ->
                     model |> UR.init
@@ -824,16 +868,16 @@ update msg model loggedIn =
             case community of
                 Just c ->
                     { model
-                        | showedOnPage = Loaded c (Objectives NoEdit)
+                        | pageStatus = Loaded c (Objectives NoEdit)
                     }
                         |> UR.init
 
                 Nothing ->
-                    { model | showedOnPage = NotFound }
+                    { model | pageStatus = NotFound }
                         |> UR.init
 
         CompletedLoadCommunity (Err err) ->
-            { model | showedOnPage = Failed err }
+            { model | pageStatus = Failed err }
                 |> UR.init
                 |> UR.logGraphqlError msg err
 
@@ -849,20 +893,20 @@ update msg model loggedIn =
             { model | claimConfirmationModalStatus = Open action }
                 |> UR.init
 
-        OpenAddPhotoProof action ->
+        OpenProofSection action ->
             let
                 runProofCodeTimer =
                     Task.perform (GotProofTime action.id) Time.now
             in
             if action.hasProofPhoto then
                 { model
-                    | showedOnPage =
-                        case model.showedOnPage of
+                    | pageStatus =
+                        case model.pageStatus of
                             Loaded community _ ->
-                                Loaded community (ClaimWithProofsShowed action)
+                                Loaded community (ClaimWithProofs action)
 
                             _ ->
-                                model.showedOnPage
+                                model.pageStatus
                     , claimConfirmationModalStatus = Closed
                     , proofs = Just (Proof NoPhotoAdded NoCodeRequired)
                 }
@@ -941,15 +985,15 @@ update msg model loggedIn =
             { model | claimConfirmationModalStatus = Closed }
                 |> UR.init
 
-        CloseAddPhotoProof reason ->
+        CloseProofSection reason ->
             { model
-                | showedOnPage =
-                    case model.showedOnPage of
-                        Loaded community (ClaimWithProofsShowed _) ->
+                | pageStatus =
+                    case model.pageStatus of
+                        Loaded community (ClaimWithProofs _) ->
                             Loaded community (Objectives NoEdit)
 
                         _ ->
-                            model.showedOnPage
+                            model.pageStatus
                 , claimConfirmationModalStatus = Closed
                 , proofs = Nothing
             }
@@ -1013,13 +1057,13 @@ update msg model loggedIn =
         GotClaimActionResponse (Ok _) ->
             { model
                 | claimConfirmationModalStatus = Closed
-                , showedOnPage =
-                    case model.showedOnPage of
-                        Loaded community (ClaimWithProofsShowed _) ->
+                , pageStatus =
+                    case model.pageStatus of
+                        Loaded community (ClaimWithProofs _) ->
                             Loaded community (Objectives NoEdit)
 
                         _ ->
-                            model.showedOnPage
+                            model.pageStatus
                 , proofs = Nothing
             }
                 |> UR.init
@@ -1031,49 +1075,6 @@ update msg model loggedIn =
             }
                 |> UR.init
                 |> UR.addExt (ShowFeedback LoggedIn.Failure (t "dashboard.check_claim.failure"))
-
-
-viewPhotoUploader : Translators -> ProofPhotoStatus -> Html Msg
-viewPhotoUploader { t } proofPhotoStatus =
-    let
-        uploadedAttrs =
-            case proofPhotoStatus of
-                Uploaded url ->
-                    [ class " bg-no-repeat bg-center bg-cover"
-                    , style "background-image" ("url(" ++ url ++ ")")
-                    ]
-
-                _ ->
-                    []
-    in
-    label
-        (class "relative bg-purple-500 w-full md:w-2/3 h-56 rounded-sm flex justify-center items-center cursor-pointer"
-            :: uploadedAttrs
-        )
-        [ input
-            [ class "hidden-img-input"
-            , type_ "file"
-            , accept "image/*"
-            , Page.onFileChange EnteredPhoto
-            , multiple False
-            ]
-            []
-        , div []
-            [ case proofPhotoStatus of
-                Uploading ->
-                    div [ class "spinner spinner-light" ] []
-
-                Uploaded _ ->
-                    span [ class "absolute bottom-0 right-0 mr-4 mb-4 bg-orange-300 w-8 h-8 p-2 rounded-full" ]
-                        [ Icons.camera ]
-
-                _ ->
-                    div [ class "text-white text-body font-bold text-center" ]
-                        [ div [ class "w-10 mx-auto mb-2" ] [ Icons.camera ]
-                        , div [] [ text (t "community.actions.proof.upload_photo_hint") ]
-                        ]
-            ]
-        ]
 
 
 jsAddressToMsg : List String -> Value -> Maybe Msg
@@ -1129,10 +1130,10 @@ msgToString msg =
         ClickedCloseObjective ->
             [ "ClickedCloseObjective" ]
 
-        OpenAddPhotoProof _ ->
+        OpenProofSection _ ->
             [ "OpenAddPhotoProof" ]
 
-        CloseAddPhotoProof _ ->
+        CloseProofSection _ ->
             [ "CloseAddPhotoProof" ]
 
         EnteredPhoto _ ->
