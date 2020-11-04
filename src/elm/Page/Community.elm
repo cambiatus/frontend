@@ -62,7 +62,6 @@ initModel _ symbol =
     , openObjective = Nothing
     , claimConfirmationModalStatus = Closed
     , addPhotoStatus = ClaimWithPhotoClosed
-    , proofPhoto = Nothing
     , proofPhotoStatus = NoPhoto
     , proofTime = Nothing
     , proofCode = Nothing
@@ -100,7 +99,6 @@ type alias Model =
     , openObjective : Maybe Int
     , claimConfirmationModalStatus : ClaimConfirmationModalStatus
     , addPhotoStatus : ClaimWithPhotoStatus
-    , proofPhoto : Maybe String
     , proofPhotoStatus : ProofPhotoStatus
     , proofCode : Maybe String
     , proofTime : Maybe Int
@@ -904,7 +902,6 @@ update msg model loggedIn =
                 , proofTime = Nothing
                 , claimConfirmationModalStatus = Closed
                 , proofCode = Nothing
-                , proofPhoto = Nothing
                 , proofPhotoStatus = NoPhoto
                 , secondsAfterClaim = Nothing
             }
@@ -929,7 +926,7 @@ update msg model loggedIn =
                 proofTime =
                     Maybe.withDefault 0 model.proofTime
 
-                proofPhoto =
+                proofPhotoUrl =
                     if action.hasProofPhoto then
                         case model.proofPhotoStatus of
                             Uploaded url ->
@@ -958,7 +955,7 @@ update msg model loggedIn =
                                   , data =
                                         { actionId = action.id
                                         , maker = loggedIn.accountName
-                                        , proofPhoto = proofPhoto
+                                        , proofPhoto = proofPhotoUrl
                                         , proofCode = proofCode
                                         , proofTime = proofTime
                                         }
@@ -979,7 +976,6 @@ update msg model loggedIn =
                 , addPhotoStatus = ClaimWithPhotoClosed
                 , proofCode = Nothing
                 , proofPhotoStatus = NoPhoto
-                , proofPhoto = Nothing
                 , proofTime = Nothing
             }
                 |> UR.init
