@@ -8,7 +8,7 @@ module Icons exposing
     , dashboard
     , edit
     , exclamation
-    , external
+    , externalLink
     , flag
     , heart
     , languages
@@ -250,8 +250,8 @@ settings =
         ]
 
 
-external : String -> Svg msg
-external class_ =
+externalLink : String -> Svg msg
+externalLink class_ =
     svg [ class class_, viewBox "0 0 20 20" ]
         [ Svg.path [ d "m16 10a1 1 0 0 0 -1 1v6a1 1 0 0 1 -1 1h-11a1 1 0 0 1 -1-1v-11a1 1 0 0 1 1-1h6a1 1 0 0 0 0-2h-6a3 3 0 0 0 -3 3v11a3 3 0 0 0 3 3h11a3 3 0 0 0 3-3v-6a1 1 0 0 0 -1-1z" ] []
         , Svg.path [ d "m19.92.62a1 1 0 0 0 -.54-.54 1 1 0 0 0 -.38-.08h-6a1 1 0 0 0 0 2h3.59l-9.3 9.29a1 1 0 0 0 0 1.42 1 1 0 0 0 1.42 0l9.29-9.3v3.59a1 1 0 0 0 2 0v-6a1 1 0 0 0 -.08-.38z" ] []

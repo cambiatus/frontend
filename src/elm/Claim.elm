@@ -463,7 +463,7 @@ viewPhotoModal loggedIn claim =
                                 , target "_blank"
                                 ]
                                 [ text (t "community.actions.proof.photo_full")
-                                , Icons.external "inline-block ml-1 h-3 fill-current"
+                                , Icons.externalLink "inline-block ml-1 h-3 fill-current"
                                 ]
                             ]
 
