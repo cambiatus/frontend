@@ -77,7 +77,7 @@ type alias Model =
     , actionId : Maybe Int
     , members : List Member
     , openObjective : Maybe Int
-    , modalStatus : ModalStatus
+    , claimConfirmationModalStatus : ClaimConfirmationModalStatus
     , addPhotoStatus : AddPhotoStatus
     , proofPhoto : Maybe String
     , proofPhotoStatus : ImageStatus
@@ -103,7 +103,7 @@ initModel _ symbol =
     , members = []
     , actionId = Nothing
     , openObjective = Nothing
-    , modalStatus = Closed
+    , claimConfirmationModalStatus = Closed
     , addPhotoStatus = AddPhotoClosed
     , proofPhoto = Nothing
     , proofPhotoStatus = NoImage
@@ -128,10 +128,9 @@ type EditStatus
     = NoEdit
 
 
-type
-    ModalStatus
-    -- TODO: Use `Loading` and `Active` instead of Bool
-    = Open Bool Community.Action
+type ClaimConfirmationModalStatus
+    = Open Community.Action
+    | InProgress
     | Closed
 
 
@@ -208,7 +207,7 @@ view loggedIn model =
                                         ]
                                     , if community.hasObjectives then
                                         div [ class "container mx-auto px-4" ]
-                                            [ viewClaimModal loggedIn model
+                                            [ viewClaimConfirmation loggedIn model
                                             , div [ class "bg-white py-6 sm:py-8 px-3 sm:px-6 rounded-lg mt-4" ]
                                                 (Page.viewTitle (t "community.objectives.title_plural")
                                                     :: List.indexedMap (viewObjective loggedIn model community)
@@ -614,32 +613,20 @@ viewAction loggedIn metadata maybeDate action =
             ]
 
 
-viewClaimModal : LoggedIn.Model -> Model -> Html Msg
-viewClaimModal loggedIn model =
-    case model.modalStatus of
-        Open isLoading action ->
-            let
-                t s =
-                    I18Next.t loggedIn.shared.translations
-                        s
+viewClaimConfirmation : LoggedIn.Model -> Model -> Html Msg
+viewClaimConfirmation loggedIn model =
+    let
+        t s =
+            I18Next.t loggedIn.shared.translations
+                s
 
-                text_ s =
-                    text (t s)
+        text_ s =
+            text (t s)
 
-                acceptMsg =
-                    case ( isLoading, action.hasProofPhoto ) of
-                        ( True, _ ) ->
-                            NoOp
+        acceptButtonText =
+            t "dashboard.check_claim.yes"
 
-                        ( False, False ) ->
-                            ClaimAction action
-
-                        ( False, True ) ->
-                            OpenAddPhotoProof action
-
-                acceptButtonText =
-                    t "dashboard.check_claim.yes"
-            in
+        modalContent acceptMsg isInProgress =
             div []
                 [ Modal.initWith
                     { closeMsg = CloseClaimConfirmation
@@ -650,24 +637,39 @@ viewClaimModal loggedIn model =
                     |> Modal.withFooter
                         [ button
                             [ class "modal-cancel"
-                            , if not isLoading then
-                                onClick CloseClaimConfirmation
+                            , if isInProgress then
+                                onClick NoOp
 
                               else
-                                onClick NoOp
-                            , disabled isLoading
+                                onClick CloseClaimConfirmation
+                            , disabled isInProgress
                             ]
                             [ text_ "dashboard.check_claim.no" ]
                         , button
                             [ class "modal-accept"
                             , onClick acceptMsg
-                            , disabled isLoading
+                            , disabled isInProgress
                             ]
                             [ text acceptButtonText
                             ]
                         ]
                     |> Modal.toHtml
                 ]
+    in
+    case model.claimConfirmationModalStatus of
+        Open action ->
+            let
+                acceptMsg =
+                    if action.hasProofPhoto then
+                        OpenAddPhotoProof action
+
+                    else
+                        ClaimAction action
+            in
+            modalContent acceptMsg False
+
+        InProgress ->
+            modalContent NoOp True
 
         Closed ->
             text ""
@@ -831,7 +833,7 @@ update msg model loggedIn =
                 |> UR.init
 
         OpenClaimConfirmation action ->
-            { model | modalStatus = Open False action }
+            { model | claimConfirmationModalStatus = Open action }
                 |> UR.init
 
         OpenAddPhotoProof action ->
@@ -842,7 +844,7 @@ update msg model loggedIn =
             if action.hasProofPhoto then
                 { model
                     | addPhotoStatus = AddPhotoOpen action
-                    , modalStatus = Closed
+                    , claimConfirmationModalStatus = Closed
                 }
                     |> UR.init
                     |> UR.addCmd
@@ -864,7 +866,7 @@ update msg model loggedIn =
 
             else
                 { model
-                    | modalStatus = Open False action
+                    | claimConfirmationModalStatus = Open action
                     , addPhotoStatus = AddPhotoClosed
                 }
                     |> UR.init
@@ -895,7 +897,7 @@ update msg model loggedIn =
                 |> UR.logHttpError msg error
 
         CloseClaimConfirmation ->
-            { model | modalStatus = Closed }
+            { model | claimConfirmationModalStatus = Closed }
                 |> UR.init
 
         CloseAddPhotoProof reason ->
@@ -903,6 +905,7 @@ update msg model loggedIn =
               -- TODO: too much fields, clean this up
                 | addPhotoStatus = AddPhotoClosed
                 , proofTime = Nothing
+                , claimConfirmationModalStatus = Closed
                 , proofCode = Nothing
                 , proofPhoto = Nothing
                 , proofPhotoStatus = NoImage
@@ -921,7 +924,7 @@ update msg model loggedIn =
         ClaimAction action ->
             let
                 newModel =
-                    { model | modalStatus = Open True action }
+                    { model | claimConfirmationModalStatus = InProgress }
 
                 proofCode =
                     Maybe.withDefault "" model.proofCode
@@ -975,7 +978,7 @@ update msg model loggedIn =
         GotClaimActionResponse (Ok _) ->
             { model
               -- TODO: Make it better
-                | modalStatus = Closed
+                | claimConfirmationModalStatus = Closed
                 , addPhotoStatus = AddPhotoClosed
                 , proofCode = Nothing
                 , proofPhotoStatus = NoImage
@@ -987,7 +990,7 @@ update msg model loggedIn =
 
         GotClaimActionResponse (Err _) ->
             { model
-                | modalStatus = Closed
+                | claimConfirmationModalStatus = Closed
             }
                 |> UR.init
                 |> UR.addExt (ShowFeedback LoggedIn.Failure (t "dashboard.check_claim.failure"))
