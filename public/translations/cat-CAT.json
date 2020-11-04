@@ -642,7 +642,7 @@
   "dashboard": {
     "back": "Tornar",
     "transfer": "Transferir a un company",
-    "explore": "Sobre aquesta comunitat",
+    "explore": "Com guanyar {{symbol}}",
     "invite": "Convida els teus amics",
     "sorry": "ho sentim!",
     "action_rejected": "S'ha rebutjat la teva acció",

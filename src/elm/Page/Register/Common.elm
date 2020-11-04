@@ -1,4 +1,16 @@
-module Page.Register.Common exposing (Errors(..), ProblemEvent(..), containsLetters, containsNumberGreaterThan, fieldProblems, findId, getCities, getDistricts, ifEmptyTuple, validateAccountName, viewSelectField)
+module Page.Register.Common exposing
+    ( Errors(..)
+    , ProblemEvent(..)
+    , containsLetters
+    , containsNumberGreaterThan
+    , fieldProblems
+    , findId
+    , getCities
+    , getDistricts
+    , ifEmptyTuple
+    , validateAccountName
+    , viewSelectField
+    )
 
 import Address
 import Cambiatus.Scalar exposing (Id(..))
