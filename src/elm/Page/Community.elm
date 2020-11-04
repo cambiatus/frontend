@@ -254,7 +254,7 @@ viewAddPhoto model { shared } action =
             , div [ class "mb-4" ]
                 [ span [ class "input-label block mb-2" ]
                     [ text (t "community.actions.proof.photo") ]
-                , viewPhotoUploader shared.translators model
+                , viewPhotoUploader shared.translators model.proofPhotoStatus
                 ]
             , div [ class "md:flex" ]
                 [ button
@@ -986,19 +986,22 @@ update msg model loggedIn =
                 |> UR.addExt (ShowFeedback LoggedIn.Failure (t "dashboard.check_claim.failure"))
 
 
-viewPhotoUploader : Translators -> Model -> Html Msg
-viewPhotoUploader { t } model =
-    label
-        ([ class "relative bg-purple-500 w-full md:w-2/3 h-56 rounded-sm flex justify-center items-center cursor-pointer" ]
-            ++ (case model.proofPhotoStatus of
-                    Uploaded url ->
-                        [ class " bg-no-repeat bg-center bg-cover"
-                        , style "background-image" ("url(" ++ url ++ ")")
-                        ]
+viewPhotoUploader : Translators -> ImageStatus -> Html Msg
+viewPhotoUploader { t } proofPhotoStatus =
+    let
+        uploadedAttrs =
+            case proofPhotoStatus of
+                Uploaded url ->
+                    [ class " bg-no-repeat bg-center bg-cover"
+                    , style "background-image" ("url(" ++ url ++ ")")
+                    ]
 
-                    _ ->
-                        []
-               )
+                _ ->
+                    []
+    in
+    label
+        (class "relative bg-purple-500 w-full md:w-2/3 h-56 rounded-sm flex justify-center items-center cursor-pointer"
+            :: uploadedAttrs
         )
         [ input
             [ class "hidden-img-input"
@@ -1009,7 +1012,7 @@ viewPhotoUploader { t } model =
             ]
             []
         , div []
-            [ case model.proofPhotoStatus of
+            [ case proofPhotoStatus of
                 Uploading ->
                     div [ class "spinner spinner-light" ] []
 

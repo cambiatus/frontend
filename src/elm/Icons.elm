@@ -250,6 +250,7 @@ settings =
         ]
 
 
+external : String -> Svg msg
 external class_ =
     svg [ class class_, viewBox "0 0 20 20" ]
         [ Svg.path [ d "m16 10a1 1 0 0 0 -1 1v6a1 1 0 0 1 -1 1h-11a1 1 0 0 1 -1-1v-11a1 1 0 0 1 1-1h6a1 1 0 0 0 0-2h-6a3 3 0 0 0 -3 3v11a3 3 0 0 0 3 3h11a3 3 0 0 0 3-3v-6a1 1 0 0 0 -1-1z" ] []

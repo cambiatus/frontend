@@ -971,9 +971,6 @@ msgToString msg =
             resultToString [ "ClaimsLoaded" ] result
 
         ClaimMsg _ ->
-            -- TODO: Do we need claim id here like it was before?
-            --OpenVoteModal claimId _ ->
-            --    [ "OpenVoteModal", String.fromInt claimId ]
             [ "ClaimMsg" ]
 
         VoteClaim claimId _ ->
