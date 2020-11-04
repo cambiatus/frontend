@@ -54,18 +54,13 @@ init ({ shared } as loggedIn) symbol =
 
 
 initModel : LoggedIn.Model -> Symbol -> Model
-initModel _ symbol =
+initModel _ _ =
     { date = Nothing
     , showedOnPage = Loading
     , actionId = Nothing
     , openObjective = Nothing
     , claimConfirmationModalStatus = Closed
-    , proofPhotoStatus = NoPhoto
-    , proofTime = Nothing
-    , proofCode = Nothing
-    , unit64name = Nothing
-    , secondsAfterClaim = Nothing
-    , proofCodeValiditySeconds = 30 * 60
+    , proofs = Nothing
     }
 
 
@@ -75,9 +70,14 @@ initModel _ symbol =
 
 subscriptions : Model -> Sub Msg
 subscriptions model =
-    case ( model.proofTime, model.secondsAfterClaim ) of
-        ( Just _, Just _ ) ->
-            Time.every 1000 Tick
+    case model.proofs of
+        Just proofs ->
+            case proofs.proofCode of
+                Just _ ->
+                    Time.every 1000 Tick
+
+                _ ->
+                    Sub.none
 
         _ ->
             Sub.none
@@ -93,12 +93,21 @@ type alias Model =
     , actionId : Maybe Int
     , openObjective : Maybe Int
     , claimConfirmationModalStatus : ClaimConfirmationModalStatus
-    , proofPhotoStatus : ProofPhotoStatus
-    , proofCode : Maybe String
-    , proofTime : Maybe Int
-    , unit64name : Maybe String
-    , secondsAfterClaim : Maybe Int
-    , proofCodeValiditySeconds : Int
+    , proofs : Maybe Proofs
+    }
+
+
+type alias Proofs =
+    { proofPhoto : ProofPhotoStatus
+    , proofCode : Maybe ProofCode
+    }
+
+
+type alias ProofCode =
+    { code : Maybe String
+    , claimTimestamp : Int
+    , secondsAfterClaim : Int
+    , availabilityPeriod : Int
     }
 
 
@@ -267,20 +276,37 @@ viewClaimWithPhoto model { shared } action =
                 [ text <|
                     Maybe.withDefault "" action.photoProofInstructions
                 ]
-            , case ( model.proofCode, model.secondsAfterClaim ) of
-                ( Just proofCode, Just secondsAfterClaim ) ->
-                    viewProofCode
-                        shared.translators
-                        proofCode
-                        secondsAfterClaim
-                        model.proofCodeValiditySeconds
+            , case model.proofs of
+                Just proofs ->
+                    case proofs.proofCode of
+                        Just { code, secondsAfterClaim, availabilityPeriod } ->
+                            case code of
+                                Just c ->
+                                    viewProofCode
+                                        shared.translators
+                                        c
+                                        secondsAfterClaim
+                                        availabilityPeriod
+
+                                _ ->
+                                    text ""
+
+                        _ ->
+                            text ""
 
                 _ ->
                     text ""
             , div [ class "mb-4" ]
                 [ span [ class "input-label block mb-2" ]
                     [ text (t "community.actions.proof.photo") ]
-                , viewPhotoUploader shared.translators model.proofPhotoStatus
+                , case model.proofs of
+                    Just proofs ->
+                        viewPhotoUploader
+                            shared.translators
+                            proofs.proofPhoto
+
+                    Nothing ->
+                        text ""
                 ]
             , div [ class "md:flex" ]
                 [ button
@@ -745,13 +771,25 @@ update msg model loggedIn =
             model |> UR.init
 
         GotUnit64Name (Ok unit64name) ->
-            case ( model.actionId, model.proofTime ) of
-                ( Just actionId, Just proofTime ) ->
-                    { model
-                        | proofCode =
-                            Just (Claim.generateVerificationCode actionId unit64name proofTime)
-                    }
-                        |> UR.init
+            case model.proofs of
+                Just ({ proofCode, proofPhoto } as proofs) ->
+                    case ( model.actionId, proofCode ) of
+                        ( Just actionId, Just code ) ->
+                            let
+                                newProofCode =
+                                    { code
+                                        | code = Just (Claim.generateVerificationCode actionId unit64name code.claimTimestamp)
+                                    }
+
+                                newProofs =
+                                    { proofs | proofCode = Just newProofCode }
+                            in
+                            { model | proofs = Just newProofs }
+                                |> UR.init
+
+                        _ ->
+                            model
+                                |> UR.init
 
                 _ ->
                     model
@@ -761,37 +799,55 @@ update msg model loggedIn =
             UR.init model
 
         Tick timer ->
-            case model.proofTime of
-                Just proofTime ->
-                    let
-                        secondsAfterClaim =
-                            (Time.posixToMillis timer // 1000) - proofTime
+            case model.proofs of
+                Just proofs ->
+                    case proofs.proofCode of
+                        Just ({ code, claimTimestamp, availabilityPeriod } as proofCode) ->
+                            let
+                                secondsAfterClaim =
+                                    (Time.posixToMillis timer // 1000) - claimTimestamp
 
-                        isProofCodeActive =
-                            (model.proofCodeValiditySeconds - secondsAfterClaim) > 0
-                    in
-                    if isProofCodeActive then
-                        { model | secondsAfterClaim = Just secondsAfterClaim }
-                            |> UR.init
+                                isProofCodeActive =
+                                    (availabilityPeriod - secondsAfterClaim) > 0
+                            in
+                            if isProofCodeActive then
+                                let
+                                    newProofCode =
+                                        { proofCode | secondsAfterClaim = secondsAfterClaim }
 
-                    else
-                        update (CloseAddPhotoProof TimerExpired) model loggedIn
+                                    newProofs =
+                                        { proofs | proofCode = Just newProofCode }
+                                in
+                                { model | proofs = Just newProofs }
+                                    |> UR.init
+
+                            else
+                                update (CloseAddPhotoProof TimerExpired) model loggedIn
+
+                        Nothing ->
+                            model |> UR.init
 
                 Nothing ->
                     model |> UR.init
 
         GotProofTime actionId posix ->
             let
-                proofTime =
-                    -- Timestamp in seconds
-                    Time.posixToMillis posix // 1000
+                initProofCode =
+                    { code = Nothing
+                    , claimTimestamp = Time.posixToMillis posix // 1000
+                    , secondsAfterClaim = 0
+                    , availabilityPeriod = 30 * 60
+                    }
             in
-            UR.init
-                { model
-                    | actionId = Just actionId
-                    , proofTime = Just proofTime
-                    , secondsAfterClaim = Just 0
-                }
+            { model
+                | actionId = Just actionId
+                , proofs =
+                    Just
+                        { proofPhoto = NoPhoto
+                        , proofCode = Just initProofCode
+                        }
+            }
+                |> UR.init
                 |> UR.addPort
                     { responseAddress = GetUnit64Name (Eos.nameToString loggedIn.accountName)
                     , responseData = Encode.null
@@ -840,7 +896,7 @@ update msg model loggedIn =
                 { model
                     | showedOnPage =
                         case model.showedOnPage of
-                            Loaded community pageStatus ->
+                            Loaded community _ ->
                                 Loaded community (ClaimWithProofsShowed action)
 
                             _ ->
@@ -873,8 +929,18 @@ update msg model loggedIn =
             let
                 uploadImage =
                     Api.uploadImage loggedIn.shared file CompletedPhotoUpload
+
+                newProofs =
+                    case model.proofs of
+                        Just proofs ->
+                            Just { proofs | proofPhoto = Uploading }
+
+                        _ ->
+                            Nothing
             in
-            { model | proofPhotoStatus = Uploading }
+            { model
+                | proofs = newProofs
+            }
                 |> UR.init
                 |> UR.addCmd uploadImage
 
@@ -882,15 +948,29 @@ update msg model loggedIn =
             UR.init model
 
         CompletedPhotoUpload (Ok url) ->
-            { model
-                | proofPhotoStatus = Uploaded url
-            }
+            let
+                newProofs =
+                    case model.proofs of
+                        Just proofs ->
+                            Just { proofs | proofPhoto = Uploaded url }
+
+                        Nothing ->
+                            Nothing
+            in
+            { model | proofs = newProofs }
                 |> UR.init
 
         CompletedPhotoUpload (Err error) ->
-            { model
-                | proofPhotoStatus = UploadFailed error
-            }
+            let
+                newProofs =
+                    case model.proofs of
+                        Just proofs ->
+                            Just { proofs | proofPhoto = UploadFailed error }
+
+                        Nothing ->
+                            Nothing
+            in
+            { model | proofs = newProofs }
                 |> UR.init
                 |> UR.logHttpError msg error
 
@@ -900,7 +980,6 @@ update msg model loggedIn =
 
         CloseAddPhotoProof reason ->
             { model
-              -- TODO: too much fields, clean this up
                 | showedOnPage =
                     case model.showedOnPage of
                         Loaded community (ClaimWithProofsShowed _) ->
@@ -908,11 +987,8 @@ update msg model loggedIn =
 
                         _ ->
                             model.showedOnPage
-                , proofTime = Nothing
                 , claimConfirmationModalStatus = Closed
-                , proofCode = Nothing
-                , proofPhotoStatus = NoPhoto
-                , secondsAfterClaim = Nothing
+                , proofs = Nothing
             }
                 |> UR.init
                 |> UR.addExt
@@ -929,23 +1005,21 @@ update msg model loggedIn =
                 newModel =
                     { model | claimConfirmationModalStatus = InProgress }
 
-                proofCode =
-                    Maybe.withDefault "" model.proofCode
+                ( proofPhotoUrl, proofCode_, proofTime ) =
+                    case model.proofs of
+                        Just { proofPhoto, proofCode } ->
+                            case ( proofPhoto, proofCode ) of
+                                ( Uploaded url, Just { code, claimTimestamp } ) ->
+                                    ( url, Maybe.withDefault "" code, claimTimestamp )
 
-                proofTime =
-                    Maybe.withDefault 0 model.proofTime
+                                ( Uploaded url, Nothing ) ->
+                                    ( url, "", 0 )
 
-                proofPhotoUrl =
-                    if action.hasProofPhoto then
-                        case model.proofPhotoStatus of
-                            Uploaded url ->
-                                url
+                                _ ->
+                                    ( "", "", 0 )
 
-                            _ ->
-                                ""
-
-                    else
-                        ""
+                        _ ->
+                            ( "", "", 0 )
             in
             if LoggedIn.isAuth loggedIn then
                 newModel
@@ -965,7 +1039,7 @@ update msg model loggedIn =
                                         { actionId = action.id
                                         , maker = loggedIn.accountName
                                         , proofPhoto = proofPhotoUrl
-                                        , proofCode = proofCode
+                                        , proofCode = proofCode_
                                         , proofTime = proofTime
                                         }
                                             |> Claim.encodeClaimAction
@@ -980,7 +1054,6 @@ update msg model loggedIn =
 
         GotClaimActionResponse (Ok _) ->
             { model
-              -- TODO: Make it better
                 | claimConfirmationModalStatus = Closed
                 , showedOnPage =
                     case model.showedOnPage of
@@ -989,9 +1062,7 @@ update msg model loggedIn =
 
                         _ ->
                             model.showedOnPage
-                , proofCode = Nothing
-                , proofPhotoStatus = NoPhoto
-                , proofTime = Nothing
+                , proofs = Nothing
             }
                 |> UR.init
                 |> UR.addExt (ShowFeedback LoggedIn.Success (t "dashboard.check_claim.success"))
