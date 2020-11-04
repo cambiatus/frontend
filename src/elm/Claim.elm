@@ -469,12 +469,17 @@ viewPhotoModal loggedIn claim =
 
                     Nothing ->
                         text ""
-                , div []
-                    [ label [ class "mt-4 md:mt-0 input-label md:text-xl block" ]
-                        [ text (t "community.actions.form.verification_number")
-                        ]
-                    , strong [ class "text-xl md:text-3xl" ] [ text (Maybe.withDefault "" claim.proofCode) ]
-                    ]
+                , case claim.proofCode of
+                    Just proofCode ->
+                        div []
+                            [ label [ class "mt-4 md:mt-0 input-label md:text-xl block" ]
+                                [ text (t "community.actions.form.verification_number")
+                                ]
+                            , strong [ class "text-xl md:text-3xl" ] [ text proofCode ]
+                            ]
+
+                    Nothing ->
+                        text ""
                 ]
             ]
 

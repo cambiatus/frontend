@@ -223,10 +223,10 @@ editForm form action =
 
                     photoProof =
                         case ( action.hasProofPhoto, action.hasProofCode ) of
-                            ( Just True, Just True ) ->
+                            ( True, True ) ->
                                 Enabled WithProofNumber
 
-                            ( Just True, _ ) ->
+                            ( True, False ) ->
                                 Enabled WithoutProofNumber
 
                             ( _, _ ) ->

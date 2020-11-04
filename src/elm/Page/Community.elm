@@ -245,11 +245,15 @@ viewAddPhoto model { shared } action =
                 [ text <|
                     Maybe.withDefault "" action.photoProofInstructions
                 ]
-            , div [ class "mb-4" ]
-                [ span [ class "input-label block mb-1" ]
-                    [ text (t "community.actions.form.verification_number") ]
-                , viewProofCode shared.translators model
-                ]
+            , if action.hasProofCode then
+                div [ class "mb-4" ]
+                    [ span [ class "input-label block mb-1" ]
+                        [ text (t "community.actions.form.verification_number") ]
+                    , viewProofCode shared.translators model
+                    ]
+
+              else
+                text ""
             , div [ class "mb-4" ]
                 [ span [ class "input-label block mb-2" ]
                     [ text (t "community.actions.proof.photo") ]
@@ -615,9 +619,6 @@ viewClaimModal loggedIn model =
     case model.modalStatus of
         Open isLoading action ->
             let
-                hasProofPhoto =
-                    Maybe.withDefault False action.hasProofPhoto
-
                 t s =
                     I18Next.t loggedIn.shared.translations
                         s
@@ -626,7 +627,7 @@ viewClaimModal loggedIn model =
                     text (t s)
 
                 acceptMsg =
-                    case ( isLoading, hasProofPhoto ) of
+                    case ( isLoading, action.hasProofPhoto ) of
                         ( True, _ ) ->
                             NoOp
 
@@ -834,30 +835,39 @@ update msg model loggedIn =
                 |> UR.init
 
         OpenAddPhotoProof action ->
-            case action.hasProofPhoto of
-                Just True ->
-                    { model
-                        | addPhotoStatus = AddPhotoOpen action
-                        , modalStatus = Closed
-                    }
-                        |> UR.init
-                        |> UR.addCmd (Task.perform (GotProofTime action.id) Time.now)
-                        |> UR.addPort
-                            { responseAddress = NoOp
-                            , responseData = Encode.null
-                            , data =
-                                Encode.object
-                                    [ ( "id", Encode.string "communityPage" )
-                                    , ( "name", Encode.string "scrollIntoView" )
-                                    ]
-                            }
+            let
+                runProofCodeTimer =
+                    Task.perform (GotProofTime action.id) Time.now
+            in
+            if action.hasProofPhoto then
+                { model
+                    | addPhotoStatus = AddPhotoOpen action
+                    , modalStatus = Closed
+                }
+                    |> UR.init
+                    |> UR.addCmd
+                        (if action.hasProofCode then
+                            runProofCodeTimer
 
-                _ ->
-                    { model
-                        | modalStatus = Open False action
-                        , addPhotoStatus = AddPhotoClosed
-                    }
-                        |> UR.init
+                         else
+                            Cmd.none
+                        )
+                    |> UR.addPort
+                        { responseAddress = NoOp
+                        , responseData = Encode.null
+                        , data =
+                            Encode.object
+                                [ ( "id", Encode.string "communityPage" )
+                                , ( "name", Encode.string "scrollIntoView" )
+                                ]
+                        }
+
+            else
+                { model
+                    | modalStatus = Open False action
+                    , addPhotoStatus = AddPhotoClosed
+                }
+                    |> UR.init
 
         EnteredPhoto (file :: _) ->
             let
@@ -920,17 +930,16 @@ update msg model loggedIn =
                     Maybe.withDefault 0 model.proofTime
 
                 proofPhoto =
-                    case action.hasProofPhoto of
-                        Just True ->
-                            case model.proofPhotoStatus of
-                                Uploaded url ->
-                                    url
+                    if action.hasProofPhoto then
+                        case model.proofPhotoStatus of
+                            Uploaded url ->
+                                url
 
-                                _ ->
-                                    ""
+                            _ ->
+                                ""
 
-                        _ ->
-                            ""
+                    else
+                        ""
             in
             if LoggedIn.isAuth loggedIn then
                 newModel

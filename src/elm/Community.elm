@@ -334,8 +334,8 @@ type alias Action =
     , verificationType : VerificationType
     , verifications : Int
     , isCompleted : Bool
-    , hasProofPhoto : Maybe Bool
-    , hasProofCode : Maybe Bool
+    , hasProofPhoto : Bool
+    , hasProofCode : Bool
     , photoProofInstructions : Maybe String
     }
 
@@ -355,8 +355,8 @@ actionSelectionSet =
         |> with Action.verificationType
         |> with Action.verifications
         |> with Action.isCompleted
-        |> with Action.hasProofPhoto
-        |> with Action.hasProofCode
+        |> with (SelectionSet.map (Maybe.withDefault False) Action.hasProofPhoto)
+        |> with (SelectionSet.map (Maybe.withDefault False) Action.hasProofCode)
         |> with Action.photoProofInstructions
 
 
