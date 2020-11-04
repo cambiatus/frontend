@@ -31,7 +31,6 @@ import Page
 import Route
 import Session.LoggedIn as LoggedIn exposing (External(..), FeedbackStatus(..))
 import Session.Shared exposing (Translators)
-import Sha256 exposing (sha256)
 import Strftime
 import Task
 import Time exposing (Posix, posixToMillis)
@@ -752,18 +751,17 @@ update msg model loggedIn =
             model |> UR.init
 
         GotUnit64Name (Ok unit64name) ->
-            let
-                proofCode =
-                    String.fromInt (Maybe.withDefault 0 model.actionId)
-                        ++ unit64name
-                        ++ String.fromInt (Maybe.withDefault 0 model.proofTime)
-                        |> sha256
-                        |> String.slice 0 8
-            in
-            UR.init
-                { model
-                    | proofCode = Just proofCode
-                }
+            case ( model.actionId, model.proofTime ) of
+                ( Just actionId, Just proofTime ) ->
+                    { model
+                        | proofCode =
+                            Just (Claim.generateVerificationCode actionId unit64name proofTime)
+                    }
+                        |> UR.init
+
+                _ ->
+                    model
+                        |> UR.init
 
         GotUnit64Name (Err _) ->
             UR.init model

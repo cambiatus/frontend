@@ -170,11 +170,11 @@ encodeVerification claimId validator vote =
         ]
 
 
-generateVerificationCode : Int -> Eos.Account.Name -> Int -> String
-generateVerificationCode actionId makerAccount proofTime =
+generateVerificationCode : Int -> String -> Int -> String
+generateVerificationCode actionId makerAccountUint64 proofTimeSeconds =
     (String.fromInt actionId
-        ++ Eos.Account.nameToString makerAccount
-        ++ (proofTime |> String.fromInt)
+        ++ makerAccountUint64
+        ++ String.fromInt proofTimeSeconds
     )
         |> sha256
         |> String.slice 0 8
