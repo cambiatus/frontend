@@ -53,6 +53,27 @@ init ({ shared } as loggedIn) symbol =
     )
 
 
+initModel : LoggedIn.Model -> Symbol -> Model
+initModel _ symbol =
+    { date = Nothing
+    , community = Loading
+    , members = []
+    , actionId = Nothing
+    , openObjective = Nothing
+    , claimConfirmationModalStatus = Closed
+    , addPhotoStatus = ClaimWithPhotoClosed
+    , proofPhoto = Nothing
+    , proofPhotoStatus = NoImage
+    , proofTime = Nothing
+    , proofCode = Nothing
+    , unit64name = Nothing
+    , secondsAfterClaim = Nothing
+    , proofCodeValiditySeconds = 30 * 60
+    , invitations = ""
+    , symbol = symbol
+    }
+
+
 
 -- SUBSCRIPTIONS
 
@@ -78,9 +99,9 @@ type alias Model =
     , members : List Member
     , openObjective : Maybe Int
     , claimConfirmationModalStatus : ClaimConfirmationModalStatus
-    , addPhotoStatus : AddPhotoStatus
+    , addPhotoStatus : ClaimWithPhotoStatus
     , proofPhoto : Maybe String
-    , proofPhotoStatus : ImageStatus
+    , proofPhotoStatus : ProofPhotoStatus
     , proofCode : Maybe String
     , proofTime : Maybe Int
     , unit64name : Maybe String
@@ -91,30 +112,9 @@ type alias Model =
     }
 
 
-type AddPhotoStatus
-    = AddPhotoOpen Community.Action
-    | AddPhotoClosed
-
-
-initModel : LoggedIn.Model -> Symbol -> Model
-initModel _ symbol =
-    { date = Nothing
-    , community = Loading
-    , members = []
-    , actionId = Nothing
-    , openObjective = Nothing
-    , claimConfirmationModalStatus = Closed
-    , addPhotoStatus = AddPhotoClosed
-    , proofPhoto = Nothing
-    , proofPhotoStatus = NoImage
-    , proofTime = Nothing
-    , proofCode = Nothing
-    , unit64name = Nothing
-    , secondsAfterClaim = Nothing
-    , proofCodeValiditySeconds = 30 * 60
-    , invitations = ""
-    , symbol = symbol
-    }
+type ClaimWithPhotoStatus
+    = ClaimWithPhotoOpen Community.Action
+    | ClaimWithPhotoClosed
 
 
 type LoadStatus
@@ -141,7 +141,7 @@ type alias Member =
     }
 
 
-type ImageStatus
+type ProofPhotoStatus
     = NoImage
     | Uploading
     | UploadFailed Http.Error
@@ -190,10 +190,10 @@ view loggedIn model =
                     in
                     div [ id "communityPage" ]
                         [ case model.addPhotoStatus of
-                            AddPhotoOpen action ->
-                                viewAddPhoto model loggedIn action
+                            ClaimWithPhotoOpen action ->
+                                viewClaimWithPhoto model loggedIn action
 
-                            AddPhotoClosed ->
+                            ClaimWithPhotoClosed ->
                                 div []
                                     [ viewHeader loggedIn community
                                     , div [ class "bg-white pt-20 pb-10 sm:pb-20" ]
@@ -231,8 +231,35 @@ view loggedIn model =
     }
 
 
-viewAddPhoto : Model -> LoggedIn.Model -> Action -> Html Msg
-viewAddPhoto model { shared } action =
+viewHeader : LoggedIn.Model -> Community.Model -> Html Msg
+viewHeader { shared } community =
+    div []
+        [ div [ class "h-16 w-full bg-indigo-500 flex px-4 items-center" ]
+            [ a
+                [ class "items-center flex absolute"
+                , Route.href Route.Dashboard
+                ]
+                [ Icons.back ""
+                , p [ class "text-white text-sm ml-2" ]
+                    [ text (t shared.translations "back")
+                    ]
+                ]
+            , p [ class "text-white mx-auto" ] [ text community.title ]
+            ]
+        , div [ class "h-24 bg-indigo-500 flex flex-wrap content-end" ]
+            [ div [ class "h-24 w-24 rounded-full mx-auto pt-12" ]
+                [ img
+                    [ src community.logo
+                    , class "object-scale-down"
+                    ]
+                    []
+                ]
+            ]
+        ]
+
+
+viewClaimWithPhoto : Model -> LoggedIn.Model -> Action -> Html Msg
+viewClaimWithPhoto model { shared } action =
     let
         { t } =
             shared.translators
@@ -244,15 +271,16 @@ viewAddPhoto model { shared } action =
                 [ text <|
                     Maybe.withDefault "" action.photoProofInstructions
                 ]
-            , if action.hasProofCode then
-                div [ class "mb-4" ]
-                    [ span [ class "input-label block mb-1" ]
-                        [ text (t "community.actions.form.verification_number") ]
-                    , viewProofCode shared.translators model
-                    ]
+            , case ( model.proofCode, model.secondsAfterClaim ) of
+                ( Just proofCode, Just secondsAfterClaim ) ->
+                    viewProofCode
+                        shared.translators
+                        proofCode
+                        secondsAfterClaim
+                        model.proofCodeValiditySeconds
 
-              else
-                text ""
+                _ ->
+                    text ""
             , div [ class "mb-4" ]
                 [ span [ class "input-label block mb-2" ]
                     [ text (t "community.actions.proof.photo") ]
@@ -274,14 +302,11 @@ viewAddPhoto model { shared } action =
         ]
 
 
-viewProofCode : Translators -> Model -> Html msg
-viewProofCode { t } { secondsAfterClaim, proofCodeValiditySeconds, proofCode } =
+viewProofCode : Translators -> String -> Int -> Int -> Html msg
+viewProofCode { t } proofCode secondsAfterClaim proofCodeValiditySeconds =
     let
-        secondsPassed =
-            Maybe.withDefault 0 secondsAfterClaim
-
         remainingSeconds =
-            proofCodeValiditySeconds - secondsPassed
+            proofCodeValiditySeconds - secondsAfterClaim
 
         timerMinutes =
             remainingSeconds // 60
@@ -299,20 +324,17 @@ viewProofCode { t } { secondsAfterClaim, proofCodeValiditySeconds, proofCode } =
         timer =
             toString timerMinutes ++ ":" ++ toString timerSeconds
     in
-    case proofCode of
-        Just code ->
-            p []
-                [ div [ class "text-2xl text-black font-bold inline-block align-middle mr-2" ]
-                    [ text code ]
-                , span [ class "whitespace-no-wrap text-body rounded-full bg-lightred px-3 py-1 text-white" ]
-                    [ text (t "community.actions.proof.code_period_label")
-                    , text " "
-                    , text timer
-                    ]
-                ]
-
-        _ ->
-            text ""
+    div [ class "mb-4" ]
+        [ span [ class "input-label block mb-1" ]
+            [ text (t "community.actions.form.verification_number") ]
+        , div [ class "text-2xl text-black font-bold inline-block align-middle mr-2" ]
+            [ text proofCode ]
+        , span [ class "whitespace-no-wrap text-body rounded-full bg-lightred px-3 py-1 text-white" ]
+            [ text (t "community.actions.proof.code_period_label")
+            , text " "
+            , text timer
+            ]
+        ]
 
 
 
@@ -675,33 +697,6 @@ viewClaimConfirmation loggedIn model =
             text ""
 
 
-viewHeader : LoggedIn.Model -> Community.Model -> Html Msg
-viewHeader { shared } community =
-    div []
-        [ div [ class "h-16 w-full bg-indigo-500 flex px-4 items-center" ]
-            [ a
-                [ class "items-center flex absolute"
-                , Route.href Route.Dashboard
-                ]
-                [ Icons.back ""
-                , p [ class "text-white text-sm ml-2" ]
-                    [ text (t shared.translations "back")
-                    ]
-                ]
-            , p [ class "text-white mx-auto" ] [ text community.title ]
-            ]
-        , div [ class "h-24 bg-indigo-500 flex flex-wrap content-end" ]
-            [ div [ class "h-24 w-24 rounded-full mx-auto pt-12" ]
-                [ img
-                    [ src community.logo
-                    , class "object-scale-down"
-                    ]
-                    []
-                ]
-            ]
-        ]
-
-
 
 -- UPDATE
 
@@ -843,7 +838,7 @@ update msg model loggedIn =
             in
             if action.hasProofPhoto then
                 { model
-                    | addPhotoStatus = AddPhotoOpen action
+                    | addPhotoStatus = ClaimWithPhotoOpen action
                     , claimConfirmationModalStatus = Closed
                 }
                     |> UR.init
@@ -867,7 +862,7 @@ update msg model loggedIn =
             else
                 { model
                     | claimConfirmationModalStatus = Open action
-                    , addPhotoStatus = AddPhotoClosed
+                    , addPhotoStatus = ClaimWithPhotoClosed
                 }
                     |> UR.init
 
@@ -903,7 +898,7 @@ update msg model loggedIn =
         CloseAddPhotoProof reason ->
             { model
               -- TODO: too much fields, clean this up
-                | addPhotoStatus = AddPhotoClosed
+                | addPhotoStatus = ClaimWithPhotoClosed
                 , proofTime = Nothing
                 , claimConfirmationModalStatus = Closed
                 , proofCode = Nothing
@@ -979,7 +974,7 @@ update msg model loggedIn =
             { model
               -- TODO: Make it better
                 | claimConfirmationModalStatus = Closed
-                , addPhotoStatus = AddPhotoClosed
+                , addPhotoStatus = ClaimWithPhotoClosed
                 , proofCode = Nothing
                 , proofPhotoStatus = NoImage
                 , proofPhoto = Nothing
@@ -996,7 +991,7 @@ update msg model loggedIn =
                 |> UR.addExt (ShowFeedback LoggedIn.Failure (t "dashboard.check_claim.failure"))
 
 
-viewPhotoUploader : Translators -> ImageStatus -> Html Msg
+viewPhotoUploader : Translators -> ProofPhotoStatus -> Html Msg
 viewPhotoUploader { t } proofPhotoStatus =
     let
         uploadedAttrs =
