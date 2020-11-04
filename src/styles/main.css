@@ -193,13 +193,13 @@ textarea.input {
 }
 
 .modal-body {
-  @apply p-4 pt-0 pb-0 text-body overflow-y-auto;
+  @apply p-4 pt-0 text-body overflow-y-auto;
   min-height: 4rem;
   max-height: 60vh;
 }
 
 .modal-footer {
-  @apply flex flex-wrap justify-center items-center p-4;
+  @apply flex flex-wrap justify-center items-center p-4 pt-0;
 }
 
 .modal-cancel {
