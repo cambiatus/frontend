@@ -67,7 +67,6 @@ initModel _ symbol =
     , secondsAfterClaim = Nothing
     , proofCodeValiditySeconds = 30 * 60
     , invitations = ""
-    , symbol = symbol
     }
 
 
@@ -102,7 +101,6 @@ type alias Model =
     , secondsAfterClaim : Maybe Int
     , proofCodeValiditySeconds : Int
     , invitations : String
-    , symbol : Symbol
     }
 
 
