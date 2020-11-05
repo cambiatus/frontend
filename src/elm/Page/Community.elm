@@ -984,6 +984,7 @@ update msg model loggedIn =
             }
                 |> UR.init
                 |> UR.addCmd uploadImage
+                |> UR.addExt HideFeedback
 
         EnteredPhoto [] ->
             UR.init model
@@ -1035,7 +1036,7 @@ update msg model loggedIn =
                 |> UR.addExt
                     (case reason of
                         TimerExpired ->
-                            ShowFeedback LoggedIn.Failure "Time for claiming is expired"
+                            ShowFeedback LoggedIn.Failure (t "community.actions.proof.time_expired")
 
                         CancelClicked ->
                             HideFeedback
@@ -1043,13 +1044,13 @@ update msg model loggedIn =
 
         ClaimAction action ->
             let
-                isNoPhotoError =
+                hasPhotoError =
                     case model.proofs of
                         Just (Proof (Uploaded _) _) ->
                             False
 
                         Just (Proof _ _) ->
-                            -- Error: claiming with proof but photo wasn't uploaded
+                            -- Error: photo wasn't uploaded while claiming with proof
                             True
 
                         Nothing ->
@@ -1075,10 +1076,10 @@ update msg model loggedIn =
                         _ ->
                             ( "", "", 0 )
             in
-            if isNoPhotoError then
+            if hasPhotoError then
                 model
                     |> UR.init
-                    |> UR.addExt (ShowFeedback LoggedIn.Failure (t "Please, upload a photo"))
+                    |> UR.addExt (ShowFeedback LoggedIn.Failure (t "community.actions.proof.no_photo_error"))
 
             else if LoggedIn.isAuth loggedIn then
                 newModel

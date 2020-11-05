@@ -441,7 +441,9 @@
         "photo": "Foto",
         "photo_full": "veure imatge completa",
         "upload_photo_hint": "Toca per fer una foto",
-        "code_period_label": "el codi és vàlid per a"
+        "code_period_label": "el codi és vàlid per a",
+        "no_photo_error": "Afegiu una foto per confirmar la vostra reclamació.",
+        "time_expired": "El temps per a la reclamació ha caducat."
       },
       "form": {
         "not_found": "Acció no trobada",

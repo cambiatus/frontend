@@ -437,7 +437,9 @@
         "photo": "Photo",
         "photo_full": "view full image",
         "upload_photo_hint": "Tap to take a photo",
-        "code_period_label": "the code is valid for"
+        "code_period_label": "the code is valid for",
+        "no_photo_error": "Please, add a photo to confirm your claim.",
+        "time_expired": "Time for the claim has expired."
       },
       "form": {
         "not_found": "Action not found",

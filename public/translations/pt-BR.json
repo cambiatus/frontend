@@ -445,7 +445,9 @@
         "photo": "Foto",
         "photo_full": "ver imagem inteira",
         "upload_photo_hint": "Toque para tirar uma foto",
-        "code_period_label": "o código é válido para"
+        "code_period_label": "o código é válido para",
+        "no_photo_error": "Por favor, adicione uma foto para confirmar sua reivindicação.",
+        "time_expired": "O tempo para a reclamação expirou."
       },
       "form": {
         "not_found": "Ação não encontrada",
