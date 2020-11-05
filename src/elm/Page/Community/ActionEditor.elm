@@ -934,7 +934,7 @@ update msg model loggedIn =
         GotSaveAction (Ok _) ->
             model
                 |> UR.init
-                |> UR.addCmd (Route.replaceUrl loggedIn.shared.navKey (Route.Community model.communityId))
+                |> UR.addCmd (Route.replaceUrl loggedIn.shared.navKey (Route.Objectives model.communityId))
                 |> UR.addExt (ShowFeedback Success (t shared.translations "community.actions.create_success"))
 
         GotSaveAction (Err val) ->
