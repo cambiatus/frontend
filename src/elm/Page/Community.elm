@@ -682,17 +682,27 @@ viewClaimConfirmation loggedIn model =
                     |> Modal.withFooter
                         [ button
                             [ class "modal-cancel"
-                            , if isInProgress then
-                                onClick NoOp
+                            , classList [ ( "button-disabled", isInProgress ) ]
+                            , onClick
+                                (if isInProgress then
+                                    NoOp
 
-                              else
-                                onClick CloseClaimConfirmation
+                                 else
+                                    CloseClaimConfirmation
+                                )
                             , disabled isInProgress
                             ]
                             [ text_ "dashboard.check_claim.no" ]
                         , button
                             [ class "modal-accept"
-                            , onClick acceptMsg
+                            , classList [ ( "button-disabled", isInProgress ) ]
+                            , onClick
+                                (if isInProgress then
+                                    NoOp
+
+                                 else
+                                    acceptMsg
+                                )
                             , disabled isInProgress
                             ]
                             [ text acceptButtonText
@@ -1034,7 +1044,13 @@ update msg model loggedIn =
         ClaimAction action ->
             let
                 newModel =
-                    { model | claimConfirmationModalStatus = InProgress }
+                    case model.proofs of
+                        Just (Proof _ _) ->
+                            -- Claim with proof dialog has no confirmation
+                            model
+
+                        Nothing ->
+                            { model | claimConfirmationModalStatus = InProgress }
 
                 ( proofPhotoUrl, proofCode_, proofTime ) =
                     case model.proofs of
