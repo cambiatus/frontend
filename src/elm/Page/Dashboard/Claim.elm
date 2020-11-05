@@ -106,7 +106,10 @@ view ({ shared } as loggedIn) model =
                                         |> Html.map ClaimMsg
 
                                 _ ->
-                                    if Claim.isVotable claim loggedIn.accountName then
+                                    if
+                                        Claim.isVotable claim loggedIn.accountName
+                                            && not model.isValidated
+                                    then
                                         viewVoteButtons shared.translators claim.id model.claimModalStatus
 
                                     else
