@@ -28,8 +28,6 @@ module Eos exposing
     , symbolUrlParser
     )
 
-import Cambiatus.Object
-import Cambiatus.Object.Community as Community
 import Eos.Account as Account exposing (PermissionName)
 import Graphql.SelectionSet as SelectionSet exposing (SelectionSet, with)
 import Json.Decode as Decode exposing (Decoder)

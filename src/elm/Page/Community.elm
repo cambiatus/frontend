@@ -18,11 +18,9 @@ import Eos exposing (Symbol)
 import Eos.Account as Eos
 import Graphql.Http
 import Graphql.OptionalArgument exposing (OptionalArgument(..))
-import Html exposing (Html, a, button, div, hr, img, p, span, text)
+import Html exposing (Html, button, div, hr, img, p, span, text)
 import Html.Attributes exposing (class, classList, disabled, src)
 import Html.Events exposing (onClick)
-import I18Next exposing (t)
-import Icons
 import Json.Decode as Decode
 import Json.Encode as Encode exposing (Value)
 import Page
@@ -116,8 +114,8 @@ type alias Member =
 view : LoggedIn.Model -> Model -> { title : String, content : Html Msg }
 view loggedIn model =
     let
-        t s =
-            I18Next.t loggedIn.shared.translations s
+        t =
+            loggedIn.shared.translators.t
 
         text_ s =
             text (t s)
@@ -145,10 +143,6 @@ view loggedIn model =
                     Page.fullPageGraphQLError (t "community.objectives.title") e
 
                 Loaded community editStatus ->
-                    let
-                        canEdit =
-                            LoggedIn.isAccount community.creator loggedIn
-                    in
                     div []
                         [ Page.viewHeader loggedIn community.title Route.Dashboard
                         , div [ class "bg-white p-4" ]

@@ -63,9 +63,6 @@ type Payload
 view : LoggedIn.Model -> Model -> { title : String, content : Html Msg }
 view ({ shared } as loggedIn) model =
     let
-        t s =
-            I18Next.t loggedIn.shared.translations s
-
         content =
             case model of
                 Loading ->
