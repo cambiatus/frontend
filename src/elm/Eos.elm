@@ -326,10 +326,6 @@ symbolUrlParser =
     Url.Parser.custom "SYMBOL" symbolFromString
 
 
-
--- symbolSelectionSet : SelectionSet Symbol Cambiatus.Object.Community
-
-
 symbolSelectionSet : SelectionSet String typeLock -> SelectionSet Symbol typeLock
 symbolSelectionSet field =
     SelectionSet.succeed Symbol
