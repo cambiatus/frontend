@@ -678,7 +678,7 @@
       "body": "Confirmar reinvindicação de ação?",
       "yes": "Sim, reinvindicar",
       "no": "Não, cancelar",
-      "success": "Reinvidicação concluída, aguarde as aprovações",
+      "success": "Parabéns! Falta pouco para ganhar seus {{symbolCode}}. Estamos revisando sua ação.",
       "failure": "Algo deu errado ao tentar realizar sua reinvidicação, tente novamente mais tarde"
     }
   },

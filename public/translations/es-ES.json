@@ -676,7 +676,7 @@
       "body": "¿Realmente quieres reclamar esta acción?",
       "yes": "Sí, reclamar",
       "no": "No, cancelar",
-      "success": "Reclamación exitosa, espere la aprobación",
+      "success": "¡Felicidades! ya casi tienes tus {{symbolCode}}. Estamos revisando tu acción.",
       "failure": "Se produjo un error al intentar procesar su reclamo. Vuelva a intentarlo más tarde."
     }
   },
