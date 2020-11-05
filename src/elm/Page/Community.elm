@@ -252,6 +252,14 @@ viewClaimWithPhoto model { shared } action =
     let
         { t } =
             shared.translators
+
+        isUploadingInProgress =
+            case model.proofs of
+                Just (Proof Uploading _) ->
+                    True
+
+                _ ->
+                    False
     in
     div [ class "bg-white border-t border-gray-300" ]
         [ div [ class "container p-4 mx-auto" ]
@@ -288,12 +296,28 @@ viewClaimWithPhoto model { shared } action =
             , div [ class "md:flex" ]
                 [ button
                     [ class "modal-cancel"
-                    , onClick (CloseProofSection CancelClicked)
+                    , onClick
+                        (if isUploadingInProgress then
+                            NoOp
+
+                         else
+                            CloseProofSection CancelClicked
+                        )
+                    , classList [ ( "button-disabled", isUploadingInProgress ) ]
+                    , disabled isUploadingInProgress
                     ]
                     [ text (t "menu.cancel") ]
                 , button
                     [ class "modal-accept"
-                    , onClick (ClaimAction action)
+                    , classList [ ( "button-disabled", isUploadingInProgress ) ]
+                    , onClick
+                        (if isUploadingInProgress then
+                            NoOp
+
+                         else
+                            ClaimAction action
+                        )
+                    , disabled isUploadingInProgress
                     ]
                     [ text (t "menu.send") ]
                 ]
