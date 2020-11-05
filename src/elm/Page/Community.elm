@@ -1043,10 +1043,22 @@ update msg model loggedIn =
 
         ClaimAction action ->
             let
+                isNoPhotoError =
+                    case model.proofs of
+                        Just (Proof (Uploaded _) _) ->
+                            False
+
+                        Just (Proof _ _) ->
+                            -- Error: claiming with proof but photo wasn't uploaded
+                            True
+
+                        Nothing ->
+                            False
+
                 newModel =
                     case model.proofs of
                         Just (Proof _ _) ->
-                            -- Claim with proof dialog has no confirmation
+                            -- Claim with proof has no confirmation
                             model
 
                         Nothing ->
@@ -1063,7 +1075,12 @@ update msg model loggedIn =
                         _ ->
                             ( "", "", 0 )
             in
-            if LoggedIn.isAuth loggedIn then
+            if isNoPhotoError then
+                model
+                    |> UR.init
+                    |> UR.addExt (ShowFeedback LoggedIn.Failure (t "Please, upload a photo"))
+
+            else if LoggedIn.isAuth loggedIn then
                 newModel
                     |> UR.init
                     |> UR.addPort
