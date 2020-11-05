@@ -473,7 +473,7 @@ viewPhotoModal loggedIn claim =
                     Just proofCode ->
                         div []
                             [ label [ class "mt-4 md:mt-0 input-label md:text-xl block" ]
-                                [ text (t "community.actions.form.verification_number")
+                                [ text (t "community.actions.form.verification_code")
                                 ]
                             , strong [ class "text-xl md:text-3xl" ] [ text proofCode ]
                             ]

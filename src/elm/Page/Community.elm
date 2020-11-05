@@ -349,7 +349,7 @@ viewProofCode { t } proofCode secondsAfterClaim proofCodeValiditySeconds =
     in
     div [ class "mb-4" ]
         [ span [ class "input-label block mb-1" ]
-            [ text (t "community.actions.form.verification_number") ]
+            [ text (t "community.actions.form.verification_code") ]
         , div [ class "text-2xl text-black font-bold inline-block align-middle mr-2" ]
             [ text proofCode ]
         , span [ class "whitespace-no-wrap text-body rounded-full bg-lightred px-3 py-1 text-white" ]

@@ -1700,8 +1700,8 @@ viewManualVerificationForm ({ shared } as loggedIn) model community =
                                         ]
                                         []
                                     , span []
-                                        [ b [ class "block" ] [ text (t "community.actions.form.verification_number") ]
-                                        , text (t "community.actions.form.verification_number_hint")
+                                        [ b [ class "block" ] [ text (t "community.actions.form.verification_code") ]
+                                        , text (t "community.actions.form.verification_code_hint")
                                         ]
                                     ]
                                 , div [ class "mt-6" ]

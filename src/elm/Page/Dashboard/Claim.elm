@@ -141,7 +141,7 @@ viewProofs { t } claim =
                 Just proofCode ->
                     div [ class "ml-4" ]
                         [ label [ class "input-label block" ]
-                            [ text (t "community.actions.form.verification_number") ]
+                            [ text (t "community.actions.form.verification_code") ]
                         , strong [ class "text-lg block" ] [ text proofCode ]
                         ]
 
