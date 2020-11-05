@@ -209,12 +209,12 @@ view loggedIn model =
                                 ]
 
                         ClaimWithProofs action ->
-                            viewClaimWithPhoto model loggedIn action
+                            viewClaimWithProofs model loggedIn action
     in
     { title = title
     , content =
         div
-            -- id is used to scroll into view with port
+            -- id is used to scroll into view with a port
             [ id "communityPage" ]
             [ content ]
     }
@@ -247,8 +247,8 @@ viewHeader { shared } community =
         ]
 
 
-viewClaimWithPhoto : Model -> LoggedIn.Model -> Action -> Html Msg
-viewClaimWithPhoto model { shared } action =
+viewClaimWithProofs : Model -> LoggedIn.Model -> Action -> Html Msg
+viewClaimWithProofs model { shared } action =
     let
         { t } =
             shared.translators
@@ -287,8 +287,8 @@ viewClaimWithPhoto model { shared } action =
                 [ span [ class "input-label block mb-2" ]
                     [ text (t "community.actions.proof.photo") ]
                 , case model.proofs of
-                    Just (Proof proofPhoto _) ->
-                        viewPhotoUploader shared.translators proofPhoto
+                    Just (Proof photoStatus _) ->
+                        viewPhotoUploader shared.translators photoStatus
 
                     _ ->
                         text ""
@@ -668,9 +668,6 @@ viewClaimConfirmation loggedIn model =
         text_ s =
             text (t s)
 
-        acceptButtonText =
-            t "dashboard.check_claim.yes"
-
         modalContent acceptMsg isInProgress =
             div []
                 [ Modal.initWith
@@ -705,7 +702,7 @@ viewClaimConfirmation loggedIn model =
                                 )
                             , disabled isInProgress
                             ]
-                            [ text acceptButtonText
+                            [ text (t "dashboard.check_claim.yes")
                             ]
                         ]
                     |> Modal.toHtml
@@ -797,8 +794,8 @@ type Msg
     | OpenProofSection Community.Action
     | CloseProofSection ReasonToCloseProofSection
     | GotProofTime Int Posix
-    | GetUnit64Name String
-    | GotUnit64Name (Result Value String)
+    | GetUint64Name String
+    | GotUint64Name (Result Value String)
     | Tick Time.Posix
     | EnteredPhoto (List File)
     | CompletedPhotoUpload (Result Http.Error String)
@@ -822,15 +819,15 @@ update msg model loggedIn =
         GotTime date ->
             UR.init { model | date = Just date }
 
-        GetUnit64Name _ ->
+        GetUint64Name _ ->
             model |> UR.init
 
-        GotUnit64Name (Ok unit64name) ->
+        GotUint64Name (Ok uint64name) ->
             case ( model.proofs, model.actionId ) of
                 ( Just (Proof proofPhoto (CodeParts proofCode)), Just actionId ) ->
                     let
                         verificationCode =
-                            Claim.generateVerificationCode actionId unit64name proofCode.claimTimestamp
+                            Claim.generateVerificationCode actionId uint64name proofCode.claimTimestamp
 
                         newProofCode =
                             CodeParts
@@ -845,7 +842,7 @@ update msg model loggedIn =
                     model
                         |> UR.init
 
-        GotUnit64Name (Err _) ->
+        GotUint64Name (Err _) ->
             UR.init model
 
         Tick timer ->
@@ -889,11 +886,11 @@ update msg model loggedIn =
             }
                 |> UR.init
                 |> UR.addPort
-                    { responseAddress = GetUnit64Name (Eos.nameToString loggedIn.accountName)
+                    { responseAddress = GetUint64Name (Eos.nameToString loggedIn.accountName)
                     , responseData = Encode.null
                     , data =
                         Encode.object
-                            [ ( "name", Encode.string "accountNameToUnit64" )
+                            [ ( "name", Encode.string "accountNameToUint64" )
                             , ( "accountName", Encode.string (Eos.nameToString loggedIn.accountName) )
                             ]
                     }
@@ -1149,15 +1146,15 @@ jsAddressToMsg addr val =
                 |> Result.map (Just << GotClaimActionResponse)
                 |> Result.withDefault Nothing
 
-        "GetUnit64Name" :: [] ->
+        "GetUint64Name" :: [] ->
             Decode.decodeValue
                 (Decode.oneOf
-                    [ Decode.field "unit64name" Decode.string |> Decode.map Ok
+                    [ Decode.field "uint64name" Decode.string |> Decode.map Ok
                     , Decode.succeed (Err val)
                     ]
                 )
                 val
-                |> Result.map (Just << GotUnit64Name)
+                |> Result.map (Just << GotUint64Name)
                 |> Result.withDefault Nothing
 
         _ ->
@@ -1209,10 +1206,10 @@ msgToString msg =
         ClaimAction _ ->
             [ "ClaimAction" ]
 
-        GetUnit64Name _ ->
-            [ "GetUnit64Name" ]
+        GetUint64Name _ ->
+            [ "GetUint64Name" ]
 
-        GotUnit64Name n ->
+        GotUint64Name n ->
             [ "GotClaimActionResponse", UR.resultToString n ]
 
         GotClaimActionResponse r ->

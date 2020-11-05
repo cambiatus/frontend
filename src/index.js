@@ -611,12 +611,12 @@ async function handleJavascriptPort (arg) {
       }
       break
     }
-    case 'accountNameToUnit64': {
-      devLog('=======================', 'accountNameToUnit64')
+    case 'accountNameToUint64': {
+      devLog('=======================', 'accountNameToUint64')
       const response = {
         address: arg.responseAddress,
         addressData: arg.responseData,
-        unit64name: window.nameToUint64(arg.data.accountName)
+        uint64name: window.nameToUint64(arg.data.accountName)
       }
       app.ports.javascriptInPort.send(response)
       break
