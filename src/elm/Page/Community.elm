@@ -147,7 +147,7 @@ view loggedIn model =
                         [ Page.viewHeader loggedIn community.title Route.Dashboard
                         , div [ class "bg-white p-4" ]
                             [ div [ class "container mx-auto px-4" ]
-                                [ div [ class "h-24 w-24 rounded-full mx-auto pt-12" ]
+                                [ div [ class "h-24 w-24 rounded-full mx-auto" ]
                                     [ img [ src community.logo, class "object-scale-down" ] []
                                     ]
                                 , div [ class "flex flex-wrap w-full items-center" ]
