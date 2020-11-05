@@ -257,8 +257,8 @@ viewObjective loggedIn model metadata index objective =
 viewAction : LoggedIn.Model -> Community.Model -> Maybe Posix -> Community.Action -> Html Msg
 viewAction loggedIn metadata maybeDate action =
     let
-        t s =
-            I18Next.t loggedIn.shared.translations s
+        t =
+            loggedIn.shared.translators.t
 
         text_ s =
             text (t s)
@@ -367,8 +367,8 @@ viewAction loggedIn metadata maybeDate action =
         ( usages, usagesLeft ) =
             ( String.fromInt action.usages, String.fromInt action.usagesLeft )
 
-        tr r_id replaces =
-            I18Next.tr loggedIn.shared.translations I18Next.Curly r_id replaces
+        tr =
+            loggedIn.shared.translators.tr
 
         validationType : String
         validationType =
@@ -463,9 +463,8 @@ viewClaimModal loggedIn model =
     case model.modalStatus of
         Open isLoading actionId ->
             let
-                t s =
-                    I18Next.t loggedIn.shared.translations
-                        s
+                t =
+                    loggedIn.shared.translators.t
 
                 text_ s =
                     text (t s)
