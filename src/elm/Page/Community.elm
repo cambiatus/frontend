@@ -516,10 +516,10 @@ viewAction loggedIn metadata maybeDate action =
 
         ( claimColors, claimText ) =
             if pastDeadline || (action.usagesLeft < 1 && action.usages > 0) then
-                ( " text-grey bg-grey cursor-not-allowed", "dashboard.closed" )
+                ( " button-disabled", "dashboard.closed" )
 
             else
-                ( " text-white button button-primary", "dashboard.claim" )
+                ( " button button-primary", "dashboard.claim" )
 
         claimSize =
             if canEdit then
@@ -577,6 +577,25 @@ viewAction loggedIn metadata maybeDate action =
 
         isClosed =
             pastDeadline || (action.usages > 0 && action.usagesLeft == 0)
+
+        viewClaimButton =
+            button
+                [ class ("h-10 uppercase rounded-lg ml-1" ++ claimColors ++ claimSize)
+                , onClick
+                    (if isClosed then
+                        NoOp
+
+                     else
+                        OpenClaimConfirmation action
+                    )
+                ]
+                [ if action.hasProofPhoto then
+                    span [ class "inline-block w-4 align-middle mr-2" ] [ Icons.camera ]
+
+                  else
+                    text ""
+                , span [ class "inline-block align-middle" ] [ text_ claimText ]
+                ]
     in
     if action.isCompleted then
         text ""
@@ -627,17 +646,7 @@ viewAction loggedIn metadata maybeDate action =
                         ]
                     , div [ class "hidden sm:flex sm:visible flex-row justify-end flex-grow-1" ]
                         [ if validationType == "CLAIMABLE" then
-                            button
-                                [ class ("h-10 uppercase rounded-lg ml-1" ++ claimColors ++ claimSize)
-                                , onClick
-                                    (if isClosed then
-                                        NoOp
-
-                                     else
-                                        OpenClaimConfirmation action
-                                    )
-                                ]
-                                [ text_ claimText ]
+                            viewClaimButton
 
                           else
                             text ""
@@ -646,11 +655,7 @@ viewAction loggedIn metadata maybeDate action =
                 ]
             , div [ class "flex flex-row mt-8 justify-between sm:hidden" ]
                 [ if validationType == "CLAIMABLE" then
-                    button
-                        [ class ("h-10 uppercase rounded-lg ml-1" ++ claimColors ++ claimSize)
-                        , onClick (OpenClaimConfirmation action)
-                        ]
-                        [ text_ claimText ]
+                    viewClaimButton
 
                   else
                     text ""
