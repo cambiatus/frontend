@@ -61,7 +61,7 @@ type Payload
 
 
 view : LoggedIn.Model -> Model -> { title : String, content : Html Msg }
-view loggedIn model =
+view ({ shared } as loggedIn) model =
     let
         t s =
             I18Next.t loggedIn.shared.translations s
@@ -72,16 +72,18 @@ view loggedIn model =
                     Page.fullPageLoading
 
                 Loaded notifications ->
-                    div [ class "container mx-auto px-4 mb-6" ]
-                        [ Page.viewTitle (t "notifications.title")
-                        , if notifications == [] then
-                            viewEmptyNotifications loggedIn.shared
+                    div []
+                        [ Page.viewHeader loggedIn (shared.translators.t "notifications.title") Route.Dashboard
+                        , div [ class "container mx-auto px-4 mb-6" ]
+                            [ if notifications == [] then
+                                viewEmptyNotifications loggedIn.shared
 
-                          else
-                            viewNotifications loggedIn notifications
+                              else
+                                viewNotifications loggedIn notifications
+                            ]
                         ]
     in
-    { title = t "notifications.title"
+    { title = shared.translators.t "notifications.title"
     , content = content
     }
 
@@ -202,7 +204,7 @@ viewNotificationMint shared history notification =
 
         description =
             [ ( "amount", String.fromFloat notification.quantity )
-            , ( "symbol", notification.community.symbol )
+            , ( "symbol", Eos.symbolToSymbolCodeString notification.community.symbol )
             ]
                 |> I18Next.tr shared.translations I18Next.Curly "notifications.issue.receive"
     in
@@ -312,7 +314,7 @@ viewNotificationSaleHistoryDetail ({ shared } as loggedIn) sale date =
     ]
 
 
-viewAmount : Float -> String -> List (Html msg)
+viewAmount : Float -> Eos.Symbol -> List (Html msg)
 viewAmount amount symbol =
     let
         amountText =
@@ -326,7 +328,8 @@ viewAmount amount symbol =
                 "text-red"
     in
     [ div [ class "text-2xl", class color ] [ text amountText ]
-    , div [ class "uppercase text-sm font-thin mt-3 ml-2 font-sans", class color ] [ text symbol ]
+    , div [ class "uppercase text-sm font-thin mt-3 ml-2 font-sans", class color ]
+        [ text <| Eos.symbolToSymbolCodeString symbol ]
     ]
 
 
