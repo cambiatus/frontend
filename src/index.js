@@ -616,7 +616,7 @@ async function handleJavascriptPort (arg) {
       const response = {
         address: arg.responseAddress,
         addressData: arg.responseData,
-        uint64name: window.nameToUint64(arg.data.accountName)
+        uint64name: eos.modules.format.encodeName(arg.data.accountName, false)
       }
       app.ports.javascriptInPort.send(response)
       break
