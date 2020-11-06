@@ -23,7 +23,6 @@ import Html exposing (Html, button, div, hr, img, input, label, p, span, text)
 import Html.Attributes exposing (accept, class, classList, disabled, id, multiple, src, style, type_)
 import Html.Events exposing (onClick)
 import Http
-import I18Next exposing (t)
 import Icons
 import Json.Decode as Decode
 import Json.Encode as Encode exposing (Value)
