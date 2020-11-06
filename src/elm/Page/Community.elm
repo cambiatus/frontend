@@ -19,7 +19,7 @@ import Eos exposing (Symbol)
 import Eos.Account as Eos
 import File exposing (File)
 import Graphql.Http
-import Html exposing (Html, a, button, div, hr, img, input, label, p, span, text)
+import Html exposing (Html, button, div, hr, img, input, label, p, span, text)
 import Html.Attributes exposing (accept, class, classList, disabled, id, multiple, src, style, type_)
 import Html.Events exposing (onClick)
 import Http
@@ -136,8 +136,8 @@ type ProofPhotoStatus
 view : LoggedIn.Model -> Model -> { title : String, content : Html Msg }
 view loggedIn model =
     let
-        t s =
-            I18Next.t loggedIn.shared.translations s
+        t =
+            loggedIn.shared.translators.t
 
         text_ s =
             text (t s)
@@ -167,36 +167,27 @@ view loggedIn model =
                 Loaded community pageStatus ->
                     case pageStatus of
                         ObjectivesAndActions ->
-                            let
-                                canEdit =
-                                    LoggedIn.isAccount community.creator loggedIn
-                            in
                             div []
-                                [ viewHeader loggedIn community
-                                , div [ class "bg-white pt-20 pb-10 sm:pb-20" ]
-                                    [ div [ class "container mx-auto" ]
-                                        [ div [ class "px-4 text-center" ]
-                                            [ p [ class "text-3xl text-black sm:text-4xl leading-tight font-bold mb-4" ]
-                                                [ text community.title ]
-                                            , p [ class "text-grey-200 text-sm" ] [ text community.description ]
+                                [ Page.viewHeader loggedIn community.title Route.Dashboard
+                                , div [ class "bg-white p-4" ]
+                                    [ div [ class "container mx-auto px-4" ]
+                                        [ div [ class "h-24 w-24 rounded-full mx-auto" ]
+                                            [ img [ src community.logo, class "object-scale-down" ] []
                                             ]
+                                        , div [ class "flex flex-wrap w-full items-center" ]
+                                            [ p [ class "text-4xl font-bold" ]
+                                                [ text community.title ]
+                                            ]
+                                        , p [ class "text-grey-200 text-sm" ] [ text community.description ]
                                         ]
                                     ]
                                 , if community.hasObjectives then
-                                    div [ class "container mx-auto px-4" ]
+                                    div [ class "container mx-auto px-4 pb-4" ]
                                         [ viewClaimConfirmation loggedIn model
                                         , div [ class "bg-white py-6 sm:py-8 px-3 sm:px-6 rounded-lg mt-4" ]
                                             (Page.viewTitle (t "community.objectives.title_plural")
                                                 :: List.indexedMap (viewObjective loggedIn model community)
                                                     community.objectives
-                                                ++ [ if canEdit then
-                                                        viewCreateNewObjective
-                                                            loggedIn.shared.translators
-                                                            community.symbol
-
-                                                     else
-                                                        text ""
-                                                   ]
                                             )
                                         ]
 
@@ -214,33 +205,6 @@ view loggedIn model =
             [ id "communityPage" ]
             [ content ]
     }
-
-
-viewHeader : LoggedIn.Model -> Community.Model -> Html Msg
-viewHeader { shared } community =
-    div []
-        [ div [ class "h-16 w-full bg-indigo-500 flex px-4 items-center" ]
-            [ a
-                [ class "items-center flex absolute"
-                , Route.href Route.Dashboard
-                ]
-                [ Icons.back ""
-                , p [ class "text-white text-sm ml-2" ]
-                    [ text (t shared.translations "back")
-                    ]
-                ]
-            , p [ class "text-white mx-auto" ] [ text community.title ]
-            ]
-        , div [ class "h-24 bg-indigo-500 flex flex-wrap content-end" ]
-            [ div [ class "h-24 w-24 rounded-full mx-auto pt-12" ]
-                [ img
-                    [ src community.logo
-                    , class "object-scale-down"
-                    ]
-                    []
-                ]
-            ]
-        ]
 
 
 viewClaimWithProofs : Model -> LoggedIn.Model -> Action -> Html Msg
@@ -430,17 +394,6 @@ viewObjective loggedIn model metadata index objective =
         ]
 
 
-viewCreateNewObjective : Translators -> Symbol -> Html Msg
-viewCreateNewObjective { t } communityId =
-    a
-        [ class "border border-dashed border-button-orange mt-6 w-full flex flex-row content-start px-4 py-2"
-        , Route.href (Route.NewObjective communityId)
-        ]
-        [ span [ class "px-2 text-orange" ] [ text "+" ]
-        , span [ class "text-orange" ] [ text (t "community.objectives.new") ]
-        ]
-
-
 
 -- VIEW ACTION
 
@@ -448,8 +401,8 @@ viewCreateNewObjective { t } communityId =
 viewAction : LoggedIn.Model -> Community.Model -> Maybe Posix -> Community.Action -> Html Msg
 viewAction loggedIn metadata maybeDate action =
     let
-        t s =
-            I18Next.t loggedIn.shared.translations s
+        t =
+            loggedIn.shared.translators.t
 
         text_ s =
             text (t s)
@@ -558,8 +511,8 @@ viewAction loggedIn metadata maybeDate action =
         ( usages, usagesLeft ) =
             ( String.fromInt action.usages, String.fromInt action.usagesLeft )
 
-        tr r_id replaces =
-            I18Next.tr loggedIn.shared.translations I18Next.Curly r_id replaces
+        tr =
+            loggedIn.shared.translators.tr
 
         validationType : String
         validationType =
@@ -657,9 +610,8 @@ viewAction loggedIn metadata maybeDate action =
 viewClaimConfirmation : LoggedIn.Model -> Model -> Html Msg
 viewClaimConfirmation loggedIn model =
     let
-        t s =
-            I18Next.t loggedIn.shared.translations
-                s
+        t =
+            loggedIn.shared.translators.t
 
         text_ s =
             text (t s)
@@ -803,10 +755,10 @@ type ReasonToCloseProofSection
 
 
 update : Msg -> Model -> LoggedIn.Model -> UpdateResult
-update msg model loggedIn =
+update msg model ({ shared } as loggedIn) =
     let
         t =
-            I18Next.t loggedIn.shared.translations
+            shared.translators.t
     in
     case msg of
         NoOp ->
@@ -1084,7 +1036,7 @@ update msg model loggedIn =
                         , responseData = Encode.null
                         , data =
                             Eos.encodeTransaction
-                                [ { accountName = loggedIn.shared.contracts.community
+                                [ { accountName = shared.contracts.community
                                   , name = "claimaction"
                                   , authorization =
                                         { actor = loggedIn.accountName
@@ -1108,6 +1060,11 @@ update msg model loggedIn =
                     |> UR.addExt (Just (ClaimAction action) |> RequiredAuthentication)
 
         GotClaimActionResponse (Ok _) ->
+            let
+                message =
+                    shared.translators.tr "dashboard.check_claim.success"
+                        [ ( "symbolCode", Eos.symbolToSymbolCodeString loggedIn.selectedCommunity ) ]
+            in
             { model
                 | claimConfirmationModalStatus = Closed
                 , pageStatus =
@@ -1120,7 +1077,7 @@ update msg model loggedIn =
                 , proofs = Nothing
             }
                 |> UR.init
-                |> UR.addExt (ShowFeedback LoggedIn.Success (t "dashboard.check_claim.success"))
+                |> UR.addExt (ShowFeedback LoggedIn.Success message)
 
         GotClaimActionResponse (Err _) ->
             { model

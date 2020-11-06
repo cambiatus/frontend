@@ -225,7 +225,7 @@ communityQuery : Symbol -> SelectionSet (Maybe Community) RootQuery
 communityQuery symbol =
     Query.community { symbol = symbolToString symbol } <|
         (SelectionSet.succeed Community
-            |> with Eos.symbolSelectionSet
+            |> with (Eos.symbolSelectionSet Community.symbol)
             |> with (Eos.nameSelectionSet Community.creator)
             |> with (Community.objectives objectiveSelectionSet)
             |> with Community.precision

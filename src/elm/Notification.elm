@@ -68,7 +68,7 @@ type alias TransferData =
     , fromId : String
     , toId : String
     , memo : Maybe String
-    , symbol : String
+    , symbol : Eos.Symbol
     , community : Community
     }
 
@@ -92,7 +92,7 @@ type alias MintData =
 
 type alias Community =
     { logo : String
-    , symbol : String
+    , symbol : Eos.Symbol
     }
 
 
@@ -176,7 +176,7 @@ transferSelectionSet =
         |> with Transfer.fromId
         |> with Transfer.toId
         |> with Transfer.memo
-        |> with Transfer.communityId
+        |> with (Eos.symbolSelectionSet Transfer.communityId)
         |> with (Transfer.community logoSelectionSet)
 
 
@@ -202,4 +202,4 @@ logoSelectionSet : SelectionSet Community Cambiatus.Object.Community
 logoSelectionSet =
     SelectionSet.succeed Community
         |> with Community.logo
-        |> with Community.symbol
+        |> with (Eos.symbolSelectionSet Community.symbol)

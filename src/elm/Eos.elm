@@ -28,8 +28,6 @@ module Eos exposing
     , symbolUrlParser
     )
 
-import Cambiatus.Object
-import Cambiatus.Object.Community as Community
 import Eos.Account as Account exposing (PermissionName)
 import Graphql.SelectionSet as SelectionSet exposing (SelectionSet, with)
 import Json.Decode as Decode exposing (Decoder)
@@ -328,11 +326,11 @@ symbolUrlParser =
     Url.Parser.custom "SYMBOL" symbolFromString
 
 
-symbolSelectionSet : SelectionSet Symbol Cambiatus.Object.Community
-symbolSelectionSet =
+symbolSelectionSet : SelectionSet String typeLock -> SelectionSet Symbol typeLock
+symbolSelectionSet field =
     SelectionSet.succeed Symbol
         |> with
-            (Community.symbol
+            (field
                 |> SelectionSet.mapOrFail
                     (\s ->
                         case String.split "," s |> List.reverse |> List.head of
@@ -343,7 +341,18 @@ symbolSelectionSet =
                                 Err "Can't parse symbol"
                     )
             )
-        |> with Community.precision
+        |> with
+            (field
+                |> SelectionSet.mapOrFail
+                    (\s ->
+                        case String.split "," s |> List.head |> Maybe.andThen String.toInt of
+                            Just e ->
+                                Ok e
+
+                            Nothing ->
+                                Err "Can't parse symbol"
+                    )
+            )
 
 
 cambiatusSymbol : Symbol

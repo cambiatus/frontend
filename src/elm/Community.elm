@@ -130,7 +130,7 @@ communitiesSelectionSet =
     SelectionSet.succeed Metadata
         |> with Community.name
         |> with Community.description
-        |> with Eos.symbolSelectionSet
+        |> with (Eos.symbolSelectionSet Community.symbol)
         |> with Community.logo
         |> with (Eos.nameSelectionSet Community.creator)
         |> with Community.memberCount
@@ -154,7 +154,7 @@ communitySelectionSet =
     SelectionSet.succeed Model
         |> with Community.name
         |> with Community.description
-        |> with Eos.symbolSelectionSet
+        |> with (Eos.symbolSelectionSet Community.symbol)
         |> with Community.logo
         |> with (Eos.nameSelectionSet Community.creator)
         |> with Community.inviterReward

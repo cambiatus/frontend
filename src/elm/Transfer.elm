@@ -111,7 +111,7 @@ transferItemSelectionSet =
         |> with (Cambiatus.Object.Transfer.from Profile.selectionSet)
         |> with Cambiatus.Object.Transfer.amount
         |> with Cambiatus.Object.Transfer.memo
-        |> with (Cambiatus.Object.Transfer.community Eos.symbolSelectionSet)
+        |> with (Eos.symbolSelectionSet Cambiatus.Object.Transfer.communityId)
         |> with
             (Cambiatus.Object.Transfer.community
                 Cambiatus.Object.Community.name

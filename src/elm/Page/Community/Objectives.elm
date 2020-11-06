@@ -304,8 +304,8 @@ viewAction ({ shared } as loggedIn) model objectiveId action =
                     [ p [ class "input-label mb-4" ] [ text_ "community.actions.verifiers" ]
                     , if validationType == "AUTOMATIC" then
                         div [ class "flex items-center" ]
-                            [ p [ class "text-body" ] [ text_ "community.actions.automatic_analyzers" ]
-                            , Icons.exclamation "ml-2"
+                            [ p [ class "text-body text-white" ] [ text_ "community.actions.automatic_analyzers" ]
+                            , Icons.exclamation "ml-2 text-white fill-current"
                             ]
 
                       else
