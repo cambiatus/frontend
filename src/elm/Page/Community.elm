@@ -112,12 +112,8 @@ type PageStatus
 
 
 type ActiveSection
-    = Objectives EditStatus
+    = ObjectivesAndActions
     | ClaimWithProofs Community.Action
-
-
-type EditStatus
-    = NoEdit
 
 
 type ClaimConfirmationModalStatus
@@ -170,7 +166,7 @@ view loggedIn model =
 
                 Loaded community pageStatus ->
                     case pageStatus of
-                        Objectives editStatus ->
+                        ObjectivesAndActions ->
                             let
                                 canEdit =
                                     LoggedIn.isAccount community.creator loggedIn
@@ -194,7 +190,9 @@ view loggedIn model =
                                                 :: List.indexedMap (viewObjective loggedIn model community)
                                                     community.objectives
                                                 ++ [ if canEdit then
-                                                        viewObjectiveNew loggedIn editStatus community.symbol
+                                                        viewCreateNewObjective
+                                                            loggedIn.shared.translators
+                                                            community.symbol
 
                                                      else
                                                         text ""
@@ -432,16 +430,11 @@ viewObjective loggedIn model metadata index objective =
         ]
 
 
-viewObjectiveNew : LoggedIn.Model -> EditStatus -> Symbol -> Html Msg
-viewObjectiveNew loggedIn edit communityId =
-    let
-        t s =
-            I18Next.t loggedIn.shared.translations s
-    in
+viewCreateNewObjective : Translators -> Symbol -> Html Msg
+viewCreateNewObjective { t } communityId =
     a
         [ class "border border-dashed border-button-orange mt-6 w-full flex flex-row content-start px-4 py-2"
         , Route.href (Route.NewObjective communityId)
-        , disabled (edit /= NoEdit)
         ]
         [ span [ class "px-2 text-orange" ] [ text "+" ]
         , span [ class "text-orange" ] [ text (t "community.objectives.new") ]
@@ -904,7 +897,7 @@ update msg model loggedIn =
             case community of
                 Just c ->
                     { model
-                        | pageStatus = Loaded c (Objectives NoEdit)
+                        | pageStatus = Loaded c ObjectivesAndActions
                     }
                         |> UR.init
 
@@ -1027,7 +1020,7 @@ update msg model loggedIn =
                 | pageStatus =
                     case model.pageStatus of
                         Loaded community (ClaimWithProofs _) ->
-                            Loaded community (Objectives NoEdit)
+                            Loaded community ObjectivesAndActions
 
                         _ ->
                             model.pageStatus
@@ -1120,7 +1113,7 @@ update msg model loggedIn =
                 , pageStatus =
                     case model.pageStatus of
                         Loaded community (ClaimWithProofs _) ->
-                            Loaded community (Objectives NoEdit)
+                            Loaded community ObjectivesAndActions
 
                         _ ->
                             model.pageStatus
