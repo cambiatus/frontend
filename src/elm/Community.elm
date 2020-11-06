@@ -24,7 +24,6 @@ module Community exposing
     , dashboardSelectionSet
     , decodeBalance
     , decodeTransaction
-    , encodeClaimAction
     , encodeCreateCommunityData
     , encodeCreateObjectiveAction
     , encodeCreateTokenData
@@ -335,8 +334,8 @@ type alias Action =
     , verificationType : VerificationType
     , verifications : Int
     , isCompleted : Bool
-    , hasProofPhoto : Maybe Bool
-    , hasProofCode : Maybe Bool
+    , hasProofPhoto : Bool
+    , hasProofCode : Bool
     , photoProofInstructions : Maybe String
     }
 
@@ -356,8 +355,8 @@ actionSelectionSet =
         |> with Action.verificationType
         |> with Action.verifications
         |> with Action.isCompleted
-        |> with Action.hasProofPhoto
-        |> with Action.hasProofCode
+        |> with (SelectionSet.map (Maybe.withDefault False) Action.hasProofPhoto)
+        |> with (SelectionSet.map (Maybe.withDefault False) Action.hasProofCode)
         |> with Action.photoProofInstructions
 
 
@@ -370,24 +369,6 @@ type alias Verifiers =
     { verifiers : List String
     , reward : Float
     }
-
-
-
--- Claim Action
-
-
-type alias ClaimAction =
-    { actionId : Int
-    , maker : Eos.Name
-    }
-
-
-encodeClaimAction : ClaimAction -> Value
-encodeClaimAction c =
-    Encode.object
-        [ ( "action_id", Encode.int c.actionId )
-        , ( "maker", Eos.encodeName c.maker )
-        ]
 
 
 

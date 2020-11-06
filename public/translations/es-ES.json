@@ -436,6 +436,15 @@
       "completed": "Terminada",
       "closed": "Cerrada",
       "edit": "Editar acción",
+      "proof": {
+        "title": "Esta acción requiere prueba de logro",
+        "photo": "Foto",
+        "photo_full": "ver imagen completa",
+        "upload_photo_hint": "Toca para tomar una foto",
+        "code_period_label": "el código es válido para",
+        "no_photo_error": "Por favor, agregue una foto para confirmar su reclamo.",
+        "time_expired": "El tiempo para la reclamación ha expirado."
+      },
       "form": {
         "not_found": "Acción no encontrada",
         "description_label": "Descripción",
@@ -468,8 +477,8 @@
         "quantity_label": "Elige cantidad",
         "photo_validation": "Validación de fotos",
         "photo_validation_hint": "Los usuarios deben enviar una foto realizando la tarea para que el reclamo sea válido.",
-        "verification_number": "Numero de verificación",
-        "verification_number_hint": "Los usuarios deberán enviar un código de verificación único con la foto para que el reclamo sea válido.",
+        "verification_code": "Código de verificación",
+        "verification_code_hint": "Los usuarios deberán enviar un código de verificación único con la foto para que el reclamo sea válido.",
         "verification_instructions": "Escriba aquí las instrucciones para los usuarios",
         "usages_left_label": "Usos restantes",
         "mark_completed": "Marcar como completado",

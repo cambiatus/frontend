@@ -45,22 +45,6 @@ body {
   @apply py-3 px-6 h-12;
 }
 
-.button-disabled {
-  @apply bg-gray-500 text-red rounded-super text-body cursor-not-allowed;
-}
-
-.button-disabled:hover {
-  @apply bg-gray-500;
-}
-
-.button-danger {
-  @apply button-secondary text-red;
-}
-
-.button-danger:hover {
-  @apply border-red;
-}
-
 .button-success {
   @apply bg-green text-white rounded-full text-body;
 }
@@ -195,11 +179,11 @@ textarea.input {
 .modal-body {
   @apply p-4 pt-0 text-body overflow-y-auto;
   min-height: 4rem;
-  max-height: 50vh;
+  max-height: 60vh;
 }
 
 .modal-footer {
-  @apply flex flex-wrap justify-center items-center p-4;
+  @apply flex flex-wrap justify-center items-center p-4 pt-0;
 }
 
 .modal-cancel {
@@ -338,6 +322,11 @@ textarea.input {
 }
 /* End of Objectives */
 
+.spinner-light {
+  border-color: white;
+  border-right-color: transparent;
+}
+
 /* Claims */
 .claim-photo-thumb {
   @apply cursor-pointer w-24 h-16 flex items-center justify-center overflow-hidden rounded-sm;
@@ -347,6 +336,24 @@ textarea.input {
   @apply shadow-outline;
 }
 /* End of Claims */
+
+/* Button Modifiers (must be below all other button's styles) */
+.button-disabled {
+  @apply bg-gray-500 text-white rounded-super text-body cursor-not-allowed;
+}
+
+.button-disabled:hover {
+  @apply bg-gray-500;
+}
+
+.button-danger {
+  @apply button-secondary text-red;
+}
+
+.button-danger:hover {
+  @apply border-red;
+}
+/* End of Button Modifiers */
 
 @import './elm-datepicker.css';
 

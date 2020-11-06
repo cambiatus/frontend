@@ -436,6 +436,15 @@
       "completed": "Completat",
       "closed": "Tancat",
       "edit": "Edita l'acció",
+      "proof": {
+        "title": "Aquesta acció requereix proves d’assoliment",
+        "photo": "Foto",
+        "photo_full": "veure imatge completa",
+        "upload_photo_hint": "Toca per fer una foto",
+        "code_period_label": "el codi és vàlid per a",
+        "no_photo_error": "Afegiu una foto per confirmar la vostra reclamació.",
+        "time_expired": "El temps per a la reclamació ha caducat."
+      },
       "form": {
         "not_found": "Acció no trobada",
         "description_label": "Descripció",
@@ -468,8 +477,8 @@
         "quantity_label": "Tria la quantitat",
         "photo_validation": "Validació de fotos",
         "photo_validation_hint": "Els usuaris han d'enviar una foto realitzant la tasca perquè la reclamació sigui vàlida.",
-        "verification_number": "Número de verificació",
-        "verification_number_hint": "Els usuaris hauran d’enviar un codi de verificació únic amb la foto perquè la reclamació sigui vàlida.",
+        "verification_code": "Codi de verificació",
+        "verification_code_hint": "Els usuaris hauran d’enviar un codi de verificació únic amb la foto perquè la reclamació sigui vàlida.",
         "verification_instructions": "Escriviu aquí instruccions per als usuaris",
         "usages_left_label": "Usos restants",
         "mark_completed": "Marca com a completat",

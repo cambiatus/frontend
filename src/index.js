@@ -611,6 +611,21 @@ async function handleJavascriptPort (arg) {
       }
       break
     }
+    case 'accountNameToUint64': {
+      devLog('=======================', 'accountNameToUint64')
+      const response = {
+        address: arg.responseAddress,
+        addressData: arg.responseData,
+        uint64name: eos.modules.format.encodeName(arg.data.accountName, false)
+      }
+      app.ports.javascriptInPort.send(response)
+      break
+    }
+    case 'scrollIntoView': {
+      devLog('=======================', 'scrollIntoView')
+      document.getElementById(arg.data.id).scrollIntoView(true)
+      break
+    }
     case 'validateDeadline': {
       devLog('=============================', 'validatingDate')
 

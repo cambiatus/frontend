@@ -96,11 +96,7 @@ view ({ shared } as loggedIn) model =
                                 ]
                             , div [ class "mx-auto container px-4" ]
                                 [ viewTitle shared claim
-                                , if Claim.tempHasPhotoProof claim then
-                                    viewPhotoThumbnail claim
-
-                                  else
-                                    text ""
+                                , viewProofs shared.translators claim
                                 , viewDetails shared model claim
                                 , viewVoters loggedIn claim
                                 ]
@@ -110,7 +106,10 @@ view ({ shared } as loggedIn) model =
                                         |> Html.map ClaimMsg
 
                                 _ ->
-                                    if Claim.isVotable claim loggedIn.accountName then
+                                    if
+                                        Claim.isVotable claim loggedIn.accountName
+                                            && not model.isValidated
+                                    then
                                         viewVoteButtons shared.translators claim.id model.claimModalStatus
 
                                     else
@@ -137,23 +136,36 @@ view ({ shared } as loggedIn) model =
     }
 
 
-viewPhotoThumbnail : Claim.Model -> Html Msg
-viewPhotoThumbnail claim =
-    div [ class "mb-8 flex" ]
-        [ div [ class "claim-photo-thumb" ]
-            [ img
-                [ onClick (ClaimMsg <| Claim.OpenPhotoModal claim)
-                , src "http://cambiatus.miskov.ru/trash.png"
+viewProofs : Translators -> Claim.Model -> Html Msg
+viewProofs { t } claim =
+    let
+        viewProofCode =
+            case claim.proofCode of
+                Just proofCode ->
+                    div [ class "ml-4" ]
+                        [ label [ class "input-label block" ]
+                            [ text (t "community.actions.form.verification_code") ]
+                        , strong [ class "text-lg block" ] [ text proofCode ]
+                        ]
+
+                Nothing ->
+                    text ""
+    in
+    case claim.proofPhoto of
+        Just url ->
+            div [ class "mb-8 flex" ]
+                [ div [ class "claim-photo-thumb" ]
+                    [ img
+                        [ onClick (ClaimMsg <| Claim.OpenPhotoModal claim)
+                        , src url
+                        ]
+                        []
+                    ]
+                , viewProofCode
                 ]
-                []
-            ]
-        , div [ class "ml-4" ]
-            [ label [ class "input-label block" ]
-                [ text "verification number"
-                ]
-            , strong [ class "text-lg block" ] [ text "82378463" ]
-            ]
-        ]
+
+        Nothing ->
+            text ""
 
 
 viewVoteButtons : Translators -> Claim.ClaimId -> Claim.ModalStatus -> Html Msg

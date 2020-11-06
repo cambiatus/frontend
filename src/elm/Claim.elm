@@ -6,14 +6,15 @@ module Claim exposing
     , Msg(..)
     , Paginated
     , claimPaginatedSelectionSet
+    , encodeClaimAction
     , encodeVerification
+    , generateVerificationCode
     , isValidated
     , isValidator
     , isVotable
     , paginatedPageInfo
     , paginatedToList
     , selectionSet
-    , tempHasPhotoProof
     , updateClaimModalStatus
     , viewClaimCard
     , viewPhotoModal
@@ -36,13 +37,15 @@ import Eos.Account
 import Graphql.OptionalArgument exposing (OptionalArgument(..))
 import Graphql.SelectionSet as SelectionSet exposing (SelectionSet, with)
 import Html exposing (Html, a, button, div, img, label, p, strong, text)
-import Html.Attributes exposing (class, classList, disabled, id, src, style)
+import Html.Attributes exposing (class, classList, disabled, href, id, src, style, target)
 import Html.Events exposing (onClick)
+import Icons
 import Json.Encode as Encode
 import Profile exposing (Profile)
 import Route exposing (Route)
 import Session.LoggedIn as LoggedIn
 import Session.Shared exposing (Translators)
+import Sha256 exposing (sha256)
 import Strftime
 import Time
 import Utils
@@ -56,6 +59,8 @@ type alias Model =
     , action : Action
     , checks : List Check
     , createdAt : DateTime
+    , proofPhoto : Maybe String
+    , proofCode : Maybe String
     }
 
 
@@ -92,7 +97,34 @@ type alias Action =
     , verificationType : VerificationType
     , objective : Objective
     , createdAt : DateTime
+    , hasProofPhoto : Bool
+    , hasProofCode : Bool
+    , instructions : Maybe String
     }
+
+
+
+-- Claim Action
+
+
+type alias ClaimAction =
+    { actionId : Int
+    , maker : Eos.Account.Name
+    , proofPhoto : String
+    , proofCode : String
+    , proofTime : Int
+    }
+
+
+encodeClaimAction : ClaimAction -> Encode.Value
+encodeClaimAction c =
+    Encode.object
+        [ ( "action_id", Encode.int c.actionId )
+        , ( "maker", Eos.Account.encodeName c.maker )
+        , ( "proof_photo", Encode.string c.proofPhoto )
+        , ( "proof_code", Encode.string c.proofCode )
+        , ( "proof_time", Encode.int c.proofTime )
+        ]
 
 
 isValidated : Model -> Eos.Account.Name -> Bool
@@ -137,6 +169,16 @@ encodeVerification claimId validator vote =
         ]
 
 
+generateVerificationCode : Int -> String -> Int -> String
+generateVerificationCode actionId makerAccountUint64 proofTimeSeconds =
+    (String.fromInt actionId
+        ++ makerAccountUint64
+        ++ String.fromInt proofTimeSeconds
+    )
+        |> sha256
+        |> String.slice 0 8
+
+
 
 -- GraphQL
 
@@ -168,6 +210,21 @@ selectionSet =
         |> with (Claim.action actionSelectionSet)
         |> with (Claim.checks (\_ -> { input = Absent }) checkSelectionSet)
         |> with Claim.createdAt
+        |> with (SelectionSet.map emptyStringToNothing Claim.proofPhoto)
+        |> with (SelectionSet.map emptyStringToNothing Claim.proofCode)
+
+
+emptyStringToNothing : Maybe String -> Maybe String
+emptyStringToNothing s =
+    case s of
+        Just "" ->
+            Nothing
+
+        Just nonEmpty ->
+            Just nonEmpty
+
+        Nothing ->
+            Nothing
 
 
 claimStatusMap : ClaimStatus.ClaimStatus -> ClaimStatus
@@ -195,6 +252,9 @@ actionSelectionSet =
         |> with Action.verificationType
         |> with (Action.objective Community.objectiveSelectionSet)
         |> with Action.createdAt
+        |> with (SelectionSet.map (Maybe.withDefault False) Action.hasProofPhoto)
+        |> with (SelectionSet.map (Maybe.withDefault False) Action.hasProofCode)
+        |> with Action.photoProofInstructions
 
 
 checkSelectionSet : SelectionSet Check Cambiatus.Object.Check
@@ -283,15 +343,6 @@ updateClaimModalStatus msg model =
             model
 
 
-{-| This is a temporary function, will be removed after implementing
-the backend part for Claims with photos.
--}
-tempHasPhotoProof : Model -> Bool
-tempHasPhotoProof claim =
-    -- TODO: replace this placeholder with the real data
-    claim.id == 41 || claim.id == 47
-
-
 {-| Claim card with a short claim overview. Used on Dashboard and Analysis pages.
 -}
 viewClaimCard : LoggedIn.Model -> Model -> Html Msg
@@ -333,23 +384,26 @@ viewClaimCard { selectedCommunity, shared, accountName } claim =
             ]
             [ div
                 [ class "flex mb-8"
-                , classList
-                    [ ( "justify-center", not <| tempHasPhotoProof claim )
-                    , ( "justify-between", tempHasPhotoProof claim )
-                    ]
+                , case claim.proofPhoto of
+                    Just _ ->
+                        class "justify-between"
+
+                    Nothing ->
+                        class "justify-center"
                 ]
                 [ Profile.view shared accountName claim.claimer
-                , if tempHasPhotoProof claim then
-                    div [ class "claim-photo-thumb" ]
-                        [ img
-                            [ Utils.onClickNoBubble (OpenPhotoModal claim)
-                            , src "http://cambiatus.miskov.ru/trash.png"
+                , case claim.proofPhoto of
+                    Just url ->
+                        div [ class "claim-photo-thumb" ]
+                            [ img
+                                [ Utils.onClickNoBubble (OpenPhotoModal claim)
+                                , src url
+                                ]
+                                []
                             ]
-                            []
-                        ]
 
-                  else
-                    text ""
+                    Nothing ->
+                        text ""
                 ]
             , div [ class "bg-gray-100 flex items-center justify-center h-6 w-32 mb-2" ]
                 [ p
@@ -395,13 +449,37 @@ viewPhotoModal loggedIn claim =
 
         body =
             [ div [ class "md:flex md:justify-start md:space-x-4" ]
-                [ img [ style "max-height" "42vh", src "http://cambiatus.miskov.ru/trash.png" ] []
-                , div []
-                    [ label [ class "mt-6 md:mt-0 input-label md:text-xl block" ]
-                        [ text "verification number"
-                        ]
-                    , strong [ class "text-xl md:text-3xl" ] [ text "82378463" ]
-                    ]
+                [ case claim.proofPhoto of
+                    Just url ->
+                        div [ class "sm:w-1/2" ]
+                            [ img
+                                [ style "max-height" "42vh"
+                                , src url
+                                ]
+                                []
+                            , a
+                                [ class "underline inline-block py-1 text-gray"
+                                , href url
+                                , target "_blank"
+                                ]
+                                [ text (t "community.actions.proof.photo_full")
+                                , Icons.externalLink "inline-block ml-1 h-3 fill-current"
+                                ]
+                            ]
+
+                    Nothing ->
+                        text ""
+                , case claim.proofCode of
+                    Just proofCode ->
+                        div []
+                            [ label [ class "mt-4 md:mt-0 input-label md:text-xl block" ]
+                                [ text (t "community.actions.form.verification_code")
+                                ]
+                            , strong [ class "text-xl md:text-3xl" ] [ text proofCode ]
+                            ]
+
+                    Nothing ->
+                        text ""
                 ]
             ]
 

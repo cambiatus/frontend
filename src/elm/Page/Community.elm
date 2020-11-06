@@ -9,18 +9,20 @@ module Page.Community exposing
     , view
     )
 
+import Api
 import Api.Graphql
 import Avatar
 import Cambiatus.Enum.VerificationType as VerificationType
-import Cambiatus.Scalar exposing (DateTime(..))
-import Community exposing (Model)
+import Claim
+import Community exposing (Action, Model)
 import Eos exposing (Symbol)
 import Eos.Account as Eos
+import File exposing (File)
 import Graphql.Http
-import Graphql.OptionalArgument exposing (OptionalArgument(..))
-import Html exposing (Html, a, button, div, hr, img, p, span, text)
-import Html.Attributes exposing (class, classList, disabled, src)
+import Html exposing (Html, a, button, div, hr, img, input, label, p, span, text)
+import Html.Attributes exposing (accept, class, classList, disabled, id, multiple, src, style, type_)
 import Html.Events exposing (onClick)
+import Http
 import I18Next exposing (t)
 import Icons
 import Json.Decode as Decode
@@ -28,6 +30,7 @@ import Json.Encode as Encode exposing (Value)
 import Page
 import Route
 import Session.LoggedIn as LoggedIn exposing (External(..), FeedbackStatus(..))
+import Session.Shared exposing (Translators)
 import Strftime
 import Task
 import Time exposing (Posix, posixToMillis)
@@ -50,13 +53,29 @@ init ({ shared } as loggedIn) symbol =
     )
 
 
+initModel : LoggedIn.Model -> Symbol -> Model
+initModel _ _ =
+    { date = Nothing
+    , pageStatus = Loading
+    , actionId = Nothing
+    , openObjective = Nothing
+    , claimConfirmationModalStatus = Closed
+    , proofs = Nothing
+    }
+
+
 
 -- SUBSCRIPTIONS
 
 
 subscriptions : Model -> Sub Msg
-subscriptions _ =
-    Sub.none
+subscriptions model =
+    case model.proofs of
+        Just (Proof _ (Just _)) ->
+            Time.every 1000 Tick
+
+        _ ->
+            Sub.none
 
 
 
@@ -65,48 +84,49 @@ subscriptions _ =
 
 type alias Model =
     { date : Maybe Posix
-    , community : LoadStatus
-    , members : List Member
+    , pageStatus : PageStatus
+    , actionId : Maybe Int
     , openObjective : Maybe Int
-    , modalStatus : ModalStatus
-    , invitations : String
-    , symbol : Symbol
+    , claimConfirmationModalStatus : ClaimConfirmationModalStatus
+    , proofs : Maybe Proof
     }
 
 
-initModel : LoggedIn.Model -> Symbol -> Model
-initModel _ symbol =
-    { date = Nothing
-    , community = Loading
-    , members = []
-    , openObjective = Nothing
-    , modalStatus = Closed
-    , invitations = ""
-    , symbol = symbol
+type Proof
+    = Proof ProofPhotoStatus (Maybe ProofCode)
+
+
+type alias ProofCode =
+    { code : Maybe String
+    , claimTimestamp : Int
+    , secondsAfterClaim : Int
+    , availabilityPeriod : Int
     }
 
 
-type LoadStatus
+type PageStatus
     = Loading
-    | Loaded Community.Model EditStatus
+    | Loaded Community.Model ActiveSection
     | NotFound
     | Failed (Graphql.Http.Error (Maybe Community.Model))
 
 
-type EditStatus
-    = NoEdit
+type ActiveSection
+    = ObjectivesAndActions
+    | ClaimWithProofs Community.Action
 
 
-type ModalStatus
-    = Open Bool Int -- Action id
+type ClaimConfirmationModalStatus
+    = Open Community.Action
+    | InProgress
     | Closed
 
 
-type alias Member =
-    { id : String
-    , accountName : String
-    , nameWithAt : String
-    }
+type ProofPhotoStatus
+    = NoPhotoAdded
+    | Uploading
+    | UploadFailed Http.Error
+    | Uploaded String
 
 
 
@@ -123,7 +143,7 @@ view loggedIn model =
             text (t s)
 
         title =
-            case model.community of
+            case model.pageStatus of
                 Loaded community _ ->
                     community.title
 
@@ -134,7 +154,7 @@ view loggedIn model =
                     t "community.not_found"
 
         content =
-            case model.community of
+            case model.pageStatus of
                 Loading ->
                     Page.fullPageLoading
 
@@ -144,43 +164,196 @@ view loggedIn model =
                 Failed e ->
                     Page.fullPageGraphQLError (t "community.objectives.title") e
 
-                Loaded community editStatus ->
-                    let
-                        canEdit =
-                            LoggedIn.isAccount community.creator loggedIn
-                    in
-                    div []
-                        [ viewHeader loggedIn community
-                        , div [ class "bg-white p-20" ]
-                            [ div [ class "flex flex-wrap w-full items-center" ]
-                                [ p [ class "text-4xl font-bold" ]
-                                    [ text community.title ]
-                                ]
-                            , p [ class "text-grey-200 text-sm" ] [ text community.description ]
-                            ]
-                        , if community.hasObjectives then
-                            div [ class "container mx-auto px-4" ]
-                                [ viewClaimModal loggedIn model
-                                , div [ class "bg-white py-6 sm:py-8 px-3 sm:px-6 rounded-lg mt-4" ]
-                                    (Page.viewTitle (t "community.objectives.title_plural")
-                                        :: List.indexedMap (viewObjective loggedIn model community)
-                                            community.objectives
-                                        ++ [ if canEdit then
-                                                viewObjectiveNew loggedIn editStatus community.symbol
+                Loaded community pageStatus ->
+                    case pageStatus of
+                        ObjectivesAndActions ->
+                            let
+                                canEdit =
+                                    LoggedIn.isAccount community.creator loggedIn
+                            in
+                            div []
+                                [ viewHeader loggedIn community
+                                , div [ class "bg-white pt-20 pb-10 sm:pb-20" ]
+                                    [ div [ class "container mx-auto" ]
+                                        [ div [ class "px-4 text-center" ]
+                                            [ p [ class "text-3xl text-black sm:text-4xl leading-tight font-bold mb-4" ]
+                                                [ text community.title ]
+                                            , p [ class "text-grey-200 text-sm" ] [ text community.description ]
+                                            ]
+                                        ]
+                                    ]
+                                , if community.hasObjectives then
+                                    div [ class "container mx-auto px-4" ]
+                                        [ viewClaimConfirmation loggedIn model
+                                        , div [ class "bg-white py-6 sm:py-8 px-3 sm:px-6 rounded-lg mt-4" ]
+                                            (Page.viewTitle (t "community.objectives.title_plural")
+                                                :: List.indexedMap (viewObjective loggedIn model community)
+                                                    community.objectives
+                                                ++ [ if canEdit then
+                                                        viewCreateNewObjective
+                                                            loggedIn.shared.translators
+                                                            community.symbol
 
-                                             else
-                                                text ""
-                                           ]
-                                    )
+                                                     else
+                                                        text ""
+                                                   ]
+                                            )
+                                        ]
+
+                                  else
+                                    text ""
                                 ]
 
-                          else
-                            text ""
-                        ]
+                        ClaimWithProofs action ->
+                            viewClaimWithProofs model loggedIn action
     in
     { title = title
-    , content = content
+    , content =
+        div
+            -- id is used to scroll into view with a port
+            [ id "communityPage" ]
+            [ content ]
     }
+
+
+viewHeader : LoggedIn.Model -> Community.Model -> Html Msg
+viewHeader { shared } community =
+    div []
+        [ div [ class "h-16 w-full bg-indigo-500 flex px-4 items-center" ]
+            [ a
+                [ class "items-center flex absolute"
+                , Route.href Route.Dashboard
+                ]
+                [ Icons.back ""
+                , p [ class "text-white text-sm ml-2" ]
+                    [ text (t shared.translations "back")
+                    ]
+                ]
+            , p [ class "text-white mx-auto" ] [ text community.title ]
+            ]
+        , div [ class "h-24 bg-indigo-500 flex flex-wrap content-end" ]
+            [ div [ class "h-24 w-24 rounded-full mx-auto pt-12" ]
+                [ img
+                    [ src community.logo
+                    , class "object-scale-down"
+                    ]
+                    []
+                ]
+            ]
+        ]
+
+
+viewClaimWithProofs : Model -> LoggedIn.Model -> Action -> Html Msg
+viewClaimWithProofs model { shared } action =
+    let
+        { t } =
+            shared.translators
+
+        isUploadingInProgress =
+            case model.proofs of
+                Just (Proof Uploading _) ->
+                    True
+
+                _ ->
+                    False
+    in
+    div [ class "bg-white border-t border-gray-300" ]
+        [ div [ class "container p-4 mx-auto" ]
+            [ div [ class "heading-bold leading-7 font-bold" ] [ text <| t "community.actions.proof.title" ]
+            , p [ class "mb-4" ]
+                [ text <|
+                    Maybe.withDefault "" action.photoProofInstructions
+                ]
+            , case model.proofs of
+                Just (Proof _ (Just { code, secondsAfterClaim, availabilityPeriod })) ->
+                    case code of
+                        Just c ->
+                            viewProofCode
+                                shared.translators
+                                c
+                                secondsAfterClaim
+                                availabilityPeriod
+
+                        _ ->
+                            text ""
+
+                _ ->
+                    text ""
+            , div [ class "mb-4" ]
+                [ span [ class "input-label block mb-2" ]
+                    [ text (t "community.actions.proof.photo") ]
+                , case model.proofs of
+                    Just (Proof photoStatus _) ->
+                        viewPhotoUploader shared.translators photoStatus
+
+                    _ ->
+                        text ""
+                ]
+            , div [ class "md:flex" ]
+                [ button
+                    [ class "modal-cancel"
+                    , onClick
+                        (if isUploadingInProgress then
+                            NoOp
+
+                         else
+                            CloseProofSection CancelClicked
+                        )
+                    , classList [ ( "button-disabled", isUploadingInProgress ) ]
+                    , disabled isUploadingInProgress
+                    ]
+                    [ text (t "menu.cancel") ]
+                , button
+                    [ class "modal-accept"
+                    , classList [ ( "button-disabled", isUploadingInProgress ) ]
+                    , onClick
+                        (if isUploadingInProgress then
+                            NoOp
+
+                         else
+                            ClaimAction action
+                        )
+                    , disabled isUploadingInProgress
+                    ]
+                    [ text (t "menu.send") ]
+                ]
+            ]
+        ]
+
+
+viewProofCode : Translators -> String -> Int -> Int -> Html msg
+viewProofCode { t } proofCode secondsAfterClaim proofCodeValiditySeconds =
+    let
+        remainingSeconds =
+            proofCodeValiditySeconds - secondsAfterClaim
+
+        timerMinutes =
+            remainingSeconds // 60
+
+        timerSeconds =
+            remainingSeconds - (timerMinutes * 60)
+
+        toString timeVal =
+            if timeVal < 10 then
+                "0" ++ String.fromInt timeVal
+
+            else
+                String.fromInt timeVal
+
+        timer =
+            toString timerMinutes ++ ":" ++ toString timerSeconds
+    in
+    div [ class "mb-4" ]
+        [ span [ class "input-label block mb-1" ]
+            [ text (t "community.actions.form.verification_code") ]
+        , div [ class "text-2xl text-black font-bold inline-block align-middle mr-2" ]
+            [ text proofCode ]
+        , span [ class "whitespace-no-wrap text-body rounded-full bg-lightred px-3 py-1 text-white" ]
+            [ text (t "community.actions.proof.code_period_label")
+            , text " "
+            , text timer
+            ]
+        ]
 
 
 
@@ -217,16 +390,16 @@ viewObjective loggedIn model metadata index objective =
     in
     div [ class "my-2" ]
         [ div
-            [ class "px-3 py-4 bg-indigo-500 flex flex-col sm:flex-row sm:items-center sm:h-10"
+            [ class "px-3 py-4 bg-indigo-500 flex flex-col sm:flex-row sm:items-center sm:h-10 cursor-pointer"
+            , if isOpen then
+                onClick ClickedCloseObjective
+
+              else
+                onClick (ClickedOpenObjective index)
             ]
             [ div [ class "sm:flex-grow-7 sm:w-5/12" ]
                 [ div
                     [ class "truncate overflow-hidden whitespace-no-wrap text-white font-medium text-sm overflow-hidden sm:flex-grow-8 sm:leading-normal sm:text-lg"
-                    , if isOpen then
-                        onClick ClickedCloseObjective
-
-                      else
-                        onClick (ClickedOpenObjective index)
                     ]
                     [ text objective.description ]
                 ]
@@ -257,16 +430,11 @@ viewObjective loggedIn model metadata index objective =
         ]
 
 
-viewObjectiveNew : LoggedIn.Model -> EditStatus -> Symbol -> Html Msg
-viewObjectiveNew loggedIn edit communityId =
-    let
-        t s =
-            I18Next.t loggedIn.shared.translations s
-    in
+viewCreateNewObjective : Translators -> Symbol -> Html Msg
+viewCreateNewObjective { t } communityId =
     a
         [ class "border border-dashed border-button-orange mt-6 w-full flex flex-row content-start px-4 py-2"
         , Route.href (Route.NewObjective communityId)
-        , disabled (edit /= NoEdit)
         ]
         [ span [ class "px-2 text-orange" ] [ text "+" ]
         , span [ class "text-orange" ] [ text (t "community.objectives.new") ]
@@ -339,10 +507,10 @@ viewAction loggedIn metadata maybeDate action =
 
         ( claimColors, claimText ) =
             if pastDeadline || (action.usagesLeft < 1 && action.usages > 0) then
-                ( " text-grey bg-grey cursor-not-allowed", "dashboard.closed" )
+                ( " button-disabled", "dashboard.closed" )
 
             else
-                ( " text-white button button-primary", "dashboard.claim" )
+                ( " button button-primary", "dashboard.claim" )
 
         claimSize =
             if canEdit then
@@ -400,6 +568,25 @@ viewAction loggedIn metadata maybeDate action =
 
         isClosed =
             pastDeadline || (action.usages > 0 && action.usagesLeft == 0)
+
+        viewClaimButton =
+            button
+                [ class ("h-10 uppercase rounded-lg ml-1" ++ claimColors ++ claimSize)
+                , onClick
+                    (if isClosed then
+                        NoOp
+
+                     else
+                        OpenClaimConfirmation action
+                    )
+                ]
+                [ if action.hasProofPhoto then
+                    span [ class "inline-block w-4 align-middle mr-2" ] [ Icons.camera ]
+
+                  else
+                    text ""
+                , span [ class "inline-block align-middle" ] [ text_ claimText ]
+                ]
     in
     if action.isCompleted then
         text ""
@@ -450,17 +637,7 @@ viewAction loggedIn metadata maybeDate action =
                         ]
                     , div [ class "hidden sm:flex sm:visible flex-row justify-end flex-grow-1" ]
                         [ if validationType == "CLAIMABLE" then
-                            button
-                                [ class ("h-10 uppercase rounded-lg ml-1" ++ claimColors ++ claimSize)
-                                , onClick
-                                    (if isClosed then
-                                        NoOp
-
-                                     else
-                                        OpenClaimConfirmation action.id
-                                    )
-                                ]
-                                [ text_ claimText ]
+                            viewClaimButton
 
                           else
                             text ""
@@ -469,11 +646,7 @@ viewAction loggedIn metadata maybeDate action =
                 ]
             , div [ class "flex flex-row mt-8 justify-between sm:hidden" ]
                 [ if validationType == "CLAIMABLE" then
-                    button
-                        [ class ("h-10 uppercase rounded-lg ml-1" ++ claimColors ++ claimSize)
-                        , onClick (OpenClaimConfirmation action.id)
-                        ]
-                        [ text_ claimText ]
+                    viewClaimButton
 
                   else
                     text ""
@@ -481,74 +654,114 @@ viewAction loggedIn metadata maybeDate action =
             ]
 
 
-viewClaimModal : LoggedIn.Model -> Model -> Html Msg
-viewClaimModal loggedIn model =
-    case model.modalStatus of
-        Open isLoading actionId ->
-            let
-                t s =
-                    I18Next.t loggedIn.shared.translations
-                        s
+viewClaimConfirmation : LoggedIn.Model -> Model -> Html Msg
+viewClaimConfirmation loggedIn model =
+    let
+        t s =
+            I18Next.t loggedIn.shared.translations
+                s
 
-                text_ s =
-                    text (t s)
-            in
+        text_ s =
+            text (t s)
+
+        modalContent acceptMsg isInProgress =
             div []
-                [ Modal.initWith { closeMsg = CloseClaimConfirmation, isVisible = True }
+                [ Modal.initWith
+                    { closeMsg = CloseClaimConfirmation
+                    , isVisible = True
+                    }
                     |> Modal.withHeader (t "claim.modal.title")
                     |> Modal.withBody [ text_ "dashboard.check_claim.body" ]
                     |> Modal.withFooter
                         [ button
                             [ class "modal-cancel"
-                            , if not isLoading then
-                                onClick CloseClaimConfirmation
+                            , classList [ ( "button-disabled", isInProgress ) ]
+                            , onClick
+                                (if isInProgress then
+                                    NoOp
 
-                              else
-                                onClick NoOp
-                            , disabled isLoading
+                                 else
+                                    CloseClaimConfirmation
+                                )
+                            , disabled isInProgress
                             ]
                             [ text_ "dashboard.check_claim.no" ]
                         , button
                             [ class "modal-accept"
-                            , if not isLoading then
-                                onClick (ClaimAction actionId)
+                            , classList [ ( "button-disabled", isInProgress ) ]
+                            , onClick
+                                (if isInProgress then
+                                    NoOp
 
-                              else
-                                onClick NoOp
-                            , disabled isLoading
+                                 else
+                                    acceptMsg
+                                )
+                            , disabled isInProgress
                             ]
-                            [ text_ "dashboard.check_claim.yes" ]
+                            [ text (t "dashboard.check_claim.yes")
+                            ]
                         ]
                     |> Modal.toHtml
                 ]
+    in
+    case model.claimConfirmationModalStatus of
+        Open action ->
+            let
+                acceptMsg =
+                    if action.hasProofPhoto then
+                        OpenProofSection action
+
+                    else
+                        ClaimAction action
+            in
+            modalContent acceptMsg False
+
+        InProgress ->
+            modalContent NoOp True
 
         Closed ->
             text ""
 
 
-viewHeader : LoggedIn.Model -> Community.Model -> Html Msg
-viewHeader { shared } community =
-    div []
-        [ div [ class "h-16 w-full bg-indigo-500 flex px-4 items-center" ]
-            [ a
-                [ class "items-center flex absolute"
-                , Route.href Route.Dashboard
-                ]
-                [ Icons.back ""
-                , p [ class "text-white text-sm ml-2" ]
-                    [ text (t shared.translations "back")
+viewPhotoUploader : Translators -> ProofPhotoStatus -> Html Msg
+viewPhotoUploader { t } proofPhotoStatus =
+    let
+        uploadedAttrs =
+            case proofPhotoStatus of
+                Uploaded url ->
+                    [ class " bg-no-repeat bg-center bg-cover"
+                    , style "background-image" ("url(" ++ url ++ ")")
                     ]
-                ]
-            , p [ class "text-white mx-auto" ] [ text community.title ]
-            ]
-        , div [ class "h-24 lg:h-56 bg-indigo-500 flex flex-wrap content-end" ]
-            [ div [ class "h-24 w-24 rounded-full mx-auto pt-12" ]
-                [ img
-                    [ src community.logo
-                    , class "object-scale-down"
-                    ]
+
+                _ ->
                     []
-                ]
+    in
+    label
+        (class "relative bg-purple-500 w-full md:w-2/3 h-56 rounded-sm flex justify-center items-center cursor-pointer"
+            :: uploadedAttrs
+        )
+        [ input
+            [ class "hidden-img-input"
+            , type_ "file"
+            , accept "image/*"
+            , Page.onFileChange EnteredPhoto
+            , multiple False
+            ]
+            []
+        , div []
+            [ case proofPhotoStatus of
+                Uploading ->
+                    div [ class "spinner spinner-light" ] []
+
+                Uploaded _ ->
+                    span [ class "absolute bottom-0 right-0 mr-4 mb-4 bg-orange-300 w-8 h-8 p-2 rounded-full" ]
+                        [ Icons.camera ]
+
+                _ ->
+                    div [ class "text-white text-body font-bold text-center" ]
+                        [ div [ class "w-10 mx-auto mb-2" ] [ Icons.camera ]
+                        , div [] [ text (t "community.actions.proof.upload_photo_hint") ]
+                        ]
             ]
         ]
 
@@ -569,10 +782,24 @@ type Msg
     | ClickedOpenObjective Int
     | ClickedCloseObjective
       -- Action
-    | OpenClaimConfirmation Int
+    | OpenClaimConfirmation Community.Action
     | CloseClaimConfirmation
-    | ClaimAction Int
+    | ClaimAction Community.Action
     | GotClaimActionResponse (Result Value String)
+      -- Proofs
+    | OpenProofSection Community.Action
+    | CloseProofSection ReasonToCloseProofSection
+    | GotProofTime Int Posix
+    | GetUint64Name String
+    | GotUint64Name (Result Value String)
+    | Tick Time.Posix
+    | EnteredPhoto (List File)
+    | CompletedPhotoUpload (Result Http.Error String)
+
+
+type ReasonToCloseProofSection
+    = CancelClicked
+    | TimerExpired
 
 
 update : Msg -> Model -> LoggedIn.Model -> UpdateResult
@@ -588,16 +815,98 @@ update msg model loggedIn =
         GotTime date ->
             UR.init { model | date = Just date }
 
+        GetUint64Name _ ->
+            model |> UR.init
+
+        GotUint64Name (Ok uint64name) ->
+            case ( model.proofs, model.actionId ) of
+                ( Just (Proof proofPhoto (Just proofCode)), Just actionId ) ->
+                    let
+                        verificationCode =
+                            Claim.generateVerificationCode actionId uint64name proofCode.claimTimestamp
+
+                        newProofCode =
+                            Just
+                                { proofCode
+                                    | code = Just verificationCode
+                                }
+                    in
+                    { model | proofs = Just (Proof proofPhoto newProofCode) }
+                        |> UR.init
+
+                _ ->
+                    model
+                        |> UR.init
+
+        GotUint64Name (Err _) ->
+            UR.init model
+
+        Tick timer ->
+            case model.proofs of
+                Just (Proof proofPhoto (Just proofCode)) ->
+                    let
+                        secondsAfterClaim =
+                            (Time.posixToMillis timer // 1000) - proofCode.claimTimestamp
+
+                        isProofCodeActive =
+                            (proofCode.availabilityPeriod - secondsAfterClaim) > 0
+                    in
+                    if isProofCodeActive then
+                        let
+                            newProofCode =
+                                Just
+                                    { proofCode
+                                        | secondsAfterClaim = secondsAfterClaim
+                                    }
+                        in
+                        { model | proofs = Just (Proof proofPhoto newProofCode) }
+                            |> UR.init
+
+                    else
+                        update (CloseProofSection TimerExpired) model loggedIn
+
+                _ ->
+                    model |> UR.init
+
+        GotProofTime actionId posix ->
+            let
+                initProofCodeParts =
+                    Just
+                        { code = Nothing
+                        , claimTimestamp = Time.posixToMillis posix // 1000
+                        , secondsAfterClaim = 0
+                        , availabilityPeriod = 30 * 60
+                        }
+            in
+            { model
+                | actionId = Just actionId
+                , proofs = Just (Proof NoPhotoAdded initProofCodeParts)
+            }
+                |> UR.init
+                |> UR.addPort
+                    { responseAddress = GetUint64Name (Eos.nameToString loggedIn.accountName)
+                    , responseData = Encode.null
+                    , data =
+                        Encode.object
+                            [ ( "name", Encode.string "accountNameToUint64" )
+                            , ( "accountName", Encode.string (Eos.nameToString loggedIn.accountName) )
+                            ]
+                    }
+
         CompletedLoadCommunity (Ok community) ->
             case community of
                 Just c ->
-                    UR.init { model | community = Loaded c NoEdit }
+                    { model
+                        | pageStatus = Loaded c ObjectivesAndActions
+                    }
+                        |> UR.init
 
                 Nothing ->
-                    UR.init { model | community = NotFound }
+                    { model | pageStatus = NotFound }
+                        |> UR.init
 
         CompletedLoadCommunity (Err err) ->
-            { model | community = Failed err }
+            { model | pageStatus = Failed err }
                 |> UR.init
                 |> UR.logGraphqlError msg err
 
@@ -609,24 +918,169 @@ update msg model loggedIn =
             { model | openObjective = Nothing }
                 |> UR.init
 
-        OpenClaimConfirmation actionId ->
-            { model | modalStatus = Open False actionId }
+        OpenClaimConfirmation action ->
+            { model | claimConfirmationModalStatus = Open action }
                 |> UR.init
+
+        OpenProofSection action ->
+            let
+                runProofCodeTimer =
+                    Task.perform (GotProofTime action.id) Time.now
+            in
+            if action.hasProofPhoto then
+                { model
+                    | pageStatus =
+                        case model.pageStatus of
+                            Loaded community _ ->
+                                Loaded community (ClaimWithProofs action)
+
+                            _ ->
+                                model.pageStatus
+                    , claimConfirmationModalStatus = Closed
+                    , proofs = Just (Proof NoPhotoAdded Nothing)
+                }
+                    |> UR.init
+                    |> UR.addCmd
+                        (if action.hasProofCode then
+                            runProofCodeTimer
+
+                         else
+                            Cmd.none
+                        )
+                    |> UR.addPort
+                        { responseAddress = NoOp
+                        , responseData = Encode.null
+                        , data =
+                            Encode.object
+                                [ ( "id", Encode.string "communityPage" )
+                                , ( "name", Encode.string "scrollIntoView" )
+                                ]
+                        }
+
+            else
+                model
+                    |> UR.init
+
+        EnteredPhoto (file :: _) ->
+            let
+                uploadImage =
+                    Api.uploadImage loggedIn.shared file CompletedPhotoUpload
+
+                newProofs =
+                    case model.proofs of
+                        Just (Proof _ proofCode) ->
+                            Just (Proof Uploading proofCode)
+
+                        _ ->
+                            Nothing
+            in
+            { model
+                | proofs = newProofs
+            }
+                |> UR.init
+                |> UR.addCmd uploadImage
+                |> UR.addExt HideFeedback
+
+        EnteredPhoto [] ->
+            UR.init model
+
+        CompletedPhotoUpload (Ok url) ->
+            let
+                newProofs =
+                    case model.proofs of
+                        Just (Proof _ proofCode) ->
+                            Just (Proof (Uploaded url) proofCode)
+
+                        _ ->
+                            Nothing
+            in
+            { model | proofs = newProofs }
+                |> UR.init
+
+        CompletedPhotoUpload (Err error) ->
+            let
+                newProofs =
+                    case model.proofs of
+                        Just (Proof _ proofCode) ->
+                            Just (Proof (UploadFailed error) proofCode)
+
+                        _ ->
+                            Nothing
+            in
+            { model | proofs = newProofs }
+                |> UR.init
+                |> UR.logHttpError msg error
 
         CloseClaimConfirmation ->
-            { model | modalStatus = Closed }
+            { model | claimConfirmationModalStatus = Closed }
                 |> UR.init
 
-        ClaimAction actionId ->
+        CloseProofSection reason ->
+            { model
+                | pageStatus =
+                    case model.pageStatus of
+                        Loaded community (ClaimWithProofs _) ->
+                            Loaded community ObjectivesAndActions
+
+                        _ ->
+                            model.pageStatus
+                , claimConfirmationModalStatus = Closed
+                , proofs = Nothing
+            }
+                |> UR.init
+                |> UR.addExt
+                    (case reason of
+                        TimerExpired ->
+                            ShowFeedback LoggedIn.Failure (t "community.actions.proof.time_expired")
+
+                        CancelClicked ->
+                            HideFeedback
+                    )
+
+        ClaimAction action ->
             let
+                hasPhotoError =
+                    case model.proofs of
+                        Just (Proof (Uploaded _) _) ->
+                            False
+
+                        Just (Proof _ _) ->
+                            -- Error: photo wasn't uploaded while claiming with proof
+                            True
+
+                        Nothing ->
+                            False
+
                 newModel =
-                    { model | modalStatus = Open True actionId }
+                    case model.proofs of
+                        Just (Proof _ _) ->
+                            -- Claim with proof has no confirmation
+                            model
+
+                        Nothing ->
+                            { model | claimConfirmationModalStatus = InProgress }
+
+                ( proofPhotoUrl, proofCode_, proofTime ) =
+                    case model.proofs of
+                        Just (Proof (Uploaded url) (Just { code, claimTimestamp })) ->
+                            ( url, Maybe.withDefault "" code, claimTimestamp )
+
+                        Just (Proof (Uploaded url) Nothing) ->
+                            ( url, "", 0 )
+
+                        _ ->
+                            ( "", "", 0 )
             in
-            if LoggedIn.isAuth loggedIn then
+            if hasPhotoError then
+                model
+                    |> UR.init
+                    |> UR.addExt (ShowFeedback LoggedIn.Failure (t "community.actions.proof.no_photo_error"))
+
+            else if LoggedIn.isAuth loggedIn then
                 newModel
                     |> UR.init
                     |> UR.addPort
-                        { responseAddress = ClaimAction actionId
+                        { responseAddress = ClaimAction action
                         , responseData = Encode.null
                         , data =
                             Eos.encodeTransaction
@@ -637,10 +1091,13 @@ update msg model loggedIn =
                                         , permissionName = Eos.samplePermission
                                         }
                                   , data =
-                                        { actionId = actionId
+                                        { actionId = action.id
                                         , maker = loggedIn.accountName
+                                        , proofPhoto = proofPhotoUrl
+                                        , proofCode = proofCode_
+                                        , proofTime = proofTime
                                         }
-                                            |> Community.encodeClaimAction
+                                            |> Claim.encodeClaimAction
                                   }
                                 ]
                         }
@@ -648,18 +1105,26 @@ update msg model loggedIn =
             else
                 newModel
                     |> UR.init
-                    |> UR.addExt (Just (ClaimAction actionId) |> RequiredAuthentication)
+                    |> UR.addExt (Just (ClaimAction action) |> RequiredAuthentication)
 
         GotClaimActionResponse (Ok _) ->
             { model
-                | modalStatus = Closed
+                | claimConfirmationModalStatus = Closed
+                , pageStatus =
+                    case model.pageStatus of
+                        Loaded community (ClaimWithProofs _) ->
+                            Loaded community ObjectivesAndActions
+
+                        _ ->
+                            model.pageStatus
+                , proofs = Nothing
             }
                 |> UR.init
                 |> UR.addExt (ShowFeedback LoggedIn.Success (t "dashboard.check_claim.success"))
 
         GotClaimActionResponse (Err _) ->
             { model
-                | modalStatus = Closed
+                | claimConfirmationModalStatus = Closed
             }
                 |> UR.init
                 |> UR.addExt (ShowFeedback LoggedIn.Failure (t "dashboard.check_claim.failure"))
@@ -679,6 +1144,17 @@ jsAddressToMsg addr val =
                 |> Result.map (Just << GotClaimActionResponse)
                 |> Result.withDefault Nothing
 
+        "GetUint64Name" :: [] ->
+            Decode.decodeValue
+                (Decode.oneOf
+                    [ Decode.field "uint64name" Decode.string |> Decode.map Ok
+                    , Decode.succeed (Err val)
+                    ]
+                )
+                val
+                |> Result.map (Just << GotUint64Name)
+                |> Result.withDefault Nothing
+
         _ ->
             Nothing
 
@@ -692,6 +1168,12 @@ msgToString msg =
         GotTime _ ->
             [ "GotTime" ]
 
+        Tick _ ->
+            [ "Tick" ]
+
+        GotProofTime _ _ ->
+            [ "GotProofTime" ]
+
         CompletedLoadCommunity r ->
             [ "CompletedLoadCommunity", UR.resultToString r ]
 
@@ -701,6 +1183,18 @@ msgToString msg =
         ClickedCloseObjective ->
             [ "ClickedCloseObjective" ]
 
+        OpenProofSection _ ->
+            [ "OpenAddPhotoProof" ]
+
+        CloseProofSection _ ->
+            [ "CloseAddPhotoProof" ]
+
+        EnteredPhoto _ ->
+            [ "EnteredPhoto" ]
+
+        CompletedPhotoUpload r ->
+            [ "CompletedPhotoUpload", UR.resultToString r ]
+
         OpenClaimConfirmation _ ->
             [ "OpenClaimConfirmation" ]
 
@@ -709,6 +1203,12 @@ msgToString msg =
 
         ClaimAction _ ->
             [ "ClaimAction" ]
+
+        GetUint64Name _ ->
+            [ "GetUint64Name" ]
+
+        GotUint64Name n ->
+            [ "GotClaimActionResponse", UR.resultToString n ]
 
         GotClaimActionResponse r ->
             [ "GotClaimActionResponse", UR.resultToString r ]
