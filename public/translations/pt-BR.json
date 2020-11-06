@@ -638,7 +638,7 @@
   "dashboard": {
     "back": "Voltar",
     "transfer": "Transferir para um amigo",
-    "explore": "Sobre essa comunidade",
+    "explore": "Como ganhar {{symbol}}",
     "invite": "Convide seus amigos",
     "sorry": "Desculpe!",
     "action_rejected": "Sua ação foi rejeitada",

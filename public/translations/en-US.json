@@ -633,7 +633,7 @@
   "dashboard": {
     "back": "Back",
     "transfer": "Transfer to a friend",
-    "explore": "About this community",
+    "explore": "How to earn {{symbol}}",
     "invite": "Invite your friends",
     "sorry": "Sorry!",
     "action_rejected": "Your action was rejected",
