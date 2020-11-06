@@ -674,7 +674,7 @@
       "body": "Do you really want to claim this action?",
       "yes": "Yes, claim",
       "no": "No, cancel",
-      "success": "Claim successful, please wait for approval",
+      "success": "Congrats! You are close to earn your {{symbolCode}}. We are reviewing your action",
       "failure": "Something went wrong while trying to process your claim, please try again later"
     }
   },

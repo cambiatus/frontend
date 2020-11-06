@@ -104,7 +104,7 @@ salesSelection =
         |> with (Eos.nameSelectionSet Cambiatus.Object.Sale.creatorId)
         |> with (Eos.nameSelectionSet Cambiatus.Object.Sale.createdEosAccount)
         |> with Cambiatus.Object.Sale.price
-        |> with (Cambiatus.Object.Sale.community Eos.symbolSelectionSet)
+        |> with (Eos.symbolSelectionSet Cambiatus.Object.Sale.communityId)
         |> SelectionSet.hardcoded (Just <| 0)
         |> with Cambiatus.Object.Sale.image
         |> with Cambiatus.Object.Sale.units

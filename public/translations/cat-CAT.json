@@ -675,7 +675,7 @@
       "body": "Vols realment reclamar aquesta acció?",
       "yes": "Sí, reclameu",
       "no": "No, cancel·la",
-      "success": "Reclamar que tingui èxit, espereu l’aprovació",
+      "success": "Felicitats! Esteu a prop de guanyar el vostre {{symbolCode}}. Estem revisant la vostra acció",
       "failure": "Alguna cosa no va funcionar correctament mentre intenteu processar la vostra reclamació. Torneu-ho a provar més endavant"
     }
   },
