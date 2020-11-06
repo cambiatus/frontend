@@ -412,6 +412,7 @@
     "actions": {
       "title": "Ação",
       "create_success": "Ação criada com sucesso",
+      "save_success": "A ação foi salva com sucesso",
       "last_title": "Últimas Ações",
       "loading_error": "Alguma coisa deu errado ao carregar as ações.",
       "no_actions_yet": "Nenhuma ação.",
@@ -439,6 +440,15 @@
       "completed": "Completa",
       "closed": "Encerrada",
       "edit": "Editar ação",
+      "proof": {
+        "title": "Esta ação requer uma prova fotográfica",
+        "photo": "Foto",
+        "photo_full": "ver imagem inteira",
+        "upload_photo_hint": "Toque para tirar uma foto",
+        "code_period_label": "o código é válido para",
+        "no_photo_error": "Por favor, adicione uma foto para confirmar sua reivindicação.",
+        "time_expired": "O tempo para a reclamação expirou."
+      },
       "form": {
         "not_found": "Ação não encontrada",
         "description_label": "Descrição",
@@ -469,6 +479,11 @@
         "usages_placeholder": "Digite um número",
         "date_label": "Escolha a data",
         "quantity_label": "Escolha a quantidade de usos",
+        "photo_validation": "Validação de foto",
+        "photo_validation_hint": "Os usuários devem enviar uma foto realizando a tarefa para que o sinistro seja válido.",
+        "verification_code": "Código de verificação",
+        "verification_code_hint": "Os usuários terão que enviar um código de verificação exclusivo com a foto para que a reclamação seja válida.",
+        "verification_instructions": "Escreva aqui instruções para os usuários",
         "usages_left_label": "Usos restantes",
         "mark_completed": "Finalizar ação",
         "errors": {
@@ -729,6 +744,7 @@
     "disapprove": "Reprovar",
     "approve": "Aprovar",
     "no_results_found": "Nenhum resultado encontrado",
+    "voteTitle": "Você aprova ou desaprova esta ação?",
     "modal": {
       "title": "Sob análise",
       "message_disapprove": "Você realmente deseja reprovar esta reivindicação?",

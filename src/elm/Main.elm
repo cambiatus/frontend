@@ -795,12 +795,12 @@ changeRouteTo maybeRoute model =
                 |> withLoggedIn (Route.EditObjective symbol objectiveId)
 
         Just (Route.NewAction symbol objectiveId) ->
-            (\l -> ActionEditor.initNew l symbol objectiveId)
+            (\l -> ActionEditor.init l symbol objectiveId Nothing)
                 >> updateStatusWith ActionEditor GotActionEditorMsg model
                 |> withLoggedIn (Route.NewAction symbol objectiveId)
 
         Just (Route.EditAction symbol objectiveId actionId) ->
-            (\l -> ActionEditor.initEdit l symbol objectiveId actionId)
+            (\l -> ActionEditor.init l symbol objectiveId (Just actionId))
                 >> updateStatusWith ActionEditor GotActionEditorMsg model
                 |> withLoggedIn (Route.EditAction symbol objectiveId actionId)
 

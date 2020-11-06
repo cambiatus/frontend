@@ -408,6 +408,7 @@
     "actions": {
       "title": "Acció",
       "create_success": "Acció creada amb èxit",
+      "save_success": "L'acció s'ha desat correctament",
       "last_title": "Darreres accions",
       "loading_error": "Alguna cosa ha sortit malament mentre recuperàvem les accions.",
       "no_actions_yet": "Encara no hi ha accions.",
@@ -435,6 +436,15 @@
       "completed": "Completat",
       "closed": "Tancat",
       "edit": "Edita l'acció",
+      "proof": {
+        "title": "Aquesta acció requereix proves d’assoliment",
+        "photo": "Foto",
+        "photo_full": "veure imatge completa",
+        "upload_photo_hint": "Toca per fer una foto",
+        "code_period_label": "el codi és vàlid per a",
+        "no_photo_error": "Afegiu una foto per confirmar la vostra reclamació.",
+        "time_expired": "El temps per a la reclamació ha caducat."
+      },
       "form": {
         "not_found": "Acció no trobada",
         "description_label": "Descripció",
@@ -465,6 +475,11 @@
         "usages_placeholder": "Escriviu un número",
         "date_label": "Tria la data",
         "quantity_label": "Tria la quantitat",
+        "photo_validation": "Validació de fotos",
+        "photo_validation_hint": "Els usuaris han d'enviar una foto realitzant la tasca perquè la reclamació sigui vàlida.",
+        "verification_code": "Codi de verificació",
+        "verification_code_hint": "Els usuaris hauran d’enviar un codi de verificació únic amb la foto perquè la reclamació sigui vàlida.",
+        "verification_instructions": "Escriviu aquí instruccions per als usuaris",
         "usages_left_label": "Usos restants",
         "mark_completed": "Marca com a completat",
         "errors": {
@@ -728,6 +743,7 @@
     "disapprove": "Desaprovar",
     "approve": "Aprovar",
     "no_results_found": "Sense resultats",
+    "voteTitle": "Aproveu o rebutgeu aquesta acció?",
     "modal": {
       "title": "Sota Revisió",
       "message_disapprove": "Realment voleu rebutjar aquesta reclamació?",

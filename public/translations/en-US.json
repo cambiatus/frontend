@@ -404,6 +404,7 @@
     "actions": {
       "title": "Action",
       "create_success": "Action created with success",
+      "save_success": "The action was successfully saved",
       "last_title": "Last Actions",
       "loading_error": "Something went wrong while fetching actions.",
       "no_actions_yet": "No actions yet.",
@@ -431,6 +432,15 @@
       "completed": "Completed",
       "closed": "Closed",
       "edit": "Edit Action",
+      "proof": {
+        "title": "This action requires proof of achievement",
+        "photo": "Photo",
+        "photo_full": "view full image",
+        "upload_photo_hint": "Tap to take a photo",
+        "code_period_label": "the code is valid for",
+        "no_photo_error": "Please, add a photo to confirm your claim.",
+        "time_expired": "Time for the claim has expired."
+      },
       "form": {
         "not_found": "Action not found",
         "description_label": "Description",
@@ -461,6 +471,11 @@
         "usages_placeholder": "Type a number",
         "date_label": "Choose date",
         "quantity_label": "Choose usages",
+        "photo_validation": "Photo validation",
+        "photo_validation_hint": "Users must send a photo performing the task for the claim to be valid.",
+        "verification_code": "Verification code",
+        "verification_code_hint": "Users will have to send a unique verification code with the photo in order for the claim to be valid.",
+        "verification_instructions": "Write here instructions for the users",
         "usages_left_label": "Usages left",
         "mark_completed": "Mark as completed",
         "errors": {
@@ -727,6 +742,7 @@
     "disapprove": "Disapprove",
     "approve": "Approve",
     "no_results_found": "No results found",
+    "voteTitle": "Do you approve or disapprove of this action?",
     "modal": {
       "title": "Under Review",
       "message_disapprove": "Do you really want to disapprove this action?",

@@ -17,8 +17,8 @@ import Eos
 import Eos.Account as Eos
 import Graphql.Http
 import Graphql.OptionalArgument exposing (OptionalArgument(..))
-import Html exposing (Html, a, button, div, img, option, p, select, span, text)
-import Html.Attributes exposing (class, id, selected, src, value)
+import Html exposing (Html, button, div, img, option, select, span, text)
+import Html.Attributes exposing (class, selected, src, value)
 import Html.Events exposing (onClick)
 import I18Next
 import Icons
@@ -32,11 +32,7 @@ import Select
 import Session.LoggedIn as LoggedIn exposing (External)
 import Session.Shared exposing (Shared)
 import Simple.Fuzzy
-import Strftime
-import Time
 import UpdateResult as UR
-import Utils
-import View.Modal as Modal
 
 
 init : LoggedIn.Model -> ( Model, Cmd Msg )
@@ -56,7 +52,7 @@ init ({ shared, selectedCommunity } as loggedIn) =
 type alias Model =
     { status : Status
     , communityStatus : CommunityStatus
-    , modalStatus : ModalStatus
+    , claimModalStatus : Claim.ModalStatus
     , autoCompleteState : Select.State
     , reloadOnNextQuery : Bool
     , filters : Filter
@@ -67,7 +63,7 @@ initModel : Model
 initModel =
     { status = Loading
     , communityStatus = LoadingCommunity
-    , modalStatus = ModalClosed
+    , claimModalStatus = Claim.Closed
     , autoCompleteState = Select.newState ""
     , reloadOnNextQuery = False
     , filters = initFilter
@@ -104,12 +100,6 @@ type StatusFilter
     | Pending
 
 
-type ModalStatus
-    = ModalClosed
-    | ModalLoading Int Bool
-    | ModalOpened Int Bool
-
-
 
 -- VIEW
 
@@ -127,20 +117,48 @@ view ({ shared } as loggedIn) model =
                     Page.fullPageLoading
 
                 Loaded claims pageInfo ->
+                    let
+                        viewClaim claim =
+                            Claim.viewClaimCard loggedIn claim
+                                |> Html.map ClaimMsg
+                    in
                     div []
                         [ Page.viewHeader loggedIn (t "all_analysis.title") Route.Dashboard
                         , div [ class "container mx-auto px-4 mb-10" ]
                             [ viewFilters loggedIn model
                             , if List.length claims > 0 then
                                 div []
-                                    [ div [ class "flex flex-wrap -mx-2" ] (List.map (viewClaim loggedIn) claims)
+                                    [ div [ class "flex flex-wrap -mx-2" ] (List.map viewClaim claims)
                                     , viewPagination loggedIn pageInfo
                                     ]
 
                               else
                                 viewEmptyResults loggedIn
                             ]
-                        , viewAnalysisModal loggedIn model
+                        , let
+                            viewVoteModal claimId isApproving isLoading =
+                                Claim.viewVoteClaimModal
+                                    loggedIn.shared.translators
+                                    { voteMsg = VoteClaim
+                                    , closeMsg = ClaimMsg Claim.CloseClaimModals
+                                    , claimId = claimId
+                                    , isApproving = isApproving
+                                    , isInProgress = isLoading
+                                    }
+                          in
+                          case model.claimModalStatus of
+                            Claim.VoteConfirmationModal claimId vote ->
+                                viewVoteModal claimId vote False
+
+                            Claim.Loading claimId vote ->
+                                viewVoteModal claimId vote True
+
+                            Claim.PhotoModal claim ->
+                                Claim.viewPhotoModal loggedIn claim
+                                    |> Html.map ClaimMsg
+
+                            _ ->
+                                text ""
                         ]
 
                 Failed ->
@@ -251,92 +269,6 @@ viewEmptyResults { shared } =
         ]
 
 
-viewClaim : LoggedIn.Model -> Claim.Model -> Html Msg
-viewClaim { shared, accountName, selectedCommunity } claim =
-    let
-        t =
-            I18Next.t shared.translations
-
-        text_ s =
-            text (I18Next.t shared.translations s)
-
-        date dateTime =
-            Just dateTime
-                |> Utils.posixDateTime
-                |> Strftime.format "%d %b %Y" Time.utc
-
-        ( msg, textColor ) =
-            case claim.status of
-                Claim.Approved ->
-                    ( t "all_analysis.approved", "text-green" )
-
-                Claim.Rejected ->
-                    ( t "all_analysis.disapproved", "text-red" )
-
-                Claim.Pending ->
-                    ( t "all_analysis.pending", "text-black" )
-    in
-    div [ class "w-full md:w-1/2 lg:w-1/3 xl:w-1/4 px-2 mb-4" ]
-        [ if Claim.isAlreadyValidated claim accountName then
-            div [ class "flex flex-col p-4 my-2 rounded-lg bg-white" ]
-                [ div [ class "flex justify-center mb-8" ]
-                    [ Profile.view shared accountName claim.claimer
-                    ]
-                , div [ class "mb-6" ]
-                    [ div
-                        [ class "bg-gray-100 flex items-center justify-center h-6 w-32 mb-2" ]
-                        [ p
-                            [ class ("text-caption uppercase " ++ textColor) ]
-                            [ text msg ]
-                        ]
-                    , p [ class "text-body mb-2" ]
-                        [ text claim.action.description ]
-                    , p
-                        [ class "text-gray-900 text-caption uppercase" ]
-                        [ text <| date claim.createdAt ]
-                    ]
-                , a
-                    [ class "button button-secondary w-full font-medium mb-2"
-                    , Route.href <| Route.Claim selectedCommunity claim.action.objective.id claim.action.id claim.id
-                    ]
-                    [ text_ "all_analysis.more_details" ]
-                ]
-
-          else
-            div [ class "flex flex-col p-4 my-2 rounded-lg bg-white", id <| "claim-" ++ String.fromInt claim.id ]
-                [ div [ class "flex justify-start mb-8" ]
-                    [ Profile.view shared accountName claim.claimer
-                    ]
-                , div
-                    [ class "bg-gray-100 flex items-center justify-center h-6 w-32 mb-2" ]
-                    [ p
-                        [ class ("text-caption uppercase " ++ textColor) ]
-                        [ text msg ]
-                    ]
-                , div [ class "mb-6" ]
-                    [ p [ class "text-body" ]
-                        [ text claim.action.description ]
-                    , p
-                        [ class "text-gray-900 text-caption uppercase" ]
-                        [ text <| date claim.createdAt ]
-                    ]
-                , div [ class "flex" ]
-                    [ button
-                        [ class "flex-1 button button-secondary font-medium text-red"
-                        , onClick (OpenModal claim.id False)
-                        ]
-                        [ text_ "dashboard.reject" ]
-                    , div [ class "w-4" ] []
-                    , button
-                        [ class "flex-1 button button-primary font-medium"
-                        , onClick (OpenModal claim.id True)
-                        ]
-                        [ text_ "dashboard.verify" ]
-                    ]
-                ]
-        ]
-
-
 viewPagination : LoggedIn.Model -> Maybe Api.Relay.PageInfo -> Html Msg
 viewPagination { shared } maybePageInfo =
     let
@@ -365,55 +297,6 @@ viewPagination { shared } maybePageInfo =
             text ""
 
 
-viewAnalysisModal : LoggedIn.Model -> Model -> Html Msg
-viewAnalysisModal loggedIn model =
-    case model.modalStatus of
-        ModalOpened claimId vote ->
-            let
-                t s =
-                    I18Next.t loggedIn.shared.translations s
-
-                text_ s =
-                    text (t s)
-            in
-            Modal.initWith
-                { closeMsg = CloseModal
-                , isVisible = True
-                }
-                |> Modal.withHeader (t "claim.modal.title")
-                |> Modal.withBody
-                    [ if vote then
-                        text_ "claim.modal.message_approve"
-
-                      else
-                        text_ "claim.modal.message_disapprove"
-                    ]
-                |> Modal.withFooter
-                    [ button
-                        [ class "modal-cancel"
-                        , onClick CloseModal
-                        ]
-                        [ text_ "claim.modal.secondary" ]
-                    , button
-                        [ class "modal-accept"
-                        , onClick (VoteClaim claimId vote)
-                        ]
-                        [ if vote then
-                            text_ "claim.modal.primary_approve"
-
-                          else
-                            text_ "claim.modal.primary_disapprove"
-                        ]
-                    ]
-                |> Modal.toHtml
-
-        ModalLoading _ _ ->
-            Page.fullPageLoading
-
-        ModalClosed ->
-            text ""
-
-
 
 -- UPDATE
 
@@ -424,10 +307,9 @@ type alias UpdateResult =
 
 type Msg
     = ClaimsLoaded (Result (Graphql.Http.Error (Maybe Claim.Paginated)) (Maybe Claim.Paginated))
-    | OpenModal Int Bool
-    | CloseModal
-    | VoteClaim Int Bool
-    | GotVoteResult Int (Result Decode.Value String)
+    | ClaimMsg Claim.Msg
+    | VoteClaim Claim.ClaimId Bool
+    | GotVoteResult Claim.ClaimId (Result Decode.Value String)
     | SelectMsg (Select.Msg Profile)
     | OnSelectVerifier (Maybe Profile)
     | CompletedCommunityLoad (Result (Graphql.Http.Error (Maybe Community.Model)) (Maybe Community.Model))
@@ -468,11 +350,19 @@ update msg model loggedIn =
         ClaimsLoaded (Err _) ->
             { model | status = Failed } |> UR.init
 
-        OpenModal claimId vote ->
-            { model | modalStatus = ModalOpened claimId vote } |> UR.init
+        ClaimMsg m ->
+            let
+                claimCmd =
+                    case m of
+                        Claim.RouteOpened r ->
+                            Route.replaceUrl loggedIn.shared.navKey r
 
-        CloseModal ->
-            { model | modalStatus = ModalClosed } |> UR.init
+                        _ ->
+                            Cmd.none
+            in
+            Claim.updateClaimModalStatus m model
+                |> UR.init
+                |> UR.addCmd claimCmd
 
         VoteClaim claimId vote ->
             case model.status of
@@ -480,7 +370,7 @@ update msg model loggedIn =
                     let
                         newModel =
                             { model
-                                | modalStatus = ModalLoading claimId vote
+                                | claimModalStatus = Claim.Loading claimId vote
                             }
                     in
                     if LoggedIn.isAuth loggedIn then
@@ -808,11 +698,8 @@ msgToString msg =
         ClaimsLoaded r ->
             [ "ChecksLoaded", UR.resultToString r ]
 
-        OpenModal _ _ ->
-            [ "OpenModal" ]
-
-        CloseModal ->
-            [ "CloseModal" ]
+        ClaimMsg _ ->
+            [ "ClaimMsg" ]
 
         VoteClaim claimId _ ->
             [ "VoteClaim", String.fromInt claimId ]

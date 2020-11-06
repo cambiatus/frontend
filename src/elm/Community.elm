@@ -24,8 +24,6 @@ module Community exposing
     , dashboardSelectionSet
     , decodeBalance
     , decodeTransaction
-    , encodeClaimAction
-    , encodeCreateActionAction
     , encodeCreateCommunityData
     , encodeCreateObjectiveAction
     , encodeCreateTokenData
@@ -336,6 +334,9 @@ type alias Action =
     , verificationType : VerificationType
     , verifications : Int
     , isCompleted : Bool
+    , hasProofPhoto : Bool
+    , hasProofCode : Bool
+    , photoProofInstructions : Maybe String
     }
 
 
@@ -354,6 +355,9 @@ actionSelectionSet =
         |> with Action.verificationType
         |> with Action.verifications
         |> with Action.isCompleted
+        |> with (SelectionSet.map (Maybe.withDefault False) Action.hasProofPhoto)
+        |> with (SelectionSet.map (Maybe.withDefault False) Action.hasProofCode)
+        |> with Action.photoProofInstructions
 
 
 type Verification
@@ -365,64 +369,6 @@ type alias Verifiers =
     { verifiers : List String
     , reward : Float
     }
-
-
-
----- ACTION CREATE
-
-
-type alias CreateActionAction =
-    { actionId : Int
-    , objectiveId : Int
-    , description : String
-    , reward : String
-    , verifierReward : String
-    , deadline : Int
-    , usages : String
-    , usagesLeft : String
-    , verifications : String
-    , verificationType : String
-    , validatorsStr : String
-    , isCompleted : Int
-    , creator : Eos.Name
-    }
-
-
-encodeCreateActionAction : CreateActionAction -> Value
-encodeCreateActionAction c =
-    Encode.object
-        [ ( "action_id", Encode.int c.actionId )
-        , ( "objective_id", Encode.int c.objectiveId )
-        , ( "description", Encode.string c.description )
-        , ( "reward", Encode.string c.reward )
-        , ( "verifier_reward", Encode.string c.verifierReward )
-        , ( "deadline", Encode.int c.deadline )
-        , ( "usages", Encode.string c.usages )
-        , ( "usages_left", Encode.string c.usagesLeft )
-        , ( "verifications", Encode.string c.verifications )
-        , ( "verification_type", Encode.string c.verificationType )
-        , ( "validators_str", Encode.string c.validatorsStr )
-        , ( "is_completed", Encode.int c.isCompleted )
-        , ( "creator", Eos.encodeName c.creator )
-        ]
-
-
-
--- Claim Action
-
-
-type alias ClaimAction =
-    { actionId : Int
-    , maker : Eos.Name
-    }
-
-
-encodeClaimAction : ClaimAction -> Value
-encodeClaimAction c =
-    Encode.object
-        [ ( "action_id", Encode.int c.actionId )
-        , ( "maker", Eos.encodeName c.maker )
-        ]
 
 
 
