@@ -71,7 +71,7 @@ initModel _ _ =
 subscriptions : Model -> Sub Msg
 subscriptions model =
     case model.proofs of
-        Just (Proof _ (CodeParts _)) ->
+        Just (Proof _ (Just _)) ->
             Time.every 1000 Tick
 
         _ ->
@@ -93,17 +93,15 @@ type alias Model =
 
 
 type Proof
-    = Proof ProofPhotoStatus ProofCode
+    = Proof ProofPhotoStatus (Maybe ProofCode)
 
 
-type ProofCode
-    = NoCodeRequired
-    | CodeParts
-        { code : Maybe String
-        , claimTimestamp : Int
-        , secondsAfterClaim : Int
-        , availabilityPeriod : Int
-        }
+type alias ProofCode =
+    { code : Maybe String
+    , claimTimestamp : Int
+    , secondsAfterClaim : Int
+    , availabilityPeriod : Int
+    }
 
 
 type PageStatus
@@ -269,7 +267,7 @@ viewClaimWithProofs model { shared } action =
                     Maybe.withDefault "" action.photoProofInstructions
                 ]
             , case model.proofs of
-                Just (Proof _ (CodeParts { code, secondsAfterClaim, availabilityPeriod })) ->
+                Just (Proof _ (Just { code, secondsAfterClaim, availabilityPeriod })) ->
                     case code of
                         Just c ->
                             viewProofCode
@@ -829,13 +827,13 @@ update msg model loggedIn =
 
         GotUint64Name (Ok uint64name) ->
             case ( model.proofs, model.actionId ) of
-                ( Just (Proof proofPhoto (CodeParts proofCode)), Just actionId ) ->
+                ( Just (Proof proofPhoto (Just proofCode)), Just actionId ) ->
                     let
                         verificationCode =
                             Claim.generateVerificationCode actionId uint64name proofCode.claimTimestamp
 
                         newProofCode =
-                            CodeParts
+                            Just
                                 { proofCode
                                     | code = Just verificationCode
                                 }
@@ -852,7 +850,7 @@ update msg model loggedIn =
 
         Tick timer ->
             case model.proofs of
-                Just (Proof proofPhoto (CodeParts proofCode)) ->
+                Just (Proof proofPhoto (Just proofCode)) ->
                     let
                         secondsAfterClaim =
                             (Time.posixToMillis timer // 1000) - proofCode.claimTimestamp
@@ -863,8 +861,10 @@ update msg model loggedIn =
                     if isProofCodeActive then
                         let
                             newProofCode =
-                                CodeParts
-                                    { proofCode | secondsAfterClaim = secondsAfterClaim }
+                                Just
+                                    { proofCode
+                                        | secondsAfterClaim = secondsAfterClaim
+                                    }
                         in
                         { model | proofs = Just (Proof proofPhoto newProofCode) }
                             |> UR.init
@@ -878,7 +878,7 @@ update msg model loggedIn =
         GotProofTime actionId posix ->
             let
                 initProofCodeParts =
-                    CodeParts
+                    Just
                         { code = Nothing
                         , claimTimestamp = Time.posixToMillis posix // 1000
                         , secondsAfterClaim = 0
@@ -944,7 +944,7 @@ update msg model loggedIn =
                             _ ->
                                 model.pageStatus
                     , claimConfirmationModalStatus = Closed
-                    , proofs = Just (Proof NoPhotoAdded NoCodeRequired)
+                    , proofs = Just (Proof NoPhotoAdded Nothing)
                 }
                     |> UR.init
                     |> UR.addCmd
@@ -1069,10 +1069,10 @@ update msg model loggedIn =
 
                 ( proofPhotoUrl, proofCode_, proofTime ) =
                     case model.proofs of
-                        Just (Proof (Uploaded url) (CodeParts { code, claimTimestamp })) ->
+                        Just (Proof (Uploaded url) (Just { code, claimTimestamp })) ->
                             ( url, Maybe.withDefault "" code, claimTimestamp )
 
-                        Just (Proof (Uploaded url) NoCodeRequired) ->
+                        Just (Proof (Uploaded url) Nothing) ->
                             ( url, "", 0 )
 
                         _ ->
