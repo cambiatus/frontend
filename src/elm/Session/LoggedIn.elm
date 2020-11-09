@@ -554,7 +554,7 @@ communitySelectorModal model =
                 [ class "flex items-center p-4 text-body cursor-pointer hover:text-black hover:bg-gray-100"
                 , onClick <| SelectCommunity c.id
                 ]
-                [ img [ src c.logo, class "h-16 w-16 mr-5" ] []
+                [ img [ src c.logo, class "h-16 w-16 mr-5 object-scale-down" ] []
                 , text c.name
                 ]
     in
