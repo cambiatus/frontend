@@ -171,7 +171,7 @@ view loggedIn model =
                                 , div [ class "bg-white p-4" ]
                                     [ div [ class "container mx-auto px-4" ]
                                         [ div [ class "h-24 w-24 rounded-full mx-auto" ]
-                                            [ img [ src community.logo, class "object-scale-down" ] []
+                                            [ img [ src community.logo, class "max-h-full m-auto object-scale-down" ] []
                                             ]
                                         , div [ class "flex flex-wrap w-full items-center" ]
                                             [ p [ class "text-4xl font-bold" ]
