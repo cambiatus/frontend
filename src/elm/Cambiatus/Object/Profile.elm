@@ -103,11 +103,6 @@ interests =
     Object.selectionForField "(Maybe String)" "interests" [] (Decode.string |> Decode.nullable)
 
 
-invitations : SelectionSet (Maybe (List (Maybe String))) Cambiatus.Object.Profile
-invitations =
-    Object.selectionForField "(Maybe (List (Maybe String)))" "invitations" [] (Decode.string |> Decode.nullable |> Decode.list |> Decode.nullable)
-
-
 kyc :
     SelectionSet decodesTo Cambiatus.Object.KycData
     -> SelectionSet (Maybe decodesTo) Cambiatus.Object.Profile
