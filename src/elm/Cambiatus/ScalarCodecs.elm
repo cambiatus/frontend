@@ -20,10 +20,15 @@ type alias Id =
     Cambiatus.Scalar.Id
 
 
-codecs : Cambiatus.Scalar.Codecs Date DateTime Id
+type alias NaiveDateTime =
+    Cambiatus.Scalar.NaiveDateTime
+
+
+codecs : Cambiatus.Scalar.Codecs Date DateTime Id NaiveDateTime
 codecs =
     Cambiatus.Scalar.defineCodecs
         { codecDate = defaultCodecs.codecDate
         , codecDateTime = defaultCodecs.codecDateTime
         , codecId = defaultCodecs.codecId
+        , codecNaiveDateTime = defaultCodecs.codecNaiveDateTime
         }

@@ -264,6 +264,31 @@ encodeClaimsAnalysisInput input =
         [ ( "account", Encode.string input.account |> Just ), ( "symbol", Encode.string input.symbol |> Just ) ]
 
 
+buildCompleteObjectiveInput :
+    CompleteObjectiveInputRequiredFields
+    -> CompleteObjectiveInput
+buildCompleteObjectiveInput required =
+    { objectiveId = required.objectiveId }
+
+
+type alias CompleteObjectiveInputRequiredFields =
+    { objectiveId : Int }
+
+
+{-| Type for the CompleteObjectiveInput input object.
+-}
+type alias CompleteObjectiveInput =
+    { objectiveId : Int }
+
+
+{-| Encode a CompleteObjectiveInput into a value that can be used as an argument.
+-}
+encodeCompleteObjectiveInput : CompleteObjectiveInput -> Value
+encodeCompleteObjectiveInput input =
+    Encode.maybeObject
+        [ ( "objectiveId", Encode.int input.objectiveId |> Just ) ]
+
+
 buildCountryInput :
     CountryInputRequiredFields
     -> CountryInput

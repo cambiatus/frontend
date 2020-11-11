@@ -351,46 +351,50 @@ viewObjective loggedIn model metadata index objective =
             List.map (viewAction loggedIn metadata model.date) objective.actions
                 |> List.intersperse (hr [ class "bg-border-grey text-border-grey" ] [])
     in
-    div [ class "my-2" ]
-        [ div
-            [ class "px-3 py-4 bg-indigo-500 flex flex-col sm:flex-row sm:items-center sm:h-10 cursor-pointer"
+    if objective.isCompleted then
+        text ""
+
+    else
+        div [ class "my-2" ]
+            [ div
+                [ class "px-3 py-4 bg-indigo-500 flex flex-col sm:flex-row sm:items-center sm:h-10 cursor-pointer"
+                , if isOpen then
+                    onClick ClickedCloseObjective
+
+                  else
+                    onClick (ClickedOpenObjective index)
+                ]
+                [ div [ class "sm:flex-grow-7 sm:w-5/12" ]
+                    [ div
+                        [ class "truncate overflow-hidden whitespace-no-wrap text-white font-medium text-sm overflow-hidden sm:flex-grow-8 sm:leading-normal sm:text-lg"
+                        ]
+                        [ text objective.description ]
+                    ]
+                , div [ class ("flex flex-row justify-end mt-5 sm:mt-0" ++ arrowStyle) ]
+                    [ button
+                        [ class ""
+                        , if isOpen then
+                            onClick ClickedCloseObjective
+
+                          else
+                            onClick (ClickedOpenObjective index)
+                        ]
+                        [ img
+                            [ class "fill-current text-white h-2 w-4 stroke-current"
+                            , src "/icons/objective_arrow.svg"
+                            , classList [ ( "rotate-180", isOpen ) ]
+                            ]
+                            []
+                        ]
+                    ]
+                ]
             , if isOpen then
-                onClick ClickedCloseObjective
+                div [ class "pt-5 px-3 pb-3 sm:px-6 bg-white rounded-b-lg border-solid border-grey border" ]
+                    actsNButton
 
               else
-                onClick (ClickedOpenObjective index)
+                text ""
             ]
-            [ div [ class "sm:flex-grow-7 sm:w-5/12" ]
-                [ div
-                    [ class "truncate overflow-hidden whitespace-no-wrap text-white font-medium text-sm overflow-hidden sm:flex-grow-8 sm:leading-normal sm:text-lg"
-                    ]
-                    [ text objective.description ]
-                ]
-            , div [ class ("flex flex-row justify-end mt-5 sm:mt-0" ++ arrowStyle) ]
-                [ button
-                    [ class ""
-                    , if isOpen then
-                        onClick ClickedCloseObjective
-
-                      else
-                        onClick (ClickedOpenObjective index)
-                    ]
-                    [ img
-                        [ class "fill-current text-white h-2 w-4 stroke-current"
-                        , src "/icons/objective_arrow.svg"
-                        , classList [ ( "rotate-180", isOpen ) ]
-                        ]
-                        []
-                    ]
-                ]
-            ]
-        , if isOpen then
-            div [ class "pt-5 px-3 pb-3 sm:px-6 bg-white rounded-b-lg border-solid border-grey border" ]
-                actsNButton
-
-          else
-            text ""
-        ]
 
 
 

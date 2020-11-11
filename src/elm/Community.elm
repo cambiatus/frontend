@@ -55,7 +55,7 @@ import Eos exposing (EosBool(..), Symbol, symbolToString)
 import Eos.Account as Eos
 import Graphql.Operation exposing (RootQuery, RootSubscription)
 import Graphql.OptionalArgument exposing (OptionalArgument(..))
-import Graphql.SelectionSet as SelectionSet exposing (SelectionSet, with)
+import Graphql.SelectionSet as SelectionSet exposing (SelectionSet, hardcoded, with)
 import Html
 import Html.Attributes
 import Json.Decode as Decode exposing (Decoder, string)
@@ -272,6 +272,7 @@ type alias Objective =
     , creator : Eos.Name
     , actions : List Action
     , community : Metadata
+    , isCompleted : Bool
     }
 
 
@@ -283,6 +284,7 @@ objectiveSelectionSet =
         |> with (Eos.nameSelectionSet Objective.creatorId)
         |> with (Objective.actions identity actionSelectionSet)
         |> with (Objective.community communitiesSelectionSet)
+        |> with Objective.isCompleted
 
 
 type alias CreateObjectiveAction =
