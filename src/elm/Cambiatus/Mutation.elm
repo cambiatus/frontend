@@ -19,6 +19,20 @@ import Graphql.SelectionSet exposing (SelectionSet)
 import Json.Decode as Decode exposing (Decoder)
 
 
+type alias CompleteObjectiveRequiredArguments =
+    { input : Cambiatus.InputObject.CompleteObjectiveInput }
+
+
+{-| Complete an objective
+-}
+completeObjective :
+    CompleteObjectiveRequiredArguments
+    -> SelectionSet decodesTo Cambiatus.Object.Objective
+    -> SelectionSet (Maybe decodesTo) RootMutation
+completeObjective requiredArgs object_ =
+    Object.selectionForCompositeField "completeObjective" [ Argument.required "input" requiredArgs.input Cambiatus.InputObject.encodeCompleteObjectiveInput ] object_ (identity >> Decode.nullable)
+
+
 type alias DeleteAddressRequiredArguments =
     { input : Cambiatus.InputObject.KycAddressDeletionInput }
 

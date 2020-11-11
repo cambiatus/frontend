@@ -46,6 +46,11 @@ community object_ =
     Object.selectionForCompositeField "community" [] object_ identity
 
 
+completedAt : SelectionSet (Maybe Cambiatus.ScalarCodecs.NaiveDateTime) Cambiatus.Object.Objective
+completedAt =
+    Object.selectionForField "(Maybe ScalarCodecs.NaiveDateTime)" "completedAt" [] (Cambiatus.ScalarCodecs.codecs |> Cambiatus.Scalar.unwrapCodecs |> .codecNaiveDateTime |> .decoder |> Decode.nullable)
+
+
 createdAt : SelectionSet Cambiatus.ScalarCodecs.DateTime Cambiatus.Object.Objective
 createdAt =
     Object.selectionForField "ScalarCodecs.DateTime" "createdAt" [] (Cambiatus.ScalarCodecs.codecs |> Cambiatus.Scalar.unwrapCodecs |> .codecDateTime |> .decoder)
@@ -86,3 +91,8 @@ description =
 id : SelectionSet Int Cambiatus.Object.Objective
 id =
     Object.selectionForField "Int" "id" [] Decode.int
+
+
+isCompleted : SelectionSet Bool Cambiatus.Object.Objective
+isCompleted =
+    Object.selectionForField "Bool" "isCompleted" [] Decode.bool

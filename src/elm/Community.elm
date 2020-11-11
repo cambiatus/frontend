@@ -272,6 +272,7 @@ type alias Objective =
     , creator : Eos.Name
     , actions : List Action
     , community : Metadata
+    , isCompleted : Bool
     }
 
 
@@ -283,6 +284,7 @@ objectiveSelectionSet =
         |> with (Eos.nameSelectionSet Objective.creatorId)
         |> with (Objective.actions identity actionSelectionSet)
         |> with (Objective.community communitiesSelectionSet)
+        |> with Objective.isCompleted
 
 
 type alias CreateObjectiveAction =
