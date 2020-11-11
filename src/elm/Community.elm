@@ -55,7 +55,7 @@ import Eos exposing (EosBool(..), Symbol, symbolToString)
 import Eos.Account as Eos
 import Graphql.Operation exposing (RootQuery, RootSubscription)
 import Graphql.OptionalArgument exposing (OptionalArgument(..))
-import Graphql.SelectionSet as SelectionSet exposing (SelectionSet, hardcoded, with)
+import Graphql.SelectionSet as SelectionSet exposing (SelectionSet, with)
 import Html
 import Html.Attributes
 import Json.Decode as Decode exposing (Decoder, string)
