@@ -93,7 +93,15 @@
       "verifyclaim": {
         "Can't vote on already verified claim": "Não é possível votar em uma reivindicação já verificada",
         "This is action is already completed, can't verify claim": "Esta ação já foi concluída, não é possível verificar a reivindicação",
-        "There are no usages left for this action": "Não há usos restantes para esta ação"
+        "There are no usages left for this action": "Não há usos restantes para esta ação",
+        "Can't find claim with given claim_id": "Não é possível encontrar a reivindicação com o claim_id fornecido",
+        "Can't find action with given claim_id": "Não é possível encontrar ação com o claim_id fornecido",
+        "Can't find objective with given claim_id": "Não é possível encontrar o objetivo com o claim_id fornecido",
+        "Can't find community with given claim_id": "Não é possível encontrar a comunidade com o claim_id fornecido",
+        "This community don't have objectives enabled.": "Esta comunidade não tem objetivos habilitados.",
+        "Verifier is not in the action validator list": "O verificador não está na lista de validadores de ação",
+        "Deadline exceeded": "Prazo excedido",
+        "The verifier cannot check the same claim more than once": "O verificador não pode verificar a mesma reivindicação mais de uma vez"
       }
     }
   },

@@ -88,7 +88,21 @@
     "unknown": "Oh oh. Algo salió mal.",
     "accountNotFound": "Cuenta no encontrada. ¿Estás seguro de haber creado tu cuenta?",
     "phone": "Utilice un número de teléfono válido",
-    "zipcode": "Código postal no válido"
+    "zipcode": "Código postal no válido",
+    "contracts": {
+      "verifyclaim": {
+        "Can't vote on already verified claim": "No puedo votar sobre un reclamo ya verificado",
+        "This is action is already completed, can't verify claim": "Esta acción ya se completó, no se puede verificar el reclamo",
+        "There are no usages left for this action": "No quedan usos para esta acción",
+        "Can't find claim with given claim_id": "No se puede encontrar el reclamo con el ID de reclamo dado",
+        "Can't find action with given claim_id": "No se puede encontrar la acción con el claim_id especificado",
+        "Can't find objective with given claim_id": "No se puede encontrar el objetivo con el claim_id especificado",
+        "Can't find community with given claim_id": "No se puede encontrar la comunidad con el ID de reclamo especificado",
+        "This community don't have objectives enabled.": "Esta comunidad no tiene objetivos habilitados.",
+        "Verifier is not in the action validator list": "El verificador no está en la lista de validadores de acciones",
+        "Deadline exceeded": "Fecha límite excedida",
+        "The verifier cannot check the same claim more than once": "El verificador no puede verificar la misma afirmación más de una vez."
+      }
   },
   "auth": {
     "title": "Use su clave privada y PIN o inicie sesión por",
