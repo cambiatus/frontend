@@ -17,6 +17,7 @@ import Claim
 import Community exposing (Balance)
 import Eos exposing (Symbol)
 import Eos.Account as Eos
+import Eos.EosError as EosError
 import FormatNumber
 import FormatNumber.Locales exposing (usLocale)
 import Graphql.Http
@@ -565,7 +566,7 @@ type Msg
     | CommunityLoaded (Result (Graphql.Http.Error (Maybe Community.DashboardInfo)) (Maybe Community.DashboardInfo))
     | ClaimMsg Claim.Msg
     | VoteClaim Claim.ClaimId Bool
-    | GotVoteResult Claim.ClaimId (Result Value String)
+    | GotVoteResult Claim.ClaimId (Result String String)
     | CreateInvite
     | CloseInviteModal
     | CompletedInviteCreation (Result Http.Error String)
@@ -575,6 +576,10 @@ type Msg
 
 update : Msg -> Model -> LoggedIn.Model -> UpdateResult
 update msg model loggedIn =
+    let
+        { t } =
+            loggedIn.shared.translators
+    in
     case msg of
         GotTime date ->
             UR.init { model | date = Just date }
@@ -734,11 +739,18 @@ update msg model loggedIn =
                 _ ->
                     model |> UR.init
 
-        GotVoteResult claimId (Err _) ->
+        GotVoteResult claimId (Err eosErrorString) ->
+            let
+                errorMessage =
+                    t <|
+                        "error.contracts.verifyclaim."
+                            ++ EosError.extractFailure eosErrorString
+            in
             case model.analysis of
                 LoadedGraphql claims pageInfo ->
                     { model | analysis = LoadedGraphql (setClaimStatus claims claimId ClaimVoteFailed) pageInfo }
                         |> UR.init
+                        |> UR.addExt (ShowFeedback LoggedIn.Failure errorMessage)
 
                 _ ->
                     model |> UR.init
@@ -934,7 +946,11 @@ jsAddressToMsg addr val =
                 (Decode.oneOf
                     [ Decode.field "transactionId" Decode.string
                         |> Decode.map Ok
-                    , Decode.succeed (Err Encode.null)
+
+                    -- Attempt to extract a string with errors from the EOS.
+                    , Decode.field "error" Decode.string
+                        |> Decode.map Err
+                    , Decode.succeed (Err "error.unknown")
                     ]
                 )
                 val
