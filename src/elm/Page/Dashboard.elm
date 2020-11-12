@@ -409,8 +409,9 @@ viewAnalysis loggedIn claimStatus =
         ClaimVoted _ ->
             text ""
 
-        ClaimVoteFailed _ ->
-            div [ class "text-red" ] [ text "failed" ]
+        ClaimVoteFailed claim ->
+            Claim.viewClaimCard loggedIn claim
+                |> Html.map ClaimMsg
 
 
 viewTransfers : LoggedIn.Model -> Model -> Html Msg
