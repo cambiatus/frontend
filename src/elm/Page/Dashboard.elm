@@ -743,7 +743,7 @@ update msg model loggedIn =
         GotVoteResult claimId (Err eosErrorString) ->
             let
                 errorMessage =
-                    EosError.prepareErrorMessage loggedIn.shared.translators eosErrorString
+                    EosError.parseErrorMessage loggedIn.shared.translators eosErrorString
             in
             case model.analysis of
                 LoadedGraphql claims pageInfo ->

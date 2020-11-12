@@ -1,4 +1,4 @@
-module Eos.EosError exposing (prepareErrorMessage)
+module Eos.EosError exposing (parseErrorMessage)
 
 import Json.Decode as Decode exposing (at, decodeString, field, list, string)
 import Session.Shared exposing (Translators)
@@ -32,8 +32,8 @@ extractFailure json =
             "error.unknown"
 
 
-prepareErrorMessage : Translators -> Maybe String -> String
-prepareErrorMessage { t } eosErrorString =
+parseErrorMessage : Translators -> Maybe String -> String
+parseErrorMessage { t } eosErrorString =
     t <|
         case eosErrorString of
             Just err ->

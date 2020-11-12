@@ -437,7 +437,7 @@ update msg model loggedIn =
         GotVoteResult _ (Err eosErrorString) ->
             let
                 errorMessage =
-                    EosError.prepareErrorMessage loggedIn.shared.translators eosErrorString
+                    EosError.parseErrorMessage loggedIn.shared.translators eosErrorString
             in
             case model.status of
                 Loaded claims pageInfo ->
