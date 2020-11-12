@@ -566,7 +566,7 @@ type Msg
     | CommunityLoaded (Result (Graphql.Http.Error (Maybe Community.DashboardInfo)) (Maybe Community.DashboardInfo))
     | ClaimMsg Claim.Msg
     | VoteClaim Claim.ClaimId Bool
-    | GotVoteResult Claim.ClaimId (Result String String)
+    | GotVoteResult Claim.ClaimId (Result (Maybe String) String)
     | CreateInvite
     | CloseInviteModal
     | CompletedInviteCreation (Result Http.Error String)
@@ -743,8 +743,13 @@ update msg model loggedIn =
             let
                 errorMessage =
                     t <|
-                        "error.contracts.verifyclaim."
-                            ++ EosError.extractFailure eosErrorString
+                        case eosErrorString of
+                            Just err ->
+                                "error.contracts.verifyclaim."
+                                    ++ EosError.extractFailure err
+
+                            Nothing ->
+                                "community.verifyClaim.error"
             in
             case model.analysis of
                 LoadedGraphql claims pageInfo ->
@@ -946,11 +951,8 @@ jsAddressToMsg addr val =
                 (Decode.oneOf
                     [ Decode.field "transactionId" Decode.string
                         |> Decode.map Ok
-
-                    -- Attempt to extract a string with errors from the EOS.
-                    , Decode.field "error" Decode.string
+                    , Decode.field "error" (Decode.nullable Decode.string)
                         |> Decode.map Err
-                    , Decode.succeed (Err "error.unknown")
                     ]
                 )
                 val
