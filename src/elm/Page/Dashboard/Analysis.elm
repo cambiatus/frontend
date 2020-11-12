@@ -15,6 +15,7 @@ import Claim
 import Community
 import Eos
 import Eos.Account as Eos
+import Eos.EosError as EosError
 import Graphql.Http
 import Graphql.OptionalArgument exposing (OptionalArgument(..))
 import Html exposing (Html, button, div, img, option, select, span, text)
@@ -29,7 +30,7 @@ import Page
 import Profile exposing (Profile)
 import Route
 import Select
-import Session.LoggedIn as LoggedIn exposing (External)
+import Session.LoggedIn as LoggedIn exposing (External(..))
 import Session.Shared exposing (Shared)
 import Simple.Fuzzy
 import UpdateResult as UR
@@ -309,7 +310,7 @@ type Msg
     = ClaimsLoaded (Result (Graphql.Http.Error (Maybe Claim.Paginated)) (Maybe Claim.Paginated))
     | ClaimMsg Claim.Msg
     | VoteClaim Claim.ClaimId Bool
-    | GotVoteResult Claim.ClaimId (Result Decode.Value String)
+    | GotVoteResult Claim.ClaimId (Result (Maybe String) String)
     | SelectMsg (Select.Msg Profile)
     | OnSelectVerifier (Maybe Profile)
     | CompletedCommunityLoad (Result (Graphql.Http.Error (Maybe Community.Model)) (Maybe Community.Model))
@@ -433,11 +434,19 @@ update msg model loggedIn =
                 _ ->
                     model |> UR.init
 
-        GotVoteResult _ (Err _) ->
+        GotVoteResult _ (Err eosErrorString) ->
+            let
+                errorMessage =
+                    EosError.prepareErrorMessage loggedIn.shared.translators eosErrorString
+            in
             case model.status of
                 Loaded claims pageInfo ->
-                    { model | status = Loaded claims pageInfo }
+                    { model
+                        | status = Loaded claims pageInfo
+                        , claimModalStatus = Claim.Closed
+                    }
                         |> UR.init
+                        |> UR.addExt (ShowFeedback LoggedIn.Failure errorMessage)
 
                 _ ->
                     model |> UR.init
@@ -681,7 +690,8 @@ jsAddressToMsg addr val =
                 (Decode.oneOf
                     [ Decode.field "transactionId" Decode.string
                         |> Decode.map Ok
-                    , Decode.succeed (Err Encode.null)
+                    , Decode.field "error" (Decode.nullable Decode.string)
+                        |> Decode.map Err
                     ]
                 )
                 val
