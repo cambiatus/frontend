@@ -1,6 +1,7 @@
-module Eos.EosError exposing (extractFailure)
+module Eos.EosError exposing (prepareErrorMessage)
 
 import Json.Decode as Decode exposing (at, decodeString, field, list, string)
+import Session.Shared exposing (Translators)
 
 
 {-| Extracts failure description from the first error message received from the EOS:
@@ -29,6 +30,18 @@ extractFailure json =
 
         _ ->
             "error.unknown"
+
+
+prepareErrorMessage : Translators -> Maybe String -> String
+prepareErrorMessage { t } eosErrorString =
+    t <|
+        case eosErrorString of
+            Just err ->
+                "error.contracts.verifyclaim."
+                    ++ extractFailure err
+
+            Nothing ->
+                "community.verifyClaim.error"
 
 
 decodeErrorDetails : Decode.Decoder (List String)

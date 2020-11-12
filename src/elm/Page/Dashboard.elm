@@ -742,14 +742,7 @@ update msg model loggedIn =
         GotVoteResult claimId (Err eosErrorString) ->
             let
                 errorMessage =
-                    t <|
-                        case eosErrorString of
-                            Just err ->
-                                "error.contracts.verifyclaim."
-                                    ++ EosError.extractFailure err
-
-                            Nothing ->
-                                "community.verifyClaim.error"
+                    EosError.prepareErrorMessage loggedIn.shared.translators eosErrorString
             in
             case model.analysis of
                 LoadedGraphql claims pageInfo ->
