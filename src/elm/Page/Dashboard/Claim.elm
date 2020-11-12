@@ -5,6 +5,7 @@ import Cambiatus.Query
 import Claim
 import Eos exposing (Symbol)
 import Eos.Account as Eos
+import Eos.EosError as EosError
 import Graphql.Http
 import Html exposing (Html, button, div, h3, img, label, p, span, strong, text)
 import Html.Attributes exposing (class, classList, src)
@@ -391,7 +392,7 @@ type alias UpdateResult =
 type Msg
     = ClaimLoaded (Result (Graphql.Http.Error Claim.Model) Claim.Model)
     | VoteClaim Claim.ClaimId Bool
-    | GotVoteResult Claim.ClaimId (Result Decode.Value String)
+    | GotVoteResult Claim.ClaimId (Result (Maybe String) String)
     | ClaimMsg Claim.Msg
 
 
@@ -479,7 +480,11 @@ update msg model loggedIn =
                     }
                         |> UR.init
 
-        GotVoteResult _ (Err v) ->
+        GotVoteResult _ (Err eosErrorString) ->
+            let
+                errorMsg =
+                    EosError.parseErrorMessage loggedIn.shared.translators eosErrorString
+            in
             case model.statusClaim of
                 Loaded claim ->
                     { model
@@ -487,13 +492,10 @@ update msg model loggedIn =
                         , claimModalStatus = Claim.Closed
                     }
                         |> UR.init
-                        |> UR.logDebugValue msg v
-                        |> UR.addExt (LoggedIn.ShowFeedback LoggedIn.Failure (t "community.verifyClaim.error"))
+                        |> UR.addExt (LoggedIn.ShowFeedback LoggedIn.Failure errorMsg)
 
                 _ ->
-                    model
-                        |> UR.init
-                        |> UR.logDebugValue msg v
+                    model |> UR.init
 
 
 
@@ -521,7 +523,8 @@ jsAddressToMsg addr val =
                 (Decode.oneOf
                     [ Decode.field "transactionId" Decode.string
                         |> Decode.map Ok
-                    , Decode.succeed (Err Encode.null)
+                    , Decode.field "error" (Decode.nullable Decode.string)
+                        |> Decode.map Err
                     ]
                 )
                 val

@@ -17,6 +17,7 @@ import Claim
 import Community exposing (Balance)
 import Eos exposing (Symbol)
 import Eos.Account as Eos
+import Eos.EosError as EosError
 import FormatNumber
 import FormatNumber.Locales exposing (usLocale)
 import Graphql.Http
@@ -408,8 +409,9 @@ viewAnalysis loggedIn claimStatus =
         ClaimVoted _ ->
             text ""
 
-        ClaimVoteFailed _ ->
-            div [ class "text-red" ] [ text "failed" ]
+        ClaimVoteFailed claim ->
+            Claim.viewClaimCard loggedIn claim
+                |> Html.map ClaimMsg
 
 
 viewTransfers : LoggedIn.Model -> Model -> Html Msg
@@ -565,7 +567,7 @@ type Msg
     | CommunityLoaded (Result (Graphql.Http.Error (Maybe Community.DashboardInfo)) (Maybe Community.DashboardInfo))
     | ClaimMsg Claim.Msg
     | VoteClaim Claim.ClaimId Bool
-    | GotVoteResult Claim.ClaimId (Result Value String)
+    | GotVoteResult Claim.ClaimId (Result (Maybe String) String)
     | CreateInvite
     | CloseInviteModal
     | CompletedInviteCreation (Result Http.Error String)
@@ -575,6 +577,10 @@ type Msg
 
 update : Msg -> Model -> LoggedIn.Model -> UpdateResult
 update msg model loggedIn =
+    let
+        { t } =
+            loggedIn.shared.translators
+    in
     case msg of
         GotTime date ->
             UR.init { model | date = Just date }
@@ -734,11 +740,16 @@ update msg model loggedIn =
                 _ ->
                     model |> UR.init
 
-        GotVoteResult claimId (Err _) ->
+        GotVoteResult claimId (Err eosErrorString) ->
+            let
+                errorMessage =
+                    EosError.parseErrorMessage loggedIn.shared.translators eosErrorString
+            in
             case model.analysis of
                 LoadedGraphql claims pageInfo ->
                     { model | analysis = LoadedGraphql (setClaimStatus claims claimId ClaimVoteFailed) pageInfo }
                         |> UR.init
+                        |> UR.addExt (ShowFeedback LoggedIn.Failure errorMessage)
 
                 _ ->
                     model |> UR.init
@@ -934,7 +945,8 @@ jsAddressToMsg addr val =
                 (Decode.oneOf
                     [ Decode.field "transactionId" Decode.string
                         |> Decode.map Ok
-                    , Decode.succeed (Err Encode.null)
+                    , Decode.field "error" (Decode.nullable Decode.string)
+                        |> Decode.map Err
                     ]
                 )
                 val

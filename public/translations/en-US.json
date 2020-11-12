@@ -88,7 +88,22 @@
     "unknown": "Uoh. Something wrong happened.",
     "accountNotFound": "Account not found. Are you sure you created your account?",
     "phone": "Please use a valid phone number",
-    "zipcode": "Invalid zipcode"
+    "zipcode": "Invalid zipcode",
+    "contracts": {
+      "verifyclaim": {
+        "Can't vote on already verified claim": "Can't vote on already verified claim",
+        "This is action is already completed, can't verify claim": "This action is already completed, can't verify claim",
+        "There are no usages left for this action": "There are no usages left for this action",
+        "Can't find claim with given claim_id": "Can't find claim with given claim_id",
+        "Can't find action with given claim_id": "Can't find action with given claim_id",
+        "Can't find objective with given claim_id": "Can't find objective with given claim_id",
+        "Can't find community with given claim_id": "Can't find community with given claim_id",
+        "This community don't have objectives enabled.": "This community doesn't have objectives enabled.",
+        "Verifier is not in the action validator list": "Verifier is not in the action validator list",
+        "Deadline exceeded": "Deadline exceeded",
+        "The verifier cannot check the same claim more than once": "The verifier cannot check the same claim more than once"
+      }
+    }
   },
   "auth": {
     "title": "Use your private key and PIN or log in by",
