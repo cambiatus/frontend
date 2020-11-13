@@ -103,6 +103,7 @@
         "Deadline exceeded": "Fecha límite excedida",
         "The verifier cannot check the same claim more than once": "El verificador no puede verificar la misma afirmación más de una vez."
       }
+    }
   },
   "auth": {
     "title": "Use su clave privada y PIN o inicie sesión por",
@@ -821,3 +822,4 @@
     "pick_date": "Selecciona una fecha..."
   }
 }
+
