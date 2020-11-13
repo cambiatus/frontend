@@ -18,7 +18,7 @@ import Eos exposing (Symbol)
 import Eos.Account as Eos
 import Graphql.Http
 import Html exposing (Html, a, br, button, div, input, label, li, p, span, text, ul)
-import Html.Attributes exposing (checked, class, classList, for, id, name, type_)
+import Html.Attributes exposing (checked, class, classList, for, href, id, name, type_)
 import Html.Events exposing (onClick)
 import Http
 import I18Next exposing (t)
@@ -363,7 +363,7 @@ viewUserInfo loggedIn profile pageType =
                         [ ul [ class "text-sm text-gray-900" ]
                             [ li [ class "font-medium text-body-black text-2xl xs-max:text-xl" ]
                                 [ text userName ]
-                            , li [] [ text email ]
+                            , li [] [ a [ href <| "mailto:" ++ email ] [ text email ] ]
                             , li [] [ text account ]
                             ]
                         , case pageType of
