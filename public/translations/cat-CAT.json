@@ -103,6 +103,7 @@
         "Deadline exceeded": "S'ha superat el termini",
         "The verifier cannot check the same claim more than once": "El verificador no pot comprovar la mateixa reclamació més d’una vegada"
       }
+    }
   },
   "auth": {
     "title": "Utilitzeu la vostra clau privada i el PIN o connecteu-vos per",
