@@ -93,7 +93,7 @@
       "transfer": {
         "cannot transfer to self": "Não é possível transferir para si mesmo",
         "destination account doesn't exists": "A conta de destino não existe",
-        "token with given symbol doesn't exists": "O token com o símbolo fornecido não existe",
+        "token with given symbol doesn't exists": "Nenhuma moeda com o símbolo fornecido foi encontrada",
         "invalid quantity": "Quantidade inválida",
         "quantity must be positive": "Quantidade deve ser positiva",
         "symbol precision mismatch": "Precisão do símbolo incompatível",
