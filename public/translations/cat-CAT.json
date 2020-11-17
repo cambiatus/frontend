@@ -90,6 +90,17 @@
     "phone": "Utilitzeu un número de telèfon vàlid",
     "zipcode": "Codi postal no vàlid",
     "contracts": {
+      "transfer": {
+        "cannot transfer to self": "No es pot transferir a un mateix",
+        "destination account doesn't exists": "El compte de destinació no existeix",
+        "token with given symbol doesn't exists": "El testimoni amb el símbol donat no existeix",
+        "invalid quantity": "Quantitat no vàlida",
+        "quantity must be positive": "La quantitat ha de ser positiva",
+        "symbol precision mismatch": "Desajust de precisió de símbols",
+        "memo has more than 256 bytes": "La nota té més de 256 símbols",
+        "from account doesn't belong to the community": "Des del compte no pertany a la comunitat",
+        "to account doesn't belong to the community": "El compte no pertany a la comunitat"
+      },
       "verifyclaim": {
         "Can't vote on already verified claim": "No es pot votar sobre una reclamació ja verificada",
         "This is action is already completed, can't verify claim": "Aquesta acció ja s'ha completat, no es pot verificar la reclamació",
