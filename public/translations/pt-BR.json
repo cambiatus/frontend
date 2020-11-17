@@ -91,7 +91,7 @@
     "zipcode": "CEP inválido",
     "contracts": {
       "transfer": {
-        "cannot transfer to self": "Não pode transferir para mim",
+        "cannot transfer to self": "Não é possível transferir para si mesmo",
         "destination account doesn't exists": "A conta de destino não existe",
         "token with given symbol doesn't exists": "O token com o símbolo fornecido não existe",
         "invalid quantity": "Quantidade inválida",
