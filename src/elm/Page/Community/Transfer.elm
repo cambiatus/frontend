@@ -14,6 +14,7 @@ import Browser.Events
 import Community exposing (Model)
 import Eos exposing (Symbol)
 import Eos.Account as Eos
+import Eos.EosError as EosError
 import Graphql.Document
 import Graphql.Http
 import Html exposing (Html, button, div, form, input, span, text, textarea)
@@ -282,7 +283,7 @@ type Msg
     | SubmitForm
     | PressedEnter Bool
     | PushTransaction
-    | GotTransferResult (Result Value String)
+    | GotTransferResult (Result (Maybe String) String)
     | Redirect Value
 
 
@@ -485,7 +486,11 @@ update msg model ({ shared } as loggedIn) =
                 _ ->
                     onlyLogImpossible []
 
-        GotTransferResult (Err _) ->
+        GotTransferResult (Err eosErrorString) ->
+            let
+                errorMessage =
+                    EosError.parseErrorMessage loggedIn.shared.translators eosErrorString
+            in
             case model.status of
                 Loaded c (SendingTransfer form) ->
                     { model | status = Loaded c (SendingTransferFailed form) }
@@ -493,7 +498,7 @@ update msg model ({ shared } as loggedIn) =
                         |> UR.addExt
                             (LoggedIn.ShowFeedback
                                 LoggedIn.Failure
-                                "Transfer Failed"
+                                errorMessage
                             )
 
                 _ ->
@@ -545,7 +550,8 @@ jsAddressToMsg addr val =
                 (Decode.oneOf
                     [ Decode.field "transactionId" Decode.string
                         |> Decode.map Ok
-                    , Decode.succeed (Err Encode.null)
+                    , Decode.field "error" (Decode.nullable Decode.string)
+                        |> Decode.map Err
                     ]
                 )
                 val
