@@ -90,6 +90,9 @@
     "phone": "Please use a valid phone number",
     "zipcode": "Invalid zipcode",
     "contracts": {
+      "transfer": {
+        "cannot transfer to self": "Cannot transfer to self"
+      },
       "verifyclaim": {
         "Can't vote on already verified claim": "Can't vote on already verified claim",
         "This is action is already completed, can't verify claim": "This action is already completed, can't verify claim",

@@ -1,4 +1,7 @@
-module Eos.EosError exposing (parseErrorMessage)
+module Eos.EosError exposing
+    ( parseClaimError
+    , parseTransferError
+    )
 
 import Json.Decode as Decode exposing (at, decodeString, field, list, string)
 import Session.Shared exposing (Translators)
@@ -32,19 +35,41 @@ extractFailure json =
             "error.unknown"
 
 
-parseErrorMessage : Translators -> Maybe String -> String
-parseErrorMessage { t } eosErrorString =
+parseErrorMessage : Translators -> String -> String -> Maybe String -> String
+parseErrorMessage { t } translationPrefix translationDefault eosErrorString =
     t <|
         case eosErrorString of
             Just err ->
-                "error.contracts.verifyclaim."
+                translationPrefix
                     ++ extractFailure err
 
             Nothing ->
-                "community.verifyClaim.error"
+                translationDefault
 
 
 decodeErrorDetails : Decode.Decoder (List String)
 decodeErrorDetails =
     at [ "error", "details" ] <|
         list (field "message" string)
+
+
+
+-- MESSAGES FOR MODULES
+
+
+parseClaimError : Translators -> Maybe String -> String
+parseClaimError translators eosErrorString =
+    parseErrorMessage
+        translators
+        "error.contracts.verifyclaim."
+        "community.verifyClaim.error"
+        eosErrorString
+
+
+parseTransferError : Translators -> Maybe String -> String
+parseTransferError translators eosErrorString =
+    parseErrorMessage
+        translators
+        "error.contracts.transfer."
+        "account.my_wallet.transfer.error"
+        eosErrorString

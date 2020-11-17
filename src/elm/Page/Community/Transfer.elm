@@ -489,7 +489,7 @@ update msg model ({ shared } as loggedIn) =
         GotTransferResult (Err eosErrorString) ->
             let
                 errorMessage =
-                    EosError.parseErrorMessage loggedIn.shared.translators eosErrorString
+                    EosError.parseTransferError loggedIn.shared.translators eosErrorString
             in
             case model.status of
                 Loaded c (SendingTransfer form) ->
