@@ -123,21 +123,18 @@ Sentry.init({
   environment: env
 })
 
-// Sentry Reporter
-function sentryReporter (msg, exception) {
-  Sentry.withScope(scope => {
-    scope.setExtra(msg)
-    scope.setTag('event', msg)
-    scope.setLevel('error')
-    Sentry.captureException(exception)
-  })
-}
-
+// Ports error Reporter
 app.ports.logError.subscribe((msg, err) => {
   if (env === 'development') {
     console.error(msg, err)
   } else {
-    sentryReporter(msg, err)
+    Sentry.withScope(scope => {
+      scope.setExtra(msg)
+      scope.setTag('type', 'port-error')
+      scope.setTag('event', msg)
+      scope.setLevel(Sentry.Severity.Error)
+      Sentry.captureException(err)
+    })
   }
 })
 
@@ -689,7 +686,7 @@ async function handleJavascriptPort (arg) {
         })
       )
 
-      let onStart = data => {
+      const onStart = data => {
         const payload = { dta: data, msg: 'starting community subscription' }
         devLog('==========================', payload)
         const response = {
@@ -700,18 +697,18 @@ async function handleJavascriptPort (arg) {
         app.ports.javascriptInPort.send(response)
       }
 
-      let onAbort = data => {
+      const onAbort = data => {
         devLog('===========================', 'aborting community subscription')
       }
 
-      let onCancel = data => {
+      const onCancel = data => {
         devLog(
           '===========================',
           'cancellling community subscription '
         )
       }
 
-      let onError = data => {
+      const onError = data => {
         devLog('community subscrition error', data)
       }
 
@@ -771,19 +768,19 @@ async function handleJavascriptPort (arg) {
         app.ports.javascriptInPort.send(response)
       }
 
-      let onAbort = data => {
+      const onAbort = data => {
         devLog('===========================', 'aborting transfer subscription')
       }
 
-      let onCancel = data => {
+      const onCancel = data => {
         devLog('===========================', 'cancel transfer subscription ')
       }
 
-      let onError = data => {
+      const onError = data => {
         devLog('transfer subscrition error', data)
       }
 
-      let onResult = data => {
+      const onResult = data => {
         devLog('===========================', 'Transfer subscription results')
         const response = {
           address: arg.responseAddress,
@@ -828,30 +825,30 @@ async function handleJavascriptPort (arg) {
         })
       )
 
-      let onStart = data => {
+      const onStart = data => {
         const payload = { dta: data, msg: 'starting unread countsubscription' }
         devLog('==========================', payload)
       }
 
-      let onAbort = data => {
+      const onAbort = data => {
         devLog(
           '===========================',
           'aborting unread count subscription'
         )
       }
 
-      let onCancel = data => {
+      const onCancel = data => {
         devLog(
           '===========================',
           'cancelling unread count subscription '
         )
       }
 
-      let onError = data => {
+      const onError = data => {
         devLog('community subscrition error', data)
       }
 
-      let onResult = data => {
+      const onResult = data => {
         devLog(
           '===========================',
           'unread count subscription results'
