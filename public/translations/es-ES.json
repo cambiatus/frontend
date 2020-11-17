@@ -90,6 +90,17 @@
     "phone": "Utilice un número de teléfono válido",
     "zipcode": "Código postal no válido",
     "contracts": {
+      "transfer": {
+        "cannot transfer to self": "No se puede transferir a uno mismo",
+        "destination account doesn't exists": "La cuenta de destino no existe",
+        "token with given symbol doesn't exists": "El token con el símbolo dado no existe",
+        "invalid quantity": "Cantidad inválida",
+        "quantity must be positive": "La cantidad debe ser positiva",
+        "symbol precision mismatch": "Falta de coincidencia de precisión de símbolo",
+        "memo has more than 256 bytes": "El memo tiene más de 256 símbolos",
+        "from account doesn't belong to the community": "De la cuenta no pertenece a la comunidad",
+        "to account doesn't belong to the community": "La cuenta no pertenece a la comunidad"
+      },
       "verifyclaim": {
         "Can't vote on already verified claim": "No puedo votar sobre un reclamo ya verificado",
         "This is action is already completed, can't verify claim": "Esta acción ya se completó, no se puede verificar el reclamo",

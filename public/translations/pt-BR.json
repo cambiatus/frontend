@@ -90,6 +90,17 @@
     "phone": "Por favor insira um número de telefone válido",
     "zipcode": "CEP inválido",
     "contracts": {
+      "transfer": {
+        "cannot transfer to self": "Não é possível transferir para si mesmo",
+        "destination account doesn't exists": "A conta de destino não existe",
+        "token with given symbol doesn't exists": "Nenhuma moeda com o símbolo fornecido foi encontrada",
+        "invalid quantity": "Quantidade inválida",
+        "quantity must be positive": "Quantidade deve ser positiva",
+        "symbol precision mismatch": "Precisão do símbolo incompatível",
+        "memo has more than 256 bytes": "a mensagem não pode ter mais que 256 carácteres",
+        "from account doesn't belong to the community": "A conta de origem não pertence à comunidade",
+        "to account doesn't belong to the community": "A conta de destino não pertence à comunidade"
+      },
       "verifyclaim": {
         "Can't vote on already verified claim": "Não é possível votar em uma reivindicação já verificada",
         "This is action is already completed, can't verify claim": "Esta ação já foi concluída, não é possível verificar a reivindicação",
