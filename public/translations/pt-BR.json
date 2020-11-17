@@ -98,7 +98,7 @@
         "quantity must be positive": "Quantidade deve ser positiva",
         "symbol precision mismatch": "Precisão do símbolo incompatível",
         "memo has more than 256 bytes": "O memorando tem mais de 256 símbolos",
-        "from account doesn't belong to the community": "De conta não pertence à comunidade",
+        "from account doesn't belong to the community": "A conta de origem não pertence à comunidade",
         "to account doesn't belong to the community": "A conta não pertence à comunidade"
       },
       "verifyclaim": {
