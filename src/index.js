@@ -119,7 +119,8 @@ function devLog (name, arg) {
 
 // Init Sentry
 Sentry.init({
-  dsn: 'https://535b151f7b8c48f8a7307b9bc83ebeba@sentry.io/1480468'
+  dsn: 'https://535b151f7b8c48f8a7307b9bc83ebeba@sentry.io/1480468',
+  environment: env
 })
 
 // Sentry Reporter
@@ -348,6 +349,7 @@ async function handleJavascriptPort (arg) {
       const passphrase = loginForm.passphrase
       const privateKey = ecc.seedPrivate(mnemonic.toSeedHex(passphrase))
 
+      // Storing stuff
       if (loginForm.usePin) {
         storePin(
           {
@@ -362,11 +364,13 @@ async function handleJavascriptPort (arg) {
         storeAccountName(accountName)
         storeAuthPreference('private_key')
       }
-      eos = Eos(
-        Object.assign(config.eosOptions, {
-          keyProvider: privateKey
-        })
-      )
+
+      // Save credentials to EOS
+      eos = Eos(Object.assign(config.eosOptions, { keyProvider: privateKey }))
+
+      // Configure Sentry logged user
+      Sentry.setUser({ email: accountName })
+
       const response = {
         address: arg.responseAddress,
         addressData: arg.responseData,
@@ -419,25 +423,25 @@ async function handleJavascriptPort (arg) {
         try {
           const decryptedKey = sjcl.decrypt(pin, store.encryptedKey)
 
-          eos = Eos(
-            Object.assign(config.eosOptions, {
-              keyProvider: decryptedKey
-            })
-          )
+          eos = Eos(Object.assign(config.eosOptions, { keyProvider: decryptedKey }))
+
+          // Configure Sentry logged user
+          Sentry.setUser({ account: store.accountName })
 
           storeAuthPreference('pin')
-          const response = {
-            address: arg.responseAddress,
-            addressData: arg.responseData,
-            accountName: store.accountName,
-            privateKey: decryptedKey
-          }
 
           // Set default selected community
           window.localStorage.setItem(
             SELECTED_COMMUNITY_KEY,
             flags().selectedCommunity
           )
+
+          const response = {
+            address: arg.responseAddress,
+            addressData: arg.responseData,
+            accountName: store.accountName,
+            privateKey: decryptedKey
+          }
 
           devLog('response', response)
           app.ports.javascriptInPort.send(response)
@@ -478,8 +482,9 @@ async function handleJavascriptPort (arg) {
           devLog('response', response)
           app.ports.javascriptInPort.send(response)
         })
-        .catch(error => {
-          var errorResponse = {
+        .catch(errorString => {
+          const error = JSON.parse(errorString)
+          const errorResponse = {
             address: arg.responseAddress,
             addressData: arg.responseData,
             error: error
@@ -487,11 +492,14 @@ async function handleJavascriptPort (arg) {
           devLog('eos.transaction.failed', errorResponse)
           // Send to sentry
           Sentry.configureScope(scope => {
+            const message = error.error.details[0].message || 'Generic EOS Error'
             scope.setTag('type', 'eos-transaction')
-            scope.setExtra('data', arg.data)
-            Sentry.setExtra('response', errorResponse)
-            Sentry.setExtra('error', errorResponse.error)
-            Sentry.captureMessage('EOS Error')
+            scope.setExtra('Sent data', arg.data)
+            scope.setExtra('Response', errorResponse)
+            scope.setExtra('Error', errorResponse.error)
+            scope.setExtra('Error String', errorString)
+            scope.setLevel(Sentry.Severity.Error)
+            Sentry.captureMessage(message)
           })
           app.ports.javascriptInPort.send(errorResponse)
         })
@@ -502,6 +510,7 @@ async function handleJavascriptPort (arg) {
       window.localStorage.removeItem(USER_KEY)
       window.localStorage.removeItem(AUTH_PREF_KEY)
       window.localStorage.removeItem(SELECTED_COMMUNITY_KEY)
+      Sentry.setUser(null)
       break
     }
     case 'requestPushPermission': {
