@@ -16,7 +16,7 @@ jobs:
         run: yarn install --production
 
       - name: Add `node_modules/.bin` to PATH
-        run: echo ::add-path::$(yarn bin)
+        run: echo $(yarn bin) >> $GITHUB_PATH
 
       - name: "Check elm-format"
         uses: sparksp/elm-format-action@v1
