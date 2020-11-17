@@ -97,7 +97,6 @@ function flags () {
     tokenContract: config.tokenContract,
     communityContract: config.communityContract
   }
-  debugLog('flags', flags_)
   return flags_
 }
 
@@ -119,18 +118,12 @@ Sentry.addBreadcrumb({
 registerServiceWorker()
 
 // Log
-
 function debugLog (name, arg) {
   if (env === 'development') {
-    console.log('[dev]', name, arg)
+    console.log('[==== DEV]: ', name, arg)
+  } else {
+    Sentry.addBreadcrumb({ message: name, level: 'info', type: 'debug' })
   }
-
-  Sentry.addBreadcrumb({
-    message: typeof arg === 'string' || arg instanceof String ? arg : name,
-    level: 'info',
-    type: 'debug'
-  }
-  )
 }
 
 // Init Sentry
@@ -240,10 +233,9 @@ function downloadPdf (accountName, passphrase, responseAddress, responseData) {
 
 app.ports.javascriptOutPort.subscribe(handleJavascriptPort)
 async function handleJavascriptPort (arg) {
-  debugLog('handleJavascriptPort', arg)
   switch (arg.data.name) {
     case 'checkAccountAvailability': {
-      debugLog('=========================', 'checkAccountAvailability')
+      debugLog('checkAccountAvailability', '')
       var sendResponse = function (isAvailable, error) {
         const response = {
           address: arg.responseAddress,
@@ -251,7 +243,7 @@ async function handleJavascriptPort (arg) {
           isAvailable: isAvailable,
           error: error
         }
-        debugLog('checkAccountAvailability response', response)
+        debugLog('checkAccountAvailability port finished', response)
         app.ports.javascriptInPort.send(response)
       }
       eos
@@ -259,8 +251,8 @@ async function handleJavascriptPort (arg) {
         .then(_ => sendResponse(false))
         .catch(e => {
           // Invalid name exception
-          debugLog('checkAccountAvailability', e)
           if (JSON.parse(e.message).error.code === 3010001) {
+            debugLog('checkAccountAvailability port failed', e)
             sendResponse(false)
           } else {
             sendResponse(true)
@@ -269,7 +261,7 @@ async function handleJavascriptPort (arg) {
       break
     }
     case 'generateKeys': {
-      debugLog('=========================', 'generateKeys')
+      debugLog('generateKeys port started', '')
       const userLang = getUserLanguage()
       const [randomWords, hexRandomWords] = mnemonic.generateRandom(userLang)
       const privateKey = ecc.seedPrivate(hexRandomWords)
@@ -287,12 +279,12 @@ async function handleJavascriptPort (arg) {
         }
       }
 
-      debugLog('generateKeys response', response)
+      debugLog('generateKeys port finished', response)
       app.ports.javascriptInPort.send(response)
       break
     }
     case 'loginWithPrivateKey': {
-      debugLog('=========================', 'loginWithPrivateKey')
+      debugLog('loginWithPrivateKey', '')
       const passphrase = arg.data.form.passphrase
       const privateKey = ecc.seedPrivate(mnemonic.toSeedHex(passphrase))
 
@@ -300,7 +292,7 @@ async function handleJavascriptPort (arg) {
         const publicKey = ecc.privateToPublic(privateKey)
         const accounts = await eos.getKeyAccounts(publicKey)
         const user = JSON.parse(window.localStorage.getItem(USER_KEY))
-        debugLog('loginWithPrivateKey:accounts', accounts)
+        debugLog('loginWithPrivateKey port accounts', accounts)
 
         if (
           !accounts ||
@@ -312,7 +304,7 @@ async function handleJavascriptPort (arg) {
             addressData: arg.responseData,
             error: 'error.accountNotFound'
           }
-          debugLog('response', response)
+          debugLog('loginWithPrivateKey port failed', response)
           app.ports.javascriptInPort.send(response)
         } else if (
           user &&
@@ -325,7 +317,7 @@ async function handleJavascriptPort (arg) {
             error:
               'This private key does not correspond to logged in account. Please logout to use a different account.'
           }
-          debugLog('response', response)
+          debugLog('loginWithPrivateKey port failed', response)
           app.ports.javascriptInPort.send(response)
         } else if (accounts.account_names.length === 1) {
           arg.data.name = 'loginWithPrivateKeyAccount'
@@ -347,7 +339,7 @@ async function handleJavascriptPort (arg) {
             addressData: arg.responseData,
             accountNames: accounts.account_names
           }
-          debugLog('response', response)
+          debugLog('loginWithPrivateKey port finished', response)
           app.ports.javascriptInPort.send(response)
         }
       } else {
@@ -356,13 +348,13 @@ async function handleJavascriptPort (arg) {
           addressData: arg.responseData,
           error: 'Invalid key'
         }
-        debugLog('response', response)
+        debugLog('loginWithPrivateKey port failed', response)
         app.ports.javascriptInPort.send(response)
       }
       break
     }
     case 'loginWithPrivateKeyAccount': {
-      debugLog('========================', 'loginWithPrivateKeyAccount')
+      debugLog('loginWithPrivateKeyAccount port started', '')
       const loginForm = arg.data.form
       const accountName = arg.data.accountName
       const passphrase = loginForm.passphrase
@@ -396,12 +388,12 @@ async function handleJavascriptPort (arg) {
         accountName: accountName,
         privateKey: privateKey
       }
-      debugLog('response', response)
+      debugLog('loginWithPrivateKeyAccount port finished', response)
       app.ports.javascriptInPort.send(response)
       break
     }
     case 'changePin': {
-      debugLog('========================', 'changePin')
+      debugLog('changePin port started', '')
 
       const userStorage = JSON.parse(window.localStorage.getItem(USER_KEY))
       const currentPin = arg.data.currentPin
@@ -435,7 +427,7 @@ async function handleJavascriptPort (arg) {
       break
     }
     case 'loginWithPin': {
-      debugLog('========================', 'loginWithPin')
+      debugLog('loginWithPin port started', '')
       const store = JSON.parse(window.localStorage.getItem(USER_KEY))
       const pin = arg.data.pin
       if (store && store.encryptedKey && store.accountName) {
@@ -468,7 +460,7 @@ async function handleJavascriptPort (arg) {
             privateKey: decryptedKey
           }
 
-          debugLog('response', response)
+          debugLog('loginWithPin port finished', response)
           app.ports.javascriptInPort.send(response)
         } catch (e) {
           const response = {
@@ -476,7 +468,7 @@ async function handleJavascriptPort (arg) {
             addressData: arg.responseData,
             error: 'Invalid PIN'
           }
-          debugLog('response', response)
+          debugLog('loginWithPin port failed', response)
           app.ports.javascriptInPort.send(response)
         }
       } else {
@@ -485,14 +477,13 @@ async function handleJavascriptPort (arg) {
           addressData: arg.responseData,
           error: 'PIN is unavailable'
         }
-        debugLog('response', response)
+        debugLog('loginWithPin port failed', response)
         app.ports.javascriptInPort.send(response)
       }
       break
     }
     case 'eosTransaction': {
-      debugLog('=========================', 'transaction')
-      debugLog('DATA', arg.data)
+      debugLog('eosTransaction port started', arg.data)
 
       Sentry.addBreadcrumb({
         type: 'debug',
@@ -518,8 +509,7 @@ async function handleJavascriptPort (arg) {
             message: 'Success pushing transaction to EOS'
           })
 
-          debugLog('eos.transaction.succeed', res)
-          debugLog('response', response)
+          debugLog('eosTransaction port response', response)
           app.ports.javascriptInPort.send(response)
         })
         .catch(errorString => {
@@ -529,7 +519,7 @@ async function handleJavascriptPort (arg) {
             addressData: arg.responseData,
             error: error
           }
-          debugLog('eos.transaction.failed', errorResponse)
+          debugLog('eosTransaction port failed', errorResponse)
 
           // Send to sentry
           Sentry.addBreadcrumb({
@@ -553,7 +543,7 @@ async function handleJavascriptPort (arg) {
       break
     }
     case 'logout': {
-      debugLog('=========================', 'logout')
+      debugLog('logout port started', '')
       window.localStorage.removeItem(USER_KEY)
       window.localStorage.removeItem(AUTH_PREF_KEY)
       window.localStorage.removeItem(SELECTED_COMMUNITY_KEY)
@@ -565,7 +555,7 @@ async function handleJavascriptPort (arg) {
       break
     }
     case 'requestPushPermission': {
-      debugLog('======================', 'requestingPushPermissions')
+      debugLog('requestingPushPermissions port started', '')
       const swUrl = `${process.env.PUBLIC_URL}/service-worker.js`
       const pKey = config.pushKey
       if (pushSub.isPushSupported()) {
@@ -580,17 +570,17 @@ async function handleJavascriptPort (arg) {
               addressData: arg.responseData,
               sub: stringSub
             }
-            debugLog('requestPushPermission response', response)
+            debugLog('requestPushPermission port ended', response)
             app.ports.javascriptInPort.send(response)
           })
-          .catch(err => debugLog('Push Permission Denied', err))
+          .catch(err => debugLog('requestPushPermission port error: Push Permission Denied', err))
       } else {
-        debugLog('=======================', 'Push not supported on this agent')
+        debugLog('requestPushPermission port error: Push not supported on this agent', '')
       }
       break
     }
     case 'completedPushUpload': {
-      debugLog('=====================', 'cachingPushSubscription')
+      debugLog('cachingPushSubscription port started', '')
       storePushPref('set')
       const response = {
         address: arg.responseAddress,
@@ -601,25 +591,22 @@ async function handleJavascriptPort (arg) {
       break
     }
     case 'checkPushPref': {
-      debugLog('=====================', 'checkingPushPref')
-      let sendResp = function (isSet) {
+      debugLog('checkingPushPref port started', '')
+      let sendResponse = function (isSet) {
         const response = {
           address: arg.responseAddress,
           addressData: arg.responseData,
           isSet: isSet
         }
-        debugLog('checkPushPref result', response)
+        debugLog('checkPushPref port ended', response)
         app.ports.javascriptInPort.send(response)
       }
-      if (window.localStorage.getItem(PUSH_PREF) === null) {
-        sendResp(false)
-      } else {
-        sendResp(true)
-      }
+
+      sendResponse(window.localStorage.getItem(PUSH_PREF) !== null)
       break
     }
     case 'disablePushPref': {
-      debugLog('=====================', 'disablePushPref')
+      debugLog('disablePushPref port started', '')
       window.localStorage.removeItem(PUSH_PREF)
       pushSub.unsubscribeFromPush()
       const response = {
@@ -631,7 +618,7 @@ async function handleJavascriptPort (arg) {
       break
     }
     case 'downloadAuthPdfFromRegistration': {
-      debugLog('=======================', 'downloadAuthPdfFromRegistration')
+      debugLog('downloadAuthPdfFromRegistration port started', '')
       const accountName = arg.data.accountName
       const passphrase = arg.data.passphrase
       downloadPdf(
@@ -643,7 +630,7 @@ async function handleJavascriptPort (arg) {
       break
     }
     case 'downloadAuthPdfFromProfile': {
-      debugLog('=======================', 'downloadAuthPdfFromProfile')
+      debugLog('downloadAuthPdfFromProfile port started', '')
       const store = JSON.parse(window.localStorage.getItem(USER_KEY))
       const pin = arg.data.pin
 
@@ -672,7 +659,7 @@ async function handleJavascriptPort (arg) {
       break
     }
     case 'accountNameToUint64': {
-      debugLog('=======================', 'accountNameToUint64')
+      debugLog('accountNameToUint64 port started', '')
       const response = {
         address: arg.responseAddress,
         addressData: arg.responseData,
@@ -682,12 +669,12 @@ async function handleJavascriptPort (arg) {
       break
     }
     case 'scrollIntoView': {
-      debugLog('=======================', 'scrollIntoView')
+      debugLog('scrollIntoView port started', '')
       document.getElementById(arg.data.id).scrollIntoView(true)
       break
     }
     case 'validateDeadline': {
-      debugLog('=============================', 'validatingDate')
+      debugLog('validatingDate port started', '')
 
       const parsedDate = new Date(arg.data.deadline)
       const now = new Date()
@@ -714,12 +701,12 @@ async function handleJavascriptPort (arg) {
       }
     }
     case 'hideFooter': {
-      debugLog('======================', 'hideFooter')
+      debugLog('hideFooter port started', '')
       document.getElementById('guest-footer').className += ' guest__footer'
       break
     }
     case 'subscribeToNewCommunity': {
-      debugLog('=======================', 'newCommunitySubscription')
+      debugLog('subscribeToNewCommunity port started', arg)
       let notifiers = []
 
       // Open a socket connection
@@ -731,7 +718,6 @@ async function handleJavascriptPort (arg) {
       // Remove existing notifiers if any
       notifiers.map(notifier => AbsintheSocket.cancel(abSocket, notifier))
 
-      debugLog('subscription doc', arg.data.subscription)
       // Create new notifiers
       notifiers = [arg.data.subscription].map(operation =>
         AbsintheSocket.send(abSocket, {
@@ -741,8 +727,7 @@ async function handleJavascriptPort (arg) {
       )
 
       const onStart = data => {
-        const payload = { dta: data, msg: 'starting community subscription' }
-        debugLog('==========================', payload)
+        debugLog('subscribeToNewCommunity port: onStart handler called', data)
         const response = {
           address: arg.responseAddress,
           addressData: arg.responseData,
@@ -752,22 +737,19 @@ async function handleJavascriptPort (arg) {
       }
 
       const onAbort = data => {
-        debugLog('===========================', 'aborting community subscription')
+        debugLog('subscribeToNewCommunity port: onAbort handler called', data)
       }
 
       const onCancel = data => {
-        debugLog(
-          '===========================',
-          'cancellling community subscription '
-        )
+        debugLog('subscribeToNewCommunity port: onCancel handler called', data)
       }
 
       const onError = data => {
-        debugLog('community subscrition error', data)
+        debugLog('subscribeToNewCommunity port: onError handler called', data)
       }
 
       let onResult = data => {
-        debugLog('===========================', 'community subscription results')
+        debugLog('subscribeToNewCommunity port: onResult handler called', data)
         const response = {
           address: arg.responseAddress,
           addressData: arg.responseData,
@@ -788,7 +770,7 @@ async function handleJavascriptPort (arg) {
       break
     }
     case 'subscribeToTransfer': {
-      debugLog('=======================', 'subscribeToTransfer')
+      debugLog('subscribeToTransfer port started', arg)
 
       let notifiers = []
 
@@ -801,7 +783,6 @@ async function handleJavascriptPort (arg) {
       // Remove existing notifiers if any
       notifiers.map(notifier => AbsintheSocket.cancel(abSocket, notifier))
 
-      debugLog('subscription doc', arg.data.subscription)
       // Create new notifiers
       notifiers = [arg.data.subscription].map(operation =>
         AbsintheSocket.send(abSocket, {
@@ -811,8 +792,7 @@ async function handleJavascriptPort (arg) {
       )
 
       let onStart = data => {
-        const payload = { dta: data, msg: 'starting transfer subscription' }
-        debugLog('==========================', payload)
+        debugLog('subscribeToTransfer port: onStart handler called', data)
 
         const response = {
           address: arg.responseAddress,
@@ -823,19 +803,19 @@ async function handleJavascriptPort (arg) {
       }
 
       const onAbort = data => {
-        debugLog('===========================', 'aborting transfer subscription')
+        debugLog('subscribeToTransfer port: onAbort handler called', data)
       }
 
       const onCancel = data => {
-        debugLog('===========================', 'cancel transfer subscription ')
+        debugLog('subscribeToTransfer port: onCancel handler called', data)
       }
 
       const onError = data => {
-        debugLog('transfer subscrition error', data)
+        debugLog('subscribeToTransfer port: onError handler called', data)
       }
 
       const onResult = data => {
-        debugLog('===========================', 'Transfer subscription results')
+        debugLog('subscribeToTransfer port: onResult handler called', data)
         const response = {
           address: arg.responseAddress,
           addressData: arg.responseData,
@@ -858,7 +838,7 @@ async function handleJavascriptPort (arg) {
       break
     }
     case 'subscribeToUnreadCount': {
-      debugLog('=======================', 'unreadCountSubscription')
+      debugLog('unreadCountSubscription port started', arg.data.subscription)
       let notifiers = []
 
       // Open a socket connection
@@ -870,7 +850,6 @@ async function handleJavascriptPort (arg) {
       // Remove existing notifiers if any
       notifiers.map(notifier => AbsintheSocket.cancel(abSocket, notifier))
 
-      debugLog('subscription doc', arg.data.subscription)
       // Create new notifiers
       notifiers = [arg.data.subscription].map(operation =>
         AbsintheSocket.send(abSocket, {
@@ -881,32 +860,23 @@ async function handleJavascriptPort (arg) {
 
       const onStart = data => {
         const payload = { dta: data, msg: 'starting unread countsubscription' }
-        debugLog('==========================', payload)
+        debugLog('subscribeToUnreadCount port: onStart handler called', payload)
       }
 
       const onAbort = data => {
-        debugLog(
-          '===========================',
-          'aborting unread count subscription'
-        )
+        debugLog('subscribeToUnreadCount port: onAbort handler called', data)
       }
 
       const onCancel = data => {
-        debugLog(
-          '===========================',
-          'cancelling unread count subscription '
-        )
+        debugLog('subscribeToUnreadCount port: onCancel handler called', data)
       }
 
       const onError = data => {
-        debugLog('community subscrition error', data)
+        debugLog('subscribeToUnreadCount port: onError handler called', data)
       }
 
       const onResult = data => {
-        debugLog(
-          '===========================',
-          'unread count subscription results'
-        )
+        debugLog('subscribeToUnreadCount port: onResult handler called', data)
         const response = {
           address: arg.responseAddress,
           addressData: arg.responseData,
@@ -927,7 +897,7 @@ async function handleJavascriptPort (arg) {
       break
     }
     case 'copyToClipboard': {
-      debugLog('=======================', 'copyToClipboard')
+      debugLog('copyToClipboard port started', '')
       document.querySelector('#' + arg.data.id).select()
       document.execCommand('copy')
       const response = {
@@ -938,7 +908,7 @@ async function handleJavascriptPort (arg) {
       break
     }
     case 'setSelectedCommunity': {
-      debugLog('=======================', 'storeSelectedCommunity')
+      debugLog('setSelectedCommunity port started', '')
 
       Sentry.addBreadcrumb({
         type: 'navigation',
@@ -960,7 +930,7 @@ async function handleJavascriptPort (arg) {
       break
     }
     default: {
-      debugLog('No treatment found for ', arg.data.name)
+      debugLog('No treatment found for Elm port ', arg.data.name)
     }
   }
 }
