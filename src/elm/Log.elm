@@ -100,10 +100,6 @@ send toStrs (Log a) =
                 |> logDebug
 
 
-
---Cmd.none
-
-
 impossible : String -> Cmd msg
 impossible e =
     logError ( "[Impossible Error]", e )
