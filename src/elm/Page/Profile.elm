@@ -230,11 +230,8 @@ viewSettings loggedIn model profile =
                 (viewButton (t "profile.pin.button") ClickedChangePin)
                 Center
                 Nothing
-            , viewProfileItem
-                (text (t "notifications.title"))
-                (viewTogglePush loggedIn model)
-                Center
-                Nothing
+
+            -- , viewProfileItem (text (t "notifications.title")) (viewTogglePush loggedIn model) Center Nothing
             , viewKycSettings
             ]
         ]
