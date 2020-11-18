@@ -283,7 +283,7 @@ type Msg
     | SubmitForm
     | PressedEnter Bool
     | PushTransaction
-    | GotTransferResult (Result (Maybe String) String)
+    | GotTransferResult (Result (Maybe Value) String)
     | Redirect Value
 
 
@@ -550,7 +550,7 @@ jsAddressToMsg addr val =
                 (Decode.oneOf
                     [ Decode.field "transactionId" Decode.string
                         |> Decode.map Ok
-                    , Decode.field "error" (Decode.nullable Decode.string)
+                    , Decode.field "error" (Decode.nullable Decode.value)
                         |> Decode.map Err
                     ]
                 )
