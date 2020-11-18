@@ -17,8 +17,8 @@ import Browser.Dom as Dom
 import Eos exposing (Symbol)
 import Eos.Account as Eos
 import Graphql.Http
-import Html exposing (Html, a, br, button, div, input, label, li, p, span, text, ul)
-import Html.Attributes exposing (checked, class, classList, for, href, id, name, type_)
+import Html exposing (Html, a, br, button, div, label, li, p, span, text, ul)
+import Html.Attributes exposing (class, classList, href)
 import Html.Events exposing (onClick)
 import Http
 import I18Next exposing (t)
@@ -230,11 +230,8 @@ viewSettings loggedIn model profile =
                 (viewButton (t "profile.pin.button") ClickedChangePin)
                 Center
                 Nothing
-            , viewProfileItem
-                (text (t "notifications.title"))
-                (viewTogglePush loggedIn model)
-                Center
-                Nothing
+
+            -- , viewProfileItem (text (t "notifications.title")) (viewTogglePush loggedIn model) Center Nothing
             , viewKycSettings
             ]
         ]
@@ -572,52 +569,45 @@ viewDangerButton label msg =
         ]
 
 
-viewTogglePush : LoggedIn.Model -> Model -> Html Msg
-viewTogglePush loggedIn model =
-    let
-        tr str =
-            t loggedIn.shared.translations str
 
-        inputId =
-            "notifications"
-
-        lblColor =
-            if model.isPushNotificationsEnabled then
-                "text-indigo-500"
-
-            else
-                "text-gray"
-
-        lblText =
-            if model.isPushNotificationsEnabled then
-                tr "settings.features.enabled"
-
-            else
-                tr "settings.features.disabled"
-    in
-    div []
-        [ label
-            [ for inputId
-            , class "inline-block lowercase mr-2 cursor-pointer"
-            , class lblColor
-            ]
-            [ text lblText ]
-        , div [ class "form-switch inline-block align-middle" ]
-            [ input
-                [ type_ "checkbox"
-                , id inputId
-                , name inputId
-                , class "form-switch-checkbox"
-                , checked model.isPushNotificationsEnabled
-                , onClick RequestPush
-                ]
-                []
-            , label [ class "form-switch-label", for inputId ] []
-            ]
-        ]
-
-
-
+-- viewTogglePush : LoggedIn.Model -> Model -> Html Msg
+-- viewTogglePush loggedIn model =
+--     let
+--         tr str =
+--             t loggedIn.shared.translations str
+--         inputId =
+--             "notifications"
+--         lblColor =
+--             if model.isPushNotificationsEnabled then
+--                 "text-indigo-500"
+--             else
+--                 "text-gray"
+--         lblText =
+--             if model.isPushNotificationsEnabled then
+--                 tr "settings.features.enabled"
+--             else
+--                 tr "settings.features.disabled"
+--     in
+--     div []
+--         [ label
+--             [ for inputId
+--             , class "inline-block lowercase mr-2 cursor-pointer"
+--             , class lblColor
+--             ]
+--             [ text lblText ]
+--         , div [ class "form-switch inline-block align-middle" ]
+--             [ input
+--                 [ type_ "checkbox"
+--                 , id inputId
+--                 , name inputId
+--                 , class "form-switch-checkbox"
+--                 , checked model.isPushNotificationsEnabled
+--                 , onClick RequestPush
+--                 ]
+--                 []
+--             , label [ class "form-switch-label", for inputId ] []
+--             ]
+--         ]
 -- UPDATE
 
 
