@@ -106,7 +106,7 @@ const app = Elm.Main.init({
 })
 Sentry.addBreadcrumb({
   message: 'Started Elm app',
-  level: 'info',
+  level: Sentry.Severity.Info,
   type: 'debug',
   category: 'started',
   data: {
