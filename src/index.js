@@ -4,7 +4,7 @@ import sjcl from 'sjcl'
 import './styles/main.css'
 import mnemonic from './scripts/mnemonic.js'
 import configuration from './scripts/config.js'
-import registerServiceWorker from './scripts/registerServiceWorker'
+// import registerServiceWorker from './scripts/registerServiceWorker'
 import pdfDefinition from './scripts/pdfDefinition'
 import * as pushSub from './scripts/pushNotifications'
 import { Elm } from './elm/Main.elm'
@@ -115,7 +115,7 @@ Sentry.addBreadcrumb({
 })
 
 // Register Service Worker After App
-registerServiceWorker()
+// registerServiceWorker()
 
 // Log
 function debugLog (name, arg) {
