@@ -17,8 +17,8 @@ import Browser.Dom as Dom
 import Eos exposing (Symbol)
 import Eos.Account as Eos
 import Graphql.Http
-import Html exposing (Html, a, br, button, div, input, label, li, p, span, text, ul)
-import Html.Attributes exposing (checked, class, classList, for, href, id, name, type_)
+import Html exposing (Html, a, br, button, div, label, li, p, span, text, ul)
+import Html.Attributes exposing (class, classList, href)
 import Html.Events exposing (onClick)
 import Http
 import I18Next exposing (t)
