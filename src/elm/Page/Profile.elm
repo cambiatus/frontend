@@ -569,52 +569,45 @@ viewDangerButton label msg =
         ]
 
 
-viewTogglePush : LoggedIn.Model -> Model -> Html Msg
-viewTogglePush loggedIn model =
-    let
-        tr str =
-            t loggedIn.shared.translations str
 
-        inputId =
-            "notifications"
-
-        lblColor =
-            if model.isPushNotificationsEnabled then
-                "text-indigo-500"
-
-            else
-                "text-gray"
-
-        lblText =
-            if model.isPushNotificationsEnabled then
-                tr "settings.features.enabled"
-
-            else
-                tr "settings.features.disabled"
-    in
-    div []
-        [ label
-            [ for inputId
-            , class "inline-block lowercase mr-2 cursor-pointer"
-            , class lblColor
-            ]
-            [ text lblText ]
-        , div [ class "form-switch inline-block align-middle" ]
-            [ input
-                [ type_ "checkbox"
-                , id inputId
-                , name inputId
-                , class "form-switch-checkbox"
-                , checked model.isPushNotificationsEnabled
-                , onClick RequestPush
-                ]
-                []
-            , label [ class "form-switch-label", for inputId ] []
-            ]
-        ]
-
-
-
+-- viewTogglePush : LoggedIn.Model -> Model -> Html Msg
+-- viewTogglePush loggedIn model =
+--     let
+--         tr str =
+--             t loggedIn.shared.translations str
+--         inputId =
+--             "notifications"
+--         lblColor =
+--             if model.isPushNotificationsEnabled then
+--                 "text-indigo-500"
+--             else
+--                 "text-gray"
+--         lblText =
+--             if model.isPushNotificationsEnabled then
+--                 tr "settings.features.enabled"
+--             else
+--                 tr "settings.features.disabled"
+--     in
+--     div []
+--         [ label
+--             [ for inputId
+--             , class "inline-block lowercase mr-2 cursor-pointer"
+--             , class lblColor
+--             ]
+--             [ text lblText ]
+--         , div [ class "form-switch inline-block align-middle" ]
+--             [ input
+--                 [ type_ "checkbox"
+--                 , id inputId
+--                 , name inputId
+--                 , class "form-switch-checkbox"
+--                 , checked model.isPushNotificationsEnabled
+--                 , onClick RequestPush
+--                 ]
+--                 []
+--             , label [ class "form-switch-label", for inputId ] []
+--             ]
+--         ]
 -- UPDATE
 
 
