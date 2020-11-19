@@ -134,17 +134,28 @@ Sentry.init({
 
 // Ports error Reporter
 app.ports.logError.subscribe((msg, err) => {
+  Sentry.addBreadcrumb({
+    message: 'Begin Elm Error port javascript handler',
+    level: Sentry.Severity.Info,
+    type: 'debug',
+    category: 'started'
+  })
   if (env === 'development') {
     console.error(msg, err)
   } else {
     Sentry.withScope(scope => {
-      scope.setExtra(msg)
-      scope.setTag('type', 'port-error')
-      scope.setTag('event', msg)
+      scope.setTag('type', 'elm-error')
       scope.setLevel(Sentry.Severity.Error)
-      Sentry.captureException(err)
+      scope.setExtra('Error shared by Elm', err)
+      Sentry.captureMessage(msg)
     })
   }
+  Sentry.addBreadcrumb({
+    message: 'Ended Elm Error port javascript handler',
+    level: Sentry.Severity.Info,
+    type: 'debug',
+    category: 'ended'
+  })
 })
 
 app.ports.logDebug.subscribe(debugLog)
