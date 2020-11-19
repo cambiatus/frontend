@@ -151,8 +151,8 @@ view guest model =
     }
 
 
-viewAccountGenerated : Translators -> Model -> AccountKeys -> Html Msg
-viewAccountGenerated { t } model keys =
+viewAccountCreated : Translators -> Model -> AccountKeys -> Html Msg
+viewAccountCreated { t } model keys =
     let
         name =
             Eos.nameToString keys.accountName
@@ -304,8 +304,17 @@ viewCreateAccount translators model =
             Loading ->
                 viewLoading
 
-            Generated keys ->
-                viewAccountGenerated translators model keys
+            KeysGenerated _ ->
+                viewLoading
+
+            AccountCreated ->
+                case model.accountKeys of
+                    Just keys ->
+                        viewAccountCreated translators model keys
+
+                    Nothing ->
+                        -- TODO: This should never happen
+                        text ""
 
             LoadedInvite _ ->
                 viewLoading
@@ -328,7 +337,7 @@ viewServerError : Maybe String -> Html msg
 viewServerError error =
     case error of
         Just message ->
-            div [ class "bg-red border-lg rounded p-4 mt-2 text-white" ] [ text message ]
+            div [ class "bg-red border-lg rounded p-4 mt-2 text-white mb-4" ] [ text message ]
 
         Nothing ->
             text ""
@@ -400,8 +409,17 @@ viewKycRegister translators model =
                         NotFound ->
                             [ Page.fullPageNotFound (translators.t "error.pageNotFound") "" ]
 
-                        Generated keys ->
-                            [ viewAccountGenerated translators model keys ]
+                        KeysGenerated _ ->
+                            [ viewLoading ]
+
+                        AccountCreated ->
+                            case model.accountKeys of
+                                Just keys ->
+                                    [ viewAccountCreated translators model keys ]
+
+                                Nothing ->
+                                    -- TODO: This should never happen
+                                    []
 
                 Nothing ->
                     []
@@ -515,7 +533,7 @@ since we don't need full width here.
 viewLoading : Html msg
 viewLoading =
     div [ class "h-full full-spinner-container" ]
-        [ div [ class "spinner" ] [] ]
+        [ div [ class "spinner spinner-light" ] [] ]
 
 
 viewTitleForStep : Translators -> Int -> Html msg
@@ -561,7 +579,7 @@ type alias UpdateResult =
 type Msg
     = ValidateForm FormType
     | GotAccountAvailabilityResponse Bool
-    | AccountGenerated (Result Decode.Error AccountKeys)
+    | AccountKeysGenerated (Result Decode.Error AccountKeys)
     | AgreedToSave12Words Bool
     | DownloadPdf PdfData
     | PdfDownloaded
@@ -591,7 +609,8 @@ type Status
     | FailedCountry (Graphql.Http.Error (Maybe Address.Country))
     | NotFound
     | LoadedDefaultCommunity
-    | Generated AccountKeys
+    | KeysGenerated AccountKeys -- on the Frontend
+    | AccountCreated -- via SignUp mutation on the EOS and the Backend
 
 
 type alias PdfData =
@@ -601,7 +620,7 @@ type alias PdfData =
 
 
 update : Maybe String -> Msg -> Model -> Guest.Model -> UpdateResult
-update maybeInvitation msg model guest =
+update _ msg model guest =
     let
         translators =
             guest.shared.translators
@@ -830,17 +849,23 @@ update maybeInvitation msg model guest =
                                     model.selectedForm
                     }
 
-        AccountGenerated (Err v) ->
-            UR.init
-                model
+        AccountKeysGenerated (Err v) ->
+            model
+                |> UR.init
                 |> UR.logDecodeError msg v
 
-        AccountGenerated (Ok account) ->
+        AccountKeysGenerated (Ok accountKeys) ->
             { model
-                | status = Generated account
-                , step = 2
+                | accountKeys = Just accountKeys
             }
                 |> UR.init
+                |> UR.addCmd
+                    (formTypeToAccountCmd
+                        guest.shared
+                        accountKeys.ownerKey
+                        model.maybeInvitationId
+                        model.selectedForm
+                    )
 
         AgreedToSave12Words val ->
             { model | hasAgreedToSavePassphrase = val }
@@ -881,46 +906,78 @@ update maybeInvitation msg model guest =
             model
                 |> UR.init
                 |> UR.addCmd
-                    (case model.status of
-                        Generated keys ->
-                            formTypeToAccountCmd guest.shared keys.ownerKey model.maybeInvitationId model.selectedForm
-
-                        _ ->
-                            Cmd.none
-                    )
+                    (Route.replaceUrl guest.shared.navKey (Route.Login Nothing))
 
         CompletedSignUp (Ok response) ->
             case response.status of
                 SignUpStatus.Success ->
+                    case model.selectedForm of
+                        Default _ ->
+                            -- For Default form the account is already created
+                            { model
+                                | status = AccountCreated
+                                , step = 2
+                            }
+                                |> UR.init
+
+                        _ ->
+                            -- For Juridical and Natural forms we need to save KYC data
+                            model
+                                |> UR.init
+                                |> UR.addCmd
+                                    -- Run KYC mutations
+                                    (formTypeToKycCmd guest.shared model.selectedForm)
+
+                SignUpStatus.Error ->
+                    UR.init
+                        { model
+                            | serverError = Just (t "register.account_error.title")
+                        }
+
+        CompletedSignUp (Err error) ->
+            { model | serverError = Just (t "register.account_error.title") }
+                |> UR.init
+                |> UR.logGraphqlError msg error
+
+        CompletedKycUpsert (Ok _) ->
+            case model.selectedForm of
+                Juridical _ ->
+                    -- Juridical account still needs the Address to be saved
                     model
                         |> UR.init
                         |> UR.addCmd
-                            (formTypeToKycCmd guest.shared model.selectedForm)
+                            (formTypeToAddressCmd guest.shared model.selectedForm)
 
-                SignUpStatus.Error ->
-                    UR.init { model | serverError = Just (t "error.unknown") }
+                Natural _ ->
+                    -- Natural account is fully created
+                    { model
+                        | status = AccountCreated
+                        , step = 2
+                    }
+                        |> UR.init
 
-        CompletedSignUp (Err _) ->
-            UR.init { model | serverError = Just (t "error.unknown") }
+                _ ->
+                    model |> UR.init
 
-        CompletedKycUpsert (Ok _) ->
-            model
+        CompletedKycUpsert (Err error) ->
+            { model
+                | serverError = Just (t "Can't save the KYC. Please, check your data and try again!")
+            }
                 |> UR.init
-                |> UR.addCmd
-                    (formTypeToAddressCmd guest.shared model.selectedForm)
-
-        CompletedKycUpsert (Err _) ->
-            UR.init { model | serverError = Just (t "error.unknown") }
+                |> UR.logGraphqlError msg error
 
         CompletedAddressUpsert (Ok _) ->
-            model
+            -- Address is saved, Juridical account is created.
+            { model
+                | status = AccountCreated
+                , step = 2
+            }
                 |> UR.init
-                |> UR.addCmd
-                    -- Go to login page after downloading PDF
-                    (Route.replaceUrl guest.shared.navKey (Route.Login Nothing))
 
-        CompletedAddressUpsert (Err _) ->
-            UR.init { model | serverError = Just (t "error.unknown") }
+        CompletedAddressUpsert (Err error) ->
+            UR.init
+                { model | serverError = Just (t "Can't save the Address. Please, check your data and try again!") }
+                |> UR.logGraphqlError msg error
 
         CompletedLoadInvite (Ok (Just invitation)) ->
             let
@@ -1086,7 +1143,7 @@ formTypeToKycCmd shared formType =
                 }
 
         _ ->
-            redirectCmd shared
+            Cmd.none
 
 
 formTypeToAddressCmd : Shared -> FormType -> Cmd Msg
@@ -1136,7 +1193,7 @@ jsAddressToMsg addr val =
 
         "GotAccountAvailabilityResponse" :: _ ->
             Decode.decodeValue (Decode.field "data" decodeAccount) val
-                |> AccountGenerated
+                |> AccountKeysGenerated
                 |> Just
 
         "PdfDownloaded" :: _ ->
@@ -1161,8 +1218,8 @@ msgToString msg =
         GotAccountAvailabilityResponse _ ->
             [ "GotAccountAvailabilityResponse" ]
 
-        AccountGenerated r ->
-            [ "AccountGenerated", UR.resultToString r ]
+        AccountKeysGenerated r ->
+            [ "AccountKeysGenerated", UR.resultToString r ]
 
         AgreedToSave12Words _ ->
             [ "AgreedToSave12Words" ]
