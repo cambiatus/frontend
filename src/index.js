@@ -147,7 +147,7 @@ app.ports.logError.subscribe((msg, err) => {
       scope.setTag('type', 'elm-error')
       scope.setLevel(Sentry.Severity.Error)
       scope.setExtra('Error shared by Elm', err)
-      Sentry.message(msg)
+      Sentry.captureMessage(msg)
     })
   }
   Sentry.addBreadcrumb({
