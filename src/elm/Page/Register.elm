@@ -36,20 +36,48 @@ import View.Form
 -- INIT
 
 
-queries : InvitationId -> Shared -> Cmd Msg
-queries maybeInvitationId shared =
-    case maybeInvitationId of
-        Just invitation ->
-            Api.Graphql.query shared (Community.inviteQuery invitation) CompletedLoadInvite
-
-        Nothing ->
-            Cmd.none
-
-
 init : InvitationId -> Guest.Model -> ( Model, Cmd Msg )
-init maybeInvitationId guest =
-    ( initModel maybeInvitationId guest
-    , queries maybeInvitationId guest.shared
+init invitationId { shared } =
+    let
+        initialStatus =
+            case invitationId of
+                Just _ ->
+                    Loading
+
+                Nothing ->
+                    LoadedDefaultCommunity
+
+        initialModel =
+            { accountKeys = Nothing
+            , hasAgreedToSavePassphrase = False
+            , isPassphraseCopiedToClipboard = False
+            , serverError = Nothing
+            , status = initialStatus
+            , invitationId = invitationId
+            , selectedForm =
+                case invitationId of
+                    Just _ ->
+                        None
+
+                    Nothing ->
+                        Default DefaultForm.init
+            , country = Nothing
+            , step = 1
+            }
+
+        loadInvitationData =
+            case invitationId of
+                Just id ->
+                    Api.Graphql.query
+                        shared
+                        (Community.inviteQuery id)
+                        CompletedLoadInvite
+
+                Nothing ->
+                    Cmd.none
+    in
+    ( initialModel
+    , loadInvitationData
     )
 
 
@@ -88,32 +116,6 @@ type FormType
     | Natural NaturalForm.Model
     | Juridical JuridicalForm.Model
     | Default DefaultForm.Model
-
-
-initModel : InvitationId -> Guest.Model -> Model
-initModel maybeInvitationId _ =
-    { accountKeys = Nothing
-    , hasAgreedToSavePassphrase = False
-    , isPassphraseCopiedToClipboard = False
-    , serverError = Nothing
-    , status =
-        case maybeInvitationId of
-            Just _ ->
-                Loading
-
-            Nothing ->
-                LoadedDefaultCommunity
-    , invitationId = maybeInvitationId
-    , selectedForm =
-        case maybeInvitationId of
-            Just _ ->
-                None
-
-            Nothing ->
-                Default DefaultForm.init
-    , country = Nothing
-    , step = 1
-    }
 
 
 
