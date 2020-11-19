@@ -30,7 +30,7 @@ import Graphql.Http
 import Graphql.Operation exposing (RootMutation)
 import Graphql.OptionalArgument exposing (OptionalArgument(..))
 import Graphql.SelectionSet as SelectionSet exposing (SelectionSet, with)
-import Html exposing (Html, a, button, div, h2, img, label, li, p, span, strong, text, textarea, ul)
+import Html exposing (Html, a, button, div, form, h2, img, input, label, li, p, span, strong, text, textarea, ul)
 import Html.Attributes exposing (autocomplete, autofocus, class, disabled, for, id, placeholder, required, src, title, type_, value)
 import Html.Events exposing (onClick, onInput, onSubmit)
 import I18Next exposing (t)
@@ -344,7 +344,7 @@ viewLoginSteps isModal shared model loginStep =
                         |> List.length
                         |> String.fromInt
             in
-            [ div [ class "sf-content" ]
+            [ form [ class "sf-content", onSubmit ClickedViewLoginPinStep ]
                 [ illustration "login_key.svg"
                 , p [ class pClass ]
                     [ span [ class "text-green text-caption tracking-wide uppercase block mb-1" ]
@@ -354,7 +354,7 @@ viewLoginSteps isModal shared model loginStep =
                     ]
                 , viewFieldLabel shared.translators "auth.login.wordsMode.input" passphraseId
                 , div [ class "relative" ]
-                    [ textarea
+                    [ input
                         [ class "form-textarea h-19 min-w-full block"
                         , placeholder (t "auth.login.wordsMode.input.placeholder")
                         , View.Form.noGrammarly
