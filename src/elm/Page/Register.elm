@@ -304,9 +304,6 @@ viewCreateAccount translators model =
             Loading ->
                 viewLoading
 
-            KeysGenerated _ ->
-                viewLoading
-
             AccountCreated ->
                 case model.accountKeys of
                     Just keys ->
@@ -408,9 +405,6 @@ viewKycRegister translators model =
 
                         NotFound ->
                             [ Page.fullPageNotFound (translators.t "error.pageNotFound") "" ]
-
-                        KeysGenerated _ ->
-                            [ viewLoading ]
 
                         AccountCreated ->
                             case model.accountKeys of
@@ -609,7 +603,6 @@ type Status
     | FailedCountry (Graphql.Http.Error (Maybe Address.Country))
     | NotFound
     | LoadedDefaultCommunity
-    | KeysGenerated AccountKeys -- on the Frontend
     | AccountCreated -- via SignUp mutation on the EOS and the Backend
 
 
