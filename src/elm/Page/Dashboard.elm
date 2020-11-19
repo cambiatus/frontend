@@ -567,7 +567,7 @@ type Msg
     | CommunityLoaded (Result (Graphql.Http.Error (Maybe Community.DashboardInfo)) (Maybe Community.DashboardInfo))
     | ClaimMsg Claim.Msg
     | VoteClaim Claim.ClaimId Bool
-    | GotVoteResult Claim.ClaimId (Result (Maybe String) String)
+    | GotVoteResult Claim.ClaimId (Result (Maybe Value) String)
     | CreateInvite
     | CloseInviteModal
     | CompletedInviteCreation (Result Http.Error String)
@@ -945,7 +945,7 @@ jsAddressToMsg addr val =
                 (Decode.oneOf
                     [ Decode.field "transactionId" Decode.string
                         |> Decode.map Ok
-                    , Decode.field "error" (Decode.nullable Decode.string)
+                    , Decode.field "error" (Decode.nullable Decode.value)
                         |> Decode.map Err
                     ]
                 )

@@ -3,7 +3,7 @@ module Eos.EosError exposing
     , parseTransferError
     )
 
-import Json.Decode as Decode exposing (at, decodeString, field, list, string)
+import Json.Decode as Decode exposing (Value, at, decodeValue, field, list, string)
 import Session.Shared exposing (Translators)
 
 
@@ -15,11 +15,11 @@ import Session.Shared exposing (Translators)
 The result is a string which can be translated and showed to the user.
 
 -}
-extractFailure : String -> String
+extractFailure : Value -> String
 extractFailure json =
     let
         eosErrorMessages =
-            decodeString decodeErrorDetails json
+            decodeValue decodeErrorDetails json
     in
     case eosErrorMessages of
         Ok (firstMessage :: _) ->
@@ -35,7 +35,7 @@ extractFailure json =
             "error.unknown"
 
 
-parseErrorMessage : Translators -> String -> String -> Maybe String -> String
+parseErrorMessage : Translators -> String -> String -> Maybe Value -> String
 parseErrorMessage { t } translationPrefix translationDefault eosErrorString =
     t <|
         case eosErrorString of
@@ -57,7 +57,7 @@ decodeErrorDetails =
 -- MESSAGES FOR MODULES
 
 
-parseClaimError : Translators -> Maybe String -> String
+parseClaimError : Translators -> Maybe Value -> String
 parseClaimError translators eosErrorString =
     parseErrorMessage
         translators
@@ -66,7 +66,7 @@ parseClaimError translators eosErrorString =
         eosErrorString
 
 
-parseTransferError : Translators -> Maybe String -> String
+parseTransferError : Translators -> Maybe Value -> String
 parseTransferError translators eosErrorString =
     parseErrorMessage
         translators

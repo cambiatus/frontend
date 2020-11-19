@@ -11,7 +11,7 @@ import Html exposing (Html, button, div, h3, img, label, p, span, strong, text)
 import Html.Attributes exposing (class, classList, src)
 import Html.Events exposing (onClick)
 import I18Next
-import Json.Decode as Decode
+import Json.Decode as Decode exposing (Value)
 import Json.Encode as Encode
 import Page
 import Profile
@@ -392,7 +392,7 @@ type alias UpdateResult =
 type Msg
     = ClaimLoaded (Result (Graphql.Http.Error Claim.Model) Claim.Model)
     | VoteClaim Claim.ClaimId Bool
-    | GotVoteResult Claim.ClaimId (Result (Maybe String) String)
+    | GotVoteResult Claim.ClaimId (Result (Maybe Value) String)
     | ClaimMsg Claim.Msg
 
 
@@ -523,7 +523,7 @@ jsAddressToMsg addr val =
                 (Decode.oneOf
                     [ Decode.field "transactionId" Decode.string
                         |> Decode.map Ok
-                    , Decode.field "error" (Decode.nullable Decode.string)
+                    , Decode.field "error" (Decode.nullable Decode.value)
                         |> Decode.map Err
                     ]
                 )
