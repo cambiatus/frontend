@@ -36,7 +36,7 @@ import View.Form
 -- INIT
 
 
-queries : Maybe String -> Shared -> Cmd Msg
+queries : InvitationId -> Shared -> Cmd Msg
 queries maybeInvitationId shared =
     case maybeInvitationId of
         Just invitation ->
@@ -46,7 +46,7 @@ queries maybeInvitationId shared =
             Cmd.none
 
 
-init : Maybe String -> Guest.Model -> ( Model, Cmd Msg )
+init : InvitationId -> Guest.Model -> ( Model, Cmd Msg )
 init maybeInvitationId guest =
     ( initModel maybeInvitationId guest
     , queries maybeInvitationId guest.shared
@@ -61,13 +61,21 @@ type alias Model =
     { accountKeys : Maybe AccountKeys
     , hasAgreedToSavePassphrase : Bool
     , isPassphraseCopiedToClipboard : Bool
-    , serverError : Maybe String
+    , serverError : ServerError
     , status : Status
-    , maybeInvitationId : Maybe String
+    , invitationId : InvitationId
     , selectedForm : FormType
     , country : Maybe Address.Country
     , step : Int
     }
+
+
+type alias ServerError =
+    Maybe String
+
+
+type alias InvitationId =
+    Maybe String
 
 
 type AccountType
@@ -82,7 +90,7 @@ type FormType
     | Default DefaultForm.Model
 
 
-initModel : Maybe String -> Guest.Model -> Model
+initModel : InvitationId -> Guest.Model -> Model
 initModel maybeInvitationId _ =
     { accountKeys = Nothing
     , hasAgreedToSavePassphrase = False
@@ -95,7 +103,7 @@ initModel maybeInvitationId _ =
 
             Nothing ->
                 LoadedDefaultCommunity
-    , maybeInvitationId = maybeInvitationId
+    , invitationId = maybeInvitationId
     , selectedForm =
         case maybeInvitationId of
             Just _ ->
@@ -361,7 +369,7 @@ viewKycRegister translators model =
     div []
         [ viewFormTypeSelector translators model
         , div [ class "sf-content" ]
-            (case model.maybeInvitationId of
+            (case model.invitationId of
                 Just _ ->
                     let
                         selectedForm =
@@ -528,11 +536,8 @@ viewLoading =
 
 
 viewTitleForStep : Translators -> Int -> Html msg
-viewTitleForStep translators s =
+viewTitleForStep { t, tr } s =
     let
-        { t, tr } =
-            translators
-
         step =
             String.fromInt s
     in
@@ -609,7 +614,7 @@ type alias PdfData =
     }
 
 
-update : Maybe String -> Msg -> Model -> Guest.Model -> UpdateResult
+update : InvitationId -> Msg -> Model -> Guest.Model -> UpdateResult
 update _ msg model guest =
     let
         translators =
@@ -853,7 +858,7 @@ update _ msg model guest =
                     (formTypeToAccountCmd
                         guest.shared
                         accountKeys.ownerKey
-                        model.maybeInvitationId
+                        model.invitationId
                         model.selectedForm
                     )
 
@@ -1051,7 +1056,7 @@ type alias SignUpResponse =
     }
 
 
-formTypeToAccountCmd : Shared -> String -> Maybe String -> FormType -> Cmd Msg
+formTypeToAccountCmd : Shared -> String -> InvitationId -> FormType -> Cmd Msg
 formTypeToAccountCmd shared key invitationId formType =
     let
         cmd obj userType =
