@@ -136,18 +136,15 @@ decodeAccount =
 
 
 view : Guest.Model -> Model -> { title : String, content : Html Msg }
-view guest model =
+view { shared } model =
     let
-        shared =
-            guest.shared
-
         { t } =
             shared.translators
     in
     { title =
         t "register.registerTab"
     , content =
-        viewCreateAccount guest.shared.translators model
+        viewCreateAccount shared.translators model
     }
 
 
