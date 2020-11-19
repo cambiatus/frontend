@@ -156,7 +156,7 @@ app.ports.logError.subscribe((msg, err) => {
       scope.setExtra('Error shared by Elm', err)
       scope.setExtra('raw msg', msg)
       scope.setExtra('Parsed details', details)
-      Sentry.captureMessage(error)
+      Sentry.captureMessage(error + details)
     })
   }
   Sentry.addBreadcrumb({
