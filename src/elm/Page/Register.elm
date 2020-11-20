@@ -13,7 +13,7 @@ import Graphql.Http
 import Graphql.OptionalArgument exposing (OptionalArgument(..))
 import Graphql.SelectionSet exposing (with)
 import Html exposing (Html, a, button, div, img, input, label, p, span, strong, text)
-import Html.Attributes exposing (checked, class, disabled, for, id, src, style, type_, value)
+import Html.Attributes exposing (checked, class, disabled, id, src, style, type_, value)
 import Html.Events exposing (onCheck, onClick, onSubmit)
 import Json.Decode as Decode exposing (Decoder, Value)
 import Json.Decode.Pipeline as Decode
@@ -45,7 +45,8 @@ init invitationId { shared } =
                     Loading
 
                 Nothing ->
-                    LoadedDefaultCommunity
+                    FormShowed
+                        (DefaultForm DefaultForm.init)
 
         initialModel =
             { accountKeys = Nothing
@@ -54,15 +55,9 @@ init invitationId { shared } =
             , serverError = Nothing
             , status = initialStatus
             , invitationId = invitationId
-            , selectedForm =
-                case invitationId of
-                    Just _ ->
-                        None
-
-                    Nothing ->
-                        Default DefaultForm.init
+            , invitation = Nothing
             , country = Nothing
-            , step = 1
+            , step = FillForm
             }
 
         loadInvitationData =
@@ -92,10 +87,48 @@ type alias Model =
     , serverError : ServerError
     , status : Status
     , invitationId : InvitationId
-    , selectedForm : FormType
+    , invitation : Maybe Invite
     , country : Maybe Address.Country
-    , step : Int
+    , step : Step
     }
+
+
+type Status
+    = Loading
+    | AccountTypeSelectorShowed
+    | FormShowed FormModel
+    | AccountCreated
+    | ErrorShowed Error
+    | NotFound
+
+
+type Step
+    = FillForm
+    | SavePassphrase
+
+
+type FormModel
+    = NaturalForm NaturalForm.Model
+    | JuridicalForm JuridicalForm.Model
+    | DefaultForm DefaultForm.Model
+
+
+type alias SignUpFields =
+    { name : String
+    , email : String
+    , account : String
+    }
+
+
+type alias PdfData =
+    { passphrase : String
+    , accountName : String
+    }
+
+
+type Error
+    = FailedInvite (Graphql.Http.Error (Maybe Invite))
+    | FailedCountry (Graphql.Http.Error (Maybe Address.Country))
 
 
 type alias ServerError =
@@ -108,14 +141,7 @@ type alias InvitationId =
 
 type AccountType
     = NaturalAccount
-    | JuridicalAccount
-
-
-type FormType
-    = None
-    | Natural NaturalForm.Model
-    | Juridical JuridicalForm.Model
-    | Default DefaultForm.Model
+    | JuridicalAccount Address.Country
 
 
 
@@ -129,16 +155,6 @@ type alias AccountKeys =
     , words : String
     , privateKey : String
     }
-
-
-decodeAccount : Decoder AccountKeys
-decodeAccount =
-    Decode.succeed AccountKeys
-        |> Decode.required "ownerKey" Decode.string
-        |> Decode.required "activeKey" Decode.string
-        |> Decode.required "accountName" Eos.nameDecoder
-        |> Decode.required "words" Decode.string
-        |> Decode.required "privateKey" Decode.string
 
 
 
@@ -156,6 +172,177 @@ view { shared } model =
     , content =
         viewCreateAccount shared.translators model
     }
+
+
+viewCreateAccount : Translators -> Model -> Html Msg
+viewCreateAccount translators model =
+    let
+        formClasses =
+            "flex flex-grow flex-col bg-white px-4 px-0 md:max-w-sm sf-wrapper self-center w-full"
+
+        backgroundColor =
+            case model.step of
+                FillForm ->
+                    "bg-white"
+
+                SavePassphrase ->
+                    "bg-purple-500"
+    in
+    div [ class ("flex flex-grow flex-col " ++ backgroundColor) ]
+        [ viewTitleForStep translators model.step
+        , case model.status of
+            Loading ->
+                div [ class "h-full full-spinner-container" ]
+                    [ div [ class "spinner spinner-light" ] [] ]
+
+            AccountTypeSelectorShowed ->
+                div [ class formClasses ]
+                    [ viewAccountTypeSelector translators model
+                    , viewFooterDisabled translators
+                    ]
+
+            FormShowed formModel ->
+                Html.form
+                    [ class formClasses
+                    , onSubmit (ValidateForm formModel)
+                    ]
+                    [ case model.serverError of
+                        Just e ->
+                            div [ class "bg-red border-lg rounded p-4 mt-2 text-white mb-4" ]
+                                [ text e ]
+
+                        Nothing ->
+                            text ""
+                    , viewAccountTypeSelector translators model
+                    , div [ class "sf-content" ]
+                        [ viewRegistrationForm translators formModel ]
+                    , viewFooterEnabled translators
+                    ]
+
+            AccountCreated ->
+                case model.accountKeys of
+                    Just keys ->
+                        viewAccountCreated translators model keys
+
+                    Nothing ->
+                        -- TODO: This should never happen
+                        text ""
+
+            ErrorShowed _ ->
+                Page.fullPageNotFound (translators.t "error.unknown") ""
+
+            NotFound ->
+                Page.fullPageNotFound (translators.t "error.pageNotFound") ""
+        ]
+
+
+viewFooterEnabled : Translators -> Html msg
+viewFooterEnabled translators =
+    viewFooter translators True
+
+
+viewFooterDisabled : Translators -> Html msg
+viewFooterDisabled translators =
+    viewFooter translators False
+
+
+viewFooter : Translators -> Bool -> Html msg
+viewFooter { t } isSubmitEnabled =
+    let
+        viewSubmitButton =
+            button
+                [ class "button w-full mb-4"
+                , class
+                    (if isSubmitEnabled then
+                        "button-primary"
+
+                     else
+                        "button-disabled"
+                    )
+                , disabled (not isSubmitEnabled)
+                ]
+                [ text (t "auth.login.continue") ]
+    in
+    div [ class "mt-auto flex flex-col justify-between items-center h-32" ]
+        [ span []
+            [ text (t "register.login")
+            , a
+                [ class "underline text-orange-300"
+                , Route.href (Route.Login Nothing)
+                ]
+                [ text (t "register.authLink") ]
+            ]
+        , viewSubmitButton
+        ]
+
+
+viewRegistrationForm : Translators -> FormModel -> Html Msg
+viewRegistrationForm translators currentForm =
+    case currentForm of
+        NaturalForm form ->
+            NaturalForm.view translators form
+                |> Html.map NaturalFormMsg
+                |> Html.map FormMsg
+
+        JuridicalForm form ->
+            JuridicalForm.view translators form
+                |> Html.map JuridicalFormMsg
+                |> Html.map FormMsg
+
+        DefaultForm form ->
+            DefaultForm.view translators form
+                |> Html.map DefaultFormMsg
+                |> Html.map FormMsg
+
+
+viewAccountTypeSelector : Translators -> Model -> Html Msg
+viewAccountTypeSelector translators model =
+    case ( model.invitation, model.country ) of
+        ( Just _, Just country ) ->
+            div []
+                [ View.Form.primaryLabel "radio" (translators.t "register.form.register_tooltip")
+                , div [ class "flex space-x-2" ]
+                    [ viewAccountTypeButton
+                        (translators.t "register.form.types.natural")
+                        NaturalAccount
+                        model.status
+                    , viewAccountTypeButton
+                        (translators.t "register.form.types.juridical")
+                        (JuridicalAccount country)
+                        model.status
+                    ]
+                ]
+
+        _ ->
+            text ""
+
+
+viewAccountTypeButton : String -> AccountType -> Status -> Html Msg
+viewAccountTypeButton title accountType status =
+    let
+        isSelected =
+            case ( accountType, status ) of
+                ( NaturalAccount, FormShowed (NaturalForm _) ) ->
+                    True
+
+                ( JuridicalAccount _, FormShowed (JuridicalForm _) ) ->
+                    True
+
+                _ ->
+                    False
+    in
+    div
+        [ class "w-1/2 leading-10 text-center cursor-pointer rounded-sm cursor-pointer mb-4"
+        , class
+            (if isSelected then
+                "bg-orange-300 text-white"
+
+             else
+                "bg-gray-100 text-black"
+            )
+        , onClick (AccountTypeSelected accountType)
+        ]
+        [ text title ]
 
 
 viewAccountCreated : Translators -> Model -> AccountKeys -> Html Msg
@@ -248,7 +435,11 @@ viewAccountCreated { t } model keys =
                         ]
                     ]
                 , button
-                    [ onClick <| DownloadPdf (pdfData keys)
+                    [ onClick <|
+                        DownloadPdf
+                            { passphrase = keys.words
+                            , accountName = Eos.nameToString keys.accountName
+                            }
                     , class "button button-primary w-full mb-8"
                     , disabled (not model.hasAgreedToSavePassphrase)
                     , class <|
@@ -264,306 +455,32 @@ viewAccountCreated { t } model keys =
         ]
 
 
-viewCreateAccount : Translators -> Model -> Html Msg
-viewCreateAccount translators model =
-    let
-        formElement element =
-            Html.form
-                [ class "flex flex-grow flex-col bg-white px-4 px-0 md:max-w-sm sf-wrapper self-center w-full"
-                , onSubmit (ValidateForm model.selectedForm)
-                ]
-                (viewServerError model.serverError :: element)
-
-        defaultForm =
-            case model.selectedForm of
-                Default form ->
-                    formElement
-                        [ DefaultForm.view translators form
-                            |> Html.map DefaultFormMsg
-                            |> Html.map FormMsg
-                        , viewFooter model translators
-                        ]
-
-                _ ->
-                    div [] []
-
-        backgroundColor =
-            case model.step of
-                2 ->
-                    "bg-purple-500"
-
-                _ ->
-                    "bg-white"
-    in
-    div [ class ("flex flex-grow flex-col " ++ backgroundColor) ]
-        [ viewTitleForStep translators model.step
-        , case model.status of
-            LoadedAll invitation _ ->
-                if invitation.community.hasKyc == True then
-                    formElement [ viewKycRegister translators model, viewFooter model translators ]
-
-                else
-                    defaultForm
-
-            LoadedDefaultCommunity ->
-                defaultForm
-
-            Loading ->
-                viewLoading
-
-            AccountCreated ->
-                case model.accountKeys of
-                    Just keys ->
-                        viewAccountCreated translators model keys
-
-                    Nothing ->
-                        -- TODO: This should never happen
-                        text ""
-
-            LoadedInvite _ ->
-                viewLoading
-
-            LoadedCountry _ ->
-                viewLoading
-
-            FailedInvite _ ->
-                Page.fullPageNotFound (translators.t "error.unknown") ""
-
-            FailedCountry _ ->
-                Page.fullPageNotFound (translators.t "error.unknown") ""
-
-            NotFound ->
-                Page.fullPageNotFound (translators.t "error.pageNotFound") ""
-        ]
-
-
-viewServerError : Maybe String -> Html msg
-viewServerError error =
-    case error of
-        Just message ->
-            div [ class "bg-red border-lg rounded p-4 mt-2 text-white mb-4" ] [ text message ]
-
-        Nothing ->
-            text ""
-
-
-viewFooter : Model -> Translators -> Html msg
-viewFooter model translators =
-    div [ class "mt-auto flex flex-col justify-between items-center h-32" ]
-        [ span []
-            [ text (translators.t "register.login")
-            , a [ class "underline text-orange-300", Route.href (Route.Login Nothing) ] [ text (translators.t "register.authLink") ]
-            ]
-        , viewSubmitButton
-            (case model.selectedForm of
-                None ->
-                    False
-
-                _ ->
-                    True
-            )
-            translators
-        ]
-
-
-viewKycRegister : Translators -> Model -> Html Msg
-viewKycRegister translators model =
-    div []
-        [ viewFormTypeSelector translators model
-        , div [ class "sf-content" ]
-            (case model.invitationId of
-                Just _ ->
-                    let
-                        selectedForm =
-                            case model.selectedForm of
-                                Natural form ->
-                                    [ NaturalForm.view translators form |> Html.map NaturalFormMsg |> Html.map FormMsg ]
-
-                                Juridical form ->
-                                    [ JuridicalForm.view translators form |> Html.map JuridicalFormMsg |> Html.map FormMsg ]
-
-                                Default form ->
-                                    [ DefaultForm.view translators form |> Html.map DefaultFormMsg |> Html.map FormMsg ]
-
-                                None ->
-                                    []
-                    in
-                    case model.status of
-                        LoadedAll _ _ ->
-                            selectedForm
-
-                        LoadedDefaultCommunity ->
-                            selectedForm
-
-                        LoadedInvite _ ->
-                            [ viewLoading ]
-
-                        LoadedCountry _ ->
-                            [ viewLoading ]
-
-                        Loading ->
-                            [ viewLoading ]
-
-                        FailedCountry _ ->
-                            [ Page.fullPageNotFound (translators.t "error.unknown") "" ]
-
-                        FailedInvite _ ->
-                            [ Page.fullPageNotFound (translators.t "error.unknown") "" ]
-
-                        NotFound ->
-                            [ Page.fullPageNotFound (translators.t "error.pageNotFound") "" ]
-
-                        AccountCreated ->
-                            case model.accountKeys of
-                                Just keys ->
-                                    [ viewAccountCreated translators model keys ]
-
-                                Nothing ->
-                                    -- TODO: This should never happen
-                                    []
-
-                Nothing ->
-                    []
-            )
-        ]
-
-
-viewSubmitButton : Bool -> Translators -> Html msg
-viewSubmitButton isEnabled translators =
-    button
-        [ class "button w-full mb-4"
-        , class
-            (if isEnabled then
-                "button-primary"
-
-             else
-                "button-disabled"
-            )
-        , disabled (not isEnabled)
-        ]
-        [ text (translators.t "auth.login.continue") ]
-
-
-viewFormTypeSelector : Translators -> Model -> Html Msg
-viewFormTypeSelector translators model =
-    div []
-        [ View.Form.primaryLabel "radio" (translators.t "register.form.register_tooltip")
-        , div [ class "flex w-full justify-center" ]
-            [ viewFormTypeRadio
-                { type_ = NaturalAccount
-                , label = translators.t "register.form.types.natural"
-                , styles = ""
-                , isSelected =
-                    case model.selectedForm of
-                        Natural _ ->
-                            True
-
-                        _ ->
-                            False
-                , onClick = AccountTypeSelected
-                }
-            , viewFormTypeRadio
-                { type_ = JuridicalAccount
-                , label = translators.t "register.form.types.juridical"
-                , styles = "ml-1"
-                , isSelected =
-                    case model.selectedForm of
-                        Juridical _ ->
-                            True
-
-                        _ ->
-                            False
-                , onClick = AccountTypeSelected
-                }
-            ]
-        ]
-
-
-type alias FormTypeRadioOptions a =
-    { type_ : AccountType
-    , label : String
-    , styles : String
-    , isSelected : Bool
-    , onClick : AccountType -> a
-    }
-
-
-viewFormTypeRadio : FormTypeRadioOptions Msg -> Html Msg
-viewFormTypeRadio options =
-    let
-        defaultClasses =
-            "w-40 h-10 rounded-sm flex justify-center items-center cursor-pointer mb-4 "
-
-        ifSelectedClasses =
-            "bg-orange-300 text-white "
-
-        unselectedClasses =
-            "bg-gray-100 text-black "
-
-        finalClasses =
-            defaultClasses
-                ++ (if options.isSelected then
-                        ifSelectedClasses
-
-                    else
-                        unselectedClasses
-                   )
-
-        id =
-            case options.type_ of
-                NaturalAccount ->
-                    "natural"
-
-                JuridicalAccount ->
-                    "juridical"
-    in
-    div
-        [ class (finalClasses ++ options.styles)
-        , onClick (options.onClick options.type_)
-        , style "width" "169px"
-        , style "height" "44px"
-        ]
-        [ label [ class "cursor-pointer", for id ] [ text options.label ]
-        , input [ class "hidden", type_ "radio", checked options.isSelected, onClick (options.onClick options.type_) ] []
-        ]
-
-
-{-| Loading screen on this page differs from `Session.Shared.viewFullLoading`
-since we don't need full width here.
--}
-viewLoading : Html msg
-viewLoading =
-    div [ class "h-full full-spinner-container" ]
-        [ div [ class "spinner spinner-light" ] [] ]
-
-
-viewTitleForStep : Translators -> Int -> Html msg
+viewTitleForStep : Translators -> Step -> Html msg
 viewTitleForStep { t, tr } s =
     let
-        step =
-            String.fromInt s
+        stepNum =
+            case s of
+                FillForm ->
+                    "1"
+
+                SavePassphrase ->
+                    "2"
     in
     p
         [ class "ml-4 py-4 mb-4 text-body border-b border-dotted text-grey border-grey-500" ]
-        [ text (tr "register.form.step" [ ( "stepNum", step ) ])
+        [ text (tr "register.form.step" [ ( "stepNum", stepNum ) ])
         , text " / "
         , strong
             [ class <|
-                if s == 1 then
-                    "text-black"
+                case s of
+                    FillForm ->
+                        "text-black"
 
-                else
-                    "text-white"
+                    SavePassphrase ->
+                        "text-white"
             ]
-            [ text <| t ("register.form.step" ++ step ++ "_title") ]
+            [ text <| t ("register.form.step" ++ stepNum ++ "_title") ]
         ]
-
-
-pdfData : AccountKeys -> PdfData
-pdfData keys =
-    { passphrase = keys.words
-    , accountName = Eos.nameToString keys.accountName
-    }
 
 
 
@@ -575,7 +492,7 @@ type alias UpdateResult =
 
 
 type Msg
-    = ValidateForm FormType
+    = ValidateForm FormModel
     | GotAccountAvailabilityResponse Bool
     | AccountKeysGenerated (Result Decode.Error AccountKeys)
     | AgreedToSave12Words Bool
@@ -598,32 +515,32 @@ type EitherFormMsg
     | DefaultFormMsg DefaultForm.Msg
 
 
-type Status
-    = LoadedInvite Invite
-    | LoadedCountry Address.Country
-    | LoadedAll Invite (Maybe Address.Country)
-    | Loading
-    | FailedInvite (Graphql.Http.Error (Maybe Invite))
-    | FailedCountry (Graphql.Http.Error (Maybe Address.Country))
-    | NotFound
-    | LoadedDefaultCommunity
-    | AccountCreated -- via SignUp mutation on the EOS and the Backend
+getSignUpFields : FormModel -> SignUpFields
+getSignUpFields form =
+    let
+        extract : { f | account : String, name : String, email : String } -> SignUpFields
+        extract f =
+            { account = f.account
+            , name = f.name
+            , email = f.email
+            }
+    in
+    case form of
+        JuridicalForm f ->
+            extract f
 
+        NaturalForm f ->
+            extract f
 
-type alias PdfData =
-    { passphrase : String
-    , accountName : String
-    }
+        DefaultForm f ->
+            extract f
 
 
 update : InvitationId -> Msg -> Model -> Guest.Model -> UpdateResult
-update _ msg model guest =
+update _ msg model { shared } =
     let
-        translators =
-            guest.shared.translators
-
         { t } =
-            translators
+            shared.translators
     in
     case msg of
         ValidateForm formType ->
@@ -636,34 +553,23 @@ update _ msg model guest =
                         Err err ->
                             err
 
-                account : Maybe String
                 account =
-                    case formType of
-                        Juridical form ->
-                            Just form.account
+                    getSignUpFields formType
+                        |> .account
 
-                        Natural form ->
-                            Just form.account
-
-                        Default form ->
-                            Just form.account
-
-                        None ->
-                            Nothing
+                translators =
+                    shared.translators
 
                 problemCount =
                     case formType of
-                        Juridical form ->
+                        JuridicalForm form ->
                             List.length (validateForm (JuridicalForm.validator translators) form)
 
-                        Natural form ->
+                        NaturalForm form ->
                             List.length (validateForm (NaturalForm.validator translators) form)
 
-                        Default form ->
+                        DefaultForm form ->
                             List.length (validateForm (DefaultForm.validator translators) form)
-
-                        None ->
-                            0
 
                 afterValidationAction =
                     if problemCount > 0 then
@@ -676,129 +582,108 @@ update _ msg model guest =
                             , data =
                                 Encode.object
                                     [ ( "name", Encode.string "checkAccountAvailability" )
-                                    , ( "account", Encode.string (Maybe.withDefault "" account) )
+                                    , ( "account", Encode.string account )
                                     ]
                             }
             in
             { model
-                | selectedForm =
+                | status =
                     case formType of
-                        Juridical form ->
-                            Juridical
+                        JuridicalForm form ->
+                            JuridicalForm
                                 { form
                                     | problems = validateForm (JuridicalForm.validator translators) form
                                 }
+                                |> FormShowed
 
-                        Natural form ->
-                            Natural
+                        NaturalForm form ->
+                            NaturalForm
                                 { form
                                     | problems = validateForm (NaturalForm.validator translators) form
                                 }
+                                |> FormShowed
 
-                        Default form ->
-                            Default
+                        DefaultForm form ->
+                            DefaultForm
                                 { form
                                     | problems = validateForm (DefaultForm.validator translators) form
                                 }
-
-                        None ->
-                            None
+                                |> FormShowed
             }
                 |> UR.init
                 |> afterValidationAction
 
         FormMsg formMsg ->
-            case formMsg of
-                JuridicalFormMsg innerMsg ->
-                    case model.selectedForm of
-                        Juridical form ->
-                            UR.init
-                                { model
-                                    | selectedForm =
-                                        JuridicalForm.update translators innerMsg form
-                                            |> Juridical
-                                }
+            case ( formMsg, model.status ) of
+                ( JuridicalFormMsg innerMsg, FormShowed (JuridicalForm form) ) ->
+                    { model
+                        | status =
+                            JuridicalForm.update shared.translators innerMsg form
+                                |> JuridicalForm
+                                |> FormShowed
+                    }
+                        |> UR.init
 
-                        _ ->
-                            UR.init model
+                ( NaturalFormMsg innerMsg, FormShowed (NaturalForm form) ) ->
+                    { model
+                        | status =
+                            NaturalForm.update shared.translators innerMsg form
+                                |> NaturalForm
+                                |> FormShowed
+                    }
+                        |> UR.init
 
-                NaturalFormMsg innerMsg ->
-                    case model.selectedForm of
-                        Natural form ->
-                            UR.init
-                                { model
-                                    | selectedForm =
-                                        NaturalForm.update translators innerMsg form
-                                            |> Natural
-                                }
+                ( DefaultFormMsg innerMsg, FormShowed (DefaultForm form) ) ->
+                    { model
+                        | status =
+                            DefaultForm.update shared.translators innerMsg form
+                                |> DefaultForm
+                                |> FormShowed
+                    }
+                        |> UR.init
 
-                        _ ->
-                            UR.init model
+                _ ->
+                    UR.init model
 
-                DefaultFormMsg innerMsg ->
-                    case model.selectedForm of
-                        Default form ->
-                            UR.init
-                                { model
-                                    | selectedForm =
-                                        DefaultForm.update translators innerMsg form
-                                            |> Default
-                                }
+        AccountTypeSelected accountType ->
+            let
+                selectedKycForm =
+                    case accountType of
+                        NaturalAccount ->
+                            NaturalForm
+                                (NaturalForm.init
+                                    { account = Nothing
+                                    , email = Nothing
+                                    , phone = Nothing
+                                    }
+                                )
 
-                        _ ->
-                            UR.init model
-
-        AccountTypeSelected type_ ->
-            UR.init
-                { model
-                    | selectedForm =
-                        case ( type_, model.status, model.selectedForm ) of
-                            ( NaturalAccount, LoadedAll _ _, Juridical form ) ->
-                                Natural
-                                    (NaturalForm.init
-                                        { account = Just form.account
-                                        , email = Just form.email
-                                        , phone = Just form.phone
-                                        }
-                                    )
-
-                            ( JuridicalAccount, LoadedAll _ (Just country), Natural form ) ->
-                                Juridical
-                                    (JuridicalForm.init
-                                        { account = Just form.account
-                                        , email = Just form.email
-                                        , phone = Just form.phone
-                                        , country = country
-                                        }
-                                        guest.shared.translators
-                                    )
-
-                            ( NaturalAccount, LoadedAll _ _, _ ) ->
-                                Natural
-                                    (NaturalForm.init
-                                        { account = Nothing
-                                        , email = Nothing
-                                        , phone = Nothing
-                                        }
-                                    )
-
-                            ( JuridicalAccount, LoadedAll _ (Just country), _ ) ->
-                                Juridical
-                                    (JuridicalForm.init
-                                        { account = Nothing
-                                        , email = Nothing
-                                        , phone = Nothing
-                                        , country = country
-                                        }
-                                        guest.shared.translators
-                                    )
-
-                            _ ->
-                                model.selectedForm
-                }
+                        JuridicalAccount country ->
+                            JuridicalForm
+                                (JuridicalForm.init
+                                    { account = Nothing
+                                    , email = Nothing
+                                    , phone = Nothing
+                                    , country = country
+                                    }
+                                    shared.translators
+                                )
+            in
+            { model | status = FormShowed selectedKycForm }
+                |> UR.init
 
         GotAccountAvailabilityResponse isAvailable ->
             if isAvailable then
+                let
+                    account =
+                        case model.status of
+                            FormShowed formType ->
+                                getSignUpFields formType
+                                    |> .account
+
+                            _ ->
+                                ""
+                in
                 model
                     |> UR.init
                     |> UR.addPort
@@ -807,62 +692,62 @@ update _ msg model guest =
                         , data =
                             Encode.object
                                 [ ( "name", Encode.string "generateKeys" )
-
-                                -- TODO: Remove this
-                                , ( "account"
-                                  , Encode.string
-                                        (case model.selectedForm of
-                                            Juridical form ->
-                                                form.account
-
-                                            Natural form ->
-                                                form.account
-
-                                            Default form ->
-                                                form.account
-
-                                            None ->
-                                                ""
-                                        )
-                                  )
+                                , ( "account", Encode.string account )
                                 ]
                         }
 
             else
-                UR.init
-                    { model
-                        | selectedForm =
-                            case model.selectedForm of
-                                Juridical form ->
-                                    Juridical { form | problems = ( JuridicalForm.Account, t "error.alreadyTaken", OnSubmit ) :: form.problems }
+                let
+                    composeProblem form formType formField =
+                        formType
+                            { form
+                                | problems = ( formField, t "error.alreadyTaken", OnSubmit ) :: form.problems
+                            }
+                            |> FormShowed
 
-                                Natural form ->
-                                    Natural { form | problems = ( NaturalForm.Account, t "error.alreadyTaken", OnSubmit ) :: form.problems }
+                    newStatus =
+                        case model.status of
+                            FormShowed (JuridicalForm form) ->
+                                composeProblem form JuridicalForm JuridicalForm.Account
 
-                                Default form ->
-                                    Default { form | problems = ( DefaultForm.Account, t "error.alreadyTaken", OnSubmit ) :: form.problems }
+                            FormShowed (NaturalForm form) ->
+                                composeProblem form NaturalForm NaturalForm.Account
 
-                                None ->
-                                    model.selectedForm
-                    }
+                            FormShowed (DefaultForm form) ->
+                                composeProblem form DefaultForm DefaultForm.Account
+
+                            _ ->
+                                model.status
+                in
+                { model | status = newStatus }
+                    |> UR.init
 
         AccountKeysGenerated (Err v) ->
-            model
-                |> UR.init
+            UR.init
+                model
                 |> UR.logDecodeError msg v
 
         AccountKeysGenerated (Ok accountKeys) ->
-            { model
-                | accountKeys = Just accountKeys
-            }
-                |> UR.init
-                |> UR.addCmd
-                    (formTypeToAccountCmd
-                        guest.shared
-                        accountKeys.ownerKey
-                        model.invitationId
-                        model.selectedForm
-                    )
+            case model.status of
+                FormShowed f ->
+                    let
+                        signUpFields =
+                            getSignUpFields f
+                    in
+                    { model
+                        | accountKeys = Just accountKeys
+                    }
+                        |> UR.init
+                        |> UR.addCmd
+                            (signUp shared
+                                signUpFields
+                                accountKeys
+                                model.invitationId
+                            )
+
+                _ ->
+                    model
+                        |> UR.init
 
         AgreedToSave12Words val ->
             { model | hasAgreedToSavePassphrase = val }
@@ -903,27 +788,50 @@ update _ msg model guest =
             model
                 |> UR.init
                 |> UR.addCmd
-                    (Route.replaceUrl guest.shared.navKey (Route.Login Nothing))
+                    (Route.replaceUrl shared.navKey (Route.Login Nothing))
 
         CompletedSignUp (Ok response) ->
             case response.status of
                 SignUpStatus.Success ->
-                    case model.selectedForm of
-                        Default _ ->
+                    case model.status of
+                        FormShowed (DefaultForm _) ->
                             -- For Default form the account is already created
                             { model
                                 | status = AccountCreated
-                                , step = 2
+                                , step = SavePassphrase
                             }
                                 |> UR.init
 
-                        _ ->
-                            -- For Juridical and Natural forms we need to save KYC data
+                        FormShowed (NaturalForm form) ->
                             model
                                 |> UR.init
                                 |> UR.addCmd
-                                    -- Run KYC mutations
-                                    (formTypeToKycCmd guest.shared model.selectedForm)
+                                    (saveKycData shared
+                                        { accountId = form.account
+                                        , countryId = Id "1"
+                                        , document = form.document
+                                        , documentType = NaturalForm.documentTypeToString form.documentType
+                                        , phone = form.phone
+                                        , userType = "natural"
+                                        }
+                                    )
+
+                        FormShowed (JuridicalForm form) ->
+                            model
+                                |> UR.init
+                                |> UR.addCmd
+                                    (saveKycData shared
+                                        { accountId = form.account
+                                        , countryId = Id "1"
+                                        , document = form.document
+                                        , documentType = JuridicalForm.companyTypeToString form.companyType
+                                        , phone = form.phone
+                                        , userType = "juridical"
+                                        }
+                                    )
+
+                        _ ->
+                            model |> UR.init
 
                 SignUpStatus.Error ->
                     UR.init
@@ -937,19 +845,33 @@ update _ msg model guest =
                 |> UR.logGraphqlError msg error
 
         CompletedKycUpsert (Ok _) ->
-            case model.selectedForm of
-                Juridical _ ->
+            case model.status of
+                FormShowed (JuridicalForm form) ->
                     -- Juridical account still needs the Address to be saved
+                    let
+                        addressData : ( InputObject.AddressUpdateInputRequiredFields, InputObject.AddressUpdateInputOptionalFields )
+                        addressData =
+                            ( { accountId = form.account
+                              , cityId = Tuple.first form.city |> Id
+                              , countryId = Id "1"
+                              , neighborhoodId = Tuple.first form.district |> Id
+                              , stateId = Tuple.first form.state |> Id
+                              , street = form.street
+                              , zip = form.zip
+                              }
+                            , { number = Graphql.OptionalArgument.Present form.number }
+                            )
+                    in
                     model
                         |> UR.init
                         |> UR.addCmd
-                            (formTypeToAddressCmd guest.shared model.selectedForm)
+                            (saveAddress shared addressData)
 
-                Natural _ ->
+                FormShowed (NaturalForm _) ->
                     -- Natural account is fully created
                     { model
                         | status = AccountCreated
-                        , step = 2
+                        , step = SavePassphrase
                     }
                         |> UR.init
 
@@ -967,7 +889,7 @@ update _ msg model guest =
             -- Address is saved, Juridical account is created.
             { model
                 | status = AccountCreated
-                , step = 2
+                , step = SavePassphrase
             }
                 |> UR.init
 
@@ -977,49 +899,35 @@ update _ msg model guest =
                 |> UR.logGraphqlError msg error
 
         CompletedLoadInvite (Ok (Just invitation)) ->
-            let
-                newStatus =
-                    case model.status of
-                        LoadedCountry country ->
-                            LoadedAll invitation (Just country)
+            if invitation.community.hasKyc then
+                let
+                    loadCountryData =
+                        Api.Graphql.query
+                            shared
+                            (Address.countryQuery "Costa Rica")
+                            CompletedLoadCountry
+                in
+                { model
+                    | status = Loading
+                    , invitation = Just invitation
+                }
+                    |> UR.init
+                    |> UR.addCmd
+                        loadCountryData
 
-                        NotFound ->
-                            NotFound
-
-                        FailedCountry err ->
-                            FailedCountry err
-
-                        _ ->
-                            if invitation.community.hasKyc then
-                                LoadedInvite invitation
-
-                            else
-                                LoadedAll invitation Nothing
-            in
-            { model
-                | status = newStatus
-                , selectedForm =
-                    if invitation.community.hasKyc == True then
-                        None
-
-                    else
-                        Default DefaultForm.init
-            }
-                |> UR.init
-                |> UR.addCmd
-                    (if invitation.community.hasKyc then
-                        Api.Graphql.query guest.shared (Address.countryQuery "Costa Rica") CompletedLoadCountry
-
-                     else
-                        Cmd.none
-                    )
+            else
+                { model
+                    | status = FormShowed (DefaultForm DefaultForm.init)
+                    , invitation = Just invitation
+                }
+                    |> UR.init
 
         CompletedLoadInvite (Ok Nothing) ->
             UR.init { model | status = NotFound }
 
         CompletedLoadInvite (Err error) ->
             { model
-                | status = FailedInvite error
+                | status = ErrorShowed (FailedInvite error)
                 , serverError = Just (t "error.unknown")
             }
                 |> UR.init
@@ -1027,19 +935,8 @@ update _ msg model guest =
 
         CompletedLoadCountry (Ok (Just country)) ->
             { model
-                | status =
-                    case model.status of
-                        LoadedInvite invitation ->
-                            LoadedAll invitation (Just country)
-
-                        FailedInvite err ->
-                            FailedInvite err
-
-                        NotFound ->
-                            NotFound
-
-                        _ ->
-                            LoadedCountry country
+                | country = Just country
+                , status = AccountTypeSelectorShowed
             }
                 |> UR.init
 
@@ -1047,7 +944,7 @@ update _ msg model guest =
             UR.init { model | status = NotFound }
 
         CompletedLoadCountry (Err error) ->
-            { model | status = FailedCountry error }
+            { model | status = ErrorShowed (FailedCountry error) }
                 |> UR.init
                 |> UR.logGraphqlError msg error
 
@@ -1058,124 +955,63 @@ type alias SignUpResponse =
     }
 
 
-formTypeToAccountCmd : Shared -> String -> InvitationId -> FormType -> Cmd Msg
-formTypeToAccountCmd shared key invitationId formType =
+signUp : Shared -> SignUpFields -> AccountKeys -> InvitationId -> Cmd Msg
+signUp shared signUpFields keys invitationId =
     let
-        cmd obj userType =
-            Api.Graphql.mutation shared
-                (Mutation.signUp
-                    { input =
-                        InputObject.buildSignUpInput
-                            obj
-                            (\x ->
-                                { x
-                                    | invitationId =
-                                        case invitationId of
-                                            Just id ->
-                                                Present id
+        requiredArgs =
+            { account = Eos.nameToString keys.accountName
+            , email = signUpFields.email
+            , name = signUpFields.name
+            , publicKey = keys.ownerKey
+            }
 
-                                            Nothing ->
-                                                Absent
-                                    , userType = Present userType
-                                }
-                            )
-                    }
-                    (Graphql.SelectionSet.succeed SignUpResponse
-                        |> with Cambiatus.Object.SignUp.reason
-                        |> with Cambiatus.Object.SignUp.status
-                    )
-                )
-                CompletedSignUp
+        fillOptionals opts =
+            { opts
+                | invitationId =
+                    Maybe.map Present invitationId
+                        |> Maybe.withDefault Absent
+            }
     in
-    case formType of
-        Juridical form ->
-            cmd { account = form.account, email = form.email, name = form.name, publicKey = key } "juridical"
-
-        Natural form ->
-            cmd { account = form.account, email = form.email, name = form.name, publicKey = key } "natural"
-
-        Default form ->
-            cmd { account = form.account, email = form.email, name = form.name, publicKey = key } "natural"
-
-        None ->
-            Cmd.none
-
-
-redirectCmd : Shared -> Cmd Msg
-redirectCmd shared =
-    Route.replaceUrl shared.navKey (Route.Login Nothing)
+    Api.Graphql.mutation shared
+        (Mutation.signUp
+            { input =
+                InputObject.buildSignUpInput
+                    requiredArgs
+                    fillOptionals
+            }
+            (Graphql.SelectionSet.succeed SignUpResponse
+                |> with Cambiatus.Object.SignUp.reason
+                |> with Cambiatus.Object.SignUp.status
+            )
+        )
+        CompletedSignUp
 
 
-formTypeToKycCmd : Shared -> FormType -> Cmd Msg
-formTypeToKycCmd shared formType =
-    let
-        cmd : InputObject.KycDataUpdateInputRequiredFields -> Cmd Msg
-        cmd obj =
-            Api.Graphql.mutation shared
-                (Mutation.upsertKyc
-                    { input = InputObject.buildKycDataUpdateInput obj }
-                    Graphql.SelectionSet.empty
-                )
-                CompletedKycUpsert
-    in
-    case formType of
-        Juridical form ->
-            cmd
-                { accountId = form.account
-                , countryId = Id "1"
-                , document = form.document
-                , documentType = JuridicalForm.companyTypeToString form.companyType
-                , phone = form.phone
-                , userType = "juridical"
-                }
-
-        Natural form ->
-            cmd
-                { accountId = form.account
-                , countryId = Id "1"
-                , document = form.document
-                , documentType = NaturalForm.documentTypeToString form.documentType
-                , phone = form.phone
-                , userType = "natural"
-                }
-
-        _ ->
-            Cmd.none
+saveKycData : Shared -> InputObject.KycDataUpdateInputRequiredFields -> Cmd Msg
+saveKycData shared requiredFields =
+    Api.Graphql.mutation shared
+        (Mutation.upsertKyc
+            { input = InputObject.buildKycDataUpdateInput requiredFields }
+            Graphql.SelectionSet.empty
+        )
+        CompletedKycUpsert
 
 
-formTypeToAddressCmd : Shared -> FormType -> Cmd Msg
-formTypeToAddressCmd shared formType =
-    let
-        cmd : InputObject.AddressUpdateInputRequiredFields -> InputObject.AddressUpdateInputOptionalFields -> Cmd Msg
-        cmd required optional =
-            Api.Graphql.mutation shared
-                (Mutation.upsertAddress
-                    { input = InputObject.buildAddressUpdateInput required (\_ -> optional) }
-                    Graphql.SelectionSet.empty
-                )
-                CompletedAddressUpsert
-    in
-    case formType of
-        Juridical form ->
-            cmd
-                { accountId = form.account
-                , cityId = Tuple.first form.city |> Id
-                , countryId = Id "1"
-                , neighborhoodId = Tuple.first form.district |> Id
-                , stateId = Tuple.first form.state |> Id
-                , street = form.street
-                , zip = form.zip
-                }
-                { number = Graphql.OptionalArgument.Present form.number }
-
-        _ ->
-            redirectCmd shared
+saveAddress :
+    Shared
+    -> ( InputObject.AddressUpdateInputRequiredFields, InputObject.AddressUpdateInputOptionalFields )
+    -> Cmd Msg
+saveAddress shared ( required, optional ) =
+    Api.Graphql.mutation shared
+        (Mutation.upsertAddress
+            { input = InputObject.buildAddressUpdateInput required (\_ -> optional) }
+            Graphql.SelectionSet.empty
+        )
+        CompletedAddressUpsert
 
 
 
---
--- Model functions
---
+-- INTEROP
 
 
 jsAddressToMsg : List String -> Value -> Maybe Msg
@@ -1189,6 +1025,16 @@ jsAddressToMsg addr val =
                 |> Result.toMaybe
 
         "GotAccountAvailabilityResponse" :: _ ->
+            let
+                decodeAccount : Decoder AccountKeys
+                decodeAccount =
+                    Decode.succeed AccountKeys
+                        |> Decode.required "ownerKey" Decode.string
+                        |> Decode.required "activeKey" Decode.string
+                        |> Decode.required "accountName" Eos.nameDecoder
+                        |> Decode.required "words" Decode.string
+                        |> Decode.required "privateKey" Decode.string
+            in
             Decode.decodeValue (Decode.field "data" decodeAccount) val
                 |> AccountKeysGenerated
                 |> Just
