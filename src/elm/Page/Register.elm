@@ -729,20 +729,14 @@ update _ msg model { shared } =
 
         AccountKeysGenerated (Ok accountKeys) ->
             case model.status of
-                FormShowed f ->
-                    let
-                        signUpFields =
-                            getSignUpFields f
-                    in
-                    { model
-                        | accountKeys = Just accountKeys
-                    }
+                FormShowed form ->
+                    { model | accountKeys = Just accountKeys }
                         |> UR.init
                         |> UR.addCmd
                             (signUp shared
-                                signUpFields
                                 accountKeys
                                 model.invitationId
+                                form
                             )
 
                 _ ->
@@ -955,14 +949,17 @@ type alias SignUpResponse =
     }
 
 
-signUp : Shared -> SignUpFields -> AccountKeys -> InvitationId -> Cmd Msg
-signUp shared signUpFields keys invitationId =
+signUp : Shared -> AccountKeys -> InvitationId -> FormModel -> Cmd Msg
+signUp shared { accountName, ownerKey } invitationId form =
     let
+        { email, name } =
+            getSignUpFields form
+
         requiredArgs =
-            { account = Eos.nameToString keys.accountName
-            , email = signUpFields.email
-            , name = signUpFields.name
-            , publicKey = keys.ownerKey
+            { account = Eos.nameToString accountName
+            , email = email
+            , name = name
+            , publicKey = ownerKey
             }
 
         fillOptionals opts =
@@ -970,6 +967,14 @@ signUp shared signUpFields keys invitationId =
                 | invitationId =
                     Maybe.map Present invitationId
                         |> Maybe.withDefault Absent
+                , userType =
+                    Present <|
+                        case form of
+                            JuridicalForm _ ->
+                                "juridical"
+
+                            _ ->
+                                "natural"
             }
     in
     Api.Graphql.mutation shared
