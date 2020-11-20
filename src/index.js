@@ -149,7 +149,7 @@ app.ports.logError.subscribe((msg, err) => {
     if (Object.prototype.toString.call(msg) === '[object Array]') {
       [error, details] = msg
     }
-    Object.prototype.toString.call(msg)
+
     Sentry.withScope(scope => {
       scope.setTag('type', 'elm-error')
       scope.setLevel(Sentry.Severity.Error)
