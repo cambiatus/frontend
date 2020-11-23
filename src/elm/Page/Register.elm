@@ -188,7 +188,11 @@ viewCreateAccount translators model =
                 SavePassphrase ->
                     "bg-purple-500"
     in
-    div [ class ("flex flex-grow flex-col " ++ backgroundColor) ]
+    div
+        [ -- `id` is used for scrolling into view if error happens
+          id "registrationPage"
+        , class ("flex flex-grow flex-col " ++ backgroundColor)
+        ]
         [ viewTitleForStep translators model.step
         , case model.status of
             Loading ->
@@ -492,7 +496,8 @@ type alias UpdateResult =
 
 
 type Msg
-    = ValidateForm FormModel
+    = NoOp
+    | ValidateForm FormModel
     | GotAccountAvailabilityResponse Bool
     | AccountKeysGenerated (Result Decode.Error AccountKeys)
     | AgreedToSave12Words Bool
@@ -541,8 +546,22 @@ update _ msg model { shared } =
     let
         { t } =
             shared.translators
+
+        scrollTop =
+            UR.addPort
+                { responseAddress = NoOp
+                , responseData = Encode.null
+                , data =
+                    Encode.object
+                        [ ( "id", Encode.string "registrationPage" )
+                        , ( "name", Encode.string "scrollIntoView" )
+                        ]
+                }
     in
     case msg of
+        NoOp ->
+            model |> UR.init
+
         ValidateForm formType ->
             let
                 validateForm validator form =
@@ -878,6 +897,7 @@ update _ msg model { shared } =
             }
                 |> UR.init
                 |> UR.logGraphqlError msg error
+                |> scrollTop
 
         CompletedAddressUpsert (Ok _) ->
             -- Address is saved, Juridical account is created.
@@ -891,6 +911,7 @@ update _ msg model { shared } =
             UR.init
                 { model | serverError = Just (t "register.form.error.address_problem") }
                 |> UR.logGraphqlError msg error
+                |> scrollTop
 
         CompletedLoadInvite (Ok (Just invitation)) ->
             if invitation.community.hasKyc then
@@ -1057,6 +1078,9 @@ jsAddressToMsg addr val =
 msgToString : Msg -> List String
 msgToString msg =
     case msg of
+        NoOp ->
+            [ "NoOp" ]
+
         FormMsg _ ->
             [ "FormMsg" ]
 
