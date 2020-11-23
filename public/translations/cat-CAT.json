@@ -276,6 +276,10 @@
         "state": "Seleccioneu l'estat",
         "city": "Seleccioneu la ciutat",
         "district": "Selecciona el districte"
+      },
+      "error": {
+        "kyc_problem": "No es pot desar el KYC. Comproveu les vostres dades i torneu-ho a provar.",
+        "address_problem": "No es pot desar l'adreça. Comproveu les vostres dades i torneu-ho a provar."
       }
     },
     "login": "Ja tens un compte? ",

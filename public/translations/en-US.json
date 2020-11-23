@@ -272,6 +272,10 @@
         "state": "Select the state",
         "city": "Select the city",
         "district": "Select the district"
+      },
+      "error": {
+        "kyc_problem": "Can't save the KYC. Please, check your data and try again!",
+        "address_problem": "Can't save the Address. Please, check your data and try again!"
       }
     },
     "login": "Already have an account? ",
