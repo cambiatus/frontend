@@ -281,6 +281,10 @@
         "state": "Selecione o Estado",
         "city": "Selecione a cidade",
         "district": "Selecione o distrito"
+      },
+      "error": {
+        "kyc_problem": "Não é possível salvar o KYC. Por favor, verifique seus dados e tente novamente!",
+        "address_problem": "Não é possível salvar o endereço. Por favor, verifique seus dados e tente novamente!"
       }
     },
     "login": "Já tem uma conta? ",

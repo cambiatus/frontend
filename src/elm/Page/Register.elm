@@ -874,7 +874,7 @@ update _ msg model { shared } =
 
         CompletedKycUpsert (Err error) ->
             { model
-                | serverError = Just (t "Can't save the KYC. Please, check your data and try again!")
+                | serverError = Just (t "register.form.error.kyc_problem")
             }
                 |> UR.init
                 |> UR.logGraphqlError msg error
@@ -889,7 +889,7 @@ update _ msg model { shared } =
 
         CompletedAddressUpsert (Err error) ->
             UR.init
-                { model | serverError = Just (t "Can't save the Address. Please, check your data and try again!") }
+                { model | serverError = Just (t "register.form.error.address_problem") }
                 |> UR.logGraphqlError msg error
 
         CompletedLoadInvite (Ok (Just invitation)) ->
