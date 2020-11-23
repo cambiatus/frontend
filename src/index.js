@@ -143,11 +143,20 @@ app.ports.logError.subscribe((msg, err) => {
   if (env === 'development') {
     console.error(msg, err)
   } else {
+    let error = 'Generic Elm Error port msg'
+    let details = ''
+
+    if (Object.prototype.toString.call(msg) === '[object Array]') {
+      [error, details] = msg
+    }
+
     Sentry.withScope(scope => {
       scope.setTag('type', 'elm-error')
       scope.setLevel(Sentry.Severity.Error)
       scope.setExtra('Error shared by Elm', err)
-      Sentry.captureMessage(msg)
+      scope.setExtra('raw msg', msg)
+      scope.setExtra('Parsed details', details)
+      Sentry.captureMessage(error + details)
     })
   }
   Sentry.addBreadcrumb({
@@ -539,7 +548,7 @@ async function handleJavascriptPort (arg) {
             level: 'info',
             message: 'Failure pushing transaction to EOS'
           })
-          Sentry.configureScope(scope => {
+          Sentry.withScope(scope => {
             const message = error.error.details[0].message || 'Generic EOS Error'
             scope.setTag('type', 'eos-transaction')
             scope.setExtra('Sent data', arg.data)
