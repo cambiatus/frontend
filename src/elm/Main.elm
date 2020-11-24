@@ -880,6 +880,10 @@ jsAddressToMsg address val =
             Maybe.map GotShopEditorMsg
                 (ShopEditor.jsAddressToMsg rAddress val)
 
+        "GotShopViewerMsg" :: rAddress ->
+            Maybe.map GotShopViewerMsg
+                (ShopViewer.jsAddressToMsg rAddress val)
+
         "GotRegisterMsg" :: rAddress ->
             Maybe.map GotRegisterMsg
                 (Register.jsAddressToMsg rAddress val)
