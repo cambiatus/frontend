@@ -1,4 +1,13 @@
-module Page.Shop.Viewer exposing (Model, Msg, init, msgToString, subscriptions, update, view)
+module Page.Shop.Viewer exposing
+    ( Model
+    , Msg
+    , init
+    , jsAddressToMsg
+    , msgToString
+    , subscriptions
+    , update
+    , view
+    )
 
 import Api
 import Api.Graphql
@@ -6,12 +15,14 @@ import Avatar
 import Community exposing (Balance)
 import Eos
 import Eos.Account as Eos
+import Eos.EosError as EosError
 import Graphql.Http
 import Html exposing (Html, a, button, div, img, input, label, p, span, text, textarea)
 import Html.Attributes exposing (autocomplete, class, disabled, for, id, placeholder, required, src, type_, value)
 import Html.Events exposing (onClick, onInput)
 import Http
 import I18Next exposing (Translations, t)
+import Json.Decode as Decode exposing (Value)
 import Json.Encode as Encode
 import List.Extra as LE
 import Page exposing (Session(..))
@@ -150,6 +161,7 @@ type Msg
     | ClickedTransfer Sale
     | EnteredUnit String
     | EnteredMemo String
+    | GotTransferResult (Result (Maybe Value) String)
 
 
 type alias UpdateResult =
@@ -157,11 +169,45 @@ type alias UpdateResult =
 
 
 update : Msg -> Model -> LoggedIn.Model -> UpdateResult
-update msg model user =
+update msg model loggedIn =
+    let
+        { t } =
+            loggedIn.shared.translators
+    in
     case msg of
         CompletedSaleLoad (Ok maybeSale) ->
             { model | status = LoadedSale maybeSale }
                 |> UR.init
+
+        GotTransferResult (Ok _) ->
+            case model.status of
+                LoadedSale _ ->
+                    model
+                        |> UR.init
+                        |> UR.addExt
+                            (ShowFeedback LoggedIn.Success (t "shop.transfer.success"))
+                        |> UR.addCmd
+                            (Route.replaceUrl loggedIn.shared.navKey (Route.Shop Shop.All))
+
+                _ ->
+                    model
+                        |> UR.init
+
+        GotTransferResult (Err eosErrorString) ->
+            let
+                errorMessage =
+                    EosError.parseTransferError loggedIn.shared.translators eosErrorString
+            in
+            case model.status of
+                LoadedSale _ ->
+                    model
+                        |> UR.init
+                        |> UR.addExt
+                            (LoggedIn.ShowFeedback LoggedIn.Failure errorMessage)
+
+                _ ->
+                    model
+                        |> UR.init
 
         CompletedSaleLoad (Err err) ->
             { model | status = LoadingFailed err }
@@ -189,7 +235,7 @@ update msg model user =
             model
                 |> UR.init
                 |> UR.addCmd
-                    (Route.replaceUrl user.shared.navKey (Route.EditSale idString))
+                    (Route.replaceUrl loggedIn.shared.navKey (Route.EditSale idString))
 
         ClickedBuy _ ->
             { model | viewing = EditingTransfer }
@@ -201,10 +247,10 @@ update msg model user =
                     validateForm sale model.form
             in
             if isFormValid validatedForm then
-                if LoggedIn.isAuth user then
+                if LoggedIn.isAuth loggedIn then
                     let
                         authorization =
-                            { actor = user.accountName
+                            { actor = loggedIn.accountName
                             , permissionName = Eos.samplePermission
                             }
 
@@ -233,23 +279,23 @@ update msg model user =
                             , responseData = Encode.null
                             , data =
                                 Eos.encodeTransaction
-                                    [ { accountName = user.shared.contracts.token
+                                    [ { accountName = loggedIn.shared.contracts.token
                                       , name = "transfer"
                                       , authorization = authorization
                                       , data =
-                                            { from = user.accountName
+                                            { from = loggedIn.accountName
                                             , to = sale.creatorId
                                             , value = value
                                             , memo = model.form.memo
                                             }
                                                 |> Transfer.encodeEosActionData
                                       }
-                                    , { accountName = user.shared.contracts.community
+                                    , { accountName = loggedIn.shared.contracts.community
                                       , name = "transfersale"
                                       , authorization = authorization
                                       , data =
                                             { id = sale.id
-                                            , from = user.accountName
+                                            , from = loggedIn.accountName
                                             , to = sale.creatorId
                                             , quantity = unitPrice
                                             , units = requiredUnits
@@ -258,8 +304,6 @@ update msg model user =
                                       }
                                     ]
                             }
-                        |> UR.addCmd (Route.replaceUrl user.shared.navKey (Route.Shop Shop.All))
-                        |> UR.addExt (ShowFeedback LoggedIn.Success (I18Next.t user.shared.translations "shop.transfer.success"))
 
                 else
                     model
@@ -726,6 +770,9 @@ msgToString msg =
         CompletedSaleLoad _ ->
             [ "CompletedSaleLoad" ]
 
+        GotTransferResult _ ->
+            [ "GotTransferResult" ]
+
         ClickedBuy _ ->
             [ "ClickedBuy" ]
 
@@ -746,3 +793,23 @@ msgToString msg =
 
         CompletedLoadBalances _ ->
             [ "CompletedLoadBalances" ]
+
+
+jsAddressToMsg : List String -> Value -> Maybe Msg
+jsAddressToMsg addr val =
+    case addr of
+        [ "ClickedTransfer" ] ->
+            Decode.decodeValue
+                (Decode.oneOf
+                    [ Decode.field "transactionId" Decode.string
+                        |> Decode.map Ok
+                    , Decode.field "error" (Decode.nullable Decode.value)
+                        |> Decode.map Err
+                    ]
+                )
+                val
+                |> Result.map (Just << GotTransferResult)
+                |> Result.withDefault Nothing
+
+        _ ->
+            Nothing

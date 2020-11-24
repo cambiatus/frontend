@@ -99,7 +99,19 @@
         "symbol precision mismatch": "Falta de coincidencia de precisión de símbolo",
         "memo has more than 256 bytes": "El memo tiene más de 256 símbolos",
         "from account doesn't belong to the community": "De la cuenta no pertenece a la comunidad",
-        "to account doesn't belong to the community": "La cuenta no pertenece a la comunidad"
+        "to account doesn't belong to the community": "La cuenta no pertenece a la comunidad",
+        "The sale creator (to) account doesn't exists": "La cuenta de creador de ventas (a) no existe",
+        "Can't sale for yourself": "No se puede vender por ti mismo",
+        "Can't find any sale with given sale_id": "No se puede encontrar ninguna venta con sale_id dado",
+        "Invalid number of units, must be greater than 0": "Número de unidades no válido, debe ser mayor que 0",
+        "Sale doesn't have that many units available": "La venta no tiene tantas unidades disponibles",
+        "Amount offered doesn't correspond to expected value": "La cantidad ofrecida no corresponde al valor esperado",
+        "Quantity must be the same as the sale price": "La cantidad debe ser igual al precio de oferta.",
+        "Can't find community with given Symbol": "No se puede encontrar la comunidad con el símbolo dado",
+        "This community don't have objectives enabled.": "Esta comunidad no tiene objetivos habilitados.",
+        "You can't use transfersale to this sale if you aren't part of the community": "No puede usar la venta transferible para esta venta si no es parte de la comunidad",
+        "Sale creator and sale doesn't match": "Creador de venta y venta no coincide",
+        "Invalid number of units": "Número de unidades no válido"
       },
       "verifyclaim": {
         "Can't vote on already verified claim": "No puedo votar sobre un reclamo ya verificado",

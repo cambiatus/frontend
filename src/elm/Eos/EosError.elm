@@ -66,6 +66,8 @@ parseClaimError translators eosErrorString =
         eosErrorString
 
 
+{-| Handle errors for both `transfer` and `transfersale` transactions.
+-}
 parseTransferError : Translators -> Maybe Value -> String
 parseTransferError translators eosErrorString =
     parseErrorMessage
