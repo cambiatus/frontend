@@ -95,7 +95,7 @@
         "destination account doesn't exists": "Destination account doesn't exist",
         "token with given symbol doesn't exists": "Token with given symbol doesn't exist",
         "invalid quantity": "Invalid quantity",
-        "quantity must be positive": "La quantitat ha de ser positiva",
+        "quantity must be positive": "Quantity must be positive",
         "symbol precision mismatch": "Symbol precision mismatch",
         "memo has more than 256 bytes": "The memo has more than 256 symbols",
         "from account doesn't belong to the community": "From account doesn't belong to the community",
