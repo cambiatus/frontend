@@ -628,6 +628,7 @@
     "message_placeholder": "Digite sua mensagem aqui ou envie diretamente por Whatsapp ou chat.",
     "create_offer": "Criar oferta",
     "edit_offer": "Editar oferta",
+    "create_offer_success": "Oferta criada com sucesso!",
     "delete_offer_success": "Oferta removida com sucesso",
     "unauthorized": "Você não tem autorização para editar essa venda",
     "photo_label": "Enviar imagem",
