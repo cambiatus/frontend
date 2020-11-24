@@ -11,7 +11,7 @@ import Eos.Account as Eos
 import File exposing (File)
 import Graphql.Http
 import Html exposing (Html, button, div, input, label, option, p, select, span, text, textarea)
-import Html.Attributes exposing (accept, attribute, class, classList, disabled, for, hidden, id, maxlength, multiple, required, selected, style, type_, value)
+import Html.Attributes exposing (accept, class, classList, disabled, for, id, maxlength, multiple, required, selected, style, type_, value)
 import Html.Events exposing (on, onClick, onInput)
 import Http
 import I18Next
@@ -21,7 +21,6 @@ import Page
 import Result exposing (Result)
 import Route
 import Session.LoggedIn as LoggedIn exposing (External(..), FeedbackStatus(..))
-import Session.Shared exposing (Shared)
 import Shop exposing (Sale, SaleId)
 import Task
 import UpdateResult as UR
@@ -131,11 +130,6 @@ initForm balanceOptions =
             []
                 |> longerThan 10
                 |> newValidator "" (\v -> Just v) True
-
-        symbol =
-            []
-                |> oneOf balanceOptions
-                |> newValidator Nothing (Maybe.map Eos.symbolToString) True
 
         trackStock =
             []
