@@ -99,7 +99,18 @@
         "symbol precision mismatch": "Symbol precision mismatch",
         "memo has more than 256 bytes": "The memo has more than 256 symbols",
         "from account doesn't belong to the community": "From account doesn't belong to the community",
-        "to account doesn't belong to the community": "To account doesn't belong to the community"
+        "to account doesn't belong to the community": "To account doesn't belong to the community",
+        "The sale creator (to) account doesn't exists": "The sale creator (to) account doesn't exist",
+        "Can't sale for yourself": "Can't sell for yourself",
+        "Can't find any sale with given sale_id": "Can't find any sale with given sale_id",
+        "Invalid number of units, must be greater than 0": "Invalid number of units, must be greater than 0",
+        "Sale doesn't have that many units available": "Sale doesn't have that many units available",
+        "Amount offered doesn't correspond to expected value": "Amount offered doesn't correspond to expected value",
+        "Quantity must be the same as the sale price": "Quantity must be the same as the sale price",
+        "Can't find community with given Symbol": "Can't find community with given Symbol",
+        "This community don't have objectives enabled.": "This community doesn't have objectives enabled",
+        "You can't use transfersale to this sale if you aren't part of the community": "You can't use transfersale to this sale if you aren't part of the community",
+        "Sale creator and sale doesn't match": "Sale creator and sale doesn't match"
       },
       "verifyclaim": {
         "Can't vote on already verified claim": "Can't vote on already verified claim",

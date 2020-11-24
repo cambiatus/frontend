@@ -99,7 +99,18 @@
         "symbol precision mismatch": "Desajust de precisió de símbols",
         "memo has more than 256 bytes": "La nota té més de 256 símbols",
         "from account doesn't belong to the community": "Des del compte no pertany a la comunitat",
-        "to account doesn't belong to the community": "El compte no pertany a la comunitat"
+        "to account doesn't belong to the community": "El compte no pertany a la comunitat",
+        "The sale creator (to) account doesn't exists": "El compte de creador de venda (a) no existeix",
+        "Can't sale for yourself": "No es pot vendre per vosaltres mateixos",
+        "Can't find any sale with given sale_id": "No trobo cap venda amb sale_id determinat",
+        "Invalid number of units, must be greater than 0": "El nombre d'unitats no vàlid ha de ser superior a 0",
+        "Sale doesn't have that many units available": "La venda no té tantes unitats disponibles",
+        "Amount offered doesn't correspond to expected value": "L'import ofert no correspon al valor esperat",
+        "Quantity must be the same as the sale price": "La quantitat ha de ser la mateixa que el preu de venda",
+        "Can't find community with given Symbol": "No es pot trobar la comunitat amb el símbol donat",
+        "This community don't have objectives enabled.": "Aquesta comunitat no té objectius activats.",
+        "You can't use transfersale to this sale if you aren't part of the community": "No podeu fer servir la venda de transferències a aquesta venda si no formeu part de la comunitat",
+        "Sale creator and sale doesn't match": "El creador de la venda i la venda no coincideixen"
       },
       "verifyclaim": {
         "Can't vote on already verified claim": "No es pot votar sobre una reclamació ja verificada",
