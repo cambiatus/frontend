@@ -425,6 +425,7 @@ viewForm ({ shared } as loggedIn) balances imageStatus isEdit isDisabled deleteM
                             , required True
                             , disabled isDisabled
                             , Html.Attributes.min "0"
+                            , Html.Attributes.max "12"
                             ]
                             []
                         , span [ class "w-1/5 flex text-white items-center justify-center bg-indigo-500 text-body uppercase rounded-r-sm" ]
