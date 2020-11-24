@@ -5,7 +5,7 @@ import Api.Graphql
 import Asset.Icon as Icon
 import Browser.Events as Events
 import Community exposing (Balance)
-import DataValidator exposing (Validator, getInput, greaterThanOrEqual, hasErrors, listErrors, longerThan, newValidator, oneOf, updateInput, validate)
+import DataValidator exposing (Validator, getInput, greaterThanOrEqual, hasErrors, listErrors, longerThan, lowerThanOrEqual, newValidator, oneOf, updateInput, validate)
 import Eos exposing (Symbol)
 import Eos.Account as Eos
 import File exposing (File)
@@ -101,7 +101,6 @@ type alias Form =
     { image : Validator (Maybe String)
     , title : Validator String
     , description : Validator String
-    , symbol : Validator (Maybe Symbol)
     , trackStock : Validator (Maybe String)
     , units : Validator String
     , price : Validator String
@@ -146,6 +145,7 @@ initForm balanceOptions =
         units =
             []
                 |> greaterThanOrEqual 0
+                |> lowerThanOrEqual 2000
                 |> newValidator "0" (\v -> Just v) False
 
         price =
@@ -156,7 +156,6 @@ initForm balanceOptions =
     { image = image
     , title = title
     , description = description
-    , symbol = symbol
     , trackStock = trackStock
     , units = units
     , price = price
@@ -216,19 +215,19 @@ view loggedIn model =
                     Page.fullPageGraphQLError (t "shop.title") error
 
                 EditingCreate balances imageStatus form ->
-                    viewForm shared balances imageStatus False False Closed form
+                    viewForm loggedIn balances imageStatus False False Closed form
 
                 Creating balances imageStatus form ->
-                    viewForm shared balances imageStatus False True Closed form
+                    viewForm loggedIn balances imageStatus False True Closed form
 
                 EditingUpdate balances _ imageStatus confirmDelete form ->
-                    viewForm shared balances imageStatus True False confirmDelete form
+                    viewForm loggedIn balances imageStatus True False confirmDelete form
 
                 Saving balances _ imageStatus form ->
-                    viewForm shared balances imageStatus True True Closed form
+                    viewForm loggedIn balances imageStatus True True Closed form
 
                 Deleting balances _ imageStatus form ->
-                    viewForm shared balances imageStatus True True Closed form
+                    viewForm loggedIn balances imageStatus True True Closed form
     in
     { title = title
     , content =
@@ -246,8 +245,8 @@ view loggedIn model =
     }
 
 
-viewForm : Shared -> List Balance -> ImageStatus -> Bool -> Bool -> DeleteModalStatus -> Form -> Html Msg
-viewForm shared balances imageStatus isEdit isDisabled deleteModal form =
+viewForm : LoggedIn.Model -> List Balance -> ImageStatus -> Bool -> Bool -> DeleteModalStatus -> Form -> Html Msg
+viewForm ({ shared } as loggedIn) balances imageStatus isEdit isDisabled deleteModal form =
     let
         t =
             I18Next.t shared.translations
@@ -278,9 +277,6 @@ viewForm shared balances imageStatus isEdit isDisabled deleteModal form =
                         [ text (t "shop.photo_label") ]
                     ]
 
-        symbol =
-            getInput form.symbol
-
         trackStock =
             getInput form.trackStock
 
@@ -291,200 +287,164 @@ viewForm shared balances imageStatus isEdit isDisabled deleteModal form =
             else
                 ( t "menu.create", t "shop.create_offer" )
     in
-    div
-        [ class "container mx-auto px-4 py-2 max-w-screen-md" ]
-        [ div
-            [ class "bg-white rounded-lg" ]
-            [ div [ class "px-4 py-6" ]
-                [ div [ class "text-heading font-medium" ] [ text pageTitle ]
-                , if isEdit then
-                    button
-                        [ class "btn delete-button"
-                        , disabled isDisabled
-                        , onClick ClickedDelete
-                        ]
-                        [ text (t "shop.delete") ]
+    div []
+        [ Page.viewHeader loggedIn pageTitle (Route.Shop Shop.All)
+        , div
+            [ class "container mx-auto px-4 py-2 max-w-screen-md" ]
+            [ div
+                [ class "bg-white rounded-lg" ]
+                [ div [ class "px-4 py-6" ]
+                    [ div [ class "text-heading font-medium" ] [ text pageTitle ]
+                    , if isEdit then
+                        button
+                            [ class "btn delete-button"
+                            , disabled isDisabled
+                            , onClick ClickedDelete
+                            ]
+                            [ text (t "shop.delete") ]
 
-                  else
-                    text ""
-                , if isEdit && deleteModal == Open then
-                    viewConfirmDeleteModal t
+                      else
+                        text ""
+                    , if isEdit && deleteModal == Open then
+                        viewConfirmDeleteModal t
 
-                  else
-                    text ""
-                ]
-            , div
-                [ class "shop-editor__image-upload w-full px-4 mb-10" ]
-                [ input
-                    [ id (fieldId "image")
-                    , class "hidden-img-input"
-                    , type_ "file"
-                    , accept "image/*"
-                    , Page.onFileChange EnteredImage
-                    , multiple False
-                    , disabled isDisabled
+                      else
+                        text ""
                     ]
-                    []
-                , label
-                    [ for (fieldId "image")
-                    , imageStyle
-                    ]
-                    imageView
-                ]
-            , div [ class "px-4 flex flex-col" ]
-                [ formField
-                    [ div
-                        [ class "input-label" ]
-                        [ text (t "shop.what_label") ]
-                    , input
-                        [ class "input w-full"
-                        , classList [ ( "field-with-error", hasErrors form.title ) ]
-                        , type_ "text"
-                        , id (fieldId "title")
-                        , value (getInput form.title)
-                        , maxlength 255
-                        , onInput EnteredTitle
-                        , required True
+                , div
+                    [ class "shop-editor__image-upload w-full px-4 mb-10" ]
+                    [ input
+                        [ id (fieldId "image")
+                        , class "hidden-img-input"
+                        , type_ "file"
+                        , accept "image/*"
+                        , Page.onFileChange EnteredImage
+                        , multiple False
                         , disabled isDisabled
                         ]
                         []
-                    , viewFieldErrors (listErrors shared.translations form.title)
-                    ]
-                , formField
-                    [ div
-                        [ class "input-label" ]
-                        [ text (t "shop.description_label") ]
-                    , textarea
-                        [ class "input textarea-input w-full"
-                        , classList [ ( "field-with-error", hasErrors form.description ) ]
-                        , id (fieldId "description")
-                        , value (getInput form.description)
-                        , maxlength 255
-                        , onInput EnteredDescription
-                        , required True
-                        , disabled isDisabled
+                    , label
+                        [ for (fieldId "image")
+                        , imageStyle
                         ]
-                        []
-                    , viewFieldErrors (listErrors shared.translations form.description)
+                        imageView
                     ]
-                , formField
-                    [ div
-                        [ class "input-label" ]
-                        [ text (t "shop.which_community_label") ]
-                    , select
-                        [ class "w-full form-select select"
-                        , id (fieldId "symbol")
-                        , required True
-                        , disabled (isEdit || isDisabled)
-                        , Html.Events.on "change"
-                            (Decode.map
-                                (\symbolStr ->
-                                    if String.isEmpty symbolStr then
-                                        EnteredSymbol Nothing
-
-                                    else
-                                        EnteredSymbol (Just symbolStr)
-                                )
-                                Html.Events.targetValue
-                            )
-                        ]
-                        (option
-                            [ hidden True
-                            , attribute "value" ""
-                            , selected (symbol == Nothing)
-                            ]
-                            [ text (t "shop.choose_community_label") ]
-                            :: List.map
-                                (\b ->
-                                    option
-                                        [ value (Eos.symbolToString b.asset.symbol)
-                                        , selected (symbol == Just b.asset.symbol)
-                                        ]
-                                        [ text (Eos.symbolToSymbolCodeString b.asset.symbol) ]
-                                )
-                                balances
-                        )
-                    , viewFieldErrors (listErrors shared.translations form.symbol)
-                    ]
-                , formField
-                    [ div
-                        [ class "input-label" ]
-                        [ text (t "shop.track_stock_label") ]
-                    , select
-                        [ class "form-select select w-full"
-                        , id (fieldId "trackStock")
-                        , required True
-                        , disabled isDisabled
-                        , on "change"
-                            (Decode.map EnteredTrackStock Html.Events.targetValue)
-                        ]
-                        [ option
-                            [ value trackYes
-                            , selected (trackStock == Just trackYes)
-                            ]
-                            [ text (t "shop.track_stock_yes") ]
-                        , option
-                            [ value trackNo
-                            , selected (trackStock == Just trackNo)
-                            ]
-                            [ text (t "shop.track_stock_no") ]
-                        ]
-                    , viewFieldErrors (listErrors shared.translations form.trackStock)
-                    ]
-                , if trackStock == Just trackYes then
-                    formField
+                , div [ class "px-4 flex flex-col" ]
+                    [ formField
                         [ div
                             [ class "input-label" ]
-                            [ text (t "shop.units_label") ]
+                            [ text (t "shop.what_label") ]
                         , input
                             [ class "input w-full"
-                            , classList [ ( "field-with-error", hasErrors form.units ) ]
-                            , type_ "number"
-                            , id (fieldId "units")
-                            , value (getInput form.units)
-                            , onInput EnteredUnits
+                            , classList [ ( "field-with-error", hasErrors form.title ) ]
+                            , type_ "text"
+                            , id (fieldId "title")
+                            , value (getInput form.title)
+                            , maxlength 255
+                            , onInput EnteredTitle
+                            , required True
+                            , disabled isDisabled
+                            ]
+                            []
+                        , viewFieldErrors (listErrors shared.translations form.title)
+                        ]
+                    , formField
+                        [ div
+                            [ class "input-label" ]
+                            [ text (t "shop.description_label") ]
+                        , textarea
+                            [ class "input textarea-input w-full"
+                            , classList [ ( "field-with-error", hasErrors form.description ) ]
+                            , id (fieldId "description")
+                            , value (getInput form.description)
+                            , maxlength 255
+                            , onInput EnteredDescription
+                            , required True
+                            , disabled isDisabled
+                            ]
+                            []
+                        , viewFieldErrors (listErrors shared.translations form.description)
+                        ]
+                    , formField
+                        [ div
+                            [ class "input-label" ]
+                            [ text (t "shop.track_stock_label") ]
+                        , select
+                            [ class "form-select select w-full"
+                            , id (fieldId "trackStock")
+                            , required True
+                            , disabled isDisabled
+                            , on "change"
+                                (Decode.map EnteredTrackStock Html.Events.targetValue)
+                            ]
+                            [ option
+                                [ value trackYes
+                                , selected (trackStock == Just trackYes)
+                                ]
+                                [ text (t "shop.track_stock_yes") ]
+                            , option
+                                [ value trackNo
+                                , selected (trackStock == Just trackNo)
+                                ]
+                                [ text (t "shop.track_stock_no") ]
+                            ]
+                        , viewFieldErrors (listErrors shared.translations form.trackStock)
+                        ]
+                    , if trackStock == Just trackYes then
+                        formField
+                            [ div
+                                [ class "input-label" ]
+                                [ text (t "shop.units_label") ]
+                            , input
+                                [ class "input w-full"
+                                , classList [ ( "field-with-error", hasErrors form.units ) ]
+                                , type_ "number"
+                                , id (fieldId "units")
+                                , value (getInput form.units)
+                                , onInput EnteredUnits
+                                , required True
+                                , disabled isDisabled
+                                , Html.Attributes.min "0"
+                                ]
+                                []
+                            , viewFieldErrors (listErrors shared.translations form.units)
+                            ]
+
+                      else
+                        text ""
+                    , formField
+                        [ div
+                            [ class "input-label" ]
+                            [ text (t "shop.price_label") ]
+                        , input
+                            [ class "input w-full"
+                            , classList [ ( "field-with-error", hasErrors form.price ) ]
+                            , id (fieldId "price")
+                            , value (getInput form.price)
+                            , onInput EnteredPrice
                             , required True
                             , disabled isDisabled
                             , Html.Attributes.min "0"
                             ]
                             []
-                        , viewFieldErrors (listErrors shared.translations form.units)
+                        , viewFieldErrors (listErrors shared.translations form.price)
                         ]
+                    , case form.error of
+                        Nothing ->
+                            text ""
 
-                  else
-                    text ""
-                , formField
-                    [ div
-                        [ class "input-label" ]
-                        [ text (t "shop.price_label") ]
-                    , input
-                        [ class "input w-full"
-                        , classList [ ( "field-with-error", hasErrors form.price ) ]
-                        , id (fieldId "price")
-                        , value (getInput form.price)
-                        , onInput EnteredPrice
-                        , required True
-                        , disabled isDisabled
-                        , Html.Attributes.min "0"
+                        Just err ->
+                            viewFieldErrors [ err ]
+                    , div
+                        [ class "flex align-center justify-center mb-10"
+                        , disabled (isDisabled || imageStatus == Uploading)
                         ]
-                        []
-                    , viewFieldErrors (listErrors shared.translations form.price)
-                    ]
-                , case form.error of
-                    Nothing ->
-                        text ""
-
-                    Just err ->
-                        viewFieldErrors [ err ]
-                , div
-                    [ class "flex align-center justify-center mb-10"
-                    , disabled (isDisabled || imageStatus == Uploading)
-                    ]
-                    [ button
-                        [ class "button button-primary w-full sm:w-40"
-                        , onClick ClickedSave
+                        [ button
+                            [ class "button button-primary w-full sm:w-40"
+                            , onClick ClickedSave
+                            ]
+                            [ text actionText ]
                         ]
-                        [ text actionText ]
                     ]
                 ]
             ]
@@ -552,7 +512,6 @@ type Msg
     | EnteredImage (List File)
     | EnteredTitle String
     | EnteredDescription String
-    | EnteredSymbol (Maybe String)
     | EnteredTrackStock String
     | EnteredUnits String
     | EnteredPrice String
@@ -635,7 +594,6 @@ update msg model loggedIn =
                                     | image = updateInput sale.image form.image
                                     , title = updateInput sale.title form.title
                                     , description = updateInput sale.description form.description
-                                    , symbol = updateInput (Just sale.symbol) form.symbol
                                     , trackStock = updateInput (Just trackStock) form.trackStock
                                     , units = updateInput (String.fromInt sale.units) form.units
                                     , price = updateInput (String.fromFloat sale.price) form.price
@@ -738,20 +696,6 @@ update msg model loggedIn =
                         )
                     |> UR.init
 
-        EnteredSymbol symbolStr ->
-            let
-                maybeSymbol =
-                    Maybe.andThen
-                        Eos.symbolFromString
-                        symbolStr
-            in
-            model
-                |> updateForm
-                    (\form ->
-                        { form | symbol = updateInput maybeSymbol form.symbol }
-                    )
-                |> UR.init
-
         EnteredTrackStock trackStock ->
             model
                 |> updateForm
@@ -830,7 +774,7 @@ update msg model loggedIn =
                                 (Saving balances sale (Uploaded url) form)
                                 loggedIn
                                 "updatesale"
-                                (encodeUpdateForm sale form)
+                                (encodeUpdateForm sale form loggedIn.selectedCommunity)
 
                         else
                             validatedModel
@@ -843,7 +787,7 @@ update msg model loggedIn =
                                 (Saving balances sale (UploadFailed error) form)
                                 loggedIn
                                 "updatesale"
-                                (encodeUpdateForm sale form)
+                                (encodeUpdateForm sale form loggedIn.selectedCommunity)
 
                         else
                             validatedModel
@@ -856,7 +800,7 @@ update msg model loggedIn =
                                 (Saving balances sale NoImage form)
                                 loggedIn
                                 "updatesale"
-                                (encodeUpdateForm sale form)
+                                (encodeUpdateForm sale form loggedIn.selectedCommunity)
 
                         else
                             validatedModel
@@ -1008,7 +952,7 @@ update msg model loggedIn =
 
 
 performRequest : Msg -> Status -> LoggedIn.Model -> String -> Value -> UpdateResult
-performRequest msg status { shared, accountName } action data =
+performRequest msg status { shared, accountName, selectedCommunity } action data =
     status
         |> UR.init
         |> UR.addPort
@@ -1056,7 +1000,6 @@ validateForm form =
         | image = validate form.image
         , title = validate form.title
         , description = validate form.description
-        , symbol = validate form.symbol
         , trackStock = validate form.trackStock
         , units = validate form.units
         , price = validate form.price
@@ -1068,7 +1011,6 @@ isValidForm form =
     hasErrors form.image
         || hasErrors form.title
         || hasErrors form.description
-        || hasErrors form.symbol
         || hasErrors form.trackStock
         || hasErrors form.units
         || hasErrors form.price
@@ -1095,14 +1037,11 @@ encodeCreateForm loggedIn form =
                 |> getInput
                 |> Encode.string
 
-        symbol =
-            getInput form.symbol
-
         price =
             String.toFloat (getInput form.price)
 
         quantity =
-            case Maybe.map2 (\p s -> Eos.Asset p s) price symbol of
+            case Maybe.map2 (\p s -> Eos.Asset p s) price (Just loggedIn.selectedCommunity) of
                 Nothing ->
                     Encode.string ""
 
@@ -1139,8 +1078,8 @@ encodeCreateForm loggedIn form =
         ]
 
 
-encodeUpdateForm : Sale -> Form -> Value
-encodeUpdateForm sale form =
+encodeUpdateForm : Sale -> Form -> Symbol -> Value
+encodeUpdateForm sale form selectedCommunity =
     let
         saleId =
             Encode.int sale.id
@@ -1159,14 +1098,11 @@ encodeUpdateForm sale form =
                 |> getInput
                 |> Encode.string
 
-        symbol =
-            getInput form.symbol
-
         price =
             String.toFloat (getInput form.price)
 
         quantity =
-            case Maybe.map2 Eos.Asset price symbol of
+            case Maybe.map2 Eos.Asset price (Just selectedCommunity) of
                 Nothing ->
                     Encode.string ""
 
@@ -1270,9 +1206,6 @@ msgToString msg =
 
         EnteredDescription _ ->
             [ "EnteredDescription" ]
-
-        EnteredSymbol _ ->
-            [ "EnteredSymbol" ]
 
         EnteredTrackStock _ ->
             [ "EnteredTrackStock" ]
