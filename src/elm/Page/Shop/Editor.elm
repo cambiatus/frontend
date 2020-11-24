@@ -288,8 +288,7 @@ viewForm ({ shared } as loggedIn) balances imageStatus isEdit isDisabled deleteM
             [ div
                 [ class "bg-white rounded-lg" ]
                 [ div [ class "px-4 py-6" ]
-                    [ div [ class "text-heading font-medium" ] [ text pageTitle ]
-                    , if isEdit then
+                    [ if isEdit then
                         button
                             [ class "btn delete-button"
                             , disabled isDisabled
