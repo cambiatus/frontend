@@ -719,10 +719,18 @@ update msg model loggedIn =
                 |> UR.init
 
         EnteredPrice value ->
+            let
+                trimmedPrice =
+                    if String.length value > 12 then
+                        String.left 12 value
+
+                    else
+                        value
+            in
             model
                 |> updateForm
                     (\form ->
-                        { form | price = updateInput (getNumericValues value) form.price }
+                        { form | price = updateInput (getNumericValues trimmedPrice) form.price }
                     )
                 |> UR.init
 
