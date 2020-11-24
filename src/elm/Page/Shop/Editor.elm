@@ -5,13 +5,13 @@ import Api.Graphql
 import Asset.Icon as Icon
 import Browser.Events as Events
 import Community exposing (Balance)
-import DataValidator exposing (Validator, getInput, greaterThanOrEqual, hasErrors, listErrors, longerThan, newValidator, oneOf, updateInput, validate)
+import DataValidator exposing (Validator, getInput, greaterThanOrEqual, hasErrors, listErrors, longerThan, lowerThanOrEqual, newValidator, oneOf, updateInput, validate)
 import Eos exposing (Symbol)
 import Eos.Account as Eos
 import File exposing (File)
 import Graphql.Http
 import Html exposing (Html, button, div, input, label, option, p, select, span, text, textarea)
-import Html.Attributes exposing (accept, attribute, class, classList, disabled, for, hidden, id, maxlength, multiple, required, selected, style, type_, value)
+import Html.Attributes exposing (accept, class, classList, disabled, for, id, maxlength, multiple, required, selected, style, type_, value)
 import Html.Events exposing (on, onClick, onInput)
 import Http
 import I18Next
@@ -21,11 +21,11 @@ import Page
 import Result exposing (Result)
 import Route
 import Session.LoggedIn as LoggedIn exposing (External(..), FeedbackStatus(..))
-import Session.Shared exposing (Shared)
 import Shop exposing (Sale, SaleId)
 import Task
 import UpdateResult as UR
 import Utils exposing (decodeEnterKeyDown)
+import View.Form.InputCounter
 import View.Modal as Modal
 
 
@@ -101,7 +101,6 @@ type alias Form =
     { image : Validator (Maybe String)
     , title : Validator String
     , description : Validator String
-    , symbol : Validator (Maybe Symbol)
     , trackStock : Validator (Maybe String)
     , units : Validator String
     , price : Validator String
@@ -126,17 +125,14 @@ initForm balanceOptions =
             newValidator Nothing identity False []
 
         title =
-            newValidator "" (\v -> Just v) True []
+            []
+                |> longerThan 3
+                |> newValidator "" (\v -> Just v) True
 
         description =
             []
                 |> longerThan 10
                 |> newValidator "" (\v -> Just v) True
-
-        symbol =
-            []
-                |> oneOf balanceOptions
-                |> newValidator Nothing (Maybe.map Eos.symbolToString) True
 
         trackStock =
             []
@@ -146,6 +142,7 @@ initForm balanceOptions =
         units =
             []
                 |> greaterThanOrEqual 0
+                |> lowerThanOrEqual 2000
                 |> newValidator "0" (\v -> Just v) False
 
         price =
@@ -156,7 +153,6 @@ initForm balanceOptions =
     { image = image
     , title = title
     , description = description
-    , symbol = symbol
     , trackStock = trackStock
     , units = units
     , price = price
@@ -216,19 +212,19 @@ view loggedIn model =
                     Page.fullPageGraphQLError (t "shop.title") error
 
                 EditingCreate balances imageStatus form ->
-                    viewForm shared balances imageStatus False False Closed form
+                    viewForm loggedIn balances imageStatus False False Closed form
 
                 Creating balances imageStatus form ->
-                    viewForm shared balances imageStatus False True Closed form
+                    viewForm loggedIn balances imageStatus False True Closed form
 
                 EditingUpdate balances _ imageStatus confirmDelete form ->
-                    viewForm shared balances imageStatus True False confirmDelete form
+                    viewForm loggedIn balances imageStatus True False confirmDelete form
 
                 Saving balances _ imageStatus form ->
-                    viewForm shared balances imageStatus True True Closed form
+                    viewForm loggedIn balances imageStatus True True Closed form
 
                 Deleting balances _ imageStatus form ->
-                    viewForm shared balances imageStatus True True Closed form
+                    viewForm loggedIn balances imageStatus True True Closed form
     in
     { title = title
     , content =
@@ -246,8 +242,8 @@ view loggedIn model =
     }
 
 
-viewForm : Shared -> List Balance -> ImageStatus -> Bool -> Bool -> DeleteModalStatus -> Form -> Html Msg
-viewForm shared balances imageStatus isEdit isDisabled deleteModal form =
+viewForm : LoggedIn.Model -> List Balance -> ImageStatus -> Bool -> Bool -> DeleteModalStatus -> Form -> Html Msg
+viewForm ({ shared } as loggedIn) balances imageStatus isEdit isDisabled deleteModal form =
     let
         t =
             I18Next.t shared.translations
@@ -278,9 +274,6 @@ viewForm shared balances imageStatus isEdit isDisabled deleteModal form =
                         [ text (t "shop.photo_label") ]
                     ]
 
-        symbol =
-            getInput form.symbol
-
         trackStock =
             getInput form.trackStock
 
@@ -291,13 +284,12 @@ viewForm shared balances imageStatus isEdit isDisabled deleteModal form =
             else
                 ( t "menu.create", t "shop.create_offer" )
     in
-    div
-        [ class "container mx-auto px-4 py-2 max-w-screen-md" ]
-        [ div
-            [ class "bg-white rounded-lg" ]
+    div [ class "bg-white" ]
+        [ Page.viewHeader loggedIn pageTitle (Route.Shop Shop.All)
+        , div
+            [ class "container mx-auto" ]
             [ div [ class "px-4 py-6" ]
-                [ div [ class "text-heading font-medium" ] [ text pageTitle ]
-                , if isEdit then
+                [ if isEdit then
                     button
                         [ class "btn delete-button"
                         , disabled isDisabled
@@ -314,7 +306,7 @@ viewForm shared balances imageStatus isEdit isDisabled deleteModal form =
                     text ""
                 ]
             , div
-                [ class "shop-editor__image-upload w-full px-4 mb-10" ]
+                [ class "shop-editor__image-upload w-full  px-4 mb-10" ]
                 [ input
                     [ id (fieldId "image")
                     , class "hidden-img-input"
@@ -365,46 +357,8 @@ viewForm shared balances imageStatus isEdit isDisabled deleteModal form =
                         , disabled isDisabled
                         ]
                         []
+                    , View.Form.InputCounter.view shared.translators.tr 255 (getInput form.description)
                     , viewFieldErrors (listErrors shared.translations form.description)
-                    ]
-                , formField
-                    [ div
-                        [ class "input-label" ]
-                        [ text (t "shop.which_community_label") ]
-                    , select
-                        [ class "w-full form-select select"
-                        , id (fieldId "symbol")
-                        , required True
-                        , disabled (isEdit || isDisabled)
-                        , Html.Events.on "change"
-                            (Decode.map
-                                (\symbolStr ->
-                                    if String.isEmpty symbolStr then
-                                        EnteredSymbol Nothing
-
-                                    else
-                                        EnteredSymbol (Just symbolStr)
-                                )
-                                Html.Events.targetValue
-                            )
-                        ]
-                        (option
-                            [ hidden True
-                            , attribute "value" ""
-                            , selected (symbol == Nothing)
-                            ]
-                            [ text (t "shop.choose_community_label") ]
-                            :: List.map
-                                (\b ->
-                                    option
-                                        [ value (Eos.symbolToString b.asset.symbol)
-                                        , selected (symbol == Just b.asset.symbol)
-                                        ]
-                                        [ text (Eos.symbolToSymbolCodeString b.asset.symbol) ]
-                                )
-                                balances
-                        )
-                    , viewFieldErrors (listErrors shared.translations form.symbol)
                     ]
                 , formField
                     [ div
@@ -446,6 +400,7 @@ viewForm shared balances imageStatus isEdit isDisabled deleteModal form =
                             , required True
                             , disabled isDisabled
                             , Html.Attributes.min "0"
+                            , Html.Attributes.max "2000"
                             ]
                             []
                         , viewFieldErrors (listErrors shared.translations form.units)
@@ -457,17 +412,25 @@ viewForm shared balances imageStatus isEdit isDisabled deleteModal form =
                     [ div
                         [ class "input-label" ]
                         [ text (t "shop.price_label") ]
-                    , input
-                        [ class "input w-full"
-                        , classList [ ( "field-with-error", hasErrors form.price ) ]
-                        , id (fieldId "price")
-                        , value (getInput form.price)
-                        , onInput EnteredPrice
-                        , required True
-                        , disabled isDisabled
-                        , Html.Attributes.min "0"
+                    , div
+                        [ class "flex w-full h-12 rounded-sm border border-gray"
+                        , classList [ ( "border-red", hasErrors form.price ) ]
                         ]
-                        []
+                        [ input
+                            [ class "block w-4/5 border-none px-4 py-3 outline-none"
+                            , id (fieldId "price")
+                            , value (getInput form.price)
+                            , onInput EnteredPrice
+                            , Html.Attributes.max "21000000"
+                            , required True
+                            , disabled isDisabled
+                            , Html.Attributes.min "0"
+                            , Html.Attributes.max "12"
+                            ]
+                            []
+                        , span [ class "w-1/5 flex text-white items-center justify-center bg-indigo-500 text-body uppercase rounded-r-sm" ]
+                            [ text (Eos.symbolToSymbolCodeString loggedIn.selectedCommunity) ]
+                        ]
                     , viewFieldErrors (listErrors shared.translations form.price)
                     ]
                 , case form.error of
@@ -525,11 +488,7 @@ viewFieldErrors errors =
     let
         viewErrors =
             List.map
-                (\error ->
-                    span
-                        [ class "form-error" ]
-                        [ text error ]
-                )
+                (\error -> span [ class "form-error" ] [ text error ])
                 errors
     in
     div
@@ -552,7 +511,6 @@ type Msg
     | EnteredImage (List File)
     | EnteredTitle String
     | EnteredDescription String
-    | EnteredSymbol (Maybe String)
     | EnteredTrackStock String
     | EnteredUnits String
     | EnteredPrice String
@@ -635,7 +593,6 @@ update msg model loggedIn =
                                     | image = updateInput sale.image form.image
                                     , title = updateInput sale.title form.title
                                     , description = updateInput sale.description form.description
-                                    , symbol = updateInput (Just sale.symbol) form.symbol
                                     , trackStock = updateInput (Just trackStock) form.trackStock
                                     , units = updateInput (String.fromInt sale.units) form.units
                                     , price = updateInput (String.fromFloat sale.price) form.price
@@ -738,20 +695,6 @@ update msg model loggedIn =
                         )
                     |> UR.init
 
-        EnteredSymbol symbolStr ->
-            let
-                maybeSymbol =
-                    Maybe.andThen
-                        Eos.symbolFromString
-                        symbolStr
-            in
-            model
-                |> updateForm
-                    (\form ->
-                        { form | symbol = updateInput maybeSymbol form.symbol }
-                    )
-                |> UR.init
-
         EnteredTrackStock trackStock ->
             model
                 |> updateForm
@@ -761,18 +704,34 @@ update msg model loggedIn =
                 |> UR.init
 
         EnteredUnits units ->
+            let
+                trimmedUnits =
+                    if String.length units > 4 then
+                        String.left 4 units
+
+                    else
+                        units
+            in
             model
                 |> updateForm
                     (\form ->
-                        { form | units = updateInput units form.units }
+                        { form | units = updateInput trimmedUnits form.units }
                     )
                 |> UR.init
 
         EnteredPrice value ->
+            let
+                trimmedPrice =
+                    if String.length value > 12 then
+                        String.left 12 value
+
+                    else
+                        value
+            in
             model
                 |> updateForm
                     (\form ->
-                        { form | price = updateInput (getNumericValues value) form.price }
+                        { form | price = updateInput (getNumericValues trimmedPrice) form.price }
                     )
                 |> UR.init
 
@@ -830,7 +789,7 @@ update msg model loggedIn =
                                 (Saving balances sale (Uploaded url) form)
                                 loggedIn
                                 "updatesale"
-                                (encodeUpdateForm sale form)
+                                (encodeUpdateForm sale form loggedIn.selectedCommunity)
 
                         else
                             validatedModel
@@ -843,7 +802,7 @@ update msg model loggedIn =
                                 (Saving balances sale (UploadFailed error) form)
                                 loggedIn
                                 "updatesale"
-                                (encodeUpdateForm sale form)
+                                (encodeUpdateForm sale form loggedIn.selectedCommunity)
 
                         else
                             validatedModel
@@ -856,7 +815,7 @@ update msg model loggedIn =
                                 (Saving balances sale NoImage form)
                                 loggedIn
                                 "updatesale"
-                                (encodeUpdateForm sale form)
+                                (encodeUpdateForm sale form loggedIn.selectedCommunity)
 
                         else
                             validatedModel
@@ -1008,7 +967,7 @@ update msg model loggedIn =
 
 
 performRequest : Msg -> Status -> LoggedIn.Model -> String -> Value -> UpdateResult
-performRequest msg status { shared, accountName } action data =
+performRequest msg status { shared, accountName, selectedCommunity } action data =
     status
         |> UR.init
         |> UR.addPort
@@ -1056,7 +1015,6 @@ validateForm form =
         | image = validate form.image
         , title = validate form.title
         , description = validate form.description
-        , symbol = validate form.symbol
         , trackStock = validate form.trackStock
         , units = validate form.units
         , price = validate form.price
@@ -1068,7 +1026,6 @@ isValidForm form =
     hasErrors form.image
         || hasErrors form.title
         || hasErrors form.description
-        || hasErrors form.symbol
         || hasErrors form.trackStock
         || hasErrors form.units
         || hasErrors form.price
@@ -1095,14 +1052,11 @@ encodeCreateForm loggedIn form =
                 |> getInput
                 |> Encode.string
 
-        symbol =
-            getInput form.symbol
-
         price =
             String.toFloat (getInput form.price)
 
         quantity =
-            case Maybe.map2 (\p s -> Eos.Asset p s) price symbol of
+            case Maybe.map2 (\p s -> Eos.Asset p s) price (Just loggedIn.selectedCommunity) of
                 Nothing ->
                     Encode.string ""
 
@@ -1121,12 +1075,16 @@ encodeCreateForm loggedIn form =
                     |> Eos.encodeEosBool
 
         units =
-            case String.toInt (getInput form.units) of
-                Nothing ->
-                    Encode.int 0
+            if getInput form.trackStock == Just trackYes then
+                case String.toInt (getInput form.units) of
+                    Nothing ->
+                        Encode.int 0
 
-                Just units_ ->
-                    Encode.int units_
+                    Just units_ ->
+                        Encode.int units_
+
+            else
+                Encode.int 0
     in
     Encode.object
         [ ( "from", creator )
@@ -1139,8 +1097,8 @@ encodeCreateForm loggedIn form =
         ]
 
 
-encodeUpdateForm : Sale -> Form -> Value
-encodeUpdateForm sale form =
+encodeUpdateForm : Sale -> Form -> Symbol -> Value
+encodeUpdateForm sale form selectedCommunity =
     let
         saleId =
             Encode.int sale.id
@@ -1159,14 +1117,11 @@ encodeUpdateForm sale form =
                 |> getInput
                 |> Encode.string
 
-        symbol =
-            getInput form.symbol
-
         price =
             String.toFloat (getInput form.price)
 
         quantity =
-            case Maybe.map2 Eos.Asset price symbol of
+            case Maybe.map2 Eos.Asset price (Just selectedCommunity) of
                 Nothing ->
                     Encode.string ""
 
@@ -1270,9 +1225,6 @@ msgToString msg =
 
         EnteredDescription _ ->
             [ "EnteredDescription" ]
-
-        EnteredSymbol _ ->
-            [ "EnteredSymbol" ]
 
         EnteredTrackStock _ ->
             [ "EnteredTrackStock" ]
