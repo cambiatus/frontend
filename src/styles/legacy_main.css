@@ -3165,9 +3165,8 @@ textarea.form-input {
 
 .shop-editor__image-upload label {
     height: 150px;
-    background-color: #d8d8d8;
+    background-color: #f8f8f8;
     text-transform: uppercase;
-    color: var(--white);
     border-radius: 4px;
     font-size: 14px;
     font-weight: 500;
@@ -3175,6 +3174,7 @@ textarea.form-input {
     align-items: center;
     justify-content: center;
     flex-direction: column;
+    border-radius: 8px;
     cursor: pointer;
     background-size: cover;
     background-repeat: no-repeat;
