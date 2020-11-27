@@ -19,7 +19,7 @@ get language toMsg =
                 "cat-CAT.json"
 
             else if String.startsWith "arc" language then
-                "arc-ETH.json"
+                "amh-ETH.json"
 
             else
                 "en-US.json"

@@ -196,7 +196,7 @@ langFlag st =
                 "/icons/spain-lang.svg"
 
             else if String.startsWith "arc" st then
-                "/icons/arc-lang.svg"
+                "/icons/amh-lang.svg"
 
             else
                 "/icons/en-lang.svg"
