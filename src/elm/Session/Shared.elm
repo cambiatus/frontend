@@ -167,7 +167,7 @@ loadTranslation result shared =
 
 viewLanguageItems : Shared -> (String -> msg) -> List (Html msg)
 viewLanguageItems shared toMsg =
-    [ "en", "pt-br", "es", "cat" ]
+    [ "en", "pt-br", "es", "cat", "arc" ]
         |> List.filter (\l -> not (String.startsWith l shared.language))
         |> List.sort
         |> List.map
@@ -194,6 +194,9 @@ langFlag st =
 
             else if String.startsWith "es" st then
                 "/icons/spain-lang.svg"
+
+            else if String.startsWith "arc" st then
+                "/icons/arc-lang.svg"
 
             else
                 "/icons/en-lang.svg"
