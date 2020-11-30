@@ -103,6 +103,22 @@ signUp requiredArgs object_ =
     Object.selectionForCompositeField "signUp" [ Argument.required "input" requiredArgs.input Cambiatus.InputObject.encodeSignUpInput ] object_ identity
 
 
+type alias SignUpNaturalRequiredArguments =
+    { input : Cambiatus.InputObject.SignUpInput
+    , kyc : Cambiatus.InputObject.KycDataUpdateInput
+    }
+
+
+{-| Creates a new natural user account with KYC
+-}
+signUpNatural :
+    SignUpNaturalRequiredArguments
+    -> SelectionSet decodesTo Cambiatus.Object.SignUp
+    -> SelectionSet decodesTo RootMutation
+signUpNatural requiredArgs object_ =
+    Object.selectionForCompositeField "signUpNatural" [ Argument.required "input" requiredArgs.input Cambiatus.InputObject.encodeSignUpInput, Argument.required "kyc" requiredArgs.kyc Cambiatus.InputObject.encodeKycDataUpdateInput ] object_ identity
+
+
 type alias UpdateProfileRequiredArguments =
     { input : Cambiatus.InputObject.ProfileUpdateInput }
 

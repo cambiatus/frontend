@@ -748,14 +748,41 @@ update _ msg model { shared } =
 
         AccountKeysGenerated (Ok accountKeys) ->
             case model.status of
-                FormShowed form ->
+                FormShowed ((NaturalForm form) as formModel) ->
+                    { model | accountKeys = Just accountKeys }
+                        |> UR.init
+                        |> UR.addCmd
+                            (signUpNatural shared
+                                accountKeys
+                                model.invitationId
+                                formModel
+                                { accountId = form.account
+                                , countryId = Id "1"
+                                , document = form.document
+                                , documentType = NaturalForm.documentTypeToString form.documentType
+                                , phone = form.phone
+                                , userType = "natural"
+                                }
+                            )
+
+                FormShowed ((JuridicalForm form) as formModel) ->
                     { model | accountKeys = Just accountKeys }
                         |> UR.init
                         |> UR.addCmd
                             (signUp shared
                                 accountKeys
                                 model.invitationId
-                                form
+                                formModel
+                            )
+
+                FormShowed ((DefaultForm _) as formModel) ->
+                    { model | accountKeys = Just accountKeys }
+                        |> UR.init
+                        |> UR.addCmd
+                            (signUp shared
+                                accountKeys
+                                model.invitationId
+                                formModel
                             )
 
                 _ ->
@@ -807,28 +834,6 @@ update _ msg model { shared } =
             case response.status of
                 SignUpStatus.Success ->
                     case model.status of
-                        FormShowed (DefaultForm _) ->
-                            -- For Default form the account is already created
-                            { model
-                                | status = AccountCreated
-                                , step = SavePassphrase
-                            }
-                                |> UR.init
-
-                        FormShowed (NaturalForm form) ->
-                            model
-                                |> UR.init
-                                |> UR.addCmd
-                                    (saveKycData shared
-                                        { accountId = form.account
-                                        , countryId = Id "1"
-                                        , document = form.document
-                                        , documentType = NaturalForm.documentTypeToString form.documentType
-                                        , phone = form.phone
-                                        , userType = "natural"
-                                        }
-                                    )
-
                         FormShowed (JuridicalForm form) ->
                             model
                                 |> UR.init
@@ -843,13 +848,23 @@ update _ msg model { shared } =
                                         }
                                     )
 
+                        FormShowed _ ->
+                            -- For Default and Natural form the account is already created
+                            { model
+                                | status = AccountCreated
+                                , step = SavePassphrase
+                            }
+                                |> UR.init
+
                         _ ->
                             model |> UR.init
 
                 SignUpStatus.Error ->
                     UR.init
                         { model
-                            | serverError = Just (t "register.account_error.title")
+                          -- TODO: Make sure the error message looks good and not just
+                          -- an `#{inspect(error)}` from the backend.
+                            | serverError = Just (t response.reason)
                         }
 
         CompletedSignUp (Err error) ->
@@ -1004,6 +1019,44 @@ signUp shared { accountName, ownerKey } invitationId form =
                 InputObject.buildSignUpInput
                     requiredArgs
                     fillOptionals
+            }
+            (Graphql.SelectionSet.succeed SignUpResponse
+                |> with Cambiatus.Object.SignUp.reason
+                |> with Cambiatus.Object.SignUp.status
+            )
+        )
+        CompletedSignUp
+
+
+signUpNatural : Shared -> AccountKeys -> InvitationId -> FormModel -> InputObject.KycDataUpdateInput -> Cmd Msg
+signUpNatural shared { accountName, ownerKey } invitationId form kycFields =
+    let
+        { email, name } =
+            getSignUpFields form
+
+        requiredArgs =
+            { account = Eos.nameToString accountName
+            , email = email
+            , name = name
+            , publicKey = ownerKey
+            }
+
+        fillOptionals opts =
+            { opts
+                | invitationId =
+                    Maybe.map Present invitationId
+                        |> Maybe.withDefault Absent
+                , userType =
+                    Present "natural"
+            }
+    in
+    Api.Graphql.mutation shared
+        (Mutation.signUpNatural
+            { input =
+                InputObject.buildSignUpInput
+                    requiredArgs
+                    fillOptionals
+            , kyc = kycFields
             }
             (Graphql.SelectionSet.succeed SignUpResponse
                 |> with Cambiatus.Object.SignUp.reason
