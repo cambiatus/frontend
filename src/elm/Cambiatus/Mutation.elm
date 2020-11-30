@@ -103,6 +103,23 @@ signUp requiredArgs object_ =
     Object.selectionForCompositeField "signUp" [ Argument.required "input" requiredArgs.input Cambiatus.InputObject.encodeSignUpInput ] object_ identity
 
 
+type alias SignUpJuridicalRequiredArguments =
+    { address : Cambiatus.InputObject.AddressUpdateInput
+    , input : Cambiatus.InputObject.SignUpInput
+    , kyc : Cambiatus.InputObject.KycDataUpdateInput
+    }
+
+
+{-| Creates a new juridical user account with KYC and Address
+-}
+signUpJuridical :
+    SignUpJuridicalRequiredArguments
+    -> SelectionSet decodesTo Cambiatus.Object.SignUp
+    -> SelectionSet decodesTo RootMutation
+signUpJuridical requiredArgs object_ =
+    Object.selectionForCompositeField "signUpJuridical" [ Argument.required "address" requiredArgs.address Cambiatus.InputObject.encodeAddressUpdateInput, Argument.required "input" requiredArgs.input Cambiatus.InputObject.encodeSignUpInput, Argument.required "kyc" requiredArgs.kyc Cambiatus.InputObject.encodeKycDataUpdateInput ] object_ identity
+
+
 type alias SignUpNaturalRequiredArguments =
     { input : Cambiatus.InputObject.SignUpInput
     , kyc : Cambiatus.InputObject.KycDataUpdateInput
