@@ -510,8 +510,6 @@ type Msg
     | AccountTypeSelected AccountType
     | FormMsg EitherFormMsg
     | CompletedSignUp (Result (Graphql.Http.Error SignUpResponse) SignUpResponse)
-    | CompletedKycUpsert (Result (Graphql.Http.Error (Maybe ())) (Maybe ()))
-    | CompletedAddressUpsert (Result (Graphql.Http.Error (Maybe ())) (Maybe ()))
 
 
 type EitherFormMsg
@@ -766,13 +764,39 @@ update _ msg model { shared } =
                             )
 
                 FormShowed ((JuridicalForm form) as formModel) ->
+                    let
+                        kycData : InputObject.KycDataUpdateInputRequiredFields
+                        kycData =
+                            { accountId = form.account
+                            , countryId = Id "1"
+                            , document = form.document
+                            , documentType = JuridicalForm.companyTypeToString form.companyType
+                            , phone = form.phone
+                            , userType = "juridical"
+                            }
+
+                        addressData : InputObject.AddressUpdateInput
+                        addressData =
+                            InputObject.buildAddressUpdateInput
+                                { accountId = form.account
+                                , cityId = Tuple.first form.city |> Id
+                                , countryId = Id "1"
+                                , neighborhoodId = Tuple.first form.district |> Id
+                                , stateId = Tuple.first form.state |> Id
+                                , street = form.street
+                                , zip = form.zip
+                                }
+                                (\_ -> { number = Graphql.OptionalArgument.Present form.number })
+                    in
                     { model | accountKeys = Just accountKeys }
                         |> UR.init
                         |> UR.addCmd
-                            (signUp shared
+                            (signUpJuridical shared
                                 accountKeys
                                 model.invitationId
                                 formModel
+                                kycData
+                                addressData
                             )
 
                 FormShowed ((DefaultForm _) as formModel) ->
@@ -833,31 +857,11 @@ update _ msg model { shared } =
         CompletedSignUp (Ok response) ->
             case response.status of
                 SignUpStatus.Success ->
-                    case model.status of
-                        FormShowed (JuridicalForm form) ->
-                            model
-                                |> UR.init
-                                |> UR.addCmd
-                                    (saveKycData shared
-                                        { accountId = form.account
-                                        , countryId = Id "1"
-                                        , document = form.document
-                                        , documentType = JuridicalForm.companyTypeToString form.companyType
-                                        , phone = form.phone
-                                        , userType = "juridical"
-                                        }
-                                    )
-
-                        FormShowed _ ->
-                            -- For Default and Natural form the account is already created
-                            { model
-                                | status = AccountCreated
-                                , step = SavePassphrase
-                            }
-                                |> UR.init
-
-                        _ ->
-                            model |> UR.init
+                    { model
+                        | status = AccountCreated
+                        , step = SavePassphrase
+                    }
+                        |> UR.init
 
                 SignUpStatus.Error ->
                     UR.init
@@ -866,67 +870,12 @@ update _ msg model { shared } =
                           -- an `#{inspect(error)}` from the backend.
                             | serverError = Just (t response.reason)
                         }
+                        |> scrollTop
 
         CompletedSignUp (Err error) ->
             { model | serverError = Just (t "register.account_error.title") }
                 |> UR.init
                 |> UR.logGraphqlError msg error
-
-        CompletedKycUpsert (Ok _) ->
-            case model.status of
-                FormShowed (JuridicalForm form) ->
-                    -- Juridical account still needs the Address to be saved
-                    let
-                        addressData : ( InputObject.AddressUpdateInputRequiredFields, InputObject.AddressUpdateInputOptionalFields )
-                        addressData =
-                            ( { accountId = form.account
-                              , cityId = Tuple.first form.city |> Id
-                              , countryId = Id "1"
-                              , neighborhoodId = Tuple.first form.district |> Id
-                              , stateId = Tuple.first form.state |> Id
-                              , street = form.street
-                              , zip = form.zip
-                              }
-                            , { number = Graphql.OptionalArgument.Present form.number }
-                            )
-                    in
-                    model
-                        |> UR.init
-                        |> UR.addCmd
-                            (saveAddress shared addressData)
-
-                FormShowed (NaturalForm _) ->
-                    -- Natural account is fully created
-                    { model
-                        | status = AccountCreated
-                        , step = SavePassphrase
-                    }
-                        |> UR.init
-
-                _ ->
-                    model |> UR.init
-
-        CompletedKycUpsert (Err error) ->
-            { model
-                | serverError = Just (t "register.form.error.kyc_problem")
-            }
-                |> UR.init
-                |> UR.logGraphqlError msg error
-                |> scrollTop
-
-        CompletedAddressUpsert (Ok _) ->
-            -- Address is saved, Juridical account is created.
-            { model
-                | status = AccountCreated
-                , step = SavePassphrase
-            }
-                |> UR.init
-
-        CompletedAddressUpsert (Err error) ->
-            UR.init
-                { model | serverError = Just (t "register.form.error.address_problem") }
-                |> UR.logGraphqlError msg error
-                |> scrollTop
 
         CompletedLoadInvite (Ok (Just invitation)) ->
             if invitation.community.hasKyc then
@@ -1066,27 +1015,50 @@ signUpNatural shared { accountName, ownerKey } invitationId form kycFields =
         CompletedSignUp
 
 
-saveKycData : Shared -> InputObject.KycDataUpdateInputRequiredFields -> Cmd Msg
-saveKycData shared requiredFields =
-    Api.Graphql.mutation shared
-        (Mutation.upsertKyc
-            { input = InputObject.buildKycDataUpdateInput requiredFields }
-            Graphql.SelectionSet.empty
-        )
-        CompletedKycUpsert
-
-
-saveAddress :
+signUpJuridical :
     Shared
-    -> ( InputObject.AddressUpdateInputRequiredFields, InputObject.AddressUpdateInputOptionalFields )
+    -> AccountKeys
+    -> InvitationId
+    -> FormModel
+    -> InputObject.KycDataUpdateInput
+    -> InputObject.AddressUpdateInput
     -> Cmd Msg
-saveAddress shared ( required, optional ) =
+signUpJuridical shared { accountName, ownerKey } invitationId form kycFields addressFields =
+    let
+        { email, name } =
+            getSignUpFields form
+
+        requiredArgs =
+            { account = Eos.nameToString accountName
+            , email = email
+            , name = name
+            , publicKey = ownerKey
+            }
+
+        fillOptionals opts =
+            { opts
+                | invitationId =
+                    Maybe.map Present invitationId
+                        |> Maybe.withDefault Absent
+                , userType =
+                    Present "natural"
+            }
+    in
     Api.Graphql.mutation shared
-        (Mutation.upsertAddress
-            { input = InputObject.buildAddressUpdateInput required (\_ -> optional) }
-            Graphql.SelectionSet.empty
+        (Mutation.signUpJuridical
+            { input =
+                InputObject.buildSignUpInput
+                    requiredArgs
+                    fillOptionals
+            , kyc = kycFields
+            , address = addressFields
+            }
+            (Graphql.SelectionSet.succeed SignUpResponse
+                |> with Cambiatus.Object.SignUp.reason
+                |> with Cambiatus.Object.SignUp.status
+            )
         )
-        CompletedAddressUpsert
+        CompletedSignUp
 
 
 
@@ -1172,9 +1144,3 @@ msgToString msg =
 
         CompletedLoadCountry _ ->
             [ "CompletedLoadCountry" ]
-
-        CompletedKycUpsert _ ->
-            [ "CompletedKycUpsert" ]
-
-        CompletedAddressUpsert _ ->
-            [ "CompletedAddressUpsert" ]
