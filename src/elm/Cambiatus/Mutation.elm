@@ -89,6 +89,12 @@ registerPush requiredArgs object_ =
     Object.selectionForCompositeField "registerPush" [ Argument.required "input" requiredArgs.input Cambiatus.InputObject.encodePushSubscriptionInput ] object_ identity
 
 
+type alias SignUpOptionalArguments =
+    { address : OptionalArgument Cambiatus.InputObject.AddressUpdateInput
+    , kyc : OptionalArgument Cambiatus.InputObject.KycDataUpdateInput
+    }
+
+
 type alias SignUpRequiredArguments =
     { input : Cambiatus.InputObject.SignUpInput }
 
@@ -96,44 +102,20 @@ type alias SignUpRequiredArguments =
 {-| Creates a new user account
 -}
 signUp :
-    SignUpRequiredArguments
+    (SignUpOptionalArguments -> SignUpOptionalArguments)
+    -> SignUpRequiredArguments
     -> SelectionSet decodesTo Cambiatus.Object.SignUp
     -> SelectionSet decodesTo RootMutation
-signUp requiredArgs object_ =
-    Object.selectionForCompositeField "signUp" [ Argument.required "input" requiredArgs.input Cambiatus.InputObject.encodeSignUpInput ] object_ identity
+signUp fillInOptionals requiredArgs object_ =
+    let
+        filledInOptionals =
+            fillInOptionals { address = Absent, kyc = Absent }
 
-
-type alias SignUpJuridicalRequiredArguments =
-    { address : Cambiatus.InputObject.AddressUpdateInput
-    , input : Cambiatus.InputObject.SignUpInput
-    , kyc : Cambiatus.InputObject.KycDataUpdateInput
-    }
-
-
-{-| Creates a new juridical user account with KYC and Address
--}
-signUpJuridical :
-    SignUpJuridicalRequiredArguments
-    -> SelectionSet decodesTo Cambiatus.Object.SignUp
-    -> SelectionSet decodesTo RootMutation
-signUpJuridical requiredArgs object_ =
-    Object.selectionForCompositeField "signUpJuridical" [ Argument.required "address" requiredArgs.address Cambiatus.InputObject.encodeAddressUpdateInput, Argument.required "input" requiredArgs.input Cambiatus.InputObject.encodeSignUpInput, Argument.required "kyc" requiredArgs.kyc Cambiatus.InputObject.encodeKycDataUpdateInput ] object_ identity
-
-
-type alias SignUpNaturalRequiredArguments =
-    { input : Cambiatus.InputObject.SignUpInput
-    , kyc : Cambiatus.InputObject.KycDataUpdateInput
-    }
-
-
-{-| Creates a new natural user account with KYC
--}
-signUpNatural :
-    SignUpNaturalRequiredArguments
-    -> SelectionSet decodesTo Cambiatus.Object.SignUp
-    -> SelectionSet decodesTo RootMutation
-signUpNatural requiredArgs object_ =
-    Object.selectionForCompositeField "signUpNatural" [ Argument.required "input" requiredArgs.input Cambiatus.InputObject.encodeSignUpInput, Argument.required "kyc" requiredArgs.kyc Cambiatus.InputObject.encodeKycDataUpdateInput ] object_ identity
+        optionalArgs =
+            [ Argument.optional "address" filledInOptionals.address Cambiatus.InputObject.encodeAddressUpdateInput, Argument.optional "kyc" filledInOptionals.kyc Cambiatus.InputObject.encodeKycDataUpdateInput ]
+                |> List.filterMap identity
+    in
+    Object.selectionForCompositeField "signUp" (optionalArgs ++ [ Argument.required "input" requiredArgs.input Cambiatus.InputObject.encodeSignUpInput ]) object_ identity
 
 
 type alias UpdateProfileRequiredArguments =

@@ -747,20 +747,31 @@ update _ msg model { shared } =
         AccountKeysGenerated (Ok accountKeys) ->
             case model.status of
                 FormShowed ((NaturalForm form) as formModel) ->
+                    let
+                        kycData : InputObject.KycDataUpdateInputRequiredFields
+                        kycData =
+                            { accountId = form.account
+                            , countryId = Id "1"
+                            , document = form.document
+                            , documentType = NaturalForm.documentTypeToString form.documentType
+                            , phone = form.phone
+                            , userType = "natural"
+                            }
+
+                        optionals : Mutation.SignUpOptionalArguments
+                        optionals =
+                            { kyc = Present kycData
+                            , address = Absent
+                            }
+                    in
                     { model | accountKeys = Just accountKeys }
                         |> UR.init
                         |> UR.addCmd
-                            (signUpNatural shared
+                            (signUp shared
                                 accountKeys
                                 model.invitationId
                                 formModel
-                                { accountId = form.account
-                                , countryId = Id "1"
-                                , document = form.document
-                                , documentType = NaturalForm.documentTypeToString form.documentType
-                                , phone = form.phone
-                                , userType = "natural"
-                                }
+                                optionals
                             )
 
                 FormShowed ((JuridicalForm form) as formModel) ->
@@ -787,19 +798,13 @@ update _ msg model { shared } =
                                 , zip = form.zip
                                 }
                                 (\_ -> { number = Graphql.OptionalArgument.Present form.number })
-                    in
-                    { model | accountKeys = Just accountKeys }
-                        |> UR.init
-                        |> UR.addCmd
-                            (signUpJuridical shared
-                                accountKeys
-                                model.invitationId
-                                formModel
-                                kycData
-                                addressData
-                            )
 
-                FormShowed ((DefaultForm _) as formModel) ->
+                        optionals : Mutation.SignUpOptionalArguments
+                        optionals =
+                            { address = Present addressData
+                            , kyc = Present kycData
+                            }
+                    in
                     { model | accountKeys = Just accountKeys }
                         |> UR.init
                         |> UR.addCmd
@@ -807,6 +812,25 @@ update _ msg model { shared } =
                                 accountKeys
                                 model.invitationId
                                 formModel
+                                optionals
+                            )
+
+                FormShowed ((DefaultForm _) as formModel) ->
+                    let
+                        optionals : Mutation.SignUpOptionalArguments
+                        optionals =
+                            { address = Absent
+                            , kyc = Absent
+                            }
+                    in
+                    { model | accountKeys = Just accountKeys }
+                        |> UR.init
+                        |> UR.addCmd
+                            (signUp shared
+                                accountKeys
+                                model.invitationId
+                                formModel
+                                optionals
                             )
 
                 _ ->
@@ -934,8 +958,14 @@ type alias SignUpResponse =
     }
 
 
-signUp : Shared -> AccountKeys -> InvitationId -> FormModel -> Cmd Msg
-signUp shared { accountName, ownerKey } invitationId form =
+signUp :
+    Shared
+    -> AccountKeys
+    -> InvitationId
+    -> FormModel
+    -> Mutation.SignUpOptionalArguments
+    -> Cmd Msg
+signUp shared { accountName, ownerKey } invitationId form optionals =
     let
         { email, name } =
             getSignUpFields form
@@ -964,94 +994,11 @@ signUp shared { accountName, ownerKey } invitationId form =
     in
     Api.Graphql.mutation shared
         (Mutation.signUp
+            (\_ -> optionals)
             { input =
                 InputObject.buildSignUpInput
                     requiredArgs
                     fillOptionals
-            }
-            (Graphql.SelectionSet.succeed SignUpResponse
-                |> with Cambiatus.Object.SignUp.reason
-                |> with Cambiatus.Object.SignUp.status
-            )
-        )
-        CompletedSignUp
-
-
-signUpNatural : Shared -> AccountKeys -> InvitationId -> FormModel -> InputObject.KycDataUpdateInput -> Cmd Msg
-signUpNatural shared { accountName, ownerKey } invitationId form kycFields =
-    let
-        { email, name } =
-            getSignUpFields form
-
-        requiredArgs =
-            { account = Eos.nameToString accountName
-            , email = email
-            , name = name
-            , publicKey = ownerKey
-            }
-
-        fillOptionals opts =
-            { opts
-                | invitationId =
-                    Maybe.map Present invitationId
-                        |> Maybe.withDefault Absent
-                , userType =
-                    Present "natural"
-            }
-    in
-    Api.Graphql.mutation shared
-        (Mutation.signUpNatural
-            { input =
-                InputObject.buildSignUpInput
-                    requiredArgs
-                    fillOptionals
-            , kyc = kycFields
-            }
-            (Graphql.SelectionSet.succeed SignUpResponse
-                |> with Cambiatus.Object.SignUp.reason
-                |> with Cambiatus.Object.SignUp.status
-            )
-        )
-        CompletedSignUp
-
-
-signUpJuridical :
-    Shared
-    -> AccountKeys
-    -> InvitationId
-    -> FormModel
-    -> InputObject.KycDataUpdateInput
-    -> InputObject.AddressUpdateInput
-    -> Cmd Msg
-signUpJuridical shared { accountName, ownerKey } invitationId form kycFields addressFields =
-    let
-        { email, name } =
-            getSignUpFields form
-
-        requiredArgs =
-            { account = Eos.nameToString accountName
-            , email = email
-            , name = name
-            , publicKey = ownerKey
-            }
-
-        fillOptionals opts =
-            { opts
-                | invitationId =
-                    Maybe.map Present invitationId
-                        |> Maybe.withDefault Absent
-                , userType =
-                    Present "natural"
-            }
-    in
-    Api.Graphql.mutation shared
-        (Mutation.signUpJuridical
-            { input =
-                InputObject.buildSignUpInput
-                    requiredArgs
-                    fillOptionals
-            , kyc = kycFields
-            , address = addressFields
             }
             (Graphql.SelectionSet.succeed SignUpResponse
                 |> with Cambiatus.Object.SignUp.reason
