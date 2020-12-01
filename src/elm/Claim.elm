@@ -411,7 +411,7 @@ viewClaimCard { selectedCommunity, shared, accountName } claim =
                     [ text claimStatus ]
                 ]
             , div [ class "mb-6" ]
-                [ p [ class "text-body" ]
+                [ p [ class "text-body overflow-ellipsis overflow-hidden" ]
                     [ text claim.action.description ]
                 , p
                     [ class "text-gray-900 text-caption uppercase" ]

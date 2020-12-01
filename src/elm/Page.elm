@@ -256,7 +256,7 @@ viewHeader { shared } title route =
                 , p [ class "ml-2 text-white text-sm hidden md:visible md:flex" ]
                     [ text (I18Next.t shared.translations "back") ]
                 ]
-            , p [ class "mx-auto text-white" ] [ text title ]
+            , p [ class "mx-auto text-white truncate ..." ] [ text title ]
             ]
         ]
 
