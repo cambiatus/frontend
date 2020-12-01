@@ -19,15 +19,9 @@ import Api.Graphql
 import Asset.Icon as Icon
 import Browser.Dom as Dom
 import Browser.Events
-import Cambiatus.Enum.SignUpStatus
-import Cambiatus.Mutation
-import Cambiatus.Object
-import Cambiatus.Object.SignUp as SignUp
 import Eos.Account as Eos
 import Graphql.Http
-import Graphql.Operation exposing (RootMutation)
 import Graphql.OptionalArgument exposing (OptionalArgument(..))
-import Graphql.SelectionSet as SelectionSet exposing (SelectionSet, with)
 import Html exposing (Html, a, button, div, h2, img, label, li, p, span, strong, text, textarea, ul)
 import Html.Attributes exposing (autocomplete, autofocus, class, disabled, for, id, placeholder, required, src, title, type_, value)
 import Html.Events exposing (onClick, onInput, onSubmit)
