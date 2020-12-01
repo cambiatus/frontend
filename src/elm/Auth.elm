@@ -3,14 +3,12 @@ module Auth exposing
     , LoginFormData
     , Model
     , Msg
-    , SignUpResult
     , init
     , initRegister
     , isAuth
     , jsAddressToMsg
     , maybePrivateKey
     , msgToString
-    , signUp
     , subscriptions
     , update
     , view
@@ -1015,61 +1013,3 @@ viewPinConfirmation ({ form } as model) shared =
         , isVisible = model.pinConfirmationVisibility
         , errors = errors
         }
-
-
-
--- GraphQL
-
-
-type alias SignUpResult =
-    { status : SignUpStatus
-    , reason : String
-    }
-
-
-type SignUpStatus
-    = Success
-    | Error
-
-
-signUp : Eos.Name -> String -> String -> String -> Maybe String -> SelectionSet SignUpResult RootMutation
-signUp account name email publicKey maybeInvitationId =
-    let
-        accountString =
-            Eos.nameToString account
-    in
-    Cambiatus.Mutation.signUp
-        { input =
-            { account = accountString
-            , name = name
-            , email = email
-            , publicKey = publicKey
-            , userType = Present ""
-            , invitationId =
-                case maybeInvitationId of
-                    Just i ->
-                        Present i
-
-                    Nothing ->
-                        Absent
-            }
-        }
-        signUpSelectionSet
-
-
-signUpSelectionSet : SelectionSet SignUpResult Cambiatus.Object.SignUp
-signUpSelectionSet =
-    let
-        mapSignUpStatus : Cambiatus.Enum.SignUpStatus.SignUpStatus -> SignUpStatus
-        mapSignUpStatus =
-            \s ->
-                case s of
-                    Cambiatus.Enum.SignUpStatus.Success ->
-                        Success
-
-                    Cambiatus.Enum.SignUpStatus.Error ->
-                        Error
-    in
-    SelectionSet.succeed SignUpResult
-        |> with (SignUp.status |> SelectionSet.map mapSignUpStatus)
-        |> with SignUp.reason
