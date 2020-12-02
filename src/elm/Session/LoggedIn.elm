@@ -103,8 +103,9 @@ initLogin shared authModel profile_ =
     ( { model
         | profile = Loaded profile_
       }
-    , Task.succeed selectedCommunity
-        |> Task.perform SelectCommunity
+    , Task.perform
+        (\_ -> SelectCommunity selectedCommunity Cmd.none)
+        (Task.succeed ())
     )
 
 
@@ -553,7 +554,7 @@ communitySelectorModal model =
         viewCommunityItem c =
             div
                 [ class "flex items-center p-4 text-body cursor-pointer hover:text-black hover:bg-gray-100"
-                , onClick <| SelectCommunity c.id
+                , onClick <| SelectCommunity c.id (Route.replaceUrl model.shared.navKey Route.Dashboard)
                 ]
                 [ img [ src c.logo, class "h-16 w-16 mr-5 object-scale-down" ] []
                 , text c.name
@@ -714,7 +715,7 @@ type Msg
     | KeyDown String
     | OpenCommunitySelector
     | CloseCommunitySelector
-    | SelectCommunity Symbol
+    | SelectCommunity Symbol (Cmd Msg)
     | HideFeedbackLocal
 
 
@@ -925,13 +926,12 @@ update msg model =
             { model | showCommunitySelector = False }
                 |> UR.init
 
-        SelectCommunity communityId ->
+        SelectCommunity communityId doNext ->
             { model
                 | selectedCommunity = communityId
                 , showCommunitySelector = False
             }
                 |> UR.init
-                |> UR.addCmd (Route.replaceUrl model.shared.navKey Route.Dashboard)
                 |> UR.addCmd (Api.Graphql.query shared (Community.settingsQuery communityId) CompletedLoadSettings)
                 |> UR.addPort
                     { responseAddress = msg
@@ -942,6 +942,7 @@ update msg model =
                             , ( "name", Encode.string "setSelectedCommunity" )
                             ]
                     }
+                |> UR.addCmd doNext
 
 
 closeModal : UpdateResult -> UpdateResult
@@ -1107,7 +1108,7 @@ msgToString msg =
         CloseCommunitySelector ->
             [ "CloseCommunitySelector" ]
 
-        SelectCommunity _ ->
+        SelectCommunity _ _ ->
             [ "SelectCommunity" ]
 
         HideFeedbackLocal ->
