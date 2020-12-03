@@ -404,7 +404,7 @@ viewHeader ({ shared } as model) profile_ =
                 [ class "outline-none relative mx-6"
                 , Route.href Route.Notification
                 ]
-                [ Icons.notification ""
+                [ Icons.notification "fill-current text-black"
                 , if model.unreadCount > 0 then
                     div [ class "absolute top-0 right-0 -mr-4 px-2 py-1 bg-orange-500 text-white font-medium text-xs rounded-full" ]
                         [ text (String.fromInt model.unreadCount) ]
