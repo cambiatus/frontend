@@ -249,7 +249,7 @@ viewHeader { shared } title route =
     div [ class "w-full h-16 flex px-4 items-center bg-indigo-500" ]
         [ div [ class "flex container mx-auto" ]
             [ a
-                [ class "flex items-center absolute"
+                [ class "flex items-center mr-4"
                 , Route.href route
                 ]
                 [ Icons.back ""
