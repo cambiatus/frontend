@@ -344,7 +344,7 @@ viewLoginSteps isModal shared model loginStep =
                         |> List.length
                         |> String.fromInt
             in
-            [ form [ class "sf-content", onSubmit ClickedViewLoginPinStep ]
+            [ form [ class "sf-content" ]
                 [ illustration "login_key.svg"
                 , p [ class pClass ]
                     [ span [ class "text-green text-caption tracking-wide uppercase block mb-1" ]
@@ -368,6 +368,7 @@ viewLoginSteps isModal shared model loginStep =
                         , id passphraseId
                         , value model.form.passphrase
                         , onInput EnteredPassphrase
+                        , onSubmit ClickedViewLoginPinStep
                         , required True
                         , autocomplete False
                         ]
@@ -831,11 +832,11 @@ update msg shared model =
             if isEnter then
                 UR.init model
                     |> UR.addCmd
-                        (Task.succeed (SubmittedLoginPrivateKey model.form)
+                        (Task.succeed ClickedViewLoginPinStep
                             |> Task.perform identity
                         )
                     |> UR.addCmd
-                        (Task.succeed ClickedViewLoginPinStep
+                        (Task.succeed (SubmittedLoginPrivateKey model.form)
                             |> Task.perform identity
                         )
 
