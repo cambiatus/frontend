@@ -112,7 +112,7 @@
         "You can't use transfersale to this sale if you aren't part of the community": "Você não pode usar transfersale para esta venda se você não fizer parte da comunidade",
         "Sale creator and sale doesn't match": "O criador da venda e a venda não correspondem",
         "Invalid number of units": "Número inválido de unidades",
-        "overdrawn community limit": "Limite de comunidade a descoberto"
+        "overdrawn community limit": "Saldo insuficiente para realizar essa transferência"
       },
       "verifyclaim": {
         "Can't vote on already verified claim": "Não é possível votar em uma reivindicação já verificada",
