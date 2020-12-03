@@ -112,7 +112,7 @@
         "You can't use transfersale to this sale if you aren't part of the community": "No puede usar la venta transferible para esta venta si no es parte de la comunidad",
         "Sale creator and sale doesn't match": "Creador de venta y venta no coincide",
         "Invalid number of units": "Número de unidades no válido",
-        "overdrawn community limit": "Límite comunitario sobregirado"
+        "overdrawn community limit": "Saldo insuficiente para realizar esta transferencia"
       },
       "verifyclaim": {
         "Can't vote on already verified claim": "No puedo votar sobre un reclamo ya verificado",
@@ -850,4 +850,3 @@
     "pick_date": "Selecciona una fecha..."
   }
 }
-
