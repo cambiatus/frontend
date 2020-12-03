@@ -32,7 +32,7 @@ import Graphql.OptionalArgument exposing (OptionalArgument(..))
 import Graphql.SelectionSet as SelectionSet exposing (SelectionSet, with)
 import Html exposing (Html, a, button, div, form, h2, img, label, li, p, span, strong, text, textarea, ul)
 import Html.Attributes exposing (autocomplete, autofocus, class, disabled, for, id, placeholder, required, src, title, type_, value)
-import Html.Events exposing (keyCode, on, onClick, onInput, onSubmit)
+import Html.Events exposing (onClick, onInput, onSubmit)
 import I18Next exposing (t)
 import Json.Decode as Decode
 import Json.Decode.Pipeline as Decode
@@ -344,7 +344,7 @@ viewLoginSteps isModal shared model loginStep =
                         |> List.length
                         |> String.fromInt
             in
-            [ form [ class "sf-content" ]
+            [ form [ class "sf-content", onSubmit ClickedViewLoginPinStep]
                 [ illustration "login_key.svg"
                 , p [ class pClass ]
                     [ span [ class "text-green text-caption tracking-wide uppercase block mb-1" ]
@@ -368,7 +368,6 @@ viewLoginSteps isModal shared model loginStep =
                         , id passphraseId
                         , value model.form.passphrase
                         , onInput EnteredPassphrase
-                        , onEnter ClickedViewLoginPinStep
                         , required True
                         , autocomplete False
                         ]
@@ -835,10 +834,13 @@ update msg shared model =
                         (Task.succeed (SubmittedLoginPrivateKey model.form)
                             |> Task.perform identity
                         )
+                    |> UR.addCmd
+                        (Task.succeed (ClickedViewLoginPinStep)
+                            |> Task.perform identity
+                        )
 
             else
                 UR.init model
-
 
 loginFailedGraphql : Graphql.Http.Error (Maybe Profile) -> Model -> UpdateResult
 loginFailedGraphql httpError model =
@@ -955,17 +957,7 @@ msgToString msg =
             [ "KeyPressed" ]
 
 
-onEnter : Msg -> Html.Attribute Msg
-onEnter msg =
-    let
-        isEnter code =
-            if code == 13 then
-                Decode.succeed msg
 
-            else
-                Decode.fail "wrong key stroke"
-    in
-    on "keydown" (Decode.andThen isEnter keyCode)
 
 
 viewPin : Model -> Shared -> Html Msg
