@@ -344,7 +344,7 @@ viewLoginSteps isModal shared model loginStep =
                         |> List.length
                         |> String.fromInt
             in
-            [ form [ class "sf-content", onSubmit ClickedViewLoginPinStep]
+            [ form [ class "sf-content", onSubmit ClickedViewLoginPinStep ]
                 [ illustration "login_key.svg"
                 , p [ class pClass ]
                     [ span [ class "text-green text-caption tracking-wide uppercase block mb-1" ]
@@ -835,12 +835,13 @@ update msg shared model =
                             |> Task.perform identity
                         )
                     |> UR.addCmd
-                        (Task.succeed (ClickedViewLoginPinStep)
+                        (Task.succeed ClickedViewLoginPinStep
                             |> Task.perform identity
                         )
 
             else
                 UR.init model
+
 
 loginFailedGraphql : Graphql.Http.Error (Maybe Profile) -> Model -> UpdateResult
 loginFailedGraphql httpError model =
@@ -955,9 +956,6 @@ msgToString msg =
 
         KeyPressed _ ->
             [ "KeyPressed" ]
-
-
-
 
 
 viewPin : Model -> Shared -> Html Msg
