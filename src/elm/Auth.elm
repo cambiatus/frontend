@@ -30,7 +30,7 @@ import Graphql.Http
 import Graphql.Operation exposing (RootMutation)
 import Graphql.OptionalArgument exposing (OptionalArgument(..))
 import Graphql.SelectionSet as SelectionSet exposing (SelectionSet, with)
-import Html exposing (Html, a, button, div, form, h2, img, input, label, li, p, span, strong, text, ul, textarea)
+import Html exposing (Html, a, button, div, form, h2, img, label, li, p, span, strong, text, ul, textarea)
 import Html.Attributes exposing (autocomplete, autofocus, class, disabled, for, id, placeholder, required, src, title, type_, value)
 import Html.Events exposing (on, keyCode, onClick, onInput, onSubmit)
 import I18Next exposing (t)
