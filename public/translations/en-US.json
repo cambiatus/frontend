@@ -111,7 +111,8 @@
         "This community don't have objectives enabled.": "This community doesn't have objectives enabled",
         "You can't use transfersale to this sale if you aren't part of the community": "You can't use transfersale to this sale if you aren't part of the community",
         "Sale creator and sale doesn't match": "Sale creator and sale doesn't match",
-        "Invalid number of units": "Invalid number of units"
+        "Invalid number of units": "Invalid number of units",
+        "overdrawn community limit": "Overdrawn community limit"
       },
       "verifyclaim": {
         "Can't vote on already verified claim": "Can't vote on already verified claim",

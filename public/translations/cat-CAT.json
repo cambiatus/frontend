@@ -111,7 +111,8 @@
         "This community don't have objectives enabled.": "Aquesta comunitat no té objectius activats.",
         "You can't use transfersale to this sale if you aren't part of the community": "No podeu fer servir la venda de transferències a aquesta venda si no formeu part de la comunitat",
         "Sale creator and sale doesn't match": "El creador de la venda i la venda no coincideixen",
-        "Invalid number of units": "Nombre d'unitats no vàlid"
+        "Invalid number of units": "Nombre d'unitats no vàlid",
+        "overdrawn community limit": "Límit de comunitat superat"
       },
       "verifyclaim": {
         "Can't vote on already verified claim": "No es pot votar sobre una reclamació ja verificada",
