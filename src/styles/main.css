@@ -428,5 +428,3 @@ textarea.input {
 
 /* https://tailwindcss.com/docs/extracting-components#extracting-css-components-with-apply */
 @tailwind utilities;
-
-/* @import './legacy_main.css'; */
