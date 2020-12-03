@@ -472,7 +472,10 @@ view shared loggedInAccount profile =
 
 viewLarge : Shared -> Eos.Name -> Profile -> Html msg
 viewLarge shared loggedInAccount profile =
-    div [ class "flex flex-col items-center" ]
+    a
+        [ class "flex flex-col items-center"
+        , href ("/profile/" ++ Eos.nameToString profile.account)
+        ]
         [ div [ class "w-20 h-20 rounded-full" ]
             [ Avatar.view profile.avatar "w-20 h-20"
             ]

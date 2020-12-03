@@ -58,12 +58,7 @@ decodeEnterKeyDown : Decode.Decoder Bool
 decodeEnterKeyDown =
     let
         isEnter code =
-            case code of
-                "Enter" ->
-                    True
-
-                _ ->
-                    False
+            code == "Enter"
     in
     Decode.field "key" Decode.string
         |> Decode.andThen
