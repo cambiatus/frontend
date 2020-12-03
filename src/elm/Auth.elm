@@ -30,9 +30,9 @@ import Graphql.Http
 import Graphql.Operation exposing (RootMutation)
 import Graphql.OptionalArgument exposing (OptionalArgument(..))
 import Graphql.SelectionSet as SelectionSet exposing (SelectionSet, with)
-import Html exposing (Html, a, button, div, form, h2, img, input, label, li, p, span, strong, text, ul)
+import Html exposing (Html, a, button, div, form, h2, img, input, label, li, p, span, strong, text, ul, textarea)
 import Html.Attributes exposing (autocomplete, autofocus, class, disabled, for, id, placeholder, required, src, title, type_, value)
-import Html.Events exposing (onClick, onInput, onSubmit)
+import Html.Events exposing (on, keyCode, onClick, onInput, onSubmit)
 import I18Next exposing (t)
 import Json.Decode as Decode
 import Json.Decode.Pipeline as Decode
@@ -344,7 +344,7 @@ viewLoginSteps isModal shared model loginStep =
                         |> List.length
                         |> String.fromInt
             in
-            [ form [ class "sf-content", onSubmit ClickedViewLoginPinStep ]
+            [ form [ class "sf-content" ]
                 [ illustration "login_key.svg"
                 , p [ class pClass ]
                     [ span [ class "text-green text-caption tracking-wide uppercase block mb-1" ]
@@ -354,7 +354,7 @@ viewLoginSteps isModal shared model loginStep =
                     ]
                 , viewFieldLabel shared.translators "auth.login.wordsMode.input" passphraseId
                 , div [ class "relative" ]
-                    [ input
+                    [ textarea
                         [ class "form-textarea h-19 min-w-full block"
                         , placeholder (t "auth.login.wordsMode.input.placeholder")
                         , View.Form.noGrammarly
@@ -368,6 +368,7 @@ viewLoginSteps isModal shared model loginStep =
                         , id passphraseId
                         , value model.form.passphrase
                         , onInput EnteredPassphrase
+                        , onEnter ClickedViewLoginPinStep
                         , required True
                         , autocomplete False
                         ]
@@ -953,6 +954,16 @@ msgToString msg =
         KeyPressed _ ->
             [ "KeyPressed" ]
 
+onEnter : Msg -> Html.Attribute Msg
+onEnter msg =
+        let
+            isEnter code =
+                if code == 13 then
+                    Decode.succeed msg
+                else
+                    Decode.fail "wrong key stroke"
+        in
+            on "keydown" (Decode.andThen isEnter keyCode)
 
 viewPin : Model -> Shared -> Html Msg
 viewPin ({ form } as model) shared =
