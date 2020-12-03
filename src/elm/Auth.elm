@@ -30,9 +30,9 @@ import Graphql.Http
 import Graphql.Operation exposing (RootMutation)
 import Graphql.OptionalArgument exposing (OptionalArgument(..))
 import Graphql.SelectionSet as SelectionSet exposing (SelectionSet, with)
-import Html exposing (Html, a, button, div, form, h2, img, label, li, p, span, strong, text, ul, textarea)
+import Html exposing (Html, a, button, div, form, h2, img, label, li, p, span, strong, text, textarea, ul)
 import Html.Attributes exposing (autocomplete, autofocus, class, disabled, for, id, placeholder, required, src, title, type_, value)
-import Html.Events exposing (on, keyCode, onClick, onInput, onSubmit)
+import Html.Events exposing (keyCode, on, onClick, onInput, onSubmit)
 import I18Next exposing (t)
 import Json.Decode as Decode
 import Json.Decode.Pipeline as Decode
@@ -954,16 +954,19 @@ msgToString msg =
         KeyPressed _ ->
             [ "KeyPressed" ]
 
+
 onEnter : Msg -> Html.Attribute Msg
 onEnter msg =
-        let
-            isEnter code =
-                if code == 13 then
-                    Decode.succeed msg
-                else
-                    Decode.fail "wrong key stroke"
-        in
-            on "keydown" (Decode.andThen isEnter keyCode)
+    let
+        isEnter code =
+            if code == 13 then
+                Decode.succeed msg
+
+            else
+                Decode.fail "wrong key stroke"
+    in
+    on "keydown" (Decode.andThen isEnter keyCode)
+
 
 viewPin : Model -> Shared -> Html Msg
 viewPin ({ form } as model) shared =
