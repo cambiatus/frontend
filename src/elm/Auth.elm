@@ -830,15 +830,22 @@ update msg shared model =
 
         KeyPressed isEnter ->
             if isEnter then
-                UR.init model
-                    |> UR.addCmd
-                        (Task.succeed ClickedViewLoginPinStep
-                            |> Task.perform identity
-                        )
-                    |> UR.addCmd
-                        (Task.succeed (SubmittedLoginPrivateKey model.form)
-                            |> Task.perform identity
-                        )
+                if model.status == Options LoginStepPassphrase then
+                    UR.init model
+                        |> UR.addCmd
+                            (Task.succeed ClickedViewLoginPinStep
+                                |> Task.perform identity
+                            )
+
+                else if model.status == Options LoginStepPIN then
+                    UR.init model
+                        |> UR.addCmd
+                            (Task.succeed (SubmittedLoginPrivateKey model.form)
+                                |> Task.perform identity
+                            )
+
+                else
+                    UR.init model
 
             else
                 UR.init model
