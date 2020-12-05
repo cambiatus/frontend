@@ -516,6 +516,7 @@
         "manual_detail": " recompensa al usuario solo después de ser revisado por otros",
         "verifier_placeholder": "Escribe el nombre de usuario",
         "usages_placeholder": "Escribe un número",
+        "verifier_not_found": "Ningún usuario encontrado",
         "date_label": "Elige fecha",
         "quantity_label": "Elige cantidad",
         "photo_validation": "Validación de fotos",
