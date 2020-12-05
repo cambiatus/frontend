@@ -46,7 +46,7 @@ import Graphql.OptionalArgument exposing (OptionalArgument(..))
 import Graphql.SelectionSet as SelectionSet exposing (SelectionSet, with)
 import Html exposing (Html, a, div, p, span, text)
 import Html.Attributes exposing (class, href, maxlength, minlength, pattern, title, type_)
-import I18Next exposing (Translations, t)
+import I18Next exposing (Translations)
 import Json.Decode as Decode exposing (Decoder, int, nullable, string)
 import Json.Decode.Pipeline as Decode exposing (optional, required)
 import Json.Encode as Encode
@@ -546,11 +546,11 @@ selectConfig select shared isDisabled =
 
 selectFilter : Int -> (a -> String) -> String -> List a -> Maybe (List a)
 selectFilter minChars toLabel q items =
-    if String.length q < minChars then
-        Nothing
+    if String.length q > minChars then
+        Just <| Simple.Fuzzy.filter toLabel q items
 
     else
-        Just <| Simple.Fuzzy.filter toLabel q items
+        Nothing
 
 
 viewAutoCompleteItem : Shared -> Profile -> Html Never

@@ -225,16 +225,10 @@ encodeFormHelper logoUrl { accountName } form =
 
 
 view : LoggedIn.Model -> Model -> { title : String, content : Html Msg }
-view loggedIn model =
+view ({ shared } as loggedIn) model =
     let
-        defaultContainer =
-            div [ class "container mx-auto px-4" ]
-
-        shared =
-            loggedIn.shared
-
-        t str =
-            I18Next.t shared.translations str
+        t =
+            shared.translators.t
 
         content =
             case model of
@@ -248,7 +242,7 @@ view loggedIn model =
                     Page.viewCardEmpty [ text "Community not found" ]
 
                 Unauthorized _ ->
-                    defaultContainer
+                    div [ class "container mx-auto px-4" ]
                         [ Page.viewTitle (t "community.edit.title")
                         , div [ class "card" ]
                             [ text (t "community.edit.unauthorized") ]
@@ -298,7 +292,7 @@ viewForm ({ shared } as loggedIn) isEdit isDisabled errors form model =
                 _ ->
                     ClickedSave
     in
-    div [ class "bg-white mb-10" ]
+    div [ class "bg-white pb-10" ]
         [ Page.viewHeader loggedIn titleText Route.Dashboard
         , Html.form
             [ class "container mx-auto px-4"
@@ -306,12 +300,16 @@ viewForm ({ shared } as loggedIn) isEdit isDisabled errors form model =
             ]
             [ div [ class "my-10" ]
                 [ viewFieldDescription shared isDisabled form.description errors
-                , div [ class "mt-4 create-community-two-column" ]
-                    [ viewFieldCurrencyName shared isDisabled form.name errors
-                    , viewFieldCurrencySymbol shared (isEdit || isDisabled) form.symbol errors
-                    , viewFieldInviterReward shared isDisabled form.inviterReward errors
-                    , viewFieldInvitedReward shared isDisabled form.invitedReward errors
-                    , viewFieldMinBalance shared isDisabled form.minBalance errors
+                , viewFieldCurrencyName shared isDisabled form.name errors
+                , div [ class "flex flex-row mt-4" ]
+                    [ div [ class "w-1/2 pr-2" ]
+                        [ viewFieldCurrencySymbol shared (isEdit || isDisabled) form.symbol errors
+                        , viewFieldInviterReward shared isDisabled form.inviterReward errors
+                        ]
+                    , div [ class "w-1/2 pl-2" ]
+                        [ viewFieldInvitedReward shared isDisabled form.invitedReward errors
+                        , viewFieldMinBalance shared isDisabled form.minBalance errors
+                        ]
                     ]
                 , viewFieldLogo shared isDisabled form.logoSelected form.logoList errors
                 , viewFieldError shared "form" errors
@@ -417,9 +415,7 @@ viewFieldLogo shared isDisabled selected logos errors =
             button
                 [ classList
                     [ ( logoClass "", True )
-                    , ( logoClass "--selected"
-                      , index == selected
-                      )
+                    , ( logoClass "--selected", index == selected )
                     ]
                 , type_ "button"
                 , disabled isDisabled
