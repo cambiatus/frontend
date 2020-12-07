@@ -678,11 +678,16 @@ update msg shared model =
                         | passphrase = phrase
                     }
             in
-            { model
-                | form = newForm
-                , problems = []
-            }
-                |> UR.init
+            case model.status of
+                Options LoginStepPassphrase ->
+                    { model
+                        | form = newForm
+                        , problems = []
+                    }
+                        |> UR.init
+
+                _ ->
+                    UR.init model
 
         SubmittedLoginPrivateKey form ->
             case validate pinValidator form of
