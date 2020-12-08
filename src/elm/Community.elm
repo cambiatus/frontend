@@ -144,7 +144,7 @@ dashboardSelectionSet =
         |> with Community.memberCount
         |> with Community.transferCount
         |> with Community.actionCount
-        |> with Community.saleCount
+        |> with Community.productCount
         |> with Community.hasObjectives
         |> with (Eos.nameSelectionSet Community.creator)
 

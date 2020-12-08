@@ -30,7 +30,7 @@ import Profile
 import Route
 import Session.LoggedIn as LoggedIn exposing (External(..))
 import Session.Shared exposing (Shared)
-import Shop exposing (Sale)
+import Shop exposing (Product)
 import Transfer
 import UpdateResult as UR
 
@@ -75,7 +75,7 @@ initCmd shared status =
     case status of
         LoadingSale id ->
             Api.Graphql.query shared
-                (Shop.saleQuery id)
+                (Shop.productQuery id)
                 CompletedSaleLoad
 
         _ ->
@@ -130,8 +130,8 @@ type ViewState
 type Status
     = LoadingSale Int
     | InvalidId String
-    | LoadingFailed (Graphql.Http.Error (Maybe Sale))
-    | LoadedSale (Maybe Sale)
+    | LoadingFailed (Graphql.Http.Error (Maybe Product))
+    | LoadedSale (Maybe Product)
 
 
 type FormError
@@ -153,12 +153,12 @@ type Validation
 
 
 type Msg
-    = CompletedSaleLoad (Result (Graphql.Http.Error (Maybe Sale)) (Maybe Sale))
+    = CompletedSaleLoad (Result (Graphql.Http.Error (Maybe Product)) (Maybe Product))
     | CompletedLoadBalances (Result Http.Error (List Balance))
-    | ClickedBuy Sale
-    | ClickedEdit Sale
-    | ClickedQuestions Sale
-    | ClickedTransfer Sale
+    | ClickedBuy Product
+    | ClickedEdit Product
+    | ClickedQuestions Product
+    | ClickedTransfer Product
     | EnteredUnit String
     | EnteredMemo String
     | GotTransferResult (Result (Maybe Value) String)
@@ -367,14 +367,14 @@ update msg model loggedIn =
 
 
 type alias Card =
-    { sale : Sale
+    { product : Product
     , rate : Maybe Int
     }
 
 
-cardFromSale : Sale -> Card
+cardFromSale : Product -> Card
 cardFromSale sale =
-    { sale = sale
+    { product = sale
     , rate = Nothing
     }
 
@@ -427,7 +427,7 @@ view loggedIn model =
                                     cardFromSale sale
                             in
                             div []
-                                [ Page.viewHeader loggedIn cardData.sale.title (Route.Shop Shop.All)
+                                [ Page.viewHeader loggedIn cardData.product.title (Route.Shop Shop.All)
                                 , div [ class "container mx-auto" ] [ viewCard loggedIn cardData model ]
                                 ]
 
@@ -457,7 +457,7 @@ viewCard : LoggedIn.Model -> Card -> Model -> Html Msg
 viewCard ({ shared } as loggedIn) card model =
     let
         cmmBalance =
-            LE.find (\bal -> bal.asset.symbol == card.sale.symbol) model.balances
+            LE.find (\bal -> bal.asset.symbol == card.product.symbol) model.balances
 
         balance =
             case cmmBalance of
@@ -468,7 +468,7 @@ viewCard ({ shared } as loggedIn) card model =
                     0.0
 
         currBalance =
-            String.fromFloat balance ++ " " ++ Eos.symbolToSymbolCodeString card.sale.symbol
+            String.fromFloat balance ++ " " ++ Eos.symbolToSymbolCodeString card.product.symbol
 
         text_ str =
             text (t shared.translations str)
@@ -479,28 +479,30 @@ viewCard ({ shared } as loggedIn) card model =
     div [ class "flex flex-wrap" ]
         [ div [ class "w-full md:w-1/2 p-4 flex justify-center" ]
             [ img
-                [ src (Maybe.withDefault "" card.sale.image)
+                [ src (Maybe.withDefault "" card.product.image)
                 , class "object-scale-down w-full h-64"
                 ]
                 []
             ]
         , div [ class "w-full md:w-1/2 flex flex-wrap bg-white p-4" ]
-            [ div [ class "font-medium text-3xl w-full" ] [ text card.sale.title ]
-            , div [ class "text-gray w-full md:text-sm" ] [ text card.sale.description ]
+            [ div [ class "font-medium text-3xl w-full" ] [ text card.product.title ]
+            , div [ class "text-gray w-full md:text-sm" ] [ text card.product.description ]
             , div [ class "w-full flex items-center text-sm" ]
-                [ div [ class "mr-4" ] [ Avatar.view card.sale.creator.avatar "h-10 w-10" ]
+                [ div [ class "mr-4" ] [ Avatar.view card.product.creator.avatar "h-10 w-10" ]
                 , text_ "shop.sold_by"
                 , a
                     [ class "font-bold ml-1"
-                    , Route.href (Route.PublicProfile <| Eos.nameToString card.sale.creator.account)
+                    , Route.href (Route.PublicProfile <| Eos.nameToString card.product.creator.account)
                     ]
-                    [ Profile.viewProfileName loggedIn.accountName card.sale.creator shared.translations ]
+                    [ Profile.viewProfileName loggedIn.accountName card.product.creator shared.translations ]
                 ]
             , div [ class "flex flex-wrap w-full justify-between items-center" ]
                 [ div [ class "" ]
                     [ div [ class "flex items-center" ]
-                        [ div [ class "text-2xl text-green font-medium" ] [ text (String.fromFloat card.sale.price) ]
-                        , div [ class "uppercase text-sm font-thin ml-2 text-green" ] [ text (Eos.symbolToSymbolCodeString card.sale.symbol) ]
+                        [ div [ class "text-2xl text-green font-medium" ]
+                            [ text (String.fromFloat card.product.price) ]
+                        , div [ class "uppercase text-sm font-thin ml-2 text-green" ]
+                            [ text (Eos.symbolToSymbolCodeString card.product.symbol) ]
                         ]
                     , div [ class "flex" ]
                         [ div [ class "bg-gray-100 uppercase text-xs px-2" ]
@@ -508,16 +510,16 @@ viewCard ({ shared } as loggedIn) card model =
                         ]
                     ]
                 , div [ class "mt-6 md:mt-0 w-full sm:w-40" ]
-                    [ if card.sale.creatorId == loggedIn.accountName then
+                    [ if card.product.creatorId == loggedIn.accountName then
                         div [ class "flex md:justify-end" ]
                             [ button
                                 [ class "button button-primary w-full px-4"
-                                , onClick (ClickedEdit card.sale)
+                                , onClick (ClickedEdit card.product)
                                 ]
                                 [ text_ "shop.edit" ]
                             ]
 
-                      else if card.sale.units <= 0 && card.sale.trackStock == True then
+                      else if card.product.units <= 0 && card.product.trackStock == True then
                         div [ class "flex -mx-2 md:justify-end" ]
                             [ button
                                 [ disabled True
@@ -530,7 +532,7 @@ viewCard ({ shared } as loggedIn) card model =
                         div [ class "flex md:justify-end" ]
                             [ button
                                 [ class "button button-primary"
-                                , onClick (ClickedTransfer card.sale)
+                                , onClick (ClickedTransfer card.product)
                                 ]
                                 [ text_ "shop.transfer.submit" ]
                             ]
@@ -539,7 +541,7 @@ viewCard ({ shared } as loggedIn) card model =
                         div [ class "flex -mx-2 md:justify-end" ]
                             [ button
                                 [ class "button button-primary w-full sm:w-40 mx-auto"
-                                , onClick (ClickedBuy card.sale)
+                                , onClick (ClickedBuy card.product)
                                 ]
                                 [ text_ "shop.buy" ]
                             ]
@@ -562,7 +564,7 @@ viewTransferForm : LoggedIn.Model -> Card -> Model -> Html Msg
 viewTransferForm { shared } card model =
     let
         accountName =
-            Eos.nameToString card.sale.creatorId
+            Eos.nameToString card.product.creatorId
 
         form =
             model.form
@@ -571,10 +573,10 @@ viewTransferForm { shared } card model =
             I18Next.t shared.translations
 
         saleSymbol =
-            Eos.symbolToSymbolCodeString card.sale.symbol
+            Eos.symbolToSymbolCodeString card.product.symbol
 
         maybeBal =
-            LE.find (\bal -> bal.asset.symbol == card.sale.symbol) model.balances
+            LE.find (\bal -> bal.asset.symbol == card.product.symbol) model.balances
 
         symbolBalance =
             case maybeBal of
@@ -716,7 +718,7 @@ fieldId =
     }
 
 
-validateForm : Sale -> Form -> Form
+validateForm : Product -> Form -> Form
 validateForm sale form =
     let
         unitValidation : Validation

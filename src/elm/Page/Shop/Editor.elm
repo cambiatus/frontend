@@ -1,4 +1,14 @@
-module Page.Shop.Editor exposing (Model, Msg(..), initCreate, initUpdate, jsAddressToMsg, msgToString, subscriptions, update, view)
+module Page.Shop.Editor exposing
+    ( Model
+    , Msg(..)
+    , initCreate
+    , initUpdate
+    , jsAddressToMsg
+    , msgToString
+    , subscriptions
+    , update
+    , view
+    )
 
 import Api
 import Api.Graphql
@@ -21,7 +31,7 @@ import Page
 import Result exposing (Result)
 import Route
 import Session.LoggedIn as LoggedIn exposing (External(..), FeedbackStatus(..))
-import Shop exposing (Sale, SaleId)
+import Shop exposing (Product, ProductId)
 import Task
 import UpdateResult as UR
 import Utils exposing (decodeEnterKeyDown)
@@ -40,9 +50,9 @@ initCreate loggedIn =
     )
 
 
-initUpdate : SaleId -> LoggedIn.Model -> ( Model, Cmd Msg )
-initUpdate saleId loggedIn =
-    ( LoadingBalancesUpdate saleId
+initUpdate : ProductId -> LoggedIn.Model -> ( Model, Cmd Msg )
+initUpdate productId loggedIn =
+    ( LoadingBalancesUpdate productId
     , Api.getBalances loggedIn.shared loggedIn.accountName CompletedBalancesLoad
     )
 
@@ -71,14 +81,14 @@ type
     | EditingCreate (List Balance) ImageStatus Form
     | Creating (List Balance) ImageStatus Form
       -- Update
-    | LoadingBalancesUpdate SaleId
-    | LoadingSaleUpdate (List Balance) SaleId
-    | EditingUpdate (List Balance) Sale ImageStatus DeleteModalStatus Form
-    | Saving (List Balance) Sale ImageStatus Form
-    | Deleting (List Balance) Sale ImageStatus Form
+    | LoadingBalancesUpdate ProductId
+    | LoadingSaleUpdate (List Balance) ProductId
+    | EditingUpdate (List Balance) Product ImageStatus DeleteModalStatus Form
+    | Saving (List Balance) Product ImageStatus Form
+    | Deleting (List Balance) Product ImageStatus Form
       -- Errors
     | LoadBalancesFailed Http.Error
-    | LoadSaleFailed (Graphql.Http.Error (Maybe Sale))
+    | LoadSaleFailed (Graphql.Http.Error (Maybe Product))
 
 
 type DeleteModalStatus
@@ -506,7 +516,7 @@ type alias UpdateResult =
 
 type Msg
     = CompletedBalancesLoad (Result Http.Error (List Balance))
-    | CompletedSaleLoad (Result (Graphql.Http.Error (Maybe Sale)) (Maybe Sale))
+    | CompletedSaleLoad (Result (Graphql.Http.Error (Maybe Product)) (Maybe Product))
     | CompletedImageUpload (Result Http.Error String)
     | EnteredImage (List File)
     | EnteredTitle String
@@ -552,7 +562,7 @@ update msg model loggedIn =
                                     Cmd.none
 
                                 Just id ->
-                                    Api.Graphql.query loggedIn.shared (Shop.saleQuery id) CompletedSaleLoad
+                                    Api.Graphql.query loggedIn.shared (Shop.productQuery id) CompletedSaleLoad
                     in
                     LoadingSaleUpdate balances saleId
                         |> UR.init
@@ -1097,11 +1107,11 @@ encodeCreateForm loggedIn form =
         ]
 
 
-encodeUpdateForm : Sale -> Form -> Symbol -> Value
-encodeUpdateForm sale form selectedCommunity =
+encodeUpdateForm : Product -> Form -> Symbol -> Value
+encodeUpdateForm product form selectedCommunity =
     let
         saleId =
-            Encode.int sale.id
+            Encode.int product.id
 
         image =
             Maybe.withDefault "" (getInput form.image)
@@ -1167,10 +1177,10 @@ getNumericValues value =
         |> String.join ""
 
 
-encodeDeleteForm : Sale -> Value
-encodeDeleteForm sale =
+encodeDeleteForm : Product -> Value
+encodeDeleteForm product =
     Encode.object
-        [ ( "sale_id", Encode.int sale.id )
+        [ ( "sale_id", Encode.int product.id )
         ]
 
 

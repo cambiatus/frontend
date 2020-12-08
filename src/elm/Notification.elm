@@ -1,12 +1,25 @@
-module Notification exposing (History, MintData, Model, Notification, NotificationType(..), SaleHistoryData, TransferData, addNotification, init, markAsReadMutation, notificationHistoryQuery, readAll)
+module Notification exposing
+    ( History
+    , MintData
+    , Model
+    , Notification
+    , NotificationType(..)
+    , OrderData
+    , TransferData
+    , addNotification
+    , init
+    , markAsReadMutation
+    , notificationHistoryQuery
+    , readAll
+    )
 
 import Cambiatus.Mutation as Mutation
 import Cambiatus.Object
 import Cambiatus.Object.Community as Community
 import Cambiatus.Object.Mint as Mint
 import Cambiatus.Object.NotificationHistory as NotificationHistory
-import Cambiatus.Object.Sale as Sale
-import Cambiatus.Object.SaleHistory as SaleHistory
+import Cambiatus.Object.Order as Order
+import Cambiatus.Object.Product as Product
 import Cambiatus.Object.Transfer as Transfer
 import Cambiatus.Query as Query
 import Cambiatus.Scalar exposing (DateTime(..))
@@ -73,13 +86,13 @@ type alias TransferData =
     }
 
 
-type alias SaleHistoryData =
+type alias OrderData =
     { amount : Float
     , community : Community
     , fromId : Eos.Name
     , toId : Eos.Name
     , communityId : String
-    , sale : Sale
+    , product : Product
     }
 
 
@@ -96,7 +109,7 @@ type alias Community =
     }
 
 
-type alias Sale =
+type alias Product =
     { id : Int
     , title : String
     , image : Maybe String
@@ -105,7 +118,7 @@ type alias Sale =
 
 type NotificationType
     = Transfer TransferData
-    | SaleHistory SaleHistoryData
+    | SaleHistory OrderData
     | Mint MintData
 
 
@@ -155,7 +168,7 @@ typeUnionSelectionSet : SelectionSet NotificationType Cambiatus.Union.Notificati
 typeUnionSelectionSet =
     Cambiatus.Union.NotificationType.fragments
         { onTransfer = SelectionSet.map Transfer transferSelectionSet
-        , onSaleHistory = SelectionSet.map SaleHistory saleHistorySelectionSet
+        , onOrder = SelectionSet.map SaleHistory saleHistorySelectionSet
         , onMint = SelectionSet.map Mint mintSelectionSet
         }
 
@@ -180,20 +193,20 @@ transferSelectionSet =
         |> with (Transfer.community logoSelectionSet)
 
 
-saleHistorySelectionSet : SelectionSet SaleHistoryData Cambiatus.Object.SaleHistory
+saleHistorySelectionSet : SelectionSet OrderData Cambiatus.Object.Order
 saleHistorySelectionSet =
-    SelectionSet.succeed SaleHistoryData
-        |> with SaleHistory.amount
-        |> with (SaleHistory.community logoSelectionSet)
-        |> with (Eos.nameSelectionSet SaleHistory.fromId)
-        |> with (Eos.nameSelectionSet SaleHistory.toId)
-        |> with SaleHistory.communityId
+    SelectionSet.succeed OrderData
+        |> with Order.amount
+        |> with (Order.community logoSelectionSet)
+        |> with (Eos.nameSelectionSet Order.fromId)
+        |> with (Eos.nameSelectionSet Order.toId)
+        |> with Order.communityId
         |> with
-            (SaleHistory.sale
-                (SelectionSet.succeed Sale
-                    |> with Sale.id
-                    |> with Sale.title
-                    |> with Sale.image
+            (Order.product
+                (SelectionSet.succeed Product
+                    |> with Product.id
+                    |> with Product.title
+                    |> with Product.image
                 )
             )
 

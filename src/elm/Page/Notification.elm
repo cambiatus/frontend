@@ -10,7 +10,7 @@ import Html exposing (Html, div, img, p, text)
 import Html.Attributes exposing (class, src)
 import Html.Events exposing (onClick)
 import I18Next exposing (Delims(..))
-import Notification exposing (History, MintData, NotificationType(..), SaleHistoryData, TransferData)
+import Notification exposing (History, MintData, NotificationType(..), OrderData, TransferData)
 import Page
 import Route
 import Session.LoggedIn as LoggedIn exposing (External(..))
@@ -28,7 +28,10 @@ import Utils
 init : LoggedIn.Model -> ( Model, Cmd Msg )
 init ({ shared } as loggedIn) =
     ( initModel
-    , Api.Graphql.query shared (Notification.notificationHistoryQuery loggedIn.accountName) CompletedLoadNotificationHistory
+    , Api.Graphql.query
+        shared
+        (Notification.notificationHistoryQuery loggedIn.accountName)
+        CompletedLoadNotificationHistory
     )
 
 
@@ -52,7 +55,7 @@ type Status
 
 type Payload
     = T TransferData
-    | S SaleHistoryData
+    | S OrderData
     | M MintData
 
 
@@ -236,7 +239,7 @@ viewNotificationMint shared history notification =
         ]
 
 
-viewNotificationSaleHistory : LoggedIn.Model -> History -> SaleHistoryData -> Html Msg
+viewNotificationSaleHistory : LoggedIn.Model -> History -> OrderData -> Html Msg
 viewNotificationSaleHistory ({ shared } as loggedIn) notification sale =
     let
         maybeLogo =
@@ -274,7 +277,7 @@ viewNotificationSaleHistory ({ shared } as loggedIn) notification sale =
         )
 
 
-viewNotificationSaleHistoryDetail : LoggedIn.Model -> SaleHistoryData -> String -> List (Html msg)
+viewNotificationSaleHistoryDetail : LoggedIn.Model -> OrderData -> String -> List (Html msg)
 viewNotificationSaleHistoryDetail ({ shared } as loggedIn) sale date =
     let
         isBuy =
@@ -283,13 +286,13 @@ viewNotificationSaleHistoryDetail ({ shared } as loggedIn) sale date =
         description =
             if isBuy then
                 [ ( "user", Eos.nameToString sale.toId )
-                , ( "sale", sale.sale.title )
+                , ( "sale", sale.product.title )
                 ]
                     |> I18Next.tr shared.translations I18Next.Curly "notifications.saleHistory.buy"
 
             else
                 [ ( "user", Eos.nameToString sale.fromId )
-                , ( "sale", sale.sale.title )
+                , ( "sale", sale.product.title )
                 ]
                     |> I18Next.tr shared.translations I18Next.Curly "notifications.saleHistory.sell"
     in
@@ -303,7 +306,7 @@ viewNotificationSaleHistoryDetail ({ shared } as loggedIn) sale date =
         ]
     , div [ class "flex flex-none pl-4" ]
         [ img
-            [ src (Maybe.withDefault "" sale.sale.image)
+            [ src (Maybe.withDefault "" sale.product.image)
             , class "object-scale-down rounded-full h-10"
             ]
             []
@@ -394,7 +397,7 @@ update msg model loggedIn =
                         |> UR.init
                         |> UR.addCmd cmd
                         |> UR.addCmd
-                            (Route.ViewSale (String.fromInt sale.sale.id)
+                            (Route.ViewSale (String.fromInt sale.product.id)
                                 |> Route.replaceUrl loggedIn.shared.navKey
                             )
 
