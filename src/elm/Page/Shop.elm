@@ -347,21 +347,15 @@ viewCard model ({ shared } as loggedIn) index card =
             , div [ class "w-full px-6 pt-4" ]
                 [ p [ class "text-xl" ] [ text title ]
                 ]
-            , div [ class "flex flex-none items-center pt-3 px-6 pb-4" ]
-                [ Icons.thumbUp "text-indigo-500"
-                , p [ class "pl-2 pr-6 text-sm" ] [ text "0" ]
-                , Icons.thumbDown ""
-                , p [ class "pl-2 pr-6 text-sm" ] [ text "0" ]
-                ]
             , if card.product.units == 0 && card.product.trackStock then
-                div [ class "border-t border-gray-300 flex flex-none w-full px-6 pb-2" ]
+                div [ class "flex flex-none w-full px-6 pb-2" ]
                     [ p [ class "text-3xl text-red" ]
                         [ text (t loggedIn.shared.translations "shop.out_of_stock")
                         ]
                     ]
 
               else
-                div [ class "border-t border-gray-300 flex flex-none w-full px-6 pb-2" ]
+                div [ class "flex flex-none w-full px-6 pb-2" ]
                     [ p [ class "text-green text-3xl" ] [ text (String.fromFloat card.product.price) ]
                     , div [ class "uppercase text-xs font-thin mt-3 ml-2 font-sans text-green" ] [ text (Eos.symbolToSymbolCodeString card.product.symbol) ]
                     ]
