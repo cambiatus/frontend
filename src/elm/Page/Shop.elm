@@ -23,7 +23,6 @@ import Html.Events exposing (on, onClick)
 import Html.Lazy as Lazy
 import Http
 import I18Next exposing (t)
-import Icons
 import Json.Decode exposing (Value)
 import Json.Encode as Encode
 import List.Extra as LE
