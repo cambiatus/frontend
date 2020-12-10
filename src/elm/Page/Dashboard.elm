@@ -421,11 +421,13 @@ viewAnalysis loggedIn claimStatus =
 viewTransfers : LoggedIn.Model -> Model -> Html Msg
 viewTransfers loggedIn model =
     let
-        t s =
-            I18Next.t loggedIn.shared.translations s
+        t =
+            loggedIn.shared.translators.t
     in
-    div []
-        [ Page.viewTitle (t "transfer.last_title")
+    div [ class "mt-4" ]
+        [ div [ class "text-2xl text-indigo-500 mr-2 font-medium mb-4" ]
+            [ text <| t "transfer.last_title"
+            ]
         , case model.transfers of
             LoadingGraphql ->
                 Page.viewCardEmpty
