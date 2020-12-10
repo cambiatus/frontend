@@ -30,7 +30,7 @@ import Graphql.Http
 import Graphql.Operation exposing (RootMutation)
 import Graphql.OptionalArgument exposing (OptionalArgument(..))
 import Graphql.SelectionSet as SelectionSet exposing (SelectionSet, with)
-import Html exposing (Html, a, button, div, h2, img, label, li, p, span, strong, text, textarea, ul)
+import Html exposing (Html, a, button, div, form, h2, img, label, li, p, span, strong, text, textarea, ul)
 import Html.Attributes exposing (autocomplete, autofocus, class, disabled, for, id, placeholder, required, src, title, type_, value)
 import Html.Events exposing (onClick, onInput, onSubmit)
 import I18Next exposing (t)
@@ -344,7 +344,7 @@ viewLoginSteps isModal shared model loginStep =
                         |> List.length
                         |> String.fromInt
             in
-            [ div [ class "sf-content" ]
+            [ form [ class "sf-content" ]
                 [ illustration "login_key.svg"
                 , p [ class pClass ]
                     [ span [ class "text-green text-caption tracking-wide uppercase block mb-1" ]
@@ -368,6 +368,7 @@ viewLoginSteps isModal shared model loginStep =
                         , id passphraseId
                         , value model.form.passphrase
                         , onInput EnteredPassphrase
+                        , onSubmit ClickedViewLoginPinStep
                         , required True
                         , autocomplete False
                         ]
@@ -677,11 +678,16 @@ update msg shared model =
                         | passphrase = phrase
                     }
             in
-            { model
-                | form = newForm
-                , problems = []
-            }
-                |> UR.init
+            case model.status of
+                Options LoginStepPassphrase ->
+                    { model
+                        | form = newForm
+                        , problems = []
+                    }
+                        |> UR.init
+
+                _ ->
+                    UR.init model
 
         SubmittedLoginPrivateKey form ->
             case validate pinValidator form of
@@ -829,11 +835,23 @@ update msg shared model =
 
         KeyPressed isEnter ->
             if isEnter then
-                UR.init model
-                    |> UR.addCmd
-                        (Task.succeed (SubmittedLoginPrivateKey model.form)
-                            |> Task.perform identity
-                        )
+                case model.status of
+                    Options LoginStepPassphrase ->
+                        UR.init model
+                            |> UR.addCmd
+                                (Task.succeed ClickedViewLoginPinStep
+                                    |> Task.perform identity
+                                )
+
+                    Options LoginStepPIN ->
+                        UR.init model
+                            |> UR.addCmd
+                                (Task.succeed (SubmittedLoginPrivateKey model.form)
+                                    |> Task.perform identity
+                                )
+
+                    _ ->
+                        UR.init model
 
             else
                 UR.init model

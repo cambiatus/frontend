@@ -48,10 +48,10 @@ view (Avatar maybeUrl) cls =
 
             else
                 Html.div
-                    [ class ("profile-avatar " ++ cls)
+                    [ class cls
                     ]
                     [ Html.img
-                        [ class ("profile-avatar object-cover " ++ cls)
+                        [ class ("object-cover rounded-full " ++ cls)
                         , src url
                         ]
                         []

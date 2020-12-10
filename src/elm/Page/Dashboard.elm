@@ -536,17 +536,17 @@ viewBalance ({ shared } as loggedIn) _ balance =
                 ]
                 [ text_ "dashboard.transfer" ]
             , a
-                [ class "flex w-full items-center justify-between h-12 text-gray border-b"
+                [ class "flex w-full items-center justify-between h-12 text-gray-600 border-b"
                 , Route.href <| Route.Community loggedIn.selectedCommunity
                 ]
                 [ text <| shared.translators.tr "dashboard.explore" [ ( "symbol", Eos.symbolToSymbolCodeString loggedIn.selectedCommunity ) ]
                 , Icons.arrowDown "rotate--90"
                 ]
             , button
-                [ class "flex w-full items-center justify-between h-12 text-gray"
+                [ class "flex w-full items-center justify-between h-12 text-gray-600"
                 , onClick CreateInvite
                 ]
-                [ text_ "dashboard.invite", Icons.arrowDown "rotate--90" ]
+                [ text_ "dashboard.invite", Icons.arrowDown "rotate--90 text-gray-600" ]
             ]
         ]
 

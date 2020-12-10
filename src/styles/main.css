@@ -2,9 +2,15 @@
 
 @tailwind components;
 
+:root {
+  --white: #f6f6f6;
+  --black: #4a4a4a;
+  --gray: #eee;
+}
+
 /* Typography */
 body {
-  background-color: var(--white);
+  background-color: #f6f6f6;
   font-family: 'Nunito', 'Lato', 'San Fransico', 'Helvetica', 'Verdana', sans-serif;
   color: var(--black);
 }
@@ -355,9 +361,169 @@ textarea.input {
 }
 /* End of Button Modifiers */
 
+/* Legacy CSS leftover */
+.shop-editor__image-upload {
+  width: 65%;
+}
+
+.shop-editor__image-upload label {
+  height: 150px;
+  background-color: #f8f8f8;
+  text-transform: uppercase;
+  border-radius: 4px;
+  font-size: 14px;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  border-radius: 8px;
+  cursor: pointer;
+  background-size: cover;
+  background-repeat: no-repeat;
+  background-position: center;
+}
+
+.shop-editor__image-upload label svg {
+  fill: currentColor;
+  height: 50px;
+  width: 50px;
+  margin-bottom: 6px;
+}
+
+.shop-editor__image-upload input:not(:disabled)~label:hover,
+.shop-editor__image-upload input:not(:disabled):focus~label {
+  color: var(--hover-color);
+}
+
+.shop-editor__image-upload input:not(:disabled):active~label {
+  color: var(--active-color);
+}
+
+.shop-editor__image-upload input:disabled~label {
+  cursor: auto;
+  opacity: 0.5;
+}
+
+.shop-editor__image-upload .spinner {
+  width: 40px;
+  height: 40px;
+  border: 4px solid currentColor;
+  border-right-color: transparent;
+}
+
+.hidden-img-input,
+.profile-img-input {
+    width: .1px;
+    height: .1px;
+    opacity: 0;
+    overflow: hidden;
+    position: absolute;
+    z-index: -1;
+}
+
+
+.create-community-logo-list {
+  display: grid;
+  grid-gap: 16px;
+  grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+  justify-items: center;
+  margin-bottom: 14px;
+}
+
+.create-community-logo-list-item {
+  width: 100px;
+  height: 100px;
+  border-radius: 8px;
+  border: solid 1px transparent;
+  transition: box-shadow .1s ease, border .1s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  outline: none;
+}
+
+.create-community-logo-list-item:not(:disabled):hover,
+.create-community-logo-list-item:not(:disabled):focus,
+.create-community-logo-list-item--selected {
+  box-shadow: 0 2px 6px 0 rgba(0, 0, 0, 0.23);
+  border: solid 1px #652d6b;
+}
+
+.create-community-logo-list-item--selected {
+  cursor: auto;
+}
+
+.create-community-logo-list-item-img {
+  height: 60px;
+  width: 60px;
+  background-size: contain;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+
+.create-community-logo-list-item:disabled,
+.create-community-logo-upload input:disabled~label {
+  cursor: auto;
+  opacity: 0.5;
+}
+
+.create-community-logo-upload {
+  width: 100px;
+  height: 100px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+
+.create-community-logo-upload label {
+  display: flex;
+  flex-direction: column;
+  text-align: center;
+  margin: 0;
+  align-items: center;
+  font-size: 12px;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.create-community-logo-upload label:not(.disabled):hover .create-community-logo-upload-svg,
+.create-community-logo-upload input:not(:disabled):focus~label .create-community-logo-upload-svg {
+  background: var(--hover-color);
+}
+
+.create-community-logo-upload input:not(:disabled):active~label .create-community-logo-upload-svg {
+  background: var(--active-color);
+}
+
+.create-community-logo-upload-svg {
+  background-image: linear-gradient(68deg, #f2663b, #f99d33);
+  border-radius: 50%;
+  width: 50px;
+  height: 50px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 6px;
+}
+
+.create-community-logo-upload-svg svg {
+  width: 30px;
+  height: 30px;
+  fill: #fff;
+}
+
+.create-community-logo-list-item .spinner {
+  border: 3px solid var(--black);
+  border-right-color: transparent;
+  margin: auto;
+}
+
+/* End of Legacy CSS leftover */
+
 @import './elm-datepicker.css';
 
 /* https://tailwindcss.com/docs/extracting-components#extracting-css-components-with-apply */
 @tailwind utilities;
-
-@import './legacy_main.css';

@@ -46,7 +46,7 @@ import Graphql.OptionalArgument exposing (OptionalArgument(..))
 import Graphql.SelectionSet as SelectionSet exposing (SelectionSet, with)
 import Html exposing (Html, a, div, p, span, text)
 import Html.Attributes exposing (class, href, maxlength, minlength, pattern, title, type_)
-import I18Next exposing (Translations, t)
+import I18Next exposing (Translations)
 import Json.Decode as Decode exposing (Decoder, int, nullable, string)
 import Json.Decode.Pipeline as Decode exposing (optional, required)
 import Json.Encode as Encode
@@ -531,44 +531,36 @@ viewEmpty shared =
 selectConfig : Select.Config msg Profile -> Shared -> Bool -> Select.Config msg Profile
 selectConfig select shared isDisabled =
     select
-        |> Select.withInputClass "form-input h-12 w-full font-sans placeholder-gray-900"
+        |> Select.withInputClass "form-input h-12 w-full placeholder-gray-900"
         |> Select.withClear False
         |> Select.withMultiInputItemContainerClass "hidden h-0"
-        |> Select.withNotFound "No matches"
-        |> Select.withNotFoundClass "text-red  border-solid border-gray-100 border rounded z-30 bg-white w-select"
+        |> Select.withNotFound (shared.translators.t "community.actions.form.verifier_not_found")
+        |> Select.withNotFoundClass "text-red border-solid border-gray-100 border rounded z-30 bg-white w-select"
         |> Select.withNotFoundStyles [ ( "padding", "0 2rem" ) ]
         |> Select.withDisabled isDisabled
         |> Select.withHighlightedItemClass "autocomplete-item-highlight"
-        |> Select.withPrompt (t shared.translations "community.actions.form.verifier_placeholder")
+        |> Select.withPrompt (shared.translators.t "community.actions.form.verifier_placeholder")
         |> Select.withItemHtml (viewAutoCompleteItem shared)
-        |> Select.withMenuClass "border-t-none border-solid border-gray-100 border rounded-b z-30 bg-white"
+        |> Select.withMenuClass "w-full border-t-none border-solid border-gray-100 border rounded-sm z-30 bg-indigo-500 px-4 py-1"
 
 
 selectFilter : Int -> (a -> String) -> String -> List a -> Maybe (List a)
 selectFilter minChars toLabel q items =
-    if String.length q < minChars then
-        Nothing
+    if String.length q > minChars then
+        Just <| Simple.Fuzzy.filter toLabel q items
 
     else
-        items
-            |> Simple.Fuzzy.filter toLabel q
-            |> Just
+        Nothing
 
 
 viewAutoCompleteItem : Shared -> Profile -> Html Never
 viewAutoCompleteItem _ profile =
-    div [ class "pt-3 pl-3 flex flex-row items-center w-select z-30" ]
+    div [ class "flex flex-row items-center z-30" ]
         [ div [ class "pr-3" ] [ Avatar.view profile.avatar "h-7 w-7" ]
-        , div [ class "flex flex-col font-sans border-b border-gray-500 pb-3 w-full" ]
-            [ span [ class "text-black text-body leading-loose" ]
+        , div [ class "flex flex-col border-dotted border-b border-gray-500 pb-1 w-full" ]
+            [ span [ class "text-white text-body font-bold leading-loose" ]
+                [ text <| Maybe.withDefault "" profile.userName ]
+            , span [ class "font-light text-white" ]
                 [ text (Eos.nameToString profile.account) ]
-            , span [ class "leading-caption uppercase text-green text-caption" ]
-                [ case profile.userName of
-                    Just name ->
-                        text name
-
-                    Nothing ->
-                        text ""
-                ]
             ]
         ]
