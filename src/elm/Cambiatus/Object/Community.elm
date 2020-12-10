@@ -24,6 +24,11 @@ actionCount =
     Object.selectionForField "Int" "actionCount" [] Decode.int
 
 
+claimCount : SelectionSet Int Cambiatus.Object.Community
+claimCount =
+    Object.selectionForField "Int" "claimCount" [] Decode.int
+
+
 createdAt : SelectionSet Cambiatus.ScalarCodecs.DateTime Cambiatus.Object.Community
 createdAt =
     Object.selectionForField "ScalarCodecs.DateTime" "createdAt" [] (Cambiatus.ScalarCodecs.codecs |> Cambiatus.Scalar.unwrapCodecs |> .codecDateTime |> .decoder)
@@ -128,6 +133,11 @@ objectives :
     -> SelectionSet (List decodesTo) Cambiatus.Object.Community
 objectives object_ =
     Object.selectionForCompositeField "objectives" [] object_ (identity >> Decode.list)
+
+
+orderCount : SelectionSet Int Cambiatus.Object.Community
+orderCount =
+    Object.selectionForField "Int" "orderCount" [] Decode.int
 
 
 precision : SelectionSet Int Cambiatus.Object.Community

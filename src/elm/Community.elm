@@ -112,6 +112,11 @@ type alias Model =
     , invitedReward : Float
     , minBalance : Maybe Float
     , memberCount : Int
+    , actionCount : Int
+    , claimCount : Int
+    , transferCount : Int
+    , productCount : Int
+    , orderCount : Int
     , members : List Profile
     , objectives : List Objective
     , precision : Int
@@ -161,6 +166,11 @@ communitySelectionSet =
         |> with Community.invitedReward
         |> with Community.minBalance
         |> with Community.memberCount
+        |> with Community.actionCount
+        |> with Community.claimCount
+        |> with Community.transferCount
+        |> with Community.productCount
+        |> with Community.orderCount
         |> with (Community.members Profile.selectionSet)
         |> with (Community.objectives objectiveSelectionSet)
         |> with Community.precision

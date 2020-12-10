@@ -355,7 +355,10 @@
 		"index": {
 			"created_by": "የተፈጠረዉ በ {{account_name}}",
 			"members": "አባለት",
-			"transfers": "{{quantity}} የተለለፈዉ መጠን"
+			"claims": "የይገባኛል ጥያቄዎች",
+			"products": "አቅርቦቶች",
+			"orders": "ትዕዛዞች",
+			"transfers": "የተለለፈዉ መጠን"
 		},
 		"invite": {
 			"title": "ጓደኛን ጋብዝ",
