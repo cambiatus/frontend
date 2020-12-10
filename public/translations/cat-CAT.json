@@ -396,7 +396,7 @@
     },
     "index": {
       "created_by": "Creada per {{account_name}}",
-      "members": "{{quantity}} Afiliació",
+      "members": "afiliació",
       "transfers": "{{quantity}} Transferències"
     },
     "invite": {

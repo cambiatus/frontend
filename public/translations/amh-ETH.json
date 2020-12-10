@@ -354,7 +354,7 @@
 		},
 		"index": {
 			"created_by": "የተፈጠረዉ በ {{account_name}}",
-			"members": "{{quantity}} አባለት",
+			"members": "አባለት",
 			"transfers": "{{quantity}} የተለለፈዉ መጠን"
 		},
 		"invite": {

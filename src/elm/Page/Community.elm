@@ -180,18 +180,29 @@ view loggedIn model =
                                         , p [ class "text-grey-200 text-sm" ] [ text community.description ]
                                         ]
                                     ]
-                                , if community.hasObjectives then
-                                    div [ class "container mx-auto px-4 pb-4" ]
-                                        [ viewClaimConfirmation loggedIn model
-                                        , div [ class "bg-white py-6 sm:py-8 px-3 sm:px-6 rounded-lg mt-4" ]
-                                            (Page.viewTitle (t "community.objectives.title_plural")
-                                                :: List.indexedMap (viewObjective loggedIn model community)
-                                                    community.objectives
-                                            )
-                                        ]
+                                , div [ class "container mx-auto" ]
+                                    [ if community.hasObjectives then
+                                        div [ class "pb-4" ]
+                                            [ viewClaimConfirmation loggedIn model
+                                            , div [ class "bg-white py-6 sm:py-8 px-3 sm:px-6 rounded-lg mt-4" ]
+                                                (Page.viewTitle (t "community.objectives.title_plural")
+                                                    :: List.indexedMap (viewObjective loggedIn model community)
+                                                        community.objectives
+                                                )
+                                            ]
 
-                                  else
-                                    text ""
+                                      else
+                                        text ""
+                                    , div [ class "pb-4 h-60" ]
+                                        [ div [ class "flex flex-wrap w-40 h-60 relative bg-white rounded-lg p-4" ]
+                                            [ p [ class "w-full font-bold text-green text-3xl" ]
+                                                [ text <| String.fromInt community.memberCount ]
+                                            , p [ class "w-full text-gray-700" ]
+                                                [ text <| t "community.index.members" ]
+                                            , img [ class "absolute object-none object-bottom", src "/images/girl-playing-guitar.svg" ] []
+                                            ]
+                                        ]
+                                    ]
                                 ]
 
                         ClaimWithProofs action ->

@@ -400,7 +400,7 @@
     },
     "index": {
       "created_by": "Criado por {{account_name}}",
-      "members": "{{quantity}} Membros",
+      "members": "membros",
       "transfers": "{{quantity}} Transferências"
     },
     "invite": {
