@@ -172,13 +172,17 @@ view loggedIn model =
                                     ]
                                 ]
                             , if isCommunityAdmin then
-                                a [ Route.href (Route.CommunitySettings loggedIn.selectedCommunity), class "ml-auto" ] [ Icons.settings ]
+                                a
+                                    [ Route.href (Route.CommunitySettings loggedIn.selectedCommunity)
+                                    , class "ml-auto"
+                                    ]
+                                    [ Icons.settings ]
 
                               else
                                 text ""
                             ]
                         , viewBalance loggedIn model balance
-                        , if areObjectivesEnabled then
+                        , if areObjectivesEnabled && List.any (\account -> account == loggedIn.accountName) community.validators then
                             viewAnalysisList loggedIn profile model
 
                           else
@@ -341,14 +345,14 @@ viewAnalysisList loggedIn profile model =
                             ]
                             [ text_ "dashboard.analysis.all" ]
                         ]
-                    , if isVoted claims || profile.analysisCount < 0 then
+                    , if isVoted claims then
                         div [ class "flex flex-col w-full items-center justify-center px-3 py-12 my-2 rounded-lg bg-white" ]
                             [ img [ src "/images/not_found.svg", class "object-contain h-32 mb-3" ] []
-                            , p [ class "flex text-body text-gray" ]
+                            , p [ class "flex text-body text-gray-600" ]
                                 [ p [ class "font-bold" ] [ text_ "dashboard.analysis.empty.1" ]
                                 , text_ "dashboard.analysis.empty.2"
                                 ]
-                            , p [ class "text-body text-gray" ] [ text_ "dashboard.analysis.empty.3" ]
+                            , p [ class "text-body text-gray-600" ] [ text_ "dashboard.analysis.empty.3" ]
                             ]
 
                       else

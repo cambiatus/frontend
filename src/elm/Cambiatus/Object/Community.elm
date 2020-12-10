@@ -192,3 +192,12 @@ transfers fillInOptionals object_ =
 type_ : SelectionSet (Maybe String) Cambiatus.Object.Community
 type_ =
     Object.selectionForField "(Maybe String)" "type" [] (Decode.string |> Decode.nullable)
+
+
+{-| List of users that are claim validators
+-}
+validators :
+    SelectionSet decodesTo Cambiatus.Object.Profile
+    -> SelectionSet (List decodesTo) Cambiatus.Object.Community
+validators object_ =
+    Object.selectionForCompositeField "validators" [] object_ (identity >> Decode.list)
