@@ -2,7 +2,7 @@
 -- https://github.com/dillonkearns/elm-graphql
 
 
-module Cambiatus.Object.SaleHistory exposing (..)
+module Cambiatus.Object.Order exposing (..)
 
 import Cambiatus.InputObject
 import Cambiatus.Interface
@@ -19,64 +19,84 @@ import Graphql.SelectionSet exposing (SelectionSet)
 import Json.Decode as Decode
 
 
-amount : SelectionSet Float Cambiatus.Object.SaleHistory
+amount : SelectionSet Float Cambiatus.Object.Order
 amount =
     Object.selectionForField "Float" "amount" [] Decode.float
 
 
 community :
     SelectionSet decodesTo Cambiatus.Object.Community
-    -> SelectionSet decodesTo Cambiatus.Object.SaleHistory
+    -> SelectionSet decodesTo Cambiatus.Object.Order
 community object_ =
     Object.selectionForCompositeField "community" [] object_ identity
 
 
-communityId : SelectionSet String Cambiatus.Object.SaleHistory
+communityId : SelectionSet String Cambiatus.Object.Order
 communityId =
     Object.selectionForField "String" "communityId" [] Decode.string
 
 
+createdAt : SelectionSet Cambiatus.ScalarCodecs.DateTime Cambiatus.Object.Order
+createdAt =
+    Object.selectionForField "ScalarCodecs.DateTime" "createdAt" [] (Cambiatus.ScalarCodecs.codecs |> Cambiatus.Scalar.unwrapCodecs |> .codecDateTime |> .decoder)
+
+
+createdBlock : SelectionSet Int Cambiatus.Object.Order
+createdBlock =
+    Object.selectionForField "Int" "createdBlock" [] Decode.int
+
+
+createdEosAccount : SelectionSet String Cambiatus.Object.Order
+createdEosAccount =
+    Object.selectionForField "String" "createdEosAccount" [] Decode.string
+
+
+createdTx : SelectionSet String Cambiatus.Object.Order
+createdTx =
+    Object.selectionForField "String" "createdTx" [] Decode.string
+
+
 from :
     SelectionSet decodesTo Cambiatus.Object.Profile
-    -> SelectionSet decodesTo Cambiatus.Object.SaleHistory
+    -> SelectionSet decodesTo Cambiatus.Object.Order
 from object_ =
     Object.selectionForCompositeField "from" [] object_ identity
 
 
-fromId : SelectionSet String Cambiatus.Object.SaleHistory
+fromId : SelectionSet String Cambiatus.Object.Order
 fromId =
     Object.selectionForField "String" "fromId" [] Decode.string
 
 
-id : SelectionSet Int Cambiatus.Object.SaleHistory
+id : SelectionSet Int Cambiatus.Object.Order
 id =
     Object.selectionForField "Int" "id" [] Decode.int
 
 
-sale :
-    SelectionSet decodesTo Cambiatus.Object.Sale
-    -> SelectionSet decodesTo Cambiatus.Object.SaleHistory
-sale object_ =
-    Object.selectionForCompositeField "sale" [] object_ identity
+product :
+    SelectionSet decodesTo Cambiatus.Object.Product
+    -> SelectionSet decodesTo Cambiatus.Object.Order
+product object_ =
+    Object.selectionForCompositeField "product" [] object_ identity
 
 
-saleId : SelectionSet Int Cambiatus.Object.SaleHistory
-saleId =
-    Object.selectionForField "Int" "saleId" [] Decode.int
+productId : SelectionSet Int Cambiatus.Object.Order
+productId =
+    Object.selectionForField "Int" "productId" [] Decode.int
 
 
 to :
     SelectionSet decodesTo Cambiatus.Object.Profile
-    -> SelectionSet decodesTo Cambiatus.Object.SaleHistory
+    -> SelectionSet decodesTo Cambiatus.Object.Order
 to object_ =
     Object.selectionForCompositeField "to" [] object_ identity
 
 
-toId : SelectionSet String Cambiatus.Object.SaleHistory
+toId : SelectionSet String Cambiatus.Object.Order
 toId =
     Object.selectionForField "String" "toId" [] Decode.string
 
 
-units : SelectionSet (Maybe Int) Cambiatus.Object.SaleHistory
+units : SelectionSet (Maybe Int) Cambiatus.Object.Order
 units =
     Object.selectionForField "(Maybe Int)" "units" [] (Decode.int |> Decode.nullable)

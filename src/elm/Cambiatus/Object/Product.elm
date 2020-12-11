@@ -2,7 +2,7 @@
 -- https://github.com/dillonkearns/elm-graphql
 
 
-module Cambiatus.Object.Sale exposing (..)
+module Cambiatus.Object.Product exposing (..)
 
 import Cambiatus.InputObject
 import Cambiatus.Interface
@@ -21,78 +21,78 @@ import Json.Decode as Decode
 
 community :
     SelectionSet decodesTo Cambiatus.Object.Community
-    -> SelectionSet decodesTo Cambiatus.Object.Sale
+    -> SelectionSet decodesTo Cambiatus.Object.Product
 community object_ =
     Object.selectionForCompositeField "community" [] object_ identity
 
 
-communityId : SelectionSet String Cambiatus.Object.Sale
+communityId : SelectionSet String Cambiatus.Object.Product
 communityId =
     Object.selectionForField "String" "communityId" [] Decode.string
 
 
-createdAt : SelectionSet Cambiatus.ScalarCodecs.DateTime Cambiatus.Object.Sale
+createdAt : SelectionSet Cambiatus.ScalarCodecs.DateTime Cambiatus.Object.Product
 createdAt =
     Object.selectionForField "ScalarCodecs.DateTime" "createdAt" [] (Cambiatus.ScalarCodecs.codecs |> Cambiatus.Scalar.unwrapCodecs |> .codecDateTime |> .decoder)
 
 
-createdBlock : SelectionSet Int Cambiatus.Object.Sale
+createdBlock : SelectionSet Int Cambiatus.Object.Product
 createdBlock =
     Object.selectionForField "Int" "createdBlock" [] Decode.int
 
 
-createdEosAccount : SelectionSet String Cambiatus.Object.Sale
+createdEosAccount : SelectionSet String Cambiatus.Object.Product
 createdEosAccount =
     Object.selectionForField "String" "createdEosAccount" [] Decode.string
 
 
-createdTx : SelectionSet String Cambiatus.Object.Sale
+createdTx : SelectionSet String Cambiatus.Object.Product
 createdTx =
     Object.selectionForField "String" "createdTx" [] Decode.string
 
 
 creator :
     SelectionSet decodesTo Cambiatus.Object.Profile
-    -> SelectionSet decodesTo Cambiatus.Object.Sale
+    -> SelectionSet decodesTo Cambiatus.Object.Product
 creator object_ =
     Object.selectionForCompositeField "creator" [] object_ identity
 
 
-creatorId : SelectionSet String Cambiatus.Object.Sale
+creatorId : SelectionSet String Cambiatus.Object.Product
 creatorId =
     Object.selectionForField "String" "creatorId" [] Decode.string
 
 
-description : SelectionSet String Cambiatus.Object.Sale
+description : SelectionSet String Cambiatus.Object.Product
 description =
     Object.selectionForField "String" "description" [] Decode.string
 
 
-id : SelectionSet Int Cambiatus.Object.Sale
+id : SelectionSet Int Cambiatus.Object.Product
 id =
     Object.selectionForField "Int" "id" [] Decode.int
 
 
-image : SelectionSet (Maybe String) Cambiatus.Object.Sale
+image : SelectionSet (Maybe String) Cambiatus.Object.Product
 image =
     Object.selectionForField "(Maybe String)" "image" [] (Decode.string |> Decode.nullable)
 
 
-price : SelectionSet Float Cambiatus.Object.Sale
+price : SelectionSet Float Cambiatus.Object.Product
 price =
     Object.selectionForField "Float" "price" [] Decode.float
 
 
-title : SelectionSet String Cambiatus.Object.Sale
+title : SelectionSet String Cambiatus.Object.Product
 title =
     Object.selectionForField "String" "title" [] Decode.string
 
 
-trackStock : SelectionSet Bool Cambiatus.Object.Sale
+trackStock : SelectionSet Bool Cambiatus.Object.Product
 trackStock =
     Object.selectionForField "Bool" "trackStock" [] Decode.bool
 
 
-units : SelectionSet Int Cambiatus.Object.Sale
+units : SelectionSet Int Cambiatus.Object.Product
 units =
     Object.selectionForField "Int" "units" [] Decode.int

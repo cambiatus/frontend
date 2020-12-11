@@ -170,6 +170,43 @@ objective requiredArgs object_ =
     Object.selectionForCompositeField "objective" [ Argument.required "input" requiredArgs.input Cambiatus.InputObject.encodeObjectiveInput ] object_ (identity >> Decode.nullable)
 
 
+type alias ProductRequiredArguments =
+    { id : Int }
+
+
+product :
+    ProductRequiredArguments
+    -> SelectionSet decodesTo Cambiatus.Object.Product
+    -> SelectionSet (Maybe decodesTo) RootQuery
+product requiredArgs object_ =
+    Object.selectionForCompositeField "product" [ Argument.required "id" requiredArgs.id Encode.int ] object_ (identity >> Decode.nullable)
+
+
+type alias ProductsOptionalArguments =
+    { filters : OptionalArgument Cambiatus.InputObject.ProductsFilterInput }
+
+
+type alias ProductsRequiredArguments =
+    { communityId : String }
+
+
+products :
+    (ProductsOptionalArguments -> ProductsOptionalArguments)
+    -> ProductsRequiredArguments
+    -> SelectionSet decodesTo Cambiatus.Object.Product
+    -> SelectionSet (List decodesTo) RootQuery
+products fillInOptionals requiredArgs object_ =
+    let
+        filledInOptionals =
+            fillInOptionals { filters = Absent }
+
+        optionalArgs =
+            [ Argument.optional "filters" filledInOptionals.filters Cambiatus.InputObject.encodeProductsFilterInput ]
+                |> List.filterMap identity
+    in
+    Object.selectionForCompositeField "products" (optionalArgs ++ [ Argument.required "communityId" requiredArgs.communityId Encode.string ]) object_ (identity >> Decode.list)
+
+
 type alias ProfileRequiredArguments =
     { input : Cambiatus.InputObject.ProfileInput }
 
@@ -182,43 +219,6 @@ profile :
     -> SelectionSet (Maybe decodesTo) RootQuery
 profile requiredArgs object_ =
     Object.selectionForCompositeField "profile" [ Argument.required "input" requiredArgs.input Cambiatus.InputObject.encodeProfileInput ] object_ (identity >> Decode.nullable)
-
-
-type alias SaleRequiredArguments =
-    { input : Cambiatus.InputObject.SaleInput }
-
-
-{-| A single sale from Cambiatus
--}
-sale :
-    SaleRequiredArguments
-    -> SelectionSet decodesTo Cambiatus.Object.Sale
-    -> SelectionSet (Maybe decodesTo) RootQuery
-sale requiredArgs object_ =
-    Object.selectionForCompositeField "sale" [ Argument.required "input" requiredArgs.input Cambiatus.InputObject.encodeSaleInput ] object_ (identity >> Decode.nullable)
-
-
-{-| A list of sale history
--}
-saleHistory :
-    SelectionSet decodesTo Cambiatus.Object.SaleHistory
-    -> SelectionSet (Maybe (List (Maybe decodesTo))) RootQuery
-saleHistory object_ =
-    Object.selectionForCompositeField "saleHistory" [] object_ (identity >> Decode.nullable >> Decode.list >> Decode.nullable)
-
-
-type alias SalesRequiredArguments =
-    { input : Cambiatus.InputObject.SalesInput }
-
-
-{-| A list of sales in Cambiatus
--}
-sales :
-    SalesRequiredArguments
-    -> SelectionSet decodesTo Cambiatus.Object.Sale
-    -> SelectionSet (List decodesTo) RootQuery
-sales requiredArgs object_ =
-    Object.selectionForCompositeField "sales" [ Argument.required "input" requiredArgs.input Cambiatus.InputObject.encodeSalesInput ] object_ (identity >> Decode.list)
 
 
 type alias TransferRequiredArguments =

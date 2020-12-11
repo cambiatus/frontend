@@ -73,8 +73,16 @@ type Objective
     = Objective
 
 
+type Order
+    = Order
+
+
 type PageInfo
     = PageInfo
+
+
+type Product
+    = Product
 
 
 type Profile
@@ -83,14 +91,6 @@ type Profile
 
 type PushSubscription
     = PushSubscription
-
-
-type Sale
-    = Sale
-
-
-type SaleHistory
-    = SaleHistory
 
 
 type SignUp

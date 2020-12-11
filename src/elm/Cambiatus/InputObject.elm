@@ -456,6 +456,31 @@ encodeObjectiveInput input =
         [ ( "id", Encode.int input.id |> Just ) ]
 
 
+buildProductsFilterInput :
+    ProductsFilterInputRequiredFields
+    -> ProductsFilterInput
+buildProductsFilterInput required =
+    { account = required.account }
+
+
+type alias ProductsFilterInputRequiredFields =
+    { account : String }
+
+
+{-| Type for the ProductsFilterInput input object.
+-}
+type alias ProductsFilterInput =
+    { account : String }
+
+
+{-| Encode a ProductsFilterInput into a value that can be used as an argument.
+-}
+encodeProductsFilterInput : ProductsFilterInput -> Value
+encodeProductsFilterInput input =
+    Encode.maybeObject
+        [ ( "account", Encode.string input.account |> Just ) ]
+
+
 buildProfileInput :
     (ProfileInputOptionalFields -> ProfileInputOptionalFields)
     -> ProfileInput
@@ -590,69 +615,6 @@ encodeReadNotificationInput : ReadNotificationInput -> Value
 encodeReadNotificationInput input =
     Encode.maybeObject
         [ ( "id", Encode.int input.id |> Just ) ]
-
-
-buildSaleInput :
-    SaleInputRequiredFields
-    -> SaleInput
-buildSaleInput required =
-    { id = required.id }
-
-
-type alias SaleInputRequiredFields =
-    { id : Int }
-
-
-{-| Type for the SaleInput input object.
--}
-type alias SaleInput =
-    { id : Int }
-
-
-{-| Encode a SaleInput into a value that can be used as an argument.
--}
-encodeSaleInput : SaleInput -> Value
-encodeSaleInput input =
-    Encode.maybeObject
-        [ ( "id", Encode.int input.id |> Just ) ]
-
-
-buildSalesInput :
-    (SalesInputOptionalFields -> SalesInputOptionalFields)
-    -> SalesInput
-buildSalesInput fillOptionals =
-    let
-        optionals =
-            fillOptionals
-                { account = Absent, all = Absent, communities = Absent, communityId = Absent }
-    in
-    { account = optionals.account, all = optionals.all, communities = optionals.communities, communityId = optionals.communityId }
-
-
-type alias SalesInputOptionalFields =
-    { account : OptionalArgument String
-    , all : OptionalArgument String
-    , communities : OptionalArgument String
-    , communityId : OptionalArgument String
-    }
-
-
-{-| Type for the SalesInput input object.
--}
-type alias SalesInput =
-    { account : OptionalArgument String
-    , all : OptionalArgument String
-    , communities : OptionalArgument String
-    , communityId : OptionalArgument String
-    }
-
-
-{-| Encode a SalesInput into a value that can be used as an argument.
--}
-encodeSalesInput : SalesInput -> Value
-encodeSalesInput input =
-    Encode.maybeObject
-        [ ( "account", Encode.string |> Encode.optional input.account ), ( "all", Encode.string |> Encode.optional input.all ), ( "communities", Encode.string |> Encode.optional input.communities ), ( "communityId", Encode.string |> Encode.optional input.communityId ) ]
 
 
 buildSignUpInput :

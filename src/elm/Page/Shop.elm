@@ -23,7 +23,6 @@ import Html.Events exposing (on, onClick)
 import Html.Lazy as Lazy
 import Http
 import I18Next exposing (t)
-import Icons
 import Json.Decode exposing (Value)
 import Json.Encode as Encode
 import List.Extra as LE
@@ -31,7 +30,7 @@ import Page exposing (Session(..))
 import Profile exposing (viewProfileNameTag)
 import Route
 import Session.LoggedIn as LoggedIn exposing (External(..))
-import Shop exposing (Filter, Sale)
+import Shop exposing (Filter, Product)
 import Task
 import Time exposing (Posix)
 import Transfer
@@ -51,7 +50,7 @@ init loggedIn filter =
     ( model
     , Cmd.batch
         [ Api.Graphql.query loggedIn.shared
-            (Shop.salesQuery filter loggedIn.accountName loggedIn.selectedCommunity)
+            (Shop.productsQuery filter loggedIn.accountName loggedIn.selectedCommunity)
             CompletedSalesLoad
         , Api.getBalances loggedIn.shared loggedIn.accountName CompletedLoadBalances
         , Task.perform GotTime Time.now
@@ -94,19 +93,19 @@ initModel filter =
 type Status
     = Loading
     | Loaded (List Card)
-    | LoadingFailed (Graphql.Http.Error (List Sale))
+    | LoadingFailed (Graphql.Http.Error (List Product))
 
 
 type alias Card =
-    { sale : Sale
+    { product : Product
     , rate : Maybe Int
     , form : SaleTransferForm
     }
 
 
-cardFromSale : Sale -> Card
-cardFromSale sale =
-    { sale = sale
+cardFromSale : Product -> Card
+cardFromSale p =
+    { product = p
     , rate = Nothing
     , form = initSaleFrom
     }
@@ -279,10 +278,10 @@ viewCard : Model -> LoggedIn.Model -> Int -> Card -> Html Msg
 viewCard model ({ shared } as loggedIn) index card =
     let
         image =
-            Maybe.withDefault "" card.sale.image
+            Maybe.withDefault "" card.product.image
 
         maybeBal =
-            LE.find (\bal -> bal.asset.symbol == card.sale.symbol) model.balances
+            LE.find (\bal -> bal.asset.symbol == card.product.symbol) model.balances
 
         symbolBalance =
             case maybeBal of
@@ -293,31 +292,31 @@ viewCard model ({ shared } as loggedIn) index card =
                     0.0
 
         currBalance =
-            String.fromFloat symbolBalance ++ " " ++ Eos.symbolToSymbolCodeString card.sale.symbol
+            String.fromFloat symbolBalance ++ " " ++ Eos.symbolToSymbolCodeString card.product.symbol
 
         tr r_id replaces =
             I18Next.tr shared.translations I18Next.Curly r_id replaces
 
         title =
-            if String.length card.sale.title > 17 then
-                String.slice 0 17 card.sale.title ++ " ..."
+            if String.length card.product.title > 17 then
+                String.slice 0 17 card.product.title ++ " ..."
 
             else
-                card.sale.title
+                card.product.title
     in
     a
         [ class "w-full md:w-1/2 lg:w-1/3 xl:w-1/4 px-2 mb-6"
-        , Route.href (Route.ViewSale (String.fromInt card.sale.id))
+        , Route.href (Route.ViewSale (String.fromInt card.product.id))
         ]
         [ div [ class "md:hidden rounded-lg bg-white h-32 flex" ]
             [ div [ class "w-1/4" ]
                 [ img [ class "rounded-l-lg object-cover h-32 w-full", src image, on "error" (Json.Decode.succeed (OnImageError index)) ] []
                 ]
             , div [ class "px-4 pb-2 flex flex-wrap" ]
-                [ p [ class "font-medium pt-2 w-full" ] [ text card.sale.title ]
-                , viewProfileNameTag loggedIn.accountName card.sale.creator shared.translations
+                [ p [ class "font-medium pt-2 w-full" ] [ text card.product.title ]
+                , viewProfileNameTag loggedIn.accountName card.product.creator shared.translations
                 , div [ class "h-16 w-full flex flex-wrap items-end" ]
-                    [ if card.sale.units == 0 && card.sale.trackStock then
+                    [ if card.product.units == 0 && card.product.trackStock then
                         div [ class "w-full" ]
                             [ p [ class "text-3xl text-red" ]
                                 [ text (t shared.translations "shop.out_of_stock")
@@ -326,8 +325,8 @@ viewCard model ({ shared } as loggedIn) index card =
 
                       else
                         div [ class "flex flex-none w-full items-center" ]
-                            [ p [ class "text-green text-2xl font-medium" ] [ text (String.fromFloat card.sale.price) ]
-                            , div [ class "uppercase text-xs ml-2 font-thin font-sans text-green" ] [ text (Eos.symbolToSymbolCodeString card.sale.symbol) ]
+                            [ p [ class "text-green text-2xl font-medium" ] [ text (String.fromFloat card.product.price) ]
+                            , div [ class "uppercase text-xs ml-2 font-thin font-sans text-green" ] [ text (Eos.symbolToSymbolCodeString card.product.symbol) ]
                             ]
                     , div [ class "w-full h-4" ]
                         [ div [ class "bg-gray-100 absolute uppercase text-xs px-2" ]
@@ -342,28 +341,22 @@ viewCard model ({ shared } as loggedIn) index card =
             [ div [ class "w-full relative bg-gray-500" ]
                 [ img [ class "w-full h-48 object-cover", src image ] []
                 , div [ class "absolute right-1 bottom-1 " ]
-                    [ Profile.view shared loggedIn.accountName card.sale.creator ]
+                    [ Profile.view shared loggedIn.accountName card.product.creator ]
                 ]
             , div [ class "w-full px-6 pt-4" ]
                 [ p [ class "text-xl" ] [ text title ]
                 ]
-            , div [ class "flex flex-none items-center pt-3 px-6 pb-4" ]
-                [ Icons.thumbUp "text-indigo-500"
-                , p [ class "pl-2 pr-6 text-sm" ] [ text "0" ]
-                , Icons.thumbDown ""
-                , p [ class "pl-2 pr-6 text-sm" ] [ text "0" ]
-                ]
-            , if card.sale.units == 0 && card.sale.trackStock then
-                div [ class "border-t border-gray-300 flex flex-none w-full px-6 pb-2" ]
+            , if card.product.units == 0 && card.product.trackStock then
+                div [ class "flex flex-none w-full px-6 pb-2" ]
                     [ p [ class "text-3xl text-red" ]
                         [ text (t loggedIn.shared.translations "shop.out_of_stock")
                         ]
                     ]
 
               else
-                div [ class "border-t border-gray-300 flex flex-none w-full px-6 pb-2" ]
-                    [ p [ class "text-green text-3xl" ] [ text (String.fromFloat card.sale.price) ]
-                    , div [ class "uppercase text-xs font-thin mt-3 ml-2 font-sans text-green" ] [ text (Eos.symbolToSymbolCodeString card.sale.symbol) ]
+                div [ class "flex flex-none w-full px-6 pb-2" ]
+                    [ p [ class "text-green text-3xl" ] [ text (String.fromFloat card.product.price) ]
+                    , div [ class "uppercase text-xs font-thin mt-3 ml-2 font-sans text-green" ] [ text (Eos.symbolToSymbolCodeString card.product.symbol) ]
                     ]
             , div [ class "px-6 pb-6" ]
                 [ div [ class "bg-gray-200 flex items-center justify-left text-xs px-4" ]
@@ -384,7 +377,7 @@ type alias UpdateResult =
 type Msg
     = Ignored
     | GotTime Posix
-    | CompletedSalesLoad (Result (Graphql.Http.Error (List Sale)) (List Sale))
+    | CompletedSalesLoad (Result (Graphql.Http.Error (List Product)) (List Product))
     | ClickedSendTransfer Card Int
     | ClickedMessages Int Eos.Name
     | ClickedFilter Filter
@@ -412,7 +405,7 @@ update msg model loggedIn =
         ClickedSendTransfer card cardIndex ->
             let
                 newForm =
-                    validateForm card.sale card.form
+                    validateForm card.product card.form
             in
             if isFormValid newForm then
                 if LoggedIn.isAuth loggedIn then
@@ -431,18 +424,18 @@ update msg model loggedIn =
                                     1
 
                         tAmount =
-                            card.sale.price * toFloat wantedUnits
+                            card.product.price * toFloat wantedUnits
 
                         quantity =
                             { amount = tAmount
-                            , symbol = card.sale.symbol
+                            , symbol = card.product.symbol
                             }
 
                         from =
                             loggedIn.accountName
 
                         to =
-                            card.sale.creatorId
+                            card.product.creatorId
                     in
                     UR.init model
                         |> UR.addPort
@@ -465,7 +458,7 @@ update msg model loggedIn =
                                       , name = "transfersale"
                                       , authorization = authorization
                                       , data =
-                                            { id = card.sale.id
+                                            { id = card.product.id
                                             , from = from
                                             , to = to
                                             , quantity = quantity
@@ -530,7 +523,7 @@ update msg model loggedIn =
                         Just card ->
                             let
                                 oldSale =
-                                    card.sale
+                                    card.product
 
                                 icon =
                                     "/icons/shop-placeholder" ++ (index |> modBy 3 |> String.fromInt) ++ ".svg"
@@ -539,7 +532,7 @@ update msg model loggedIn =
                                     { oldSale | image = Just icon }
 
                                 newCard =
-                                    { card | sale = newSale }
+                                    { card | product = newSale }
 
                                 newList =
                                     Array.set index newCard cardArray
@@ -581,7 +574,7 @@ updateCard msg cardIndex transform ({ model } as uResult) =
             UR.logImpossible msg [] uResult
 
 
-validateForm : Sale -> SaleTransferForm -> SaleTransferForm
+validateForm : Product -> SaleTransferForm -> SaleTransferForm
 validateForm sale form =
     let
         unitValidation : Validation

@@ -135,9 +135,9 @@ precision =
     Object.selectionForField "Int" "precision" [] Decode.int
 
 
-saleCount : SelectionSet Int Cambiatus.Object.Community
-saleCount =
-    Object.selectionForField "Int" "saleCount" [] Decode.int
+productCount : SelectionSet Int Cambiatus.Object.Community
+productCount =
+    Object.selectionForField "Int" "productCount" [] Decode.int
 
 
 supply : SelectionSet (Maybe Float) Cambiatus.Object.Community
