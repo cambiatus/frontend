@@ -24,6 +24,11 @@ actionCount =
     Object.selectionForField "Int" "actionCount" [] Decode.int
 
 
+claimCount : SelectionSet Int Cambiatus.Object.Community
+claimCount =
+    Object.selectionForField "Int" "claimCount" [] Decode.int
+
+
 createdAt : SelectionSet Cambiatus.ScalarCodecs.DateTime Cambiatus.Object.Community
 createdAt =
     Object.selectionForField "ScalarCodecs.DateTime" "createdAt" [] (Cambiatus.ScalarCodecs.codecs |> Cambiatus.Scalar.unwrapCodecs |> .codecDateTime |> .decoder)
@@ -130,6 +135,11 @@ objectives object_ =
     Object.selectionForCompositeField "objectives" [] object_ (identity >> Decode.list)
 
 
+orderCount : SelectionSet Int Cambiatus.Object.Community
+orderCount =
+    Object.selectionForField "Int" "orderCount" [] Decode.int
+
+
 precision : SelectionSet Int Cambiatus.Object.Community
 precision =
     Object.selectionForField "Int" "precision" [] Decode.int
@@ -182,3 +192,12 @@ transfers fillInOptionals object_ =
 type_ : SelectionSet (Maybe String) Cambiatus.Object.Community
 type_ =
     Object.selectionForField "(Maybe String)" "type" [] (Decode.string |> Decode.nullable)
+
+
+{-| List of users that are claim validators
+-}
+validators :
+    SelectionSet decodesTo Cambiatus.Object.Profile
+    -> SelectionSet (List decodesTo) Cambiatus.Object.Community
+validators object_ =
+    Object.selectionForCompositeField "validators" [] object_ (identity >> Decode.list)

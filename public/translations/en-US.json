@@ -392,8 +392,11 @@
     },
     "index": {
       "created_by": "Created by {{account_name}}",
-      "members": "{{quantity}} Members",
-      "transfers": "{{quantity}} Transfers"
+      "members": "Members",
+      "claims": "Claims",
+      "products": "Offers",
+      "orders": "Orders",
+      "transfers": "Transfers"
     },
     "invite": {
       "title": "Invite your friends",

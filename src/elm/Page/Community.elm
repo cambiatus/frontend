@@ -180,18 +180,62 @@ view loggedIn model =
                                         , p [ class "text-grey-200 text-sm" ] [ text community.description ]
                                         ]
                                     ]
-                                , if community.hasObjectives then
-                                    div [ class "container mx-auto px-4 pb-4" ]
-                                        [ viewClaimConfirmation loggedIn model
-                                        , div [ class "bg-white py-6 sm:py-8 px-3 sm:px-6 rounded-lg mt-4" ]
-                                            (Page.viewTitle (t "community.objectives.title_plural")
-                                                :: List.indexedMap (viewObjective loggedIn model community)
-                                                    community.objectives
-                                            )
-                                        ]
+                                , div [ class "container mx-auto" ]
+                                    [ if community.hasObjectives then
+                                        div [ class "pb-4" ]
+                                            [ viewClaimConfirmation loggedIn model
+                                            , div [ class "bg-white py-6 sm:py-8 px-3 sm:px-6 rounded-lg mt-4" ]
+                                                (Page.viewTitle (t "community.objectives.title_plural")
+                                                    :: List.indexedMap (viewObjective loggedIn model community)
+                                                        community.objectives
+                                                )
+                                            ]
 
-                                  else
-                                    text ""
+                                      else
+                                        text ""
+                                    , div [ class "flex flex-wrap -mx-2 pb-4" ]
+                                        [ div [ class "px-2 mb-6" ]
+                                            [ div
+                                                [ class "w-40 h-48 relative bg-white rounded-lg p-4 overflow-hidden" ]
+                                                [ p [ class "w-full font-bold text-green text-3xl" ]
+                                                    [ text <| String.fromInt community.memberCount ]
+                                                , p [ class " text-gray-700 text-sm" ]
+                                                    [ text <| t "community.index.members" ]
+                                                , img [ class "absolute bottom-0 right-0", src "/images/girl-playing-guitar.svg" ] []
+                                                ]
+                                            ]
+                                        , div [ class "px-2 mb-6" ]
+                                            [ div [ class "flex flex-col w-40" ]
+                                                [ div [ class "w-40 h-24 bg-white rounded-lg px-4 py-2 mb-4" ]
+                                                    [ p [ class "w-full font-bold text-green text-3xl" ]
+                                                        [ text <| String.fromInt community.claimCount ]
+                                                    , p [ class " text-gray-700 text-sm" ]
+                                                        [ text <| t "community.index.claims" ]
+                                                    ]
+                                                , div [ class "w-40 h-20 bg-white rounded-lg px-4 py-2" ]
+                                                    [ p [ class "w-full font-bold text-green text-3xl" ]
+                                                        [ text <| String.fromInt community.transferCount ]
+                                                    , p [ class " text-gray-700 text-sm" ]
+                                                        [ text <| t "community.index.transfers" ]
+                                                    ]
+                                                ]
+                                            ]
+                                        , div [ class "px-2 mb-6" ]
+                                            [ div [ class "w-80 relative bg-white rounded-lg p-4 h-48 overflow-hidden" ]
+                                                [ p [ class "w-full font-bold text-green text-3xl" ]
+                                                    [ text <| String.fromInt community.productCount ]
+                                                , p [ class " text-gray-700 text-sm" ]
+                                                    [ text <| t "community.index.products" ]
+                                                , p
+                                                    [ class "w-full font-bold text-green text-3xl mt-4" ]
+                                                    [ text <| String.fromInt community.orderCount ]
+                                                , p [ class " text-gray-700 text-sm" ]
+                                                    [ text <| t "community.index.orders" ]
+                                                , img [ class "absolute right-0 bottom-0", src "/images/booth.svg" ] []
+                                                ]
+                                            ]
+                                        ]
+                                    ]
                                 ]
 
                         ClaimWithProofs action ->

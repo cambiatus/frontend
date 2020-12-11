@@ -48,6 +48,7 @@ import Cambiatus.Object.Claim as Claim exposing (ChecksOptionalArguments)
 import Cambiatus.Object.Community as Community
 import Cambiatus.Object.Invite as Invite
 import Cambiatus.Object.Objective as Objective
+import Cambiatus.Object.Profile as Profile
 import Cambiatus.Query as Query
 import Cambiatus.Scalar exposing (DateTime(..))
 import Cambiatus.Subscription as Subscription
@@ -80,6 +81,7 @@ type alias DashboardInfo =
     , saleCount : Int
     , hasObjectives : Bool
     , creator : Eos.Name
+    , validators : List Eos.Name
     }
 
 
@@ -112,6 +114,11 @@ type alias Model =
     , invitedReward : Float
     , minBalance : Maybe Float
     , memberCount : Int
+    , actionCount : Int
+    , claimCount : Int
+    , transferCount : Int
+    , productCount : Int
+    , orderCount : Int
     , members : List Profile
     , objectives : List Objective
     , precision : Int
@@ -147,6 +154,7 @@ dashboardSelectionSet =
         |> with Community.productCount
         |> with Community.hasObjectives
         |> with (Eos.nameSelectionSet Community.creator)
+        |> with (Community.validators (Eos.nameSelectionSet Profile.account))
 
 
 communitySelectionSet : SelectionSet Model Cambiatus.Object.Community
@@ -161,6 +169,11 @@ communitySelectionSet =
         |> with Community.invitedReward
         |> with Community.minBalance
         |> with Community.memberCount
+        |> with Community.actionCount
+        |> with Community.claimCount
+        |> with Community.transferCount
+        |> with Community.productCount
+        |> with Community.orderCount
         |> with (Community.members Profile.selectionSet)
         |> with (Community.objectives objectiveSelectionSet)
         |> with Community.precision

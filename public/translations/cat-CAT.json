@@ -396,8 +396,11 @@
     },
     "index": {
       "created_by": "Creada per {{account_name}}",
-      "members": "{{quantity}} Afiliació",
-      "transfers": "{{quantity}} Transferències"
+      "members": "Afiliació",
+      "claims": "Reclamacions",
+      "products": "Ofertes",
+      "orders": "Comandes",
+      "transfers": "Transferències"
     },
     "invite": {
       "title": "Convida als teus amics",

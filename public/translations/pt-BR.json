@@ -400,8 +400,11 @@
     },
     "index": {
       "created_by": "Criado por {{account_name}}",
-      "members": "{{quantity}} Membros",
-      "transfers": "{{quantity}} Transferências"
+      "members": "Membros",
+      "claims": "Reinvidicações",
+      "products": "Ofertas",
+      "orders": "Pedidos",
+      "transfers": "Transferências"
     },
     "invite": {
       "title": "Convide um amigo",
