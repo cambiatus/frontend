@@ -5,7 +5,7 @@ import Api.Graphql
 import Cambiatus.Enum.SignUpStatus as SignUpStatus
 import Cambiatus.InputObject as InputObject
 import Cambiatus.Mutation as Mutation
-import Cambiatus.Object.SignUp
+import Cambiatus.Object.SignUpResponse
 import Cambiatus.Scalar exposing (Id(..))
 import Community exposing (Invite)
 import Eos.Account as Eos
@@ -404,7 +404,7 @@ viewAccountCreated { t } model keys =
                         ]
                     , p
                         [ class "pb-2 leading-tight" ]
-                        [ span [ id passphraseTextId ] [ text keys.words ]
+                        [ span [ class "select-all", id passphraseTextId ] [ text keys.words ]
                         , input
                             -- We use `HTMLInputElement.select()` method in port to select and copy the text. This method
                             -- works only with `input` and `textarea` elements which has to be presented in DOM (e.g. we can't
@@ -981,6 +981,13 @@ signUp shared { accountName, ownerKey } invitationId form =
             , email = email
             , name = name
             , publicKey = ownerKey
+            , userType =
+                case form of
+                    JuridicalForm _ ->
+                        "juridical"
+
+                    _ ->
+                        "natural"
             }
 
         fillOptionals opts =
@@ -988,26 +995,17 @@ signUp shared { accountName, ownerKey } invitationId form =
                 | invitationId =
                     Maybe.map Present invitationId
                         |> Maybe.withDefault Absent
-                , userType =
-                    Present <|
-                        case form of
-                            JuridicalForm _ ->
-                                "juridical"
-
-                            _ ->
-                                "natural"
+                , kyc = Absent
+                , address = Absent
             }
     in
     Api.Graphql.mutation shared
         (Mutation.signUp
-            { input =
-                InputObject.buildSignUpInput
-                    requiredArgs
-                    fillOptionals
-            }
+            fillOptionals
+            requiredArgs
             (Graphql.SelectionSet.succeed SignUpResponse
-                |> with Cambiatus.Object.SignUp.reason
-                |> with Cambiatus.Object.SignUp.status
+                |> with Cambiatus.Object.SignUpResponse.reason
+                |> with Cambiatus.Object.SignUpResponse.status
             )
         )
         CompletedSignUp

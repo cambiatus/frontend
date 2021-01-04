@@ -95,9 +95,9 @@ type alias Form =
     , symbol : String
     , logoSelected : Int
     , logoList : List LogoStatus
-    , inviterReward : Float
-    , invitedReward : Float
-    , minBalance : Float
+    , inviterReward : String
+    , invitedReward : String
+    , minBalance : String
     , hasShop : Bool
     , hasObjectives : Bool
     , hasKyc : Bool
@@ -111,9 +111,9 @@ newForm =
     , symbol = ""
     , logoSelected = 0
     , logoList = defaultLogos
-    , inviterReward = 0
-    , invitedReward = 10
-    , minBalance = -100
+    , inviterReward = "0"
+    , invitedReward = "10"
+    , minBalance = "-100"
     , hasShop = True
     , hasObjectives = True
     , hasKyc = False
@@ -140,9 +140,9 @@ editForm community =
     , symbol = Eos.symbolToString community.symbol
     , logoSelected = logoSelected
     , logoList = logoList
-    , inviterReward = community.inviterReward
-    , invitedReward = community.invitedReward
-    , minBalance = community.minBalance |> Maybe.withDefault newForm.minBalance
+    , inviterReward = String.fromFloat community.inviterReward
+    , invitedReward = String.fromFloat community.invitedReward
+    , minBalance = String.fromFloat (community.minBalance |> Maybe.withDefault 0.0)
     , hasShop = community.hasShop
     , hasObjectives = community.hasObjectives
     , hasKyc = community.hasKyc
@@ -209,9 +209,9 @@ encodeFormHelper logoUrl { accountName } form =
             , logoUrl = logoUrl
             , name = form.name
             , description = form.description
-            , inviterReward = form.inviterReward
-            , invitedReward = form.invitedReward
-            , minBalance = form.minBalance
+            , inviterReward = String.toFloat form.inviterReward |> Maybe.withDefault 0.0
+            , invitedReward = String.toFloat form.invitedReward |> Maybe.withDefault 0.0
+            , minBalance = String.toFloat form.minBalance |> Maybe.withDefault 0.0
             , hasShop = form.hasShop
             , hasObjectives = form.hasObjectives
             , hasKyc = form.hasKyc
@@ -466,7 +466,7 @@ viewFieldLogo shared isDisabled selected logos errors =
         )
 
 
-viewFieldInviterReward : Shared -> Bool -> Float -> Dict String FormError -> Html Msg
+viewFieldInviterReward : Shared -> Bool -> String -> Dict String FormError -> Html Msg
 viewFieldInviterReward shared isDisabled defVal errors =
     let
         id_ =
@@ -481,7 +481,7 @@ viewFieldInviterReward shared isDisabled defVal errors =
         , input
             [ class "w-full input rounded-sm"
             , id id_
-            , value <| String.fromFloat defVal
+            , value defVal
             , maxlength 255
             , required True
             , onInput EnteredInviterReward
@@ -492,7 +492,7 @@ viewFieldInviterReward shared isDisabled defVal errors =
         ]
 
 
-viewFieldInvitedReward : Shared -> Bool -> Float -> Dict String FormError -> Html Msg
+viewFieldInvitedReward : Shared -> Bool -> String -> Dict String FormError -> Html Msg
 viewFieldInvitedReward shared isDisabled defVal errors =
     let
         id_ =
@@ -506,7 +506,7 @@ viewFieldInvitedReward shared isDisabled defVal errors =
             [ text <| t "community.create.labels.invited_reward" ]
         , input
             [ class "w-full input rounded-sm"
-            , value <| String.fromFloat defVal
+            , value defVal
             , maxlength 255
             , required True
             , onInput EnteredInvitedReward
@@ -517,7 +517,7 @@ viewFieldInvitedReward shared isDisabled defVal errors =
         ]
 
 
-viewFieldMinBalance : Shared -> Bool -> Float -> Dict String FormError -> Html Msg
+viewFieldMinBalance : Shared -> Bool -> String -> Dict String FormError -> Html Msg
 viewFieldMinBalance shared isDisabled defVal errors =
     let
         id_ =
@@ -530,7 +530,7 @@ viewFieldMinBalance shared isDisabled defVal errors =
         [ span [ class "input-label" ] [ text <| t "community.create.labels.min_balance" ]
         , input
             [ class "w-full input rounded-sm"
-            , value <| String.fromFloat defVal
+            , value defVal
             , maxlength 255
             , required True
             , onInput EnteredMinBalance
@@ -652,15 +652,15 @@ update msg model loggedIn =
 
         EnteredInviterReward input ->
             UR.init model
-                |> updateForm (\form -> { form | inviterReward = Maybe.withDefault form.inviterReward <| String.toFloat input })
+                |> updateForm (\form -> { form | inviterReward = input })
 
         EnteredInvitedReward input ->
             UR.init model
-                |> updateForm (\form -> { form | invitedReward = Maybe.withDefault form.invitedReward <| String.toFloat input })
+                |> updateForm (\form -> { form | invitedReward = input })
 
         EnteredMinBalance input ->
             UR.init model
-                |> updateForm (\f -> { f | minBalance = Maybe.withDefault f.minBalance <| String.toFloat input })
+                |> updateForm (\f -> { f | minBalance = input })
 
         EnteredSymbol input ->
             UR.init model

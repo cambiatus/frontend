@@ -1,4 +1,4 @@
-module Page.PublicProfile exposing (Model, Msg, Status, init, initModel, jsAddressToMsg, msgToString, update, view)
+module Page.Profile.Public exposing (Model, Msg, Status, init, initModel, jsAddressToMsg, msgToString, update, view)
 
 import Api.Graphql
 import Eos.Account as Eos

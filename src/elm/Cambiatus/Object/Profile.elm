@@ -57,6 +57,13 @@ chatUserId =
     Object.selectionForField "(Maybe String)" "chatUserId" [] (Decode.string |> Decode.nullable)
 
 
+claims :
+    SelectionSet decodesTo Cambiatus.Object.Claim
+    -> SelectionSet (List (Maybe decodesTo)) Cambiatus.Object.Profile
+claims object_ =
+    Object.selectionForCompositeField "claims" [] object_ (identity >> Decode.nullable >> Decode.list)
+
+
 communities :
     SelectionSet decodesTo Cambiatus.Object.Community
     -> SelectionSet (List decodesTo) Cambiatus.Object.Profile

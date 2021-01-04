@@ -617,53 +617,6 @@ encodeReadNotificationInput input =
         [ ( "id", Encode.int input.id |> Just ) ]
 
 
-buildSignUpInput :
-    SignUpInputRequiredFields
-    -> (SignUpInputOptionalFields -> SignUpInputOptionalFields)
-    -> SignUpInput
-buildSignUpInput required fillOptionals =
-    let
-        optionals =
-            fillOptionals
-                { invitationId = Absent, userType = Absent }
-    in
-    { account = required.account, email = required.email, invitationId = optionals.invitationId, name = required.name, publicKey = required.publicKey, userType = optionals.userType }
-
-
-type alias SignUpInputRequiredFields =
-    { account : String
-    , email : String
-    , name : String
-    , publicKey : String
-    }
-
-
-type alias SignUpInputOptionalFields =
-    { invitationId : OptionalArgument String
-    , userType : OptionalArgument String
-    }
-
-
-{-| Type for the SignUpInput input object.
--}
-type alias SignUpInput =
-    { account : String
-    , email : String
-    , invitationId : OptionalArgument String
-    , name : String
-    , publicKey : String
-    , userType : OptionalArgument String
-    }
-
-
-{-| Encode a SignUpInput into a value that can be used as an argument.
--}
-encodeSignUpInput : SignUpInput -> Value
-encodeSignUpInput input =
-    Encode.maybeObject
-        [ ( "account", Encode.string input.account |> Just ), ( "email", Encode.string input.email |> Just ), ( "invitationId", Encode.string |> Encode.optional input.invitationId ), ( "name", Encode.string input.name |> Just ), ( "publicKey", Encode.string input.publicKey |> Just ), ( "userType", Encode.string |> Encode.optional input.userType ) ]
-
-
 buildTransferInput :
     TransferInputRequiredFields
     -> TransferInput

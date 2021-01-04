@@ -2,7 +2,7 @@
 -- https://github.com/dillonkearns/elm-graphql
 
 
-module Cambiatus.Object.SignUp exposing (..)
+module Cambiatus.Object.SignUpResponse exposing (..)
 
 import Cambiatus.Enum.SignUpStatus
 import Cambiatus.InputObject
@@ -20,11 +20,11 @@ import Graphql.SelectionSet exposing (SelectionSet)
 import Json.Decode as Decode
 
 
-reason : SelectionSet String Cambiatus.Object.SignUp
+reason : SelectionSet String Cambiatus.Object.SignUpResponse
 reason =
     Object.selectionForField "String" "reason" [] Decode.string
 
 
-status : SelectionSet Cambiatus.Enum.SignUpStatus.SignUpStatus Cambiatus.Object.SignUp
+status : SelectionSet Cambiatus.Enum.SignUpStatus.SignUpStatus Cambiatus.Object.SignUpResponse
 status =
     Object.selectionForField "Enum.SignUpStatus.SignUpStatus" "status" [] Cambiatus.Enum.SignUpStatus.decoder

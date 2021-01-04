@@ -181,6 +181,7 @@ view loggedIn model =
                               else
                                 text ""
                             ]
+                        , button [ class "button button-primary w-full font-medium mb-2", onClick Test ] [ text "Uau" ]
                         , viewBalance loggedIn model balance
                         , if areObjectivesEnabled && List.any (\account -> account == loggedIn.accountName) community.validators then
                             viewAnalysisList loggedIn profile model
@@ -273,7 +274,7 @@ viewInvitationModal { shared } model =
                             [ ( "button-primary", not model.copied )
                             , ( "button-success", model.copied )
                             ]
-                        , class "button w-full md:w-48"
+                        , class "button w-full md:w-48 select-all"
                         , onClick (CopyToClipboard "invitation-id")
                         ]
                         [ if model.copied then
@@ -579,6 +580,7 @@ type Msg
     | CompletedInviteCreation (Result Http.Error String)
     | CopyToClipboard String
     | CopiedToClipboard
+    | Test
 
 
 update : Msg -> Model -> LoggedIn.Model -> UpdateResult
@@ -821,6 +823,11 @@ update msg model loggedIn =
             { model | copied = True }
                 |> UR.init
 
+        Test ->
+            model
+                |> UR.init
+                |> UR.addExt (ShowFeedback LoggedIn.Success "foi tiozao")
+
 
 
 -- HELPERS
@@ -1016,3 +1023,6 @@ msgToString msg =
 
         CopiedToClipboard ->
             [ "CopiedToClipboard" ]
+
+        Test ->
+            [ "Test" ]

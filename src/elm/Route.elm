@@ -21,7 +21,8 @@ type Route
     | Notification
     | ProfileEditor
     | ProfileAddKyc
-    | PublicProfile String
+    | ProfilePublic String
+    | ProfileClaims String
     | PaymentHistory String
     | Profile
     | Dashboard
@@ -78,11 +79,12 @@ parser url =
                         (Query.string "redirect")
             )
         , Url.map Logout (s "logout")
+        , Url.map Profile (s "profile")
         , Url.map ProfileEditor (s "profile" </> s "edit")
         , Url.map ProfileAddKyc (s "profile" </> s "add-kyc")
-        , Url.map PublicProfile (s "profile" </> string)
+        , Url.map ProfilePublic (s "profile" </> string)
+        , Url.map ProfileClaims (s "profile" </> string </> s "claims")
         , Url.map PaymentHistory (s "payments" </> string)
-        , Url.map Profile (s "profile")
         , Url.map Notification (s "notification")
         , Url.map Dashboard (s "dashboard")
         , Url.map NewCommunity (s "community" </> s "new")
@@ -234,8 +236,11 @@ routeToString route =
                 ProfileAddKyc ->
                     ( [ "profile", "add-kyc" ], [] )
 
-                PublicProfile accountName ->
+                ProfilePublic accountName ->
                     ( [ "profile", accountName ], [] )
+
+                ProfileClaims account ->
+                    ( [ "profile", account, "claims" ], [] )
 
                 PaymentHistory accountName ->
                     ( [ "payments", accountName ], [] )

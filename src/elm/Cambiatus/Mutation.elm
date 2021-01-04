@@ -89,18 +89,39 @@ registerPush requiredArgs object_ =
     Object.selectionForCompositeField "registerPush" [ Argument.required "input" requiredArgs.input Cambiatus.InputObject.encodePushSubscriptionInput ] object_ identity
 
 
+type alias SignUpOptionalArguments =
+    { address : OptionalArgument Cambiatus.InputObject.AddressUpdateInput
+    , invitationId : OptionalArgument String
+    , kyc : OptionalArgument Cambiatus.InputObject.KycDataUpdateInput
+    }
+
+
 type alias SignUpRequiredArguments =
-    { input : Cambiatus.InputObject.SignUpInput }
+    { account : String
+    , email : String
+    , name : String
+    , publicKey : String
+    , userType : String
+    }
 
 
 {-| Creates a new user account
 -}
 signUp :
-    SignUpRequiredArguments
-    -> SelectionSet decodesTo Cambiatus.Object.SignUp
+    (SignUpOptionalArguments -> SignUpOptionalArguments)
+    -> SignUpRequiredArguments
+    -> SelectionSet decodesTo Cambiatus.Object.SignUpResponse
     -> SelectionSet decodesTo RootMutation
-signUp requiredArgs object_ =
-    Object.selectionForCompositeField "signUp" [ Argument.required "input" requiredArgs.input Cambiatus.InputObject.encodeSignUpInput ] object_ identity
+signUp fillInOptionals requiredArgs object_ =
+    let
+        filledInOptionals =
+            fillInOptionals { address = Absent, invitationId = Absent, kyc = Absent }
+
+        optionalArgs =
+            [ Argument.optional "address" filledInOptionals.address Cambiatus.InputObject.encodeAddressUpdateInput, Argument.optional "invitationId" filledInOptionals.invitationId Encode.string, Argument.optional "kyc" filledInOptionals.kyc Cambiatus.InputObject.encodeKycDataUpdateInput ]
+                |> List.filterMap identity
+    in
+    Object.selectionForCompositeField "signUp" (optionalArgs ++ [ Argument.required "account" requiredArgs.account Encode.string, Argument.required "email" requiredArgs.email Encode.string, Argument.required "name" requiredArgs.name Encode.string, Argument.required "publicKey" requiredArgs.publicKey Encode.string, Argument.required "userType" requiredArgs.userType Encode.string ]) object_ identity
 
 
 type alias UpdateProfileRequiredArguments =

@@ -492,7 +492,7 @@ viewCard ({ shared } as loggedIn) card model =
                 , text_ "shop.sold_by"
                 , a
                     [ class "font-bold ml-1"
-                    , Route.href (Route.PublicProfile <| Eos.nameToString card.product.creator.account)
+                    , Route.href (Route.ProfilePublic <| Eos.nameToString card.product.creator.account)
                     ]
                     [ Profile.viewProfileName loggedIn.accountName card.product.creator shared.translations ]
                 ]

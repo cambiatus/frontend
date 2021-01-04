@@ -225,9 +225,10 @@ type Page
     | ShopViewer
     | FAQ
     | Profile
-    | PublicProfile
+    | ProfilePublic
     | ProfileEditor
     | ProfileAddKyc
+    | ProfileClaims
     | PaymentHistory
     | Transfer
     | ViewTransfer
@@ -267,14 +268,13 @@ viewFeedback status message =
         color =
             case status of
                 Success ->
-                    "bg-green"
+                    " bg-green"
 
                 Failure ->
-                    "bg-red"
+                    " bg-red"
     in
     div
-        [ class "sticky z-10 top-0 w-full"
-        , classList [ ( color, True ) ]
+        [ class <| "w-full sticky z-10 top-0 transition duration-500 ease-in-out bg-blue-500 hover:bg-red-500 transform hover:-translate-y-1 hover:scale-110" ++ color
         , style "display" "grid"
         , style "grid-template" "\". text x\" 100% / 10% 80% 10%"
         ]
@@ -312,7 +312,7 @@ viewHelper thisMsg page profile_ ({ shared } as model) content =
             [ Other
             , Profile
             , Notification
-            , PublicProfile
+            , ProfilePublic
             , ProfileEditor
             , ProfileAddKyc
             , PaymentHistory

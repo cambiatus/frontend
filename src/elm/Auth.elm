@@ -24,7 +24,7 @@ import Browser.Events
 import Cambiatus.Enum.SignUpStatus
 import Cambiatus.Mutation
 import Cambiatus.Object
-import Cambiatus.Object.SignUp as SignUp
+import Cambiatus.Object.SignUpResponse as SignUp
 import Eos.Account as Eos
 import Graphql.Http
 import Graphql.Operation exposing (RootMutation)
@@ -1057,25 +1057,23 @@ signUp account name email publicKey maybeInvitationId =
             Eos.nameToString account
     in
     Cambiatus.Mutation.signUp
-        { input =
-            { account = accountString
-            , name = name
-            , email = email
-            , publicKey = publicKey
-            , userType = Present ""
-            , invitationId =
-                case maybeInvitationId of
-                    Just i ->
-                        Present i
-
-                    Nothing ->
-                        Absent
+        (\optionals ->
+            { optionals
+                | invitationId =
+                    Maybe.map Present maybeInvitationId
+                        |> Maybe.withDefault Absent
             }
+        )
+        { account = accountString
+        , email = email
+        , name = name
+        , publicKey = publicKey
+        , userType = "natural"
         }
         signUpSelectionSet
 
 
-signUpSelectionSet : SelectionSet SignUpResult Cambiatus.Object.SignUp
+signUpSelectionSet : SelectionSet SignUpResult Cambiatus.Object.SignUpResponse
 signUpSelectionSet =
     let
         mapSignUpStatus : Cambiatus.Enum.SignUpStatus.SignUpStatus -> SignUpStatus

@@ -27,8 +27,9 @@ import Page.Notification as Notification
 import Page.PaymentHistory as PaymentHistory
 import Page.Profile as Profile
 import Page.Profile.AddKyc as ProfileAddKyc
+import Page.Profile.Claims as ProfileClaims
 import Page.Profile.Editor as ProfileEditor
-import Page.PublicProfile as PublicProfile
+import Page.Profile.Public as ProfilePublic
 import Page.Register as Register
 import Page.Shop as Shop
 import Page.Shop.Editor as ShopEditor
@@ -156,10 +157,11 @@ type Status
     | Notification Notification.Model
     | Dashboard Dashboard.Model
     | Login Login.Model
-    | PublicProfile PublicProfile.Model
     | Profile Profile.Model
+    | ProfilePublic ProfilePublic.Model
     | ProfileEditor ProfileEditor.Model
     | ProfileAddKyc ProfileAddKyc.Model
+    | ProfileClaims ProfileClaims.Model
     | Register (Maybe String) Register.Model
     | Shop Shop.Filter Shop.Model
     | ShopEditor (Maybe String) ShopEditor.Model
@@ -191,11 +193,12 @@ type Msg
     | GotVerifyClaimMsg Claim.Msg
     | GotDashboardMsg Dashboard.Msg
     | GotLoginMsg Login.Msg
-    | GotPublicProfileMsg PublicProfile.Msg
     | GotPaymentHistoryMsg PaymentHistory.Msg
     | GotProfileMsg Profile.Msg
+    | GotProfilePublicMsg ProfilePublic.Msg
     | GotProfileEditorMsg ProfileEditor.Msg
     | GotProfileAddKycMsg ProfileAddKyc.Msg
+    | GotProfileClaimsMsg ProfileClaims.Msg
     | GotRegisterMsg Register.Msg
     | GotShopMsg Shop.Msg
     | GotShopEditorMsg ShopEditor.Msg
@@ -360,9 +363,9 @@ update msg model =
                 >> updateLoggedInUResult Dashboard GotDashboardMsg model
                 |> withLoggedIn
 
-        ( GotPublicProfileMsg subMsg, PublicProfile subModel ) ->
-            PublicProfile.update subMsg subModel
-                >> updateLoggedInUResult PublicProfile GotPublicProfileMsg model
+        ( GotProfilePublicMsg subMsg, ProfilePublic subModel ) ->
+            ProfilePublic.update subMsg subModel
+                >> updateLoggedInUResult ProfilePublic GotProfilePublicMsg model
                 |> withLoggedIn
 
         ( GotProfileMsg subMsg, Profile subModel ) ->
@@ -729,10 +732,10 @@ changeRouteTo maybeRoute model =
                 >> updateStatusWith Notification GotNotificationMsg model
                 |> withLoggedIn Route.Notification
 
-        Just (Route.PublicProfile accountName) ->
-            (\loggedIn -> PublicProfile.init loggedIn accountName)
-                >> updateStatusWith PublicProfile GotPublicProfileMsg model
-                |> withLoggedIn (Route.PublicProfile accountName)
+        Just (Route.ProfilePublic account) ->
+            (\loggedIn -> ProfilePublic.init loggedIn account)
+                >> updateStatusWith ProfilePublic GotProfilePublicMsg model
+                |> withLoggedIn (Route.ProfilePublic account)
 
         Just Route.Profile ->
             Profile.init
@@ -748,6 +751,11 @@ changeRouteTo maybeRoute model =
             ProfileAddKyc.init
                 >> updateStatusWith ProfileAddKyc GotProfileAddKycMsg model
                 |> withLoggedIn Route.ProfileAddKyc
+
+        Just (Route.ProfileClaims account) ->
+            (\l -> ProfileClaims.init l account)
+                >> updateStatusWith ProfileClaims GotProfileClaimsMsg model
+                |> withLoggedIn (Route.ProfileClaims account)
 
         Just Route.Dashboard ->
             Dashboard.init
@@ -892,9 +900,9 @@ jsAddressToMsg address val =
             Maybe.map GotShopMsg
                 (Shop.jsAddressToMsg rAddress val)
 
-        "GotPublicProfileMsg" :: rAddress ->
-            Maybe.map GotPublicProfileMsg
-                (PublicProfile.jsAddressToMsg rAddress val)
+        "ProfilePublic" :: rAddress ->
+            Maybe.map GotProfilePublicMsg
+                (ProfilePublic.jsAddressToMsg rAddress val)
 
         "GotProfileMsg" :: rAddress ->
             Maybe.map GotProfileMsg
@@ -975,8 +983,8 @@ msgToString msg =
         GotLoginMsg subMsg ->
             "GotLoginMsg" :: Login.msgToString subMsg
 
-        GotPublicProfileMsg subMsg ->
-            "GotPublicProfileMsg" :: PublicProfile.msgToString subMsg
+        GotProfilePublicMsg subMsg ->
+            "ProfilePublic" :: ProfilePublic.msgToString subMsg
 
         GotPaymentHistoryMsg subMsg ->
             "GotPaymentHistoryMsg" :: PaymentHistory.msgToString subMsg
@@ -989,6 +997,9 @@ msgToString msg =
 
         GotProfileAddKycMsg subMsg ->
             "GotProfileAddKycMsg" :: ProfileAddKyc.msgToString subMsg
+
+        GotProfileClaimsMsg subMsg ->
+            "GotProfileClaimsMsg" :: ProfileClaims.msgToString subMsg
 
         GotRegisterMsg subMsg ->
             "GotRegisterMsg" :: Register.msgToString subMsg
@@ -1156,8 +1167,8 @@ view model =
         Dashboard subModel ->
             viewLoggedIn subModel LoggedIn.Dashboard GotDashboardMsg Dashboard.view
 
-        PublicProfile subModel ->
-            viewLoggedIn subModel LoggedIn.PublicProfile GotPublicProfileMsg PublicProfile.view
+        ProfilePublic subModel ->
+            viewLoggedIn subModel LoggedIn.ProfilePublic GotProfilePublicMsg ProfilePublic.view
 
         Profile subModel ->
             viewLoggedIn subModel LoggedIn.Profile GotProfileMsg Profile.view
@@ -1167,6 +1178,9 @@ view model =
 
         ProfileAddKyc subModel ->
             viewLoggedIn subModel LoggedIn.ProfileAddKyc GotProfileAddKycMsg ProfileAddKyc.view
+
+        ProfileClaims subModel ->
+            viewLoggedIn subModel LoggedIn.ProfileClaims GotProfileClaimsMsg ProfileClaims.view
 
         Shop _ subModel ->
             viewLoggedIn subModel LoggedIn.Shop GotShopMsg Shop.view
