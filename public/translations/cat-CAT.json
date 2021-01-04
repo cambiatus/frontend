@@ -717,6 +717,8 @@
     "reject": "Rebutjar",
     "verify": "Verificar",
     "closed": "tancat",
+    "my_claims": "Les meves reclamacions",
+    "my_offers": "Les meves ofertes",
     "analysis": {
       "title": {
         "1": "Accions",

@@ -717,6 +717,8 @@
     "reject": "Rechazar",
     "verify": "Verificar",
     "closed": "cerrado",
+    "my_claims": "Mis reclamos",
+    "my_offers": "Mis ofertas",
     "analysis": {
       "title": {
         "1": "Acciones",

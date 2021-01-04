@@ -36,6 +36,7 @@ import Profile
 import Route
 import Session.LoggedIn as LoggedIn exposing (External(..))
 import Session.Shared exposing (Shared)
+import Shop
 import Task
 import Time exposing (Posix)
 import Transfer exposing (QueryTransfers, Transfer)
@@ -181,7 +182,6 @@ view loggedIn model =
                               else
                                 text ""
                             ]
-                        , button [ class "button button-primary w-full font-medium mb-2", onClick Test ] [ text "Uau" ]
                         , viewBalance loggedIn model balance
                         , if areObjectivesEnabled && List.any (\account -> account == loggedIn.accountName) community.validators then
                             viewAnalysisList loggedIn profile model
@@ -515,6 +515,22 @@ viewAmount amount symbol =
     ]
 
 
+viewQuickLinks : LoggedIn.Model -> Html Msg
+viewQuickLinks ({ shared } as loggedIn) =
+    div [ class "flex-wrap flex space-y-3" ]
+        [ a
+            [ class "w-full h-10 flex items-center justify-center rounded-full bg-indigo-500 text-white"
+            , Route.href (Route.ProfileClaims (Eos.nameToString loggedIn.accountName))
+            ]
+            [ text <| shared.translators.t "dashboard.my_claims" ]
+        , a
+            [ class "w-full h-10 flex items-center justify-center rounded-full border border-indigo-500 text-indigo-500"
+            , Route.href (Route.Shop Shop.UserSales)
+            ]
+            [ text <| shared.translators.t "dashboard.my_offers" ]
+        ]
+
+
 viewBalance : LoggedIn.Model -> Model -> Balance -> Html Msg
 viewBalance ({ shared } as loggedIn) _ balance =
     let
@@ -527,33 +543,38 @@ viewBalance ({ shared } as loggedIn) _ balance =
         balanceText =
             String.fromFloat balance.asset.amount ++ " "
     in
-    div [ class "flex w-full lg:w-1/3 bg-white rounded h-64 p-4" ]
-        [ div [ class "w-full" ]
-            [ div [ class "input-label mb-2" ]
-                [ text_ "account.my_wallet.balances.current" ]
-            , div [ class "flex items-center mb-4" ]
-                [ div [ class "text-indigo-500 font-bold text-3xl" ]
-                    [ text balanceText ]
-                , div [ class "text-indigo-500 ml-2" ]
-                    [ text symbolText ]
+    div [ class "flex-wrap flex space-x-3" ]
+        [ div [ class "flex w-full lg:w-1/3 bg-white rounded h-64 p-4" ]
+            [ div [ class "w-full" ]
+                [ div [ class "input-label mb-2" ]
+                    [ text_ "account.my_wallet.balances.current" ]
+                , div [ class "flex items-center mb-4" ]
+                    [ div [ class "text-indigo-500 font-bold text-3xl" ]
+                        [ text balanceText ]
+                    , div [ class "text-indigo-500 ml-2" ]
+                        [ text symbolText ]
+                    ]
+                , a
+                    [ class "button button-primary w-full font-medium mb-2"
+                    , Route.href <| Route.Transfer loggedIn.selectedCommunity Nothing
+                    ]
+                    [ text_ "dashboard.transfer" ]
+                , a
+                    [ class "flex w-full items-center justify-between h-12 text-gray-600 border-b"
+                    , Route.href <| Route.Community loggedIn.selectedCommunity
+                    ]
+                    [ text <| shared.translators.tr "dashboard.explore" [ ( "symbol", Eos.symbolToSymbolCodeString loggedIn.selectedCommunity ) ]
+                    , Icons.arrowDown "rotate--90"
+                    ]
+                , button
+                    [ class "flex w-full items-center justify-between h-12 text-gray-600"
+                    , onClick CreateInvite
+                    ]
+                    [ text_ "dashboard.invite", Icons.arrowDown "rotate--90 text-gray-600" ]
                 ]
-            , a
-                [ class "button button-primary w-full font-medium mb-2"
-                , Route.href <| Route.Transfer loggedIn.selectedCommunity Nothing
-                ]
-                [ text_ "dashboard.transfer" ]
-            , a
-                [ class "flex w-full items-center justify-between h-12 text-gray-600 border-b"
-                , Route.href <| Route.Community loggedIn.selectedCommunity
-                ]
-                [ text <| shared.translators.tr "dashboard.explore" [ ( "symbol", Eos.symbolToSymbolCodeString loggedIn.selectedCommunity ) ]
-                , Icons.arrowDown "rotate--90"
-                ]
-            , button
-                [ class "flex w-full items-center justify-between h-12 text-gray-600"
-                , onClick CreateInvite
-                ]
-                [ text_ "dashboard.invite", Icons.arrowDown "rotate--90 text-gray-600" ]
+            ]
+        , div [ class "w-full lg:w-1/3 mt-3 lg:mt-0" ]
+            [ viewQuickLinks loggedIn
             ]
         ]
 
@@ -580,7 +601,6 @@ type Msg
     | CompletedInviteCreation (Result Http.Error String)
     | CopyToClipboard String
     | CopiedToClipboard
-    | Test
 
 
 update : Msg -> Model -> LoggedIn.Model -> UpdateResult
@@ -823,11 +843,6 @@ update msg model loggedIn =
             { model | copied = True }
                 |> UR.init
 
-        Test ->
-            model
-                |> UR.init
-                |> UR.addExt (ShowFeedback LoggedIn.Success "foi tiozao")
-
 
 
 -- HELPERS
@@ -1023,6 +1038,3 @@ msgToString msg =
 
         CopiedToClipboard ->
             [ "CopiedToClipboard" ]
-
-        Test ->
-            [ "Test" ]

@@ -676,6 +676,8 @@
 		"reject": "አልጸደቀም",
 		"verify": "አጽድቅ",
 		"closed": "ዝጋ",
+		"my_claims": "የእኔ የይገባኛል ጥያቄዎች",
+		"my_offers": "የእኔ አቅርቦቶች",
 		"analysis": {
 			"title": {
 				"1": "ተግባር",
