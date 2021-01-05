@@ -326,7 +326,7 @@ fullPageError title_ _ =
 
 fullPageGraphQLError : String -> Graphql.Http.Error a -> Html msg
 fullPageGraphQLError title_ e =
-    div [ class "mx-auto container p-24 flex flex-wrap" ]
+    div [ class "mx-auto container p-16 flex flex-wrap" ]
         [ div [ class "w-full" ]
             [ p [ class "text-2xl font-bold text-center" ] [ text title_ ]
             , p [ class "text-center" ] [ text (errorToString e) ]

@@ -3,6 +3,7 @@ module Page.Profile.Claims exposing
     , Msg(..)
     , init
     , msgToString
+    , update
     , view
     )
 
@@ -18,7 +19,8 @@ import Graphql.SelectionSet as SelectionSet exposing (SelectionSet, with)
 import Html exposing (Html, div, text)
 import Page
 import Route
-import Session.LoggedIn as LoggedIn
+import Session.LoggedIn as LoggedIn exposing (External(..))
+import UpdateResult as UR
 
 
 type alias Model =
@@ -27,16 +29,13 @@ type alias Model =
 
 init : LoggedIn.Model -> String -> ( Model, Cmd Msg )
 init loggedIn account =
-    ( { status = Loading }, profileClaimQuery loggedIn )
-
-
-type Msg
-    = ClaimsLoaded (Result (Graphql.Http.Error (Maybe ProfileClaims)) (Maybe ProfileClaims))
+    ( { status = Loading }, profileClaimQuery loggedIn account )
 
 
 type Status
     = Loading
     | Loaded ProfileClaims
+    | NotFound
     | Failed (Graphql.Http.Error (Maybe ProfileClaims))
 
 
@@ -64,6 +63,9 @@ view loggedIn model =
                         , text "Empty yet"
                         ]
 
+                NotFound ->
+                    Page.fullPageNotFound (t "profile.claims.not_found.title") (t "profile.claims.not_found.subtitle")
+
                 Failed e ->
                     Page.fullPageGraphQLError pageTitle e
     in
@@ -74,11 +76,37 @@ type alias ProfileClaims =
     { claims : List Claim.Model }
 
 
-profileClaimQuery : LoggedIn.Model -> Cmd Msg
-profileClaimQuery ({ shared, accountName } as loggedIn) =
+type alias UpdateResult =
+    UR.UpdateResult Model Msg (External Msg)
+
+
+type Msg
+    = ClaimsLoaded (Result (Graphql.Http.Error (Maybe ProfileClaims)) (Maybe ProfileClaims))
+
+
+update : Msg -> Model -> LoggedIn.Model -> UpdateResult
+update msg model loggedIn =
+    case msg of
+        ClaimsLoaded (Ok results) ->
+            case results of
+                Just claims ->
+                    { model | status = Loaded claims }
+                        |> UR.init
+
+                Nothing ->
+                    { model | status = NotFound }
+                        |> UR.init
+
+        ClaimsLoaded (Err e) ->
+            { model | status = Failed e }
+                |> UR.init
+
+
+profileClaimQuery : LoggedIn.Model -> String -> Cmd Msg
+profileClaimQuery ({ shared } as loggedIn) accountName =
     Api.Graphql.query
         shared
-        (Cambiatus.Query.profile { account = Eos.nameToString accountName } selectionSet)
+        (Cambiatus.Query.profile { account = accountName } selectionSet)
         ClaimsLoaded
 
 

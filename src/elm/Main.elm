@@ -383,6 +383,11 @@ update msg model =
                 >> updateLoggedInUResult ProfileAddKyc GotProfileAddKycMsg model
                 |> withLoggedIn
 
+        (GotProfileClaimsMsg subMsg, ProfileClaims subModel) ->
+            ProfileClaims.update subMsg subModel
+            >> updateLoggedInUResult ProfileClaims GotProfileClaimsMsg model
+            |> withLoggedIn
+
         ( GotCommunitySettingsMsg subMsg, CommunitySettings subModel ) ->
             CommunitySettings.update subMsg subModel
                 >> updateLoggedInUResult CommunitySettings GotCommunitySettingsMsg model
