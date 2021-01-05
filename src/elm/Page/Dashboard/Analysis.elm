@@ -416,7 +416,7 @@ update msg model loggedIn =
                                 value =
                                     String.fromFloat claim.action.verifierReward
                                         ++ " "
-                                        ++ Eos.symbolToString claim.action.objective.community.symbol
+                                        ++ Eos.symbolToSymbolCodeString claim.action.objective.community.symbol
                             in
                             { model
                                 | status = Loaded claims pageInfo

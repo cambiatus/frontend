@@ -383,10 +383,10 @@ update msg model =
                 >> updateLoggedInUResult ProfileAddKyc GotProfileAddKycMsg model
                 |> withLoggedIn
 
-        (GotProfileClaimsMsg subMsg, ProfileClaims subModel) ->
+        ( GotProfileClaimsMsg subMsg, ProfileClaims subModel ) ->
             ProfileClaims.update subMsg subModel
-            >> updateLoggedInUResult ProfileClaims GotProfileClaimsMsg model
-            |> withLoggedIn
+                >> updateLoggedInUResult ProfileClaims GotProfileClaimsMsg model
+                |> withLoggedIn
 
         ( GotCommunitySettingsMsg subMsg, CommunitySettings subModel ) ->
             CommunitySettings.update subMsg subModel
@@ -932,6 +932,10 @@ jsAddressToMsg address val =
         "GotAnalysisMsg" :: rAddress ->
             Maybe.map GotAnalysisMsg
                 (Analysis.jsAddressToMsg rAddress val)
+
+        "GotProfileClaimsMsg" :: rAddress ->
+            Maybe.map GotProfileClaimsMsg
+                (ProfileClaims.jsAddressToMsg rAddress val)
 
         _ ->
             Nothing

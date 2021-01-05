@@ -2,6 +2,7 @@ module Page.Profile.Claims exposing
     ( Model
     , Msg(..)
     , init
+    , jsAddressToMsg
     , msgToString
     , update
     , view
@@ -32,20 +33,22 @@ import UpdateResult as UR
 
 init : LoggedIn.Model -> String -> ( Model, Cmd Msg )
 init loggedIn account =
-    ( initModel
+    ( initModel account
     , profileClaimQuery loggedIn account
     )
 
 
 type alias Model =
     { status : Status
+    , accountString : String
     , claimModalStatus : Claim.ModalStatus
     }
 
 
-initModel : Model
-initModel =
+initModel : String -> Model
+initModel account =
     { status = Loading
+    , accountString = account
     , claimModalStatus = Claim.Closed
     }
 
@@ -256,14 +259,14 @@ update msg model loggedIn =
                                 value =
                                     String.fromFloat claim.action.verifierReward
                                         ++ " "
-                                        ++ Eos.symbolToString claim.action.objective.community.symbol
+                                        ++ Eos.symbolToSymbolCodeString claim.action.objective.community.symbol
                             in
                             { model
                                 | status = Loaded profile
                             }
                                 |> UR.init
                                 |> UR.addExt (LoggedIn.ShowFeedback LoggedIn.Success (message value))
-                                |> UR.addCmd (Route.replaceUrl loggedIn.shared.navKey Route.Analysis)
+                                |> UR.addCmd (Route.replaceUrl loggedIn.shared.navKey (Route.ProfileClaims model.accountString))
 
                         Nothing ->
                             model
