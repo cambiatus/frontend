@@ -4,6 +4,7 @@ module Community exposing
     , ActionVerificationsResponse
     , Balance
     , ClaimResponse
+    , CommunityProfile
     , CreateCommunityData
     , CreateTokenData
     , DashboardInfo
@@ -40,6 +41,7 @@ module Community exposing
     , toVerifications
     )
 
+import Avatar exposing (Avatar)
 import Cambiatus.Enum.VerificationType exposing (VerificationType(..))
 import Cambiatus.Object
 import Cambiatus.Object.Action as Action
@@ -119,12 +121,19 @@ type alias Model =
     , transferCount : Int
     , productCount : Int
     , orderCount : Int
-    , members : List Profile
+    , members : List CommunityProfile
     , objectives : List Objective
     , precision : Int
     , hasObjectives : Bool
     , hasShop : Bool
     , hasKyc : Bool
+    }
+
+
+type alias CommunityProfile =
+    { name : Maybe String
+    , account : Eos.Name
+    , avatar : Avatar
     }
 
 
@@ -141,6 +150,14 @@ communitiesSelectionSet =
         |> with Community.logo
         |> with (Eos.nameSelectionSet Community.creator)
         |> with Community.memberCount
+
+
+communityProfileSelectionSet : SelectionSet CommunityProfile Cambiatus.Object.Profile
+communityProfileSelectionSet =
+    SelectionSet.succeed CommunityProfile
+        |> with Profile.name
+        |> with (Eos.nameSelectionSet Profile.account)
+        |> with (Avatar.selectionSet Profile.avatar)
 
 
 dashboardSelectionSet : SelectionSet DashboardInfo Cambiatus.Object.Community
@@ -174,7 +191,7 @@ communitySelectionSet =
         |> with Community.transferCount
         |> with Community.productCount
         |> with Community.orderCount
-        |> with (Community.members Profile.selectionSet)
+        |> with (Community.members communityProfileSelectionSet)
         |> with (Community.objectives objectiveSelectionSet)
         |> with Community.precision
         |> with Community.hasObjectives
@@ -342,7 +359,7 @@ type alias Action =
     , reward : Float
     , verificationReward : Float
     , creator : Eos.Name
-    , validators : List Profile
+    , validators : List CommunityProfile
     , usages : Int
     , usagesLeft : Int
     , deadline : Maybe DateTime
@@ -363,7 +380,7 @@ actionSelectionSet =
         |> with Action.reward
         |> with Action.verifierReward
         |> with (Eos.nameSelectionSet Action.creatorId)
-        |> with (Action.validators Profile.selectionSet)
+        |> with (Action.validators communityProfileSelectionSet)
         |> with Action.usages
         |> with Action.usagesLeft
         |> with Action.deadline
@@ -690,7 +707,7 @@ toVerifications actionVerificationResponse =
 
 type alias Invite =
     { community : Model
-    , creator : Profile
+    , creator : CommunityProfile
     }
 
 
@@ -698,7 +715,7 @@ inviteSelectionSet : SelectionSet Invite Cambiatus.Object.Invite
 inviteSelectionSet =
     SelectionSet.succeed Invite
         |> with (Invite.community communitySelectionSet)
-        |> with (Invite.creator Profile.selectionSet)
+        |> with (Invite.creator communityProfileSelectionSet)
 
 
 inviteQuery : String -> SelectionSet (Maybe Invite) RootQuery

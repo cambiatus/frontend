@@ -22,6 +22,7 @@ module Claim exposing
     )
 
 import Api.Relay exposing (Edge, PageConnection)
+import Avatar exposing (Avatar)
 import Cambiatus.Enum.ClaimStatus as ClaimStatus
 import Cambiatus.Enum.VerificationType exposing (VerificationType(..))
 import Cambiatus.Object
@@ -30,10 +31,11 @@ import Cambiatus.Object.Check as Check
 import Cambiatus.Object.Claim as Claim
 import Cambiatus.Object.ClaimConnection
 import Cambiatus.Object.ClaimEdge
+import Cambiatus.Object.Profile as User
 import Cambiatus.Scalar exposing (DateTime(..))
 import Community exposing (Objective)
 import Eos
-import Eos.Account
+import Eos.Account as Eos
 import Graphql.OptionalArgument exposing (OptionalArgument(..))
 import Graphql.SelectionSet as SelectionSet exposing (SelectionSet, with)
 import Html exposing (Html, a, button, div, img, label, p, strong, text)
@@ -41,7 +43,7 @@ import Html.Attributes exposing (class, classList, disabled, href, id, src, styl
 import Html.Events exposing (onClick)
 import Icons
 import Json.Encode as Encode
-import Profile exposing (Profile)
+import Profile
 import Route exposing (Route)
 import Session.LoggedIn as LoggedIn
 import Session.Shared exposing (Translators)
@@ -55,7 +57,7 @@ import View.Modal as Modal
 type alias Model =
     { id : ClaimId
     , status : ClaimStatus
-    , claimer : Profile
+    , claimer : ClaimProfile
     , action : Action
     , checks : List Check
     , createdAt : DateTime
@@ -83,7 +85,7 @@ type alias ClaimId =
 
 type alias Check =
     { isApproved : Bool
-    , validator : Profile
+    , validator : ClaimProfile
     }
 
 
@@ -92,7 +94,7 @@ type alias Action =
     , description : String
     , reward : Float
     , verifierReward : Float
-    , validators : List Profile
+    , validators : List ClaimProfile
     , verifications : Int
     , verificationType : VerificationType
     , objective : Objective
@@ -103,13 +105,20 @@ type alias Action =
     }
 
 
+type alias ClaimProfile =
+    { name : Maybe String
+    , account : Eos.Name
+    , avatar : Avatar
+    }
+
+
 
 -- Claim Action
 
 
 type alias ClaimAction =
     { actionId : Int
-    , maker : Eos.Account.Name
+    , maker : Eos.Name
     , proofPhoto : String
     , proofCode : String
     , proofTime : Int
@@ -120,32 +129,32 @@ encodeClaimAction : ClaimAction -> Encode.Value
 encodeClaimAction c =
     Encode.object
         [ ( "action_id", Encode.int c.actionId )
-        , ( "maker", Eos.Account.encodeName c.maker )
+        , ( "maker", Eos.encodeName c.maker )
         , ( "proof_photo", Encode.string c.proofPhoto )
         , ( "proof_code", Encode.string c.proofCode )
         , ( "proof_time", Encode.int c.proofTime )
         ]
 
 
-isValidated : Model -> Eos.Account.Name -> Bool
+isValidated : Model -> Eos.Name -> Bool
 isValidated claim user =
     claim.status /= Pending || List.any (\c -> c.validator.account == user) claim.checks
 
 
-isValidator : Eos.Account.Name -> Model -> Bool
+isValidator : Eos.Name -> Model -> Bool
 isValidator accountName claim =
     claim.action.validators
         |> List.any
             (\v -> v.account == accountName)
 
 
-isVotable : Model -> Eos.Account.Name -> Bool
+isVotable : Model -> Eos.Name -> Bool
 isVotable claim accountName =
     isValidator accountName claim
         && not (isValidated claim accountName)
 
 
-encodeVerification : ClaimId -> Eos.Account.Name -> Bool -> Encode.Value
+encodeVerification : ClaimId -> Eos.Name -> Bool -> Encode.Value
 encodeVerification claimId validator vote =
     let
         encodedClaimId : Encode.Value
@@ -154,7 +163,7 @@ encodeVerification claimId validator vote =
 
         encodedVerifier : Encode.Value
         encodedVerifier =
-            Eos.Account.encodeName validator
+            Eos.encodeName validator
 
         encodedVote : Encode.Value
         encodedVote =
@@ -206,7 +215,7 @@ selectionSet =
     SelectionSet.succeed Model
         |> with Claim.id
         |> with (SelectionSet.map claimStatusMap Claim.status)
-        |> with (Claim.claimer Profile.selectionSet)
+        |> with (Claim.claimer claimProfileSelectionSet)
         |> with (Claim.action actionSelectionSet)
         |> with (Claim.checks (\_ -> { input = Absent }) checkSelectionSet)
         |> with Claim.createdAt
@@ -247,7 +256,7 @@ actionSelectionSet =
         |> with Action.description
         |> with Action.reward
         |> with Action.verifierReward
-        |> with (Action.validators Profile.selectionSet)
+        |> with (Action.validators claimProfileSelectionSet)
         |> with Action.verifications
         |> with Action.verificationType
         |> with (Action.objective Community.objectiveSelectionSet)
@@ -261,7 +270,15 @@ checkSelectionSet : SelectionSet Check Cambiatus.Object.Check
 checkSelectionSet =
     SelectionSet.succeed Check
         |> with Check.isVerified
-        |> with (Check.validator Profile.selectionSet)
+        |> with (Check.validator claimProfileSelectionSet)
+
+
+claimProfileSelectionSet : SelectionSet ClaimProfile Cambiatus.Object.Profile
+claimProfileSelectionSet =
+    SelectionSet.succeed ClaimProfile
+        |> with User.name
+        |> with (Eos.nameSelectionSet User.account)
+        |> with (Avatar.selectionSet User.avatar)
 
 
 paginatedToList : Maybe Paginated -> List Model

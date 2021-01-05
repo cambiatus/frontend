@@ -10,6 +10,7 @@ module Page.Community.Transfer exposing
     )
 
 import Api.Graphql
+import Avatar exposing (Avatar)
 import Browser.Events
 import Community exposing (Model)
 import Eos exposing (Symbol)
@@ -23,7 +24,7 @@ import Html.Events exposing (onInput, onSubmit)
 import Json.Decode as Decode exposing (Value)
 import Json.Encode as Encode exposing (Value)
 import Page
-import Profile exposing (Profile)
+import Profile exposing (Profile, SelectProfile)
 import Route
 import Select
 import Session.LoggedIn as LoggedIn exposing (External(..))
@@ -87,7 +88,7 @@ type Validation
 
 
 type alias Form =
-    { selectedProfile : Maybe Profile
+    { selectedProfile : Maybe SelectProfile
     , selectedProfileValidation : Validation
     , amount : String
     , amountValidation : Validation
@@ -233,8 +234,10 @@ viewForm ({ shared } as loggedIn) model f community isDisabled =
 viewAutoCompleteAccount : Shared.Shared -> Model -> Form -> Bool -> Community.Model -> Html Msg
 viewAutoCompleteAccount shared model form isDisabled community =
     let
+        users : List SelectProfile
         users =
             community.members
+                |> List.map (\u -> SelectProfile u.name u.account u.avatar)
 
         selectedUsers =
             Maybe.map (\v -> [ v ]) form.selectedProfile
@@ -251,7 +254,7 @@ viewAutoCompleteAccount shared model form isDisabled community =
         ]
 
 
-selectConfiguration : Shared.Shared -> Bool -> Select.Config Msg Profile
+selectConfiguration : Shared.Shared -> Bool -> Select.Config Msg SelectProfile
 selectConfiguration shared isDisabled =
     Profile.selectConfig
         (Select.newConfig
@@ -274,8 +277,8 @@ type alias UpdateResult =
 
 type Msg
     = CompletedLoad (Result (Graphql.Http.Error (Maybe Community.Model)) (Maybe Community.Model))
-    | OnSelect (Maybe Profile)
-    | SelectMsg (Select.Msg Profile)
+    | OnSelect (Maybe SelectProfile)
+    | SelectMsg (Select.Msg SelectProfile)
     | EnteredAmount String
     | EnteredMemo String
     | SubmitForm

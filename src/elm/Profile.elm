@@ -4,6 +4,7 @@ module Profile exposing
     , Profile
     , ProfileCreate
     , ProfileForm
+    , SelectProfile
     , decode
     , deleteKycAndAddressMutation
     , emptyProfileForm
@@ -442,7 +443,11 @@ view shared loggedInAccount profile =
         ]
 
 
-viewLarge : Shared -> Eos.Name -> Profile -> Html msg
+viewLarge :
+    Shared
+    -> Eos.Name
+    -> { profile | account : Eos.Name, name : Maybe String, avatar : Avatar }
+    -> Html msg
 viewLarge shared loggedInAccount profile =
     a
         [ class "flex flex-col items-center"
@@ -500,7 +505,11 @@ viewEmpty shared =
 -- Autocomplete select
 
 
-selectConfig : Select.Config msg Profile -> Shared -> Bool -> Select.Config msg Profile
+type alias SelectProfile =
+    { name : Maybe String, account : Eos.Name, avatar : Avatar }
+
+
+selectConfig : Select.Config msg SelectProfile -> Shared -> Bool -> Select.Config msg SelectProfile
 selectConfig select shared isDisabled =
     select
         |> Select.withInputClass "form-input h-12 w-full placeholder-gray-900"
@@ -525,7 +534,7 @@ selectFilter minChars toLabel q items =
         Nothing
 
 
-viewAutoCompleteItem : Shared -> Profile -> Html Never
+viewAutoCompleteItem : Shared -> SelectProfile -> Html Never
 viewAutoCompleteItem _ profile =
     div [ class "flex flex-row items-center z-30" ]
         [ div [ class "pr-3" ] [ Avatar.view profile.avatar "h-7 w-7" ]

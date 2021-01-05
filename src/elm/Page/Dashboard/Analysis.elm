@@ -26,7 +26,7 @@ import Json.Decode as Decode exposing (Value)
 import Json.Encode as Encode
 import List.Extra as List
 import Page
-import Profile exposing (Profile)
+import Profile exposing (Profile, SelectProfile)
 import Route
 import Select
 import Session.LoggedIn as LoggedIn exposing (External(..))
@@ -83,7 +83,7 @@ type CommunityStatus
 
 
 type alias Filter =
-    { profile : Maybe Profile
+    { profile : Maybe SelectProfile
     , statusFilter : StatusFilter
     }
 
@@ -309,8 +309,8 @@ type Msg
     | ClaimMsg Claim.Msg
     | VoteClaim Claim.ClaimId Bool
     | GotVoteResult Claim.ClaimId (Result (Maybe Value) String)
-    | SelectMsg (Select.Msg Profile)
-    | OnSelectVerifier (Maybe Profile)
+    | SelectMsg (Select.Msg SelectProfile)
+    | OnSelectVerifier (Maybe SelectProfile)
     | CompletedCommunityLoad (Result (Graphql.Http.Error (Maybe Community.Model)) (Maybe Community.Model))
     | ShowMore
     | ClearSelectSelection
@@ -638,7 +638,7 @@ selectFilter minChars toLabel query items =
             |> Just
 
 
-selectConfiguration : Shared -> Bool -> Select.Config Msg Profile
+selectConfiguration : Shared -> Bool -> Select.Config Msg SelectProfile
 selectConfiguration shared isDisabled =
     Profile.selectConfig
         (Select.newConfig
@@ -652,7 +652,7 @@ selectConfiguration shared isDisabled =
         isDisabled
 
 
-viewSelectedVerifiers : LoggedIn.Model -> List Profile -> Html Msg
+viewSelectedVerifiers : LoggedIn.Model -> List SelectProfile -> Html Msg
 viewSelectedVerifiers ({ shared } as loggedIn) selectedVerifiers =
     if List.isEmpty selectedVerifiers then
         text ""

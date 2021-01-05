@@ -200,15 +200,7 @@ getTransfers maybeObj =
 
         toMaybeNodes : List (Maybe EdgeTransfer) -> List (Maybe Transfer)
         toMaybeNodes edges =
-            List.map
-                (\a ->
-                    Maybe.andThen
-                        (\b ->
-                            b.node
-                        )
-                        a
-                )
-                edges
+            List.map (\a -> Maybe.andThen (\b -> b.node) a) edges
 
         toNodes : List (Maybe Transfer) -> List Transfer
         toNodes maybeNodes =
