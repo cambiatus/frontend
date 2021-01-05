@@ -345,7 +345,7 @@ update msg model loggedIn =
             UR.init
                 { model
                     | status = Loaded profile
-                    , fullName = nullable profile.userName
+                    , fullName = nullable profile.name
                     , email = nullable profile.email
                     , bio = nullable profile.bio
                     , location = nullable profile.localization
@@ -458,7 +458,7 @@ update msg model loggedIn =
 modelToProfile : Model -> Profile -> Profile
 modelToProfile model profile =
     { profile
-        | userName = Just model.fullName
+        | name = Just model.fullName
         , email = Just model.email
         , localization = Just model.location
         , interests = model.interests

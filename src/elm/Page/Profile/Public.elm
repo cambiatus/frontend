@@ -59,7 +59,7 @@ view loggedIn status =
         title =
             case status of
                 Loaded profile ->
-                    Maybe.withDefault "" profile.userName
+                    Maybe.withDefault "" profile.name
 
                 _ ->
                     ""

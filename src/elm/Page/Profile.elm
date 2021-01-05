@@ -97,7 +97,7 @@ view ({ shared } as loggedIn) model =
         title =
             case model.status of
                 Loaded profile ->
-                    Maybe.withDefault "" profile.userName
+                    Maybe.withDefault "" profile.name
 
                 _ ->
                     ""
@@ -248,7 +248,7 @@ viewUserInfo loggedIn profile pageType =
             loggedIn.shared.translators
 
         userName =
-            Maybe.withDefault "" profile.userName
+            Maybe.withDefault "" profile.name
 
         email =
             Maybe.withDefault "" profile.email

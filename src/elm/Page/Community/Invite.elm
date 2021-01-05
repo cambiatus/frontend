@@ -103,7 +103,7 @@ view session model =
                 JoinConfirmation invite ->
                     let
                         inviter =
-                            invite.creator.userName
+                            invite.creator.name
                                 |> Maybe.withDefault (nameToString invite.creator.account)
                     in
                     inviter
@@ -222,7 +222,7 @@ viewContent : Translators -> Invite -> Html Msg -> Html Msg
 viewContent { t } { creator, community } innerContent =
     let
         inviter =
-            creator.userName
+            creator.name
                 |> Maybe.withDefault (nameToString creator.account)
     in
     div [ class "bg-white pb-20" ]
