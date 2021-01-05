@@ -64,7 +64,7 @@ import Html.Attributes
 import Json.Decode as Decode exposing (Decoder, string)
 import Json.Decode.Pipeline as Decode exposing (required)
 import Json.Encode as Encode exposing (Value)
-import Profile exposing (Profile)
+import Profile
 import Time exposing (Posix)
 import Utils
 import View.Tag as Tag

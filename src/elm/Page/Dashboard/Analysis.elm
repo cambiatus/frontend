@@ -26,7 +26,7 @@ import Json.Decode as Decode exposing (Value)
 import Json.Encode as Encode
 import List.Extra as List
 import Page
-import Profile exposing (Profile, SelectProfile)
+import Profile exposing (SelectProfile)
 import Route
 import Select
 import Session.LoggedIn as LoggedIn exposing (External(..))

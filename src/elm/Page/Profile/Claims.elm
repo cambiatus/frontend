@@ -12,7 +12,7 @@ import Api.Graphql
 import Cambiatus.Object
 import Cambiatus.Object.Profile as Profile
 import Cambiatus.Query
-import Claim exposing (viewVoteClaimModal)
+import Claim
 import Eos
 import Eos.Account as Eos
 import Eos.EosError as EosError
@@ -21,7 +21,6 @@ import Graphql.OptionalArgument exposing (OptionalArgument(..))
 import Graphql.SelectionSet as SelectionSet exposing (SelectionSet, with)
 import Html exposing (Html, div, img, text)
 import Html.Attributes exposing (class, src)
-import Html.Events exposing (onClick)
 import Json.Decode as Decode exposing (Value)
 import Json.Encode as Encode
 import List.Extra as List

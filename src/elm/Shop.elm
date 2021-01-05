@@ -21,7 +21,6 @@ import Graphql.SelectionSet as SelectionSet exposing (SelectionSet, with)
 import Html.Events exposing (targetValue)
 import Json.Decode as Decode exposing (Decoder)
 import Json.Encode as Encode exposing (Value)
-import Profile exposing (Profile)
 
 
 

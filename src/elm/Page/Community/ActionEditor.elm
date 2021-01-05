@@ -9,7 +9,6 @@ module Page.Community.ActionEditor exposing
     )
 
 import Api.Graphql
-import Avatar exposing (Avatar)
 import Cambiatus.Enum.VerificationType as VerificationType
 import Cambiatus.Scalar exposing (DateTime(..))
 import Community exposing (CommunityProfile, Model)
@@ -41,7 +40,7 @@ import Json.Decode as Json exposing (Value)
 import Json.Encode as Encode
 import MaskedInput.Text as MaskedDate
 import Page
-import Profile exposing (Profile, SelectProfile)
+import Profile exposing (SelectProfile)
 import Route
 import Select
 import Session.LoggedIn as LoggedIn exposing (External(..), FeedbackStatus(..))

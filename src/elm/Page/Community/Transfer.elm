@@ -10,7 +10,6 @@ module Page.Community.Transfer exposing
     )
 
 import Api.Graphql
-import Avatar exposing (Avatar)
 import Browser.Events
 import Community exposing (Model)
 import Eos exposing (Symbol)
@@ -24,7 +23,7 @@ import Html.Events exposing (onInput, onSubmit)
 import Json.Decode as Decode exposing (Value)
 import Json.Encode as Encode exposing (Value)
 import Page
-import Profile exposing (Profile, SelectProfile)
+import Profile exposing (SelectProfile)
 import Route
 import Select
 import Session.LoggedIn as LoggedIn exposing (External(..))
