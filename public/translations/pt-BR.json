@@ -626,12 +626,13 @@
       "push_notifications": "Habilitar notificações",
       "submit": "Salvar"
     },
-    "badge": {
-      "title": "Conquistas",
-      "currencyStarter": " Criador de Moeda",
-      "developer": "Developer",
-      "seedTeam": "Time Seed",
-      "mentor": "Mentor"
+    "claims": {
+      "title": "Reinvidicações",
+      "not_found": {
+        "title": "Minhas reinvidicações",
+        "subtitle": "Nenhum usuário encontrado"
+      },
+      "empty_results": "Nenhuma reinvidicação ainda"
     }
   },
   "shop": {

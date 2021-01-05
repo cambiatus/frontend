@@ -622,12 +622,13 @@
       "push_notifications": "Activar notificaciones",
       "submit": "Guardar"
     },
-    "badge": {
-      "title": "Insignias",
-      "currencyStarter": "Currency Starter",
-      "developer": "Developer",
-      "seedTeam": "Seed Team",
-      "mentor": "Mentor"
+    "claims": {
+      "title": "Reclamaciones",
+      "not_found": {
+        "title": "Mis reclamos",
+        "subtitle": "Ningún usuario encontrado"
+      },
+      "empty_results": "Aún no hay reclamos"
     }
   },
   "shop": {

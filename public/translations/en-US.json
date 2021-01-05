@@ -620,12 +620,13 @@
       "push_notifications": "Enable push notifications",
       "submit": "Save"
     },
-    "badge": {
-      "title": "Badges",
-      "currencyStarter": "Currency Starter",
-      "developer": "Developer",
-      "seedTeam": "Seed Team",
-      "mentor": "Mentor"
+    "claims": {
+      "title": "My claims",
+      "not_found": {
+        "title": "My claims",
+        "subtitle": "No user found"
+      },
+      "empty_results": "No claims yet"
     }
   },
   "shop": {

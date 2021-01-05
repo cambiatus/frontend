@@ -581,12 +581,13 @@
         "push_notifications": " ማሳሰቢያዎችን ማሳየት መቻል",
         "submit": "አስቀምጥ"
       },
-      "badge": {
-        "title": "ባጆች",
-        "currencyStarter": "ገንዘብ አስጀማሪ",
-        "developer": "አበልፃግዉ",
-        "seedTeam": "የዘር ቡድን",
-        "mentor": "መካሪ"
+      "claims": {
+        "title": "የይገባኛል ጥያቄዎች",
+        "not_found": {
+          "title": "የእኔ የይገባኛል ጥያቄዎች",
+          "subtitle": "ምንም ተጠቃሚ አልተገኘም"
+        },
+        "empty_results": "እስካሁን የይገባኛል ጥያቄዎች የሉም"
       }
     },
     "shop": {

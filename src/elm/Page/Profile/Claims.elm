@@ -16,20 +16,32 @@ import Eos.Account as Eos
 import Graphql.Http
 import Graphql.OptionalArgument exposing (OptionalArgument(..))
 import Graphql.SelectionSet as SelectionSet exposing (SelectionSet, with)
-import Html exposing (Html, div, text)
+import Html exposing (Html, div, img, text)
+import Html.Attributes exposing (class, src)
 import Page
 import Route
 import Session.LoggedIn as LoggedIn exposing (External(..))
 import UpdateResult as UR
 
 
-type alias Model =
-    { status : Status }
-
-
 init : LoggedIn.Model -> String -> ( Model, Cmd Msg )
 init loggedIn account =
-    ( { status = Loading }, profileClaimQuery loggedIn account )
+    ( initModel
+    , profileClaimQuery loggedIn account
+    )
+
+
+type alias Model =
+    { status : Status
+    , claimModalStatus : Claim.ModalStatus
+    }
+
+
+initModel : Model
+initModel =
+    { status = Loading
+    , claimModalStatus = Claim.Closed
+    }
 
 
 type Status
@@ -57,19 +69,57 @@ view loggedIn model =
                 Loading ->
                     Page.fullPageLoading loggedIn.shared
 
-                Loaded profileClaims ->
+                Loaded profile ->
                     div []
                         [ Page.viewHeader loggedIn pageTitle Route.Dashboard
-                        , text "Empty yet"
+                        , viewResults loggedIn profile.claims
                         ]
 
                 NotFound ->
-                    Page.fullPageNotFound (t "profile.claims.not_found.title") (t "profile.claims.not_found.subtitle")
+                    Page.fullPageNotFound
+                        (t "profile.claims.not_found.title")
+                        (t "profile.claims.not_found.subtitle")
 
                 Failed e ->
                     Page.fullPageGraphQLError pageTitle e
     in
     { title = pageTitle, content = content }
+
+
+viewResults : LoggedIn.Model -> List Claim.Model -> Html Msg
+viewResults loggedIn claims =
+    let
+        viewClaim claim =
+            Claim.viewClaimCard loggedIn claim
+                |> Html.map ClaimMsg
+    in
+    div [ class "container mx-auto px-4 mb-10" ]
+        [ if List.length claims > 0 then
+            div [ class "flex flex-wrap -mx-2" ]
+                (claims
+                    |> List.reverse
+                    |> List.map viewClaim
+                )
+
+          else
+            viewEmptyResults loggedIn
+        ]
+
+
+viewEmptyResults : LoggedIn.Model -> Html Msg
+viewEmptyResults { shared } =
+    let
+        text_ s =
+            text (shared.translators.t s)
+    in
+    div [ class "w-full text-center" ]
+        [ div [ class "w-full flex justify-center" ]
+            [ img [ src "/images/empty-analysis.svg", class "object-contain h-32 mb-3" ] []
+            ]
+        , div [ class "inline-block text-gray" ]
+            [ text_ "profile.claims.empty_results"
+            ]
+        ]
 
 
 type alias ProfileClaims =
@@ -82,6 +132,7 @@ type alias UpdateResult =
 
 type Msg
     = ClaimsLoaded (Result (Graphql.Http.Error (Maybe ProfileClaims)) (Maybe ProfileClaims))
+    | ClaimMsg Claim.Msg
 
 
 update : Msg -> Model -> LoggedIn.Model -> UpdateResult
@@ -101,6 +152,9 @@ update msg model loggedIn =
             { model | status = Failed e }
                 |> UR.init
 
+        ClaimMsg _ ->
+            UR.init model
+
 
 profileClaimQuery : LoggedIn.Model -> String -> Cmd Msg
 profileClaimQuery ({ shared } as loggedIn) accountName =
@@ -119,5 +173,8 @@ selectionSet =
 msgToString : Msg -> List String
 msgToString msg =
     case msg of
-        _ ->
-            []
+        ClaimsLoaded r ->
+            [ "ClaimsLoaded", UR.resultToString r ]
+
+        ClaimMsg _ ->
+            [ "ClaimMsg" ]
