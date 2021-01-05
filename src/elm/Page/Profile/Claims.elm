@@ -11,13 +11,19 @@ import Api.Graphql
 import Cambiatus.Object
 import Cambiatus.Object.Profile as Profile
 import Cambiatus.Query
-import Claim
+import Claim exposing (viewVoteClaimModal)
+import Eos
 import Eos.Account as Eos
+import Eos.EosError as EosError
 import Graphql.Http
 import Graphql.OptionalArgument exposing (OptionalArgument(..))
 import Graphql.SelectionSet as SelectionSet exposing (SelectionSet, with)
 import Html exposing (Html, div, img, text)
 import Html.Attributes exposing (class, src)
+import Html.Events exposing (onClick)
+import Json.Decode as Decode exposing (Value)
+import Json.Encode as Encode
+import List.Extra as List
 import Page
 import Route
 import Session.LoggedIn as LoggedIn exposing (External(..))
@@ -73,6 +79,7 @@ view loggedIn model =
                     div []
                         [ Page.viewHeader loggedIn pageTitle Route.Dashboard
                         , viewResults loggedIn profile.claims
+                        , viewClaimVoteModal loggedIn model
                         ]
 
                 NotFound ->
@@ -106,6 +113,34 @@ viewResults loggedIn claims =
         ]
 
 
+viewClaimVoteModal : LoggedIn.Model -> Model -> Html Msg
+viewClaimVoteModal loggedIn model =
+    let
+        viewVoteModal claimId isApproving isLoading =
+            Claim.viewVoteClaimModal
+                loggedIn.shared.translators
+                { voteMsg = VoteClaim
+                , closeMsg = ClaimMsg Claim.CloseClaimModals
+                , claimId = claimId
+                , isApproving = isApproving
+                , isInProgress = isLoading
+                }
+    in
+    case model.claimModalStatus of
+        Claim.VoteConfirmationModal claimId vote ->
+            viewVoteModal claimId vote False
+
+        Claim.Loading claimId vote ->
+            viewVoteModal claimId vote True
+
+        Claim.PhotoModal claimId ->
+            Claim.viewPhotoModal loggedIn claimId
+                |> Html.map ClaimMsg
+
+        _ ->
+            text ""
+
+
 viewEmptyResults : LoggedIn.Model -> Html Msg
 viewEmptyResults { shared } =
     let
@@ -133,6 +168,8 @@ type alias UpdateResult =
 type Msg
     = ClaimsLoaded (Result (Graphql.Http.Error (Maybe ProfileClaims)) (Maybe ProfileClaims))
     | ClaimMsg Claim.Msg
+    | VoteClaim Claim.ClaimId Bool
+    | GotVoteResult Claim.ClaimId (Result (Maybe Value) String)
 
 
 update : Msg -> Model -> LoggedIn.Model -> UpdateResult
@@ -152,8 +189,105 @@ update msg model loggedIn =
             { model | status = Failed e }
                 |> UR.init
 
-        ClaimMsg _ ->
-            UR.init model
+        ClaimMsg m ->
+            let
+                claimCmd =
+                    case m of
+                        Claim.RouteOpened r ->
+                            Route.replaceUrl loggedIn.shared.navKey r
+
+                        _ ->
+                            Cmd.none
+            in
+            Claim.updateClaimModalStatus m model
+                |> UR.init
+                |> UR.addCmd claimCmd
+
+        VoteClaim claimId vote ->
+            case model.status of
+                Loaded _ ->
+                    let
+                        newModel =
+                            { model
+                                | claimModalStatus = Claim.Loading claimId vote
+                            }
+                    in
+                    if LoggedIn.isAuth loggedIn then
+                        UR.init newModel
+                            |> UR.addPort
+                                { responseAddress = msg
+                                , responseData = Encode.null
+                                , data =
+                                    Eos.encodeTransaction
+                                        [ { accountName = loggedIn.shared.contracts.community
+                                          , name = "verifyclaim"
+                                          , authorization =
+                                                { actor = loggedIn.accountName
+                                                , permissionName = Eos.samplePermission
+                                                }
+                                          , data = Claim.encodeVerification claimId loggedIn.accountName vote
+                                          }
+                                        ]
+                                }
+
+                    else
+                        UR.init newModel
+                            |> UR.addExt (Just (VoteClaim claimId vote) |> LoggedIn.RequiredAuthentication)
+
+                _ ->
+                    model
+                        |> UR.init
+
+        GotVoteResult claimId (Ok _) ->
+            case model.status of
+                Loaded profile ->
+                    let
+                        maybeClaim : Maybe Claim.Model
+                        maybeClaim =
+                            List.find (\c -> c.id == claimId) profile.claims
+
+                        message val =
+                            [ ( "value", val ) ]
+                                |> loggedIn.shared.translators.tr "claim.reward"
+                    in
+                    case maybeClaim of
+                        Just claim ->
+                            let
+                                value =
+                                    String.fromFloat claim.action.verifierReward
+                                        ++ " "
+                                        ++ Eos.symbolToString claim.action.objective.community.symbol
+                            in
+                            { model
+                                | status = Loaded profile
+                            }
+                                |> UR.init
+                                |> UR.addExt (LoggedIn.ShowFeedback LoggedIn.Success (message value))
+                                |> UR.addCmd (Route.replaceUrl loggedIn.shared.navKey Route.Analysis)
+
+                        Nothing ->
+                            model
+                                |> UR.init
+
+                _ ->
+                    model |> UR.init
+
+        GotVoteResult _ (Err eosErrorString) ->
+            let
+                errorMessage =
+                    EosError.parseClaimError loggedIn.shared.translators eosErrorString
+            in
+            case model.status of
+                Loaded claims ->
+                    { model
+                        | status = Loaded claims
+                        , claimModalStatus = Claim.Closed
+                    }
+                        |> UR.init
+                        |> UR.addExt (ShowFeedback LoggedIn.Failure errorMessage)
+
+                _ ->
+                    model |> UR.init
 
 
 profileClaimQuery : LoggedIn.Model -> String -> Cmd Msg
@@ -170,6 +304,31 @@ selectionSet =
         |> with (Profile.claims Claim.selectionSet)
 
 
+jsAddressToMsg : List String -> Encode.Value -> Maybe Msg
+jsAddressToMsg addr val =
+    case addr of
+        "VoteClaim" :: claimId :: _ ->
+            let
+                id =
+                    String.toInt claimId
+                        |> Maybe.withDefault 0
+            in
+            Decode.decodeValue
+                (Decode.oneOf
+                    [ Decode.field "transactionId" Decode.string
+                        |> Decode.map Ok
+                    , Decode.field "error" (Decode.nullable Decode.value)
+                        |> Decode.map Err
+                    ]
+                )
+                val
+                |> Result.map (Just << GotVoteResult id)
+                |> Result.withDefault Nothing
+
+        _ ->
+            Nothing
+
+
 msgToString : Msg -> List String
 msgToString msg =
     case msg of
@@ -178,3 +337,9 @@ msgToString msg =
 
         ClaimMsg _ ->
             [ "ClaimMsg" ]
+
+        VoteClaim claimId _ ->
+            [ "VoteClaim", String.fromInt claimId ]
+
+        GotVoteResult _ r ->
+            [ "GotVoteResult", UR.resultToString r ]

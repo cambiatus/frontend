@@ -130,7 +130,8 @@ view ({ shared } as loggedIn) model =
                             [ viewFilters loggedIn model
                             , if List.length claims > 0 then
                                 div []
-                                    [ div [ class "flex flex-wrap -mx-2" ] (List.map viewClaim claims)
+                                    [ div [ class "flex flex-wrap -mx-2" ]
+                                        (List.map viewClaim claims)
                                     , viewPagination loggedIn pageInfo
                                     ]
 
