@@ -481,36 +481,6 @@ encodeProductsFilterInput input =
         [ ( "account", Encode.string input.account |> Just ) ]
 
 
-buildProfileInput :
-    (ProfileInputOptionalFields -> ProfileInputOptionalFields)
-    -> ProfileInput
-buildProfileInput fillOptionals =
-    let
-        optionals =
-            fillOptionals
-                { account = Absent }
-    in
-    { account = optionals.account }
-
-
-type alias ProfileInputOptionalFields =
-    { account : OptionalArgument String }
-
-
-{-| Type for the ProfileInput input object.
--}
-type alias ProfileInput =
-    { account : OptionalArgument String }
-
-
-{-| Encode a ProfileInput into a value that can be used as an argument.
--}
-encodeProfileInput : ProfileInput -> Value
-encodeProfileInput input =
-    Encode.maybeObject
-        [ ( "account", Encode.string |> Encode.optional input.account ) ]
-
-
 buildProfileUpdateInput :
     ProfileUpdateInputRequiredFields
     -> (ProfileUpdateInputOptionalFields -> ProfileUpdateInputOptionalFields)

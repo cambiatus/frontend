@@ -168,7 +168,7 @@ communityTransfersSelectionSet paginateArgs =
 transfersUserQuery : Name -> (User.TransfersOptionalArguments -> User.TransfersOptionalArguments) -> SelectionSet (Maybe QueryTransfers) RootQuery
 transfersUserQuery name paginateArgs =
     profileTransfersSelectionSet paginateArgs
-        |> Cambiatus.Query.profile { input = { account = Present (Eos.nameToString name) } }
+        |> Cambiatus.Query.profile { account = Eos.nameToString name }
 
 
 transfersCommunityQuery : Symbol -> (PaginationArgs -> PaginationArgs) -> SelectionSet (Maybe QueryTransfers) RootQuery

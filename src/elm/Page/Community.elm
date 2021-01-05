@@ -155,7 +155,7 @@ view loggedIn model =
         content =
             case model.pageStatus of
                 Loading ->
-                    Page.fullPageLoading
+                    Page.fullPageLoading loggedIn.shared
 
                 NotFound ->
                     Page.viewCardEmpty [ text_ "community.not_found" ]

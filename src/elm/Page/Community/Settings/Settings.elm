@@ -6,7 +6,6 @@ import Eos exposing (Symbol)
 import Graphql.Http
 import Html exposing (Html, a, button, div, span, text)
 import Html.Attributes exposing (class, style)
-import I18Next exposing (t)
 import Page
 import Route exposing (Route)
 import Session.LoggedIn as LoggedIn exposing (External(..))
@@ -50,13 +49,10 @@ initModel symbol =
 
 
 view : LoggedIn.Model -> Model -> { title : String, content : Html Msg }
-view loggedIn model =
+view ({ shared } as loggedIn) model =
     let
-        translate =
-            t loggedIn.shared.translations
-
         title =
-            translate "community.edit.title"
+            shared.translators.t "community.edit.title"
 
         content =
             let
@@ -68,12 +64,12 @@ view loggedIn model =
             in
             case model.status of
                 Loading ->
-                    Page.fullPageLoading
+                    Page.fullPageLoading shared
 
                 Loaded community ->
                     div []
                         [ header
-                        , viewSettingsList loggedIn.shared community
+                        , viewSettingsList shared community
                         ]
 
                 LoadingFailed e ->
@@ -83,7 +79,7 @@ view loggedIn model =
                     div []
                         [ Page.viewHeader loggedIn title Route.Dashboard
                         , div [ class "card" ]
-                            [ text (translate "community.edit.unauthorized") ]
+                            [ text (shared.translators.t "community.edit.unauthorized") ]
                         ]
     in
     { title = title
@@ -95,7 +91,7 @@ viewSettingsList : Shared -> Community.Model -> Html Msg
 viewSettingsList shared community =
     let
         translate =
-            t shared.translations
+            shared.translators.t
 
         featuresDescription =
             translate "community.objectives.title_plural" ++ ", " ++ translate "menu.shop"

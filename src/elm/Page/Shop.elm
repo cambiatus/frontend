@@ -182,7 +182,7 @@ view loggedIn model =
                     div []
                         [ Lazy.lazy viewHeader loggedIn
                         , div [ class "container mx-auto px-4" ]
-                            [ Page.fullPageLoading ]
+                            [ Page.fullPageLoading loggedIn.shared ]
                         ]
 
                 LoadingFailed e ->
@@ -209,26 +209,30 @@ view loggedIn model =
                     (t "shop.disabled.description")
 
             LoggedIn.FeatureLoading ->
-                Page.fullPageLoading
+                Page.fullPageLoading loggedIn.shared
     }
 
 
 viewHeader : LoggedIn.Model -> Html Msg
 viewHeader loggedIn =
+    let
+        t =
+            loggedIn.shared.translators.t
+    in
     div [ class "w-full flex flex-wrap relative bg-indigo-500 p-4 lg:mx-auto lg:py-12" ]
         [ div [ class "flex w-full container mx-auto" ]
             [ div [ class "w-1/2" ]
                 [ p [ class "text-white w-full text-xl font-medium mb-4 mx-8 text-xs font-light mb-2 uppercase" ]
-                    [ text (t loggedIn.shared.translations "shop.title") ]
+                    [ text (t "shop.title") ]
                 , p [ class "hidden lg:visible lg:flex text-white text-3xl mx-8 mb-4 font-medium" ]
-                    [ text (t loggedIn.shared.translations "shop.subtitle") ]
+                    [ text (t "shop.subtitle") ]
                 , p [ class "hidden lg:visible lg:flex text-white mx-8 font-light text-sm" ]
-                    [ text (t loggedIn.shared.translations "shop.description") ]
+                    [ text (t "shop.description") ]
                 , a
                     [ Route.href Route.NewSale
                     , class "button button-primary button-sm w-full lg:w-64 lg:mx-8 lg:mt-6 lg:button-medium font-medium"
                     ]
-                    [ text (t loggedIn.shared.translations "shop.create_offer") ]
+                    [ text (t "shop.create_offer") ]
                 ]
             , div [ class "hidden lg:visible lg:flex w-1/2 justify-center absolute right-0 bottom-0" ]
                 [ img [ src "/images/shop.svg" ] []
@@ -240,6 +244,9 @@ viewHeader loggedIn =
 viewShopFilter : LoggedIn.Model -> Filter -> Html Msg
 viewShopFilter loggedIn filter =
     let
+        t =
+            loggedIn.shared.translators.t
+
         buttonClass =
             "w-1/2 lg:w-56 border border-purple-500 first:rounded-l last:rounded-r px-12 py-2 text-sm font-light text-gray"
     in
@@ -247,17 +254,17 @@ viewShopFilter loggedIn filter =
         [ button
             [ class buttonClass
             , classList [ ( "bg-purple-500 text-white", filter == Shop.All ) ]
-            , value (t loggedIn.shared.translations "shop.all_offers")
+            , value (t "shop.all_offers")
             , onClick (ClickedFilter Shop.All)
             ]
-            [ text (t loggedIn.shared.translations "shop.all_offers") ]
+            [ text (t "shop.all_offers") ]
         , button
             [ class buttonClass
             , classList [ ( "bg-purple-500 text-white", filter == Shop.UserSales ) ]
-            , value (t loggedIn.shared.translations "shop.my_offers")
+            , value (t "shop.my_offers")
             , onClick (ClickedFilter Shop.UserSales)
             ]
-            [ text (t loggedIn.shared.translations "shop.my_offers") ]
+            [ text (t "shop.my_offers") ]
         ]
 
 
@@ -295,7 +302,7 @@ viewCard model ({ shared } as loggedIn) index card =
             String.fromFloat symbolBalance ++ " " ++ Eos.symbolToSymbolCodeString card.product.symbol
 
         tr r_id replaces =
-            I18Next.tr shared.translations I18Next.Curly r_id replaces
+            shared.translators.tr r_id replaces
 
         title =
             if String.length card.product.title > 17 then
@@ -314,12 +321,12 @@ viewCard model ({ shared } as loggedIn) index card =
                 ]
             , div [ class "px-4 pb-2 flex flex-wrap" ]
                 [ p [ class "font-medium pt-2 w-full" ] [ text card.product.title ]
-                , viewProfileNameTag loggedIn.accountName card.product.creator shared.translations
+                , viewProfileNameTag shared loggedIn.accountName card.product.creator
                 , div [ class "h-16 w-full flex flex-wrap items-end" ]
                     [ if card.product.units == 0 && card.product.trackStock then
                         div [ class "w-full" ]
                             [ p [ class "text-3xl text-red" ]
-                                [ text (t shared.translations "shop.out_of_stock")
+                                [ text (shared.translators.t "shop.out_of_stock")
                                 ]
                             ]
 
@@ -349,7 +356,7 @@ viewCard model ({ shared } as loggedIn) index card =
             , if card.product.units == 0 && card.product.trackStock then
                 div [ class "flex flex-none w-full px-6 pb-2" ]
                     [ p [ class "text-3xl text-red" ]
-                        [ text (t loggedIn.shared.translations "shop.out_of_stock")
+                        [ text (loggedIn.shared.translators.t "shop.out_of_stock")
                         ]
                     ]
 

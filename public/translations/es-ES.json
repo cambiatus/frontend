@@ -1,6 +1,10 @@
 {
   "bespiral": "Cambiatus",
   "back": "Volver",
+  "loading": {
+    "title": "Espera un momento",
+    "subtitle": "Estamos procesando su petición"
+  },
   "menu": {
     "title": "Menu",
     "my_communities": "Bienvenido a ",

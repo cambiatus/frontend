@@ -59,9 +59,9 @@ chatUserId =
 
 claims :
     SelectionSet decodesTo Cambiatus.Object.Claim
-    -> SelectionSet (List (Maybe decodesTo)) Cambiatus.Object.Profile
+    -> SelectionSet (List decodesTo) Cambiatus.Object.Profile
 claims object_ =
-    Object.selectionForCompositeField "claims" [] object_ (identity >> Decode.nullable >> Decode.list)
+    Object.selectionForCompositeField "claims" [] object_ (identity >> Decode.list)
 
 
 communities :

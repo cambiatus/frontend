@@ -8,7 +8,6 @@ import Eos.Account as Eos
 import Graphql.Http
 import Html exposing (Html, a, div, h2, h5, img, p, span, text)
 import Html.Attributes exposing (class, src)
-import I18Next
 import Icons
 import Page
 import Profile
@@ -71,8 +70,8 @@ type Status
 view : LoggedIn.Model -> Model -> { title : String, content : Html Msg }
 view loggedIn model =
     let
-        t =
-            I18Next.t loggedIn.shared.translations
+        { t } =
+            loggedIn.shared.translators
 
         title =
             case model.status of
@@ -90,7 +89,7 @@ view loggedIn model =
         content =
             case model.status of
                 Loading _ ->
-                    Page.fullPageLoading
+                    Page.fullPageLoading loggedIn.shared
 
                 LoadFailed error ->
                     div []
@@ -124,7 +123,7 @@ viewTransfer : LoggedIn.Model -> Transfer -> State -> Html Msg
 viewTransfer loggedIn transfer state =
     let
         t =
-            I18Next.t loggedIn.shared.translations
+            loggedIn.shared.translators.t
     in
     div [ class "flex w-full justify-center bg-green py-8" ]
         [ div [ class "flex-row w-full lg:w-2/3" ]
@@ -190,7 +189,7 @@ viewAmount : LoggedIn.Model -> Transfer -> State -> Html Msg
 viewAmount { shared } transfer state =
     let
         t =
-            I18Next.t shared.translations
+            shared.translators.t
 
         direction =
             case state of
@@ -229,7 +228,7 @@ viewDetails : LoggedIn.Model -> Transfer -> State -> Html Msg
 viewDetails ({ shared } as loggedIn) transfer state =
     let
         t str =
-            I18Next.t shared.translations str
+            shared.translators.t str
                 |> String.toUpper
 
         date =

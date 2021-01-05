@@ -21,7 +21,6 @@ import Html exposing (Html, a, button, div, img, input, label, p, span, text, te
 import Html.Attributes exposing (autocomplete, class, disabled, for, id, placeholder, required, src, type_, value)
 import Html.Events exposing (onClick, onInput)
 import Http
-import I18Next exposing (Translations, t)
 import Json.Decode as Decode exposing (Value)
 import Json.Encode as Encode
 import List.Extra as LE
@@ -29,7 +28,7 @@ import Page exposing (Session(..))
 import Profile
 import Route
 import Session.LoggedIn as LoggedIn exposing (External(..))
-import Session.Shared exposing (Shared)
+import Session.Shared exposing (Shared, Translators)
 import Shop exposing (Product)
 import Transfer
 import UpdateResult as UR
@@ -48,7 +47,7 @@ init { shared, accountName } saleId =
         model =
             { status = currentStatus
             , viewing = ViewingCard
-            , form = initForm shared.translations
+            , form = initForm shared.translators
             , balances = []
             }
     in
@@ -112,11 +111,11 @@ type alias Form =
     }
 
 
-initForm : Translations -> Form
-initForm translations =
+initForm : Translators -> Form
+initForm { t } =
     { price = ""
     , units = ""
-    , memo = t translations "shop.transfer.default_memo"
+    , memo = t "shop.transfer.default_memo"
     , unitValidation = Valid
     , memoValidation = Valid
     }
@@ -406,7 +405,7 @@ view loggedIn model =
                 LoadingSale _ ->
                     div []
                         [ Page.viewHeader loggedIn "" (Route.Shop Shop.All)
-                        , Page.fullPageLoading
+                        , Page.fullPageLoading loggedIn.shared
                         ]
 
                 InvalidId invalidId ->
@@ -449,7 +448,7 @@ view loggedIn model =
                     (t "shop.disabled.description")
 
             LoggedIn.FeatureLoading ->
-                Page.fullPageLoading
+                Page.fullPageLoading loggedIn.shared
     }
 
 
@@ -471,10 +470,10 @@ viewCard ({ shared } as loggedIn) card model =
             String.fromFloat balance ++ " " ++ Eos.symbolToSymbolCodeString card.product.symbol
 
         text_ str =
-            text (t shared.translations str)
+            text (shared.translators.t str)
 
         tr r_id replaces =
-            I18Next.tr shared.translations I18Next.Curly r_id replaces
+            shared.translators.tr r_id replaces
     in
     div [ class "flex flex-wrap" ]
         [ div [ class "w-full md:w-1/2 p-4 flex justify-center" ]
@@ -494,7 +493,7 @@ viewCard ({ shared } as loggedIn) card model =
                     [ class "font-bold ml-1"
                     , Route.href (Route.ProfilePublic <| Eos.nameToString card.product.creator.account)
                     ]
-                    [ Profile.viewProfileName loggedIn.accountName card.product.creator shared.translations ]
+                    [ Profile.viewProfileName shared loggedIn.accountName card.product.creator ]
                 ]
             , div [ class "flex flex-wrap w-full justify-between items-center" ]
                 [ div [ class "" ]
@@ -570,7 +569,7 @@ viewTransferForm { shared } card model =
             model.form
 
         t =
-            I18Next.t shared.translations
+            shared.translators.t
 
         saleSymbol =
             Eos.symbolToSymbolCodeString card.product.symbol
@@ -594,7 +593,7 @@ viewTransferForm { shared } card model =
             currBalance
 
         tr r_id replaces =
-            I18Next.tr shared.translations I18Next.Curly r_id replaces
+            shared.translators.tr r_id replaces
     in
     div [ class "large__card__transfer" ]
         [ div [ class "large__card__account" ]

@@ -10,7 +10,6 @@ import Graphql.Http
 import Html exposing (Html, button, div, h3, img, label, p, span, strong, text)
 import Html.Attributes exposing (class, classList, src)
 import Html.Events exposing (onClick)
-import I18Next
 import Json.Decode as Decode exposing (Value)
 import Json.Encode as Encode
 import Page
@@ -71,9 +70,8 @@ type Status
 view : LoggedIn.Model -> Model -> { title : String, content : Html Msg }
 view ({ shared } as loggedIn) model =
     let
-        t : String -> String
-        t =
-            I18Next.t shared.translations
+        { t } =
+            shared.translators
 
         title =
             case model.statusClaim of
@@ -87,7 +85,7 @@ view ({ shared } as loggedIn) model =
             div []
                 [ case model.statusClaim of
                     Loading ->
-                        Page.fullPageLoading
+                        Page.fullPageLoading shared
 
                     Loaded claim ->
                         div [ class "bg-gray-100" ]
@@ -133,7 +131,7 @@ view ({ shared } as loggedIn) model =
                     (t "community.objectives.disabled.description")
 
             LoggedIn.FeatureLoading ->
-                Page.fullPageLoading
+                Page.fullPageLoading shared
     }
 
 
@@ -214,7 +212,7 @@ viewTitle : Shared -> Claim.Model -> Html msg
 viewTitle shared claim =
     let
         text_ s =
-            text (I18Next.t shared.translations s)
+            text (shared.translators.t s)
     in
     div [ class "text-heading font-bold text-center mb-4" ]
         [ case claim.status of
@@ -243,7 +241,7 @@ viewDetails : Shared -> Model -> Claim.Model -> Html msg
 viewDetails shared model claim =
     let
         text_ s =
-            text (I18Next.t shared.translations s)
+            text (shared.translators.t s)
 
         isRejected =
             claim.status == Claim.Rejected
@@ -308,7 +306,7 @@ viewVoters : LoggedIn.Model -> Claim.Model -> Html msg
 viewVoters ({ shared } as loggedIn) claim =
     let
         text_ s =
-            text (I18Next.t shared.translations s)
+            text (shared.translators.t s)
 
         pendingValidators =
             List.filter

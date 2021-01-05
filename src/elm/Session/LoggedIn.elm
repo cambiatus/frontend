@@ -392,10 +392,10 @@ viewHeader : Model -> Profile -> Html Msg
 viewHeader ({ shared } as model) profile_ =
     let
         text_ str =
-            text (t shared.translations str)
+            text (shared.translators.t str)
 
         tr str values =
-            I18Next.tr shared.translations I18Next.Curly str values
+            shared.translators.tr str values
     in
     div [ class "flex flex-wrap items-center justify-between px-4 pt-6 pb-4" ]
         [ viewCommunitySelector model
@@ -426,7 +426,7 @@ viewHeader ({ shared } as model) profile_ =
                         [ p [ class "w-full font-sans uppercase text-gray-900 text-xs overflow-x-hidden" ]
                             [ text (tr "menu.welcome_message" [ ( "user_name", Eos.nameToString profile_.account ) ]) ]
                         , p [ class "w-full font-sans text-indigo-500 text-sm" ]
-                            [ text (t shared.translations "menu.my_account") ]
+                            [ text (shared.translators.t "menu.my_account") ]
                         ]
                     , Icons.arrowDown "float-right"
                     ]
@@ -545,7 +545,7 @@ communitySelectorModal : Model -> Html Msg
 communitySelectorModal model =
     let
         t s =
-            I18Next.t model.shared.translations s
+            model.shared.translators.t s
 
         text_ s =
             text (t s)
@@ -609,7 +609,7 @@ viewMainMenu page model =
             , Route.href Route.Dashboard
             ]
             [ Icons.dashboard iconClass
-            , text (t model.shared.translations "menu.dashboard")
+            , text (model.shared.translators.t "menu.dashboard")
             ]
         , case model.hasShop of
             FeatureLoaded True ->
@@ -621,7 +621,7 @@ viewMainMenu page model =
                     , Route.href (Route.Shop Shop.All)
                     ]
                     [ Icons.shop iconClass
-                    , text (t model.shared.translations "menu.shop")
+                    , text (model.shared.translators.t "menu.shop")
                     ]
 
             _ ->

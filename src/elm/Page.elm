@@ -254,7 +254,7 @@ viewHeader { shared } title route =
                 ]
                 [ Icons.back ""
                 , p [ class "ml-2 text-white text-sm hidden md:visible md:flex" ]
-                    [ text (I18Next.t shared.translations "back") ]
+                    [ text (shared.translators.t "back") ]
                 ]
             , p [ class "mx-auto text-white truncate ..." ] [ text title ]
             ]
@@ -307,10 +307,13 @@ viewDateDistance date maybeNow =
             []
 
 
-fullPageLoading : Html msg
-fullPageLoading =
-    div [ class "full-spinner-container h-full" ]
-        [ div [ class "spinner spinner--delay" ] [] ]
+fullPageLoading : Shared.Shared -> Html msg
+fullPageLoading { translators } =
+    div [ class "h-full text-center pt-4" ]
+        [ img [ class "h-16 mx-auto", src "/images/loading.gif" ] []
+        , p [ class "font-bold text-2xl" ] [ text <| translators.t "loading.title" ]
+        , p [ class "text-sm" ] [ text <| translators.t "loading.subtitle" ]
+        ]
 
 
 fullPageError : String -> Http.Error -> Html msg

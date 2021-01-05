@@ -462,7 +462,7 @@ viewMultipleAccount : List Eos.Name -> LoginFormData -> Bool -> Shared -> Model 
 viewMultipleAccount accounts form isDisabled shared model =
     let
         text_ s =
-            Html.text (t shared.translations s)
+            Html.text (shared.translators.t s)
 
         btnClass =
             class "btn btn--outline btn--login"
@@ -476,7 +476,7 @@ viewMultipleAccount accounts form isDisabled shared model =
             , onClick ClickedViewOptions
             , type_ "button"
             , disabled isDisabled
-            , title (t shared.translations "menu.cancel")
+            , title (shared.translators.t "menu.cancel")
             ]
             [ Icon.close "" ]
         ]
@@ -530,7 +530,7 @@ viewAuthError shared maybeLoginError =
         Just error ->
             div [ class "bg-red border-lg rounded p-4 mt-2" ]
                 [ p [ class "text-white" ]
-                    [ text (t shared.translations error) ]
+                    [ text (shared.translators.t error) ]
                 ]
 
 
@@ -979,10 +979,10 @@ viewPin ({ form } as model) shared =
             case shared.maybeAccount of
                 Just _ ->
                     -- Popup with PIN input for logged-in user has different label
-                    I18Next.t shared.translations "auth.pinPopup.label"
+                    shared.translators.t "auth.pinPopup.label"
 
                 Nothing ->
-                    I18Next.t shared.translations "auth.pin.label"
+                    shared.translators.t "auth.pin.label"
 
         isPinError ( problemType, _ ) =
             case problemType of

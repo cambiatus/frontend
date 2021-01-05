@@ -21,7 +21,6 @@ import Graphql.OptionalArgument exposing (OptionalArgument(..))
 import Html exposing (Html, button, div, img, option, select, span, text)
 import Html.Attributes exposing (class, selected, src, value)
 import Html.Events exposing (onClick)
-import I18Next
 import Icons
 import Json.Decode as Decode exposing (Value)
 import Json.Encode as Encode
@@ -108,14 +107,16 @@ type StatusFilter
 view : LoggedIn.Model -> Model -> { title : String, content : Html Msg }
 view ({ shared } as loggedIn) model =
     let
-        t : String -> String
         t =
-            I18Next.t shared.translations
+            shared.translators.t
+
+        pageTitle =
+            t "all_analysis.title"
 
         content =
             case model.status of
                 Loading ->
-                    Page.fullPageLoading
+                    Page.fullPageLoading shared
 
                 Loaded claims pageInfo ->
                     let
@@ -124,7 +125,7 @@ view ({ shared } as loggedIn) model =
                                 |> Html.map ClaimMsg
                     in
                     div []
-                        [ Page.viewHeader loggedIn (t "all_analysis.title") Route.Dashboard
+                        [ Page.viewHeader loggedIn pageTitle Route.Dashboard
                         , div [ class "container mx-auto px-4 mb-10" ]
                             [ viewFilters loggedIn model
                             , if List.length claims > 0 then
@@ -165,7 +166,7 @@ view ({ shared } as loggedIn) model =
                 Failed ->
                     text ""
     in
-    { title = t "all_analysis.title"
+    { title = pageTitle
     , content = content
     }
 
@@ -173,9 +174,8 @@ view ({ shared } as loggedIn) model =
 viewFilters : LoggedIn.Model -> Model -> Html Msg
 viewFilters ({ shared } as loggedIn) model =
     let
-        t : String -> String
         t =
-            I18Next.t shared.translations
+            shared.translators.t
 
         text_ s =
             text (t s)
@@ -257,7 +257,7 @@ viewEmptyResults : LoggedIn.Model -> Html Msg
 viewEmptyResults { shared } =
     let
         text_ s =
-            text (I18Next.t shared.translations s)
+            text (shared.translators.t s)
     in
     div [ class "w-full text-center" ]
         [ div [ class "w-full flex justify-center" ]
@@ -273,11 +273,8 @@ viewEmptyResults { shared } =
 viewPagination : LoggedIn.Model -> Maybe Api.Relay.PageInfo -> Html Msg
 viewPagination { shared } maybePageInfo =
     let
-        t s =
-            I18Next.t shared.translations s
-
         text_ s =
-            text (t s)
+            text (shared.translators.t s)
     in
     case maybePageInfo of
         Just pageInfo ->
@@ -410,7 +407,7 @@ update msg model loggedIn =
 
                         message val =
                             [ ( "value", val ) ]
-                                |> I18Next.tr loggedIn.shared.translations I18Next.Curly "claim.reward"
+                                |> loggedIn.shared.translators.tr "claim.reward"
                     in
                     case maybeClaim of
                         Just claim ->

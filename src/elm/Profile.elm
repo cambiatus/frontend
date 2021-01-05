@@ -46,7 +46,6 @@ import Graphql.OptionalArgument exposing (OptionalArgument(..))
 import Graphql.SelectionSet as SelectionSet exposing (SelectionSet, with)
 import Html exposing (Html, a, div, p, span, text)
 import Html.Attributes exposing (class, href, maxlength, minlength, pattern, title, type_)
-import I18Next exposing (Translations)
 import Json.Decode as Decode exposing (Decoder, int, nullable, string)
 import Json.Decode.Pipeline as Decode exposing (optional, required)
 import Json.Encode as Encode
@@ -166,7 +165,7 @@ query account =
             Eos.nameToString account
     in
     Cambiatus.Query.profile
-        { input = { account = Present nameString } }
+        { account = nameString }
         selectionSet
 
 
@@ -466,7 +465,7 @@ view shared loggedInAccount profile =
             [ Avatar.view profile.avatar "w-10 h-10"
             ]
         , div [ class "mt-2" ]
-            [ viewProfileNameTag loggedInAccount profile shared.translations ]
+            [ viewProfileNameTag shared loggedInAccount profile ]
         ]
 
 
@@ -480,22 +479,22 @@ viewLarge shared loggedInAccount profile =
             [ Avatar.view profile.avatar "w-20 h-20"
             ]
         , div [ class "mt-2" ]
-            [ viewProfileNameTag loggedInAccount profile shared.translations ]
+            [ viewProfileNameTag shared loggedInAccount profile ]
         ]
 
 
-viewProfileNameTag : Eos.Name -> Profile -> Translations -> Html msg
-viewProfileNameTag loggedInAccount profile translations =
+viewProfileNameTag : Shared -> Eos.Name -> Profile -> Html msg
+viewProfileNameTag shared loggedInAccount profile =
     div [ class "flex items-center bg-black rounded-label p-1" ]
         [ p [ class "mx-2 pt-caption uppercase font-bold text-white text-caption" ]
-            [ viewProfileName loggedInAccount profile translations ]
+            [ viewProfileName shared loggedInAccount profile ]
         ]
 
 
-viewProfileName : Eos.Name -> Profile -> Translations -> Html msg
-viewProfileName loggedInAccount profile translations =
+viewProfileName : Shared -> Eos.Name -> Profile -> Html msg
+viewProfileName shared loggedInAccount profile =
     if profile.account == loggedInAccount then
-        text (I18Next.t translations "transfer_result.you")
+        text (shared.translators.t "transfer_result.you")
 
     else
         case profile.userName of
@@ -518,7 +517,7 @@ viewEmpty shared =
         , div [ class "mt-2" ]
             [ div [ class "flex items-center bg-black rounded-sm p-1" ]
                 [ p [ class "mx-2 pt-caption uppercase font-medium text-white text-caption" ]
-                    [ text (I18Next.t shared.translations "profile.no_one") ]
+                    [ text (shared.translators.t "profile.no_one") ]
                 ]
             ]
         ]

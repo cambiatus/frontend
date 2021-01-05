@@ -4,7 +4,6 @@ import Api.Graphql
 import Eos.Account as Eos
 import Graphql.Http
 import Html exposing (Html, div)
-import I18Next
 import Json.Decode exposing (Value)
 import Page
 import Page.Profile exposing (ProfilePage(..), viewUserInfo)
@@ -55,7 +54,7 @@ view : LoggedIn.Model -> Model -> { title : String, content : Html Msg }
 view loggedIn status =
     let
         t =
-            I18Next.t loggedIn.shared.translations
+            loggedIn.shared.translators.t
 
         title =
             case status of
@@ -68,7 +67,7 @@ view loggedIn status =
         content =
             case status of
                 Loading ->
-                    Page.fullPageLoading
+                    Page.fullPageLoading loggedIn.shared
 
                 Loaded profile ->
                     div []

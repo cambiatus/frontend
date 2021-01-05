@@ -25,7 +25,6 @@ import Html exposing (Html, br, button, div, input, label, span, text, textarea)
 import Html.Attributes exposing (accept, class, classList, disabled, for, id, maxlength, minlength, multiple, placeholder, required, type_, value)
 import Html.Events exposing (onClick, onInput, onSubmit)
 import Http
-import I18Next
 import Json.Decode as Decode
 import Json.Encode as Encode exposing (Value)
 import List.Extra as List
@@ -233,7 +232,7 @@ view ({ shared } as loggedIn) model =
         content =
             case model of
                 Loading _ ->
-                    Page.fullPageLoading
+                    Page.fullPageLoading shared
 
                 LoadingFailed e ->
                     Page.fullPageGraphQLError (t "community.edit.title") e
@@ -275,7 +274,7 @@ viewForm : LoggedIn.Model -> Bool -> Bool -> Dict String FormError -> Form -> Mo
 viewForm ({ shared } as loggedIn) isEdit isDisabled errors form model =
     let
         t =
-            I18Next.t shared.translations
+            shared.translators.t
 
         ( titleText, actionText ) =
             if isEdit then
@@ -330,7 +329,7 @@ viewFieldDescription shared isDisabled defVal errors =
             "comm-description"
 
         t =
-            I18Next.t shared.translations
+            shared.translators.t
     in
     formField
         [ span [ class "input-label" ]
@@ -358,7 +357,7 @@ viewFieldCurrencyName shared isDisabled defVal errors =
             "comm-currency-name"
 
         t =
-            I18Next.t shared.translations
+            shared.translators.t
     in
     formField
         [ span [ class "input-label" ]
@@ -381,7 +380,7 @@ viewFieldCurrencySymbol : Shared -> Bool -> String -> Dict String FormError -> H
 viewFieldCurrencySymbol shared isDisabled defVal errors =
     let
         t =
-            I18Next.t shared.translations
+            shared.translators.t
     in
     formField
         [ span [ class "input-label" ]
@@ -406,7 +405,7 @@ viewFieldLogo : Shared -> Bool -> Int -> List LogoStatus -> Dict String FormErro
 viewFieldLogo shared isDisabled selected logos errors =
     let
         t =
-            I18Next.t shared.translations
+            shared.translators.t
 
         logoClass s =
             "create-community-logo-list-item" ++ s
@@ -473,7 +472,7 @@ viewFieldInviterReward shared isDisabled defVal errors =
             "comm-inviter-reward"
 
         t =
-            I18Next.t shared.translations
+            shared.translators.t
     in
     formField
         [ span [ class "input-label" ]
@@ -499,7 +498,7 @@ viewFieldInvitedReward shared isDisabled defVal errors =
             "comm-invited-reward"
 
         t =
-            I18Next.t shared.translations
+            shared.translators.t
     in
     formField
         [ span [ class "input-label" ]
@@ -524,7 +523,7 @@ viewFieldMinBalance shared isDisabled defVal errors =
             "min-balance"
 
         t =
-            I18Next.t shared.translations
+            shared.translators.t
     in
     formField
         [ span [ class "input-label" ] [ text <| t "community.create.labels.min_balance" ]
@@ -574,8 +573,8 @@ viewFieldError shared fieldId errors =
 errorToString : Shared -> FormError -> String
 errorToString shared v =
     let
-        t s =
-            I18Next.t shared.translations s
+        t =
+            shared.translators.t
     in
     case v of
         ChooseOrUploadLogo ->
@@ -619,7 +618,7 @@ update : Msg -> Model -> LoggedIn.Model -> UpdateResult
 update msg model loggedIn =
     let
         t =
-            I18Next.t loggedIn.shared.translations
+            loggedIn.shared.translators.t
     in
     case msg of
         CompletedCommunityLoad (Ok community) ->

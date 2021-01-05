@@ -1245,7 +1245,7 @@ view ({ shared } as loggedIn) model =
         content =
             case model.status of
                 Loading ->
-                    Page.fullPageLoading
+                    Page.fullPageLoading shared
 
                 Loaded community ->
                     div [ class "bg-white" ]
@@ -1274,7 +1274,7 @@ view ({ shared } as loggedIn) model =
                     (t "community.objectives.disabled.description")
 
             LoggedIn.FeatureLoading ->
-                Page.fullPageLoading
+                Page.fullPageLoading shared
     }
 
 

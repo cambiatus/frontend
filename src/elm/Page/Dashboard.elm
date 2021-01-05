@@ -134,15 +134,15 @@ type InviteModalStatus
 
 
 view : LoggedIn.Model -> Model -> { title : String, content : Html Msg }
-view loggedIn model =
+view ({ shared, accountName } as loggedIn) model =
     let
-        t s =
-            I18Next.t loggedIn.shared.translations s
+        t =
+            shared.translators.t
 
         isCommunityAdmin =
             case model.community of
                 LoadedGraphql community _ ->
-                    community.creator == loggedIn.accountName
+                    community.creator == accountName
 
                 _ ->
                     False
@@ -158,7 +158,7 @@ view loggedIn model =
         content =
             case ( model.balance, loggedIn.profile, model.community ) of
                 ( Loading, _, _ ) ->
-                    Page.fullPageLoading
+                    Page.fullPageLoading shared
 
                 ( Failed e, _, _ ) ->
                     Page.fullPageError (t "dashboard.sorry") e
@@ -203,8 +203,8 @@ view loggedIn model =
 viewInvitationModal : LoggedIn.Model -> Model -> Html Msg
 viewInvitationModal { shared } model =
     let
-        t s =
-            I18Next.t shared.translations s
+        t =
+            shared.translators.t
 
         text_ s =
             text (t s)
@@ -310,7 +310,7 @@ viewAnalysisList : LoggedIn.Model -> Profile.Profile -> Model -> Html Msg
 viewAnalysisList loggedIn profile model =
     let
         text_ s =
-            text (I18Next.t loggedIn.shared.translations s)
+            text <| loggedIn.shared.translators.t s
 
         isVoted : List ClaimStatus -> Bool
         isVoted claims =
@@ -327,7 +327,7 @@ viewAnalysisList loggedIn profile model =
     in
     case model.analysis of
         LoadingGraphql ->
-            Page.fullPageLoading
+            Page.fullPageLoading loggedIn.shared
 
         LoadedGraphql claims _ ->
             div [ class "w-full flex" ]
@@ -408,7 +408,8 @@ viewAnalysis loggedIn claimStatus =
 
         ClaimLoading _ ->
             div [ class "w-full md:w-1/2 lg:w-1/3 xl:w-1/4 px-2 mb-4" ]
-                [ div [ class "rounded-lg bg-white h-56 my-2" ] [ Page.fullPageLoading ]
+                [ div [ class "rounded-lg bg-white h-56 my-2" ]
+                    [ Page.fullPageLoading loggedIn.shared ]
                 ]
 
         ClaimVoted _ ->
@@ -472,13 +473,13 @@ viewTransfer ({ shared } as loggedIn) transfer =
                 [ ( "user", Eos.nameToString transfer.from.account )
                 , ( "amount", String.fromFloat transfer.value )
                 ]
-                    |> I18Next.tr shared.translations I18Next.Curly "notifications.transfer.receive"
+                    |> shared.translators.tr "notifications.transfer.receive"
 
             else
                 [ ( "user", Eos.nameToString transfer.to.account )
                 , ( "amount", String.fromFloat transfer.value )
                 ]
-                    |> I18Next.tr shared.translations I18Next.Curly "notifications.transfer.sent"
+                    |> shared.translators.tr "notifications.transfer.sent"
     in
     a
         [ class "flex items-start lg:items-center p-4 border-b last:border-b-0"
@@ -732,7 +733,7 @@ update msg model loggedIn =
 
                         message val =
                             [ ( "value", val ) ]
-                                |> I18Next.tr loggedIn.shared.translations I18Next.Curly "claim.reward"
+                                |> loggedIn.shared.translators.tr "claim.reward"
                     in
                     case maybeClaim of
                         Just claim ->
@@ -823,7 +824,7 @@ update msg model loggedIn =
 
         CompletedInviteCreation (Err httpError) ->
             UR.init
-                { model | inviteModalStatus = InviteModalFailed (I18Next.t loggedIn.shared.translations "community.invite.failed") }
+                { model | inviteModalStatus = InviteModalFailed (loggedIn.shared.translators.t "community.invite.failed") }
                 |> UR.logHttpError msg httpError
 
         CopyToClipboard elementId ->

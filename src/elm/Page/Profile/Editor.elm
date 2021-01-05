@@ -89,7 +89,7 @@ view loggedIn model =
         content =
             case model.status of
                 Loading ->
-                    Page.fullPageLoading
+                    Page.fullPageLoading loggedIn.shared
 
                 LoadingFailed _ ->
                     Page.fullPageError (t "profile.title") Http.Timeout

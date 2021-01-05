@@ -208,7 +208,7 @@ products fillInOptionals requiredArgs object_ =
 
 
 type alias ProfileRequiredArguments =
-    { input : Cambiatus.InputObject.ProfileInput }
+    { account : String }
 
 
 {-| A users profile
@@ -218,7 +218,7 @@ profile :
     -> SelectionSet decodesTo Cambiatus.Object.Profile
     -> SelectionSet (Maybe decodesTo) RootQuery
 profile requiredArgs object_ =
-    Object.selectionForCompositeField "profile" [ Argument.required "input" requiredArgs.input Cambiatus.InputObject.encodeProfileInput ] object_ (identity >> Decode.nullable)
+    Object.selectionForCompositeField "profile" [ Argument.required "account" requiredArgs.account Encode.string ] object_ (identity >> Decode.nullable)
 
 
 type alias TransferRequiredArguments =

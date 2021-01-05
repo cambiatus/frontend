@@ -24,7 +24,6 @@ import Html exposing (Html, button, div, input, label, option, p, select, span, 
 import Html.Attributes exposing (accept, class, classList, disabled, for, id, maxlength, multiple, required, selected, style, type_, value)
 import Html.Events exposing (on, onClick, onInput)
 import Http
-import I18Next
 import Json.Decode as Decode
 import Json.Encode as Encode exposing (Value)
 import Page
@@ -181,7 +180,7 @@ view loggedIn model =
             loggedIn.shared
 
         t =
-            I18Next.t shared.translations
+            shared.translators.t
 
         isEdit =
             case model of
@@ -207,13 +206,13 @@ view loggedIn model =
         content =
             case model of
                 LoadingBalancesCreate ->
-                    Page.fullPageLoading
+                    Page.fullPageLoading shared
 
                 LoadingBalancesUpdate _ ->
-                    Page.fullPageLoading
+                    Page.fullPageLoading shared
 
                 LoadingSaleUpdate _ _ ->
-                    Page.fullPageLoading
+                    Page.fullPageLoading shared
 
                 LoadBalancesFailed error ->
                     Page.fullPageError (t "shop.title") error
@@ -248,7 +247,7 @@ view loggedIn model =
                     (t "shop.disabled.description")
 
             LoggedIn.FeatureLoading ->
-                Page.fullPageLoading
+                Page.fullPageLoading shared
     }
 
 
@@ -256,7 +255,7 @@ viewForm : LoggedIn.Model -> List Balance -> ImageStatus -> Bool -> Bool -> Dele
 viewForm ({ shared } as loggedIn) balances imageStatus isEdit isDisabled deleteModal form =
     let
         t =
-            I18Next.t shared.translations
+            shared.translators.t
 
         fieldId s =
             "shop-editor-" ++ s
@@ -537,7 +536,7 @@ update : Msg -> Model -> LoggedIn.Model -> UpdateResult
 update msg model loggedIn =
     let
         t =
-            I18Next.t loggedIn.shared.translations
+            loggedIn.shared.translators.t
     in
     case msg of
         CompletedBalancesLoad (Ok balances) ->
@@ -905,7 +904,7 @@ update msg model loggedIn =
         GotSaveResponse (Err error) ->
             let
                 internalError =
-                    I18Next.t loggedIn.shared.translations "error.unknown"
+                    loggedIn.shared.translators.t "error.unknown"
             in
             case model of
                 Creating balances imageStatus form ->
@@ -945,7 +944,7 @@ update msg model loggedIn =
         GotDeleteResponse (Err error) ->
             let
                 internalError =
-                    I18Next.t loggedIn.shared.translations "error.unknown"
+                    loggedIn.shared.translators.t "error.unknown"
             in
             case model of
                 Deleting balances sale imageStatus form ->
