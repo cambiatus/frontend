@@ -26,7 +26,6 @@ module Icons exposing
     , trash
     )
 
-import Auth exposing (msgToString)
 import Html exposing (Html)
 import Svg exposing (Svg, svg)
 import Svg.Attributes exposing (class, clipPath, clipRule, cx, cy, d, fill, fillRule, height, id, r, stroke, strokeLinecap, strokeLinejoin, strokeWidth, style, viewBox, width)
