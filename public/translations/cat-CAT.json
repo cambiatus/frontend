@@ -722,8 +722,16 @@
     "reject": "Rebutjar",
     "verify": "Verificar",
     "closed": "tancat",
-    "my_claims": "Les meves reclamacions",
-    "my_offers": "Les meves ofertes",
+    "my_claims": {
+      "1": "Les meves ",
+      "2": "Reclamacions",
+      "go": "Vaja"
+    },
+    "my_offers": {
+      "1": "Les meves ",
+      "2": "Ofertes",
+      "go": "Vaja"
+    },
     "analysis": {
       "title": {
         "1": "Accions",

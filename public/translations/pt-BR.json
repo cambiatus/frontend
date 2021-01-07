@@ -627,7 +627,7 @@
       "submit": "Salvar"
     },
     "claims": {
-      "title": "Reinvidicações",
+      "title": "Minhas reinvidicações",
       "not_found": {
         "title": "Minhas reinvidicações",
         "subtitle": "Nenhum usuário encontrado"
@@ -726,8 +726,16 @@
     "reject": "Reprovar",
     "verify": "Aprovar",
     "closed": "fechados",
-    "my_claims": "Minhas Reinvidicações",
-    "my_offers": "Minhas ofertas",
+    "my_claims": {
+      "1": "Minhas ",
+      "2": "Reinvidicações",
+      "go": "ir"
+    },
+    "my_offers": {
+      "1": "Minhas ",
+      "2": "Ofertas",
+      "go": "Ir"
+    },
     "analysis": {
       "title": {
         "1": "Ações",

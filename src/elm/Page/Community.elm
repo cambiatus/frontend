@@ -540,7 +540,7 @@ viewAction loggedIn metadata maybeDate action =
                     )
                 ]
                 [ if action.hasProofPhoto then
-                    span [ class "inline-block w-4 align-middle mr-2" ] [ Icons.camera ]
+                    span [ class "inline-block w-4 align-middle mr-2" ] [ Icons.camera "" ]
 
                   else
                     text ""
@@ -713,11 +713,11 @@ viewPhotoUploader { t } proofPhotoStatus =
 
                 Uploaded _ ->
                     span [ class "absolute bottom-0 right-0 mr-4 mb-4 bg-orange-300 w-8 h-8 p-2 rounded-full" ]
-                        [ Icons.camera ]
+                        [ Icons.camera "" ]
 
                 _ ->
                     div [ class "text-white text-body font-bold text-center" ]
-                        [ div [ class "w-10 mx-auto mb-2" ] [ Icons.camera ]
+                        [ div [ class "w-10 mx-auto mb-2" ] [ Icons.camera "" ]
                         , div [] [ text (t "community.actions.proof.upload_photo_hint") ]
                         ]
             ]

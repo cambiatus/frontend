@@ -165,23 +165,7 @@ view ({ shared, accountName } as loggedIn) model =
 
                 ( Loaded balance, LoggedIn.Loaded profile, LoadedGraphql community _ ) ->
                     div [ class "container mx-auto px-4 mb-10" ]
-                        [ div [ class "flex inline-block text-gray-600 font-light mt-6 mb-5" ]
-                            [ div []
-                                [ text (t "menu.my_communities")
-                                , span [ class "text-indigo-500 font-medium" ]
-                                    [ text community.name
-                                    ]
-                                ]
-                            , if isCommunityAdmin then
-                                a
-                                    [ Route.href (Route.CommunitySettings loggedIn.selectedCommunity)
-                                    , class "ml-auto"
-                                    ]
-                                    [ Icons.settings ]
-
-                              else
-                                text ""
-                            ]
+                        [ viewHeader loggedIn community isCommunityAdmin
                         , viewBalance loggedIn model balance
                         , if areObjectivesEnabled && List.any (\account -> account == loggedIn.accountName) community.validators then
                             viewAnalysisList loggedIn profile model
@@ -198,6 +182,27 @@ view ({ shared, accountName } as loggedIn) model =
     { title = t "menu.dashboard"
     , content = content
     }
+
+
+viewHeader : LoggedIn.Model -> Community.DashboardInfo -> Bool -> Html Msg
+viewHeader loggedIn community isCommunityAdmin =
+    div [ class "flex inline-block text-gray-600 font-light mt-6 mb-5" ]
+        [ div []
+            [ text (loggedIn.shared.translators.t "menu.my_communities")
+            , span [ class "text-indigo-500 font-medium" ]
+                [ text community.name
+                ]
+            ]
+        , if isCommunityAdmin then
+            a
+                [ Route.href (Route.CommunitySettings loggedIn.selectedCommunity)
+                , class "ml-auto"
+                ]
+                [ Icons.settings ]
+
+          else
+            text ""
+        ]
 
 
 viewInvitationModal : LoggedIn.Model -> Model -> Html Msg
@@ -516,22 +521,6 @@ viewAmount amount symbol =
     ]
 
 
-viewQuickLinks : LoggedIn.Model -> Html Msg
-viewQuickLinks ({ shared } as loggedIn) =
-    div [ class "flex-wrap flex space-y-3" ]
-        [ a
-            [ class "w-full h-10 flex items-center justify-center rounded-full bg-indigo-500 text-white"
-            , Route.href (Route.ProfileClaims (Eos.nameToString loggedIn.accountName))
-            ]
-            [ text <| shared.translators.t "dashboard.my_claims" ]
-        , a
-            [ class "w-full h-10 flex items-center justify-center rounded-full border border-indigo-500 text-indigo-500"
-            , Route.href (Route.Shop Shop.UserSales)
-            ]
-            [ text <| shared.translators.t "dashboard.my_offers" ]
-        ]
-
-
 viewBalance : LoggedIn.Model -> Model -> Balance -> Html Msg
 viewBalance ({ shared } as loggedIn) _ balance =
     let
@@ -544,7 +533,7 @@ viewBalance ({ shared } as loggedIn) _ balance =
         balanceText =
             String.fromFloat balance.asset.amount ++ " "
     in
-    div [ class "flex-wrap flex space-x-3" ]
+    div [ class "flex-wrap flex lg:space-x-3" ]
         [ div [ class "flex w-full lg:w-1/3 bg-white rounded h-64 p-4" ]
             [ div [ class "w-full" ]
                 [ div [ class "input-label mb-2" ]
@@ -574,8 +563,48 @@ viewBalance ({ shared } as loggedIn) _ balance =
                     [ text_ "dashboard.invite", Icons.arrowDown "rotate--90 text-gray-600" ]
                 ]
             ]
-        , div [ class "w-full lg:w-1/3 mt-3 lg:mt-0" ]
+        , div [ class "w-full lg:w-1/3 mt-4 lg:mt-0" ]
             [ viewQuickLinks loggedIn
+            ]
+        ]
+
+
+viewQuickLinks : LoggedIn.Model -> Html Msg
+viewQuickLinks ({ shared } as loggedIn) =
+    let
+        t =
+            shared.translators.t
+    in
+    div [ class "flex-wrap flex" ]
+        [ div [ class "w-1/2 lg:w-full" ]
+            [ a
+                [ class "flex flex-wrap mr-2 px-4 py-6 rounded bg-white hover:shadow lg:flex-no-wrap lg:justify-between lg:items-center lg:mb-6 lg:mr-0"
+                , Route.href (Route.ProfileClaims (Eos.nameToString loggedIn.accountName))
+                ]
+                [ div []
+                    [ div [ class "w-full mb-4" ] [ Icons.claims "w-8 h-8" ]
+                    , p [ class "w-full text-gray-600 mb-4 lg:mb-0" ]
+                        [ text <| t "dashboard.my_claims.1"
+                        , span [ class "font-bold" ] [ text <| t "dashboard.my_claims.2" ]
+                        ]
+                    ]
+                , div [ class "w-full lg:w-1/3 button button-primary" ] [ text <| t "dashboard.my_claims.go" ]
+                ]
+            ]
+        , div [ class "w-1/2 lg:w-full" ]
+            [ a
+                [ class "flex flex-wrap ml-2 px-4 py-6 rounded bg-white hover:shadow lg:flex-no-wrap lg:justify-between lg:items-center lg:ml-0"
+                , Route.href (Route.Shop Shop.UserSales)
+                ]
+                [ div []
+                    [ div [ class "w-full mb-4 lg:mb-2" ] [ Icons.shop "w-8 h-8 fill-current" ]
+                    , p [ class "w-full text-gray-600 mb-4 lg:mb-0" ]
+                        [ text <| t "dashboard.my_offers.1"
+                        , span [ class "font-bold" ] [ text <| t "dashboard.my_offers.2" ]
+                        ]
+                    ]
+                , div [ class "w-full lg:w-1/3 button button-primary" ] [ text <| t "dashboard.my_offers.go" ]
+                ]
             ]
         ]
 

@@ -720,8 +720,16 @@
     "reject": "Disapprove",
     "verify": "Approve",
     "closed": "closed",
-    "my_claims": "My Claims",
-    "my_offers": "My Offers",
+    "my_claims": {
+      "1": "My ",
+      "2": "Claims",
+      "go": "Go"
+    },
+    "my_offers": {
+      "1": "My ",
+      "2": "Offers",
+      "go": "Go"
+    },
     "analysis": {
       "title": {
         "1": "Actions",

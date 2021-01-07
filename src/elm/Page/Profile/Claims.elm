@@ -104,7 +104,7 @@ viewResults loggedIn claims =
     in
     div [ class "container mx-auto px-4 mb-10" ]
         [ if List.length claims > 0 then
-            div [ class "flex flex-wrap -mx-2" ]
+            div [ class "flex flex-wrap -mx-2 pt-4" ]
                 (claims
                     |> List.reverse
                     |> List.map viewClaim

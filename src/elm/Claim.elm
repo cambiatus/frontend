@@ -391,7 +391,7 @@ viewClaimCard { selectedCommunity, shared, accountName } claim =
                 claim.action.id
                 claim.id
     in
-    div [ class "w-full sm:w-1/2 lg:w-1/3 xl:w-1/4 px-2 mb-4" ]
+    div [ class "w-full sm:w-1/2 lg:w-1/3 xl:w-1/4 px-2" ]
         [ div
             [ class "flex flex-col p-4 my-2 rounded-lg bg-white hover:shadow cursor-pointer"
             , id ("claim" ++ String.fromInt claim.id)

@@ -722,8 +722,16 @@
     "reject": "Rechazar",
     "verify": "Verificar",
     "closed": "cerrado",
-    "my_claims": "Mis reclamos",
-    "my_offers": "Mis ofertas",
+    "my_claims": {
+      "1": "Mis ",
+      "2": "Reclamos",
+      "go": "Ir"
+    },
+    "my_offers": {
+      "1": "Mis ",
+      "2": "Ofertas",
+      "go": "Ir"
+    },
     "analysis": {
       "title": {
         "1": "Acciones",
