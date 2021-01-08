@@ -101,6 +101,11 @@ photoProofInstructions =
     Object.selectionForField "(Maybe String)" "photoProofInstructions" [] (Decode.string |> Decode.nullable)
 
 
+position : SelectionSet (Maybe Int) Cambiatus.Object.Action
+position =
+    Object.selectionForField "(Maybe Int)" "position" [] (Decode.int |> Decode.nullable)
+
+
 reward : SelectionSet Float Cambiatus.Object.Action
 reward =
     Object.selectionForField "Float" "reward" [] Decode.float

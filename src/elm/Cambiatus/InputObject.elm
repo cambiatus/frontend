@@ -458,19 +458,31 @@ encodeObjectiveInput input =
 
 buildProductsFilterInput :
     ProductsFilterInputRequiredFields
+    -> (ProductsFilterInputOptionalFields -> ProductsFilterInputOptionalFields)
     -> ProductsFilterInput
-buildProductsFilterInput required =
-    { account = required.account }
+buildProductsFilterInput required fillOptionals =
+    let
+        optionals =
+            fillOptionals
+                { inStock = Absent }
+    in
+    { account = required.account, inStock = optionals.inStock }
 
 
 type alias ProductsFilterInputRequiredFields =
     { account : String }
 
 
+type alias ProductsFilterInputOptionalFields =
+    { inStock : OptionalArgument Bool }
+
+
 {-| Type for the ProductsFilterInput input object.
 -}
 type alias ProductsFilterInput =
-    { account : String }
+    { account : String
+    , inStock : OptionalArgument Bool
+    }
 
 
 {-| Encode a ProductsFilterInput into a value that can be used as an argument.
@@ -478,7 +490,7 @@ type alias ProductsFilterInput =
 encodeProductsFilterInput : ProductsFilterInput -> Value
 encodeProductsFilterInput input =
     Encode.maybeObject
-        [ ( "account", Encode.string input.account |> Just ) ]
+        [ ( "account", Encode.string input.account |> Just ), ( "inStock", Encode.bool |> Encode.optional input.inStock ) ]
 
 
 buildProfileUpdateInput :
