@@ -19,7 +19,7 @@ import Eos exposing (Symbol)
 import Eos.Account as Eos
 import File exposing (File)
 import Graphql.Http
-import Html exposing (Html, button, div, hr, img, input, label, p, span, text)
+import Html exposing (Html, button, div, img, input, label, p, span, text)
 import Html.Attributes exposing (accept, class, classList, disabled, id, multiple, src, style, type_)
 import Html.Events exposing (onClick)
 import Http
