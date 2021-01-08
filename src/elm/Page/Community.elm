@@ -351,8 +351,9 @@ viewObjective loggedIn model metadata index objective =
 
         actsNButton : List (Html Msg)
         actsNButton =
-            List.map (viewAction loggedIn metadata model.date) objective.actions
-                |> List.intersperse (hr [ class "bg-border-grey text-border-grey" ] [])
+            objective.actions
+                |> List.sortBy (\a -> a.position |> Maybe.withDefault 0)
+                |> List.map (viewAction loggedIn metadata model.date)
     in
     if objective.isCompleted then
         text ""

@@ -369,6 +369,7 @@ type alias Action =
     , hasProofPhoto : Bool
     , hasProofCode : Bool
     , photoProofInstructions : Maybe String
+    , position : Maybe Int
     }
 
 
@@ -390,6 +391,7 @@ actionSelectionSet =
         |> with (SelectionSet.map (Maybe.withDefault False) Action.hasProofPhoto)
         |> with (SelectionSet.map (Maybe.withDefault False) Action.hasProofCode)
         |> with Action.photoProofInstructions
+        |> with Action.position
 
 
 type Verification

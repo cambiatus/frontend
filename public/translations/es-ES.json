@@ -401,7 +401,7 @@
     "index": {
       "created_by": "Creada por {{account_name}}",
       "members": "Miembros",
-      "claims": "Reclamaciones",
+      "claims": "Reivindicaciones",
       "products": "Ofertas",
       "orders": "Pedidos",
       "transfers": "Transferencias"
@@ -452,7 +452,7 @@
         "submit": "Salvar"
       },
       "disabled": {
-        "description": "Las reclamaciones, las acciones y los objetivos están deshabilitados en esta comunidad."
+        "description": "Las reivindicaciones, las acciones y los objetivos están deshabilitados en esta comunidad."
       }
     },
     "actions": {
@@ -623,7 +623,7 @@
       "submit": "Guardar"
     },
     "claims": {
-      "title": "Reclamaciones",
+      "title": "Reivindicaciones",
       "not_found": {
         "title": "Mis reclamos",
         "subtitle": "Ningún usuario encontrado"
@@ -749,7 +749,7 @@
       "no_activities_yet": "Aún no hay actividades."
     },
     "check_claim": {
-      "title": "Reclamacion",
+      "title": "Reivindicaciones",
       "body": "¿Realmente quieres reclamar esta acción?",
       "yes": "Sí, reclamar",
       "no": "No, cancelar",

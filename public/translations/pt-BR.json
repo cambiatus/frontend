@@ -405,7 +405,7 @@
     "index": {
       "created_by": "Criado por {{account_name}}",
       "members": "Membros",
-      "claims": "Reinvidicações",
+      "claims": "Reivindicações",
       "products": "Ofertas",
       "orders": "Pedidos",
       "transfers": "Transferências"
@@ -522,7 +522,7 @@
         "no": "Não",
         "yes": "Sim",
         "automatic": "Automático,",
-        "automatic_detail": " recompensa o usuário imediatamente quando feita a reinvidicação",
+        "automatic_detail": " recompensa o usuário imediatamente quando feita a reivindicação",
         "manual": "Manual,",
         "manual_detail": " recompensa o usuário somente após revisão e aprovação de outros membros",
         "verifier_placeholder": "Digite o nome de usuário",
@@ -627,12 +627,12 @@
       "submit": "Salvar"
     },
     "claims": {
-      "title": "Minhas reinvidicações",
+      "title": "Minhas reivindicações",
       "not_found": {
-        "title": "Minhas reinvidicações",
+        "title": "Minhas reivindicações",
         "subtitle": "Nenhum usuário encontrado"
       },
-      "empty_results": "Nenhuma reinvidicação ainda"
+      "empty_results": "Nenhuma reivindicação ainda"
     }
   },
   "shop": {
@@ -714,7 +714,7 @@
     "next": "Próximo",
     "your_action": "Sua ação:",
     "add_comment": "Adicionar um comentário",
-    "claim": "Reinvidicar",
+    "claim": "Reivindicar",
     "wait_verification": "Espere pela verificação",
     "you_won": "Boa notícia! Você ganhou:",
     "you_rejected": "Você rejeitou a ação",
@@ -728,7 +728,7 @@
     "closed": "fechados",
     "my_claims": {
       "1": "Minhas ",
-      "2": "Reinvidicações",
+      "2": "Reivindicações",
       "go": "ir"
     },
     "my_offers": {
@@ -757,7 +757,7 @@
       "yes": "Sim, reinvindicar",
       "no": "Não, cancelar",
       "success": "Parabéns! Falta pouco para ganhar seus {{symbolCode}}. Estamos revisando sua ação.",
-      "failure": "Algo deu errado ao tentar realizar sua reinvidicação, tente novamente mais tarde"
+      "failure": "Algo deu errado ao tentar realizar sua reivindicação, tente novamente mais tarde"
     }
   },
   "all_analysis": {
