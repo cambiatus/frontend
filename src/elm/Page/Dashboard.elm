@@ -413,7 +413,7 @@ viewAnalysis loggedIn claimStatus =
 
         ClaimLoading _ ->
             div [ class "w-full md:w-1/2 lg:w-1/3 xl:w-1/4 px-2 mb-4" ]
-                [ div [ class "rounded-lg bg-white h-56 my-2" ]
+                [ div [ class "rounded-lg bg-white h-56 my-2 pt-8" ]
                     [ Page.fullPageLoading loggedIn.shared ]
                 ]
 
