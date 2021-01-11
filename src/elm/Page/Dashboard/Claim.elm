@@ -27,9 +27,9 @@ import Utils
 -- INIT
 
 
-init : LoggedIn.Model -> Symbol -> Claim.ClaimId -> ( Model, Cmd Msg )
-init { shared } communityId claimId =
-    ( initModel communityId claimId
+init : LoggedIn.Model -> Claim.ClaimId -> ( Model, Cmd Msg )
+init { shared } claimId =
+    ( initModel claimId
     , fetchClaim claimId shared
     )
 
@@ -39,18 +39,16 @@ init { shared } communityId claimId =
 
 
 type alias Model =
-    { communityId : Symbol
-    , claimId : Claim.ClaimId
+    { claimId : Claim.ClaimId
     , statusClaim : Status
     , claimModalStatus : Claim.ModalStatus
     , isValidated : Bool
     }
 
 
-initModel : Symbol -> Claim.ClaimId -> Model
-initModel communityId claimId =
-    { communityId = communityId
-    , claimId = claimId
+initModel : Claim.ClaimId -> Model
+initModel claimId =
+    { claimId = claimId
     , statusClaim = Loading
     , claimModalStatus = Claim.Closed
     , isValidated = False
@@ -279,7 +277,7 @@ viewDetails shared model claim =
                         [ class "pt-2 text-body"
                         , classList [ ( "text-red line-through", isRejected ) ]
                         ]
-                        [ text (String.fromFloat claim.action.reward ++ " " ++ Eos.symbolToSymbolCodeString model.communityId) ]
+                        [ text (String.fromFloat claim.action.reward ++ " " ++ Eos.symbolToSymbolCodeString claim.action.objective.community.symbol) ]
                     ]
                 ]
             ]
@@ -297,7 +295,7 @@ viewDetails shared model claim =
                 [ text_ "claim.your_reward" ]
             , p
                 [ class "pt-2 text-body" ]
-                [ text (String.fromFloat claim.action.verifierReward ++ " " ++ Eos.symbolToSymbolCodeString model.communityId) ]
+                [ text (String.fromFloat claim.action.verifierReward ++ " " ++ Eos.symbolToSymbolCodeString claim.action.objective.community.symbol) ]
             ]
         ]
 

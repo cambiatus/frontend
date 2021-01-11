@@ -296,14 +296,14 @@ profileClaimQuery : LoggedIn.Model -> String -> Cmd Msg
 profileClaimQuery ({ shared } as loggedIn) accountName =
     Api.Graphql.query
         shared
-        (Cambiatus.Query.profile { account = accountName } selectionSet)
+        (Cambiatus.Query.profile { account = accountName } (selectionSet loggedIn.selectedCommunity))
         ClaimsLoaded
 
 
-selectionSet : SelectionSet ProfileClaims Cambiatus.Object.Profile
-selectionSet =
+selectionSet : Eos.Symbol -> SelectionSet ProfileClaims Cambiatus.Object.Profile
+selectionSet communityId =
     SelectionSet.succeed ProfileClaims
-        |> with (Profile.claims Claim.selectionSet)
+        |> with (Profile.claims (\l -> { communityId = Present (Eos.symbolToString communityId) }) Claim.selectionSet)
 
 
 jsAddressToMsg : List String -> Encode.Value -> Maybe Msg

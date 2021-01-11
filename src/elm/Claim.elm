@@ -386,7 +386,6 @@ viewClaimCard { selectedCommunity, shared, accountName } claim =
 
         claimRoute =
             Route.Claim
-                selectedCommunity
                 claim.action.objective.id
                 claim.action.id
                 claim.id

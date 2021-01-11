@@ -817,10 +817,10 @@ changeRouteTo maybeRoute model =
                 >> updateStatusWith ActionEditor GotActionEditorMsg model
                 |> withLoggedIn (Route.EditAction symbol objectiveId actionId)
 
-        Just (Route.Claim communityId objectiveId actionId claimId) ->
-            (\l -> Claim.init l communityId claimId)
+        Just (Route.Claim objectiveId actionId claimId) ->
+            (\l -> Claim.init l claimId)
                 >> updateStatusWith Claim GotVerifyClaimMsg model
-                |> withLoggedIn (Route.Claim communityId objectiveId actionId claimId)
+                |> withLoggedIn (Route.Claim objectiveId actionId claimId)
 
         Just (Route.Shop maybeFilter) ->
             (\l -> Shop.init l maybeFilter)
