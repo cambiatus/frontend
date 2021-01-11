@@ -3,7 +3,7 @@ module Page.Dashboard.Claim exposing (Model, Msg, init, jsAddressToMsg, msgToStr
 import Api.Graphql
 import Cambiatus.Query
 import Claim
-import Eos exposing (Symbol)
+import Eos
 import Eos.Account as Eos
 import Eos.EosError as EosError
 import Graphql.Http
