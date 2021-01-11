@@ -54,8 +54,6 @@ init loggedIn filter =
             CompletedSalesLoad
         , Api.getBalances loggedIn.shared loggedIn.accountName CompletedLoadBalances
         , Task.perform GotTime Time.now
-        , Dom.focus "main-content"
-            |> Task.attempt (\_ -> Ignored)
         ]
     )
 
@@ -98,7 +96,6 @@ type Status
 
 type alias Card =
     { product : Product
-    , rate : Maybe Int
     , form : SaleTransferForm
     }
 
@@ -106,7 +103,6 @@ type alias Card =
 cardFromSale : Product -> Card
 cardFromSale p =
     { product = p
-    , rate = Nothing
     , form = initSaleFrom
     }
 
@@ -274,11 +270,29 @@ viewShopFilter loggedIn filter =
 
 viewGrid : LoggedIn.Model -> List Card -> Model -> Html Msg
 viewGrid loggedIn cards model =
-    div [ class "flex flex-wrap -mx-2" ]
-        (List.indexedMap
-            (viewCard model loggedIn)
+    let
+        outOfStockCards =
             cards
-        )
+                |> List.filter (\c -> c.product.units == 0 && c.product.trackStock)
+
+        availableCards =
+            cards
+                |> List.filter (\c -> c.product.units > 0 || not c.product.trackStock)
+    in
+    div []
+        [ div [ class "flex flex-wrap -mx-2" ]
+            (List.indexedMap (viewCard model loggedIn) availableCards)
+        , if List.length outOfStockCards > 0 then
+            div []
+                [ p [ class " ml-2 w-full border-b-2 pb-2 border-gray-300 mb-4 text-md font-normal text-2xl" ]
+                    [ text "Out of Stock" ]
+                , div [ class "flex flex-wrap -mx-2" ]
+                    (List.indexedMap (viewCard model loggedIn) outOfStockCards)
+                ]
+
+          else
+            text ""
+        ]
 
 
 viewCard : Model -> LoggedIn.Model -> Int -> Card -> Html Msg
