@@ -22,7 +22,6 @@ module Claim exposing
     )
 
 import Api.Relay exposing (Edge, PageConnection)
-import Avatar exposing (Avatar)
 import Cambiatus.Enum.ClaimStatus as ClaimStatus
 import Cambiatus.Enum.VerificationType exposing (VerificationType(..))
 import Cambiatus.Object
@@ -31,7 +30,6 @@ import Cambiatus.Object.Check as Check
 import Cambiatus.Object.Claim as Claim
 import Cambiatus.Object.ClaimConnection
 import Cambiatus.Object.ClaimEdge
-import Cambiatus.Object.Profile as User
 import Cambiatus.Scalar exposing (DateTime(..))
 import Community exposing (Objective)
 import Eos

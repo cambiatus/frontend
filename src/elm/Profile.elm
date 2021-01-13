@@ -56,7 +56,6 @@ import Profile.Address as Address exposing (Address)
 import Select
 import Session.Shared exposing (Shared)
 import Simple.Fuzzy
-import Time exposing (Posix)
 
 
 type alias Basic a =

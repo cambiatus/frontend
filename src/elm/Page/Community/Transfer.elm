@@ -23,7 +23,7 @@ import Html.Events exposing (onInput, onSubmit)
 import Json.Decode as Decode exposing (Value)
 import Json.Encode as Encode exposing (Value)
 import Page
-import Profile exposing (Minimal)
+import Profile
 import Route
 import Select
 import Session.LoggedIn as LoggedIn exposing (External(..))

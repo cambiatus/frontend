@@ -20,7 +20,7 @@ import Flags exposing (Endpoints)
 import Http
 import Json.Decode as Decode exposing (Decoder)
 import Json.Encode as Encode exposing (Value)
-import Profile exposing (ProfileForm)
+import Profile
 import Session.Shared exposing (Shared)
 import Url.Builder exposing (QueryParameter)
 

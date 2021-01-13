@@ -51,7 +51,7 @@ import Icons
 import Json.Decode as Decode exposing (Decoder)
 import Json.Encode exposing (Value)
 import Ports
-import Profile exposing (Model)
+import Profile
 import Route exposing (Route)
 import Session.Guest as Guest
 import Session.LoggedIn as LoggedIn

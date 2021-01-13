@@ -40,7 +40,6 @@ module Community exposing
     , toVerifications
     )
 
-import Avatar exposing (Avatar)
 import Cambiatus.Enum.VerificationType exposing (VerificationType(..))
 import Cambiatus.Object
 import Cambiatus.Object.Action as Action
