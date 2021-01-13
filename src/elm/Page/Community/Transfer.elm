@@ -23,7 +23,7 @@ import Html.Events exposing (onInput, onSubmit)
 import Json.Decode as Decode exposing (Value)
 import Json.Encode as Encode exposing (Value)
 import Page
-import Profile exposing (SelectProfile)
+import Profile exposing (Minimal)
 import Route
 import Select
 import Session.LoggedIn as LoggedIn exposing (External(..))
@@ -87,7 +87,7 @@ type Validation
 
 
 type alias Form =
-    { selectedProfile : Maybe SelectProfile
+    { selectedProfile : Maybe Profile.Minimal
     , selectedProfileValidation : Validation
     , amount : String
     , amountValidation : Validation
@@ -233,10 +233,10 @@ viewForm ({ shared } as loggedIn) model f community isDisabled =
 viewAutoCompleteAccount : Shared.Shared -> Model -> Form -> Bool -> Community.Model -> Html Msg
 viewAutoCompleteAccount shared model form isDisabled community =
     let
-        users : List SelectProfile
+        users : List Profile.Minimal
         users =
             community.members
-                |> List.map (\u -> SelectProfile u.name u.account u.avatar)
+                |> List.map (\u -> { name = u.name, account = u.account, avatar = u.avatar })
 
         selectedUsers =
             Maybe.map (\v -> [ v ]) form.selectedProfile
@@ -253,7 +253,7 @@ viewAutoCompleteAccount shared model form isDisabled community =
         ]
 
 
-selectConfiguration : Shared.Shared -> Bool -> Select.Config Msg SelectProfile
+selectConfiguration : Shared.Shared -> Bool -> Select.Config Msg Profile.Minimal
 selectConfiguration shared isDisabled =
     Profile.selectConfig
         (Select.newConfig
@@ -276,8 +276,8 @@ type alias UpdateResult =
 
 type Msg
     = CompletedLoad (Result (Graphql.Http.Error (Maybe Community.Model)) (Maybe Community.Model))
-    | OnSelect (Maybe SelectProfile)
-    | SelectMsg (Select.Msg SelectProfile)
+    | OnSelect (Maybe Profile.Minimal)
+    | SelectMsg (Select.Msg Profile.Minimal)
     | EnteredAmount String
     | EnteredMemo String
     | SubmitForm

@@ -3,14 +3,12 @@ module Auth exposing
     , LoginFormData
     , Model
     , Msg
-    , SignUpResult
     , init
     , initRegister
     , isAuth
     , jsAddressToMsg
     , maybePrivateKey
     , msgToString
-    , signUp
     , subscriptions
     , update
     , view
@@ -38,7 +36,7 @@ import Json.Decode as Decode
 import Json.Decode.Pipeline as Decode
 import Json.Encode as Encode exposing (Value)
 import Log
-import Profile exposing (Profile)
+import Profile exposing (Model)
 import Route
 import Session.Shared exposing (Shared, Translators)
 import Task
@@ -564,7 +562,7 @@ type Msg
     | GotPrivateKeyLogin (Result String ( Eos.Name, String ))
     | SubmittedLoginPIN
     | GotPinLogin (Result String ( Eos.Name, String ))
-    | CompletedLoadProfile Status Eos.Name (Result (Graphql.Http.Error (Maybe Profile)) (Maybe Profile))
+    | CompletedLoadProfile Status Eos.Name (Result (Graphql.Http.Error (Maybe Profile.Model)) (Maybe Profile.Model))
     | TogglePinVisibility
     | TogglePinConfirmationVisibility
     | KeyPressed Bool
@@ -574,7 +572,7 @@ type Msg
 
 type ExternalMsg
     = ClickedCancel
-    | CompletedAuth Profile
+    | CompletedAuth Profile.Model
     | UpdatedShared Shared
 
 
@@ -857,7 +855,7 @@ update msg shared model =
                 UR.init model
 
 
-loginFailedGraphql : Graphql.Http.Error (Maybe Profile) -> Model -> UpdateResult
+loginFailedGraphql : Graphql.Http.Error (Maybe Profile.Model) -> Model -> UpdateResult
 loginFailedGraphql httpError model =
     UR.init
         { model
@@ -1033,59 +1031,3 @@ viewPinConfirmation ({ form } as model) shared =
         , isVisible = model.pinConfirmationVisibility
         , errors = errors
         }
-
-
-
--- GraphQL
-
-
-type alias SignUpResult =
-    { status : SignUpStatus
-    , reason : String
-    }
-
-
-type SignUpStatus
-    = Success
-    | Error
-
-
-signUp : Eos.Name -> String -> String -> String -> Maybe String -> SelectionSet SignUpResult RootMutation
-signUp account name email publicKey maybeInvitationId =
-    let
-        accountString =
-            Eos.nameToString account
-    in
-    Cambiatus.Mutation.signUp
-        (\optionals ->
-            { optionals
-                | invitationId =
-                    Maybe.map Present maybeInvitationId
-                        |> Maybe.withDefault Absent
-            }
-        )
-        { account = accountString
-        , email = email
-        , name = name
-        , publicKey = publicKey
-        , userType = "natural"
-        }
-        signUpSelectionSet
-
-
-signUpSelectionSet : SelectionSet SignUpResult Cambiatus.Object.SignUpResponse
-signUpSelectionSet =
-    let
-        mapSignUpStatus : Cambiatus.Enum.SignUpStatus.SignUpStatus -> SignUpStatus
-        mapSignUpStatus =
-            \s ->
-                case s of
-                    Cambiatus.Enum.SignUpStatus.Success ->
-                        Success
-
-                    Cambiatus.Enum.SignUpStatus.Error ->
-                        Error
-    in
-    SelectionSet.succeed SignUpResult
-        |> with (SignUp.status |> SelectionSet.map mapSignUpStatus)
-        |> with SignUp.reason

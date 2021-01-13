@@ -18,7 +18,7 @@ import Html.Attributes exposing (class, src)
 import Html.Events exposing (onClick)
 import Http
 import Page exposing (Session(..), toShared)
-import Profile exposing (Profile)
+import Profile exposing (Model)
 import Profile.EditKycForm as KycForm
 import Route
 import Session.LoggedIn as LoggedIn exposing (External(..), FeedbackStatus(..))
@@ -301,7 +301,7 @@ type Msg
     | CloseConfirmationModal
     | InvitationRejected
     | InvitationAccepted InvitationId Invite
-    | CompletedSignIn LoggedIn.Model (Result Http.Error Profile)
+    | CompletedSignIn LoggedIn.Model (Result Http.Error Profile.Model)
     | FormMsg KycForm.Msg
 
 

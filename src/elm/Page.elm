@@ -51,7 +51,7 @@ import Icons
 import Json.Decode as Decode exposing (Decoder)
 import Json.Encode exposing (Value)
 import Ports
-import Profile exposing (Profile)
+import Profile exposing (Model)
 import Route exposing (Route)
 import Session.Guest as Guest
 import Session.LoggedIn as LoggedIn
@@ -433,7 +433,7 @@ updateShared session transform =
 -- TRANSFORM
 
 
-login : Auth.Model -> Profile -> Guest.Model -> ( LoggedIn.Model, Cmd Msg )
+login : Auth.Model -> Profile.Model -> Guest.Model -> ( LoggedIn.Model, Cmd Msg )
 login auth profile guest =
     let
         ( loggedIn, cmd ) =

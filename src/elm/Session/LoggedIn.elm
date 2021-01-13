@@ -54,7 +54,7 @@ import Json.Encode as Encode exposing (Value)
 import List.Extra as List
 import Notification exposing (Notification)
 import Ports
-import Profile exposing (Profile)
+import Profile exposing (Model)
 import Route exposing (Route)
 import Session.Shared as Shared exposing (Shared)
 import Shop
@@ -88,7 +88,7 @@ fetchTranslations language _ =
         |> Translation.get language
 
 
-initLogin : Shared -> Auth.Model -> Profile -> ( Model, Cmd Msg )
+initLogin : Shared -> Auth.Model -> Profile.Model -> ( Model, Cmd Msg )
 initLogin shared authModel profile_ =
     let
         selectedCommunity : Symbol
@@ -187,8 +187,8 @@ type FeedbackVisibility
 
 type ProfileStatus
     = Loading Eos.Name
-    | LoadingFailed Eos.Name (Graphql.Http.Error (Maybe Profile))
-    | Loaded Profile
+    | LoadingFailed Eos.Name (Graphql.Http.Error (Maybe Profile.Model))
+    | Loaded Profile.Model
 
 
 isAuth : Model -> Bool
@@ -293,7 +293,7 @@ viewFeedback status message =
         ]
 
 
-viewHelper : (Msg -> msg) -> Page -> Profile -> Model -> Html msg -> Html msg
+viewHelper : (Msg -> msg) -> Page -> Profile.Model -> Model -> Html msg -> Html msg
 viewHelper thisMsg page profile_ ({ shared } as model) content =
     let
         { t } =
@@ -388,7 +388,7 @@ viewHelper thisMsg page profile_ ({ shared } as model) content =
         ]
 
 
-viewHeader : Model -> Profile -> Html Msg
+viewHeader : Model -> Profile.Model -> Html Msg
 viewHeader ({ shared } as model) profile_ =
     let
         text_ str =
@@ -698,7 +698,7 @@ type Msg
     = Ignored
     | CompletedLoadTranslation String (Result Http.Error Translations)
     | ClickedTryAgainTranslation
-    | CompletedLoadProfile (Result (Graphql.Http.Error (Maybe Profile)) (Maybe Profile))
+    | CompletedLoadProfile (Result (Graphql.Http.Error (Maybe Profile.Model)) (Maybe Profile.Model))
     | CompletedLoadSettings (Result (Graphql.Http.Error (Maybe Community.Settings)) (Maybe Community.Settings))
     | ClickedTryAgainProfile Eos.Name
     | ClickedLogout
@@ -988,7 +988,7 @@ readAllNotifications model =
 -- INFO
 
 
-profile : Model -> Maybe Profile
+profile : Model -> Maybe Profile.Model
 profile model =
     case model.profile of
         Loaded profile_ ->

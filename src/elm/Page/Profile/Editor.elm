@@ -12,7 +12,7 @@ import Http
 import Icons
 import Json.Decode
 import Page
-import Profile exposing (Profile)
+import Profile exposing (Model)
 import Route
 import Session.LoggedIn exposing (External(..), FeedbackStatus(..))
 import Session.Shared exposing (Translators)
@@ -69,8 +69,8 @@ initModel =
 
 type Status
     = Loading
-    | LoadingFailed (Graphql.Http.Error (Maybe Profile))
-    | Loaded Profile
+    | LoadingFailed (Graphql.Http.Error (Maybe Profile.Model))
+    | Loaded Profile.Model
 
 
 
@@ -102,7 +102,7 @@ view loggedIn model =
     }
 
 
-view_ : Session.LoggedIn.Model -> Model -> Profile -> Html Msg
+view_ : Session.LoggedIn.Model -> Model -> Profile.Model -> Html Msg
 view_ loggedIn model profile =
     let
         { t } =
@@ -292,7 +292,7 @@ viewAvatar url =
 
 
 type Msg
-    = CompletedProfileLoad (Result (Graphql.Http.Error (Maybe Profile)) (Maybe Profile))
+    = CompletedProfileLoad (Result (Graphql.Http.Error (Maybe Profile.Model)) (Maybe Profile.Model))
     | OnFieldInput Field String
     | AddInterest
     | RemoveInterest String
@@ -455,7 +455,7 @@ update msg model loggedIn =
                 |> UR.logHttpError msg err
 
 
-modelToProfile : Model -> Profile -> Profile
+modelToProfile : Model -> Profile.Model -> Profile.Model
 modelToProfile model profile =
     { profile
         | name = Just model.fullName

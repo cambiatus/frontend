@@ -311,7 +311,7 @@ viewInvitationModal { shared } model =
         |> Modal.toHtml
 
 
-viewAnalysisList : LoggedIn.Model -> Profile.Profile -> Model -> Html Msg
+viewAnalysisList : LoggedIn.Model -> Profile.Model -> Model -> Html Msg
 viewAnalysisList loggedIn profile model =
     let
         text_ s =

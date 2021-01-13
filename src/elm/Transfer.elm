@@ -33,7 +33,7 @@ import Graphql.Operation exposing (RootQuery)
 import Graphql.OptionalArgument exposing (OptionalArgument(..))
 import Graphql.SelectionSet as SelectionSet exposing (SelectionSet, with)
 import Json.Encode as Encode exposing (Value)
-import Profile exposing (Profile)
+import Profile exposing (Model)
 
 
 type TransferFilter
@@ -53,8 +53,8 @@ communityFilter sym =
 
 type alias Transfer =
     { id : Int
-    , to : Profile
-    , from : Profile
+    , to : Profile.Model
+    , from : Profile.Model
     , value : Float
     , memo : Maybe String
     , symbol : Symbol

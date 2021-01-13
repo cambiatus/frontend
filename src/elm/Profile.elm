@@ -1,10 +1,11 @@
 module Profile exposing
-    ( CommunityInfo
+    ( Basic
+    , CommunityInfo
     , DeleteKycAndAddressResult
-    , Profile
+    , Minimal
+    , Model
     , ProfileCreate
     , ProfileForm
-    , SelectProfile
     , decode
     , deleteKycAndAddressMutation
     , emptyProfileForm
@@ -14,6 +15,7 @@ module Profile exposing
     , encodeProfileLoginWithInvitation
     , maxPinChars
     , minPinChars
+    , minimalSelectionSet
     , mutation
     , pinValidationAttrs
     , profileToForm
@@ -57,23 +59,48 @@ import Simple.Fuzzy
 import Time exposing (Posix)
 
 
+type alias Basic a =
+    { a
+        | name : Maybe String
+        , account : Eos.Name
+        , avatar : Avatar
+    }
 
--- Profile
+
+type alias Minimal =
+    Basic {}
 
 
-type alias Profile =
-    { name : Maybe String
-    , email : Maybe String
-    , bio : Maybe String
-    , localization : Maybe String
-    , account : Eos.Name
-    , avatar : Avatar
-    , interests : List String
-    , createdAt : Posix
-    , communities : List CommunityInfo
-    , analysisCount : Int
-    , kyc : Maybe ProfileKyc
-    , address : Maybe Address
+type alias Model =
+    Basic
+        { email : Maybe String
+        , bio : Maybe String
+        , localization : Maybe String
+        , account : Eos.Name
+        , interests : List String
+        , communities : List CommunityInfo
+        , analysisCount : Int
+        , kyc : Maybe ProfileKyc
+        , address : Maybe Address
+        }
+
+
+
+-- buildModel : Maybe String -> Eos.Name -> Avatar -> Maybe String -> Maybe String -> Maybe String -> Eos.Name -> List String -> List CommunityInfo -> Int -> Maybe ProfileKyc -> Maybe Address
+
+
+buildModel name account avatar email bio location interests communities analysis kyc address =
+    { name = name
+    , account = account
+    , avatar = avatar
+    , email = email
+    , bio = bio
+    , localization = location
+    , interests = interests
+    , communities = communities
+    , analysisCount = analysis
+    , kyc = kyc
+    , address = address
     }
 
 
@@ -87,30 +114,34 @@ type alias CommunityInfo =
     }
 
 
-selectionSet : SelectionSet Profile Cambiatus.Object.Profile
+selectionSet : SelectionSet Model Cambiatus.Object.Profile
 selectionSet =
-    SelectionSet.succeed Profile
+    SelectionSet.succeed buildModel
         |> with User.name
+        |> with (Eos.nameSelectionSet User.account)
+        |> with (Avatar.selectionSet User.avatar)
         |> with User.email
         |> with User.bio
         |> with User.location
-        |> with (Eos.nameSelectionSet User.account)
-        |> with (Avatar.selectionSet User.avatar)
         |> with
             (User.interests
                 |> SelectionSet.map
                     (\maybeInterests ->
-                        Maybe.map
-                            (String.split ",")
-                            maybeInterests
-                            |> Maybe.withDefault []
+                        Maybe.map (String.split ",") maybeInterests |> Maybe.withDefault []
                     )
             )
-        |> SelectionSet.hardcoded (Time.millisToPosix 0)
         |> with (User.communities communityInfoSelectionSet)
         |> with User.analysisCount
         |> with (User.kyc Kyc.selectionSet)
         |> with (User.address Address.selectionSet)
+
+
+minimalSelectionSet : SelectionSet Minimal Cambiatus.Object.Profile
+minimalSelectionSet =
+    SelectionSet.succeed (\name account avatar -> { name = name, account = account, avatar = avatar })
+        |> with User.name
+        |> with (Eos.nameSelectionSet User.account)
+        |> with (Avatar.selectionSet User.avatar)
 
 
 communityInfoSelectionSet : SelectionSet CommunityInfo Cambiatus.Object.Community
@@ -124,17 +155,16 @@ communityInfoSelectionSet =
         |> with Community.hasKyc
 
 
-decode : Decoder Profile
+decode : Decoder Model
 decode =
-    Decode.succeed Profile
+    Decode.succeed buildModel
         |> optional "name" (nullable string) Nothing
+        |> required "account" Eos.nameDecoder
+        |> optional "avatar" Avatar.decode Avatar.empty
         |> optional "email" (nullable string) Nothing
         |> optional "bio" (nullable string) Nothing
         |> optional "localization" (nullable string) Nothing
-        |> required "account" Eos.nameDecoder
-        |> optional "avatar" Avatar.decode Avatar.empty
         |> optional "interests" decodeInterests []
-        |> Decode.hardcoded (Time.millisToPosix 0)
         |> Decode.hardcoded []
         |> Decode.at [ "data", "user" ]
         |> optional "analysisCount" int 0
@@ -152,7 +182,7 @@ decodeInterests =
             )
 
 
-query : Eos.Name -> SelectionSet (Maybe Profile) RootQuery
+query : Eos.Name -> SelectionSet (Maybe Model) RootQuery
 query account =
     let
         nameString =
@@ -163,7 +193,7 @@ query account =
         selectionSet
 
 
-mutation : Eos.Name -> ProfileForm -> SelectionSet (Maybe Profile) RootMutation
+mutation : Eos.Name -> ProfileForm -> SelectionSet (Maybe Model) RootMutation
 mutation account form =
     let
         nameString =
@@ -304,10 +334,6 @@ encodeProfileLoginWithInvitation account invitationId =
         ]
 
 
-
--- Profile Create
-
-
 type alias ProfileCreate =
     { name : String
     , email : String
@@ -329,10 +355,6 @@ encodeProfileCreate form =
                 |> Encode.object
     in
     Encode.object [ ( "user", user ) ]
-
-
-
--- Profile Form
 
 
 type alias ProfileForm =
@@ -360,15 +382,15 @@ emptyProfileForm =
     }
 
 
-profileToForm : Profile -> ProfileForm
-profileToForm profile =
-    { name = Maybe.withDefault "" profile.name
-    , email = Maybe.withDefault "" profile.email
-    , bio = Maybe.withDefault "" profile.bio
-    , localization = Maybe.withDefault "" profile.localization
-    , avatar = Avatar.toMaybeString profile.avatar
+profileToForm : Model -> ProfileForm
+profileToForm { name, email, bio, localization, avatar, interests } =
+    { name = Maybe.withDefault "" name
+    , email = Maybe.withDefault "" email
+    , bio = Maybe.withDefault "" bio
+    , localization = Maybe.withDefault "" localization
+    , avatar = Avatar.toMaybeString avatar
     , interest = ""
-    , interests = profile.interests
+    , interests = interests
     , errors = Dict.empty
     }
 
@@ -388,17 +410,17 @@ encodeProfileForm account form =
 
 
 
--- Show account.name if no profile name is set.
+{- Show account.name if no profile name is set. -}
 
 
-username : Profile -> String
-username profile =
-    case Maybe.map String.trim profile.name of
+username : Basic a -> String
+username { name, account } =
+    case Maybe.map String.trim name of
         Nothing ->
-            Eos.nameToString profile.account
+            Eos.nameToString account
 
         Just "" ->
-            Eos.nameToString profile.account
+            Eos.nameToString account
 
         Just userName ->
             userName
@@ -505,11 +527,7 @@ viewEmpty shared =
 -- Autocomplete select
 
 
-type alias SelectProfile =
-    { name : Maybe String, account : Eos.Name, avatar : Avatar }
-
-
-selectConfig : Select.Config msg SelectProfile -> Shared -> Bool -> Select.Config msg SelectProfile
+selectConfig : Select.Config msg (Basic p) -> Shared -> Bool -> Select.Config msg (Basic p)
 selectConfig select shared isDisabled =
     select
         |> Select.withInputClass "form-input h-12 w-full placeholder-gray-900"
@@ -534,14 +552,14 @@ selectFilter minChars toLabel q items =
         Nothing
 
 
-viewAutoCompleteItem : Shared -> SelectProfile -> Html Never
-viewAutoCompleteItem _ profile =
+viewAutoCompleteItem : Shared -> Basic p -> Html Never
+viewAutoCompleteItem _ { avatar, name, account } =
     div [ class "flex flex-row items-center z-30" ]
-        [ div [ class "pr-3" ] [ Avatar.view profile.avatar "h-7 w-7" ]
+        [ div [ class "pr-3" ] [ Avatar.view avatar "h-7 w-7" ]
         , div [ class "flex flex-col border-dotted border-b border-gray-500 pb-1 w-full" ]
             [ span [ class "text-white text-body font-bold leading-loose" ]
-                [ text <| Maybe.withDefault "" profile.name ]
+                [ text <| Maybe.withDefault "" name ]
             , span [ class "font-light text-white" ]
-                [ text (Eos.nameToString profile.account) ]
+                [ text (Eos.nameToString account) ]
             ]
         ]

@@ -3,11 +3,9 @@ module Api exposing
     , backendUrl
     , blockchainUrl
     , communityInvite
-    , editProfile
     , get
     , getBalances
     , getTableRows
-    , signIn
     , signInInvitation
     , uploadAvatar
     , uploadImage
@@ -22,7 +20,7 @@ import Flags exposing (Endpoints)
 import Http
 import Json.Decode as Decode exposing (Decoder)
 import Json.Encode as Encode exposing (Value)
-import Profile exposing (Profile, ProfileForm)
+import Profile exposing (ProfileForm)
 import Session.Shared exposing (Shared)
 import Url.Builder exposing (QueryParameter)
 
@@ -94,18 +92,7 @@ type alias UserId =
     String
 
 
-signIn : Shared -> Eos.Name -> (Result Http.Error Profile -> msg) -> Cmd msg
-signIn shared accountName toMsg =
-    Http.post
-        { url = backendUrl shared [ "auth", "sign_in" ] []
-        , body =
-            Profile.encodeProfileLogin accountName
-                |> Http.jsonBody
-        , expect = Http.expectJson toMsg Profile.decode
-        }
-
-
-signInInvitation : Shared -> Eos.Name -> String -> (Result Http.Error Profile -> msg) -> Cmd msg
+signInInvitation : Shared -> Eos.Name -> String -> (Result Http.Error Profile.Model -> msg) -> Cmd msg
 signInInvitation shared accountName invitationId toMsg =
     Http.post
         { url = backendUrl shared [ "auth", "sign_in" ] []
@@ -118,19 +105,6 @@ signInInvitation shared accountName invitationId toMsg =
 
 
 -- Profile
-
-
-editProfile : Shared -> Eos.Name -> ProfileForm -> (Result Http.Error Profile -> msg) -> Cmd msg
-editProfile shared accountName form toMsg =
-    Http.post
-        { url = backendUrl shared [ "profile", Eos.nameToString accountName ] []
-        , body =
-            Profile.encodeProfileForm accountName form
-                |> Http.jsonBody
-        , expect =
-            Profile.decode
-                |> Http.expectJson toMsg
-        }
 
 
 uploadAvatar : Shared -> File -> (Result Http.Error Avatar -> msg) -> Cmd msg

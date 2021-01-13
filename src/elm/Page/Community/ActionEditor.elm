@@ -11,7 +11,7 @@ module Page.Community.ActionEditor exposing
 import Api.Graphql
 import Cambiatus.Enum.VerificationType as VerificationType
 import Cambiatus.Scalar exposing (DateTime(..))
-import Community exposing (CommunityProfile, Model)
+import Community exposing (Model)
 import DataValidator
     exposing
         ( Validator
@@ -40,7 +40,7 @@ import Json.Decode as Json exposing (Value)
 import Json.Encode as Encode
 import MaskedInput.Text as MaskedDate
 import Page
-import Profile exposing (SelectProfile)
+import Profile exposing (Minimal)
 import Route
 import Select
 import Session.LoggedIn as LoggedIn exposing (External(..), FeedbackStatus(..))
@@ -112,7 +112,7 @@ type ActionValidation
 type Verification
     = Automatic
     | Manual
-        { verifiersValidator : Validator (List SelectProfile)
+        { verifiersValidator : Validator (List Profile.Minimal)
         , verifierRewardValidator : Validator String
         , minVotesValidator : Validator String
         , photoProof : PhotoProof
@@ -200,7 +200,7 @@ editForm form action =
 
             else
                 action.validators
-                    |> List.map (\v -> SelectProfile v.name v.account v.avatar)
+                    |> List.map (\v -> { name = v.name, account = v.account, avatar = v.avatar })
 
         verification : Verification
         verification =
@@ -293,7 +293,7 @@ defaultUsagesValidator =
         |> newValidator "" (\s -> Just s) True
 
 
-defaultVerifiersValidator : List CommunityProfile -> String -> Validator (List SelectProfile)
+defaultVerifiersValidator : List Profile.Minimal -> String -> Validator (List Profile.Minimal)
 defaultVerifiersValidator verifiers minVerifiersQty =
     let
         limit =
@@ -452,9 +452,9 @@ type alias UpdateResult =
 
 type Msg
     = CompletedCommunityLoad (Result (Graphql.Http.Error (Maybe Community.Model)) (Maybe Community.Model))
-    | OnSelectVerifier (Maybe SelectProfile)
-    | OnRemoveVerifier SelectProfile
-    | SelectMsg (Select.Msg SelectProfile)
+    | OnSelectVerifier (Maybe Profile.Minimal)
+    | OnRemoveVerifier Profile.Minimal
+    | SelectMsg (Select.Msg Profile.Minimal)
     | EnteredDescription String
     | EnteredInstructions String
     | EnteredReward String
@@ -619,7 +619,7 @@ update msg model ({ shared } as loggedIn) =
 
                         Manual m ->
                             let
-                                newVerifiers : List SelectProfile
+                                newVerifiers : List Profile.Minimal
                                 newVerifiers =
                                     maybeProfile
                                         |> Maybe.map (List.singleton >> List.append (getInput m.verifiersValidator))
@@ -642,7 +642,7 @@ update msg model ({ shared } as loggedIn) =
 
                         Manual m ->
                             let
-                                newVerifiers : List SelectProfile
+                                newVerifiers : List Profile.Minimal
                                 newVerifiers =
                                     List.filter
                                         (\currVerifier -> currVerifier.account /= profile.account)
@@ -1756,7 +1756,7 @@ viewVotesCount selectedCount count =
         ]
 
 
-viewSelectedVerifiers : LoggedIn.Model -> List SelectProfile -> Html Msg
+viewSelectedVerifiers : LoggedIn.Model -> List Profile.Minimal -> Html Msg
 viewSelectedVerifiers ({ shared } as loggedIn) selectedVerifiers =
     div [ class "flex flex-row mt-3 mb-6 flex-wrap" ]
         (selectedVerifiers
@@ -1801,7 +1801,7 @@ filter minChars toLabel query items =
             |> Just
 
 
-selectConfiguration : Shared -> Bool -> Select.Config Msg SelectProfile
+selectConfiguration : Shared -> Bool -> Select.Config Msg Profile.Minimal
 selectConfiguration shared isDisabled =
     Profile.selectConfig
         (Select.newConfig

@@ -13,7 +13,7 @@ import Icons
 import Json.Decode as Decode
 import List
 import Ports
-import Profile exposing (Profile)
+import Profile exposing (Model)
 import Route exposing (Route)
 import Session.Shared as Shared exposing (Shared)
 import Translation
@@ -78,7 +78,7 @@ type alias Model =
     { shared : Shared
     , showLanguageNav : Bool
     , afterLoginRedirect : Maybe Route
-    , profile : Maybe Profile
+    , profile : Maybe Profile.Model
     , community : CommunityStatus
     }
 

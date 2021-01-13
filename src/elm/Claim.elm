@@ -57,7 +57,7 @@ import View.Modal as Modal
 type alias Model =
     { id : ClaimId
     , status : ClaimStatus
-    , claimer : ClaimProfile
+    , claimer : Profile.Minimal
     , action : Action
     , checks : List Check
     , createdAt : DateTime
@@ -85,7 +85,7 @@ type alias ClaimId =
 
 type alias Check =
     { isApproved : Bool
-    , validator : ClaimProfile
+    , validator : Profile.Minimal
     }
 
 
@@ -94,7 +94,7 @@ type alias Action =
     , description : String
     , reward : Float
     , verifierReward : Float
-    , validators : List ClaimProfile
+    , validators : List Profile.Minimal
     , verifications : Int
     , verificationType : VerificationType
     , objective : Objective
@@ -102,13 +102,6 @@ type alias Action =
     , hasProofPhoto : Bool
     , hasProofCode : Bool
     , instructions : Maybe String
-    }
-
-
-type alias ClaimProfile =
-    { name : Maybe String
-    , account : Eos.Name
-    , avatar : Avatar
     }
 
 
@@ -215,7 +208,7 @@ selectionSet =
     SelectionSet.succeed Model
         |> with Claim.id
         |> with (SelectionSet.map claimStatusMap Claim.status)
-        |> with (Claim.claimer claimProfileSelectionSet)
+        |> with (Claim.claimer Profile.minimalSelectionSet)
         |> with (Claim.action actionSelectionSet)
         |> with (Claim.checks (\_ -> { input = Absent }) checkSelectionSet)
         |> with Claim.createdAt
@@ -256,7 +249,7 @@ actionSelectionSet =
         |> with Action.description
         |> with Action.reward
         |> with Action.verifierReward
-        |> with (Action.validators claimProfileSelectionSet)
+        |> with (Action.validators Profile.minimalSelectionSet)
         |> with Action.verifications
         |> with Action.verificationType
         |> with (Action.objective Community.objectiveSelectionSet)
@@ -270,15 +263,7 @@ checkSelectionSet : SelectionSet Check Cambiatus.Object.Check
 checkSelectionSet =
     SelectionSet.succeed Check
         |> with Check.isVerified
-        |> with (Check.validator claimProfileSelectionSet)
-
-
-claimProfileSelectionSet : SelectionSet ClaimProfile Cambiatus.Object.Profile
-claimProfileSelectionSet =
-    SelectionSet.succeed ClaimProfile
-        |> with User.name
-        |> with (Eos.nameSelectionSet User.account)
-        |> with (Avatar.selectionSet User.avatar)
+        |> with (Check.validator Profile.minimalSelectionSet)
 
 
 paginatedToList : Maybe Paginated -> List Model

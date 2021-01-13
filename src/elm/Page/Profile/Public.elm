@@ -7,7 +7,7 @@ import Html exposing (Html, div)
 import Json.Decode exposing (Value)
 import Page
 import Page.Profile exposing (ProfilePage(..), viewUserInfo)
-import Profile exposing (Profile)
+import Profile exposing (Model)
 import Route
 import Session.LoggedIn as LoggedIn exposing (External(..), FeedbackStatus(..))
 import UpdateResult as UR
@@ -31,7 +31,7 @@ type alias UpdateResult =
 
 
 type Msg
-    = CompletedProfileLoad (Result (Graphql.Http.Error (Maybe Profile)) (Maybe Profile))
+    = CompletedProfileLoad (Result (Graphql.Http.Error (Maybe Profile.Model)) (Maybe Profile.Model))
 
 
 type alias Model =
@@ -40,8 +40,8 @@ type alias Model =
 
 type Status
     = Loading
-    | LoadingFailed (Graphql.Http.Error (Maybe Profile))
-    | Loaded Profile
+    | LoadingFailed (Graphql.Http.Error (Maybe Profile.Model))
+    | Loaded Profile.Model
     | NotFound
 
 

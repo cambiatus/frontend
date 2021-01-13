@@ -14,7 +14,7 @@ import Html exposing (Html, div)
 import Html.Attributes exposing (class)
 import Http
 import Page
-import Profile exposing (Profile)
+import Profile exposing (Model)
 import Profile.EditKycForm as KycForm
 import Route
 import Session.LoggedIn as LoggedIn exposing (External(..), FeedbackStatus(..), ProfileStatus(..))
@@ -56,7 +56,7 @@ init loggedIn =
 
 type Msg
     = FormMsg KycForm.Msg
-    | CompletedProfileLoad (Result (Graphql.Http.Error (Maybe Profile)) (Maybe Profile))
+    | CompletedProfileLoad (Result (Graphql.Http.Error (Maybe Profile.Model)) (Maybe Profile.Model))
 
 
 type alias UpdateResult =

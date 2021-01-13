@@ -25,7 +25,7 @@ import Icons
 import Json.Decode as Decode exposing (Value)
 import Json.Encode as Encode
 import Page
-import Profile exposing (DeleteKycAndAddressResult, Profile)
+import Profile exposing (DeleteKycAndAddressResult, Model)
 import PushSubscription exposing (PushSubscription)
 import Route
 import Session.LoggedIn as LoggedIn exposing (External(..), FeedbackStatus(..), ProfileStatus(..))
@@ -154,7 +154,7 @@ viewDeleteKycModal { t } model =
         |> Modal.toHtml
 
 
-viewSettings : LoggedIn.Model -> Model -> Profile -> Html Msg
+viewSettings : LoggedIn.Model -> Model -> Profile.Model -> Html Msg
 viewSettings loggedIn model profile =
     let
         { t } =
@@ -241,7 +241,7 @@ type ProfilePage
     | Public
 
 
-viewUserInfo : LoggedIn.Model -> Profile -> ProfilePage -> Html msg
+viewUserInfo : LoggedIn.Model -> Profile.Model -> ProfilePage -> Html msg
 viewUserInfo loggedIn profile pageType =
     let
         { t } =
@@ -616,7 +616,7 @@ type alias UpdateResult =
 
 type Msg
     = Ignored
-    | CompletedProfileLoad (Result (Graphql.Http.Error (Maybe Profile)) (Maybe Profile))
+    | CompletedProfileLoad (Result (Graphql.Http.Error (Maybe Profile.Model)) (Maybe Profile.Model))
     | DownloadPdf String
     | DownloadPdfProcessed Bool
     | ClickedClosePdfDownloadError
