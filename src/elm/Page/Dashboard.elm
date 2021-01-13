@@ -577,19 +577,24 @@ viewQuickLinks ({ shared } as loggedIn) =
     in
     div [ class "flex-wrap flex" ]
         [ div [ class "w-1/2 lg:w-full" ]
-            [ a
-                [ class "flex flex-wrap mr-2 px-4 py-6 rounded bg-white hover:shadow lg:flex-no-wrap lg:justify-between lg:items-center lg:mb-6 lg:mr-0"
-                , Route.href (Route.ProfileClaims (Eos.nameToString loggedIn.accountName))
-                ]
-                [ div []
-                    [ div [ class "w-full mb-4" ] [ Icons.claims "w-8 h-8" ]
-                    , p [ class "w-full text-gray-600 mb-4 lg:mb-0" ]
-                        [ text <| t "dashboard.my_claims.1"
-                        , span [ class "font-bold" ] [ text <| t "dashboard.my_claims.2" ]
+            [ case loggedIn.hasObjectives of
+                FeatureLoaded True ->
+                    a
+                        [ class "flex flex-wrap mr-2 px-4 py-6 rounded bg-white hover:shadow lg:flex-no-wrap lg:justify-between lg:items-center lg:mb-6 lg:mr-0"
+                        , Route.href (Route.ProfileClaims (Eos.nameToString loggedIn.accountName))
                         ]
-                    ]
-                , div [ class "w-full lg:w-1/3 button button-primary" ] [ text <| t "dashboard.my_claims.go" ]
-                ]
+                        [ div []
+                            [ div [ class "w-full mb-4" ] [ Icons.claims "w-8 h-8" ]
+                            , p [ class "w-full text-gray-600 mb-4 lg:mb-0" ]
+                                [ text <| t "dashboard.my_claims.1"
+                                , span [ class "font-bold" ] [ text <| t "dashboard.my_claims.2" ]
+                                ]
+                            ]
+                        , div [ class "w-full lg:w-1/3 button button-primary" ] [ text <| t "dashboard.my_claims.go" ]
+                        ]
+
+                _ ->
+                    text ""
             ]
         , div [ class "w-1/2 lg:w-full" ]
             [ case loggedIn.hasShop of
