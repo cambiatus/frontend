@@ -284,8 +284,8 @@ viewGrid loggedIn cards model =
             (List.indexedMap (viewCard model loggedIn) availableCards)
         , if List.length outOfStockCards > 0 then
             div []
-                [ p [ class " ml-2 w-full border-b-2 pb-2 border-gray-300 mb-4 text-md font-normal text-2xl" ]
-                    [ text "Out of Stock" ]
+                [ p [ class " ml-2 w-full border-b-2 pb-2 border-gray-300 mb-4 text-2xl capitalize" ]
+                    [ text <| loggedIn.shared.translators.t "shop.out_of_stock" ]
                 , div [ class "flex flex-wrap -mx-2" ]
                     (List.indexedMap (viewCard model loggedIn) outOfStockCards)
                 ]
