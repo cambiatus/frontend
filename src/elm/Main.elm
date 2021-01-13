@@ -905,7 +905,7 @@ jsAddressToMsg address val =
             Maybe.map GotShopMsg
                 (Shop.jsAddressToMsg rAddress val)
 
-        "ProfilePublic" :: rAddress ->
+        "GotProfilePublicMsg" :: rAddress ->
             Maybe.map GotProfilePublicMsg
                 (ProfilePublic.jsAddressToMsg rAddress val)
 
@@ -993,7 +993,7 @@ msgToString msg =
             "GotLoginMsg" :: Login.msgToString subMsg
 
         GotProfilePublicMsg subMsg ->
-            "ProfilePublic" :: ProfilePublic.msgToString subMsg
+            "GotProfilePublicMsg" :: ProfilePublic.msgToString subMsg
 
         GotPaymentHistoryMsg subMsg ->
             "GotPaymentHistoryMsg" :: PaymentHistory.msgToString subMsg
