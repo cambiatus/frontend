@@ -12,7 +12,6 @@ module Page.Shop exposing
 import Api
 import Api.Graphql
 import Array
-import Browser.Dom as Dom
 import Community exposing (Balance)
 import Eos
 import Eos.Account as Eos
