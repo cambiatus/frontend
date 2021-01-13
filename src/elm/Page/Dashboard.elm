@@ -34,7 +34,7 @@ import List.Extra as List
 import Page
 import Profile
 import Route
-import Session.LoggedIn as LoggedIn exposing (External(..))
+import Session.LoggedIn as LoggedIn exposing (External(..), FeatureStatus(..))
 import Session.Shared exposing (Shared)
 import Shop
 import Task
@@ -592,19 +592,24 @@ viewQuickLinks ({ shared } as loggedIn) =
                 ]
             ]
         , div [ class "w-1/2 lg:w-full" ]
-            [ a
-                [ class "flex flex-wrap ml-2 px-4 py-6 rounded bg-white hover:shadow lg:flex-no-wrap lg:justify-between lg:items-center lg:ml-0"
-                , Route.href (Route.Shop Shop.UserSales)
-                ]
-                [ div []
-                    [ div [ class "w-full mb-4 lg:mb-2" ] [ Icons.shop "w-8 h-8 fill-current" ]
-                    , p [ class "w-full text-gray-600 mb-4 lg:mb-0" ]
-                        [ text <| t "dashboard.my_offers.1"
-                        , span [ class "font-bold" ] [ text <| t "dashboard.my_offers.2" ]
+            [ case loggedIn.hasShop of
+                FeatureLoaded True ->
+                    a
+                        [ class "flex flex-wrap ml-2 px-4 py-6 rounded bg-white hover:shadow lg:flex-no-wrap lg:justify-between lg:items-center lg:ml-0"
+                        , Route.href (Route.Shop Shop.UserSales)
                         ]
-                    ]
-                , div [ class "w-full lg:w-1/3 button button-primary" ] [ text <| t "dashboard.my_offers.go" ]
-                ]
+                        [ div []
+                            [ div [ class "w-full mb-4 lg:mb-2" ] [ Icons.shop "w-8 h-8 fill-current" ]
+                            , p [ class "w-full text-gray-600 mb-4 lg:mb-0" ]
+                                [ text <| t "dashboard.my_offers.1"
+                                , span [ class "font-bold" ] [ text <| t "dashboard.my_offers.2" ]
+                                ]
+                            ]
+                        , div [ class "w-full lg:w-1/3 button button-primary" ] [ text <| t "dashboard.my_offers.go" ]
+                        ]
+
+                _ ->
+                    text ""
             ]
         ]
 
