@@ -993,7 +993,7 @@ msgToString msg =
             "GotLoginMsg" :: Login.msgToString subMsg
 
         GotProfilePublicMsg subMsg ->
-            "ProfilePublic" :: ProfilePublic.msgToString subMsg
+            "GotProfilePublicMsg" :: ProfilePublic.msgToString subMsg
 
         GotPaymentHistoryMsg subMsg ->
             "GotPaymentHistoryMsg" :: PaymentHistory.msgToString subMsg
