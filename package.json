@@ -95,7 +95,7 @@
     "scrypt-async": "^2.0.1",
     "sjcl": "^1.0.8",
     "sw-precache": "^5.2.1",
-    "tailwindcss": "^1.4.6",
+    "tailwindcss": "^1.9.0",
     "tailwindcss-transforms": "^2.2.0",
     "webpack-cli": "^3.3.9"
   }

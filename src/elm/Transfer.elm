@@ -33,7 +33,7 @@ import Graphql.Operation exposing (RootQuery)
 import Graphql.OptionalArgument exposing (OptionalArgument(..))
 import Graphql.SelectionSet as SelectionSet exposing (SelectionSet, with)
 import Json.Encode as Encode exposing (Value)
-import Profile exposing (Profile)
+import Profile
 
 
 type TransferFilter
@@ -53,8 +53,8 @@ communityFilter sym =
 
 type alias Transfer =
     { id : Int
-    , to : Profile
-    , from : Profile
+    , to : Profile.Model
+    , from : Profile.Model
     , value : Float
     , memo : Maybe String
     , symbol : Symbol
@@ -168,7 +168,7 @@ communityTransfersSelectionSet paginateArgs =
 transfersUserQuery : Name -> (User.TransfersOptionalArguments -> User.TransfersOptionalArguments) -> SelectionSet (Maybe QueryTransfers) RootQuery
 transfersUserQuery name paginateArgs =
     profileTransfersSelectionSet paginateArgs
-        |> Cambiatus.Query.profile { input = { account = Present (Eos.nameToString name) } }
+        |> Cambiatus.Query.profile { account = Eos.nameToString name }
 
 
 transfersCommunityQuery : Symbol -> (PaginationArgs -> PaginationArgs) -> SelectionSet (Maybe QueryTransfers) RootQuery
@@ -200,15 +200,7 @@ getTransfers maybeObj =
 
         toMaybeNodes : List (Maybe EdgeTransfer) -> List (Maybe Transfer)
         toMaybeNodes edges =
-            List.map
-                (\a ->
-                    Maybe.andThen
-                        (\b ->
-                            b.node
-                        )
-                        a
-                )
-                edges
+            List.map (\a -> Maybe.andThen (\b -> b.node) a) edges
 
         toNodes : List (Maybe Transfer) -> List Transfer
         toNodes maybeNodes =

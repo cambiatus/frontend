@@ -8,8 +8,10 @@ module Shop exposing
     , productsQuery
     )
 
+import Avatar exposing (Avatar)
 import Cambiatus.Object
 import Cambiatus.Object.Product
+import Cambiatus.Object.Profile as User
 import Cambiatus.Query as Query
 import Eos exposing (Symbol)
 import Eos.Account as Eos
@@ -19,7 +21,6 @@ import Graphql.SelectionSet as SelectionSet exposing (SelectionSet, with)
 import Html.Events exposing (targetValue)
 import Json.Decode as Decode exposing (Decoder)
 import Json.Encode as Encode exposing (Value)
-import Profile exposing (Profile)
 
 
 
@@ -36,12 +37,20 @@ type alias Product =
     , image : Maybe String
     , units : Int
     , trackStock : Bool
-    , creator : Profile
+    , creator : ShopProfile
     }
 
 
 type alias ProductId =
     String
+
+
+type alias ShopProfile =
+    { account : Eos.Name
+    , name : Maybe String
+    , avatar : Avatar
+    , email : Maybe String
+    }
 
 
 type Filter
@@ -105,7 +114,16 @@ productSelection =
         |> with Cambiatus.Object.Product.image
         |> with Cambiatus.Object.Product.units
         |> with Cambiatus.Object.Product.trackStock
-        |> with (Cambiatus.Object.Product.creator Profile.selectionSet)
+        |> with (Cambiatus.Object.Product.creator shopProfileSelectionSet)
+
+
+shopProfileSelectionSet : SelectionSet ShopProfile Cambiatus.Object.Profile
+shopProfileSelectionSet =
+    SelectionSet.succeed ShopProfile
+        |> with (Eos.nameSelectionSet User.account)
+        |> with User.name
+        |> with (Avatar.selectionSet User.avatar)
+        |> with User.email
 
 
 productQuery : Int -> SelectionSet (Maybe Product) RootQuery
@@ -120,7 +138,7 @@ productsQuery filter accName communityId =
             let
                 args =
                     \_ ->
-                        { filters = Present { account = Eos.nameToString accName }
+                        { filters = Present { account = Eos.nameToString accName, inStock = Present True }
                         }
             in
             Query.products args { communityId = Eos.symbolToString communityId } productSelection

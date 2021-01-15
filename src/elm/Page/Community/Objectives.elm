@@ -8,7 +8,6 @@ import Graphql.Http
 import Html exposing (Html, a, button, div, p, text)
 import Html.Attributes exposing (class, classList)
 import Html.Events exposing (onClick)
-import I18Next exposing (Delims(..), t)
 import Icons
 import Page
 import Profile
@@ -67,26 +66,26 @@ type Status
 view : LoggedIn.Model -> Model -> { title : String, content : Html Msg }
 view ({ shared } as loggedIn) model =
     let
-        translate =
-            t shared.translations
+        t =
+            shared.translators.t
 
         title =
-            translate "community.objectives.title_plural"
+            t "community.objectives.title_plural"
 
         content =
             case model.status of
                 Loading ->
-                    Page.fullPageLoading
+                    Page.fullPageLoading shared
 
                 NotFound ->
                     Page.viewCardEmpty [ text "Community not found" ]
 
                 Failed e ->
-                    Page.fullPageGraphQLError (t shared.translations "community.objectives.title_plural") e
+                    Page.fullPageGraphQLError (t "community.objectives.title_plural") e
 
                 Loaded community ->
                     div []
-                        [ Page.viewHeader loggedIn (t shared.translations "community.objectives.title_plural") (Route.Community model.communityId)
+                        [ Page.viewHeader loggedIn (t "community.objectives.title_plural") (Route.Community model.communityId)
                         , div [ class "container mx-auto px-4 my-10" ]
                             [ div [ class "flex justify-end mb-10" ] [ viewNewObjectiveButton loggedIn community ]
                             , div []
@@ -102,7 +101,7 @@ view ({ shared } as loggedIn) model =
                     div []
                         [ Page.viewHeader loggedIn title Route.Dashboard
                         , div [ class "card" ]
-                            [ text (translate "community.edit.unauthorized") ]
+                            [ text (shared.translators.t "community.edit.unauthorized") ]
                         ]
     in
     { title = title
@@ -117,7 +116,7 @@ viewNewObjectiveButton ({ shared } as loggedIn) community =
             [ class "button button-primary button-sm w-full md:w-64"
             , Route.href (Route.NewObjective community.symbol)
             ]
-            [ text (t shared.translations "community.objectives.new") ]
+            [ text (shared.translators.t "community.objectives.new") ]
 
     else
         text ""
@@ -136,7 +135,7 @@ viewObjective ({ shared } as loggedIn) model community index objective =
                     False
 
         text_ s =
-            text (t shared.translations s)
+            text (shared.translators.t s)
     in
     div
         [ class "bg-white rounded mt-4 hover:shadow" ]
@@ -151,8 +150,7 @@ viewObjective ({ shared } as loggedIn) model community index objective =
                     [ p [ class "text-sm" ] [ text objective.description ]
                     , p [ class "text-gray-900 text-caption uppercase mt-2" ]
                         [ text
-                            (I18Next.tr shared.translations
-                                Curly
+                            (shared.translators.tr
                                 "community.objectives.action_count"
                                 [ ( "actions", objective.actions |> List.length |> String.fromInt ) ]
                             )
@@ -232,10 +230,10 @@ viewAction ({ shared } as loggedIn) model objectiveId action =
                 |> VerificationType.toString
 
         text_ s =
-            text (t shared.translations s)
+            text (shared.translators.t s)
 
         tr r_id replaces =
-            I18Next.tr loggedIn.shared.translations I18Next.Curly r_id replaces
+            loggedIn.shared.translators.tr r_id replaces
     in
     div [ class "flex flex-wrap sm:flex-no-wrap mt-8 mb-4 relative bg-purple-500 rounded-lg px-4 py-5" ]
         [ div [ class "absolute top-0 left-0 right-0 -mt-6" ] [ Icons.flag "w-full" ]

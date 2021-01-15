@@ -25,7 +25,6 @@ import Html exposing (Html, br, button, div, input, label, span, text, textarea)
 import Html.Attributes exposing (accept, class, classList, disabled, for, id, maxlength, minlength, multiple, placeholder, required, type_, value)
 import Html.Events exposing (onClick, onInput, onSubmit)
 import Http
-import I18Next
 import Json.Decode as Decode
 import Json.Encode as Encode exposing (Value)
 import List.Extra as List
@@ -95,9 +94,9 @@ type alias Form =
     , symbol : String
     , logoSelected : Int
     , logoList : List LogoStatus
-    , inviterReward : Float
-    , invitedReward : Float
-    , minBalance : Float
+    , inviterReward : String
+    , invitedReward : String
+    , minBalance : String
     , hasShop : Bool
     , hasObjectives : Bool
     , hasKyc : Bool
@@ -111,9 +110,9 @@ newForm =
     , symbol = ""
     , logoSelected = 0
     , logoList = defaultLogos
-    , inviterReward = 0
-    , invitedReward = 10
-    , minBalance = -100
+    , inviterReward = "0"
+    , invitedReward = "10"
+    , minBalance = "-100"
     , hasShop = True
     , hasObjectives = True
     , hasKyc = False
@@ -140,9 +139,9 @@ editForm community =
     , symbol = Eos.symbolToString community.symbol
     , logoSelected = logoSelected
     , logoList = logoList
-    , inviterReward = community.inviterReward
-    , invitedReward = community.invitedReward
-    , minBalance = community.minBalance |> Maybe.withDefault newForm.minBalance
+    , inviterReward = String.fromFloat community.inviterReward
+    , invitedReward = String.fromFloat community.invitedReward
+    , minBalance = String.fromFloat (community.minBalance |> Maybe.withDefault 0.0)
     , hasShop = community.hasShop
     , hasObjectives = community.hasObjectives
     , hasKyc = community.hasKyc
@@ -209,9 +208,9 @@ encodeFormHelper logoUrl { accountName } form =
             , logoUrl = logoUrl
             , name = form.name
             , description = form.description
-            , inviterReward = form.inviterReward
-            , invitedReward = form.invitedReward
-            , minBalance = form.minBalance
+            , inviterReward = String.toFloat form.inviterReward |> Maybe.withDefault 0.0
+            , invitedReward = String.toFloat form.invitedReward |> Maybe.withDefault 0.0
+            , minBalance = String.toFloat form.minBalance |> Maybe.withDefault 0.0
             , hasShop = form.hasShop
             , hasObjectives = form.hasObjectives
             , hasKyc = form.hasKyc
@@ -233,7 +232,7 @@ view ({ shared } as loggedIn) model =
         content =
             case model of
                 Loading _ ->
-                    Page.fullPageLoading
+                    Page.fullPageLoading shared
 
                 LoadingFailed e ->
                     Page.fullPageGraphQLError (t "community.edit.title") e
@@ -275,7 +274,7 @@ viewForm : LoggedIn.Model -> Bool -> Bool -> Dict String FormError -> Form -> Mo
 viewForm ({ shared } as loggedIn) isEdit isDisabled errors form model =
     let
         t =
-            I18Next.t shared.translations
+            shared.translators.t
 
         ( titleText, actionText ) =
             if isEdit then
@@ -330,7 +329,7 @@ viewFieldDescription shared isDisabled defVal errors =
             "comm-description"
 
         t =
-            I18Next.t shared.translations
+            shared.translators.t
     in
     formField
         [ span [ class "input-label" ]
@@ -358,7 +357,7 @@ viewFieldCurrencyName shared isDisabled defVal errors =
             "comm-currency-name"
 
         t =
-            I18Next.t shared.translations
+            shared.translators.t
     in
     formField
         [ span [ class "input-label" ]
@@ -381,7 +380,7 @@ viewFieldCurrencySymbol : Shared -> Bool -> String -> Dict String FormError -> H
 viewFieldCurrencySymbol shared isDisabled defVal errors =
     let
         t =
-            I18Next.t shared.translations
+            shared.translators.t
     in
     formField
         [ span [ class "input-label" ]
@@ -406,7 +405,7 @@ viewFieldLogo : Shared -> Bool -> Int -> List LogoStatus -> Dict String FormErro
 viewFieldLogo shared isDisabled selected logos errors =
     let
         t =
-            I18Next.t shared.translations
+            shared.translators.t
 
         logoClass s =
             "create-community-logo-list-item" ++ s
@@ -466,14 +465,14 @@ viewFieldLogo shared isDisabled selected logos errors =
         )
 
 
-viewFieldInviterReward : Shared -> Bool -> Float -> Dict String FormError -> Html Msg
+viewFieldInviterReward : Shared -> Bool -> String -> Dict String FormError -> Html Msg
 viewFieldInviterReward shared isDisabled defVal errors =
     let
         id_ =
             "comm-inviter-reward"
 
         t =
-            I18Next.t shared.translations
+            shared.translators.t
     in
     formField
         [ span [ class "input-label" ]
@@ -481,7 +480,7 @@ viewFieldInviterReward shared isDisabled defVal errors =
         , input
             [ class "w-full input rounded-sm"
             , id id_
-            , value <| String.fromFloat defVal
+            , value defVal
             , maxlength 255
             , required True
             , onInput EnteredInviterReward
@@ -492,21 +491,21 @@ viewFieldInviterReward shared isDisabled defVal errors =
         ]
 
 
-viewFieldInvitedReward : Shared -> Bool -> Float -> Dict String FormError -> Html Msg
+viewFieldInvitedReward : Shared -> Bool -> String -> Dict String FormError -> Html Msg
 viewFieldInvitedReward shared isDisabled defVal errors =
     let
         id_ =
             "comm-invited-reward"
 
         t =
-            I18Next.t shared.translations
+            shared.translators.t
     in
     formField
         [ span [ class "input-label" ]
             [ text <| t "community.create.labels.invited_reward" ]
         , input
             [ class "w-full input rounded-sm"
-            , value <| String.fromFloat defVal
+            , value defVal
             , maxlength 255
             , required True
             , onInput EnteredInvitedReward
@@ -517,20 +516,20 @@ viewFieldInvitedReward shared isDisabled defVal errors =
         ]
 
 
-viewFieldMinBalance : Shared -> Bool -> Float -> Dict String FormError -> Html Msg
+viewFieldMinBalance : Shared -> Bool -> String -> Dict String FormError -> Html Msg
 viewFieldMinBalance shared isDisabled defVal errors =
     let
         id_ =
             "min-balance"
 
         t =
-            I18Next.t shared.translations
+            shared.translators.t
     in
     formField
         [ span [ class "input-label" ] [ text <| t "community.create.labels.min_balance" ]
         , input
             [ class "w-full input rounded-sm"
-            , value <| String.fromFloat defVal
+            , value defVal
             , maxlength 255
             , required True
             , onInput EnteredMinBalance
@@ -574,8 +573,8 @@ viewFieldError shared fieldId errors =
 errorToString : Shared -> FormError -> String
 errorToString shared v =
     let
-        t s =
-            I18Next.t shared.translations s
+        t =
+            shared.translators.t
     in
     case v of
         ChooseOrUploadLogo ->
@@ -619,7 +618,7 @@ update : Msg -> Model -> LoggedIn.Model -> UpdateResult
 update msg model loggedIn =
     let
         t =
-            I18Next.t loggedIn.shared.translations
+            loggedIn.shared.translators.t
     in
     case msg of
         CompletedCommunityLoad (Ok community) ->
@@ -652,15 +651,15 @@ update msg model loggedIn =
 
         EnteredInviterReward input ->
             UR.init model
-                |> updateForm (\form -> { form | inviterReward = Maybe.withDefault form.inviterReward <| String.toFloat input })
+                |> updateForm (\form -> { form | inviterReward = input })
 
         EnteredInvitedReward input ->
             UR.init model
-                |> updateForm (\form -> { form | invitedReward = Maybe.withDefault form.invitedReward <| String.toFloat input })
+                |> updateForm (\form -> { form | invitedReward = input })
 
         EnteredMinBalance input ->
             UR.init model
-                |> updateForm (\f -> { f | minBalance = Maybe.withDefault f.minBalance <| String.toFloat input })
+                |> updateForm (\f -> { f | minBalance = input })
 
         EnteredSymbol input ->
             UR.init model

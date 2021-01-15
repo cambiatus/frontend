@@ -3,14 +3,12 @@ module Auth exposing
     , LoginFormData
     , Model
     , Msg
-    , SignUpResult
     , init
     , initRegister
     , isAuth
     , jsAddressToMsg
     , maybePrivateKey
     , msgToString
-    , signUp
     , subscriptions
     , update
     , view
@@ -21,15 +19,9 @@ import Api.Graphql
 import Asset.Icon as Icon
 import Browser.Dom as Dom
 import Browser.Events
-import Cambiatus.Enum.SignUpStatus
-import Cambiatus.Mutation
-import Cambiatus.Object
-import Cambiatus.Object.SignUp as SignUp
 import Eos.Account as Eos
 import Graphql.Http
-import Graphql.Operation exposing (RootMutation)
 import Graphql.OptionalArgument exposing (OptionalArgument(..))
-import Graphql.SelectionSet as SelectionSet exposing (SelectionSet, with)
 import Html exposing (Html, a, button, div, form, h2, img, label, li, p, span, strong, text, textarea, ul)
 import Html.Attributes exposing (autocomplete, autofocus, class, disabled, for, id, placeholder, required, src, title, type_, value)
 import Html.Events exposing (onClick, onInput, onSubmit)
@@ -38,7 +30,7 @@ import Json.Decode as Decode
 import Json.Decode.Pipeline as Decode
 import Json.Encode as Encode exposing (Value)
 import Log
-import Profile exposing (Profile)
+import Profile exposing (Model)
 import Route
 import Session.Shared exposing (Shared, Translators)
 import Task
@@ -462,7 +454,7 @@ viewMultipleAccount : List Eos.Name -> LoginFormData -> Bool -> Shared -> Model 
 viewMultipleAccount accounts form isDisabled shared model =
     let
         text_ s =
-            Html.text (t shared.translations s)
+            Html.text (shared.translators.t s)
 
         btnClass =
             class "btn btn--outline btn--login"
@@ -476,7 +468,7 @@ viewMultipleAccount accounts form isDisabled shared model =
             , onClick ClickedViewOptions
             , type_ "button"
             , disabled isDisabled
-            , title (t shared.translations "menu.cancel")
+            , title (shared.translators.t "menu.cancel")
             ]
             [ Icon.close "" ]
         ]
@@ -530,7 +522,7 @@ viewAuthError shared maybeLoginError =
         Just error ->
             div [ class "bg-red border-lg rounded p-4 mt-2" ]
                 [ p [ class "text-white" ]
-                    [ text (t shared.translations error) ]
+                    [ text (shared.translators.t error) ]
                 ]
 
 
@@ -564,7 +556,7 @@ type Msg
     | GotPrivateKeyLogin (Result String ( Eos.Name, String ))
     | SubmittedLoginPIN
     | GotPinLogin (Result String ( Eos.Name, String ))
-    | CompletedLoadProfile Status Eos.Name (Result (Graphql.Http.Error (Maybe Profile)) (Maybe Profile))
+    | CompletedLoadProfile Status Eos.Name (Result (Graphql.Http.Error (Maybe Profile.Model)) (Maybe Profile.Model))
     | TogglePinVisibility
     | TogglePinConfirmationVisibility
     | KeyPressed Bool
@@ -574,7 +566,7 @@ type Msg
 
 type ExternalMsg
     = ClickedCancel
-    | CompletedAuth Profile
+    | CompletedAuth Profile.Model
     | UpdatedShared Shared
 
 
@@ -857,7 +849,7 @@ update msg shared model =
                 UR.init model
 
 
-loginFailedGraphql : Graphql.Http.Error (Maybe Profile) -> Model -> UpdateResult
+loginFailedGraphql : Graphql.Http.Error (Maybe Profile.Model) -> Model -> UpdateResult
 loginFailedGraphql httpError model =
     UR.init
         { model
@@ -979,10 +971,10 @@ viewPin ({ form } as model) shared =
             case shared.maybeAccount of
                 Just _ ->
                     -- Popup with PIN input for logged-in user has different label
-                    I18Next.t shared.translations "auth.pinPopup.label"
+                    shared.translators.t "auth.pinPopup.label"
 
                 Nothing ->
-                    I18Next.t shared.translations "auth.pin.label"
+                    shared.translators.t "auth.pin.label"
 
         isPinError ( problemType, _ ) =
             case problemType of
@@ -1033,61 +1025,3 @@ viewPinConfirmation ({ form } as model) shared =
         , isVisible = model.pinConfirmationVisibility
         , errors = errors
         }
-
-
-
--- GraphQL
-
-
-type alias SignUpResult =
-    { status : SignUpStatus
-    , reason : String
-    }
-
-
-type SignUpStatus
-    = Success
-    | Error
-
-
-signUp : Eos.Name -> String -> String -> String -> Maybe String -> SelectionSet SignUpResult RootMutation
-signUp account name email publicKey maybeInvitationId =
-    let
-        accountString =
-            Eos.nameToString account
-    in
-    Cambiatus.Mutation.signUp
-        { input =
-            { account = accountString
-            , name = name
-            , email = email
-            , publicKey = publicKey
-            , userType = Present ""
-            , invitationId =
-                case maybeInvitationId of
-                    Just i ->
-                        Present i
-
-                    Nothing ->
-                        Absent
-            }
-        }
-        signUpSelectionSet
-
-
-signUpSelectionSet : SelectionSet SignUpResult Cambiatus.Object.SignUp
-signUpSelectionSet =
-    let
-        mapSignUpStatus : Cambiatus.Enum.SignUpStatus.SignUpStatus -> SignUpStatus
-        mapSignUpStatus =
-            \s ->
-                case s of
-                    Cambiatus.Enum.SignUpStatus.Success ->
-                        Success
-
-                    Cambiatus.Enum.SignUpStatus.Error ->
-                        Error
-    in
-    SelectionSet.succeed SignUpResult
-        |> with (SignUp.status |> SelectionSet.map mapSignUpStatus)
-        |> with SignUp.reason

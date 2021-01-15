@@ -1,6 +1,10 @@
 {
   "bespiral": "Cambiatus",
   "back": "Torna",
+  "loading": {
+    "title": "Espera un moment",
+    "subtitle": "Estem processant la vostra sol·licitud"
+  },
   "menu": {
     "title": "Menú",
     "my_communities": "Benvingut a ",
@@ -618,12 +622,13 @@
       "push_notifications": "Activeu les notificacions",
       "submit": "Guardar"
     },
-    "badge": {
-      "title": "Insígnies",
-      "currencyStarter": "Currency Starter",
-      "developer": "Developer",
-      "seedTeam": "Seed Team",
-      "mentor": "Mentor"
+    "claims": {
+      "title": "Reclamacions",
+      "not_found": {
+        "title": "Les meves afirmacions",
+        "subtitle": "No s'ha trobat cap usuari"
+      },
+      "empty_results": "Encara no hi ha reclamacions"
     }
   },
   "shop": {
@@ -717,6 +722,16 @@
     "reject": "Rebutjar",
     "verify": "Verificar",
     "closed": "tancat",
+    "my_claims": {
+      "1": "Les meves ",
+      "2": "Reclamacions",
+      "go": "Vaja"
+    },
+    "my_offers": {
+      "1": "Les meves ",
+      "2": "Ofertes",
+      "go": "Vaja"
+    },
     "analysis": {
       "title": {
         "1": "Accions",

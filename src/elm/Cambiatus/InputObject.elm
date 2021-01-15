@@ -458,19 +458,31 @@ encodeObjectiveInput input =
 
 buildProductsFilterInput :
     ProductsFilterInputRequiredFields
+    -> (ProductsFilterInputOptionalFields -> ProductsFilterInputOptionalFields)
     -> ProductsFilterInput
-buildProductsFilterInput required =
-    { account = required.account }
+buildProductsFilterInput required fillOptionals =
+    let
+        optionals =
+            fillOptionals
+                { inStock = Absent }
+    in
+    { account = required.account, inStock = optionals.inStock }
 
 
 type alias ProductsFilterInputRequiredFields =
     { account : String }
 
 
+type alias ProductsFilterInputOptionalFields =
+    { inStock : OptionalArgument Bool }
+
+
 {-| Type for the ProductsFilterInput input object.
 -}
 type alias ProductsFilterInput =
-    { account : String }
+    { account : String
+    , inStock : OptionalArgument Bool
+    }
 
 
 {-| Encode a ProductsFilterInput into a value that can be used as an argument.
@@ -478,37 +490,7 @@ type alias ProductsFilterInput =
 encodeProductsFilterInput : ProductsFilterInput -> Value
 encodeProductsFilterInput input =
     Encode.maybeObject
-        [ ( "account", Encode.string input.account |> Just ) ]
-
-
-buildProfileInput :
-    (ProfileInputOptionalFields -> ProfileInputOptionalFields)
-    -> ProfileInput
-buildProfileInput fillOptionals =
-    let
-        optionals =
-            fillOptionals
-                { account = Absent }
-    in
-    { account = optionals.account }
-
-
-type alias ProfileInputOptionalFields =
-    { account : OptionalArgument String }
-
-
-{-| Type for the ProfileInput input object.
--}
-type alias ProfileInput =
-    { account : OptionalArgument String }
-
-
-{-| Encode a ProfileInput into a value that can be used as an argument.
--}
-encodeProfileInput : ProfileInput -> Value
-encodeProfileInput input =
-    Encode.maybeObject
-        [ ( "account", Encode.string |> Encode.optional input.account ) ]
+        [ ( "account", Encode.string input.account |> Just ), ( "inStock", Encode.bool |> Encode.optional input.inStock ) ]
 
 
 buildProfileUpdateInput :
@@ -615,53 +597,6 @@ encodeReadNotificationInput : ReadNotificationInput -> Value
 encodeReadNotificationInput input =
     Encode.maybeObject
         [ ( "id", Encode.int input.id |> Just ) ]
-
-
-buildSignUpInput :
-    SignUpInputRequiredFields
-    -> (SignUpInputOptionalFields -> SignUpInputOptionalFields)
-    -> SignUpInput
-buildSignUpInput required fillOptionals =
-    let
-        optionals =
-            fillOptionals
-                { invitationId = Absent, userType = Absent }
-    in
-    { account = required.account, email = required.email, invitationId = optionals.invitationId, name = required.name, publicKey = required.publicKey, userType = optionals.userType }
-
-
-type alias SignUpInputRequiredFields =
-    { account : String
-    , email : String
-    , name : String
-    , publicKey : String
-    }
-
-
-type alias SignUpInputOptionalFields =
-    { invitationId : OptionalArgument String
-    , userType : OptionalArgument String
-    }
-
-
-{-| Type for the SignUpInput input object.
--}
-type alias SignUpInput =
-    { account : String
-    , email : String
-    , invitationId : OptionalArgument String
-    , name : String
-    , publicKey : String
-    , userType : OptionalArgument String
-    }
-
-
-{-| Encode a SignUpInput into a value that can be used as an argument.
--}
-encodeSignUpInput : SignUpInput -> Value
-encodeSignUpInput input =
-    Encode.maybeObject
-        [ ( "account", Encode.string input.account |> Just ), ( "email", Encode.string input.email |> Just ), ( "invitationId", Encode.string |> Encode.optional input.invitationId ), ( "name", Encode.string input.name |> Just ), ( "publicKey", Encode.string input.publicKey |> Just ), ( "userType", Encode.string |> Encode.optional input.userType ) ]
 
 
 buildTransferInput :

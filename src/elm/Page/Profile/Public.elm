@@ -1,14 +1,13 @@
-module Page.PublicProfile exposing (Model, Msg, Status, init, initModel, jsAddressToMsg, msgToString, update, view)
+module Page.Profile.Public exposing (Model, Msg, Status, init, initModel, jsAddressToMsg, msgToString, update, view)
 
 import Api.Graphql
 import Eos.Account as Eos
 import Graphql.Http
 import Html exposing (Html, div)
-import I18Next
 import Json.Decode exposing (Value)
 import Page
 import Page.Profile exposing (ProfilePage(..), viewUserInfo)
-import Profile exposing (Profile)
+import Profile exposing (Model)
 import Route
 import Session.LoggedIn as LoggedIn exposing (External(..), FeedbackStatus(..))
 import UpdateResult as UR
@@ -32,7 +31,7 @@ type alias UpdateResult =
 
 
 type Msg
-    = CompletedProfileLoad (Result (Graphql.Http.Error (Maybe Profile)) (Maybe Profile))
+    = CompletedProfileLoad (Result (Graphql.Http.Error (Maybe Profile.Model)) (Maybe Profile.Model))
 
 
 type alias Model =
@@ -41,8 +40,8 @@ type alias Model =
 
 type Status
     = Loading
-    | LoadingFailed (Graphql.Http.Error (Maybe Profile))
-    | Loaded Profile
+    | LoadingFailed (Graphql.Http.Error (Maybe Profile.Model))
+    | Loaded Profile.Model
     | NotFound
 
 
@@ -55,12 +54,12 @@ view : LoggedIn.Model -> Model -> { title : String, content : Html Msg }
 view loggedIn status =
     let
         t =
-            I18Next.t loggedIn.shared.translations
+            loggedIn.shared.translators.t
 
         title =
             case status of
                 Loaded profile ->
-                    Maybe.withDefault "" profile.userName
+                    Maybe.withDefault "" profile.name
 
                 _ ->
                     ""
@@ -68,7 +67,7 @@ view loggedIn status =
         content =
             case status of
                 Loading ->
-                    Page.fullPageLoading
+                    Page.fullPageLoading loggedIn.shared
 
                 Loaded profile ->
                     div []

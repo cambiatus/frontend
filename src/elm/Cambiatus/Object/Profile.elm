@@ -57,6 +57,26 @@ chatUserId =
     Object.selectionForField "(Maybe String)" "chatUserId" [] (Decode.string |> Decode.nullable)
 
 
+type alias ClaimsOptionalArguments =
+    { communityId : OptionalArgument String }
+
+
+claims :
+    (ClaimsOptionalArguments -> ClaimsOptionalArguments)
+    -> SelectionSet decodesTo Cambiatus.Object.Claim
+    -> SelectionSet (List decodesTo) Cambiatus.Object.Profile
+claims fillInOptionals object_ =
+    let
+        filledInOptionals =
+            fillInOptionals { communityId = Absent }
+
+        optionalArgs =
+            [ Argument.optional "communityId" filledInOptionals.communityId Encode.string ]
+                |> List.filterMap identity
+    in
+    Object.selectionForCompositeField "claims" optionalArgs object_ (identity >> Decode.list)
+
+
 communities :
     SelectionSet decodesTo Cambiatus.Object.Community
     -> SelectionSet (List decodesTo) Cambiatus.Object.Profile

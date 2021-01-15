@@ -12,7 +12,7 @@ import Http
 import Icons
 import Json.Decode
 import Page
-import Profile exposing (Profile)
+import Profile exposing (Model)
 import Route
 import Session.LoggedIn exposing (External(..), FeedbackStatus(..))
 import Session.Shared exposing (Translators)
@@ -69,8 +69,8 @@ initModel =
 
 type Status
     = Loading
-    | LoadingFailed (Graphql.Http.Error (Maybe Profile))
-    | Loaded Profile
+    | LoadingFailed (Graphql.Http.Error (Maybe Profile.Model))
+    | Loaded Profile.Model
 
 
 
@@ -89,7 +89,7 @@ view loggedIn model =
         content =
             case model.status of
                 Loading ->
-                    Page.fullPageLoading
+                    Page.fullPageLoading loggedIn.shared
 
                 LoadingFailed _ ->
                     Page.fullPageError (t "profile.title") Http.Timeout
@@ -102,7 +102,7 @@ view loggedIn model =
     }
 
 
-view_ : Session.LoggedIn.Model -> Model -> Profile -> Html Msg
+view_ : Session.LoggedIn.Model -> Model -> Profile.Model -> Html Msg
 view_ loggedIn model profile =
     let
         { t } =
@@ -282,7 +282,7 @@ viewAvatar url =
             , class "block cursor-pointer"
             ]
             [ Avatar.view url "w-20 h-20"
-            , span [ class "absolute bottom-0 right-0 bg-orange-300 w-8 h-8 p-2 rounded-full" ] [ Icons.camera ]
+            , span [ class "absolute bottom-0 right-0 bg-orange-300 w-8 h-8 p-2 rounded-full" ] [ Icons.camera "" ]
             ]
         ]
 
@@ -292,7 +292,7 @@ viewAvatar url =
 
 
 type Msg
-    = CompletedProfileLoad (Result (Graphql.Http.Error (Maybe Profile)) (Maybe Profile))
+    = CompletedProfileLoad (Result (Graphql.Http.Error (Maybe Profile.Model)) (Maybe Profile.Model))
     | OnFieldInput Field String
     | AddInterest
     | RemoveInterest String
@@ -345,7 +345,7 @@ update msg model loggedIn =
             UR.init
                 { model
                     | status = Loaded profile
-                    , fullName = nullable profile.userName
+                    , fullName = nullable profile.name
                     , email = nullable profile.email
                     , bio = nullable profile.bio
                     , location = nullable profile.localization
@@ -455,10 +455,10 @@ update msg model loggedIn =
                 |> UR.logHttpError msg err
 
 
-modelToProfile : Model -> Profile -> Profile
+modelToProfile : Model -> Profile.Model -> Profile.Model
 modelToProfile model profile =
     { profile
-        | userName = Just model.fullName
+        | name = Just model.fullName
         , email = Just model.email
         , localization = Just model.location
         , interests = model.interests

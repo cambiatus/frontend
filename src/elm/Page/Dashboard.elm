@@ -34,8 +34,9 @@ import List.Extra as List
 import Page
 import Profile
 import Route
-import Session.LoggedIn as LoggedIn exposing (External(..))
+import Session.LoggedIn as LoggedIn exposing (External(..), FeatureStatus(..))
 import Session.Shared exposing (Shared)
+import Shop
 import Task
 import Time exposing (Posix)
 import Transfer exposing (QueryTransfers, Transfer)
@@ -133,15 +134,15 @@ type InviteModalStatus
 
 
 view : LoggedIn.Model -> Model -> { title : String, content : Html Msg }
-view loggedIn model =
+view ({ shared, accountName } as loggedIn) model =
     let
-        t s =
-            I18Next.t loggedIn.shared.translations s
+        t =
+            shared.translators.t
 
         isCommunityAdmin =
             case model.community of
                 LoadedGraphql community _ ->
-                    community.creator == loggedIn.accountName
+                    community.creator == accountName
 
                 _ ->
                     False
@@ -157,30 +158,14 @@ view loggedIn model =
         content =
             case ( model.balance, loggedIn.profile, model.community ) of
                 ( Loading, _, _ ) ->
-                    Page.fullPageLoading
+                    Page.fullPageLoading shared
 
                 ( Failed e, _, _ ) ->
                     Page.fullPageError (t "dashboard.sorry") e
 
                 ( Loaded balance, LoggedIn.Loaded profile, LoadedGraphql community _ ) ->
                     div [ class "container mx-auto px-4 mb-10" ]
-                        [ div [ class "flex inline-block text-gray-600 font-light mt-6 mb-5" ]
-                            [ div []
-                                [ text (t "menu.my_communities")
-                                , span [ class "text-indigo-500 font-medium" ]
-                                    [ text community.name
-                                    ]
-                                ]
-                            , if isCommunityAdmin then
-                                a
-                                    [ Route.href (Route.CommunitySettings loggedIn.selectedCommunity)
-                                    , class "ml-auto"
-                                    ]
-                                    [ Icons.settings ]
-
-                              else
-                                text ""
-                            ]
+                        [ viewHeader loggedIn community isCommunityAdmin
                         , viewBalance loggedIn model balance
                         , if areObjectivesEnabled && List.any (\account -> account == loggedIn.accountName) community.validators then
                             viewAnalysisList loggedIn profile model
@@ -199,11 +184,32 @@ view loggedIn model =
     }
 
 
+viewHeader : LoggedIn.Model -> Community.DashboardInfo -> Bool -> Html Msg
+viewHeader loggedIn community isCommunityAdmin =
+    div [ class "flex inline-block text-gray-600 font-light mt-6 mb-5" ]
+        [ div []
+            [ text (loggedIn.shared.translators.t "menu.my_communities")
+            , span [ class "text-indigo-500 font-medium" ]
+                [ text community.name
+                ]
+            ]
+        , if isCommunityAdmin then
+            a
+                [ Route.href (Route.CommunitySettings loggedIn.selectedCommunity)
+                , class "ml-auto"
+                ]
+                [ Icons.settings ]
+
+          else
+            text ""
+        ]
+
+
 viewInvitationModal : LoggedIn.Model -> Model -> Html Msg
 viewInvitationModal { shared } model =
     let
-        t s =
-            I18Next.t shared.translations s
+        t =
+            shared.translators.t
 
         text_ s =
             text (t s)
@@ -273,7 +279,7 @@ viewInvitationModal { shared } model =
                             [ ( "button-primary", not model.copied )
                             , ( "button-success", model.copied )
                             ]
-                        , class "button w-full md:w-48"
+                        , class "button w-full md:w-48 select-all"
                         , onClick (CopyToClipboard "invitation-id")
                         ]
                         [ if model.copied then
@@ -305,11 +311,11 @@ viewInvitationModal { shared } model =
         |> Modal.toHtml
 
 
-viewAnalysisList : LoggedIn.Model -> Profile.Profile -> Model -> Html Msg
+viewAnalysisList : LoggedIn.Model -> Profile.Model -> Model -> Html Msg
 viewAnalysisList loggedIn profile model =
     let
         text_ s =
-            text (I18Next.t loggedIn.shared.translations s)
+            text <| loggedIn.shared.translators.t s
 
         isVoted : List ClaimStatus -> Bool
         isVoted claims =
@@ -326,7 +332,7 @@ viewAnalysisList loggedIn profile model =
     in
     case model.analysis of
         LoadingGraphql ->
-            Page.fullPageLoading
+            Page.fullPageLoading loggedIn.shared
 
         LoadedGraphql claims _ ->
             div [ class "w-full flex" ]
@@ -407,7 +413,8 @@ viewAnalysis loggedIn claimStatus =
 
         ClaimLoading _ ->
             div [ class "w-full md:w-1/2 lg:w-1/3 xl:w-1/4 px-2 mb-4" ]
-                [ div [ class "rounded-lg bg-white h-56 my-2" ] [ Page.fullPageLoading ]
+                [ div [ class "rounded-lg bg-white h-56 my-2 pt-8" ]
+                    [ Page.fullPageLoading loggedIn.shared ]
                 ]
 
         ClaimVoted _ ->
@@ -471,13 +478,13 @@ viewTransfer ({ shared } as loggedIn) transfer =
                 [ ( "user", Eos.nameToString transfer.from.account )
                 , ( "amount", String.fromFloat transfer.value )
                 ]
-                    |> I18Next.tr shared.translations I18Next.Curly "notifications.transfer.receive"
+                    |> shared.translators.tr "notifications.transfer.receive"
 
             else
                 [ ( "user", Eos.nameToString transfer.to.account )
                 , ( "amount", String.fromFloat transfer.value )
                 ]
-                    |> I18Next.tr shared.translations I18Next.Curly "notifications.transfer.sent"
+                    |> shared.translators.tr "notifications.transfer.sent"
     in
     a
         [ class "flex items-start lg:items-center p-4 border-b last:border-b-0"
@@ -526,33 +533,88 @@ viewBalance ({ shared } as loggedIn) _ balance =
         balanceText =
             String.fromFloat balance.asset.amount ++ " "
     in
-    div [ class "flex w-full lg:w-1/3 bg-white rounded h-64 p-4" ]
-        [ div [ class "w-full" ]
-            [ div [ class "input-label mb-2" ]
-                [ text_ "account.my_wallet.balances.current" ]
-            , div [ class "flex items-center mb-4" ]
-                [ div [ class "text-indigo-500 font-bold text-3xl" ]
-                    [ text balanceText ]
-                , div [ class "text-indigo-500 ml-2" ]
-                    [ text symbolText ]
+    div [ class "flex-wrap flex lg:space-x-3" ]
+        [ div [ class "flex w-full lg:w-1/3 bg-white rounded h-64 p-4" ]
+            [ div [ class "w-full" ]
+                [ div [ class "input-label mb-2" ]
+                    [ text_ "account.my_wallet.balances.current" ]
+                , div [ class "flex items-center mb-4" ]
+                    [ div [ class "text-indigo-500 font-bold text-3xl" ]
+                        [ text balanceText ]
+                    , div [ class "text-indigo-500 ml-2" ]
+                        [ text symbolText ]
+                    ]
+                , a
+                    [ class "button button-primary w-full font-medium mb-2"
+                    , Route.href <| Route.Transfer loggedIn.selectedCommunity Nothing
+                    ]
+                    [ text_ "dashboard.transfer" ]
+                , a
+                    [ class "flex w-full items-center justify-between h-12 text-gray-600 border-b"
+                    , Route.href <| Route.Community loggedIn.selectedCommunity
+                    ]
+                    [ text <| shared.translators.tr "dashboard.explore" [ ( "symbol", Eos.symbolToSymbolCodeString loggedIn.selectedCommunity ) ]
+                    , Icons.arrowDown "rotate--90"
+                    ]
+                , button
+                    [ class "flex w-full items-center justify-between h-12 text-gray-600"
+                    , onClick CreateInvite
+                    ]
+                    [ text_ "dashboard.invite", Icons.arrowDown "rotate--90 text-gray-600" ]
                 ]
-            , a
-                [ class "button button-primary w-full font-medium mb-2"
-                , Route.href <| Route.Transfer loggedIn.selectedCommunity Nothing
-                ]
-                [ text_ "dashboard.transfer" ]
-            , a
-                [ class "flex w-full items-center justify-between h-12 text-gray-600 border-b"
-                , Route.href <| Route.Community loggedIn.selectedCommunity
-                ]
-                [ text <| shared.translators.tr "dashboard.explore" [ ( "symbol", Eos.symbolToSymbolCodeString loggedIn.selectedCommunity ) ]
-                , Icons.arrowDown "rotate--90"
-                ]
-            , button
-                [ class "flex w-full items-center justify-between h-12 text-gray-600"
-                , onClick CreateInvite
-                ]
-                [ text_ "dashboard.invite", Icons.arrowDown "rotate--90 text-gray-600" ]
+            ]
+        , div [ class "w-full lg:w-1/3 mt-4 lg:mt-0" ]
+            [ viewQuickLinks loggedIn
+            ]
+        ]
+
+
+viewQuickLinks : LoggedIn.Model -> Html Msg
+viewQuickLinks ({ shared } as loggedIn) =
+    let
+        t =
+            shared.translators.t
+    in
+    div [ class "flex-wrap flex" ]
+        [ div [ class "w-1/2 lg:w-full" ]
+            [ case loggedIn.hasObjectives of
+                FeatureLoaded True ->
+                    a
+                        [ class "flex flex-wrap mr-2 px-4 py-6 rounded bg-white hover:shadow lg:flex-no-wrap lg:justify-between lg:items-center lg:mb-6 lg:mr-0"
+                        , Route.href (Route.ProfileClaims (Eos.nameToString loggedIn.accountName))
+                        ]
+                        [ div []
+                            [ div [ class "w-full mb-4" ] [ Icons.claims "w-8 h-8" ]
+                            , p [ class "w-full text-gray-600 mb-4 lg:mb-0" ]
+                                [ text <| t "dashboard.my_claims.1"
+                                , span [ class "font-bold" ] [ text <| t "dashboard.my_claims.2" ]
+                                ]
+                            ]
+                        , div [ class "w-full lg:w-1/3 button button-primary" ] [ text <| t "dashboard.my_claims.go" ]
+                        ]
+
+                _ ->
+                    text ""
+            ]
+        , div [ class "w-1/2 lg:w-full" ]
+            [ case loggedIn.hasShop of
+                FeatureLoaded True ->
+                    a
+                        [ class "flex flex-wrap ml-2 px-4 py-6 rounded bg-white hover:shadow lg:flex-no-wrap lg:justify-between lg:items-center lg:ml-0"
+                        , Route.href (Route.Shop Shop.UserSales)
+                        ]
+                        [ div []
+                            [ div [ class "w-full mb-4 lg:mb-2" ] [ Icons.shop "w-8 h-8 fill-current" ]
+                            , p [ class "w-full text-gray-600 mb-4 lg:mb-0" ]
+                                [ text <| t "dashboard.my_offers.1"
+                                , span [ class "font-bold" ] [ text <| t "dashboard.my_offers.2" ]
+                                ]
+                            ]
+                        , div [ class "w-full lg:w-1/3 button button-primary" ] [ text <| t "dashboard.my_offers.go" ]
+                        ]
+
+                _ ->
+                    text ""
             ]
         ]
 
@@ -710,7 +772,7 @@ update msg model loggedIn =
 
                         message val =
                             [ ( "value", val ) ]
-                                |> I18Next.tr loggedIn.shared.translations I18Next.Curly "claim.reward"
+                                |> loggedIn.shared.translators.tr "claim.reward"
                     in
                     case maybeClaim of
                         Just claim ->
@@ -801,7 +863,7 @@ update msg model loggedIn =
 
         CompletedInviteCreation (Err httpError) ->
             UR.init
-                { model | inviteModalStatus = InviteModalFailed (I18Next.t loggedIn.shared.translations "community.invite.failed") }
+                { model | inviteModalStatus = InviteModalFailed (loggedIn.shared.translators.t "community.invite.failed") }
                 |> UR.logHttpError msg httpError
 
         CopyToClipboard elementId ->

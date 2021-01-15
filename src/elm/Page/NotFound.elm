@@ -1,7 +1,6 @@
 module Page.NotFound exposing (view)
 
 import Html exposing (Html)
-import I18Next exposing (t)
 import Page
 
 
@@ -10,12 +9,9 @@ view session =
     let
         shared =
             Page.toShared session
-
-        text_ =
-            t shared.translations
     in
     { title =
-        t shared.translations "error.pageNotFound"
+        shared.translators.t "error.pageNotFound"
     , content =
-        Page.fullPageNotFound (text_ "error.pageNotFound") ""
+        Page.fullPageNotFound (shared.translators.t "error.pageNotFound") ""
     }

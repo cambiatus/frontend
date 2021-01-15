@@ -21,12 +21,11 @@ import Html exposing (Html, a, br, button, div, label, li, p, span, text, ul)
 import Html.Attributes exposing (class, classList, href)
 import Html.Events exposing (onClick)
 import Http
-import I18Next exposing (t)
 import Icons
 import Json.Decode as Decode exposing (Value)
 import Json.Encode as Encode
 import Page
-import Profile exposing (DeleteKycAndAddressResult, Profile)
+import Profile exposing (DeleteKycAndAddressResult, Model)
 import PushSubscription exposing (PushSubscription)
 import Route
 import Session.LoggedIn as LoggedIn exposing (External(..), FeedbackStatus(..), ProfileStatus(..))
@@ -93,12 +92,12 @@ initModel loggedIn =
 
 
 view : LoggedIn.Model -> Model -> { title : String, content : Html Msg }
-view loggedIn model =
+view ({ shared } as loggedIn) model =
     let
         title =
             case model.status of
                 Loaded profile ->
-                    Maybe.withDefault "" profile.userName
+                    Maybe.withDefault "" profile.name
 
                 _ ->
                     ""
@@ -106,21 +105,21 @@ view loggedIn model =
         content =
             case model.status of
                 Loading _ ->
-                    Page.fullPageLoading
+                    Page.fullPageLoading shared
 
                 LoadingFailed _ _ ->
-                    Page.fullPageError (t loggedIn.shared.translations "profile.title") Http.Timeout
+                    Page.fullPageError (shared.translators.t "profile.title") Http.Timeout
 
                 Loaded profile ->
                     div []
-                        [ Page.viewHeader loggedIn (t loggedIn.shared.translations "menu.profile") Route.Dashboard
+                        [ Page.viewHeader loggedIn (shared.translators.t "menu.profile") Route.Dashboard
                         , viewUserInfo loggedIn
                             profile
                             Private
                         , viewSettings loggedIn model profile
-                        , viewNewPinModal model loggedIn.shared
+                        , viewNewPinModal model shared
                         , viewDownloadPdfErrorModal model loggedIn
-                        , viewDeleteKycModal loggedIn.shared.translators model
+                        , viewDeleteKycModal shared.translators model
                         ]
     in
     { title = title
@@ -155,7 +154,7 @@ viewDeleteKycModal { t } model =
         |> Modal.toHtml
 
 
-viewSettings : LoggedIn.Model -> Model -> Profile -> Html Msg
+viewSettings : LoggedIn.Model -> Model -> Profile.Model -> Html Msg
 viewSettings loggedIn model profile =
     let
         { t } =
@@ -242,14 +241,14 @@ type ProfilePage
     | Public
 
 
-viewUserInfo : LoggedIn.Model -> Profile -> ProfilePage -> Html msg
+viewUserInfo : LoggedIn.Model -> Profile.Model -> ProfilePage -> Html msg
 viewUserInfo loggedIn profile pageType =
     let
         { t } =
             loggedIn.shared.translators
 
         userName =
-            Maybe.withDefault "" profile.userName
+            Maybe.withDefault "" profile.name
 
         email =
             Maybe.withDefault "" profile.email
@@ -452,7 +451,7 @@ viewTransferButton : Shared -> Symbol -> String -> Html msg
 viewTransferButton shared symbol user =
     let
         text_ s =
-            text (t shared.translations s)
+            text (shared.translators.t s)
     in
     div [ class "mt-3 mb-2" ]
         [ a
@@ -507,12 +506,12 @@ viewNewPinModal : Model -> Shared -> Html Msg
 viewNewPinModal model shared =
     let
         tr str =
-            t shared.translations str
+            text (shared.translators.t str)
 
         pinField =
             Pin.view
                 shared
-                { labelText = tr "profile.newPin"
+                { labelText = shared.translators.t "profile.newPin"
                 , inputId = "pinInput"
                 , inputValue = Maybe.withDefault "" model.newPin
                 , onInputMsg = EnteredPin
@@ -530,21 +529,21 @@ viewNewPinModal model shared =
         body =
             [ div []
                 [ p [ class "text-sm" ]
-                    [ text (tr "profile.changePinPrompt") ]
+                    [ tr "profile.changePinPrompt" ]
                 ]
             , div [ class "mb-4" ] [ pinField ]
             , button
                 [ class "button button-primary w-full"
                 , onClick ChangePinSubmitted
                 ]
-                [ text (tr "profile.pin.button") ]
+                [ tr "profile.pin.button" ]
             ]
     in
     Modal.initWith
         { closeMsg = ClickedCloseChangePin
         , isVisible = model.isNewPinModalVisible
         }
-        |> Modal.withHeader (tr "profile.changePin")
+        |> Modal.withHeader (shared.translators.t "profile.changePin")
         |> Modal.withBody body
         |> Modal.toHtml
 
@@ -617,7 +616,7 @@ type alias UpdateResult =
 
 type Msg
     = Ignored
-    | CompletedProfileLoad (Result (Graphql.Http.Error (Maybe Profile)) (Maybe Profile))
+    | CompletedProfileLoad (Result (Graphql.Http.Error (Maybe Profile.Model)) (Maybe Profile.Model))
     | DownloadPdf String
     | DownloadPdfProcessed Bool
     | ClickedClosePdfDownloadError
@@ -643,7 +642,7 @@ update : Msg -> Model -> LoggedIn.Model -> UpdateResult
 update msg model loggedIn =
     let
         t =
-            I18Next.t loggedIn.shared.translations
+            loggedIn.shared.translators.t
 
         downloadPdfPort pin =
             UR.addPort

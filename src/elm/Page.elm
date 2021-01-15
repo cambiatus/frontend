@@ -51,7 +51,7 @@ import Icons
 import Json.Decode as Decode exposing (Decoder)
 import Json.Encode exposing (Value)
 import Ports
-import Profile exposing (Profile)
+import Profile
 import Route exposing (Route)
 import Session.Guest as Guest
 import Session.LoggedIn as LoggedIn
@@ -254,7 +254,7 @@ viewHeader { shared } title route =
                 ]
                 [ Icons.back ""
                 , p [ class "ml-2 text-white text-sm hidden md:visible md:flex" ]
-                    [ text (I18Next.t shared.translations "back") ]
+                    [ text (shared.translators.t "back") ]
                 ]
             , p [ class "mx-auto text-white truncate ..." ] [ text title ]
             ]
@@ -307,10 +307,13 @@ viewDateDistance date maybeNow =
             []
 
 
-fullPageLoading : Html msg
-fullPageLoading =
-    div [ class "full-spinner-container h-full" ]
-        [ div [ class "spinner spinner--delay" ] [] ]
+fullPageLoading : Shared.Shared -> Html msg
+fullPageLoading { translators } =
+    div [ class "h-full text-center pt-4" ]
+        [ img [ class "h-16 mx-auto", src "/images/loading.gif" ] []
+        , p [ class "font-bold text-2xl" ] [ text <| translators.t "loading.title" ]
+        , p [ class "text-sm" ] [ text <| translators.t "loading.subtitle" ]
+        ]
 
 
 fullPageError : String -> Http.Error -> Html msg
@@ -323,7 +326,7 @@ fullPageError title_ _ =
 
 fullPageGraphQLError : String -> Graphql.Http.Error a -> Html msg
 fullPageGraphQLError title_ e =
-    div [ class "mx-auto container p-24 flex flex-wrap" ]
+    div [ class "mx-auto container p-16 flex flex-wrap" ]
         [ div [ class "w-full" ]
             [ p [ class "text-2xl font-bold text-center" ] [ text title_ ]
             , p [ class "text-center" ] [ text (errorToString e) ]
@@ -430,7 +433,7 @@ updateShared session transform =
 -- TRANSFORM
 
 
-login : Auth.Model -> Profile -> Guest.Model -> ( LoggedIn.Model, Cmd Msg )
+login : Auth.Model -> Profile.Model -> Guest.Model -> ( LoggedIn.Model, Cmd Msg )
 login auth profile guest =
     let
         ( loggedIn, cmd ) =

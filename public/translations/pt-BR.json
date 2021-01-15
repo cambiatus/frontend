@@ -1,6 +1,10 @@
 {
   "bespiral": "Cambiatus",
   "back": "Voltar",
+  "loading": {
+    "title": "Aguarde um instante",
+    "subtitle": "Estamos processando sua solicitação"
+  },
   "menu": {
     "title": "Menu",
     "my_communities": "Bem vindo a ",
@@ -401,7 +405,7 @@
     "index": {
       "created_by": "Criado por {{account_name}}",
       "members": "Membros",
-      "claims": "Reinvidicações",
+      "claims": "Reivindicações",
       "products": "Ofertas",
       "orders": "Pedidos",
       "transfers": "Transferências"
@@ -518,7 +522,7 @@
         "no": "Não",
         "yes": "Sim",
         "automatic": "Automático,",
-        "automatic_detail": " recompensa o usuário imediatamente quando feita a reinvidicação",
+        "automatic_detail": " recompensa o usuário imediatamente quando feita a reivindicação",
         "manual": "Manual,",
         "manual_detail": " recompensa o usuário somente após revisão e aprovação de outros membros",
         "verifier_placeholder": "Digite o nome de usuário",
@@ -622,12 +626,13 @@
       "push_notifications": "Habilitar notificações",
       "submit": "Salvar"
     },
-    "badge": {
-      "title": "Conquistas",
-      "currencyStarter": " Criador de Moeda",
-      "developer": "Developer",
-      "seedTeam": "Time Seed",
-      "mentor": "Mentor"
+    "claims": {
+      "title": "Minhas reivindicações",
+      "not_found": {
+        "title": "Minhas reivindicações",
+        "subtitle": "Nenhum usuário encontrado"
+      },
+      "empty_results": "Nenhuma reivindicação ainda"
     }
   },
   "shop": {
@@ -709,7 +714,7 @@
     "next": "Próximo",
     "your_action": "Sua ação:",
     "add_comment": "Adicionar um comentário",
-    "claim": "Reinvidicar",
+    "claim": "Reivindicar",
     "wait_verification": "Espere pela verificação",
     "you_won": "Boa notícia! Você ganhou:",
     "you_rejected": "Você rejeitou a ação",
@@ -721,6 +726,16 @@
     "reject": "Reprovar",
     "verify": "Aprovar",
     "closed": "fechados",
+    "my_claims": {
+      "1": "Minhas ",
+      "2": "Reivindicações",
+      "go": "ir"
+    },
+    "my_offers": {
+      "1": "Minhas ",
+      "2": "Ofertas",
+      "go": "Ir"
+    },
     "analysis": {
       "title": {
         "1": "Ações",
@@ -742,7 +757,7 @@
       "yes": "Sim, reinvindicar",
       "no": "Não, cancelar",
       "success": "Parabéns! Falta pouco para ganhar seus {{symbolCode}}. Estamos revisando sua ação.",
-      "failure": "Algo deu errado ao tentar realizar sua reinvidicação, tente novamente mais tarde"
+      "failure": "Algo deu errado ao tentar realizar sua reivindicação, tente novamente mais tarde"
     }
   },
   "all_analysis": {

@@ -24,7 +24,7 @@ body {
 /* Button */
 
 .button {
-  @apply uppercase text-sm flex items-center justify-center leading-none w-40 h-12;
+  @apply uppercase text-sm flex items-center justify-center leading-none w-40 h-10;
 }
 
 .button-primary {

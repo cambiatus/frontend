@@ -1,6 +1,10 @@
 {
   "bespiral": "Cambiatus",
   "back": "Back",
+  "loading": {
+    "title": "Wait a moment",
+    "subtitle": "We are processing your request"
+  },
   "menu": {
     "title": "Menu",
     "my_communities": "Welcome to ",
@@ -616,12 +620,13 @@
       "push_notifications": "Enable push notifications",
       "submit": "Save"
     },
-    "badge": {
-      "title": "Badges",
-      "currencyStarter": "Currency Starter",
-      "developer": "Developer",
-      "seedTeam": "Seed Team",
-      "mentor": "Mentor"
+    "claims": {
+      "title": "My claims",
+      "not_found": {
+        "title": "My claims",
+        "subtitle": "No user found"
+      },
+      "empty_results": "No claims yet"
     }
   },
   "shop": {
@@ -715,6 +720,16 @@
     "reject": "Disapprove",
     "verify": "Approve",
     "closed": "closed",
+    "my_claims": {
+      "1": "My ",
+      "2": "Claims",
+      "go": "Go"
+    },
+    "my_offers": {
+      "1": "My ",
+      "2": "Offers",
+      "go": "Go"
+    },
     "analysis": {
       "title": {
         "1": "Actions",

@@ -20,11 +20,10 @@ import Graphql.Http
 import Html exposing (Html, button, div, form, input, span, text, textarea)
 import Html.Attributes exposing (class, disabled, placeholder, required, rows, type_, value)
 import Html.Events exposing (onInput, onSubmit)
-import I18Next exposing (Delims(..), t)
 import Json.Decode as Decode exposing (Value)
 import Json.Encode as Encode exposing (Value)
 import Page
-import Profile exposing (Profile)
+import Profile
 import Route
 import Select
 import Session.LoggedIn as LoggedIn exposing (External(..))
@@ -88,7 +87,7 @@ type Validation
 
 
 type alias Form =
-    { selectedProfile : Maybe Profile
+    { selectedProfile : Maybe Profile.Minimal
     , selectedProfileValidation : Validation
     , amount : String
     , amountValidation : Validation
@@ -145,13 +144,13 @@ view ({ shared } as loggedIn) model =
         content =
             case model.status of
                 Loading ->
-                    Page.fullPageLoading
+                    Page.fullPageLoading shared
 
                 NotFound ->
                     Page.viewCardEmpty [ text "Community not found" ]
 
                 Failed e ->
-                    Page.fullPageGraphQLError (t shared.translations "community.objectives.title_plural") e
+                    Page.fullPageGraphQLError (shared.translators.t "community.objectives.title_plural") e
 
                 Loaded community (EditingTransfer f) ->
                     viewForm loggedIn model f community False
@@ -165,7 +164,7 @@ view ({ shared } as loggedIn) model =
                 Loaded community (SendingTransferFailed f) ->
                     viewForm loggedIn model f community False
     in
-    { title = t shared.translations "transfer.title"
+    { title = shared.translators.t "transfer.title"
     , content = content
     }
 
@@ -174,10 +173,10 @@ viewForm : LoggedIn.Model -> Model -> Form -> Community.Model -> Bool -> Html Ms
 viewForm ({ shared } as loggedIn) model f community isDisabled =
     let
         text_ s =
-            text (t loggedIn.shared.translations s)
+            text (loggedIn.shared.translators.t s)
     in
     div [ class "bg-white" ]
-        [ Page.viewHeader loggedIn (t shared.translations "transfer.title") Route.Dashboard
+        [ Page.viewHeader loggedIn (shared.translators.t "transfer.title") Route.Dashboard
         , form [ class "container mx-auto p-4", onSubmit SubmitForm ]
             [ div [ class "mb-10" ]
                 [ span [ class "input-label" ]
@@ -188,8 +187,7 @@ viewForm ({ shared } as loggedIn) model f community isDisabled =
             , div [ class "mb-10" ]
                 [ span [ class "input-label" ]
                     [ text
-                        (I18Next.tr shared.translations
-                            Curly
+                        (shared.translators.tr
                             "account.my_wallet.transfer.amount"
                             [ ( "symbol", Eos.symbolToSymbolCodeString community.symbol ) ]
                         )
@@ -235,8 +233,10 @@ viewForm ({ shared } as loggedIn) model f community isDisabled =
 viewAutoCompleteAccount : Shared.Shared -> Model -> Form -> Bool -> Community.Model -> Html Msg
 viewAutoCompleteAccount shared model form isDisabled community =
     let
+        users : List Profile.Minimal
         users =
             community.members
+                |> List.map (\u -> { name = u.name, account = u.account, avatar = u.avatar })
 
         selectedUsers =
             Maybe.map (\v -> [ v ]) form.selectedProfile
@@ -253,7 +253,7 @@ viewAutoCompleteAccount shared model form isDisabled community =
         ]
 
 
-selectConfiguration : Shared.Shared -> Bool -> Select.Config Msg Profile
+selectConfiguration : Shared.Shared -> Bool -> Select.Config Msg Profile.Minimal
 selectConfiguration shared isDisabled =
     Profile.selectConfig
         (Select.newConfig
@@ -276,8 +276,8 @@ type alias UpdateResult =
 
 type Msg
     = CompletedLoad (Result (Graphql.Http.Error (Maybe Community.Model)) (Maybe Community.Model))
-    | OnSelect (Maybe Profile)
-    | SelectMsg (Select.Msg Profile)
+    | OnSelect (Maybe Profile.Minimal)
+    | SelectMsg (Select.Msg Profile.Minimal)
     | EnteredAmount String
     | EnteredMemo String
     | SubmitForm

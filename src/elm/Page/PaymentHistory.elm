@@ -26,7 +26,6 @@ import Graphql.SelectionSet as SelectionSet exposing (SelectionSet)
 import Html exposing (Html, a, button, div, h1, h2, label, p, span, text, ul)
 import Html.Attributes as Attrs exposing (class, href, style)
 import Html.Events exposing (onClick)
-import I18Next exposing (t)
 import Icons
 import List.Extra as LE
 import Page
@@ -184,7 +183,7 @@ fetchProfileWithTransfers shared model =
     in
     Api.Graphql.query shared
         (Cambiatus.Query.profile
-            { input = { account = Present accountName } }
+            { account = accountName }
             (profileWithTransfersSelectionSet model)
         )
         RecipientProfileWithTransfersLoaded
@@ -210,9 +209,7 @@ fetchProfilesForAutocomplete shared model payerAccount =
     in
     Api.Graphql.query shared
         (Cambiatus.Query.profile
-            { input =
-                { account = Present accountName
-                }
+            { account = accountName
             }
             selectionSet
         )
@@ -228,7 +225,7 @@ datePickerSettings : Shared -> DatePicker.Settings
 datePickerSettings shared =
     { defaultSettings
         | changeYear = off
-        , placeholder = I18Next.t shared.translations "payment_history.pick_date"
+        , placeholder = shared.translators.t "payment_history.pick_date"
         , inputClassList =
             [ ( "input", True )
             , ( "w-full", True )
@@ -506,7 +503,7 @@ view : SharedModel m -> Model -> { title : String, content : Html Msg }
 view { shared } model =
     let
         pageTitle =
-            I18Next.t shared.translations "payment_history.title"
+            shared.translators.t "payment_history.title"
 
         content =
             case model.queryStatus of
@@ -515,7 +512,7 @@ view { shared } model =
                         [ viewSplash profile
                         , div [ class "mx-4 max-w-md md:m-auto" ]
                             [ h2 [ class "text-center text-black text-2xl" ]
-                                [ text (I18Next.t shared.translations "payment_history.title") ]
+                                [ text (shared.translators.t "payment_history.title") ]
                             , div []
                                 [ viewUserAutocomplete shared model
                                 , viewDatePicker shared model
@@ -525,10 +522,10 @@ view { shared } model =
                         ]
 
                 Failed err ->
-                    div [] [ Page.fullPageGraphQLError (I18Next.t shared.translations "error.accountNotFound") err ]
+                    div [] [ Page.fullPageGraphQLError (shared.translators.t "error.accountNotFound") err ]
 
                 Loading ->
-                    Page.fullPageLoading
+                    Page.fullPageLoading shared
     in
     { title = pageTitle
     , content = content
@@ -555,7 +552,7 @@ viewUserAutocomplete shared model =
         [ label
             [ class "block" ]
             [ span [ class "text-green tracking-wide uppercase text-caption block mb-1" ]
-                [ text (I18Next.t shared.translations "payment_history.user") ]
+                [ text (shared.translators.t "payment_history.user") ]
             ]
         , viewPayerAutocomplete shared model False
         ]
@@ -604,7 +601,7 @@ viewSelectedPayer shared model profile =
     let
         accountName =
             if profile.account == model.recipientProfile.account then
-                text (I18Next.t shared.translations "transfer_result.you")
+                text (shared.translators.t "transfer_result.you")
 
             else
                 case profile.userName of
@@ -643,7 +640,7 @@ selectConfig select shared isDisabled =
         |> Select.withNotFoundStyles [ ( "padding", "0 2rem" ) ]
         |> Select.withDisabled isDisabled
         |> Select.withHighlightedItemClass "autocomplete-item-highlight"
-        |> Select.withPrompt (t shared.translations "community.actions.form.verifier_placeholder")
+        |> Select.withPrompt (shared.translators.t "community.actions.form.verifier_placeholder")
         |> Select.withItemHtml (viewAutoCompleteItem shared)
         |> Select.withMenuClass "border-t-none border-solid border-gray-100 border rounded-b z-30 bg-white"
 
@@ -698,7 +695,7 @@ viewDatePicker shared model =
         [ label
             [ class "block" ]
             [ span [ class "text-green tracking-wide uppercase text-caption block mb-1" ]
-                [ text (I18Next.t shared.translations "payment_history.date") ]
+                [ text (shared.translators.t "payment_history.date") ]
             ]
         , div [ class "relative" ]
             [ DatePicker.view
@@ -764,7 +761,8 @@ viewTransfers shared model =
     case model.incomingTransfers of
         Just transfers ->
             if List.isEmpty transfers then
-                div [ class "text-center my-6" ] [ text (I18Next.t shared.translations "payment_history.no_transfers_found") ]
+                div [ class "text-center my-6" ]
+                    [ text (shared.translators.t "payment_history.no_transfers_found") ]
 
             else
                 div []
@@ -776,7 +774,7 @@ viewTransfers shared model =
         Nothing ->
             div [ class "text-center leading-10 h-48" ]
                 [ div [ class "m-auto spinner" ] []
-                , text (I18Next.t shared.translations "menu.loading")
+                , text (shared.translators.t "menu.loading")
                 ]
 
 
@@ -790,7 +788,7 @@ viewPagination shared { incomingTransfersPageInfo } =
                         [ class "button m-auto button-primary w-full sm:w-40"
                         , onClick ShowMore
                         ]
-                        [ text (I18Next.t shared.translations "payment_history.more") ]
+                        [ text (shared.translators.t "payment_history.more") ]
                     ]
 
             else

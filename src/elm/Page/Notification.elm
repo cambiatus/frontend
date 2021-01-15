@@ -69,7 +69,7 @@ view ({ shared } as loggedIn) model =
         content =
             case model of
                 Loading ->
-                    Page.fullPageLoading
+                    Page.fullPageLoading shared
 
                 Loaded notifications ->
                     div []
@@ -148,13 +148,13 @@ viewNotificationTransfer shared history notification =
                 [ ( "user", notification.fromId )
                 , ( "amount", String.fromFloat notification.amount )
                 ]
-                    |> I18Next.tr shared.translations I18Next.Curly "notifications.transfer.receive"
+                    |> shared.translators.tr "notifications.transfer.receive"
 
             else
                 [ ( "user", notification.toId )
                 , ( "amount", String.fromFloat notification.amount )
                 ]
-                    |> I18Next.tr shared.translations I18Next.Curly "notifications.transfer.sent"
+                    |> shared.translators.tr "notifications.transfer.sent"
     in
     div
         [ class "flex items-start lg:items-center p-4"
@@ -206,7 +206,7 @@ viewNotificationMint shared history notification =
             [ ( "amount", String.fromFloat notification.quantity )
             , ( "symbol", Eos.symbolToSymbolCodeString notification.community.symbol )
             ]
-                |> I18Next.tr shared.translations I18Next.Curly "notifications.issue.receive"
+                |> shared.translators.tr "notifications.issue.receive"
     in
     div
         [ class "flex items-start lg:items-center p-4"
@@ -288,13 +288,13 @@ viewNotificationSaleHistoryDetail ({ shared } as loggedIn) sale date =
                 [ ( "user", Eos.nameToString sale.toId )
                 , ( "sale", sale.product.title )
                 ]
-                    |> I18Next.tr shared.translations I18Next.Curly "notifications.saleHistory.buy"
+                    |> shared.translators.tr "notifications.saleHistory.buy"
 
             else
                 [ ( "user", Eos.nameToString sale.fromId )
                 , ( "sale", sale.product.title )
                 ]
-                    |> I18Next.tr shared.translations I18Next.Curly "notifications.saleHistory.sell"
+                    |> shared.translators.tr "notifications.saleHistory.sell"
     in
     [ div [ class "flex-col flex-grow-1 pl-4" ]
         [ p
@@ -335,13 +335,9 @@ viewAmount amount symbol =
 
 viewEmptyNotifications : Shared -> Html msg
 viewEmptyNotifications shared =
-    let
-        t s =
-            I18Next.t shared.translations s
-    in
     div
         [ class "rounded-lg bg-white mt-5 p-8 text-center shadow" ]
-        [ p [] [ text (t "notifications.empty") ]
+        [ p [] [ text (shared.translators.t "notifications.empty") ]
         ]
 
 

@@ -21,7 +21,8 @@ type Route
     | Notification
     | ProfileEditor
     | ProfileAddKyc
-    | PublicProfile String
+    | ProfilePublic String
+    | ProfileClaims String
     | PaymentHistory String
     | Profile
     | Dashboard
@@ -35,7 +36,7 @@ type Route
     | EditObjective Symbol Int
     | NewAction Symbol Int
     | EditAction Symbol Int Int
-    | Claim Symbol Int Int Int
+    | Claim Int Int Int
     | Shop Shop.Filter
     | NewSale
     | EditSale String
@@ -78,11 +79,12 @@ parser url =
                         (Query.string "redirect")
             )
         , Url.map Logout (s "logout")
+        , Url.map Profile (s "profile")
         , Url.map ProfileEditor (s "profile" </> s "edit")
         , Url.map ProfileAddKyc (s "profile" </> s "add-kyc")
-        , Url.map PublicProfile (s "profile" </> string)
+        , Url.map ProfilePublic (s "profile" </> string)
+        , Url.map ProfileClaims (s "profile" </> string </> s "claims")
         , Url.map PaymentHistory (s "payments" </> string)
-        , Url.map Profile (s "profile")
         , Url.map Notification (s "notification")
         , Url.map Dashboard (s "dashboard")
         , Url.map NewCommunity (s "community" </> s "new")
@@ -95,7 +97,7 @@ parser url =
         , Url.map EditObjective (s "community" </> Eos.symbolUrlParser </> s "objectives" </> int </> s "edit")
         , Url.map NewAction (s "community" </> Eos.symbolUrlParser </> s "objectives" </> int </> s "action" </> s "new")
         , Url.map EditAction (s "community" </> Eos.symbolUrlParser </> s "objectives" </> int </> s "action" </> int </> s "edit")
-        , Url.map Claim (s "community" </> Eos.symbolUrlParser </> s "objectives" </> int </> s "action" </> int </> s "claim" </> int)
+        , Url.map Claim (s "objectives" </> int </> s "action" </> int </> s "claim" </> int)
         , Url.map Shop
             (s "shop"
                 <?> Query.map
@@ -234,8 +236,11 @@ routeToString route =
                 ProfileAddKyc ->
                     ( [ "profile", "add-kyc" ], [] )
 
-                PublicProfile accountName ->
+                ProfilePublic accountName ->
                     ( [ "profile", accountName ], [] )
+
+                ProfileClaims account ->
+                    ( [ "profile", account, "claims" ], [] )
 
                 PaymentHistory accountName ->
                     ( [ "payments", accountName ], [] )
@@ -280,10 +285,8 @@ routeToString route =
                     , []
                     )
 
-                Claim communityId objectiveId actionId claimId ->
-                    ( [ "community"
-                      , Eos.symbolToString communityId
-                      , "objectives"
+                Claim objectiveId actionId claimId ->
+                    ( [ "objectives"
                       , String.fromInt objectiveId
                       , "action"
                       , String.fromInt actionId

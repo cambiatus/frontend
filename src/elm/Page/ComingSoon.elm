@@ -1,7 +1,6 @@
 module Page.ComingSoon exposing (view)
 
 import Html exposing (Html, div, text)
-import I18Next exposing (t)
 import Page
 
 
@@ -12,10 +11,10 @@ view session =
             Page.toShared session
     in
     { title =
-        t shared.translations "menu.coming_soon"
+        shared.translators.t "menu.coming_soon"
     , content =
         div []
-            [ Page.viewTitle (t shared.translations "menu.coming_soon")
-            , text (t shared.translations "menu.coming_soon")
+            [ Page.viewTitle (shared.translators.t "menu.coming_soon")
+            , text (shared.translators.t "menu.coming_soon")
             ]
     }

@@ -33,7 +33,7 @@ import Cambiatus.Object.ClaimEdge
 import Cambiatus.Scalar exposing (DateTime(..))
 import Community exposing (Objective)
 import Eos
-import Eos.Account
+import Eos.Account as Eos
 import Graphql.OptionalArgument exposing (OptionalArgument(..))
 import Graphql.SelectionSet as SelectionSet exposing (SelectionSet, with)
 import Html exposing (Html, a, button, div, img, label, p, strong, text)
@@ -41,7 +41,7 @@ import Html.Attributes exposing (class, classList, disabled, href, id, src, styl
 import Html.Events exposing (onClick)
 import Icons
 import Json.Encode as Encode
-import Profile exposing (Profile)
+import Profile
 import Route exposing (Route)
 import Session.LoggedIn as LoggedIn
 import Session.Shared exposing (Translators)
@@ -55,7 +55,7 @@ import View.Modal as Modal
 type alias Model =
     { id : ClaimId
     , status : ClaimStatus
-    , claimer : Profile
+    , claimer : Profile.Minimal
     , action : Action
     , checks : List Check
     , createdAt : DateTime
@@ -83,7 +83,7 @@ type alias ClaimId =
 
 type alias Check =
     { isApproved : Bool
-    , validator : Profile
+    , validator : Profile.Minimal
     }
 
 
@@ -92,7 +92,7 @@ type alias Action =
     , description : String
     , reward : Float
     , verifierReward : Float
-    , validators : List Profile
+    , validators : List Profile.Minimal
     , verifications : Int
     , verificationType : VerificationType
     , objective : Objective
@@ -109,7 +109,7 @@ type alias Action =
 
 type alias ClaimAction =
     { actionId : Int
-    , maker : Eos.Account.Name
+    , maker : Eos.Name
     , proofPhoto : String
     , proofCode : String
     , proofTime : Int
@@ -120,32 +120,32 @@ encodeClaimAction : ClaimAction -> Encode.Value
 encodeClaimAction c =
     Encode.object
         [ ( "action_id", Encode.int c.actionId )
-        , ( "maker", Eos.Account.encodeName c.maker )
+        , ( "maker", Eos.encodeName c.maker )
         , ( "proof_photo", Encode.string c.proofPhoto )
         , ( "proof_code", Encode.string c.proofCode )
         , ( "proof_time", Encode.int c.proofTime )
         ]
 
 
-isValidated : Model -> Eos.Account.Name -> Bool
+isValidated : Model -> Eos.Name -> Bool
 isValidated claim user =
     claim.status /= Pending || List.any (\c -> c.validator.account == user) claim.checks
 
 
-isValidator : Eos.Account.Name -> Model -> Bool
+isValidator : Eos.Name -> Model -> Bool
 isValidator accountName claim =
     claim.action.validators
         |> List.any
             (\v -> v.account == accountName)
 
 
-isVotable : Model -> Eos.Account.Name -> Bool
+isVotable : Model -> Eos.Name -> Bool
 isVotable claim accountName =
     isValidator accountName claim
         && not (isValidated claim accountName)
 
 
-encodeVerification : ClaimId -> Eos.Account.Name -> Bool -> Encode.Value
+encodeVerification : ClaimId -> Eos.Name -> Bool -> Encode.Value
 encodeVerification claimId validator vote =
     let
         encodedClaimId : Encode.Value
@@ -154,7 +154,7 @@ encodeVerification claimId validator vote =
 
         encodedVerifier : Encode.Value
         encodedVerifier =
-            Eos.Account.encodeName validator
+            Eos.encodeName validator
 
         encodedVote : Encode.Value
         encodedVote =
@@ -206,7 +206,7 @@ selectionSet =
     SelectionSet.succeed Model
         |> with Claim.id
         |> with (SelectionSet.map claimStatusMap Claim.status)
-        |> with (Claim.claimer Profile.selectionSet)
+        |> with (Claim.claimer Profile.minimalSelectionSet)
         |> with (Claim.action actionSelectionSet)
         |> with (Claim.checks (\_ -> { input = Absent }) checkSelectionSet)
         |> with Claim.createdAt
@@ -247,7 +247,7 @@ actionSelectionSet =
         |> with Action.description
         |> with Action.reward
         |> with Action.verifierReward
-        |> with (Action.validators Profile.selectionSet)
+        |> with (Action.validators Profile.minimalSelectionSet)
         |> with Action.verifications
         |> with Action.verificationType
         |> with (Action.objective Community.objectiveSelectionSet)
@@ -261,7 +261,7 @@ checkSelectionSet : SelectionSet Check Cambiatus.Object.Check
 checkSelectionSet =
     SelectionSet.succeed Check
         |> with Check.isVerified
-        |> with (Check.validator Profile.selectionSet)
+        |> with (Check.validator Profile.minimalSelectionSet)
 
 
 paginatedToList : Maybe Paginated -> List Model
@@ -369,12 +369,11 @@ viewClaimCard { selectedCommunity, shared, accountName } claim =
 
         claimRoute =
             Route.Claim
-                selectedCommunity
                 claim.action.objective.id
                 claim.action.id
                 claim.id
     in
-    div [ class "w-full sm:w-1/2 lg:w-1/3 xl:w-1/4 px-2 mb-4" ]
+    div [ class "w-full sm:w-1/2 lg:w-1/3 xl:w-1/4 px-2" ]
         [ div
             [ class "flex flex-col p-4 my-2 rounded-lg bg-white hover:shadow cursor-pointer"
             , id ("claim" ++ String.fromInt claim.id)

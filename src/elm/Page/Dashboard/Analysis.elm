@@ -21,13 +21,12 @@ import Graphql.OptionalArgument exposing (OptionalArgument(..))
 import Html exposing (Html, button, div, img, option, select, span, text)
 import Html.Attributes exposing (class, selected, src, value)
 import Html.Events exposing (onClick)
-import I18Next
 import Icons
 import Json.Decode as Decode exposing (Value)
 import Json.Encode as Encode
 import List.Extra as List
 import Page
-import Profile exposing (Profile)
+import Profile
 import Route
 import Select
 import Session.LoggedIn as LoggedIn exposing (External(..))
@@ -84,7 +83,7 @@ type CommunityStatus
 
 
 type alias Filter =
-    { profile : Maybe Profile
+    { profile : Maybe Profile.Minimal
     , statusFilter : StatusFilter
     }
 
@@ -108,14 +107,16 @@ type StatusFilter
 view : LoggedIn.Model -> Model -> { title : String, content : Html Msg }
 view ({ shared } as loggedIn) model =
     let
-        t : String -> String
         t =
-            I18Next.t shared.translations
+            shared.translators.t
+
+        pageTitle =
+            t "all_analysis.title"
 
         content =
             case model.status of
                 Loading ->
-                    Page.fullPageLoading
+                    Page.fullPageLoading shared
 
                 Loaded claims pageInfo ->
                     let
@@ -124,12 +125,13 @@ view ({ shared } as loggedIn) model =
                                 |> Html.map ClaimMsg
                     in
                     div []
-                        [ Page.viewHeader loggedIn (t "all_analysis.title") Route.Dashboard
+                        [ Page.viewHeader loggedIn pageTitle Route.Dashboard
                         , div [ class "container mx-auto px-4 mb-10" ]
                             [ viewFilters loggedIn model
                             , if List.length claims > 0 then
                                 div []
-                                    [ div [ class "flex flex-wrap -mx-2" ] (List.map viewClaim claims)
+                                    [ div [ class "flex flex-wrap -mx-2" ]
+                                        (List.map viewClaim claims)
                                     , viewPagination loggedIn pageInfo
                                     ]
 
@@ -165,7 +167,7 @@ view ({ shared } as loggedIn) model =
                 Failed ->
                     text ""
     in
-    { title = t "all_analysis.title"
+    { title = pageTitle
     , content = content
     }
 
@@ -173,9 +175,8 @@ view ({ shared } as loggedIn) model =
 viewFilters : LoggedIn.Model -> Model -> Html Msg
 viewFilters ({ shared } as loggedIn) model =
     let
-        t : String -> String
         t =
-            I18Next.t shared.translations
+            shared.translators.t
 
         text_ s =
             text (t s)
@@ -257,7 +258,7 @@ viewEmptyResults : LoggedIn.Model -> Html Msg
 viewEmptyResults { shared } =
     let
         text_ s =
-            text (I18Next.t shared.translations s)
+            text (shared.translators.t s)
     in
     div [ class "w-full text-center" ]
         [ div [ class "w-full flex justify-center" ]
@@ -273,11 +274,8 @@ viewEmptyResults { shared } =
 viewPagination : LoggedIn.Model -> Maybe Api.Relay.PageInfo -> Html Msg
 viewPagination { shared } maybePageInfo =
     let
-        t s =
-            I18Next.t shared.translations s
-
         text_ s =
-            text (t s)
+            text (shared.translators.t s)
     in
     case maybePageInfo of
         Just pageInfo ->
@@ -311,8 +309,8 @@ type Msg
     | ClaimMsg Claim.Msg
     | VoteClaim Claim.ClaimId Bool
     | GotVoteResult Claim.ClaimId (Result (Maybe Value) String)
-    | SelectMsg (Select.Msg Profile)
-    | OnSelectVerifier (Maybe Profile)
+    | SelectMsg (Select.Msg Profile.Minimal)
+    | OnSelectVerifier (Maybe Profile.Minimal)
     | CompletedCommunityLoad (Result (Graphql.Http.Error (Maybe Community.Model)) (Maybe Community.Model))
     | ShowMore
     | ClearSelectSelection
@@ -410,7 +408,7 @@ update msg model loggedIn =
 
                         message val =
                             [ ( "value", val ) ]
-                                |> I18Next.tr loggedIn.shared.translations I18Next.Curly "claim.reward"
+                                |> loggedIn.shared.translators.tr "claim.reward"
                     in
                     case maybeClaim of
                         Just claim ->
@@ -418,7 +416,7 @@ update msg model loggedIn =
                                 value =
                                     String.fromFloat claim.action.verifierReward
                                         ++ " "
-                                        ++ Eos.symbolToString claim.action.objective.community.symbol
+                                        ++ Eos.symbolToSymbolCodeString claim.action.objective.community.symbol
                             in
                             { model
                                 | status = Loaded claims pageInfo
@@ -640,7 +638,7 @@ selectFilter minChars toLabel query items =
             |> Just
 
 
-selectConfiguration : Shared -> Bool -> Select.Config Msg Profile
+selectConfiguration : Shared -> Bool -> Select.Config Msg Profile.Minimal
 selectConfiguration shared isDisabled =
     Profile.selectConfig
         (Select.newConfig
@@ -654,7 +652,7 @@ selectConfiguration shared isDisabled =
         isDisabled
 
 
-viewSelectedVerifiers : LoggedIn.Model -> List Profile -> Html Msg
+viewSelectedVerifiers : LoggedIn.Model -> List Profile.Minimal -> Html Msg
 viewSelectedVerifiers ({ shared } as loggedIn) selectedVerifiers =
     if List.isEmpty selectedVerifiers then
         text ""

@@ -143,7 +143,7 @@ view ({ shared } as loggedIn) model =
         content =
             case model.status of
                 Loading ->
-                    Page.fullPageLoading
+                    Page.fullPageLoading shared
 
                 NotFound ->
                     Page.fullPageNotFound (t "community.objectives.editor.not_found") ""
@@ -177,13 +177,16 @@ view ({ shared } as loggedIn) model =
                     (t "community.objectives.disabled.description")
 
             LoggedIn.FeatureLoading ->
-                Page.fullPageLoading
+                Page.fullPageLoading shared
     }
 
 
 viewForm : LoggedIn.Model -> ObjectiveForm -> Html Msg
 viewForm { shared } objForm =
     let
+        t =
+            shared.translators.t
+
         isDisabled =
             objForm.save == Saving
     in
@@ -193,7 +196,7 @@ viewForm { shared } objForm =
                 [ class "mb-10"
                 ]
                 [ span [ class "input-label" ]
-                    [ text (t shared.translations "community.objectives.editor.description_label") ]
+                    [ text (t "community.objectives.editor.description_label") ]
                 , textarea
                     [ class "input textarea-input w-full"
                     , rows 5
@@ -202,7 +205,7 @@ viewForm { shared } objForm =
                     , value objForm.description
                     , required True
                     , maxlength 254
-                    , placeholder (t shared.translations "community.objectives.editor.description_placeholder")
+                    , placeholder (t "community.objectives.editor.description_placeholder")
                     ]
                     []
                 ]
@@ -212,7 +215,7 @@ viewForm { shared } objForm =
                 , onClick ClickedSaveObjective
                 , disabled isDisabled
                 ]
-                [ text (t shared.translations "community.objectives.editor.submit") ]
+                [ text (t "community.objectives.editor.submit") ]
             ]
         ]
 
@@ -292,7 +295,7 @@ update : Msg -> Model -> LoggedIn.Model -> UpdateResult
 update msg model loggedIn =
     let
         t =
-            I18Next.t loggedIn.shared.translations
+            loggedIn.shared.translators.t
     in
     case msg of
         CompletedCommunityLoad (Ok community) ->

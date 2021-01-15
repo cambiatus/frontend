@@ -62,7 +62,7 @@ import Html.Attributes
 import Json.Decode as Decode exposing (Decoder, string)
 import Json.Decode.Pipeline as Decode exposing (required)
 import Json.Encode as Encode exposing (Value)
-import Profile exposing (Profile)
+import Profile
 import Time exposing (Posix)
 import Utils
 import View.Tag as Tag
@@ -119,7 +119,7 @@ type alias Model =
     , transferCount : Int
     , productCount : Int
     , orderCount : Int
-    , members : List Profile
+    , members : List Profile.Minimal
     , objectives : List Objective
     , precision : Int
     , hasObjectives : Bool
@@ -174,7 +174,7 @@ communitySelectionSet =
         |> with Community.transferCount
         |> with Community.productCount
         |> with Community.orderCount
-        |> with (Community.members Profile.selectionSet)
+        |> with (Community.members Profile.minimalSelectionSet)
         |> with (Community.objectives objectiveSelectionSet)
         |> with Community.precision
         |> with Community.hasObjectives
@@ -342,7 +342,7 @@ type alias Action =
     , reward : Float
     , verificationReward : Float
     , creator : Eos.Name
-    , validators : List Profile
+    , validators : List Profile.Minimal
     , usages : Int
     , usagesLeft : Int
     , deadline : Maybe DateTime
@@ -352,6 +352,7 @@ type alias Action =
     , hasProofPhoto : Bool
     , hasProofCode : Bool
     , photoProofInstructions : Maybe String
+    , position : Maybe Int
     }
 
 
@@ -363,7 +364,7 @@ actionSelectionSet =
         |> with Action.reward
         |> with Action.verifierReward
         |> with (Eos.nameSelectionSet Action.creatorId)
-        |> with (Action.validators Profile.selectionSet)
+        |> with (Action.validators Profile.minimalSelectionSet)
         |> with Action.usages
         |> with Action.usagesLeft
         |> with Action.deadline
@@ -373,6 +374,7 @@ actionSelectionSet =
         |> with (SelectionSet.map (Maybe.withDefault False) Action.hasProofPhoto)
         |> with (SelectionSet.map (Maybe.withDefault False) Action.hasProofCode)
         |> with Action.photoProofInstructions
+        |> with Action.position
 
 
 type Verification
@@ -690,7 +692,7 @@ toVerifications actionVerificationResponse =
 
 type alias Invite =
     { community : Model
-    , creator : Profile
+    , creator : Profile.Minimal
     }
 
 
@@ -698,7 +700,7 @@ inviteSelectionSet : SelectionSet Invite Cambiatus.Object.Invite
 inviteSelectionSet =
     SelectionSet.succeed Invite
         |> with (Invite.community communitySelectionSet)
-        |> with (Invite.creator Profile.selectionSet)
+        |> with (Invite.creator Profile.minimalSelectionSet)
 
 
 inviteQuery : String -> SelectionSet (Maybe Invite) RootQuery

@@ -3,14 +3,13 @@ module Page.Dashboard.Claim exposing (Model, Msg, init, jsAddressToMsg, msgToStr
 import Api.Graphql
 import Cambiatus.Query
 import Claim
-import Eos exposing (Symbol)
+import Eos
 import Eos.Account as Eos
 import Eos.EosError as EosError
 import Graphql.Http
 import Html exposing (Html, button, div, h3, img, label, p, span, strong, text)
 import Html.Attributes exposing (class, classList, src)
 import Html.Events exposing (onClick)
-import I18Next
 import Json.Decode as Decode exposing (Value)
 import Json.Encode as Encode
 import Page
@@ -28,9 +27,9 @@ import Utils
 -- INIT
 
 
-init : LoggedIn.Model -> Symbol -> Claim.ClaimId -> ( Model, Cmd Msg )
-init { shared } communityId claimId =
-    ( initModel communityId claimId
+init : LoggedIn.Model -> Claim.ClaimId -> ( Model, Cmd Msg )
+init { shared } claimId =
+    ( initModel claimId
     , fetchClaim claimId shared
     )
 
@@ -40,18 +39,16 @@ init { shared } communityId claimId =
 
 
 type alias Model =
-    { communityId : Symbol
-    , claimId : Claim.ClaimId
+    { claimId : Claim.ClaimId
     , statusClaim : Status
     , claimModalStatus : Claim.ModalStatus
     , isValidated : Bool
     }
 
 
-initModel : Symbol -> Claim.ClaimId -> Model
-initModel communityId claimId =
-    { communityId = communityId
-    , claimId = claimId
+initModel : Claim.ClaimId -> Model
+initModel claimId =
+    { claimId = claimId
     , statusClaim = Loading
     , claimModalStatus = Claim.Closed
     , isValidated = False
@@ -71,9 +68,8 @@ type Status
 view : LoggedIn.Model -> Model -> { title : String, content : Html Msg }
 view ({ shared } as loggedIn) model =
     let
-        t : String -> String
-        t =
-            I18Next.t shared.translations
+        { t } =
+            shared.translators
 
         title =
             case model.statusClaim of
@@ -87,7 +83,7 @@ view ({ shared } as loggedIn) model =
             div []
                 [ case model.statusClaim of
                     Loading ->
-                        Page.fullPageLoading
+                        Page.fullPageLoading shared
 
                     Loaded claim ->
                         div [ class "bg-gray-100" ]
@@ -133,7 +129,7 @@ view ({ shared } as loggedIn) model =
                     (t "community.objectives.disabled.description")
 
             LoggedIn.FeatureLoading ->
-                Page.fullPageLoading
+                Page.fullPageLoading shared
     }
 
 
@@ -214,7 +210,7 @@ viewTitle : Shared -> Claim.Model -> Html msg
 viewTitle shared claim =
     let
         text_ s =
-            text (I18Next.t shared.translations s)
+            text (shared.translators.t s)
     in
     div [ class "text-heading font-bold text-center mb-4" ]
         [ case claim.status of
@@ -243,7 +239,7 @@ viewDetails : Shared -> Model -> Claim.Model -> Html msg
 viewDetails shared model claim =
     let
         text_ s =
-            text (I18Next.t shared.translations s)
+            text (shared.translators.t s)
 
         isRejected =
             claim.status == Claim.Rejected
@@ -281,7 +277,7 @@ viewDetails shared model claim =
                         [ class "pt-2 text-body"
                         , classList [ ( "text-red line-through", isRejected ) ]
                         ]
-                        [ text (String.fromFloat claim.action.reward ++ " " ++ Eos.symbolToSymbolCodeString model.communityId) ]
+                        [ text (String.fromFloat claim.action.reward ++ " " ++ Eos.symbolToSymbolCodeString claim.action.objective.community.symbol) ]
                     ]
                 ]
             ]
@@ -299,7 +295,7 @@ viewDetails shared model claim =
                 [ text_ "claim.your_reward" ]
             , p
                 [ class "pt-2 text-body" ]
-                [ text (String.fromFloat claim.action.verifierReward ++ " " ++ Eos.symbolToSymbolCodeString model.communityId) ]
+                [ text (String.fromFloat claim.action.verifierReward ++ " " ++ Eos.symbolToSymbolCodeString claim.action.objective.community.symbol) ]
             ]
         ]
 
@@ -308,7 +304,7 @@ viewVoters : LoggedIn.Model -> Claim.Model -> Html msg
 viewVoters ({ shared } as loggedIn) claim =
     let
         text_ s =
-            text (I18Next.t shared.translations s)
+            text (shared.translators.t s)
 
         pendingValidators =
             List.filter

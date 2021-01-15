@@ -54,7 +54,7 @@ import Json.Encode as Encode exposing (Value)
 import List.Extra as List
 import Notification exposing (Notification)
 import Ports
-import Profile exposing (Profile)
+import Profile exposing (Model)
 import Route exposing (Route)
 import Session.Shared as Shared exposing (Shared)
 import Shop
@@ -88,7 +88,7 @@ fetchTranslations language _ =
         |> Translation.get language
 
 
-initLogin : Shared -> Auth.Model -> Profile -> ( Model, Cmd Msg )
+initLogin : Shared -> Auth.Model -> Profile.Model -> ( Model, Cmd Msg )
 initLogin shared authModel profile_ =
     let
         selectedCommunity : Symbol
@@ -187,8 +187,8 @@ type FeedbackVisibility
 
 type ProfileStatus
     = Loading Eos.Name
-    | LoadingFailed Eos.Name (Graphql.Http.Error (Maybe Profile))
-    | Loaded Profile
+    | LoadingFailed Eos.Name (Graphql.Http.Error (Maybe Profile.Model))
+    | Loaded Profile.Model
 
 
 isAuth : Model -> Bool
@@ -225,9 +225,10 @@ type Page
     | ShopViewer
     | FAQ
     | Profile
-    | PublicProfile
+    | ProfilePublic
     | ProfileEditor
     | ProfileAddKyc
+    | ProfileClaims
     | PaymentHistory
     | Transfer
     | ViewTransfer
@@ -267,14 +268,13 @@ viewFeedback status message =
         color =
             case status of
                 Success ->
-                    "bg-green"
+                    " bg-green"
 
                 Failure ->
-                    "bg-red"
+                    " bg-red"
     in
     div
-        [ class "sticky z-10 top-0 w-full"
-        , classList [ ( color, True ) ]
+        [ class <| "w-full sticky z-10 top-0 transition duration-500 ease-in-out bg-blue-500 hover:bg-red-500 transform hover:-translate-y-1 hover:scale-110" ++ color
         , style "display" "grid"
         , style "grid-template" "\". text x\" 100% / 10% 80% 10%"
         ]
@@ -293,7 +293,7 @@ viewFeedback status message =
         ]
 
 
-viewHelper : (Msg -> msg) -> Page -> Profile -> Model -> Html msg -> Html msg
+viewHelper : (Msg -> msg) -> Page -> Profile.Model -> Model -> Html msg -> Html msg
 viewHelper thisMsg page profile_ ({ shared } as model) content =
     let
         { t } =
@@ -312,7 +312,7 @@ viewHelper thisMsg page profile_ ({ shared } as model) content =
             [ Other
             , Profile
             , Notification
-            , PublicProfile
+            , ProfilePublic
             , ProfileEditor
             , ProfileAddKyc
             , PaymentHistory
@@ -388,14 +388,14 @@ viewHelper thisMsg page profile_ ({ shared } as model) content =
         ]
 
 
-viewHeader : Model -> Profile -> Html Msg
+viewHeader : Model -> Profile.Model -> Html Msg
 viewHeader ({ shared } as model) profile_ =
     let
         text_ str =
-            text (t shared.translations str)
+            text (shared.translators.t str)
 
         tr str values =
-            I18Next.tr shared.translations I18Next.Curly str values
+            shared.translators.tr str values
     in
     div [ class "flex flex-wrap items-center justify-between px-4 pt-6 pb-4" ]
         [ viewCommunitySelector model
@@ -426,7 +426,7 @@ viewHeader ({ shared } as model) profile_ =
                         [ p [ class "w-full font-sans uppercase text-gray-900 text-xs overflow-x-hidden" ]
                             [ text (tr "menu.welcome_message" [ ( "user_name", Eos.nameToString profile_.account ) ]) ]
                         , p [ class "w-full font-sans text-indigo-500 text-sm" ]
-                            [ text (t shared.translations "menu.my_account") ]
+                            [ text (shared.translators.t "menu.my_account") ]
                         ]
                     , Icons.arrowDown "float-right"
                     ]
@@ -545,7 +545,7 @@ communitySelectorModal : Model -> Html Msg
 communitySelectorModal model =
     let
         t s =
-            I18Next.t model.shared.translations s
+            model.shared.translators.t s
 
         text_ s =
             text (t s)
@@ -609,7 +609,7 @@ viewMainMenu page model =
             , Route.href Route.Dashboard
             ]
             [ Icons.dashboard iconClass
-            , text (t model.shared.translations "menu.dashboard")
+            , text (model.shared.translators.t "menu.dashboard")
             ]
         , case model.hasShop of
             FeatureLoaded True ->
@@ -621,7 +621,7 @@ viewMainMenu page model =
                     , Route.href (Route.Shop Shop.All)
                     ]
                     [ Icons.shop iconClass
-                    , text (t model.shared.translations "menu.shop")
+                    , text (model.shared.translators.t "menu.shop")
                     ]
 
             _ ->
@@ -698,7 +698,7 @@ type Msg
     = Ignored
     | CompletedLoadTranslation String (Result Http.Error Translations)
     | ClickedTryAgainTranslation
-    | CompletedLoadProfile (Result (Graphql.Http.Error (Maybe Profile)) (Maybe Profile))
+    | CompletedLoadProfile (Result (Graphql.Http.Error (Maybe Profile.Model)) (Maybe Profile.Model))
     | CompletedLoadSettings (Result (Graphql.Http.Error (Maybe Community.Settings)) (Maybe Community.Settings))
     | ClickedTryAgainProfile Eos.Name
     | ClickedLogout
@@ -988,7 +988,7 @@ readAllNotifications model =
 -- INFO
 
 
-profile : Model -> Maybe Profile
+profile : Model -> Maybe Profile.Model
 profile model =
     case model.profile of
         Loaded profile_ ->

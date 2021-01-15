@@ -19,7 +19,7 @@ import Eos exposing (Symbol)
 import Eos.Account as Eos
 import File exposing (File)
 import Graphql.Http
-import Html exposing (Html, button, div, hr, img, input, label, p, span, text)
+import Html exposing (Html, button, div, img, input, label, p, span, text)
 import Html.Attributes exposing (accept, class, classList, disabled, id, multiple, src, style, type_)
 import Html.Events exposing (onClick)
 import Http
@@ -155,7 +155,7 @@ view loggedIn model =
         content =
             case model.pageStatus of
                 Loading ->
-                    Page.fullPageLoading
+                    Page.fullPageLoading loggedIn.shared
 
                 NotFound ->
                     Page.viewCardEmpty [ text_ "community.not_found" ]
@@ -182,9 +182,9 @@ view loggedIn model =
                                     ]
                                 , div [ class "container mx-auto" ]
                                     [ if community.hasObjectives then
-                                        div [ class "pb-4" ]
+                                        div [ class "px-4 pb-4" ]
                                             [ viewClaimConfirmation loggedIn model
-                                            , div [ class "bg-white py-6 sm:py-8 px-3 sm:px-6 rounded-lg mt-4" ]
+                                            , div [ class "container bg-white py-6 sm:py-8 px-3 sm:px-6 rounded-lg mt-4" ]
                                                 (Page.viewTitle (t "community.objectives.title_plural")
                                                     :: List.indexedMap (viewObjective loggedIn model community)
                                                         community.objectives
@@ -193,48 +193,7 @@ view loggedIn model =
 
                                       else
                                         text ""
-                                    , div [ class "flex flex-wrap -mx-2 pb-4" ]
-                                        [ div [ class "px-2 mb-6" ]
-                                            [ div
-                                                [ class "w-40 h-48 relative bg-white rounded-lg p-4 overflow-hidden" ]
-                                                [ p [ class "w-full font-bold text-green text-3xl" ]
-                                                    [ text <| String.fromInt community.memberCount ]
-                                                , p [ class " text-gray-700 text-sm" ]
-                                                    [ text <| t "community.index.members" ]
-                                                , img [ class "absolute bottom-0 right-0", src "/images/girl-playing-guitar.svg" ] []
-                                                ]
-                                            ]
-                                        , div [ class "px-2 mb-6" ]
-                                            [ div [ class "flex flex-col w-40" ]
-                                                [ div [ class "w-40 h-24 bg-white rounded-lg px-4 py-2 mb-4" ]
-                                                    [ p [ class "w-full font-bold text-green text-3xl" ]
-                                                        [ text <| String.fromInt community.claimCount ]
-                                                    , p [ class " text-gray-700 text-sm" ]
-                                                        [ text <| t "community.index.claims" ]
-                                                    ]
-                                                , div [ class "w-40 h-20 bg-white rounded-lg px-4 py-2" ]
-                                                    [ p [ class "w-full font-bold text-green text-3xl" ]
-                                                        [ text <| String.fromInt community.transferCount ]
-                                                    , p [ class " text-gray-700 text-sm" ]
-                                                        [ text <| t "community.index.transfers" ]
-                                                    ]
-                                                ]
-                                            ]
-                                        , div [ class "px-2 mb-6" ]
-                                            [ div [ class "w-80 relative bg-white rounded-lg p-4 h-48 overflow-hidden" ]
-                                                [ p [ class "w-full font-bold text-green text-3xl" ]
-                                                    [ text <| String.fromInt community.productCount ]
-                                                , p [ class " text-gray-700 text-sm" ]
-                                                    [ text <| t "community.index.products" ]
-                                                , p
-                                                    [ class "w-full font-bold text-green text-3xl mt-4" ]
-                                                    [ text <| String.fromInt community.orderCount ]
-                                                , p [ class " text-gray-700 text-sm" ]
-                                                    [ text <| t "community.index.orders" ]
-                                                , img [ class "absolute right-0 bottom-0", src "/images/booth.svg" ] []
-                                                ]
-                                            ]
-                                        ]
+                                    , viewCommunityStats loggedIn community
                                     ]
                                 ]
 
@@ -392,8 +351,9 @@ viewObjective loggedIn model metadata index objective =
 
         actsNButton : List (Html Msg)
         actsNButton =
-            List.map (viewAction loggedIn metadata model.date) objective.actions
-                |> List.intersperse (hr [ class "bg-border-grey text-border-grey" ] [])
+            objective.actions
+                |> List.sortBy (\a -> a.position |> Maybe.withDefault 0)
+                |> List.map (viewAction loggedIn metadata model.date)
     in
     if objective.isCompleted then
         text ""
@@ -581,7 +541,7 @@ viewAction loggedIn metadata maybeDate action =
                     )
                 ]
                 [ if action.hasProofPhoto then
-                    span [ class "inline-block w-4 align-middle mr-2" ] [ Icons.camera ]
+                    span [ class "inline-block w-4 align-middle mr-2" ] [ Icons.camera "" ]
 
                   else
                     text ""
@@ -754,13 +714,67 @@ viewPhotoUploader { t } proofPhotoStatus =
 
                 Uploaded _ ->
                     span [ class "absolute bottom-0 right-0 mr-4 mb-4 bg-orange-300 w-8 h-8 p-2 rounded-full" ]
-                        [ Icons.camera ]
+                        [ Icons.camera "" ]
 
                 _ ->
                     div [ class "text-white text-body font-bold text-center" ]
-                        [ div [ class "w-10 mx-auto mb-2" ] [ Icons.camera ]
+                        [ div [ class "w-10 mx-auto mb-2" ] [ Icons.camera "" ]
                         , div [] [ text (t "community.actions.proof.upload_photo_hint") ]
                         ]
+            ]
+        ]
+
+
+viewCommunityStats : LoggedIn.Model -> Community.Model -> Html msg
+viewCommunityStats loggedIn community =
+    let
+        t =
+            loggedIn.shared.translators.t
+    in
+    div [ class "flex flex-wrap px-4 container mb-6" ]
+        [ div [ class "flex w-full lg:w-1/2 h-48 mb-4" ]
+            [ div [ class "flex-grow" ]
+                [ div
+                    [ class " min-w-40 h-48 relative bg-white rounded-lg p-4 overflow-hidden" ]
+                    [ p [ class "w-full font-bold text-green text-3xl" ]
+                        [ text <| String.fromInt community.memberCount ]
+                    , p [ class " text-gray-700 text-sm" ]
+                        [ text <| t "community.index.members" ]
+                    , img [ class "absolute bottom-0 right-0", src "/images/girl-playing-guitar.svg" ] []
+                    ]
+                ]
+            , div [ class "px-2 mb-6" ]
+                [ div [ class "flex flex-col w-40" ]
+                    [ div [ class "w-40 h-24 bg-white rounded-lg px-4 py-2 mb-4" ]
+                        [ p [ class "w-full font-bold text-green text-3xl" ]
+                            [ text <| String.fromInt community.claimCount ]
+                        , p [ class " text-gray-700 text-sm" ]
+                            [ text <| t "community.index.claims" ]
+                        ]
+                    , div [ class "w-40 h-20 bg-white rounded-lg px-4 py-2" ]
+                        [ p [ class "w-full font-bold text-green text-3xl" ]
+                            [ text <| String.fromInt community.transferCount ]
+                        , p [ class " text-gray-700 text-sm" ]
+                            [ text <| t "community.index.transfers" ]
+                        ]
+                    ]
+                ]
+            ]
+        , div [ class "w-full lg:w-1/2 h-48" ]
+            [ div [ class "" ]
+                [ div [ class "w-full relative bg-white rounded-lg p-4 h-48 overflow-hidden" ]
+                    [ p [ class "w-full font-bold text-green text-3xl" ]
+                        [ text <| String.fromInt community.productCount ]
+                    , p [ class " text-gray-700 text-sm" ]
+                        [ text <| t "community.index.products" ]
+                    , p
+                        [ class "w-full font-bold text-green text-3xl mt-4" ]
+                        [ text <| String.fromInt community.orderCount ]
+                    , p [ class " text-gray-700 text-sm" ]
+                        [ text <| t "community.index.orders" ]
+                    , img [ class "absolute right-0 bottom-0", src "/images/booth.svg" ] []
+                    ]
+                ]
             ]
         ]
 

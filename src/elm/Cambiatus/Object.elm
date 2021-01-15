@@ -93,8 +93,8 @@ type PushSubscription
     = PushSubscription
 
 
-type SignUp
-    = SignUp
+type SignUpResponse
+    = SignUpResponse
 
 
 type State

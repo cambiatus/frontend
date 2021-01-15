@@ -8,7 +8,6 @@ import Graphql.Http
 import Html exposing (Html, div, input, label, span, text)
 import Html.Attributes exposing (checked, class, for, id, name, style, type_)
 import Html.Events exposing (onCheck)
-import I18Next exposing (Translations, t)
 import Icons
 import Json.Decode exposing (Value)
 import Json.Encode
@@ -73,11 +72,8 @@ type alias UpdateResult =
 view : LoggedIn.Model -> Model -> { title : String, content : Html Msg }
 view loggedIn model =
     let
-        translations =
-            loggedIn.shared.translations
-
         translate =
-            t translations
+            loggedIn.shared.translators.t
 
         title =
             translate "settings.features.title"
@@ -90,9 +86,9 @@ view loggedIn model =
                         , div
                             [ class "container divide-y px-4"
                             ]
-                            [ toggleView translations (translate "community.objectives.title_plural") model.hasObjectives ToggleObjectives "actions"
-                            , toggleView translations (translate "menu.shop") model.hasShop ToggleShop "shop"
-                            , toggleView translations (translate "community.kyc.title") model.hasKyc ToggleKyc "kyc"
+                            [ toggleView loggedIn (translate "community.objectives.title_plural") model.hasObjectives ToggleObjectives "actions"
+                            , toggleView loggedIn (translate "menu.shop") model.hasShop ToggleShop "shop"
+                            , toggleView loggedIn (translate "community.kyc.title") model.hasKyc ToggleKyc "kyc"
                             ]
                         ]
 
@@ -100,7 +96,7 @@ view loggedIn model =
                     Page.fullPageGraphQLError title error
 
                 Loading ->
-                    Page.fullPageLoading
+                    Page.fullPageLoading loggedIn.shared
 
                 Unauthorized ->
                     div []
@@ -114,11 +110,11 @@ view loggedIn model =
     }
 
 
-toggleView : Translations -> String -> Bool -> (Bool -> Msg) -> String -> Html Msg
-toggleView translations labelText isEnabled toggleFunction inputId =
+toggleView : LoggedIn.Model -> String -> Bool -> (Bool -> Msg) -> String -> Html Msg
+toggleView { shared } labelText isEnabled toggleFunction inputId =
     let
         translate =
-            t translations
+            shared.translators.t
 
         classes =
             class "flex items-center text-sm"
@@ -179,7 +175,7 @@ update : Msg -> Model -> LoggedIn.Model -> UpdateResult
 update msg model loggedIn =
     let
         translate =
-            t loggedIn.shared.translations
+            loggedIn.shared.translators.t
     in
     case msg of
         CompletedLoad (Ok (Just community)) ->

@@ -18,7 +18,7 @@ import Html.Attributes exposing (class, src)
 import Html.Events exposing (onClick)
 import Http
 import Page exposing (Session(..), toShared)
-import Profile exposing (Profile)
+import Profile exposing (Model)
 import Profile.EditKycForm as KycForm
 import Route
 import Session.LoggedIn as LoggedIn exposing (External(..), FeedbackStatus(..))
@@ -103,7 +103,7 @@ view session model =
                 JoinConfirmation invite ->
                     let
                         inviter =
-                            invite.creator.userName
+                            invite.creator.name
                                 |> Maybe.withDefault (nameToString invite.creator.account)
                     in
                     inviter
@@ -222,7 +222,7 @@ viewContent : Translators -> Invite -> Html Msg -> Html Msg
 viewContent { t } { creator, community } innerContent =
     let
         inviter =
-            creator.userName
+            creator.name
                 |> Maybe.withDefault (nameToString creator.account)
     in
     div [ class "bg-white pb-20" ]
@@ -301,7 +301,7 @@ type Msg
     | CloseConfirmationModal
     | InvitationRejected
     | InvitationAccepted InvitationId Invite
-    | CompletedSignIn LoggedIn.Model (Result Http.Error Profile)
+    | CompletedSignIn LoggedIn.Model (Result Http.Error Profile.Model)
     | FormMsg KycForm.Msg
 
 

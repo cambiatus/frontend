@@ -40,7 +40,7 @@ import Json.Decode as Json exposing (Value)
 import Json.Encode as Encode
 import MaskedInput.Text as MaskedDate
 import Page
-import Profile exposing (Profile)
+import Profile
 import Route
 import Select
 import Session.LoggedIn as LoggedIn exposing (External(..), FeedbackStatus(..))
@@ -112,7 +112,7 @@ type ActionValidation
 type Verification
     = Automatic
     | Manual
-        { verifiersValidator : Validator (List Profile)
+        { verifiersValidator : Validator (List Profile.Minimal)
         , verifierRewardValidator : Validator String
         , minVotesValidator : Validator String
         , photoProof : PhotoProof
@@ -194,13 +194,13 @@ editForm form action =
             else
                 NoValidation
 
-        verifiers : List Profile
         verifiers =
             if VerificationType.toString action.verificationType == "AUTOMATIC" then
                 []
 
             else
                 action.validators
+                    |> List.map (\v -> { name = v.name, account = v.account, avatar = v.avatar })
 
         verification : Verification
         verification =
@@ -293,7 +293,7 @@ defaultUsagesValidator =
         |> newValidator "" (\s -> Just s) True
 
 
-defaultVerifiersValidator : List Profile -> String -> Validator (List Profile)
+defaultVerifiersValidator : List Profile.Minimal -> String -> Validator (List Profile.Minimal)
 defaultVerifiersValidator verifiers minVerifiersQty =
     let
         limit =
@@ -452,9 +452,9 @@ type alias UpdateResult =
 
 type Msg
     = CompletedCommunityLoad (Result (Graphql.Http.Error (Maybe Community.Model)) (Maybe Community.Model))
-    | OnSelectVerifier (Maybe Profile)
-    | OnRemoveVerifier Profile
-    | SelectMsg (Select.Msg Profile)
+    | OnSelectVerifier (Maybe Profile.Minimal)
+    | OnRemoveVerifier Profile.Minimal
+    | SelectMsg (Select.Msg Profile.Minimal)
     | EnteredDescription String
     | EnteredInstructions String
     | EnteredReward String
@@ -619,7 +619,7 @@ update msg model ({ shared } as loggedIn) =
 
                         Manual m ->
                             let
-                                newVerifiers : List Profile
+                                newVerifiers : List Profile.Minimal
                                 newVerifiers =
                                     maybeProfile
                                         |> Maybe.map (List.singleton >> List.append (getInput m.verifiersValidator))
@@ -642,7 +642,7 @@ update msg model ({ shared } as loggedIn) =
 
                         Manual m ->
                             let
-                                newVerifiers : List Profile
+                                newVerifiers : List Profile.Minimal
                                 newVerifiers =
                                     List.filter
                                         (\currVerifier -> currVerifier.account /= profile.account)
@@ -1245,7 +1245,7 @@ view ({ shared } as loggedIn) model =
         content =
             case model.status of
                 Loading ->
-                    Page.fullPageLoading
+                    Page.fullPageLoading shared
 
                 Loaded community ->
                     div [ class "bg-white" ]
@@ -1274,7 +1274,7 @@ view ({ shared } as loggedIn) model =
                     (t "community.objectives.disabled.description")
 
             LoggedIn.FeatureLoading ->
-                Page.fullPageLoading
+                Page.fullPageLoading shared
     }
 
 
@@ -1756,7 +1756,7 @@ viewVotesCount selectedCount count =
         ]
 
 
-viewSelectedVerifiers : LoggedIn.Model -> List Profile -> Html Msg
+viewSelectedVerifiers : LoggedIn.Model -> List Profile.Minimal -> Html Msg
 viewSelectedVerifiers ({ shared } as loggedIn) selectedVerifiers =
     div [ class "flex flex-row mt-3 mb-6 flex-wrap" ]
         (selectedVerifiers
@@ -1801,7 +1801,7 @@ filter minChars toLabel query items =
             |> Just
 
 
-selectConfiguration : Shared -> Bool -> Select.Config Msg Profile
+selectConfiguration : Shared -> Bool -> Select.Config Msg Profile.Minimal
 selectConfiguration shared isDisabled =
     Profile.selectConfig
         (Select.newConfig

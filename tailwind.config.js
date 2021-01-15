@@ -66,12 +66,15 @@ module.exports = {
     },
     // Customizing BorderRadius sizes
     borderRadius: {
-      none: '0',
-      sm: '.125rem',
-      label: '.313rem', // 5px
+      'none': '0',
+      'sm': '0.125rem',
+      DEFAULT: '.4rem',
       default: '.4rem',
-      lg: '1.25rem',
-      full: '9999px'
+      label: '.313rem', // 5px
+      'md': '0.375rem',
+      'lg': '1.25rem',
+      'full': '9999px',
+      'large': '12px'
     },
     // Overwriting since the current font family only have these weights
     fontWeight: {
