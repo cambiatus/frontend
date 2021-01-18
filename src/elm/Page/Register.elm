@@ -965,7 +965,7 @@ update _ msg model { shared } =
 
 
 type alias SignUpResponse =
-    { reason : String
+    { reason : Maybe String
     , status : SignUpStatus.SignUpStatus
     }
 
