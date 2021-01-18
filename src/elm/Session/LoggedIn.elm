@@ -43,9 +43,9 @@ import Graphql.Document
 import Graphql.Http
 import Graphql.Operation exposing (RootSubscription)
 import Graphql.SelectionSet exposing (SelectionSet)
-import Html exposing (Html, a, button, div, footer, img, nav, p, span, text)
-import Html.Attributes exposing (class, classList, src, style, type_)
-import Html.Events exposing (onClick, onMouseEnter)
+import Html exposing (Html, a, button, div, footer, img, input, li, nav, p, span, text, ul)
+import Html.Attributes exposing (class, classList, placeholder, src, style, type_)
+import Html.Events exposing (onBlur, onClick, onFocus, onInput, onMouseEnter)
 import Http
 import I18Next exposing (Delims(..), Translations, t)
 import Icons
@@ -144,6 +144,7 @@ type alias Model =
     , hasShop : FeatureStatus
     , hasObjectives : FeatureStatus
     , hasKyc : FeatureStatus
+    , searchState : SearchState
     }
 
 
@@ -172,6 +173,7 @@ initModel shared authModel accountName selectedCommunity =
     , hasShop = FeatureLoading
     , hasObjectives = FeatureLoading
     , hasKyc = FeatureLoading
+    , searchState = Inactive
     }
 
 
@@ -388,6 +390,65 @@ viewHelper thisMsg page profile_ ({ shared } as model) content =
         ]
 
 
+type SearchState
+    = Inactive
+    | Active String
+    | ResultsShowed
+
+
+viewSearch model =
+    let
+        iconColor =
+            case model.searchState of
+                Inactive ->
+                    "fill-gray"
+
+                _ ->
+                    "fill-indigo"
+
+        viewRecentSearches =
+            case model.searchState of
+                Active _ ->
+                    let
+                        viewQuery q =
+                            div [ class "leading-10" ]
+                                [ Icons.clock "fill-gray inline-block align-middle mr-3"
+                                , span [ class "inline align-middle" ] [ text q ]
+                                ]
+                    in
+                    div [ class "fixed bg-white w-full left-0 px-2 py-4 border-2" ]
+                        [ span [ class "font-bold" ] [ text "Recently searched" ]
+                        , ul []
+                            [ li []
+                                [ viewQuery "English Class"
+                                , viewQuery "Organic bag"
+                                , viewQuery "Pura vida"
+                                ]
+                            ]
+                        ]
+
+                _ ->
+                    text ""
+    in
+    div [ class "w-full" ]
+        [ Html.form
+            [ class "w-full relative block mt-2"
+            ]
+            [ input
+                [ type_ "search"
+                , class "w-full form-input rounded-full bg-gray-100 pl-10 m-0 block"
+                , placeholder "Find friends and communities"
+                , onFocus (SearchStateChanged (Active ""))
+                , onBlur (SearchStateChanged Inactive)
+                , onInput (\query -> SearchStateChanged (Active query))
+                ]
+                []
+            , Icons.search <| "absolute top-0 left-0 mt-2 ml-2" ++ " " ++ iconColor
+            ]
+        , viewRecentSearches
+        ]
+
+
 viewHeader : Model -> Profile.Model -> Html Msg
 viewHeader ({ shared } as model) profile_ =
     let
@@ -494,6 +555,7 @@ viewHeader ({ shared } as model) profile_ =
                     ]
                 ]
             ]
+        , viewSearch model
         ]
 
 
@@ -717,6 +779,7 @@ type Msg
     | CloseCommunitySelector
     | SelectCommunity Symbol (Cmd Msg)
     | HideFeedbackLocal
+    | SearchStateChanged SearchState
 
 
 update : Msg -> Model -> UpdateResult
@@ -745,6 +808,10 @@ update msg model =
     case msg of
         Ignored ->
             UR.init model
+
+        SearchStateChanged state ->
+            { model | searchState = state }
+                |> UR.init
 
         CompletedLoadTranslation lang (Ok transl) ->
             case model.profile of
@@ -1050,6 +1117,9 @@ msgToString msg =
     case msg of
         Ignored ->
             [ "Ignored" ]
+
+        SearchStateChanged _ ->
+            [ "SearchStateChanged" ]
 
         CompletedLoadTranslation _ r ->
             [ "CompletedLoadTranslation", UR.resultToString r ]
