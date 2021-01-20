@@ -21,6 +21,7 @@ module Session.LoggedIn exposing
     , msgToString
     , profile
     , readAllNotifications
+    , searchFor
     , subscriptions
     , update
     , view
@@ -45,11 +46,11 @@ import Graphql.Operation exposing (RootSubscription)
 import Graphql.SelectionSet exposing (SelectionSet)
 import Html exposing (Html, a, button, div, footer, img, input, li, nav, p, span, text, ul)
 import Html.Attributes exposing (class, classList, placeholder, src, style, type_)
-import Html.Events exposing (onBlur, onClick, onFocus, onInput, onMouseEnter)
+import Html.Events exposing (onBlur, onClick, onFocus, onInput, onMouseEnter, onSubmit)
 import Http
 import I18Next exposing (Delims(..), Translations, t)
 import Icons
-import Json.Decode as Decode exposing (Value)
+import Json.Decode as Decode exposing (Value, list, string)
 import Json.Encode as Encode exposing (Value)
 import List.Extra as List
 import Notification exposing (Notification)
@@ -118,6 +119,7 @@ subscriptions model =
     Sub.batch
         [ Sub.map GotAuthMsg (Auth.subscriptions model.auth)
         , Sub.map KeyDown (Browser.Events.onKeyDown (Decode.field "key" Decode.string))
+        , Ports.gotRecentSearches GotRecentSearches
         ]
 
 
@@ -145,6 +147,7 @@ type alias Model =
     , hasObjectives : FeatureStatus
     , hasKyc : FeatureStatus
     , searchState : SearchState
+    , recentSearches : List String
     }
 
 
@@ -174,6 +177,7 @@ initModel shared authModel accountName selectedCommunity =
     , hasObjectives = FeatureLoading
     , hasKyc = FeatureLoading
     , searchState = Inactive
+    , recentSearches = []
     }
 
 
@@ -420,10 +424,7 @@ viewSearch model =
                         [ span [ class "font-bold" ] [ text "Recently searched" ]
                         , ul []
                             [ li []
-                                [ viewQuery "English Class"
-                                , viewQuery "Organic bag"
-                                , viewQuery "Pura vida"
-                                ]
+                                (List.map viewQuery model.recentSearches)
                             ]
                         ]
 
@@ -433,6 +434,7 @@ viewSearch model =
     div [ class "w-full" ]
         [ Html.form
             [ class "w-full relative block mt-2"
+            , onSubmit (SubmittedSearch model.searchState)
             ]
             [ input
                 [ type_ "search"
@@ -765,7 +767,7 @@ type Msg
     | ClickedTryAgainProfile Eos.Name
     | ClickedLogout
     | EnteredSearch String
-    | SubmitedSearch
+    | SubmittedSearch SearchState
     | ShowNotificationModal Bool
     | ShowUserNav Bool
     | ShowMainNav Bool
@@ -780,6 +782,13 @@ type Msg
     | SelectCommunity Symbol (Cmd Msg)
     | HideFeedbackLocal
     | SearchStateChanged SearchState
+    | GotRecentSearches String
+
+
+searchFor : String -> Cmd msg
+searchFor query =
+    -- TODO: send GraphQl query
+    Cmd.none
 
 
 update : Msg -> Model -> UpdateResult
@@ -809,9 +818,20 @@ update msg model =
         Ignored ->
             UR.init model
 
+        GotRecentSearches queries ->
+            case Decode.decodeString (list string) queries of
+                Ok queryList ->
+                    { model | recentSearches = queryList }
+                        |> UR.init
+
+                Err _ ->
+                    model |> UR.init
+
         SearchStateChanged state ->
             { model | searchState = state }
                 |> UR.init
+                -- TODO: Retrieve recent searches only when state changed to show the dropdown
+                |> UR.addCmd (Ports.askForRecentSearches ())
 
         CompletedLoadTranslation lang (Ok transl) ->
             case model.profile of
@@ -903,8 +923,25 @@ update msg model =
         EnteredSearch s ->
             UR.init { model | searchText = s }
 
-        SubmitedSearch ->
-            UR.init model
+        SubmittedSearch searchState ->
+            case searchState of
+                Active query ->
+                    let
+                        newRecentSearches =
+                            (query :: model.recentSearches)
+                                |> List.take 3
+
+                        encoded =
+                            Encode.encode 0 (Encode.list Encode.string newRecentSearches)
+                    in
+                    { model | recentSearches = newRecentSearches }
+                        |> UR.init
+                        |> UR.addCmd (searchFor query)
+                        |> UR.addCmd (Ports.storeRecentSearches encoded)
+
+                _ ->
+                    model
+                        |> UR.init
 
         ShowNotificationModal b ->
             UR.init
@@ -1118,6 +1155,9 @@ msgToString msg =
         Ignored ->
             [ "Ignored" ]
 
+        GotRecentSearches _ ->
+            [ "GotRecentSearches" ]
+
         SearchStateChanged _ ->
             [ "SearchStateChanged" ]
 
@@ -1142,8 +1182,8 @@ msgToString msg =
         EnteredSearch _ ->
             [ "EnteredSearch" ]
 
-        SubmitedSearch ->
-            [ "SubmitedSearch" ]
+        SubmittedSearch _ ->
+            [ "SubmittedSearch" ]
 
         ShowNotificationModal _ ->
             [ "ShowNotificationModal" ]
