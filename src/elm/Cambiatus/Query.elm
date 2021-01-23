@@ -221,6 +221,18 @@ profile requiredArgs object_ =
     Object.selectionForCompositeField "profile" [ Argument.required "account" requiredArgs.account Encode.string ] object_ (identity >> Decode.nullable)
 
 
+type alias SearchRequiredArguments =
+    { communityId : String }
+
+
+search :
+    SearchRequiredArguments
+    -> SelectionSet decodesTo Cambiatus.Object.SearchResult
+    -> SelectionSet decodesTo RootQuery
+search requiredArgs object_ =
+    Object.selectionForCompositeField "search" [ Argument.required "communityId" requiredArgs.communityId Encode.string ] object_ identity
+
+
 type alias TransferRequiredArguments =
     { input : Cambiatus.InputObject.TransferInput }
 

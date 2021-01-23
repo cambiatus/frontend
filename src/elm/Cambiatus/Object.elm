@@ -93,6 +93,10 @@ type PushSubscription
     = PushSubscription
 
 
+type SearchResult
+    = SearchResult
+
+
 type SignUpResponse
     = SignUpResponse
 
