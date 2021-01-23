@@ -34,7 +34,11 @@ import Avatar
 import Browser.Dom as Dom
 import Browser.Events
 import Cambiatus.Object
+import Cambiatus.Object.Action
+import Cambiatus.Object.Product
+import Cambiatus.Object.SearchResult
 import Cambiatus.Object.UnreadNotifications
+import Cambiatus.Query
 import Cambiatus.Subscription as Subscription
 import Community
 import Eos exposing (Symbol)
@@ -43,7 +47,8 @@ import Flags exposing (Flags)
 import Graphql.Document
 import Graphql.Http
 import Graphql.Operation exposing (RootSubscription)
-import Graphql.SelectionSet exposing (SelectionSet)
+import Graphql.OptionalArgument exposing (OptionalArgument(..))
+import Graphql.SelectionSet as SelectionSet exposing (SelectionSet, with)
 import Html exposing (Html, a, button, div, footer, img, input, li, nav, p, span, text, ul)
 import Html.Attributes exposing (class, classList, placeholder, src, style, type_)
 import Html.Events exposing (onBlur, onClick, onFocus, onInput, onMouseEnter, onSubmit)
@@ -782,13 +787,53 @@ type Msg
     | SelectCommunity Symbol (Cmd Msg)
     | HideFeedbackLocal
     | SearchStateChanged SearchState
+    | CompletedLoadSearchResults (Result (Graphql.Http.Error SearchResult) SearchResult)
     | GotRecentSearches String
 
 
-searchFor : String -> Cmd msg
-searchFor query =
-    -- TODO: send GraphQl query
-    Cmd.none
+type alias SearchProduct =
+    { title : String
+    }
+
+
+type alias SearchAction =
+    { description : String
+    }
+
+
+type alias SearchResult =
+    { products : List SearchProduct
+    , actions : List SearchAction
+    }
+
+
+searchFor : Symbol -> Shared -> String -> Cmd Msg
+searchFor selectedCommunity shared queryString =
+    let
+        req =
+            { communityId = Eos.symbolToString selectedCommunity }
+    in
+    Api.Graphql.query
+        shared
+        (Cambiatus.Query.search req (searchResultSelectionSet queryString))
+        CompletedLoadSearchResults
+
+
+searchResultSelectionSet : String -> SelectionSet SearchResult Cambiatus.Object.SearchResult
+searchResultSelectionSet queryString =
+    SelectionSet.succeed SearchResult
+        |> with (Cambiatus.Object.SearchResult.products (\_ -> { query = Present queryString }) productsSelectionSet)
+        |> with (Cambiatus.Object.SearchResult.actions (\_ -> { query = Present queryString }) actionsSelectionSet)
+
+
+productsSelectionSet : SelectionSet SearchProduct Cambiatus.Object.Product
+productsSelectionSet =
+    SelectionSet.map SearchProduct Cambiatus.Object.Product.title
+
+
+actionsSelectionSet : SelectionSet SearchAction Cambiatus.Object.Action
+actionsSelectionSet =
+    SelectionSet.map SearchAction Cambiatus.Object.Action.description
 
 
 update : Msg -> Model -> UpdateResult
@@ -817,6 +862,13 @@ update msg model =
     case msg of
         Ignored ->
             UR.init model
+
+        CompletedLoadSearchResults res ->
+            let
+                _ =
+                    Debug.log "CompletedLoadSearchResults res" res
+            in
+            model |> UR.init
 
         GotRecentSearches queries ->
             case Decode.decodeString (list string) queries of
@@ -927,17 +979,25 @@ update msg model =
             case searchState of
                 Active query ->
                     let
+                        newRecentSearches : List String
                         newRecentSearches =
                             (query :: model.recentSearches)
                                 |> List.take 3
 
-                        encoded =
-                            Encode.encode 0 (Encode.list Encode.string newRecentSearches)
+                        storeRecentSearches : Cmd msg
+                        storeRecentSearches =
+                            newRecentSearches
+                                |> Encode.list Encode.string
+                                |> Encode.encode 0
+                                |> Ports.storeRecentSearches
+
+                        selectedCommunity =
+                            model.selectedCommunity
                     in
                     { model | recentSearches = newRecentSearches }
                         |> UR.init
-                        |> UR.addCmd (searchFor query)
-                        |> UR.addCmd (Ports.storeRecentSearches encoded)
+                        |> UR.addCmd storeRecentSearches
+                        |> UR.addCmd (searchFor selectedCommunity shared query)
 
                 _ ->
                     model
@@ -1154,6 +1214,9 @@ msgToString msg =
     case msg of
         Ignored ->
             [ "Ignored" ]
+
+        CompletedLoadSearchResults _ ->
+            [ "CompletedLoadSearchResults" ]
 
         GotRecentSearches _ ->
             [ "GotRecentSearches" ]
