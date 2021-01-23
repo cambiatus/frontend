@@ -864,10 +864,6 @@ update msg model =
             UR.init model
 
         CompletedLoadSearchResults res ->
-            let
-                _ =
-                    Debug.log "CompletedLoadSearchResults res" res
-            in
             model |> UR.init
 
         GotRecentSearches queries ->
