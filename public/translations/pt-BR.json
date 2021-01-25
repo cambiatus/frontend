@@ -598,6 +598,7 @@
     },
     "changePin": "Troque seu PIN!",
     "newPin": "Novo PIN",
+    "changePinPrompt": "Entre seu novo PIN de segurança com 6 dígitos.",
     "actions": {
       "edit": "Editar",
       "viewPrivatekey": "Ver chave privada"
