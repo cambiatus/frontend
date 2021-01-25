@@ -138,7 +138,7 @@ productsQuery filter accName communityId =
             let
                 args =
                     \_ ->
-                        { filters = Present { account = Eos.nameToString accName, inStock = Present True }
+                        { filters = Present { account = Eos.nameToString accName, inStock = Absent }
                         }
             in
             Query.products args { communityId = Eos.symbolToString communityId } productSelection
