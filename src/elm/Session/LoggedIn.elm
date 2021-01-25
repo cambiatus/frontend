@@ -43,9 +43,9 @@ import Graphql.Document
 import Graphql.Http
 import Graphql.Operation exposing (RootSubscription)
 import Graphql.SelectionSet exposing (SelectionSet)
-import Html exposing (Html, a, button, div, footer, img, input, li, nav, p, span, text, ul)
-import Html.Attributes exposing (class, classList, placeholder, src, style, type_)
-import Html.Events exposing (onBlur, onClick, onFocus, onInput, onMouseEnter, onSubmit)
+import Html exposing (Html, a, button, div, footer, img, nav, p, span, text)
+import Html.Attributes exposing (class, classList, src, style, type_)
+import Html.Events exposing (onClick, onMouseEnter)
 import Http
 import I18Next exposing (Delims(..), Translations, t)
 import Icons
@@ -321,7 +321,7 @@ viewHelper thisMsg page profile_ ({ shared } as model) content =
          ]
             ++ (if Search.isActive model.searchModel then
                     [ div [ class "bg-white flex-grow" ]
-                        [ Search.viewRecentQueries model.searchModel
+                        [ Search.viewSearchBody model.searchModel
                             |> Html.map (SearchMsg >> thisMsg)
                         ]
                     ]
