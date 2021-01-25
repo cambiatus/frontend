@@ -1,7 +1,7 @@
 port module Ports exposing
     ( JavascriptOut
     , JavascriptOutModel
-    , askForRecentSearches
+    , getRecentSearches
     , gotRecentSearches
     , javascriptInPort
     , javascriptOut
@@ -71,7 +71,7 @@ port storeRecentSearches : String -> Cmd msg
 
 {-| Ping JS to send back the recent searches from the `localStorage`.
 -}
-port askForRecentSearches : () -> Cmd msg
+port getRecentSearches : () -> Cmd msg
 
 
 

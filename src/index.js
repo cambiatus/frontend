@@ -190,9 +190,7 @@ app.ports.storeRecentSearches.subscribe(query =>
 )
 
 // RETRIEVE RECENT SEARCHES
-// Elm pings JS with `askForRecentSearches` command when search field is focused,
-// JS sends back recent searches to Elm via `gotRecentSearches` subscription.
-app.ports.askForRecentSearches.subscribe(() => {
+app.ports.getRecentSearches.subscribe(() => {
   app.ports.gotRecentSearches.send(window.localStorage.getItem(RECENT_SEARCHES) || '[]')
 })
 

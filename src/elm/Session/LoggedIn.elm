@@ -21,7 +21,6 @@ module Session.LoggedIn exposing
     , msgToString
     , profile
     , readAllNotifications
-    , searchFor
     , subscriptions
     , update
     , view
@@ -34,11 +33,7 @@ import Avatar
 import Browser.Dom as Dom
 import Browser.Events
 import Cambiatus.Object
-import Cambiatus.Object.Action
-import Cambiatus.Object.Product
-import Cambiatus.Object.SearchResult
 import Cambiatus.Object.UnreadNotifications
-import Cambiatus.Query
 import Cambiatus.Subscription as Subscription
 import Community
 import Eos exposing (Symbol)
@@ -47,21 +42,21 @@ import Flags exposing (Flags)
 import Graphql.Document
 import Graphql.Http
 import Graphql.Operation exposing (RootSubscription)
-import Graphql.OptionalArgument exposing (OptionalArgument(..))
-import Graphql.SelectionSet as SelectionSet exposing (SelectionSet, with)
+import Graphql.SelectionSet exposing (SelectionSet)
 import Html exposing (Html, a, button, div, footer, img, input, li, nav, p, span, text, ul)
 import Html.Attributes exposing (class, classList, placeholder, src, style, type_)
 import Html.Events exposing (onBlur, onClick, onFocus, onInput, onMouseEnter, onSubmit)
 import Http
 import I18Next exposing (Delims(..), Translations, t)
 import Icons
-import Json.Decode as Decode exposing (Value, list, string)
+import Json.Decode as Decode exposing (Value)
 import Json.Encode as Encode exposing (Value)
 import List.Extra as List
 import Notification exposing (Notification)
 import Ports
 import Profile exposing (Model)
 import Route exposing (Route)
+import Search
 import Session.Shared as Shared exposing (Shared)
 import Shop
 import Task
@@ -84,6 +79,7 @@ init shared accountName flags =
     , Cmd.batch
         [ Api.Graphql.query shared (Profile.query accountName) CompletedLoadProfile
         , Api.Graphql.query shared (Community.settingsQuery flags.selectedCommunity) CompletedLoadSettings
+        , Ports.getRecentSearches ()
         ]
     )
 
@@ -124,7 +120,7 @@ subscriptions model =
     Sub.batch
         [ Sub.map GotAuthMsg (Auth.subscriptions model.auth)
         , Sub.map KeyDown (Browser.Events.onKeyDown (Decode.field "key" Decode.string))
-        , Ports.gotRecentSearches GotRecentSearches
+        , Sub.map SearchMsg Search.subscriptions
         ]
 
 
@@ -139,7 +135,6 @@ type alias Model =
     , selectedCommunity : Symbol
     , showUserNav : Bool
     , showLanguageItems : Bool
-    , searchText : String
     , showNotificationModal : Bool
     , showMainNav : Bool
     , notification : Notification.Model
@@ -151,8 +146,7 @@ type alias Model =
     , hasShop : FeatureStatus
     , hasObjectives : FeatureStatus
     , hasKyc : FeatureStatus
-    , searchState : SearchState
-    , recentSearches : List String
+    , searchModel : Search.Model
     }
 
 
@@ -169,7 +163,6 @@ initModel shared authModel accountName selectedCommunity =
     , selectedCommunity = selectedCommunity
     , showUserNav = False
     , showLanguageItems = False
-    , searchText = ""
     , showNotificationModal = False
     , showMainNav = False
     , notification = Notification.init
@@ -181,8 +174,7 @@ initModel shared authModel accountName selectedCommunity =
     , hasShop = FeatureLoading
     , hasObjectives = FeatureLoading
     , hasKyc = FeatureLoading
-    , searchState = Inactive
-    , recentSearches = []
+    , searchModel = Search.init selectedCommunity
     }
 
 
@@ -399,63 +391,6 @@ viewHelper thisMsg page profile_ ({ shared } as model) content =
         ]
 
 
-type SearchState
-    = Inactive
-    | Active String
-    | ResultsShowed
-
-
-viewSearch model =
-    let
-        iconColor =
-            case model.searchState of
-                Inactive ->
-                    "fill-gray"
-
-                _ ->
-                    "fill-indigo"
-
-        viewRecentSearches =
-            case model.searchState of
-                Active _ ->
-                    let
-                        viewQuery q =
-                            div [ class "leading-10" ]
-                                [ Icons.clock "fill-gray inline-block align-middle mr-3"
-                                , span [ class "inline align-middle" ] [ text q ]
-                                ]
-                    in
-                    div [ class "fixed bg-white w-full left-0 px-2 py-4 border-2" ]
-                        [ span [ class "font-bold" ] [ text "Recently searched" ]
-                        , ul []
-                            [ li []
-                                (List.map viewQuery model.recentSearches)
-                            ]
-                        ]
-
-                _ ->
-                    text ""
-    in
-    div [ class "w-full" ]
-        [ Html.form
-            [ class "w-full relative block mt-2"
-            , onSubmit (SubmittedSearch model.searchState)
-            ]
-            [ input
-                [ type_ "search"
-                , class "w-full form-input rounded-full bg-gray-100 pl-10 m-0 block"
-                , placeholder "Find friends and communities"
-                , onFocus (SearchStateChanged (Active ""))
-                , onBlur (SearchStateChanged Inactive)
-                , onInput (\query -> SearchStateChanged (Active query))
-                ]
-                []
-            , Icons.search <| "absolute top-0 left-0 mt-2 ml-2" ++ " " ++ iconColor
-            ]
-        , viewRecentSearches
-        ]
-
-
 viewHeader : Model -> Profile.Model -> Html Msg
 viewHeader ({ shared } as model) profile_ =
     let
@@ -562,7 +497,8 @@ viewHeader ({ shared } as model) profile_ =
                     ]
                 ]
             ]
-        , viewSearch model
+        , Search.view model.searchModel
+            |> Html.map SearchMsg
         ]
 
 
@@ -771,8 +707,6 @@ type Msg
     | CompletedLoadSettings (Result (Graphql.Http.Error (Maybe Community.Settings)) (Maybe Community.Settings))
     | ClickedTryAgainProfile Eos.Name
     | ClickedLogout
-    | EnteredSearch String
-    | SubmittedSearch SearchState
     | ShowNotificationModal Bool
     | ShowUserNav Bool
     | ShowMainNav Bool
@@ -786,54 +720,7 @@ type Msg
     | CloseCommunitySelector
     | SelectCommunity Symbol (Cmd Msg)
     | HideFeedbackLocal
-    | SearchStateChanged SearchState
-    | CompletedLoadSearchResults (Result (Graphql.Http.Error SearchResult) SearchResult)
-    | GotRecentSearches String
-
-
-type alias SearchProduct =
-    { title : String
-    }
-
-
-type alias SearchAction =
-    { description : String
-    }
-
-
-type alias SearchResult =
-    { products : List SearchProduct
-    , actions : List SearchAction
-    }
-
-
-searchFor : Symbol -> Shared -> String -> Cmd Msg
-searchFor selectedCommunity shared queryString =
-    let
-        req =
-            { communityId = Eos.symbolToString selectedCommunity }
-    in
-    Api.Graphql.query
-        shared
-        (Cambiatus.Query.search req (searchResultSelectionSet queryString))
-        CompletedLoadSearchResults
-
-
-searchResultSelectionSet : String -> SelectionSet SearchResult Cambiatus.Object.SearchResult
-searchResultSelectionSet queryString =
-    SelectionSet.succeed SearchResult
-        |> with (Cambiatus.Object.SearchResult.products (\_ -> { query = Present queryString }) productsSelectionSet)
-        |> with (Cambiatus.Object.SearchResult.actions (\_ -> { query = Present queryString }) actionsSelectionSet)
-
-
-productsSelectionSet : SelectionSet SearchProduct Cambiatus.Object.Product
-productsSelectionSet =
-    SelectionSet.map SearchProduct Cambiatus.Object.Product.title
-
-
-actionsSelectionSet : SelectionSet SearchAction Cambiatus.Object.Action
-actionsSelectionSet =
-    SelectionSet.map SearchAction Cambiatus.Object.Action.description
+    | SearchMsg Search.Msg
 
 
 update : Msg -> Model -> UpdateResult
@@ -863,23 +750,14 @@ update msg model =
         Ignored ->
             UR.init model
 
-        CompletedLoadSearchResults res ->
-            model |> UR.init
-
-        GotRecentSearches queries ->
-            case Decode.decodeString (list string) queries of
-                Ok queryList ->
-                    { model | recentSearches = queryList }
-                        |> UR.init
-
-                Err _ ->
-                    model |> UR.init
-
-        SearchStateChanged state ->
-            { model | searchState = state }
+        SearchMsg searchMsg ->
+            let
+                ( searchModel, searchCmd ) =
+                    Search.update shared model.searchModel searchMsg
+            in
+            { model | searchModel = searchModel }
                 |> UR.init
-                -- TODO: Retrieve recent searches only when state changed to show the dropdown
-                |> UR.addCmd (Ports.askForRecentSearches ())
+                |> UR.addCmd (Cmd.map SearchMsg searchCmd)
 
         CompletedLoadTranslation lang (Ok transl) ->
             case model.profile of
@@ -967,37 +845,6 @@ update msg model =
                             [ ( "name", Encode.string "logout" )
                             ]
                     }
-
-        EnteredSearch s ->
-            UR.init { model | searchText = s }
-
-        SubmittedSearch searchState ->
-            case searchState of
-                Active query ->
-                    let
-                        newRecentSearches : List String
-                        newRecentSearches =
-                            (query :: model.recentSearches)
-                                |> List.take 3
-
-                        storeRecentSearches : Cmd msg
-                        storeRecentSearches =
-                            newRecentSearches
-                                |> Encode.list Encode.string
-                                |> Encode.encode 0
-                                |> Ports.storeRecentSearches
-
-                        selectedCommunity =
-                            model.selectedCommunity
-                    in
-                    { model | recentSearches = newRecentSearches }
-                        |> UR.init
-                        |> UR.addCmd storeRecentSearches
-                        |> UR.addCmd (searchFor selectedCommunity shared query)
-
-                _ ->
-                    model
-                        |> UR.init
 
         ShowNotificationModal b ->
             UR.init
@@ -1211,14 +1058,8 @@ msgToString msg =
         Ignored ->
             [ "Ignored" ]
 
-        CompletedLoadSearchResults _ ->
-            [ "CompletedLoadSearchResults" ]
-
-        GotRecentSearches _ ->
-            [ "GotRecentSearches" ]
-
-        SearchStateChanged _ ->
-            [ "SearchStateChanged" ]
+        SearchMsg _ ->
+            [ "SearchMsg" ]
 
         CompletedLoadTranslation _ r ->
             [ "CompletedLoadTranslation", UR.resultToString r ]
@@ -1237,12 +1078,6 @@ msgToString msg =
 
         ClickedLogout ->
             [ "ClickedLogout" ]
-
-        EnteredSearch _ ->
-            [ "EnteredSearch" ]
-
-        SubmittedSearch _ ->
-            [ "SubmittedSearch" ]
 
         ShowNotificationModal _ ->
             [ "ShowNotificationModal" ]
