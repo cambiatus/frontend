@@ -1,4 +1,4 @@
-module Search exposing (Model, Msg, init, subscriptions, update, view)
+module Search exposing (Model, Msg, init, isActive, subscriptions, update, viewForm, viewRecentQueries)
 
 import Api.Graphql
 import Cambiatus.Object
@@ -26,18 +26,18 @@ import Session.Shared exposing (Shared)
 
 
 type alias Model =
-    { searchState : SearchState
-    , recentSearches : List String
-    , searchText : String
+    { state : State
+    , recentQueries : List String
+    , queryText : String
     , selectedCommunity : Symbol
     }
 
 
 init : Symbol -> Model
 init selectedCommunity =
-    { searchState = Inactive
-    , recentSearches = []
-    , searchText = ""
+    { state = Inactive
+    , recentQueries = []
+    , queryText = ""
     , selectedCommunity = selectedCommunity
     }
 
@@ -46,7 +46,7 @@ init selectedCommunity =
 -- TYPES
 
 
-type SearchState
+type State
     = Inactive
     | Active String
     | ResultsShowed
@@ -106,7 +106,7 @@ actionsSelectionSet =
 
 
 type Msg
-    = StateChanged SearchState
+    = StateChanged State
     | GotRecentSearches String
     | RecentSearchClicked String
     | SearchResultsLoaded (Result (Graphql.Http.Error SearchResult) SearchResult)
@@ -117,7 +117,11 @@ update : Shared -> Model -> Msg -> ( Model, Cmd Msg )
 update shared model msg =
     case msg of
         RecentSearchClicked q ->
-            update shared { model | searchText = q } QuerySubmitted
+            let
+                _ =
+                    Debug.log "q" q
+            in
+            update shared { model | queryText = q } QuerySubmitted
 
         SearchResultsLoaded res ->
             let
@@ -129,7 +133,7 @@ update shared model msg =
         GotRecentSearches queries ->
             case Decode.decodeString (list string) queries of
                 Ok queryList ->
-                    ( { model | recentSearches = queryList }, Cmd.none )
+                    ( { model | recentQueries = queryList }, Cmd.none )
 
                 Err _ ->
                     ( model, Cmd.none )
@@ -142,11 +146,11 @@ update shared model msg =
                             q
 
                         _ ->
-                            model.searchText
+                            model.queryText
             in
             ( { model
-                | searchState = state
-                , searchText = searchText
+                | state = state
+                , queryText = searchText
               }
             , Cmd.none
             )
@@ -155,7 +159,7 @@ update shared model msg =
             let
                 newRecentSearches : List String
                 newRecentSearches =
-                    (model.searchText :: model.recentSearches)
+                    (model.queryText :: model.recentQueries)
                         |> List.unique
                         |> List.take 3
 
@@ -169,10 +173,10 @@ update shared model msg =
                 selectedCommunity =
                     model.selectedCommunity
             in
-            ( { model | recentSearches = newRecentSearches }
+            ( { model | recentQueries = newRecentSearches }
             , Cmd.batch
                 [ storeRecentSearches
-                , sendSearchQuery selectedCommunity shared model.searchText
+                , sendSearchQuery selectedCommunity shared model.queryText
                 ]
             )
 
@@ -181,57 +185,80 @@ update shared model msg =
 -- VIEW
 
 
-view : Model -> Html Msg
-view model =
+viewForm : Model -> Html Msg
+viewForm model =
     let
         iconColor =
-            case model.searchState of
+            case model.state of
                 Inactive ->
                     "fill-gray"
 
                 _ ->
                     "fill-indigo"
     in
-    div [ class "w-full" ]
+    div [ class "w-full px-4" ]
         [ Html.form
-            [ class "w-full relative block mt-2"
+            [ class "w-full mt-2 flex"
             , onSubmit QuerySubmitted
             ]
-            [ input
-                [ type_ "search"
-                , class "w-full form-input rounded-full bg-gray-100 pl-10 m-0 block"
-                , placeholder "Find friends and communities"
-                , value model.searchText
-                , onFocus (StateChanged <| Active model.searchText)
-                , onBlur (StateChanged Inactive)
-                , onInput (\q -> StateChanged (Active q))
+            [ div [ class "relative w-full" ]
+                [ input
+                    [ type_ "search"
+                    , class "w-full form-input rounded-full bg-gray-100 pl-10 m-0 block"
+                    , placeholder "Find friends and communities"
+                    , value model.queryText
+                    , onFocus (StateChanged <| Active model.queryText)
+                    , onInput (\q -> StateChanged (Active q))
+                    ]
+                    []
+                , Icons.search <| "absolute top-0 left-0 mt-2 ml-2" ++ " " ++ iconColor
                 ]
-                []
-            , Icons.search <| "absolute top-0 left-0 mt-2 ml-2" ++ " " ++ iconColor
+            , case model.state of
+                Active _ ->
+                    span
+                        [ class "text-orange-300 leading-10 inline-block ml-3"
+                        , onClick (StateChanged Inactive)
+                        ]
+                        [ text "cancel" ]
+
+                _ ->
+                    text ""
             ]
-        , viewRecentSearches model
         ]
 
 
-viewRecentSearches : Model -> Html Msg
-viewRecentSearches model =
+viewRecentQueries : Model -> Html Msg
+viewRecentQueries model =
     let
         viewQuery q =
-            li [ class "leading-10", onClick (RecentSearchClicked q) ]
+            li
+                [ class "leading-10 hover:text-orange-500 cursor-pointer"
+                , onClick (RecentSearchClicked q)
+                ]
                 [ Icons.clock "fill-gray inline-block align-middle mr-3"
                 , span [ class "inline align-middle" ] [ text q ]
                 ]
     in
-    case model.searchState of
+    case model.state of
         Active _ ->
-            div [ class "fixed bg-white w-full left-0 px-2 py-4 border-2" ]
+            div [ class "w-full left-0 p-4" ]
                 [ span [ class "font-bold" ] [ text "Recently searched" ]
-                , ul []
-                    (List.map viewQuery model.recentSearches)
+                , ul [ class "text-gray-900" ]
+                    (List.map viewQuery model.recentQueries)
                 ]
 
         _ ->
             text ""
+
+
+isActive : Model -> Bool
+isActive model =
+    case model.state of
+        Active _ ->
+            True
+
+        _ ->
+            False
 
 
 

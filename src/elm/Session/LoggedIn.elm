@@ -301,7 +301,53 @@ viewHelper thisMsg page profile_ ({ shared } as model) content =
     let
         { t } =
             shared.translators
+    in
+    div
+        [ class "min-h-screen flex flex-col" ]
+        ([ div [ class "bg-white" ]
+            [ div [ class "container mx-auto" ]
+                [ viewHeader model profile_ |> Html.map thisMsg
+                , -- Search form is separated from search results because it needs to
+                  -- be between community selector and user dropdown on Desktops.
+                  Search.viewForm model.searchModel
+                    |> Html.map (SearchMsg >> thisMsg)
+                , if Search.isActive model.searchModel then
+                    text ""
 
+                  else
+                    viewMainMenu page model |> Html.map thisMsg
+                ]
+            ]
+         ]
+            ++ (if Search.isActive model.searchModel then
+                    [ div [ class "bg-white flex-grow" ]
+                        [ Search.viewRecentQueries model.searchModel
+                            |> Html.map (SearchMsg >> thisMsg)
+                        ]
+                    ]
+
+                else
+                    viewPageBody t model profile_ page content thisMsg
+               )
+            ++ [ viewFooter shared
+               , Modal.initWith
+                    { closeMsg = ClosedAuthModal
+                    , isVisible = model.showAuthModal
+                    }
+                    |> Modal.withBody
+                        (Auth.view True shared model.auth
+                            |> List.map (Html.map GotAuthMsg)
+                        )
+                    |> Modal.toHtml
+                    |> Html.map thisMsg
+               , communitySelectorModal model
+                    |> Html.map thisMsg
+               ]
+        )
+
+
+viewPageBody t model profile_ page content thisMsg =
+    let
         hasUserKycFilled =
             case profile_.kyc of
                 Just _ ->
@@ -342,53 +388,32 @@ viewHelper thisMsg page profile_ ({ shared } as model) content =
                     []
                 ]
     in
-    div
-        [ class "min-h-screen flex flex-col" ]
-        [ div [ class "bg-white" ]
-            [ div [ class "container mx-auto" ]
-                [ viewHeader model profile_ |> Html.map thisMsg
-                , viewMainMenu page model |> Html.map thisMsg
-                ]
-            ]
-        , case model.feedback of
-            Show status message ->
-                viewFeedback status message |> Html.map thisMsg
+    [ case model.feedback of
+        Show status message ->
+            viewFeedback status message |> Html.map thisMsg
 
-            Hidden ->
-                text ""
-        , div [ class "flex-grow" ]
-            [ case model.hasKyc of
-                FeatureLoading ->
-                    div [ class "full-spinner-container h-full" ]
-                        [ div [ class "spinner spinner--delay mt-8" ] [] ]
+        Hidden ->
+            text ""
+    , div [ class "flex-grow" ]
+        [ case model.hasKyc of
+            FeatureLoading ->
+                div [ class "full-spinner-container h-full" ]
+                    [ div [ class "spinner spinner--delay mt-8" ] [] ]
 
-                FeatureLoaded isKycEnabled ->
-                    let
-                        isContentAllowed =
-                            List.member page availableWithoutKyc
-                                || not isKycEnabled
-                                || (isKycEnabled && hasUserKycFilled)
-                    in
-                    if isContentAllowed then
-                        content
+            FeatureLoaded isKycEnabled ->
+                let
+                    isContentAllowed =
+                        List.member page availableWithoutKyc
+                            || not isKycEnabled
+                            || (isKycEnabled && hasUserKycFilled)
+                in
+                if isContentAllowed then
+                    content
 
-                    else
-                        viewKycRestriction
-            ]
-        , viewFooter shared
-        , Modal.initWith
-            { closeMsg = ClosedAuthModal
-            , isVisible = model.showAuthModal
-            }
-            |> Modal.withBody
-                (Auth.view True shared model.auth
-                    |> List.map (Html.map GotAuthMsg)
-                )
-            |> Modal.toHtml
-            |> Html.map thisMsg
-        , communitySelectorModal model
-            |> Html.map thisMsg
+                else
+                    viewKycRestriction
         ]
+    ]
 
 
 viewHeader : Model -> Profile.Model -> Html Msg
@@ -497,8 +522,6 @@ viewHeader ({ shared } as model) profile_ =
                     ]
                 ]
             ]
-        , Search.view model.searchModel
-            |> Html.map SearchMsg
         ]
 
 
