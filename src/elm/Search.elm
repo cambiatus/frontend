@@ -10,8 +10,8 @@ import Eos exposing (Symbol)
 import Graphql.Http
 import Graphql.OptionalArgument exposing (OptionalArgument(..))
 import Graphql.SelectionSet as SelectionSet exposing (SelectionSet, with)
-import Html exposing (Html, a, button, div, h3, img, input, li, p, span, strong, text, ul)
-import Html.Attributes exposing (class, href, placeholder, src, type_, value)
+import Html exposing (Html, button, div, h3, img, input, li, p, span, strong, text, ul)
+import Html.Attributes exposing (class, placeholder, src, type_, value)
 import Html.Events exposing (onClick, onFocus, onInput, onSubmit)
 import Icons
 import Json.Decode as Decode exposing (list, string)
@@ -52,10 +52,10 @@ init selectedCommunity =
 type State
     = Inactive
     | Active String
-    | ResultsShowed FoundItems
+    | ResultsShowed FoundItemsKind
 
 
-type FoundItems
+type FoundItemsKind
     = Offers
     | Actions
 
@@ -129,7 +129,7 @@ type Msg
     | RecentQueryClicked String
     | SearchResultsLoaded (Result (Graphql.Http.Error SearchResult) SearchResult)
     | QuerySubmitted
-    | TabActivated FoundItems
+    | TabActivated FoundItemsKind
     | FoundItemClicked Route
 
 
@@ -257,7 +257,7 @@ viewForm model =
 
                 _ ->
                     span
-                        [ class "text-orange-300 ml-3"
+                        [ class "text-orange-300 pl-3 leading-10 cursor-pointer"
                         , onClick (StateChanged Inactive)
                         ]
                         [ text "cancel" ]
@@ -301,26 +301,37 @@ viewRecentQueries model =
             text ""
 
 
+viewTabs : SearchResult -> FoundItemsKind -> Html Msg
 viewTabs results activeTab =
     let
-        viewTab tab label clickMsg =
+        viewTab : FoundItemsKind -> String -> List a -> Msg -> Html Msg
+        viewTab tabKind label foundItems clickMsg =
+            let
+                count =
+                    List.length foundItems
+            in
             li
-                [ onClick clickMsg
-                , if activeTab == tab then
+                [ if activeTab == tabKind then
                     class "bg-orange-300 text-white"
 
                   else
                     class "bg-gray-100"
-                , class "rounded-sm flex-1 text-center"
+                , class "rounded-sm flex-1 text-center cursor-pointer"
+                , if count > 0 then
+                    onClick clickMsg
+
+                  else
+                    class "cursor-not-allowed text-gray-300"
                 ]
-                [ text label ]
+                [ text <| label ++ String.fromInt count ]
     in
     ul [ class "space-x-2 flex items-stretch leading-10" ]
-        [ viewTab Offers ("Offers " ++ String.fromInt (List.length results.offers)) (TabActivated Offers)
-        , viewTab Actions ("Actions " ++ String.fromInt (List.length results.actions)) (TabActivated Actions)
+        [ viewTab Offers "Offers " results.offers (TabActivated Offers)
+        , viewTab Actions "Actions " results.actions (TabActivated Actions)
         ]
 
 
+viewOffers : SearchResult -> Html Msg
 viewOffers ({ offers, actions } as results) =
     let
         viewOffer : FoundOffer -> Html Msg
@@ -350,13 +361,13 @@ viewActions : SearchResult -> Html Msg
 viewActions ({ actions, offers } as results) =
     let
         viewAction action =
-            div [ class "border-2 rounded-lg overflow-hidden bg-white" ]
+            div [ class "border-2 w-full rounded-lg overflow-hidden bg-white" ]
                 [ div [] [ text action.description ]
                 ]
     in
     div []
         [ viewTabs results Actions
-        , div [ class "flex" ]
+        , div [ class "flex flex-col" ]
             (List.map viewAction actions)
         ]
 
@@ -383,9 +394,16 @@ viewResults state ({ actions, offers } as results) =
                         ]
                     ]
                 , button
-                    [ onClick showMsg
-                    , class "button button-primary w-auto button-sm px-6"
-                    ]
+                    (class "button w-auto button-sm px-6"
+                        :: (if count == 0 then
+                                [ class "button-disabled" ]
+
+                            else
+                                [ class "button-primary"
+                                , onClick showMsg
+                                ]
+                           )
+                    )
                     [ text "Show" ]
                 ]
     in
