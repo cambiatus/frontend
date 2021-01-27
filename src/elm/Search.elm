@@ -10,7 +10,7 @@ import Eos exposing (Symbol)
 import Graphql.Http
 import Graphql.OptionalArgument exposing (OptionalArgument(..))
 import Graphql.SelectionSet as SelectionSet exposing (SelectionSet, with)
-import Html exposing (Html, button, div, h3, img, input, li, p, span, strong, text, ul)
+import Html exposing (Html, br, button, div, h3, img, input, li, p, span, strong, text, ul)
 import Html.Attributes exposing (class, placeholder, src, type_, value)
 import Html.Events exposing (onClick, onFocus, onInput, onSubmit)
 import Icons
@@ -361,8 +361,21 @@ viewActions : SearchResult -> Html Msg
 viewActions ({ actions, offers } as results) =
     let
         viewAction action =
-            div [ class "border-2 w-full rounded-lg overflow-hidden bg-white" ]
-                [ div [] [ text action.description ]
+            div [ class "relative w-full mt-8 mb-4 bg-purple-500 rounded-lg text-white" ]
+                [ div [ class "absolute top-0 left-0 right-0 -mt-6" ] [ Icons.flag "w-full fill-green" ]
+                , div [ class "px-4 pt-8 pb-6" ]
+                    [ p [ class "mb-6" ] [ text action.description ]
+                    , div [ class "flex justify-between" ]
+                        [ p []
+                            [ text "Você ganha"
+                            , br [] []
+                            , span [ class "text-green" ] [ text "300" ]
+                            , text " "
+                            , text "MUDAS"
+                            ]
+                        , button [ class "self-end button button-primary" ] [ text "Claim" ]
+                        ]
+                    ]
                 ]
     in
     div []
