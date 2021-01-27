@@ -77,6 +77,7 @@ type alias FoundOffer =
 type alias FoundAction =
     { id : Int
     , description : String
+    , reward : Float
     }
 
 
@@ -114,9 +115,10 @@ offersSelectionSet =
 
 actionsSelectionSet : SelectionSet FoundAction Cambiatus.Object.Action
 actionsSelectionSet =
-    SelectionSet.map2 FoundAction
+    SelectionSet.map3 FoundAction
         Cambiatus.Object.Action.id
         Cambiatus.Object.Action.description
+        Cambiatus.Object.Action.reward
 
 
 
@@ -267,10 +269,10 @@ viewForm model =
 
 viewSearchBody : Model -> Html Msg
 viewSearchBody model =
-    div [ class "container mx-auto p-4" ]
+    div [ class "container mx-auto flex flex-grow" ]
         [ case model.found of
             Just results ->
-                viewResults model.state results
+                viewResults model.selectedCommunity model.state results
 
             Nothing ->
                 viewRecentQueries model
@@ -291,7 +293,7 @@ viewRecentQueries model =
     in
     case model.state of
         Active _ ->
-            div [ class "w-full left-0 p-4" ]
+            div [ class "w-full p-4 bg-white" ]
                 [ strong [] [ text "Recently searched" ]
                 , ul [ class "text-gray-900" ]
                     (List.map viewItem model.recentQueries)
@@ -325,19 +327,19 @@ viewTabs results activeTab =
                 ]
                 [ text <| label ++ String.fromInt count ]
     in
-    ul [ class "space-x-2 flex items-stretch leading-10" ]
+    ul [ class "space-x-2 flex items-stretch leading-10 p-4 pb-2 bg-white" ]
         [ viewTab Offers "Offers " results.offers (TabActivated Offers)
         , viewTab Actions "Actions " results.actions (TabActivated Actions)
         ]
 
 
-viewOffers : SearchResult -> Html Msg
+viewOffers : SearchResult -> List (Html Msg)
 viewOffers ({ offers, actions } as results) =
     let
         viewOffer : FoundOffer -> Html Msg
         viewOffer offer =
-            span
-                [ class "border-2 rounded-lg overflow-hidden bg-white"
+            li
+                [ class "border-2 rounded-lg overflow-hidden bg-white w-1/2"
                 , onClick (FoundItemClicked (Route.ViewSale (String.fromInt offer.id)))
                 ]
                 [ case offer.image of
@@ -350,15 +352,14 @@ viewOffers ({ offers, actions } as results) =
                 , p [ class "px-2" ] [ text <| String.fromFloat offer.price ]
                 ]
     in
-    div []
-        [ viewTabs results Offers
-        , div [ class "flex" ]
-            (List.map viewOffer offers)
-        ]
+    [ viewTabs results Offers
+    , ul [ class "flex flex-wrap m-4" ]
+        (List.map viewOffer offers)
+    ]
 
 
-viewActions : SearchResult -> Html Msg
-viewActions ({ actions, offers } as results) =
+viewActions : Symbol -> SearchResult -> List (Html Msg)
+viewActions symbol ({ actions, offers } as results) =
     let
         viewAction action =
             div [ class "relative w-full mt-8 mb-4 bg-purple-500 rounded-lg text-white" ]
@@ -367,26 +368,25 @@ viewActions ({ actions, offers } as results) =
                     [ p [ class "mb-6" ] [ text action.description ]
                     , div [ class "flex justify-between" ]
                         [ p []
-                            [ text "Você ganha"
+                            [ text "You gain"
                             , br [] []
-                            , span [ class "text-green" ] [ text "300" ]
+                            , span [ class "text-green" ] [ text <| String.fromFloat action.reward ]
                             , text " "
-                            , text "MUDAS"
+                            , text <| Eos.symbolToSymbolCodeString symbol
                             ]
                         , button [ class "self-end button button-primary" ] [ text "Claim" ]
                         ]
                     ]
                 ]
     in
-    div []
-        [ viewTabs results Actions
-        , div [ class "flex flex-col" ]
-            (List.map viewAction actions)
-        ]
+    [ viewTabs results Actions
+    , div [ class "flex flex-col px-4" ]
+        (List.map viewAction actions)
+    ]
 
 
-viewResults : State -> SearchResult -> Html Msg
-viewResults state ({ actions, offers } as results) =
+viewResultsOverview : SearchResult -> List (Html Msg)
+viewResultsOverview { offers, actions } =
     let
         viewItem icon count singular plural showMsg =
             li [ class "py-4 flex items-center" ]
@@ -420,21 +420,32 @@ viewResults state ({ actions, offers } as results) =
                     [ text "Show" ]
                 ]
     in
+    [ strong [ class "block py-4" ] [ text "Here is what we found" ]
+    , ul []
+        [ viewItem Icons.shop (List.length offers) "offer" "offers" (TabActivated Offers)
+        , viewItem Icons.flag (List.length actions) "action" "actions" (TabActivated Actions)
+        ]
+    ]
+
+
+viewResults : Symbol -> State -> SearchResult -> Html Msg
+viewResults symbol state ({ actions, offers } as results) =
+    let
+        wrapWithClass c =
+            div [ class ("flex-grow " ++ c) ]
+    in
     case state of
         ResultsShowed Offers ->
             viewOffers results
+                |> wrapWithClass "bg-gray-100"
 
         ResultsShowed Actions ->
-            viewActions results
+            viewActions symbol results
+                |> wrapWithClass "bg-gray-100"
 
         _ ->
-            div []
-                [ strong [ class "block py-4" ] [ text "Here is what we found" ]
-                , ul []
-                    [ viewItem Icons.shop (List.length offers) "offer" "offers" (TabActivated Offers)
-                    , viewItem Icons.flag (List.length actions) "action" "actions" (TabActivated Actions)
-                    ]
-                ]
+            viewResultsOverview results
+                |> wrapWithClass "bg-white p-4"
 
 
 isActive : Model -> Bool

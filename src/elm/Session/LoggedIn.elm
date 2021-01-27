@@ -320,10 +320,8 @@ viewHelper thisMsg page profile_ ({ shared } as model) content =
             ]
          ]
             ++ (if Search.isActive model.searchModel then
-                    [ div [ class "bg-white flex-grow" ]
-                        [ Search.viewSearchBody model.searchModel
-                            |> Html.map (SearchMsg >> thisMsg)
-                        ]
+                    [ Search.viewSearchBody model.searchModel
+                        |> Html.map (SearchMsg >> thisMsg)
                     ]
 
                 else
