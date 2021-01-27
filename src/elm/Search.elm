@@ -10,14 +10,15 @@ import Eos exposing (Symbol)
 import Graphql.Http
 import Graphql.OptionalArgument exposing (OptionalArgument(..))
 import Graphql.SelectionSet as SelectionSet exposing (SelectionSet, with)
-import Html exposing (Html, button, div, h3, img, input, li, p, span, strong, text, ul)
-import Html.Attributes exposing (class, placeholder, src, type_, value)
+import Html exposing (Html, a, button, div, h3, img, input, li, p, span, strong, text, ul)
+import Html.Attributes exposing (class, href, placeholder, src, type_, value)
 import Html.Events exposing (onClick, onFocus, onInput, onSubmit)
 import Icons
 import Json.Decode as Decode exposing (list, string)
 import Json.Encode as Encode
 import List.Extra as List
 import Ports
+import Route
 import Session.Shared exposing (Shared)
 
 
@@ -51,9 +52,12 @@ init selectedCommunity =
 type State
     = Inactive
     | Active String
-    | ResultsShowed
-    | OffersShowed
-    | ActionsShowed
+    | ResultsShowed ActiveTab
+
+
+type ActiveTab
+    = Offers
+    | Actions
 
 
 
@@ -79,14 +83,16 @@ type alias SearchResult =
 
 
 type alias SearchOffer =
-    { title : String
+    { id : Int
+    , title : String
     , price : Float
     , image : Maybe String
     }
 
 
 type alias SearchAction =
-    { description : String
+    { id : Int
+    , description : String
     }
 
 
@@ -99,7 +105,8 @@ searchResultSelectionSet queryString =
 
 productsSelectionSet : SelectionSet SearchOffer Cambiatus.Object.Product
 productsSelectionSet =
-    SelectionSet.map3 SearchOffer
+    SelectionSet.map4 SearchOffer
+        Cambiatus.Object.Product.id
         Cambiatus.Object.Product.title
         Cambiatus.Object.Product.price
         Cambiatus.Object.Product.image
@@ -107,7 +114,9 @@ productsSelectionSet =
 
 actionsSelectionSet : SelectionSet SearchAction Cambiatus.Object.Action
 actionsSelectionSet =
-    SelectionSet.map SearchAction Cambiatus.Object.Action.description
+    SelectionSet.map2 SearchAction
+        Cambiatus.Object.Action.id
+        Cambiatus.Object.Action.description
 
 
 
@@ -131,10 +140,10 @@ update shared model msg =
             update shared { model | queryText = q } QuerySubmitted
 
         ShowOffersClicked ->
-            ( { model | state = OffersShowed }, Cmd.none )
+            ( { model | state = ResultsShowed Offers }, Cmd.none )
 
         ShowActionsClicked ->
-            ( { model | state = ActionsShowed }, Cmd.none )
+            ( { model | state = ResultsShowed Actions }, Cmd.none )
 
         SearchResultsLoaded res ->
             case res of
@@ -156,16 +165,20 @@ update shared model msg =
 
         StateChanged state ->
             let
-                searchText =
+                ( searchText, found ) =
                     case state of
                         Active q ->
-                            q
+                            ( q, model.found )
+
+                        Inactive ->
+                            ( "", Nothing )
 
                         _ ->
-                            model.queryText
+                            ( model.queryText, model.found )
             in
             ( { model
                 | state = state
+                , found = found
                 , queryText = searchText
               }
             , Cmd.none
@@ -230,15 +243,15 @@ viewForm model =
                 , Icons.search <| "absolute top-0 left-0 mt-2 ml-2" ++ " " ++ iconColor
                 ]
             , case model.state of
-                Active _ ->
+                Inactive ->
+                    text ""
+
+                _ ->
                     span
                         [ class "text-orange-300 ml-3"
                         , onClick (StateChanged Inactive)
                         ]
                         [ text "cancel" ]
-
-                _ ->
-                    text ""
             ]
         ]
 
@@ -279,11 +292,6 @@ viewRecentQueries model =
             text ""
 
 
-type ActiveTab
-    = OffersTab
-    | ActionsTab
-
-
 viewTabs results activeTab =
     let
         viewTab tab label clickMsg =
@@ -299,8 +307,8 @@ viewTabs results activeTab =
                 [ text label ]
     in
     ul [ class "space-x-2 flex items-stretch leading-10" ]
-        [ viewTab OffersTab ("Offers " ++ String.fromInt (List.length results.offers)) ShowOffersClicked
-        , viewTab ActionsTab ("Actions " ++ String.fromInt (List.length results.actions)) ShowActionsClicked
+        [ viewTab Offers ("Offers " ++ String.fromInt (List.length results.offers)) ShowOffersClicked
+        , viewTab Actions ("Actions " ++ String.fromInt (List.length results.actions)) ShowActionsClicked
         ]
 
 
@@ -308,7 +316,11 @@ viewOffers ({ offers, actions } as results) =
     let
         viewOffer : SearchOffer -> Html msg
         viewOffer offer =
-            div [ class "border-2 rounded-lg overflow-hidden bg-white" ]
+            a
+                -- TODO: Hide search bar after clicking the link!
+                [ Route.href (Route.ViewSale (String.fromInt offer.id))
+                , class "border-2 rounded-lg overflow-hidden bg-white"
+                ]
                 [ case offer.image of
                     Nothing ->
                         text ""
@@ -320,7 +332,7 @@ viewOffers ({ offers, actions } as results) =
                 ]
     in
     div []
-        [ viewTabs results OffersTab
+        [ viewTabs results Offers
         , div [ class "flex" ]
             (List.map viewOffer offers)
         ]
@@ -335,7 +347,7 @@ viewActions ({ actions, offers } as results) =
                 ]
     in
     div []
-        [ viewTabs results ActionsTab
+        [ viewTabs results Actions
         , div [ class "flex" ]
             (List.map viewAction actions)
         ]
@@ -370,10 +382,10 @@ viewResults state ({ actions, offers } as results) =
                 ]
     in
     case state of
-        OffersShowed ->
+        ResultsShowed Offers ->
             viewOffers results
 
-        ActionsShowed ->
+        ResultsShowed Actions ->
             viewActions results
 
         _ ->
