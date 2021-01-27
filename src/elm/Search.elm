@@ -18,7 +18,7 @@ import Json.Decode as Decode exposing (list, string)
 import Json.Encode as Encode
 import List.Extra as List
 import Ports
-import Route
+import Route exposing (Route)
 import Session.Shared exposing (Shared)
 
 
@@ -52,12 +52,32 @@ init selectedCommunity =
 type State
     = Inactive
     | Active String
-    | ResultsShowed ActiveTab
+    | ResultsShowed FoundItems
 
 
-type ActiveTab
+type FoundItems
     = Offers
     | Actions
+
+
+type alias SearchResult =
+    { offers : List FoundOffer
+    , actions : List FoundAction
+    }
+
+
+type alias FoundOffer =
+    { id : Int
+    , title : String
+    , price : Float
+    , image : Maybe String
+    }
+
+
+type alias FoundAction =
+    { id : Int
+    , description : String
+    }
 
 
 
@@ -76,45 +96,25 @@ sendSearchQuery selectedCommunity shared queryString =
         SearchResultsLoaded
 
 
-type alias SearchResult =
-    { offers : List SearchOffer
-    , actions : List SearchAction
-    }
-
-
-type alias SearchOffer =
-    { id : Int
-    , title : String
-    , price : Float
-    , image : Maybe String
-    }
-
-
-type alias SearchAction =
-    { id : Int
-    , description : String
-    }
-
-
 searchResultSelectionSet : String -> SelectionSet SearchResult Cambiatus.Object.SearchResult
 searchResultSelectionSet queryString =
     SelectionSet.succeed SearchResult
-        |> with (Cambiatus.Object.SearchResult.products (\_ -> { query = Present queryString }) productsSelectionSet)
+        |> with (Cambiatus.Object.SearchResult.products (\_ -> { query = Present queryString }) offersSelectionSet)
         |> with (Cambiatus.Object.SearchResult.actions (\_ -> { query = Present queryString }) actionsSelectionSet)
 
 
-productsSelectionSet : SelectionSet SearchOffer Cambiatus.Object.Product
-productsSelectionSet =
-    SelectionSet.map4 SearchOffer
+offersSelectionSet : SelectionSet FoundOffer Cambiatus.Object.Product
+offersSelectionSet =
+    SelectionSet.map4 FoundOffer
         Cambiatus.Object.Product.id
         Cambiatus.Object.Product.title
         Cambiatus.Object.Product.price
         Cambiatus.Object.Product.image
 
 
-actionsSelectionSet : SelectionSet SearchAction Cambiatus.Object.Action
+actionsSelectionSet : SelectionSet FoundAction Cambiatus.Object.Action
 actionsSelectionSet =
-    SelectionSet.map2 SearchAction
+    SelectionSet.map2 FoundAction
         Cambiatus.Object.Action.id
         Cambiatus.Object.Action.description
 
@@ -126,24 +126,33 @@ actionsSelectionSet =
 type Msg
     = StateChanged State
     | GotRecentSearches String
-    | RecentSearchClicked String
+    | RecentQueryClicked String
     | SearchResultsLoaded (Result (Graphql.Http.Error SearchResult) SearchResult)
     | QuerySubmitted
-    | ShowOffersClicked
-    | ShowActionsClicked
+    | TabActivated FoundItems
+    | FoundItemClicked Route
 
 
 update : Shared -> Model -> Msg -> ( Model, Cmd Msg )
 update shared model msg =
     case msg of
-        RecentSearchClicked q ->
+        FoundItemClicked route ->
+            let
+                -- Make the search dropdown inactive before opening the found item's URL.
+                ( inactiveModel, _ ) =
+                    update shared model (StateChanged Inactive)
+            in
+            ( inactiveModel
+            , Route.replaceUrl shared.navKey route
+            )
+
+        RecentQueryClicked q ->
             update shared { model | queryText = q } QuerySubmitted
 
-        ShowOffersClicked ->
-            ( { model | state = ResultsShowed Offers }, Cmd.none )
-
-        ShowActionsClicked ->
-            ( { model | state = ResultsShowed Actions }, Cmd.none )
+        TabActivated activeTab ->
+            ( { model | state = ResultsShowed activeTab }
+            , Cmd.none
+            )
 
         SearchResultsLoaded res ->
             case res of
@@ -271,10 +280,10 @@ viewSearchBody model =
 viewRecentQueries : Model -> Html Msg
 viewRecentQueries model =
     let
-        viewQuery q =
+        viewItem q =
             li
                 [ class "leading-10 hover:text-orange-500 cursor-pointer"
-                , onClick (RecentSearchClicked q)
+                , onClick (RecentQueryClicked q)
                 ]
                 [ Icons.clock "fill-gray inline-block align-middle mr-3"
                 , span [ class "inline align-middle" ] [ text q ]
@@ -285,7 +294,7 @@ viewRecentQueries model =
             div [ class "w-full left-0 p-4" ]
                 [ strong [] [ text "Recently searched" ]
                 , ul [ class "text-gray-900" ]
-                    (List.map viewQuery model.recentQueries)
+                    (List.map viewItem model.recentQueries)
                 ]
 
         _ ->
@@ -307,19 +316,18 @@ viewTabs results activeTab =
                 [ text label ]
     in
     ul [ class "space-x-2 flex items-stretch leading-10" ]
-        [ viewTab Offers ("Offers " ++ String.fromInt (List.length results.offers)) ShowOffersClicked
-        , viewTab Actions ("Actions " ++ String.fromInt (List.length results.actions)) ShowActionsClicked
+        [ viewTab Offers ("Offers " ++ String.fromInt (List.length results.offers)) (TabActivated Offers)
+        , viewTab Actions ("Actions " ++ String.fromInt (List.length results.actions)) (TabActivated Actions)
         ]
 
 
 viewOffers ({ offers, actions } as results) =
     let
-        viewOffer : SearchOffer -> Html msg
+        viewOffer : FoundOffer -> Html Msg
         viewOffer offer =
-            a
-                -- TODO: Hide search bar after clicking the link!
-                [ Route.href (Route.ViewSale (String.fromInt offer.id))
-                , class "border-2 rounded-lg overflow-hidden bg-white"
+            span
+                [ class "border-2 rounded-lg overflow-hidden bg-white"
+                , onClick (FoundItemClicked (Route.ViewSale (String.fromInt offer.id)))
                 ]
                 [ case offer.image of
                     Nothing ->
@@ -392,8 +400,8 @@ viewResults state ({ actions, offers } as results) =
             div []
                 [ strong [ class "block py-4" ] [ text "Here is what we found" ]
                 , ul []
-                    [ viewItem Icons.shop (List.length offers) "offer" "offers" ShowOffersClicked
-                    , viewItem Icons.flag (List.length actions) "action" "actions" ShowActionsClicked
+                    [ viewItem Icons.shop (List.length offers) "offer" "offers" (TabActivated Offers)
+                    , viewItem Icons.flag (List.length actions) "action" "actions" (TabActivated Actions)
                     ]
                 ]
 
