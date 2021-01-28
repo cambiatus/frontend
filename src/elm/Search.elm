@@ -10,7 +10,7 @@ import Eos exposing (Symbol)
 import Graphql.Http
 import Graphql.OptionalArgument exposing (OptionalArgument(..))
 import Graphql.SelectionSet as SelectionSet exposing (SelectionSet, with)
-import Html exposing (Html, br, button, div, h3, img, input, li, p, span, strong, text, ul)
+import Html exposing (Html, br, button, div, h3, i, img, input, li, p, span, strong, text, ul)
 import Html.Attributes exposing (class, minlength, placeholder, required, src, style, type_, value)
 import Html.Events exposing (onClick, onFocus, onInput, onSubmit)
 import Icons
@@ -365,7 +365,7 @@ viewOffers symbol ({ offers, actions } as results) =
                 ]
     in
     [ viewTabs results Offers
-    , ul [ class "offers-list flex flex-wrap mt-6 mb-8 mx-2 justify-between" ]
+    , ul [ class "offers-list flex flex-wrap mt-6 mb-8 mx-2 justify-left" ]
         (List.map viewOffer offers)
     ]
 
@@ -374,15 +374,15 @@ viewActions : Symbol -> SearchResult -> List (Html Msg)
 viewActions symbol ({ actions, offers } as results) =
     let
         viewAction action =
-            div [ class "relative w-full mt-8 mb-4 bg-purple-500 rounded-lg text-white" ]
-                [ div [ class "absolute top-0 left-0 right-0 -mt-6" ] [ Icons.flag "w-full fill-green" ]
-                , div [ class "px-4 pt-8 pb-6" ]
-                    [ p [ class "mb-6" ] [ text action.description ]
+            li [ class "relative mb-10 w-full sm:px-2 sm:w-1/2 lg:w-1/3" ]
+                [ i [ class "absolute top-0 left-0 right-0 -mt-6" ] [ Icons.flag "w-full fill-green" ]
+                , div [ class "px-4 pt-8 pb-4 text-sm font-light bg-purple-500 rounded-lg text-white" ]
+                    [ p [ class "mb-8" ] [ text action.description ]
                     , div [ class "flex justify-between" ]
                         [ p []
                             [ text "You gain"
                             , br [] []
-                            , span [ class "text-green" ] [ text <| String.fromFloat action.reward ]
+                            , span [ class "text-green font-medium" ] [ text <| String.fromFloat action.reward ]
                             , text " "
                             , text <| Eos.symbolToSymbolCodeString symbol
                             ]
@@ -392,7 +392,7 @@ viewActions symbol ({ actions, offers } as results) =
                 ]
     in
     [ viewTabs results Actions
-    , div [ class "flex flex-col px-4" ]
+    , ul [ class "flex px-4 sm:px-2 pt-12 flex-wrap justify-left" ]
         (List.map viewAction actions)
     ]
 
