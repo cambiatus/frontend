@@ -1,6 +1,7 @@
 module Page.Community.Settings.Features exposing (Model, Msg, init, jsAddressToMsg, msgToString, update, view)
 
 import Api.Graphql
+import Browser.Navigation as Navigation
 import Community
 import Eos exposing (Symbol)
 import Eos.Account
@@ -220,6 +221,7 @@ update msg model loggedIn =
             model
                 |> UR.init
                 |> UR.addExt (ShowFeedback Success (translate "settings.success"))
+                |> UR.addCmd Navigation.reload
 
 
 saveFeaturePort : LoggedIn.Model -> Feature -> Status -> Bool -> (UR.UpdateResult Model Msg (External Msg) -> UR.UpdateResult Model Msg (External Msg))

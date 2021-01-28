@@ -585,7 +585,7 @@ viewQuickLinks ({ shared } as loggedIn) =
                         ]
                         [ div []
                             [ div [ class "w-full mb-4" ] [ Icons.claims "w-8 h-8" ]
-                            , p [ class "w-full text-gray-600 mb-4 lg:mb-0" ]
+                            , p [ class "w-full h-12 lg:h-auto text-gray-600 mb-4 lg:mb-0" ]
                                 [ text <| t "dashboard.my_claims.1"
                                 , span [ class "font-bold" ] [ text <| t "dashboard.my_claims.2" ]
                                 ]
@@ -605,7 +605,7 @@ viewQuickLinks ({ shared } as loggedIn) =
                         ]
                         [ div []
                             [ div [ class "w-full mb-4 lg:mb-2" ] [ Icons.shop "w-8 h-8 fill-current" ]
-                            , p [ class "w-full text-gray-600 mb-4 lg:mb-0" ]
+                            , p [ class "w-full h-12 lg:h-auto text-gray-600 mb-4 lg:mb-0" ]
                                 [ text <| t "dashboard.my_offers.1"
                                 , span [ class "font-bold" ] [ text <| t "dashboard.my_offers.2" ]
                                 ]

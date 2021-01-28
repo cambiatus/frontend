@@ -303,7 +303,7 @@ profileClaimQuery ({ shared } as loggedIn) accountName =
 selectionSet : Eos.Symbol -> SelectionSet ProfileClaims Cambiatus.Object.Profile
 selectionSet communityId =
     SelectionSet.succeed ProfileClaims
-        |> with (Profile.claims (\l -> { communityId = Present (Eos.symbolToString communityId) }) Claim.selectionSet)
+        |> with (Profile.claims (\_ -> { communityId = Present (Eos.symbolToString communityId) }) Claim.selectionSet)
 
 
 jsAddressToMsg : List String -> Encode.Value -> Maybe Msg
