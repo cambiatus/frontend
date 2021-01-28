@@ -320,7 +320,7 @@ viewHelper thisMsg page profile_ ({ shared } as model) content =
             ]
          ]
             ++ (if Search.isActive model.searchModel then
-                    [ Search.viewSearchBody model.searchModel
+                    [ Search.viewBody model.searchModel
                         |> Html.map (GotSearchMsg >> thisMsg)
                     ]
 

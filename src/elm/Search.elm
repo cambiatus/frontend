@@ -1,4 +1,4 @@
-module Search exposing (Model, Msg, closeSearch, init, isActive, subscriptions, update, viewForm, viewRecentQueries, viewSearchBody)
+module Search exposing (Model, Msg, closeSearch, init, isActive, subscriptions, update, viewBody, viewForm, viewRecentQueries)
 
 import Api.Graphql
 import Cambiatus.Object
@@ -11,7 +11,7 @@ import Graphql.Http
 import Graphql.OptionalArgument exposing (OptionalArgument(..))
 import Graphql.SelectionSet as SelectionSet exposing (SelectionSet, with)
 import Html exposing (Html, br, button, div, h3, i, img, input, li, p, span, strong, text, ul)
-import Html.Attributes exposing (class, minlength, placeholder, required, src, style, type_, value)
+import Html.Attributes exposing (class, placeholder, src, type_, value)
 import Html.Events exposing (onClick, onFocus, onInput, onSubmit)
 import Icons
 import Json.Decode as Decode exposing (list, string)
@@ -184,7 +184,7 @@ update shared model msg =
                 ( searchText, found ) =
                     case state of
                         Active q ->
-                            ( q, model.found )
+                            ( q, Nothing )
 
                         Inactive ->
                             ( "", Nothing )
@@ -275,12 +275,32 @@ viewForm model =
         ]
 
 
-viewSearchBody : Model -> Html Msg
-viewSearchBody model =
+viewEmptyResults queryText =
+    div [ class "flex-grow bg-white text-center" ]
+        [ h3 [ class "mt-20 text-xl font-bold" ]
+            [ text <| "You searched for \"" ++ queryText ++ "\"" ]
+        , div []
+            [ img
+                [ class "w-2/3 mx-auto md:w-64 mt-6 mb-8"
+                , src "/images/not_found.svg"
+                ]
+                []
+            , text "No results were found"
+            ]
+        ]
+
+
+viewBody : Model -> Html Msg
+viewBody model =
     div [ class "container mx-auto flex flex-grow" ]
         [ case model.found of
-            Just results ->
-                viewResults model.selectedCommunity model.state results
+            Just ({ actions, offers } as results) ->
+                case ( List.length actions, List.length offers ) of
+                    ( 0, 0 ) ->
+                        viewEmptyResults model.queryText
+
+                    _ ->
+                        viewResults model.selectedCommunity model.state results
 
             Nothing ->
                 viewRecentQueries model
@@ -446,7 +466,7 @@ viewResultsOverview { offers, actions } =
 
 
 viewResults : Symbol -> State -> SearchResult -> Html Msg
-viewResults symbol state ({ actions, offers } as results) =
+viewResults symbol state results =
     let
         wrapWithClass c =
             div [ class ("flex-grow " ++ c) ]
