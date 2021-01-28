@@ -11,7 +11,7 @@ import Graphql.Http
 import Graphql.OptionalArgument exposing (OptionalArgument(..))
 import Graphql.SelectionSet as SelectionSet exposing (SelectionSet, with)
 import Html exposing (Html, br, button, div, h3, img, input, li, p, span, strong, text, ul)
-import Html.Attributes exposing (class, placeholder, src, type_, value)
+import Html.Attributes exposing (class, minlength, placeholder, required, src, style, type_, value)
 import Html.Events exposing (onClick, onFocus, onInput, onSubmit)
 import Icons
 import Json.Decode as Decode exposing (list, string)
@@ -244,6 +244,9 @@ viewForm model =
             [ div [ class "relative w-full" ]
                 [ input
                     [ type_ "search"
+
+                    --, minlength 3
+                    --, required True
                     , class "w-full form-input rounded-full bg-gray-100 pl-10 m-0"
                     , placeholder "Find friends and communities"
                     , value model.queryText
@@ -333,27 +336,36 @@ viewTabs results activeTab =
         ]
 
 
-viewOffers : SearchResult -> List (Html Msg)
-viewOffers ({ offers, actions } as results) =
+viewOffers : Symbol -> SearchResult -> List (Html Msg)
+viewOffers symbol ({ offers, actions } as results) =
     let
         viewOffer : FoundOffer -> Html Msg
         viewOffer offer =
             li
-                [ class "border-2 rounded-lg overflow-hidden bg-white w-1/2"
-                , onClick (FoundItemClicked (Route.ViewSale (String.fromInt offer.id)))
-                ]
-                [ case offer.image of
-                    Nothing ->
-                        text ""
+                [ class "flex px-2 w-1/2 sm:w-1/3 md:w-1/4" ]
+                [ div
+                    [ class "rounded-md overflow-hidden bg-white flex-grow mb-4 pb-4 cursor-pointer hover:shadow"
+                    , onClick (FoundItemClicked (Route.ViewSale (String.fromInt offer.id)))
+                    ]
+                    [ case offer.image of
+                        Nothing ->
+                            text ""
 
-                    Just url ->
-                        img [ src url ] []
-                , h3 [ class "px-2" ] [ text offer.title ]
-                , p [ class "px-2" ] [ text <| String.fromFloat offer.price ]
+                        Just url ->
+                            img [ src url ] []
+                    , h3 [ class "p-3" ] [ text offer.title ]
+                    , p [ class "px-3 leading-none" ]
+                        [ span [ class "text-xl text-green font-medium" ] [ text <| String.fromFloat offer.price ]
+                        , br [] []
+                        , span [ class "text-gray-300 text-xs" ]
+                            [ text <| Eos.symbolToSymbolCodeString symbol
+                            ]
+                        ]
+                    ]
                 ]
     in
     [ viewTabs results Offers
-    , ul [ class "flex flex-wrap m-4" ]
+    , ul [ class "offers-list flex flex-wrap mt-6 mb-8 mx-2 justify-between" ]
         (List.map viewOffer offers)
     ]
 
@@ -436,7 +448,7 @@ viewResults symbol state ({ actions, offers } as results) =
     in
     case state of
         ResultsShowed Offers ->
-            viewOffers results
+            viewOffers symbol results
                 |> wrapWithClass "bg-gray-100"
 
         ResultsShowed Actions ->
