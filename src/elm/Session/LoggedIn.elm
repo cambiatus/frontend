@@ -120,7 +120,7 @@ subscriptions model =
     Sub.batch
         [ Sub.map GotAuthMsg (Auth.subscriptions model.auth)
         , Sub.map KeyDown (Browser.Events.onKeyDown (Decode.field "key" Decode.string))
-        , Sub.map SearchMsg Search.subscriptions
+        , Sub.map GotSearchMsg Search.subscriptions
         ]
 
 
@@ -310,7 +310,7 @@ viewHelper thisMsg page profile_ ({ shared } as model) content =
                 , -- Search form is separated from search results because it needs to
                   -- be between community selector and user dropdown on Desktops.
                   Search.viewForm model.searchModel
-                    |> Html.map (SearchMsg >> thisMsg)
+                    |> Html.map (GotSearchMsg >> thisMsg)
                 , if Search.isActive model.searchModel then
                     text ""
 
@@ -321,7 +321,7 @@ viewHelper thisMsg page profile_ ({ shared } as model) content =
          ]
             ++ (if Search.isActive model.searchModel then
                     [ Search.viewSearchBody model.searchModel
-                        |> Html.map (SearchMsg >> thisMsg)
+                        |> Html.map (GotSearchMsg >> thisMsg)
                     ]
 
                 else
@@ -488,6 +488,7 @@ viewHeader ({ shared } as model) profile_ =
                         [ class "flex block w-full px-4 py-4 justify-start items-center text-sm"
                         , Route.href Route.Profile
                         , onClick (ShowUserNav False)
+                        , onClick SearchClosed
                         ]
                         [ Icons.profile "mr-4"
                         , text_ "menu.profile"
@@ -741,7 +742,8 @@ type Msg
     | CloseCommunitySelector
     | SelectCommunity Symbol (Cmd Msg)
     | HideFeedbackLocal
-    | SearchMsg Search.Msg
+    | GotSearchMsg Search.Msg
+    | SearchClosed
 
 
 update : Msg -> Model -> UpdateResult
@@ -771,14 +773,22 @@ update msg model =
         Ignored ->
             UR.init model
 
-        SearchMsg searchMsg ->
+        SearchClosed ->
+            { model
+                | searchModel =
+                    Search.closeSearch shared model.searchModel
+                        |> Tuple.first
+            }
+                |> UR.init
+
+        GotSearchMsg searchMsg ->
             let
                 ( searchModel, searchCmd ) =
                     Search.update shared model.searchModel searchMsg
             in
             { model | searchModel = searchModel }
                 |> UR.init
-                |> UR.addCmd (Cmd.map SearchMsg searchCmd)
+                |> UR.addCmd (Cmd.map GotSearchMsg searchCmd)
 
         CompletedLoadTranslation lang (Ok transl) ->
             case model.profile of
@@ -958,6 +968,10 @@ update msg model =
             { model
                 | selectedCommunity = communityId
                 , showCommunitySelector = False
+                , searchModel =
+                    Search.closeSearch shared model.searchModel
+                        |> Tuple.first
+                        |> (\searchModel -> { searchModel | selectedCommunity = communityId })
             }
                 |> UR.init
                 |> UR.addCmd (Api.Graphql.query shared (Community.settingsQuery communityId) CompletedLoadSettings)
@@ -1079,8 +1093,11 @@ msgToString msg =
         Ignored ->
             [ "Ignored" ]
 
-        SearchMsg _ ->
-            [ "SearchMsg" ]
+        SearchClosed ->
+            [ "SearchClosed" ]
+
+        GotSearchMsg _ ->
+            [ "GotSearchMsg" ]
 
         CompletedLoadTranslation _ r ->
             [ "CompletedLoadTranslation", UR.resultToString r ]

@@ -1,4 +1,4 @@
-module Search exposing (Model, Msg, init, isActive, subscriptions, update, viewForm, viewRecentQueries, viewSearchBody)
+module Search exposing (Model, Msg, closeSearch, init, isActive, subscriptions, update, viewForm, viewRecentQueries, viewSearchBody)
 
 import Api.Graphql
 import Cambiatus.Object
@@ -133,6 +133,11 @@ type Msg
     | QuerySubmitted
     | TabActivated FoundItemsKind
     | FoundItemClicked Route
+
+
+closeSearch : Shared -> Model -> ( Model, Cmd Msg )
+closeSearch shared model =
+    update shared model (StateChanged Inactive)
 
 
 update : Shared -> Model -> Msg -> ( Model, Cmd Msg )
