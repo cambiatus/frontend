@@ -416,7 +416,7 @@ viewClaimCard { selectedCommunity, shared, accountName } claim =
                     [ class "text-gray-900 text-caption uppercase" ]
                     [ text (date claim.createdAt) ]
                 ]
-            , if isValidated claim accountName then
+            , if isValidated claim accountName || not (isValidator accountName claim) then
                 a
                     [ class "button button-secondary w-full font-medium mb-2"
                     , Route.href claimRoute

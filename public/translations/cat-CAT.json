@@ -594,6 +594,7 @@
     },
     "changePin": "Canvieu el PIN!",
     "newPin": "Nou PIN de seguretat",
+    "changePinPrompt": "Introduïu el vostre nou PIN de seguretat de 6 dígits.",
     "actions": {
       "edit": "Editar",
       "viewPrivatekey": "Veure clau privada"
