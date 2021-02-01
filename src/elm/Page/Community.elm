@@ -59,7 +59,7 @@ initModel _ _ =
     , actionId = Nothing
     , openObjective = Nothing
     , claimConfirmationModalStatus = Closed
-    , proofs = Nothing
+    , proof = Nothing
     }
 
 
@@ -69,7 +69,7 @@ initModel _ _ =
 
 subscriptions : Model -> Sub Msg
 subscriptions model =
-    case model.proofs of
+    case model.proof of
         Just (Proof _ (Just _)) ->
             Time.every 1000 Tick
 
@@ -87,7 +87,7 @@ type alias Model =
     , actionId : Maybe Int
     , openObjective : Maybe Int
     , claimConfirmationModalStatus : ClaimConfirmationModalStatus
-    , proofs : Maybe Proof
+    , proof : Maybe Proof
     }
 
 
@@ -198,7 +198,7 @@ view loggedIn model =
                                 ]
 
                         ClaimWithProofs action ->
-                            viewClaimWithProofs model.proofs loggedIn.shared.translators action
+                            viewClaimWithProofs model.proof loggedIn.shared.translators action
     in
     { title = title
     , content =
@@ -824,7 +824,7 @@ update msg model ({ shared } as loggedIn) =
             model |> UR.init
 
         GotUint64Name (Ok uint64name) ->
-            case ( model.proofs, model.actionId ) of
+            case ( model.proof, model.actionId ) of
                 ( Just (Proof proofPhoto (Just proofCode)), Just actionId ) ->
                     let
                         verificationCode =
@@ -836,7 +836,7 @@ update msg model ({ shared } as loggedIn) =
                                     | code = Just verificationCode
                                 }
                     in
-                    { model | proofs = Just (Proof proofPhoto newProofCode) }
+                    { model | proof = Just (Proof proofPhoto newProofCode) }
                         |> UR.init
 
                 _ ->
@@ -847,7 +847,7 @@ update msg model ({ shared } as loggedIn) =
             UR.init model
 
         Tick timer ->
-            case model.proofs of
+            case model.proof of
                 Just (Proof proofPhoto (Just proofCode)) ->
                     let
                         secondsAfterClaim =
@@ -864,7 +864,7 @@ update msg model ({ shared } as loggedIn) =
                                         | secondsAfterClaim = secondsAfterClaim
                                     }
                         in
-                        { model | proofs = Just (Proof proofPhoto newProofCode) }
+                        { model | proof = Just (Proof proofPhoto newProofCode) }
                             |> UR.init
 
                     else
@@ -885,7 +885,7 @@ update msg model ({ shared } as loggedIn) =
             in
             { model
                 | actionId = Just actionId
-                , proofs = Just (Proof NoPhotoAdded initProofCodeParts)
+                , proof = Just (Proof NoPhotoAdded initProofCodeParts)
             }
                 |> UR.init
                 |> UR.addPort
@@ -942,7 +942,7 @@ update msg model ({ shared } as loggedIn) =
                             _ ->
                                 model.pageStatus
                     , claimConfirmationModalStatus = Closed
-                    , proofs = Just (Proof NoPhotoAdded Nothing)
+                    , proof = Just (Proof NoPhotoAdded Nothing)
                 }
                     |> UR.init
                     |> UR.addCmd
@@ -972,7 +972,7 @@ update msg model ({ shared } as loggedIn) =
                     Api.uploadImage loggedIn.shared file CompletedPhotoUpload
 
                 newProofs =
-                    case model.proofs of
+                    case model.proof of
                         Just (Proof _ proofCode) ->
                             Just (Proof Uploading proofCode)
 
@@ -980,7 +980,7 @@ update msg model ({ shared } as loggedIn) =
                             Nothing
             in
             { model
-                | proofs = newProofs
+                | proof = newProofs
             }
                 |> UR.init
                 |> UR.addCmd uploadImage
@@ -992,27 +992,27 @@ update msg model ({ shared } as loggedIn) =
         CompletedPhotoUpload (Ok url) ->
             let
                 newProofs =
-                    case model.proofs of
+                    case model.proof of
                         Just (Proof _ proofCode) ->
                             Just (Proof (Uploaded url) proofCode)
 
                         _ ->
                             Nothing
             in
-            { model | proofs = newProofs }
+            { model | proof = newProofs }
                 |> UR.init
 
         CompletedPhotoUpload (Err error) ->
             let
                 newProofs =
-                    case model.proofs of
+                    case model.proof of
                         Just (Proof _ proofCode) ->
                             Just (Proof (UploadFailed error) proofCode)
 
                         _ ->
                             Nothing
             in
-            { model | proofs = newProofs }
+            { model | proof = newProofs }
                 |> UR.init
                 |> UR.logHttpError msg error
 
@@ -1030,7 +1030,7 @@ update msg model ({ shared } as loggedIn) =
                         _ ->
                             model.pageStatus
                 , claimConfirmationModalStatus = Closed
-                , proofs = Nothing
+                , proof = Nothing
             }
                 |> UR.init
                 |> UR.addExt
@@ -1045,7 +1045,7 @@ update msg model ({ shared } as loggedIn) =
         ClaimAction action ->
             let
                 hasPhotoError =
-                    case model.proofs of
+                    case model.proof of
                         Just (Proof (Uploaded _) _) ->
                             False
 
@@ -1057,7 +1057,7 @@ update msg model ({ shared } as loggedIn) =
                             False
 
                 newModel =
-                    case model.proofs of
+                    case model.proof of
                         Just (Proof _ _) ->
                             -- Claim with proof has no confirmation
                             model
@@ -1066,7 +1066,7 @@ update msg model ({ shared } as loggedIn) =
                             { model | claimConfirmationModalStatus = InProgress }
 
                 ( proofPhotoUrl, proofCode_, proofTime ) =
-                    case model.proofs of
+                    case model.proof of
                         Just (Proof (Uploaded url) (Just { code, claimTimestamp })) ->
                             ( url, Maybe.withDefault "" code, claimTimestamp )
 
@@ -1127,7 +1127,7 @@ update msg model ({ shared } as loggedIn) =
 
                         _ ->
                             model.pageStatus
-                , proofs = Nothing
+                , proof = Nothing
             }
                 |> UR.init
                 |> UR.addExt (ShowFeedback LoggedIn.Success message)
