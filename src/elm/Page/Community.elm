@@ -29,7 +29,7 @@ import Json.Encode as Encode exposing (Value)
 import Page
 import Route
 import Session.LoggedIn as LoggedIn exposing (External(..), FeedbackStatus(..))
-import Session.Shared exposing (Translators)
+import Session.Shared exposing (Shared, Translators)
 import Strftime
 import Task
 import Time exposing (Posix, posixToMillis)
@@ -198,7 +198,7 @@ view loggedIn model =
                                 ]
 
                         ClaimWithProofs action ->
-                            viewClaimWithProofs model loggedIn action
+                            viewClaimWithProofs model.proofs loggedIn.shared.translators action
     in
     { title = title
     , content =
@@ -209,14 +209,14 @@ view loggedIn model =
     }
 
 
-viewClaimWithProofs : Model -> LoggedIn.Model -> Action -> Html Msg
-viewClaimWithProofs model { shared } action =
+viewClaimWithProofs : Maybe Proof -> Translators -> Action -> Html Msg
+viewClaimWithProofs proofs translators action =
     let
         { t } =
-            shared.translators
+            translators
 
         isUploadingInProgress =
-            case model.proofs of
+            case proofs of
                 Just (Proof Uploading _) ->
                     True
 
@@ -230,12 +230,12 @@ viewClaimWithProofs model { shared } action =
                 [ text <|
                     Maybe.withDefault "" action.photoProofInstructions
                 ]
-            , case model.proofs of
+            , case proofs of
                 Just (Proof _ (Just { code, secondsAfterClaim, availabilityPeriod })) ->
                     case code of
                         Just c ->
                             viewProofCode
-                                shared.translators
+                                translators
                                 c
                                 secondsAfterClaim
                                 availabilityPeriod
@@ -248,9 +248,9 @@ viewClaimWithProofs model { shared } action =
             , div [ class "mb-4" ]
                 [ span [ class "input-label block mb-2" ]
                     [ text (t "community.actions.proof.photo") ]
-                , case model.proofs of
+                , case proofs of
                     Just (Proof photoStatus _) ->
-                        viewPhotoUploader shared.translators photoStatus
+                        viewPhotoUploader translators photoStatus
 
                     _ ->
                         text ""
