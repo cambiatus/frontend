@@ -183,7 +183,7 @@ view loggedIn model =
                                 , div [ class "container mx-auto" ]
                                     [ if community.hasObjectives then
                                         div [ class "px-4 pb-4" ]
-                                            [ viewClaimConfirmation loggedIn.shared.translators model
+                                            [ viewClaimConfirmation loggedIn.shared.translators model.claimConfirmationModalStatus
                                             , div [ class "container bg-white py-6 sm:py-8 px-3 sm:px-6 rounded-lg mt-4" ]
                                                 (Page.viewTitle (t "community.objectives.title_plural")
                                                     :: List.indexedMap (viewObjective loggedIn model community)
@@ -193,7 +193,7 @@ view loggedIn model =
 
                                       else
                                         text ""
-                                    , viewCommunityStats loggedIn community
+                                    , viewCommunityStats loggedIn.shared.translators community
                                     ]
                                 ]
 
@@ -721,12 +721,8 @@ viewPhotoUploader { t } proofPhotoStatus =
         ]
 
 
-viewCommunityStats : LoggedIn.Model -> Community.Model -> Html msg
-viewCommunityStats loggedIn community =
-    let
-        t =
-            loggedIn.shared.translators.t
-    in
+viewCommunityStats : Translators -> Community.Model -> Html msg
+viewCommunityStats { t } community =
     div [ class "flex flex-wrap px-4 container mb-6" ]
         [ div [ class "flex w-full lg:w-1/2 h-48 mb-4" ]
             [ div [ class "flex-grow" ]
