@@ -10,33 +10,22 @@ module Page.Community exposing
     )
 
 import Action
-import Api
 import Api.Graphql
-import Avatar
-import Cambiatus.Enum.VerificationType as VerificationType
-import Claim
-import Community exposing (Action, Model)
+import Browser exposing (UrlRequest(..))
+import Community exposing (Model)
 import Eos exposing (Symbol)
-import Eos.Account as Eos
-import File exposing (File)
 import Graphql.Http
-import Html exposing (Html, button, div, img, input, label, p, span, text)
-import Html.Attributes exposing (accept, class, classList, disabled, id, multiple, src, style, type_)
+import Html exposing (Html, button, div, img, p, text)
+import Html.Attributes exposing (class, classList, id, src)
 import Html.Events exposing (onClick)
-import Http
-import Icons
-import Json.Decode as Decode
-import Json.Encode as Encode exposing (Value)
+import Json.Encode exposing (Value)
 import Page
 import Route
-import Session.LoggedIn as LoggedIn exposing (External(..), FeedbackStatus(..))
-import Session.Shared exposing (Shared, Translators)
-import Strftime
+import Session.LoggedIn as LoggedIn exposing (External(..), FeedbackStatus(..), mapExternal)
+import Session.Shared exposing (Translators)
 import Task
-import Time exposing (Posix, posixToMillis)
+import Time exposing (Posix)
 import UpdateResult as UR
-import Utils
-import View.Modal as Modal
 
 
 
@@ -362,10 +351,6 @@ type Msg
 
 update : Msg -> Model -> LoggedIn.Model -> UpdateResult
 update msg model ({ shared } as loggedIn) =
-    let
-        t =
-            shared.translators.t
-    in
     case msg of
         NoOp ->
             UR.init model
@@ -375,17 +360,100 @@ update msg model ({ shared } as loggedIn) =
 
         GotActionMsg actionMsg ->
             let
-                updateClaimingAction : Action.Model -> UR.UpdateResult Model Msg extMsg
+                updateClaimingAction : Action.Model -> UpdateResult
                 updateClaimingAction actionModel =
+                    let
+                        cb : External Action.Msg -> UpdateResult -> UpdateResult
+                        cb =
+                            \extMsgAction uResult ->
+                                uResult
+                                    |> UR.addExt (mapExternal GotActionMsg extMsgAction)
+                    in
                     Action.update loggedIn actionMsg actionModel
                         |> UR.map
                             (\a -> { model | claimingAction = Just a })
                             GotActionMsg
-                            (\extMsg uResult -> uResult)
+                            cb
             in
             case actionMsg of
                 Action.OpenClaimConfirmation action ->
                     updateClaimingAction (Action.init action)
+
+                Action.GotClaimActionResponse (Ok _) ->
+                    case model.claimingAction of
+                        Just ca ->
+                            let
+                                updatePageStatus m =
+                                    { m
+                                        | pageStatus =
+                                            case model.pageStatus of
+                                                Loaded community (ClaimWithProofs _) ->
+                                                    Loaded community ObjectivesAndActions
+
+                                                _ ->
+                                                    m.pageStatus
+                                    }
+                            in
+                            updateClaimingAction ca
+                                |> UR.mapModel updatePageStatus
+
+                        Nothing ->
+                            model
+                                |> UR.init
+
+                Action.OpenProofSection action ->
+                    case model.claimingAction of
+                        Just ca ->
+                            if ca.action.hasProofPhoto then
+                                let
+                                    updatePageStatus m =
+                                        { m
+                                            | pageStatus =
+                                                case model.pageStatus of
+                                                    Loaded community _ ->
+                                                        Loaded community (ClaimWithProofs action)
+
+                                                    _ ->
+                                                        model.pageStatus
+                                        }
+                                in
+                                updateClaimingAction ca
+                                    |> UR.mapModel updatePageStatus
+
+                            else
+                                model
+                                    |> UR.init
+
+                        Nothing ->
+                            model
+                                |> UR.init
+
+                Action.CloseProofSection _ ->
+                    case model.claimingAction of
+                        Just ca ->
+                            if ca.action.hasProofPhoto then
+                                let
+                                    updatePageStatus m =
+                                        { m
+                                            | pageStatus =
+                                                case model.pageStatus of
+                                                    Loaded community (ClaimWithProofs _) ->
+                                                        Loaded community ObjectivesAndActions
+
+                                                    _ ->
+                                                        model.pageStatus
+                                        }
+                                in
+                                updateClaimingAction ca
+                                    |> UR.mapModel updatePageStatus
+
+                            else
+                                model
+                                    |> UR.init
+
+                        Nothing ->
+                            model
+                                |> UR.init
 
                 _ ->
                     case model.claimingAction of
@@ -424,32 +492,13 @@ update msg model ({ shared } as loggedIn) =
 
 jsAddressToMsg : List String -> Value -> Maybe Msg
 jsAddressToMsg addr val =
-    --case addr of
-    --    "ClaimAction" :: [] ->
-    --        Decode.decodeValue
-    --            (Decode.oneOf
-    --                [ Decode.field "transactionId" Decode.string |> Decode.map Ok
-    --                , Decode.succeed (Err val)
-    --                ]
-    --            )
-    --            val
-    --            |> Result.map (Just << GotClaimActionResponse)
-    --            |> Result.withDefault Nothing
-    --
-    --    "GetUint64Name" :: [] ->
-    --        Decode.decodeValue
-    --            (Decode.oneOf
-    --                [ Decode.field "uint64name" Decode.string |> Decode.map Ok
-    --                , Decode.succeed (Err val)
-    --                ]
-    --            )
-    --            val
-    --            |> Result.map (Just << GotUint64Name)
-    --            |> Result.withDefault Nothing
-    --
-    --    _ ->
-    --        Nothing
-    Nothing
+    case addr of
+        "GotActionMsg" :: remainAddress ->
+            Action.jsAddressToMsg remainAddress val
+                |> Maybe.map GotActionMsg
+
+        _ ->
+            Nothing
 
 
 msgToString : Msg -> List String
@@ -461,14 +510,9 @@ msgToString msg =
         GotTime _ ->
             [ "GotTime" ]
 
-        GotActionMsg _ ->
-            [ "GotActionMsg" ]
+        GotActionMsg actionMsg ->
+            "GotActionMsg" :: Action.msgToString actionMsg
 
-        --Tick _ ->
-        --    [ "Tick" ]
-        --
-        --GotProofTime _ _ ->
-        --    [ "GotProofTime" ]
         CompletedLoadCommunity r ->
             [ "CompletedLoadCommunity", UR.resultToString r ]
 
@@ -477,35 +521,3 @@ msgToString msg =
 
         ClickedCloseObjective ->
             [ "ClickedCloseObjective" ]
-
-
-
---OpenProofSection _ ->
---    [ "OpenAddPhotoProof" ]
---
---CloseProofSection _ ->
---    [ "CloseAddPhotoProof" ]
---
---EnteredPhoto _ ->
---    [ "EnteredPhoto" ]
---
---CompletedPhotoUpload r ->
---    [ "CompletedPhotoUpload", UR.resultToString r ]
---
---OpenClaimConfirmation _ ->
---    [ "OpenClaimConfirmation" ]
---
---CloseClaimConfirmation ->
---    [ "CloseClaimConfirmation" ]
---
---ClaimAction _ ->
---    [ "ClaimAction" ]
---
---GetUint64Name _ ->
---    [ "GetUint64Name" ]
---
---GotUint64Name n ->
---    [ "GotClaimActionResponse", UR.resultToString n ]
---
---GotClaimActionResponse r ->
---    [ "GotClaimActionResponse", UR.resultToString r ]
