@@ -353,7 +353,12 @@ viewObjective loggedIn model metadata index objective =
         actsNButton =
             objective.actions
                 |> List.sortBy (\a -> a.position |> Maybe.withDefault 0)
-                |> List.map (viewAction loggedIn metadata model.date)
+                |> List.map
+                    (viewAction loggedIn.shared.translators
+                        (LoggedIn.isAccount metadata.creator loggedIn)
+                        metadata.symbol
+                        model.date
+                    )
     in
     if objective.isCompleted then
         text ""
@@ -405,17 +410,14 @@ viewObjective loggedIn model metadata index objective =
 -- VIEW ACTION
 
 
-viewAction : LoggedIn.Model -> Community.Model -> Maybe Posix -> Community.Action -> Html Msg
-viewAction loggedIn metadata maybeDate action =
+viewAction : Translators -> Bool -> Symbol -> Maybe Posix -> Action -> Html Msg
+viewAction translators canEdit symbol maybeDate action =
     let
-        t =
-            loggedIn.shared.translators.t
+        { t, tr } =
+            translators
 
         text_ s =
             text (t s)
-
-        canEdit =
-            LoggedIn.isAccount metadata.creator loggedIn
 
         posixDeadline : Posix
         posixDeadline =
@@ -513,13 +515,10 @@ viewAction loggedIn metadata maybeDate action =
                    )
 
         rewardStr =
-            String.fromFloat action.reward ++ " " ++ Eos.symbolToSymbolCodeString metadata.symbol
+            String.fromFloat action.reward ++ " " ++ Eos.symbolToSymbolCodeString symbol
 
         ( usages, usagesLeft ) =
             ( String.fromInt action.usages, String.fromInt action.usagesLeft )
-
-        tr =
-            loggedIn.shared.translators.tr
 
         validationType : String
         validationType =
