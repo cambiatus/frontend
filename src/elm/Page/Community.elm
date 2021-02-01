@@ -183,7 +183,7 @@ view loggedIn model =
                                 , div [ class "container mx-auto" ]
                                     [ if community.hasObjectives then
                                         div [ class "px-4 pb-4" ]
-                                            [ viewClaimConfirmation loggedIn model
+                                            [ viewClaimConfirmation loggedIn.shared.translators model
                                             , div [ class "container bg-white py-6 sm:py-8 px-3 sm:px-6 rounded-lg mt-4" ]
                                                 (Page.viewTitle (t "community.objectives.title_plural")
                                                     :: List.indexedMap (viewObjective loggedIn model community)
@@ -613,12 +613,9 @@ viewAction translators canEdit symbol maybeDate action =
             ]
 
 
-viewClaimConfirmation : LoggedIn.Model -> Model -> Html Msg
-viewClaimConfirmation loggedIn model =
+viewClaimConfirmation : Translators -> ClaimConfirmationModalStatus -> Html Msg
+viewClaimConfirmation { t } claimConfirmationModalStatus =
     let
-        t =
-            loggedIn.shared.translators.t
-
         text_ s =
             text (t s)
 
@@ -662,7 +659,7 @@ viewClaimConfirmation loggedIn model =
                     |> Modal.toHtml
                 ]
     in
-    case model.claimConfirmationModalStatus of
+    case claimConfirmationModalStatus of
         Open action ->
             let
                 acceptMsg =
