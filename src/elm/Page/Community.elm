@@ -46,12 +46,8 @@ initModel : LoggedIn.Model -> Symbol -> Model
 initModel _ _ =
     { date = Nothing
     , pageStatus = Loading
-    , actionId = Nothing
     , openObjective = Nothing
     , claimingAction = Nothing
-
-    --, claimConfirmationModalStatus = Closed
-    --, proof = Nothing
     }
 
 
@@ -77,11 +73,7 @@ type alias Model =
     { date : Maybe Posix
     , claimingAction : Maybe Action.Model
     , pageStatus : PageStatus
-    , actionId : Maybe Int
     , openObjective : Maybe Int
-
-    --, claimConfirmationModalStatus : ClaimConfirmationModalStatus
-    --, proof : Maybe Proof
     }
 
 
