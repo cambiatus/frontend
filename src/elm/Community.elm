@@ -42,7 +42,7 @@ module Community exposing
 
 import Cambiatus.Enum.VerificationType exposing (VerificationType(..))
 import Cambiatus.Object
-import Cambiatus.Object.Action as Action
+import Cambiatus.Object.Action as ActionObject
 import Cambiatus.Object.Check as Check
 import Cambiatus.Object.Claim as Claim exposing (ChecksOptionalArguments)
 import Cambiatus.Object.Community as Community
@@ -359,22 +359,22 @@ type alias Action =
 actionSelectionSet : SelectionSet Action Cambiatus.Object.Action
 actionSelectionSet =
     SelectionSet.succeed Action
-        |> with Action.id
-        |> with Action.description
-        |> with Action.reward
-        |> with Action.verifierReward
-        |> with (Eos.nameSelectionSet Action.creatorId)
-        |> with (Action.validators Profile.minimalSelectionSet)
-        |> with Action.usages
-        |> with Action.usagesLeft
-        |> with Action.deadline
-        |> with Action.verificationType
-        |> with Action.verifications
-        |> with Action.isCompleted
-        |> with (SelectionSet.map (Maybe.withDefault False) Action.hasProofPhoto)
-        |> with (SelectionSet.map (Maybe.withDefault False) Action.hasProofCode)
-        |> with Action.photoProofInstructions
-        |> with Action.position
+        |> with ActionObject.id
+        |> with ActionObject.description
+        |> with ActionObject.reward
+        |> with ActionObject.verifierReward
+        |> with (Eos.nameSelectionSet ActionObject.creatorId)
+        |> with (ActionObject.validators Profile.minimalSelectionSet)
+        |> with ActionObject.usages
+        |> with ActionObject.usagesLeft
+        |> with ActionObject.deadline
+        |> with ActionObject.verificationType
+        |> with ActionObject.verifications
+        |> with ActionObject.isCompleted
+        |> with (SelectionSet.map (Maybe.withDefault False) ActionObject.hasProofPhoto)
+        |> with (SelectionSet.map (Maybe.withDefault False) ActionObject.hasProofCode)
+        |> with ActionObject.photoProofInstructions
+        |> with ActionObject.position
 
 
 type Verification
@@ -626,9 +626,9 @@ checkSelectionSet =
 verificationActionSelectionSet : SelectionSet ActionResponse Cambiatus.Object.Action
 verificationActionSelectionSet =
     SelectionSet.succeed ActionResponse
-        |> with Action.id
-        |> with Action.description
-        |> with (Action.objective verificationObjectiveSelectionSet)
+        |> with ActionObject.id
+        |> with ActionObject.description
+        |> with (ActionObject.objective verificationObjectiveSelectionSet)
 
 
 verificationObjectiveSelectionSet : SelectionSet ObjectiveResponse Cambiatus.Object.Objective

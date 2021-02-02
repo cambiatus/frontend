@@ -9,7 +9,7 @@ module Page.Community exposing
     , view
     )
 
-import Action
+import Action exposing (Action)
 import Api.Graphql
 import Browser exposing (UrlRequest(..))
 import Community exposing (Model)
@@ -86,7 +86,7 @@ type PageStatus
 
 type ActiveSection
     = ObjectivesAndActions
-    | ClaimWithProofs Community.Action
+    | ClaimWithProofs Action
 
 
 

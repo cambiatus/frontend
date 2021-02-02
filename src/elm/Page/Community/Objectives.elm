@@ -1,5 +1,6 @@
 module Page.Community.Objectives exposing (Model, Msg, init, msgToString, update, view)
 
+import Action exposing (Action)
 import Api.Graphql
 import Cambiatus.Enum.VerificationType as VerificationType
 import Community exposing (Model)
@@ -192,7 +193,7 @@ viewObjective ({ shared } as loggedIn) model community index objective =
         ]
 
 
-viewAction : LoggedIn.Model -> Model -> Int -> Community.Action -> Html Msg
+viewAction : LoggedIn.Model -> Model -> Int -> Action -> Html Msg
 viewAction ({ shared } as loggedIn) model objectiveId action =
     let
         posixDeadline : Posix
