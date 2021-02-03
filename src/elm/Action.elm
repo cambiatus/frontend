@@ -17,7 +17,7 @@ import Cambiatus.Enum.VerificationType exposing (VerificationType)
 import Cambiatus.Object
 import Cambiatus.Object.Action as ActionObject
 import Cambiatus.Scalar exposing (DateTime)
-import Eos exposing (Symbol)
+import Eos
 import Eos.Account as Eos exposing (Name)
 import Graphql.SelectionSet as SelectionSet exposing (SelectionSet, with)
 import Html exposing (Html, button, div, text)
@@ -27,7 +27,6 @@ import Json.Decode as Decode
 import Json.Encode as Encode exposing (Value)
 import Ports
 import Profile
-import Session.LoggedIn as LoggedIn exposing (External(..))
 import Session.Shared exposing (Translators)
 import UpdateResult as UR
 import View.Modal as Modal
@@ -85,7 +84,7 @@ type Msg
     = NoOp
     | OpenClaimConfirmation Action
     | CloseClaimConfirmation
-    | ClaimAction Action
+    | ClaimAction
     | GotClaimActionResponse (Result Value String)
 
 
@@ -145,7 +144,7 @@ viewClaimConfirmation { t } claimConfirmationModalStatus =
                         NoOp
 
                     else
-                        ClaimAction action
+                        ClaimAction
             in
             modalContent acceptMsg False
 
@@ -160,76 +159,31 @@ viewClaimConfirmation { t } claimConfirmationModalStatus =
 -- UPDATE
 
 
-type alias ActionUpdate =
-    { isAuthorized : Bool
-    , accountName : Name
-    , selectedCommunity : Symbol
-    , contractsCommunity : String --Shared.contracts.community
-    }
-
-
-update : LoggedIn.Model -> Msg -> Model -> UR.UpdateResult Model Msg (External Msg)
-update ({ shared } as loggedIn) msg model =
-    -- TODO: Don't apply ports here, don't use loggedIn. It must be simple, local component without any global state
-    let
-        { t } =
-            shared.translators
-    in
+update : Translators -> Msg -> Model -> Model
+update { t } msg model =
     case msg of
         OpenClaimConfirmation action ->
             { model | claimConfirmationModalStatus = Open action }
-                |> UR.init
 
         CloseClaimConfirmation ->
             { model | claimConfirmationModalStatus = Closed }
-                |> UR.init
 
-        ClaimAction action ->
-            let
-                newModel =
-                    { model | claimConfirmationModalStatus = InProgress }
-            in
-            if LoggedIn.isAuth loggedIn then
-                newModel
-                    |> UR.init
-                    |> UR.addPort
-                        (claimActionPort
-                            action
-                            shared.contracts.community
-                            loggedIn.accountName
-                        )
-
-            else
-                newModel
-                    |> UR.init
-                    |> UR.addExt (Just (ClaimAction action) |> RequiredAuthentication)
+        ClaimAction ->
+            { model | claimConfirmationModalStatus = InProgress }
 
         GotClaimActionResponse (Ok _) ->
-            let
-                message =
-                    shared.translators.tr "dashboard.check_claim.success"
-                        [ ( "symbolCode", Eos.symbolToSymbolCodeString loggedIn.selectedCommunity ) ]
-            in
-            { model
-                | claimConfirmationModalStatus = Closed
-            }
-                |> UR.init
-                |> UR.addExt (ShowFeedback LoggedIn.Success message)
+            { model | claimConfirmationModalStatus = Closed }
 
         GotClaimActionResponse (Err _) ->
-            { model
-                | claimConfirmationModalStatus = Closed
-            }
-                |> UR.init
-                |> UR.addExt (ShowFeedback LoggedIn.Failure (t "dashboard.check_claim.failure"))
+            { model | claimConfirmationModalStatus = Closed }
 
         NoOp ->
-            model |> UR.init
+            model
 
 
-claimActionPort : Action -> String -> Name -> Ports.JavascriptOutModel Msg
-claimActionPort action contractsCommunity accountName =
-    { responseAddress = ClaimAction action
+claimActionPort : msg -> Action -> String -> Name -> Ports.JavascriptOutModel msg
+claimActionPort msg action contractsCommunity accountName =
+    { responseAddress = msg
     , responseData = Encode.null
     , data =
         Eos.encodeTransaction
@@ -282,7 +236,7 @@ msgToString msg =
         CloseClaimConfirmation ->
             [ "CloseClaimConfirmation" ]
 
-        ClaimAction _ ->
+        ClaimAction ->
             [ "ClaimAction" ]
 
         GotClaimActionResponse r ->

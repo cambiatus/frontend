@@ -22,8 +22,9 @@ import Html.Events exposing (onClick)
 import Icons
 import Json.Encode exposing (Value)
 import Page
+import Ports exposing (JavascriptOutModel)
 import Route
-import Session.LoggedIn as LoggedIn exposing (External(..), FeedbackStatus(..), mapExternal)
+import Session.LoggedIn as LoggedIn exposing (External(..), FeedbackStatus(..))
 import Session.Shared exposing (Translators)
 import Strftime
 import Task
@@ -325,6 +326,10 @@ type Msg
 
 update : Msg -> Model -> LoggedIn.Model -> UpdateResult
 update msg model ({ shared } as loggedIn) =
+    let
+        { t } =
+            shared.translators
+    in
     case msg of
         NoOp ->
             UR.init model
@@ -334,45 +339,66 @@ update msg model ({ shared } as loggedIn) =
 
         GotActionMsg actionMsg ->
             let
-                updateClaimingAction : Action.Model -> UpdateResult
+                updateClaimingAction : Action.Model -> Model
                 updateClaimingAction actionModel =
-                    let
-                        cb : External Action.Msg -> UpdateResult -> UpdateResult
-                        cb =
-                            \extMsgAction uResult ->
-                                uResult
-                                    |> UR.addExt (mapExternal GotActionMsg extMsgAction)
-                    in
-                    Action.update loggedIn actionMsg actionModel
-                        |> UR.map
-                            (\a -> { model | claimingAction = Just a })
-                            GotActionMsg
-                            cb
+                    { model
+                        | claimingAction =
+                            Action.update shared.translators actionMsg actionModel
+                                |> Just
+                    }
             in
             case actionMsg of
                 Action.OpenClaimConfirmation action ->
                     updateClaimingAction (Action.init action)
+                        |> UR.init
 
-                Action.GotClaimActionResponse (Ok _) ->
+                Action.ClaimAction ->
                     case model.claimingAction of
                         Just ca ->
                             let
-                                updatePageStatus m =
-                                    { m
-                                        | pageStatus =
-                                            -- TODO: Do we really need this update?
-                                            case model.pageStatus of
-                                                Loaded community ->
-                                                    Loaded community
-
-                                                _ ->
-                                                    m.pageStatus
-                                    }
+                                claimPort : JavascriptOutModel Msg
+                                claimPort =
+                                    Action.claimActionPort
+                                        (GotActionMsg Action.ClaimAction)
+                                        ca.action
+                                        shared.contracts.community
+                                        loggedIn.accountName
                             in
-                            updateClaimingAction ca
-                                |> UR.mapModel updatePageStatus
+                            if LoggedIn.isAuth loggedIn then
+                                updateClaimingAction ca
+                                    |> UR.init
+                                    |> UR.addPort claimPort
+
+                            else
+                                updateClaimingAction ca
+                                    |> UR.init
+                                    |> UR.addExt
+                                        (Just (GotActionMsg Action.ClaimAction)
+                                            |> RequiredAuthentication
+                                        )
 
                         Nothing ->
+                            model
+                                |> UR.init
+
+                Action.GotClaimActionResponse resp ->
+                    case ( model.claimingAction, resp ) of
+                        ( Just ca, Ok _ ) ->
+                            let
+                                message =
+                                    shared.translators.tr "dashboard.check_claim.success"
+                                        [ ( "symbolCode", Eos.symbolToSymbolCodeString loggedIn.selectedCommunity ) ]
+                            in
+                            updateClaimingAction ca
+                                |> UR.init
+                                |> UR.addExt (ShowFeedback LoggedIn.Success message)
+
+                        ( Just ca, Err _ ) ->
+                            updateClaimingAction ca
+                                |> UR.init
+                                |> UR.addExt (ShowFeedback LoggedIn.Failure (t "dashboard.check_claim.failure"))
+
+                        ( Nothing, _ ) ->
                             model
                                 |> UR.init
 
@@ -380,6 +406,7 @@ update msg model ({ shared } as loggedIn) =
                     case model.claimingAction of
                         Just ca ->
                             updateClaimingAction ca
+                                |> UR.init
 
                         Nothing ->
                             model
