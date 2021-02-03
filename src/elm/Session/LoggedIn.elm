@@ -219,6 +219,7 @@ type Page
     | Objectives
     | ObjectiveEditor
     | ActionEditor
+    | ClaimAction
     | Claim
     | News
     | Learn

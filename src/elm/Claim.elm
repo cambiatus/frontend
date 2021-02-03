@@ -337,13 +337,15 @@ viewClaimCard { selectedCommunity, shared, accountName } claim =
         claimRoute =
             Route.Claim
                 --claim.action.objectiveId
-                666
+                -- the route just works without objectiveId even with direct loading from browser's address bar
+                0
                 claim.action.id
                 claim.id
+                |> Debug.log "route to claim"
     in
     div [ class "w-full sm:w-1/2 lg:w-1/3 xl:w-1/4 px-2" ]
         [ div
-            [ class "flex flex-col p-4 my-2 rounded-lg bg-white hover:shadow cursor-pointer"
+            [ class "flex flex-col p-4 my-2 rounded-lg bg-white hover:shadow cursor-pointer bg-red"
             , id ("claim" ++ String.fromInt claim.id)
 
             -- We can't just use `a` with `href` here because there are other `a`-nodes inside.

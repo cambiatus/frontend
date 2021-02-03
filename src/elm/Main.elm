@@ -11,6 +11,7 @@ import Page exposing (Session)
 import Page.ComingSoon as ComingSoon
 import Page.Community as CommunityPage
 import Page.Community.ActionEditor as ActionEditor
+import Page.Community.ClaimWithPhoto as ClaimWithPhoto
 import Page.Community.Editor as CommunityEditor
 import Page.Community.Invite as Invite
 import Page.Community.ObjectiveEditor as ObjectiveEditor
@@ -154,6 +155,7 @@ type Status
     | ObjectiveEditor ObjectiveEditor.Model
     | ActionEditor ActionEditor.Model
     | Claim Claim.Model
+    | ClaimAction ClaimWithPhoto.Model
     | Notification Notification.Model
     | Dashboard Dashboard.Model
     | Login Login.Model
@@ -189,6 +191,7 @@ type Msg
     | GotCommunitySettingsFeaturesMsg CommunitySettingsFeatures.Msg
     | GotObjectivesMsg Objectives.Msg
     | GotActionEditorMsg ActionEditor.Msg
+    | GotClaimActionMsg ClaimWithPhoto.Msg
     | GotObjectiveEditorMsg ObjectiveEditor.Msg
     | GotVerifyClaimMsg Claim.Msg
     | GotDashboardMsg Dashboard.Msg
@@ -817,6 +820,11 @@ changeRouteTo maybeRoute model =
                 >> updateStatusWith ActionEditor GotActionEditorMsg model
                 |> withLoggedIn (Route.EditAction symbol objectiveId actionId)
 
+        Just (Route.ClaimAction symbol objectiveId actionId) ->
+            (\l -> ClaimWithPhoto.init l symbol objectiveId (Just actionId))
+                >> updateStatusWith ClaimAction GotClaimActionMsg model
+                |> withLoggedIn (Route.ClaimAction symbol objectiveId actionId)
+
         Just (Route.Claim objectiveId actionId claimId) ->
             (\l -> Claim.init l claimId)
                 >> updateStatusWith Claim GotVerifyClaimMsg model
@@ -979,6 +987,9 @@ msgToString msg =
 
         GotActionEditorMsg subMsg ->
             "GotActionEditor" :: ActionEditor.msgToString subMsg
+
+        GotClaimActionMsg subMsg ->
+            "GotClaimActionMsg" :: ClaimWithPhoto.msgToString subMsg
 
         GotVerifyClaimMsg subMsg ->
             "GotVerifyClaimMsg" :: Claim.msgToString subMsg
@@ -1169,6 +1180,9 @@ view model =
 
         ActionEditor subModel ->
             viewLoggedIn subModel LoggedIn.ActionEditor GotActionEditorMsg ActionEditor.view
+
+        ClaimAction subModel ->
+            viewLoggedIn subModel LoggedIn.ClaimAction GotClaimActionMsg ClaimWithPhoto.view
 
         Claim subModel ->
             viewLoggedIn subModel LoggedIn.Claim GotVerifyClaimMsg Claim.view

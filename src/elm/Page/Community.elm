@@ -12,7 +12,6 @@ module Page.Community exposing
 import Action exposing (Action)
 import Api.Graphql
 import Avatar
-import Browser exposing (UrlRequest(..))
 import Cambiatus.Enum.VerificationType as VerificationType
 import Community exposing (Model)
 import Eos exposing (Symbol)
@@ -61,13 +60,8 @@ initModel _ _ =
 
 
 subscriptions : Model -> Sub Msg
-subscriptions model =
-    case model.claimingAction of
-        Just ca ->
-            Sub.map GotActionMsg (Action.subscriptions ca)
-
-        Nothing ->
-            Sub.none
+subscriptions _ =
+    Sub.none
 
 
 
@@ -84,14 +78,13 @@ type alias Model =
 
 type PageStatus
     = Loading
-    | Loaded Community.Model ActiveSection
+    | Loaded Community.Model
     | NotFound
     | Failed (Graphql.Http.Error (Maybe Community.Model))
 
 
 type ActiveSection
     = ObjectivesAndActions
-    | ClaimWithProofs Action
 
 
 
@@ -109,7 +102,7 @@ view loggedIn model =
 
         title =
             case model.pageStatus of
-                Loaded community _ ->
+                Loaded community ->
                     community.title
 
                 Loading ->
@@ -129,57 +122,46 @@ view loggedIn model =
                 Failed e ->
                     Page.fullPageGraphQLError (t "community.objectives.title") e
 
-                Loaded community pageStatus ->
-                    case pageStatus of
-                        ObjectivesAndActions ->
-                            div []
-                                [ Page.viewHeader loggedIn community.title Route.Dashboard
-                                , div [ class "bg-white p-4" ]
-                                    [ div [ class "container mx-auto px-4" ]
-                                        [ div [ class "h-24 w-24 rounded-full mx-auto" ]
-                                            [ img [ src community.logo, class "max-h-full m-auto object-scale-down" ] []
-                                            ]
-                                        , div [ class "flex flex-wrap w-full items-center" ]
-                                            [ p [ class "text-4xl font-bold" ]
-                                                [ text community.title ]
-                                            ]
-                                        , p [ class "text-grey-200 text-sm" ] [ text community.description ]
-                                        ]
+                Loaded community ->
+                    div []
+                        [ Page.viewHeader loggedIn community.title Route.Dashboard
+                        , div [ class "bg-white p-4" ]
+                            [ div [ class "container mx-auto px-4" ]
+                                [ div [ class "h-24 w-24 rounded-full mx-auto" ]
+                                    [ img [ src community.logo, class "max-h-full m-auto object-scale-down" ] []
                                     ]
-                                , div [ class "container mx-auto" ]
-                                    [ if community.hasObjectives then
-                                        div [ class "px-4 pb-4" ]
-                                            [ Html.map GotActionMsg
-                                                (case model.claimingAction of
-                                                    Just ca ->
-                                                        Action.viewClaimConfirmation
-                                                            loggedIn.shared.translators
-                                                            ca.claimConfirmationModalStatus
-
-                                                    Nothing ->
-                                                        text ""
-                                                )
-                                            , div [ class "container bg-white py-6 sm:py-8 px-3 sm:px-6 rounded-lg mt-4" ]
-                                                (Page.viewTitle (t "community.objectives.title_plural")
-                                                    :: List.indexedMap (viewObjective loggedIn model community)
-                                                        community.objectives
-                                                )
-                                            ]
-
-                                      else
-                                        text ""
-                                    , viewCommunityStats loggedIn.shared.translators community
+                                , div [ class "flex flex-wrap w-full items-center" ]
+                                    [ p [ class "text-4xl font-bold" ]
+                                        [ text community.title ]
                                     ]
+                                , p [ class "text-grey-200 text-sm" ] [ text community.description ]
                                 ]
+                            ]
+                        , div [ class "container mx-auto" ]
+                            [ if community.hasObjectives then
+                                div [ class "px-4 pb-4" ]
+                                    [ Html.map GotActionMsg
+                                        (case model.claimingAction of
+                                            Just ca ->
+                                                Action.viewClaimConfirmation
+                                                    loggedIn.shared.translators
+                                                    ca.claimConfirmationModalStatus
 
-                        ClaimWithProofs action ->
-                            case model.claimingAction of
-                                Just ca ->
-                                    Html.map GotActionMsg
-                                        (Action.viewClaimWithProofs ca.proof loggedIn.shared.translators action)
+                                            Nothing ->
+                                                text ""
+                                        )
+                                    , div [ class "container bg-white py-6 sm:py-8 px-3 sm:px-6 rounded-lg mt-4" ]
+                                        (Page.viewTitle (t "community.objectives.title_plural")
+                                            :: List.indexedMap (viewObjective loggedIn model community)
+                                                community.objectives
+                                        )
+                                    ]
 
-                                Nothing ->
-                                    text ""
+                              else
+                                text ""
+                            , viewCommunityStats loggedIn.shared.translators community
+                            ]
+                        ]
     in
     { title = title
     , content =
@@ -381,9 +363,10 @@ update msg model ({ shared } as loggedIn) =
                                 updatePageStatus m =
                                     { m
                                         | pageStatus =
+                                            -- TODO: Do we really need this update?
                                             case model.pageStatus of
-                                                Loaded community (ClaimWithProofs _) ->
-                                                    Loaded community ObjectivesAndActions
+                                                Loaded community ->
+                                                    Loaded community
 
                                                 _ ->
                                                     m.pageStatus
@@ -391,60 +374,6 @@ update msg model ({ shared } as loggedIn) =
                             in
                             updateClaimingAction ca
                                 |> UR.mapModel updatePageStatus
-
-                        Nothing ->
-                            model
-                                |> UR.init
-
-                Action.OpenProofSection action ->
-                    case model.claimingAction of
-                        Just ca ->
-                            if ca.action.hasProofPhoto then
-                                let
-                                    updatePageStatus m =
-                                        { m
-                                            | pageStatus =
-                                                case model.pageStatus of
-                                                    Loaded community _ ->
-                                                        Loaded community (ClaimWithProofs action)
-
-                                                    _ ->
-                                                        model.pageStatus
-                                        }
-                                in
-                                updateClaimingAction ca
-                                    |> UR.mapModel updatePageStatus
-
-                            else
-                                model
-                                    |> UR.init
-
-                        Nothing ->
-                            model
-                                |> UR.init
-
-                Action.CloseProofSection _ ->
-                    case model.claimingAction of
-                        Just ca ->
-                            if ca.action.hasProofPhoto then
-                                let
-                                    updatePageStatus m =
-                                        { m
-                                            | pageStatus =
-                                                case model.pageStatus of
-                                                    Loaded community (ClaimWithProofs _) ->
-                                                        Loaded community ObjectivesAndActions
-
-                                                    _ ->
-                                                        model.pageStatus
-                                        }
-                                in
-                                updateClaimingAction ca
-                                    |> UR.mapModel updatePageStatus
-
-                            else
-                                model
-                                    |> UR.init
 
                         Nothing ->
                             model
@@ -463,7 +392,7 @@ update msg model ({ shared } as loggedIn) =
             case community of
                 Just c ->
                     { model
-                        | pageStatus = Loaded c ObjectivesAndActions
+                        | pageStatus = Loaded c
                     }
                         |> UR.init
 
