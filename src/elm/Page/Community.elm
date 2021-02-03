@@ -16,7 +16,7 @@ import Cambiatus.Enum.VerificationType as VerificationType
 import Community exposing (Model)
 import Eos exposing (Symbol)
 import Graphql.Http
-import Html exposing (Html, button, div, img, p, span, text)
+import Html exposing (Html, a, button, div, img, p, span, text)
 import Html.Attributes exposing (class, classList, id, src)
 import Html.Events exposing (onClick)
 import Icons
@@ -81,10 +81,6 @@ type PageStatus
     | Loaded Community.Model
     | NotFound
     | Failed (Graphql.Http.Error (Maybe Community.Model))
-
-
-type ActiveSection
-    = ObjectivesAndActions
 
 
 
@@ -258,6 +254,7 @@ viewObjective loggedIn model metadata index objective =
                         viewAction loggedIn.shared.translators
                             (LoggedIn.isAccount metadata.creator loggedIn)
                             metadata.symbol
+                            objective.id
                             model.date
                             action
                     )
@@ -447,8 +444,8 @@ msgToString msg =
             [ "ClickedCloseObjective" ]
 
 
-viewAction : Translators -> Bool -> Symbol -> Maybe Posix -> Action -> Html Msg
-viewAction translators canEdit symbol maybeDate action =
+viewAction : Translators -> Bool -> Symbol -> Int -> Maybe Posix -> Action -> Html Msg
+viewAction translators canEdit symbol objId maybeDate action =
     let
         { t, tr } =
             translators

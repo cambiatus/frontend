@@ -16,7 +16,7 @@ import Cambiatus.Enum.VerificationType exposing (VerificationType)
 import Cambiatus.Object
 import Cambiatus.Object.Action as ActionObject
 import Cambiatus.Scalar exposing (DateTime)
-import Eos exposing (Symbol)
+import Eos
 import Eos.Account as Eos
 import Graphql.SelectionSet as SelectionSet exposing (SelectionSet, with)
 import Html exposing (Html, button, div, text)
@@ -27,7 +27,6 @@ import Json.Encode as Encode exposing (Value)
 import Profile
 import Session.LoggedIn as LoggedIn exposing (External(..))
 import Session.Shared exposing (Translators)
-import Sha256 exposing (sha256)
 import UpdateResult as UR
 import View.Modal as Modal
 

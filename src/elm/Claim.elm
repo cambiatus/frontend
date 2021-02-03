@@ -29,7 +29,6 @@ import Cambiatus.Object.Claim as Claim
 import Cambiatus.Object.ClaimConnection
 import Cambiatus.Object.ClaimEdge
 import Cambiatus.Scalar exposing (DateTime(..))
-import Community exposing (Objective)
 import Eos
 import Eos.Account as Eos
 import Graphql.OptionalArgument exposing (OptionalArgument(..))
@@ -337,11 +336,10 @@ viewClaimCard { selectedCommunity, shared, accountName } claim =
         claimRoute =
             Route.Claim
                 --claim.action.objectiveId
-                -- the route just works without objectiveId even with direct loading from browser's address bar
+                -- TODO: the route just works without objectiveId even with direct loading from browser's address bar
                 0
                 claim.action.id
                 claim.id
-                |> Debug.log "route to claim"
     in
     div [ class "w-full sm:w-1/2 lg:w-1/3 xl:w-1/4 px-2" ]
         [ div

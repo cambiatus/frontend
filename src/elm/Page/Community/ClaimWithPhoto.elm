@@ -1,10 +1,22 @@
-module Page.Community.ClaimWithPhoto exposing (..)
+module Page.Community.ClaimWithPhoto exposing
+    ( Model
+    , Msg(..)
+    , init
+    , jsAddressToMsg
+    , msgToString
+    , subscriptions
+    , update
+    , view
+    )
 
 import Action exposing (Action, ClaimConfirmationModalStatus(..))
 import Api
+import Api.Graphql
+import Community
 import Eos exposing (Symbol)
 import Eos.Account as Eos
 import File exposing (File)
+import Graphql.Http
 import Html exposing (Html, button, div, input, label, p, span, text)
 import Html.Attributes exposing (accept, class, classList, disabled, multiple, style, type_)
 import Html.Events exposing (onClick)
@@ -23,6 +35,7 @@ import UpdateResult as UR
 
 type alias Model =
     { claimConfirmationModalStatus : Action.ClaimConfirmationModalStatus
+    , status : Status
     , action : Maybe Action -- TODO: Use result since action must be loaded
     , proof : Proof
     }
@@ -39,15 +52,19 @@ type alias ActionId =
 init : LoggedIn.Model -> Symbol -> ObjectiveId -> Maybe ActionId -> ( Model, Cmd Msg )
 init loggedIn symbol objectiveId actionId =
     ( { claimConfirmationModalStatus = Action.Closed
+      , status = Loading
       , action = Nothing
       , proof = Proof NoPhotoAdded Nothing
       }
-    , Cmd.none
+    , Api.Graphql.query loggedIn.shared
+        (Community.communityQuery symbol)
+        CommunityLoaded
     )
 
 
 type Msg
     = NoOp
+    | CommunityLoaded (Result (Graphql.Http.Error (Maybe Community.Model)) (Maybe Community.Model))
     | OpenProofSection Action
     | CloseProofSection ReasonToCloseProofSection
     | GotProofTime Int Posix
@@ -255,13 +272,38 @@ subscriptions _ =
     Time.every 1000 Tick
 
 
-update : LoggedIn.Model -> Msg -> Model -> UR.UpdateResult Model Msg (External Msg)
-update ({ shared } as loggedIn) msg model =
+type Status
+    = Loading
+    | Loaded Community.Model
+      -- Errors
+    | LoadFailed (Graphql.Http.Error (Maybe Community.Model))
+    | NotFound
+
+
+update : Msg -> Model -> LoggedIn.Model -> UR.UpdateResult Model Msg (External Msg)
+update msg model ({ shared } as loggedIn) =
     let
         { t } =
             shared.translators
     in
     case msg of
+        CommunityLoaded (Err err) ->
+            { model | status = LoadFailed err }
+                |> UR.init
+                |> UR.logGraphqlError msg err
+
+        CommunityLoaded (Ok c) ->
+            case c of
+                Just community ->
+                    { model
+                        | status = Loaded community
+                    }
+                        |> UR.init
+
+                Nothing ->
+                    { model | status = NotFound }
+                        |> UR.init
+
         OpenProofSection action ->
             let
                 runProofCodeTimer =
@@ -397,7 +439,7 @@ update ({ shared } as loggedIn) msg model =
                         { model | proof = Proof proofPhoto newProofCode } |> UR.init
 
                     else
-                        update loggedIn (CloseProofSection TimerExpired) model
+                        update (CloseProofSection TimerExpired) model loggedIn
 
                 _ ->
                     model |> UR.init
@@ -547,6 +589,9 @@ jsAddressToMsg addr val =
 msgToString : Msg -> List String
 msgToString msg =
     case msg of
+        CommunityLoaded res ->
+            [ "CommunityLoaded" ]
+
         Tick _ ->
             [ "Tick" ]
 

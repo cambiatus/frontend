@@ -155,7 +155,7 @@ type Status
     | ObjectiveEditor ObjectiveEditor.Model
     | ActionEditor ActionEditor.Model
     | Claim Claim.Model
-    | ClaimAction ClaimWithPhoto.Model
+    | ClaimWithPhoto ClaimWithPhoto.Model
     | Notification Notification.Model
     | Dashboard Dashboard.Model
     | Login Login.Model
@@ -191,7 +191,7 @@ type Msg
     | GotCommunitySettingsFeaturesMsg CommunitySettingsFeatures.Msg
     | GotObjectivesMsg Objectives.Msg
     | GotActionEditorMsg ActionEditor.Msg
-    | GotClaimActionMsg ClaimWithPhoto.Msg
+    | GotClaimWithPhotoMsg ClaimWithPhoto.Msg
     | GotObjectiveEditorMsg ObjectiveEditor.Msg
     | GotVerifyClaimMsg Claim.Msg
     | GotDashboardMsg Dashboard.Msg
@@ -419,6 +419,11 @@ update msg model =
         ( GotActionEditorMsg subMsg, ActionEditor subModel ) ->
             ActionEditor.update subMsg subModel
                 >> updateLoggedInUResult ActionEditor GotActionEditorMsg model
+                |> withLoggedIn
+
+        ( GotClaimWithPhotoMsg subMsg, ClaimWithPhoto subModel ) ->
+            ClaimWithPhoto.update subMsg subModel
+                >> updateLoggedInUResult ClaimWithPhoto GotClaimWithPhotoMsg model
                 |> withLoggedIn
 
         ( GotVerifyClaimMsg subMsg, Claim subModel ) ->
@@ -822,7 +827,7 @@ changeRouteTo maybeRoute model =
 
         Just (Route.ClaimAction symbol objectiveId actionId) ->
             (\l -> ClaimWithPhoto.init l symbol objectiveId (Just actionId))
-                >> updateStatusWith ClaimAction GotClaimActionMsg model
+                >> updateStatusWith ClaimWithPhoto GotClaimWithPhotoMsg model
                 |> withLoggedIn (Route.ClaimAction symbol objectiveId actionId)
 
         Just (Route.Claim objectiveId actionId claimId) ->
@@ -988,7 +993,7 @@ msgToString msg =
         GotActionEditorMsg subMsg ->
             "GotActionEditor" :: ActionEditor.msgToString subMsg
 
-        GotClaimActionMsg subMsg ->
+        GotClaimWithPhotoMsg subMsg ->
             "GotClaimActionMsg" :: ClaimWithPhoto.msgToString subMsg
 
         GotVerifyClaimMsg subMsg ->
@@ -1181,8 +1186,8 @@ view model =
         ActionEditor subModel ->
             viewLoggedIn subModel LoggedIn.ActionEditor GotActionEditorMsg ActionEditor.view
 
-        ClaimAction subModel ->
-            viewLoggedIn subModel LoggedIn.ClaimAction GotClaimActionMsg ClaimWithPhoto.view
+        ClaimWithPhoto subModel ->
+            viewLoggedIn subModel LoggedIn.ClaimAction GotClaimWithPhotoMsg ClaimWithPhoto.view
 
         Claim subModel ->
             viewLoggedIn subModel LoggedIn.Claim GotVerifyClaimMsg Claim.view
