@@ -11,21 +11,26 @@ module Page.Community exposing
 
 import Action exposing (Action)
 import Api.Graphql
+import Avatar
 import Browser exposing (UrlRequest(..))
+import Cambiatus.Enum.VerificationType as VerificationType
 import Community exposing (Model)
 import Eos exposing (Symbol)
 import Graphql.Http
-import Html exposing (Html, button, div, img, p, text)
+import Html exposing (Html, button, div, img, p, span, text)
 import Html.Attributes exposing (class, classList, id, src)
 import Html.Events exposing (onClick)
+import Icons
 import Json.Encode exposing (Value)
 import Page
 import Route
 import Session.LoggedIn as LoggedIn exposing (External(..), FeedbackStatus(..), mapExternal)
 import Session.Shared exposing (Translators)
+import Strftime
 import Task
-import Time exposing (Posix)
+import Time exposing (Posix, posixToMillis)
 import UpdateResult as UR
+import Utils
 
 
 
@@ -268,13 +273,11 @@ viewObjective loggedIn model metadata index objective =
                 |> List.sortBy (\a -> a.position |> Maybe.withDefault 0)
                 |> List.map
                     (\action ->
-                        Html.map GotActionMsg
-                            (Action.viewAction loggedIn.shared.translators
-                                (LoggedIn.isAccount metadata.creator loggedIn)
-                                metadata.symbol
-                                model.date
-                                action
-                            )
+                        viewAction loggedIn.shared.translators
+                            (LoggedIn.isAccount metadata.creator loggedIn)
+                            metadata.symbol
+                            model.date
+                            action
                     )
     in
     if objective.isCompleted then
@@ -513,3 +516,207 @@ msgToString msg =
 
         ClickedCloseObjective ->
             [ "ClickedCloseObjective" ]
+
+
+viewAction : Translators -> Bool -> Symbol -> Maybe Posix -> Action -> Html Msg
+viewAction translators canEdit symbol maybeDate action =
+    let
+        { t, tr } =
+            translators
+
+        text_ s =
+            text (t s)
+
+        posixDeadline : Posix
+        posixDeadline =
+            action.deadline
+                |> Utils.posixDateTime
+
+        deadlineStr : String
+        deadlineStr =
+            posixDeadline
+                |> Strftime.format "%d %B %Y" Time.utc
+
+        pastDeadline : Bool
+        pastDeadline =
+            case action.deadline of
+                Just _ ->
+                    case maybeDate of
+                        Just today ->
+                            posixToMillis today > posixToMillis posixDeadline
+
+                        Nothing ->
+                            False
+
+                Nothing ->
+                    False
+
+        rewardStrike : String
+        rewardStrike =
+            if pastDeadline || (action.usagesLeft < 1 && action.usages > 0) then
+                " line-through"
+
+            else
+                ""
+
+        dateColor : String
+        dateColor =
+            if pastDeadline then
+                " text-red"
+
+            else
+                " text-indigo-500"
+
+        usagesColor : String
+        usagesColor =
+            if action.usagesLeft >= 1 || action.usages == 0 then
+                " text-indigo-500"
+
+            else
+                " text-red"
+
+        ( claimColors, claimText ) =
+            if pastDeadline || (action.usagesLeft < 1 && action.usages > 0) then
+                ( " button-disabled", "dashboard.closed" )
+
+            else
+                ( " button button-primary", "dashboard.claim" )
+
+        claimSize =
+            if canEdit then
+                " w-4/5"
+
+            else
+                " w-1/2"
+
+        validatorAvatars =
+            List.take 3 action.validators
+                |> List.indexedMap
+                    (\vIndex v ->
+                        let
+                            margin =
+                                if vIndex /= 0 then
+                                    " -ml-5"
+
+                                else
+                                    ""
+                        in
+                        ("h-10 w-10 border-white border-4 rounded-full bg-white" ++ margin)
+                            |> Avatar.view v.avatar
+                    )
+                |> (\vals ->
+                        let
+                            numValidators =
+                                List.length action.validators
+                        in
+                        if numValidators > 3 then
+                            vals
+                                ++ [ div
+                                        [ class "h-10 w-10 flex flex-col border-white border-4 bg-grey rounded-full -ml-5" ]
+                                        [ p [ class "text-date-purple m-auto text-xs font-black leading-none tracking-wide" ]
+                                            [ text ("+" ++ String.fromInt (numValidators - 3)) ]
+                                        ]
+                                   ]
+
+                        else
+                            vals
+                   )
+
+        rewardStr =
+            String.fromFloat action.reward ++ " " ++ Eos.symbolToSymbolCodeString symbol
+
+        ( usages, usagesLeft ) =
+            ( String.fromInt action.usages, String.fromInt action.usagesLeft )
+
+        validationType : String
+        validationType =
+            action.verificationType
+                |> VerificationType.toString
+
+        isClosed =
+            pastDeadline
+                || (action.usages > 0 && action.usagesLeft == 0)
+
+        viewClaimButton =
+            button
+                [ class ("h-10 uppercase rounded-lg ml-1" ++ claimColors ++ claimSize)
+                , onClick
+                    (if isClosed then
+                        NoOp
+
+                     else
+                        (GotActionMsg << Action.OpenClaimConfirmation) action
+                    )
+                ]
+                [ if action.hasProofPhoto then
+                    span [ class "inline-block w-4 align-middle mr-2" ] [ Icons.camera "" ]
+
+                  else
+                    text ""
+                , span [ class "inline-block align-middle" ] [ text_ claimText ]
+                ]
+    in
+    if action.isCompleted then
+        text ""
+
+    else
+        div [ class "py-6 px-2" ]
+            [ div [ class "flex flex-col border-l-8 border-light-grey rounded-l-sm pl-2 sm:pl-6" ]
+                [ span [ class "text-text-grey text-sm sm:text-base" ]
+                    [ text action.description ]
+                , div [ class "flex flex-col sm:flex-row sm:items-center sm:justify-between" ]
+                    [ div [ class "text-xs mt-5 sm:w-1/3" ]
+                        [ case action.deadline of
+                            Just _ ->
+                                div []
+                                    [ span [ class "capitalize text-text-grey" ] [ text_ "community.actions.available_until" ]
+                                    , span [ class dateColor ] [ text deadlineStr ]
+                                    , span [] [ text_ "community.actions.or" ]
+                                    ]
+
+                            Nothing ->
+                                text ""
+                        , if action.usages > 0 then
+                            p [ class usagesColor ]
+                                [ text (tr "community.actions.usages" [ ( "usages", usages ), ( "usagesLeft", usagesLeft ) ]) ]
+
+                          else
+                            text ""
+                        ]
+                    , div [ class "sm:self-end" ]
+                        [ div [ class "mt-3 flex flex-row items-center" ]
+                            (if validationType == "CLAIMABLE" then
+                                validatorAvatars
+
+                             else
+                                [ span [ class "text-date-purple uppercase text-sm mr-1" ]
+                                    [ text_ "community.actions.automatic_analyzers" ]
+                                , img [ src "/icons/tooltip.svg" ] []
+                                ]
+                            )
+                        , div [ class "capitalize text-text-grey text-sm sm:text-right" ]
+                            [ text_ "community.actions.verifiers" ]
+                        ]
+                    ]
+                , div [ class "mt-5 flex flex-row items-baseline" ]
+                    [ div [ class ("text-green text-base mt-5 flex-grow-1" ++ rewardStrike) ]
+                        [ span [] [ text (t "community.actions.reward" ++ ": ") ]
+                        , span [ class "font-medium" ] [ text rewardStr ]
+                        ]
+                    , div [ class "hidden sm:flex sm:visible flex-row justify-end flex-grow-1" ]
+                        [ if validationType == "CLAIMABLE" then
+                            viewClaimButton
+
+                          else
+                            text ""
+                        ]
+                    ]
+                ]
+            , div [ class "flex flex-row mt-8 justify-between sm:hidden" ]
+                [ if validationType == "CLAIMABLE" then
+                    viewClaimButton
+
+                  else
+                    text ""
+                ]
+            ]
