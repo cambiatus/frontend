@@ -4,7 +4,6 @@ import Api
 import Avatar
 import Cambiatus.Enum.VerificationType as VerificationType exposing (VerificationType)
 import Cambiatus.Scalar exposing (DateTime)
-import Claim
 import Eos exposing (Symbol)
 import Eos.Account as Eos
 import File exposing (File)
@@ -19,6 +18,7 @@ import Page
 import Profile
 import Session.LoggedIn as LoggedIn exposing (External(..))
 import Session.Shared exposing (Translators)
+import Sha256 exposing (sha256)
 import Strftime
 import Task
 import Time exposing (Posix, posixToMillis)
@@ -69,6 +69,15 @@ type alias Action =
     , hasProofCode : Bool
     , photoProofInstructions : Maybe String
     , position : Maybe Int
+    }
+
+
+type alias ClaimedAction =
+    { actionId : Int
+    , maker : Eos.Name
+    , proofPhoto : String
+    , proofCode : String
+    , proofTime : Int
     }
 
 
@@ -729,7 +738,7 @@ update ({ shared } as loggedIn) msg model =
                                         , proofCode = proofCode_
                                         , proofTime = proofTime
                                         }
-                                            |> Claim.encodeClaimAction
+                                            |> encodeClaimAction
                                   }
                                 ]
                         }
@@ -767,7 +776,7 @@ update ({ shared } as loggedIn) msg model =
                 ( Just (Proof proofPhoto (Just proofCode)), actionId ) ->
                     let
                         verificationCode =
-                            Claim.generateVerificationCode actionId uint64name proofCode.claimTimestamp
+                            generateVerificationCode actionId uint64name proofCode.claimTimestamp
 
                         newProofCode =
                             Just
@@ -910,3 +919,24 @@ msgToString msg =
 
         GotClaimActionResponse r ->
             [ "GotClaimActionResponse", UR.resultToString r ]
+
+
+encodeClaimAction : ClaimedAction -> Encode.Value
+encodeClaimAction c =
+    Encode.object
+        [ ( "action_id", Encode.int c.actionId )
+        , ( "maker", Eos.encodeName c.maker )
+        , ( "proof_photo", Encode.string c.proofPhoto )
+        , ( "proof_code", Encode.string c.proofCode )
+        , ( "proof_time", Encode.int c.proofTime )
+        ]
+
+
+generateVerificationCode : Int -> String -> Int -> String
+generateVerificationCode actionId makerAccountUint64 proofTimeSeconds =
+    (String.fromInt actionId
+        ++ makerAccountUint64
+        ++ String.fromInt proofTimeSeconds
+    )
+        |> sha256
+        |> String.slice 0 8

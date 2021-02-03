@@ -6,9 +6,7 @@ module Claim exposing
     , Msg(..)
     , Paginated
     , claimPaginatedSelectionSet
-    , encodeClaimAction
     , encodeVerification
-    , generateVerificationCode
     , isValidated
     , isValidator
     , isVotable
@@ -45,7 +43,6 @@ import Profile
 import Route exposing (Route)
 import Session.LoggedIn as LoggedIn
 import Session.Shared exposing (Translators)
-import Sha256 exposing (sha256)
 import Strftime
 import Time
 import Utils
@@ -107,26 +104,6 @@ type alias Action =
 -- Claim Action
 
 
-type alias ClaimAction =
-    { actionId : Int
-    , maker : Eos.Name
-    , proofPhoto : String
-    , proofCode : String
-    , proofTime : Int
-    }
-
-
-encodeClaimAction : ClaimAction -> Encode.Value
-encodeClaimAction c =
-    Encode.object
-        [ ( "action_id", Encode.int c.actionId )
-        , ( "maker", Eos.encodeName c.maker )
-        , ( "proof_photo", Encode.string c.proofPhoto )
-        , ( "proof_code", Encode.string c.proofCode )
-        , ( "proof_time", Encode.int c.proofTime )
-        ]
-
-
 isValidated : Model -> Eos.Name -> Bool
 isValidated claim user =
     claim.status /= Pending || List.any (\c -> c.validator.account == user) claim.checks
@@ -167,16 +144,6 @@ encodeVerification claimId validator vote =
         , ( "verifier", encodedVerifier )
         , ( "vote", encodedVote )
         ]
-
-
-generateVerificationCode : Int -> String -> Int -> String
-generateVerificationCode actionId makerAccountUint64 proofTimeSeconds =
-    (String.fromInt actionId
-        ++ makerAccountUint64
-        ++ String.fromInt proofTimeSeconds
-    )
-        |> sha256
-        |> String.slice 0 8
 
 
 
