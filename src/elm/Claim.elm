@@ -19,11 +19,11 @@ module Claim exposing
     , viewVoteClaimModal
     )
 
+import Action exposing (Action)
 import Api.Relay exposing (Edge, PageConnection)
 import Cambiatus.Enum.ClaimStatus as ClaimStatus
 import Cambiatus.Enum.VerificationType exposing (VerificationType(..))
 import Cambiatus.Object
-import Cambiatus.Object.Action as Action
 import Cambiatus.Object.Check as Check
 import Cambiatus.Object.Claim as Claim
 import Cambiatus.Object.ClaimConnection
@@ -84,23 +84,22 @@ type alias Check =
     }
 
 
-type alias Action =
-    { id : Int
-    , description : String
-    , reward : Float
-    , verifierReward : Float
-    , validators : List Profile.Minimal
-    , verifications : Int
-    , verificationType : VerificationType
-    , objective : Objective
-    , createdAt : DateTime
-    , hasProofPhoto : Bool
-    , hasProofCode : Bool
-    , instructions : Maybe String
-    }
 
-
-
+--type alias ActionFromClaimModule =
+--    { id : Int
+--    , description : String
+--    , reward : Float
+--    , verifierReward : Float
+--    , validators : List Profile.Minimal
+--    , verifications : Int
+--    , verificationType : VerificationType
+--    , objective : Objective
+--    , createdAt : DateTime
+--    , hasProofPhoto : Bool
+--    , hasProofCode : Bool
+--    , instructions : Maybe String
+--    }
+--
 -- Claim Action
 
 
@@ -174,7 +173,7 @@ selectionSet =
         |> with Claim.id
         |> with (SelectionSet.map claimStatusMap Claim.status)
         |> with (Claim.claimer Profile.minimalSelectionSet)
-        |> with (Claim.action actionSelectionSet)
+        |> with (Claim.action Action.selectionSet)
         |> with (Claim.checks (\_ -> { input = Absent }) checkSelectionSet)
         |> with Claim.createdAt
         |> with (SelectionSet.map emptyStringToNothing Claim.proofPhoto)
@@ -207,21 +206,22 @@ claimStatusMap v =
             Pending
 
 
-actionSelectionSet : SelectionSet Action Cambiatus.Object.Action
-actionSelectionSet =
-    SelectionSet.succeed Action
-        |> with Action.id
-        |> with Action.description
-        |> with Action.reward
-        |> with Action.verifierReward
-        |> with (Action.validators Profile.minimalSelectionSet)
-        |> with Action.verifications
-        |> with Action.verificationType
-        |> with (Action.objective Community.objectiveSelectionSet)
-        |> with Action.createdAt
-        |> with (SelectionSet.map (Maybe.withDefault False) Action.hasProofPhoto)
-        |> with (SelectionSet.map (Maybe.withDefault False) Action.hasProofCode)
-        |> with Action.photoProofInstructions
+
+--actionSelectionSetClaim : SelectionSet ActionFromClaimModule Cambiatus.Object.Action
+--actionSelectionSetClaim =
+--    SelectionSet.succeed ActionFromClaimModule
+--        |> with ActionObject.id
+--        |> with ActionObject.description
+--        |> with ActionObject.reward
+--        |> with ActionObject.verifierReward
+--        |> with (ActionObject.validators Profile.minimalSelectionSet)
+--        |> with ActionObject.verifications
+--        |> with ActionObject.verificationType
+--        |> with (ActionObject.objective Community.objectiveSelectionSet)
+--        |> with ActionObject.createdAt
+--        |> with (SelectionSet.map (Maybe.withDefault False) ActionObject.hasProofPhoto)
+--        |> with (SelectionSet.map (Maybe.withDefault False) ActionObject.hasProofCode)
+--        |> with ActionObject.photoProofInstructions
 
 
 checkSelectionSet : SelectionSet Check Cambiatus.Object.Check
@@ -336,7 +336,8 @@ viewClaimCard { selectedCommunity, shared, accountName } claim =
 
         claimRoute =
             Route.Claim
-                claim.action.objective.id
+                --claim.action.objectiveId
+                666
                 claim.action.id
                 claim.id
     in

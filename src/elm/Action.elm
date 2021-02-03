@@ -1,12 +1,29 @@
-module Action exposing (Action, Model, Msg(..), UpdateResultAction, init, jsAddressToMsg, msgToString, subscriptions, update, viewAction, viewClaimConfirmation, viewClaimWithProofs)
+module Action exposing
+    ( Action
+    , Model
+    , Msg(..)
+    , UpdateResultAction
+    , init
+    , jsAddressToMsg
+    , msgToString
+    , selectionSet
+    , subscriptions
+    , update
+    , viewAction
+    , viewClaimConfirmation
+    , viewClaimWithProofs
+    )
 
 import Api
 import Avatar
 import Cambiatus.Enum.VerificationType as VerificationType exposing (VerificationType)
+import Cambiatus.Object
+import Cambiatus.Object.Action as ActionObject
 import Cambiatus.Scalar exposing (DateTime)
 import Eos exposing (Symbol)
 import Eos.Account as Eos
 import File exposing (File)
+import Graphql.SelectionSet as SelectionSet exposing (SelectionSet, with)
 import Html exposing (Html, button, div, img, input, label, p, span, text)
 import Html.Attributes exposing (accept, class, classList, disabled, multiple, src, style, type_)
 import Html.Events exposing (onClick)
@@ -56,7 +73,7 @@ type alias Action =
     { id : Int
     , description : String
     , reward : Float
-    , verificationReward : Float
+    , verifierReward : Float
     , creator : Eos.Name
     , validators : List Profile.Minimal
     , usages : Int
@@ -940,3 +957,25 @@ generateVerificationCode actionId makerAccountUint64 proofTimeSeconds =
     )
         |> sha256
         |> String.slice 0 8
+
+
+selectionSet : SelectionSet Action Cambiatus.Object.Action
+selectionSet =
+    SelectionSet.succeed Action
+        |> with ActionObject.id
+        |> with ActionObject.description
+        |> with ActionObject.reward
+        |> with ActionObject.verifierReward
+        |> with (Eos.nameSelectionSet ActionObject.creatorId)
+        |> with (ActionObject.validators Profile.minimalSelectionSet)
+        |> with ActionObject.usages
+        |> with ActionObject.usagesLeft
+        |> with ActionObject.deadline
+        |> with ActionObject.verificationType
+        --|> with (SelectionSet.map ActionObject.objective actionObjectiveIdSelectionSet)
+        |> with ActionObject.verifications
+        |> with ActionObject.isCompleted
+        |> with (SelectionSet.map (Maybe.withDefault False) ActionObject.hasProofPhoto)
+        |> with (SelectionSet.map (Maybe.withDefault False) ActionObject.hasProofCode)
+        |> with ActionObject.photoProofInstructions
+        |> with ActionObject.position

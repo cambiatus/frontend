@@ -220,7 +220,7 @@ editForm form action =
 
                     verifierRewardValidator =
                         defaultVerificationReward
-                            |> updateInput (String.fromFloat action.verificationReward)
+                            |> updateInput (String.fromFloat action.verifierReward)
 
                     photoProof =
                         case ( action.hasProofPhoto, action.hasProofCode ) of

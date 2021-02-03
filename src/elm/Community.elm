@@ -1,5 +1,5 @@
 module Community exposing
-    ( Action
+    ( ActionFromCommunityModule
     , ActionVerification
     , ActionVerificationsResponse
     , Balance
@@ -283,7 +283,7 @@ type alias Objective =
     { id : Int
     , description : String
     , creator : Eos.Name
-    , actions : List Action
+    , actions : List ActionFromCommunityModule
     , community : Metadata
     , isCompleted : Bool
     }
@@ -336,11 +336,11 @@ encodeUpdateObjectiveAction c =
 -- ACTION
 
 
-type alias Action =
+type alias ActionFromCommunityModule =
     { id : Int
     , description : String
     , reward : Float
-    , verificationReward : Float
+    , verifierReward : Float
     , creator : Eos.Name
     , validators : List Profile.Minimal
     , usages : Int
@@ -356,9 +356,9 @@ type alias Action =
     }
 
 
-actionSelectionSet : SelectionSet Action Cambiatus.Object.Action
+actionSelectionSet : SelectionSet ActionFromCommunityModule Cambiatus.Object.Action
 actionSelectionSet =
-    SelectionSet.succeed Action
+    SelectionSet.succeed ActionFromCommunityModule
         |> with ActionObject.id
         |> with ActionObject.description
         |> with ActionObject.reward
@@ -369,6 +369,7 @@ actionSelectionSet =
         |> with ActionObject.usagesLeft
         |> with ActionObject.deadline
         |> with ActionObject.verificationType
+        --|> with (SelectionSet.map (\s -> s.id) (ActionObject.objective objectiveSelectionSet))
         |> with ActionObject.verifications
         |> with ActionObject.isCompleted
         |> with (SelectionSet.map (Maybe.withDefault False) ActionObject.hasProofPhoto)

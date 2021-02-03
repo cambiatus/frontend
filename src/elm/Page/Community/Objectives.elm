@@ -256,7 +256,7 @@ viewAction ({ shared } as loggedIn) model objectiveId action =
                         [ p [ class "input-label" ]
                             [ text_ "community.actions.validation_reward" ]
                         , p [ class "uppercase text-body text-white" ]
-                            [ String.fromFloat action.verificationReward
+                            [ String.fromFloat action.verifierReward
                                 ++ " "
                                 ++ Eos.symbolToString model.communityId
                                 |> text
