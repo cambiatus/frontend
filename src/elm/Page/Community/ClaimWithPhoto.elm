@@ -25,6 +25,7 @@ import Icons
 import Json.Decode as Decode
 import Json.Encode as Encode exposing (Value)
 import Page
+import Route
 import Session.LoggedIn as LoggedIn exposing (External(..))
 import Session.Shared exposing (Translators)
 import Sha256 exposing (sha256)
@@ -145,15 +146,35 @@ viewPhotoUploader { t } proofPhotoStatus =
 
 
 view : LoggedIn.Model -> Model -> { title : String, content : Html Msg }
-view loggedIn model =
-    { title = "Claim with photo"
-    , content =
-        case model.action of
-            Just a ->
-                viewClaimWithProofs model.proof loggedIn.shared.translators a
+view ({ shared } as loggedIn) model =
+    let
+        { t } =
+            shared.translators
 
-            Nothing ->
-                text "this is claim with photo page"
+        content =
+            case model.status of
+                Loading ->
+                    Page.fullPageLoading shared
+
+                Loaded community ->
+                    div [ class "bg-white" ]
+                        [ Page.viewHeader loggedIn (t "community.actions.title") (Route.Community community.symbol)
+                        , case model.action of
+                            Just a ->
+                                viewClaimWithProofs model.proof loggedIn.shared.translators a
+
+                            Nothing ->
+                                text "this is claim with photo page"
+                        ]
+
+                LoadFailed err ->
+                    Page.fullPageGraphQLError (t "error.invalidSymbol") err
+
+                NotFound ->
+                    Page.fullPageNotFound (t "community.actions.form.not_found") ""
+    in
+    { title = "Claim with photo"
+    , content = content
     }
 
 

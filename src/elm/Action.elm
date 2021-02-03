@@ -3,6 +3,7 @@ module Action exposing
     , ClaimConfirmationModalStatus(..)
     , Model
     , Msg(..)
+    , claimActionPort
     , encodeClaimAction
     , init
     , jsAddressToMsg
@@ -16,14 +17,15 @@ import Cambiatus.Enum.VerificationType exposing (VerificationType)
 import Cambiatus.Object
 import Cambiatus.Object.Action as ActionObject
 import Cambiatus.Scalar exposing (DateTime)
-import Eos
-import Eos.Account as Eos
+import Eos exposing (Symbol)
+import Eos.Account as Eos exposing (Name)
 import Graphql.SelectionSet as SelectionSet exposing (SelectionSet, with)
 import Html exposing (Html, button, div, text)
 import Html.Attributes exposing (class, classList, disabled)
 import Html.Events exposing (onClick)
 import Json.Decode as Decode
 import Json.Encode as Encode exposing (Value)
+import Ports
 import Profile
 import Session.LoggedIn as LoggedIn exposing (External(..))
 import Session.Shared exposing (Translators)
@@ -158,8 +160,17 @@ viewClaimConfirmation { t } claimConfirmationModalStatus =
 -- UPDATE
 
 
+type alias ActionUpdate =
+    { isAuthorized : Bool
+    , accountName : Name
+    , selectedCommunity : Symbol
+    , contractsCommunity : String --Shared.contracts.community
+    }
+
+
 update : LoggedIn.Model -> Msg -> Model -> UR.UpdateResult Model Msg (External Msg)
 update ({ shared } as loggedIn) msg model =
+    -- TODO: Don't apply ports here, don't use loggedIn. It must be simple, local component without any global state
     let
         { t } =
             shared.translators
@@ -182,27 +193,11 @@ update ({ shared } as loggedIn) msg model =
                 newModel
                     |> UR.init
                     |> UR.addPort
-                        { responseAddress = ClaimAction action
-                        , responseData = Encode.null
-                        , data =
-                            Eos.encodeTransaction
-                                [ { accountName = shared.contracts.community
-                                  , name = "claimaction"
-                                  , authorization =
-                                        { actor = loggedIn.accountName
-                                        , permissionName = Eos.samplePermission
-                                        }
-                                  , data =
-                                        { actionId = action.id
-                                        , maker = loggedIn.accountName
-                                        , proofPhoto = ""
-                                        , proofCode = ""
-                                        , proofTime = 0
-                                        }
-                                            |> encodeClaimAction
-                                  }
-                                ]
-                        }
+                        (claimActionPort
+                            action
+                            shared.contracts.community
+                            loggedIn.accountName
+                        )
 
             else
                 newModel
@@ -230,6 +225,31 @@ update ({ shared } as loggedIn) msg model =
 
         NoOp ->
             model |> UR.init
+
+
+claimActionPort : Action -> String -> Name -> Ports.JavascriptOutModel Msg
+claimActionPort action contractsCommunity accountName =
+    { responseAddress = ClaimAction action
+    , responseData = Encode.null
+    , data =
+        Eos.encodeTransaction
+            [ { accountName = contractsCommunity
+              , name = "claimaction"
+              , authorization =
+                    { actor = accountName
+                    , permissionName = Eos.samplePermission
+                    }
+              , data =
+                    { actionId = action.id
+                    , maker = accountName
+                    , proofPhoto = ""
+                    , proofCode = ""
+                    , proofTime = 0
+                    }
+                        |> encodeClaimAction
+              }
+            ]
+    }
 
 
 jsAddressToMsg : List String -> Value -> Maybe Msg

@@ -411,7 +411,10 @@ viewActions symbol ({ actions, offers } as results) =
                             , text " "
                             , text <| Eos.symbolToSymbolCodeString symbol
                             ]
-                        , button [ class "self-end button button-primary" ] [ text "Claim" ]
+                        , button
+                            [ class "self-end button button-primary"
+                            ]
+                            [ text "Claim" ]
                         ]
                     ]
                 ]
