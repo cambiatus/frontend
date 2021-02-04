@@ -52,7 +52,7 @@ initModel _ _ =
     { date = Nothing
     , pageStatus = Loading
     , openObjective = Nothing
-    , claimingAction = Nothing
+    , actionToClaim = Nothing
     }
 
 
@@ -71,7 +71,7 @@ subscriptions _ =
 
 type alias Model =
     { date : Maybe Posix
-    , claimingAction : Maybe Action.Model
+    , actionToClaim : Maybe Action.Model
     , pageStatus : PageStatus
     , openObjective : Maybe Int
     }
@@ -138,7 +138,7 @@ view loggedIn model =
                             [ if community.hasObjectives then
                                 div [ class "px-4 pb-4" ]
                                     [ Html.map GotActionMsg
-                                        (case model.claimingAction of
+                                        (case model.actionToClaim of
                                             Just ca ->
                                                 Action.viewClaimConfirmation
                                                     loggedIn.shared.translators
@@ -342,24 +342,24 @@ update msg model ({ shared } as loggedIn) =
                 updateClaimingAction : Action.Model -> Model
                 updateClaimingAction actionModel =
                     { model
-                        | claimingAction =
+                        | actionToClaim =
                             Action.update shared.translators actionMsg actionModel
                                 |> Just
                     }
             in
             case actionMsg of
-                Action.OpenClaimConfirmation action ->
+                Action.ClaimConfirmationOpen action ->
                     updateClaimingAction (Action.init action)
                         |> UR.init
 
-                Action.ClaimAction ->
-                    case model.claimingAction of
+                Action.ActionClaimed ->
+                    case model.actionToClaim of
                         Just ca ->
                             let
                                 claimPort : JavascriptOutModel Msg
                                 claimPort =
                                     Action.claimActionPort
-                                        (GotActionMsg Action.ClaimAction)
+                                        (GotActionMsg Action.ActionClaimed)
                                         ca.action
                                         shared.contracts.community
                                         loggedIn.accountName
@@ -373,7 +373,7 @@ update msg model ({ shared } as loggedIn) =
                                 updateClaimingAction ca
                                     |> UR.init
                                     |> UR.addExt
-                                        (Just (GotActionMsg Action.ClaimAction)
+                                        (Just (GotActionMsg Action.ActionClaimed)
                                             |> RequiredAuthentication
                                         )
 
@@ -381,8 +381,8 @@ update msg model ({ shared } as loggedIn) =
                             model
                                 |> UR.init
 
-                Action.GotClaimActionResponse resp ->
-                    case ( model.claimingAction, resp ) of
+                Action.GotActionClaimedResponse resp ->
+                    case ( model.actionToClaim, resp ) of
                         ( Just ca, Ok _ ) ->
                             let
                                 message =
@@ -403,7 +403,7 @@ update msg model ({ shared } as loggedIn) =
                                 |> UR.init
 
                 _ ->
-                    case model.claimingAction of
+                    case model.actionToClaim of
                         Just ca ->
                             updateClaimingAction ca
                                 |> UR.init
@@ -598,7 +598,7 @@ viewAction translators canEdit symbol objId maybeDate action =
                         NoOp
 
                      else
-                        (GotActionMsg << Action.OpenClaimConfirmation) action
+                        (GotActionMsg << Action.ClaimConfirmationOpen) action
                     )
                 ]
                 [ if action.hasProofPhoto then

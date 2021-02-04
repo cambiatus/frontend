@@ -82,10 +82,10 @@ init action =
 
 type Msg
     = NoOp
-    | OpenClaimConfirmation Action
-    | CloseClaimConfirmation
-    | ClaimAction
-    | GotClaimActionResponse (Result Value String)
+    | ClaimConfirmationOpen Action
+    | ClaimConfirmationClosed
+    | ActionClaimed
+    | GotActionClaimedResponse (Result Value String)
 
 
 viewClaimConfirmation : Translators -> ClaimConfirmationModalStatus -> Html Msg
@@ -97,7 +97,7 @@ viewClaimConfirmation { t } claimConfirmationModalStatus =
         modalContent acceptMsg isInProgress =
             div []
                 [ Modal.initWith
-                    { closeMsg = CloseClaimConfirmation
+                    { closeMsg = ClaimConfirmationClosed
                     , isVisible = True
                     }
                     |> Modal.withHeader (t "claim.modal.title")
@@ -111,7 +111,7 @@ viewClaimConfirmation { t } claimConfirmationModalStatus =
                                     NoOp
 
                                  else
-                                    CloseClaimConfirmation
+                                    ClaimConfirmationClosed
                                 )
                             , disabled isInProgress
                             ]
@@ -144,7 +144,7 @@ viewClaimConfirmation { t } claimConfirmationModalStatus =
                         NoOp
 
                     else
-                        ClaimAction
+                        ActionClaimed
             in
             modalContent acceptMsg False
 
@@ -162,19 +162,19 @@ viewClaimConfirmation { t } claimConfirmationModalStatus =
 update : Translators -> Msg -> Model -> Model
 update { t } msg model =
     case msg of
-        OpenClaimConfirmation action ->
+        ClaimConfirmationOpen action ->
             { model | claimConfirmationModalStatus = Open action }
 
-        CloseClaimConfirmation ->
+        ClaimConfirmationClosed ->
             { model | claimConfirmationModalStatus = Closed }
 
-        ClaimAction ->
+        ActionClaimed ->
             { model | claimConfirmationModalStatus = InProgress }
 
-        GotClaimActionResponse (Ok _) ->
+        GotActionClaimedResponse (Ok _) ->
             { model | claimConfirmationModalStatus = Closed }
 
-        GotClaimActionResponse (Err _) ->
+        GotActionClaimedResponse (Err _) ->
             { model | claimConfirmationModalStatus = Closed }
 
         NoOp ->
@@ -217,7 +217,7 @@ jsAddressToMsg addr val =
                     ]
                 )
                 val
-                |> Result.map (Just << GotClaimActionResponse)
+                |> Result.map (Just << GotActionClaimedResponse)
                 |> Result.withDefault Nothing
 
         _ ->
@@ -230,16 +230,16 @@ msgToString msg =
         NoOp ->
             [ "NoOp" ]
 
-        OpenClaimConfirmation _ ->
+        ClaimConfirmationOpen _ ->
             [ "OpenClaimConfirmation" ]
 
-        CloseClaimConfirmation ->
+        ClaimConfirmationClosed ->
             [ "CloseClaimConfirmation" ]
 
-        ClaimAction ->
+        ActionClaimed ->
             [ "ClaimAction" ]
 
-        GotClaimActionResponse r ->
+        GotActionClaimedResponse r ->
             [ "GotClaimActionResponse", UR.resultToString r ]
 
 
