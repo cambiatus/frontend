@@ -11,7 +11,6 @@ module Action exposing
     , msgToString
     , selectionSet
     , update
-    , viewClaimButton
     , viewClaimConfirmation
     , viewSearchActions
     )
@@ -24,7 +23,7 @@ import Cambiatus.Scalar exposing (DateTime)
 import Eos exposing (Symbol)
 import Eos.Account as Eos exposing (Name)
 import Graphql.SelectionSet as SelectionSet exposing (SelectionSet, with)
-import Html exposing (Html, a, br, button, div, i, li, p, span, text, ul)
+import Html exposing (Html, br, button, div, i, li, p, span, text, ul)
 import Html.Attributes exposing (class, classList, disabled)
 import Html.Events exposing (onClick)
 import Icons
@@ -46,8 +45,8 @@ type ClaimConfirmationModalStatus
 
 type alias Action =
     { id : Int
-    , objectiveId : Int
     , description : String
+    , objective : Objective
     , reward : Float
     , verifierReward : Float
     , creator : Eos.Name
@@ -78,10 +77,6 @@ type alias Model =
     { claimConfirmationModalStatus : ClaimConfirmationModalStatus
     , action : Action
     }
-
-
-type alias ObjectiveId =
-    Int
 
 
 initClaimingActionModel : Action -> Model
@@ -159,9 +154,7 @@ viewClaimConfirmation symbol { t } claimConfirmationModalStatus =
             let
                 acceptMsg =
                     if action.hasProofPhoto then
-                        --OpenProofSection action
-                        -- TODO: Go to the Claim with Photo page
-                        ActionWithPhotoLinkClicked (getClaimWithPhotoRoute symbol action.objectiveId action.id)
+                        ActionWithPhotoLinkClicked (getClaimWithPhotoRoute symbol action.objective.id action.id)
 
                     else
                         ActionClaimed
@@ -283,6 +276,7 @@ encodeClaimAction c =
 
 type alias Objective =
     { id : Int
+    , description : String
     }
 
 
@@ -290,14 +284,15 @@ objectiveSelectionSet : SelectionSet Objective Cambiatus.Object.Objective
 objectiveSelectionSet =
     SelectionSet.succeed Objective
         |> with Cambiatus.Object.Objective.id
+        |> with Cambiatus.Object.Objective.description
 
 
 selectionSet : SelectionSet Action Cambiatus.Object.Action
 selectionSet =
     SelectionSet.succeed Action
         |> with ActionObject.id
-        |> with (SelectionSet.map (\s -> s.id) (ActionObject.objective objectiveSelectionSet))
         |> with ActionObject.description
+        |> with (SelectionSet.map (\o -> { id = o.id, description = o.description }) (ActionObject.objective objectiveSelectionSet))
         |> with ActionObject.reward
         |> with ActionObject.verifierReward
         |> with (Eos.nameSelectionSet ActionObject.creatorId)
@@ -314,13 +309,12 @@ selectionSet =
         |> with ActionObject.position
 
 
-viewClaimButton : Action -> Eos.Symbol -> Html Msg
-viewClaimButton action symbol =
+viewClaimButton : Action -> Html Msg
+viewClaimButton action =
     -- TODO: Handle action.deadline and action.isCompleted.
     if action.hasProofPhoto then
-        a
-            [ --Route.href (getClaimWithPhotoRoute symbol action.objectiveId action.id)
-              onClick (ActionWithPhotoLinkClicked (getClaimWithPhotoRoute symbol action.objectiveId action.id))
+        button
+            [ onClick (ClaimConfirmationOpen action)
             , class "self-end button button-primary"
             ]
             [ span [ class "inline-block w-4 align-middle mr-2" ] [ Icons.camera "" ]
@@ -352,7 +346,7 @@ viewSearchActions symbol actions =
                             , text " "
                             , text <| Eos.symbolToSymbolCodeString symbol
                             ]
-                        , viewClaimButton action symbol
+                        , viewClaimButton action
                         ]
                     ]
                 ]

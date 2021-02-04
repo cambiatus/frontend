@@ -22,7 +22,6 @@ module Claim exposing
 import Action exposing (Action)
 import Api.Relay exposing (Edge, PageConnection)
 import Cambiatus.Enum.ClaimStatus as ClaimStatus
-import Cambiatus.Enum.VerificationType exposing (VerificationType(..))
 import Cambiatus.Object
 import Cambiatus.Object.Check as Check
 import Cambiatus.Object.Claim as Claim
@@ -81,25 +80,6 @@ type alias Check =
     { isApproved : Bool
     , validator : Profile.Minimal
     }
-
-
-
---type alias ActionFromClaimModule =
---    { id : Int
---    , description : String
---    , reward : Float
---    , verifierReward : Float
---    , validators : List Profile.Minimal
---    , verifications : Int
---    , verificationType : VerificationType
---    , objective : Objective
---    , createdAt : DateTime
---    , hasProofPhoto : Bool
---    , hasProofCode : Bool
---    , instructions : Maybe String
---    }
---
--- Claim Action
 
 
 isValidated : Model -> Eos.Name -> Bool
@@ -203,24 +183,6 @@ claimStatusMap v =
 
         ClaimStatus.Pending ->
             Pending
-
-
-
---actionSelectionSetClaim : SelectionSet ActionFromClaimModule Cambiatus.Object.Action
---actionSelectionSetClaim =
---    SelectionSet.succeed ActionFromClaimModule
---        |> with ActionObject.id
---        |> with ActionObject.description
---        |> with ActionObject.reward
---        |> with ActionObject.verifierReward
---        |> with (ActionObject.validators Profile.minimalSelectionSet)
---        |> with ActionObject.verifications
---        |> with ActionObject.verificationType
---        |> with (ActionObject.objective Community.objectiveSelectionSet)
---        |> with ActionObject.createdAt
---        |> with (SelectionSet.map (Maybe.withDefault False) ActionObject.hasProofPhoto)
---        |> with (SelectionSet.map (Maybe.withDefault False) ActionObject.hasProofCode)
---        |> with ActionObject.photoProofInstructions
 
 
 checkSelectionSet : SelectionSet Check Cambiatus.Object.Check

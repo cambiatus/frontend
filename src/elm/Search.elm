@@ -26,7 +26,7 @@ import Eos exposing (Symbol)
 import Graphql.Http
 import Graphql.OptionalArgument exposing (OptionalArgument(..))
 import Graphql.SelectionSet as SelectionSet exposing (SelectionSet, with)
-import Html exposing (Html, br, button, div, h3, i, img, input, li, p, span, strong, text, ul)
+import Html exposing (Html, br, button, div, h3, img, input, li, p, span, strong, text, ul)
 import Html.Attributes exposing (class, placeholder, src, type_, value)
 import Html.Events exposing (onClick, onFocus, onInput, onSubmit)
 import Icons
@@ -48,7 +48,6 @@ type alias Model =
     , queryText : String
     , selectedCommunity : Symbol
     , found : Maybe SearchResult
-    , actionToClaim : Maybe Action.Model
     }
 
 
@@ -59,7 +58,6 @@ init selectedCommunity =
     , queryText = ""
     , selectedCommunity = selectedCommunity
     , found = Nothing
-    , actionToClaim = Nothing
     }
 
 
@@ -136,7 +134,6 @@ type Msg
     | QuerySubmitted
     | TabActivated FoundItemsKind
     | FoundItemClicked Route
-    | GotActionMsg Action.Msg
 
 
 closeSearch : Shared -> Model -> ( Model, Cmd Msg )
@@ -147,32 +144,6 @@ closeSearch shared model =
 update : Shared -> Model -> Msg -> ( Model, Cmd Msg )
 update shared model msg =
     case msg of
-        GotActionMsg actionMsg ->
-            let
-                updateClaimingAction : Action.Model -> Model
-                updateClaimingAction actionModel =
-                    { model
-                        | actionToClaim =
-                            Action.update shared.translators actionMsg actionModel
-                                |> Just
-                    }
-            in
-            case actionMsg of
-                Action.ClaimConfirmationOpen action ->
-                    let
-                        _ =
-                            Debug.log "open" action
-                    in
-                    ( updateClaimingAction (Action.initClaimingActionModel action)
-                    , Cmd.none
-                    )
-
-                Action.ActionWithPhotoLinkClicked _ ->
-                    ( { model | state = Inactive }, Cmd.none )
-
-                _ ->
-                    ( model, Cmd.none )
-
         FoundItemClicked route ->
             let
                 -- Make the search dropdown inactive before opening the found item's URL.

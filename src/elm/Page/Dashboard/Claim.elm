@@ -293,7 +293,7 @@ viewDetails { shared, selectedCommunity } model claim =
                 [ text_ "claim.objective" ]
             , p
                 [ class "pt-2 text-body" ]
-                [ text "OBJECTIVE DESCIPTION1!!!!" --claim.action.objective.description
+                [ text claim.action.objective.description
                 ]
             ]
         , div [ class "mb-8" ]

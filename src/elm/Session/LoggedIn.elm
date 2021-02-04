@@ -312,11 +312,11 @@ viewHelper thisMsg page profile_ ({ shared } as model) content =
             [ div [ class "container mx-auto" ]
                 [ viewHeader model profile_ |> Html.map thisMsg
                 , case model.actionToClaim of
-                    Just ca ->
+                    Just a ->
                         Action.viewClaimConfirmation
                             model.selectedCommunity
                             shared.translators
-                            ca.claimConfirmationModalStatus
+                            a.claimConfirmationModalStatus
                             |> Html.map (thisMsg << GotActionMsg)
 
                     Nothing ->
@@ -875,7 +875,7 @@ update msg model =
                     case model.actionToClaim of
                         Just ca ->
                             updateClaimingAction ca
-                                |> UR.init
+                                |> update SearchClosed
                                 |> UR.addCmd (Route.replaceUrl model.shared.navKey route)
 
                         Nothing ->

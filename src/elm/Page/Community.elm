@@ -22,7 +22,6 @@ import Html.Events exposing (onClick)
 import Icons
 import Json.Encode exposing (Value)
 import Page
-import Ports exposing (JavascriptOutModel)
 import Route
 import Session.LoggedIn as LoggedIn exposing (External(..), FeedbackStatus(..))
 import Session.Shared exposing (Translators)
@@ -51,7 +50,7 @@ initModel : LoggedIn.Model -> Symbol -> Model
 initModel _ _ =
     { date = Nothing
     , pageStatus = Loading
-    , openObjective = Nothing
+    , openObjectiveId = Nothing
     }
 
 
@@ -71,7 +70,7 @@ subscriptions _ =
 type alias Model =
     { date : Maybe Posix
     , pageStatus : PageStatus
-    , openObjective : Maybe Int
+    , openObjectiveId : Maybe Int
     }
 
 
@@ -219,7 +218,7 @@ viewObjective loggedIn model metadata index objective =
 
         isOpen : Bool
         isOpen =
-            case model.openObjective of
+            case model.openObjectiveId of
                 Just obj ->
                     obj == index
 
@@ -327,7 +326,7 @@ update msg model ({ shared } as loggedIn) =
         GotCommunityActionMsg actionMsg ->
             let
                 loggedInWithUpdatedClaimingAction =
-                    case loggedIn.searchModel.actionToClaim of
+                    case loggedIn.actionToClaim of
                         Just a ->
                             { loggedIn
                                 | actionToClaim =
@@ -367,11 +366,11 @@ update msg model ({ shared } as loggedIn) =
                 |> UR.logGraphqlError msg err
 
         ClickedOpenObjective index ->
-            { model | openObjective = Just index }
+            { model | openObjectiveId = Just index }
                 |> UR.init
 
         ClickedCloseObjective ->
-            { model | openObjective = Nothing }
+            { model | openObjectiveId = Nothing }
                 |> UR.init
 
 
