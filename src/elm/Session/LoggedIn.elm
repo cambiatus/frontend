@@ -27,6 +27,7 @@ module Session.LoggedIn exposing
     , viewFooter
     )
 
+import Action
 import Api.Graphql
 import Auth
 import Avatar
@@ -47,16 +48,16 @@ import Html exposing (Html, a, button, div, footer, img, nav, p, span, text)
 import Html.Attributes exposing (class, classList, src, style, type_)
 import Html.Events exposing (onClick, onMouseEnter)
 import Http
-import I18Next exposing (Delims(..), Translations, t)
+import I18Next exposing (Delims(..), Translations)
 import Icons
 import Json.Decode as Decode exposing (Value)
 import Json.Encode as Encode exposing (Value)
 import List.Extra as List
 import Notification exposing (Notification)
-import Ports
+import Ports exposing (JavascriptOutModel)
 import Profile exposing (Model)
 import Route exposing (Route)
-import Search
+import Search exposing (FoundItemsKind(..), State(..))
 import Session.Shared as Shared exposing (Shared)
 import Shop
 import Task
@@ -147,6 +148,7 @@ type alias Model =
     , hasObjectives : FeatureStatus
     , hasKyc : FeatureStatus
     , searchModel : Search.Model
+    , actionToClaim : Maybe Action.Model
     }
 
 
@@ -175,6 +177,7 @@ initModel shared authModel accountName selectedCommunity =
     , hasObjectives = FeatureLoading
     , hasKyc = FeatureLoading
     , searchModel = Search.init selectedCommunity
+    , actionToClaim = Nothing
     }
 
 
@@ -308,6 +311,15 @@ viewHelper thisMsg page profile_ ({ shared } as model) content =
         ([ div [ class "bg-white" ]
             [ div [ class "container mx-auto" ]
                 [ viewHeader model profile_ |> Html.map thisMsg
+                , case model.actionToClaim of
+                    Just ca ->
+                        Action.viewClaimConfirmation
+                            shared.translators
+                            ca.claimConfirmationModalStatus
+                            |> Html.map (thisMsg << GotActionMsg)
+
+                    Nothing ->
+                        text ""
                 , -- Search form is separated from search results because it needs to
                   -- be between community selector and user dropdown on Desktops.
                   Search.viewForm model.searchModel
@@ -321,8 +333,46 @@ viewHelper thisMsg page profile_ ({ shared } as model) content =
             ]
          ]
             ++ (if Search.isActive model.searchModel then
-                    [ Search.viewBody model.searchModel
-                        |> Html.map (GotSearchMsg >> thisMsg)
+                    [ div [ class "container mx-auto flex flex-grow" ]
+                        [ case model.searchModel.found of
+                            Just ({ actions, offers } as results) ->
+                                case ( List.length actions, List.length offers ) of
+                                    ( 0, 0 ) ->
+                                        Search.viewEmptyResults model.searchModel.queryText
+                                            |> Html.map (GotSearchMsg >> thisMsg)
+
+                                    _ ->
+                                        let
+                                            wrapWithClass c inner =
+                                                div [ class ("flex-grow " ++ c) ]
+                                                    [ inner ]
+                                        in
+                                        case model.searchModel.state of
+                                            ResultsShowed Offers ->
+                                                div []
+                                                    [ Search.viewTabs results Offers
+                                                    , Search.viewOffers model.selectedCommunity results.offers
+                                                        |> wrapWithClass "bg-gray-100"
+                                                    ]
+                                                    |> Html.map (GotSearchMsg >> thisMsg)
+
+                                            ResultsShowed Actions ->
+                                                div []
+                                                    [ Search.viewTabs results Actions
+                                                        |> Html.map (GotSearchMsg >> thisMsg)
+                                                    , Action.viewSearchActions model.selectedCommunity results.actions
+                                                        |> wrapWithClass "bg-gray-100"
+                                                        |> Html.map (GotActionMsg >> thisMsg)
+                                                    ]
+
+                                            _ ->
+                                                Search.viewResultsOverview results
+                                                    |> wrapWithClass "bg-white p-4"
+                                                    |> Html.map (GotSearchMsg >> thisMsg)
+
+                            Nothing ->
+                                Search.viewRecentQueries model.searchModel |> Html.map (GotSearchMsg >> thisMsg)
+                        ]
                     ]
 
                 else
@@ -723,7 +773,7 @@ type ExternalMsg
 
 
 type Msg
-    = Ignored
+    = NoOp
     | CompletedLoadTranslation String (Result Http.Error Translations)
     | ClickedTryAgainTranslation
     | CompletedLoadProfile (Result (Graphql.Http.Error (Maybe Profile.Model)) (Maybe Profile.Model))
@@ -744,6 +794,7 @@ type Msg
     | SelectCommunity Symbol (Cmd Msg)
     | HideFeedbackLocal
     | GotSearchMsg Search.Msg
+    | GotActionMsg Action.Msg
     | SearchClosed
 
 
@@ -753,14 +804,17 @@ update msg model =
         shared =
             model.shared
 
+        { t, tr } =
+            shared.translators
+
         focusMainContent b alternative =
             if b then
                 Dom.focus "main-content"
-                    |> Task.attempt (\_ -> Ignored)
+                    |> Task.attempt (\_ -> NoOp)
 
             else
                 Dom.focus alternative
-                    |> Task.attempt (\_ -> Ignored)
+                    |> Task.attempt (\_ -> NoOp)
 
         closeAllModals =
             { model
@@ -771,8 +825,84 @@ update msg model =
             }
     in
     case msg of
-        Ignored ->
+        NoOp ->
             UR.init model
+
+        GotActionMsg actionMsg ->
+            let
+                _ =
+                    Debug.log "actionMsg from logged in" actionMsg
+
+                updateClaimingAction : Action.Model -> Model
+                updateClaimingAction actionModel =
+                    { model
+                        | actionToClaim =
+                            Action.update shared.translators actionMsg actionModel
+                                |> Just
+                    }
+            in
+            case actionMsg of
+                Action.ClaimConfirmationOpen action ->
+                    updateClaimingAction (Action.initModel action)
+                        |> UR.init
+
+                Action.ActionClaimed ->
+                    case model.actionToClaim of
+                        Just ca ->
+                            let
+                                claimPort : JavascriptOutModel Msg
+                                claimPort =
+                                    Action.claimActionPort
+                                        (GotActionMsg Action.ActionClaimed)
+                                        ca.action
+                                        shared.contracts.community
+                                        model.accountName
+                            in
+                            if isAuth model then
+                                updateClaimingAction ca
+                                    |> UR.init
+                                    |> UR.addPort claimPort
+
+                            else
+                                updateClaimingAction ca
+                                    |> UR.init
+
+                        -- TODO: !!! Maybe return UpdateResult from Action.view?
+                        --|> UR.addExt (RequiredAuthentication (Just (GotActionMsg Action.ActionClaimed)))
+                        Nothing ->
+                            model
+                                |> UR.init
+
+                Action.GotActionClaimedResponse resp ->
+                    case ( model.actionToClaim, resp ) of
+                        ( Just ca, Ok _ ) ->
+                            let
+                                message =
+                                    tr "dashboard.check_claim.success"
+                                        [ ( "symbolCode", Eos.symbolToSymbolCodeString model.selectedCommunity ) ]
+                            in
+                            updateClaimingAction ca
+                                |> (\m -> { m | feedback = Show Success message })
+                                |> UR.init
+
+                        ( Just ca, Err _ ) ->
+                            updateClaimingAction ca
+                                |> (\m -> { m | feedback = Show Failure (t "dashboard.check_claim.failure") })
+                                |> UR.init
+
+                        ( Nothing, _ ) ->
+                            model
+                                |> UR.init
+
+                _ ->
+                    case model.actionToClaim of
+                        Just ca ->
+                            updateClaimingAction ca
+                                |> UR.init
+
+                        Nothing ->
+                            model
+                                |> UR.init
 
         SearchClosed ->
             { model
@@ -1084,6 +1214,10 @@ jsAddressToMsg addr val =
                 |> Result.map CompletedLoadUnread
                 |> Result.toMaybe
 
+        "GotActionMsg" :: remainAddress ->
+            Action.jsAddressToMsg remainAddress val
+                |> Maybe.map GotActionMsg
+
         _ ->
             Nothing
 
@@ -1091,7 +1225,7 @@ jsAddressToMsg addr val =
 msgToString : Msg -> List String
 msgToString msg =
     case msg of
-        Ignored ->
+        NoOp ->
             [ "Ignored" ]
 
         SearchClosed ->
@@ -1099,6 +1233,9 @@ msgToString msg =
 
         GotSearchMsg _ ->
             [ "GotSearchMsg" ]
+
+        GotActionMsg actionMsg ->
+            "GotActionMsg" :: Action.msgToString actionMsg
 
         CompletedLoadTranslation _ r ->
             [ "CompletedLoadTranslation", UR.resultToString r ]

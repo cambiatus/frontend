@@ -1,4 +1,20 @@
-module Search exposing (Model, Msg, closeSearch, init, isActive, subscriptions, update, viewBody, viewForm, viewRecentQueries)
+module Search exposing
+    ( FoundItemsKind(..)
+    , Model
+    , Msg
+    , State(..)
+    , closeSearch
+    , init
+    , isActive
+    , subscriptions
+    , update
+    , viewEmptyResults
+    , viewForm
+    , viewOffers
+    , viewRecentQueries
+    , viewResultsOverview
+    , viewTabs
+    )
 
 import Action exposing (Action)
 import Api.Graphql
@@ -289,6 +305,7 @@ viewForm model =
         ]
 
 
+viewEmptyResults : String -> Html msg
 viewEmptyResults queryText =
     div [ class "flex-grow bg-white text-center" ]
         [ h3 [ class "mt-20 text-xl font-bold" ]
@@ -301,23 +318,6 @@ viewEmptyResults queryText =
                 []
             , text "No results were found"
             ]
-        ]
-
-
-viewBody : Model -> Html Msg
-viewBody model =
-    div [ class "container mx-auto flex flex-grow" ]
-        [ case model.found of
-            Just ({ actions, offers } as results) ->
-                case ( List.length actions, List.length offers ) of
-                    ( 0, 0 ) ->
-                        viewEmptyResults model.queryText
-
-                    _ ->
-                        viewResults model.selectedCommunity model.state results
-
-            Nothing ->
-                viewRecentQueries model
         ]
 
 
@@ -375,64 +375,6 @@ viewTabs results activeTab =
         ]
 
 
-viewOffers : Symbol -> List Offer -> Html Msg
-viewOffers symbol offers =
-    let
-        viewOffer : Offer -> Html Msg
-        viewOffer offer =
-            li
-                [ class "flex px-2 w-1/2 sm:w-1/3 md:w-1/4" ]
-                [ div
-                    [ class "rounded-md overflow-hidden bg-white flex-grow mb-4 pb-4 cursor-pointer hover:shadow"
-                    , onClick (FoundItemClicked (Route.ViewSale (String.fromInt offer.id)))
-                    ]
-                    [ case offer.image of
-                        Nothing ->
-                            text ""
-
-                        Just url ->
-                            img [ src url ] []
-                    , h3 [ class "p-3" ] [ text offer.title ]
-                    , p [ class "px-3 leading-none" ]
-                        [ span [ class "text-xl text-green font-medium" ] [ text <| String.fromFloat offer.price ]
-                        , br [] []
-                        , span [ class "text-gray-300 text-xs" ]
-                            [ text <| Eos.symbolToSymbolCodeString symbol
-                            ]
-                        ]
-                    ]
-                ]
-    in
-    ul [ class "offers-list flex flex-wrap mt-6 mb-8 mx-2 justify-left" ]
-        (List.map viewOffer offers)
-
-
-viewActions : Symbol -> List Action -> Html Msg
-viewActions symbol actions =
-    let
-        viewAction action =
-            li [ class "relative mb-10 w-full sm:px-2 sm:w-1/2 lg:w-1/3" ]
-                [ i [ class "absolute top-0 left-0 right-0 -mt-6" ] [ Icons.flag "w-full fill-green" ]
-                , div [ class "px-4 pt-8 pb-4 text-sm font-light bg-purple-500 rounded-lg text-white" ]
-                    [ p [ class "mb-8" ] [ text action.description ]
-                    , div [ class "flex justify-between" ]
-                        [ p []
-                            [ text "You gain"
-                            , br [] []
-                            , span [ class "text-green font-medium" ] [ text <| String.fromFloat action.reward ]
-                            , text " "
-                            , text <| Eos.symbolToSymbolCodeString symbol
-                            ]
-                        , Action.viewClaimButton action symbol
-                            |> Html.map GotActionMsg
-                        ]
-                    ]
-                ]
-    in
-    ul [ class "flex px-4 sm:px-2 pt-12 flex-wrap justify-left" ]
-        (List.map viewAction actions)
-
-
 viewResultsOverview : SearchResult -> Html Msg
 viewResultsOverview { offers, actions } =
     let
@@ -477,31 +419,36 @@ viewResultsOverview { offers, actions } =
         ]
 
 
-viewResults : Symbol -> State -> SearchResult -> Html Msg
-viewResults symbol state results =
+viewOffers : Symbol -> List Offer -> Html Msg
+viewOffers symbol offers =
     let
-        wrapWithClass c content =
-            div [ class ("flex-grow " ++ c) ]
-                [ content ]
+        viewOffer : Offer -> Html Msg
+        viewOffer offer =
+            li
+                [ class "flex px-2 w-1/2 sm:w-1/3 md:w-1/4" ]
+                [ div
+                    [ class "rounded-md overflow-hidden bg-white flex-grow mb-4 pb-4 cursor-pointer hover:shadow"
+                    , onClick (FoundItemClicked (Route.ViewSale (String.fromInt offer.id)))
+                    ]
+                    [ case offer.image of
+                        Nothing ->
+                            text ""
+
+                        Just url ->
+                            img [ src url ] []
+                    , h3 [ class "p-3" ] [ text offer.title ]
+                    , p [ class "px-3 leading-none" ]
+                        [ span [ class "text-xl text-green font-medium" ] [ text <| String.fromFloat offer.price ]
+                        , br [] []
+                        , span [ class "text-gray-300 text-xs" ]
+                            [ text <| Eos.symbolToSymbolCodeString symbol
+                            ]
+                        ]
+                    ]
+                ]
     in
-    case state of
-        ResultsShowed Offers ->
-            div []
-                [ viewTabs results Offers
-                , viewOffers symbol results.offers
-                    |> wrapWithClass "bg-gray-100"
-                ]
-
-        ResultsShowed Actions ->
-            div []
-                [ viewTabs results Actions
-                , viewActions symbol results.actions
-                    |> wrapWithClass "bg-gray-100"
-                ]
-
-        _ ->
-            viewResultsOverview results
-                |> wrapWithClass "bg-white p-4"
+    ul [ class "offers-list flex flex-wrap mt-6 mb-8 mx-2 justify-left" ]
+        (List.map viewOffer offers)
 
 
 isActive : Model -> Bool

@@ -13,6 +13,7 @@ module Action exposing
     , update
     , viewClaimButton
     , viewClaimConfirmation
+    , viewSearchActions
     )
 
 import Cambiatus.Enum.VerificationType exposing (VerificationType)
@@ -20,10 +21,10 @@ import Cambiatus.Object
 import Cambiatus.Object.Action as ActionObject
 import Cambiatus.Object.Objective
 import Cambiatus.Scalar exposing (DateTime)
-import Eos
+import Eos exposing (Symbol)
 import Eos.Account as Eos exposing (Name)
 import Graphql.SelectionSet as SelectionSet exposing (SelectionSet, with)
-import Html exposing (Html, a, button, div, span, text)
+import Html exposing (Html, a, br, button, div, i, li, p, span, text, ul)
 import Html.Attributes exposing (class, classList, disabled)
 import Html.Events exposing (onClick)
 import Icons
@@ -333,3 +334,28 @@ viewClaimButton action symbol =
             ]
             [ span [ class "inline-block align-middle" ] [ text "Claim" ]
             ]
+
+
+viewSearchActions : Symbol -> List Action -> Html Msg
+viewSearchActions symbol actions =
+    let
+        viewAction action =
+            li [ class "relative mb-10 w-full sm:px-2 sm:w-1/2 lg:w-1/3" ]
+                [ i [ class "absolute top-0 left-0 right-0 -mt-6" ] [ Icons.flag "w-full fill-green" ]
+                , div [ class "px-4 pt-8 pb-4 text-sm font-light bg-purple-500 rounded-lg text-white" ]
+                    [ p [ class "mb-8" ] [ text action.description ]
+                    , div [ class "flex justify-between" ]
+                        [ p []
+                            [ text "You gain"
+                            , br [] []
+                            , span [ class "text-green font-medium" ] [ text <| String.fromFloat action.reward ]
+                            , text " "
+                            , text <| Eos.symbolToSymbolCodeString symbol
+                            ]
+                        , viewClaimButton action symbol
+                        ]
+                    ]
+                ]
+    in
+    ul [ class "flex px-4 sm:px-2 pt-12 flex-wrap justify-left" ]
+        (List.map viewAction actions)
