@@ -375,8 +375,8 @@ viewTabs results activeTab =
         ]
 
 
-viewOffers : Symbol -> SearchResult -> List (Html Msg)
-viewOffers symbol ({ offers, actions } as results) =
+viewOffers : Symbol -> List Offer -> Html Msg
+viewOffers symbol offers =
     let
         viewOffer : Offer -> Html Msg
         viewOffer offer =
@@ -403,42 +403,37 @@ viewOffers symbol ({ offers, actions } as results) =
                     ]
                 ]
     in
-    [ viewTabs results Offers
-    , ul [ class "offers-list flex flex-wrap mt-6 mb-8 mx-2 justify-left" ]
+    ul [ class "offers-list flex flex-wrap mt-6 mb-8 mx-2 justify-left" ]
         (List.map viewOffer offers)
-    ]
 
 
-viewAction : Symbol -> Action -> Html Msg
-viewAction symbol action =
-    li [ class "relative mb-10 w-full sm:px-2 sm:w-1/2 lg:w-1/3" ]
-        [ i [ class "absolute top-0 left-0 right-0 -mt-6" ] [ Icons.flag "w-full fill-green" ]
-        , div [ class "px-4 pt-8 pb-4 text-sm font-light bg-purple-500 rounded-lg text-white" ]
-            [ p [ class "mb-8" ] [ text action.description ]
-            , div [ class "flex justify-between" ]
-                [ p []
-                    [ text "You gain"
-                    , br [] []
-                    , span [ class "text-green font-medium" ] [ text <| String.fromFloat action.reward ]
-                    , text " "
-                    , text <| Eos.symbolToSymbolCodeString symbol
+viewActions : Symbol -> List Action -> Html Msg
+viewActions symbol actions =
+    let
+        viewAction action =
+            li [ class "relative mb-10 w-full sm:px-2 sm:w-1/2 lg:w-1/3" ]
+                [ i [ class "absolute top-0 left-0 right-0 -mt-6" ] [ Icons.flag "w-full fill-green" ]
+                , div [ class "px-4 pt-8 pb-4 text-sm font-light bg-purple-500 rounded-lg text-white" ]
+                    [ p [ class "mb-8" ] [ text action.description ]
+                    , div [ class "flex justify-between" ]
+                        [ p []
+                            [ text "You gain"
+                            , br [] []
+                            , span [ class "text-green font-medium" ] [ text <| String.fromFloat action.reward ]
+                            , text " "
+                            , text <| Eos.symbolToSymbolCodeString symbol
+                            ]
+                        , Action.viewClaimButton action symbol
+                            |> Html.map GotActionMsg
+                        ]
                     ]
-                , Action.viewClaimButton action symbol
-                    |> Html.map GotActionMsg
                 ]
-            ]
-        ]
+    in
+    ul [ class "flex px-4 sm:px-2 pt-12 flex-wrap justify-left" ]
+        (List.map viewAction actions)
 
 
-viewActions : Symbol -> SearchResult -> List (Html Msg)
-viewActions symbol ({ actions } as results) =
-    [ viewTabs results Actions
-    , ul [ class "flex px-4 sm:px-2 pt-12 flex-wrap justify-left" ]
-        (List.map (viewAction symbol) actions)
-    ]
-
-
-viewResultsOverview : SearchResult -> List (Html Msg)
+viewResultsOverview : SearchResult -> Html Msg
 viewResultsOverview { offers, actions } =
     let
         viewItem icon count singular plural showMsg =
@@ -473,28 +468,36 @@ viewResultsOverview { offers, actions } =
                     [ text "Show" ]
                 ]
     in
-    [ strong [ class "block py-4" ] [ text "Here is what we found" ]
-    , ul []
-        [ viewItem Icons.shop (List.length offers) "offer" "offers" (TabActivated Offers)
-        , viewItem Icons.flag (List.length actions) "action" "actions" (TabActivated Actions)
+    div []
+        [ strong [ class "block py-4" ] [ text "Here is what we found" ]
+        , ul []
+            [ viewItem Icons.shop (List.length offers) "offer" "offers" (TabActivated Offers)
+            , viewItem Icons.flag (List.length actions) "action" "actions" (TabActivated Actions)
+            ]
         ]
-    ]
 
 
 viewResults : Symbol -> State -> SearchResult -> Html Msg
 viewResults symbol state results =
     let
-        wrapWithClass c =
+        wrapWithClass c content =
             div [ class ("flex-grow " ++ c) ]
+                [ content ]
     in
     case state of
         ResultsShowed Offers ->
-            viewOffers symbol results
-                |> wrapWithClass "bg-gray-100"
+            div []
+                [ viewTabs results Offers
+                , viewOffers symbol results.offers
+                    |> wrapWithClass "bg-gray-100"
+                ]
 
         ResultsShowed Actions ->
-            viewActions symbol results
-                |> wrapWithClass "bg-gray-100"
+            div []
+                [ viewTabs results Actions
+                , viewActions symbol results.actions
+                    |> wrapWithClass "bg-gray-100"
+                ]
 
         _ ->
             viewResultsOverview results
