@@ -6,7 +6,7 @@ module Action exposing
     , claimActionPort
     , encodeClaimAction
     , getClaimWithPhotoRoute
-    , initModel
+    , initClaimingActionModel
     , jsAddressToMsg
     , msgToString
     , selectionSet
@@ -84,9 +84,9 @@ type alias ObjectiveId =
     Int
 
 
-initModel : Action -> Model
-initModel action =
-    { claimConfirmationModalStatus = Closed
+initClaimingActionModel : Action -> Model
+initClaimingActionModel action =
+    { claimConfirmationModalStatus = Open action
     , action = action
     }
 
@@ -97,7 +97,7 @@ type Msg
     | ClaimConfirmationClosed
     | ActionClaimed
     | GotActionClaimedResponse (Result Value String)
-    | ActionWithPhotoLinkClicked
+    | ActionWithPhotoLinkClicked Route.Route
 
 
 getClaimWithPhotoRoute : Eos.Symbol -> Int -> Int -> Route.Route
@@ -108,8 +108,8 @@ getClaimWithPhotoRoute community objectiveId actionId =
         actionId
 
 
-viewClaimConfirmation : Translators -> ClaimConfirmationModalStatus -> Html Msg
-viewClaimConfirmation { t } claimConfirmationModalStatus =
+viewClaimConfirmation : Eos.Symbol -> Translators -> ClaimConfirmationModalStatus -> Html Msg
+viewClaimConfirmation symbol { t } claimConfirmationModalStatus =
     let
         text_ s =
             text (t s)
@@ -161,7 +161,7 @@ viewClaimConfirmation { t } claimConfirmationModalStatus =
                     if action.hasProofPhoto then
                         --OpenProofSection action
                         -- TODO: Go to the Claim with Photo page
-                        NoOp
+                        ActionWithPhotoLinkClicked (getClaimWithPhotoRoute symbol action.objectiveId action.id)
 
                     else
                         ActionClaimed
@@ -183,14 +183,17 @@ update : Translators -> Msg -> Model -> Model
 update { t } msg model =
     case msg of
         -- TODO: this update function looks to simple to have it here...
+        NoOp ->
+            model
+
         ClaimConfirmationOpen action ->
             { model | claimConfirmationModalStatus = Open action }
 
-        ClaimConfirmationClosed ->
-            { model | claimConfirmationModalStatus = Closed }
-
         ActionClaimed ->
             { model | claimConfirmationModalStatus = InProgress }
+
+        ClaimConfirmationClosed ->
+            { model | claimConfirmationModalStatus = Closed }
 
         GotActionClaimedResponse (Ok _) ->
             { model | claimConfirmationModalStatus = Closed }
@@ -198,11 +201,8 @@ update { t } msg model =
         GotActionClaimedResponse (Err _) ->
             { model | claimConfirmationModalStatus = Closed }
 
-        ActionWithPhotoLinkClicked ->
-            model
-
-        NoOp ->
-            model
+        ActionWithPhotoLinkClicked _ ->
+            { model | claimConfirmationModalStatus = Closed }
 
 
 claimActionPort : msg -> Action -> String -> Name -> Ports.JavascriptOutModel msg
@@ -263,7 +263,7 @@ msgToString msg =
         ActionClaimed ->
             [ "ClaimAction" ]
 
-        ActionWithPhotoLinkClicked ->
+        ActionWithPhotoLinkClicked _ ->
             [ "ActionWithPhotoLinkClicked" ]
 
         GotActionClaimedResponse r ->
@@ -319,8 +319,8 @@ viewClaimButton action symbol =
     -- TODO: Handle action.deadline and action.isCompleted.
     if action.hasProofPhoto then
         a
-            [ Route.href (getClaimWithPhotoRoute symbol action.objectiveId action.id)
-            , onClick ActionWithPhotoLinkClicked
+            [ --Route.href (getClaimWithPhotoRoute symbol action.objectiveId action.id)
+              onClick (ActionWithPhotoLinkClicked (getClaimWithPhotoRoute symbol action.objectiveId action.id))
             , class "self-end button button-primary"
             ]
             [ span [ class "inline-block w-4 align-middle mr-2" ] [ Icons.camera "" ]

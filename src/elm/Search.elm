@@ -163,11 +163,11 @@ update shared model msg =
                         _ =
                             Debug.log "open" action
                     in
-                    ( updateClaimingAction (Action.initModel action)
+                    ( updateClaimingAction (Action.initClaimingActionModel action)
                     , Cmd.none
                     )
 
-                Action.ActionWithPhotoLinkClicked ->
+                Action.ActionWithPhotoLinkClicked _ ->
                     ( { model | state = Inactive }, Cmd.none )
 
                 _ ->

@@ -314,6 +314,7 @@ viewHelper thisMsg page profile_ ({ shared } as model) content =
                 , case model.actionToClaim of
                     Just ca ->
                         Action.viewClaimConfirmation
+                            model.selectedCommunity
                             shared.translators
                             ca.claimConfirmationModalStatus
                             |> Html.map (thisMsg << GotActionMsg)
@@ -830,9 +831,6 @@ update msg model =
 
         GotActionMsg actionMsg ->
             let
-                _ =
-                    Debug.log "actionMsg from logged in" actionMsg
-
                 updateClaimingAction : Action.Model -> Model
                 updateClaimingAction actionModel =
                     { model
@@ -843,7 +841,7 @@ update msg model =
             in
             case actionMsg of
                 Action.ClaimConfirmationOpen action ->
-                    updateClaimingAction (Action.initModel action)
+                    updateClaimingAction (Action.initClaimingActionModel action)
                         |> UR.init
 
                 Action.ActionClaimed ->
@@ -869,6 +867,17 @@ update msg model =
 
                         -- TODO: !!! Maybe return UpdateResult from Action.view?
                         --|> UR.addExt (RequiredAuthentication (Just (GotActionMsg Action.ActionClaimed)))
+                        Nothing ->
+                            model
+                                |> UR.init
+
+                Action.ActionWithPhotoLinkClicked route ->
+                    case model.actionToClaim of
+                        Just ca ->
+                            updateClaimingAction ca
+                                |> UR.init
+                                |> UR.addCmd (Route.replaceUrl model.shared.navKey route)
+
                         Nothing ->
                             model
                                 |> UR.init

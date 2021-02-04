@@ -52,7 +52,6 @@ initModel _ _ =
     { date = Nothing
     , pageStatus = Loading
     , openObjective = Nothing
-    , actionToClaim = Nothing
     }
 
 
@@ -71,7 +70,6 @@ subscriptions _ =
 
 type alias Model =
     { date : Maybe Posix
-    , actionToClaim : Maybe Action.Model
     , pageStatus : PageStatus
     , openObjective : Maybe Int
     }
@@ -137,17 +135,7 @@ view loggedIn model =
                         , div [ class "container mx-auto" ]
                             [ if community.hasObjectives then
                                 div [ class "px-4 pb-4" ]
-                                    [ Html.map GotActionMsg
-                                        (case model.actionToClaim of
-                                            Just ca ->
-                                                Action.viewClaimConfirmation
-                                                    loggedIn.shared.translators
-                                                    ca.claimConfirmationModalStatus
-
-                                            Nothing ->
-                                                text ""
-                                        )
-                                    , div [ class "container bg-white py-6 sm:py-8 px-3 sm:px-6 rounded-lg mt-4" ]
+                                    [ div [ class "container bg-white py-6 sm:py-8 px-3 sm:px-6 rounded-lg mt-4" ]
                                         (Page.viewTitle (t "community.objectives.title_plural")
                                             :: List.indexedMap (viewObjective loggedIn model community)
                                                 community.objectives
@@ -320,7 +308,7 @@ type Msg
       -- Objective
     | ClickedOpenObjective Int
     | ClickedCloseObjective
-    | GotActionMsg Action.Msg
+    | GotCommunityActionMsg Action.Msg
 
 
 update : Msg -> Model -> LoggedIn.Model -> UpdateResult
@@ -336,80 +324,30 @@ update msg model ({ shared } as loggedIn) =
         GotTime date ->
             UR.init { model | date = Just date }
 
-        GotActionMsg actionMsg ->
+        GotCommunityActionMsg actionMsg ->
             let
-                updateClaimingAction : Action.Model -> Model
-                updateClaimingAction actionModel =
-                    { model
-                        | actionToClaim =
-                            Action.update shared.translators actionMsg actionModel
-                                |> Just
-                    }
+                loggedInWithUpdatedClaimingAction =
+                    case loggedIn.searchModel.actionToClaim of
+                        Just a ->
+                            { loggedIn
+                                | actionToClaim =
+                                    Action.update shared.translators actionMsg a
+                                        |> Just
+                            }
+
+                        Nothing ->
+                            case actionMsg of
+                                Action.ClaimConfirmationOpen a ->
+                                    { loggedIn
+                                        | actionToClaim = Just (Action.initClaimingActionModel a)
+                                    }
+
+                                _ ->
+                                    loggedIn
             in
-            case actionMsg of
-                Action.ClaimConfirmationOpen action ->
-                    updateClaimingAction (Action.initModel action)
-                        |> UR.init
-
-                Action.ActionClaimed ->
-                    case model.actionToClaim of
-                        Just ca ->
-                            let
-                                claimPort : JavascriptOutModel Msg
-                                claimPort =
-                                    Action.claimActionPort
-                                        (GotActionMsg Action.ActionClaimed)
-                                        ca.action
-                                        shared.contracts.community
-                                        loggedIn.accountName
-                            in
-                            if LoggedIn.isAuth loggedIn then
-                                updateClaimingAction ca
-                                    |> UR.init
-                                    |> UR.addPort claimPort
-
-                            else
-                                updateClaimingAction ca
-                                    |> UR.init
-                                    |> UR.addExt
-                                        (Just (GotActionMsg Action.ActionClaimed)
-                                            |> RequiredAuthentication
-                                        )
-
-                        Nothing ->
-                            model
-                                |> UR.init
-
-                Action.GotActionClaimedResponse resp ->
-                    case ( model.actionToClaim, resp ) of
-                        ( Just ca, Ok _ ) ->
-                            let
-                                message =
-                                    shared.translators.tr "dashboard.check_claim.success"
-                                        [ ( "symbolCode", Eos.symbolToSymbolCodeString loggedIn.selectedCommunity ) ]
-                            in
-                            updateClaimingAction ca
-                                |> UR.init
-                                |> UR.addExt (ShowFeedback LoggedIn.Success message)
-
-                        ( Just ca, Err _ ) ->
-                            updateClaimingAction ca
-                                |> UR.init
-                                |> UR.addExt (ShowFeedback LoggedIn.Failure (t "dashboard.check_claim.failure"))
-
-                        ( Nothing, _ ) ->
-                            model
-                                |> UR.init
-
-                _ ->
-                    case model.actionToClaim of
-                        Just ca ->
-                            updateClaimingAction ca
-                                |> UR.init
-
-                        Nothing ->
-                            model
-                                |> UR.init
+            model
+                |> UR.init
+                |> UR.addExt (UpdatedLoggedIn loggedInWithUpdatedClaimingAction)
 
         CompletedLoadCommunity (Ok community) ->
             case community of
@@ -440,10 +378,6 @@ update msg model ({ shared } as loggedIn) =
 jsAddressToMsg : List String -> Value -> Maybe Msg
 jsAddressToMsg addr val =
     case addr of
-        "GotActionMsg" :: remainAddress ->
-            Action.jsAddressToMsg remainAddress val
-                |> Maybe.map GotActionMsg
-
         _ ->
             Nothing
 
@@ -457,8 +391,8 @@ msgToString msg =
         GotTime _ ->
             [ "GotTime" ]
 
-        GotActionMsg actionMsg ->
-            "GotActionMsg" :: Action.msgToString actionMsg
+        GotCommunityActionMsg _ ->
+            [ "GotCommunityActionMsg" ]
 
         CompletedLoadCommunity r ->
             [ "CompletedLoadCommunity", UR.resultToString r ]
@@ -598,7 +532,7 @@ viewAction translators canEdit symbol maybeDate action =
                         NoOp
 
                      else
-                        (GotActionMsg << Action.ClaimConfirmationOpen) action
+                        (GotCommunityActionMsg << Action.ClaimConfirmationOpen) action
                     )
                 ]
                 [ if action.hasProofPhoto then
