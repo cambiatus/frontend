@@ -255,7 +255,6 @@ viewObjective loggedIn model metadata index objective =
                         viewAction loggedIn.shared.translators
                             (LoggedIn.isAccount metadata.creator loggedIn)
                             metadata.symbol
-                            objective.id
                             model.date
                             action
                     )
@@ -471,8 +470,8 @@ msgToString msg =
             [ "ClickedCloseObjective" ]
 
 
-viewAction : Translators -> Bool -> Symbol -> Int -> Maybe Posix -> Action -> Html Msg
-viewAction translators canEdit symbol objId maybeDate action =
+viewAction : Translators -> Bool -> Symbol -> Maybe Posix -> Action -> Html Msg
+viewAction translators canEdit symbol maybeDate action =
     let
         { t, tr } =
             translators
@@ -591,6 +590,7 @@ viewAction translators canEdit symbol objId maybeDate action =
                 || (action.usages > 0 && action.usagesLeft == 0)
 
         viewClaimButton =
+            -- TODO: move this to Action module
             button
                 [ class ("h-10 uppercase rounded-lg ml-1" ++ claimColors ++ claimSize)
                 , onClick

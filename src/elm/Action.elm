@@ -5,28 +5,33 @@ module Action exposing
     , Msg(..)
     , claimActionPort
     , encodeClaimAction
+    , getClaimWithPhotoRoute
     , init
     , jsAddressToMsg
     , msgToString
     , selectionSet
     , update
+    , viewClaimButton
     , viewClaimConfirmation
     )
 
 import Cambiatus.Enum.VerificationType exposing (VerificationType)
 import Cambiatus.Object
 import Cambiatus.Object.Action as ActionObject
+import Cambiatus.Object.Objective
 import Cambiatus.Scalar exposing (DateTime)
 import Eos
 import Eos.Account as Eos exposing (Name)
 import Graphql.SelectionSet as SelectionSet exposing (SelectionSet, with)
-import Html exposing (Html, button, div, text)
+import Html exposing (Html, a, button, div, span, text)
 import Html.Attributes exposing (class, classList, disabled)
 import Html.Events exposing (onClick)
+import Icons
 import Json.Decode as Decode
 import Json.Encode as Encode exposing (Value)
 import Ports
 import Profile
+import Route
 import Session.Shared exposing (Translators)
 import UpdateResult as UR
 import View.Modal as Modal
@@ -40,6 +45,7 @@ type ClaimConfirmationModalStatus
 
 type alias Action =
     { id : Int
+    , objectiveId : Int
     , description : String
     , reward : Float
     , verifierReward : Float
@@ -73,6 +79,10 @@ type alias Model =
     }
 
 
+type alias ObjectiveId =
+    Int
+
+
 init : Action -> Model
 init action =
     { claimConfirmationModalStatus = Closed
@@ -86,6 +96,15 @@ type Msg
     | ClaimConfirmationClosed
     | ActionClaimed
     | GotActionClaimedResponse (Result Value String)
+    | ClaimWithPhotoLinkClicked
+
+
+getClaimWithPhotoRoute : Eos.Symbol -> Int -> Int -> Route.Route
+getClaimWithPhotoRoute community objectiveId actionId =
+    Route.ClaimAction
+        community
+        objectiveId
+        actionId
 
 
 viewClaimConfirmation : Translators -> ClaimConfirmationModalStatus -> Html Msg
@@ -162,6 +181,7 @@ viewClaimConfirmation { t } claimConfirmationModalStatus =
 update : Translators -> Msg -> Model -> Model
 update { t } msg model =
     case msg of
+        -- TODO: this update function looks to simple to have it here...
         ClaimConfirmationOpen action ->
             { model | claimConfirmationModalStatus = Open action }
 
@@ -176,6 +196,9 @@ update { t } msg model =
 
         GotActionClaimedResponse (Err _) ->
             { model | claimConfirmationModalStatus = Closed }
+
+        ClaimWithPhotoLinkClicked ->
+            model
 
         NoOp ->
             model
@@ -239,6 +262,9 @@ msgToString msg =
         ActionClaimed ->
             [ "ClaimAction" ]
 
+        ClaimWithPhotoLinkClicked ->
+            [ "ClaimWithPhotoLinkClicked" ]
+
         GotActionClaimedResponse r ->
             [ "GotClaimActionResponse", UR.resultToString r ]
 
@@ -254,10 +280,22 @@ encodeClaimAction c =
         ]
 
 
+type alias Objective =
+    { id : Int
+    }
+
+
+objectiveSelectionSet : SelectionSet Objective Cambiatus.Object.Objective
+objectiveSelectionSet =
+    SelectionSet.succeed Objective
+        |> with Cambiatus.Object.Objective.id
+
+
 selectionSet : SelectionSet Action Cambiatus.Object.Action
 selectionSet =
     SelectionSet.succeed Action
         |> with ActionObject.id
+        |> with (SelectionSet.map (\s -> s.id) (ActionObject.objective objectiveSelectionSet))
         |> with ActionObject.description
         |> with ActionObject.reward
         |> with ActionObject.verifierReward
@@ -267,10 +305,29 @@ selectionSet =
         |> with ActionObject.usagesLeft
         |> with ActionObject.deadline
         |> with ActionObject.verificationType
-        --|> with (SelectionSet.map ActionObject.objective actionObjectiveIdSelectionSet)
         |> with ActionObject.verifications
         |> with ActionObject.isCompleted
         |> with (SelectionSet.map (Maybe.withDefault False) ActionObject.hasProofPhoto)
         |> with (SelectionSet.map (Maybe.withDefault False) ActionObject.hasProofCode)
         |> with ActionObject.photoProofInstructions
         |> with ActionObject.position
+
+
+viewClaimButton : { a | hasProofPhoto : Bool, objectiveId : Int, id : Int } -> Eos.Symbol -> Html Msg
+viewClaimButton action symbol =
+    -- TODO: Handle action.deadline and action.isCompleted.
+    if action.hasProofPhoto then
+        a
+            [ Route.href (getClaimWithPhotoRoute symbol action.objectiveId action.id)
+            , onClick ClaimWithPhotoLinkClicked
+            , class "self-end button button-primary"
+            ]
+            [ span [ class "inline-block w-4 align-middle mr-2" ] [ Icons.camera "" ]
+            , span [ class "inline-block align-middle" ] [ text "Claim" ]
+            ]
+
+    else
+        button
+            [ class "self-end button button-primary" ]
+            [ span [ class "inline-block align-middle" ] [ text "Claim" ]
+            ]

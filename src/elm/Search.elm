@@ -1,8 +1,10 @@
 module Search exposing (Model, Msg, closeSearch, init, isActive, subscriptions, update, viewBody, viewForm, viewRecentQueries)
 
+import Action
 import Api.Graphql
 import Cambiatus.Object
 import Cambiatus.Object.Action
+import Cambiatus.Object.Objective
 import Cambiatus.Object.Product
 import Cambiatus.Object.SearchResult
 import Cambiatus.Query
@@ -10,8 +12,8 @@ import Eos exposing (Symbol)
 import Graphql.Http
 import Graphql.OptionalArgument exposing (OptionalArgument(..))
 import Graphql.SelectionSet as SelectionSet exposing (SelectionSet, with)
-import Html exposing (Html, br, button, div, h3, i, img, input, li, p, span, strong, text, ul)
-import Html.Attributes exposing (class, placeholder, src, type_, value)
+import Html exposing (Html, a, br, button, div, h3, i, img, input, li, p, span, strong, text, ul)
+import Html.Attributes exposing (class, href, placeholder, src, type_, value)
 import Html.Events exposing (onClick, onFocus, onInput, onSubmit)
 import Icons
 import Json.Decode as Decode exposing (list, string)
@@ -76,8 +78,10 @@ type alias FoundOffer =
 
 type alias FoundAction =
     { id : Int
+    , objectiveId : Int
     , description : String
     , reward : Float
+    , hasProofPhoto : Bool
     }
 
 
@@ -113,12 +117,25 @@ offersSelectionSet =
         Cambiatus.Object.Product.image
 
 
+type alias Objective =
+    { id : Int
+    }
+
+
+objectiveSelectionSet : SelectionSet Objective Cambiatus.Object.Objective
+objectiveSelectionSet =
+    SelectionSet.map Objective Cambiatus.Object.Objective.id
+
+
 actionsSelectionSet : SelectionSet FoundAction Cambiatus.Object.Action
 actionsSelectionSet =
-    SelectionSet.map3 FoundAction
-        Cambiatus.Object.Action.id
-        Cambiatus.Object.Action.description
-        Cambiatus.Object.Action.reward
+    SelectionSet.succeed FoundAction
+        |> with Cambiatus.Object.Action.id
+        -- TODO: simplify retrieving the objective id
+        |> with (SelectionSet.map (\s -> s.id) (Cambiatus.Object.Action.objective objectiveSelectionSet))
+        |> with Cambiatus.Object.Action.description
+        |> with Cambiatus.Object.Action.reward
+        |> with (SelectionSet.map (Maybe.withDefault False) Cambiatus.Object.Action.hasProofPhoto)
 
 
 
@@ -133,6 +150,7 @@ type Msg
     | QuerySubmitted
     | TabActivated FoundItemsKind
     | FoundItemClicked Route
+    | GotActionMsg Action.Msg
 
 
 closeSearch : Shared -> Model -> ( Model, Cmd Msg )
@@ -143,6 +161,9 @@ closeSearch shared model =
 update : Shared -> Model -> Msg -> ( Model, Cmd Msg )
 update shared model msg =
     case msg of
+        GotActionMsg actionMsg ->
+            ( { model | state = Inactive }, Cmd.none )
+
         FoundItemClicked route ->
             let
                 -- Make the search dropdown inactive before opening the found item's URL.
@@ -411,10 +432,8 @@ viewActions symbol ({ actions, offers } as results) =
                             , text " "
                             , text <| Eos.symbolToSymbolCodeString symbol
                             ]
-                        , button
-                            [ class "self-end button button-primary"
-                            ]
-                            [ text "Claim" ]
+                        , Action.viewClaimButton action symbol
+                            |> Html.map GotActionMsg
                         ]
                     ]
                 ]
