@@ -97,7 +97,7 @@ type Msg
 
 getClaimWithPhotoRoute : Eos.Symbol -> Int -> Int -> Route.Route
 getClaimWithPhotoRoute community objectiveId actionId =
-    Route.ClaimAction
+    Route.ClaimWithPhoto
         community
         objectiveId
         actionId

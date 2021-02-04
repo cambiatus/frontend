@@ -126,6 +126,10 @@ subscriptions model =
                 ShopViewer.subscriptions subModel
                     |> Sub.map GotShopViewerMsg
 
+            ClaimWithPhoto subModel ->
+                ClaimWithPhoto.subscriptions subModel
+                    |> Sub.map GotClaimWithPhotoMsg
+
             _ ->
                 Sub.none
         ]
@@ -263,7 +267,7 @@ update msg model =
                         )
                         val
             in
-            case jsAddressResult of
+            case jsAddressResult |> Debug.log "jsAddressResult" of
                 Ok jsAddress ->
                     Maybe.map
                         (\newMsg -> update newMsg model)
@@ -825,10 +829,10 @@ changeRouteTo maybeRoute model =
                 >> updateStatusWith ActionEditor GotActionEditorMsg model
                 |> withLoggedIn (Route.EditAction symbol objectiveId actionId)
 
-        Just (Route.ClaimAction symbol objectiveId actionId) ->
+        Just (Route.ClaimWithPhoto symbol objectiveId actionId) ->
             (\l -> ClaimWithPhoto.init l symbol objectiveId (Just actionId))
                 >> updateStatusWith ClaimWithPhoto GotClaimWithPhotoMsg model
-                |> withLoggedIn (Route.ClaimAction symbol objectiveId actionId)
+                |> withLoggedIn (Route.ClaimWithPhoto symbol objectiveId actionId)
 
         Just (Route.Claim objectiveId actionId claimId) ->
             (\l -> Claim.init l claimId)
@@ -934,6 +938,10 @@ jsAddressToMsg address val =
             Maybe.map GotActionEditorMsg
                 (ActionEditor.jsAddressToMsg rAddress val)
 
+        "GotClaimWithPhotoMsg" :: rAddress ->
+            Maybe.map GotClaimWithPhotoMsg
+                (ClaimWithPhoto.jsAddressToMsg rAddress val)
+
         "GotVerifyClaimMsg" :: rAddress ->
             Maybe.map GotVerifyClaimMsg
                 (Claim.jsAddressToMsg rAddress val)
@@ -994,7 +1002,7 @@ msgToString msg =
             "GotActionEditor" :: ActionEditor.msgToString subMsg
 
         GotClaimWithPhotoMsg subMsg ->
-            "GotClaimActionMsg" :: ClaimWithPhoto.msgToString subMsg
+            "GotClaimWithPhotoMsg" :: ClaimWithPhoto.msgToString subMsg
 
         GotVerifyClaimMsg subMsg ->
             "GotVerifyClaimMsg" :: Claim.msgToString subMsg

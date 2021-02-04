@@ -35,9 +35,7 @@ import UpdateResult as UR
 
 
 type alias Model =
-    { claimConfirmationModalStatus : Action.ClaimConfirmationModalStatus
-    , status : Status
-    , action : Maybe Action -- TODO: Use result since action must be loaded
+    { status : Status
     , proof : Proof
     }
 
@@ -52,14 +50,22 @@ type alias ActionId =
 
 init : LoggedIn.Model -> Symbol -> ObjectiveId -> Maybe ActionId -> ( Model, Cmd Msg )
 init loggedIn symbol objectiveId actionId =
-    ( { claimConfirmationModalStatus = Action.Closed
-      , status = Loading
-      , action = Nothing
+    let
+        ( status, cmd ) =
+            case loggedIn.actionToClaim |> Debug.log "action" of
+                Just a ->
+                    ( Loaded a, Task.succeed (OpenProofSection a.action) |> Task.perform identity )
+
+                Nothing ->
+                    ( NotFound, Cmd.none )
+    in
+    ( { status = status
       , proof = Proof NoPhotoAdded Nothing
       }
-    , Api.Graphql.query loggedIn.shared
-        (Community.communityQuery symbol)
-        CommunityLoaded
+      --, Api.Graphql.query loggedIn.shared
+      --    (Community.communityQuery symbol)
+      --    CommunityLoaded
+    , cmd
     )
 
 
@@ -156,12 +162,12 @@ view ({ shared } as loggedIn) model =
                 Loading ->
                     Page.fullPageLoading shared
 
-                Loaded community ->
+                Loaded _ ->
                     div [ class "bg-white" ]
-                        [ Page.viewHeader loggedIn (t "community.actions.title") (Route.Community community.symbol)
-                        , case model.action of
-                            Just a ->
-                                viewClaimWithProofs model.proof loggedIn.shared.translators a
+                        [ Page.viewHeader loggedIn (t "community.actions.title") (Route.Community loggedIn.selectedCommunity)
+                        , case loggedIn.actionToClaim of
+                            Just actionModel ->
+                                viewClaimWithProofs model.proof loggedIn.shared.translators actionModel.action
 
                             Nothing ->
                                 text "this is claim with photo page"
@@ -295,7 +301,7 @@ subscriptions _ =
 
 type Status
     = Loading
-    | Loaded Community.Model
+    | Loaded Action.Model
       -- Errors
     | LoadFailed (Graphql.Http.Error (Maybe Community.Model))
     | NotFound
@@ -304,6 +310,9 @@ type Status
 update : Msg -> Model -> LoggedIn.Model -> UR.UpdateResult Model Msg (External Msg)
 update msg model ({ shared } as loggedIn) =
     let
+        _ =
+            Debug.log "msg" msg
+
         { t } =
             shared.translators
     in
@@ -317,7 +326,7 @@ update msg model ({ shared } as loggedIn) =
             case c of
                 Just community ->
                     { model
-                        | status = Loaded community
+                        | status = Loading
                     }
                         |> UR.init
 
@@ -332,8 +341,8 @@ update msg model ({ shared } as loggedIn) =
             in
             if action.hasProofPhoto then
                 { model
-                    | claimConfirmationModalStatus = Action.Closed
-                    , proof = Proof NoPhotoAdded Nothing
+                    | --claimConfirmationModalStatus = Action.Closed
+                      proof = Proof NoPhotoAdded Nothing
                 }
                     |> UR.init
                     |> UR.addCmd
@@ -343,15 +352,15 @@ update msg model ({ shared } as loggedIn) =
                          else
                             Cmd.none
                         )
-                    |> UR.addPort
-                        { responseAddress = NoOp
-                        , responseData = Encode.null
-                        , data =
-                            Encode.object
-                                [ ( "id", Encode.string "communityPage" )
-                                , ( "name", Encode.string "scrollIntoView" )
-                                ]
-                        }
+                --|> UR.addPort
+                --    { responseAddress = NoOp
+                --    , responseData = Encode.null
+                --    , data =
+                --        Encode.object
+                --            [ ( "id", Encode.string "communityPage" )
+                --            , ( "name", Encode.string "scrollIntoView" )
+                --            ]
+                --    }
 
             else
                 model |> UR.init
@@ -399,9 +408,8 @@ update msg model ({ shared } as loggedIn) =
                 |> UR.logHttpError msg error
 
         CloseProofSection reason ->
-            { model
-                | claimConfirmationModalStatus = Action.Closed
-            }
+            model
+                --claimConfirmationModalStatus = Action.Closed
                 -- TODO: Show expired message
                 |> UR.init
                 |> UR.addExt
@@ -417,11 +425,11 @@ update msg model ({ shared } as loggedIn) =
             model |> UR.init
 
         GotUint64Name (Ok uint64name) ->
-            case ( model.proof, model.action ) of
-                ( Proof proofPhoto (Just proofCode), Just action ) ->
+            case ( model.proof, loggedIn.actionToClaim ) of
+                ( Proof proofPhoto (Just proofCode), Just actionModel ) ->
                     let
                         verificationCode =
-                            generateVerificationCode action.id uint64name proofCode.claimTimestamp
+                            generateVerificationCode actionModel.action.id uint64name proofCode.claimTimestamp
 
                         newProofCode =
                             Just
@@ -562,17 +570,15 @@ update msg model ({ shared } as loggedIn) =
                     shared.translators.tr "dashboard.check_claim.success"
                         [ ( "symbolCode", Eos.symbolToSymbolCodeString loggedIn.selectedCommunity ) ]
             in
-            { model
-                | claimConfirmationModalStatus = Closed
-            }
+            model
+                --claimConfirmationModalStatus = Closed
                 |> UR.init
                 |> UR.addExt (ShowFeedback LoggedIn.Success message)
 
         GotClaimActionResponse (Err _) ->
             -- TODO: remove duplicates
-            { model
-                | claimConfirmationModalStatus = Closed
-            }
+            model
+                -- claimConfirmationModalStatus = Closed
                 |> UR.init
                 |> UR.addExt (ShowFeedback LoggedIn.Failure (t "dashboard.check_claim.failure"))
 
@@ -580,7 +586,7 @@ update msg model ({ shared } as loggedIn) =
 jsAddressToMsg : List String -> Value -> Maybe Msg
 jsAddressToMsg addr val =
     -- TODO: Remove duplicates
-    case addr of
+    case addr |> Debug.log "addr" of
         "ClaimAction" :: [] ->
             Decode.decodeValue
                 (Decode.oneOf

@@ -148,7 +148,7 @@ type alias Model =
     , hasObjectives : FeatureStatus
     , hasKyc : FeatureStatus
     , searchModel : Search.Model
-    , actionToClaim : Maybe Action.Model
+    , actionToClaim : Maybe Action.Model -- TODO: Clean this action after claiming
     }
 
 
