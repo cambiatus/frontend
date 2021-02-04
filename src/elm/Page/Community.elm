@@ -348,7 +348,7 @@ update msg model ({ shared } as loggedIn) =
             in
             case actionMsg of
                 Action.ClaimConfirmationOpen action ->
-                    updateClaimingAction (Action.init action)
+                    updateClaimingAction (Action.initModel action)
                         |> UR.init
 
                 Action.ActionClaimed ->

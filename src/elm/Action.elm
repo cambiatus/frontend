@@ -6,7 +6,7 @@ module Action exposing
     , claimActionPort
     , encodeClaimAction
     , getClaimWithPhotoRoute
-    , init
+    , initModel
     , jsAddressToMsg
     , msgToString
     , selectionSet
@@ -83,8 +83,8 @@ type alias ObjectiveId =
     Int
 
 
-init : Action -> Model
-init action =
+initModel : Action -> Model
+initModel action =
     { claimConfirmationModalStatus = Closed
     , action = action
     }
@@ -96,7 +96,7 @@ type Msg
     | ClaimConfirmationClosed
     | ActionClaimed
     | GotActionClaimedResponse (Result Value String)
-    | ClaimWithPhotoLinkClicked
+    | ActionWithPhotoLinkClicked
 
 
 getClaimWithPhotoRoute : Eos.Symbol -> Int -> Int -> Route.Route
@@ -197,7 +197,7 @@ update { t } msg model =
         GotActionClaimedResponse (Err _) ->
             { model | claimConfirmationModalStatus = Closed }
 
-        ClaimWithPhotoLinkClicked ->
+        ActionWithPhotoLinkClicked ->
             model
 
         NoOp ->
@@ -262,8 +262,8 @@ msgToString msg =
         ActionClaimed ->
             [ "ClaimAction" ]
 
-        ClaimWithPhotoLinkClicked ->
-            [ "ClaimWithPhotoLinkClicked" ]
+        ActionWithPhotoLinkClicked ->
+            [ "ActionWithPhotoLinkClicked" ]
 
         GotActionClaimedResponse r ->
             [ "GotClaimActionResponse", UR.resultToString r ]
@@ -313,13 +313,13 @@ selectionSet =
         |> with ActionObject.position
 
 
-viewClaimButton : { a | hasProofPhoto : Bool, objectiveId : Int, id : Int } -> Eos.Symbol -> Html Msg
+viewClaimButton : Action -> Eos.Symbol -> Html Msg
 viewClaimButton action symbol =
     -- TODO: Handle action.deadline and action.isCompleted.
     if action.hasProofPhoto then
         a
             [ Route.href (getClaimWithPhotoRoute symbol action.objectiveId action.id)
-            , onClick ClaimWithPhotoLinkClicked
+            , onClick ActionWithPhotoLinkClicked
             , class "self-end button button-primary"
             ]
             [ span [ class "inline-block w-4 align-middle mr-2" ] [ Icons.camera "" ]
@@ -328,6 +328,8 @@ viewClaimButton action symbol =
 
     else
         button
-            [ class "self-end button button-primary" ]
+            [ onClick (ClaimConfirmationOpen action)
+            , class "self-end button button-primary"
+            ]
             [ span [ class "inline-block align-middle" ] [ text "Claim" ]
             ]

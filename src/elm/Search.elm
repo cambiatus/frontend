@@ -1,10 +1,8 @@
 module Search exposing (Model, Msg, closeSearch, init, isActive, subscriptions, update, viewBody, viewForm, viewRecentQueries)
 
-import Action
+import Action exposing (Action)
 import Api.Graphql
 import Cambiatus.Object
-import Cambiatus.Object.Action
-import Cambiatus.Object.Objective
 import Cambiatus.Object.Product
 import Cambiatus.Object.SearchResult
 import Cambiatus.Query
@@ -12,8 +10,8 @@ import Eos exposing (Symbol)
 import Graphql.Http
 import Graphql.OptionalArgument exposing (OptionalArgument(..))
 import Graphql.SelectionSet as SelectionSet exposing (SelectionSet, with)
-import Html exposing (Html, a, br, button, div, h3, i, img, input, li, p, span, strong, text, ul)
-import Html.Attributes exposing (class, href, placeholder, src, type_, value)
+import Html exposing (Html, br, button, div, h3, i, img, input, li, p, span, strong, text, ul)
+import Html.Attributes exposing (class, placeholder, src, type_, value)
 import Html.Events exposing (onClick, onFocus, onInput, onSubmit)
 import Icons
 import Json.Decode as Decode exposing (list, string)
@@ -34,6 +32,7 @@ type alias Model =
     , queryText : String
     , selectedCommunity : Symbol
     , found : Maybe SearchResult
+    , actionToClaim : Maybe Action.Model
     }
 
 
@@ -44,6 +43,7 @@ init selectedCommunity =
     , queryText = ""
     , selectedCommunity = selectedCommunity
     , found = Nothing
+    , actionToClaim = Nothing
     }
 
 
@@ -63,25 +63,16 @@ type FoundItemsKind
 
 
 type alias SearchResult =
-    { offers : List FoundOffer
-    , actions : List FoundAction
+    { offers : List Offer
+    , actions : List Action
     }
 
 
-type alias FoundOffer =
+type alias Offer =
     { id : Int
     , title : String
     , price : Float
     , image : Maybe String
-    }
-
-
-type alias FoundAction =
-    { id : Int
-    , objectiveId : Int
-    , description : String
-    , reward : Float
-    , hasProofPhoto : Bool
     }
 
 
@@ -105,37 +96,16 @@ searchResultSelectionSet : String -> SelectionSet SearchResult Cambiatus.Object.
 searchResultSelectionSet queryString =
     SelectionSet.succeed SearchResult
         |> with (Cambiatus.Object.SearchResult.products (\_ -> { query = Present queryString }) offersSelectionSet)
-        |> with (Cambiatus.Object.SearchResult.actions (\_ -> { query = Present queryString }) actionsSelectionSet)
+        |> with (Cambiatus.Object.SearchResult.actions (\_ -> { query = Present queryString }) Action.selectionSet)
 
 
-offersSelectionSet : SelectionSet FoundOffer Cambiatus.Object.Product
+offersSelectionSet : SelectionSet Offer Cambiatus.Object.Product
 offersSelectionSet =
-    SelectionSet.map4 FoundOffer
+    SelectionSet.map4 Offer
         Cambiatus.Object.Product.id
         Cambiatus.Object.Product.title
         Cambiatus.Object.Product.price
         Cambiatus.Object.Product.image
-
-
-type alias Objective =
-    { id : Int
-    }
-
-
-objectiveSelectionSet : SelectionSet Objective Cambiatus.Object.Objective
-objectiveSelectionSet =
-    SelectionSet.map Objective Cambiatus.Object.Objective.id
-
-
-actionsSelectionSet : SelectionSet FoundAction Cambiatus.Object.Action
-actionsSelectionSet =
-    SelectionSet.succeed FoundAction
-        |> with Cambiatus.Object.Action.id
-        -- TODO: simplify retrieving the objective id
-        |> with (SelectionSet.map (\s -> s.id) (Cambiatus.Object.Action.objective objectiveSelectionSet))
-        |> with Cambiatus.Object.Action.description
-        |> with Cambiatus.Object.Action.reward
-        |> with (SelectionSet.map (Maybe.withDefault False) Cambiatus.Object.Action.hasProofPhoto)
 
 
 
@@ -162,7 +132,30 @@ update : Shared -> Model -> Msg -> ( Model, Cmd Msg )
 update shared model msg =
     case msg of
         GotActionMsg actionMsg ->
-            ( { model | state = Inactive }, Cmd.none )
+            let
+                updateClaimingAction : Action.Model -> Model
+                updateClaimingAction actionModel =
+                    { model
+                        | actionToClaim =
+                            Action.update shared.translators actionMsg actionModel
+                                |> Just
+                    }
+            in
+            case actionMsg of
+                Action.ClaimConfirmationOpen action ->
+                    let
+                        _ =
+                            Debug.log "open" action
+                    in
+                    ( updateClaimingAction (Action.initModel action)
+                    , Cmd.none
+                    )
+
+                Action.ActionWithPhotoLinkClicked ->
+                    ( { model | state = Inactive }, Cmd.none )
+
+                _ ->
+                    ( model, Cmd.none )
 
         FoundItemClicked route ->
             let
@@ -385,7 +378,7 @@ viewTabs results activeTab =
 viewOffers : Symbol -> SearchResult -> List (Html Msg)
 viewOffers symbol ({ offers, actions } as results) =
     let
-        viewOffer : FoundOffer -> Html Msg
+        viewOffer : Offer -> Html Msg
         viewOffer offer =
             li
                 [ class "flex px-2 w-1/2 sm:w-1/3 md:w-1/4" ]
@@ -416,31 +409,32 @@ viewOffers symbol ({ offers, actions } as results) =
     ]
 
 
-viewActions : Symbol -> SearchResult -> List (Html Msg)
-viewActions symbol ({ actions, offers } as results) =
-    let
-        viewAction action =
-            li [ class "relative mb-10 w-full sm:px-2 sm:w-1/2 lg:w-1/3" ]
-                [ i [ class "absolute top-0 left-0 right-0 -mt-6" ] [ Icons.flag "w-full fill-green" ]
-                , div [ class "px-4 pt-8 pb-4 text-sm font-light bg-purple-500 rounded-lg text-white" ]
-                    [ p [ class "mb-8" ] [ text action.description ]
-                    , div [ class "flex justify-between" ]
-                        [ p []
-                            [ text "You gain"
-                            , br [] []
-                            , span [ class "text-green font-medium" ] [ text <| String.fromFloat action.reward ]
-                            , text " "
-                            , text <| Eos.symbolToSymbolCodeString symbol
-                            ]
-                        , Action.viewClaimButton action symbol
-                            |> Html.map GotActionMsg
-                        ]
+viewAction : Symbol -> Action -> Html Msg
+viewAction symbol action =
+    li [ class "relative mb-10 w-full sm:px-2 sm:w-1/2 lg:w-1/3" ]
+        [ i [ class "absolute top-0 left-0 right-0 -mt-6" ] [ Icons.flag "w-full fill-green" ]
+        , div [ class "px-4 pt-8 pb-4 text-sm font-light bg-purple-500 rounded-lg text-white" ]
+            [ p [ class "mb-8" ] [ text action.description ]
+            , div [ class "flex justify-between" ]
+                [ p []
+                    [ text "You gain"
+                    , br [] []
+                    , span [ class "text-green font-medium" ] [ text <| String.fromFloat action.reward ]
+                    , text " "
+                    , text <| Eos.symbolToSymbolCodeString symbol
                     ]
+                , Action.viewClaimButton action symbol
+                    |> Html.map GotActionMsg
                 ]
-    in
+            ]
+        ]
+
+
+viewActions : Symbol -> SearchResult -> List (Html Msg)
+viewActions symbol ({ actions } as results) =
     [ viewTabs results Actions
     , ul [ class "flex px-4 sm:px-2 pt-12 flex-wrap justify-left" ]
-        (List.map viewAction actions)
+        (List.map (viewAction symbol) actions)
     ]
 
 
