@@ -267,7 +267,7 @@ update msg model =
                         )
                         val
             in
-            case jsAddressResult |> Debug.log "jsAddressResult" of
+            case jsAddressResult of
                 Ok jsAddress ->
                     Maybe.map
                         (\newMsg -> update newMsg model)
