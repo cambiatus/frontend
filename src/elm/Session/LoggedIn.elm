@@ -839,68 +839,56 @@ update msg model =
                                 |> Just
                     }
             in
-            case actionMsg of
-                Action.ClaimConfirmationOpen action ->
+            case ( model.actionToClaim, actionMsg ) of
+                ( Nothing, Action.ClaimConfirmationOpen action ) ->
                     updateClaimingAction (Action.initClaimingActionModel action)
                         |> UR.init
 
-                Action.ActionClaimed ->
-                    case model.actionToClaim |> Debug.log "Action.ActionClaimed from LoggedIn" of
-                        Just ({ action } as actionModel) ->
-                            let
-                                ( proofPhoto, proofCode, proofTime ) =
-                                    case actionModel.proofData of
-                                        Just pd ->
-                                            ( pd.proofPhoto, pd.proofCode, pd.proofTime )
+                ( Just ({ action } as actionModel), Action.ActionClaimed ) ->
+                    let
+                        ( proofPhoto, proofCode, proofTime ) =
+                            case actionModel.proofData of
+                                Just pd ->
+                                    ( pd.proofPhoto, pd.proofCode, pd.proofTime )
 
-                                        Nothing ->
-                                            ( "", "", 0 )
+                                Nothing ->
+                                    ( "", "", 0 )
 
-                                claimedAction =
-                                    { actionId = action.id
-                                    , maker = model.accountName
-                                    , proofPhoto = proofPhoto
-                                    , proofCode = proofCode
-                                    , proofTime = proofTime
-                                    }
+                        claimedAction =
+                            { actionId = action.id
+                            , maker = model.accountName
+                            , proofPhoto = proofPhoto
+                            , proofCode = proofCode
+                            , proofTime = proofTime
+                            }
 
-                                claimPort : JavascriptOutModel Msg
-                                claimPort =
-                                    Action.claimActionPort
-                                        (GotActionMsg Action.ActionClaimed)
-                                        shared.contracts.community
-                                        claimedAction
-                            in
-                            if isAuth model then
-                                updateClaimingAction actionModel
-                                    |> UR.init
-                                    |> UR.addPort claimPort
+                        claimPort : JavascriptOutModel Msg
+                        claimPort =
+                            Action.claimActionPort
+                                (GotActionMsg Action.ActionClaimed)
+                                shared.contracts.community
+                                claimedAction
+                    in
+                    if isAuth model then
+                        updateClaimingAction actionModel
+                            |> UR.init
+                            |> UR.addPort claimPort
 
-                            else
-                                updateClaimingAction actionModel
-                                    |> Debug.log "we stuck here"
-                                    -- TODO: Make it work!
-                                    --|> UR.addExt (RequiredAuthentication (Just (GotActionMsg Action.ActionClaimed)))
-                                    |> UR.init
+                    else
+                        updateClaimingAction actionModel
+                            |> Debug.log "we stuck here"
+                            -- TODO: Make it work!
+                            --|> UR.addExt (RequiredAuthentication (Just (GotActionMsg Action.ActionClaimed)))
+                            |> UR.init
 
-                        Nothing ->
-                            model
-                                |> UR.init
+                ( Just ca, Action.ActionWithPhotoLinkClicked route ) ->
+                    updateClaimingAction ca
+                        |> update SearchClosed
+                        |> UR.addCmd (Route.replaceUrl model.shared.navKey route)
 
-                Action.ActionWithPhotoLinkClicked route ->
-                    case model.actionToClaim of
-                        Just ca ->
-                            updateClaimingAction ca
-                                |> update SearchClosed
-                                |> UR.addCmd (Route.replaceUrl model.shared.navKey route)
-
-                        Nothing ->
-                            model
-                                |> UR.init
-
-                Action.GotActionClaimedResponse resp ->
-                    case ( model.actionToClaim, resp ) of
-                        ( Just ca, Ok _ ) ->
+                ( Just ca, Action.GotActionClaimedResponse resp ) ->
+                    case resp of
+                        Ok _ ->
                             let
                                 message =
                                     tr "dashboard.check_claim.success"
@@ -910,24 +898,18 @@ update msg model =
                                 |> (\m -> { m | feedback = Show Success message })
                                 |> UR.init
 
-                        ( Just ca, Err _ ) ->
+                        Err _ ->
                             updateClaimingAction ca
                                 |> (\m -> { m | feedback = Show Failure (t "dashboard.check_claim.failure") })
                                 |> UR.init
 
-                        ( Nothing, _ ) ->
-                            model
-                                |> UR.init
+                ( Just ca, _ ) ->
+                    updateClaimingAction ca
+                        |> UR.init
 
                 _ ->
-                    case model.actionToClaim of
-                        Just ca ->
-                            updateClaimingAction ca
-                                |> UR.init
-
-                        Nothing ->
-                            model
-                                |> UR.init
+                    model
+                        |> UR.init
 
         SearchClosed ->
             { model
