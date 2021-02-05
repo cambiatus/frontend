@@ -1,6 +1,7 @@
 module Action exposing
     ( Action
     , ClaimConfirmationModalStatus(..)
+    , ClaimedAction
     , Model
     , Msg(..)
     , claimActionPort
@@ -76,6 +77,7 @@ type alias ClaimedAction =
 type alias Model =
     { claimConfirmationModalStatus : ClaimConfirmationModalStatus
     , action : Action
+    , proofData : Maybe { proofPhoto : String, proofCode : String, proofTime : Int }
     }
 
 
@@ -83,6 +85,7 @@ initClaimingActionModel : Action -> Model
 initClaimingActionModel action =
     { claimConfirmationModalStatus = Open action
     , action = action
+    , proofData = Nothing
     }
 
 
@@ -153,11 +156,12 @@ viewClaimConfirmation symbol { t } claimConfirmationModalStatus =
         Open action ->
             let
                 acceptMsg =
-                    if action.hasProofPhoto then
-                        ActionWithPhotoLinkClicked (getClaimWithPhotoRoute symbol action.objective.id action.id)
-
-                    else
-                        ActionClaimed
+                    -- TODO: Decide what to do the modal when click "claim" button for claim with proof
+                    --if action.hasProofPhoto then
+                    --    ActionWithPhotoLinkClicked (getClaimWithPhotoRoute symbol action.objective.id action.id)
+                    --
+                    --else
+                    ActionClaimed
             in
             modalContent acceptMsg False
 
@@ -198,8 +202,8 @@ update { t } msg model =
             { model | claimConfirmationModalStatus = Closed }
 
 
-claimActionPort : msg -> Action -> String -> Name -> Ports.JavascriptOutModel msg
-claimActionPort msg action contractsCommunity accountName =
+claimActionPort : msg -> String -> ClaimedAction -> Ports.JavascriptOutModel msg
+claimActionPort msg contractsCommunity { actionId, maker, proofPhoto, proofCode, proofTime } =
     { responseAddress = msg
     , responseData = Encode.null
     , data =
@@ -207,15 +211,15 @@ claimActionPort msg action contractsCommunity accountName =
             [ { accountName = contractsCommunity
               , name = "claimaction"
               , authorization =
-                    { actor = accountName
+                    { actor = maker
                     , permissionName = Eos.samplePermission
                     }
               , data =
-                    { actionId = action.id
-                    , maker = accountName
-                    , proofPhoto = ""
-                    , proofCode = ""
-                    , proofTime = 0
+                    { actionId = actionId
+                    , maker = maker
+                    , proofPhoto = proofPhoto
+                    , proofCode = proofCode
+                    , proofTime = proofTime
                     }
                         |> encodeClaimAction
               }

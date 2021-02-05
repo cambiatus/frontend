@@ -845,28 +845,44 @@ update msg model =
                         |> UR.init
 
                 Action.ActionClaimed ->
-                    case model.actionToClaim of
-                        Just ca ->
+                    case model.actionToClaim |> Debug.log "Action.ActionClaimed from LoggedIn" of
+                        Just ({ action } as actionModel) ->
                             let
+                                ( proofPhoto, proofCode, proofTime ) =
+                                    case actionModel.proofData of
+                                        Just pd ->
+                                            ( pd.proofPhoto, pd.proofCode, pd.proofTime )
+
+                                        Nothing ->
+                                            ( "", "", 0 )
+
+                                claimedAction =
+                                    { actionId = action.id
+                                    , maker = model.accountName
+                                    , proofPhoto = proofPhoto
+                                    , proofCode = proofCode
+                                    , proofTime = proofTime
+                                    }
+
                                 claimPort : JavascriptOutModel Msg
                                 claimPort =
                                     Action.claimActionPort
                                         (GotActionMsg Action.ActionClaimed)
-                                        ca.action
                                         shared.contracts.community
-                                        model.accountName
+                                        claimedAction
                             in
                             if isAuth model then
-                                updateClaimingAction ca
+                                updateClaimingAction actionModel
                                     |> UR.init
                                     |> UR.addPort claimPort
 
                             else
-                                updateClaimingAction ca
+                                updateClaimingAction actionModel
+                                    |> Debug.log "we stuck here"
+                                    -- TODO: Make it work!
+                                    --|> UR.addExt (RequiredAuthentication (Just (GotActionMsg Action.ActionClaimed)))
                                     |> UR.init
 
-                        -- TODO: !!! Maybe return UpdateResult from Action.view?
-                        --|> UR.addExt (RequiredAuthentication (Just (GotActionMsg Action.ActionClaimed)))
                         Nothing ->
                             model
                                 |> UR.init

@@ -24,6 +24,7 @@ import Icons
 import Json.Decode as Decode
 import Json.Encode as Encode exposing (Value)
 import Page
+import Ports exposing (JavascriptOutModel)
 import Route
 import Session.LoggedIn as LoggedIn exposing (External(..))
 import Session.Shared exposing (Translators)
@@ -83,8 +84,9 @@ type Msg
     | Tick Time.Posix
     | EnteredPhoto (List File)
     | CompletedPhotoUpload (Result Http.Error String)
-    | ClaimAction Action
+      --| ClaimAction Action
     | GotClaimActionResponse (Result Value String)
+    | GotActionWithPhotoMsg Action.Msg
 
 
 type Proof
@@ -253,7 +255,8 @@ viewClaimWithProofs (Proof photoStatus proofCode) translators action =
                             NoOp
 
                          else
-                            ClaimAction action
+                            --GotActionWithPhotoMsg Action.ActionClaimed
+                            (GotActionWithPhotoMsg << Action.ClaimConfirmationOpen) action
                         )
                     , disabled isUploadingInProgress
                     ]
@@ -465,7 +468,7 @@ update msg model ({ shared } as loggedIn) =
                         { code = Nothing
                         , claimTimestamp = Time.posixToMillis posix // 1000
                         , secondsAfterClaim = 0
-                        , availabilityPeriod = 5 --30 * 60
+                        , availabilityPeriod = 30 * 60
                         }
             in
             { model | proof = Proof NoPhotoAdded initProofCodeParts }
@@ -480,10 +483,11 @@ update msg model ({ shared } as loggedIn) =
                             ]
                     }
 
-        ClaimAction action ->
-            -- TODO: Remove duplication in port
-            -- TODO: ??? Stop timer after photo was uploaded successfully
+        GotActionWithPhotoMsg actionMsg ->
             let
+                _ =
+                    Debug.log "photo model" model
+
                 hasPhotoError =
                     case model.proof of
                         Proof (Uploaded _) _ ->
@@ -493,52 +497,65 @@ update msg model ({ shared } as loggedIn) =
                             -- Error: photo wasn't uploaded while claiming with proof
                             True
 
-                ( proofPhotoUrl, proofCode_, proofTime ) =
-                    case model.proof of
-                        Proof (Uploaded url) (Just { code, claimTimestamp }) ->
-                            ( url, Maybe.withDefault "" code, claimTimestamp )
+                proofData =
+                    if hasPhotoError then
+                        Nothing
 
-                        Proof (Uploaded url) Nothing ->
-                            ( url, "", 0 )
+                    else
+                        let
+                            ( proofPhotoUrl, proofCode_, proofTime ) =
+                                case model.proof of
+                                    Proof (Uploaded url) (Just { code, claimTimestamp }) ->
+                                        ( url, Maybe.withDefault "" code, claimTimestamp )
 
-                        _ ->
-                            ( "", "", 0 )
+                                    Proof (Uploaded url) Nothing ->
+                                        ( url, "", 0 )
+
+                                    _ ->
+                                        ( "", "", 0 )
+                        in
+                        Just
+                            { proofPhoto = proofPhotoUrl
+                            , proofCode = proofCode_
+                            , proofTime = proofTime
+                            }
+
+                addProofData actionModel pd =
+                    { actionModel | proofData = pd }
+
+                loggedInWithUpdatedClaimingAction =
+                    case loggedIn.actionToClaim of
+                        Just actionModel ->
+                            { loggedIn
+                                | actionToClaim =
+                                    Action.update shared.translators
+                                        actionMsg
+                                        (addProofData actionModel proofData)
+                                        |> Just
+                            }
+
+                        Nothing ->
+                            case actionMsg of
+                                Action.ClaimConfirmationOpen a ->
+                                    { loggedIn
+                                        | actionToClaim =
+                                            addProofData (Action.initClaimingActionModel a) proofData
+                                                |> Just
+                                    }
+
+                                _ ->
+                                    loggedIn
+
+                ext =
+                    if hasPhotoError then
+                        ShowFeedback LoggedIn.Failure (t "community.actions.proof.no_photo_error")
+
+                    else
+                        UpdatedLoggedIn (Debug.log "loggedInWithUpdatedClaimingAction" loggedInWithUpdatedClaimingAction)
             in
-            if hasPhotoError then
-                model
-                    |> UR.init
-                    |> UR.addExt (ShowFeedback LoggedIn.Failure (t "community.actions.proof.no_photo_error"))
-
-            else if LoggedIn.isAuth loggedIn then
-                model
-                    |> UR.init
-                    |> UR.addPort
-                        { responseAddress = ClaimAction action
-                        , responseData = Encode.null
-                        , data =
-                            Eos.encodeTransaction
-                                [ { accountName = shared.contracts.community
-                                  , name = "claimaction"
-                                  , authorization =
-                                        { actor = loggedIn.accountName
-                                        , permissionName = Eos.samplePermission
-                                        }
-                                  , data =
-                                        { actionId = action.id
-                                        , maker = loggedIn.accountName
-                                        , proofPhoto = proofPhotoUrl
-                                        , proofCode = proofCode_
-                                        , proofTime = proofTime
-                                        }
-                                            |> Action.encodeClaimAction
-                                  }
-                                ]
-                        }
-
-            else
-                model
-                    |> UR.init
-                    |> UR.addExt (Just (ClaimAction action) |> RequiredAuthentication)
+            model
+                |> UR.init
+                |> UR.addExt ext
 
         NoOp ->
             model |> UR.init
@@ -565,19 +582,7 @@ update msg model ({ shared } as loggedIn) =
 
 jsAddressToMsg : List String -> Value -> Maybe Msg
 jsAddressToMsg addr val =
-    -- TODO: Remove duplicates
     case addr of
-        "ClaimAction" :: [] ->
-            Decode.decodeValue
-                (Decode.oneOf
-                    [ Decode.field "transactionId" Decode.string |> Decode.map Ok
-                    , Decode.succeed (Err val)
-                    ]
-                )
-                val
-                |> Result.map (Just << GotClaimActionResponse)
-                |> Result.withDefault Nothing
-
         "GetUint64Name" :: [] ->
             Decode.decodeValue
                 (Decode.oneOf
@@ -598,6 +603,9 @@ msgToString msg =
     case msg of
         CommunityLoaded res ->
             [ "CommunityLoaded" ]
+
+        GotActionWithPhotoMsg _ ->
+            [ "GotActionWithPhotoMsg" ]
 
         Tick _ ->
             [ "Tick" ]
@@ -628,9 +636,6 @@ msgToString msg =
 
         NoOp ->
             [ "NoOp" ]
-
-        ClaimAction _ ->
-            [ "ClaimAction" ]
 
 
 generateVerificationCode : Int -> String -> Int -> String
