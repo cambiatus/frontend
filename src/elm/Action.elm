@@ -93,7 +93,7 @@ type Msg
     = NoOp
     | ClaimConfirmationOpen Action
     | ClaimConfirmationClosed
-    | ActionClaimed
+    | ActionClaimed Bool
     | GotActionClaimedResponse (Result Value String)
     | ActionWithPhotoLinkClicked Route.Route
 
@@ -106,8 +106,8 @@ getClaimWithPhotoRoute community objectiveId actionId =
         actionId
 
 
-viewClaimConfirmation : Eos.Symbol -> Translators -> ClaimConfirmationModalStatus -> Html Msg
-viewClaimConfirmation symbol { t } claimConfirmationModalStatus =
+viewClaimConfirmation : Bool -> Eos.Symbol -> Translators -> ClaimConfirmationModalStatus -> Html Msg
+viewClaimConfirmation isAuth symbol { t } claimConfirmationModalStatus =
     let
         text_ s =
             text (t s)
@@ -161,7 +161,7 @@ viewClaimConfirmation symbol { t } claimConfirmationModalStatus =
                     --    ActionWithPhotoLinkClicked (getClaimWithPhotoRoute symbol action.objective.id action.id)
                     --
                     --else
-                    ActionClaimed
+                    ActionClaimed isAuth
             in
             modalContent acceptMsg False
 
@@ -186,7 +186,7 @@ update { t } msg model =
         ClaimConfirmationOpen action ->
             { model | claimConfirmationModalStatus = Open action }
 
-        ActionClaimed ->
+        ActionClaimed _ ->
             { model | claimConfirmationModalStatus = InProgress }
 
         ClaimConfirmationClosed ->
@@ -230,7 +230,7 @@ claimActionPort msg contractsCommunity { actionId, maker, proofPhoto, proofCode,
 jsAddressToMsg : List String -> Value -> Maybe Msg
 jsAddressToMsg addr val =
     case addr of
-        "ClaimAction" :: [] ->
+        "ActionClaimed" :: [] ->
             Decode.decodeValue
                 (Decode.oneOf
                     [ Decode.field "transactionId" Decode.string |> Decode.map Ok
@@ -252,19 +252,19 @@ msgToString msg =
             [ "NoOp" ]
 
         ClaimConfirmationOpen _ ->
-            [ "OpenClaimConfirmation" ]
+            [ "ClaimConfirmationOpen" ]
 
         ClaimConfirmationClosed ->
-            [ "CloseClaimConfirmation" ]
+            [ "ClaimConfirmationClosed" ]
 
-        ActionClaimed ->
-            [ "ClaimAction" ]
+        ActionClaimed _ ->
+            [ "ActionClaimed" ]
 
         ActionWithPhotoLinkClicked _ ->
             [ "ActionWithPhotoLinkClicked" ]
 
         GotActionClaimedResponse r ->
-            [ "GotClaimActionResponse", UR.resultToString r ]
+            [ "GotActionClaimedResponse", UR.resultToString r ]
 
 
 encodeClaimAction : ClaimedAction -> Encode.Value
@@ -313,12 +313,14 @@ selectionSet =
         |> with ActionObject.position
 
 
-viewClaimButton : Action -> Html Msg
-viewClaimButton action =
+viewClaimButton : Symbol -> Action -> Html Msg
+viewClaimButton symbol action =
     -- TODO: Handle action.deadline and action.isCompleted.
     if action.hasProofPhoto then
         button
-            [ onClick (ClaimConfirmationOpen action)
+            [ --onClick (ClaimConfirmationOpen action)
+              -- TODO: Just use href
+              onClick <| ActionWithPhotoLinkClicked (getClaimWithPhotoRoute symbol action.objective.id action.id)
             , class "self-end button button-primary"
             ]
             [ span [ class "inline-block w-4 align-middle mr-2" ] [ Icons.camera "" ]
@@ -350,7 +352,7 @@ viewSearchActions symbol actions =
                             , text " "
                             , text <| Eos.symbolToSymbolCodeString symbol
                             ]
-                        , viewClaimButton action
+                        , viewClaimButton symbol action
                         ]
                     ]
                 ]

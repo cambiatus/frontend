@@ -325,6 +325,9 @@ update msg model ({ shared } as loggedIn) =
 
         GotCommunityActionMsg actionMsg ->
             let
+                _ =
+                    Debug.log "actionMsg from Community" ( actionMsg, loggedIn.actionToClaim )
+
                 loggedInWithUpdatedClaimingAction =
                     case loggedIn.actionToClaim of
                         Just a ->
@@ -346,6 +349,7 @@ update msg model ({ shared } as loggedIn) =
             in
             model
                 |> UR.init
+                -- TODO: This doesn't handle all `LoggedIn.GotActionMsg` cases (e.g. Claim with Photo)
                 |> UR.addExt (UpdatedLoggedIn loggedInWithUpdatedClaimingAction)
 
         CompletedLoadCommunity (Ok community) ->
@@ -529,6 +533,12 @@ viewAction translators canEdit symbol maybeDate action =
                 , onClick
                     (if isClosed then
                         NoOp
+
+                     else if action.hasProofPhoto then
+                        GotCommunityActionMsg
+                            (Action.ActionWithPhotoLinkClicked
+                                (Action.getClaimWithPhotoRoute symbol action.objective.id action.id)
+                            )
 
                      else
                         (GotCommunityActionMsg << Action.ClaimConfirmationOpen) action

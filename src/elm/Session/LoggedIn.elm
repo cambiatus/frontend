@@ -281,12 +281,12 @@ viewFeedback status message =
                     " bg-red"
     in
     div
-        [ class <| "w-full sticky z-10 top-0 transition duration-500 ease-in-out bg-blue-500 hover:bg-red-500 transform hover:-translate-y-1 hover:scale-110" ++ color
+        [ class <| "w-full sticky z-10 top-0 bg-blue-500 hover:bg-red-500" ++ color
         , style "display" "grid"
         , style "grid-template" "\". text x\" 100% / 10% 80% 10%"
         ]
         [ span
-            [ class "flex justify-center items-center text-sm h-10 leading-snug text-white font-bold"
+            [ class "flex justify-center items-center transition duration-500 ease-in-out text-sm h-10 leading-snug text-white font-bold transform hover:-translate-y-1 hover:scale-110"
             , style "grid-area" "text"
             ]
             [ text message ]
@@ -314,6 +314,7 @@ viewHelper thisMsg page profile_ ({ shared } as model) content =
                 , case model.actionToClaim of
                     Just a ->
                         Action.viewClaimConfirmation
+                            (isAuth model)
                             model.selectedCommunity
                             shared.translators
                             a.claimConfirmationModalStatus
@@ -331,6 +332,12 @@ viewHelper thisMsg page profile_ ({ shared } as model) content =
                   else
                     viewMainMenu page model |> Html.map thisMsg
                 ]
+            , case model.feedback of
+                Show status message ->
+                    viewFeedback status message |> Html.map thisMsg
+
+                Hidden ->
+                    text ""
             ]
          ]
             ++ (if Search.isActive model.searchModel then
@@ -438,13 +445,7 @@ viewPageBody t model profile_ page content thisMsg =
                     []
                 ]
     in
-    [ case model.feedback of
-        Show status message ->
-            viewFeedback status message |> Html.map thisMsg
-
-        Hidden ->
-            text ""
-    , div [ class "flex-grow" ]
+    [ div [ class "flex-grow" ]
         [ case model.hasKyc of
             FeatureLoading ->
                 div [ class "full-spinner-container h-full" ]
@@ -838,14 +839,22 @@ update msg model =
                             Action.update shared.translators actionMsg actionModel
                                 |> Just
                     }
+
+                _ =
+                    Debug.log "Action msg" actionMsg
             in
             case ( model.actionToClaim, actionMsg ) of
                 ( Nothing, Action.ClaimConfirmationOpen action ) ->
                     updateClaimingAction (Action.initClaimingActionModel action)
                         |> UR.init
 
-                ( Just ({ action } as actionModel), Action.ActionClaimed ) ->
+                ( Just ({ action } as actionModel), Action.ActionClaimed True ) ->
+                    -- Do the actual claiming via EOS.
+                    -- This case is fired from `GotAuthMsg` after user logs in if `actionToClaim` is presented in `model`.
                     let
+                        _ =
+                            Debug.log "Claiming action when isAuth is True" (isAuth model)
+
                         ( proofPhoto, proofCode, proofTime ) =
                             case actionModel.proofData of
                                 Just pd ->
@@ -865,43 +874,44 @@ update msg model =
                         claimPort : JavascriptOutModel Msg
                         claimPort =
                             Action.claimActionPort
-                                (GotActionMsg Action.ActionClaimed)
+                                (GotActionMsg actionMsg)
                                 shared.contracts.community
                                 claimedAction
                     in
-                    if isAuth model then
-                        updateClaimingAction actionModel
-                            |> UR.init
-                            |> UR.addPort claimPort
+                    updateClaimingAction actionModel
+                        |> UR.init
+                        |> UR.addPort claimPort
 
-                    else
-                        updateClaimingAction actionModel
-                            |> Debug.log "we stuck here"
-                            -- TODO: Make it work!
-                            --|> UR.addExt (RequiredAuthentication (Just (GotActionMsg Action.ActionClaimed)))
-                            |> UR.init
+                ( Just ({ action } as actionModel), Action.ActionClaimed False ) ->
+                    updateClaimingAction actionModel
+                        |> askedAuthentication
+                        |> UR.init
 
-                ( Just ca, Action.ActionWithPhotoLinkClicked route ) ->
-                    updateClaimingAction ca
+                ( _, Action.ActionWithPhotoLinkClicked route ) ->
+                    let
+                        _ =
+                            Debug.log "photo" route
+                    in
+                    model
                         |> update SearchClosed
                         |> UR.addCmd (Route.replaceUrl model.shared.navKey route)
 
-                ( Just ca, Action.GotActionClaimedResponse resp ) ->
-                    case resp of
-                        Ok _ ->
-                            let
-                                message =
+                ( Just _, Action.GotActionClaimedResponse resp ) ->
+                    let
+                        showMessage =
+                            case resp of
+                                Ok _ ->
                                     tr "dashboard.check_claim.success"
                                         [ ( "symbolCode", Eos.symbolToSymbolCodeString model.selectedCommunity ) ]
-                            in
-                            updateClaimingAction ca
-                                |> (\m -> { m | feedback = Show Success message })
-                                |> UR.init
+                                        |> Show Success
 
-                        Err _ ->
-                            updateClaimingAction ca
-                                |> (\m -> { m | feedback = Show Failure (t "dashboard.check_claim.failure") })
-                                |> UR.init
+                                Err _ ->
+                                    Show Failure (t "dashboard.check_claim.failure")
+                    in
+                    -- Flush claimed action.
+                    { model | actionToClaim = Nothing }
+                        |> (\m -> { m | feedback = showMessage })
+                        |> UR.init
 
                 ( Just ca, _ ) ->
                     updateClaimingAction ca
@@ -1051,6 +1061,10 @@ update msg model =
             UR.init closeAllModals
 
         GotAuthMsg authMsg ->
+            let
+                _ =
+                    Debug.log "authMsg" authMsg
+            in
             Auth.update authMsg shared model.auth
                 |> UR.map
                     (\a -> { model | auth = a })
@@ -1062,8 +1076,25 @@ update msg model =
                                     |> UR.addExt AuthenticationFailed
 
                             Auth.CompletedAuth _ ->
+                                let
+                                    cmd =
+                                        -- Check if there's action claim in progress (stored in model.actionToClaim).
+                                        -- If we found one, we claim it after loggin in. Otherwise, just login.
+                                        case model.actionToClaim of
+                                            Just ac ->
+                                                let
+                                                    _ =
+                                                        Debug.log "from CompletedAuth" ac
+                                                in
+                                                Task.succeed (GotActionMsg (Action.ActionClaimed True))
+                                                    |> Task.perform identity
+
+                                            Nothing ->
+                                                Cmd.none
+                                in
                                 closeModal uResult
                                     |> UR.addExt AuthenticationSucceed
+                                    |> UR.addCmd cmd
 
                             Auth.UpdatedShared newShared ->
                                 UR.mapModel
