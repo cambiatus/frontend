@@ -887,12 +887,13 @@ update msg model =
                         |> askedAuthentication
                         |> UR.init
 
-                ( _, Action.ActionWithPhotoLinkClicked route ) ->
+                ( Just ({ action } as actionModel), Action.ActionWithPhotoLinkClicked route ) ->
+                    -- TODO: pass the route to go back to `ActionWithPhotoLinkClicked` when Cancel clicked?
                     let
                         _ =
-                            Debug.log "photo" route
+                            Debug.log "model, photo" ( model.actionToClaim, route )
                     in
-                    model
+                    updateClaimingAction actionModel
                         |> update SearchClosed
                         |> UR.addCmd (Route.replaceUrl model.shared.navKey route)
 

@@ -534,12 +534,6 @@ viewAction translators canEdit symbol maybeDate action =
                     (if isClosed then
                         NoOp
 
-                     else if action.hasProofPhoto then
-                        GotCommunityActionMsg
-                            (Action.ActionWithPhotoLinkClicked
-                                (Action.getClaimWithPhotoRoute symbol action.objective.id action.id)
-                            )
-
                      else
                         (GotCommunityActionMsg << Action.ClaimConfirmationOpen) action
                     )

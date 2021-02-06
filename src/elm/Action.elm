@@ -157,11 +157,11 @@ viewClaimConfirmation isAuth symbol { t } claimConfirmationModalStatus =
             let
                 acceptMsg =
                     -- TODO: Decide what to do the modal when click "claim" button for claim with proof
-                    --if action.hasProofPhoto then
-                    --    ActionWithPhotoLinkClicked (getClaimWithPhotoRoute symbol action.objective.id action.id)
-                    --
-                    --else
-                    ActionClaimed isAuth
+                    if action.hasProofPhoto then
+                        ActionWithPhotoLinkClicked (getClaimWithPhotoRoute symbol action.objective.id action.id)
+
+                    else
+                        ActionClaimed isAuth
             in
             modalContent acceptMsg False
 
@@ -199,6 +199,10 @@ update { t } msg model =
             { model | claimConfirmationModalStatus = Closed }
 
         ActionWithPhotoLinkClicked _ ->
+            let
+                _ =
+                    Debug.log "ActionWithPhotoLinkClicked" model
+            in
             { model | claimConfirmationModalStatus = Closed }
 
 
@@ -318,9 +322,7 @@ viewClaimButton symbol action =
     -- TODO: Handle action.deadline and action.isCompleted.
     if action.hasProofPhoto then
         button
-            [ --onClick (ClaimConfirmationOpen action)
-              -- TODO: Just use href
-              onClick <| ActionWithPhotoLinkClicked (getClaimWithPhotoRoute symbol action.objective.id action.id)
+            [ onClick (ClaimConfirmationOpen action)
             , class "self-end button button-primary"
             ]
             [ span [ class "inline-block w-4 align-middle mr-2" ] [ Icons.camera "" ]
