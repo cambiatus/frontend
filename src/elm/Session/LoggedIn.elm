@@ -843,9 +843,6 @@ update msg model =
                             Action.update shared.translators actionMsg actionModel
                                 |> Just
                     }
-
-                _ =
-                    Debug.log "Action msg" actionMsg
             in
             case ( model.actionToClaim, actionMsg ) of
                 ( Nothing, Action.ClaimConfirmationOpen action ) ->
@@ -857,22 +854,17 @@ update msg model =
                     -- This case is fired from `GotAuthMsg` after user logs in if `actionToClaim` is presented in `model`.
                     let
                         _ =
-                            Debug.log "Claiming action when isAuth is True" (isAuth model)
+                            Debug.log "Claiming action with no proof when isAuth is True" (isAuth model)
 
-                        ( proofPhoto, proofCode, proofTime ) =
-                            case actionModel.proofData of
-                                Just pd ->
-                                    ( pd.proofPhoto, pd.proofCode, pd.proofTime )
-
-                                Nothing ->
-                                    ( "", "", 0 )
+                        ( emptyProofPhoto, emptyProofCode, emptyProofTime ) =
+                            ( "", "", 0 )
 
                         claimedAction =
                             { actionId = action.id
                             , maker = model.accountName
-                            , proofPhoto = proofPhoto
-                            , proofCode = proofCode
-                            , proofTime = proofTime
+                            , proofPhoto = emptyProofPhoto
+                            , proofCode = emptyProofCode
+                            , proofTime = emptyProofTime
                             }
 
                         claimPort : JavascriptOutModel Msg
@@ -887,10 +879,6 @@ update msg model =
                         |> UR.addPort claimPort
 
                 ( Just ({ action } as actionModel), Action.ActionClaimed False ) ->
-                    let
-                        _ =
-                            Debug.log "Auth is " False
-                    in
                     updateClaimingAction actionModel
                         |> askedAuthentication
                         |> UR.init
@@ -1103,8 +1091,8 @@ update msg model =
                                 in
                                 closeModal uResult
                                     |> UR.addExt AuthenticationSucceed
-                                    |> UR.addCmd cmd
 
+                            --|> UR.addCmd cmd
                             Auth.UpdatedShared newShared ->
                                 UR.mapModel
                                     (\m -> { m | shared = newShared })

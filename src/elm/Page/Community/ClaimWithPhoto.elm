@@ -55,7 +55,7 @@ init loggedIn symbol objectiveId actionId =
             case loggedIn.actionToClaim of
                 Just actionModel ->
                     if actionModel.action.hasProofPhoto then
-                        ( Loaded actionModel, Task.succeed (OpenProofSection actionModel.action) |> Task.perform identity )
+                        ( Loaded actionModel, Task.succeed (PageShowed actionModel.action) |> Task.perform identity )
 
                     else
                         ( NotFound, Cmd.none )
@@ -75,18 +75,16 @@ init loggedIn symbol objectiveId actionId =
 
 type Msg
     = NoOp
-    | CommunityLoaded (Result (Graphql.Http.Error (Maybe Community.Model)) (Maybe Community.Model))
-    | OpenProofSection Action
-    | CloseProofSection ReasonToCloseProofSection
+    | ActionLoaded (Result (Graphql.Http.Error (Maybe Action.Model)) (Maybe Action.Model))
+    | PageShowed Action
+    | ClaimingCancelled ReasonToCloseProofSection
     | GotProofTime Posix
-    | GetUint64Name String
+    | AskedForUint64Name String
     | GotUint64Name (Result Value String)
     | Tick Time.Posix
-    | EnteredPhoto (List File)
-    | CompletedPhotoUpload (Result Http.Error String)
-      --| ClaimAction Action
-    | GotClaimActionResponse (Result Value String)
-    | GotActionWithPhotoMsg Action.Msg
+    | PhotoAdded (List File)
+    | PhotoUploaded (Result Http.Error String)
+    | GotActionMsg Action.Msg
 
 
 type Proof
@@ -94,7 +92,7 @@ type Proof
 
 
 type alias ProofCode =
-    { code : Maybe String
+    { code_ : Maybe String
     , claimTimestamp : Int
     , secondsAfterClaim : Int
     , availabilityPeriod : Int
@@ -110,7 +108,7 @@ type ProofPhotoStatus
 
 type ReasonToCloseProofSection
     = CancelClicked
-    | TimerExpired
+    | TimerEnded
 
 
 viewPhotoUploader : Translators -> ProofPhotoStatus -> Html Msg
@@ -134,7 +132,7 @@ viewPhotoUploader { t } proofPhotoStatus =
             [ class "hidden-img-input"
             , type_ "file"
             , accept "image/*"
-            , Page.onFileChange EnteredPhoto
+            , Page.onFileChange PhotoAdded
             , multiple False
             ]
             []
@@ -167,13 +165,12 @@ view ({ shared } as loggedIn) model =
                 Loading ->
                     Page.fullPageLoading shared
 
-                TimeExpired ->
-                    Page.fullPageNotFound "Time has expired" "hello subtitle"
+                Expired ->
+                    Page.fullPageNotFound "Time has expired" ""
 
                 Loaded _ ->
                     div [ class "bg-white" ]
-                        [ Page.viewHeader loggedIn (t "community.actions.title") (Route.Community loggedIn.selectedCommunity)
-                        , case loggedIn.actionToClaim of
+                        [ case loggedIn.actionToClaim of
                             Just actionModel ->
                                 viewClaimWithProofs model.proof
                                     loggedIn.shared.translators
@@ -181,6 +178,7 @@ view ({ shared } as loggedIn) model =
                                     actionModel.action
 
                             Nothing ->
+                                -- TODO: FIXIT: We see this after claiming
                                 text "this is claim with photo page"
                         ]
 
@@ -217,8 +215,8 @@ viewClaimWithProofs (Proof photoStatus proofCode) translators isAuth action =
                     Maybe.withDefault "" action.photoProofInstructions
                 ]
             , case proofCode of
-                Just { code, secondsAfterClaim, availabilityPeriod } ->
-                    case code of
+                Just { code_, secondsAfterClaim, availabilityPeriod } ->
+                    case code_ of
                         Just c ->
                             viewProofCode
                                 translators
@@ -244,7 +242,7 @@ viewClaimWithProofs (Proof photoStatus proofCode) translators isAuth action =
                             NoOp
 
                          else
-                            CloseProofSection CancelClicked
+                            ClaimingCancelled CancelClicked
                         )
                     , classList [ ( "button-disabled", isUploadingInProgress ) ]
                     , disabled isUploadingInProgress
@@ -258,8 +256,7 @@ viewClaimWithProofs (Proof photoStatus proofCode) translators isAuth action =
                             NoOp
 
                          else
-                            GotActionWithPhotoMsg (Action.ActionClaimed isAuth)
-                         --(GotActionWithPhotoMsg << Action.ClaimConfirmationOpen) action
+                            GotActionMsg (Action.ActionClaimed isAuth)
                         )
                     , disabled isUploadingInProgress
                     ]
@@ -311,16 +308,16 @@ subscriptions model =
             Time.every 1000 Tick
 
         _ ->
-            -- No proof code, no timer needed
+            -- No timer needed if there's no proof code.
             Sub.none
 
 
 type Status
     = Loading
     | Loaded Action.Model
-    | LoadFailed (Graphql.Http.Error (Maybe Community.Model))
+    | LoadFailed (Graphql.Http.Error (Maybe Action.Model))
     | NotFound
-    | TimeExpired
+    | Expired
 
 
 update : Msg -> Model -> LoggedIn.Model -> UR.UpdateResult Model Msg (External Msg)
@@ -333,14 +330,14 @@ update msg model ({ shared } as loggedIn) =
             shared.translators
     in
     case msg of
-        CommunityLoaded (Err err) ->
+        ActionLoaded (Err err) ->
             { model | status = LoadFailed err }
                 |> UR.init
                 |> UR.logGraphqlError msg err
 
-        CommunityLoaded (Ok c) ->
+        ActionLoaded (Ok c) ->
             case c of
-                Just community ->
+                Just action ->
                     { model
                         | status = Loading
                     }
@@ -350,7 +347,7 @@ update msg model ({ shared } as loggedIn) =
                     { model | status = NotFound }
                         |> UR.init
 
-        OpenProofSection action ->
+        PageShowed action ->
             let
                 runProofCodeTimer =
                     if action.hasProofCode then
@@ -362,44 +359,37 @@ update msg model ({ shared } as loggedIn) =
             model
                 |> UR.init
                 |> UR.addCmd runProofCodeTimer
-                -- Don't show any messages at first
-                |> UR.addExt HideFeedback
 
-        EnteredPhoto (file :: _) ->
-            let
-                uploadImage =
-                    Api.uploadImage shared file CompletedPhotoUpload
-            in
+        PhotoAdded (file :: _) ->
             { model
                 | proof = Proof Uploading proofCode
             }
                 |> UR.init
-                |> UR.addCmd uploadImage
-                |> UR.addExt HideFeedback
+                |> UR.addCmd (Api.uploadImage shared file PhotoUploaded)
 
-        EnteredPhoto [] ->
+        PhotoAdded [] ->
             model
                 |> UR.init
 
-        CompletedPhotoUpload (Ok url) ->
+        PhotoUploaded (Ok url) ->
             { model
                 | proof = Proof (Uploaded url) proofCode
             }
                 |> UR.init
 
-        CompletedPhotoUpload (Err error) ->
+        PhotoUploaded (Err error) ->
             { model
                 | proof = Proof (UploadFailed error) proofCode
             }
                 |> UR.init
                 |> UR.logHttpError msg error
 
-        CloseProofSection reason ->
+        ClaimingCancelled reason ->
             let
                 ( status, ext ) =
                     case reason of
-                        TimerExpired ->
-                            ( TimeExpired, ShowFeedback LoggedIn.Failure (t "community.actions.proof.time_expired") )
+                        TimerEnded ->
+                            ( Expired, ShowFeedback LoggedIn.Failure (t "community.actions.proof.time_expired") )
 
                         CancelClicked ->
                             -- TODO: Redirect to the place where the user came from
@@ -412,12 +402,12 @@ update msg model ({ shared } as loggedIn) =
                 |> UR.init
                 |> UR.addExt ext
 
-        GetUint64Name _ ->
+        AskedForUint64Name _ ->
             model |> UR.init
 
         GotUint64Name (Ok uint64name) ->
-            case ( proofCode, loggedIn.actionToClaim ) of
-                ( Just pc, Just actionModel ) ->
+            case ( proofCode, model.status ) of
+                ( Just pc, Loaded actionModel ) ->
                     let
                         verificationCode =
                             generateVerificationCode actionModel.action.id uint64name pc.claimTimestamp
@@ -425,7 +415,7 @@ update msg model ({ shared } as loggedIn) =
                         newProofCode =
                             Just
                                 { pc
-                                    | code = Just verificationCode
+                                    | code_ = Just verificationCode
                                 }
                     in
                     { model | proof = Proof photoStatus newProofCode }
@@ -436,30 +426,32 @@ update msg model ({ shared } as loggedIn) =
                         |> UR.init
 
         GotUint64Name (Err _) ->
-            model |> UR.init
+            model
+                |> UR.init
+                |> UR.addExt (ShowFeedback LoggedIn.Failure "Failed while creating proof code.")
 
         Tick timer ->
             case proofCode of
-                Just pc ->
+                Just proofCode_ ->
                     let
                         secondsAfterClaim =
-                            (Time.posixToMillis timer // 1000) - pc.claimTimestamp
+                            (Time.posixToMillis timer // 1000) - proofCode_.claimTimestamp
 
                         isProofCodeActive =
-                            (pc.availabilityPeriod - secondsAfterClaim) > 0
+                            (proofCode_.availabilityPeriod - secondsAfterClaim) > 0
                     in
                     if isProofCodeActive then
                         let
                             newProofCode =
                                 Just
-                                    { pc
+                                    { proofCode_
                                         | secondsAfterClaim = secondsAfterClaim
                                     }
                         in
                         { model | proof = Proof photoStatus newProofCode } |> UR.init
 
                     else
-                        update (CloseProofSection TimerExpired) model loggedIn
+                        update (ClaimingCancelled TimerEnded) model loggedIn
 
                 _ ->
                     model |> UR.init
@@ -468,7 +460,7 @@ update msg model ({ shared } as loggedIn) =
             let
                 initProofCodeParts =
                     Just
-                        { code = Nothing
+                        { code_ = Nothing
                         , claimTimestamp = Time.posixToMillis posix // 1000
                         , secondsAfterClaim = 0
                         , availabilityPeriod = 30 * 60
@@ -477,7 +469,7 @@ update msg model ({ shared } as loggedIn) =
             { model | proof = Proof NoPhotoAdded initProofCodeParts }
                 |> UR.init
                 |> UR.addPort
-                    { responseAddress = GetUint64Name (Eos.nameToString loggedIn.accountName)
+                    { responseAddress = AskedForUint64Name (Eos.nameToString loggedIn.accountName)
                     , responseData = Encode.null
                     , data =
                         Encode.object
@@ -486,101 +478,85 @@ update msg model ({ shared } as loggedIn) =
                             ]
                     }
 
-        GotActionWithPhotoMsg actionMsg ->
-            let
-                _ =
-                    Debug.log "photo model" model
+        GotActionMsg ((Action.ActionClaimed isAuth) as actionMsg) ->
+            case ( model.status, model.proof ) of
+                ( Loaded actionModel, Proof (Uploaded url) proofCodeMatch ) ->
+                    let
+                        ( code, time ) =
+                            case proofCodeMatch of
+                                Just { code_, claimTimestamp } ->
+                                    ( Maybe.withDefault "" code_, claimTimestamp )
 
-                hasPhotoError =
-                    case model.proof of
-                        Proof (Uploaded _) _ ->
-                            False
+                                Nothing ->
+                                    ( "", 0 )
 
-                        _ ->
-                            -- Error: photo wasn't uploaded while claiming with proof
-                            True
-
-                proofData =
-                    if hasPhotoError then
-                        Nothing
-
-                    else
-                        let
-                            ( proofPhotoUrl, proofCode_, proofTime ) =
-                                case model.proof of
-                                    Proof (Uploaded url) (Just { code, claimTimestamp }) ->
-                                        ( url, Maybe.withDefault "" code, claimTimestamp )
-
-                                    Proof (Uploaded url) Nothing ->
-                                        ( url, "", 0 )
-
-                                    _ ->
-                                        ( "", "", 0 )
-                        in
-                        Just
-                            { proofPhoto = proofPhotoUrl
-                            , proofCode = proofCode_
-                            , proofTime = proofTime
+                        claimedAction =
+                            { actionId = actionModel.action.id
+                            , maker = loggedIn.accountName
+                            , proofPhoto = url
+                            , proofCode = code
+                            , proofTime = time
                             }
 
-                addProofData actionModel pd =
-                    { actionModel | proofData = pd }
+                        claimPort : JavascriptOutModel Msg
+                        claimPort =
+                            Action.claimActionPort
+                                (GotActionMsg actionMsg)
+                                shared.contracts.community
+                                claimedAction
 
-                loggedInWithUpdatedClaimingAction =
-                    case loggedIn.actionToClaim of
-                        Just actionModel ->
-                            { loggedIn
-                                | actionToClaim =
-                                    Action.update shared.translators
-                                        actionMsg
-                                        (addProofData actionModel proofData)
-                                        |> Just
-                            }
+                        doNext =
+                            if isAuth then
+                                -- Process claim if user is logged in
+                                UR.addPort claimPort
 
-                        Nothing ->
-                            case actionMsg of
-                                Action.ClaimConfirmationOpen a ->
-                                    { loggedIn
-                                        | actionToClaim =
-                                            addProofData (Action.initClaimingActionModel a) proofData
-                                                |> Just
-                                    }
+                            else
+                                -- Ask for PIN if user is not logged in
+                                UR.addExt (RequiredAuthentication (Just <| GotActionMsg (Action.ActionClaimed True)))
+                    in
+                    { model
+                        | status = Loaded (Action.update shared.translators actionMsg actionModel)
+                    }
+                        |> UR.init
+                        |> doNext
 
-                                _ ->
-                                    loggedIn
+                _ ->
+                    -- No photo uploaded, show the error message
+                    model
+                        |> UR.init
+                        |> UR.addExt (ShowFeedback LoggedIn.Failure (t "community.actions.proof.no_photo_error"))
 
-                ext =
-                    if hasPhotoError then
-                        ShowFeedback LoggedIn.Failure (t "community.actions.proof.no_photo_error")
-
-                    else
-                        UpdatedLoggedIn (Debug.log "loggedInWithUpdatedClaimingAction" loggedInWithUpdatedClaimingAction)
-            in
-            model
-                |> UR.init
-                |> UR.addExt ext
-
-        NoOp ->
-            model |> UR.init
-
-        GotClaimActionResponse (Ok _) ->
-            -- TODO: remove duplicates
+        GotActionMsg (Action.GotActionClaimedResponse (Ok _)) ->
             let
                 message =
                     shared.translators.tr "dashboard.check_claim.success"
                         [ ( "symbolCode", Eos.symbolToSymbolCodeString loggedIn.selectedCommunity ) ]
             in
             model
-                --claimConfirmationModalStatus = Closed
                 |> UR.init
+                -- Remove claimed action from the global state
+                |> UR.addExt (UpdatedLoggedIn { loggedIn | actionToClaim = Nothing })
                 |> UR.addExt (ShowFeedback LoggedIn.Success message)
 
-        GotClaimActionResponse (Err _) ->
-            -- TODO: remove duplicates
+        GotActionMsg (Action.GotActionClaimedResponse (Err _)) ->
             model
-                -- claimConfirmationModalStatus = Closed
                 |> UR.init
                 |> UR.addExt (ShowFeedback LoggedIn.Failure (t "dashboard.check_claim.failure"))
+
+        GotActionMsg actionMsg ->
+            -- TODO: Just update the actionModel
+            case model.status of
+                Loaded actionModel ->
+                    { model
+                        | status = Loaded (Action.update shared.translators actionMsg actionModel)
+                    }
+                        |> UR.init
+
+                _ ->
+                    model |> UR.init
+
+        NoOp ->
+            model |> UR.init
 
 
 jsAddressToMsg : List String -> Value -> Maybe Msg
@@ -597,6 +573,10 @@ jsAddressToMsg addr val =
                 |> Result.map (Just << GotUint64Name)
                 |> Result.withDefault Nothing
 
+        "GotActionMsg" :: remainAddress ->
+            Action.jsAddressToMsg remainAddress val
+                |> Maybe.map GotActionMsg
+
         _ ->
             Nothing
 
@@ -604,11 +584,11 @@ jsAddressToMsg addr val =
 msgToString : Msg -> List String
 msgToString msg =
     case msg of
-        CommunityLoaded res ->
+        ActionLoaded res ->
             [ "CommunityLoaded" ]
 
-        GotActionWithPhotoMsg _ ->
-            [ "GotActionWithPhotoMsg" ]
+        GotActionMsg actionMsg ->
+            "GotActionMsg" :: Action.msgToString actionMsg
 
         Tick _ ->
             [ "Tick" ]
@@ -616,26 +596,23 @@ msgToString msg =
         GotProofTime _ ->
             [ "GotProofTime" ]
 
-        OpenProofSection _ ->
+        PageShowed _ ->
             [ "OpenProofSection" ]
 
-        CloseProofSection _ ->
+        ClaimingCancelled _ ->
             [ "CloseProofSection" ]
 
-        EnteredPhoto _ ->
+        PhotoAdded _ ->
             [ "EnteredPhoto" ]
 
-        CompletedPhotoUpload r ->
+        PhotoUploaded r ->
             [ "CompletedPhotoUpload", UR.resultToString r ]
 
-        GetUint64Name _ ->
+        AskedForUint64Name _ ->
             [ "GetUint64Name" ]
 
         GotUint64Name n ->
             [ "GotUint64Name", UR.resultToString n ]
-
-        GotClaimActionResponse r ->
-            [ "GotClaimActionResponse", UR.resultToString r ]
 
         NoOp ->
             [ "NoOp" ]

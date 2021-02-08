@@ -77,7 +77,6 @@ type alias ClaimedAction =
 type alias Model =
     { claimConfirmationModalStatus : ClaimConfirmationModalStatus
     , action : Action
-    , proofData : Maybe { proofPhoto : String, proofCode : String, proofTime : Int }
     }
 
 
@@ -85,7 +84,6 @@ initClaimingActionModel : Action -> Model
 initClaimingActionModel action =
     { claimConfirmationModalStatus = Open action
     , action = action
-    , proofData = Nothing
     }
 
 
