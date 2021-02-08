@@ -300,8 +300,8 @@ viewFeedback status message =
         ]
 
 
-viewHelper : (Msg -> msg) -> Page -> Profile.Model -> Model -> Html msg -> Html msg
-viewHelper thisMsg page profile_ ({ shared } as model) content =
+viewHelper : (Msg -> pageMsg) -> Page -> Profile.Model -> Model -> Html pageMsg -> Html pageMsg
+viewHelper pageMsg page profile_ ({ shared } as model) content =
     let
         { t } =
             shared.translators
@@ -310,7 +310,7 @@ viewHelper thisMsg page profile_ ({ shared } as model) content =
         [ class "min-h-screen flex flex-col" ]
         ([ div [ class "bg-white" ]
             [ div [ class "container mx-auto" ]
-                [ viewHeader model profile_ |> Html.map thisMsg
+                [ viewHeader model profile_ |> Html.map pageMsg
                 , case model.actionToClaim of
                     Just a ->
                         Action.viewClaimConfirmation
@@ -318,73 +318,33 @@ viewHelper thisMsg page profile_ ({ shared } as model) content =
                             model.selectedCommunity
                             shared.translators
                             a.claimConfirmationModalStatus
-                            |> Html.map (thisMsg << GotActionMsg)
+                            |> Html.map (pageMsg << GotActionMsg)
 
                     Nothing ->
                         text ""
                 , -- Search form is separated from search results because it needs to
                   -- be between community selector and user dropdown on Desktops.
                   Search.viewForm model.searchModel
-                    |> Html.map (GotSearchMsg >> thisMsg)
+                    |> Html.map (GotSearchMsg >> pageMsg)
                 , if Search.isActive model.searchModel then
                     text ""
 
                   else
-                    viewMainMenu page model |> Html.map thisMsg
+                    viewMainMenu page model |> Html.map pageMsg
                 ]
             , case model.feedback of
                 Show status message ->
-                    viewFeedback status message |> Html.map thisMsg
+                    viewFeedback status message |> Html.map pageMsg
 
                 Hidden ->
                     text ""
             ]
          ]
             ++ (if Search.isActive model.searchModel then
-                    [ div [ class "container mx-auto flex flex-grow" ]
-                        [ case model.searchModel.found of
-                            Just ({ actions, offers } as results) ->
-                                case ( List.length actions, List.length offers ) of
-                                    ( 0, 0 ) ->
-                                        Search.viewEmptyResults model.searchModel.queryText
-                                            |> Html.map (GotSearchMsg >> thisMsg)
-
-                                    _ ->
-                                        let
-                                            wrapWithClass c inner =
-                                                div [ class ("flex-grow " ++ c) ]
-                                                    [ inner ]
-                                        in
-                                        case model.searchModel.state of
-                                            ResultsShowed Offers ->
-                                                div []
-                                                    [ Search.viewTabs results Offers
-                                                    , Search.viewOffers model.selectedCommunity results.offers
-                                                        |> wrapWithClass "bg-gray-100"
-                                                    ]
-                                                    |> Html.map (GotSearchMsg >> thisMsg)
-
-                                            ResultsShowed Actions ->
-                                                div []
-                                                    [ Search.viewTabs results Actions
-                                                        |> Html.map (GotSearchMsg >> thisMsg)
-                                                    , Action.viewSearchActions model.selectedCommunity results.actions
-                                                        |> wrapWithClass "bg-gray-100"
-                                                        |> Html.map (GotActionMsg >> thisMsg)
-                                                    ]
-
-                                            _ ->
-                                                Search.viewResultsOverview results
-                                                    |> wrapWithClass "bg-white p-4"
-                                                    |> Html.map (GotSearchMsg >> thisMsg)
-
-                            Nothing ->
-                                Search.viewRecentQueries model.searchModel |> Html.map (GotSearchMsg >> thisMsg)
-                        ]
-                    ]
+                    [ viewSearchBody model.selectedCommunity pageMsg model.searchModel ]
 
                 else
-                    viewPageBody t model profile_ page content thisMsg
+                    viewPageBody t model profile_ page content pageMsg
                )
             ++ [ viewFooter shared
                , Modal.initWith
@@ -396,11 +356,55 @@ viewHelper thisMsg page profile_ ({ shared } as model) content =
                             |> List.map (Html.map GotAuthMsg)
                         )
                     |> Modal.toHtml
-                    |> Html.map thisMsg
+                    |> Html.map pageMsg
                , communitySelectorModal model
-                    |> Html.map thisMsg
+                    |> Html.map pageMsg
                ]
         )
+
+
+viewSearchBody : Symbol -> (Msg -> pageMsg) -> Search.Model -> Html pageMsg
+viewSearchBody selectedCommunity toPageMsg searchModel =
+    div [ class "container mx-auto flex flex-grow" ]
+        [ case searchModel.found of
+            Just ({ actions, offers } as results) ->
+                case ( List.length actions, List.length offers ) of
+                    ( 0, 0 ) ->
+                        Search.viewEmptyResults searchModel.queryText
+                            |> Html.map (GotSearchMsg >> toPageMsg)
+
+                    _ ->
+                        let
+                            wrapWithClass c inner =
+                                div [ class ("flex-grow " ++ c) ]
+                                    [ inner ]
+                        in
+                        case searchModel.state of
+                            ResultsShowed Offers ->
+                                div []
+                                    [ Search.viewTabs results Offers
+                                    , Search.viewOffers selectedCommunity results.offers
+                                        |> wrapWithClass "bg-gray-100"
+                                    ]
+                                    |> Html.map (GotSearchMsg >> toPageMsg)
+
+                            ResultsShowed Actions ->
+                                div []
+                                    [ Search.viewTabs results Actions
+                                        |> Html.map (GotSearchMsg >> toPageMsg)
+                                    , Action.viewSearchActions selectedCommunity results.actions
+                                        |> wrapWithClass "bg-gray-100"
+                                        |> Html.map (GotActionMsg >> toPageMsg)
+                                    ]
+
+                            _ ->
+                                Search.viewResultsOverview results
+                                    |> wrapWithClass "bg-white p-4"
+                                    |> Html.map (GotSearchMsg >> toPageMsg)
+
+            Nothing ->
+                Search.viewRecentQueries searchModel |> Html.map (GotSearchMsg >> toPageMsg)
+        ]
 
 
 viewPageBody t model profile_ page content thisMsg =
