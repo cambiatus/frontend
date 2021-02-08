@@ -61,6 +61,8 @@ import Shop
 import Task
 import Translation
 import UpdateResult as UR
+import View.Form.Input as Input
+import View.Form.Select as Select
 import View.Modal as Modal
 
 
@@ -144,6 +146,7 @@ type alias Model =
     , hasShop : FeatureStatus
     , hasObjectives : FeatureStatus
     , hasKyc : FeatureStatus
+    , addPhoneInfo : AddPhoneModal
     }
 
 
@@ -172,6 +175,9 @@ initModel shared authModel accountName selectedCommunity =
     , hasShop = FeatureLoading
     , hasObjectives = FeatureLoading
     , hasKyc = FeatureLoading
+
+    -- TODO
+    , addPhoneInfo = initAddPhoneModal True
     }
 
 
@@ -189,6 +195,26 @@ type ProfileStatus
     = Loading Eos.Name
     | LoadingFailed Eos.Name (Graphql.Http.Error (Maybe Profile.Model))
     | Loaded Profile.Model
+
+
+type alias AddPhoneModal =
+    -- TODO - Change to `type AddPhoneModal = NotShowing | Showing {...}` ?
+    { show : Bool
+    , contactOption : String
+    , country : String
+    , phone : String
+    , phoneProblems : Maybe (List String) -- Validate
+    }
+
+
+initAddPhoneModal : Bool -> AddPhoneModal
+initAddPhoneModal show =
+    { show = show
+    , contactOption = ""
+    , country = ""
+    , phone = ""
+    , phoneProblems = Nothing
+    }
 
 
 isAuth : Model -> Bool
@@ -384,6 +410,8 @@ viewHelper thisMsg page profile_ ({ shared } as model) content =
             |> Modal.toHtml
             |> Html.map thisMsg
         , communitySelectorModal model
+            |> Html.map thisMsg
+        , addPhoneModal model
             |> Html.map thisMsg
         ]
 
@@ -588,6 +616,84 @@ communitySelectorModal model =
         text ""
 
 
+addPhoneModal : Model -> Html Msg
+addPhoneModal ({ addPhoneInfo } as model) =
+    let
+        header =
+            div [ class "mt-4" ]
+                [ p [ class "inline bg-purple-100 text-white rounded-full py-0.5 px-2 text-caption" ]
+                    [ text "NEW" ]
+                , p [ class "text-heading font-bold mt-2" ]
+                    [ text "Add your Phone Number" ]
+                ]
+
+        contactTypeSelect =
+            Select.init "contact_type"
+                "Contact type"
+                EnteredContactOption
+                addPhoneInfo.contactOption
+                Nothing
+                |> Select.withOption { value = "sms", label = "SMS" }
+                |> Select.withOption { value = "whatsapp", label = "Whatsapp" }
+                |> Select.toHtml
+
+        countrySelect =
+            Select.init "contact_country"
+                "Country"
+                EnteredContactCountry
+                addPhoneInfo.country
+                Nothing
+                |> Select.withOption { value = "brasil", label = "Brasil" }
+                |> Select.withOption { value = "costa_rica", label = "Costa Rica" }
+                |> Select.withOption { value = "argentina", label = "Argentina" }
+                |> Select.toHtml
+
+        phoneInput =
+            div [ class "w-full" ]
+                [ Input.init
+                    { label = "Phone number (with DDD)"
+                    , id = "contact_phone_number"
+                    , onInput = EnteredContactPhone
+                    , disabled = False
+                    , value = addPhoneInfo.phone
+                    , placeholder = Just "Ex.: 11964337131"
+                    , problems = addPhoneInfo.phoneProblems
+                    , translators = model.shared.translators
+                    }
+                    |> Input.toHtml
+                ]
+
+        phoneForm =
+            div [ class "flex space-x-4" ] [ countrySelect, phoneInput ]
+
+        submitButton =
+            button
+                [ class "button button-primary w-full"
+                , type_ "submit"
+                ]
+                [ text "Add phone number" ]
+
+        form =
+            Html.form [ class "w-full md:w-5/6 mx-auto mt-12" ]
+                [ contactTypeSelect
+                , phoneForm
+                , submitButton
+                , p [ class "text-caption text-center uppercase my-4" ]
+                    [ text "You can add it later in the profile's area" ]
+                ]
+    in
+    Modal.initWith
+        { closeMsg = CloseAddPhoneModal
+        , isVisible = addPhoneInfo.show
+        }
+        |> Modal.withBody
+            [ header
+            , img [ class "mx-auto mt-10", src "/images/girl-with-phone.svg" ] []
+            , form
+            ]
+        |> Modal.toHtml
+
+
 viewMainMenu : Page -> Model -> Html Msg
 viewMainMenu page model =
     let
@@ -717,6 +823,10 @@ type Msg
     | CloseCommunitySelector
     | SelectCommunity Symbol (Cmd Msg)
     | HideFeedbackLocal
+    | CloseAddPhoneModal
+    | EnteredContactOption String
+    | EnteredContactCountry String
+    | EnteredContactPhone String
 
 
 update : Msg -> Model -> UpdateResult
@@ -944,6 +1054,46 @@ update msg model =
                     }
                 |> UR.addCmd doNext
 
+        CloseAddPhoneModal ->
+            let
+                addPhoneModalInfo =
+                    model.addPhoneInfo
+            in
+            { model | addPhoneInfo = { addPhoneModalInfo | show = False } }
+                |> UR.init
+
+        EnteredContactOption contactOption ->
+            let
+                addPhoneModalInfo =
+                    model.addPhoneInfo
+            in
+            { model
+                | addPhoneInfo =
+                    { addPhoneModalInfo | contactOption = contactOption }
+            }
+                |> UR.init
+
+        EnteredContactCountry contactCountry ->
+            let
+                addPhoneModalInfo =
+                    model.addPhoneInfo
+            in
+            { model
+                | addPhoneInfo =
+                    { addPhoneModalInfo | country = contactCountry }
+            }
+                |> UR.init
+
+        EnteredContactPhone contactPhone ->
+            let
+                addPhoneModalInfo =
+                    model.addPhoneInfo
+            in
+            { model
+                | addPhoneInfo = { addPhoneModalInfo | phone = contactPhone }
+            }
+                |> UR.init
+
 
 closeModal : UpdateResult -> UpdateResult
 closeModal ({ model } as uResult) =
@@ -1113,3 +1263,15 @@ msgToString msg =
 
         HideFeedbackLocal ->
             [ "HideFeedbackLocal" ]
+
+        CloseAddPhoneModal ->
+            [ "CloseAddPhoneModal" ]
+
+        EnteredContactOption contactOption ->
+            [ "EnteredContactOption", contactOption ]
+
+        EnteredContactCountry contactCountry ->
+            [ "EnteredContactCountry", contactCountry ]
+
+        EnteredContactPhone contactPhone ->
+            [ "EnteredContactPhone", contactPhone ]
