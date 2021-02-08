@@ -59,6 +59,7 @@ import Route exposing (Route)
 import Session.Shared as Shared exposing (Shared)
 import Shop
 import Task
+import Time
 import Translation
 import UpdateResult as UR
 import Validate
@@ -158,6 +159,14 @@ type FeatureStatus
 
 initModel : Shared -> Auth.Model -> Eos.Name -> Symbol -> Model
 initModel shared authModel accountName selectedCommunity =
+    let
+        addPhoneLimitDate =
+            -- 01/01/2022
+            1641006000000
+
+        showPhoneModal =
+            addPhoneLimitDate - Time.posixToMillis shared.now > 0
+    in
     { shared = shared
     , accountName = accountName
     , profile = Loading accountName
@@ -176,7 +185,7 @@ initModel shared authModel accountName selectedCommunity =
     , hasShop = FeatureLoading
     , hasObjectives = FeatureLoading
     , hasKyc = FeatureLoading
-    , addPhoneInfo = initAddPhoneModal True
+    , addPhoneInfo = initAddPhoneModal showPhoneModal
     }
 
 
@@ -638,15 +647,17 @@ addPhoneModal ({ addPhoneInfo } as model) =
                 |> Select.toHtml
 
         countrySelect =
-            Select.init "contact_country"
-                "Country"
-                EnteredContactCountry
-                addPhoneInfo.country
-                Nothing
-                |> Select.withOption { value = "brasil", label = "Brasil" }
-                |> Select.withOption { value = "costa_rica", label = "Costa Rica" }
-                |> Select.withOption { value = "argentina", label = "Argentina" }
-                |> Select.toHtml
+            div [ class "flex-shrink-0" ]
+                [ Select.init "contact_country"
+                    "Country"
+                    EnteredContactCountry
+                    addPhoneInfo.country
+                    Nothing
+                    |> Select.withOption { value = "brasil", label = "Brasil" }
+                    |> Select.withOption { value = "costa_rica", label = "Costa Rica" }
+                    |> Select.withOption { value = "argentina", label = "Argentina" }
+                    |> Select.toHtml
+                ]
 
         phoneInput =
             div [ class "w-full" ]
