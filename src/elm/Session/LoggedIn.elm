@@ -45,7 +45,7 @@ import Graphql.Operation exposing (RootSubscription)
 import Graphql.SelectionSet exposing (SelectionSet)
 import Html exposing (Html, a, button, div, footer, img, nav, p, span, text)
 import Html.Attributes exposing (class, classList, src, style, type_)
-import Html.Events exposing (onClick, onMouseEnter)
+import Html.Events exposing (onClick, onMouseEnter, onSubmit)
 import Http
 import I18Next exposing (Delims(..), Translations, t)
 import Icons
@@ -61,6 +61,7 @@ import Shop
 import Task
 import Translation
 import UpdateResult as UR
+import Validate
 import View.Form.Input as Input
 import View.Form.Select as Select
 import View.Modal as Modal
@@ -175,8 +176,6 @@ initModel shared authModel accountName selectedCommunity =
     , hasShop = FeatureLoading
     , hasObjectives = FeatureLoading
     , hasKyc = FeatureLoading
-
-    -- TODO
     , addPhoneInfo = initAddPhoneModal True
     }
 
@@ -198,12 +197,11 @@ type ProfileStatus
 
 
 type alias AddPhoneModal =
-    -- TODO - Change to `type AddPhoneModal = NotShowing | Showing {...}` ?
     { show : Bool
     , contactOption : String
     , country : String
     , phone : String
-    , phoneProblems : Maybe (List String) -- Validate
+    , phoneProblems : Maybe (List String)
     }
 
 
@@ -633,7 +631,9 @@ addPhoneModal ({ addPhoneInfo } as model) =
                 EnteredContactOption
                 addPhoneInfo.contactOption
                 Nothing
-                |> Select.withOption { value = "sms", label = "SMS" }
+                |> Select.withOption { value = "phone_call", label = "Phone call" }
+                |> Select.withOption { value = "instagram", label = "Instagram" }
+                |> Select.withOption { value = "telegram", label = "Telegram" }
                 |> Select.withOption { value = "whatsapp", label = "Whatsapp" }
                 |> Select.toHtml
 
@@ -674,7 +674,10 @@ addPhoneModal ({ addPhoneInfo } as model) =
                 [ text "Add phone number" ]
 
         form =
-            Html.form [ class "w-full md:w-5/6 mx-auto mt-12" ]
+            Html.form
+                [ class "w-full md:w-5/6 mx-auto mt-12"
+                , onSubmit SubmittedPhoneModalForm
+                ]
                 [ contactTypeSelect
                 , phoneForm
                 , submitButton
@@ -692,6 +695,14 @@ addPhoneModal ({ addPhoneInfo } as model) =
             , form
             ]
         |> Modal.toHtml
+
+
+phoneModalValidator : Validate.Validator String AddPhoneModal
+phoneModalValidator =
+    Validate.all
+        [ Validate.ifBlank .phone "Please enter a phone number."
+        , Validate.ifNotInt .phone (always "Please only enter digits.")
+        ]
 
 
 viewMainMenu : Page -> Model -> Html Msg
@@ -827,6 +838,7 @@ type Msg
     | EnteredContactOption String
     | EnteredContactCountry String
     | EnteredContactPhone String
+    | SubmittedPhoneModalForm
 
 
 update : Msg -> Model -> UpdateResult
@@ -1094,6 +1106,26 @@ update msg model =
             }
                 |> UR.init
 
+        SubmittedPhoneModalForm ->
+            let
+                addPhoneInfo =
+                    model.addPhoneInfo
+            in
+            case Validate.validate phoneModalValidator addPhoneInfo of
+                Err errors ->
+                    { model
+                        | addPhoneInfo =
+                            { addPhoneInfo
+                                | phoneProblems =
+                                    List.head errors
+                                        |> Maybe.map (\x -> [ x ])
+                            }
+                    }
+                        |> UR.init
+
+                Ok _ ->
+                    model |> UR.init
+
 
 closeModal : UpdateResult -> UpdateResult
 closeModal ({ model } as uResult) =
@@ -1275,3 +1307,6 @@ msgToString msg =
 
         EnteredContactPhone contactPhone ->
             [ "EnteredContactPhone", contactPhone ]
+
+        SubmittedPhoneModalForm ->
+            [ "SubmittedPhoneModalForm" ]
