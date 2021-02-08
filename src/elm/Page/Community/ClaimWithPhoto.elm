@@ -175,7 +175,10 @@ view ({ shared } as loggedIn) model =
                         [ Page.viewHeader loggedIn (t "community.actions.title") (Route.Community loggedIn.selectedCommunity)
                         , case loggedIn.actionToClaim of
                             Just actionModel ->
-                                viewClaimWithProofs model.proof loggedIn.shared.translators actionModel.action
+                                viewClaimWithProofs model.proof
+                                    loggedIn.shared.translators
+                                    (LoggedIn.isAuth loggedIn)
+                                    actionModel.action
 
                             Nothing ->
                                 text "this is claim with photo page"
@@ -192,8 +195,8 @@ view ({ shared } as loggedIn) model =
     }
 
 
-viewClaimWithProofs : Proof -> Translators -> Action -> Html Msg
-viewClaimWithProofs (Proof photoStatus proofCode) translators action =
+viewClaimWithProofs : Proof -> Translators -> Bool -> Action -> Html Msg
+viewClaimWithProofs (Proof photoStatus proofCode) translators isAuth action =
     let
         { t } =
             translators
@@ -255,8 +258,8 @@ viewClaimWithProofs (Proof photoStatus proofCode) translators action =
                             NoOp
 
                          else
-                            --GotActionWithPhotoMsg Action.ActionClaimed
-                            (GotActionWithPhotoMsg << Action.ClaimConfirmationOpen) action
+                            GotActionWithPhotoMsg (Action.ActionClaimed isAuth)
+                         --(GotActionWithPhotoMsg << Action.ClaimConfirmationOpen) action
                         )
                     , disabled isUploadingInProgress
                     ]

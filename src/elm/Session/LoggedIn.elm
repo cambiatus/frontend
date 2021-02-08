@@ -887,6 +887,10 @@ update msg model =
                         |> UR.addPort claimPort
 
                 ( Just ({ action } as actionModel), Action.ActionClaimed False ) ->
+                    let
+                        _ =
+                            Debug.log "Auth is " False
+                    in
                     updateClaimingAction actionModel
                         |> askedAuthentication
                         |> UR.init
