@@ -88,7 +88,7 @@ type Msg
     = NoOp
     | ClaimConfirmationOpen Action
     | ClaimConfirmationClosed
-    | ActionClaimed Bool
+    | ActionClaimed { isPinConfirmed : Bool }
     | GotActionClaimedResponse (Result Value String)
     | ActionWithPhotoLinkClicked Route.Route
 
@@ -215,7 +215,7 @@ viewClaimConfirmation isAuth symbol { t } claimConfirmationModalStatus =
                         ActionWithPhotoLinkClicked (getClaimWithPhotoRoute symbol action.objective.id action.id)
 
                     else
-                        ActionClaimed isAuth
+                        ActionClaimed { isPinConfirmed = isAuth }
             in
             modalContent acceptMsg False
 

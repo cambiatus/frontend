@@ -148,7 +148,7 @@ type alias Model =
     , hasObjectives : FeatureStatus
     , hasKyc : FeatureStatus
     , searchModel : Search.Model
-    , actionToClaim : Maybe Action.Model -- TODO: Clean this action after claiming
+    , actionToClaim : Maybe Action.Model
     }
 
 
@@ -977,10 +977,6 @@ update msg model =
             UR.init closeAllModals
 
         GotAuthMsg authMsg ->
-            let
-                _ =
-                    Debug.log "authMsg" authMsg
-            in
             Auth.update authMsg shared model.auth
                 |> UR.map
                     (\a -> { model | auth = a })
@@ -994,15 +990,10 @@ update msg model =
                             Auth.CompletedAuth _ ->
                                 let
                                     cmd =
-                                        -- Check if there's action claim in progress (stored in model.actionToClaim).
-                                        -- If we found one, we claim it after loggin in. Otherwise, just login.
                                         case model.actionToClaim of
-                                            Just ac ->
-                                                let
-                                                    _ =
-                                                        Debug.log "from CompletedAuth" ac
-                                                in
-                                                Task.succeed (GotActionMsg (Action.ActionClaimed True))
+                                            Just _ ->
+                                                -- An action claim is in progress, send a message to claim it after logging in.
+                                                Task.succeed (GotActionMsg (Action.ActionClaimed { isPinConfirmed = True }))
                                                     |> Task.perform identity
 
                                             Nothing ->
@@ -1086,69 +1077,59 @@ handleActionMsg ({ shared } as model) actionMsg =
                         |> Just
             }
     in
-    case ( model.actionToClaim, actionMsg ) of
-        ( Nothing, Action.ClaimConfirmationOpen action ) ->
+    case ( actionMsg, model.actionToClaim ) of
+        ( Action.ClaimConfirmationOpen action, Nothing ) ->
             updateClaimingAction (Action.initClaimingActionModel action)
                 |> UR.init
 
-        ( Just ({ action } as actionModel), Action.ActionClaimed True ) ->
+        ( Action.ActionClaimed { isPinConfirmed }, Just ({ action } as actionModel) ) ->
             -- Do the actual claiming via EOS.
             -- This case is fired from `GotAuthMsg` after user logs in if `actionToClaim` is presented in `model`.
-            let
-                _ =
-                    Debug.log "Claiming action with no proof when isAuth is True" (isAuth model)
+            if isPinConfirmed then
+                updateClaimingAction actionModel
+                    |> UR.init
+                    |> UR.addPort
+                        (Action.claimActionPort
+                            (GotActionMsg actionMsg)
+                            shared.contracts.community
+                            { actionId = action.id
+                            , maker = model.accountName
+                            , proofPhoto = ""
+                            , proofCode = ""
+                            , proofTime = 0
+                            }
+                        )
 
-                ( emptyProofPhoto, emptyProofCode, emptyProofTime ) =
-                    ( "", "", 0 )
+            else
+                updateClaimingAction actionModel
+                    |> askedAuthentication
+                    |> UR.init
 
-                claimedAction =
-                    { actionId = action.id
-                    , maker = model.accountName
-                    , proofPhoto = emptyProofPhoto
-                    , proofCode = emptyProofCode
-                    , proofTime = emptyProofTime
-                    }
-
-                claimPort : JavascriptOutModel Msg
-                claimPort =
-                    Action.claimActionPort
-                        (GotActionMsg actionMsg)
-                        shared.contracts.community
-                        claimedAction
-            in
-            updateClaimingAction actionModel
-                |> UR.init
-                |> UR.addPort claimPort
-
-        ( Just ({ action } as actionModel), Action.ActionClaimed False ) ->
-            updateClaimingAction actionModel
-                |> askedAuthentication
-                |> UR.init
-
-        ( Just ({ action } as actionModel), Action.ActionWithPhotoLinkClicked route ) ->
+        ( Action.ActionWithPhotoLinkClicked route, Just ({ action } as actionModel) ) ->
             updateClaimingAction actionModel
                 |> update SearchClosed
                 |> UR.addCmd (Route.replaceUrl model.shared.navKey route)
 
-        ( Just _, Action.GotActionClaimedResponse resp ) ->
-            let
-                showMessage =
-                    case resp of
-                        Ok _ ->
-                            tr "dashboard.check_claim.success"
-                                [ ( "symbolCode", Eos.symbolToSymbolCodeString model.selectedCommunity ) ]
-                                |> Show Success
-
-                        Err _ ->
-                            Show Failure (t "dashboard.check_claim.failure")
-            in
-            -- Flush claimed action.
-            { model | actionToClaim = Nothing }
-                |> (\m -> { m | feedback = showMessage })
+        ( Action.GotActionClaimedResponse (Ok _), Just actionModel ) ->
+            updateClaimingAction actionModel
+                |> (\m ->
+                        { m
+                            | actionToClaim = Nothing -- Action was claimed successfully, we don't need it anymore.
+                            , feedback =
+                                tr "dashboard.check_claim.success"
+                                    [ ( "symbolCode", Eos.symbolToSymbolCodeString model.selectedCommunity ) ]
+                                    |> Show Success
+                        }
+                   )
                 |> UR.init
 
-        ( Just ca, _ ) ->
-            updateClaimingAction ca
+        ( Action.GotActionClaimedResponse (Err _), Just actionModel ) ->
+            updateClaimingAction actionModel
+                |> (\m -> { m | feedback = Show Failure (t "dashboard.check_claim.failure") })
+                |> UR.init
+
+        ( _, Just actionModel ) ->
+            updateClaimingAction actionModel
                 |> UR.init
 
         _ ->

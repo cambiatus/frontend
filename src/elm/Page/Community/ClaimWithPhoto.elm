@@ -212,7 +212,7 @@ viewClaimWithProofs (Proof photoStatus proofCode) ({ t } as translators) isAuth 
                             NoOp
 
                          else
-                            GotActionMsg (Action.ActionClaimed isAuth)
+                            GotActionMsg (Action.ActionClaimed { isPinConfirmed = isAuth })
                         )
                     , disabled isUploadingInProgress
                     ]
@@ -494,44 +494,50 @@ handleActionMsg ({ shared } as loggedIn) actionMsg model =
             shared.translators
     in
     case actionMsg of
-        Action.ActionClaimed False ->
-            model
-                |> UR.init
-                |> UR.addExt (RequiredAuthentication (Just <| GotActionMsg (Action.ActionClaimed True)))
+        Action.ActionClaimed { isPinConfirmed } ->
+            if isPinConfirmed then
+                model
+                    |> UR.init
+                    |> UR.addExt
+                        (Action.ActionClaimed { isPinConfirmed = True }
+                            |> GotActionMsg
+                            |> Just
+                            |> RequiredAuthentication
+                        )
 
-        Action.ActionClaimed True ->
-            case ( model.status, model.proof ) of
-                ( Loaded actionModel, Proof (Uploaded url) proofCodeMatch ) ->
-                    let
-                        ( code, time ) =
-                            case proofCodeMatch of
-                                Just { code_, claimTimestamp } ->
-                                    ( Maybe.withDefault "" code_, claimTimestamp )
+            else
+                case ( model.status, model.proof ) of
+                    ( Loaded actionModel, Proof (Uploaded url) proofCodeMatch ) ->
+                        let
+                            ( code, time ) =
+                                case proofCodeMatch of
+                                    Just { code_, claimTimestamp } ->
+                                        ( Maybe.withDefault "" code_, claimTimestamp )
 
-                                Nothing ->
-                                    ( "", 0 )
-                    in
-                    { model
-                        | status = Loaded (Action.update shared.translators actionMsg actionModel)
-                    }
-                        |> UR.init
-                        |> UR.addPort
-                            (Action.claimActionPort
-                                (GotActionMsg actionMsg)
-                                shared.contracts.community
-                                { actionId = actionModel.action.id
-                                , maker = loggedIn.accountName
-                                , proofPhoto = url
-                                , proofCode = code
-                                , proofTime = time
-                                }
-                            )
+                                    Nothing ->
+                                        ( "", 0 )
+                        in
+                        { model
+                            | status = Loaded (Action.update shared.translators actionMsg actionModel)
+                        }
+                            |> UR.init
+                            |> UR.addPort
+                                (Action.claimActionPort
+                                    (GotActionMsg actionMsg)
+                                    shared.contracts.community
+                                    { actionId = actionModel.action.id
+                                    , maker = loggedIn.accountName
+                                    , proofPhoto = url
+                                    , proofCode = code
+                                    , proofTime = time
+                                    }
+                                )
 
-                _ ->
-                    model
-                        |> UR.init
-                        -- No photo uploaded, show the error message
-                        |> UR.addExt (ShowFeedback LoggedIn.Failure (t "community.actions.proof.no_photo_error"))
+                    _ ->
+                        model
+                            |> UR.init
+                            -- No photo uploaded, show the error message
+                            |> UR.addExt (ShowFeedback LoggedIn.Failure (t "community.actions.proof.no_photo_error"))
 
         Action.GotActionClaimedResponse (Ok _) ->
             let
