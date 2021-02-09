@@ -207,20 +207,6 @@ products fillInOptionals requiredArgs object_ =
     Object.selectionForCompositeField "products" (optionalArgs ++ [ Argument.required "communityId" requiredArgs.communityId Encode.string ]) object_ (identity >> Decode.list)
 
 
-type alias ProfileRequiredArguments =
-    { account : String }
-
-
-{-| A users profile
--}
-profile :
-    ProfileRequiredArguments
-    -> SelectionSet decodesTo Cambiatus.Object.Profile
-    -> SelectionSet (Maybe decodesTo) RootQuery
-profile requiredArgs object_ =
-    Object.selectionForCompositeField "profile" [ Argument.required "account" requiredArgs.account Encode.string ] object_ (identity >> Decode.nullable)
-
-
 type alias SearchRequiredArguments =
     { communityId : String }
 
@@ -245,3 +231,17 @@ transfer :
     -> SelectionSet (Maybe decodesTo) RootQuery
 transfer requiredArgs object_ =
     Object.selectionForCompositeField "transfer" [ Argument.required "input" requiredArgs.input Cambiatus.InputObject.encodeTransferInput ] object_ (identity >> Decode.nullable)
+
+
+type alias UserRequiredArguments =
+    { account : String }
+
+
+{-| A users
+-}
+user :
+    UserRequiredArguments
+    -> SelectionSet decodesTo Cambiatus.Object.User
+    -> SelectionSet (Maybe decodesTo) RootQuery
+user requiredArgs object_ =
+    Object.selectionForCompositeField "user" [ Argument.required "account" requiredArgs.account Encode.string ] object_ (identity >> Decode.nullable)

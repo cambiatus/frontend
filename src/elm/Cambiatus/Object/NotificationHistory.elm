@@ -42,7 +42,7 @@ payload object_ =
 
 
 recipient :
-    SelectionSet decodesTo Cambiatus.Object.Profile
+    SelectionSet decodesTo Cambiatus.Object.User
     -> SelectionSet decodesTo Cambiatus.Object.NotificationHistory
 recipient object_ =
     Object.selectionForCompositeField "recipient" [] object_ identity

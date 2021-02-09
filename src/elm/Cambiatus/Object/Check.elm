@@ -52,7 +52,7 @@ isVerified =
 
 
 validator :
-    SelectionSet decodesTo Cambiatus.Object.Profile
+    SelectionSet decodesTo Cambiatus.Object.User
     -> SelectionSet decodesTo Cambiatus.Object.Check
 validator object_ =
     Object.selectionForCompositeField "validator" [] object_ identity

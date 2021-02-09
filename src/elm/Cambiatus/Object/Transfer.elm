@@ -57,7 +57,7 @@ createdTx =
 
 
 from :
-    SelectionSet decodesTo Cambiatus.Object.Profile
+    SelectionSet decodesTo Cambiatus.Object.User
     -> SelectionSet decodesTo Cambiatus.Object.Transfer
 from object_ =
     Object.selectionForCompositeField "from" [] object_ identity
@@ -79,7 +79,7 @@ memo =
 
 
 to :
-    SelectionSet decodesTo Cambiatus.Object.Profile
+    SelectionSet decodesTo Cambiatus.Object.User
     -> SelectionSet decodesTo Cambiatus.Object.Transfer
 to object_ =
     Object.selectionForCompositeField "to" [] object_ identity

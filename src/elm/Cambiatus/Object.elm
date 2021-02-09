@@ -37,6 +37,10 @@ type Community
     = Community
 
 
+type Contact
+    = Contact
+
+
 type Country
     = Country
 
@@ -85,10 +89,6 @@ type Product
     = Product
 
 
-type Profile
-    = Profile
-
-
 type PushSubscription
     = PushSubscription
 
@@ -119,3 +119,7 @@ type TransferEdge
 
 type UnreadNotifications
     = UnreadNotifications
+
+
+type User
+    = User

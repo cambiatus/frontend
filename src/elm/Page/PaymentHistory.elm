@@ -12,7 +12,7 @@ import Api.Relay
 import Avatar exposing (Avatar)
 import Cambiatus.Enum.TransferDirection exposing (TransferDirection(..))
 import Cambiatus.Object
-import Cambiatus.Object.Profile as User
+import Cambiatus.Object.User as User
 import Cambiatus.Query
 import Cambiatus.Scalar
 import Date exposing (Date)
@@ -125,7 +125,7 @@ type alias ProfileWithOnlyAutocomplete =
     }
 
 
-profileWithTransfersSelectionSet : Model -> SelectionSet ProfileWithTransfers Cambiatus.Object.Profile
+profileWithTransfersSelectionSet : Model -> SelectionSet ProfileWithTransfers Cambiatus.Object.User
 profileWithTransfersSelectionSet model =
     let
         endCursor =
@@ -182,7 +182,7 @@ fetchProfileWithTransfers shared model =
             Eos.Account.nameToString model.recipientProfile.account
     in
     Api.Graphql.query shared
-        (Cambiatus.Query.profile
+        (Cambiatus.Query.user
             { account = accountName }
             (profileWithTransfersSelectionSet model)
         )
@@ -192,14 +192,14 @@ fetchProfileWithTransfers shared model =
 fetchProfilesForAutocomplete : Shared -> Model -> String -> Cmd Msg
 fetchProfilesForAutocomplete shared model payerAccount =
     let
-        autocompleteSelectionSet : SelectionSet ProfileBase Cambiatus.Object.Profile
+        autocompleteSelectionSet : SelectionSet ProfileBase Cambiatus.Object.User
         autocompleteSelectionSet =
             SelectionSet.map3 ProfileBase
                 User.name
                 (Eos.Account.nameSelectionSet User.account)
                 (Avatar.selectionSet User.avatar)
 
-        selectionSet : SelectionSet ProfileWithOnlyAutocomplete Cambiatus.Object.Profile
+        selectionSet : SelectionSet ProfileWithOnlyAutocomplete Cambiatus.Object.User
         selectionSet =
             SelectionSet.map ProfileWithOnlyAutocomplete
                 (User.getPayersByAccount { account = payerAccount } autocompleteSelectionSet)
@@ -208,7 +208,7 @@ fetchProfilesForAutocomplete shared model payerAccount =
             Eos.Account.nameToString model.recipientProfile.account
     in
     Api.Graphql.query shared
-        (Cambiatus.Query.profile
+        (Cambiatus.Query.user
             { account = accountName
             }
             selectionSet
