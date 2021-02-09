@@ -20,13 +20,6 @@ import Graphql.SelectionSet exposing (SelectionSet)
 import Json.Decode as Decode
 
 
-profile :
-    SelectionSet decodesTo Cambiatus.Object.Profile
-    -> SelectionSet (Maybe decodesTo) Cambiatus.Object.SignUpResponse
-profile object_ =
-    Object.selectionForCompositeField "profile" [] object_ (identity >> Decode.nullable)
-
-
 reason : SelectionSet (Maybe String) Cambiatus.Object.SignUpResponse
 reason =
     Object.selectionForField "(Maybe String)" "reason" [] (Decode.string |> Decode.nullable)
@@ -35,3 +28,10 @@ reason =
 status : SelectionSet Cambiatus.Enum.SignUpStatus.SignUpStatus Cambiatus.Object.SignUpResponse
 status =
     Object.selectionForField "Enum.SignUpStatus.SignUpStatus" "status" [] Cambiatus.Enum.SignUpStatus.decoder
+
+
+user :
+    SelectionSet decodesTo Cambiatus.Object.User
+    -> SelectionSet (Maybe decodesTo) Cambiatus.Object.SignUpResponse
+user object_ =
+    Object.selectionForCompositeField "user" [] object_ (identity >> Decode.nullable)

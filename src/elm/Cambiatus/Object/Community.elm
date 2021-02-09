@@ -105,7 +105,7 @@ memberCount =
 
 
 members :
-    SelectionSet decodesTo Cambiatus.Object.Profile
+    SelectionSet decodesTo Cambiatus.Object.User
     -> SelectionSet (List decodesTo) Cambiatus.Object.Community
 members object_ =
     Object.selectionForCompositeField "members" [] object_ (identity >> Decode.list)
@@ -197,7 +197,7 @@ type_ =
 {-| List of users that are claim validators
 -}
 validators :
-    SelectionSet decodesTo Cambiatus.Object.Profile
+    SelectionSet decodesTo Cambiatus.Object.User
     -> SelectionSet (List decodesTo) Cambiatus.Object.Community
 validators object_ =
     Object.selectionForCompositeField "validators" [] object_ (identity >> Decode.list)

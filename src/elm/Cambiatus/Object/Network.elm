@@ -20,7 +20,7 @@ import Json.Decode as Decode
 
 
 account :
-    SelectionSet decodesTo Cambiatus.Object.Profile
+    SelectionSet decodesTo Cambiatus.Object.User
     -> SelectionSet (Maybe decodesTo) Cambiatus.Object.Network
 account object_ =
     Object.selectionForCompositeField "account" [] object_ (identity >> Decode.nullable)
