@@ -32,6 +32,7 @@ import Auth
 import Avatar
 import Browser.Dom as Dom
 import Browser.Events
+import Cambiatus.Enum.ContactType as ContactType
 import Cambiatus.Object
 import Cambiatus.Object.UnreadNotifications
 import Cambiatus.Subscription as Subscription
@@ -217,7 +218,7 @@ type alias AddPhoneModal =
 initAddPhoneModal : Bool -> AddPhoneModal
 initAddPhoneModal show =
     { show = show
-    , contactOption = ""
+    , contactOption = "whatsapp"
     , country = ""
     , phone = ""
     , phoneProblems = Nothing
@@ -850,6 +851,7 @@ type Msg
     | EnteredContactCountry String
     | EnteredContactPhone String
     | SubmittedPhoneModalForm
+    | CompletedUpdateContact (Result (Graphql.Http.Error (Maybe Profile.Model)) (Maybe Profile.Model))
 
 
 update : Msg -> Model -> UpdateResult
@@ -1124,22 +1126,85 @@ update msg model =
             in
             case Validate.validate phoneModalValidator addPhoneInfo of
                 Err errors ->
-                    { model
-                        | addPhoneInfo =
-                            { addPhoneInfo
-                                | phoneProblems =
-                                    List.head errors
-                                        |> Maybe.map (\x -> [ x ])
-                            }
-                    }
+                    List.head errors
+                        |> Maybe.map (addPhoneError model)
+                        |> Maybe.withDefault model
                         |> UR.init
 
-                Ok _ ->
+                Ok validModal ->
+                    case profile model of
+                        Nothing ->
+                            model |> UR.init
+
+                        Just userProfile ->
+                            model
+                                |> UR.init
+                                |> UR.addCmd
+                                    (Profile.mutation
+                                        model.accountName
+                                        (updateProfileContacts userProfile validModal
+                                            |> Profile.profileToForm
+                                        )
+                                        |> (\mutation ->
+                                                Api.Graphql.mutation shared
+                                                    mutation
+                                                    CompletedUpdateContact
+                                           )
+                                    )
+
+        CompletedUpdateContact (Ok profile_) ->
+            case profile_ of
+                Just p ->
+                    { model | profile = Loaded p }
+                        |> UR.init
+                        |> closeModal
+
+                Nothing ->
+                    -- TODO - Show error
                     model |> UR.init
+
+        CompletedUpdateContact (Err err) ->
+            UR.init model
+                |> UR.logGraphqlError msg err
+
+
+updateProfileContacts : Profile.Model -> Validate.Valid AddPhoneModal -> Profile.Model
+updateProfileContacts ({ contacts } as profile_) contactInfo =
+    let
+        modalInfo =
+            Validate.fromValid contactInfo
+
+        newContact =
+            modalInfo.contactOption
+                |> String.toUpper
+                |> ContactType.fromString
+                |> Maybe.map
+                    (\contactType ->
+                        { contactType = contactType
+                        , contact = modalInfo.phone
+                        }
+                    )
+    in
+    { profile_
+        | contacts =
+            case ( contacts, newContact ) of
+                ( Nothing, Just newC ) ->
+                    Just [ newC ]
+
+                ( Just contacts_, Just newC ) ->
+                    Just (contacts_ ++ [ newC ])
+
+                _ ->
+                    Nothing
+    }
 
 
 closeModal : UpdateResult -> UpdateResult
 closeModal ({ model } as uResult) =
+    let
+        addPhoneInfo =
+            model.addPhoneInfo
+    in
     { uResult
         | model =
             { model
@@ -1147,6 +1212,7 @@ closeModal ({ model } as uResult) =
                 , showUserNav = False
                 , showMainNav = False
                 , showAuthModal = False
+                , addPhoneInfo = { addPhoneInfo | show = False }
             }
     }
 
@@ -1175,6 +1241,11 @@ addNotification notification model =
 readAllNotifications : Model -> Model
 readAllNotifications model =
     { model | notification = Notification.readAll model.notification }
+
+
+addPhoneError : Model -> String -> Model
+addPhoneError ({ addPhoneInfo } as model) error =
+    { model | addPhoneInfo = { addPhoneInfo | phoneProblems = Just [ error ] } }
 
 
 
@@ -1321,3 +1392,6 @@ msgToString msg =
 
         SubmittedPhoneModalForm ->
             [ "SubmittedPhoneModalForm" ]
+
+        CompletedUpdateContact r ->
+            [ "CompletedUpdateContact", UR.resultToString r ]
