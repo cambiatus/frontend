@@ -307,7 +307,7 @@ type Msg
       -- Objective
     | ClickedOpenObjective Int
     | ClickedCloseObjective
-    | GotCommunityActionMsg Action.Msg
+    | GotActionMsg Action.Msg
 
 
 update : Msg -> Model -> LoggedIn.Model -> UpdateResult
@@ -323,34 +323,27 @@ update msg model ({ shared } as loggedIn) =
         GotTime date ->
             UR.init { model | date = Just date }
 
-        GotCommunityActionMsg actionMsg ->
+        GotActionMsg ((Action.ClaimConfirmationOpen a) as actionMsg) ->
             let
                 _ =
-                    Debug.log "actionMsg from Community" ( actionMsg, loggedIn.actionToClaim )
-
-                loggedInWithUpdatedClaimingAction =
-                    case loggedIn.actionToClaim of
-                        Just a ->
-                            { loggedIn
-                                | actionToClaim =
-                                    Action.update shared.translators actionMsg a
-                                        |> Just
-                            }
-
-                        Nothing ->
-                            case actionMsg of
-                                Action.ClaimConfirmationOpen a ->
-                                    { loggedIn
-                                        | actionToClaim = Just (Action.initClaimingActionModel a)
-                                    }
-
-                                _ ->
-                                    loggedIn
+                    Debug.log "opened" actionMsg
             in
             model
                 |> UR.init
-                -- TODO: This doesn't handle all `LoggedIn.GotActionMsg` cases (e.g. Claim with Photo)
-                |> UR.addExt (UpdatedLoggedIn loggedInWithUpdatedClaimingAction)
+                |> UR.addExt
+                    (UpdatedLoggedIn
+                        { loggedIn
+                            | actionToClaim = Just (Action.initClaimingActionModel a)
+                        }
+                    )
+
+        GotActionMsg a ->
+            let
+                _ =
+                    Debug.log "unhandled action message from community" a
+            in
+            model
+                |> UR.init
 
         CompletedLoadCommunity (Ok community) ->
             case community of
@@ -394,7 +387,7 @@ msgToString msg =
         GotTime _ ->
             [ "GotTime" ]
 
-        GotCommunityActionMsg _ ->
+        GotActionMsg _ ->
             [ "GotCommunityActionMsg" ]
 
         CompletedLoadCommunity r ->
@@ -535,7 +528,7 @@ viewAction translators canEdit symbol maybeDate action =
                         NoOp
 
                      else
-                        (GotCommunityActionMsg << Action.ClaimConfirmationOpen) action
+                        (GotActionMsg << Action.ClaimConfirmationOpen) action
                     )
                 ]
                 [ if action.hasProofPhoto then
