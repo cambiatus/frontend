@@ -106,6 +106,16 @@ type alias SignUpRequiredArguments =
 
 
 {-| Creates a new user account
+
+  - account - EOS Account, must have 12 chars long and use only [a-z] and [0-5]
+  - address - Address data
+  - email - User's email
+  - invitationId - Optinal, used to auto invite an user to a community
+  - kyc - KYC data
+  - name - User's Full name
+  - publicKey - EOS Account public key, used for creating a new account
+  - userType - User type informs if its a 'natural' or 'juridical' user for regular users and companies
+
 -}
 signUp :
     (SignUpOptionalArguments -> SignUpOptionalArguments)
@@ -124,18 +134,18 @@ signUp fillInOptionals requiredArgs object_ =
     Object.selectionForCompositeField "signUp" (optionalArgs ++ [ Argument.required "account" requiredArgs.account Encode.string, Argument.required "email" requiredArgs.email Encode.string, Argument.required "name" requiredArgs.name Encode.string, Argument.required "publicKey" requiredArgs.publicKey Encode.string, Argument.required "userType" requiredArgs.userType Encode.string ]) object_ identity
 
 
-type alias UpdateProfileRequiredArguments =
-    { input : Cambiatus.InputObject.ProfileUpdateInput }
+type alias UpdateUserRequiredArguments =
+    { input : Cambiatus.InputObject.UserUpdateInput }
 
 
-{-| A mutation to update a user's profile
+{-| A mutation to update a user
 -}
-updateProfile :
-    UpdateProfileRequiredArguments
-    -> SelectionSet decodesTo Cambiatus.Object.Profile
+updateUser :
+    UpdateUserRequiredArguments
+    -> SelectionSet decodesTo Cambiatus.Object.User
     -> SelectionSet (Maybe decodesTo) RootMutation
-updateProfile requiredArgs object_ =
-    Object.selectionForCompositeField "updateProfile" [ Argument.required "input" requiredArgs.input Cambiatus.InputObject.encodeProfileUpdateInput ] object_ (identity >> Decode.nullable)
+updateUser requiredArgs object_ =
+    Object.selectionForCompositeField "updateUser" [ Argument.required "input" requiredArgs.input Cambiatus.InputObject.encodeUserUpdateInput ] object_ (identity >> Decode.nullable)
 
 
 type alias UpsertAddressRequiredArguments =

@@ -2,7 +2,7 @@
 -- https://github.com/dillonkearns/elm-graphql
 
 
-module Cambiatus.Object.Profile exposing (..)
+module Cambiatus.Object.User exposing (..)
 
 import Cambiatus.Enum.TransferDirection
 import Cambiatus.InputObject
@@ -20,39 +20,39 @@ import Graphql.SelectionSet exposing (SelectionSet)
 import Json.Decode as Decode
 
 
-account : SelectionSet String Cambiatus.Object.Profile
+account : SelectionSet String Cambiatus.Object.User
 account =
     Object.selectionForField "String" "account" [] Decode.string
 
 
 address :
     SelectionSet decodesTo Cambiatus.Object.Address
-    -> SelectionSet (Maybe decodesTo) Cambiatus.Object.Profile
+    -> SelectionSet (Maybe decodesTo) Cambiatus.Object.User
 address object_ =
     Object.selectionForCompositeField "address" [] object_ (identity >> Decode.nullable)
 
 
-analysisCount : SelectionSet Int Cambiatus.Object.Profile
+analysisCount : SelectionSet Int Cambiatus.Object.User
 analysisCount =
     Object.selectionForField "Int" "analysisCount" [] Decode.int
 
 
-avatar : SelectionSet (Maybe String) Cambiatus.Object.Profile
+avatar : SelectionSet (Maybe String) Cambiatus.Object.User
 avatar =
     Object.selectionForField "(Maybe String)" "avatar" [] (Decode.string |> Decode.nullable)
 
 
-bio : SelectionSet (Maybe String) Cambiatus.Object.Profile
+bio : SelectionSet (Maybe String) Cambiatus.Object.User
 bio =
     Object.selectionForField "(Maybe String)" "bio" [] (Decode.string |> Decode.nullable)
 
 
-chatToken : SelectionSet (Maybe String) Cambiatus.Object.Profile
+chatToken : SelectionSet (Maybe String) Cambiatus.Object.User
 chatToken =
     Object.selectionForField "(Maybe String)" "chatToken" [] (Decode.string |> Decode.nullable)
 
 
-chatUserId : SelectionSet (Maybe String) Cambiatus.Object.Profile
+chatUserId : SelectionSet (Maybe String) Cambiatus.Object.User
 chatUserId =
     Object.selectionForField "(Maybe String)" "chatUserId" [] (Decode.string |> Decode.nullable)
 
@@ -64,7 +64,7 @@ type alias ClaimsOptionalArguments =
 claims :
     (ClaimsOptionalArguments -> ClaimsOptionalArguments)
     -> SelectionSet decodesTo Cambiatus.Object.Claim
-    -> SelectionSet (List decodesTo) Cambiatus.Object.Profile
+    -> SelectionSet (List decodesTo) Cambiatus.Object.User
 claims fillInOptionals object_ =
     let
         filledInOptionals =
@@ -79,27 +79,34 @@ claims fillInOptionals object_ =
 
 communities :
     SelectionSet decodesTo Cambiatus.Object.Community
-    -> SelectionSet (List decodesTo) Cambiatus.Object.Profile
+    -> SelectionSet (List decodesTo) Cambiatus.Object.User
 communities object_ =
     Object.selectionForCompositeField "communities" [] object_ (identity >> Decode.list)
 
 
-createdAt : SelectionSet (Maybe String) Cambiatus.Object.Profile
+contacts :
+    SelectionSet decodesTo Cambiatus.Object.Contact
+    -> SelectionSet (Maybe (List decodesTo)) Cambiatus.Object.User
+contacts object_ =
+    Object.selectionForCompositeField "contacts" [] object_ (identity >> Decode.list >> Decode.nullable)
+
+
+createdAt : SelectionSet (Maybe String) Cambiatus.Object.User
 createdAt =
     Object.selectionForField "(Maybe String)" "createdAt" [] (Decode.string |> Decode.nullable)
 
 
-createdBlock : SelectionSet (Maybe Int) Cambiatus.Object.Profile
+createdBlock : SelectionSet (Maybe Int) Cambiatus.Object.User
 createdBlock =
     Object.selectionForField "(Maybe Int)" "createdBlock" [] (Decode.int |> Decode.nullable)
 
 
-createdEosAccount : SelectionSet (Maybe String) Cambiatus.Object.Profile
+createdEosAccount : SelectionSet (Maybe String) Cambiatus.Object.User
 createdEosAccount =
     Object.selectionForField "(Maybe String)" "createdEosAccount" [] (Decode.string |> Decode.nullable)
 
 
-email : SelectionSet (Maybe String) Cambiatus.Object.Profile
+email : SelectionSet (Maybe String) Cambiatus.Object.User
 email =
     Object.selectionForField "(Maybe String)" "email" [] (Decode.string |> Decode.nullable)
 
@@ -112,39 +119,46 @@ type alias GetPayersByAccountRequiredArguments =
 -}
 getPayersByAccount :
     GetPayersByAccountRequiredArguments
-    -> SelectionSet decodesTo Cambiatus.Object.Profile
-    -> SelectionSet (Maybe (List (Maybe decodesTo))) Cambiatus.Object.Profile
+    -> SelectionSet decodesTo Cambiatus.Object.User
+    -> SelectionSet (Maybe (List (Maybe decodesTo))) Cambiatus.Object.User
 getPayersByAccount requiredArgs object_ =
     Object.selectionForCompositeField "getPayersByAccount" [ Argument.required "account" requiredArgs.account Encode.string ] object_ (identity >> Decode.nullable >> Decode.list >> Decode.nullable)
 
 
-interests : SelectionSet (Maybe String) Cambiatus.Object.Profile
+interests : SelectionSet (Maybe String) Cambiatus.Object.User
 interests =
     Object.selectionForField "(Maybe String)" "interests" [] (Decode.string |> Decode.nullable)
 
 
 kyc :
     SelectionSet decodesTo Cambiatus.Object.KycData
-    -> SelectionSet (Maybe decodesTo) Cambiatus.Object.Profile
+    -> SelectionSet (Maybe decodesTo) Cambiatus.Object.User
 kyc object_ =
     Object.selectionForCompositeField "kyc" [] object_ (identity >> Decode.nullable)
 
 
-location : SelectionSet (Maybe String) Cambiatus.Object.Profile
+location : SelectionSet (Maybe String) Cambiatus.Object.User
 location =
     Object.selectionForField "(Maybe String)" "location" [] (Decode.string |> Decode.nullable)
 
 
-name : SelectionSet (Maybe String) Cambiatus.Object.Profile
+name : SelectionSet (Maybe String) Cambiatus.Object.User
 name =
     Object.selectionForField "(Maybe String)" "name" [] (Decode.string |> Decode.nullable)
 
 
 network :
     SelectionSet decodesTo Cambiatus.Object.Network
-    -> SelectionSet (Maybe (List (Maybe decodesTo))) Cambiatus.Object.Profile
+    -> SelectionSet (Maybe (List (Maybe decodesTo))) Cambiatus.Object.User
 network object_ =
     Object.selectionForCompositeField "network" [] object_ (identity >> Decode.nullable >> Decode.list >> Decode.nullable)
+
+
+products :
+    SelectionSet decodesTo Cambiatus.Object.Product
+    -> SelectionSet (List (Maybe decodesTo)) Cambiatus.Object.User
+products object_ =
+    Object.selectionForCompositeField "products" [] object_ (identity >> Decode.nullable >> Decode.list)
 
 
 type alias TransfersOptionalArguments =
@@ -167,7 +181,7 @@ type alias TransfersOptionalArguments =
 transfers :
     (TransfersOptionalArguments -> TransfersOptionalArguments)
     -> SelectionSet decodesTo Cambiatus.Object.TransferConnection
-    -> SelectionSet (Maybe decodesTo) Cambiatus.Object.Profile
+    -> SelectionSet (Maybe decodesTo) Cambiatus.Object.User
 transfers fillInOptionals object_ =
     let
         filledInOptionals =

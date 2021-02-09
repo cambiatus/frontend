@@ -48,7 +48,7 @@ createdTx =
 
 
 creator :
-    SelectionSet decodesTo Cambiatus.Object.Profile
+    SelectionSet decodesTo Cambiatus.Object.User
     -> SelectionSet decodesTo Cambiatus.Object.Action
 creator object_ =
     Object.selectionForCompositeField "creator" [] object_ identity
@@ -122,7 +122,7 @@ usagesLeft =
 
 
 validators :
-    SelectionSet decodesTo Cambiatus.Object.Profile
+    SelectionSet decodesTo Cambiatus.Object.User
     -> SelectionSet (List decodesTo) Cambiatus.Object.Action
 validators object_ =
     Object.selectionForCompositeField "validators" [] object_ (identity >> Decode.list)

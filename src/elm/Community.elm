@@ -48,7 +48,7 @@ import Cambiatus.Object.Claim as Claim exposing (ChecksOptionalArguments)
 import Cambiatus.Object.Community as Community
 import Cambiatus.Object.Invite as Invite
 import Cambiatus.Object.Objective as Objective
-import Cambiatus.Object.Profile as Profile
+import Cambiatus.Object.User as Profile
 import Cambiatus.Query as Query
 import Cambiatus.Scalar exposing (DateTime(..))
 import Cambiatus.Subscription as Subscription

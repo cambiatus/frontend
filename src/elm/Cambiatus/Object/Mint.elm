@@ -57,7 +57,7 @@ quantity =
 
 
 to :
-    SelectionSet decodesTo Cambiatus.Object.Profile
+    SelectionSet decodesTo Cambiatus.Object.User
     -> SelectionSet decodesTo Cambiatus.Object.Mint
 to object_ =
     Object.selectionForCompositeField "to" [] object_ identity

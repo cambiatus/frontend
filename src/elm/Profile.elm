@@ -37,7 +37,7 @@ import Cambiatus.Mutation
 import Cambiatus.Object
 import Cambiatus.Object.Community as Community
 import Cambiatus.Object.DeleteKycAddress
-import Cambiatus.Object.Profile as User
+import Cambiatus.Object.User as User
 import Cambiatus.Query
 import Cambiatus.Scalar exposing (Id(..))
 import Dict exposing (Dict)
@@ -113,7 +113,7 @@ type alias CommunityInfo =
     }
 
 
-selectionSet : SelectionSet Model Cambiatus.Object.Profile
+selectionSet : SelectionSet Model Cambiatus.Object.User
 selectionSet =
     SelectionSet.succeed buildModel
         |> with User.name
@@ -135,7 +135,7 @@ selectionSet =
         |> with (User.address Address.selectionSet)
 
 
-minimalSelectionSet : SelectionSet Minimal Cambiatus.Object.Profile
+minimalSelectionSet : SelectionSet Minimal Cambiatus.Object.User
 minimalSelectionSet =
     SelectionSet.succeed (\name account avatar -> { name = name, account = account, avatar = avatar })
         |> with User.name
@@ -187,7 +187,7 @@ query account =
         nameString =
             Eos.nameToString account
     in
-    Cambiatus.Query.profile
+    Cambiatus.Query.user
         { account = nameString }
         selectionSet
 
@@ -208,12 +208,15 @@ mutation account form =
             Maybe.map Present form.avatar
                 |> Maybe.withDefault Absent
     in
-    Cambiatus.Mutation.updateProfile
+    Cambiatus.Mutation.updateUser
         { input =
             { account = nameString
             , name = Present form.name
             , email = Present form.email
             , bio = Present form.bio
+
+            -- TODO: Implement add/edit contacts
+            , contacts = Absent
             , interests = Present interestString
             , location = Present form.localization
             , avatar = avatarInput
