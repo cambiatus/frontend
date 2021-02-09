@@ -1,11 +1,9 @@
 module Action exposing
     ( Action
     , ClaimConfirmationModalStatus(..)
-    , ClaimedAction
     , Model
     , Msg(..)
     , claimActionPort
-    , encodeClaimAction
     , getClaimWithPhotoRoute
     , initClaimingActionModel
     , jsAddressToMsg
@@ -38,10 +36,21 @@ import UpdateResult as UR
 import View.Modal as Modal
 
 
-type ClaimConfirmationModalStatus
-    = Open Action
-    | InProgress
-    | Closed
+
+-- MODEL
+
+
+type alias Model =
+    { claimConfirmationModalStatus : ClaimConfirmationModalStatus
+    , action : Action
+    }
+
+
+initClaimingActionModel : Action -> Model
+initClaimingActionModel action =
+    { claimConfirmationModalStatus = Open action
+    , action = action
+    }
 
 
 type alias Action =
@@ -65,26 +74,14 @@ type alias Action =
     }
 
 
-type alias ClaimedAction =
-    { actionId : Int
-    , maker : Eos.Name
-    , proofPhoto : String
-    , proofCode : String
-    , proofTime : Int
-    }
+type ClaimConfirmationModalStatus
+    = Open Action
+    | InProgress
+    | Closed
 
 
-type alias Model =
-    { claimConfirmationModalStatus : ClaimConfirmationModalStatus
-    , action : Action
-    }
 
-
-initClaimingActionModel : Action -> Model
-initClaimingActionModel action =
-    { claimConfirmationModalStatus = Open action
-    , action = action
-    }
+-- UPDATE
 
 
 type Msg
@@ -96,12 +93,72 @@ type Msg
     | ActionWithPhotoLinkClicked Route.Route
 
 
-getClaimWithPhotoRoute : Eos.Symbol -> Int -> Int -> Route.Route
-getClaimWithPhotoRoute community objectiveId actionId =
-    Route.ClaimWithPhoto
-        community
-        objectiveId
-        actionId
+update : Translators -> Msg -> Model -> Model
+update { t } msg model =
+    case msg of
+        NoOp ->
+            model
+
+        ClaimConfirmationOpen action ->
+            { model | claimConfirmationModalStatus = Open action }
+
+        ActionClaimed _ ->
+            { model | claimConfirmationModalStatus = InProgress }
+
+        ClaimConfirmationClosed ->
+            { model | claimConfirmationModalStatus = Closed }
+
+        GotActionClaimedResponse (Ok _) ->
+            { model | claimConfirmationModalStatus = Closed }
+
+        GotActionClaimedResponse (Err _) ->
+            { model | claimConfirmationModalStatus = Closed }
+
+        ActionWithPhotoLinkClicked _ ->
+            { model | claimConfirmationModalStatus = Closed }
+
+
+
+-- GRAPHQL
+
+
+type alias Objective =
+    { id : Int
+    , description : String
+    }
+
+
+objectiveSelectionSet : SelectionSet Objective Cambiatus.Object.Objective
+objectiveSelectionSet =
+    SelectionSet.succeed Objective
+        |> with Cambiatus.Object.Objective.id
+        |> with Cambiatus.Object.Objective.description
+
+
+selectionSet : SelectionSet Action Cambiatus.Object.Action
+selectionSet =
+    SelectionSet.succeed Action
+        |> with ActionObject.id
+        |> with ActionObject.description
+        |> with (SelectionSet.map (\o -> { id = o.id, description = o.description }) (ActionObject.objective objectiveSelectionSet))
+        |> with ActionObject.reward
+        |> with ActionObject.verifierReward
+        |> with (Eos.nameSelectionSet ActionObject.creatorId)
+        |> with (ActionObject.validators Profile.minimalSelectionSet)
+        |> with ActionObject.usages
+        |> with ActionObject.usagesLeft
+        |> with ActionObject.deadline
+        |> with ActionObject.verificationType
+        |> with ActionObject.verifications
+        |> with ActionObject.isCompleted
+        |> with (SelectionSet.map (Maybe.withDefault False) ActionObject.hasProofPhoto)
+        |> with (SelectionSet.map (Maybe.withDefault False) ActionObject.hasProofCode)
+        |> with ActionObject.photoProofInstructions
+        |> with ActionObject.position
+
+
+
+-- VIEW
 
 
 viewClaimConfirmation : Bool -> Eos.Symbol -> Translators -> ClaimConfirmationModalStatus -> Html Msg
@@ -170,151 +227,6 @@ viewClaimConfirmation isAuth symbol { t } claimConfirmationModalStatus =
             text ""
 
 
-
--- UPDATE
-
-
-update : Translators -> Msg -> Model -> Model
-update { t } msg model =
-    case msg of
-        -- TODO: this update function looks to simple to have it here...
-        NoOp ->
-            model
-
-        ClaimConfirmationOpen action ->
-            { model | claimConfirmationModalStatus = Open action }
-
-        ActionClaimed _ ->
-            { model | claimConfirmationModalStatus = InProgress }
-
-        ClaimConfirmationClosed ->
-            { model | claimConfirmationModalStatus = Closed }
-
-        GotActionClaimedResponse (Ok _) ->
-            { model | claimConfirmationModalStatus = Closed }
-
-        GotActionClaimedResponse (Err _) ->
-            { model | claimConfirmationModalStatus = Closed }
-
-        ActionWithPhotoLinkClicked _ ->
-            let
-                _ =
-                    Debug.log "ActionWithPhotoLinkClicked" model
-            in
-            { model | claimConfirmationModalStatus = Closed }
-
-
-claimActionPort : msg -> String -> ClaimedAction -> Ports.JavascriptOutModel msg
-claimActionPort msg contractsCommunity { actionId, maker, proofPhoto, proofCode, proofTime } =
-    { responseAddress = msg
-    , responseData = Encode.null
-    , data =
-        Eos.encodeTransaction
-            [ { accountName = contractsCommunity
-              , name = "claimaction"
-              , authorization =
-                    { actor = maker
-                    , permissionName = Eos.samplePermission
-                    }
-              , data =
-                    { actionId = actionId
-                    , maker = maker
-                    , proofPhoto = proofPhoto
-                    , proofCode = proofCode
-                    , proofTime = proofTime
-                    }
-                        |> encodeClaimAction
-              }
-            ]
-    }
-
-
-jsAddressToMsg : List String -> Value -> Maybe Msg
-jsAddressToMsg addr val =
-    case addr of
-        "ActionClaimed" :: [] ->
-            Decode.decodeValue
-                (Decode.oneOf
-                    [ Decode.field "transactionId" Decode.string |> Decode.map Ok
-                    , Decode.succeed (Err val)
-                    ]
-                )
-                val
-                |> Result.map (Just << GotActionClaimedResponse)
-                |> Result.withDefault Nothing
-
-        _ ->
-            Nothing
-
-
-msgToString : Msg -> List String
-msgToString msg =
-    case msg of
-        NoOp ->
-            [ "NoOp" ]
-
-        ClaimConfirmationOpen _ ->
-            [ "ClaimConfirmationOpen" ]
-
-        ClaimConfirmationClosed ->
-            [ "ClaimConfirmationClosed" ]
-
-        ActionClaimed _ ->
-            [ "ActionClaimed" ]
-
-        ActionWithPhotoLinkClicked _ ->
-            [ "ActionWithPhotoLinkClicked" ]
-
-        GotActionClaimedResponse r ->
-            [ "GotActionClaimedResponse", UR.resultToString r ]
-
-
-encodeClaimAction : ClaimedAction -> Encode.Value
-encodeClaimAction c =
-    Encode.object
-        [ ( "action_id", Encode.int c.actionId )
-        , ( "maker", Eos.encodeName c.maker )
-        , ( "proof_photo", Encode.string c.proofPhoto )
-        , ( "proof_code", Encode.string c.proofCode )
-        , ( "proof_time", Encode.int c.proofTime )
-        ]
-
-
-type alias Objective =
-    { id : Int
-    , description : String
-    }
-
-
-objectiveSelectionSet : SelectionSet Objective Cambiatus.Object.Objective
-objectiveSelectionSet =
-    SelectionSet.succeed Objective
-        |> with Cambiatus.Object.Objective.id
-        |> with Cambiatus.Object.Objective.description
-
-
-selectionSet : SelectionSet Action Cambiatus.Object.Action
-selectionSet =
-    SelectionSet.succeed Action
-        |> with ActionObject.id
-        |> with ActionObject.description
-        |> with (SelectionSet.map (\o -> { id = o.id, description = o.description }) (ActionObject.objective objectiveSelectionSet))
-        |> with ActionObject.reward
-        |> with ActionObject.verifierReward
-        |> with (Eos.nameSelectionSet ActionObject.creatorId)
-        |> with (ActionObject.validators Profile.minimalSelectionSet)
-        |> with ActionObject.usages
-        |> with ActionObject.usagesLeft
-        |> with ActionObject.deadline
-        |> with ActionObject.verificationType
-        |> with ActionObject.verifications
-        |> with ActionObject.isCompleted
-        |> with (SelectionSet.map (Maybe.withDefault False) ActionObject.hasProofPhoto)
-        |> with (SelectionSet.map (Maybe.withDefault False) ActionObject.hasProofCode)
-        |> with ActionObject.photoProofInstructions
-        |> with ActionObject.position
-
-
 viewClaimButton : Symbol -> Action -> Html Msg
 viewClaimButton symbol action =
     -- TODO: Handle action.deadline and action.isCompleted.
@@ -359,3 +271,104 @@ viewSearchActions symbol actions =
     in
     ul [ class "flex px-4 sm:px-2 pt-12 flex-wrap justify-left" ]
         (List.map viewAction actions)
+
+
+
+-- INTEROP
+
+
+claimActionPort : msg -> String -> ClaimedAction -> Ports.JavascriptOutModel msg
+claimActionPort msg contractsCommunity { actionId, maker, proofPhoto, proofCode, proofTime } =
+    { responseAddress = msg
+    , responseData = Encode.null
+    , data =
+        Eos.encodeTransaction
+            [ { accountName = contractsCommunity
+              , name = "claimaction"
+              , authorization =
+                    { actor = maker
+                    , permissionName = Eos.samplePermission
+                    }
+              , data =
+                    { actionId = actionId
+                    , maker = maker
+                    , proofPhoto = proofPhoto
+                    , proofCode = proofCode
+                    , proofTime = proofTime
+                    }
+                        |> encodeClaimAction
+              }
+            ]
+    }
+
+
+type alias ClaimedAction =
+    { actionId : Int
+    , maker : Eos.Name
+    , proofPhoto : String
+    , proofCode : String
+    , proofTime : Int
+    }
+
+
+encodeClaimAction : ClaimedAction -> Encode.Value
+encodeClaimAction c =
+    Encode.object
+        [ ( "action_id", Encode.int c.actionId )
+        , ( "maker", Eos.encodeName c.maker )
+        , ( "proof_photo", Encode.string c.proofPhoto )
+        , ( "proof_code", Encode.string c.proofCode )
+        , ( "proof_time", Encode.int c.proofTime )
+        ]
+
+
+jsAddressToMsg : List String -> Value -> Maybe Msg
+jsAddressToMsg addr val =
+    case addr of
+        "ActionClaimed" :: [] ->
+            Decode.decodeValue
+                (Decode.oneOf
+                    [ Decode.field "transactionId" Decode.string |> Decode.map Ok
+                    , Decode.succeed (Err val)
+                    ]
+                )
+                val
+                |> Result.map (Just << GotActionClaimedResponse)
+                |> Result.withDefault Nothing
+
+        _ ->
+            Nothing
+
+
+msgToString : Msg -> List String
+msgToString msg =
+    case msg of
+        NoOp ->
+            [ "NoOp" ]
+
+        ClaimConfirmationOpen _ ->
+            [ "ClaimConfirmationOpen" ]
+
+        ClaimConfirmationClosed ->
+            [ "ClaimConfirmationClosed" ]
+
+        ActionClaimed _ ->
+            [ "ActionClaimed" ]
+
+        ActionWithPhotoLinkClicked _ ->
+            [ "ActionWithPhotoLinkClicked" ]
+
+        GotActionClaimedResponse r ->
+            [ "GotActionClaimedResponse", UR.resultToString r ]
+
+
+
+-- HELPERS
+
+
+getClaimWithPhotoRoute : Eos.Symbol -> Int -> Int -> Route.Route
+getClaimWithPhotoRoute community objectiveId actionId =
+    Route.ClaimWithPhoto
+        community
+        objectiveId
+        actionId
