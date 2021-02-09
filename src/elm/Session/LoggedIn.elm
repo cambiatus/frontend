@@ -218,7 +218,7 @@ type alias AddContactModal =
 initAddPhoneModal : Bool -> AddContactModal
 initAddPhoneModal show =
     { show = show
-    , contactOption = "whatsapp"
+    , contactOption = ""
     , country = ""
     , contact = ""
     , contactProblems = Nothing
@@ -635,16 +635,35 @@ addContactModal ({ addContactInfo } as model) =
                     [ text "Add your Phone Number" ]
                 ]
 
+        options =
+            List.map
+                (\contactType ->
+                    let
+                        lower =
+                            ContactType.toString contactType
+                                |> String.toLower
+
+                        capitalized =
+                            (String.left 1 lower
+                                |> String.toUpper
+                            )
+                                ++ String.dropLeft 1 lower
+                    in
+                    { value = lower
+                    , label = capitalized
+                    }
+                )
+                ContactType.list
+
         contactTypeSelect =
-            Select.init "contact_type"
-                "Contact type"
-                EnteredContactOption
-                addContactInfo.contactOption
-                Nothing
-                |> Select.withOption { value = "phone_call", label = "Phone call" }
-                |> Select.withOption { value = "instagram", label = "Instagram" }
-                |> Select.withOption { value = "telegram", label = "Telegram" }
-                |> Select.withOption { value = "whatsapp", label = "Whatsapp" }
+            List.foldr (\option select -> Select.withOption option select)
+                (Select.init "contact_type"
+                    "Contact type"
+                    EnteredContactOption
+                    addContactInfo.contactOption
+                    Nothing
+                )
+                options
                 |> Select.toHtml
 
         countrySelect =
@@ -1090,10 +1109,7 @@ update msg model =
                 addPhoneModalInfo =
                     model.addContactInfo
             in
-            { model
-                | addContactInfo =
-                    { addPhoneModalInfo | contactOption = contactOption }
-            }
+            { model | addContactInfo = { addPhoneModalInfo | contactOption = contactOption } }
                 |> UR.init
 
         EnteredContactCountry contactCountry ->
