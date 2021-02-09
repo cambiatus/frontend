@@ -52,7 +52,7 @@ createdTx =
 
 
 creator :
-    SelectionSet decodesTo Cambiatus.Object.Profile
+    SelectionSet decodesTo Cambiatus.Object.User
     -> SelectionSet decodesTo Cambiatus.Object.Product
 creator object_ =
     Object.selectionForCompositeField "creator" [] object_ identity
