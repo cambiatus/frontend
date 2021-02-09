@@ -10,6 +10,7 @@ module Action exposing
     , msgToString
     , selectionSet
     , update
+    , viewClaimButton
     , viewClaimConfirmation
     , viewSearchActions
     )
@@ -32,7 +33,9 @@ import Ports
 import Profile
 import Route
 import Session.Shared exposing (Translators)
+import Time exposing (Posix, posixToMillis)
 import UpdateResult as UR
+import Utils
 import View.Modal as Modal
 
 
@@ -226,47 +229,77 @@ viewClaimConfirmation isAuth symbol { t } claimConfirmationModalStatus =
             text ""
 
 
-viewClaimButton : Symbol -> Action -> Html Msg
-viewClaimButton symbol action =
-    -- TODO: Handle action.deadline and action.isCompleted.
-    if action.hasProofPhoto then
-        button
-            [ onClick (ClaimConfirmationOpen action)
-            , class "self-end button button-primary"
-            ]
-            [ span [ class "inline-block w-4 align-middle mr-2" ] [ Icons.camera "" ]
-            , span [ class "inline-block align-middle" ] [ text "Claim" ]
-            ]
+viewClaimButton : Translators -> Maybe Posix -> Action -> Html Msg
+viewClaimButton { t } maybeToday action =
+    let
+        posixDeadline : Posix
+        posixDeadline =
+            action.deadline
+                |> Utils.posixDateTime
 
-    else
-        button
-            [ onClick (ClaimConfirmationOpen action)
-            , class "self-end button button-primary"
-            ]
-            [ span [ class "inline-block align-middle" ] [ text "Claim" ]
-            ]
+        pastDeadline : Bool
+        pastDeadline =
+            case action.deadline of
+                Just _ ->
+                    case maybeToday of
+                        Just today ->
+                            posixToMillis today > posixToMillis posixDeadline
+
+                        Nothing ->
+                            False
+
+                Nothing ->
+                    False
+
+        isClosed =
+            pastDeadline
+                || (action.usages > 0 && action.usagesLeft == 0)
+
+        ( buttonMsg, buttonClasses, buttonText ) =
+            if isClosed then
+                ( NoOp, "button-disabled", "dashboard.closed" )
+
+            else
+                ( ClaimConfirmationOpen action, "button button-primary", "dashboard.claim" )
+    in
+    button
+        [ onClick buttonMsg
+        , class "self-end button"
+        , class buttonClasses
+        ]
+        [ if action.hasProofPhoto then
+            span [ class "inline-block w-4 align-middle mr-2" ] [ Icons.camera "" ]
+
+          else
+            text ""
+        , span [ class "inline-block align-middle" ] [ text (t buttonText) ]
+        ]
 
 
-viewSearchActions : Symbol -> List Action -> Html Msg
-viewSearchActions symbol actions =
+viewSearchActions : Translators -> Symbol -> Maybe Posix -> List Action -> Html Msg
+viewSearchActions translators symbol maybeToday actions =
     let
         viewAction action =
-            li [ class "relative mb-10 w-full sm:px-2 sm:w-1/2 lg:w-1/3" ]
-                [ i [ class "absolute top-0 left-0 right-0 -mt-6" ] [ Icons.flag "w-full fill-green" ]
-                , div [ class "px-4 pt-8 pb-4 text-sm font-light bg-purple-500 rounded-lg text-white" ]
-                    [ p [ class "mb-8" ] [ text action.description ]
-                    , div [ class "flex justify-between" ]
-                        [ p []
-                            [ text "You gain"
-                            , br [] []
-                            , span [ class "text-green font-medium" ] [ text <| String.fromFloat action.reward ]
-                            , text " "
-                            , text <| Eos.symbolToSymbolCodeString symbol
+            if action.isCompleted then
+                text ""
+
+            else
+                li [ class "relative mb-10 w-full sm:px-2 sm:w-1/2 lg:w-1/3" ]
+                    [ i [ class "absolute top-0 left-0 right-0 -mt-6" ] [ Icons.flag "w-full fill-green" ]
+                    , div [ class "px-4 pt-8 pb-4 text-sm font-light bg-purple-500 rounded-lg text-white" ]
+                        [ p [ class "mb-8" ] [ text action.description ]
+                        , div [ class "flex justify-between" ]
+                            [ p []
+                                [ text "You gain"
+                                , br [] []
+                                , span [ class "text-green font-medium" ] [ text <| String.fromFloat action.reward ]
+                                , text " "
+                                , text <| Eos.symbolToSymbolCodeString symbol
+                                ]
+                            , viewClaimButton translators maybeToday action
                             ]
-                        , viewClaimButton symbol action
                         ]
                     ]
-                ]
     in
     ul [ class "flex px-4 sm:px-2 pt-12 flex-wrap justify-left" ]
         (List.map viewAction actions)

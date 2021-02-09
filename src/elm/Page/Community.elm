@@ -323,25 +323,17 @@ update msg model ({ shared } as loggedIn) =
         GotTime date ->
             UR.init { model | date = Just date }
 
-        GotActionMsg ((Action.ClaimConfirmationOpen a) as actionMsg) ->
-            let
-                _ =
-                    Debug.log "opened" actionMsg
-            in
+        GotActionMsg (Action.ClaimConfirmationOpen action) ->
             model
                 |> UR.init
                 |> UR.addExt
                     (UpdatedLoggedIn
                         { loggedIn
-                            | actionToClaim = Just (Action.initClaimingActionModel a)
+                            | actionToClaim = Just (Action.initClaimingActionModel action)
                         }
                     )
 
-        GotActionMsg a ->
-            let
-                _ =
-                    Debug.log "unhandled action message from community" a
-            in
+        GotActionMsg _ ->
             model
                 |> UR.init
 

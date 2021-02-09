@@ -58,9 +58,10 @@ import Ports exposing (JavascriptOutModel)
 import Profile exposing (Model)
 import Route exposing (Route)
 import Search exposing (FoundItemsKind(..), State(..))
-import Session.Shared as Shared exposing (Shared)
+import Session.Shared as Shared exposing (Shared, Translators)
 import Shop
 import Task
+import Time exposing (Posix)
 import Translation
 import UpdateResult as UR
 import View.Modal as Modal
@@ -81,6 +82,7 @@ init shared accountName flags =
         [ Api.Graphql.query shared (Profile.query accountName) CompletedLoadProfile
         , Api.Graphql.query shared (Community.settingsQuery flags.selectedCommunity) CompletedLoadSettings
         , Ports.getRecentSearches ()
+        , Task.perform GotTime Time.now
         ]
     )
 
@@ -149,6 +151,7 @@ type alias Model =
     , hasKyc : FeatureStatus
     , searchModel : Search.Model
     , actionToClaim : Maybe Action.Model
+    , date : Maybe Posix -- TODO: move to Action.Model?
     }
 
 
@@ -178,6 +181,7 @@ initModel shared authModel accountName selectedCommunity =
     , hasKyc = FeatureLoading
     , searchModel = Search.init selectedCommunity
     , actionToClaim = Nothing
+    , date = Nothing
     }
 
 
@@ -341,7 +345,7 @@ viewHelper pageMsg page profile_ ({ shared } as model) content =
             ]
          ]
             ++ (if Search.isActive model.searchModel then
-                    [ viewSearchBody model.selectedCommunity pageMsg model.searchModel ]
+                    [ viewSearchBody shared.translators model.selectedCommunity model.date pageMsg model.searchModel ]
 
                 else
                     viewPageBody t model profile_ page content pageMsg
@@ -363,8 +367,8 @@ viewHelper pageMsg page profile_ ({ shared } as model) content =
         )
 
 
-viewSearchBody : Symbol -> (Msg -> pageMsg) -> Search.Model -> Html pageMsg
-viewSearchBody selectedCommunity toPageMsg searchModel =
+viewSearchBody : Translators -> Symbol -> Maybe Posix -> (Msg -> pageMsg) -> Search.Model -> Html pageMsg
+viewSearchBody translators selectedCommunity maybeToday toPageMsg searchModel =
     div [ class "container mx-auto flex flex-grow" ]
         [ case searchModel.found of
             Just ({ actions, offers } as results) ->
@@ -392,7 +396,7 @@ viewSearchBody selectedCommunity toPageMsg searchModel =
                                 div []
                                     [ Search.viewTabs results Actions
                                         |> Html.map (GotSearchMsg >> toPageMsg)
-                                    , Action.viewSearchActions selectedCommunity results.actions
+                                    , Action.viewSearchActions translators selectedCommunity maybeToday results.actions
                                         |> wrapWithClass "bg-gray-100"
                                         |> Html.map (GotActionMsg >> toPageMsg)
                                     ]
@@ -802,6 +806,7 @@ type Msg
     | GotSearchMsg Search.Msg
     | GotActionMsg Action.Msg
     | SearchClosed
+    | GotTime Posix
 
 
 update : Msg -> Model -> UpdateResult
@@ -833,6 +838,9 @@ update msg model =
     case msg of
         NoOp ->
             UR.init model
+
+        GotTime date ->
+            UR.init { model | date = Just date }
 
         GotActionMsg actionMsg ->
             handleActionMsg model actionMsg
@@ -1246,6 +1254,9 @@ msgToString msg =
     case msg of
         NoOp ->
             [ "Ignored" ]
+
+        GotTime _ ->
+            [ "GotTime" ]
 
         SearchClosed ->
             [ "SearchClosed" ]
