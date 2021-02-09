@@ -494,7 +494,12 @@ handleActionMsg ({ shared } as loggedIn) actionMsg model =
             shared.translators
     in
     case actionMsg of
-        Action.ActionClaimed isAuth ->
+        Action.ActionClaimed False ->
+            model
+                |> UR.init
+                |> UR.addExt (RequiredAuthentication (Just <| GotActionMsg (Action.ActionClaimed True)))
+
+        Action.ActionClaimed True ->
             case ( model.status, model.proof ) of
                 ( Loaded actionModel, Proof (Uploaded url) proofCodeMatch ) ->
                     let
@@ -505,41 +510,27 @@ handleActionMsg ({ shared } as loggedIn) actionMsg model =
 
                                 Nothing ->
                                     ( "", 0 )
-
-                        claimedAction =
-                            { actionId = actionModel.action.id
-                            , maker = loggedIn.accountName
-                            , proofPhoto = url
-                            , proofCode = code
-                            , proofTime = time
-                            }
-
-                        claimPort : JavascriptOutModel Msg
-                        claimPort =
-                            Action.claimActionPort
-                                (GotActionMsg actionMsg)
-                                shared.contracts.community
-                                claimedAction
-
-                        doNext =
-                            if isAuth then
-                                -- Process claim if user is logged in
-                                UR.addPort claimPort
-
-                            else
-                                -- Ask for PIN if user is not logged in
-                                UR.addExt (RequiredAuthentication (Just <| GotActionMsg (Action.ActionClaimed True)))
                     in
                     { model
                         | status = Loaded (Action.update shared.translators actionMsg actionModel)
                     }
                         |> UR.init
-                        |> doNext
+                        |> UR.addPort
+                            (Action.claimActionPort
+                                (GotActionMsg actionMsg)
+                                shared.contracts.community
+                                { actionId = actionModel.action.id
+                                , maker = loggedIn.accountName
+                                , proofPhoto = url
+                                , proofCode = code
+                                , proofTime = time
+                                }
+                            )
 
                 _ ->
-                    -- No photo uploaded, show the error message
                     model
                         |> UR.init
+                        -- No photo uploaded, show the error message
                         |> UR.addExt (ShowFeedback LoggedIn.Failure (t "community.actions.proof.no_photo_error"))
 
         Action.GotActionClaimedResponse (Ok _) ->
@@ -560,7 +551,6 @@ handleActionMsg ({ shared } as loggedIn) actionMsg model =
                 |> UR.addExt (ShowFeedback LoggedIn.Failure (t "dashboard.check_claim.failure"))
 
         _ ->
-            -- TODO: Just update the actionModel
             case model.status of
                 Loaded actionModel ->
                     { model

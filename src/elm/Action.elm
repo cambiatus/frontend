@@ -211,7 +211,6 @@ viewClaimConfirmation isAuth symbol { t } claimConfirmationModalStatus =
         Open action ->
             let
                 acceptMsg =
-                    -- TODO: Decide what to do the modal when click "claim" button for claim with proof
                     if action.hasProofPhoto then
                         ActionWithPhotoLinkClicked (getClaimWithPhotoRoute symbol action.objective.id action.id)
 

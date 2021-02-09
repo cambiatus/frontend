@@ -1126,11 +1126,6 @@ handleActionMsg ({ shared } as model) actionMsg =
                 |> UR.init
 
         ( Just ({ action } as actionModel), Action.ActionWithPhotoLinkClicked route ) ->
-            -- TODO: pass the route to go back to `ActionWithPhotoLinkClicked` when Cancel clicked?
-            let
-                _ =
-                    Debug.log "model, photo" ( model.actionToClaim, route )
-            in
             updateClaimingAction actionModel
                 |> update SearchClosed
                 |> UR.addCmd (Route.replaceUrl model.shared.navKey route)
