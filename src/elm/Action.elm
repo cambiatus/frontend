@@ -21,7 +21,7 @@ import Cambiatus.Object.Action as ActionObject
 import Cambiatus.Object.Objective
 import Cambiatus.Scalar exposing (DateTime)
 import Eos exposing (Symbol)
-import Eos.Account as Eos exposing (Name)
+import Eos.Account as Eos
 import Graphql.SelectionSet as SelectionSet exposing (SelectionSet, with)
 import Html exposing (Html, br, button, div, i, li, p, span, text, ul)
 import Html.Attributes exposing (class, classList, disabled)

@@ -54,7 +54,7 @@ import Json.Decode as Decode exposing (Value)
 import Json.Encode as Encode exposing (Value)
 import List.Extra as List
 import Notification exposing (Notification)
-import Ports exposing (JavascriptOutModel)
+import Ports
 import Profile exposing (Model)
 import Route exposing (Route)
 import Search exposing (FoundItemsKind(..), State(..))

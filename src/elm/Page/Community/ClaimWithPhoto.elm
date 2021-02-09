@@ -23,7 +23,6 @@ import Icons
 import Json.Decode as Decode
 import Json.Encode as Encode exposing (Value)
 import Page
-import Ports exposing (JavascriptOutModel)
 import Route
 import Session.LoggedIn as LoggedIn exposing (External(..))
 import Session.Shared exposing (Translators)
