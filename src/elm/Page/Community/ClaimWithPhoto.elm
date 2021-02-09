@@ -11,7 +11,6 @@ module Page.Community.ClaimWithPhoto exposing
 
 import Action exposing (Action, ClaimConfirmationModalStatus(..))
 import Api
-import Community
 import Eos exposing (Symbol)
 import Eos.Account as Eos
 import File exposing (File)
@@ -25,7 +24,6 @@ import Json.Decode as Decode
 import Json.Encode as Encode exposing (Value)
 import Page
 import Ports exposing (JavascriptOutModel)
-import Route
 import Session.LoggedIn as LoggedIn exposing (External(..))
 import Session.Shared exposing (Translators)
 import Sha256 exposing (sha256)
@@ -34,18 +32,14 @@ import Time exposing (Posix)
 import UpdateResult as UR
 
 
+
+-- MODEL
+
+
 type alias Model =
     { status : Status
     , proof : Proof
     }
-
-
-type alias ObjectiveId =
-    Int
-
-
-type alias ActionId =
-    Int
 
 
 init : LoggedIn.Model -> Symbol -> ObjectiveId -> Maybe ActionId -> ( Model, Cmd Msg )
@@ -73,18 +67,24 @@ init loggedIn symbol objectiveId actionId =
     )
 
 
-type Msg
-    = NoOp
-    | ActionLoaded (Result (Graphql.Http.Error (Maybe Action.Model)) (Maybe Action.Model))
-    | PageShowed Action
-    | ClaimingCancelled ReasonToCloseProofSection
-    | GotProofTime Posix
-    | AskedForUint64Name String
-    | GotUint64Name (Result Value String)
-    | Tick Time.Posix
-    | PhotoAdded (List File)
-    | PhotoUploaded (Result Http.Error String)
-    | GotActionMsg Action.Msg
+
+-- TYPES
+
+
+type Status
+    = Loading
+    | Loaded Action.Model
+    | LoadFailed (Graphql.Http.Error (Maybe Action.Model))
+    | NotFound
+    | Expired
+
+
+type alias ObjectiveId =
+    Int
+
+
+type alias ActionId =
+    Int
 
 
 type Proof
@@ -111,47 +111,8 @@ type ReasonToCloseProofSection
     | TimerEnded
 
 
-viewPhotoUploader : Translators -> ProofPhotoStatus -> Html Msg
-viewPhotoUploader { t } proofPhotoStatus =
-    let
-        uploadedAttrs =
-            case proofPhotoStatus of
-                Uploaded url ->
-                    [ class " bg-no-repeat bg-center bg-cover"
-                    , style "background-image" ("url(" ++ url ++ ")")
-                    ]
 
-                _ ->
-                    []
-    in
-    label
-        (class "relative bg-purple-500 w-full md:w-2/3 h-56 rounded-sm flex justify-center items-center cursor-pointer"
-            :: uploadedAttrs
-        )
-        [ input
-            [ class "hidden-img-input"
-            , type_ "file"
-            , accept "image/*"
-            , Page.onFileChange PhotoAdded
-            , multiple False
-            ]
-            []
-        , div []
-            [ case proofPhotoStatus of
-                Uploading ->
-                    div [ class "spinner spinner-light" ] []
-
-                Uploaded _ ->
-                    span [ class "absolute bottom-0 right-0 mr-4 mb-4 bg-orange-300 w-8 h-8 p-2 rounded-full" ]
-                        [ Icons.camera "" ]
-
-                _ ->
-                    div [ class "text-white text-body font-bold text-center" ]
-                        [ div [ class "w-10 mx-auto mb-2" ] [ Icons.camera "" ]
-                        , div [] [ text (t "community.actions.proof.upload_photo_hint") ]
-                        ]
-            ]
-        ]
+-- VIEW
 
 
 view : LoggedIn.Model -> Model -> { title : String, content : Html Msg }
@@ -162,12 +123,6 @@ view ({ shared } as loggedIn) model =
 
         content =
             case model.status of
-                Loading ->
-                    Page.fullPageLoading shared
-
-                Expired ->
-                    Page.fullPageNotFound "Time has expired" ""
-
                 Loaded _ ->
                     div [ class "bg-white" ]
                         [ case loggedIn.actionToClaim of
@@ -185,20 +140,23 @@ view ({ shared } as loggedIn) model =
                 LoadFailed err ->
                     Page.fullPageGraphQLError (t "error.invalidSymbol") err
 
+                Loading ->
+                    Page.fullPageLoading shared
+
+                Expired ->
+                    Page.fullPageNotFound "Time has expired" ""
+
                 NotFound ->
                     Page.fullPageNotFound (t "community.actions.form.not_found") ""
     in
-    { title = "Claim with photo"
+    { title = "Claim action with photo"
     , content = content
     }
 
 
 viewClaimWithProofs : Proof -> Translators -> Bool -> Action -> Html Msg
-viewClaimWithProofs (Proof photoStatus proofCode) translators isAuth action =
+viewClaimWithProofs (Proof photoStatus proofCode) ({ t } as translators) isAuth action =
     let
-        { t } =
-            translators
-
         isUploadingInProgress =
             case photoStatus of
                 Uploading ->
@@ -211,9 +169,7 @@ viewClaimWithProofs (Proof photoStatus proofCode) translators isAuth action =
         [ div [ class "container p-4 mx-auto" ]
             [ div [ class "heading-bold leading-7 font-bold" ] [ text <| t "community.actions.proof.title" ]
             , p [ class "mb-4" ]
-                [ text <|
-                    Maybe.withDefault "" action.photoProofInstructions
-                ]
+                [ text (Maybe.withDefault "" action.photoProofInstructions) ]
             , case proofCode of
                 Just { code_, secondsAfterClaim, availabilityPeriod } ->
                     case code_ of
@@ -266,6 +222,49 @@ viewClaimWithProofs (Proof photoStatus proofCode) translators isAuth action =
         ]
 
 
+viewPhotoUploader : Translators -> ProofPhotoStatus -> Html Msg
+viewPhotoUploader { t } proofPhotoStatus =
+    let
+        uploadedAttrs =
+            case proofPhotoStatus of
+                Uploaded url ->
+                    [ class "bg-no-repeat bg-center bg-cover"
+                    , style "background-image" ("url(" ++ url ++ ")")
+                    ]
+
+                _ ->
+                    []
+    in
+    label
+        (class "relative bg-purple-500 w-full md:w-2/3 h-56 rounded-sm flex justify-center items-center cursor-pointer"
+            :: uploadedAttrs
+        )
+        [ input
+            [ class "hidden-img-input"
+            , type_ "file"
+            , accept "image/*"
+            , Page.onFileChange PhotoAdded
+            , multiple False
+            ]
+            []
+        , div []
+            [ case proofPhotoStatus of
+                Uploading ->
+                    div [ class "spinner spinner-light" ] []
+
+                Uploaded _ ->
+                    span [ class "absolute bottom-0 right-0 mr-4 mb-4 bg-orange-300 w-8 h-8 p-2 rounded-full" ]
+                        [ Icons.camera "" ]
+
+                _ ->
+                    div [ class "text-white text-body font-bold text-center" ]
+                        [ div [ class "w-10 mx-auto mb-2" ] [ Icons.camera "" ]
+                        , div [] [ text (t "community.actions.proof.upload_photo_hint") ]
+                        ]
+            ]
+        ]
+
+
 viewProofCode : Translators -> String -> Int -> Int -> Html msg
 viewProofCode { t } proofCode secondsAfterClaim proofCodeValiditySeconds =
     let
@@ -301,23 +300,22 @@ viewProofCode { t } proofCode secondsAfterClaim proofCodeValiditySeconds =
         ]
 
 
-subscriptions : Model -> Sub Msg
-subscriptions model =
-    case model.proof of
-        Proof _ (Just _) ->
-            Time.every 1000 Tick
 
-        _ ->
-            -- No timer needed if there's no proof code.
-            Sub.none
+-- UPDATE
 
 
-type Status
-    = Loading
-    | Loaded Action.Model
-    | LoadFailed (Graphql.Http.Error (Maybe Action.Model))
-    | NotFound
-    | Expired
+type Msg
+    = NoOp
+    | ActionLoaded (Result (Graphql.Http.Error (Maybe Action.Model)) (Maybe Action.Model))
+    | PageShowed Action
+    | ClaimingCancelled ReasonToCloseProofSection
+    | GotProofTime Posix
+    | AskedForUint64Name String
+    | GotUint64Name (Result Value String)
+    | Tick Time.Posix
+    | PhotoAdded (List File)
+    | PhotoUploaded (Result Http.Error String)
+    | GotActionMsg Action.Msg
 
 
 update : Msg -> Model -> LoggedIn.Model -> UR.UpdateResult Model Msg (External Msg)
@@ -335,8 +333,9 @@ update msg model ({ shared } as loggedIn) =
                 |> UR.init
                 |> UR.logGraphqlError msg err
 
-        ActionLoaded (Ok c) ->
-            case c of
+        ActionLoaded (Ok a) ->
+            -- TODO: This is a placeholder. Use real loaded action.
+            case a of
                 Just action ->
                     { model
                         | status = Loading
@@ -392,7 +391,8 @@ update msg model ({ shared } as loggedIn) =
                             ( Expired, ShowFeedback LoggedIn.Failure (t "community.actions.proof.time_expired") )
 
                         CancelClicked ->
-                            -- TODO: Redirect to the place where the user came from
+                            -- TODO: Redirect to the place where the user came from.
+                            -- TODO: Flush global action in loggedIn.
                             ( NotFound, HideFeedback )
             in
             { model
@@ -425,10 +425,11 @@ update msg model ({ shared } as loggedIn) =
                     model
                         |> UR.init
 
-        GotUint64Name (Err _) ->
+        GotUint64Name (Err err) ->
             model
                 |> UR.init
                 |> UR.addExt (ShowFeedback LoggedIn.Failure "Failed while creating proof code.")
+                |> UR.logDebugValue msg err
 
         Tick timer ->
             case proofCode of
@@ -448,12 +449,13 @@ update msg model ({ shared } as loggedIn) =
                                         | secondsAfterClaim = secondsAfterClaim
                                     }
                         in
-                        { model | proof = Proof photoStatus newProofCode } |> UR.init
+                        { model | proof = Proof photoStatus newProofCode }
+                            |> UR.init
 
                     else
                         update (ClaimingCancelled TimerEnded) model loggedIn
 
-                _ ->
+                Nothing ->
                     model |> UR.init
 
         GotProofTime posix ->
@@ -559,10 +561,14 @@ update msg model ({ shared } as loggedIn) =
             model |> UR.init
 
 
+
+-- INTEROP
+
+
 jsAddressToMsg : List String -> Value -> Maybe Msg
 jsAddressToMsg addr val =
     case addr of
-        "GetUint64Name" :: [] ->
+        "AskedForUint64Name" :: [] ->
             Decode.decodeValue
                 (Decode.oneOf
                     [ Decode.field "uint64name" Decode.string |> Decode.map Ok
@@ -584,8 +590,8 @@ jsAddressToMsg addr val =
 msgToString : Msg -> List String
 msgToString msg =
     case msg of
-        ActionLoaded res ->
-            [ "CommunityLoaded" ]
+        ActionLoaded _ ->
+            [ "ActionLoaded" ]
 
         GotActionMsg actionMsg ->
             "GotActionMsg" :: Action.msgToString actionMsg
@@ -597,25 +603,44 @@ msgToString msg =
             [ "GotProofTime" ]
 
         PageShowed _ ->
-            [ "OpenProofSection" ]
+            [ "PageShowed" ]
 
         ClaimingCancelled _ ->
-            [ "CloseProofSection" ]
+            [ "ClaimingCancelled" ]
 
         PhotoAdded _ ->
-            [ "EnteredPhoto" ]
+            [ "PhotoAdded" ]
 
         PhotoUploaded r ->
-            [ "CompletedPhotoUpload", UR.resultToString r ]
+            [ "PhotoUploaded", UR.resultToString r ]
 
         AskedForUint64Name _ ->
-            [ "GetUint64Name" ]
+            [ "AskedForUint64Name" ]
 
         GotUint64Name n ->
             [ "GotUint64Name", UR.resultToString n ]
 
         NoOp ->
             [ "NoOp" ]
+
+
+
+-- SUBSCRIPTIONS
+
+
+subscriptions : Model -> Sub Msg
+subscriptions model =
+    case model.proof of
+        Proof _ (Just _) ->
+            Time.every 1000 Tick
+
+        _ ->
+            -- No timer needed if there's no proof code.
+            Sub.none
+
+
+
+-- HELPERS
 
 
 generateVerificationCode : Int -> String -> Int -> String
