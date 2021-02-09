@@ -24,6 +24,7 @@ import Json.Decode as Decode
 import Json.Encode as Encode exposing (Value)
 import Page
 import Ports exposing (JavascriptOutModel)
+import Route
 import Session.LoggedIn as LoggedIn exposing (External(..))
 import Session.Shared exposing (Translators)
 import Sha256 exposing (sha256)
@@ -125,6 +126,7 @@ view ({ shared } as loggedIn) model =
             case model.status of
                 Loaded _ ->
                     div [ class "bg-white" ]
+                        -- TODO: why loggedIn here? Why not `Loaded actionModel`?
                         [ case loggedIn.actionToClaim of
                             Just actionModel ->
                                 viewClaimWithProofs model.proof
@@ -385,22 +387,26 @@ update msg model ({ shared } as loggedIn) =
 
         ClaimingCancelled reason ->
             let
-                ( status, ext ) =
+                ( status, doNext ) =
                     case reason of
                         TimerEnded ->
-                            ( Expired, ShowFeedback LoggedIn.Failure (t "community.actions.proof.time_expired") )
+                            ( Expired, UR.addExt <| ShowFeedback LoggedIn.Failure (t "community.actions.proof.time_expired") )
 
                         CancelClicked ->
-                            -- TODO: Redirect to the place where the user came from.
-                            -- TODO: Flush global action in loggedIn.
-                            ( NotFound, HideFeedback )
+                            ( NotFound, UR.addCmd <| Route.replaceUrl loggedIn.shared.navKey Route.Dashboard )
             in
             { model
                 | status = status
                 , proof = Proof NoPhotoAdded Nothing
             }
                 |> UR.init
-                |> UR.addExt ext
+                |> doNext
+                |> UR.addExt
+                    (UpdatedLoggedIn
+                        { loggedIn
+                            | actionToClaim = Nothing -- Remove cancelled claiming action from the global state
+                        }
+                    )
 
         AskedForUint64Name ->
             model |> UR.init
