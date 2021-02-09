@@ -835,88 +835,7 @@ update msg model =
             UR.init model
 
         GotActionMsg actionMsg ->
-            let
-                updateClaimingAction : Action.Model -> Model
-                updateClaimingAction actionModel =
-                    { model
-                        | actionToClaim =
-                            Action.update shared.translators actionMsg actionModel
-                                |> Just
-                    }
-            in
-            case ( model.actionToClaim, actionMsg ) of
-                ( Nothing, Action.ClaimConfirmationOpen action ) ->
-                    updateClaimingAction (Action.initClaimingActionModel action)
-                        |> UR.init
-
-                ( Just ({ action } as actionModel), Action.ActionClaimed True ) ->
-                    -- Do the actual claiming via EOS.
-                    -- This case is fired from `GotAuthMsg` after user logs in if `actionToClaim` is presented in `model`.
-                    let
-                        _ =
-                            Debug.log "Claiming action with no proof when isAuth is True" (isAuth model)
-
-                        ( emptyProofPhoto, emptyProofCode, emptyProofTime ) =
-                            ( "", "", 0 )
-
-                        claimedAction =
-                            { actionId = action.id
-                            , maker = model.accountName
-                            , proofPhoto = emptyProofPhoto
-                            , proofCode = emptyProofCode
-                            , proofTime = emptyProofTime
-                            }
-
-                        claimPort : JavascriptOutModel Msg
-                        claimPort =
-                            Action.claimActionPort
-                                (GotActionMsg actionMsg)
-                                shared.contracts.community
-                                claimedAction
-                    in
-                    updateClaimingAction actionModel
-                        |> UR.init
-                        |> UR.addPort claimPort
-
-                ( Just ({ action } as actionModel), Action.ActionClaimed False ) ->
-                    updateClaimingAction actionModel
-                        |> askedAuthentication
-                        |> UR.init
-
-                ( Just ({ action } as actionModel), Action.ActionWithPhotoLinkClicked route ) ->
-                    -- TODO: pass the route to go back to `ActionWithPhotoLinkClicked` when Cancel clicked?
-                    let
-                        _ =
-                            Debug.log "model, photo" ( model.actionToClaim, route )
-                    in
-                    updateClaimingAction actionModel
-                        |> update SearchClosed
-                        |> UR.addCmd (Route.replaceUrl model.shared.navKey route)
-
-                ( Just _, Action.GotActionClaimedResponse resp ) ->
-                    let
-                        showMessage =
-                            case resp of
-                                Ok _ ->
-                                    tr "dashboard.check_claim.success"
-                                        [ ( "symbolCode", Eos.symbolToSymbolCodeString model.selectedCommunity ) ]
-                                        |> Show Success
-
-                                Err _ ->
-                                    Show Failure (t "dashboard.check_claim.failure")
-                    in
-                    -- Flush claimed action.
-                    { model | actionToClaim = Nothing }
-                        |> (\m -> { m | feedback = showMessage })
-                        |> UR.init
-
-                ( Just ca, _ ) ->
-                    updateClaimingAction ca
-                        |> UR.init
-
-                _ ->
-                    model
-                        |> UR.init
+            handleActionMsg model actionMsg
 
         SearchClosed ->
             { model
@@ -1091,8 +1010,8 @@ update msg model =
                                 in
                                 closeModal uResult
                                     |> UR.addExt AuthenticationSucceed
+                                    |> UR.addCmd cmd
 
-                            --|> UR.addCmd cmd
                             Auth.UpdatedShared newShared ->
                                 UR.mapModel
                                     (\m -> { m | shared = newShared })
@@ -1151,6 +1070,95 @@ update msg model =
                             ]
                     }
                 |> UR.addCmd doNext
+
+
+handleActionMsg : Model -> Action.Msg -> UpdateResult
+handleActionMsg ({ shared } as model) actionMsg =
+    let
+        { t, tr } =
+            shared.translators
+
+        updateClaimingAction : Action.Model -> Model
+        updateClaimingAction actionModel =
+            { model
+                | actionToClaim =
+                    Action.update shared.translators actionMsg actionModel
+                        |> Just
+            }
+    in
+    case ( model.actionToClaim, actionMsg ) of
+        ( Nothing, Action.ClaimConfirmationOpen action ) ->
+            updateClaimingAction (Action.initClaimingActionModel action)
+                |> UR.init
+
+        ( Just ({ action } as actionModel), Action.ActionClaimed True ) ->
+            -- Do the actual claiming via EOS.
+            -- This case is fired from `GotAuthMsg` after user logs in if `actionToClaim` is presented in `model`.
+            let
+                _ =
+                    Debug.log "Claiming action with no proof when isAuth is True" (isAuth model)
+
+                ( emptyProofPhoto, emptyProofCode, emptyProofTime ) =
+                    ( "", "", 0 )
+
+                claimedAction =
+                    { actionId = action.id
+                    , maker = model.accountName
+                    , proofPhoto = emptyProofPhoto
+                    , proofCode = emptyProofCode
+                    , proofTime = emptyProofTime
+                    }
+
+                claimPort : JavascriptOutModel Msg
+                claimPort =
+                    Action.claimActionPort
+                        (GotActionMsg actionMsg)
+                        shared.contracts.community
+                        claimedAction
+            in
+            updateClaimingAction actionModel
+                |> UR.init
+                |> UR.addPort claimPort
+
+        ( Just ({ action } as actionModel), Action.ActionClaimed False ) ->
+            updateClaimingAction actionModel
+                |> askedAuthentication
+                |> UR.init
+
+        ( Just ({ action } as actionModel), Action.ActionWithPhotoLinkClicked route ) ->
+            -- TODO: pass the route to go back to `ActionWithPhotoLinkClicked` when Cancel clicked?
+            let
+                _ =
+                    Debug.log "model, photo" ( model.actionToClaim, route )
+            in
+            updateClaimingAction actionModel
+                |> update SearchClosed
+                |> UR.addCmd (Route.replaceUrl model.shared.navKey route)
+
+        ( Just _, Action.GotActionClaimedResponse resp ) ->
+            let
+                showMessage =
+                    case resp of
+                        Ok _ ->
+                            tr "dashboard.check_claim.success"
+                                [ ( "symbolCode", Eos.symbolToSymbolCodeString model.selectedCommunity ) ]
+                                |> Show Success
+
+                        Err _ ->
+                            Show Failure (t "dashboard.check_claim.failure")
+            in
+            -- Flush claimed action.
+            { model | actionToClaim = Nothing }
+                |> (\m -> { m | feedback = showMessage })
+                |> UR.init
+
+        ( Just ca, _ ) ->
+            updateClaimingAction ca
+                |> UR.init
+
+        _ ->
+            model
+                |> UR.init
 
 
 closeModal : UpdateResult -> UpdateResult
