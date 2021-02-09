@@ -310,7 +310,7 @@ type Msg
     | PageShowed Action
     | ClaimingCancelled ReasonToCloseProofSection
     | GotProofTime Posix
-    | AskedForUint64Name String
+    | AskedForUint64Name
     | GotUint64Name (Result Value String)
     | Tick Time.Posix
     | PhotoAdded (List File)
@@ -402,7 +402,7 @@ update msg model ({ shared } as loggedIn) =
                 |> UR.init
                 |> UR.addExt ext
 
-        AskedForUint64Name _ ->
+        AskedForUint64Name ->
             model |> UR.init
 
         GotUint64Name (Ok uint64name) ->
@@ -471,7 +471,7 @@ update msg model ({ shared } as loggedIn) =
             { model | proof = Proof NoPhotoAdded initProofCodeParts }
                 |> UR.init
                 |> UR.addPort
-                    { responseAddress = AskedForUint64Name (Eos.nameToString loggedIn.accountName)
+                    { responseAddress = AskedForUint64Name
                     , responseData = Encode.null
                     , data =
                         Encode.object
@@ -480,7 +480,21 @@ update msg model ({ shared } as loggedIn) =
                             ]
                     }
 
-        GotActionMsg ((Action.ActionClaimed isAuth) as actionMsg) ->
+        GotActionMsg actionMsg ->
+            handleActionMsg loggedIn actionMsg model
+
+        NoOp ->
+            model |> UR.init
+
+
+handleActionMsg : LoggedIn.Model -> Action.Msg -> Model -> UR.UpdateResult Model Msg (External Msg)
+handleActionMsg ({ shared } as loggedIn) actionMsg model =
+    let
+        { t } =
+            shared.translators
+    in
+    case actionMsg of
+        Action.ActionClaimed isAuth ->
             case ( model.status, model.proof ) of
                 ( Loaded actionModel, Proof (Uploaded url) proofCodeMatch ) ->
                     let
@@ -528,7 +542,7 @@ update msg model ({ shared } as loggedIn) =
                         |> UR.init
                         |> UR.addExt (ShowFeedback LoggedIn.Failure (t "community.actions.proof.no_photo_error"))
 
-        GotActionMsg (Action.GotActionClaimedResponse (Ok _)) ->
+        Action.GotActionClaimedResponse (Ok _) ->
             let
                 message =
                     shared.translators.tr "dashboard.check_claim.success"
@@ -540,12 +554,12 @@ update msg model ({ shared } as loggedIn) =
                 |> UR.addExt (UpdatedLoggedIn { loggedIn | actionToClaim = Nothing })
                 |> UR.addExt (ShowFeedback LoggedIn.Success message)
 
-        GotActionMsg (Action.GotActionClaimedResponse (Err _)) ->
+        Action.GotActionClaimedResponse (Err _) ->
             model
                 |> UR.init
                 |> UR.addExt (ShowFeedback LoggedIn.Failure (t "dashboard.check_claim.failure"))
 
-        GotActionMsg actionMsg ->
+        _ ->
             -- TODO: Just update the actionModel
             case model.status of
                 Loaded actionModel ->
@@ -556,9 +570,6 @@ update msg model ({ shared } as loggedIn) =
 
                 _ ->
                     model |> UR.init
-
-        NoOp ->
-            model |> UR.init
 
 
 
@@ -614,7 +625,7 @@ msgToString msg =
         PhotoUploaded r ->
             [ "PhotoUploaded", UR.resultToString r ]
 
-        AskedForUint64Name _ ->
+        AskedForUint64Name ->
             [ "AskedForUint64Name" ]
 
         GotUint64Name n ->
