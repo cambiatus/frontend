@@ -12,13 +12,14 @@ module Page.Community.Transfer exposing
 import Api.Graphql
 import Browser.Events
 import Community exposing (Model)
+import DataValidator exposing (getInput)
 import Eos exposing (Symbol)
 import Eos.Account as Eos
 import Eos.EosError as EosError
 import Graphql.Document
 import Graphql.Http
 import Html exposing (Html, button, div, form, input, span, text, textarea)
-import Html.Attributes exposing (class, disabled, placeholder, required, rows, type_, value)
+import Html.Attributes exposing (class, disabled, placeholder, required, rows, type_, value, maxlength)
 import Html.Events exposing (onInput, onSubmit)
 import Json.Decode as Decode exposing (Value)
 import Json.Encode as Encode exposing (Value)
@@ -32,6 +33,12 @@ import Task
 import Transfer
 import UpdateResult as UR
 import Utils
+import View.Form.InputCounter
+import DataValidator exposing (Validator)
+import DataValidator exposing (longerThan)
+import DataValidator exposing (shorterThan)
+import DataValidator exposing (newValidator)
+import DataValidator exposing (updateInput)
 
 
 init : LoggedIn.Model -> Symbol -> Maybe String -> ( Model, Cmd Msg )
@@ -91,7 +98,7 @@ type alias Form =
     , selectedProfileValidation : Validation
     , amount : String
     , amountValidation : Validation
-    , memo : String
+    , memo : Validator String
     }
 
 
@@ -101,7 +108,7 @@ emptyForm =
     , selectedProfileValidation = Valid
     , amount = ""
     , amountValidation = Valid
-    , memo = ""
+    , memo = defaultMemo
     }
 
 
@@ -214,9 +221,12 @@ viewForm ({ shared } as loggedIn) model f community isDisabled =
                     [ class "w-full input rounded-sm"
                     , rows 5
                     , disabled isDisabled
+                    , maxlength 255
                     , onInput EnteredMemo
+                    , value (getInput f.memo)
                     ]
                     []
+                , View.Form.InputCounter.view loggedIn.shared.translators.tr 255 (getInput f.memo)
                 ]
             , div [ class "mt-6" ]
                 [ button
@@ -371,17 +381,24 @@ update msg model ({ shared } as loggedIn) =
                     model |> UR.init
 
         EnteredMemo value ->
-            case model.status of
-                Loaded community (EditingTransfer form) ->
-                    { model
-                        | status =
-                            EditingTransfer { form | memo = value }
-                                |> Loaded community
-                    }
-                        |> UR.init
+            let
+                limitedMemo =
+                    if String.length value < 255 then
+                        value
+                    else
+                        String.slice 0 255 value
+            in
+                case model.status of
+                    Loaded community (EditingTransfer form) ->
+                        { model
+                            | status =
+                                EditingTransfer { form | memo =  updateInput limitedMemo form.memo}
+                                    |> Loaded community
+                        }
+                            |> UR.init
 
-                _ ->
-                    model |> UR.init
+                    _ ->
+                        model |> UR.init
 
         SubmitForm ->
             case model.status of
@@ -449,7 +466,8 @@ update msg model ({ shared } as loggedIn) =
                                                         |> Maybe.withDefault 0.0
                                                 , symbol = model.communityId
                                                 }
-                                            , memo = form.memo
+                                            , memo = getInput form.memo
+
                                             }
                                                 |> Transfer.encodeEosActionData
                                       }
@@ -612,3 +630,11 @@ msgToString msg =
 
         Redirect _ ->
             [ "Redirect" ]
+
+
+defaultMemo : Validator String
+defaultMemo =
+    []
+    |> longerThan -1
+    |> shorterThan 256
+    |> newValidator "" (\v -> Just v) True
