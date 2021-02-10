@@ -1,14 +1,12 @@
 module Action exposing
     ( Action
     , ClaimingActionStatus(..)
-    , Model
     , Msg(..)
     , Proof(..)
     , ProofPhotoStatus(..)
     , ReasonToClose(..)
     , claimActionPort
     , getClaimWithPhotoRoute
-    , initClaimingActionModel
     , jsAddressToMsg
     , msgToString
     , selectionSet
@@ -41,7 +39,6 @@ import Profile
 import Route
 import Session.Shared exposing (Translators)
 import Sha256 exposing (sha256)
-import Task
 import Time exposing (Posix, posixToMillis)
 import UpdateResult as UR
 import Utils
@@ -49,32 +46,38 @@ import View.Modal as Modal
 
 
 
--- MODEL
+-- TYPES
 
 
-type alias Model =
-    { action : Action
-    , proof : Maybe Proof
+type ClaimingActionStatus
+    = ConfirmationOpen Action
+    | InProgress Action (Maybe Proof)
+    | PhotoProofShowed Action Proof
+    | Closed
+
+
+type Proof
+    = Proof ProofPhotoStatus (Maybe ProofCode)
+
+
+type alias ProofCode =
+    { code_ : Maybe String
+    , claimTimestamp : Int
+    , secondsAfterClaim : Int
+    , availabilityPeriod : Int
     }
 
 
-initClaimingActionModel : Action -> Model
-initClaimingActionModel action =
-    let
-        ( proof, cmd ) =
-            if action.hasProofCode then
-                ( Just (Proof NoPhotoAdded Nothing), Task.perform GotProofTime Time.now )
-
-            else
-                ( Nothing, Cmd.none )
-    in
-    { action = action
-    , proof = proof
-    }
+type ProofPhotoStatus
+    = NoPhotoAdded
+    | Uploading
+    | UploadFailed Http.Error
+    | Uploaded String
 
 
-
--- TODO: I can use extensible record as a param instead of `loggedIn`!!! { l | claimingAction : ... }
+type ReasonToClose
+    = CancelClicked
+    | TimerEnded
 
 
 type alias Action =
@@ -104,11 +107,13 @@ type alias Action =
 
 type Msg
     = NoOp
+      -- General Claim Messages
     | ClaimConfirmationOpen Action
     | ClaimConfirmationClosed ReasonToClose
     | ActionClaimed Action (Maybe Proof)
     | GotActionClaimedResponse (Result Value String)
-    | ActionWithPhotoLinkClicked Action
+      -- Claim with Proof Messages
+    | AgreedToClaimWithProof Action
     | GotProofTime Posix
     | AskedForUint64Name
     | GotUint64Name (Result Value String)
@@ -117,10 +122,10 @@ type Msg
     | PhotoUploaded (Result Http.Error String)
 
 
-update : Translators -> Msg -> Model -> Model
+update : Translators -> Msg -> ClaimingActionStatus -> ClaimingActionStatus
 update ({ t } as translators) msg model =
-    case msg of
-        GotProofTime posix ->
+    case ( msg, model ) of
+        ( GotProofTime posix, PhotoProofShowed action _ ) ->
             let
                 initProofCodeParts =
                     Just
@@ -130,84 +135,49 @@ update ({ t } as translators) msg model =
                         , availabilityPeriod = 30 * 60
                         }
             in
-            { model | proof = Just <| Proof NoPhotoAdded initProofCodeParts }
+            PhotoProofShowed action (Proof NoPhotoAdded initProofCodeParts)
 
-        GotUint64Name (Ok uint64name) ->
-            case model.proof of
-                Just (Proof photoStatus (Just proofCode)) ->
-                    let
-                        verificationCode =
-                            generateVerificationCode model.action.id uint64name proofCode.claimTimestamp
+        ( GotUint64Name (Ok uint64name), PhotoProofShowed action (Proof photoStatus (Just proofCode)) ) ->
+            let
+                verificationCode =
+                    generateVerificationCode action.id uint64name proofCode.claimTimestamp
 
-                        newProofCode =
-                            Just
-                                { proofCode
-                                    | code_ = Just verificationCode
-                                }
-                    in
-                    { model | proof = Just <| Proof photoStatus newProofCode }
+                newProofCode =
+                    Just
+                        { proofCode
+                            | code_ = Just verificationCode
+                        }
+            in
+            PhotoProofShowed action (Proof photoStatus newProofCode)
 
-                _ ->
-                    model
+        ( Tick timer, PhotoProofShowed action (Proof photoStatus (Just proofCode)) ) ->
+            let
+                secondsAfterClaim =
+                    (Time.posixToMillis timer // 1000) - proofCode.claimTimestamp
 
-        GotUint64Name (Err err) ->
-            model
+                isProofCodeActive =
+                    (proofCode.availabilityPeriod - secondsAfterClaim) > 0
 
-        Tick timer ->
-            case model.proof of
-                Just (Proof photoStatus (Just proofCode)) ->
-                    let
-                        secondsAfterClaim =
-                            (Time.posixToMillis timer // 1000) - proofCode.claimTimestamp
-
-                        isProofCodeActive =
-                            (proofCode.availabilityPeriod - secondsAfterClaim) > 0
-                    in
-                    if isProofCodeActive then
-                        let
-                            newProofCode =
-                                Just
-                                    { proofCode
-                                        | secondsAfterClaim = secondsAfterClaim
-                                    }
-                        in
-                        { model | proof = Just <| Proof photoStatus newProofCode }
-
-                    else
-                        update translators (ClaimConfirmationClosed TimerEnded) model
-
-                _ ->
-                    model
-
-        PhotoAdded (_ :: _) ->
-            case model.proof of
-                Just (Proof _ proofCode) ->
-                    { model
-                        | proof = Just <| Proof Uploading proofCode
+                newProofCode =
+                    { proofCode
+                        | secondsAfterClaim = secondsAfterClaim
                     }
+                        |> Just
+            in
+            if isProofCodeActive then
+                PhotoProofShowed action (Proof photoStatus newProofCode)
 
-                _ ->
-                    model
+            else
+                update translators (ClaimConfirmationClosed TimerEnded) model
 
-        PhotoUploaded (Ok url) ->
-            case model.proof of
-                Just (Proof _ proofCode) ->
-                    { model
-                        | proof = Just <| Proof (Uploaded url) proofCode
-                    }
+        ( PhotoAdded (_ :: _), PhotoProofShowed action (Proof _ proofCode) ) ->
+            PhotoProofShowed action (Proof Uploading proofCode)
 
-                Nothing ->
-                    model
+        ( PhotoUploaded (Ok url), PhotoProofShowed action (Proof _ proofCode) ) ->
+            PhotoProofShowed action (Proof (Uploaded url) proofCode)
 
-        PhotoUploaded (Err error) ->
-            case model.proof of
-                Just (Proof _ proofCode) ->
-                    { model
-                        | proof = Just <| Proof (UploadFailed error) proofCode
-                    }
-
-                Nothing ->
-                    model
+        ( PhotoUploaded (Err error), PhotoProofShowed action (Proof _ proofCode) ) ->
+            PhotoProofShowed action (Proof (UploadFailed error) proofCode)
 
         _ ->
             model
@@ -250,13 +220,6 @@ selectionSet =
         |> with (SelectionSet.map (Maybe.withDefault False) ActionObject.hasProofCode)
         |> with ActionObject.photoProofInstructions
         |> with ActionObject.position
-
-
-type ClaimingActionStatus
-    = ConfirmationOpen Action
-    | InProgress Action (Maybe Proof)
-    | PhotoProofShowed Action Proof
-    | Closed
 
 
 
@@ -314,7 +277,7 @@ viewClaimConfirmation { t } claimConfirmationModalStatus =
             let
                 acceptMsg =
                     if action.hasProofPhoto then
-                        ActionWithPhotoLinkClicked action
+                        AgreedToClaimWithProof action
 
                     else
                         ActionClaimed action Nothing
@@ -405,136 +368,6 @@ viewSearchActions translators symbol maybeToday actions =
     in
     ul [ class "flex px-4 sm:px-2 pt-12 flex-wrap justify-left" ]
         (List.map viewAction actions)
-
-
-
--- INTEROP
-
-
-claimActionPort : msg -> String -> ClaimedAction -> Ports.JavascriptOutModel msg
-claimActionPort msg contractsCommunity { actionId, maker, proofPhoto, proofCode, proofTime } =
-    { responseAddress = msg
-    , responseData = Encode.null
-    , data =
-        Eos.encodeTransaction
-            [ { accountName = contractsCommunity
-              , name = "claimaction"
-              , authorization =
-                    { actor = maker
-                    , permissionName = Eos.samplePermission
-                    }
-              , data =
-                    { actionId = actionId
-                    , maker = maker
-                    , proofPhoto = proofPhoto
-                    , proofCode = proofCode
-                    , proofTime = proofTime
-                    }
-                        |> encodeClaimAction
-              }
-            ]
-    }
-
-
-type alias ClaimedAction =
-    { actionId : Int
-    , maker : Eos.Name
-    , proofPhoto : String
-    , proofCode : String
-    , proofTime : Int
-    }
-
-
-encodeClaimAction : ClaimedAction -> Encode.Value
-encodeClaimAction c =
-    Encode.object
-        [ ( "action_id", Encode.int c.actionId )
-        , ( "maker", Eos.encodeName c.maker )
-        , ( "proof_photo", Encode.string c.proofPhoto )
-        , ( "proof_code", Encode.string c.proofCode )
-        , ( "proof_time", Encode.int c.proofTime )
-        ]
-
-
-jsAddressToMsg : List String -> Value -> Maybe Msg
-jsAddressToMsg addr val =
-    case addr of
-        "ActionClaimed" :: [] ->
-            Decode.decodeValue
-                (Decode.oneOf
-                    [ Decode.field "transactionId" Decode.string |> Decode.map Ok
-                    , Decode.succeed (Err val)
-                    ]
-                )
-                val
-                |> Result.map (Just << GotActionClaimedResponse)
-                |> Result.withDefault Nothing
-
-        "AskedForUint64Name" :: [] ->
-            Decode.decodeValue
-                (Decode.oneOf
-                    [ Decode.field "uint64name" Decode.string |> Decode.map Ok
-                    , Decode.succeed (Err val)
-                    ]
-                )
-                val
-                |> Result.map (Just << GotUint64Name)
-                |> Result.withDefault Nothing
-
-        _ ->
-            Nothing
-
-
-msgToString : Msg -> List String
-msgToString msg =
-    case msg of
-        NoOp ->
-            [ "NoOp" ]
-
-        ClaimConfirmationOpen _ ->
-            [ "ClaimConfirmationOpen" ]
-
-        ClaimConfirmationClosed _ ->
-            [ "ClaimConfirmationClosed" ]
-
-        ActionClaimed _ _ ->
-            [ "ActionClaimed" ]
-
-        ActionWithPhotoLinkClicked _ ->
-            [ "ActionWithPhotoLinkClicked" ]
-
-        GotActionClaimedResponse r ->
-            [ "GotActionClaimedResponse", UR.resultToString r ]
-
-        Tick _ ->
-            [ "Tick" ]
-
-        GotProofTime _ ->
-            [ "GotProofTime" ]
-
-        PhotoAdded _ ->
-            [ "PhotoAdded" ]
-
-        PhotoUploaded r ->
-            [ "PhotoUploaded", UR.resultToString r ]
-
-        AskedForUint64Name ->
-            [ "AskedForUint64Name" ]
-
-        GotUint64Name n ->
-            [ "GotUint64Name", UR.resultToString n ]
-
-
-
--- HELPERS
-
-
-getClaimWithPhotoRoute : Eos.Symbol -> Int -> Int -> Route.Route
-getClaimWithPhotoRoute community objectiveId actionId =
-    Route.ClaimWithPhoto
-        community
-        objectiveId
-        actionId
 
 
 viewClaimWithProofs : Proof -> Translators -> Bool -> Action -> Html Msg
@@ -690,36 +523,122 @@ viewProofCode { t } proofCode secondsAfterClaim proofCodeValiditySeconds =
         ]
 
 
-type alias ObjectiveId =
-    Int
+
+-- INTEROP
 
 
-type alias ActionId =
-    Int
-
-
-type Proof
-    = Proof ProofPhotoStatus (Maybe ProofCode)
-
-
-type alias ProofCode =
-    { code_ : Maybe String
-    , claimTimestamp : Int
-    , secondsAfterClaim : Int
-    , availabilityPeriod : Int
+claimActionPort : msg -> String -> ClaimedAction -> Ports.JavascriptOutModel msg
+claimActionPort msg contractsCommunity { actionId, maker, proofPhoto, proofCode, proofTime } =
+    { responseAddress = msg
+    , responseData = Encode.null
+    , data =
+        Eos.encodeTransaction
+            [ { accountName = contractsCommunity
+              , name = "claimaction"
+              , authorization =
+                    { actor = maker
+                    , permissionName = Eos.samplePermission
+                    }
+              , data =
+                    { actionId = actionId
+                    , maker = maker
+                    , proofPhoto = proofPhoto
+                    , proofCode = proofCode
+                    , proofTime = proofTime
+                    }
+                        |> encodeClaimAction
+              }
+            ]
     }
 
 
-type ProofPhotoStatus
-    = NoPhotoAdded
-    | Uploading
-    | UploadFailed Http.Error
-    | Uploaded String
+type alias ClaimedAction =
+    { actionId : Int
+    , maker : Eos.Name
+    , proofPhoto : String
+    , proofCode : String
+    , proofTime : Int
+    }
 
 
-type ReasonToClose
-    = CancelClicked
-    | TimerEnded
+encodeClaimAction : ClaimedAction -> Encode.Value
+encodeClaimAction c =
+    Encode.object
+        [ ( "action_id", Encode.int c.actionId )
+        , ( "maker", Eos.encodeName c.maker )
+        , ( "proof_photo", Encode.string c.proofPhoto )
+        , ( "proof_code", Encode.string c.proofCode )
+        , ( "proof_time", Encode.int c.proofTime )
+        ]
+
+
+jsAddressToMsg : List String -> Value -> Maybe Msg
+jsAddressToMsg addr val =
+    case addr of
+        "ActionClaimed" :: [] ->
+            Decode.decodeValue
+                (Decode.oneOf
+                    [ Decode.field "transactionId" Decode.string |> Decode.map Ok
+                    , Decode.succeed (Err val)
+                    ]
+                )
+                val
+                |> Result.map (Just << GotActionClaimedResponse)
+                |> Result.withDefault Nothing
+
+        "AskedForUint64Name" :: [] ->
+            Decode.decodeValue
+                (Decode.oneOf
+                    [ Decode.field "uint64name" Decode.string |> Decode.map Ok
+                    , Decode.succeed (Err val)
+                    ]
+                )
+                val
+                |> Result.map (Just << GotUint64Name)
+                |> Result.withDefault Nothing
+
+        _ ->
+            Nothing
+
+
+msgToString : Msg -> List String
+msgToString msg =
+    case msg of
+        NoOp ->
+            [ "NoOp" ]
+
+        ClaimConfirmationOpen _ ->
+            [ "ClaimConfirmationOpen" ]
+
+        ClaimConfirmationClosed _ ->
+            [ "ClaimConfirmationClosed" ]
+
+        ActionClaimed _ _ ->
+            [ "ActionClaimed" ]
+
+        AgreedToClaimWithProof _ ->
+            [ "ActionWithPhotoLinkClicked" ]
+
+        GotActionClaimedResponse r ->
+            [ "GotActionClaimedResponse", UR.resultToString r ]
+
+        Tick _ ->
+            [ "Tick" ]
+
+        GotProofTime _ ->
+            [ "GotProofTime" ]
+
+        PhotoAdded _ ->
+            [ "PhotoAdded" ]
+
+        PhotoUploaded r ->
+            [ "PhotoUploaded", UR.resultToString r ]
+
+        AskedForUint64Name ->
+            [ "AskedForUint64Name" ]
+
+        GotUint64Name n ->
+            [ "GotUint64Name", UR.resultToString n ]
 
 
 
@@ -740,10 +659,10 @@ generateVerificationCode actionId makerAccountUint64 proofTimeSeconds =
 -- SUBSCRIPTIONS
 
 
-subscriptions : Model -> Sub Msg
+subscriptions : ClaimingActionStatus -> Sub Msg
 subscriptions model =
-    case model.proof of
-        Just (Proof _ (Just _)) ->
+    case model of
+        PhotoProofShowed _ (Proof _ (Just _)) ->
             Time.every 1000 Tick
 
         _ ->

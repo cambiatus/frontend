@@ -73,8 +73,8 @@ init loggedIn symbol objectiveId actionId =
 
 type Status
     = Loading
-    | Loaded Action.Model
-    | LoadFailed (Graphql.Http.Error (Maybe Action.Model))
+    | Loaded Action.ClaimingActionStatus
+    | LoadFailed (Graphql.Http.Error (Maybe Action.ClaimingActionStatus))
     | NotFound
     | Expired
 
@@ -307,7 +307,7 @@ viewProofCode { t } proofCode secondsAfterClaim proofCodeValiditySeconds =
 
 type Msg
     = NoOp
-    | ActionLoaded (Result (Graphql.Http.Error (Maybe Action.Model)) (Maybe Action.Model))
+    | ActionLoaded (Result (Graphql.Http.Error (Maybe Action.ClaimingActionStatus)) (Maybe Action.ClaimingActionStatus))
     | PageShowed Action
     | ClaimingCancelled ReasonToCloseProofSection
     | GotProofTime Posix
@@ -411,24 +411,24 @@ update msg model ({ shared } as loggedIn) =
             model |> UR.init
 
         GotUint64Name (Ok uint64name) ->
-            case ( proofCode, model.status ) of
-                ( Just pc, Loaded actionModel ) ->
-                    let
-                        verificationCode =
-                            generateVerificationCode actionModel.action.id uint64name pc.claimTimestamp
-
-                        newProofCode =
-                            Just
-                                { pc
-                                    | code_ = Just verificationCode
-                                }
-                    in
-                    { model | proof = Proof photoStatus newProofCode }
-                        |> UR.init
-
-                _ ->
-                    model
-                        |> UR.init
+            --case ( proofCode, model.status ) of
+            --    ( Just pc, Loaded actionModel ) ->
+            --        let
+            --            verificationCode =
+            --                generateVerificationCode actionModel.action.id uint64name pc.claimTimestamp
+            --
+            --            newProofCode =
+            --                Just
+            --                    { pc
+            --                        | code_ = Just verificationCode
+            --                    }
+            --        in
+            --        { model | proof = Proof photoStatus newProofCode }
+            --            |> UR.init
+            --
+            --    _ ->
+            model
+                |> UR.init
 
         GotUint64Name (Err err) ->
             model
@@ -530,7 +530,7 @@ handleActionMsg ({ shared } as loggedIn) actionMsg model =
                                 (Action.claimActionPort
                                     (GotActionMsg actionMsg)
                                     shared.contracts.community
-                                    { actionId = actionModel.action.id
+                                    { actionId = 0 --actionModel.action.id
                                     , maker = loggedIn.accountName
                                     , proofPhoto = url
                                     , proofCode = code

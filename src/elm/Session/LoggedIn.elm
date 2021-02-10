@@ -126,12 +126,7 @@ subscriptions model =
         [ Sub.map GotAuthMsg (Auth.subscriptions model.auth)
         , Sub.map KeyDown (Browser.Events.onKeyDown (Decode.field "key" Decode.string))
         , Sub.map GotSearchMsg Search.subscriptions
-        , case model.claimingActionStatus of
-            Action.PhotoProofShowed a p ->
-                Sub.map GotActionMsg (Action.subscriptions { action = a, proof = Just p })
-
-            _ ->
-                Sub.none
+        , Sub.map GotActionMsg (Action.subscriptions model.claimingActionStatus)
         ]
 
 
@@ -1098,21 +1093,12 @@ handleActionMsg ({ shared } as model) actionMsg =
             shared.translators
 
         updateProofs =
-            case model.claimingActionStatus of
-                Action.PhotoProofShowed a p ->
-                    let
-                        { action, proof } =
-                            Action.update shared.translators actionMsg { action = a, proof = Just p }
-                    in
-                    case proof of
-                        Just proof_ ->
-                            { model | claimingActionStatus = Action.PhotoProofShowed action proof_ }
-
-                        Nothing ->
-                            model
-
-                _ ->
-                    model
+            { model
+                | claimingActionStatus =
+                    Action.update shared.translators
+                        actionMsg
+                        model.claimingActionStatus
+            }
 
         sendClaimToEos : Int -> String -> String -> Int -> Model -> UR.UpdateResult Model Msg eMsg
         sendClaimToEos accountId photoUrl code time m =
@@ -1170,7 +1156,7 @@ handleActionMsg ({ shared } as model) actionMsg =
             }
                 |> UR.init
 
-        Action.ActionWithPhotoLinkClicked action ->
+        Action.AgreedToClaimWithProof action ->
             { model
                 | claimingActionStatus =
                     Action.PhotoProofShowed action (Action.Proof Action.NoPhotoAdded Nothing)
