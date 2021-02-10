@@ -385,19 +385,17 @@ viewSearchBody translators selectedCommunity maybeToday toPageMsg searchModel =
                         in
                         case searchModel.state of
                             ResultsShowed Offers ->
-                                div []
+                                div [ class "w-full" ]
                                     [ Search.viewTabs results Offers
                                     , Search.viewOffers selectedCommunity results.offers
-                                        |> wrapWithClass "bg-gray-100"
                                     ]
                                     |> Html.map (GotSearchMsg >> toPageMsg)
 
                             ResultsShowed Actions ->
-                                div []
+                                div [ class "w-full" ]
                                     [ Search.viewTabs results Actions
                                         |> Html.map (GotSearchMsg >> toPageMsg)
                                     , Action.viewSearchActions translators selectedCommunity maybeToday results.actions
-                                        |> wrapWithClass "bg-gray-100"
                                         |> Html.map (GotActionMsg >> toPageMsg)
                                     ]
 
