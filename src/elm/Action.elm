@@ -216,9 +216,6 @@ update isAuth shared uploadFile selectedCommunity accName msg model =
 
         ( GotActionClaimedResponse resp, _ ) ->
             let
-                _ =
-                    Debug.log "resp" resp
-
                 feedback =
                     case resp of
                         Ok _ ->
@@ -297,7 +294,7 @@ update isAuth shared uploadFile selectedCommunity accName msg model =
             (if isProofCodeActive then
                 { model
                     | status = PhotoProofShowed action (Proof photoStatus newProofCode)
-                    , feedback = model.feedback |> Debug.log "current feedback"
+                    , feedback = model.feedback
                 }
 
              else

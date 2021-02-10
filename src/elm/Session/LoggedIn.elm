@@ -40,7 +40,6 @@ import Cambiatus.Subscription as Subscription
 import Community
 import Eos exposing (Symbol)
 import Eos.Account as Eos
-import File exposing (File)
 import Flags exposing (Flags)
 import Graphql.Document
 import Graphql.Http
@@ -1059,10 +1058,6 @@ update msg model =
                     |> UR.init
 
         HideFeedbackLocal ->
-            let
-                _ =
-                    Debug.log "this local?" True
-            in
             { model | feedback = Hidden }
                 |> UR.init
 
