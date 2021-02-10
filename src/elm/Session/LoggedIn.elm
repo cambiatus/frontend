@@ -28,6 +28,7 @@ module Session.LoggedIn exposing
     )
 
 import Action
+import Api
 import Api.Graphql
 import Auth
 import Avatar
@@ -125,6 +126,12 @@ subscriptions model =
         [ Sub.map GotAuthMsg (Auth.subscriptions model.auth)
         , Sub.map KeyDown (Browser.Events.onKeyDown (Decode.field "key" Decode.string))
         , Sub.map GotSearchMsg Search.subscriptions
+        , case model.claimingActionStatus of
+            Action.PhotoProofShowed a p ->
+                Sub.map GotActionMsg (Action.subscriptions { action = a, proof = Just p })
+
+            _ ->
+                Sub.none
         ]
 
 
@@ -151,7 +158,7 @@ type alias Model =
     , hasObjectives : FeatureStatus
     , hasKyc : FeatureStatus
     , searchModel : Search.Model
-    , actionToClaim : Maybe Action.Model
+    , claimingActionStatus : Action.ClaimingActionStatus
     , date : Maybe Posix -- TODO: move to Action.Model?
     }
 
@@ -181,7 +188,7 @@ initModel shared authModel accountName selectedCommunity =
     , hasObjectives = FeatureLoading
     , hasKyc = FeatureLoading
     , searchModel = Search.init selectedCommunity
-    , actionToClaim = Nothing
+    , claimingActionStatus = Action.Closed
     , date = Nothing
     }
 
@@ -316,17 +323,8 @@ viewHelper pageMsg page profile_ ({ shared } as model) content =
         ([ div [ class "bg-white" ]
             [ div [ class "container mx-auto" ]
                 [ viewHeader model profile_ |> Html.map pageMsg
-                , case model.actionToClaim of
-                    Just a ->
-                        Action.viewClaimConfirmation
-                            (isAuth model)
-                            model.selectedCommunity
-                            shared.translators
-                            a.claimConfirmationModalStatus
-                            |> Html.map (pageMsg << GotActionMsg)
-
-                    Nothing ->
-                        text ""
+                , Action.viewClaimConfirmation shared.translators model.claimingActionStatus
+                    |> Html.map (pageMsg << GotActionMsg)
                 , -- Search form is separated from search results because it needs to
                   -- be between community selector and user dropdown on Desktops.
                   Search.viewForm model.searchModel
@@ -349,7 +347,15 @@ viewHelper pageMsg page profile_ ({ shared } as model) content =
                     [ viewSearchBody shared.translators model.selectedCommunity model.date pageMsg model.searchModel ]
 
                 else
-                    viewPageBody t model profile_ page content pageMsg
+                    case model.claimingActionStatus of
+                        -- TODO: Use ADT for handling these three states
+                        Action.PhotoProofShowed action p ->
+                            [ Action.viewClaimWithProofs p shared.translators (isAuth model) action
+                                |> Html.map (GotActionMsg >> pageMsg)
+                            ]
+
+                        _ ->
+                            viewPageBody t model profile_ page content pageMsg
                )
             ++ [ viewFooter shared
                , Modal.initWith
@@ -692,6 +698,9 @@ viewMainMenu page model =
 
         iconClass =
             "w-6 h-6 fill-current hover:text-indigo-500 mr-5"
+
+        closeClaimWithPhoto =
+            GotActionMsg (Action.ClaimConfirmationClosed Action.CancelClicked)
     in
     nav [ class "h-16 w-full flex overflow-x-auto" ]
         [ a
@@ -700,6 +709,9 @@ viewMainMenu page model =
                 , ( activeClass, isActive page Route.Dashboard )
                 ]
             , Route.href Route.Dashboard
+
+            -- TODO: Is there a better solution for closing claim with photo?
+            , onClick closeClaimWithPhoto
             ]
             [ Icons.dashboard iconClass
             , text (model.shared.translators.t "menu.dashboard")
@@ -712,6 +724,9 @@ viewMainMenu page model =
                         , ( activeClass, isActive page (Route.Shop Shop.All) )
                         ]
                     , Route.href (Route.Shop Shop.All)
+
+                    -- TODO: Is there a better solution for closing claim with photo?
+                    , onClick closeClaimWithPhoto
                     ]
                     [ Icons.shop iconClass
                     , text (model.shared.translators.t "menu.shop")
@@ -1003,13 +1018,13 @@ update msg model =
                             Auth.CompletedAuth _ ->
                                 let
                                     cmd =
-                                        case model.actionToClaim of
-                                            Just _ ->
+                                        case model.claimingActionStatus of
+                                            Action.InProgress action maybeProof ->
                                                 -- An action claim is in progress, send a message to claim it after logging in.
-                                                Task.succeed (GotActionMsg (Action.ActionClaimed { isPinConfirmed = True }))
+                                                Task.succeed (GotActionMsg (Action.ActionClaimed action maybeProof))
                                                     |> Task.perform identity
 
-                                            Nothing ->
+                                            _ ->
                                                 Cmd.none
                                 in
                                 closeModal uResult
@@ -1082,67 +1097,168 @@ handleActionMsg ({ shared } as model) actionMsg =
         { t, tr } =
             shared.translators
 
-        updateClaimingAction : Action.Model -> Model
-        updateClaimingAction actionModel =
-            { model
-                | actionToClaim =
-                    Action.update shared.translators actionMsg actionModel
-                        |> Just
-            }
-    in
-    case ( actionMsg, model.actionToClaim ) of
-        ( Action.ClaimConfirmationOpen action, Nothing ) ->
-            updateClaimingAction (Action.initClaimingActionModel action)
-                |> UR.init
+        updateProofs =
+            case model.claimingActionStatus of
+                Action.PhotoProofShowed a p ->
+                    let
+                        { action, proof } =
+                            Action.update shared.translators actionMsg { action = a, proof = Just p }
+                    in
+                    case proof of
+                        Just proof_ ->
+                            { model | claimingActionStatus = Action.PhotoProofShowed action proof_ }
 
-        ( Action.ActionClaimed { isPinConfirmed }, Just ({ action } as actionModel) ) ->
-            -- Do the actual claiming via EOS.
-            -- This case is fired from `GotAuthMsg` after user logs in if `actionToClaim` is presented in `model`.
-            if isPinConfirmed then
-                updateClaimingAction actionModel
+                        Nothing ->
+                            model
+
+                _ ->
+                    model
+
+        sendClaimToEos : Int -> String -> String -> Int -> Model -> UR.UpdateResult Model Msg eMsg
+        sendClaimToEos accountId photoUrl code time m =
+            if isAuth m then
+                m
                     |> UR.init
                     |> UR.addPort
                         (Action.claimActionPort
                             (GotActionMsg actionMsg)
                             shared.contracts.community
-                            { actionId = action.id
-                            , maker = model.accountName
-                            , proofPhoto = ""
-                            , proofCode = ""
-                            , proofTime = 0
+                            { actionId = accountId
+                            , maker = m.accountName
+                            , proofPhoto = photoUrl
+                            , proofCode = code
+                            , proofTime = time
                             }
                         )
 
             else
-                updateClaimingAction actionModel
+                m
                     |> askedAuthentication
                     |> UR.init
+    in
+    case actionMsg of
+        Action.ClaimConfirmationOpen action ->
+            { model | claimingActionStatus = Action.ConfirmationOpen action }
+                |> UR.init
 
-        ( Action.ActionWithPhotoLinkClicked route, Just ({ action } as actionModel) ) ->
-            updateClaimingAction actionModel
+        Action.ActionClaimed action Nothing ->
+            { model
+                | claimingActionStatus = Action.InProgress action Nothing
+            }
+                |> sendClaimToEos action.id "" "" 0
+
+        -- Valid claim with proof photo
+        Action.ActionClaimed action (Just (Action.Proof (Action.Uploaded url) proofCodeMatch)) ->
+            let
+                ( code, time ) =
+                    case proofCodeMatch of
+                        Just { code_, claimTimestamp } ->
+                            ( Maybe.withDefault "" code_, claimTimestamp )
+
+                        Nothing ->
+                            ( "", 0 )
+            in
+            { model
+                | claimingActionStatus = Action.InProgress action Nothing
+            }
+                |> sendClaimToEos action.id url code time
+
+        -- Invalid claim with proof: no proto provided
+        Action.ActionClaimed _ (Just (Action.Proof _ _)) ->
+            { model
+                | feedback = Show Failure (t "community.actions.proof.no_photo_error")
+            }
+                |> UR.init
+
+        Action.ActionWithPhotoLinkClicked action ->
+            { model
+                | claimingActionStatus =
+                    Action.PhotoProofShowed action (Action.Proof Action.NoPhotoAdded Nothing)
+            }
                 |> update SearchClosed
-                |> UR.addCmd (Route.replaceUrl model.shared.navKey route)
+                |> UR.addCmd (Task.perform (GotActionMsg << Action.GotProofTime) Time.now)
 
-        ( Action.GotActionClaimedResponse (Ok _), Just actionModel ) ->
-            updateClaimingAction actionModel
-                |> (\m ->
-                        { m
-                            | actionToClaim = Nothing -- Action was claimed successfully, we don't need it anymore.
-                            , feedback =
-                                tr "dashboard.check_claim.success"
-                                    [ ( "symbolCode", Eos.symbolToSymbolCodeString model.selectedCommunity ) ]
-                                    |> Show Success
-                        }
-                   )
+        Action.GotActionClaimedResponse (Ok r) ->
+            let
+                _ =
+                    Debug.log "got Ok resp" r
+            in
+            { model
+                | claimingActionStatus = Action.Closed
+                , feedback =
+                    tr "dashboard.check_claim.success"
+                        [ ( "symbolCode", Eos.symbolToSymbolCodeString model.selectedCommunity ) ]
+                        |> Show Success
+            }
                 |> UR.init
 
-        ( Action.GotActionClaimedResponse (Err _), Just actionModel ) ->
-            updateClaimingAction actionModel
-                |> (\m -> { m | feedback = Show Failure (t "dashboard.check_claim.failure") })
+        Action.GotActionClaimedResponse (Err _) ->
+            { model
+                | claimingActionStatus = Action.Closed
+                , feedback = Show Failure (t "dashboard.check_claim.failure")
+            }
                 |> UR.init
 
-        ( _, Just actionModel ) ->
-            updateClaimingAction actionModel
+        Action.ClaimConfirmationClosed reason ->
+            { model
+                | claimingActionStatus = Action.Closed
+                , feedback =
+                    case reason of
+                        Action.TimerEnded ->
+                            Show Failure (t "community.actions.proof.time_expired")
+
+                        _ ->
+                            Hidden
+            }
+                |> UR.init
+
+        Action.GotProofTime _ ->
+            updateProofs
+                |> UR.init
+                |> UR.addPort
+                    { responseAddress = GotActionMsg Action.AskedForUint64Name
+                    , responseData = Encode.null
+                    , data =
+                        Encode.object
+                            [ ( "name", Encode.string "accountNameToUint64" )
+                            , ( "accountName", Encode.string (Eos.nameToString model.accountName) )
+                            ]
+                    }
+
+        Action.GotUint64Name (Err err) ->
+            updateProofs
+                |> (\m -> { m | feedback = Show Failure "Failed while creating proof code." })
+                |> UR.init
+                |> UR.logDebugValue (GotActionMsg actionMsg) err
+
+        Action.PhotoAdded (file :: _) ->
+            let
+                _ =
+                    Debug.log "file added" file
+            in
+            updateProofs
+                |> UR.init
+                |> UR.addCmd (Api.uploadImage shared file (GotActionMsg << Action.PhotoUploaded))
+
+        Action.PhotoUploaded (Err error) ->
+            updateProofs
+                |> UR.init
+                |> UR.logHttpError (GotActionMsg actionMsg) error
+
+        Action.PhotoUploaded (Ok url) ->
+            let
+                _ =
+                    Debug.log "url" url
+            in
+            updateProofs
+                |> UR.init
+
+        Action.GotUint64Name (Ok _) ->
+            updateProofs
+                |> UR.init
+
+        Action.Tick p ->
+            updateProofs
                 |> UR.init
 
         _ ->

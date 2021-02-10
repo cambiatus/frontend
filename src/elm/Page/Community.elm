@@ -329,7 +329,7 @@ update msg model ({ shared } as loggedIn) =
                 |> UR.addExt
                     (UpdatedLoggedIn
                         { loggedIn
-                            | actionToClaim = Just (Action.initClaimingActionModel action)
+                            | claimingActionStatus = Action.ConfirmationOpen action
                         }
                     )
 

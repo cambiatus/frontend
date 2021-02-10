@@ -1,17 +1,22 @@
 module Action exposing
     ( Action
-    , ClaimConfirmationModalStatus(..)
+    , ClaimingActionStatus(..)
     , Model
     , Msg(..)
+    , Proof(..)
+    , ProofPhotoStatus(..)
+    , ReasonToClose(..)
     , claimActionPort
     , getClaimWithPhotoRoute
     , initClaimingActionModel
     , jsAddressToMsg
     , msgToString
     , selectionSet
+    , subscriptions
     , update
     , viewClaimButton
     , viewClaimConfirmation
+    , viewClaimWithProofs
     , viewSearchActions
     )
 
@@ -22,10 +27,12 @@ import Cambiatus.Object.Objective
 import Cambiatus.Scalar exposing (DateTime)
 import Eos exposing (Symbol)
 import Eos.Account as Eos
+import File exposing (File)
 import Graphql.SelectionSet as SelectionSet exposing (SelectionSet, with)
-import Html exposing (Html, br, button, div, i, li, p, span, text, ul)
-import Html.Attributes exposing (class, classList, disabled)
-import Html.Events exposing (onClick)
+import Html exposing (Attribute, Html, br, button, div, i, input, label, li, p, span, text, ul)
+import Html.Attributes exposing (accept, class, classList, disabled, multiple, style, type_)
+import Html.Events exposing (on, onClick)
+import Http
 import Icons
 import Json.Decode as Decode
 import Json.Encode as Encode exposing (Value)
@@ -33,6 +40,8 @@ import Ports
 import Profile
 import Route
 import Session.Shared exposing (Translators)
+import Sha256 exposing (sha256)
+import Task
 import Time exposing (Posix, posixToMillis)
 import UpdateResult as UR
 import Utils
@@ -44,16 +53,28 @@ import View.Modal as Modal
 
 
 type alias Model =
-    { claimConfirmationModalStatus : ClaimConfirmationModalStatus
-    , action : Action
+    { action : Action
+    , proof : Maybe Proof
     }
 
 
 initClaimingActionModel : Action -> Model
 initClaimingActionModel action =
-    { claimConfirmationModalStatus = Open action
-    , action = action
+    let
+        ( proof, cmd ) =
+            if action.hasProofCode then
+                ( Just (Proof NoPhotoAdded Nothing), Task.perform GotProofTime Time.now )
+
+            else
+                ( Nothing, Cmd.none )
+    in
+    { action = action
+    , proof = proof
     }
+
+
+
+-- TODO: I can use extensible record as a param instead of `loggedIn`!!! { l | claimingAction : ... }
 
 
 type alias Action =
@@ -77,12 +98,6 @@ type alias Action =
     }
 
 
-type ClaimConfirmationModalStatus
-    = Open Action
-    | InProgress
-    | Closed
-
-
 
 -- UPDATE
 
@@ -90,35 +105,112 @@ type ClaimConfirmationModalStatus
 type Msg
     = NoOp
     | ClaimConfirmationOpen Action
-    | ClaimConfirmationClosed
-    | ActionClaimed { isPinConfirmed : Bool }
+    | ClaimConfirmationClosed ReasonToClose
+    | ActionClaimed Action (Maybe Proof)
     | GotActionClaimedResponse (Result Value String)
-    | ActionWithPhotoLinkClicked Route.Route
+    | ActionWithPhotoLinkClicked Action
+    | GotProofTime Posix
+    | AskedForUint64Name
+    | GotUint64Name (Result Value String)
+    | Tick Time.Posix
+    | PhotoAdded (List File)
+    | PhotoUploaded (Result Http.Error String)
 
 
 update : Translators -> Msg -> Model -> Model
-update { t } msg model =
+update ({ t } as translators) msg model =
     case msg of
-        NoOp ->
+        GotProofTime posix ->
+            let
+                initProofCodeParts =
+                    Just
+                        { code_ = Nothing
+                        , claimTimestamp = Time.posixToMillis posix // 1000
+                        , secondsAfterClaim = 0
+                        , availabilityPeriod = 30 * 60
+                        }
+            in
+            { model | proof = Just <| Proof NoPhotoAdded initProofCodeParts }
+
+        GotUint64Name (Ok uint64name) ->
+            case model.proof of
+                Just (Proof photoStatus (Just proofCode)) ->
+                    let
+                        verificationCode =
+                            generateVerificationCode model.action.id uint64name proofCode.claimTimestamp
+
+                        newProofCode =
+                            Just
+                                { proofCode
+                                    | code_ = Just verificationCode
+                                }
+                    in
+                    { model | proof = Just <| Proof photoStatus newProofCode }
+
+                _ ->
+                    model
+
+        GotUint64Name (Err err) ->
             model
 
-        ClaimConfirmationOpen action ->
-            { model | claimConfirmationModalStatus = Open action }
+        Tick timer ->
+            case model.proof of
+                Just (Proof photoStatus (Just proofCode)) ->
+                    let
+                        secondsAfterClaim =
+                            (Time.posixToMillis timer // 1000) - proofCode.claimTimestamp
 
-        ActionClaimed _ ->
-            { model | claimConfirmationModalStatus = InProgress }
+                        isProofCodeActive =
+                            (proofCode.availabilityPeriod - secondsAfterClaim) > 0
+                    in
+                    if isProofCodeActive then
+                        let
+                            newProofCode =
+                                Just
+                                    { proofCode
+                                        | secondsAfterClaim = secondsAfterClaim
+                                    }
+                        in
+                        { model | proof = Just <| Proof photoStatus newProofCode }
 
-        ClaimConfirmationClosed ->
-            { model | claimConfirmationModalStatus = Closed }
+                    else
+                        update translators (ClaimConfirmationClosed TimerEnded) model
 
-        GotActionClaimedResponse (Ok _) ->
-            { model | claimConfirmationModalStatus = Closed }
+                _ ->
+                    model
 
-        GotActionClaimedResponse (Err _) ->
-            { model | claimConfirmationModalStatus = Closed }
+        PhotoAdded (_ :: _) ->
+            case model.proof of
+                Just (Proof _ proofCode) ->
+                    { model
+                        | proof = Just <| Proof Uploading proofCode
+                    }
 
-        ActionWithPhotoLinkClicked _ ->
-            { model | claimConfirmationModalStatus = Closed }
+                _ ->
+                    model
+
+        PhotoUploaded (Ok url) ->
+            case model.proof of
+                Just (Proof _ proofCode) ->
+                    { model
+                        | proof = Just <| Proof (Uploaded url) proofCode
+                    }
+
+                Nothing ->
+                    model
+
+        PhotoUploaded (Err error) ->
+            case model.proof of
+                Just (Proof _ proofCode) ->
+                    { model
+                        | proof = Just <| Proof (UploadFailed error) proofCode
+                    }
+
+                Nothing ->
+                    model
+
+        _ ->
+            model
 
 
 
@@ -160,12 +252,19 @@ selectionSet =
         |> with ActionObject.position
 
 
+type ClaimingActionStatus
+    = ConfirmationOpen Action
+    | InProgress Action (Maybe Proof)
+    | PhotoProofShowed Action Proof
+    | Closed
+
+
 
 -- VIEW
 
 
-viewClaimConfirmation : Bool -> Eos.Symbol -> Translators -> ClaimConfirmationModalStatus -> Html Msg
-viewClaimConfirmation isAuth symbol { t } claimConfirmationModalStatus =
+viewClaimConfirmation : Translators -> ClaimingActionStatus -> Html Msg
+viewClaimConfirmation { t } claimConfirmationModalStatus =
     let
         text_ s =
             text (t s)
@@ -173,7 +272,7 @@ viewClaimConfirmation isAuth symbol { t } claimConfirmationModalStatus =
         modalContent acceptMsg isInProgress =
             div []
                 [ Modal.initWith
-                    { closeMsg = ClaimConfirmationClosed
+                    { closeMsg = ClaimConfirmationClosed CancelClicked
                     , isVisible = True
                     }
                     |> Modal.withHeader (t "claim.modal.title")
@@ -187,7 +286,7 @@ viewClaimConfirmation isAuth symbol { t } claimConfirmationModalStatus =
                                     NoOp
 
                                  else
-                                    ClaimConfirmationClosed
+                                    ClaimConfirmationClosed CancelClicked
                                 )
                             , disabled isInProgress
                             ]
@@ -211,19 +310,22 @@ viewClaimConfirmation isAuth symbol { t } claimConfirmationModalStatus =
                 ]
     in
     case claimConfirmationModalStatus of
-        Open action ->
+        ConfirmationOpen action ->
             let
                 acceptMsg =
                     if action.hasProofPhoto then
-                        ActionWithPhotoLinkClicked (getClaimWithPhotoRoute symbol action.objective.id action.id)
+                        ActionWithPhotoLinkClicked action
 
                     else
-                        ActionClaimed { isPinConfirmed = isAuth }
+                        ActionClaimed action Nothing
             in
             modalContent acceptMsg False
 
-        InProgress ->
+        InProgress _ _ ->
             modalContent NoOp True
+
+        PhotoProofShowed _ _ ->
+            text ""
 
         Closed ->
             text ""
@@ -368,6 +470,17 @@ jsAddressToMsg addr val =
                 |> Result.map (Just << GotActionClaimedResponse)
                 |> Result.withDefault Nothing
 
+        "AskedForUint64Name" :: [] ->
+            Decode.decodeValue
+                (Decode.oneOf
+                    [ Decode.field "uint64name" Decode.string |> Decode.map Ok
+                    , Decode.succeed (Err val)
+                    ]
+                )
+                val
+                |> Result.map (Just << GotUint64Name)
+                |> Result.withDefault Nothing
+
         _ ->
             Nothing
 
@@ -381,10 +494,10 @@ msgToString msg =
         ClaimConfirmationOpen _ ->
             [ "ClaimConfirmationOpen" ]
 
-        ClaimConfirmationClosed ->
+        ClaimConfirmationClosed _ ->
             [ "ClaimConfirmationClosed" ]
 
-        ActionClaimed _ ->
+        ActionClaimed _ _ ->
             [ "ActionClaimed" ]
 
         ActionWithPhotoLinkClicked _ ->
@@ -392,6 +505,24 @@ msgToString msg =
 
         GotActionClaimedResponse r ->
             [ "GotActionClaimedResponse", UR.resultToString r ]
+
+        Tick _ ->
+            [ "Tick" ]
+
+        GotProofTime _ ->
+            [ "GotProofTime" ]
+
+        PhotoAdded _ ->
+            [ "PhotoAdded" ]
+
+        PhotoUploaded r ->
+            [ "PhotoUploaded", UR.resultToString r ]
+
+        AskedForUint64Name ->
+            [ "AskedForUint64Name" ]
+
+        GotUint64Name n ->
+            [ "GotUint64Name", UR.resultToString n ]
 
 
 
@@ -404,3 +535,217 @@ getClaimWithPhotoRoute community objectiveId actionId =
         community
         objectiveId
         actionId
+
+
+viewClaimWithProofs : Proof -> Translators -> Bool -> Action -> Html Msg
+viewClaimWithProofs ((Proof photoStatus proofCode) as proof) ({ t } as translators) isAuth action =
+    let
+        isUploadingInProgress =
+            case photoStatus of
+                Uploading ->
+                    True
+
+                _ ->
+                    False
+    in
+    div [ class "bg-white border-t border-gray-300" ]
+        [ div [ class "container p-4 mx-auto" ]
+            [ div [ class "heading-bold leading-7 font-bold" ] [ text <| t "community.actions.proof.title" ]
+            , p [ class "mb-4" ]
+                [ text (Maybe.withDefault "" action.photoProofInstructions) ]
+            , case proofCode of
+                Just { code_, secondsAfterClaim, availabilityPeriod } ->
+                    case code_ of
+                        Just c ->
+                            viewProofCode
+                                translators
+                                c
+                                secondsAfterClaim
+                                availabilityPeriod
+
+                        _ ->
+                            text ""
+
+                _ ->
+                    text ""
+            , div [ class "mb-4" ]
+                [ span [ class "input-label block mb-2" ]
+                    [ text (t "community.actions.proof.photo") ]
+                , viewPhotoUploader translators photoStatus
+                ]
+            , div [ class "md:flex" ]
+                [ button
+                    [ class "modal-cancel"
+                    , onClick
+                        (if isUploadingInProgress then
+                            NoOp
+
+                         else
+                            ClaimConfirmationClosed CancelClicked
+                        )
+                    , classList [ ( "button-disabled", isUploadingInProgress ) ]
+                    , disabled isUploadingInProgress
+                    ]
+                    [ text (t "menu.cancel") ]
+                , button
+                    [ class "modal-accept"
+                    , classList [ ( "button-disabled", isUploadingInProgress ) ]
+                    , onClick
+                        (if isUploadingInProgress then
+                            NoOp
+
+                         else
+                            ActionClaimed action (Just proof)
+                        )
+                    , disabled isUploadingInProgress
+                    ]
+                    [ text (t "menu.send") ]
+                ]
+            ]
+        ]
+
+
+viewPhotoUploader : Translators -> ProofPhotoStatus -> Html Msg
+viewPhotoUploader { t } proofPhotoStatus =
+    let
+        uploadedAttrs =
+            case proofPhotoStatus of
+                Uploaded url ->
+                    [ class "bg-no-repeat bg-center bg-cover"
+                    , style "background-image" ("url(" ++ url ++ ")")
+                    ]
+
+                _ ->
+                    []
+
+        onFileChange : (List File -> msg) -> Attribute msg
+        onFileChange toMsg =
+            Decode.list File.decoder
+                |> Decode.at [ "target", "files" ]
+                |> Decode.map toMsg
+                |> on "change"
+    in
+    label
+        (class "relative bg-purple-500 w-full md:w-2/3 h-56 rounded-sm flex justify-center items-center cursor-pointer"
+            :: uploadedAttrs
+        )
+        [ input
+            [ class "hidden-img-input"
+            , type_ "file"
+            , accept "image/*"
+            , onFileChange PhotoAdded
+            , multiple False
+            ]
+            []
+        , div []
+            [ case proofPhotoStatus of
+                Uploading ->
+                    div [ class "spinner spinner-light" ] []
+
+                Uploaded _ ->
+                    span [ class "absolute bottom-0 right-0 mr-4 mb-4 bg-orange-300 w-8 h-8 p-2 rounded-full" ]
+                        [ Icons.camera "" ]
+
+                _ ->
+                    div [ class "text-white text-body font-bold text-center" ]
+                        [ div [ class "w-10 mx-auto mb-2" ] [ Icons.camera "" ]
+                        , div [] [ text (t "community.actions.proof.upload_photo_hint") ]
+                        ]
+            ]
+        ]
+
+
+viewProofCode : Translators -> String -> Int -> Int -> Html msg
+viewProofCode { t } proofCode secondsAfterClaim proofCodeValiditySeconds =
+    let
+        remainingSeconds =
+            proofCodeValiditySeconds - secondsAfterClaim
+
+        timerMinutes =
+            remainingSeconds // 60
+
+        timerSeconds =
+            remainingSeconds - (timerMinutes * 60)
+
+        toString timeVal =
+            if timeVal < 10 then
+                "0" ++ String.fromInt timeVal
+
+            else
+                String.fromInt timeVal
+
+        timer =
+            toString timerMinutes ++ ":" ++ toString timerSeconds
+    in
+    div [ class "mb-4" ]
+        [ span [ class "input-label block mb-1" ]
+            [ text (t "community.actions.form.verification_code") ]
+        , div [ class "text-2xl text-black font-bold inline-block align-middle mr-2" ]
+            [ text proofCode ]
+        , span [ class "whitespace-no-wrap text-body rounded-full bg-lightred px-3 py-1 text-white" ]
+            [ text (t "community.actions.proof.code_period_label")
+            , text " "
+            , text timer
+            ]
+        ]
+
+
+type alias ObjectiveId =
+    Int
+
+
+type alias ActionId =
+    Int
+
+
+type Proof
+    = Proof ProofPhotoStatus (Maybe ProofCode)
+
+
+type alias ProofCode =
+    { code_ : Maybe String
+    , claimTimestamp : Int
+    , secondsAfterClaim : Int
+    , availabilityPeriod : Int
+    }
+
+
+type ProofPhotoStatus
+    = NoPhotoAdded
+    | Uploading
+    | UploadFailed Http.Error
+    | Uploaded String
+
+
+type ReasonToClose
+    = CancelClicked
+    | TimerEnded
+
+
+
+-- HELPERS
+
+
+generateVerificationCode : Int -> String -> Int -> String
+generateVerificationCode actionId makerAccountUint64 proofTimeSeconds =
+    (String.fromInt actionId
+        ++ makerAccountUint64
+        ++ String.fromInt proofTimeSeconds
+    )
+        |> sha256
+        |> String.slice 0 8
+
+
+
+-- SUBSCRIPTIONS
+
+
+subscriptions : Model -> Sub Msg
+subscriptions model =
+    case model.proof of
+        Just (Proof _ (Just _)) ->
+            Time.every 1000 Tick
+
+        _ ->
+            -- No timer needed if there's no proof code.
+            Sub.none

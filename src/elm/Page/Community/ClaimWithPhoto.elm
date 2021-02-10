@@ -9,7 +9,7 @@ module Page.Community.ClaimWithPhoto exposing
     , view
     )
 
-import Action exposing (Action, ClaimConfirmationModalStatus(..))
+import Action exposing (Action, ClaimingActionStatus(..))
 import Api
 import Eos exposing (Symbol)
 import Eos.Account as Eos
@@ -46,16 +46,16 @@ init : LoggedIn.Model -> Symbol -> ObjectiveId -> Maybe ActionId -> ( Model, Cmd
 init loggedIn symbol objectiveId actionId =
     let
         ( status, cmd ) =
-            case loggedIn.actionToClaim of
-                Just actionModel ->
-                    if actionModel.action.hasProofPhoto then
-                        ( Loaded actionModel, Task.succeed (PageShowed actionModel.action) |> Task.perform identity )
-
-                    else
-                        ( NotFound, Cmd.none )
-
-                Nothing ->
-                    ( NotFound, Cmd.none )
+            --case loggedIn.actionToClaim of
+            --    Just actionModel ->
+            --        if actionModel.action.hasProofPhoto then
+            --            ( Loaded actionModel, Task.succeed (PageShowed actionModel.action) |> Task.perform identity )
+            --
+            --        else
+            --            ( NotFound, Cmd.none )
+            --
+            --    Nothing ->
+            ( NotFound, Cmd.none )
     in
     ( { status = status
       , proof = Proof NoPhotoAdded Nothing
@@ -126,16 +126,16 @@ view ({ shared } as loggedIn) model =
                 Loaded _ ->
                     div [ class "bg-white" ]
                         -- TODO: why loggedIn here? Why not `Loaded actionModel`?
-                        [ case loggedIn.actionToClaim of
-                            Just actionModel ->
-                                viewClaimWithProofs model.proof
-                                    loggedIn.shared.translators
-                                    (LoggedIn.isAuth loggedIn)
-                                    actionModel.action
-
-                            Nothing ->
-                                -- TODO: FIXIT: We see this after claiming
-                                text "this is claim with photo page"
+                        [--case loggedIn.actionToClaim of
+                         --    Just actionModel ->
+                         --        viewClaimWithProofs model.proof
+                         --            loggedIn.shared.translators
+                         --            (LoggedIn.isAuth loggedIn)
+                         --            actionModel.action
+                         --
+                         --    Nothing ->
+                         --        -- TODO: FIXIT: We see this after claiming
+                         --        text "this is claim with photo page"
                         ]
 
                 LoadFailed err ->
@@ -213,7 +213,7 @@ viewClaimWithProofs (Proof photoStatus proofCode) ({ t } as translators) isAuth 
                             NoOp
 
                          else
-                            GotActionMsg (Action.ActionClaimed { isPinConfirmed = isAuth })
+                            GotActionMsg (Action.ActionClaimed action Nothing)
                         )
                     , disabled isUploadingInProgress
                     ]
@@ -400,13 +400,13 @@ update msg model ({ shared } as loggedIn) =
             }
                 |> UR.init
                 |> doNext
-                |> UR.addExt
-                    (UpdatedLoggedIn
-                        { loggedIn
-                            | actionToClaim = Nothing -- Remove cancelled claiming action from the global state
-                        }
-                    )
 
+        --|> UR.addExt
+        --    (UpdatedLoggedIn
+        --        { loggedIn
+        --            | actionToClaim = Nothing -- Remove cancelled claiming action from the global state
+        --        }
+        --    )
         AskedForUint64Name ->
             model |> UR.init
 
@@ -499,16 +499,16 @@ handleActionMsg ({ shared } as loggedIn) actionMsg model =
             shared.translators
     in
     case actionMsg of
-        Action.ActionClaimed { isPinConfirmed } ->
-            if isPinConfirmed then
+        Action.ActionClaimed _ _ ->
+            if True then
                 model
                     |> UR.init
-                    |> UR.addExt
-                        (Action.ActionClaimed { isPinConfirmed = True }
-                            |> GotActionMsg
-                            |> Just
-                            |> RequiredAuthentication
-                        )
+                --|> UR.addExt
+                --    (Action.ActionClaimed { isPinConfirmed = True }
+                --        |> GotActionMsg
+                --        |> Just
+                --        |> RequiredAuthentication
+                --    )
 
             else
                 case ( model.status, model.proof ) of
@@ -553,7 +553,7 @@ handleActionMsg ({ shared } as loggedIn) actionMsg model =
             model
                 |> UR.init
                 -- Remove claimed action from the global state
-                |> UR.addExt (UpdatedLoggedIn { loggedIn | actionToClaim = Nothing })
+                --|> UR.addExt (UpdatedLoggedIn { loggedIn | actionToClaim = Nothing })
                 |> UR.addExt (ShowFeedback LoggedIn.Success message)
 
         Action.GotActionClaimedResponse (Err _) ->
