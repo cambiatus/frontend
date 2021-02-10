@@ -36,7 +36,7 @@ import Json.Decode as Decode
 import Json.Encode as Encode exposing (Value)
 import Ports
 import Profile
-import Session.Shared exposing (Translators)
+import Session.Shared exposing (Shared, Translators)
 import Sha256 exposing (sha256)
 import Task
 import Time exposing (Posix, posixToMillis)
@@ -52,8 +52,7 @@ import View.Modal as Modal
 type alias Model =
     { status : ClaimingActionStatus
     , feedback : Maybe ActionFeedback
-
-    --, needsAuth : Bool
+    , needsAuth : Bool
     }
 
 
@@ -131,36 +130,77 @@ type Msg
 
 
 update :
-    Translators
+    Bool
+    -> Shared
     -> (File -> (Result Http.Error String -> Msg) -> Cmd Msg)
     -> Symbol
     -> Eos.Name
     -> Msg
     -> Model
     -> UR.UpdateResult Model Msg extMsg
-update { t, tr } uploadFile selectedCommunity accName msg model =
+update isAuth shared uploadFile selectedCommunity accName msg model =
+    let
+        { t, tr } =
+            shared.translators
+
+        doNext actionId photoUrl code time m =
+            if isAuth then
+                m
+                    |> UR.init
+                    |> UR.addPort
+                        (claimActionPort
+                            msg
+                            shared.contracts.community
+                            { actionId = actionId
+                            , maker = accName
+                            , proofPhoto = photoUrl
+                            , proofCode = code
+                            , proofTime = time
+                            }
+                        )
+
+            else
+                m |> UR.init
+    in
     case ( msg, model.status ) of
         ( ClaimConfirmationOpen action, Closed ) ->
-            { status = ConfirmationOpen action
-            , feedback = Nothing
+            { model
+                | status = ConfirmationOpen action
+                , feedback = Nothing
             }
                 |> UR.init
 
         -- TODO: we don't need `Proof` in ActionClaimed, we already have it in ClaimingActionStatus
         ( ActionClaimed action Nothing, status ) ->
-            let
-                _ =
-                    Debug.log "statsu" status
-            in
-            { status = InProgress action Nothing
-            , feedback = Nothing
+            { model
+                | status = InProgress action Nothing
+                , feedback = Nothing
+                , needsAuth = not isAuth
             }
-                |> UR.init
+                |> doNext action.id "" "" 0
 
         -- Valid: photo uploaded
-        ( ActionClaimed action ((Just (Proof (Uploaded _) _)) as proof), _ ) ->
-            { status = InProgress action proof, feedback = Nothing }
-                |> UR.init
+        ( ActionClaimed action ((Just (Proof (Uploaded url) maybeProofCode)) as proof), status ) ->
+            let
+                ( proofCode, time ) =
+                    case maybeProofCode of
+                        Just { code_, claimTimestamp } ->
+                            ( Maybe.withDefault "" code_, claimTimestamp )
+
+                        Nothing ->
+                            ( "", 0 )
+            in
+            { model
+                | status =
+                    if isAuth then
+                        InProgress action proof
+
+                    else
+                        PhotoProofShowed action (Proof (Uploaded url) maybeProofCode)
+                , feedback = Nothing
+                , needsAuth = not isAuth
+            }
+                |> doNext action.id url proofCode time
 
         -- Invalid: no photo presented
         ( ActionClaimed _ (Just _), _ ) ->
@@ -170,7 +210,7 @@ update { t, tr } uploadFile selectedCommunity accName msg model =
                 |> UR.init
 
         ( AgreedToClaimWithProof action, ConfirmationOpen _ ) ->
-            { status = PhotoProofShowed action (Proof NoPhotoAdded Nothing), feedback = Nothing }
+            { model | status = PhotoProofShowed action (Proof NoPhotoAdded Nothing), feedback = Nothing }
                 |> UR.init
                 |> UR.addCmd (Task.perform GotProofTime Time.now)
 
@@ -189,11 +229,11 @@ update { t, tr } uploadFile selectedCommunity accName msg model =
                         Err _ ->
                             Failure (t "dashboard.check_claim.failure")
             in
-            { status = Closed, feedback = Just feedback }
+            { model | status = Closed, feedback = Just feedback }
                 |> UR.init
 
         ( ClaimConfirmationClosed, _ ) ->
-            { status = Closed, feedback = Nothing }
+            { model | status = Closed, feedback = Nothing }
                 |> UR.init
 
         ( GotProofTime posix, PhotoProofShowed action _ ) ->
@@ -206,8 +246,9 @@ update { t, tr } uploadFile selectedCommunity accName msg model =
                         , availabilityPeriod = 30 * 60
                         }
             in
-            { status = PhotoProofShowed action (Proof NoPhotoAdded initProofCodeParts)
-            , feedback = Nothing
+            { model
+                | status = PhotoProofShowed action (Proof NoPhotoAdded initProofCodeParts)
+                , feedback = Nothing
             }
                 |> UR.init
                 |> UR.addPort
@@ -231,7 +272,7 @@ update { t, tr } uploadFile selectedCommunity accName msg model =
                             | code_ = Just verificationCode
                         }
             in
-            { status = PhotoProofShowed action (Proof photoStatus newProofCode), feedback = Nothing }
+            { model | status = PhotoProofShowed action (Proof photoStatus newProofCode), feedback = Nothing }
                 |> UR.init
 
         ( GotUint64Name (Err err), _ ) ->
@@ -254,28 +295,30 @@ update { t, tr } uploadFile selectedCommunity accName msg model =
                         |> Just
             in
             (if isProofCodeActive then
-                { status = PhotoProofShowed action (Proof photoStatus newProofCode)
-                , feedback = model.feedback |> Debug.log "current feedback"
+                { model
+                    | status = PhotoProofShowed action (Proof photoStatus newProofCode)
+                    , feedback = model.feedback |> Debug.log "current feedback"
                 }
 
              else
-                { status = Closed
-                , feedback = Failure (t "community.actions.proof.time_expired") |> Just
+                { model
+                    | status = Closed
+                    , feedback = Failure (t "community.actions.proof.time_expired") |> Just
                 }
             )
                 |> UR.init
 
         ( PhotoAdded (file :: _), PhotoProofShowed action (Proof _ proofCode) ) ->
-            { status = PhotoProofShowed action (Proof Uploading proofCode), feedback = Nothing }
+            { model | status = PhotoProofShowed action (Proof Uploading proofCode), feedback = Nothing }
                 |> UR.init
                 |> UR.addCmd (uploadFile file PhotoUploaded)
 
         ( PhotoUploaded (Ok url), PhotoProofShowed action (Proof _ proofCode) ) ->
-            { status = PhotoProofShowed action (Proof (Uploaded url) proofCode), feedback = Nothing }
+            { model | status = PhotoProofShowed action (Proof (Uploaded url) proofCode), feedback = Nothing }
                 |> UR.init
 
         ( PhotoUploaded (Err error), PhotoProofShowed action (Proof _ proofCode) ) ->
-            { status = PhotoProofShowed action (Proof (UploadFailed error) proofCode), feedback = Nothing }
+            { model | status = PhotoProofShowed action (Proof (UploadFailed error) proofCode), feedback = Nothing }
                 |> UR.init
                 |> UR.logHttpError msg error
 

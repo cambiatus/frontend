@@ -184,7 +184,7 @@ initModel shared authModel accountName selectedCommunity =
     , hasObjectives = FeatureLoading
     , hasKyc = FeatureLoading
     , searchModel = Search.init selectedCommunity
-    , claimingAction = { status = Action.Closed, feedback = Nothing }
+    , claimingAction = { status = Action.Closed, feedback = Nothing, needsAuth = False }
     , date = Nothing
     }
 
@@ -343,12 +343,18 @@ viewHelper pageMsg page profile_ ({ shared } as model) content =
                     [ viewSearchBody shared.translators model.selectedCommunity model.date pageMsg model.searchModel ]
 
                 else
-                    case model.claimingAction.status of
-                        -- TODO: Use ADT for handling these three states
-                        Action.PhotoProofShowed action p ->
-                            [ Action.viewClaimWithProofs p shared.translators (isAuth model) action
+                    let
+                        photoView action proof =
+                            [ Action.viewClaimWithProofs proof shared.translators (isAuth model) action
                                 |> Html.map (GotActionMsg >> pageMsg)
                             ]
+                    in
+                    case model.claimingAction.status of
+                        Action.PhotoProofShowed action p ->
+                            photoView action p
+
+                        Action.InProgress action (Just p) ->
+                            photoView action p
 
                         _ ->
                             viewPageBody t model profile_ page content pageMsg
@@ -1097,81 +1103,45 @@ handleActionMsg ({ shared } as model) actionMsg =
         { t, tr } =
             shared.translators
 
-        updateClaimingAction : UpdateResult
-        updateClaimingAction =
-            let
-                actionModelToLoggedIn : Action.Model -> Model
-                actionModelToLoggedIn a =
-                    { model
-                        | claimingAction = a
-                        , feedback =
-                            case ( a.feedback, actionMsg ) of
-                                ( _, Action.Tick _ ) ->
-                                    -- Don't change feedback each second
-                                    model.feedback
+        actionModelToLoggedIn : Action.Model -> Model
+        actionModelToLoggedIn a =
+            { model
+                | claimingAction = a
+                , feedback =
+                    case ( a.feedback, actionMsg ) of
+                        ( _, Action.Tick _ ) ->
+                            -- Don't change feedback each second
+                            model.feedback
 
-                                ( Just (Action.Failure s), _ ) ->
-                                    Show Failure s
+                        ( Just (Action.Failure s), _ ) ->
+                            Show Failure s
 
-                                ( Just (Action.Success s), _ ) ->
-                                    Show Success s
+                        ( Just (Action.Success s), _ ) ->
+                            Show Success s
 
-                                ( Nothing, _ ) ->
-                                    model.feedback
-                    }
-            in
-            Action.update shared.translators (Api.uploadImage shared) model.selectedCommunity model.accountName actionMsg model.claimingAction
-                |> UR.map
-                    actionModelToLoggedIn
-                    GotActionMsg
-                    (\extMsg uR -> UR.addExt extMsg uR)
+                        ( Nothing, _ ) ->
+                            model.feedback
+            }
+                |> (if a.needsAuth then
+                        askedAuthentication
 
-        sendClaimToEos : Int -> String -> String -> Int -> UpdateResult -> UpdateResult
-        sendClaimToEos accountId photoUrl code time urLoggedIn =
-            if isAuth model then
-                urLoggedIn
-                    |> UR.addPort
-                        (Action.claimActionPort
-                            (GotActionMsg actionMsg)
-                            shared.contracts.community
-                            { actionId = accountId
-                            , maker = model.accountName
-                            , proofPhoto = photoUrl
-                            , proofCode = code
-                            , proofTime = time
-                            }
-                        )
-
-            else
-                UR.mapModel
-                    (\m -> askedAuthentication m)
-                    urLoggedIn
+                    else
+                        identity
+                   )
     in
-    case actionMsg of
-        Action.ActionClaimed action Nothing ->
-            updateClaimingAction
-                |> sendClaimToEos action.id "" "" 0
+    Action.update (isAuth model) shared (Api.uploadImage shared) model.selectedCommunity model.accountName actionMsg model.claimingAction
+        |> UR.map
+            actionModelToLoggedIn
+            GotActionMsg
+            (\extMsg uR -> UR.addExt extMsg uR)
+        |> UR.addCmd
+            (case actionMsg of
+                Action.AgreedToClaimWithProof _ ->
+                    Task.perform identity (Task.succeed SearchClosed)
 
-        -- Valid claim with proof photo
-        Action.ActionClaimed action (Just (Action.Proof (Action.Uploaded url) maybeProofCode)) ->
-            let
-                ( proofCode, time ) =
-                    case maybeProofCode of
-                        Just { code_, claimTimestamp } ->
-                            ( Maybe.withDefault "" code_, claimTimestamp )
-
-                        Nothing ->
-                            ( "", 0 )
-            in
-            updateClaimingAction
-                |> sendClaimToEos action.id url proofCode time
-
-        Action.AgreedToClaimWithProof _ ->
-            updateClaimingAction
-                |> UR.addCmd (Task.perform identity (Task.succeed SearchClosed))
-
-        _ ->
-            updateClaimingAction
+                _ ->
+                    Cmd.none
+            )
 
 
 closeModal : UpdateResult -> UpdateResult
