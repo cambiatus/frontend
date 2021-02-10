@@ -36,7 +36,7 @@ type Route
     | EditObjective Symbol Int
     | NewAction Symbol Int
     | EditAction Symbol Int Int
-    | ClaimWithPhoto Symbol Int Int
+      --| ClaimWithPhoto Symbol Int Int
     | Claim Int Int Int
     | Shop Shop.Filter
     | NewSale
@@ -98,7 +98,8 @@ parser url =
         , Url.map EditObjective (s "community" </> Eos.symbolUrlParser </> s "objectives" </> int </> s "edit")
         , Url.map NewAction (s "community" </> Eos.symbolUrlParser </> s "objectives" </> int </> s "action" </> s "new")
         , Url.map EditAction (s "community" </> Eos.symbolUrlParser </> s "objectives" </> int </> s "action" </> int </> s "edit")
-        , Url.map ClaimWithPhoto (s "community" </> Eos.symbolUrlParser </> s "objectives" </> int </> s "action" </> int </> s "claim")
+
+        --, Url.map ClaimWithPhoto (s "community" </> Eos.symbolUrlParser </> s "objectives" </> int </> s "action" </> int </> s "claim")
         , Url.map Claim (s "objectives" </> int </> s "action" </> int </> s "claim" </> int)
         , Url.map Shop
             (s "shop"
@@ -287,11 +288,10 @@ routeToString route =
                     , []
                     )
 
-                ClaimWithPhoto symbol objectiveId actionId ->
-                    ( [ "community", Eos.symbolToString symbol, "objectives", String.fromInt objectiveId, "action", String.fromInt actionId, "claim" ]
-                    , []
-                    )
-
+                --ClaimWithPhoto symbol objectiveId actionId ->
+                --    ( [ "community", Eos.symbolToString symbol, "objectives", String.fromInt objectiveId, "action", String.fromInt actionId, "claim" ]
+                --    , []
+                --    )
                 Claim objectiveId actionId claimId ->
                     ( [ "objectives"
                       , String.fromInt objectiveId

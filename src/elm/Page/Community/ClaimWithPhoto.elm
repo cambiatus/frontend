@@ -9,7 +9,7 @@ module Page.Community.ClaimWithPhoto exposing
     , view
     )
 
-import Action exposing (Action, ClaimingActionStatus(..))
+import Action exposing (Action, Model(..))
 import Api
 import Eos exposing (Symbol)
 import Eos.Account as Eos
@@ -73,8 +73,8 @@ init loggedIn symbol objectiveId actionId =
 
 type Status
     = Loading
-    | Loaded Action.ClaimingActionStatus
-    | LoadFailed (Graphql.Http.Error (Maybe Action.ClaimingActionStatus))
+    | Loaded Action.Model
+    | LoadFailed (Graphql.Http.Error (Maybe Action.Model))
     | NotFound
     | Expired
 
@@ -307,7 +307,7 @@ viewProofCode { t } proofCode secondsAfterClaim proofCodeValiditySeconds =
 
 type Msg
     = NoOp
-    | ActionLoaded (Result (Graphql.Http.Error (Maybe Action.ClaimingActionStatus)) (Maybe Action.ClaimingActionStatus))
+    | ActionLoaded (Result (Graphql.Http.Error (Maybe Action.Model)) (Maybe Action.Model))
     | PageShowed Action
     | ClaimingCancelled ReasonToCloseProofSection
     | GotProofTime Posix

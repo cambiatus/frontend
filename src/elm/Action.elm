@@ -1,10 +1,11 @@
 module Action exposing
     ( Action
+    , ActionFeedback(..)
     , ClaimingActionStatus(..)
+    , Model
     , Msg(..)
     , Proof(..)
     , ProofPhotoStatus(..)
-    , ReasonToClose(..)
     , claimActionPort
     , jsAddressToMsg
     , msgToString
@@ -37,6 +38,7 @@ import Ports
 import Profile
 import Session.Shared exposing (Translators)
 import Sha256 exposing (sha256)
+import Task
 import Time exposing (Posix, posixToMillis)
 import UpdateResult as UR
 import Utils
@@ -47,11 +49,24 @@ import View.Modal as Modal
 -- TYPES
 
 
+type alias Model =
+    { status : ClaimingActionStatus
+    , feedback : Maybe ActionFeedback
+
+    --, needsAuth : Bool
+    }
+
+
 type ClaimingActionStatus
     = ConfirmationOpen Action
     | InProgress Action (Maybe Proof)
     | PhotoProofShowed Action Proof
     | Closed
+
+
+type ActionFeedback
+    = Failure String
+    | Success String
 
 
 type Proof
@@ -71,11 +86,6 @@ type ProofPhotoStatus
     | Uploading
     | UploadFailed Http.Error
     | Uploaded String
-
-
-type ReasonToClose
-    = CancelClicked
-    | TimerEnded
 
 
 type alias Action =
@@ -107,7 +117,7 @@ type Msg
     = NoOp
       -- General Claim Messages
     | ClaimConfirmationOpen Action
-    | ClaimConfirmationClosed ReasonToClose
+    | ClaimConfirmationClosed
     | ActionClaimed Action (Maybe Proof)
     | GotActionClaimedResponse (Result Value String)
       -- Claim with Proof Messages
@@ -120,30 +130,71 @@ type Msg
     | PhotoUploaded (Result Http.Error String)
 
 
-update : Translators -> Msg -> ClaimingActionStatus -> ClaimingActionStatus
-update ({ t } as translators) msg status =
-    case ( msg, status ) of
+update :
+    Translators
+    -> (File -> (Result Http.Error String -> Msg) -> Cmd Msg)
+    -> Symbol
+    -> Eos.Name
+    -> Msg
+    -> Model
+    -> UR.UpdateResult Model Msg extMsg
+update { t, tr } uploadFile selectedCommunity accName msg model =
+    case ( msg, model.status ) of
         ( ClaimConfirmationOpen action, Closed ) ->
-            ConfirmationOpen action
+            { status = ConfirmationOpen action
+            , feedback = Nothing
+            }
+                |> UR.init
 
         -- TODO: we don't need `Proof` in ActionClaimed, we already have it in ClaimingActionStatus
-        ( ActionClaimed action Nothing, _ ) ->
-            InProgress action Nothing
+        ( ActionClaimed action Nothing, status ) ->
+            let
+                _ =
+                    Debug.log "statsu" status
+            in
+            { status = InProgress action Nothing
+            , feedback = Nothing
+            }
+                |> UR.init
 
+        -- Valid: photo uploaded
         ( ActionClaimed action ((Just (Proof (Uploaded _) _)) as proof), _ ) ->
-            InProgress action proof
+            { status = InProgress action proof, feedback = Nothing }
+                |> UR.init
 
-        ( ActionClaimed action (Just proof), _ ) ->
-            PhotoProofShowed action proof
+        -- Invalid: no photo presented
+        ( ActionClaimed _ (Just _), _ ) ->
+            { model
+                | feedback = Failure (t "community.actions.proof.no_photo_error") |> Just
+            }
+                |> UR.init
 
         ( AgreedToClaimWithProof action, ConfirmationOpen _ ) ->
-            PhotoProofShowed action (Proof NoPhotoAdded Nothing)
+            { status = PhotoProofShowed action (Proof NoPhotoAdded Nothing), feedback = Nothing }
+                |> UR.init
+                |> UR.addCmd (Task.perform GotProofTime Time.now)
 
-        ( GotActionClaimedResponse _, _ ) ->
-            Closed
+        ( GotActionClaimedResponse resp, _ ) ->
+            let
+                _ =
+                    Debug.log "resp" resp
 
-        ( ClaimConfirmationClosed reason, _ ) ->
-            Closed
+                feedback =
+                    case resp of
+                        Ok _ ->
+                            tr "dashboard.check_claim.success"
+                                [ ( "symbolCode", Eos.symbolToSymbolCodeString selectedCommunity ) ]
+                                |> Success
+
+                        Err _ ->
+                            Failure (t "dashboard.check_claim.failure")
+            in
+            { status = Closed, feedback = Just feedback }
+                |> UR.init
+
+        ( ClaimConfirmationClosed, _ ) ->
+            { status = Closed, feedback = Nothing }
+                |> UR.init
 
         ( GotProofTime posix, PhotoProofShowed action _ ) ->
             let
@@ -155,7 +206,19 @@ update ({ t } as translators) msg status =
                         , availabilityPeriod = 30 * 60
                         }
             in
-            PhotoProofShowed action (Proof NoPhotoAdded initProofCodeParts)
+            { status = PhotoProofShowed action (Proof NoPhotoAdded initProofCodeParts)
+            , feedback = Nothing
+            }
+                |> UR.init
+                |> UR.addPort
+                    { responseAddress = AskedForUint64Name
+                    , responseData = Encode.null
+                    , data =
+                        Encode.object
+                            [ ( "name", Encode.string "accountNameToUint64" )
+                            , ( "accountName", Encode.string (Eos.nameToString accName) )
+                            ]
+                    }
 
         ( GotUint64Name (Ok uint64name), PhotoProofShowed action (Proof photoStatus (Just proofCode)) ) ->
             let
@@ -168,7 +231,13 @@ update ({ t } as translators) msg status =
                             | code_ = Just verificationCode
                         }
             in
-            PhotoProofShowed action (Proof photoStatus newProofCode)
+            { status = PhotoProofShowed action (Proof photoStatus newProofCode), feedback = Nothing }
+                |> UR.init
+
+        ( GotUint64Name (Err err), _ ) ->
+            { model | feedback = Just <| Failure "Failed while creating proof code." }
+                |> UR.init
+                |> UR.logDebugValue msg err
 
         ( Tick timer, PhotoProofShowed action (Proof photoStatus (Just proofCode)) ) ->
             let
@@ -184,23 +253,35 @@ update ({ t } as translators) msg status =
                     }
                         |> Just
             in
-            if isProofCodeActive then
-                PhotoProofShowed action (Proof photoStatus newProofCode)
+            (if isProofCodeActive then
+                { status = PhotoProofShowed action (Proof photoStatus newProofCode)
+                , feedback = model.feedback |> Debug.log "current feedback"
+                }
 
-            else
-                update translators (ClaimConfirmationClosed TimerEnded) status
+             else
+                { status = Closed
+                , feedback = Failure (t "community.actions.proof.time_expired") |> Just
+                }
+            )
+                |> UR.init
 
-        ( PhotoAdded (_ :: _), PhotoProofShowed action (Proof _ proofCode) ) ->
-            PhotoProofShowed action (Proof Uploading proofCode)
+        ( PhotoAdded (file :: _), PhotoProofShowed action (Proof _ proofCode) ) ->
+            { status = PhotoProofShowed action (Proof Uploading proofCode), feedback = Nothing }
+                |> UR.init
+                |> UR.addCmd (uploadFile file PhotoUploaded)
 
         ( PhotoUploaded (Ok url), PhotoProofShowed action (Proof _ proofCode) ) ->
-            PhotoProofShowed action (Proof (Uploaded url) proofCode)
+            { status = PhotoProofShowed action (Proof (Uploaded url) proofCode), feedback = Nothing }
+                |> UR.init
 
         ( PhotoUploaded (Err error), PhotoProofShowed action (Proof _ proofCode) ) ->
-            PhotoProofShowed action (Proof (UploadFailed error) proofCode)
+            { status = PhotoProofShowed action (Proof (UploadFailed error) proofCode), feedback = Nothing }
+                |> UR.init
+                |> UR.logHttpError msg error
 
         _ ->
-            status
+            model
+                |> UR.init
 
 
 
@@ -246,8 +327,8 @@ selectionSet =
 -- VIEW
 
 
-viewClaimConfirmation : Translators -> ClaimingActionStatus -> Html Msg
-viewClaimConfirmation { t } claimConfirmationModalStatus =
+viewClaimConfirmation : Translators -> Model -> Html Msg
+viewClaimConfirmation { t } model =
     let
         text_ s =
             text (t s)
@@ -255,7 +336,7 @@ viewClaimConfirmation { t } claimConfirmationModalStatus =
         modalContent acceptMsg isInProgress =
             div []
                 [ Modal.initWith
-                    { closeMsg = ClaimConfirmationClosed CancelClicked
+                    { closeMsg = ClaimConfirmationClosed
                     , isVisible = True
                     }
                     |> Modal.withHeader (t "claim.modal.title")
@@ -269,7 +350,7 @@ viewClaimConfirmation { t } claimConfirmationModalStatus =
                                     NoOp
 
                                  else
-                                    ClaimConfirmationClosed CancelClicked
+                                    ClaimConfirmationClosed
                                 )
                             , disabled isInProgress
                             ]
@@ -292,7 +373,7 @@ viewClaimConfirmation { t } claimConfirmationModalStatus =
                     |> Modal.toHtml
                 ]
     in
-    case claimConfirmationModalStatus of
+    case model.status of
         ConfirmationOpen action ->
             let
                 acceptMsg =
@@ -434,7 +515,7 @@ viewClaimWithProofs ((Proof photoStatus proofCode) as proof) ({ t } as translato
                             NoOp
 
                          else
-                            ClaimConfirmationClosed CancelClicked
+                            ClaimConfirmationClosed
                         )
                     , classList [ ( "button-disabled", isUploadingInProgress ) ]
                     , disabled isUploadingInProgress
@@ -630,7 +711,7 @@ msgToString msg =
         ClaimConfirmationOpen _ ->
             [ "ClaimConfirmationOpen" ]
 
-        ClaimConfirmationClosed _ ->
+        ClaimConfirmationClosed ->
             [ "ClaimConfirmationClosed" ]
 
         ActionClaimed _ _ ->
@@ -679,9 +760,9 @@ generateVerificationCode actionId makerAccountUint64 proofTimeSeconds =
 -- SUBSCRIPTIONS
 
 
-subscriptions : ClaimingActionStatus -> Sub Msg
+subscriptions : Model -> Sub Msg
 subscriptions model =
-    case model of
+    case model.status of
         PhotoProofShowed _ (Proof _ (Just _)) ->
             Time.every 1000 Tick
 

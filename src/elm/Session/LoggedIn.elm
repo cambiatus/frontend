@@ -40,6 +40,7 @@ import Cambiatus.Subscription as Subscription
 import Community
 import Eos exposing (Symbol)
 import Eos.Account as Eos
+import File exposing (File)
 import Flags exposing (Flags)
 import Graphql.Document
 import Graphql.Http
@@ -153,7 +154,7 @@ type alias Model =
     , hasObjectives : FeatureStatus
     , hasKyc : FeatureStatus
     , searchModel : Search.Model
-    , claimingAction : Action.ClaimingActionStatus
+    , claimingAction : Action.Model
     , date : Maybe Posix -- TODO: move to Action.Model?
     }
 
@@ -183,7 +184,7 @@ initModel shared authModel accountName selectedCommunity =
     , hasObjectives = FeatureLoading
     , hasKyc = FeatureLoading
     , searchModel = Search.init selectedCommunity
-    , claimingAction = Action.Closed
+    , claimingAction = { status = Action.Closed, feedback = Nothing }
     , date = Nothing
     }
 
@@ -342,7 +343,7 @@ viewHelper pageMsg page profile_ ({ shared } as model) content =
                     [ viewSearchBody shared.translators model.selectedCommunity model.date pageMsg model.searchModel ]
 
                 else
-                    case model.claimingAction of
+                    case model.claimingAction.status of
                         -- TODO: Use ADT for handling these three states
                         Action.PhotoProofShowed action p ->
                             [ Action.viewClaimWithProofs p shared.translators (isAuth model) action
@@ -695,7 +696,7 @@ viewMainMenu page model =
             "w-6 h-6 fill-current hover:text-indigo-500 mr-5"
 
         closeClaimWithPhoto =
-            GotActionMsg (Action.ClaimConfirmationClosed Action.CancelClicked)
+            GotActionMsg Action.ClaimConfirmationClosed
     in
     nav [ class "h-16 w-full flex overflow-x-auto" ]
         [ a
@@ -1013,7 +1014,7 @@ update msg model =
                             Auth.CompletedAuth _ ->
                                 let
                                     cmd =
-                                        case model.claimingAction of
+                                        case model.claimingAction.status of
                                             Action.InProgress action maybeProof ->
                                                 -- An action claim is in progress, send a message to claim it after logging in.
                                                 Task.succeed (GotActionMsg (Action.ActionClaimed action maybeProof))
@@ -1052,6 +1053,10 @@ update msg model =
                     |> UR.init
 
         HideFeedbackLocal ->
+            let
+                _ =
+                    Debug.log "this local?" True
+            in
             { model | feedback = Hidden }
                 |> UR.init
 
@@ -1092,14 +1097,34 @@ handleActionMsg ({ shared } as model) actionMsg =
         { t, tr } =
             shared.translators
 
+        updateClaimingAction : UpdateResult
         updateClaimingAction =
-            { model
-                | claimingAction =
-                    Action.update shared.translators
-                        actionMsg
-                        model.claimingAction
-            }
-                |> UR.init
+            let
+                actionModelToLoggedIn : Action.Model -> Model
+                actionModelToLoggedIn a =
+                    { model
+                        | claimingAction = a
+                        , feedback =
+                            case ( a.feedback, actionMsg ) of
+                                ( _, Action.Tick _ ) ->
+                                    -- Don't change feedback each second
+                                    model.feedback
+
+                                ( Just (Action.Failure s), _ ) ->
+                                    Show Failure s
+
+                                ( Just (Action.Success s), _ ) ->
+                                    Show Success s
+
+                                ( Nothing, _ ) ->
+                                    model.feedback
+                    }
+            in
+            Action.update shared.translators (Api.uploadImage shared) model.selectedCommunity model.accountName actionMsg model.claimingAction
+                |> UR.map
+                    actionModelToLoggedIn
+                    GotActionMsg
+                    (\extMsg uR -> UR.addExt extMsg uR)
 
         sendClaimToEos : Int -> String -> String -> Int -> UpdateResult -> UpdateResult
         sendClaimToEos accountId photoUrl code time urLoggedIn =
@@ -1122,7 +1147,7 @@ handleActionMsg ({ shared } as model) actionMsg =
                     (\m -> askedAuthentication m)
                     urLoggedIn
     in
-    case actionMsg |> Debug.log "actionMsg" of
+    case actionMsg of
         Action.ActionClaimed action Nothing ->
             updateClaimingAction
                 |> sendClaimToEos action.id "" "" 0
@@ -1141,59 +1166,9 @@ handleActionMsg ({ shared } as model) actionMsg =
             updateClaimingAction
                 |> sendClaimToEos action.id url proofCode time
 
-        -- Invalid claim with proof: no proto provided
-        Action.ActionClaimed _ (Just (Action.Proof _ _)) ->
-            updateClaimingAction
-                |> UR.mapModel (\m -> { m | feedback = Show Failure (t "community.actions.proof.no_photo_error") })
-
-        Action.AgreedToClaimWithProof a ->
+        Action.AgreedToClaimWithProof _ ->
             updateClaimingAction
                 |> UR.addCmd (Task.perform identity (Task.succeed SearchClosed))
-                |> UR.addCmd (Task.perform (GotActionMsg << Action.GotProofTime) Time.now)
-
-        Action.GotActionClaimedResponse resp ->
-            let
-                feedback =
-                    case resp of
-                        Ok r ->
-                            tr "dashboard.check_claim.success"
-                                [ ( "symbolCode", Eos.symbolToSymbolCodeString model.selectedCommunity ) ]
-                                |> Show Success
-
-                        Err err ->
-                            Show Failure (t "dashboard.check_claim.failure")
-            in
-            updateClaimingAction
-                |> UR.mapModel (\m -> { m | feedback = feedback })
-
-        Action.ClaimConfirmationClosed Action.TimerEnded ->
-            updateClaimingAction
-                |> UR.mapModel (\m -> { m | feedback = Show Failure (t "community.actions.proof.time_expired") })
-
-        Action.GotProofTime _ ->
-            updateClaimingAction
-                |> UR.addPort
-                    { responseAddress = GotActionMsg Action.AskedForUint64Name
-                    , responseData = Encode.null
-                    , data =
-                        Encode.object
-                            [ ( "name", Encode.string "accountNameToUint64" )
-                            , ( "accountName", Encode.string (Eos.nameToString model.accountName) )
-                            ]
-                    }
-
-        Action.GotUint64Name (Err err) ->
-            updateClaimingAction
-                |> UR.mapModel (\m -> { m | feedback = Show Failure "Failed while creating proof code." })
-                |> UR.logDebugValue (GotActionMsg actionMsg) err
-
-        Action.PhotoAdded (file :: _) ->
-            updateClaimingAction
-                |> UR.addCmd (Api.uploadImage shared file (GotActionMsg << Action.PhotoUploaded))
-
-        Action.PhotoUploaded (Err error) ->
-            updateClaimingAction
-                |> UR.logHttpError (GotActionMsg actionMsg) error
 
         _ ->
             updateClaimingAction

@@ -1,5 +1,7 @@
 module Main exposing (main)
 
+--import Page.Community.ClaimWithPhoto as ClaimWithPhoto
+
 import Auth
 import Browser exposing (Document)
 import Browser.Navigation as Nav
@@ -11,7 +13,6 @@ import Page exposing (Session)
 import Page.ComingSoon as ComingSoon
 import Page.Community as CommunityPage
 import Page.Community.ActionEditor as ActionEditor
-import Page.Community.ClaimWithPhoto as ClaimWithPhoto
 import Page.Community.Editor as CommunityEditor
 import Page.Community.Invite as Invite
 import Page.Community.ObjectiveEditor as ObjectiveEditor
@@ -126,10 +127,9 @@ subscriptions model =
                 ShopViewer.subscriptions subModel
                     |> Sub.map GotShopViewerMsg
 
-            ClaimWithPhoto subModel ->
-                ClaimWithPhoto.subscriptions subModel
-                    |> Sub.map GotClaimWithPhotoMsg
-
+            --ClaimWithPhoto subModel ->
+            --    ClaimWithPhoto.subscriptions subModel
+            --        |> Sub.map GotClaimWithPhotoMsg
             _ ->
                 Sub.none
         ]
@@ -159,7 +159,7 @@ type Status
     | ObjectiveEditor ObjectiveEditor.Model
     | ActionEditor ActionEditor.Model
     | Claim Claim.Model
-    | ClaimWithPhoto ClaimWithPhoto.Model
+      --| ClaimWithPhoto ClaimWithPhoto.Model
     | Notification Notification.Model
     | Dashboard Dashboard.Model
     | Login Login.Model
@@ -195,7 +195,7 @@ type Msg
     | GotCommunitySettingsFeaturesMsg CommunitySettingsFeatures.Msg
     | GotObjectivesMsg Objectives.Msg
     | GotActionEditorMsg ActionEditor.Msg
-    | GotClaimWithPhotoMsg ClaimWithPhoto.Msg
+      --| GotClaimWithPhotoMsg ClaimWithPhoto.Msg
     | GotObjectiveEditorMsg ObjectiveEditor.Msg
     | GotVerifyClaimMsg Claim.Msg
     | GotDashboardMsg Dashboard.Msg
@@ -425,11 +425,10 @@ update msg model =
                 >> updateLoggedInUResult ActionEditor GotActionEditorMsg model
                 |> withLoggedIn
 
-        ( GotClaimWithPhotoMsg subMsg, ClaimWithPhoto subModel ) ->
-            ClaimWithPhoto.update subMsg subModel
-                >> updateLoggedInUResult ClaimWithPhoto GotClaimWithPhotoMsg model
-                |> withLoggedIn
-
+        --( GotClaimWithPhotoMsg subMsg, ClaimWithPhoto subModel ) ->
+        --    ClaimWithPhoto.update subMsg subModel
+        --        >> updateLoggedInUResult ClaimWithPhoto GotClaimWithPhotoMsg model
+        --        |> withLoggedIn
         ( GotVerifyClaimMsg subMsg, Claim subModel ) ->
             Claim.update subMsg subModel
                 >> updateLoggedInUResult Claim GotVerifyClaimMsg model
@@ -829,11 +828,10 @@ changeRouteTo maybeRoute model =
                 >> updateStatusWith ActionEditor GotActionEditorMsg model
                 |> withLoggedIn (Route.EditAction symbol objectiveId actionId)
 
-        Just (Route.ClaimWithPhoto symbol objectiveId actionId) ->
-            (\l -> ClaimWithPhoto.init l symbol objectiveId (Just actionId))
-                >> updateStatusWith ClaimWithPhoto GotClaimWithPhotoMsg model
-                |> withLoggedIn (Route.ClaimWithPhoto symbol objectiveId actionId)
-
+        --Just (Route.ClaimWithPhoto symbol objectiveId actionId) ->
+        --    (\l -> ClaimWithPhoto.init l symbol objectiveId (Just actionId))
+        --        >> updateStatusWith ClaimWithPhoto GotClaimWithPhotoMsg model
+        --        |> withLoggedIn (Route.ClaimWithPhoto symbol objectiveId actionId)
         Just (Route.Claim objectiveId actionId claimId) ->
             (\l -> Claim.init l claimId)
                 >> updateStatusWith Claim GotVerifyClaimMsg model
@@ -938,10 +936,9 @@ jsAddressToMsg address val =
             Maybe.map GotActionEditorMsg
                 (ActionEditor.jsAddressToMsg rAddress val)
 
-        "GotClaimWithPhotoMsg" :: rAddress ->
-            Maybe.map GotClaimWithPhotoMsg
-                (ClaimWithPhoto.jsAddressToMsg rAddress val)
-
+        --"GotClaimWithPhotoMsg" :: rAddress ->
+        --    Maybe.map GotClaimWithPhotoMsg
+        --        (ClaimWithPhoto.jsAddressToMsg rAddress val)
         "GotVerifyClaimMsg" :: rAddress ->
             Maybe.map GotVerifyClaimMsg
                 (Claim.jsAddressToMsg rAddress val)
@@ -1001,9 +998,8 @@ msgToString msg =
         GotActionEditorMsg subMsg ->
             "GotActionEditor" :: ActionEditor.msgToString subMsg
 
-        GotClaimWithPhotoMsg subMsg ->
-            "GotClaimWithPhotoMsg" :: ClaimWithPhoto.msgToString subMsg
-
+        --GotClaimWithPhotoMsg subMsg ->
+        --    "GotClaimWithPhotoMsg" :: ClaimWithPhoto.msgToString subMsg
         GotVerifyClaimMsg subMsg ->
             "GotVerifyClaimMsg" :: Claim.msgToString subMsg
 
@@ -1194,9 +1190,8 @@ view model =
         ActionEditor subModel ->
             viewLoggedIn subModel LoggedIn.ActionEditor GotActionEditorMsg ActionEditor.view
 
-        ClaimWithPhoto subModel ->
-            viewLoggedIn subModel LoggedIn.ClaimAction GotClaimWithPhotoMsg ClaimWithPhoto.view
-
+        --ClaimWithPhoto subModel ->
+        --    viewLoggedIn subModel LoggedIn.ClaimAction GotClaimWithPhotoMsg ClaimWithPhoto.view
         Claim subModel ->
             viewLoggedIn subModel LoggedIn.Claim GotVerifyClaimMsg Claim.view
 
