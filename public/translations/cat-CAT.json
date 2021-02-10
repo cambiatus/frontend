@@ -462,6 +462,7 @@
         "error": "Ui! Quelcom ha fallat",
         "description_label": "Quin és el teu objectiu?",
         "description_placeholder": "Defineix un objectiu que resolgui el problema al que s’enfronta la teva comunitat.",
+        "mark_completed": "Marca com a completat",
         "submit": "Guardar"
       },
       "disabled": {

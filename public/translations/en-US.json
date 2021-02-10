@@ -458,6 +458,7 @@
         "error": "Ops something went wrong!",
         "description_label": "What is your objective?",
         "description_placeholder": "Set a goal that helps resolve the community problem.",
+        "mark_completed": "Mark as completed",
         "submit": "Save"
       },
       "disabled": {

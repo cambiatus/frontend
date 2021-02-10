@@ -466,6 +466,7 @@
         "error": "Ops algo deu errado!",
         "description_label": "Qual o seu objetivo?",
         "description_placeholder": "Defina uma meta que ajude a resolver o problema da comunidade.",
+        "mark_completed": "Finalizar ação",
         "submit": "Salvar"
       },
       "disabled": {

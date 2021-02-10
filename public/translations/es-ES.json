@@ -462,6 +462,7 @@
         "error": "¡Huy! Algo salió mal",
         "description_label": "¿Cual es tu objetivo?",
         "description_placeholder": "Define un objetivo que atienda el problema que enfrenta tu comunidad.",
+        "mark_completed": "Marcar como completado",
         "submit": "Salvar"
       },
       "disabled": {

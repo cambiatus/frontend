@@ -420,6 +420,7 @@
           "error": "ዉይ የሆነ ችግር ተከስቷል!",
           "description_label": "ዓላማ ምንድነዉ?",
           "description_placeholder": "የማህበረሰቡን ችግሮች እንዲትፈታ የሚግዝህን  ግብ አስላ.",
+          "mark_completed": "እንደተጠናቀቀ ምልክት አኑር",
           "submit": "አስቀምጥ"
         },
         "disabled": {

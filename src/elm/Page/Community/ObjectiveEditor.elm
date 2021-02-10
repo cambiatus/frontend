@@ -101,6 +101,7 @@ type Msg
     = CompletedCommunityLoad (Result (Graphql.Http.Error (Maybe Community)) (Maybe Community))
     | EnteredDescription String
     | ClickedSaveObjective
+    | ClickedArchiveObjetive
     | GotSaveObjectiveResponse (Result Value String)
 
 
@@ -209,13 +210,21 @@ viewForm { shared } objForm =
                     ]
                     []
                 ]
-            , button
-                [ class "button button-primary"
-                , type_ "submit"
-                , onClick ClickedSaveObjective
-                , disabled isDisabled
+            , div [ class "flex justify-between space-x-4" ]
+                [ button
+                    [ class "button button-primary"
+                    , type_ "submit"
+                    , onClick ClickedSaveObjective
+                    , disabled isDisabled
+                    ]
+                    [ text (t "community.objectives.editor.submit") ]
+                , button
+                    [ class "button button-secondary"
+                    , onClick ClickedArchiveObjetive
+                    , disabled isDisabled
+                    ]
+                    [ text (t "community.objectives.editor.mark_completed") ]
                 ]
-                [ text (t "community.objectives.editor.submit") ]
             ]
         ]
 
@@ -411,6 +420,9 @@ update msg model loggedIn =
                     |> UR.addExt
                         (Just ClickedSaveObjective |> RequiredAuthentication)
 
+        ClickedArchiveObjetive ->
+            UR.init model
+
         GotSaveObjectiveResponse (Ok _) ->
             UR.init model
                 |> updateObjective msg (\o -> { o | save = Saved })
@@ -461,6 +473,9 @@ msgToString msg =
 
         ClickedSaveObjective ->
             [ "ClickedSaveObjective" ]
+
+        ClickedArchiveObjetive ->
+            [ "ClickedArchiveObjetive" ]
 
         GotSaveObjectiveResponse r ->
             [ "GotSaveObjectiveResponse", UR.resultToString r ]
