@@ -60,6 +60,7 @@ import Time exposing (Posix)
 import Translation
 import UpdateResult as UR
 import Url exposing (Url)
+import View.Components
 
 
 
@@ -309,11 +310,7 @@ viewDateDistance date maybeNow =
 
 fullPageLoading : Shared.Shared -> Html msg
 fullPageLoading { translators } =
-    div [ class "h-full text-center pt-4" ]
-        [ img [ class "h-16 mx-auto", src "/images/loading.gif" ] []
-        , p [ class "font-bold text-2xl" ] [ text <| translators.t "loading.title" ]
-        , p [ class "text-sm" ] [ text <| translators.t "loading.subtitle" ]
-        ]
+    View.Components.loadingLogoAnimated translators
 
 
 fullPageError : String -> Http.Error -> Html msg
