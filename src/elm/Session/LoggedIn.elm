@@ -1099,18 +1099,18 @@ handleActionMsg ({ shared } as model) actionMsg =
                         actionMsg
                         model.claimingAction
             }
+                |> UR.init
 
-        sendClaimToEos : Int -> String -> String -> Int -> Model -> UR.UpdateResult Model Msg eMsg
-        sendClaimToEos accountId photoUrl code time loggedIn =
-            if isAuth loggedIn then
-                loggedIn
-                    |> UR.init
+        sendClaimToEos : Int -> String -> String -> Int -> UpdateResult -> UpdateResult
+        sendClaimToEos accountId photoUrl code time urLoggedIn =
+            if isAuth model then
+                urLoggedIn
                     |> UR.addPort
                         (Action.claimActionPort
                             (GotActionMsg actionMsg)
                             shared.contracts.community
                             { actionId = accountId
-                            , maker = loggedIn.accountName
+                            , maker = model.accountName
                             , proofPhoto = photoUrl
                             , proofCode = code
                             , proofTime = time
@@ -1118,11 +1118,11 @@ handleActionMsg ({ shared } as model) actionMsg =
                         )
 
             else
-                loggedIn
-                    |> askedAuthentication
-                    |> UR.init
+                UR.mapModel
+                    (\m -> askedAuthentication m)
+                    urLoggedIn
     in
-    case actionMsg of
+    case actionMsg |> Debug.log "actionMsg" of
         Action.ActionClaimed action Nothing ->
             updateClaimingAction
                 |> sendClaimToEos action.id "" "" 0
@@ -1144,12 +1144,11 @@ handleActionMsg ({ shared } as model) actionMsg =
         -- Invalid claim with proof: no proto provided
         Action.ActionClaimed _ (Just (Action.Proof _ _)) ->
             updateClaimingAction
-                |> (\m -> { m | feedback = Show Failure (t "community.actions.proof.no_photo_error") })
-                |> UR.init
+                |> UR.mapModel (\m -> { m | feedback = Show Failure (t "community.actions.proof.no_photo_error") })
 
-        Action.AgreedToClaimWithProof _ ->
+        Action.AgreedToClaimWithProof a ->
             updateClaimingAction
-                |> update SearchClosed
+                |> UR.addCmd (Task.perform identity (Task.succeed SearchClosed))
                 |> UR.addCmd (Task.perform (GotActionMsg << Action.GotProofTime) Time.now)
 
         Action.GotActionClaimedResponse resp ->
@@ -1165,17 +1164,14 @@ handleActionMsg ({ shared } as model) actionMsg =
                             Show Failure (t "dashboard.check_claim.failure")
             in
             updateClaimingAction
-                |> (\m -> { m | feedback = feedback })
-                |> UR.init
+                |> UR.mapModel (\m -> { m | feedback = feedback })
 
         Action.ClaimConfirmationClosed Action.TimerEnded ->
             updateClaimingAction
-                |> (\m -> { m | feedback = Show Failure (t "community.actions.proof.time_expired") })
-                |> UR.init
+                |> UR.mapModel (\m -> { m | feedback = Show Failure (t "community.actions.proof.time_expired") })
 
         Action.GotProofTime _ ->
             updateClaimingAction
-                |> UR.init
                 |> UR.addPort
                     { responseAddress = GotActionMsg Action.AskedForUint64Name
                     , responseData = Encode.null
@@ -1188,23 +1184,19 @@ handleActionMsg ({ shared } as model) actionMsg =
 
         Action.GotUint64Name (Err err) ->
             updateClaimingAction
-                |> (\m -> { m | feedback = Show Failure "Failed while creating proof code." })
-                |> UR.init
+                |> UR.mapModel (\m -> { m | feedback = Show Failure "Failed while creating proof code." })
                 |> UR.logDebugValue (GotActionMsg actionMsg) err
 
         Action.PhotoAdded (file :: _) ->
             updateClaimingAction
-                |> UR.init
                 |> UR.addCmd (Api.uploadImage shared file (GotActionMsg << Action.PhotoUploaded))
 
         Action.PhotoUploaded (Err error) ->
             updateClaimingAction
-                |> UR.init
                 |> UR.logHttpError (GotActionMsg actionMsg) error
 
         _ ->
             updateClaimingAction
-                |> UR.init
 
 
 closeModal : UpdateResult -> UpdateResult

@@ -35,7 +35,6 @@ import Json.Decode as Decode
 import Json.Encode as Encode exposing (Value)
 import Ports
 import Profile
-import Route
 import Session.Shared exposing (Translators)
 import Sha256 exposing (sha256)
 import Time exposing (Posix, posixToMillis)
@@ -122,14 +121,20 @@ type Msg
 
 
 update : Translators -> Msg -> ClaimingActionStatus -> ClaimingActionStatus
-update ({ t } as translators) msg model =
-    case ( msg, model ) of
+update ({ t } as translators) msg status =
+    case ( msg, status ) of
+        ( ClaimConfirmationOpen action, Closed ) ->
+            ConfirmationOpen action
+
         -- TODO: we don't need `Proof` in ActionClaimed, we already have it in ClaimingActionStatus
         ( ActionClaimed action Nothing, _ ) ->
             InProgress action Nothing
 
-        ( ActionClaimed action ((Just _) as proof), _ ) ->
+        ( ActionClaimed action ((Just (Proof (Uploaded _) _)) as proof), _ ) ->
             InProgress action proof
+
+        ( ActionClaimed action (Just proof), _ ) ->
+            PhotoProofShowed action proof
 
         ( AgreedToClaimWithProof action, ConfirmationOpen _ ) ->
             PhotoProofShowed action (Proof NoPhotoAdded Nothing)
@@ -183,7 +188,7 @@ update ({ t } as translators) msg model =
                 PhotoProofShowed action (Proof photoStatus newProofCode)
 
             else
-                update translators (ClaimConfirmationClosed TimerEnded) model
+                update translators (ClaimConfirmationClosed TimerEnded) status
 
         ( PhotoAdded (_ :: _), PhotoProofShowed action (Proof _ proofCode) ) ->
             PhotoProofShowed action (Proof Uploading proofCode)
@@ -195,7 +200,7 @@ update ({ t } as translators) msg model =
             PhotoProofShowed action (Proof (UploadFailed error) proofCode)
 
         _ ->
-            model
+            status
 
 
 
