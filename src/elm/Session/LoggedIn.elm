@@ -57,13 +57,14 @@ import Notification exposing (Notification)
 import Ports
 import Profile exposing (Model)
 import Route exposing (Route)
-import Search exposing (FoundItemsKind(..), State(..))
+import Search exposing (State(..))
 import Session.Shared as Shared exposing (Shared, Translators)
 import Shop
 import Task
 import Time exposing (Posix)
 import Translation
 import UpdateResult as UR
+import View.Components
 import View.Modal as Modal
 
 
@@ -370,42 +371,48 @@ viewHelper pageMsg page profile_ ({ shared } as model) content =
 viewSearchBody : Translators -> Symbol -> Maybe Posix -> (Msg -> pageMsg) -> Search.Model -> Html pageMsg
 viewSearchBody translators selectedCommunity maybeToday toPageMsg searchModel =
     div [ class "container mx-auto flex flex-grow" ]
-        [ case searchModel.found of
-            Just ({ actions, offers } as results) ->
+        [ case searchModel.state of
+            Search.ResultsShowed (Just { actions, offers }) activeTab ->
                 case ( List.length actions, List.length offers ) of
                     ( 0, 0 ) ->
-                        Search.viewEmptyResults searchModel.queryText
+                        Search.viewEmptyResults searchModel.currentQuery
                             |> Html.map (GotSearchMsg >> toPageMsg)
 
                     _ ->
                         let
-                            wrapWithClass c inner =
-                                div [ class ("flex-grow " ++ c) ]
-                                    [ inner ]
+                            results =
+                                { actions = actions
+                                , offers = offers
+                                }
                         in
-                        case searchModel.state of
-                            ResultsShowed Offers ->
+                        case activeTab of
+                            Search.OffersTab ->
                                 div [ class "w-full" ]
-                                    [ Search.viewTabs results Offers
+                                    [ Search.viewTabs results Search.OffersTab
                                     , Search.viewOffers selectedCommunity results.offers
                                     ]
                                     |> Html.map (GotSearchMsg >> toPageMsg)
 
-                            ResultsShowed Actions ->
+                            Search.ActionsTab ->
                                 div [ class "w-full" ]
-                                    [ Search.viewTabs results Actions
+                                    [ Search.viewTabs results Search.ActionsTab
                                         |> Html.map (GotSearchMsg >> toPageMsg)
                                     , Action.viewSearchActions translators selectedCommunity maybeToday results.actions
                                         |> Html.map (GotActionMsg >> toPageMsg)
                                     ]
 
-                            _ ->
-                                Search.viewResultsOverview results
-                                    |> wrapWithClass "bg-white p-4"
+                            Search.None ->
+                                div [ class "bg-white p-4" ]
+                                    [ Search.viewResultsOverview results
+                                    ]
                                     |> Html.map (GotSearchMsg >> toPageMsg)
 
-            Nothing ->
-                Search.viewRecentQueries searchModel |> Html.map (GotSearchMsg >> toPageMsg)
+            Search.Loading ->
+                View.Components.loadingLogoAnimated translators
+
+            _ ->
+                Search.viewRecentQueries searchModel.recentQueries
+                    |> Html.map (GotSearchMsg >> toPageMsg)
         ]
 
 

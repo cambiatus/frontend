@@ -1,5 +1,5 @@
 module Search exposing
-    ( FoundItemsKind(..)
+    ( ActiveTab(..)
     , Model
     , Msg
     , State(..)
@@ -27,7 +27,7 @@ import Graphql.Http
 import Graphql.OptionalArgument exposing (OptionalArgument(..))
 import Graphql.SelectionSet as SelectionSet exposing (SelectionSet, with)
 import Html exposing (Html, br, button, div, h3, img, input, li, p, span, strong, text, ul)
-import Html.Attributes exposing (class, placeholder, src, type_, value)
+import Html.Attributes exposing (class, disabled, placeholder, src, type_, value)
 import Html.Events exposing (onClick, onFocus, onInput, onSubmit)
 import Icons
 import Json.Decode as Decode exposing (list, string)
@@ -44,20 +44,18 @@ import Session.Shared exposing (Shared)
 
 type alias Model =
     { state : State
+    , currentQuery : String
     , recentQueries : List String
-    , queryText : String
     , selectedCommunity : Symbol
-    , found : Maybe SearchResult
     }
 
 
 init : Symbol -> Model
 init selectedCommunity =
     { state = Inactive
+    , currentQuery = ""
     , recentQueries = []
-    , queryText = ""
     , selectedCommunity = selectedCommunity
-    , found = Nothing
     }
 
 
@@ -67,13 +65,16 @@ init selectedCommunity =
 
 type State
     = Inactive
-    | Active String
-    | ResultsShowed FoundItemsKind
+    | Loading
+    | RecentSearchesShowed
+      -- | OverviewShowed
+    | ResultsShowed (Maybe SearchResult) ActiveTab
 
 
-type FoundItemsKind
-    = Offers
-    | Actions
+type ActiveTab
+    = OffersTab
+    | ActionsTab
+    | None
 
 
 type alias SearchResult =
@@ -127,49 +128,67 @@ offersSelectionSet =
 
 
 type Msg
-    = StateChanged State
+    = CancelClicked
+    | InputFocused
     | GotRecentSearches String
     | RecentQueryClicked String
     | SearchResultsLoaded (Result (Graphql.Http.Error SearchResult) SearchResult)
     | QuerySubmitted
-    | TabActivated FoundItemsKind
+    | TabActivated ActiveTab
+    | CurrentQueryChanged String
     | FoundItemClicked Route
 
 
 closeSearch : Shared -> Model -> ( Model, Cmd Msg )
 closeSearch shared model =
-    update shared model (StateChanged Inactive)
+    update shared model CancelClicked
 
 
 update : Shared -> Model -> Msg -> ( Model, Cmd Msg )
 update shared model msg =
     case msg of
+        CurrentQueryChanged q ->
+            ( { model | currentQuery = q }, Cmd.none )
+
         FoundItemClicked route ->
-            let
-                -- Make the search dropdown inactive before opening the found item's URL.
-                ( inactiveModel, _ ) =
-                    update shared model (StateChanged Inactive)
-            in
-            ( inactiveModel
+            ( { model
+                | state = Inactive
+                , currentQuery = ""
+              }
             , Route.replaceUrl shared.navKey route
             )
 
         RecentQueryClicked q ->
-            update shared { model | queryText = q } QuerySubmitted
+            update shared
+                { model
+                    | state = Loading
+                    , currentQuery = q
+                }
+                QuerySubmitted
 
         TabActivated activeTab ->
-            ( { model | state = ResultsShowed activeTab }
-            , Cmd.none
-            )
+            case model.state of
+                ResultsShowed r _ ->
+                    ( { model
+                        | state = ResultsShowed r activeTab
+                      }
+                    , Cmd.none
+                    )
+
+                _ ->
+                    ( model, Cmd.none )
 
         SearchResultsLoaded res ->
             case res of
                 Ok searchResult ->
-                    ( { model | found = Just searchResult }
+                    ( { model
+                        | state = ResultsShowed (Just searchResult) OffersTab
+                      }
                     , Cmd.none
                     )
 
                 Err _ ->
+                    -- TODO: Show the error message
                     ( model, Cmd.none )
 
         GotRecentSearches queries ->
@@ -180,23 +199,17 @@ update shared model msg =
                 Err _ ->
                     ( model, Cmd.none )
 
-        StateChanged state ->
-            let
-                ( searchText, found ) =
-                    case state of
-                        Active q ->
-                            ( q, Nothing )
-
-                        Inactive ->
-                            ( "", Nothing )
-
-                        _ ->
-                            ( model.queryText, model.found )
-            in
+        CancelClicked ->
             ( { model
-                | state = state
-                , found = found
-                , queryText = searchText
+                | state = Inactive
+                , currentQuery = ""
+              }
+            , Cmd.none
+            )
+
+        InputFocused ->
+            ( { model
+                | state = RecentSearchesShowed
               }
             , Cmd.none
             )
@@ -205,7 +218,7 @@ update shared model msg =
             let
                 newRecentSearches : List String
                 newRecentSearches =
-                    (model.queryText :: model.recentQueries)
+                    (model.currentQuery :: model.recentQueries)
                         |> List.unique
                         |> List.take 3
 
@@ -219,10 +232,13 @@ update shared model msg =
                 selectedCommunity =
                     model.selectedCommunity
             in
-            ( { model | recentQueries = newRecentSearches }
+            ( { model
+                | recentQueries = newRecentSearches
+                , state = Loading
+              }
             , Cmd.batch
                 [ storeRecentSearches
-                , sendSearchQuery selectedCommunity shared model.queryText
+                , sendSearchQuery selectedCommunity shared model.currentQuery
                 ]
             )
 
@@ -234,6 +250,14 @@ update shared model msg =
 viewForm : Model -> Html Msg
 viewForm model =
     let
+        isLoading =
+            case model.state of
+                Loading ->
+                    True
+
+                _ ->
+                    False
+
         iconColor =
             case model.state of
                 Inactive ->
@@ -241,6 +265,18 @@ viewForm model =
 
                 _ ->
                     "fill-indigo"
+
+        viewCancel =
+            case model.state of
+                Inactive ->
+                    text ""
+
+                _ ->
+                    span
+                        [ class "text-orange-300 pl-3 leading-10 cursor-pointer"
+                        , onClick CancelClicked
+                        ]
+                        [ text "cancel" ]
     in
     div [ class "w-full px-4" ]
         [ Html.form
@@ -250,28 +286,20 @@ viewForm model =
             [ div [ class "relative w-full" ]
                 [ input
                     [ type_ "search"
+                    , disabled isLoading
 
                     --, minlength 3
                     --, required True
                     , class "w-full form-input rounded-full bg-gray-100 pl-10 m-0"
                     , placeholder "Find friends and communities"
-                    , value model.queryText
-                    , onFocus (StateChanged <| Active model.queryText)
-                    , onInput (\q -> StateChanged (Active q))
+                    , value model.currentQuery
+                    , onFocus InputFocused
+                    , onInput CurrentQueryChanged
                     ]
                     []
                 , Icons.search <| "absolute top-0 left-0 mt-2 ml-2" ++ " " ++ iconColor
                 ]
-            , case model.state of
-                Inactive ->
-                    text ""
-
-                _ ->
-                    span
-                        [ class "text-orange-300 pl-3 leading-10 cursor-pointer"
-                        , onClick (StateChanged Inactive)
-                        ]
-                        [ text "cancel" ]
+            , viewCancel
             ]
         ]
 
@@ -292,8 +320,8 @@ viewEmptyResults queryText =
         ]
 
 
-viewRecentQueries : Model -> Html Msg
-viewRecentQueries model =
+viewRecentQueries : List String -> Html Msg
+viewRecentQueries recentQueries =
     let
         viewItem q =
             li
@@ -304,22 +332,18 @@ viewRecentQueries model =
                 , span [ class "inline align-middle" ] [ text q ]
                 ]
     in
-    case model.state of
-        Active _ ->
-            div [ class "w-full p-4 bg-white" ]
-                [ strong [] [ text "Recently searched" ]
-                , ul [ class "text-gray-900" ]
-                    (List.map viewItem model.recentQueries)
-                ]
-
-        _ ->
-            text ""
+    div [ class "w-full p-4 bg-white" ]
+        [ strong [] [ text "Recently searched" ]
+        , ul [ class "text-gray-900" ]
+            (List.map viewItem recentQueries)
+        ]
 
 
-viewTabs : SearchResult -> FoundItemsKind -> Html Msg
+viewTabs : SearchResult -> ActiveTab -> Html Msg
 viewTabs results activeTab =
+    -- TODO: Function may consume an `Active q r t` and render everything from it.
     let
-        viewTab : FoundItemsKind -> String -> List a -> Msg -> Html Msg
+        viewTab : ActiveTab -> String -> List a -> Msg -> Html Msg
         viewTab tabKind label foundItems clickMsg =
             let
                 count =
@@ -341,8 +365,8 @@ viewTabs results activeTab =
                 [ text <| label ++ String.fromInt count ]
     in
     ul [ class "space-x-2 flex items-stretch leading-10 p-4 pb-2 bg-white" ]
-        [ viewTab Offers "Offers " results.offers (TabActivated Offers)
-        , viewTab Actions "Actions " results.actions (TabActivated Actions)
+        [ viewTab OffersTab "Offers " results.offers (TabActivated OffersTab)
+        , viewTab ActionsTab "Actions " results.actions (TabActivated ActionsTab)
         ]
 
 
@@ -384,8 +408,8 @@ viewResultsOverview { offers, actions } =
     div []
         [ strong [ class "block py-4" ] [ text "Here is what we found" ]
         , ul []
-            [ viewItem Icons.shop (List.length offers) "offer" "offers" (TabActivated Offers)
-            , viewItem Icons.flag (List.length actions) "action" "actions" (TabActivated Actions)
+            [ viewItem Icons.shop (List.length offers) "offer" "offers" (TabActivated OffersTab)
+            , viewItem Icons.flag (List.length actions) "action" "actions" (TabActivated ActionsTab)
             ]
         ]
 
