@@ -126,7 +126,7 @@ subscriptions model =
         [ Sub.map GotAuthMsg (Auth.subscriptions model.auth)
         , Sub.map KeyDown (Browser.Events.onKeyDown (Decode.field "key" Decode.string))
         , Sub.map GotSearchMsg Search.subscriptions
-        , Sub.map GotActionMsg (Action.subscriptions model.claimingActionStatus)
+        , Sub.map GotActionMsg (Action.subscriptions model.claimingAction)
         ]
 
 
@@ -153,7 +153,7 @@ type alias Model =
     , hasObjectives : FeatureStatus
     , hasKyc : FeatureStatus
     , searchModel : Search.Model
-    , claimingActionStatus : Action.ClaimingActionStatus
+    , claimingAction : Action.ClaimingActionStatus
     , date : Maybe Posix -- TODO: move to Action.Model?
     }
 
@@ -183,7 +183,7 @@ initModel shared authModel accountName selectedCommunity =
     , hasObjectives = FeatureLoading
     , hasKyc = FeatureLoading
     , searchModel = Search.init selectedCommunity
-    , claimingActionStatus = Action.Closed
+    , claimingAction = Action.Closed
     , date = Nothing
     }
 
@@ -318,7 +318,7 @@ viewHelper pageMsg page profile_ ({ shared } as model) content =
         ([ div [ class "bg-white" ]
             [ div [ class "container mx-auto" ]
                 [ viewHeader model profile_ |> Html.map pageMsg
-                , Action.viewClaimConfirmation shared.translators model.claimingActionStatus
+                , Action.viewClaimConfirmation shared.translators model.claimingAction
                     |> Html.map (pageMsg << GotActionMsg)
                 , -- Search form is separated from search results because it needs to
                   -- be between community selector and user dropdown on Desktops.
@@ -342,7 +342,7 @@ viewHelper pageMsg page profile_ ({ shared } as model) content =
                     [ viewSearchBody shared.translators model.selectedCommunity model.date pageMsg model.searchModel ]
 
                 else
-                    case model.claimingActionStatus of
+                    case model.claimingAction of
                         -- TODO: Use ADT for handling these three states
                         Action.PhotoProofShowed action p ->
                             [ Action.viewClaimWithProofs p shared.translators (isAuth model) action
@@ -1013,7 +1013,7 @@ update msg model =
                             Auth.CompletedAuth _ ->
                                 let
                                     cmd =
-                                        case model.claimingActionStatus of
+                                        case model.claimingAction of
                                             Action.InProgress action maybeProof ->
                                                 -- An action claim is in progress, send a message to claim it after logging in.
                                                 Task.succeed (GotActionMsg (Action.ActionClaimed action maybeProof))
@@ -1092,25 +1092,25 @@ handleActionMsg ({ shared } as model) actionMsg =
         { t, tr } =
             shared.translators
 
-        updateProofs =
+        updateClaimingAction =
             { model
-                | claimingActionStatus =
+                | claimingAction =
                     Action.update shared.translators
                         actionMsg
-                        model.claimingActionStatus
+                        model.claimingAction
             }
 
         sendClaimToEos : Int -> String -> String -> Int -> Model -> UR.UpdateResult Model Msg eMsg
-        sendClaimToEos accountId photoUrl code time m =
-            if isAuth m then
-                m
+        sendClaimToEos accountId photoUrl code time loggedIn =
+            if isAuth loggedIn then
+                loggedIn
                     |> UR.init
                     |> UR.addPort
                         (Action.claimActionPort
                             (GotActionMsg actionMsg)
                             shared.contracts.community
                             { actionId = accountId
-                            , maker = m.accountName
+                            , maker = loggedIn.accountName
                             , proofPhoto = photoUrl
                             , proofCode = code
                             , proofTime = time
@@ -1118,88 +1118,63 @@ handleActionMsg ({ shared } as model) actionMsg =
                         )
 
             else
-                m
+                loggedIn
                     |> askedAuthentication
                     |> UR.init
     in
     case actionMsg of
-        Action.ClaimConfirmationOpen action ->
-            { model | claimingActionStatus = Action.ConfirmationOpen action }
-                |> UR.init
-
         Action.ActionClaimed action Nothing ->
-            { model
-                | claimingActionStatus = Action.InProgress action Nothing
-            }
+            updateClaimingAction
                 |> sendClaimToEos action.id "" "" 0
 
         -- Valid claim with proof photo
-        Action.ActionClaimed action (Just (Action.Proof (Action.Uploaded url) proofCodeMatch)) ->
+        Action.ActionClaimed action (Just (Action.Proof (Action.Uploaded url) maybeProofCode)) ->
             let
-                ( code, time ) =
-                    case proofCodeMatch of
+                ( proofCode, time ) =
+                    case maybeProofCode of
                         Just { code_, claimTimestamp } ->
                             ( Maybe.withDefault "" code_, claimTimestamp )
 
                         Nothing ->
                             ( "", 0 )
             in
-            { model
-                | claimingActionStatus = Action.InProgress action Nothing
-            }
-                |> sendClaimToEos action.id url code time
+            updateClaimingAction
+                |> sendClaimToEos action.id url proofCode time
 
         -- Invalid claim with proof: no proto provided
         Action.ActionClaimed _ (Just (Action.Proof _ _)) ->
-            { model
-                | feedback = Show Failure (t "community.actions.proof.no_photo_error")
-            }
+            updateClaimingAction
+                |> (\m -> { m | feedback = Show Failure (t "community.actions.proof.no_photo_error") })
                 |> UR.init
 
-        Action.AgreedToClaimWithProof action ->
-            { model
-                | claimingActionStatus =
-                    Action.PhotoProofShowed action (Action.Proof Action.NoPhotoAdded Nothing)
-            }
+        Action.AgreedToClaimWithProof _ ->
+            updateClaimingAction
                 |> update SearchClosed
                 |> UR.addCmd (Task.perform (GotActionMsg << Action.GotProofTime) Time.now)
 
-        Action.GotActionClaimedResponse (Ok r) ->
+        Action.GotActionClaimedResponse resp ->
             let
-                _ =
-                    Debug.log "got Ok resp" r
+                feedback =
+                    case resp of
+                        Ok r ->
+                            tr "dashboard.check_claim.success"
+                                [ ( "symbolCode", Eos.symbolToSymbolCodeString model.selectedCommunity ) ]
+                                |> Show Success
+
+                        Err err ->
+                            Show Failure (t "dashboard.check_claim.failure")
             in
-            { model
-                | claimingActionStatus = Action.Closed
-                , feedback =
-                    tr "dashboard.check_claim.success"
-                        [ ( "symbolCode", Eos.symbolToSymbolCodeString model.selectedCommunity ) ]
-                        |> Show Success
-            }
+            updateClaimingAction
+                |> (\m -> { m | feedback = feedback })
                 |> UR.init
 
-        Action.GotActionClaimedResponse (Err _) ->
-            { model
-                | claimingActionStatus = Action.Closed
-                , feedback = Show Failure (t "dashboard.check_claim.failure")
-            }
-                |> UR.init
-
-        Action.ClaimConfirmationClosed reason ->
-            { model
-                | claimingActionStatus = Action.Closed
-                , feedback =
-                    case reason of
-                        Action.TimerEnded ->
-                            Show Failure (t "community.actions.proof.time_expired")
-
-                        _ ->
-                            Hidden
-            }
+        Action.ClaimConfirmationClosed Action.TimerEnded ->
+            updateClaimingAction
+                |> (\m -> { m | feedback = Show Failure (t "community.actions.proof.time_expired") })
                 |> UR.init
 
         Action.GotProofTime _ ->
-            updateProofs
+            updateClaimingAction
                 |> UR.init
                 |> UR.addPort
                     { responseAddress = GotActionMsg Action.AskedForUint64Name
@@ -1212,43 +1187,23 @@ handleActionMsg ({ shared } as model) actionMsg =
                     }
 
         Action.GotUint64Name (Err err) ->
-            updateProofs
+            updateClaimingAction
                 |> (\m -> { m | feedback = Show Failure "Failed while creating proof code." })
                 |> UR.init
                 |> UR.logDebugValue (GotActionMsg actionMsg) err
 
         Action.PhotoAdded (file :: _) ->
-            let
-                _ =
-                    Debug.log "file added" file
-            in
-            updateProofs
+            updateClaimingAction
                 |> UR.init
                 |> UR.addCmd (Api.uploadImage shared file (GotActionMsg << Action.PhotoUploaded))
 
         Action.PhotoUploaded (Err error) ->
-            updateProofs
+            updateClaimingAction
                 |> UR.init
                 |> UR.logHttpError (GotActionMsg actionMsg) error
 
-        Action.PhotoUploaded (Ok url) ->
-            let
-                _ =
-                    Debug.log "url" url
-            in
-            updateProofs
-                |> UR.init
-
-        Action.GotUint64Name (Ok _) ->
-            updateProofs
-                |> UR.init
-
-        Action.Tick p ->
-            updateProofs
-                |> UR.init
-
         _ ->
-            model
+            updateClaimingAction
                 |> UR.init
 
 

@@ -6,7 +6,6 @@ module Action exposing
     , ProofPhotoStatus(..)
     , ReasonToClose(..)
     , claimActionPort
-    , getClaimWithPhotoRoute
     , jsAddressToMsg
     , msgToString
     , selectionSet
@@ -125,6 +124,22 @@ type Msg
 update : Translators -> Msg -> ClaimingActionStatus -> ClaimingActionStatus
 update ({ t } as translators) msg model =
     case ( msg, model ) of
+        -- TODO: we don't need `Proof` in ActionClaimed, we already have it in ClaimingActionStatus
+        ( ActionClaimed action Nothing, _ ) ->
+            InProgress action Nothing
+
+        ( ActionClaimed action ((Just _) as proof), _ ) ->
+            InProgress action proof
+
+        ( AgreedToClaimWithProof action, ConfirmationOpen _ ) ->
+            PhotoProofShowed action (Proof NoPhotoAdded Nothing)
+
+        ( GotActionClaimedResponse _, _ ) ->
+            Closed
+
+        ( ClaimConfirmationClosed reason, _ ) ->
+            Closed
+
         ( GotProofTime posix, PhotoProofShowed action _ ) ->
             let
                 initProofCodeParts =
