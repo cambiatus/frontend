@@ -83,7 +83,7 @@ init shared accountName flags =
     , Cmd.batch
         [ Api.Graphql.query shared (Profile.query accountName) CompletedLoadProfile
         , Api.Graphql.query shared (Community.settingsQuery flags.selectedCommunity) CompletedLoadSettings
-        , Ports.getRecentSearches ()
+        , Ports.getRecentSearches () -- run on the page refresh, duplicated in `initLogin`
         , Task.perform GotTime Time.now
         ]
     )
@@ -110,9 +110,12 @@ initLogin shared authModel profile_ =
     ( { model
         | profile = Loaded profile_
       }
-    , Task.perform
-        (\_ -> SelectCommunity selectedCommunity Cmd.none)
-        (Task.succeed ())
+    , Cmd.batch
+        [ Task.perform
+            (\_ -> SelectCommunity selectedCommunity Cmd.none)
+            (Task.succeed ())
+        , Ports.getRecentSearches () -- run on the passphrase login, duplicated in `init`
+        ]
     )
 
 
