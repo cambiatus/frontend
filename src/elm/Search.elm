@@ -27,7 +27,7 @@ import Graphql.Http
 import Graphql.OptionalArgument exposing (OptionalArgument(..))
 import Graphql.SelectionSet as SelectionSet exposing (SelectionSet, with)
 import Html exposing (Html, br, button, div, h3, img, input, li, p, span, strong, text, ul)
-import Html.Attributes exposing (class, disabled, placeholder, src, type_, value)
+import Html.Attributes exposing (class, disabled, minlength, placeholder, required, src, type_, value)
 import Html.Events exposing (onClick, onFocus, onInput, onSubmit)
 import Icons
 import Json.Decode as Decode exposing (list, string)
@@ -35,7 +35,7 @@ import Json.Encode as Encode
 import List.Extra as List
 import Ports
 import Route exposing (Route)
-import Session.Shared exposing (Shared)
+import Session.Shared exposing (Shared, Translators)
 
 
 
@@ -67,14 +67,13 @@ type State
     = Inactive
     | Loading
     | RecentSearchesShowed
-      -- | OverviewShowed
     | ResultsShowed (Maybe SearchResult) ActiveTab
 
 
 type ActiveTab
     = OffersTab
     | ActionsTab
-    | None
+    | ResultsOverview
 
 
 type alias SearchResult =
@@ -182,13 +181,12 @@ update shared model msg =
             case res of
                 Ok searchResult ->
                     ( { model
-                        | state = ResultsShowed (Just searchResult) OffersTab
+                        | state = ResultsShowed (Just searchResult) ResultsOverview
                       }
                     , Cmd.none
                     )
 
                 Err _ ->
-                    -- TODO: Show the error message
                     ( model, Cmd.none )
 
         GotRecentSearches queries ->
@@ -247,8 +245,8 @@ update shared model msg =
 -- VIEW
 
 
-viewForm : Model -> Html Msg
-viewForm model =
+viewForm : Translators -> Model -> Html Msg
+viewForm { t } model =
     let
         isLoading =
             case model.state of
@@ -273,55 +271,52 @@ viewForm model =
 
                 _ ->
                     span
-                        [ class "text-orange-300 pl-3 leading-10 cursor-pointer"
+                        [ class "text-orange-300 pl-3 leading-10 cursor-pointer lowercase"
                         , onClick CancelClicked
                         ]
-                        [ text "cancel" ]
+                        [ text (t "menu.cancel") ]
     in
-    div [ class "w-full px-4" ]
-        [ Html.form
-            [ class "w-full mt-2 flex items-center"
-            , onSubmit QuerySubmitted
-            ]
-            [ div [ class "relative w-full" ]
-                [ input
-                    [ type_ "search"
-                    , disabled isLoading
-
-                    --, minlength 3
-                    --, required True
-                    , class "w-full form-input rounded-full bg-gray-100 pl-10 m-0"
-                    , placeholder "Find friends and communities"
-                    , value model.currentQuery
-                    , onFocus InputFocused
-                    , onInput CurrentQueryChanged
-                    ]
-                    []
-                , Icons.search <| "absolute top-0 left-0 mt-2 ml-2" ++ " " ++ iconColor
+    Html.form
+        [ class "flex items-center"
+        , onSubmit QuerySubmitted
+        ]
+        [ div [ class "relative w-full" ]
+            [ input
+                [ type_ "search"
+                , disabled isLoading
+                , minlength 3
+                , required True
+                , class "w-full form-input rounded-full bg-gray-100 pl-10 m-0"
+                , placeholder (t "menu.search.placeholder")
+                , value model.currentQuery
+                , onFocus InputFocused
+                , onInput CurrentQueryChanged
                 ]
-            , viewCancel
+                []
+            , Icons.search <| "absolute top-0 left-0 mt-2 ml-2" ++ " " ++ iconColor
             ]
+        , viewCancel
         ]
 
 
-viewEmptyResults : String -> Html msg
-viewEmptyResults queryText =
+viewEmptyResults : Translators -> String -> Html msg
+viewEmptyResults { t } queryText =
     div [ class "flex-grow bg-white text-center" ]
         [ h3 [ class "mt-20 text-xl font-bold" ]
-            [ text <| "You searched for \"" ++ queryText ++ "\"" ]
+            [ text <| t "menu.search.notFoundLabel" ++ " \"" ++ queryText ++ "\"" ]
         , div []
             [ img
                 [ class "w-2/3 mx-auto md:w-64 mt-6 mb-8"
                 , src "/images/not_found.svg"
                 ]
                 []
-            , text "No results were found"
+            , text (t "menu.search.notFoundResults")
             ]
         ]
 
 
-viewRecentQueries : List String -> Html Msg
-viewRecentQueries recentQueries =
+viewRecentQueries : Translators -> List String -> Html Msg
+viewRecentQueries { t } recentQueries =
     let
         viewItem q =
             li
@@ -333,15 +328,14 @@ viewRecentQueries recentQueries =
                 ]
     in
     div [ class "w-full p-4 bg-white" ]
-        [ strong [] [ text "Recently searched" ]
+        [ strong [] [ text (t "menu.search.recentlyHeader") ]
         , ul [ class "text-gray-900" ]
             (List.map viewItem recentQueries)
         ]
 
 
-viewTabs : SearchResult -> ActiveTab -> Html Msg
-viewTabs results activeTab =
-    -- TODO: Function may consume an `Active q r t` and render everything from it.
+viewTabs : Translators -> SearchResult -> ActiveTab -> Html Msg
+viewTabs { t } results activeTab =
     let
         viewTab : ActiveTab -> String -> List a -> Msg -> Html Msg
         viewTab tabKind label foundItems clickMsg =
@@ -355,30 +349,40 @@ viewTabs results activeTab =
 
                   else
                     class "bg-gray-100"
-                , class "rounded-sm flex-1 text-center cursor-pointer"
+                , class "rounded-sm flex-1 text-center cursor-pointer capitalize"
                 , if count > 0 then
                     onClick clickMsg
 
                   else
                     class "cursor-not-allowed text-gray-300"
                 ]
-                [ text <| label ++ String.fromInt count ]
+                [ text label
+                , text " "
+                , text (String.fromInt count)
+                ]
     in
     ul [ class "space-x-2 flex items-stretch leading-10 p-4 pb-2 bg-white" ]
-        [ viewTab OffersTab "Offers " results.offers (TabActivated OffersTab)
-        , viewTab ActionsTab "Actions " results.actions (TabActivated ActionsTab)
+        [ viewTab OffersTab
+            (t "menu.search.offers")
+            results.offers
+            (TabActivated OffersTab)
+        , viewTab ActionsTab
+            (t "menu.search.actions")
+            results.actions
+            (TabActivated ActionsTab)
         ]
 
 
-viewResultsOverview : SearchResult -> Html Msg
-viewResultsOverview { offers, actions } =
+viewResultsOverview : Translators -> SearchResult -> Html Msg
+viewResultsOverview { t } { offers, actions } =
     let
         viewItem icon count singular plural showMsg =
             li [ class "py-4 flex items-center" ]
                 [ div [ class "flex-grow flex items-center" ]
                     [ icon "w-8 h-8 fill-black mr-3"
                     , span []
-                        [ text "We found "
+                        [ text <| t "menu.search.overviewFound"
+                        , text " "
                         , strong []
                             [ text (String.fromInt count)
                             , text " "
@@ -402,14 +406,23 @@ viewResultsOverview { offers, actions } =
                                 ]
                            )
                     )
-                    [ text "Show" ]
+                    [ text (t "menu.search.overviewShow") ]
                 ]
     in
     div []
-        [ strong [ class "block py-4" ] [ text "Here is what we found" ]
+        [ strong [ class "block py-4" ]
+            [ text (t "menu.search.overviewHeader") ]
         , ul []
-            [ viewItem Icons.shop (List.length offers) "offer" "offers" (TabActivated OffersTab)
-            , viewItem Icons.flag (List.length actions) "action" "actions" (TabActivated ActionsTab)
+            [ viewItem Icons.shop
+                (List.length offers)
+                (t "menu.search.offer")
+                (t "menu.search.offers")
+                (TabActivated OffersTab)
+            , viewItem Icons.flag
+                (List.length actions)
+                (t "menu.search.action")
+                (t "menu.search.actions")
+                (TabActivated ActionsTab)
             ]
         ]
 

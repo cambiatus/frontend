@@ -319,8 +319,6 @@ viewHelper pageMsg page profile_ ({ shared } as model) content =
             [ div [ class "container mx-auto" ]
                 [ viewHeader model profile_
                     |> Html.map pageMsg
-                , Search.viewForm model.searchModel
-                    |> Html.map (GotSearchMsg >> pageMsg)
                 , if Search.isActive model.searchModel then
                     text ""
 
@@ -381,7 +379,7 @@ viewSearchBody translators selectedCommunity maybeToday toPageMsg searchModel =
             Search.ResultsShowed (Just { actions, offers }) activeTab ->
                 case ( List.length actions, List.length offers ) of
                     ( 0, 0 ) ->
-                        Search.viewEmptyResults searchModel.currentQuery
+                        Search.viewEmptyResults translators searchModel.currentQuery
                             |> Html.map (GotSearchMsg >> toPageMsg)
 
                     _ ->
@@ -394,22 +392,22 @@ viewSearchBody translators selectedCommunity maybeToday toPageMsg searchModel =
                         case activeTab of
                             Search.OffersTab ->
                                 div [ class "w-full" ]
-                                    [ Search.viewTabs results Search.OffersTab
+                                    [ Search.viewTabs translators results Search.OffersTab
                                     , Search.viewOffers selectedCommunity results.offers
                                     ]
                                     |> Html.map (GotSearchMsg >> toPageMsg)
 
                             Search.ActionsTab ->
                                 div [ class "w-full" ]
-                                    [ Search.viewTabs results Search.ActionsTab
+                                    [ Search.viewTabs translators results Search.ActionsTab
                                         |> Html.map (GotSearchMsg >> toPageMsg)
                                     , Action.viewSearchActions translators selectedCommunity maybeToday results.actions
                                         |> Html.map (GotActionMsg >> toPageMsg)
                                     ]
 
-                            Search.None ->
-                                div [ class "bg-white p-4" ]
-                                    [ Search.viewResultsOverview results
+                            Search.ResultsOverview ->
+                                div [ class "bg-white w-full p-4" ]
+                                    [ Search.viewResultsOverview translators results
                                     ]
                                     |> Html.map (GotSearchMsg >> toPageMsg)
 
@@ -417,7 +415,7 @@ viewSearchBody translators selectedCommunity maybeToday toPageMsg searchModel =
                 View.Components.loadingLogoAnimated translators
 
             _ ->
-                Search.viewRecentQueries searchModel.recentQueries
+                Search.viewRecentQueries translators searchModel.recentQueries
                     |> Html.map (GotSearchMsg >> toPageMsg)
         ]
 
@@ -497,6 +495,10 @@ viewHeader ({ shared } as model) profile_ =
     in
     div [ class "flex flex-wrap items-center justify-between px-4 pt-6 pb-4" ]
         [ viewCommunitySelector model
+        , div [ class "order-last w-full md:order-none mt-2 md:ml-2 md:flex-grow md:w-auto" ]
+            [ Search.viewForm shared.translators model.searchModel
+                |> Html.map GotSearchMsg
+            ]
         , div [ class "flex items-center float-right" ]
             [ a
                 [ class "outline-none relative mx-6"
