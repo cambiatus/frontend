@@ -330,7 +330,6 @@ update msg model ({ shared } as loggedIn) =
                     (UpdatedLoggedIn
                         { loggedIn
                             | claimingAction =
-                                -- TODO: Probably create `Auth.initClaimingAction`?
                                 { status = Action.ConfirmationOpen action
                                 , feedback = Nothing
                                 , needsPinConfirmation = False
@@ -517,7 +516,6 @@ viewAction translators canEdit symbol maybeDate action =
                 || (action.usages > 0 && action.usagesLeft == 0)
 
         viewClaimButton =
-            -- TODO: move this to Action module?
             button
                 [ class ("h-10 uppercase rounded-lg ml-1" ++ claimColors ++ claimSize)
                 , onClick
