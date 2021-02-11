@@ -183,7 +183,7 @@ initModel shared authModel accountName selectedCommunity =
     , hasObjectives = FeatureLoading
     , hasKyc = FeatureLoading
     , searchModel = Search.init selectedCommunity
-    , claimingAction = { status = Action.Closed, feedback = Nothing, needsAuth = False }
+    , claimingAction = { status = Action.Closed, feedback = Nothing, needsPinConfirmation = False }
     , date = Nothing
     }
 
@@ -1112,7 +1112,7 @@ handleActionMsg ({ shared } as model) actionMsg =
                         ( Nothing, _ ) ->
                             model.feedback
             }
-                |> (if a.needsAuth then
+                |> (if a.needsPinConfirmation then
                         askedAuthentication
 
                     else

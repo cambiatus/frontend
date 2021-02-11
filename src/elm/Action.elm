@@ -52,7 +52,7 @@ import View.Modal as Modal
 type alias Model =
     { status : ClaimingActionStatus
     , feedback : Maybe ActionFeedback
-    , needsAuth : Bool
+    , needsPinConfirmation : Bool
     }
 
 
@@ -138,13 +138,13 @@ update :
     -> Msg
     -> Model
     -> UR.UpdateResult Model Msg extMsg
-update isAuth shared uploadFile selectedCommunity accName msg model =
+update isPinConfirmed shared uploadFile selectedCommunity accName msg model =
     let
         { t, tr } =
             shared.translators
 
         doNext actionId photoUrl code time m =
-            if isAuth then
+            if isPinConfirmed then
                 m
                     |> UR.init
                     |> UR.addPort
@@ -175,7 +175,7 @@ update isAuth shared uploadFile selectedCommunity accName msg model =
             { model
                 | status = InProgress action Nothing
                 , feedback = Nothing
-                , needsAuth = not isAuth
+                , needsPinConfirmation = not isPinConfirmed
             }
                 |> doNext action.id "" "" 0
 
@@ -192,13 +192,13 @@ update isAuth shared uploadFile selectedCommunity accName msg model =
             in
             { model
                 | status =
-                    if isAuth then
+                    if isPinConfirmed then
                         InProgress action proof
 
                     else
                         PhotoProofShowed action (Proof (Uploaded url) maybeProofCode)
                 , feedback = Nothing
-                , needsAuth = not isAuth
+                , needsPinConfirmation = not isPinConfirmed
             }
                 |> doNext action.id url proofCode time
 
@@ -206,7 +206,7 @@ update isAuth shared uploadFile selectedCommunity accName msg model =
         ( ActionClaimed _ (Just _), _ ) ->
             { model
                 | feedback = Failure (t "community.actions.proof.no_photo_error") |> Just
-                , needsAuth = False
+                , needsPinConfirmation = False
             }
                 |> UR.init
 
@@ -214,7 +214,7 @@ update isAuth shared uploadFile selectedCommunity accName msg model =
             { model
                 | status = PhotoProofShowed action (Proof NoPhotoAdded Nothing)
                 , feedback = Nothing
-                , needsAuth = False
+                , needsPinConfirmation = False
             }
                 |> UR.init
                 |> UR.addCmd (Task.perform GotProofTime Time.now)
@@ -234,7 +234,7 @@ update isAuth shared uploadFile selectedCommunity accName msg model =
             { model
                 | status = Closed
                 , feedback = Just feedback
-                , needsAuth = False
+                , needsPinConfirmation = False
             }
                 |> UR.init
 
@@ -242,7 +242,7 @@ update isAuth shared uploadFile selectedCommunity accName msg model =
             { model
                 | status = Closed
                 , feedback = Nothing
-                , needsAuth = False
+                , needsPinConfirmation = False
             }
                 |> UR.init
 
@@ -259,7 +259,7 @@ update isAuth shared uploadFile selectedCommunity accName msg model =
             { model
                 | status = PhotoProofShowed action (Proof NoPhotoAdded initProofCodeParts)
                 , feedback = Nothing
-                , needsAuth = False
+                , needsPinConfirmation = False
             }
                 |> UR.init
                 |> UR.addPort
@@ -286,14 +286,14 @@ update isAuth shared uploadFile selectedCommunity accName msg model =
             { model
                 | status = PhotoProofShowed action (Proof photoStatus newProofCode)
                 , feedback = Nothing
-                , needsAuth = False
+                , needsPinConfirmation = False
             }
                 |> UR.init
 
         ( GotUint64Name (Err err), _ ) ->
             { model
                 | feedback = Just <| Failure "Failed while creating proof code."
-                , needsAuth = False
+                , needsPinConfirmation = False
             }
                 |> UR.init
                 |> UR.logDebugValue msg err
@@ -316,14 +316,14 @@ update isAuth shared uploadFile selectedCommunity accName msg model =
                 { model
                     | status = PhotoProofShowed action (Proof photoStatus newProofCode)
                     , feedback = model.feedback
-                    , needsAuth = False
+                    , needsPinConfirmation = False
                 }
 
              else
                 { model
                     | status = Closed
                     , feedback = Failure (t "community.actions.proof.time_expired") |> Just
-                    , needsAuth = False
+                    , needsPinConfirmation = False
                 }
             )
                 |> UR.init
@@ -332,7 +332,7 @@ update isAuth shared uploadFile selectedCommunity accName msg model =
             { model
                 | status = PhotoProofShowed action (Proof Uploading proofCode)
                 , feedback = Nothing
-                , needsAuth = False
+                , needsPinConfirmation = False
             }
                 |> UR.init
                 |> UR.addCmd (uploadFile file PhotoUploaded)
@@ -341,7 +341,7 @@ update isAuth shared uploadFile selectedCommunity accName msg model =
             { model
                 | status = PhotoProofShowed action (Proof (Uploaded url) proofCode)
                 , feedback = Nothing
-                , needsAuth = False
+                , needsPinConfirmation = False
             }
                 |> UR.init
 
@@ -349,14 +349,14 @@ update isAuth shared uploadFile selectedCommunity accName msg model =
             { model
                 | status = PhotoProofShowed action (Proof (UploadFailed error) proofCode)
                 , feedback = Nothing
-                , needsAuth = False
+                , needsPinConfirmation = False
             }
                 |> UR.init
                 |> UR.logHttpError msg error
 
         _ ->
             { model
-                | needsAuth = False
+                | needsPinConfirmation = False
             }
                 |> UR.init
 

@@ -333,7 +333,7 @@ update msg model ({ shared } as loggedIn) =
                                 -- TODO: Probably create `Auth.initClaimingAction`?
                                 { status = Action.ConfirmationOpen action
                                 , feedback = Nothing
-                                , needsAuth = False
+                                , needsPinConfirmation = False
                                 }
                         }
                     )
