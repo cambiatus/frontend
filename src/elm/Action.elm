@@ -58,9 +58,9 @@ type alias Model =
 
 type ClaimingActionStatus
     = ConfirmationOpen Action
-    | InProgress Action (Maybe Proof)
-    | PhotoProofShowed Action Proof
-    | Closed
+    | ClaimInProgress Action (Maybe Proof)
+    | PhotoUploaderShowed Action Proof
+    | NotAsked
 
 
 type ActionFeedback
@@ -143,7 +143,7 @@ update isPinConfirmed shared uploadFile selectedCommunity accName msg model =
         { t, tr } =
             shared.translators
 
-        doNext actionId photoUrl code time m =
+        claimOrAskForPin actionId photoUrl code time m =
             if isPinConfirmed then
                 m
                     |> UR.init
@@ -163,7 +163,7 @@ update isPinConfirmed shared uploadFile selectedCommunity accName msg model =
                 m |> UR.init
     in
     case ( msg, model.status ) of
-        ( ClaimButtonClicked action, Closed ) ->
+        ( ClaimButtonClicked action, _ ) ->
             { model
                 | status = ConfirmationOpen action
                 , feedback = Nothing
@@ -171,13 +171,12 @@ update isPinConfirmed shared uploadFile selectedCommunity accName msg model =
                 |> UR.init
 
         ( ActionClaimed action Nothing, _ ) ->
-            -- `status` could be `Open` or `InProgress` (when tried to claim without having the PIN)
             { model
-                | status = InProgress action Nothing
+                | status = ClaimInProgress action Nothing
                 , feedback = Nothing
                 , needsPinConfirmation = not isPinConfirmed
             }
-                |> doNext action.id "" "" 0
+                |> claimOrAskForPin action.id "" "" 0
 
         -- Valid: photo uploaded
         ( ActionClaimed action ((Just (Proof (Uploaded url) maybeProofCode)) as proof), _ ) ->
@@ -191,16 +190,11 @@ update isPinConfirmed shared uploadFile selectedCommunity accName msg model =
                             ( "", 0 )
             in
             { model
-                | status =
-                    if isPinConfirmed then
-                        InProgress action proof
-
-                    else
-                        PhotoProofShowed action (Proof (Uploaded url) maybeProofCode)
+                | status = ClaimInProgress action proof
                 , feedback = Nothing
                 , needsPinConfirmation = not isPinConfirmed
             }
-                |> doNext action.id url proofCode time
+                |> claimOrAskForPin action.id url proofCode time
 
         -- Invalid: no photo presented
         ( ActionClaimed _ (Just _), _ ) ->
@@ -212,7 +206,7 @@ update isPinConfirmed shared uploadFile selectedCommunity accName msg model =
 
         ( AgreedToClaimWithProof action, _ ) ->
             { model
-                | status = PhotoProofShowed action (Proof NoPhotoAdded Nothing)
+                | status = PhotoUploaderShowed action (Proof NoPhotoAdded Nothing)
                 , feedback = Nothing
                 , needsPinConfirmation = False
             }
@@ -232,7 +226,7 @@ update isPinConfirmed shared uploadFile selectedCommunity accName msg model =
                             Failure (t "dashboard.check_claim.failure")
             in
             { model
-                | status = Closed
+                | status = NotAsked
                 , feedback = Just feedback
                 , needsPinConfirmation = False
             }
@@ -240,13 +234,13 @@ update isPinConfirmed shared uploadFile selectedCommunity accName msg model =
 
         ( ClaimConfirmationClosed, _ ) ->
             { model
-                | status = Closed
+                | status = NotAsked
                 , feedback = Nothing
                 , needsPinConfirmation = False
             }
                 |> UR.init
 
-        ( GotProofTime posix, PhotoProofShowed action _ ) ->
+        ( GotProofTime posix, PhotoUploaderShowed action _ ) ->
             let
                 initProofCodeParts =
                     Just
@@ -257,7 +251,7 @@ update isPinConfirmed shared uploadFile selectedCommunity accName msg model =
                         }
             in
             { model
-                | status = PhotoProofShowed action (Proof NoPhotoAdded initProofCodeParts)
+                | status = PhotoUploaderShowed action (Proof NoPhotoAdded initProofCodeParts)
                 , feedback = Nothing
                 , needsPinConfirmation = False
             }
@@ -272,7 +266,7 @@ update isPinConfirmed shared uploadFile selectedCommunity accName msg model =
                             ]
                     }
 
-        ( GotUint64Name (Ok uint64name), PhotoProofShowed action (Proof photoStatus (Just proofCode)) ) ->
+        ( GotUint64Name (Ok uint64name), PhotoUploaderShowed action (Proof photoStatus (Just proofCode)) ) ->
             let
                 verificationCode =
                     generateVerificationCode action.id uint64name proofCode.claimTimestamp
@@ -284,7 +278,7 @@ update isPinConfirmed shared uploadFile selectedCommunity accName msg model =
                         }
             in
             { model
-                | status = PhotoProofShowed action (Proof photoStatus newProofCode)
+                | status = PhotoUploaderShowed action (Proof photoStatus newProofCode)
                 , feedback = Nothing
                 , needsPinConfirmation = False
             }
@@ -298,7 +292,7 @@ update isPinConfirmed shared uploadFile selectedCommunity accName msg model =
                 |> UR.init
                 |> UR.logDebugValue msg err
 
-        ( Tick timer, PhotoProofShowed action (Proof photoStatus (Just proofCode)) ) ->
+        ( Tick timer, PhotoUploaderShowed action (Proof photoStatus (Just proofCode)) ) ->
             let
                 secondsAfterClaim =
                     (Time.posixToMillis timer // 1000) - proofCode.claimTimestamp
@@ -314,40 +308,40 @@ update isPinConfirmed shared uploadFile selectedCommunity accName msg model =
             in
             (if isProofCodeActive then
                 { model
-                    | status = PhotoProofShowed action (Proof photoStatus newProofCode)
+                    | status = PhotoUploaderShowed action (Proof photoStatus newProofCode)
                     , feedback = model.feedback
                     , needsPinConfirmation = False
                 }
 
              else
                 { model
-                    | status = Closed
+                    | status = NotAsked
                     , feedback = Failure (t "community.actions.proof.time_expired") |> Just
                     , needsPinConfirmation = False
                 }
             )
                 |> UR.init
 
-        ( PhotoAdded (file :: _), PhotoProofShowed action (Proof _ proofCode) ) ->
+        ( PhotoAdded (file :: _), PhotoUploaderShowed action (Proof _ proofCode) ) ->
             { model
-                | status = PhotoProofShowed action (Proof Uploading proofCode)
+                | status = PhotoUploaderShowed action (Proof Uploading proofCode)
                 , feedback = Nothing
                 , needsPinConfirmation = False
             }
                 |> UR.init
                 |> UR.addCmd (uploadFile file PhotoUploaded)
 
-        ( PhotoUploaded (Ok url), PhotoProofShowed action (Proof _ proofCode) ) ->
+        ( PhotoUploaded (Ok url), PhotoUploaderShowed action (Proof _ proofCode) ) ->
             { model
-                | status = PhotoProofShowed action (Proof (Uploaded url) proofCode)
+                | status = PhotoUploaderShowed action (Proof (Uploaded url) proofCode)
                 , feedback = Nothing
                 , needsPinConfirmation = False
             }
                 |> UR.init
 
-        ( PhotoUploaded (Err error), PhotoProofShowed action (Proof _ proofCode) ) ->
+        ( PhotoUploaded (Err error), PhotoUploaderShowed action (Proof _ proofCode) ) ->
             { model
-                | status = PhotoProofShowed action (Proof (UploadFailed error) proofCode)
+                | status = PhotoUploaderShowed action (Proof (UploadFailed error) proofCode)
                 , feedback = Nothing
                 , needsPinConfirmation = False
             }
@@ -462,13 +456,13 @@ viewClaimConfirmation { t } model =
             in
             modalContent acceptMsg False
 
-        InProgress _ _ ->
+        ClaimInProgress _ _ ->
             modalContent NoOp True
 
-        PhotoProofShowed _ _ ->
+        PhotoUploaderShowed _ _ ->
             text ""
 
-        Closed ->
+        NotAsked ->
             text ""
 
 
@@ -840,7 +834,7 @@ generateVerificationCode actionId makerAccountUint64 proofTimeSeconds =
 subscriptions : Model -> Sub Msg
 subscriptions model =
     case model.status of
-        PhotoProofShowed _ (Proof _ (Just _)) ->
+        PhotoUploaderShowed _ (Proof _ (Just _)) ->
             Time.every 1000 Tick
 
         _ ->

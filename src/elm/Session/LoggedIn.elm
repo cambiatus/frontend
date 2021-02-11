@@ -188,7 +188,7 @@ initModel shared authModel accountName selectedCommunity =
     , hasObjectives = FeatureLoading
     , hasKyc = FeatureLoading
     , searchModel = Search.init selectedCommunity
-    , claimingAction = { status = Action.Closed, feedback = Nothing, needsPinConfirmation = False }
+    , claimingAction = { status = Action.NotAsked, feedback = Nothing, needsPinConfirmation = False }
     , date = Nothing
     }
 
@@ -348,10 +348,10 @@ viewHelper pageMsg page profile_ ({ shared } as model) content =
                             ]
                     in
                     case model.claimingAction.status of
-                        Action.PhotoProofShowed action p ->
+                        Action.PhotoUploaderShowed action p ->
                             viewClaimWithProofs action p
 
-                        Action.InProgress action (Just p) ->
+                        Action.ClaimInProgress action (Just p) ->
                             viewClaimWithProofs action p
 
                         _ ->
@@ -1021,7 +1021,7 @@ update msg model =
                                 let
                                     cmd =
                                         case model.claimingAction.status of
-                                            Action.InProgress action maybeProof ->
+                                            Action.ClaimInProgress action maybeProof ->
                                                 -- If action claim is in progress,
                                                 -- send a message to finish the claiming process
                                                 -- when the user confirms the PIN.
