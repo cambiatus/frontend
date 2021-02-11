@@ -297,9 +297,7 @@ viewClaimCard { selectedCommunity, shared, accountName } claim =
 
         claimRoute =
             Route.Claim
-                --claim.action.objectiveId
-                -- TODO: the route just works without objectiveId even with direct loading from browser's address bar
-                0
+                claim.action.objective.id
                 claim.action.id
                 claim.id
     in
