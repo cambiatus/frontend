@@ -355,7 +355,7 @@ viewHelper pageMsg page profile_ ({ shared } as model) content =
                             viewClaimWithProofs action p
 
                         _ ->
-                            viewPageBody t model profile_ page content pageMsg
+                            viewPageBody model profile_ page content
                )
             ++ [ viewFooter shared
                , Action.viewClaimConfirmation shared.translators model.claimingAction
@@ -424,8 +424,12 @@ viewSearchBody translators selectedCommunity maybeToday toPageMsg searchModel =
         ]
 
 
-viewPageBody t model profile_ page content thisMsg =
+viewPageBody : Model -> Profile.Model -> Page -> Html pageMsg -> List (Html pageMsg)
+viewPageBody ({ shared } as model) profile_ page content =
     let
+        { t } =
+            shared.translators
+
         hasUserKycFilled =
             case profile_.kyc of
                 Just _ ->
