@@ -154,7 +154,7 @@ type alias Model =
     , hasKyc : FeatureStatus
     , searchModel : Search.Model
     , claimingAction : Action.Model
-    , date : Maybe Posix -- TODO: move to Action.Model?
+    , date : Maybe Posix
     }
 
 
@@ -317,12 +317,9 @@ viewHelper pageMsg page profile_ ({ shared } as model) content =
         [ class "min-h-screen flex flex-col" ]
         ([ div [ class "bg-white" ]
             [ div [ class "container mx-auto" ]
-                [ viewHeader model profile_ |> Html.map pageMsg
-                , Action.viewClaimConfirmation shared.translators model.claimingAction
-                    |> Html.map (pageMsg << GotActionMsg)
-                , -- Search form is separated from search results because it needs to
-                  -- be between community selector and user dropdown on Desktops.
-                  Search.viewForm model.searchModel
+                [ viewHeader model profile_
+                    |> Html.map pageMsg
+                , Search.viewForm model.searchModel
                     |> Html.map (GotSearchMsg >> pageMsg)
                 , if Search.isActive model.searchModel then
                     text ""
@@ -343,22 +340,24 @@ viewHelper pageMsg page profile_ ({ shared } as model) content =
 
                 else
                     let
-                        photoView action proof =
+                        viewClaimWithProofs action proof =
                             [ Action.viewClaimWithProofs proof shared.translators (isAuth model) action
                                 |> Html.map (GotActionMsg >> pageMsg)
                             ]
                     in
                     case model.claimingAction.status of
                         Action.PhotoProofShowed action p ->
-                            photoView action p
+                            viewClaimWithProofs action p
 
                         Action.InProgress action (Just p) ->
-                            photoView action p
+                            viewClaimWithProofs action p
 
                         _ ->
                             viewPageBody t model profile_ page content pageMsg
                )
             ++ [ viewFooter shared
+               , Action.viewClaimConfirmation shared.translators model.claimingAction
+                    |> Html.map (GotActionMsg >> pageMsg)
                , Modal.initWith
                     { closeMsg = ClosedAuthModal
                     , isVisible = model.showAuthModal
@@ -710,8 +709,6 @@ viewMainMenu page model =
                 , ( activeClass, isActive page Route.Dashboard )
                 ]
             , Route.href Route.Dashboard
-
-            -- TODO: Is there a better solution for closing claim with photo?
             , onClick closeClaimWithPhoto
             ]
             [ Icons.dashboard iconClass
@@ -725,8 +722,6 @@ viewMainMenu page model =
                         , ( activeClass, isActive page (Route.Shop Shop.All) )
                         ]
                     , Route.href (Route.Shop Shop.All)
-
-                    -- TODO: Is there a better solution for closing claim with photo?
                     , onClick closeClaimWithPhoto
                     ]
                     [ Icons.shop iconClass

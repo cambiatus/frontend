@@ -323,7 +323,7 @@ update msg model ({ shared } as loggedIn) =
         GotTime date ->
             UR.init { model | date = Just date }
 
-        GotActionMsg (Action.ClaimConfirmationOpen action) ->
+        GotActionMsg (Action.ClaimButtonClicked action) ->
             model
                 |> UR.init
                 |> UR.addExt
@@ -525,7 +525,7 @@ viewAction translators canEdit symbol maybeDate action =
                         NoOp
 
                      else
-                        (GotActionMsg << Action.ClaimConfirmationOpen) action
+                        (GotActionMsg << Action.ClaimButtonClicked) action
                     )
                 ]
                 [ if action.hasProofPhoto then

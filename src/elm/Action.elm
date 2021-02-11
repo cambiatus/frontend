@@ -115,7 +115,7 @@ type alias Action =
 type Msg
     = NoOp
       -- General Claim Messages
-    | ClaimConfirmationOpen Action
+    | ClaimButtonClicked Action
     | ClaimConfirmationClosed
     | ActionClaimed Action (Maybe Proof)
     | GotActionClaimedResponse (Result Value String)
@@ -163,15 +163,15 @@ update isAuth shared uploadFile selectedCommunity accName msg model =
                 m |> UR.init
     in
     case ( msg, model.status ) of
-        ( ClaimConfirmationOpen action, Closed ) ->
+        ( ClaimButtonClicked action, Closed ) ->
             { model
                 | status = ConfirmationOpen action
                 , feedback = Nothing
             }
                 |> UR.init
 
-        -- TODO: we don't need `Proof` in ActionClaimed, we already have it in ClaimingActionStatus
-        ( ActionClaimed action Nothing, status ) ->
+        ( ActionClaimed action Nothing, _ ) ->
+            -- `status` could be `Open` or `InProgress` (when tried to claim without having the PIN)
             { model
                 | status = InProgress action Nothing
                 , feedback = Nothing
@@ -180,7 +180,7 @@ update isAuth shared uploadFile selectedCommunity accName msg model =
                 |> doNext action.id "" "" 0
 
         -- Valid: photo uploaded
-        ( ActionClaimed action ((Just (Proof (Uploaded url) maybeProofCode)) as proof), status ) ->
+        ( ActionClaimed action ((Just (Proof (Uploaded url) maybeProofCode)) as proof), _ ) ->
             let
                 ( proofCode, time ) =
                     case maybeProofCode of
@@ -206,11 +206,16 @@ update isAuth shared uploadFile selectedCommunity accName msg model =
         ( ActionClaimed _ (Just _), _ ) ->
             { model
                 | feedback = Failure (t "community.actions.proof.no_photo_error") |> Just
+                , needsAuth = False
             }
                 |> UR.init
 
-        ( AgreedToClaimWithProof action, ConfirmationOpen _ ) ->
-            { model | status = PhotoProofShowed action (Proof NoPhotoAdded Nothing), feedback = Nothing }
+        ( AgreedToClaimWithProof action, _ ) ->
+            { model
+                | status = PhotoProofShowed action (Proof NoPhotoAdded Nothing)
+                , feedback = Nothing
+                , needsAuth = False
+            }
                 |> UR.init
                 |> UR.addCmd (Task.perform GotProofTime Time.now)
 
@@ -226,11 +231,19 @@ update isAuth shared uploadFile selectedCommunity accName msg model =
                         Err _ ->
                             Failure (t "dashboard.check_claim.failure")
             in
-            { model | status = Closed, feedback = Just feedback }
+            { model
+                | status = Closed
+                , feedback = Just feedback
+                , needsAuth = False
+            }
                 |> UR.init
 
         ( ClaimConfirmationClosed, _ ) ->
-            { model | status = Closed, feedback = Nothing }
+            { model
+                | status = Closed
+                , feedback = Nothing
+                , needsAuth = False
+            }
                 |> UR.init
 
         ( GotProofTime posix, PhotoProofShowed action _ ) ->
@@ -246,6 +259,7 @@ update isAuth shared uploadFile selectedCommunity accName msg model =
             { model
                 | status = PhotoProofShowed action (Proof NoPhotoAdded initProofCodeParts)
                 , feedback = Nothing
+                , needsAuth = False
             }
                 |> UR.init
                 |> UR.addPort
@@ -269,11 +283,18 @@ update isAuth shared uploadFile selectedCommunity accName msg model =
                             | code_ = Just verificationCode
                         }
             in
-            { model | status = PhotoProofShowed action (Proof photoStatus newProofCode), feedback = Nothing }
+            { model
+                | status = PhotoProofShowed action (Proof photoStatus newProofCode)
+                , feedback = Nothing
+                , needsAuth = False
+            }
                 |> UR.init
 
         ( GotUint64Name (Err err), _ ) ->
-            { model | feedback = Just <| Failure "Failed while creating proof code." }
+            { model
+                | feedback = Just <| Failure "Failed while creating proof code."
+                , needsAuth = False
+            }
                 |> UR.init
                 |> UR.logDebugValue msg err
 
@@ -295,32 +316,48 @@ update isAuth shared uploadFile selectedCommunity accName msg model =
                 { model
                     | status = PhotoProofShowed action (Proof photoStatus newProofCode)
                     , feedback = model.feedback
+                    , needsAuth = False
                 }
 
              else
                 { model
                     | status = Closed
                     , feedback = Failure (t "community.actions.proof.time_expired") |> Just
+                    , needsAuth = False
                 }
             )
                 |> UR.init
 
         ( PhotoAdded (file :: _), PhotoProofShowed action (Proof _ proofCode) ) ->
-            { model | status = PhotoProofShowed action (Proof Uploading proofCode), feedback = Nothing }
+            { model
+                | status = PhotoProofShowed action (Proof Uploading proofCode)
+                , feedback = Nothing
+                , needsAuth = False
+            }
                 |> UR.init
                 |> UR.addCmd (uploadFile file PhotoUploaded)
 
         ( PhotoUploaded (Ok url), PhotoProofShowed action (Proof _ proofCode) ) ->
-            { model | status = PhotoProofShowed action (Proof (Uploaded url) proofCode), feedback = Nothing }
+            { model
+                | status = PhotoProofShowed action (Proof (Uploaded url) proofCode)
+                , feedback = Nothing
+                , needsAuth = False
+            }
                 |> UR.init
 
         ( PhotoUploaded (Err error), PhotoProofShowed action (Proof _ proofCode) ) ->
-            { model | status = PhotoProofShowed action (Proof (UploadFailed error) proofCode), feedback = Nothing }
+            { model
+                | status = PhotoProofShowed action (Proof (UploadFailed error) proofCode)
+                , feedback = Nothing
+                , needsAuth = False
+            }
                 |> UR.init
                 |> UR.logHttpError msg error
 
         _ ->
-            model
+            { model
+                | needsAuth = False
+            }
                 |> UR.init
 
 
@@ -466,7 +503,7 @@ viewClaimButton { t } maybeToday action =
                 ( NoOp, "button-disabled", "dashboard.closed" )
 
             else
-                ( ClaimConfirmationOpen action, "button button-primary", "dashboard.claim" )
+                ( ClaimButtonClicked action, "button button-primary", "dashboard.claim" )
     in
     button
         [ onClick buttonMsg
@@ -748,7 +785,7 @@ msgToString msg =
         NoOp ->
             [ "NoOp" ]
 
-        ClaimConfirmationOpen _ ->
+        ClaimButtonClicked _ ->
             [ "ClaimConfirmationOpen" ]
 
         ClaimConfirmationClosed ->
