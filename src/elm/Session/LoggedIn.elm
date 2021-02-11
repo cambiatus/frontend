@@ -154,6 +154,8 @@ type alias Model =
     , hasKyc : FeatureStatus
     , searchModel : Search.Model
     , claimingAction : Action.Model
+
+    -- TODO: `date` is used to filter outdated actions and could be removed if we filter them on the backend
     , date : Maybe Posix
     }
 
@@ -229,7 +231,6 @@ type Page
     | Objectives
     | ObjectiveEditor
     | ActionEditor
-    | ClaimAction
     | Claim
     | News
     | Learn
@@ -1018,7 +1019,9 @@ update msg model =
                                     cmd =
                                         case model.claimingAction.status of
                                             Action.InProgress action maybeProof ->
-                                                -- An action claim is in progress, send a message to claim it after logging in.
+                                                -- If action claim is in progress,
+                                                -- send a message to finish the claiming process
+                                                -- when the user confirms the PIN.
                                                 Task.succeed (GotActionMsg (Action.ActionClaimed action maybeProof))
                                                     |> Task.perform identity
 

@@ -280,7 +280,6 @@ viewDetails { shared, selectedCommunity } model claim =
                         [ text
                             (String.fromFloat claim.action.reward
                                 ++ " "
-                                --++ Eos.symbolToSymbolCodeString claim.action.objective.community.symbol
                                 ++ Eos.symbolToSymbolCodeString selectedCommunity
                             )
                         ]
@@ -305,7 +304,6 @@ viewDetails { shared, selectedCommunity } model claim =
                 [ text
                     (String.fromFloat claim.action.verifierReward
                         ++ " "
-                        --++ Eos.symbolToSymbolCodeString claim.action.objective.community.symbol
                         ++ Eos.symbolToSymbolCodeString selectedCommunity
                     )
                 ]
@@ -474,7 +472,6 @@ update msg model loggedIn =
                         value =
                             String.fromFloat claim.action.verifierReward
                                 ++ " "
-                                --++ Eos.symbolToSymbolCodeString claim.action.objective.community.symbol
                                 ++ Eos.symbolToSymbolCodeString loggedIn.selectedCommunity
                     in
                     { model

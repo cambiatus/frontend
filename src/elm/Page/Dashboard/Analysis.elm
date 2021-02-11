@@ -416,7 +416,6 @@ update msg model loggedIn =
                                 value =
                                     String.fromFloat claim.action.verifierReward
                                         ++ " "
-                                        --++ Eos.symbolToSymbolCodeString claim.action.objective.community.symbol
                                         ++ Eos.symbolToSymbolCodeString loggedIn.selectedCommunity
                             in
                             { model
