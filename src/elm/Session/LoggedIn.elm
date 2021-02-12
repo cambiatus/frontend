@@ -157,8 +157,6 @@ type alias Model =
     , hasKyc : FeatureStatus
     , searchModel : Search.Model
     , claimingAction : Action.Model
-
-    -- TODO: `date` is used to filter outdated actions and could be removed if we filter them on the backend
     , date : Maybe Posix
     }
 
