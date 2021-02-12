@@ -241,7 +241,6 @@ viewObjective loggedIn model metadata index objective =
                     (\action ->
                         viewAction loggedIn.shared.translators
                             (LoggedIn.isAccount metadata.creator loggedIn)
-                            metadata.symbol
                             model.date
                             action
                     )
@@ -396,8 +395,8 @@ msgToString msg =
             [ "ClickedCloseObjective" ]
 
 
-viewAction : Translators -> Bool -> Symbol -> Maybe Posix -> Action -> Html Msg
-viewAction translators canEdit symbol maybeDate action =
+viewAction : Translators -> Bool -> Maybe Posix -> Action -> Html Msg
+viewAction translators canEdit maybeDate action =
     let
         { t, tr } =
             translators
@@ -501,7 +500,7 @@ viewAction translators canEdit symbol maybeDate action =
                    )
 
         rewardStr =
-            String.fromFloat action.reward ++ " " ++ Eos.symbolToSymbolCodeString symbol
+            String.fromFloat action.reward ++ " " ++ Eos.symbolToSymbolCodeString action.objective.community.symbol
 
         ( usages, usagesLeft ) =
             ( String.fromInt action.usages, String.fromInt action.usagesLeft )

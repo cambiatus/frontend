@@ -780,7 +780,7 @@ update msg model loggedIn =
                                 value =
                                     String.fromFloat claim.action.verifierReward
                                         ++ " "
-                                        ++ Eos.symbolToSymbolCodeString loggedIn.selectedCommunity
+                                        ++ Eos.symbolToSymbolCodeString claim.action.objective.community.symbol
 
                                 cmd =
                                     case pageInfo of

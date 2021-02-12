@@ -21,6 +21,7 @@ module Action exposing
 import Cambiatus.Enum.VerificationType exposing (VerificationType)
 import Cambiatus.Object
 import Cambiatus.Object.Action as ActionObject
+import Cambiatus.Object.Community
 import Cambiatus.Object.Objective
 import Cambiatus.Scalar exposing (DateTime)
 import Eos exposing (Symbol)
@@ -359,9 +360,20 @@ update isPinConfirmed shared uploadFile selectedCommunity accName msg model =
 -- GRAPHQL
 
 
+type alias Community =
+    { symbol : Symbol }
+
+
+communitySelectionSet : SelectionSet Community Cambiatus.Object.Community
+communitySelectionSet =
+    SelectionSet.succeed Community
+        |> with (Eos.symbolSelectionSet Cambiatus.Object.Community.symbol)
+
+
 type alias Objective =
     { id : Int
     , description : String
+    , community : Community
     }
 
 
@@ -370,6 +382,7 @@ objectiveSelectionSet =
     SelectionSet.succeed Objective
         |> with Cambiatus.Object.Objective.id
         |> with Cambiatus.Object.Objective.description
+        |> with (Cambiatus.Object.Objective.community communitySelectionSet)
 
 
 selectionSet : SelectionSet Action Cambiatus.Object.Action
@@ -377,7 +390,16 @@ selectionSet =
     SelectionSet.succeed Action
         |> with ActionObject.id
         |> with ActionObject.description
-        |> with (SelectionSet.map (\o -> { id = o.id, description = o.description }) (ActionObject.objective objectiveSelectionSet))
+        |> with
+            (SelectionSet.map
+                (\o ->
+                    { id = o.id
+                    , description = o.description
+                    , community = o.community
+                    }
+                )
+                (ActionObject.objective objectiveSelectionSet)
+            )
         |> with ActionObject.reward
         |> with ActionObject.verifierReward
         |> with (Eos.nameSelectionSet ActionObject.creatorId)
@@ -513,8 +535,8 @@ viewClaimButton { t } maybeToday action =
         ]
 
 
-viewSearchActions : Translators -> Symbol -> Maybe Posix -> List Action -> Html Msg
-viewSearchActions ({ t } as translators) symbol maybeToday actions =
+viewSearchActions : Translators -> Maybe Posix -> List Action -> Html Msg
+viewSearchActions ({ t } as translators) maybeToday actions =
     let
         viewAction action =
             if action.isCompleted then
@@ -531,7 +553,7 @@ viewSearchActions ({ t } as translators) symbol maybeToday actions =
                                 , br [] []
                                 , span [ class "text-green font-medium" ] [ text <| String.fromFloat action.reward ]
                                 , text " "
-                                , text <| Eos.symbolToSymbolCodeString symbol
+                                , text <| Eos.symbolToSymbolCodeString action.objective.community.symbol
                                 ]
                             , viewClaimButton translators maybeToday action
                             ]

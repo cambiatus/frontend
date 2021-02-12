@@ -403,7 +403,7 @@ viewSearchBody translators selectedCommunity maybeToday toPageMsg searchModel =
                                 div [ class "w-full" ]
                                     [ Search.viewTabs translators results Search.ActionsTab
                                         |> Html.map (GotSearchMsg >> toPageMsg)
-                                    , Action.viewSearchActions translators selectedCommunity maybeToday results.actions
+                                    , Action.viewSearchActions translators maybeToday results.actions
                                         |> Html.map (GotActionMsg >> toPageMsg)
                                     ]
 

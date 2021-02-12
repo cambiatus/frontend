@@ -258,7 +258,7 @@ update msg model loggedIn =
                                 value =
                                     String.fromFloat claim.action.verifierReward
                                         ++ " "
-                                        ++ Eos.symbolToSymbolCodeString loggedIn.selectedCommunity
+                                        ++ Eos.symbolToSymbolCodeString claim.action.objective.community.symbol
                             in
                             { model
                                 | status = Loaded profile
