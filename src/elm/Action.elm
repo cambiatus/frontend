@@ -514,7 +514,7 @@ viewClaimButton { t } maybeToday action =
 
 
 viewSearchActions : Translators -> Symbol -> Maybe Posix -> List Action -> Html Msg
-viewSearchActions translators symbol maybeToday actions =
+viewSearchActions ({ t } as translators) symbol maybeToday actions =
     let
         viewAction action =
             if action.isCompleted then
@@ -527,7 +527,7 @@ viewSearchActions translators symbol maybeToday actions =
                         [ p [ class "mb-8" ] [ text action.description ]
                         , div [ class "flex justify-between" ]
                             [ p []
-                                [ text "You gain"
+                                [ text (t "menu.search.gain")
                                 , br [] []
                                 , span [ class "text-green font-medium" ] [ text <| String.fromFloat action.reward ]
                                 , text " "
