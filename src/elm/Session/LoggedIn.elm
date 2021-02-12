@@ -59,7 +59,7 @@ import Ports
 import Profile exposing (Model)
 import Route exposing (Route)
 import Search exposing (State(..))
-import Session.Shared as Shared exposing (Shared, Translators)
+import Session.Shared as Shared exposing (Shared)
 import Shop
 import Task
 import Time exposing (Posix)
@@ -334,32 +334,31 @@ viewHelper pageMsg page profile_ ({ shared } as model) content =
                     text ""
             ]
          ]
-            ++ (if Search.isActive model.searchModel then
-                    [ Search.viewSearchBody
-                        shared.translators
-                        model.selectedCommunity
-                        model.date
-                        (GotSearchMsg >> pageMsg)
-                        (GotActionMsg >> pageMsg)
-                        model.searchModel
-                    ]
+            ++ (let
+                    viewClaimWithProofs action proof =
+                        [ Action.viewClaimWithProofs proof shared.translators (isAuth model) action
+                            |> Html.map (GotActionMsg >> pageMsg)
+                        ]
+                in
+                case ( Search.isActive model.searchModel, model.claimingAction.status ) of
+                    ( True, _ ) ->
+                        [ Search.viewSearchBody
+                            shared.translators
+                            model.selectedCommunity
+                            model.date
+                            (GotSearchMsg >> pageMsg)
+                            (GotActionMsg >> pageMsg)
+                            model.searchModel
+                        ]
 
-                else
-                    let
-                        viewClaimWithProofs action proof =
-                            [ Action.viewClaimWithProofs proof shared.translators (isAuth model) action
-                                |> Html.map (GotActionMsg >> pageMsg)
-                            ]
-                    in
-                    case model.claimingAction.status of
-                        Action.PhotoUploaderShowed action p ->
-                            viewClaimWithProofs action p
+                    ( False, Action.PhotoUploaderShowed action p ) ->
+                        viewClaimWithProofs action p
 
-                        Action.ClaimInProgress action (Just p) ->
-                            viewClaimWithProofs action p
+                    ( False, Action.ClaimInProgress action (Just p) ) ->
+                        viewClaimWithProofs action p
 
-                        _ ->
-                            viewPageBody model profile_ page content
+                    _ ->
+                        viewPageBody model profile_ page content
                )
             ++ [ viewFooter shared
                , Action.viewClaimConfirmation shared.translators model.claimingAction
