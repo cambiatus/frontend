@@ -295,6 +295,61 @@ viewForm { t } model =
         ]
 
 
+viewSearchBody :
+    Translators
+    -> Symbol
+    -> Maybe Posix
+    -> (Msg -> parentMsg)
+    -> (Action.Msg -> parentMsg)
+    -> Model
+    -> Html parentMsg
+viewSearchBody translators selectedCommunity maybeToday searchToMsg actionToMsg searchModel =
+    div [ class "container mx-auto flex flex-grow" ]
+        [ case searchModel.state of
+            ResultsShowed (RemoteData.Success { actions, offers }) activeTab ->
+                case ( List.length actions, List.length offers ) of
+                    ( 0, 0 ) ->
+                        viewEmptyResults translators searchModel.currentQuery
+                            |> Html.map searchToMsg
+
+                    _ ->
+                        let
+                            results =
+                                { actions = actions
+                                , offers = offers
+                                }
+                        in
+                        case activeTab of
+                            Just OffersTab ->
+                                div [ class "w-full" ]
+                                    [ viewTabs translators results OffersTab
+                                    , viewOffers selectedCommunity results.offers
+                                    ]
+                                    |> Html.map searchToMsg
+
+                            Just ActionsTab ->
+                                div [ class "w-full" ]
+                                    [ viewTabs translators results ActionsTab
+                                        |> Html.map searchToMsg
+                                    , Action.viewSearchActions translators maybeToday results.actions
+                                        |> Html.map actionToMsg
+                                    ]
+
+                            Nothing ->
+                                div [ class "bg-white w-full p-4" ]
+                                    [ viewResultsOverview translators results
+                                    ]
+                                    |> Html.map searchToMsg
+
+            ResultsShowed RemoteData.Loading _ ->
+                View.Components.loadingLogoAnimated translators
+
+            _ ->
+                viewRecentQueries translators searchModel.recentQueries
+                    |> Html.map searchToMsg
+        ]
+
+
 viewEmptyResults : Translators -> String -> Html msg
 viewEmptyResults { t } queryText =
     div [ class "flex-grow bg-white text-center" ]
@@ -481,58 +536,3 @@ isActive model =
 closeSearch : Shared -> Model -> ( Model, Cmd Msg )
 closeSearch shared model =
     update shared model CancelClicked
-
-
-viewSearchBody :
-    Translators
-    -> Symbol
-    -> Maybe Posix
-    -> (Msg -> parentMsg)
-    -> (Action.Msg -> parentMsg)
-    -> Model
-    -> Html parentMsg
-viewSearchBody translators selectedCommunity maybeToday searchToMsg actionToMsg searchModel =
-    div [ class "container mx-auto flex flex-grow" ]
-        [ case searchModel.state of
-            ResultsShowed (RemoteData.Success { actions, offers }) activeTab ->
-                case ( List.length actions, List.length offers ) of
-                    ( 0, 0 ) ->
-                        viewEmptyResults translators searchModel.currentQuery
-                            |> Html.map searchToMsg
-
-                    _ ->
-                        let
-                            results =
-                                { actions = actions
-                                , offers = offers
-                                }
-                        in
-                        case activeTab of
-                            Just OffersTab ->
-                                div [ class "w-full" ]
-                                    [ viewTabs translators results OffersTab
-                                    , viewOffers selectedCommunity results.offers
-                                    ]
-                                    |> Html.map searchToMsg
-
-                            Just ActionsTab ->
-                                div [ class "w-full" ]
-                                    [ viewTabs translators results ActionsTab
-                                        |> Html.map searchToMsg
-                                    , Action.viewSearchActions translators maybeToday results.actions
-                                        |> Html.map actionToMsg
-                                    ]
-
-                            Nothing ->
-                                div [ class "bg-white w-full p-4" ]
-                                    [ viewResultsOverview translators results
-                                    ]
-                                    |> Html.map searchToMsg
-
-            ResultsShowed RemoteData.Loading _ ->
-                View.Components.loadingLogoAnimated translators
-
-            _ ->
-                viewRecentQueries translators searchModel.recentQueries
-                    |> Html.map searchToMsg
-        ]
