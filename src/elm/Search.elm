@@ -34,6 +34,7 @@ import Json.Decode as Decode exposing (list, string)
 import Json.Encode as Encode
 import List.Extra as List
 import Ports
+import RemoteData exposing (RemoteData)
 import Route exposing (Route)
 import Session.Shared exposing (Shared, Translators)
 
@@ -65,18 +66,16 @@ init selectedCommunity =
 
 type State
     = Inactive
-    | Loading
     | RecentSearchesShowed
-    | ResultsShowed (Maybe SearchResult) ActiveTab
+    | ResultsShowed FoundData (Maybe ActiveTab)
 
 
 type ActiveTab
     = OffersTab
     | ActionsTab
-    | ResultsOverview
 
 
-type alias SearchResult =
+type alias SearchResults =
     { offers : List Offer
     , actions : List Action
     }
@@ -94,6 +93,10 @@ type alias Offer =
 -- GRAPHQL
 
 
+type alias FoundData =
+    RemoteData (Graphql.Http.Error SearchResults) SearchResults
+
+
 sendSearchQuery : Symbol -> Shared -> String -> Cmd Msg
 sendSearchQuery selectedCommunity shared queryString =
     let
@@ -103,12 +106,12 @@ sendSearchQuery selectedCommunity shared queryString =
     Api.Graphql.query
         shared
         (Cambiatus.Query.search req (searchResultSelectionSet queryString))
-        SearchResultsLoaded
+        (RemoteData.fromResult >> GotSearchResults)
 
 
-searchResultSelectionSet : String -> SelectionSet SearchResult Cambiatus.Object.SearchResult
+searchResultSelectionSet : String -> SelectionSet SearchResults Cambiatus.Object.SearchResult
 searchResultSelectionSet queryString =
-    SelectionSet.succeed SearchResult
+    SelectionSet.succeed SearchResults
         |> with (Cambiatus.Object.SearchResult.products (\_ -> { query = Present queryString }) offersSelectionSet)
         |> with (Cambiatus.Object.SearchResult.actions (\_ -> { query = Present queryString }) Action.selectionSet)
 
@@ -131,16 +134,11 @@ type Msg
     | InputFocused
     | GotRecentSearches String
     | RecentQueryClicked String
-    | SearchResultsLoaded (Result (Graphql.Http.Error SearchResult) SearchResult)
+    | GotSearchResults FoundData
     | QuerySubmitted
     | TabActivated ActiveTab
     | CurrentQueryChanged String
     | FoundItemClicked Route
-
-
-closeSearch : Shared -> Model -> ( Model, Cmd Msg )
-closeSearch shared model =
-    update shared model CancelClicked
 
 
 update : Shared -> Model -> Msg -> ( Model, Cmd Msg )
@@ -160,7 +158,7 @@ update shared model msg =
         RecentQueryClicked q ->
             update shared
                 { model
-                    | state = Loading
+                    | state = ResultsShowed RemoteData.Loading Nothing
                     , currentQuery = q
                 }
                 QuerySubmitted
@@ -169,7 +167,7 @@ update shared model msg =
             case model.state of
                 ResultsShowed r _ ->
                     ( { model
-                        | state = ResultsShowed r activeTab
+                        | state = ResultsShowed r (Just activeTab)
                       }
                     , Cmd.none
                     )
@@ -177,17 +175,12 @@ update shared model msg =
                 _ ->
                     ( model, Cmd.none )
 
-        SearchResultsLoaded res ->
-            case res of
-                Ok searchResult ->
-                    ( { model
-                        | state = ResultsShowed (Just searchResult) ResultsOverview
-                      }
-                    , Cmd.none
-                    )
-
-                Err _ ->
-                    ( model, Cmd.none )
+        GotSearchResults res ->
+            ( { model
+                | state = ResultsShowed res Nothing
+              }
+            , Cmd.none
+            )
 
         GotRecentSearches queries ->
             case Decode.decodeString (list string) queries of
@@ -232,7 +225,7 @@ update shared model msg =
             in
             ( { model
                 | recentQueries = newRecentSearches
-                , state = Loading
+                , state = ResultsShowed RemoteData.Loading Nothing
               }
             , Cmd.batch
                 [ storeRecentSearches
@@ -250,7 +243,7 @@ viewForm { t } model =
     let
         isLoading =
             case model.state of
-                Loading ->
+                ResultsShowed RemoteData.Loading _ ->
                     True
 
                 _ ->
@@ -334,7 +327,7 @@ viewRecentQueries { t } recentQueries =
         ]
 
 
-viewTabs : Translators -> SearchResult -> ActiveTab -> Html Msg
+viewTabs : Translators -> SearchResults -> ActiveTab -> Html Msg
 viewTabs { t } results activeTab =
     let
         viewTab : ActiveTab -> String -> List a -> Msg -> Html Msg
@@ -373,7 +366,7 @@ viewTabs { t } results activeTab =
         ]
 
 
-viewResultsOverview : Translators -> SearchResult -> Html Msg
+viewResultsOverview : Translators -> SearchResults -> Html Msg
 viewResultsOverview { t } { offers, actions } =
     let
         viewItem icon count singular plural showMsg =
@@ -459,6 +452,19 @@ viewOffers symbol offers =
         (List.map viewOffer offers)
 
 
+
+-- SUBSCRIPTION
+
+
+subscriptions : Sub Msg
+subscriptions =
+    Ports.gotRecentSearches GotRecentSearches
+
+
+
+-- HELPERS
+
+
 isActive : Model -> Bool
 isActive model =
     case model.state of
@@ -469,10 +475,6 @@ isActive model =
             True
 
 
-
--- SUBSCRIPTION
-
-
-subscriptions : Sub Msg
-subscriptions =
-    Ports.gotRecentSearches GotRecentSearches
+closeSearch : Shared -> Model -> ( Model, Cmd Msg )
+closeSearch shared model =
+    update shared model CancelClicked

@@ -57,6 +57,7 @@ import List.Extra as List
 import Notification exposing (Notification)
 import Ports
 import Profile exposing (Model)
+import RemoteData
 import Route exposing (Route)
 import Search exposing (State(..))
 import Session.Shared as Shared exposing (Shared, Translators)
@@ -378,7 +379,7 @@ viewSearchBody : Translators -> Symbol -> Maybe Posix -> (Msg -> pageMsg) -> Sea
 viewSearchBody translators selectedCommunity maybeToday toPageMsg searchModel =
     div [ class "container mx-auto flex flex-grow" ]
         [ case searchModel.state of
-            Search.ResultsShowed (Just { actions, offers }) activeTab ->
+            Search.ResultsShowed (RemoteData.Success { actions, offers }) activeTab ->
                 case ( List.length actions, List.length offers ) of
                     ( 0, 0 ) ->
                         Search.viewEmptyResults translators searchModel.currentQuery
@@ -392,14 +393,14 @@ viewSearchBody translators selectedCommunity maybeToday toPageMsg searchModel =
                                 }
                         in
                         case activeTab of
-                            Search.OffersTab ->
+                            Just Search.OffersTab ->
                                 div [ class "w-full" ]
                                     [ Search.viewTabs translators results Search.OffersTab
                                     , Search.viewOffers selectedCommunity results.offers
                                     ]
                                     |> Html.map (GotSearchMsg >> toPageMsg)
 
-                            Search.ActionsTab ->
+                            Just Search.ActionsTab ->
                                 div [ class "w-full" ]
                                     [ Search.viewTabs translators results Search.ActionsTab
                                         |> Html.map (GotSearchMsg >> toPageMsg)
@@ -407,13 +408,13 @@ viewSearchBody translators selectedCommunity maybeToday toPageMsg searchModel =
                                         |> Html.map (GotActionMsg >> toPageMsg)
                                     ]
 
-                            Search.ResultsOverview ->
+                            Nothing ->
                                 div [ class "bg-white w-full p-4" ]
                                     [ Search.viewResultsOverview translators results
                                     ]
                                     |> Html.map (GotSearchMsg >> toPageMsg)
 
-            Search.Loading ->
+            Search.ResultsShowed RemoteData.Loading _ ->
                 View.Components.loadingLogoAnimated translators
 
             _ ->
