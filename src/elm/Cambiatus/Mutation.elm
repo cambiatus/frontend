@@ -5,15 +5,11 @@
 module Cambiatus.Mutation exposing (..)
 
 import Cambiatus.InputObject
-import Cambiatus.Interface
 import Cambiatus.Object
-import Cambiatus.Scalar
-import Cambiatus.ScalarCodecs
-import Cambiatus.Union
 import Graphql.Internal.Builder.Argument as Argument exposing (Argument)
 import Graphql.Internal.Builder.Object as Object
 import Graphql.Internal.Encode as Encode exposing (Value)
-import Graphql.Operation exposing (RootMutation, RootQuery, RootSubscription)
+import Graphql.Operation exposing (RootMutation)
 import Graphql.OptionalArgument exposing (OptionalArgument(..))
 import Graphql.SelectionSet exposing (SelectionSet)
 import Json.Decode as Decode exposing (Decoder)
@@ -174,3 +170,13 @@ upsertKyc :
     -> SelectionSet (Maybe decodesTo) RootMutation
 upsertKyc requiredArgs object_ =
     Object.selectionForCompositeField "upsertKyc" [ Argument.required "input" requiredArgs.input Cambiatus.InputObject.encodeKycDataUpdateInput ] object_ (identity >> Decode.nullable)
+
+
+{-| Mark objective as completed
+-}
+archiveObjective :
+    CompleteObjectiveRequiredArguments
+    -> SelectionSet decodesTo Cambiatus.Object.Objective
+    -> SelectionSet (Maybe decodesTo) RootMutation
+archiveObjective requiredArgs object_ =
+    Object.selectionForCompositeField "archiveObjective" [ Argument.required "input" requiredArgs.input Cambiatus.InputObject.encodeCompleteObjectiveInput ] object_ (identity >> Decode.nullable)

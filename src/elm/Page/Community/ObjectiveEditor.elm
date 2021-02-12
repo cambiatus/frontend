@@ -1,6 +1,8 @@
 module Page.Community.ObjectiveEditor exposing (Model, Msg, initEdit, initNew, jsAddressToMsg, msgToString, update, view)
 
 import Api.Graphql
+import Cambiatus.InputObject exposing (CompleteObjectiveInput)
+import Cambiatus.Mutation as Mutation
 import Cambiatus.Object
 import Cambiatus.Object.Community as Community
 import Cambiatus.Object.Objective as Objective
@@ -10,7 +12,7 @@ import Eos exposing (Symbol, symbolToString)
 import Eos.Account as Eos
 import Graphql.Http
 import Graphql.Operation exposing (RootQuery)
-import Graphql.SelectionSet as SelectionSet exposing (SelectionSet, with)
+import Graphql.SelectionSet as SelectionSet exposing (SelectionSet, empty, with)
 import Html exposing (Html, button, div, span, text, textarea)
 import Html.Attributes exposing (class, disabled, maxlength, placeholder, required, rows, type_, value)
 import Html.Events exposing (onClick, onInput)
@@ -99,6 +101,7 @@ type alias UpdateResult =
 
 type Msg
     = CompletedCommunityLoad (Result (Graphql.Http.Error (Maybe Community)) (Maybe Community))
+    | CompletedArchiveMutation (Graphql.Http.Error Int)
     | EnteredDescription String
     | ClickedSaveObjective
     | ClickedArchiveObjetive
@@ -421,7 +424,25 @@ update msg model loggedIn =
                         (Just ClickedSaveObjective |> RequiredAuthentication)
 
         ClickedArchiveObjetive ->
+            let
+
+                newObjectiveId = Maybe.withDefault 0 model.objectiveId
+                buildRequiredRecord: Int -> CompleteObjectiveInput
+                buildRequiredRecord objectiveId =
+                    { objectiveId = objectiveId }
+
+            in
+            
             UR.init model
+                |> UR.init
+                |> UR.addCmd
+                    (Api.Graphql.mutation loggedIn.shared
+                        (Mutation.archiveObjective
+                            { input = Cambiatus.InputObject.buildCompleteObjectiveInput (buildRequiredRecord newObjectiveId) }
+                            empty
+                        )
+                        CompletedArchiveMutation
+                    )
 
         GotSaveObjectiveResponse (Ok _) ->
             UR.init model
