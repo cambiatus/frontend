@@ -57,7 +57,6 @@ import List.Extra as List
 import Notification exposing (Notification)
 import Ports
 import Profile exposing (Model)
-import RemoteData
 import Route exposing (Route)
 import Search exposing (State(..))
 import Session.Shared as Shared exposing (Shared, Translators)
@@ -66,7 +65,6 @@ import Task
 import Time exposing (Posix)
 import Translation
 import UpdateResult as UR
-import View.Components
 import View.Modal as Modal
 
 
@@ -337,7 +335,14 @@ viewHelper pageMsg page profile_ ({ shared } as model) content =
             ]
          ]
             ++ (if Search.isActive model.searchModel then
-                    [ viewSearchBody shared.translators model.selectedCommunity model.date pageMsg model.searchModel ]
+                    [ Search.viewSearchBody
+                        shared.translators
+                        model.selectedCommunity
+                        model.date
+                        (GotSearchMsg >> pageMsg)
+                        (GotActionMsg >> pageMsg)
+                        model.searchModel
+                    ]
 
                 else
                     let
@@ -373,54 +378,6 @@ viewHelper pageMsg page profile_ ({ shared } as model) content =
                     |> Html.map pageMsg
                ]
         )
-
-
-viewSearchBody : Translators -> Symbol -> Maybe Posix -> (Msg -> pageMsg) -> Search.Model -> Html pageMsg
-viewSearchBody translators selectedCommunity maybeToday toPageMsg searchModel =
-    div [ class "container mx-auto flex flex-grow" ]
-        [ case searchModel.state of
-            Search.ResultsShowed (RemoteData.Success { actions, offers }) activeTab ->
-                case ( List.length actions, List.length offers ) of
-                    ( 0, 0 ) ->
-                        Search.viewEmptyResults translators searchModel.currentQuery
-                            |> Html.map (GotSearchMsg >> toPageMsg)
-
-                    _ ->
-                        let
-                            results =
-                                { actions = actions
-                                , offers = offers
-                                }
-                        in
-                        case activeTab of
-                            Just Search.OffersTab ->
-                                div [ class "w-full" ]
-                                    [ Search.viewTabs translators results Search.OffersTab
-                                    , Search.viewOffers selectedCommunity results.offers
-                                    ]
-                                    |> Html.map (GotSearchMsg >> toPageMsg)
-
-                            Just Search.ActionsTab ->
-                                div [ class "w-full" ]
-                                    [ Search.viewTabs translators results Search.ActionsTab
-                                        |> Html.map (GotSearchMsg >> toPageMsg)
-                                    , Action.viewSearchActions translators maybeToday results.actions
-                                        |> Html.map (GotActionMsg >> toPageMsg)
-                                    ]
-
-                            Nothing ->
-                                div [ class "bg-white w-full p-4" ]
-                                    [ Search.viewResultsOverview translators results
-                                    ]
-                                    |> Html.map (GotSearchMsg >> toPageMsg)
-
-            Search.ResultsShowed RemoteData.Loading _ ->
-                View.Components.loadingLogoAnimated translators
-
-            _ ->
-                Search.viewRecentQueries translators searchModel.recentQueries
-                    |> Html.map (GotSearchMsg >> toPageMsg)
-        ]
 
 
 viewPageBody : Model -> Profile.Model -> Page -> Html pageMsg -> List (Html pageMsg)
