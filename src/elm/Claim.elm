@@ -6,9 +6,7 @@ module Claim exposing
     , Msg(..)
     , Paginated
     , claimPaginatedSelectionSet
-    , encodeClaimAction
     , encodeVerification
-    , generateVerificationCode
     , isValidated
     , isValidator
     , isVotable
@@ -21,17 +19,15 @@ module Claim exposing
     , viewVoteClaimModal
     )
 
+import Action exposing (Action)
 import Api.Relay exposing (Edge, PageConnection)
 import Cambiatus.Enum.ClaimStatus as ClaimStatus
-import Cambiatus.Enum.VerificationType exposing (VerificationType(..))
 import Cambiatus.Object
-import Cambiatus.Object.Action as Action
 import Cambiatus.Object.Check as Check
 import Cambiatus.Object.Claim as Claim
 import Cambiatus.Object.ClaimConnection
 import Cambiatus.Object.ClaimEdge
 import Cambiatus.Scalar exposing (DateTime(..))
-import Community exposing (Objective)
 import Eos
 import Eos.Account as Eos
 import Graphql.OptionalArgument exposing (OptionalArgument(..))
@@ -45,7 +41,6 @@ import Profile
 import Route exposing (Route)
 import Session.LoggedIn as LoggedIn
 import Session.Shared exposing (Translators)
-import Sha256 exposing (sha256)
 import Strftime
 import Time
 import Utils
@@ -85,46 +80,6 @@ type alias Check =
     { isApproved : Bool
     , validator : Profile.Minimal
     }
-
-
-type alias Action =
-    { id : Int
-    , description : String
-    , reward : Float
-    , verifierReward : Float
-    , validators : List Profile.Minimal
-    , verifications : Int
-    , verificationType : VerificationType
-    , objective : Objective
-    , createdAt : DateTime
-    , hasProofPhoto : Bool
-    , hasProofCode : Bool
-    , instructions : Maybe String
-    }
-
-
-
--- Claim Action
-
-
-type alias ClaimAction =
-    { actionId : Int
-    , maker : Eos.Name
-    , proofPhoto : String
-    , proofCode : String
-    , proofTime : Int
-    }
-
-
-encodeClaimAction : ClaimAction -> Encode.Value
-encodeClaimAction c =
-    Encode.object
-        [ ( "action_id", Encode.int c.actionId )
-        , ( "maker", Eos.encodeName c.maker )
-        , ( "proof_photo", Encode.string c.proofPhoto )
-        , ( "proof_code", Encode.string c.proofCode )
-        , ( "proof_time", Encode.int c.proofTime )
-        ]
 
 
 isValidated : Model -> Eos.Name -> Bool
@@ -169,16 +124,6 @@ encodeVerification claimId validator vote =
         ]
 
 
-generateVerificationCode : Int -> String -> Int -> String
-generateVerificationCode actionId makerAccountUint64 proofTimeSeconds =
-    (String.fromInt actionId
-        ++ makerAccountUint64
-        ++ String.fromInt proofTimeSeconds
-    )
-        |> sha256
-        |> String.slice 0 8
-
-
 
 -- GraphQL
 
@@ -207,7 +152,7 @@ selectionSet =
         |> with Claim.id
         |> with (SelectionSet.map claimStatusMap Claim.status)
         |> with (Claim.claimer Profile.minimalSelectionSet)
-        |> with (Claim.action actionSelectionSet)
+        |> with (Claim.action Action.selectionSet)
         |> with (Claim.checks (\_ -> { input = Absent }) checkSelectionSet)
         |> with Claim.createdAt
         |> with (SelectionSet.map emptyStringToNothing Claim.proofPhoto)
@@ -238,23 +183,6 @@ claimStatusMap v =
 
         ClaimStatus.Pending ->
             Pending
-
-
-actionSelectionSet : SelectionSet Action Cambiatus.Object.Action
-actionSelectionSet =
-    SelectionSet.succeed Action
-        |> with Action.id
-        |> with Action.description
-        |> with Action.reward
-        |> with Action.verifierReward
-        |> with (Action.validators Profile.minimalSelectionSet)
-        |> with Action.verifications
-        |> with Action.verificationType
-        |> with (Action.objective Community.objectiveSelectionSet)
-        |> with Action.createdAt
-        |> with (SelectionSet.map (Maybe.withDefault False) Action.hasProofPhoto)
-        |> with (SelectionSet.map (Maybe.withDefault False) Action.hasProofCode)
-        |> with Action.photoProofInstructions
 
 
 checkSelectionSet : SelectionSet Check Cambiatus.Object.Check

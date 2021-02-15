@@ -65,6 +65,7 @@ const LANGUAGE_KEY = 'bespiral.language'
 const AUTH_PREF_KEY = 'bespiral.auth.pref'
 const PUSH_PREF = 'bespiral.push.pref'
 const SELECTED_COMMUNITY_KEY = 'bespiral.selected_community'
+const RECENT_SEARCHES = 'bespiral.recent_search'
 const env = process.env.NODE_ENV || 'development'
 const config = configuration[env]
 
@@ -182,6 +183,16 @@ app.ports.storeLanguage.subscribe(storeLanguage)
 function storeLanguage (lang) {
   window.localStorage.setItem(LANGUAGE_KEY, lang)
 }
+
+// STORE RECENT SEARCHES
+app.ports.storeRecentSearches.subscribe(query =>
+  window.localStorage.setItem(RECENT_SEARCHES, query)
+)
+
+// RETRIEVE RECENT SEARCHES
+app.ports.getRecentSearches.subscribe(() => {
+  app.ports.gotRecentSearches.send(window.localStorage.getItem(RECENT_SEARCHES) || '[]')
+})
 
 // STORE AUTH PREFERENCE
 
