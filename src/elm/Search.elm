@@ -255,10 +255,10 @@ viewForm { t } model =
         iconColor =
             case model.state of
                 Inactive ->
-                    "fill-gray"
+                    "text-gray-400"
 
                 _ ->
-                    "fill-indigo"
+                    "text-indigo-500"
 
         viewCancel =
             case model.state of
@@ -282,14 +282,14 @@ viewForm { t } model =
                 , disabled isLoading
                 , minlength 3
                 , required True
-                , class "w-full form-input rounded-full bg-gray-100 pl-10 m-0"
+                , class "w-full form-input rounded-full border-0 bg-gray-100 pl-10 m-0"
                 , placeholder (t "menu.search.placeholder")
                 , value model.currentQuery
                 , onFocus InputFocused
                 , onInput CurrentQueryChanged
                 ]
                 []
-            , Icons.search <| "absolute top-0 left-0 mt-2 ml-2" ++ " " ++ iconColor
+            , Icons.search <| "absolute top-0 left-0 mt-2 ml-2 fill-current" ++ " " ++ iconColor
             ]
         , viewCancel
         ]
@@ -374,7 +374,7 @@ viewRecentQueries { t } recentQueries =
                 [ class "leading-10 hover:text-orange-500 cursor-pointer"
                 , onClick (RecentQueryClicked q)
                 ]
-                [ Icons.clock "fill-gray inline-block align-middle mr-3"
+                [ Icons.clock "inline-block align-middle mr-3 fill-current text-gray-900"
                 , span [ class "inline align-middle" ] [ text q ]
                 ]
     in
@@ -430,7 +430,7 @@ viewResultsOverview { t } { offers, actions } =
         viewItem icon count singular plural showMsg =
             li [ class "py-4 flex items-center" ]
                 [ div [ class "flex-grow flex items-center" ]
-                    [ icon "w-8 h-8 fill-black mr-3"
+                    [ icon "w-6 h-6 text-black fill-current mr-3"
                     , span []
                         [ text <| t "menu.search.overviewFound"
                         , text " "
@@ -461,7 +461,7 @@ viewResultsOverview { t } { offers, actions } =
                 ]
     in
     div []
-        [ strong [ class "block py-4" ]
+        [ strong [ class "block py-0" ]
             [ text (t "menu.search.overviewHeader") ]
         , ul []
             [ viewItem Icons.shop

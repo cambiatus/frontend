@@ -26,12 +26,6 @@ module.exports = {
         }
       }
     }),
-    fill: {
-      gray: '#DADADA',
-      indigo: '#45469B',
-      black: '#000',
-      green: '#8ACC9E'
-    },
     // Colors used on the 'Design System'
     colors: {
       black: '#000000',

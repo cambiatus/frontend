@@ -544,7 +544,7 @@ viewSearchActions ({ t } as translators) maybeToday actions =
 
             else
                 li [ class "relative mb-10 w-full sm:px-2 sm:w-1/2 lg:w-1/3" ]
-                    [ i [ class "absolute top-0 left-0 right-0 -mt-6" ] [ Icons.flag "w-full fill-green" ]
+                    [ i [ class "absolute top-0 left-0 right-0 -mt-6" ] [ Icons.flag "w-full fill-current text-green" ]
                     , div [ class "px-4 pt-8 pb-4 text-sm font-light bg-purple-500 rounded-lg text-white" ]
                         [ p [ class "mb-8" ] [ text action.description ]
                         , div [ class "flex justify-between" ]
