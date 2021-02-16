@@ -56,6 +56,7 @@ import List.Extra as List
 import Notification exposing (Notification)
 import Ports
 import Profile exposing (Model)
+import Profile.Contact as Contact
 import Route exposing (Route)
 import Session.Shared as Shared exposing (Shared)
 import Shop
@@ -713,7 +714,7 @@ addContactModal ({ addContactInfo, shared } as model) =
                 ]
 
         isPhoneContact =
-            List.member addContactInfo.contactOption [ "whatsapp", "phone" ]
+            Contact.usesPhoneFromString addContactInfo.contactOption
 
         contactForm =
             div [ class "flex space-x-4" ]
@@ -1222,6 +1223,28 @@ updateProfileContacts ({ contacts } as profile_) contactInfo =
         modalInfo =
             Validate.fromValid contactInfo
 
+        countryCode country =
+            case String.toLower country of
+                "brasil" ->
+                    "55"
+
+                "argentina" ->
+                    "54"
+
+                "costa_rica" ->
+                    "506"
+
+                _ ->
+                    ""
+
+        -- Add country code to start of number
+        adjustContactOption contactType contact =
+            if Contact.usesPhone contactType then
+                countryCode modalInfo.country ++ contact
+
+            else
+                contact
+
         newContact =
             modalInfo.contactOption
                 |> String.toUpper
@@ -1229,7 +1252,7 @@ updateProfileContacts ({ contacts } as profile_) contactInfo =
                 |> Maybe.map
                     (\contactType ->
                         { contactType = contactType
-                        , contact = modalInfo.contact
+                        , contact = adjustContactOption contactType modalInfo.contact
                         }
                     )
     in

@@ -1,4 +1,11 @@
-module Profile.Contact exposing (Contact, decode, encode)
+module Profile.Contact exposing
+    ( Contact
+    , contactTypeFromString
+    , decode
+    , encode
+    , usesPhone
+    , usesPhoneFromString
+    )
 
 import Cambiatus.Enum.ContactType as ContactType exposing (ContactType)
 import Json.Decode as Decode exposing (Decoder)
@@ -24,3 +31,21 @@ encode { contactType, contact } =
         [ ( "type", Encode.string (ContactType.toString contactType) )
         , ( "externalId", Encode.string contact )
         ]
+
+
+usesPhoneFromString : String -> Bool
+usesPhoneFromString contactTypeString =
+    contactTypeFromString contactTypeString
+        |> Maybe.map usesPhone
+        |> Maybe.withDefault False
+
+
+contactTypeFromString : String -> Maybe ContactType
+contactTypeFromString contactTypeString =
+    String.toUpper contactTypeString
+        |> ContactType.fromString
+
+
+usesPhone : ContactType -> Bool
+usesPhone contactType =
+    List.member contactType [ ContactType.Whatsapp, ContactType.Phone ]
