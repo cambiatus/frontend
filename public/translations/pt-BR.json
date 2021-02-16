@@ -869,5 +869,17 @@
     "more": "Mostre mais",
     "no_transfers_found": "Nenhuma transferência foi encontrada de acordo com seus critérios.",
     "pick_date": "Escolha uma data..."
+  },
+  "contact_modal": {
+    "new": "Novo",
+    "title": "Adicione seu Número de Telefone",
+    "contact_type": "Tipo de contato",
+    "country": "País",
+    "phone": {
+      "label": "Número de Telefone (com DDD)",
+      "placeholder": "Ex.: 11964337131"
+    },
+    "submit": "Adicionar Número de Telefone",
+    "footer": "Você pode fazer isso mais tarde na área do perfil"
   }
 }

@@ -625,14 +625,17 @@ communitySelectorModal model =
 
 
 addContactModal : Model -> Html Msg
-addContactModal ({ addContactInfo } as model) =
+addContactModal ({ addContactInfo, shared } as model) =
     let
+        text_ s =
+            text (shared.translators.t s)
+
         header =
             div [ class "mt-4" ]
-                [ p [ class "inline bg-purple-100 text-white rounded-full py-0.5 px-2 text-caption" ]
-                    [ text "NEW" ]
+                [ p [ class "inline bg-purple-100 text-white rounded-full py-0.5 px-2 text-caption uppercase" ]
+                    [ text_ "contact_modal.new" ]
                 , p [ class "text-heading font-bold mt-2" ]
-                    [ text "Add your Phone Number" ]
+                    [ text_ "contact_modal.title" ]
                 ]
 
         options =
@@ -658,7 +661,7 @@ addContactModal ({ addContactInfo } as model) =
         contactTypeSelect =
             List.foldr (\option select -> Select.withOption option select)
                 (Select.init "contact_type"
-                    "Contact type"
+                    (shared.translators.t "contact_modal.contact_type")
                     EnteredContactOption
                     addContactInfo.contactOption
                     Nothing
@@ -669,7 +672,7 @@ addContactModal ({ addContactInfo } as model) =
         countrySelect =
             div [ class "flex-shrink-0" ]
                 [ Select.init "contact_country"
-                    "Country"
+                    (shared.translators.t "contact_modal.country")
                     EnteredContactCountry
                     addContactInfo.country
                     Nothing
@@ -682,12 +685,12 @@ addContactModal ({ addContactInfo } as model) =
         contactInput =
             div [ class "w-full" ]
                 [ Input.init
-                    { label = "Phone number (with DDD)"
+                    { label = shared.translators.t "contact_modal.phone.label"
                     , id = "contact_value"
                     , onInput = EnteredContactText
                     , disabled = False
                     , value = addContactInfo.contact
-                    , placeholder = Just "Ex.: 11964337131"
+                    , placeholder = Just (shared.translators.t "contact_modal.phone.placeholder")
                     , problems = addContactInfo.contactProblems
                     , translators = model.shared.translators
                     }
@@ -702,7 +705,7 @@ addContactModal ({ addContactInfo } as model) =
                 [ class "button button-primary w-full"
                 , type_ "submit"
                 ]
-                [ text "Add phone number" ]
+                [ text_ "contact_modal.submit" ]
 
         form =
             Html.form
@@ -713,7 +716,7 @@ addContactModal ({ addContactInfo } as model) =
                 , contactForm
                 , submitButton
                 , p [ class "text-caption text-center uppercase my-4" ]
-                    [ text "You can add it later in the profile's area" ]
+                    [ text_ "contact_modal.footer" ]
                 ]
     in
     Modal.initWith

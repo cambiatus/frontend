@@ -865,5 +865,17 @@
     "more": "Show More",
     "no_transfers_found": "No transfers were found according to your criteria.",
     "pick_date": "Pick a date..."
+  },
+  "contact_modal": {
+    "new": "New",
+    "title": "Add your Phone Number",
+    "contact_type": "Contact type",
+    "country": "Country",
+    "phone": {
+      "label": "Phone Number (with DDD)",
+      "placeholder": "Ex.: 11964337131"
+    },
+    "submit": "Add Phone Number",
+    "footer": "You can add it later in the profile's area"
   }
 }

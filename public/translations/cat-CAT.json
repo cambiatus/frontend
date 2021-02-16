@@ -867,5 +867,17 @@
     "more": "Mostra més",
     "no_transfers_found": "No s'ha trobat transferència segons els vostres criteris.",
     "pick_date": "Escolliu una data..."
+  },
+  "contact_modal": {
+    "new": "Novetat",
+    "title": "Afegiu el vostre Número de Telèfon",
+    "contact_type": "Tipus de contacte",
+    "country": "País",
+    "phone": {
+      "label": "Número de telèfon (amb DDD)",
+      "placeholder": "Ex.: 11964337131"
+    },
+    "submit": "Afegiu un Número de Telèfon",
+    "footer": "Podeu afegir-lo més endavant a l'àrea del perfil"
   }
 }

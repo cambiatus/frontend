@@ -867,5 +867,17 @@
     "more": "Mostrar más",
     "no_transfers_found": "No se encontraron transferencias según sus criterios.",
     "pick_date": "Selecciona una fecha..."
+  },
+  "contact_modal": {
+    "new": "Nuevo",
+    "title": "Agrega tu Número de Teléfono",
+    "contact_type": "Tipo de Contacto",
+    "country": "País",
+    "phone": {
+      "label": "Número de teléfono (con DDD)",
+      "placeholder": "Ej.: 11964337131"
+    },
+    "submit": "Agregar el número de teléfono",
+    "footer": "Puedes agregarlo más tarde en el área del perfil"
   }
 }
