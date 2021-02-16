@@ -873,9 +873,14 @@
     "country": "Country",
     "phone": {
       "label": "Phone Number (with DDD)",
-      "placeholder": "Ex.: 11964337131"
+      "placeholder": "Ex.: 11964337131",
+      "submit": "Add Phone Number"
     },
-    "submit": "Add Phone Number",
+    "username": {
+      "label": "Username",
+      "placeholder": "Ex.: @cambiatus",
+      "submit": "Add Profile"
+    },
     "footer": "You can add it later in the profile's area"
   }
 }

@@ -834,9 +834,14 @@
       "country": "ሀገር",
       "phone": {
         "label": "የስልክ ቁጥር (ከዲዲዲ ጋር)",
-        "placeholder": "ዘጸ-11964337131"
+        "placeholder": "ዘጸ-11964337131",
+        "submit": "ስልክ ቁጥር ያክሉ"
       },
-      "submit": "ስልክ ቁጥር ያክሉ",
+      "username": {
+        "label": "የተጠቃሚ ስም",
+        "placeholder": "ዘፀ: @cambiatus",
+        "submit": "መገለጫ ያክሉ"
+      },
       "footer": "በኋላ ላይ በመገለጫው አካባቢ ውስጥ ማከል ይችላሉ"
     }
   }

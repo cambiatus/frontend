@@ -682,11 +682,11 @@ addContactModal ({ addContactInfo, shared } as model) =
                     |> Select.toHtml
                 ]
 
-        contactInput =
+        phoneInput =
             div [ class "w-full" ]
                 [ Input.init
                     { label = shared.translators.t "contact_modal.phone.label"
-                    , id = "contact_value"
+                    , id = "contact_phone_input"
                     , onInput = EnteredContactText
                     , disabled = False
                     , value = addContactInfo.contact
@@ -697,15 +697,46 @@ addContactModal ({ addContactInfo, shared } as model) =
                     |> Input.toHtml
                 ]
 
+        contactInput =
+            div [ class "w-full" ]
+                [ Input.init
+                    { label = shared.translators.t "contact_modal.username.label"
+                    , id = "contact_input"
+                    , onInput = EnteredContactText
+                    , disabled = False
+                    , value = addContactInfo.contact
+                    , placeholder = Just (shared.translators.t "contact_modal.username.placeholder")
+                    , problems = addContactInfo.contactProblems
+                    , translators = model.shared.translators
+                    }
+                    |> Input.toHtml
+                ]
+
+        isPhoneContact =
+            List.member addContactInfo.contactOption [ "whatsapp", "phone" ]
+
         contactForm =
-            div [ class "flex space-x-4" ] [ countrySelect, contactInput ]
+            div [ class "flex space-x-4" ]
+                (if isPhoneContact then
+                    [ countrySelect, phoneInput ]
+
+                 else
+                    [ contactInput ]
+                )
 
         submitButton =
             button
                 [ class "button button-primary w-full"
                 , type_ "submit"
                 ]
-                [ text_ "contact_modal.submit" ]
+                [ text_
+                    (if isPhoneContact then
+                        "contact_modal.phone.submit"
+
+                     else
+                        "contact_modal.username.submit"
+                    )
+                ]
 
         form =
             Html.form

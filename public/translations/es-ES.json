@@ -875,9 +875,14 @@
     "country": "País",
     "phone": {
       "label": "Número de teléfono (con DDD)",
-      "placeholder": "Ej.: 11964337131"
+      "placeholder": "Ej.: 11964337131",
+      "submit": "Agregar el número de teléfono"
     },
-    "submit": "Agregar el número de teléfono",
+    "username": {
+      "label": "Nombre de Usuario",
+      "placeholder": "Ej.: @cambiatus",
+      "submit": "Agregar perfil"
+    },
     "footer": "Puedes agregarlo más tarde en el área del perfil"
   }
 }
