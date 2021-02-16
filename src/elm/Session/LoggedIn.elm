@@ -161,12 +161,12 @@ type FeatureStatus
 initModel : Shared -> Auth.Model -> Eos.Name -> Symbol -> Model
 initModel shared authModel accountName selectedCommunity =
     let
-        addPhoneLimitDate =
+        addContactLimitDate =
             -- 01/01/2022
             1641006000000
 
-        showPhoneModal =
-            addPhoneLimitDate - Time.posixToMillis shared.now > 0
+        showContactModal =
+            addContactLimitDate - Time.posixToMillis shared.now > 0
     in
     { shared = shared
     , accountName = accountName
@@ -186,7 +186,7 @@ initModel shared authModel accountName selectedCommunity =
     , hasShop = FeatureLoading
     , hasObjectives = FeatureLoading
     , hasKyc = FeatureLoading
-    , addContactInfo = initAddPhoneModal showPhoneModal
+    , addContactInfo = initAddContactModal showContactModal
     }
 
 
@@ -215,8 +215,8 @@ type alias AddContactModal =
     }
 
 
-initAddPhoneModal : Bool -> AddContactModal
-initAddPhoneModal show =
+initAddContactModal : Bool -> AddContactModal
+initAddContactModal show =
     { show = show
     , contactOption = ""
     , country = ""
@@ -679,11 +679,11 @@ addContactModal ({ addContactInfo } as model) =
                     |> Select.toHtml
                 ]
 
-        phoneInput =
+        contactInput =
             div [ class "w-full" ]
                 [ Input.init
                     { label = "Phone number (with DDD)"
-                    , id = "contact_phone_number"
+                    , id = "contact_value"
                     , onInput = EnteredContactText
                     , disabled = False
                     , value = addContactInfo.contact
@@ -694,8 +694,8 @@ addContactModal ({ addContactInfo } as model) =
                     |> Input.toHtml
                 ]
 
-        phoneForm =
-            div [ class "flex space-x-4" ] [ countrySelect, phoneInput ]
+        contactForm =
+            div [ class "flex space-x-4" ] [ countrySelect, contactInput ]
 
         submitButton =
             button
@@ -710,7 +710,7 @@ addContactModal ({ addContactInfo } as model) =
                 , onSubmit SubmittedContactModalForm
                 ]
                 [ contactTypeSelect
-                , phoneForm
+                , contactForm
                 , submitButton
                 , p [ class "text-caption text-center uppercase my-4" ]
                     [ text "You can add it later in the profile's area" ]
@@ -728,8 +728,8 @@ addContactModal ({ addContactInfo } as model) =
         |> Modal.toHtml
 
 
-phoneModalValidator : Validate.Validator String AddContactModal
-phoneModalValidator =
+contactModalValidator : Validate.Validator String AddContactModal
+contactModalValidator =
     Validate.all
         [ Validate.ifBlank .contact "Please enter your contact." ]
 
@@ -1098,50 +1098,50 @@ update msg model =
 
         CloseAddContactModal ->
             let
-                addPhoneModalInfo =
+                addContactModalInfo =
                     model.addContactInfo
             in
-            { model | addContactInfo = { addPhoneModalInfo | show = False } }
+            { model | addContactInfo = { addContactModalInfo | show = False } }
                 |> UR.init
 
         EnteredContactOption contactOption ->
             let
-                addPhoneModalInfo =
+                addContactModalInfo =
                     model.addContactInfo
             in
-            { model | addContactInfo = { addPhoneModalInfo | contactOption = contactOption } }
+            { model | addContactInfo = { addContactModalInfo | contactOption = contactOption } }
                 |> UR.init
 
         EnteredContactCountry contactCountry ->
             let
-                addPhoneModalInfo =
+                addContactModalInfo =
                     model.addContactInfo
             in
             { model
                 | addContactInfo =
-                    { addPhoneModalInfo | country = contactCountry }
+                    { addContactModalInfo | country = contactCountry }
             }
                 |> UR.init
 
-        EnteredContactText contactPhone ->
+        EnteredContactText contact ->
             let
-                addPhoneModalInfo =
+                addContactModalInfo =
                     model.addContactInfo
             in
             { model
-                | addContactInfo = { addPhoneModalInfo | contact = contactPhone }
+                | addContactInfo = { addContactModalInfo | contact = contact }
             }
                 |> UR.init
 
         SubmittedContactModalForm ->
             let
-                addPhoneInfo =
+                addContactInfo =
                     model.addContactInfo
             in
-            case Validate.validate phoneModalValidator addPhoneInfo of
+            case Validate.validate contactModalValidator addContactInfo of
                 Err errors ->
                     List.head errors
-                        |> Maybe.map (addPhoneError model)
+                        |> Maybe.map (addContactError model)
                         |> Maybe.withDefault model
                         |> UR.init
 
@@ -1216,7 +1216,7 @@ updateProfileContacts ({ contacts } as profile_) contactInfo =
 closeModal : UpdateResult -> UpdateResult
 closeModal ({ model } as uResult) =
     let
-        addPhoneInfo =
+        addContactInfo =
             model.addContactInfo
     in
     { uResult
@@ -1226,7 +1226,7 @@ closeModal ({ model } as uResult) =
                 , showUserNav = False
                 , showMainNav = False
                 , showAuthModal = False
-                , addContactInfo = { addPhoneInfo | show = False }
+                , addContactInfo = { addContactInfo | show = False }
             }
     }
 
@@ -1257,8 +1257,8 @@ readAllNotifications model =
     { model | notification = Notification.readAll model.notification }
 
 
-addPhoneError : Model -> String -> Model
-addPhoneError ({ addContactInfo } as model) error =
+addContactError : Model -> String -> Model
+addContactError ({ addContactInfo } as model) error =
     { model | addContactInfo = { addContactInfo | contactProblems = Just [ error ] } }
 
 
@@ -1393,7 +1393,7 @@ msgToString msg =
             [ "HideFeedbackLocal" ]
 
         CloseAddContactModal ->
-            [ "CloseAddPhoneModal" ]
+            [ "CloseAddContactModal" ]
 
         EnteredContactOption contactOption ->
             [ "EnteredContactOption", contactOption ]
@@ -1401,11 +1401,11 @@ msgToString msg =
         EnteredContactCountry contactCountry ->
             [ "EnteredContactCountry", contactCountry ]
 
-        EnteredContactText contactPhone ->
-            [ "EnteredContactPhone", contactPhone ]
+        EnteredContactText contact ->
+            [ "EnteredContactText", contact ]
 
         SubmittedContactModalForm ->
-            [ "SubmittedPhoneModalForm" ]
+            [ "SubmittedContactModalForm" ]
 
         CompletedUpdateContact r ->
             [ "CompletedUpdateContact", UR.resultToString r ]
