@@ -32,7 +32,7 @@ import Auth
 import Avatar
 import Browser.Dom as Dom
 import Browser.Events
-import Cambiatus.Enum.ContactType as ContactType
+import Cambiatus.Enum.ContactType as ContactType exposing (ContactType)
 import Cambiatus.Object
 import Cambiatus.Object.UnreadNotifications
 import Cambiatus.Subscription as Subscription
@@ -209,7 +209,7 @@ type ProfileStatus
 
 type alias AddContactModal =
     { show : Bool
-    , contactOption : String
+    , contactOption : ContactType
     , country : String
     , contact : String
     , contactProblems : Maybe (List String)
@@ -219,7 +219,7 @@ type alias AddContactModal =
 initAddContactModal : Bool -> AddContactModal
 initAddContactModal show =
     { show = show
-    , contactOption = "instagram"
+    , contactOption = ContactType.Instagram
     , country = ""
     , contact = ""
     , contactProblems = Nothing
@@ -645,7 +645,6 @@ addContactModal ({ addContactInfo, shared } as model) =
                     let
                         lower =
                             ContactType.toString contactType
-                                |> String.toLower
 
                         capitalized =
                             (String.left 1 lower
@@ -664,7 +663,7 @@ addContactModal ({ addContactInfo, shared } as model) =
                 (Select.init "contact_type"
                     (shared.translators.t "contact_modal.contact_type")
                     EnteredContactOption
-                    addContactInfo.contactOption
+                    (ContactType.toString addContactInfo.contactOption)
                     Nothing
                 )
                 options
@@ -714,7 +713,7 @@ addContactModal ({ addContactInfo, shared } as model) =
                 ]
 
         isPhoneContact =
-            Contact.usesPhoneFromString addContactInfo.contactOption
+            Contact.usesPhone addContactInfo.contactOption
 
         contactForm =
             div [ class "flex space-x-4" ]
@@ -1144,7 +1143,14 @@ update msg model =
                 addContactModalInfo =
                     model.addContactInfo
             in
-            { model | addContactInfo = { addContactModalInfo | contactOption = contactOption } }
+            { model
+                | addContactInfo =
+                    { addContactModalInfo
+                        | contactOption =
+                            ContactType.fromString contactOption
+                                |> Maybe.withDefault ContactType.Instagram
+                    }
+            }
                 |> UR.init
 
         EnteredContactCountry contactCountry ->
@@ -1224,28 +1230,19 @@ updateProfileContacts ({ contacts } as profile_) contactInfo =
             Validate.fromValid contactInfo
 
         newContact =
-            modalInfo.contactOption
-                |> String.toUpper
-                |> ContactType.fromString
-                |> Maybe.map
-                    (\contactType ->
-                        { contactType = contactType
-                        , contact = modalInfo.contact
-                        }
-                    )
-                |> Maybe.map (Contact.normalize modalInfo.country)
+            { contactType = modalInfo.contactOption
+            , contact = modalInfo.contact
+            }
+                |> Contact.normalize modalInfo.country
     in
     { profile_
         | contacts =
-            case ( contacts, newContact ) of
-                ( Nothing, Just newC ) ->
-                    Just [ newC ]
+            case contacts of
+                Nothing ->
+                    Just [ newContact ]
 
-                ( Just contacts_, Just newC ) ->
-                    Just (contacts_ ++ [ newC ])
-
-                _ ->
-                    Nothing
+                Just contactsList ->
+                    Just (contactsList ++ [ newContact ])
     }
 
 

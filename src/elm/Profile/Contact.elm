@@ -1,14 +1,12 @@
 module Profile.Contact exposing
     ( Contact
     , Normalized
-    , contactTypeFromString
     , decode
     , encode
     , normalize
     , selectionSet
     , unWrap
     , usesPhone
-    , usesPhoneFromString
     )
 
 import Cambiatus.Enum.ContactType as ContactType exposing (ContactType)
@@ -73,19 +71,6 @@ selectionSet =
 
 
 -- UTILITIES
-
-
-usesPhoneFromString : String -> Bool
-usesPhoneFromString contactTypeString =
-    contactTypeFromString contactTypeString
-        |> Maybe.map usesPhone
-        |> Maybe.withDefault False
-
-
-contactTypeFromString : String -> Maybe ContactType
-contactTypeFromString contactTypeString =
-    String.toUpper contactTypeString
-        |> ContactType.fromString
 
 
 usesPhone : ContactType -> Bool
