@@ -219,7 +219,7 @@ type alias AddContactModal =
 initAddContactModal : Bool -> AddContactModal
 initAddContactModal show =
     { show = show
-    , contactOption = ""
+    , contactOption = "instagram"
     , country = ""
     , contact = ""
     , contactProblems = Nothing
@@ -1223,28 +1223,6 @@ updateProfileContacts ({ contacts } as profile_) contactInfo =
         modalInfo =
             Validate.fromValid contactInfo
 
-        countryCode country =
-            case String.toLower country of
-                "brasil" ->
-                    "55"
-
-                "argentina" ->
-                    "54"
-
-                "costa_rica" ->
-                    "506"
-
-                _ ->
-                    ""
-
-        -- Add country code to start of number
-        adjustContactOption contactType contact =
-            if Contact.usesPhone contactType then
-                countryCode modalInfo.country ++ contact
-
-            else
-                contact
-
         newContact =
             modalInfo.contactOption
                 |> String.toUpper
@@ -1252,9 +1230,10 @@ updateProfileContacts ({ contacts } as profile_) contactInfo =
                 |> Maybe.map
                     (\contactType ->
                         { contactType = contactType
-                        , contact = adjustContactOption contactType modalInfo.contact
+                        , contact = modalInfo.contact
                         }
                     )
+                |> Maybe.map (Contact.normalize modalInfo.country)
     in
     { profile_
         | contacts =

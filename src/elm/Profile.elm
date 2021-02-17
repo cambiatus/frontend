@@ -36,7 +36,7 @@ import Avatar exposing (Avatar)
 import Cambiatus.Mutation
 import Cambiatus.Object
 import Cambiatus.Object.Community as Community
-import Cambiatus.Object.Contact as Contact
+import Cambiatus.Object.Contact
 import Cambiatus.Object.DeleteKycAddress
 import Cambiatus.Object.User as User
 import Cambiatus.Query
@@ -54,7 +54,7 @@ import Json.Decode.Pipeline as Decode exposing (optional, required)
 import Json.Encode as Encode
 import Kyc exposing (ProfileKyc)
 import Profile.Address as Address exposing (Address)
-import Profile.Contact exposing (Contact)
+import Profile.Contact as Contact exposing (Contact)
 import Select
 import Session.Shared exposing (Shared)
 import Simple.Fuzzy
@@ -78,7 +78,7 @@ type alias Model =
         , bio : Maybe String
         , localization : Maybe String
         , account : Eos.Name
-        , contacts : Maybe (List Contact)
+        , contacts : Maybe (List Contact.Normalized)
         , interests : List String
         , communities : List CommunityInfo
         , analysisCount : Int
@@ -134,7 +134,7 @@ selectionSet =
                     )
             )
         |> with
-            (User.contacts contactSelectionSet
+            (User.contacts Contact.selectionSet
                 |> SelectionSet.map (Maybe.map (List.filterMap identity))
             )
         |> with (User.communities communityInfoSelectionSet)
@@ -162,21 +162,6 @@ communityInfoSelectionSet =
         |> with Community.hasKyc
 
 
-contactSelectionSet : SelectionSet (Maybe Contact) Cambiatus.Object.Contact
-contactSelectionSet =
-    SelectionSet.succeed
-        (\maybeType maybeExternalId ->
-            case ( maybeType, maybeExternalId ) of
-                ( Just type_, Just externalId ) ->
-                    Contact type_ externalId |> Just
-
-                _ ->
-                    Nothing
-        )
-        |> with Contact.type_
-        |> with Contact.externalId
-
-
 decode : Decoder Model
 decode =
     Decode.succeed buildModel
@@ -187,11 +172,7 @@ decode =
         |> optional "bio" (nullable string) Nothing
         |> optional "localization" (nullable string) Nothing
         |> optional "interests" decodeInterests []
-        |> optional "contacts"
-            (Decode.list Profile.Contact.decode
-                |> Decode.map Just
-            )
-            Nothing
+        |> optional "contacts" (Decode.list Contact.decode |> Decode.map Just) Nothing
         |> Decode.hardcoded []
         |> Decode.at [ "data", "user" ]
         |> optional "analysisCount" int 0
@@ -245,7 +226,7 @@ mutation account form =
             , name = Present form.name
             , email = Present form.email
             , bio = Present form.bio
-            , contacts = Present (List.map contactInput form.contacts)
+            , contacts = Present (List.map (Contact.unWrap >> contactInput) form.contacts)
             , interests = Present interestString
             , location = Present form.localization
             , avatar = avatarInput
@@ -394,7 +375,7 @@ type alias ProfileForm =
     , bio : String
     , localization : String
     , avatar : Maybe String
-    , contacts : List Contact
+    , contacts : List Contact.Normalized
     , interest : String
     , interests : List String
     , errors : Dict String String
@@ -437,7 +418,7 @@ encodeProfileForm account form =
         , ( "bio", Encode.string form.bio )
         , ( "localization", Encode.string form.localization )
         , ( "account", Eos.encodeName account )
-        , ( "contacts", Encode.list Profile.Contact.encode form.contacts )
+        , ( "contacts", Encode.list Contact.encode form.contacts )
         , ( "interests"
           , Encode.list Encode.string form.interests
           )
