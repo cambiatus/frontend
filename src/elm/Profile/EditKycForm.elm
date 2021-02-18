@@ -299,5 +299,5 @@ saveKycData { accountName, shared } model =
             modelToProfileKyc model
     in
     Api.Graphql.mutation shared
-        (Profile.upsertKycMutation accountName data)
+        (Profile.upsertKycMutation data)
         Saved

@@ -149,7 +149,6 @@ markAsReadMutation id =
 notificationHistoryQuery : Eos.Name -> SelectionSet (List History) RootQuery
 notificationHistoryQuery account =
     Query.notificationHistory
-        { account = Eos.nameToString account }
         notificationHistorySelectionSet
 
 

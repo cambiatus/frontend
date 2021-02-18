@@ -909,11 +909,7 @@ fetchAvailableAnalysis : LoggedIn.Model -> Maybe String -> Cmd Msg
 fetchAvailableAnalysis { shared, accountName, selectedCommunity } maybeCursor =
     let
         arg =
-            { input =
-                { symbol = Eos.symbolToString selectedCommunity
-                , account = Eos.nameToString accountName
-                }
-            }
+            { communityId = Eos.symbolToString selectedCommunity }
 
         pagination =
             \a ->

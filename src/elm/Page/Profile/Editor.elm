@@ -421,7 +421,7 @@ update msg model loggedIn =
                         |> UR.init
                         |> UR.addCmd
                             (Api.Graphql.mutation loggedIn.shared
-                                (Profile.mutation profile.account (Profile.profileToForm newProfile))
+                                (Profile.mutation (Profile.profileToForm newProfile))
                                 CompletedProfileLoad
                             )
 

@@ -593,12 +593,7 @@ fetchAnalysis { accountName, selectedCommunity, shared } { profile, statusFilter
                     Present filterRecord
 
         args =
-            { input =
-                { symbol = Eos.symbolToString selectedCommunity
-                , account = Eos.nameToString accountName
-                , filter = filter
-                }
-            }
+            { communityId = Eos.symbolToString selectedCommunity }
 
         mapFn =
             \s ->

@@ -2,10 +2,10 @@ module Page.Register exposing (Model, Msg, init, jsAddressToMsg, msgToString, up
 
 import Address
 import Api.Graphql
-import Cambiatus.Enum.SignUpStatus as SignUpStatus
 import Cambiatus.InputObject as InputObject
 import Cambiatus.Mutation as Mutation
-import Cambiatus.Object.SignUpResponse
+import Cambiatus.Object exposing (Session)
+import Cambiatus.Object.Session
 import Cambiatus.Scalar exposing (Id(..))
 import Community exposing (Invite)
 import Eos.Account as Eos
@@ -23,6 +23,7 @@ import Page.Register.Common exposing (ProblemEvent(..))
 import Page.Register.DefaultForm as DefaultForm
 import Page.Register.JuridicalForm as JuridicalForm
 import Page.Register.NaturalForm as NaturalForm
+import Profile
 import Result
 import Route
 import Session.Guest as Guest exposing (External(..))
@@ -509,7 +510,7 @@ type Msg
     | CompletedLoadCountry (Result (Graphql.Http.Error (Maybe Address.Country)) (Maybe Address.Country))
     | AccountTypeSelected AccountType
     | FormMsg EitherFormMsg
-    | CompletedSignUp (Result (Graphql.Http.Error SignUpResponse) SignUpResponse)
+    | CompletedSignUp (Result (Graphql.Http.Error (Maybe SignUpResponse)) (Maybe SignUpResponse))
     | CompletedKycUpsert (Result (Graphql.Http.Error (Maybe ())) (Maybe ()))
     | CompletedAddressUpsert (Result (Graphql.Http.Error (Maybe ())) (Maybe ()))
 
@@ -747,6 +748,10 @@ update _ msg model { shared } =
                 |> UR.logDecodeError msg v
 
         AccountKeysGenerated (Ok accountKeys) ->
+            let
+                _ =
+                    Debug.log "generated keys" accountKeys
+            in
             case model.status of
                 FormShowed form ->
                     { model | accountKeys = Just accountKeys }
@@ -803,54 +808,26 @@ update _ msg model { shared } =
                 |> UR.addCmd
                     (Route.replaceUrl shared.navKey (Route.Login Nothing))
 
-        CompletedSignUp (Ok response) ->
-            case response.status of
-                SignUpStatus.Success ->
-                    case model.status of
-                        FormShowed (DefaultForm _) ->
-                            -- For Default form the account is already created
-                            { model
-                                | status = AccountCreated
-                                , step = SavePassphrase
-                            }
-                                |> UR.init
+        CompletedSignUp ((Ok (Just { user, token })) as resp) ->
+            -- Account was created
+            let
+                _ =
+                    Debug.log "resp" resp
+            in
+            { model
+                | status = AccountCreated
+                , step = SavePassphrase
+            }
+                |> UR.init
 
-                        FormShowed (NaturalForm form) ->
-                            model
-                                |> UR.init
-                                |> UR.addCmd
-                                    (saveKycData shared
-                                        { accountId = form.account
-                                        , countryId = Id "1"
-                                        , document = form.document
-                                        , documentType = NaturalForm.documentTypeToString form.documentType
-                                        , phone = form.phone
-                                        , userType = "natural"
-                                        }
-                                    )
-
-                        FormShowed (JuridicalForm form) ->
-                            model
-                                |> UR.init
-                                |> UR.addCmd
-                                    (saveKycData shared
-                                        { accountId = form.account
-                                        , countryId = Id "1"
-                                        , document = form.document
-                                        , documentType = JuridicalForm.companyTypeToString form.companyType
-                                        , phone = form.phone
-                                        , userType = "juridical"
-                                        }
-                                    )
-
-                        _ ->
-                            model |> UR.init
-
-                SignUpStatus.Error ->
-                    UR.init
-                        { model
-                            | serverError = Just (t "register.account_error.title")
-                        }
+        CompletedSignUp (Ok resp) ->
+            -- Response was invalid: no token/user info
+            let
+                _ =
+                    Debug.log "error: no account" resp
+            in
+            { model | serverError = Just (t "register.account_error.title") }
+                |> UR.init
 
         CompletedSignUp (Err error) ->
             { model | serverError = Just (t "register.account_error.title") }
@@ -864,8 +841,8 @@ update _ msg model { shared } =
                     let
                         addressData : ( InputObject.AddressUpdateInputRequiredFields, InputObject.AddressUpdateInputOptionalFields )
                         addressData =
-                            ( { accountId = form.account
-                              , cityId = Tuple.first form.city |> Id
+                            ( { --accountId = form.account
+                                cityId = Tuple.first form.city |> Id
                               , countryId = Id "1"
                               , neighborhoodId = Tuple.first form.district |> Id
                               , stateId = Tuple.first form.state |> Id
@@ -965,8 +942,8 @@ update _ msg model { shared } =
 
 
 type alias SignUpResponse =
-    { reason : Maybe String
-    , status : SignUpStatus.SignUpStatus
+    { user : Profile.Minimal
+    , token : String
     }
 
 
@@ -980,23 +957,60 @@ signUp shared { accountName, ownerKey } invitationId form =
             { account = Eos.nameToString accountName
             , email = email
             , name = name
+            , password = ""
             , publicKey = ownerKey
-            , userType =
-                case form of
-                    JuridicalForm _ ->
-                        "juridical"
-
-                    _ ->
-                        "natural"
             }
+                |> Debug.log "requiredArgs"
+
+        ( kycOpts, addressOpts ) =
+            case form of
+                DefaultForm _ ->
+                    ( Absent, Absent )
+
+                NaturalForm f ->
+                    ( Present
+                        { countryId = Id "1"
+                        , document = f.document
+                        , documentType = NaturalForm.documentTypeToString f.documentType
+                        , phone = f.phone
+                        , userType = "natural"
+                        }
+                    , Absent
+                    )
+
+                JuridicalForm f ->
+                    ( Present
+                        { countryId = Id "1"
+                        , document = f.document
+                        , documentType = JuridicalForm.companyTypeToString f.companyType
+                        , phone = f.phone
+                        , userType = "juridical"
+                        }
+                    , Present
+                        { countryId = Id "1"
+                        , cityId = Tuple.first f.city |> Id
+                        , neighborhoodId = Tuple.first f.district |> Id
+                        , number = Present f.number
+                        , stateId = Tuple.first f.state |> Id
+                        , street = f.street
+                        , zip = f.zip
+                        }
+                    )
 
         fillOptionals opts =
             { opts
                 | invitationId =
                     Maybe.map Present invitationId
                         |> Maybe.withDefault Absent
-                , kyc = Absent
-                , address = Absent
+                , kyc = kycOpts
+                , address = addressOpts
+                , userType =
+                    case form of
+                        JuridicalForm _ ->
+                            Present "juridical"
+
+                        _ ->
+                            Present "natural"
             }
     in
     Api.Graphql.mutation shared
@@ -1004,8 +1018,8 @@ signUp shared { accountName, ownerKey } invitationId form =
             fillOptionals
             requiredArgs
             (Graphql.SelectionSet.succeed SignUpResponse
-                |> with Cambiatus.Object.SignUpResponse.reason
-                |> with Cambiatus.Object.SignUpResponse.status
+                |> with (Cambiatus.Object.Session.user Profile.minimalSelectionSet)
+                |> with Cambiatus.Object.Session.token
             )
         )
         CompletedSignUp
