@@ -283,10 +283,11 @@ viewForm { t } model =
                 _ ->
                     if String.length model.currentQuery > 0 then
                         span
-                            [ class "rounded bg-gray-900 hover:bg-orange-300 cursor-pointer text-white leading-4 text-center absolute right-0 mt-3 mr-3 w-4 h-4"
+                            [ class "cursor-pointer absolute right-0 mr-3 h-full flex items-center top-0"
                             , onClick ClearSearchIconClicked
                             ]
-                            [ text "×" ]
+                            [ Icons.clearInput ""
+                            ]
 
                     else
                         text ""
