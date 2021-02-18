@@ -462,7 +462,7 @@ viewResultsOverview { t } { offers, actions } =
                 ]
     in
     div []
-        [ strong [ class "block py-0" ]
+        [ strong [ class "block pb-2" ]
             [ text (t "menu.search.overviewHeader") ]
         , ul []
             [ viewItem Icons.shop
