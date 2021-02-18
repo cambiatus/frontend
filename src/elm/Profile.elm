@@ -36,7 +36,6 @@ import Avatar exposing (Avatar)
 import Cambiatus.Mutation
 import Cambiatus.Object
 import Cambiatus.Object.Community as Community
-import Cambiatus.Object.Contact
 import Cambiatus.Object.DeleteKycAddress
 import Cambiatus.Object.User as User
 import Cambiatus.Query
@@ -54,7 +53,7 @@ import Json.Decode.Pipeline as Decode exposing (optional, required)
 import Json.Encode as Encode
 import Kyc exposing (ProfileKyc)
 import Profile.Address as Address exposing (Address)
-import Profile.Contact as Contact exposing (Contact)
+import Profile.Contact as Contact
 import Select
 import Session.Shared exposing (Shared)
 import Simple.Fuzzy
