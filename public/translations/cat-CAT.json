@@ -880,7 +880,7 @@
     },
     "username": {
       "label": "Nom d'usuari",
-      "placeholder": "Ex.: @cambiatus",
+      "placeholder": "Ex.: cambiatus",
       "submit": "Afegeix un perfil"
     },
     "error": "S'ha produït un error en afegir el vostre contacte",

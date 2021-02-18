@@ -878,7 +878,7 @@
     },
     "username": {
       "label": "Username",
-      "placeholder": "Ex.: @cambiatus",
+      "placeholder": "Ex.: cambiatus",
       "submit": "Add Profile"
     },
     "error": "Something went wrong when adding your contact",

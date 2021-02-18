@@ -880,7 +880,7 @@
     },
     "username": {
       "label": "Nombre de Usuario",
-      "placeholder": "Ej.: @cambiatus",
+      "placeholder": "Ej.: cambiatus",
       "submit": "Agregar perfil"
     },
     "error": "Algo salió mal al agregar su contacto",

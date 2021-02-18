@@ -882,7 +882,7 @@
     },
     "username": {
       "label": "Nome de Usuário",
-      "placeholder": "Ex.: @cambiatus",
+      "placeholder": "Ex.: cambiatus",
       "submit": "Adicionar Perfil"
     },
     "error": "Algo deu errado ao adicionar seu contato",

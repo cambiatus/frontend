@@ -839,7 +839,7 @@
       },
       "username": {
         "label": "የተጠቃሚ ስም",
-        "placeholder": "ዘፀ: @cambiatus",
+        "placeholder": "ዘፀ: cambiatus",
         "submit": "መገለጫ ያክሉ"
       },
       "error": "ዕውቂያዎን ሲያክሉ አንድ ነገር ተሳስቷል",
