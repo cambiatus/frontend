@@ -11,6 +11,7 @@ module Profile.Contact exposing
     , selectionSet
     , unWrap
     , usesPhone
+    , validator
     )
 
 import Cambiatus.Enum.ContactType as ContactType exposing (ContactType)
@@ -19,6 +20,9 @@ import Cambiatus.Object.Contact
 import Graphql.SelectionSet as SelectionSet exposing (SelectionSet, with)
 import Json.Decode as Decode exposing (Decoder)
 import Json.Encode as Encode
+import Regex exposing (Regex)
+import Session.Shared exposing (Translators)
+import Validate
 
 
 
@@ -90,13 +94,13 @@ countryCode : Country -> String
 countryCode country =
     case country of
         Brazil ->
-            "55"
+            "+055 "
 
         CostaRica ->
-            "506"
+            "+506 "
 
         Ethiopia ->
-            "251"
+            "+251 "
 
 
 normalize : Country -> Contact -> Normalized
@@ -122,6 +126,47 @@ normalize country { contactType, contact } =
 unWrap : Normalized -> Contact
 unWrap (Normalized contact) =
     contact
+
+
+
+-- VALIDATING
+
+
+phoneRegex : Regex
+phoneRegex =
+    Regex.fromString "^\\+?\\(?[0-9]{3}\\)?[-\\s\\.]?\\(?[0-9]{2}?\\)?[-\\s\\.]?[0-9]{3,5}[-\\s\\.]?[0-9]{3,4}$"
+        |> Maybe.withDefault Regex.never
+
+
+validator : ContactType -> Translators -> Validate.Validator String Normalized
+validator contactType translators =
+    let
+        getContact (Normalized { contact }) =
+            contact
+
+        phoneValidations =
+            [ Validate.ifBlank getContact (translators.t "contact_validator.phone.blank")
+            , Validate.fromErrors
+                (\(Normalized { contact }) ->
+                    if Regex.contains phoneRegex contact then
+                        []
+
+                    else
+                        [ translators.t "contact_validator.phone.invalid" ]
+                )
+            ]
+
+        profileValidations =
+            [ Validate.ifBlank getContact (translators.t "contact_validator.profile.blank")
+            ]
+    in
+    Validate.all
+        (if usesPhone contactType then
+            phoneValidations
+
+         else
+            profileValidations
+        )
 
 
 

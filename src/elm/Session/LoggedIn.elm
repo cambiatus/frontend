@@ -56,7 +56,7 @@ import List.Extra as List
 import Notification exposing (Notification)
 import Ports
 import Profile exposing (Model)
-import Profile.Contact as Contact
+import Profile.Contact as Contact exposing (Contact)
 import Route exposing (Route)
 import Session.Shared as Shared exposing (Shared)
 import Shop
@@ -773,12 +773,6 @@ addContactModal ({ addContactInfo, shared } as model) =
         |> Modal.toHtml
 
 
-contactModalValidator : Validate.Validator String AddContactModal
-contactModalValidator =
-    Validate.all
-        [ Validate.ifBlank .contact "Please enter your contact." ]
-
-
 viewMainMenu : Page -> Model -> Html Msg
 viewMainMenu page model =
     let
@@ -921,6 +915,9 @@ update msg model =
     let
         shared =
             model.shared
+
+        addContactInfo =
+            model.addContactInfo
 
         focusMainContent b alternative =
             if b then
@@ -1142,36 +1139,25 @@ update msg model =
                 |> UR.addCmd doNext
 
         CloseAddContactModal ->
-            let
-                addContactModalInfo =
-                    model.addContactInfo
-            in
-            { model | addContactInfo = { addContactModalInfo | show = False } }
+            { model | addContactInfo = { addContactInfo | show = False } }
                 |> UR.init
 
         EnteredContactOption contactOption ->
-            let
-                addContactModalInfo =
-                    model.addContactInfo
-            in
             { model
                 | addContactInfo =
-                    { addContactModalInfo
+                    { addContactInfo
                         | contactOption =
                             ContactType.fromString contactOption
                                 |> Maybe.withDefault ContactType.Instagram
+                        , contactProblems = Nothing
                     }
             }
                 |> UR.init
 
         EnteredContactCountry contactCountry ->
-            let
-                addContactModalInfo =
-                    model.addContactInfo
-            in
             { model
                 | addContactInfo =
-                    { addContactModalInfo
+                    { addContactInfo
                         | country =
                             Contact.countryFromString contactCountry
                                 |> Maybe.withDefault Contact.Brazil
@@ -1180,21 +1166,22 @@ update msg model =
                 |> UR.init
 
         EnteredContactText contact ->
-            let
-                addContactModalInfo =
-                    model.addContactInfo
-            in
             { model
-                | addContactInfo = { addContactModalInfo | contact = contact }
+                | addContactInfo = { addContactInfo | contact = contact }
             }
                 |> UR.init
 
         SubmittedContactModalForm ->
             let
-                addContactInfo =
-                    model.addContactInfo
+                validator =
+                    Contact.validator addContactInfo.contactOption shared.translators
             in
-            case Validate.validate contactModalValidator addContactInfo of
+            case
+                Validate.validate validator
+                    (contactModalToContact addContactInfo
+                        |> Contact.normalize addContactInfo.country
+                    )
+            of
                 Err errors ->
                     List.head errors
                         |> Maybe.map (addContactError model)
@@ -1209,18 +1196,7 @@ update msg model =
                         Just userProfile ->
                             model
                                 |> UR.init
-                                |> UR.addCmd
-                                    (Profile.mutation
-                                        model.accountName
-                                        (updateProfileContacts userProfile validModal
-                                            |> Profile.profileToForm
-                                        )
-                                        |> (\mutation ->
-                                                Api.Graphql.mutation shared
-                                                    mutation
-                                                    CompletedUpdateContact
-                                           )
-                                    )
+                                |> UR.addCmd (addContact model userProfile validModal)
 
         CompletedUpdateContact (Ok profile_) ->
             case profile_ of
@@ -1238,26 +1214,32 @@ update msg model =
                 |> UR.logGraphqlError msg err
 
 
-updateProfileContacts : Profile.Model -> Validate.Valid AddContactModal -> Profile.Model
-updateProfileContacts ({ contacts } as profile_) contactInfo =
-    let
-        modalInfo =
-            Validate.fromValid contactInfo
+addContact : Model -> Profile.Model -> Validate.Valid Contact.Normalized -> Cmd Msg
+addContact ({ shared } as model) userProfile contact =
+    Profile.mutation model.accountName
+        (updateProfileContacts userProfile contact |> Profile.profileToForm)
+        |> (\mutation -> Api.Graphql.mutation shared mutation CompletedUpdateContact)
 
-        newContact =
-            { contactType = modalInfo.contactOption
-            , contact = modalInfo.contact
-            }
-                |> Contact.normalize modalInfo.country
+
+contactModalToContact : AddContactModal -> Contact
+contactModalToContact { contactOption, contact } =
+    { contactType = contactOption, contact = contact }
+
+
+updateProfileContacts : Profile.Model -> Validate.Valid Contact.Normalized -> Profile.Model
+updateProfileContacts ({ contacts } as profile_) validatedContact =
+    let
+        contact =
+            Validate.fromValid validatedContact
     in
     { profile_
         | contacts =
             case contacts of
                 Nothing ->
-                    Just [ newContact ]
+                    Just [ contact ]
 
                 Just contactsList ->
-                    Just (contactsList ++ [ newContact ])
+                    Just (contactsList ++ [ contact ])
     }
 
 

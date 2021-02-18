@@ -884,5 +884,14 @@
       "submit": "Afegeix un perfil"
     },
     "footer": "Podeu afegir-lo més endavant a l'àrea del perfil"
+  },
+  "contact_validator": {
+    "phone": {
+      "blank": "Introduïu el vostre número de telèfon",
+      "invalid": "Siusplau introdueixi un número de telèfon vàlid"
+    },
+    "profile": {
+      "blank": "Introduïu el nom del vostre perfil"
+    }
   }
 }

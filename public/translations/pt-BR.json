@@ -886,5 +886,14 @@
       "submit": "Adicionar Perfil"
     },
     "footer": "Você pode fazer isso mais tarde na área do perfil"
+  },
+  "contact_validator": {
+    "phone": {
+      "blank": "Por favor insira seu número de telefone",
+      "invalid": "Por favor insira um número de telefone válido"
+    },
+    "profile": {
+      "blank": "Por favor insira seu perfil"
+    }
   }
 }

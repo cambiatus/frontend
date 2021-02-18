@@ -882,5 +882,14 @@
       "submit": "Add Profile"
     },
     "footer": "You can add it later in the profile's area"
+  },
+  "contact_validator": {
+    "phone": {
+      "blank": "Please enter your phone number",
+      "invalid": "Please enter a valid phone number"
+    },
+    "profile": {
+      "blank": "Please enter your profile name"
+    }
   }
 }
