@@ -1,8 +1,12 @@
 module Profile.Contact exposing
     ( Contact
+    , Country(..)
     , Normalized
+    , countryFromString
+    , countryToString
     , decode
     , encode
+    , listCountries
     , normalize
     , selectionSet
     , unWrap
@@ -82,23 +86,20 @@ usesPhone contactType =
 -- NORMALIZING
 
 
-countryCode : String -> String
+countryCode : Country -> String
 countryCode country =
-    case String.toLower country of
-        "brasil" ->
+    case country of
+        Brazil ->
             "55"
 
-        "argentina" ->
-            "54"
-
-        "costa_rica" ->
+        CostaRica ->
             "506"
 
-        _ ->
-            ""
+        Ethiopia ->
+            "251"
 
 
-normalize : String -> Contact -> Normalized
+normalize : Country -> Contact -> Normalized
 normalize country { contactType, contact } =
     Normalized
         { contactType = contactType
@@ -121,3 +122,47 @@ normalize country { contactType, contact } =
 unWrap : Normalized -> Contact
 unWrap (Normalized contact) =
     contact
+
+
+
+-- COUNTRY
+
+
+type Country
+    = Brazil
+    | CostaRica
+    | Ethiopia
+
+
+listCountries : List Country
+listCountries =
+    [ Brazil, CostaRica, Ethiopia ]
+
+
+countryToString : Country -> String
+countryToString country =
+    case country of
+        Brazil ->
+            "Brasil"
+
+        CostaRica ->
+            "Costa Rica"
+
+        Ethiopia ->
+            "Ethiopia"
+
+
+countryFromString : String -> Maybe Country
+countryFromString countryString =
+    case countryString of
+        "Brasil" ->
+            Just Brazil
+
+        "Costa Rica" ->
+            Just CostaRica
+
+        "Ethiopia" ->
+            Just Ethiopia
+
+        _ ->
+            Nothing

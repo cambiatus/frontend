@@ -210,7 +210,7 @@ type ProfileStatus
 type alias AddContactModal =
     { show : Bool
     , contactOption : ContactType
-    , country : String
+    , country : Contact.Country
     , contact : String
     , contactProblems : Maybe (List String)
     }
@@ -220,7 +220,7 @@ initAddContactModal : Bool -> AddContactModal
 initAddContactModal show =
     { show = show
     , contactOption = ContactType.Instagram
-    , country = ""
+    , country = Contact.Brazil
     , contact = ""
     , contactProblems = Nothing
     }
@@ -639,20 +639,20 @@ addContactModal ({ addContactInfo, shared } as model) =
                     [ text_ "contact_modal.title" ]
                 ]
 
-        options =
+        contactOptions =
             List.map
                 (\contactType ->
                     let
-                        lower =
+                        asString =
                             ContactType.toString contactType
 
                         capitalized =
-                            (String.left 1 lower
+                            (String.left 1 asString
                                 |> String.toUpper
                             )
-                                ++ String.dropLeft 1 lower
+                                ++ String.dropLeft 1 (String.toLower asString)
                     in
-                    { value = lower
+                    { value = asString
                     , label = capitalized
                     }
                 )
@@ -666,19 +666,30 @@ addContactModal ({ addContactInfo, shared } as model) =
                     (ContactType.toString addContactInfo.contactOption)
                     Nothing
                 )
-                options
+                contactOptions
                 |> Select.toHtml
+
+        countryOptions =
+            List.map
+                (\country ->
+                    let
+                        asString =
+                            Contact.countryToString country
+                    in
+                    { value = asString, label = asString }
+                )
+                Contact.listCountries
 
         countrySelect =
             div [ class "flex-shrink-0" ]
-                [ Select.init "contact_country"
-                    (shared.translators.t "contact_modal.country")
-                    EnteredContactCountry
-                    addContactInfo.country
-                    Nothing
-                    |> Select.withOption { value = "brasil", label = "Brasil" }
-                    |> Select.withOption { value = "costa_rica", label = "Costa Rica" }
-                    |> Select.withOption { value = "argentina", label = "Argentina" }
+                [ List.foldr (\option select -> Select.withOption option select)
+                    (Select.init "contact_country"
+                        (shared.translators.t "contact_modal.country")
+                        EnteredContactCountry
+                        (Contact.countryToString addContactInfo.country)
+                        Nothing
+                    )
+                    countryOptions
                     |> Select.toHtml
                 ]
 
@@ -1160,7 +1171,11 @@ update msg model =
             in
             { model
                 | addContactInfo =
-                    { addContactModalInfo | country = contactCountry }
+                    { addContactModalInfo
+                        | country =
+                            Contact.countryFromString contactCountry
+                                |> Maybe.withDefault Contact.Brazil
+                    }
             }
                 |> UR.init
 
