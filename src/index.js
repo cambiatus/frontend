@@ -65,8 +65,10 @@ const LANGUAGE_KEY = 'bespiral.language'
 const AUTH_PREF_KEY = 'bespiral.auth.pref'
 const PUSH_PREF = 'bespiral.push.pref'
 const SELECTED_COMMUNITY_KEY = 'bespiral.selected_community'
+const AUTH_TOKEN = 'bespiral.auth_token'
 const RECENT_SEARCHES = 'bespiral.recent_search'
 const env = process.env.NODE_ENV || 'development'
+const graphqlSecret = process.env.GRAPHQL_SECRET || ''
 const config = configuration[env]
 
 function getUserLanguage () {
@@ -83,8 +85,10 @@ function getUserLanguage () {
 
 function flags () {
   const user = JSON.parse(window.localStorage.getItem(USER_KEY))
-  var flags_ = {
+  return {
     env: env,
+    graphqlSecret: graphqlSecret,
+    authToken: getAuthToken(),
     endpoints: config.endpoints,
     language: getUserLanguage(),
     accountName: (user && user.accountName) || null,
@@ -98,7 +102,6 @@ function flags () {
     tokenContract: config.tokenContract,
     communityContract: config.communityContract
   }
-  return flags_
 }
 
 // Start elm app with flags
@@ -239,6 +242,21 @@ async function storePin (data, pin) {
 
 function getSelectedCommunity () {
   return window.localStorage.getItem(SELECTED_COMMUNITY_KEY)
+}
+
+function setAuthToken (authToken) {
+  window.localStorage.setItem(
+    AUTH_TOKEN,
+    authToken
+  )
+}
+
+function getAuthToken () {
+  return window.localStorage.getItem(AUTH_TOKEN)
+}
+
+function removeAuthToken () {
+  window.localStorage.removeItem(AUTH_TOKEN)
 }
 
 function downloadPdf (accountName, passphrase, responseAddress, responseData) {

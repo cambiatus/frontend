@@ -54,8 +54,8 @@ init ({ shared, accountName, selectedCommunity } as loggedIn) =
     ( initModel
     , Cmd.batch
         [ fetchBalance shared accountName
-        , fetchTransfers shared accountName
-        , fetchCommunity shared selectedCommunity
+        , fetchTransfers loggedIn accountName
+        , fetchCommunity loggedIn selectedCommunity
         , fetchAvailableAnalysis loggedIn Nothing
         , Task.perform GotTime Time.now
         ]
@@ -893,9 +893,9 @@ fetchBalance shared accountName =
     Api.getBalances shared accountName CompletedLoadBalances
 
 
-fetchTransfers : Shared -> Eos.Name -> Cmd Msg
-fetchTransfers shared accountName =
-    Api.Graphql.query shared
+fetchTransfers : LoggedIn.Model -> Eos.Name -> Cmd Msg
+fetchTransfers loggedIn accountName =
+    LoggedIn.authQuery loggedIn
         (Transfer.transfersUserQuery
             accountName
             (\args ->
@@ -906,7 +906,7 @@ fetchTransfers shared accountName =
 
 
 fetchAvailableAnalysis : LoggedIn.Model -> Maybe String -> Cmd Msg
-fetchAvailableAnalysis { shared, accountName, selectedCommunity } maybeCursor =
+fetchAvailableAnalysis ({ shared, accountName, selectedCommunity } as loggedIn) maybeCursor =
     let
         arg =
             { communityId = Eos.symbolToString selectedCommunity }
@@ -934,16 +934,14 @@ fetchAvailableAnalysis { shared, accountName, selectedCommunity } maybeCursor =
                             |> Maybe.withDefault Absent
                 }
     in
-    Api.Graphql.query
-        shared
+    LoggedIn.authQuery loggedIn
         (Cambiatus.Query.claimsAnalysis pagination arg Claim.claimPaginatedSelectionSet)
         ClaimsLoaded
 
 
-fetchCommunity : Shared -> Symbol -> Cmd Msg
-fetchCommunity shared selectedCommunity =
-    Api.Graphql.query
-        shared
+fetchCommunity : LoggedIn.Model -> Symbol -> Cmd Msg
+fetchCommunity loggedIn selectedCommunity =
+    LoggedIn.authQuery loggedIn
         (Cambiatus.Query.community { symbol = Eos.symbolToString selectedCommunity } Community.dashboardSelectionSet)
         CommunityLoaded
 

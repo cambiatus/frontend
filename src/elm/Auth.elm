@@ -19,9 +19,12 @@ import Api.Graphql
 import Asset.Icon as Icon
 import Browser.Dom as Dom
 import Browser.Events
+import Cambiatus.Mutation
+import Cambiatus.Object.Session
 import Eos.Account as Eos
 import Graphql.Http
 import Graphql.OptionalArgument exposing (OptionalArgument(..))
+import Graphql.SelectionSet exposing (with)
 import Html exposing (Html, a, button, div, form, h2, img, label, li, p, span, strong, text, textarea, ul)
 import Html.Attributes exposing (autocomplete, autofocus, class, disabled, for, id, placeholder, required, src, title, type_, value)
 import Html.Events exposing (onClick, onInput, onSubmit)
@@ -57,11 +60,11 @@ because it's more convenient for humans.
 -- INIT
 
 
-init : Shared -> Model
-init shared =
+init : Shared -> Maybe String -> Model
+init shared authToken =
     case shared.maybeAccount of
         Just ( _, True ) ->
-            { initModel | status = LoginWithPin }
+            { initModel | status = LoginWithPin, token = authToken }
 
         _ ->
             initModel
@@ -93,6 +96,7 @@ type alias Model =
     , pinVisibility : Bool
     , pinConfirmationVisibility : Bool
     , problems : List ( Field, String )
+    , token : Maybe String
     }
 
 
@@ -105,6 +109,7 @@ initModel =
     , pinVisibility = True
     , pinConfirmationVisibility = True
     , problems = []
+    , token = Nothing
     }
 
 
@@ -556,6 +561,7 @@ type Msg
     | GotPrivateKeyLogin (Result String ( Eos.Name, String ))
     | SubmittedLoginPIN
     | GotPinLogin (Result String ( Eos.Name, String ))
+    | CompletedSignIn Status (Result (Graphql.Http.Error (Maybe SignInResponse)) (Maybe SignInResponse))
     | CompletedLoadProfile Status Eos.Name (Result (Graphql.Http.Error (Maybe Profile.Model)) (Maybe Profile.Model))
     | TogglePinVisibility
     | TogglePinConfirmationVisibility
@@ -745,12 +751,55 @@ update msg shared model =
                     }
 
         GotPrivateKeyLogin (Ok ( accountName, privateKey )) ->
+            let
+                _ =
+                    Debug.log "after gotPrivateKeyLogin" ( accountName, privateKey )
+            in
             UR.init model
                 |> UR.addCmd
-                    (Api.Graphql.query shared
-                        (Profile.query accountName)
-                        (CompletedLoadProfile (LoggedInWithPrivateKey privateKey) accountName)
+                    (Api.Graphql.mutation shared
+                        (Cambiatus.Mutation.signIn
+                            { account = Eos.nameToString accountName
+                            , password = "d8Ed.-qfhj7"
+                            }
+                            (Graphql.SelectionSet.succeed SignInResponse
+                                |> with (Cambiatus.Object.Session.user Profile.selectionSet)
+                                |> with Cambiatus.Object.Session.token
+                            )
+                        )
+                        (CompletedSignIn (LoggedInWithPrivateKey privateKey))
                     )
+
+        --(Api.Graphql.query shared
+        --    (Profile.query accountName)
+        --    (CompletedLoadProfile (LoggedInWithPrivateKey privateKey) accountName)
+        --)
+        CompletedSignIn status (Ok ((Just { user, token }) as resp)) ->
+            let
+                _ =
+                    Debug.log "session" resp
+            in
+            UR.init
+                { model
+                    | status = status
+                    , token = Just token
+                }
+                |> UR.addExt (CompletedAuth user)
+
+        CompletedSignIn _ (Ok resp) ->
+            let
+                _ =
+                    Debug.log "Nothing resp" resp
+            in
+            model |> UR.init
+
+        CompletedSignIn status (Err err) ->
+            let
+                _ =
+                    Debug.log "error resp" err
+            in
+            --loginFailedGraphql err model
+            model |> UR.init
 
         GotPrivateKeyLogin (Err err) ->
             UR.init
@@ -816,7 +865,11 @@ update msg shared model =
                 Nothing ->
                     UR.init model
 
-        CompletedLoadProfile _ _ (Err err) ->
+        CompletedLoadProfile a b (Err err) ->
+            let
+                _ =
+                    Debug.log "all" ( a, b, err )
+            in
             loginFailedGraphql err model
 
         TogglePinVisibility ->
@@ -849,8 +902,18 @@ update msg shared model =
                 UR.init model
 
 
+type alias SignInResponse =
+    { user : Profile.Model
+    , token : String
+    }
+
+
 loginFailedGraphql : Graphql.Http.Error (Maybe Profile.Model) -> Model -> UpdateResult
 loginFailedGraphql httpError model =
+    let
+        _ =
+            Debug.log "error" httpError
+    in
     UR.init
         { model
             | loginError =
@@ -917,6 +980,9 @@ msgToString msg =
     case msg of
         Ignored ->
             [ "Ignored" ]
+
+        CompletedSignIn _ _ ->
+            [ "CompletedSignIn" ]
 
         ClickedViewOptions ->
             [ "ClickedViewOptions" ]

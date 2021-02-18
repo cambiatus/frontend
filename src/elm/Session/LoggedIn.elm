@@ -10,6 +10,7 @@ module Session.LoggedIn exposing
     , ProfileStatus(..)
     , addNotification
     , askedAuthentication
+    , authQuery
     , init
     , initLogin
     , isAccount
@@ -40,10 +41,10 @@ import Cambiatus.Subscription as Subscription
 import Community
 import Eos exposing (Symbol)
 import Eos.Account as Eos
-import Flags exposing (Flags)
+import Flags exposing (Endpoints, Flags)
 import Graphql.Document
 import Graphql.Http
-import Graphql.Operation exposing (RootSubscription)
+import Graphql.Operation exposing (RootQuery, RootSubscription)
 import Graphql.SelectionSet exposing (SelectionSet)
 import Html exposing (Html, a, button, div, footer, img, nav, p, span, text)
 import Html.Attributes exposing (class, classList, src, style, type_)
@@ -76,12 +77,12 @@ init : Shared -> Eos.Name -> Flags -> ( Model, Cmd Msg )
 init shared accountName flags =
     let
         authModel =
-            Auth.init shared
+            Auth.init shared flags.authToken
     in
     ( initModel shared authModel accountName flags.selectedCommunity
     , Cmd.batch
-        [ Api.Graphql.query shared (Profile.query accountName) CompletedLoadProfile
-        , Api.Graphql.query shared (Community.settingsQuery flags.selectedCommunity) CompletedLoadSettings
+        [ authQuery { auth = authModel, shared = shared } (Profile.query accountName) CompletedLoadProfile
+        , authQuery { auth = authModel, shared = shared } (Community.settingsQuery flags.selectedCommunity) CompletedLoadSettings
         , Ports.getRecentSearches () -- run on the page refresh, duplicated in `initLogin`
         , Task.perform GotTime Time.now
         ]
@@ -158,6 +159,32 @@ type alias Model =
     , claimingAction : Action.Model
     , date : Maybe Posix
     }
+
+
+authQuery :
+    { m | auth : Auth.Model, shared : Shared }
+    -> SelectionSet a RootQuery
+    -> (Result (Graphql.Http.Error a) a -> msg)
+    -> Cmd msg
+authQuery { auth, shared } query toMsg =
+    let
+        token =
+            auth.token
+
+        endpoints =
+            shared.endpoints
+    in
+    query
+        |> Graphql.Http.queryRequest endpoints.graphql
+        |> (case token of
+                Just t ->
+                    Graphql.Http.withHeader "authorization"
+                        ("Bearer " ++ t)
+
+                Nothing ->
+                    identity
+           )
+        |> Graphql.Http.send toMsg
 
 
 type FeatureStatus

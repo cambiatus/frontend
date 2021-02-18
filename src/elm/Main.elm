@@ -69,6 +69,7 @@ init flagsValue url navKey =
                     Page.init flags navKey url
                         |> UR.map identity GotPageMsg (\_ uR -> uR)
                         |> UR.toModelCmd (\_ m -> ( m, Cmd.none )) msgToString
+                        |> Debug.log "flags"
 
                 Err e ->
                     Page.init Flags.default navKey url
@@ -662,10 +663,10 @@ changeRouteTo maybeRoute model =
                                                 )
                                                 subModel.accountKeys
                                                 |> Maybe.withDefault
-                                                    (Auth.init guest.shared)
+                                                    (Auth.init guest.shared Nothing)
 
                                         _ ->
-                                            Auth.init guest.shared
+                                            Auth.init guest.shared Nothing
 
                                 ( loggedIn, cmd ) =
                                     Page.login authModel profile guest
