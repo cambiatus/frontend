@@ -6,10 +6,11 @@ module Profile.Contact exposing
     , countryToString
     , decode
     , encode
+    , hasSameType
     , listCountries
     , normalize
     , selectionSet
-    , unWrap
+    , unwrap
     , usesPhone
     , validator
     )
@@ -86,6 +87,16 @@ usesPhone contactType =
     List.member contactType [ ContactType.Whatsapp, ContactType.Phone ]
 
 
+unwrap : Normalized -> Contact
+unwrap (Normalized contact) =
+    contact
+
+
+hasSameType : Normalized -> Normalized -> Bool
+hasSameType (Normalized contact1) (Normalized contact2) =
+    contact1.contactType == contact2.contactType
+
+
 
 -- NORMALIZING
 
@@ -121,11 +132,6 @@ normalize country { contactType, contact } =
                 ContactType.Whatsapp ->
                     countryCode country ++ contact
         }
-
-
-unWrap : Normalized -> Contact
-unWrap (Normalized contact) =
-    contact
 
 
 

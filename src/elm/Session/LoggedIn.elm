@@ -1207,8 +1207,13 @@ update msg model =
                         |> closeModal
 
                 Nothing ->
-                    -- TODO - Show error
-                    model |> UR.init
+                    { model
+                        | addContactInfo =
+                            { addContactInfo
+                                | contactProblems = Just [ shared.translators.t "contact_modal.error" ]
+                            }
+                    }
+                        |> UR.init
 
         CompletedUpdateContact (Err err) ->
             UR.init model
@@ -1240,7 +1245,12 @@ updateProfileContacts ({ contacts } as profile_) validatedContact =
                     Just [ contact ]
 
                 Just contactsList ->
-                    Just (contactsList ++ [ contact ])
+                    Just
+                        (List.filter
+                            (not << Contact.hasSameType contact)
+                            contactsList
+                            ++ [ contact ]
+                        )
     }
 
 

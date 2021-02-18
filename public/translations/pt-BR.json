@@ -885,6 +885,7 @@
       "placeholder": "Ex.: @cambiatus",
       "submit": "Adicionar Perfil"
     },
+    "error": "Algo deu errado ao adicionar seu contato",
     "footer": "Você pode fazer isso mais tarde na área do perfil"
   },
   "contact_validator": {

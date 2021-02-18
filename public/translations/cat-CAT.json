@@ -883,6 +883,7 @@
       "placeholder": "Ex.: @cambiatus",
       "submit": "Afegeix un perfil"
     },
+    "error": "S'ha produït un error en afegir el vostre contacte",
     "footer": "Podeu afegir-lo més endavant a l'àrea del perfil"
   },
   "contact_validator": {

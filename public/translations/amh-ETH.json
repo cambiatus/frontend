@@ -842,6 +842,7 @@
         "placeholder": "ዘፀ: @cambiatus",
         "submit": "መገለጫ ያክሉ"
       },
+      "error": "ዕውቂያዎን ሲያክሉ አንድ ነገር ተሳስቷል",
       "footer": "በኋላ ላይ በመገለጫው አካባቢ ውስጥ ማከል ይችላሉ"
     },
     "contact_validator": {
