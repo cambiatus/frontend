@@ -4,6 +4,7 @@ module View.Modal exposing
     , withBody
     , withFooter
     , withHeader
+    , withLarge
     )
 
 {-| Modal dialog (popup)
@@ -28,7 +29,7 @@ and call `toHtml` at the end of the pipeline:
 -}
 
 import Html exposing (Html, button, div, h3, text)
-import Html.Attributes exposing (class)
+import Html.Attributes exposing (class, classList)
 import Html.Events exposing (onClick)
 import Icons
 
@@ -43,6 +44,7 @@ type alias Options msg =
     { header : Maybe String
     , body : Maybe (List (Html msg))
     , footer : Maybe (List (Html msg))
+    , isLarge : Bool
     , isVisible : Bool
     , closeMsg : msg
     }
@@ -68,6 +70,7 @@ initWith : RequiredOptions msg -> Modal msg
 initWith reqOpts =
     Modal
         { closeMsg = reqOpts.closeMsg
+        , isLarge = False
         , isVisible = reqOpts.isVisible
         , header = Nothing
         , body = Nothing
@@ -92,6 +95,11 @@ withBody body (Modal options) =
 withFooter : List (Html msg) -> Modal msg -> Modal msg
 withFooter footer (Modal options) =
     Modal { options | footer = Just footer }
+
+
+withLarge : Bool -> Modal msg -> Modal msg
+withLarge large (Modal options) =
+    Modal { options | isLarge = large }
 
 
 
@@ -122,7 +130,7 @@ viewModalDetails options =
         body =
             case options.body of
                 Just b ->
-                    div [ class "modal-body" ]
+                    div [ class "modal-body", classList [ ( "modal-body-lg", options.isLarge ) ] ]
                         b
 
                 Nothing ->

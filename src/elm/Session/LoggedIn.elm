@@ -770,6 +770,7 @@ addContactModal ({ addContactInfo, shared } as model) =
             , img [ class "mx-auto mt-10", src "/images/girl-with-phone.svg" ] []
             , form
             ]
+        |> Modal.withLarge True
         |> Modal.toHtml
 
 
