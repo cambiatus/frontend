@@ -408,8 +408,9 @@ viewTabs { t } results activeTab =
                     class "cursor-not-allowed text-gray-300"
                 ]
                 [ text label
-                , text " "
+                , text " ("
                 , text (String.fromInt count)
+                , text ")"
                 ]
     in
     ul [ class "space-x-2 flex items-stretch leading-10 p-4 pb-2 bg-white" ]
