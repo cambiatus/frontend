@@ -185,6 +185,10 @@ textarea.input {
   @apply bg-white rounded-t-lg absolute bottom-0 w-full;
 }
 
+.modal-content-lg {
+  @apply rounded-t-none top-0;
+}
+
 .modal-header {
   @apply w-full font-medium text-heading p-4 pb-2;
 }
@@ -196,7 +200,7 @@ textarea.input {
 }
 
 .modal-body-lg {
-  max-height: 90vh;
+  max-height: unset;
 }
 
 .modal-footer {

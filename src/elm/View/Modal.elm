@@ -130,7 +130,10 @@ viewModalDetails options =
         body =
             case options.body of
                 Just b ->
-                    div [ class "modal-body", classList [ ( "modal-body-lg", options.isLarge ) ] ]
+                    div
+                        [ class "modal-body"
+                        , classList [ ( "modal-body-lg", options.isLarge ) ]
+                        ]
                         b
 
                 Nothing ->
@@ -153,7 +156,9 @@ viewModalDetails options =
             ]
             []
         , div
-            [ class "modal-content" ]
+            [ class "modal-content"
+            , classList [ ( "modal-content-lg", options.isLarge ) ]
+            ]
             [ button
                 [ class "absolute top-0 right-0 mx-4 my-4"
                 , onClick options.closeMsg
