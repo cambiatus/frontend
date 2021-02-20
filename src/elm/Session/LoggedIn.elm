@@ -1206,7 +1206,6 @@ update msg model =
             let
                 validator =
                     Contact.validator addContactInfo.contactType shared.translators
-                        |> Debug.log "Submitted"
             in
             case
                 Validate.validate validator
