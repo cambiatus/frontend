@@ -65,6 +65,7 @@ import Time
 import Translation
 import UpdateResult as UR
 import Validate
+import View.Form
 import View.Form.Input as Input
 import View.Form.Select as Select
 import View.Modal as Modal
@@ -209,20 +210,22 @@ type ProfileStatus
 
 type alias AddContactModal =
     { show : Bool
-    , contactOption : ContactType
+    , contactType : ContactType
     , country : Contact.Country
     , contact : String
-    , contactProblems : Maybe (List String)
+    , errors : Maybe (List String)
+    , showFlags : Bool
     }
 
 
 initAddContactModal : Bool -> AddContactModal
 initAddContactModal show =
     { show = show
-    , contactOption = ContactType.Instagram
+    , contactType = ContactType.Instagram
     , country = Contact.Brazil
     , contact = ""
-    , contactProblems = Nothing
+    , errors = Nothing
+    , showFlags = False
     }
 
 
@@ -663,34 +666,60 @@ addContactModal ({ addContactInfo, shared } as model) =
                 (Select.init "contact_type"
                     (shared.translators.t "contact_modal.contact_type")
                     EnteredContactOption
-                    (ContactType.toString addContactInfo.contactOption)
+                    (ContactType.toString addContactInfo.contactType)
                     Nothing
                 )
                 contactOptions
                 |> Select.toHtml
 
         countryOptions =
-            List.map
-                (\country ->
-                    let
-                        asString =
-                            Contact.countryToString country
-                    in
-                    { value = asString, label = asString }
-                )
-                Contact.listCountries
+            addContactInfo.country
+                :: List.filter
+                    (\country -> country /= addContactInfo.country)
+                    Contact.listCountries
 
-        countrySelect =
-            div [ class "flex-shrink-0" ]
-                [ List.foldr (\option select -> Select.withOption option select)
-                    (Select.init "contact_country"
-                        (shared.translators.t "contact_modal.country")
-                        EnteredContactCountry
-                        (Contact.countryToString addContactInfo.country)
-                        Nothing
-                    )
-                    countryOptions
-                    |> Select.toHtml
+        flag country =
+            button
+                [ class "w-full"
+                , onClick (SelectedContactCountry country)
+                , type_ "button"
+                ]
+                [ img
+                    [ class "w-7"
+                    , src (Contact.countryToFlag country)
+                    ]
+                    []
+                ]
+
+        flagsSelect =
+            div [ class "mb-10 flex-shrink-0", Html.Attributes.id "flags_select" ]
+                [ if addContactInfo.showFlags then
+                    -- Invisible button to close flags selection
+                    button
+                        [ class "absolute top-0 left-0 w-full h-full cursor-default z-40"
+                        , onClick ClickedToggleContactFlags
+                        , type_ "button"
+                        ]
+                        []
+
+                  else
+                    Html.text ""
+                , View.Form.label "flags_select" "Country"
+                , button
+                    [ class "form-select select relative"
+                    , classList [ ( "border-none mx-px", addContactInfo.showFlags ) ]
+                    , onClick ClickedToggleContactFlags
+                    , type_ "button"
+                    ]
+                    [ flag addContactInfo.country
+                    , if addContactInfo.showFlags then
+                        div
+                            [ class "absolute form-input -mx-px inset-x-0 top-0 space-y-4 z-50" ]
+                            (List.map flag countryOptions)
+
+                      else
+                        Html.text ""
+                    ]
                 ]
 
         phoneInput =
@@ -702,7 +731,7 @@ addContactModal ({ addContactInfo, shared } as model) =
                     , disabled = False
                     , value = addContactInfo.contact
                     , placeholder = Just (shared.translators.t "contact_modal.phone.placeholder")
-                    , problems = addContactInfo.contactProblems
+                    , problems = addContactInfo.errors
                     , translators = model.shared.translators
                     }
                     |> Input.toHtml
@@ -717,19 +746,19 @@ addContactModal ({ addContactInfo, shared } as model) =
                     , disabled = False
                     , value = addContactInfo.contact
                     , placeholder = Just (shared.translators.t "contact_modal.username.placeholder")
-                    , problems = addContactInfo.contactProblems
+                    , problems = addContactInfo.errors
                     , translators = model.shared.translators
                     }
                     |> Input.toHtml
                 ]
 
         isPhoneContact =
-            Contact.usesPhone addContactInfo.contactOption
+            Contact.usesPhone addContactInfo.contactType
 
         contactForm =
             div [ class "flex space-x-4" ]
                 (if isPhoneContact then
-                    [ countrySelect, phoneInput ]
+                    [ flagsSelect, phoneInput ]
 
                  else
                     [ contactInput ]
@@ -905,7 +934,8 @@ type Msg
     | HideFeedbackLocal
     | CloseAddContactModal
     | EnteredContactOption String
-    | EnteredContactCountry String
+    | ClickedToggleContactFlags
+    | SelectedContactCountry Contact.Country
     | EnteredContactText String
     | SubmittedContactModalForm
     | CompletedUpdateContact (Result (Graphql.Http.Error (Maybe Profile.Model)) (Maybe Profile.Model))
@@ -1147,23 +1177,23 @@ update msg model =
             { model
                 | addContactInfo =
                     { addContactInfo
-                        | contactOption =
+                        | contactType =
                             ContactType.fromString contactOption
                                 |> Maybe.withDefault ContactType.Instagram
-                        , contactProblems = Nothing
+                        , errors = Nothing
                     }
             }
                 |> UR.init
 
-        EnteredContactCountry contactCountry ->
+        ClickedToggleContactFlags ->
             { model
                 | addContactInfo =
-                    { addContactInfo
-                        | country =
-                            Contact.countryFromString contactCountry
-                                |> Maybe.withDefault Contact.Brazil
-                    }
+                    { addContactInfo | showFlags = not addContactInfo.showFlags }
             }
+                |> UR.init
+
+        SelectedContactCountry country ->
+            { model | addContactInfo = { addContactInfo | country = country } }
                 |> UR.init
 
         EnteredContactText contact ->
@@ -1175,7 +1205,8 @@ update msg model =
         SubmittedContactModalForm ->
             let
                 validator =
-                    Contact.validator addContactInfo.contactOption shared.translators
+                    Contact.validator addContactInfo.contactType shared.translators
+                        |> Debug.log "Submitted"
             in
             case
                 Validate.validate validator
@@ -1210,7 +1241,7 @@ update msg model =
                     { model
                         | addContactInfo =
                             { addContactInfo
-                                | contactProblems = Just [ shared.translators.t "contact_modal.error" ]
+                                | errors = Just [ shared.translators.t "contact_modal.error" ]
                             }
                     }
                         |> UR.init
@@ -1228,8 +1259,8 @@ addContact ({ shared } as model) userProfile contact =
 
 
 contactModalToContact : AddContactModal -> Contact
-contactModalToContact { contactOption, contact } =
-    { contactType = contactOption, contact = contact }
+contactModalToContact { contactType, contact } =
+    { contactType = contactType, contact = contact }
 
 
 updateProfileContacts : Profile.Model -> Validate.Valid Contact.Normalized -> Profile.Model
@@ -1300,7 +1331,7 @@ readAllNotifications model =
 
 addContactError : Model -> String -> Model
 addContactError ({ addContactInfo } as model) error =
-    { model | addContactInfo = { addContactInfo | contactProblems = Just [ error ] } }
+    { model | addContactInfo = { addContactInfo | errors = Just [ error ] } }
 
 
 
@@ -1439,8 +1470,11 @@ msgToString msg =
         EnteredContactOption contactOption ->
             [ "EnteredContactOption", contactOption ]
 
-        EnteredContactCountry contactCountry ->
-            [ "EnteredContactCountry", contactCountry ]
+        ClickedToggleContactFlags ->
+            [ "ClickedShowContactFlags" ]
+
+        SelectedContactCountry _ ->
+            [ "SelectedContactCountry" ]
 
         EnteredContactText contact ->
             [ "EnteredContactText", contact ]

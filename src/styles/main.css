@@ -186,7 +186,7 @@ textarea.input {
 }
 
 .modal-content-lg {
-  @apply rounded-t-none top-0;
+  @apply rounded-t-none top-0 overflow-auto;
 }
 
 .modal-header {

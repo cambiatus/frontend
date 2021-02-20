@@ -2,8 +2,7 @@ module Profile.Contact exposing
     ( Contact
     , Country(..)
     , Normalized
-    , countryFromString
-    , countryToString
+    , countryToFlag
     , decode
     , encode
     , hasSameType
@@ -190,30 +189,14 @@ listCountries =
     [ Brazil, CostaRica, Ethiopia ]
 
 
-countryToString : Country -> String
-countryToString country =
+countryToFlag : Country -> String
+countryToFlag country =
     case country of
         Brazil ->
-            "Brasil"
+            "/icons/portuguese-lang.svg"
 
         CostaRica ->
-            "Costa Rica"
+            "/icons/costa-rica-flag.svg"
 
         Ethiopia ->
-            "Ethiopia"
-
-
-countryFromString : String -> Maybe Country
-countryFromString countryString =
-    case countryString of
-        "Brasil" ->
-            Just Brazil
-
-        "Costa Rica" ->
-            Just CostaRica
-
-        "Ethiopia" ->
-            Just Ethiopia
-
-        _ ->
-            Nothing
+            "/icons/amh-lang.svg"
