@@ -885,19 +885,25 @@
     "new": "Nuevo",
     "title": "Agrega tu Número de Teléfono",
     "contact_type": "Tipo de Contacto",
-    "country": "País",
     "phone": {
-      "label": "Número de teléfono (con DDD)",
-      "placeholder": "Ej.: 11964337131",
       "submit": "Agregar el número de teléfono"
     },
     "username": {
-      "label": "Nombre de Usuario",
-      "placeholder": "Ej.: cambiatus",
       "submit": "Agregar Perfil"
     },
     "error": "Algo salió mal al agregar su contacto",
     "footer": "Puedes agregarlo más tarde en el área del perfil"
+  },
+  "contact_form": {
+    "country": "País",
+    "phone": {
+      "label": "Número de teléfono (con DDD)",
+      "placeholder": "Ej.: 11964337131"
+    },
+    "username": {
+      "label": "Nombre de Usuario",
+      "placeholder": "Ej.: cambiatus"
+    }
   },
   "contact_validator": {
     "phone": {

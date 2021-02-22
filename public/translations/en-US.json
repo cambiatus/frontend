@@ -883,19 +883,25 @@
     "new": "New",
     "title": "Add your Phone Number",
     "contact_type": "Contact type",
-    "country": "Country",
     "phone": {
-      "label": "Phone Number (with DDD)",
-      "placeholder": "Ex.: 11964337131",
       "submit": "Add Phone Number"
     },
     "username": {
-      "label": "Username",
-      "placeholder": "Ex.: cambiatus",
       "submit": "Add Profile"
     },
     "error": "Something went wrong when adding your contact",
     "footer": "You can add it later in the profile's area"
+  },
+  "contact_form": {
+    "country": "Country",
+    "phone": {
+      "label": "Phone Number (with DDD)",
+      "placeholder": "Ex.: 11964337131"
+    },
+    "username": {
+      "label": "Username",
+      "placeholder": "Ex.: cambiatus"
+    }
   },
   "contact_validator": {
     "phone": {

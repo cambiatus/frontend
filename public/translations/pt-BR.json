@@ -887,19 +887,25 @@
     "new": "Novo",
     "title": "Adicione seu Número de Telefone",
     "contact_type": "Tipo de contato",
-    "country": "País",
     "phone": {
-      "label": "Número de Telefone (com DDD)",
-      "placeholder": "Ex.: 11964337131",
       "submit": "Adicionar Número de Telefone"
     },
     "username": {
-      "label": "Nome de Usuário",
-      "placeholder": "Ex.: cambiatus",
       "submit": "Adicionar Perfil"
     },
     "error": "Algo deu errado ao adicionar seu contato",
     "footer": "Você pode fazer isso mais tarde na área do perfil"
+  },
+  "contact_form": {
+    "country": "País",
+    "phone": {
+      "label": "Número de Telefone (com DDD)",
+      "placeholder": "Ex.: 11964337131"
+    },
+    "username": {
+      "label": "Nome de Usuário",
+      "placeholder": "Ex.: cambiatus"
+    }
   },
   "contact_validator": {
     "phone": {

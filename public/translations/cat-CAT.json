@@ -885,19 +885,25 @@
     "new": "Novetat",
     "title": "Afegiu el vostre Número de Telèfon",
     "contact_type": "Tipus de contacte",
-    "country": "País",
     "phone": {
-      "label": "Número de telèfon (amb DDD)",
-      "placeholder": "Ex.: 11964337131",
       "submit": "Afegiu un Número de Telèfon"
     },
     "username": {
-      "label": "Nom d'usuari",
-      "placeholder": "Ex.: cambiatus",
       "submit": "Afegeix un perfil"
     },
     "error": "S'ha produït un error en afegir el vostre contacte",
     "footer": "Podeu afegir-lo més endavant a l'àrea del perfil"
+  },
+  "contact_form": {
+    "country": "País",
+    "phone": {
+      "label": "Número de telèfon (amb DDD)",
+      "placeholder": "Ex.: 11964337131"
+    },
+    "username": {
+      "label": "Nom d'usuari",
+      "placeholder": "Ex.: cambiatus"
+    }
   },
   "contact_validator": {
     "phone": {

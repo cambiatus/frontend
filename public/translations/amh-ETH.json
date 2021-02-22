@@ -844,19 +844,25 @@
       "new": "አዲስ",
       "title": "የስልክ ቁጥርዎን ያክሉ",
       "contact_type": "የእውቂያ ዓይነት",
-      "country": "ሀገር",
       "phone": {
-        "label": "የስልክ ቁጥር (ከዲዲዲ ጋር)",
-        "placeholder": "ዘጸ-11964337131",
         "submit": "ስልክ ቁጥር ያክሉ"
       },
       "username": {
-        "label": "የተጠቃሚ ስም",
-        "placeholder": "ዘፀ: cambiatus",
         "submit": "መገለጫ ያክሉ"
       },
       "error": "ዕውቂያዎን ሲያክሉ አንድ ነገር ተሳስቷል",
       "footer": "በኋላ ላይ በመገለጫው አካባቢ ውስጥ ማከል ይችላሉ"
+    },
+    "contact_form": {
+      "country": "ሀገር",
+      "phone": {
+        "label": "የስልክ ቁጥር (ከዲዲዲ ጋር)",
+        "placeholder": "ዘጸ-11964337131"
+      },
+      "username": {
+        "label": "የተጠቃሚ ስም",
+        "placeholder": "ዘፀ: cambiatus"
+      }
     },
     "contact_validator": {
       "phone": {
