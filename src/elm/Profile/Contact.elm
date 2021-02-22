@@ -193,10 +193,10 @@ countryToFlag : Country -> String
 countryToFlag country =
     case country of
         Brazil ->
-            "/icons/portuguese-lang.svg"
+            "/icons/flag-brazil.svg"
 
         CostaRica ->
-            "/icons/costa-rica-flag.svg"
+            "/icons/flag-costa-rica.svg"
 
         Ethiopia ->
-            "/icons/amh-lang.svg"
+            "/icons/flag-ethiopia.svg"
