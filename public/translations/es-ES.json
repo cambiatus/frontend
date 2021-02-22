@@ -894,7 +894,7 @@
     "username": {
       "label": "Nombre de Usuario",
       "placeholder": "Ej.: cambiatus",
-      "submit": "Agregar perfil"
+      "submit": "Agregar Perfil"
     },
     "error": "Algo salió mal al agregar su contacto",
     "footer": "Puedes agregarlo más tarde en el área del perfil"
