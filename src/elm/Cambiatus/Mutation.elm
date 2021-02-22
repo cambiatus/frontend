@@ -170,13 +170,3 @@ upsertKyc :
     -> SelectionSet (Maybe decodesTo) RootMutation
 upsertKyc requiredArgs object_ =
     Object.selectionForCompositeField "upsertKyc" [ Argument.required "input" requiredArgs.input Cambiatus.InputObject.encodeKycDataUpdateInput ] object_ (identity >> Decode.nullable)
-
-
-{-| Mark objective as completed
--}
-archiveObjective :
-    CompleteObjectiveRequiredArguments
-    -> SelectionSet decodesTo Cambiatus.Object.Objective
-    -> SelectionSet (Maybe decodesTo) RootMutation
-archiveObjective requiredArgs object_ =
-    Object.selectionForCompositeField "archiveObjective" [ Argument.required "input" requiredArgs.input Cambiatus.InputObject.encodeCompleteObjectiveInput ] object_ (identity >> Decode.nullable)

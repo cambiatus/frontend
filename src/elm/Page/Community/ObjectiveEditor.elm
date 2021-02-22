@@ -101,7 +101,7 @@ type alias UpdateResult =
 
 type Msg
     = CompletedCommunityLoad (Result (Graphql.Http.Error (Maybe Community)) (Maybe Community))
-    | CompletedArchiveMutation (Graphql.Http.Error Int)
+    | CompletedArchiveMutation (Result (Graphql.Http.Error (Maybe ())) (Maybe ()))
     | EnteredDescription String
     | ClickedSaveObjective
     | ClickedArchiveObjetive
@@ -424,25 +424,30 @@ update msg model loggedIn =
                         (Just ClickedSaveObjective |> RequiredAuthentication)
 
         ClickedArchiveObjetive ->
-            let
+            case model.objectiveId of
+                Just objectiveId ->
+                    model
+                        |> UR.init
+                        |> UR.addCmd
+                            (Api.Graphql.mutation loggedIn.shared
+                                (Mutation.completeObjective
+                                    { input = { objectiveId = objectiveId } }
+                                    empty
+                                )
+                                CompletedArchiveMutation
+                            )
 
-                newObjectiveId = Maybe.withDefault 0 model.objectiveId
-                buildRequiredRecord: Int -> CompleteObjectiveInput
-                buildRequiredRecord objectiveId =
-                    { objectiveId = objectiveId }
+                Nothing ->
+                    model
+                        |> UR.init
 
-            in
-            
-            UR.init model
+        CompletedArchiveMutation (Ok _) ->
+            model
                 |> UR.init
-                |> UR.addCmd
-                    (Api.Graphql.mutation loggedIn.shared
-                        (Mutation.archiveObjective
-                            { input = Cambiatus.InputObject.buildCompleteObjectiveInput (buildRequiredRecord newObjectiveId) }
-                            empty
-                        )
-                        CompletedArchiveMutation
-                    )
+
+        CompletedArchiveMutation (Err _) ->
+            model
+                |> UR.init
 
         GotSaveObjectiveResponse (Ok _) ->
             UR.init model
@@ -486,6 +491,9 @@ jsAddressToMsg addr val =
 msgToString : Msg -> List String
 msgToString msg =
     case msg of
+        CompletedArchiveMutation _ ->
+            [ "CompletedArchiveMutation" ]
+
         CompletedCommunityLoad _ ->
             [ "CompletedCommunityLoad" ]
 
