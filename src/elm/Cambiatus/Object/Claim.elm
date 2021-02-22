@@ -48,7 +48,7 @@ checks fillInOptionals object_ =
 
 
 claimer :
-    SelectionSet decodesTo Cambiatus.Object.Profile
+    SelectionSet decodesTo Cambiatus.Object.User
     -> SelectionSet decodesTo Cambiatus.Object.Claim
 claimer object_ =
     Object.selectionForCompositeField "claimer" [] object_ identity

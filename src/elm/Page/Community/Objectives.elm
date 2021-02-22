@@ -1,5 +1,6 @@
 module Page.Community.Objectives exposing (Model, Msg, init, msgToString, update, view)
 
+import Action exposing (Action)
 import Api.Graphql
 import Cambiatus.Enum.VerificationType as VerificationType
 import Community exposing (Model)
@@ -192,7 +193,7 @@ viewObjective ({ shared } as loggedIn) model community index objective =
         ]
 
 
-viewAction : LoggedIn.Model -> Model -> Int -> Community.Action -> Html Msg
+viewAction : LoggedIn.Model -> Model -> Int -> Action -> Html Msg
 viewAction ({ shared } as loggedIn) model objectiveId action =
     let
         posixDeadline : Posix
@@ -236,7 +237,7 @@ viewAction ({ shared } as loggedIn) model objectiveId action =
             loggedIn.shared.translators.tr r_id replaces
     in
     div [ class "flex flex-wrap sm:flex-no-wrap mt-8 mb-4 relative bg-purple-500 rounded-lg px-4 py-5" ]
-        [ div [ class "absolute top-0 left-0 right-0 -mt-6" ] [ Icons.flag "w-full" ]
+        [ div [ class "absolute top-0 left-0 right-0 -mt-6" ] [ Icons.flag "w-full fill-current text-green" ]
         , div [ class "w-full" ]
             [ p [ class "text-white" ] [ text action.description ]
             , div [ class "flex flex-wrap my-6 -mx-2 items-center" ]
@@ -255,7 +256,7 @@ viewAction ({ shared } as loggedIn) model objectiveId action =
                         [ p [ class "input-label" ]
                             [ text_ "community.actions.validation_reward" ]
                         , p [ class "uppercase text-body text-white" ]
-                            [ String.fromFloat action.verificationReward
+                            [ String.fromFloat action.verifierReward
                                 ++ " "
                                 ++ Eos.symbolToString model.communityId
                                 |> text

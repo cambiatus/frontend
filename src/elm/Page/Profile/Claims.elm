@@ -10,7 +10,7 @@ module Page.Profile.Claims exposing
 
 import Api.Graphql
 import Cambiatus.Object
-import Cambiatus.Object.Profile as Profile
+import Cambiatus.Object.User as Profile
 import Cambiatus.Query
 import Claim
 import Eos
@@ -296,11 +296,11 @@ profileClaimQuery : LoggedIn.Model -> String -> Cmd Msg
 profileClaimQuery ({ shared } as loggedIn) accountName =
     Api.Graphql.query
         shared
-        (Cambiatus.Query.profile { account = accountName } (selectionSet loggedIn.selectedCommunity))
+        (Cambiatus.Query.user { account = accountName } (selectionSet loggedIn.selectedCommunity))
         ClaimsLoaded
 
 
-selectionSet : Eos.Symbol -> SelectionSet ProfileClaims Cambiatus.Object.Profile
+selectionSet : Eos.Symbol -> SelectionSet ProfileClaims Cambiatus.Object.User
 selectionSet communityId =
     SelectionSet.succeed ProfileClaims
         |> with (Profile.claims (\_ -> { communityId = Present (Eos.symbolToString communityId) }) Claim.selectionSet)

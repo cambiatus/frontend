@@ -4,6 +4,7 @@
 
 module Cambiatus.InputObject exposing (..)
 
+import Cambiatus.Enum.ContactType
 import Cambiatus.Enum.VerificationType
 import Cambiatus.Interface
 import Cambiatus.Object
@@ -289,6 +290,40 @@ encodeCompleteObjectiveInput input =
         [ ( "objectiveId", Encode.int input.objectiveId |> Just ) ]
 
 
+buildContactInput :
+    (ContactInputOptionalFields -> ContactInputOptionalFields)
+    -> ContactInput
+buildContactInput fillOptionals =
+    let
+        optionals =
+            fillOptionals
+                { externalId = Absent, type_ = Absent }
+    in
+    { externalId = optionals.externalId, type_ = optionals.type_ }
+
+
+type alias ContactInputOptionalFields =
+    { externalId : OptionalArgument String
+    , type_ : OptionalArgument Cambiatus.Enum.ContactType.ContactType
+    }
+
+
+{-| Type for the ContactInput input object.
+-}
+type alias ContactInput =
+    { externalId : OptionalArgument String
+    , type_ : OptionalArgument Cambiatus.Enum.ContactType.ContactType
+    }
+
+
+{-| Encode a ContactInput into a value that can be used as an argument.
+-}
+encodeContactInput : ContactInput -> Value
+encodeContactInput input =
+    Encode.maybeObject
+        [ ( "externalId", Encode.string |> Encode.optional input.externalId ), ( "type", Encode.enum Cambiatus.Enum.ContactType.toString |> Encode.optional input.type_ ) ]
+
+
 buildCountryInput :
     CountryInputRequiredFields
     -> CountryInput
@@ -493,54 +528,6 @@ encodeProductsFilterInput input =
         [ ( "account", Encode.string input.account |> Just ), ( "inStock", Encode.bool |> Encode.optional input.inStock ) ]
 
 
-buildProfileUpdateInput :
-    ProfileUpdateInputRequiredFields
-    -> (ProfileUpdateInputOptionalFields -> ProfileUpdateInputOptionalFields)
-    -> ProfileUpdateInput
-buildProfileUpdateInput required fillOptionals =
-    let
-        optionals =
-            fillOptionals
-                { avatar = Absent, bio = Absent, email = Absent, interests = Absent, location = Absent, name = Absent }
-    in
-    { account = required.account, avatar = optionals.avatar, bio = optionals.bio, email = optionals.email, interests = optionals.interests, location = optionals.location, name = optionals.name }
-
-
-type alias ProfileUpdateInputRequiredFields =
-    { account : String }
-
-
-type alias ProfileUpdateInputOptionalFields =
-    { avatar : OptionalArgument String
-    , bio : OptionalArgument String
-    , email : OptionalArgument String
-    , interests : OptionalArgument String
-    , location : OptionalArgument String
-    , name : OptionalArgument String
-    }
-
-
-{-| Type for the ProfileUpdateInput input object.
--}
-type alias ProfileUpdateInput =
-    { account : String
-    , avatar : OptionalArgument String
-    , bio : OptionalArgument String
-    , email : OptionalArgument String
-    , interests : OptionalArgument String
-    , location : OptionalArgument String
-    , name : OptionalArgument String
-    }
-
-
-{-| Encode a ProfileUpdateInput into a value that can be used as an argument.
--}
-encodeProfileUpdateInput : ProfileUpdateInput -> Value
-encodeProfileUpdateInput input =
-    Encode.maybeObject
-        [ ( "account", Encode.string input.account |> Just ), ( "avatar", Encode.string |> Encode.optional input.avatar ), ( "bio", Encode.string |> Encode.optional input.bio ), ( "email", Encode.string |> Encode.optional input.email ), ( "interests", Encode.string |> Encode.optional input.interests ), ( "location", Encode.string |> Encode.optional input.location ), ( "name", Encode.string |> Encode.optional input.name ) ]
-
-
 buildPushSubscriptionInput :
     PushSubscriptionInputRequiredFields
     -> PushSubscriptionInput
@@ -678,3 +665,53 @@ encodeUnreadNotificationsSubscriptionInput : UnreadNotificationsSubscriptionInpu
 encodeUnreadNotificationsSubscriptionInput input =
     Encode.maybeObject
         [ ( "account", Encode.string input.account |> Just ) ]
+
+
+buildUserUpdateInput :
+    UserUpdateInputRequiredFields
+    -> (UserUpdateInputOptionalFields -> UserUpdateInputOptionalFields)
+    -> UserUpdateInput
+buildUserUpdateInput required fillOptionals =
+    let
+        optionals =
+            fillOptionals
+                { avatar = Absent, bio = Absent, contacts = Absent, email = Absent, interests = Absent, location = Absent, name = Absent }
+    in
+    { account = required.account, avatar = optionals.avatar, bio = optionals.bio, contacts = optionals.contacts, email = optionals.email, interests = optionals.interests, location = optionals.location, name = optionals.name }
+
+
+type alias UserUpdateInputRequiredFields =
+    { account : String }
+
+
+type alias UserUpdateInputOptionalFields =
+    { avatar : OptionalArgument String
+    , bio : OptionalArgument String
+    , contacts : OptionalArgument (List ContactInput)
+    , email : OptionalArgument String
+    , interests : OptionalArgument String
+    , location : OptionalArgument String
+    , name : OptionalArgument String
+    }
+
+
+{-| Type for the UserUpdateInput input object.
+-}
+type alias UserUpdateInput =
+    { account : String
+    , avatar : OptionalArgument String
+    , bio : OptionalArgument String
+    , contacts : OptionalArgument (List ContactInput)
+    , email : OptionalArgument String
+    , interests : OptionalArgument String
+    , location : OptionalArgument String
+    , name : OptionalArgument String
+    }
+
+
+{-| Encode a UserUpdateInput into a value that can be used as an argument.
+-}
+encodeUserUpdateInput : UserUpdateInput -> Value
+encodeUserUpdateInput input =
+    Encode.maybeObject
+        [ ( "account", Encode.string input.account |> Just ), ( "avatar", Encode.string |> Encode.optional input.avatar ), ( "bio", Encode.string |> Encode.optional input.bio ), ( "contacts", (encodeContactInput |> Encode.list) |> Encode.optional input.contacts ), ( "email", Encode.string |> Encode.optional input.email ), ( "interests", Encode.string |> Encode.optional input.interests ), ( "location", Encode.string |> Encode.optional input.location ), ( "name", Encode.string |> Encode.optional input.name ) ]

@@ -57,7 +57,7 @@ createdTx =
 
 
 from :
-    SelectionSet decodesTo Cambiatus.Object.Profile
+    SelectionSet decodesTo Cambiatus.Object.User
     -> SelectionSet decodesTo Cambiatus.Object.Order
 from object_ =
     Object.selectionForCompositeField "from" [] object_ identity
@@ -86,7 +86,7 @@ productId =
 
 
 to :
-    SelectionSet decodesTo Cambiatus.Object.Profile
+    SelectionSet decodesTo Cambiatus.Object.User
     -> SelectionSet decodesTo Cambiatus.Object.Order
 to object_ =
     Object.selectionForCompositeField "to" [] object_ identity

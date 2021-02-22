@@ -2,8 +2,9 @@
 -- https://github.com/dillonkearns/elm-graphql
 
 
-module Cambiatus.Object.Invite exposing (..)
+module Cambiatus.Object.Contact exposing (..)
 
+import Cambiatus.Enum.ContactType
 import Cambiatus.InputObject
 import Cambiatus.Interface
 import Cambiatus.Object
@@ -19,15 +20,11 @@ import Graphql.SelectionSet exposing (SelectionSet)
 import Json.Decode as Decode
 
 
-community :
-    SelectionSet decodesTo Cambiatus.Object.Community
-    -> SelectionSet decodesTo Cambiatus.Object.Invite
-community object_ =
-    Object.selectionForCompositeField "community" [] object_ identity
+externalId : SelectionSet (Maybe String) Cambiatus.Object.Contact
+externalId =
+    Object.selectionForField "(Maybe String)" "externalId" [] (Decode.string |> Decode.nullable)
 
 
-creator :
-    SelectionSet decodesTo Cambiatus.Object.User
-    -> SelectionSet decodesTo Cambiatus.Object.Invite
-creator object_ =
-    Object.selectionForCompositeField "creator" [] object_ identity
+type_ : SelectionSet (Maybe Cambiatus.Enum.ContactType.ContactType) Cambiatus.Object.Contact
+type_ =
+    Object.selectionForField "(Maybe Enum.ContactType.ContactType)" "type" [] (Cambiatus.Enum.ContactType.decoder |> Decode.nullable)

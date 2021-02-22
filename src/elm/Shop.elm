@@ -11,7 +11,7 @@ module Shop exposing
 import Avatar exposing (Avatar)
 import Cambiatus.Object
 import Cambiatus.Object.Product
-import Cambiatus.Object.Profile as User
+import Cambiatus.Object.User as User
 import Cambiatus.Query as Query
 import Eos exposing (Symbol)
 import Eos.Account as Eos
@@ -117,7 +117,7 @@ productSelection =
         |> with (Cambiatus.Object.Product.creator shopProfileSelectionSet)
 
 
-shopProfileSelectionSet : SelectionSet ShopProfile Cambiatus.Object.Profile
+shopProfileSelectionSet : SelectionSet ShopProfile Cambiatus.Object.User
 shopProfileSelectionSet =
     SelectionSet.succeed ShopProfile
         |> with (Eos.nameSelectionSet User.account)
