@@ -8,6 +8,7 @@ module Page.Community.ActionEditor exposing
     , view
     )
 
+import Action exposing (Action)
 import Api.Graphql
 import Cambiatus.Enum.VerificationType as VerificationType
 import Cambiatus.Scalar exposing (DateTime(..))
@@ -162,7 +163,7 @@ initForm =
     }
 
 
-editForm : Form -> Community.Action -> Form
+editForm : Form -> Action -> Form
 editForm form action =
     let
         dateValidator : Maybe (Validator String)
@@ -219,7 +220,7 @@ editForm form action =
 
                     verifierRewardValidator =
                         defaultVerificationReward
-                            |> updateInput (String.fromFloat action.verificationReward)
+                            |> updateInput (String.fromFloat action.verifierReward)
 
                     photoProof =
                         case ( action.hasProofPhoto, action.hasProofCode ) of

@@ -27,6 +27,8 @@ module Session.LoggedIn exposing
     , viewFooter
     )
 
+import Action
+import Api
 import Api.Graphql
 import Auth
 import Avatar
@@ -48,7 +50,7 @@ import Html exposing (Html, a, button, div, footer, img, nav, p, span, text)
 import Html.Attributes exposing (class, classList, src, style, type_)
 import Html.Events exposing (onClick, onMouseEnter, onSubmit)
 import Http
-import I18Next exposing (Delims(..), Translations, t)
+import I18Next exposing (Delims(..), Translations)
 import Icons
 import Json.Decode as Decode exposing (Value)
 import Json.Encode as Encode exposing (Value)
@@ -58,10 +60,11 @@ import Ports
 import Profile exposing (Model)
 import Profile.Contact as Contact exposing (Contact)
 import Route exposing (Route)
+import Search exposing (State(..))
 import Session.Shared as Shared exposing (Shared)
 import Shop
 import Task
-import Time
+import Time exposing (Posix)
 import Translation
 import UpdateResult as UR
 import Validate
@@ -85,6 +88,8 @@ init shared accountName flags =
     , Cmd.batch
         [ Api.Graphql.query shared (Profile.query accountName) CompletedLoadProfile
         , Api.Graphql.query shared (Community.settingsQuery flags.selectedCommunity) CompletedLoadSettings
+        , Ports.getRecentSearches () -- run on the page refresh, duplicated in `initLogin`
+        , Task.perform GotTime Time.now
         ]
     )
 
@@ -110,9 +115,12 @@ initLogin shared authModel profile_ =
     ( { model
         | profile = Loaded profile_
       }
-    , Task.perform
-        (\_ -> SelectCommunity selectedCommunity Cmd.none)
-        (Task.succeed ())
+    , Cmd.batch
+        [ Task.perform
+            (\_ -> SelectCommunity selectedCommunity Cmd.none)
+            (Task.succeed ())
+        , Ports.getRecentSearches () -- run on the passphrase login, duplicated in `init`
+        ]
     )
 
 
@@ -125,6 +133,8 @@ subscriptions model =
     Sub.batch
         [ Sub.map GotAuthMsg (Auth.subscriptions model.auth)
         , Sub.map KeyDown (Browser.Events.onKeyDown (Decode.field "key" Decode.string))
+        , Sub.map GotSearchMsg Search.subscriptions
+        , Sub.map GotActionMsg (Action.subscriptions model.claimingAction)
         ]
 
 
@@ -139,7 +149,6 @@ type alias Model =
     , selectedCommunity : Symbol
     , showUserNav : Bool
     , showLanguageItems : Bool
-    , searchText : String
     , showNotificationModal : Bool
     , showMainNav : Bool
     , notification : Notification.Model
@@ -152,6 +161,9 @@ type alias Model =
     , hasObjectives : FeatureStatus
     , hasKyc : FeatureStatus
     , addContactInfo : AddContactModal
+    , searchModel : Search.Model
+    , claimingAction : Action.Model
+    , date : Maybe Posix
     }
 
 
@@ -176,7 +188,6 @@ initModel shared authModel accountName selectedCommunity =
     , selectedCommunity = selectedCommunity
     , showUserNav = False
     , showLanguageItems = False
-    , searchText = ""
     , showNotificationModal = False
     , showMainNav = False
     , notification = Notification.init
@@ -189,6 +200,9 @@ initModel shared authModel accountName selectedCommunity =
     , hasObjectives = FeatureLoading
     , hasKyc = FeatureLoading
     , addContactInfo = initAddContactModal showContactModal
+    , searchModel = Search.init selectedCommunity
+    , claimingAction = { status = Action.NotAsked, feedback = Nothing, needsPinConfirmation = False }
+    , date = Nothing
     }
 
 
@@ -312,12 +326,12 @@ viewFeedback status message =
                     " bg-red"
     in
     div
-        [ class <| "w-full sticky z-10 top-0 transition duration-500 ease-in-out bg-blue-500 hover:bg-red-500 transform hover:-translate-y-1 hover:scale-110" ++ color
+        [ class <| "w-full sticky z-10 top-0 bg-blue-500 hover:bg-red-500" ++ color
         , style "display" "grid"
         , style "grid-template" "\". text x\" 100% / 10% 80% 10%"
         ]
         [ span
-            [ class "flex justify-center items-center text-sm h-10 leading-snug text-white font-bold"
+            [ class "flex justify-center items-center transition duration-500 ease-in-out text-sm h-10 leading-snug text-white font-bold transform hover:-translate-y-1 hover:scale-110"
             , style "grid-area" "text"
             ]
             [ text message ]
@@ -331,8 +345,81 @@ viewFeedback status message =
         ]
 
 
-viewHelper : (Msg -> msg) -> Page -> Profile.Model -> Model -> Html msg -> Html msg
-viewHelper thisMsg page profile_ ({ shared } as model) content =
+viewHelper : (Msg -> pageMsg) -> Page -> Profile.Model -> Model -> Html pageMsg -> Html pageMsg
+viewHelper pageMsg page profile_ ({ shared } as model) content =
+    let
+        { t } =
+            shared.translators
+    in
+    div
+        [ class "min-h-screen flex flex-col" ]
+        ([ div [ class "bg-white" ]
+            [ div [ class "container mx-auto" ]
+                [ viewHeader model profile_
+                    |> Html.map pageMsg
+                , if Search.isActive model.searchModel then
+                    text ""
+
+                  else
+                    viewMainMenu page model |> Html.map pageMsg
+                ]
+            , case model.feedback of
+                Show status message ->
+                    viewFeedback status message |> Html.map pageMsg
+
+                Hidden ->
+                    text ""
+            ]
+         ]
+            ++ (let
+                    viewClaimWithProofs action proof =
+                        [ Action.viewClaimWithProofs proof shared.translators (isAuth model) action
+                            |> Html.map (GotActionMsg >> pageMsg)
+                        ]
+                in
+                case ( Search.isActive model.searchModel, model.claimingAction.status ) of
+                    ( True, _ ) ->
+                        [ Search.viewSearchBody
+                            shared.translators
+                            model.selectedCommunity
+                            model.date
+                            (GotSearchMsg >> pageMsg)
+                            (GotActionMsg >> pageMsg)
+                            model.searchModel
+                        ]
+
+                    ( False, Action.PhotoUploaderShowed action p ) ->
+                        viewClaimWithProofs action p
+
+                    ( False, Action.ClaimInProgress action (Just p) ) ->
+                        viewClaimWithProofs action p
+
+                    _ ->
+                        viewPageBody model profile_ page content
+               )
+            ++ [ viewFooter shared
+               , Action.viewClaimConfirmation shared.translators model.claimingAction
+                    |> Html.map (GotActionMsg >> pageMsg)
+               , Modal.initWith
+                    { closeMsg = ClosedAuthModal
+                    , isVisible = model.showAuthModal
+                    }
+                    |> Modal.withBody
+                        (Auth.view True shared model.auth
+                            |> List.map (Html.map GotAuthMsg)
+                        )
+                    |> Modal.toHtml
+                    |> Html.map pageMsg
+               , communitySelectorModal model
+                    |> Html.map pageMsg
+               , addContactModal model
+                    |> Html.map pageMsg
+               ]
+        )
+
+
+viewPageBody : Model -> Profile.Model -> Page -> Html pageMsg -> List (Html pageMsg)
+viewPageBody ({ shared } as model) profile_ page content =
     let
         { t } =
             shared.translators
@@ -377,55 +464,26 @@ viewHelper thisMsg page profile_ ({ shared } as model) content =
                     []
                 ]
     in
-    div
-        [ class "min-h-screen flex flex-col" ]
-        [ div [ class "bg-white" ]
-            [ div [ class "container mx-auto" ]
-                [ viewHeader model profile_ |> Html.map thisMsg
-                , viewMainMenu page model |> Html.map thisMsg
-                ]
-            ]
-        , case model.feedback of
-            Show status message ->
-                viewFeedback status message |> Html.map thisMsg
+    [ div [ class "flex-grow" ]
+        [ case model.hasKyc of
+            FeatureLoading ->
+                div [ class "full-spinner-container h-full" ]
+                    [ div [ class "spinner spinner--delay mt-8" ] [] ]
 
-            Hidden ->
-                text ""
-        , div [ class "flex-grow" ]
-            [ case model.hasKyc of
-                FeatureLoading ->
-                    div [ class "full-spinner-container h-full" ]
-                        [ div [ class "spinner spinner--delay mt-8" ] [] ]
+            FeatureLoaded isKycEnabled ->
+                let
+                    isContentAllowed =
+                        List.member page availableWithoutKyc
+                            || not isKycEnabled
+                            || (isKycEnabled && hasUserKycFilled)
+                in
+                if isContentAllowed then
+                    content
 
-                FeatureLoaded isKycEnabled ->
-                    let
-                        isContentAllowed =
-                            List.member page availableWithoutKyc
-                                || not isKycEnabled
-                                || (isKycEnabled && hasUserKycFilled)
-                    in
-                    if isContentAllowed then
-                        content
-
-                    else
-                        viewKycRestriction
-            ]
-        , viewFooter shared
-        , Modal.initWith
-            { closeMsg = ClosedAuthModal
-            , isVisible = model.showAuthModal
-            }
-            |> Modal.withBody
-                (Auth.view True shared model.auth
-                    |> List.map (Html.map GotAuthMsg)
-                )
-            |> Modal.toHtml
-            |> Html.map thisMsg
-        , communitySelectorModal model
-            |> Html.map thisMsg
-        , addContactModal model
-            |> Html.map thisMsg
+                else
+                    viewKycRestriction
         ]
+    ]
 
 
 viewHeader : Model -> Profile.Model -> Html Msg
@@ -439,6 +497,10 @@ viewHeader ({ shared } as model) profile_ =
     in
     div [ class "flex flex-wrap items-center justify-between px-4 pt-6 pb-4" ]
         [ viewCommunitySelector model
+        , div [ class "order-last w-full md:order-none mt-2 md:ml-2 md:flex-grow md:w-auto" ]
+            [ Search.viewForm shared.translators model.searchModel
+                |> Html.map GotSearchMsg
+            ]
         , div [ class "flex items-center float-right" ]
             [ a
                 [ class "outline-none relative mx-6"
@@ -502,6 +564,7 @@ viewHeader ({ shared } as model) profile_ =
                         [ class "flex block w-full px-4 py-4 justify-start items-center text-sm"
                         , Route.href Route.Profile
                         , onClick (ShowUserNav False)
+                        , onClick SearchClosed
                         ]
                         [ Icons.profile "mr-4"
                         , text_ "menu.profile"
@@ -814,6 +877,9 @@ viewMainMenu page model =
 
         iconClass =
             "w-6 h-6 fill-current hover:text-indigo-500 mr-5"
+
+        closeClaimWithPhoto =
+            GotActionMsg Action.ClaimConfirmationClosed
     in
     nav [ class "h-16 w-full flex overflow-x-auto" ]
         [ a
@@ -822,6 +888,7 @@ viewMainMenu page model =
                 , ( activeClass, isActive page Route.Dashboard )
                 ]
             , Route.href Route.Dashboard
+            , onClick closeClaimWithPhoto
             ]
             [ Icons.dashboard iconClass
             , text (model.shared.translators.t "menu.dashboard")
@@ -834,6 +901,7 @@ viewMainMenu page model =
                         , ( activeClass, isActive page (Route.Shop Shop.All) )
                         ]
                     , Route.href (Route.Shop Shop.All)
+                    , onClick closeClaimWithPhoto
                     ]
                     [ Icons.shop iconClass
                     , text (model.shared.translators.t "menu.shop")
@@ -910,15 +978,13 @@ type ExternalMsg
 
 
 type Msg
-    = Ignored
+    = NoOp
     | CompletedLoadTranslation String (Result Http.Error Translations)
     | ClickedTryAgainTranslation
     | CompletedLoadProfile (Result (Graphql.Http.Error (Maybe Profile.Model)) (Maybe Profile.Model))
     | CompletedLoadSettings (Result (Graphql.Http.Error (Maybe Community.Settings)) (Maybe Community.Settings))
     | ClickedTryAgainProfile Eos.Name
     | ClickedLogout
-    | EnteredSearch String
-    | SubmitedSearch
     | ShowNotificationModal Bool
     | ShowUserNav Bool
     | ShowMainNav Bool
@@ -939,6 +1005,10 @@ type Msg
     | EnteredContactText String
     | SubmittedContactModalForm
     | CompletedUpdateContact (Result (Graphql.Http.Error (Maybe Profile.Model)) (Maybe Profile.Model))
+    | GotSearchMsg Search.Msg
+    | GotActionMsg Action.Msg
+    | SearchClosed
+    | GotTime Posix
 
 
 update : Msg -> Model -> UpdateResult
@@ -950,14 +1020,17 @@ update msg model =
         addContactInfo =
             model.addContactInfo
 
+        { t, tr } =
+            shared.translators
+
         focusMainContent b alternative =
             if b then
                 Dom.focus "main-content"
-                    |> Task.attempt (\_ -> Ignored)
+                    |> Task.attempt (\_ -> NoOp)
 
             else
                 Dom.focus alternative
-                    |> Task.attempt (\_ -> Ignored)
+                    |> Task.attempt (\_ -> NoOp)
 
         closeAllModals =
             { model
@@ -968,8 +1041,31 @@ update msg model =
             }
     in
     case msg of
-        Ignored ->
+        NoOp ->
             UR.init model
+
+        GotTime date ->
+            UR.init { model | date = Just date }
+
+        GotActionMsg actionMsg ->
+            handleActionMsg model actionMsg
+
+        SearchClosed ->
+            { model
+                | searchModel =
+                    Search.closeSearch shared model.searchModel
+                        |> Tuple.first
+            }
+                |> UR.init
+
+        GotSearchMsg searchMsg ->
+            let
+                ( searchModel, searchCmd ) =
+                    Search.update shared model.searchModel searchMsg
+            in
+            { model | searchModel = searchModel }
+                |> UR.init
+                |> UR.addCmd (Cmd.map GotSearchMsg searchCmd)
 
         CompletedLoadTranslation lang (Ok transl) ->
             case model.profile of
@@ -1058,12 +1154,6 @@ update msg model =
                             ]
                     }
 
-        EnteredSearch s ->
-            UR.init { model | searchText = s }
-
-        SubmitedSearch ->
-            UR.init model
-
         ShowNotificationModal b ->
             UR.init
                 { closeAllModals
@@ -1111,8 +1201,22 @@ update msg model =
                                     |> UR.addExt AuthenticationFailed
 
                             Auth.CompletedAuth _ ->
+                                let
+                                    cmd =
+                                        case model.claimingAction.status of
+                                            Action.ClaimInProgress action maybeProof ->
+                                                -- If action claim is in progress,
+                                                -- send a message to finish the claiming process
+                                                -- when the user confirms the PIN.
+                                                Task.succeed (GotActionMsg (Action.ActionClaimed action maybeProof))
+                                                    |> Task.perform identity
+
+                                            _ ->
+                                                Cmd.none
+                                in
                                 closeModal uResult
                                     |> UR.addExt AuthenticationSucceed
+                                    |> UR.addCmd cmd
 
                             Auth.UpdatedShared newShared ->
                                 UR.mapModel
@@ -1155,6 +1259,10 @@ update msg model =
             { model
                 | selectedCommunity = communityId
                 , showCommunitySelector = False
+                , searchModel =
+                    Search.closeSearch shared model.searchModel
+                        |> Tuple.first
+                        |> (\searchModel -> { searchModel | selectedCommunity = communityId })
             }
                 |> UR.init
                 |> UR.addCmd (Api.Graphql.query shared (Community.settingsQuery communityId) CompletedLoadSettings)
@@ -1284,6 +1392,53 @@ updateProfileContacts ({ contacts } as profile_) validatedContact =
     }
 
 
+handleActionMsg : Model -> Action.Msg -> UpdateResult
+handleActionMsg ({ shared } as model) actionMsg =
+    let
+        { t, tr } =
+            shared.translators
+
+        actionModelToLoggedIn : Action.Model -> Model
+        actionModelToLoggedIn a =
+            { model
+                | claimingAction = a
+                , feedback =
+                    case ( a.feedback, actionMsg ) of
+                        ( _, Action.Tick _ ) ->
+                            -- Don't change feedback each second
+                            model.feedback
+
+                        ( Just (Action.Failure s), _ ) ->
+                            Show Failure s
+
+                        ( Just (Action.Success s), _ ) ->
+                            Show Success s
+
+                        ( Nothing, _ ) ->
+                            model.feedback
+            }
+                |> (if a.needsPinConfirmation then
+                        askedAuthentication
+
+                    else
+                        identity
+                   )
+    in
+    Action.update (isAuth model) shared (Api.uploadImage shared) model.selectedCommunity model.accountName actionMsg model.claimingAction
+        |> UR.map
+            actionModelToLoggedIn
+            GotActionMsg
+            (\extMsg uR -> UR.addExt extMsg uR)
+        |> UR.addCmd
+            (case actionMsg of
+                Action.AgreedToClaimWithProof _ ->
+                    Task.perform identity (Task.succeed SearchClosed)
+
+                _ ->
+                    Cmd.none
+            )
+
+
 closeModal : UpdateResult -> UpdateResult
 closeModal ({ model } as uResult) =
     let
@@ -1390,6 +1545,10 @@ jsAddressToMsg addr val =
                 |> Result.map CompletedLoadUnread
                 |> Result.toMaybe
 
+        "GotActionMsg" :: remainAddress ->
+            Action.jsAddressToMsg remainAddress val
+                |> Maybe.map GotActionMsg
+
         _ ->
             Nothing
 
@@ -1397,8 +1556,20 @@ jsAddressToMsg addr val =
 msgToString : Msg -> List String
 msgToString msg =
     case msg of
-        Ignored ->
+        NoOp ->
             [ "Ignored" ]
+
+        GotTime _ ->
+            [ "GotTime" ]
+
+        SearchClosed ->
+            [ "SearchClosed" ]
+
+        GotSearchMsg _ ->
+            [ "GotSearchMsg" ]
+
+        GotActionMsg actionMsg ->
+            "GotActionMsg" :: Action.msgToString actionMsg
 
         CompletedLoadTranslation _ r ->
             [ "CompletedLoadTranslation", UR.resultToString r ]
@@ -1417,12 +1588,6 @@ msgToString msg =
 
         ClickedLogout ->
             [ "ClickedLogout" ]
-
-        EnteredSearch _ ->
-            [ "EnteredSearch" ]
-
-        SubmitedSearch ->
-            [ "SubmitedSearch" ]
 
         ShowNotificationModal _ ->
             [ "ShowNotificationModal" ]

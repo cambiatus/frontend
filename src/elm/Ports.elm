@@ -1,11 +1,14 @@
 port module Ports exposing
     ( JavascriptOut
     , JavascriptOutModel
+    , getRecentSearches
+    , gotRecentSearches
     , javascriptInPort
     , javascriptOut
     , javascriptOutCmd
     , mapAddress
     , storeLanguage
+    , storeRecentSearches
     )
 
 import Json.Encode as Encode exposing (Value)
@@ -59,3 +62,24 @@ port javascriptInPort : (Value -> msg) -> Sub msg
 
 
 port storeLanguage : String -> Cmd msg
+
+
+{-| Store recent searches to the `localStorage`.
+-}
+port storeRecentSearches : String -> Cmd msg
+
+
+{-| Ping JS to send back the recent searches from the `localStorage`.
+-}
+port getRecentSearches : () -> Cmd msg
+
+
+
+--
+-- Subscriptions
+--
+
+
+{-| Receive recent searches from JS.
+-}
+port gotRecentSearches : (String -> msg) -> Sub msg

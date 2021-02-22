@@ -94,7 +94,7 @@ view ({ shared } as loggedIn) model =
                             , div [ class "mx-auto container px-4" ]
                                 [ viewTitle shared claim
                                 , viewProofs shared.translators claim
-                                , viewDetails shared model claim
+                                , viewDetails loggedIn model claim
                                 , viewVoters loggedIn claim
                                 ]
                             , case model.claimModalStatus of
@@ -235,8 +235,8 @@ viewTitle shared claim =
         ]
 
 
-viewDetails : Shared -> Model -> Claim.Model -> Html msg
-viewDetails shared model claim =
+viewDetails : LoggedIn.Model -> Model -> Claim.Model -> Html msg
+viewDetails { shared, selectedCommunity } model claim =
     let
         text_ s =
             text (shared.translators.t s)
@@ -277,7 +277,12 @@ viewDetails shared model claim =
                         [ class "pt-2 text-body"
                         , classList [ ( "text-red line-through", isRejected ) ]
                         ]
-                        [ text (String.fromFloat claim.action.reward ++ " " ++ Eos.symbolToSymbolCodeString claim.action.objective.community.symbol) ]
+                        [ text
+                            (String.fromFloat claim.action.reward
+                                ++ " "
+                                ++ Eos.symbolToSymbolCodeString claim.action.objective.community.symbol
+                            )
+                        ]
                     ]
                 ]
             ]
@@ -287,7 +292,8 @@ viewDetails shared model claim =
                 [ text_ "claim.objective" ]
             , p
                 [ class "pt-2 text-body" ]
-                [ text claim.action.objective.description ]
+                [ text claim.action.objective.description
+                ]
             ]
         , div [ class "mb-8" ]
             [ p
@@ -295,7 +301,12 @@ viewDetails shared model claim =
                 [ text_ "claim.your_reward" ]
             , p
                 [ class "pt-2 text-body" ]
-                [ text (String.fromFloat claim.action.verifierReward ++ " " ++ Eos.symbolToSymbolCodeString claim.action.objective.community.symbol) ]
+                [ text
+                    (String.fromFloat claim.action.verifierReward
+                        ++ " "
+                        ++ Eos.symbolToSymbolCodeString claim.action.objective.community.symbol
+                    )
+                ]
             ]
         ]
 
