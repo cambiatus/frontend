@@ -161,6 +161,7 @@ type alias Model =
     , hasObjectives : FeatureStatus
     , hasKyc : FeatureStatus
     , addContactInfo : AddContactModal
+    , showContactModal : Bool
     , searchModel : Search.Model
     , claimingAction : Action.Model
     , date : Maybe Posix
@@ -174,14 +175,6 @@ type FeatureStatus
 
 initModel : Shared -> Auth.Model -> Eos.Name -> Symbol -> Model
 initModel shared authModel accountName selectedCommunity =
-    let
-        addContactLimitDate =
-            -- 01/01/2022
-            1641006000000
-
-        showContactModal =
-            addContactLimitDate - Time.posixToMillis shared.now > 0
-    in
     { shared = shared
     , accountName = accountName
     , profile = Loading accountName
@@ -199,7 +192,8 @@ initModel shared authModel accountName selectedCommunity =
     , hasShop = FeatureLoading
     , hasObjectives = FeatureLoading
     , hasKyc = FeatureLoading
-    , addContactInfo = initAddContactModal showContactModal
+    , addContactInfo = initAddContactModal
+    , showContactModal = False
     , searchModel = Search.init selectedCommunity
     , claimingAction = { status = Action.NotAsked, feedback = Nothing, needsPinConfirmation = False }
     , date = Nothing
@@ -223,8 +217,7 @@ type ProfileStatus
 
 
 type alias AddContactModal =
-    { show : Bool
-    , contactType : ContactType
+    { contactType : ContactType
     , country : Contact.Country
     , contact : String
     , errors : Maybe (List String)
@@ -232,10 +225,9 @@ type alias AddContactModal =
     }
 
 
-initAddContactModal : Bool -> AddContactModal
-initAddContactModal show =
-    { show = show
-    , contactType = ContactType.Whatsapp
+initAddContactModal : AddContactModal
+initAddContactModal =
+    { contactType = ContactType.Whatsapp
     , country = Contact.Brazil
     , contact = ""
     , errors = Nothing
@@ -855,7 +847,7 @@ addContactModal ({ addContactInfo, shared } as model) =
     in
     Modal.initWith
         { closeMsg = CloseAddContactModal
-        , isVisible = addContactInfo.show
+        , isVisible = model.showContactModal
         }
         |> Modal.withBody
             [ header
@@ -1089,10 +1081,24 @@ update msg model =
                 subscriptionDoc =
                     unreadCountSubscription model.accountName
                         |> Graphql.Document.serializeSubscription
+
+                addContactLimitDate =
+                    -- 01/01/2022
+                    1641006000000
+
+                showContactModalFromDate =
+                    addContactLimitDate - Time.posixToMillis shared.now > 0
             in
             case profile_ of
                 Just p ->
-                    { model | profile = Loaded p }
+                    { model
+                        | profile = Loaded p
+                        , showContactModal =
+                            showContactModalFromDate
+                                && (Maybe.map (List.length >> (>) 1) p.contacts
+                                        |> Maybe.withDefault False
+                                   )
+                    }
                         |> UR.init
                         |> UR.addPort
                             { responseAddress = CompletedLoadUnread (Encode.string "")
@@ -1278,7 +1284,7 @@ update msg model =
                 |> UR.addCmd doNext
 
         CloseAddContactModal ->
-            { model | addContactInfo = { addContactInfo | show = False } }
+            { model | showContactModal = False }
                 |> UR.init
 
         EnteredContactOption contactOption ->
@@ -1452,7 +1458,7 @@ closeModal ({ model } as uResult) =
                 , showUserNav = False
                 , showMainNav = False
                 , showAuthModal = False
-                , addContactInfo = { addContactInfo | show = False }
+                , showContactModal = False
             }
     }
 
