@@ -23,12 +23,10 @@ import Cambiatus.Mutation
 import Cambiatus.Object.Session
 import Eos.Account as Eos
 import Graphql.Http
-import Graphql.OptionalArgument exposing (OptionalArgument(..))
 import Graphql.SelectionSet exposing (with)
 import Html exposing (Html, a, button, div, form, h2, img, label, li, p, span, strong, text, textarea, ul)
 import Html.Attributes exposing (autocomplete, autofocus, class, disabled, for, id, placeholder, required, src, title, type_, value)
 import Html.Events exposing (onClick, onInput, onSubmit)
-import I18Next exposing (t)
 import Json.Decode as Decode
 import Json.Decode.Pipeline as Decode
 import Json.Encode as Encode exposing (Value)
@@ -64,10 +62,11 @@ init : Shared -> Maybe String -> Model
 init shared authToken =
     case shared.maybeAccount of
         Just ( _, True ) ->
-            { initModel | status = LoginWithPin, token = authToken }
+            { initModel | status = LoginWithPin, authToken = authToken }
 
         _ ->
-            initModel
+            -- TODO: Do we need authToken here?
+            { initModel | authToken = authToken }
 
 
 initRegister : String -> Model
@@ -96,7 +95,7 @@ type alias Model =
     , pinVisibility : Bool
     , pinConfirmationVisibility : Bool
     , problems : List ( Field, String )
-    , token : Maybe String
+    , authToken : Maybe String
     }
 
 
@@ -109,7 +108,7 @@ initModel =
     , pinVisibility = True
     , pinConfirmationVisibility = True
     , problems = []
-    , token = Nothing
+    , authToken = Nothing
     }
 
 
@@ -760,7 +759,7 @@ update msg shared model =
                     (Api.Graphql.mutation shared
                         (Cambiatus.Mutation.signIn
                             { account = Eos.nameToString accountName
-                            , password = "d8Ed.-qfhj7"
+                            , password = shared.graphqlSecret
                             }
                             (Graphql.SelectionSet.succeed SignInResponse
                                 |> with (Cambiatus.Object.Session.user Profile.selectionSet)
@@ -782,24 +781,16 @@ update msg shared model =
             UR.init
                 { model
                     | status = status
-                    , token = Just token
+                    , authToken = Just token
                 }
+                -- TODO: Save token to localStorage
                 |> UR.addExt (CompletedAuth user)
 
-        CompletedSignIn _ (Ok resp) ->
-            let
-                _ =
-                    Debug.log "Nothing resp" resp
-            in
+        CompletedSignIn _ (Ok Nothing) ->
             model |> UR.init
 
-        CompletedSignIn status (Err err) ->
-            let
-                _ =
-                    Debug.log "error resp" err
-            in
-            --loginFailedGraphql err model
-            model |> UR.init
+        CompletedSignIn _ (Err err) ->
+            loginFailedGraphql err model
 
         GotPrivateKeyLogin (Err err) ->
             UR.init
@@ -908,12 +899,8 @@ type alias SignInResponse =
     }
 
 
-loginFailedGraphql : Graphql.Http.Error (Maybe Profile.Model) -> Model -> UpdateResult
+loginFailedGraphql : Graphql.Http.Error e -> Model -> UpdateResult
 loginFailedGraphql httpError model =
-    let
-        _ =
-            Debug.log "error" httpError
-    in
     UR.init
         { model
             | loginError =

@@ -169,7 +169,7 @@ authQuery :
 authQuery { auth, shared } query toMsg =
     let
         token =
-            auth.token
+            auth.authToken
 
         endpoints =
             shared.endpoints
@@ -943,7 +943,7 @@ update msg model =
 
         ClickedTryAgainProfile accountName ->
             UR.init { model | profile = Loading accountName }
-                |> UR.addCmd (Api.Graphql.query shared (Profile.query accountName) CompletedLoadProfile)
+                |> UR.addCmd (authQuery model (Profile.query accountName) CompletedLoadProfile)
 
         ClickedLogout ->
             UR.init model
@@ -1068,7 +1068,7 @@ update msg model =
                         |> (\searchModel -> { searchModel | selectedCommunity = communityId })
             }
                 |> UR.init
-                |> UR.addCmd (Api.Graphql.query shared (Community.settingsQuery communityId) CompletedLoadSettings)
+                |> UR.addCmd (authQuery model (Community.settingsQuery communityId) CompletedLoadSettings)
                 |> UR.addPort
                     { responseAddress = msg
                     , responseData = Encode.null

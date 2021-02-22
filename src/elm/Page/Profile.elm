@@ -44,7 +44,7 @@ init : LoggedIn.Model -> ( Model, Cmd Msg )
 init loggedIn =
     let
         profileQuery =
-            Api.Graphql.query loggedIn.shared
+            LoggedIn.authQuery loggedIn
                 (Profile.query loggedIn.accountName)
                 CompletedProfileLoad
     in
@@ -683,7 +683,7 @@ update msg model loggedIn =
         DeleteKycAndAddressCompleted resp ->
             let
                 reloadProfile =
-                    Api.Graphql.query loggedIn.shared
+                    LoggedIn.authQuery loggedIn
                         (Profile.query loggedIn.accountName)
                         CompletedProfileLoad
             in

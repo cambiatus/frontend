@@ -8,7 +8,7 @@
   "scripts": {
     "build": "yarn bundle",
     "bundle": "NODE_ENV=production yarn webpack --color --mode=production --config config/webpack.config.prod.js",
-    "start": "GRAPHQL_SECRET=d8Ed.-qfhj7 standard && node scripts/start.js",
+    "start": "standard && GRAPHQL_SECRET=d8Ed.-qfhj7 node scripts/start.js",
     "review": "elm-review",
     "make": "elm make",
     "repl": "elm repl",
