@@ -235,7 +235,7 @@ type alias AddContactModal =
 initAddContactModal : Bool -> AddContactModal
 initAddContactModal show =
     { show = show
-    , contactType = ContactType.Instagram
+    , contactType = ContactType.Whatsapp
     , country = Contact.Brazil
     , contact = ""
     , errors = Nothing
@@ -1287,7 +1287,7 @@ update msg model =
                     { addContactInfo
                         | contactType =
                             ContactType.fromString contactOption
-                                |> Maybe.withDefault ContactType.Instagram
+                                |> Maybe.withDefault ContactType.Whatsapp
                         , errors = Nothing
                     }
             }
