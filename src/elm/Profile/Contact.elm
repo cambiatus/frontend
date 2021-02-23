@@ -87,6 +87,7 @@ type Country
     = Brazil
     | CostaRica
     | Ethiopia
+    | UnitedStates
 
 
 
@@ -275,6 +276,9 @@ countryCode country =
         Ethiopia ->
             "+251"
 
+        UnitedStates ->
+            "+001"
+
 
 normalize : Country -> Validate.Valid Model -> Normalized
 normalize country validatedContact =
@@ -344,7 +348,7 @@ validator contactType translators =
 
 listCountries : List Country
 listCountries =
-    [ Brazil, CostaRica, Ethiopia ]
+    [ Brazil, CostaRica, Ethiopia, UnitedStates ]
 
 
 countryToFlag : Country -> String
@@ -358,6 +362,9 @@ countryToFlag country =
 
         Ethiopia ->
             "/icons/flag-ethiopia.svg"
+
+        UnitedStates ->
+            "/icons/flag-usa.svg"
 
 
 
