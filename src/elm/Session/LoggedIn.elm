@@ -34,7 +34,7 @@ import Auth
 import Avatar
 import Browser.Dom as Dom
 import Browser.Events
-import Cambiatus.Enum.ContactType as ContactType exposing (ContactType)
+import Cambiatus.Enum.ContactType as ContactType
 import Cambiatus.Object
 import Cambiatus.Object.UnreadNotifications
 import Cambiatus.Subscription as Subscription
@@ -58,7 +58,7 @@ import List.Extra as List
 import Notification exposing (Notification)
 import Ports
 import Profile exposing (Model)
-import Profile.Contact as Contact exposing (Contact)
+import Profile.Contact as Contact
 import Route exposing (Route)
 import Search exposing (State(..))
 import Session.Shared as Shared exposing (Shared)
@@ -68,8 +68,6 @@ import Time exposing (Posix)
 import Translation
 import UpdateResult as UR
 import Validate
-import View.Form
-import View.Form.Input as Input
 import View.Form.Select as Select
 import View.Modal as Modal
 
@@ -1195,16 +1193,13 @@ update msg model =
                     Contact.validator contactModel.contactType
                         shared.translators
             in
-            case
-                Contact.toContact contactModel
-                    |> Validate.validate validator
-            of
+            case Validate.validate validator contactModel of
                 Err errors ->
                     Contact.addErrors errors contactModel
                         |> (\contact -> { model | contactModel = contact })
                         |> UR.init
 
-                Ok validModal ->
+                Ok validModel ->
                     case profile model of
                         Nothing ->
                             model |> UR.init
@@ -1213,7 +1208,7 @@ update msg model =
                             model
                                 |> UR.init
                                 |> UR.addCmd
-                                    (Contact.normalize contactModel.country validModal
+                                    (Contact.normalize contactModel.country validModel
                                         |> addContact model userProfile
                                     )
 

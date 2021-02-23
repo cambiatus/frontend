@@ -1,20 +1,16 @@
 module Profile.Contact exposing
-    ( Contact
-    , Country(..)
+    ( Country(..)
     , Model
     , Msg
     , Normalized
     , addErrors
-    , countryToFlag
     , decode
     , defaultContactType
     , encode
     , hasSameType
     , init
-    , listCountries
     , normalize
     , selectionSet
-    , toContact
     , unwrap
     , update
     , updateType
@@ -253,11 +249,6 @@ updateType newType model =
     { model | contactType = newType, errors = Nothing }
 
 
-toContact : Model -> Contact
-toContact { contactType, contact } =
-    { contactType = contactType, contact = contact }
-
-
 addErrors : List String -> Model -> Model
 addErrors errors model =
     case errors of
@@ -285,7 +276,7 @@ countryCode country =
             "+251"
 
 
-normalize : Country -> Validate.Valid Contact -> Normalized
+normalize : Country -> Validate.Valid Model -> Normalized
 normalize country validatedContact =
     let
         { contactType, contact } =
@@ -319,7 +310,7 @@ phoneRegex =
         |> Maybe.withDefault Regex.never
 
 
-validator : ContactType -> Translators -> Validate.Validator String Contact
+validator : ContactType -> Translators -> Validate.Validator String Model
 validator contactType translators =
     let
         phoneValidations =
