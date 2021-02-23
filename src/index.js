@@ -88,12 +88,12 @@ function flags () {
   return {
     env: env,
     graphqlSecret: graphqlSecret,
-    authToken: getAuthToken(),
     endpoints: config.endpoints,
     language: getUserLanguage(),
     accountName: (user && user.accountName) || null,
     isPinAvailable: !!(user && user.encryptedKey),
     authPreference: window.localStorage.getItem(AUTH_PREF_KEY),
+    authToken: window.localStorage.getItem(AUTH_TOKEN),
     logo: config.logo,
     logoMobile: config.logoMobile,
     now: Date.now(),
@@ -203,6 +203,10 @@ function storeAuthPreference (auth) {
   window.localStorage.setItem(AUTH_PREF_KEY, auth)
 }
 
+app.ports.storeAuthToken.subscribe(token =>
+  window.localStorage.setItem(AUTH_TOKEN, token)
+)
+
 // STORE ACCOUNTNAME
 
 function storeAccountName (accountName) {
@@ -242,21 +246,6 @@ async function storePin (data, pin) {
 
 function getSelectedCommunity () {
   return window.localStorage.getItem(SELECTED_COMMUNITY_KEY)
-}
-
-function setAuthToken (authToken) {
-  window.localStorage.setItem(
-    AUTH_TOKEN,
-    authToken
-  )
-}
-
-function getAuthToken () {
-  return window.localStorage.getItem(AUTH_TOKEN)
-}
-
-function removeAuthToken () {
-  window.localStorage.removeItem(AUTH_TOKEN)
 }
 
 function downloadPdf (accountName, passphrase, responseAddress, responseData) {
@@ -596,6 +585,7 @@ async function handleJavascriptPort (arg) {
       window.localStorage.removeItem(USER_KEY)
       window.localStorage.removeItem(AUTH_PREF_KEY)
       window.localStorage.removeItem(SELECTED_COMMUNITY_KEY)
+      window.localStorage.removeItem(AUTH_TOKEN)
       Sentry.addBreadcrumb({
         category: 'auth',
         message: 'User logged out'

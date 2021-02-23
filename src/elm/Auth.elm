@@ -31,6 +31,7 @@ import Json.Decode as Decode
 import Json.Decode.Pipeline as Decode
 import Json.Encode as Encode exposing (Value)
 import Log
+import Ports
 import Profile exposing (Model)
 import Route
 import Session.Shared exposing (Shared, Translators)
@@ -774,17 +775,13 @@ update msg shared model =
         --    (CompletedLoadProfile (LoggedInWithPrivateKey privateKey) accountName)
         --)
         CompletedSignIn status (Ok ((Just { user, token }) as resp)) ->
-            let
-                _ =
-                    Debug.log "session" resp
-            in
             UR.init
                 { model
                     | status = status
                     , authToken = Just token
                 }
-                -- TODO: Save token to localStorage
                 |> UR.addExt (CompletedAuth user)
+                |> UR.addCmd (Ports.storeAuthToken token)
 
         CompletedSignIn _ (Ok Nothing) ->
             model |> UR.init
