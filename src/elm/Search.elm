@@ -281,16 +281,16 @@ viewForm { t } model =
                     text ""
 
                 _ ->
-                    if String.length model.currentQuery > 0 then
+                    if String.isEmpty model.currentQuery then
+                        text ""
+
+                    else
                         span
                             [ class "cursor-pointer absolute right-0 mr-3 h-full flex items-center top-0"
                             , onClick ClearSearchIconClicked
                             ]
                             [ Icons.clearInput ""
                             ]
-
-                    else
-                        text ""
 
         viewCancel =
             case model.state of
