@@ -913,7 +913,8 @@
       "invalid": "Por favor insira um número de telefone válido"
     },
     "profile": {
-      "blank": "Por favor insira seu perfil"
+      "blank": "Por favor insira seu perfil",
+      "invalid": "Por favor insira um perfil válido"
     }
   }
 }

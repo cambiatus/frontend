@@ -911,7 +911,8 @@
       "invalid": "Siusplau introdueixi un número de telèfon vàlid"
     },
     "profile": {
-      "blank": "Introduïu el nom del vostre perfil"
+      "blank": "Introduïu el nom del vostre perfil",
+      "invalid": "Introduïu un nom de perfil vàlid"
     }
   }
 }

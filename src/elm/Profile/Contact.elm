@@ -19,7 +19,7 @@ module Profile.Contact exposing
     , viewForm
     )
 
-import Cambiatus.Enum.ContactType as ContactType exposing (ContactType)
+import Cambiatus.Enum.ContactType as ContactType exposing (ContactType(..))
 import Cambiatus.Object
 import Cambiatus.Object.Contact
 import Graphql.SelectionSet as SelectionSet exposing (SelectionSet, with)
@@ -63,7 +63,7 @@ init id =
 
 defaultContactType : ContactType
 defaultContactType =
-    ContactType.Whatsapp
+    Whatsapp
 
 
 
@@ -232,7 +232,7 @@ viewProfileInput ({ t } as translators) model =
 
 usesPhone : ContactType -> Bool
 usesPhone contactType =
-    List.member contactType [ ContactType.Whatsapp, ContactType.Phone ]
+    List.member contactType [ Whatsapp, Phone ]
 
 
 unwrap : Normalized -> Contact
@@ -290,16 +290,16 @@ normalize country validatedContact =
         { contactType = contactType
         , contact =
             case contactType of
-                ContactType.Instagram ->
+                Instagram ->
                     "https://instagram.com/" ++ contact
 
-                ContactType.Phone ->
+                Phone ->
                     String.join " " [ countryCode country, contact ]
 
-                ContactType.Telegram ->
+                Telegram ->
                     "https://t.me/" ++ contact
 
-                ContactType.Whatsapp ->
+                Whatsapp ->
                     String.join " " [ countryCode country, contact ]
         }
 
@@ -314,32 +314,56 @@ phoneRegex =
         |> Maybe.withDefault Regex.never
 
 
+telegramRegex : Regex
+telegramRegex =
+    Regex.fromString "^[\\w]{5,32}$"
+        |> Maybe.withDefault Regex.never
+
+
+instagramRegex : Regex
+instagramRegex =
+    Regex.fromString "^[\\w](?!.*?\\.{2})[\\w.]{1,28}[\\w]$"
+        |> Maybe.withDefault Regex.never
+
+
+validateRegex : Regex -> String -> Validate.Validator String Model
+validateRegex regex error =
+    Validate.fromErrors
+        (\{ contact } ->
+            if Regex.contains regex contact then
+                []
+
+            else
+                [ error ]
+        )
+
+
 validator : ContactType -> Translators -> Validate.Validator String Model
 validator contactType translators =
     let
-        phoneValidations =
-            [ Validate.ifBlank .contact (translators.t "contact_validator.phone.blank")
-            , Validate.fromErrors
-                (\{ contact } ->
-                    if Regex.contains phoneRegex contact then
-                        []
+        ( regex, field ) =
+            case contactType of
+                Phone ->
+                    ( phoneRegex, "phone" )
 
-                    else
-                        [ translators.t "contact_validator.phone.invalid" ]
-                )
-            ]
+                Whatsapp ->
+                    ( phoneRegex, "phone" )
 
-        profileValidations =
-            [ Validate.ifBlank .contact (translators.t "contact_validator.profile.blank")
-            ]
+                Instagram ->
+                    ( instagramRegex, "profile" )
+
+                Telegram ->
+                    ( telegramRegex, "profile" )
+
+        baseTranslation =
+            "contact_validator"
     in
     Validate.all
-        (if usesPhone contactType then
-            phoneValidations
-
-         else
-            profileValidations
-        )
+        [ Validate.ifBlank .contact
+            (translators.t (String.join "." [ baseTranslation, field, "blank" ]))
+        , validateRegex regex
+            (translators.t (String.join "." [ baseTranslation, field, "invalid" ]))
+        ]
 
 
 

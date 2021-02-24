@@ -911,7 +911,8 @@
       "invalid": "Por favor ingrese un número de teléfono válido"
     },
     "profile": {
-      "blank": "Ingrese su nombre de perfil"
+      "blank": "Ingrese su nombre de perfil",
+      "invalid": "Ingrese un nombre de perfil válido"
     }
   }
 }

@@ -909,7 +909,8 @@
       "invalid": "Please enter a valid phone number"
     },
     "profile": {
-      "blank": "Please enter your profile name"
+      "blank": "Please enter your profile name",
+      "invalid": "Please enter a valid profile name"
     }
   }
 }
