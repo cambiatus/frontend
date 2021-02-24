@@ -19,6 +19,7 @@ module Search exposing
 
 import Action exposing (Action)
 import Api.Graphql
+import Browser.Dom as Dom
 import Cambiatus.Object
 import Cambiatus.Object.Product
 import Cambiatus.Object.SearchResult
@@ -28,7 +29,7 @@ import Graphql.Http
 import Graphql.OptionalArgument exposing (OptionalArgument(..))
 import Graphql.SelectionSet as SelectionSet exposing (SelectionSet, with)
 import Html exposing (Html, br, button, div, h3, img, input, li, p, span, strong, text, ul)
-import Html.Attributes exposing (class, disabled, minlength, placeholder, required, src, type_, value)
+import Html.Attributes exposing (autocomplete, class, disabled, id, minlength, placeholder, required, src, type_, value)
 import Html.Events exposing (onClick, onFocus, onInput, onSubmit)
 import Icons
 import Json.Decode as Decode exposing (list, string)
@@ -38,6 +39,7 @@ import Ports
 import RemoteData exposing (RemoteData)
 import Route exposing (Route)
 import Session.Shared exposing (Shared, Translators)
+import Task
 import Time exposing (Posix)
 import View.Components
 
@@ -133,7 +135,8 @@ offersSelectionSet =
 
 
 type Msg
-    = CancelClicked
+    = NoOp
+    | CancelClicked
     | InputFocused
     | GotRecentSearches String
     | RecentQueryClicked String
@@ -141,12 +144,16 @@ type Msg
     | QuerySubmitted
     | TabActivated ActiveTab
     | CurrentQueryChanged String
+    | ClearSearchIconClicked
     | FoundItemClicked Route
 
 
 update : Shared -> Model -> Msg -> ( Model, Cmd Msg )
 update shared model msg =
     case msg of
+        NoOp ->
+            ( model, Cmd.none )
+
         CurrentQueryChanged q ->
             ( { model | currentQuery = q }, Cmd.none )
 
@@ -199,6 +206,14 @@ update shared model msg =
                 , currentQuery = ""
               }
             , Cmd.none
+            )
+
+        ClearSearchIconClicked ->
+            ( { model
+                | currentQuery = ""
+              }
+            , Dom.focus "searchInput"
+                |> Task.attempt (\_ -> NoOp)
             )
 
         InputFocused ->
@@ -260,6 +275,23 @@ viewForm { t } model =
                 _ ->
                     "text-indigo-500"
 
+        viewClearSearchIcon =
+            case model.state of
+                Inactive ->
+                    text ""
+
+                _ ->
+                    if String.isEmpty model.currentQuery then
+                        text ""
+
+                    else
+                        span
+                            [ class "cursor-pointer absolute right-0 mr-3 h-full flex items-center top-0"
+                            , onClick ClearSearchIconClicked
+                            ]
+                            [ Icons.clearInput ""
+                            ]
+
         viewCancel =
             case model.state of
                 Inactive ->
@@ -278,7 +310,9 @@ viewForm { t } model =
         ]
         [ div [ class "relative w-full" ]
             [ input
-                [ type_ "search"
+                [ type_ "text"
+                , id "searchInput"
+                , autocomplete False
                 , disabled isLoading
                 , minlength 3
                 , required True
@@ -289,6 +323,7 @@ viewForm { t } model =
                 , onInput CurrentQueryChanged
                 ]
                 []
+            , viewClearSearchIcon
             , Icons.search <| "absolute top-0 left-0 mt-2 ml-2 fill-current" ++ " " ++ iconColor
             ]
         , viewCancel
@@ -408,8 +443,9 @@ viewTabs { t } results activeTab =
                     class "cursor-not-allowed text-gray-300"
                 ]
                 [ text label
-                , text " "
+                , text " ("
                 , text (String.fromInt count)
+                , text ")"
                 ]
     in
     ul [ class "space-x-2 flex items-stretch leading-10 p-4 pb-2 bg-white" ]
@@ -461,7 +497,7 @@ viewResultsOverview { t } { offers, actions } =
                 ]
     in
     div []
-        [ strong [ class "block py-0" ]
+        [ strong [ class "block pb-2" ]
             [ text (t "menu.search.overviewHeader") ]
         , ul []
             [ viewItem Icons.shop

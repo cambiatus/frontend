@@ -4,6 +4,7 @@ module Icons exposing
     , back
     , camera
     , claims
+    , clearInput
     , clock
     , close
     , communities
@@ -28,7 +29,7 @@ module Icons exposing
     )
 
 import Html exposing (Html)
-import Svg exposing (Svg, svg)
+import Svg exposing (Svg, g, svg)
 import Svg.Attributes exposing (class, clipPath, clipRule, cx, cy, d, fill, fillRule, height, id, r, stroke, strokeLinecap, strokeLinejoin, strokeWidth, style, viewBox, width)
 
 
@@ -54,6 +55,14 @@ close : String -> Svg msg
 close class_ =
     svg [ class class_, width "24", height "24", viewBox "0 0 24 24" ]
         [ Svg.path [ fillRule "evenodd", clipRule "evenodd", d "M13.6299 12.0242L22.2329 3.25164C22.603 2.84787 22.5865 2.22339 22.1956 1.83974C21.8046 1.4561 21.18 1.45137 20.7833 1.82906L12.1938 10.5881L3.25206 1.81551C2.99607 1.54661 2.6138 1.43874 2.25501 1.53415C1.89622 1.62956 1.61802 1.91306 1.5294 2.2736C1.44078 2.63414 1.55584 3.01431 1.82951 3.26519L10.7577 12.0242L1.82951 20.7832C1.45184 21.1799 1.45656 21.8046 1.8402 22.1956C2.22383 22.5865 2.8483 22.603 3.25206 22.2329L12.1938 13.4603L20.7833 22.2194C21.18 22.597 21.8046 22.5923 22.1956 22.2087C22.5865 21.825 22.603 21.2005 22.2329 20.7968L13.6299 12.0242Z" ] [] ]
+
+
+clearInput : String -> Svg msg
+clearInput class_ =
+    svg [ fill "none", height "20", viewBox "0 0 20 20", width "20" ]
+        [ g [ strokeLinecap "round", strokeLinejoin "round" ]
+            [ Svg.path [ d "m10 18.3334c4.6024 0 8.3333-3.7309 8.3333-8.3333 0-4.60239-3.7309-8.33335-8.3333-8.33335-4.60237 0-8.33333 3.73096-8.33333 8.33335 0 4.6024 3.73096 8.3333 8.33333 8.3333z", fill "#b9b7b7", stroke "#b9b7b7", strokeWidth "2" ] [], g [ stroke "#fff" ] [ Svg.path [ d "m12.5 7.5-5 5" ] [], Svg.path [ d "m7.5 7.5 5 5" ] [] ] ]
+        ]
 
 
 alert : String -> Html msg
