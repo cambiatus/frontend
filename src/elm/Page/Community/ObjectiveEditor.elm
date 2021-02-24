@@ -30,14 +30,14 @@ import UpdateResult as UR
 
 initNew : LoggedIn.Model -> Symbol -> ( Model, Cmd Msg )
 initNew { shared } communityId =
-    ( { status = Loading, community = communityId, objectiveId = Nothing }
+    ( { status = Loading, community = communityId, objectiveId = Nothing, archived = False }
     , Api.Graphql.query shared (communityQuery communityId) CompletedCommunityLoad
     )
 
 
 initEdit : LoggedIn.Model -> Symbol -> Int -> ( Model, Cmd Msg )
 initEdit { shared } communityId objectiveId =
-    ( { status = Loading, community = communityId, objectiveId = Just objectiveId }
+    ( { status = Loading, community = communityId, objectiveId = Just objectiveId, archived = False }
     , Api.Graphql.query shared (communityQuery communityId) CompletedCommunityLoad
     )
 
@@ -50,6 +50,7 @@ type alias Model =
     { status : Status
     , community : Symbol
     , objectiveId : Maybe Int
+    , archived : Bool
     }
 
 
@@ -162,10 +163,10 @@ view ({ shared } as loggedIn) model =
                         [ Page.viewHeader loggedIn (t "community.objectives.title") (Route.Objectives symbol)
                         , case editStatus of
                             NewObjective objForm ->
-                                viewForm loggedIn objForm
+                                viewForm loggedIn objForm model.archived
 
                             EditObjective _ objForm ->
-                                viewForm loggedIn objForm
+                                viewForm loggedIn objForm model.archived
                         ]
     in
     { title = title
@@ -184,8 +185,8 @@ view ({ shared } as loggedIn) model =
     }
 
 
-viewForm : LoggedIn.Model -> ObjectiveForm -> Html Msg
-viewForm { shared } objForm =
+viewForm : LoggedIn.Model -> ObjectiveForm -> Bool -> Html Msg
+viewForm { shared } objForm archived =
     let
         t =
             shared.translators.t
@@ -223,7 +224,7 @@ viewForm { shared } objForm =
                 , button
                     [ class "button button-secondary"
                     , onClick ClickedArchiveObjetive
-                    , disabled isDisabled
+                    , disabled archived
                     ]
                     [ text (t "community.objectives.editor.mark_completed") ]
                 ]
@@ -441,9 +442,13 @@ update msg model loggedIn =
                         |> UR.init
 
         CompletedArchiveMutation (Ok _) ->
-            model
+            let
+                newModel =
+                    { model | archived = True }
+            in
+            newModel
                 |> UR.init
-                |> UR.addExt (ShowFeedback Success (t "community.archived_success"))
+                |> UR.addExt (ShowFeedback Success (t "community.objectives.archived_success"))
 
         CompletedArchiveMutation (Err _) ->
             model
