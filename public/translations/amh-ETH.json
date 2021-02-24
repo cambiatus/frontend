@@ -410,6 +410,7 @@
       "objectives": {
         "title": "ዓላማ",
         "create_success": "ዓላማ በትክክል ተፈጥሯል",
+        "archived_success": "ዓላማ በተሳካ ሁኔታ ተቀርvedል",
         "title_plural": "ዓላማ እና ተግባራት",
         "subtitle": "{{objectives}} አላማዎች እና{{actions}} ተግባራት",
         "new": "አዲስ ዓላማ ፍጠር",

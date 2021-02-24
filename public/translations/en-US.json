@@ -448,6 +448,7 @@
     "objectives": {
       "title": "Objective",
       "create_success": "Objective successfully created",
+      "archived_success": "Objective successfully archived",
       "title_plural": "Objectives and Actions",
       "subtitle": "{{objectives}} objectives and {{actions}} actions",
       "new": "Create new objective",

@@ -452,6 +452,7 @@
     "objectives": {
       "title": "Objectiu",
       "create_success": "Objectiu creat amb èxit",
+      "archived_success": "Objectiu arxivat amb èxit",
       "title_plural": "Objectius i Accions",
       "subtitle": "{{objectives}} objectius i {{actions}} accions",
       "new": "Crear un objectiu nou",

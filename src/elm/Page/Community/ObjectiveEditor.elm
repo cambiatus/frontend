@@ -1,7 +1,6 @@
 module Page.Community.ObjectiveEditor exposing (Model, Msg, initEdit, initNew, jsAddressToMsg, msgToString, update, view)
 
 import Api.Graphql
-import Cambiatus.InputObject exposing (CompleteObjectiveInput)
 import Cambiatus.Mutation as Mutation
 import Cambiatus.Object
 import Cambiatus.Object.Community as Community
@@ -444,10 +443,12 @@ update msg model loggedIn =
         CompletedArchiveMutation (Ok _) ->
             model
                 |> UR.init
+                |> UR.addExt (ShowFeedback Success (t "community.archived_success"))
 
         CompletedArchiveMutation (Err _) ->
             model
                 |> UR.init
+                |> UR.addExt (ShowFeedback Failure (t "error.unknown"))
 
         GotSaveObjectiveResponse (Ok _) ->
             UR.init model
