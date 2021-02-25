@@ -19,42 +19,58 @@ module Profile.Contact exposing
     , viewForm
     )
 
+import Api.Graphql
 import Cambiatus.Enum.ContactType as ContactType exposing (ContactType(..))
 import Cambiatus.Object
 import Cambiatus.Object.Contact
+import Graphql.Http
+import Graphql.Operation exposing (RootMutation)
 import Graphql.SelectionSet as SelectionSet exposing (SelectionSet, with)
 import Html exposing (Html, button, div, img, p, text)
 import Html.Attributes exposing (class, classList, src, style, type_)
-import Html.Events exposing (onClick)
+import Html.Events exposing (onClick, onSubmit)
 import Json.Decode as Decode exposing (Decoder)
 import Json.Encode as Encode
-import List.Extra
+import List.Extra as LE
 import Regex exposing (Regex)
-import Session.Shared exposing (Translators)
+import Session.Shared exposing (Shared, Translators)
 import Validate
 import View.Form
 import View.Form.Input as Input
+import View.Form.Select as Select
 
 
 
 -- MODEL
 
 
-type alias Model =
-    { contactType : ContactType
-    , id : String
-    , country : Country
+type Model
+    = Single Basic
+    | Multiple (List Basic)
+
+
+type alias Basic =
+    { country : Country
+    , contactType : ContactType
     , contact : String
     , errors : Maybe (List String)
     , showFlags : Bool
     }
 
 
-init : String -> Model
-init id =
-    { contactType = defaultContactType
-    , id = id
-    , country = Brazil
+init : Bool -> Model
+init showTypeSelector =
+    if showTypeSelector then
+        Single (initBasic defaultContactType)
+
+    else
+        Multiple (List.map initBasic ContactType.list)
+
+
+initBasic : ContactType -> Basic
+initBasic contactType =
+    { country = Brazil
+    , contactType = contactType
     , contact = ""
     , errors = Nothing
     , showFlags = False
@@ -94,52 +110,264 @@ type Country
 -- UPDATE
 
 
-type Msg
-    = SelectedCountry Country
-    | ClickedToggleContactFlags
-    | EnteredContactText String
+type Msg profile
+    = SelectedCountry ContactType Country
+    | ClickedToggleContactFlags ContactType
+    | EnteredContactText ContactType String
+    | EnteredContactOption String
+    | ClickedSubmit
+    | CompletedUpdateContact (Result (Graphql.Http.Error (Maybe profile)) (Maybe profile))
 
 
-update : Msg -> Model -> Model
-update msg model =
-    case msg of
-        SelectedCountry country ->
-            { model | country = country }
+update :
+    Msg profile
+    -> Model
+    -> (List Normalized -> SelectionSet (Maybe profile) RootMutation)
+    -> Shared
+    -> ( Model, Cmd (Msg profile), Maybe profile )
+update msg model mutationFunction ({ translators } as shared) =
+    case ( msg, model ) of
+        ( SelectedCountry _ country, Single contact ) ->
+            ( Single { contact | country = country, errors = Nothing }
+            , Cmd.none
+            , Nothing
+            )
 
-        ClickedToggleContactFlags ->
-            { model | showFlags = not model.showFlags }
+        ( SelectedCountry contactType country, Multiple contacts ) ->
+            ( Multiple
+                (updateIfContactType contactType
+                    (\contact -> { contact | country = country })
+                    contacts
+                )
+            , Cmd.none
+            , Nothing
+            )
 
-        EnteredContactText contact ->
-            { model | contact = contact }
+        ( ClickedToggleContactFlags _, Single contact ) ->
+            ( Single { contact | showFlags = not contact.showFlags }
+            , Cmd.none
+            , Nothing
+            )
+
+        ( ClickedToggleContactFlags contactType, Multiple contacts ) ->
+            ( Multiple
+                (updateIfContactType contactType
+                    (\contact -> { contact | showFlags = not contact.showFlags })
+                    contacts
+                )
+            , Cmd.none
+            , Nothing
+            )
+
+        ( EnteredContactText _ newContact, Single contact ) ->
+            ( Single { contact | contact = newContact }
+            , Cmd.none
+            , Nothing
+            )
+
+        ( EnteredContactText contactType newContact, Multiple contacts ) ->
+            ( Multiple
+                (updateIfContactType contactType
+                    (\contact -> { contact | contact = newContact })
+                    contacts
+                )
+            , Cmd.none
+            , Nothing
+            )
+
+        ( EnteredContactOption option, Single contact ) ->
+            ( Single
+                { contact
+                    | contactType =
+                        ContactType.fromString option
+                            |> Maybe.withDefault defaultContactType
+                    , errors = Nothing
+                    , contact = ""
+                }
+            , Cmd.none
+            , Nothing
+            )
+
+        ( EnteredContactOption _, Multiple contacts ) ->
+            -- TODO - Impossible (add logging?)
+            ( Multiple contacts
+            , Cmd.none
+            , Nothing
+            )
+
+        ( ClickedSubmit, _ ) ->
+            case submit translators model of
+                Err withError ->
+                    ( withError
+                    , Cmd.none
+                    , Nothing
+                    )
+
+                Ok normalized ->
+                    ( model
+                    , Api.Graphql.mutation shared
+                        (mutationFunction normalized)
+                        CompletedUpdateContact
+                    , Nothing
+                    )
+
+        ( CompletedUpdateContact result, _ ) ->
+            case result of
+                Ok (Just profile) ->
+                    ( model, Cmd.none, Just profile )
+
+                _ ->
+                    -- TODO - Report error, get rid of this
+                    ( model, Cmd.none, Nothing )
+
+
+updateIfContactType : ContactType -> (Basic -> Basic) -> List Basic -> List Basic
+updateIfContactType contactType fn contacts =
+    LE.updateIf (.contactType >> (==) contactType) fn contacts
+
+
+submit : Translators -> Model -> Result Model (List Normalized)
+submit translators model =
+    case model of
+        Single contact ->
+            submitSingle translators contact
+                |> Result.mapError Single
+                |> Result.map List.singleton
+
+        Multiple contacts ->
+            submitMultiple translators contacts
+                |> Result.mapError Multiple
+
+
+submitSingle : Translators -> Basic -> Result Basic Normalized
+submitSingle translators basic =
+    basic
+        |> Validate.validate (validator basic.contactType translators)
+        |> Result.mapError (\errors -> addErrors errors basic)
+        |> Result.map (\valid -> normalize basic.country valid)
+
+
+submitMultiple : Translators -> List Basic -> Result (List Basic) (List Normalized)
+submitMultiple translators basics =
+    let
+        ( withError, valid ) =
+            List.foldr
+                (\basic ( basicsAcc, normalizedsAcc ) ->
+                    case submitSingle translators basic of
+                        Err basicWithErrors ->
+                            ( basicWithErrors :: basicsAcc, normalizedsAcc )
+
+                        Ok normalized ->
+                            ( { basic | errors = Nothing } :: basicsAcc
+                            , normalized :: normalizedsAcc
+                            )
+                )
+                ( [], [] )
+                basics
+    in
+    if List.length valid == List.length basics then
+        Ok valid
+
+    else
+        Err withError
 
 
 
 -- VIEW
 
 
-viewForm : Translators -> Model -> Html Msg
+viewForm : Translators -> Model -> Html (Msg profile)
 viewForm translators model =
+    let
+        submitButton =
+            button
+                [ class "button button-primary w-full"
+                , type_ "submit"
+                ]
+                [ text
+                    (case model of
+                        Single contact ->
+                            if usesPhone contact.contactType then
+                                translators.t "contact_modal.phone.submit"
+
+                            else
+                                "contact_modal.username.submit"
+
+                        Multiple _ ->
+                            translators.t "contact_modal.submit_multiple"
+                    )
+                ]
+    in
+    (case model of
+        Single contact ->
+            [ viewContactTypeSelect translators contact.contactType
+            , viewInput translators contact
+            ]
+
+        Multiple contacts ->
+            List.map (viewInput translators) contacts
+    )
+        ++ [ submitButton ]
+        |> Html.form
+            [ class "w-full md:w-5/6 mx-auto mt-12"
+            , onSubmit ClickedSubmit
+            ]
+
+
+viewInput : Translators -> Basic -> Html (Msg profile)
+viewInput translators basic =
     div [ class "flex space-x-4" ]
-        (if usesPhone model.contactType then
-            [ viewFlagsSelect translators model, viewPhoneInput translators model ]
+        (if usesPhone basic.contactType then
+            [ viewFlagsSelect translators basic, viewPhoneInput translators basic ]
 
          else
-            [ viewProfileInput translators model ]
+            [ viewProfileInput translators basic ]
         )
 
 
-viewFlagsSelect : Translators -> Model -> Html Msg
-viewFlagsSelect { t } model =
+viewContactTypeSelect : Translators -> ContactType -> Html (Msg profile)
+viewContactTypeSelect translators contactType =
+    let
+        contactOptions =
+            List.map
+                (\contactType_ ->
+                    let
+                        asString =
+                            ContactType.toString contactType_
+
+                        capitalized =
+                            (String.left 1 asString |> String.toUpper)
+                                ++ String.dropLeft 1 (String.toLower asString)
+                    in
+                    { value = asString
+                    , label = capitalized
+                    }
+                )
+                ContactType.list
+    in
+    List.foldr Select.withOption
+        (Select.init "contact_type"
+            (translators.t "contact_modal.contact_type")
+            EnteredContactOption
+            (ContactType.toString contactType)
+            Nothing
+        )
+        contactOptions
+        |> Select.toHtml
+
+
+viewFlagsSelect : Translators -> Basic -> Html (Msg profile)
+viewFlagsSelect { t } basic =
     let
         countryOptions =
-            model.country
-                :: List.filter (\country -> country /= model.country) listCountries
+            basic.country
+                :: List.filter (\country -> country /= basic.country) listCountries
 
         -- For example, in Brazil we only use +55, not +055
         readableCountryCode country =
             case countryCode country |> String.toList of
                 '+' :: rest ->
-                    "+" ++ (List.Extra.dropWhile ((==) '0') rest |> String.fromList)
+                    "+" ++ (LE.dropWhile ((==) '0') rest |> String.fromList)
 
                 code ->
                     String.fromList code
@@ -147,7 +375,7 @@ viewFlagsSelect { t } model =
         flag classes country =
             button
                 [ class ("w-full flex items-center space-x-2 text-menu " ++ classes)
-                , onClick (SelectedCountry country)
+                , onClick (SelectedCountry basic.contactType country)
                 , type_ "button"
                 ]
                 [ img
@@ -160,13 +388,13 @@ viewFlagsSelect { t } model =
                 ]
 
         id =
-            model.id ++ "_select"
+            ContactType.toString basic.contactType ++ "_select"
     in
     div [ class "mb-10 flex-shrink-0", Html.Attributes.id id ]
-        [ if model.showFlags then
+        [ if basic.showFlags then
             button
                 [ class "absolute top-0 left-0 w-full h-full cursor-default z-40"
-                , onClick ClickedToggleContactFlags
+                , onClick (ClickedToggleContactFlags basic.contactType)
                 , type_ "button"
                 ]
                 []
@@ -176,12 +404,12 @@ viewFlagsSelect { t } model =
         , View.Form.label id (t "contact_form.country")
         , button
             [ class "form-select select relative"
-            , classList [ ( "border-none mx-px", model.showFlags ) ]
-            , onClick ClickedToggleContactFlags
+            , classList [ ( "border-none mx-px", basic.showFlags ) ]
+            , onClick (ClickedToggleContactFlags basic.contactType)
             , type_ "button"
             ]
-            [ flag "" model.country
-            , if model.showFlags then
+            [ flag "" basic.country
+            , if basic.showFlags then
                 div
                     [ class "absolute form-input -mx-px inset-x-0 top-0 space-y-4 z-50" ]
                     (List.map (flag "mt-px") countryOptions)
@@ -192,34 +420,34 @@ viewFlagsSelect { t } model =
         ]
 
 
-viewPhoneInput : Translators -> Model -> Html Msg
-viewPhoneInput ({ t } as translators) model =
+viewPhoneInput : Translators -> Basic -> Html (Msg profile)
+viewPhoneInput ({ t } as translators) basic =
     div [ class "w-full" ]
         [ Input.init
             { label = t "contact_form.phone.label"
-            , id = model.id ++ "_contact_input"
-            , onInput = EnteredContactText
+            , id = ContactType.toString basic.contactType ++ "_input"
+            , onInput = EnteredContactText basic.contactType
             , disabled = False
-            , value = model.contact
+            , value = basic.contact
             , placeholder = Just (t "contact_form.phone.placeholder")
-            , problems = model.errors
+            , problems = basic.errors
             , translators = translators
             }
             |> Input.toHtml
         ]
 
 
-viewProfileInput : Translators -> Model -> Html Msg
-viewProfileInput ({ t } as translators) model =
+viewProfileInput : Translators -> Basic -> Html (Msg profile)
+viewProfileInput ({ t } as translators) basic =
     div [ class "w-full" ]
         [ Input.init
             { label = t "contact_form.username.label"
-            , id = model.id ++ "_contact_input"
-            , onInput = EnteredContactText
+            , id = ContactType.toString basic.contactType ++ "_input"
+            , onInput = EnteredContactText basic.contactType
             , disabled = False
-            , value = model.contact
+            , value = basic.contact
             , placeholder = Just (t "contact_form.username.placeholder")
-            , problems = model.errors
+            , problems = basic.errors
             , translators = translators
             }
             |> Input.toHtml
@@ -245,19 +473,19 @@ hasSameType (Normalized contact1) (Normalized contact2) =
     contact1.contactType == contact2.contactType
 
 
-updateType : ContactType -> Model -> Model
-updateType newType model =
-    { model | contactType = newType, errors = Nothing }
+updateType : ContactType -> Basic -> Basic
+updateType newType basic =
+    { basic | contactType = newType, errors = Nothing }
 
 
-addErrors : List String -> Model -> Model
-addErrors errors model =
+addErrors : List String -> Basic -> Basic
+addErrors errors basic =
     case errors of
         [] ->
-            { model | errors = Nothing }
+            { basic | errors = Nothing }
 
         err :: _ ->
-            { model | errors = Just [ err ] }
+            { basic | errors = Just [ err ] }
 
 
 
@@ -280,7 +508,7 @@ countryCode country =
             "+001"
 
 
-normalize : Country -> Validate.Valid Model -> Normalized
+normalize : Country -> Validate.Valid Basic -> Normalized
 normalize country validatedContact =
     let
         { contactType, contact } =
@@ -326,7 +554,7 @@ instagramRegex =
         |> Maybe.withDefault Regex.never
 
 
-validateRegex : Regex -> String -> Validate.Validator String Model
+validateRegex : Regex -> String -> Validate.Validator String Basic
 validateRegex regex error =
     Validate.fromErrors
         (\{ contact } ->
@@ -338,7 +566,7 @@ validateRegex regex error =
         )
 
 
-validator : ContactType -> Translators -> Validate.Validator String Model
+validator : ContactType -> Translators -> Validate.Validator String Basic
 validator contactType translators =
     let
         ( regex, field ) =

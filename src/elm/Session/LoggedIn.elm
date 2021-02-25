@@ -34,7 +34,6 @@ import Auth
 import Avatar
 import Browser.Dom as Dom
 import Browser.Events
-import Cambiatus.Enum.ContactType as ContactType
 import Cambiatus.Object
 import Cambiatus.Object.UnreadNotifications
 import Cambiatus.Subscription as Subscription
@@ -48,7 +47,7 @@ import Graphql.Operation exposing (RootSubscription)
 import Graphql.SelectionSet exposing (SelectionSet)
 import Html exposing (Html, a, button, div, footer, img, nav, p, span, text)
 import Html.Attributes exposing (class, classList, src, style, type_)
-import Html.Events exposing (onClick, onMouseEnter, onSubmit)
+import Html.Events exposing (onClick, onMouseEnter)
 import Http
 import I18Next exposing (Delims(..), Translations)
 import Icons
@@ -67,8 +66,6 @@ import Task
 import Time exposing (Posix)
 import Translation
 import UpdateResult as UR
-import Validate
-import View.Form.Select as Select
 import View.Modal as Modal
 
 
@@ -190,7 +187,7 @@ initModel shared authModel accountName selectedCommunity =
     , hasShop = FeatureLoading
     , hasObjectives = FeatureLoading
     , hasKyc = FeatureLoading
-    , contactModel = Contact.init "add_contact_modal"
+    , contactModel = Contact.init True
     , showContactModal = False
     , searchModel = Search.init selectedCommunity
     , claimingAction = { status = Action.NotAsked, feedback = Nothing, needsPinConfirmation = False }
@@ -677,60 +674,9 @@ addContactModal ({ contactModel, shared } as model) =
                     [ text_ "contact_modal.title" ]
                 ]
 
-        contactOptions =
-            List.map
-                (\contactType ->
-                    let
-                        asString =
-                            ContactType.toString contactType
-
-                        capitalized =
-                            (String.left 1 asString |> String.toUpper)
-                                ++ String.dropLeft 1 (String.toLower asString)
-                    in
-                    { value = asString
-                    , label = capitalized
-                    }
-                )
-                ContactType.list
-
-        contactTypeSelect =
-            List.foldr Select.withOption
-                (Select.init "contact_type"
-                    (shared.translators.t "contact_modal.contact_type")
-                    EnteredContactOption
-                    (ContactType.toString contactModel.contactType)
-                    Nothing
-                )
-                contactOptions
-                |> Select.toHtml
-
-        submitButton =
-            button
-                [ class "button button-primary w-full"
-                , type_ "submit"
-                ]
-                [ text_
-                    (if Contact.usesPhone contactModel.contactType then
-                        "contact_modal.phone.submit"
-
-                     else
-                        "contact_modal.username.submit"
-                    )
-                ]
-
         form =
-            Html.form
-                [ class "w-full md:w-5/6 mx-auto mt-12"
-                , onSubmit SubmittedContactModalForm
-                ]
-                [ contactTypeSelect
-                , Contact.viewForm shared.translators contactModel
-                    |> Html.map GotContactMsg
-                , submitButton
-                , p [ class "text-caption text-center uppercase my-4" ]
-                    [ text_ "contact_modal.footer" ]
-                ]
+            Contact.viewForm shared.translators contactModel
+                |> Html.map GotContactMsg
     in
     Modal.initWith
         { closeMsg = CloseAddContactModal
@@ -740,6 +686,8 @@ addContactModal ({ contactModel, shared } as model) =
             [ header
             , img [ class "mx-auto mt-10", src "/images/girl-with-phone.svg" ] []
             , form
+            , p [ class "text-caption text-center uppercase my-4" ]
+                [ text_ "contact_modal.footer" ]
             ]
         |> Modal.withLarge True
         |> Modal.toHtml
@@ -878,10 +826,7 @@ type Msg
     | SelectCommunity Symbol (Cmd Msg)
     | HideFeedbackLocal
     | CloseAddContactModal
-    | EnteredContactOption String
-    | GotContactMsg Contact.Msg
-    | SubmittedContactModalForm
-    | CompletedUpdateContact (Result (Graphql.Http.Error (Maybe Profile.Model)) (Maybe Profile.Model))
+    | GotContactMsg (Contact.Msg Profile.Model)
     | GotSearchMsg Search.Msg
     | GotActionMsg Action.Msg
     | SearchClosed
@@ -1169,93 +1114,36 @@ update msg model =
             { model | showContactModal = False }
                 |> UR.init
 
-        EnteredContactOption contactOption ->
-            { model
-                | contactModel =
-                    Contact.updateType
-                        (ContactType.fromString contactOption
-                            |> Maybe.withDefault Contact.defaultContactType
-                        )
-                        model.contactModel
-            }
-                |> UR.init
-
         GotContactMsg subMsg ->
-            { model | contactModel = Contact.update subMsg model.contactModel }
-                |> UR.init
-
-        SubmittedContactModalForm ->
-            let
-                contactModel =
-                    model.contactModel
-
-                validator =
-                    Contact.validator contactModel.contactType
-                        shared.translators
-            in
-            case Validate.validate validator contactModel of
-                Err errors ->
-                    Contact.addErrors errors contactModel
-                        |> (\contact -> { model | contactModel = contact })
-                        |> UR.init
-
-                Ok validModel ->
-                    case profile model of
-                        Nothing ->
-                            model |> UR.init
-
-                        Just userProfile ->
-                            model
-                                |> UR.init
-                                |> UR.addCmd
-                                    (Contact.normalize contactModel.country validModel
-                                        |> addContact model userProfile
-                                    )
-
-        CompletedUpdateContact (Ok profile_) ->
-            case profile_ of
-                Just p ->
-                    { model | profile = Loaded p }
-                        |> UR.init
-                        |> closeModal
-
-                Nothing ->
-                    { model
-                        | contactModel =
-                            Contact.addErrors
-                                [ shared.translators.t "contact_modal.error" ]
+            case profile model of
+                Just userProfile ->
+                    let
+                        ( contactModel, cmd, newProfile ) =
+                            Contact.update
+                                subMsg
                                 model.contactModel
-                    }
+                                (Profile.updateContacts userProfile
+                                    >> Profile.profileToForm
+                                    >> Profile.mutation model.accountName
+                                )
+                                shared
+                    in
+                    (case newProfile of
+                        Nothing ->
+                            { model | contactModel = contactModel }
+
+                        Just p ->
+                            { model
+                                | contactModel = contactModel
+                                , profile = Loaded p
+                                , showContactModal = False
+                            }
+                    )
                         |> UR.init
+                        |> UR.addCmd (Cmd.map GotContactMsg cmd)
 
-        CompletedUpdateContact (Err err) ->
-            UR.init model
-                |> UR.logGraphqlError msg err
-
-
-addContact : Model -> Profile.Model -> Contact.Normalized -> Cmd Msg
-addContact ({ shared } as model) userProfile contact =
-    Profile.mutation model.accountName
-        (updateProfileContacts userProfile contact |> Profile.profileToForm)
-        |> (\mutation -> Api.Graphql.mutation shared mutation CompletedUpdateContact)
-
-
-updateProfileContacts : Profile.Model -> Contact.Normalized -> Profile.Model
-updateProfileContacts ({ contacts } as profile_) contact =
-    { profile_
-        | contacts =
-            case contacts of
                 Nothing ->
-                    Just [ contact ]
-
-                Just contactsList ->
-                    Just
-                        (List.filter
-                            (not << Contact.hasSameType contact)
-                            contactsList
-                            ++ [ contact ]
-                        )
-    }
+                    model |> UR.init
 
 
 handleActionMsg : Model -> Action.Msg -> UpdateResult
@@ -1488,14 +1376,5 @@ msgToString msg =
         CloseAddContactModal ->
             [ "CloseAddContactModal" ]
 
-        EnteredContactOption contactOption ->
-            [ "EnteredContactOption", contactOption ]
-
         GotContactMsg _ ->
             [ "GotContactMsg" ]
-
-        SubmittedContactModalForm ->
-            [ "SubmittedContactModalForm" ]
-
-        CompletedUpdateContact r ->
-            [ "CompletedUpdateContact", UR.resultToString r ]

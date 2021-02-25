@@ -23,6 +23,7 @@ module Profile exposing
     , selectConfig
     , selectFilter
     , selectionSet
+    , updateContacts
     , upsertKycMutation
     , username
     , view
@@ -460,6 +461,27 @@ pinValidationAttrs =
     , Html.Attributes.attribute "inputmode" "numeric"
     , title "Use only numbers."
     ]
+
+
+updateContacts : Model -> List Contact.Normalized -> Model
+updateContacts ({ contacts } as profile) newContacts =
+    { profile
+        | contacts =
+            case contacts of
+                Nothing ->
+                    Just newContacts
+
+                Just contactsList ->
+                    Just
+                        (List.filter
+                            (\contact ->
+                                List.any (Contact.hasSameType contact) newContacts
+                                    |> not
+                            )
+                            contactsList
+                            ++ newContacts
+                        )
+    }
 
 
 
