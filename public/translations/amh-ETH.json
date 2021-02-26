@@ -843,35 +843,32 @@
     "contact_modal": {
       "new": "አዲስ",
       "title": "የስልክ ቁጥርዎን ያክሉ",
-      "contact_type": "የእውቂያ ዓይነት",
-      "phone": {
-        "submit": "ስልክ ቁጥር ያክሉ"
-      },
-      "username": {
-        "submit": "መገለጫ ያክሉ"
-      },
-      "error": "ዕውቂያዎን ሲያክሉ አንድ ነገር ተሳስቷል",
       "footer": "በኋላ ላይ በመገለጫው አካባቢ ውስጥ ማከል ይችላሉ"
     },
     "contact_form": {
       "country": "ሀገር",
+      "contact_type": "የእውቂያ ዓይነት",
+      "error": "ዕውቂያዎን ሲያክሉ አንድ ነገር ተሳስቷል",
+      "submit_multiple": "አስቀምጥ",
       "phone": {
         "label": "የስልክ ቁጥር (ከዲዲዲ ጋር)",
-        "placeholder": "ዘጸ-11964337131"
+        "placeholder": "ዘጸ-11964337131",
+        "submit": "ስልክ ቁጥር ያክሉ"
       },
       "username": {
         "label": "የተጠቃሚ ስም",
-        "placeholder": "ዘፀ: cambiatus"
-      }
-    },
-    "contact_validator": {
-      "phone": {
-        "blank": "እባክዎን የስልክ ቁጥርዎን ያስገቡ",
-        "invalid": "እባክዎ ትክክለኛ የስልክ ቁጥር ያስገቡ"
+        "placeholder": "ዘፀ: cambiatus",
+        "submit": "መገለጫ ያክሉ"
       },
-      "profile": {
-        "blank": "እባክዎን የመገለጫ ስምዎን ያስገቡ",
-        "invalid": "እባክዎ ትክክለኛ የመገለጫ ስም ያስገቡ"
+      "validation": {
+        "phone": {
+          "blank": "እባክዎን የስልክ ቁጥርዎን ያስገቡ",
+          "invalid": "እባክዎ ትክክለኛ የስልክ ቁጥር ያስገቡ"
+        },
+        "username": {
+          "blank": "እባክዎን የመገለጫ ስምዎን ያስገቡ",
+          "invalid": "እባክዎ ትክክለኛ የመገለጫ ስም ያስገቡ"
+        }
       }
     }
   }

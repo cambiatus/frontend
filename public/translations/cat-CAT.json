@@ -884,35 +884,32 @@
   "contact_modal": {
     "new": "Novetat",
     "title": "Afegiu el vostre Número de Telèfon",
-    "contact_type": "Tipus de contacte",
-    "phone": {
-      "submit": "Afegiu un Número de Telèfon"
-    },
-    "username": {
-      "submit": "Afegeix un perfil"
-    },
-    "error": "S'ha produït un error en afegir el vostre contacte",
     "footer": "Podeu afegir-lo més endavant a l'àrea del perfil"
   },
   "contact_form": {
     "country": "País",
+    "contact_type": "Tipus de contacte",
+    "error": "S'ha produït un error en afegir el vostre contacte",
+    "submit_multiple": "Desa",
     "phone": {
       "label": "Número de telèfon (amb DDD)",
-      "placeholder": "Ex.: 11964337131"
+      "placeholder": "Ex.: 11964337131",
+      "submit": "Afegiu un Número de Telèfon"
     },
     "username": {
       "label": "Nom d'usuari",
-      "placeholder": "Ex.: cambiatus"
-    }
-  },
-  "contact_validator": {
-    "phone": {
-      "blank": "Introduïu el vostre número de telèfon",
-      "invalid": "Siusplau introdueixi un número de telèfon vàlid"
+      "placeholder": "Ex.: cambiatus",
+      "submit": "Afegeix un perfil"
     },
-    "profile": {
-      "blank": "Introduïu el nom del vostre perfil",
-      "invalid": "Introduïu un nom de perfil vàlid"
+    "validation": {
+      "phone": {
+        "blank": "Introduïu el vostre número de telèfon",
+        "invalid": "Siusplau introdueixi un número de telèfon vàlid"
+      },
+      "username": {
+        "blank": "Introduïu el nom del vostre perfil",
+        "invalid": "Introduïu un nom de perfil vàlid"
+      }
     }
   }
 }

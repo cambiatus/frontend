@@ -27,6 +27,10 @@ body {
   @apply uppercase text-sm flex items-center justify-center leading-none w-40 h-10;
 }
 
+.button:disabled {
+  @apply bg-opacity-75;
+}
+
 .button-primary {
   @apply bg-orange-300 text-white text-body rounded-super font-medium;
 }

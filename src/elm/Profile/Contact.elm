@@ -24,7 +24,7 @@ import Graphql.Operation exposing (RootMutation)
 import Graphql.OptionalArgument exposing (OptionalArgument(..))
 import Graphql.SelectionSet as SelectionSet exposing (SelectionSet, with)
 import Html exposing (Html, button, div, img, p, text)
-import Html.Attributes exposing (class, classList, src, style, type_)
+import Html.Attributes exposing (class, classList, disabled, src, style, type_)
 import Html.Events exposing (onClick, onSubmit)
 import Json.Decode as Decode exposing (Decoder)
 import Json.Encode as Encode
@@ -33,6 +33,7 @@ import Regex exposing (Regex)
 import RemoteData exposing (RemoteData)
 import Session.Shared exposing (Shared, Translators)
 import Validate
+import View.Components
 import View.Form
 import View.Form.Input as Input
 import View.Form.Select as Select
@@ -286,23 +287,40 @@ submitMultiple translators basics =
 view : Translators -> Model -> Html Msg
 view translators model =
     let
+        submitText =
+            (case model.kind of
+                Single contact ->
+                    if usesPhone contact.contactType then
+                        "contact_form.phone.submit"
+
+                    else
+                        "contact_form.username.submit"
+
+                Multiple _ ->
+                    "contact_form.submit_multiple"
+            )
+                |> translators.t
+                |> text
+
+        isDisabled =
+            RemoteData.isLoading model.state || RemoteData.isSuccess model.state
+
         submitButton =
             button
-                [ class "button button-primary w-full"
+                [ class "button w-full"
                 , type_ "submit"
+                , classList
+                    [ ( "button-success", RemoteData.isSuccess model.state )
+                    , ( "button-primary", not (RemoteData.isSuccess model.state) )
+                    ]
+                , disabled isDisabled
                 ]
-                [ text
-                    (case model.kind of
-                        Single contact ->
-                            if usesPhone contact.contactType then
-                                translators.t "contact_modal.phone.submit"
+                [ case model.state of
+                    RemoteData.Loading ->
+                        View.Components.loadingLogoAnimatedFluid
 
-                            else
-                                "contact_modal.username.submit"
-
-                        Multiple _ ->
-                            translators.t "contact_modal.submit_multiple"
-                    )
+                    _ ->
+                        submitText
                 ]
     in
     (case model.kind of
@@ -314,7 +332,13 @@ view translators model =
         Multiple contacts ->
             List.map (viewInput translators) contacts
     )
-        ++ [ submitButton ]
+        ++ [ submitButton
+           , if RemoteData.isFailure model.state then
+                text (translators.t "contact_form.error")
+
+             else
+                text ""
+           ]
         |> Html.form
             [ class "w-full md:w-5/6 mx-auto mt-12"
             , onSubmit ClickedSubmit
@@ -354,7 +378,7 @@ viewContactTypeSelect translators contactType =
     in
     List.foldr Select.withOption
         (Select.init "contact_type"
-            (translators.t "contact_modal.contact_type")
+            (translators.t "contact_form.contact_type")
             EnteredContactOption
             (ContactType.toString contactType)
             Nothing
@@ -580,13 +604,13 @@ validator contactType translators =
                     ( phoneRegex, "phone" )
 
                 Instagram ->
-                    ( instagramRegex, "profile" )
+                    ( instagramRegex, "username" )
 
                 Telegram ->
-                    ( telegramRegex, "profile" )
+                    ( telegramRegex, "username" )
 
         baseTranslation =
-            "contact_validator"
+            "contact_form.validation"
     in
     Validate.all
         [ Validate.ifBlank .contact

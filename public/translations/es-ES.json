@@ -884,35 +884,32 @@
   "contact_modal": {
     "new": "Nuevo",
     "title": "Agrega tu Número de Teléfono",
-    "contact_type": "Tipo de Contacto",
-    "phone": {
-      "submit": "Agregar el número de teléfono"
-    },
-    "username": {
-      "submit": "Agregar Perfil"
-    },
-    "error": "Algo salió mal al agregar su contacto",
     "footer": "Puedes agregarlo más tarde en el área del perfil"
   },
   "contact_form": {
     "country": "País",
+    "contact_type": "Tipo de Contacto",
+    "error": "Algo salió mal al agregar su contacto",
+    "submit_multiple": "Salvar",
     "phone": {
       "label": "Número de teléfono (con DDD)",
-      "placeholder": "Ej.: 11964337131"
+      "placeholder": "Ej.: 11964337131",
+      "submit": "Agregar el número de teléfono"
     },
     "username": {
       "label": "Nombre de Usuario",
-      "placeholder": "Ej.: cambiatus"
-    }
-  },
-  "contact_validator": {
-    "phone": {
-      "blank": "Por favor, introduzca su número de teléfono",
-      "invalid": "Por favor ingrese un número de teléfono válido"
+      "placeholder": "Ej.: cambiatus",
+      "submit": "Agregar Perfil"
     },
-    "profile": {
-      "blank": "Ingrese su nombre de perfil",
-      "invalid": "Ingrese un nombre de perfil válido"
+    "validation": {
+      "phone": {
+        "blank": "Por favor, introduzca su número de teléfono",
+        "invalid": "Por favor ingrese un número de teléfono válido"
+      },
+      "username": {
+        "blank": "Ingrese su nombre de perfil",
+        "invalid": "Ingrese un nombre de perfil válido"
+      }
     }
   }
 }

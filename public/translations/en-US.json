@@ -882,35 +882,32 @@
   "contact_modal": {
     "new": "New",
     "title": "Add your Phone Number",
-    "contact_type": "Contact type",
-    "phone": {
-      "submit": "Add Phone Number"
-    },
-    "username": {
-      "submit": "Add Profile"
-    },
-    "error": "Something went wrong when adding your contact",
     "footer": "You can add it later in the profile's area"
   },
   "contact_form": {
     "country": "Country",
+    "contact_type": "Contact type",
+    "error": "Something went wrong when adding your contact",
+    "submit_multiple": "Save",
     "phone": {
       "label": "Phone Number (with DDD)",
-      "placeholder": "Ex.: 11964337131"
+      "placeholder": "Ex.: 11964337131",
+      "submit": "Add Phone Number"
     },
     "username": {
       "label": "Username",
-      "placeholder": "Ex.: cambiatus"
-    }
-  },
-  "contact_validator": {
-    "phone": {
-      "blank": "Please enter your phone number",
-      "invalid": "Please enter a valid phone number"
+      "placeholder": "Ex.: cambiatus",
+      "submit": "Add Profile"
     },
-    "profile": {
-      "blank": "Please enter your profile name",
-      "invalid": "Please enter a valid profile name"
+    "validation": {
+      "phone": {
+        "blank": "Please enter your phone number",
+        "invalid": "Please enter a valid phone number"
+      },
+      "username": {
+        "blank": "Please enter your profile name",
+        "invalid": "Please enter a valid profile name"
+      }
     }
   }
 }
