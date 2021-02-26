@@ -10,7 +10,6 @@ module Session.LoggedIn exposing
     , ProfileStatus(..)
     , addNotification
     , askedAuthentication
-    , authQuery
     , init
     , initLogin
     , isAccount
@@ -81,8 +80,8 @@ init shared accountName flags =
     in
     ( initModel shared authModel accountName flags.selectedCommunity
     , Cmd.batch
-        [ authQuery { auth = authModel, shared = shared } (Profile.query accountName) CompletedLoadProfile
-        , authQuery { auth = authModel, shared = shared } (Community.settingsQuery flags.selectedCommunity) CompletedLoadSettings
+        [ Auth.query shared authModel (Profile.query accountName) CompletedLoadProfile
+        , Auth.query shared authModel (Community.settingsQuery flags.selectedCommunity) CompletedLoadSettings
         , Ports.getRecentSearches () -- run on the page refresh, duplicated in `initLogin`
         , Task.perform GotTime Time.now
         ]
@@ -159,32 +158,6 @@ type alias Model =
     , claimingAction : Action.Model
     , date : Maybe Posix
     }
-
-
-authQuery :
-    { m | auth : Auth.Model, shared : Shared }
-    -> SelectionSet a RootQuery
-    -> (Result (Graphql.Http.Error a) a -> msg)
-    -> Cmd msg
-authQuery { auth, shared } query toMsg =
-    let
-        token =
-            auth.authToken
-
-        endpoints =
-            shared.endpoints
-    in
-    query
-        |> Graphql.Http.queryRequest endpoints.graphql
-        |> (case token of
-                Just t ->
-                    Graphql.Http.withHeader "authorization"
-                        ("Bearer " ++ t)
-
-                Nothing ->
-                    identity
-           )
-        |> Graphql.Http.send toMsg
 
 
 type FeatureStatus
@@ -943,7 +916,7 @@ update msg model =
 
         ClickedTryAgainProfile accountName ->
             UR.init { model | profile = Loading accountName }
-                |> UR.addCmd (authQuery model (Profile.query accountName) CompletedLoadProfile)
+                |> UR.addCmd (Auth.query model.shared model.auth (Profile.query accountName) CompletedLoadProfile)
 
         ClickedLogout ->
             UR.init model
@@ -1068,7 +1041,12 @@ update msg model =
                         |> (\searchModel -> { searchModel | selectedCommunity = communityId })
             }
                 |> UR.init
-                |> UR.addCmd (authQuery model (Community.settingsQuery communityId) CompletedLoadSettings)
+                |> UR.addCmd
+                    (Auth.query model.shared
+                        model.auth
+                        (Community.settingsQuery communityId)
+                        CompletedLoadSettings
+                    )
                 |> UR.addPort
                     { responseAddress = msg
                     , responseData = Encode.null

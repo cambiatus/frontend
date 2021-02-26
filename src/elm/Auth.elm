@@ -9,6 +9,7 @@ module Auth exposing
     , jsAddressToMsg
     , maybePrivateKey
     , msgToString
+    , query
     , subscriptions
     , update
     , view
@@ -23,7 +24,8 @@ import Cambiatus.Mutation
 import Cambiatus.Object.Session
 import Eos.Account as Eos
 import Graphql.Http
-import Graphql.SelectionSet exposing (with)
+import Graphql.Operation exposing (RootQuery)
+import Graphql.SelectionSet exposing (SelectionSet, with)
 import Html exposing (Html, a, button, div, form, h2, img, label, li, p, span, strong, text, textarea, ul)
 import Html.Attributes exposing (autocomplete, autofocus, class, disabled, for, id, placeholder, required, src, title, type_, value)
 import Html.Events exposing (onClick, onInput, onSubmit)
@@ -98,6 +100,26 @@ type alias Model =
     , problems : List ( Field, String )
     , authToken : Maybe String
     }
+
+
+query :
+    Shared
+    -> Model
+    -> SelectionSet a RootQuery
+    -> (Result (Graphql.Http.Error a) a -> msg)
+    -> Cmd msg
+query { endpoints } { authToken } query_ toMsg =
+    query_
+        |> Graphql.Http.queryRequest endpoints.graphql
+        |> (case authToken of
+                Just t ->
+                    Graphql.Http.withHeader "authorization"
+                        ("Bearer " ++ t)
+
+                Nothing ->
+                    identity
+           )
+        |> Graphql.Http.send toMsg
 
 
 initModel : Model

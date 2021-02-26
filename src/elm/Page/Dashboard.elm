@@ -10,8 +10,8 @@ module Page.Dashboard exposing
     )
 
 import Api
-import Api.Graphql
 import Api.Relay
+import Auth
 import Cambiatus.Query
 import Claim
 import Community exposing (Balance)
@@ -895,7 +895,8 @@ fetchBalance shared accountName =
 
 fetchTransfers : LoggedIn.Model -> Eos.Name -> Cmd Msg
 fetchTransfers loggedIn accountName =
-    LoggedIn.authQuery loggedIn
+    Auth.query loggedIn.shared
+        loggedIn.auth
         (Transfer.transfersUserQuery
             accountName
             (\args ->
@@ -934,14 +935,16 @@ fetchAvailableAnalysis ({ shared, accountName, selectedCommunity } as loggedIn) 
                             |> Maybe.withDefault Absent
                 }
     in
-    LoggedIn.authQuery loggedIn
+    Auth.query loggedIn.shared
+        loggedIn.auth
         (Cambiatus.Query.claimsAnalysis pagination arg Claim.claimPaginatedSelectionSet)
         ClaimsLoaded
 
 
 fetchCommunity : LoggedIn.Model -> Symbol -> Cmd Msg
 fetchCommunity loggedIn selectedCommunity =
-    LoggedIn.authQuery loggedIn
+    Auth.query loggedIn.shared
+        loggedIn.auth
         (Cambiatus.Query.community { symbol = Eos.symbolToString selectedCommunity } Community.dashboardSelectionSet)
         CommunityLoaded
 

@@ -12,6 +12,7 @@ module Page.Profile exposing
     )
 
 import Api.Graphql
+import Auth
 import Avatar
 import Browser.Dom as Dom
 import Eos exposing (Symbol)
@@ -44,7 +45,8 @@ init : LoggedIn.Model -> ( Model, Cmd Msg )
 init loggedIn =
     let
         profileQuery =
-            LoggedIn.authQuery loggedIn
+            Auth.query loggedIn.shared
+                loggedIn.auth
                 (Profile.query loggedIn.accountName)
                 CompletedProfileLoad
     in
@@ -683,7 +685,8 @@ update msg model loggedIn =
         DeleteKycAndAddressCompleted resp ->
             let
                 reloadProfile =
-                    LoggedIn.authQuery loggedIn
+                    Auth.query loggedIn.shared
+                        loggedIn.auth
                         (Profile.query loggedIn.accountName)
                         CompletedProfileLoad
             in
