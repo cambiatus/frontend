@@ -187,7 +187,7 @@ initModel shared authModel accountName selectedCommunity =
     , hasShop = FeatureLoading
     , hasObjectives = FeatureLoading
     , hasKyc = FeatureLoading
-    , contactModel = Contact.init True
+    , contactModel = Contact.init False
     , showContactModal = False
     , searchModel = Search.init selectedCommunity
     , claimingAction = { status = Action.NotAsked, feedback = Nothing, needsPinConfirmation = False }
@@ -675,11 +675,11 @@ addContactModal ({ contactModel, shared } as model) =
                 ]
 
         form =
-            Contact.viewForm shared.translators contactModel
+            Contact.view shared.translators contactModel
                 |> Html.map GotContactMsg
     in
     Modal.initWith
-        { closeMsg = CloseAddContactModal
+        { closeMsg = ClosedAddContactModal
         , isVisible = model.showContactModal
         }
         |> Modal.withBody
@@ -825,8 +825,8 @@ type Msg
     | CloseCommunitySelector
     | SelectCommunity Symbol (Cmd Msg)
     | HideFeedbackLocal
-    | CloseAddContactModal
-    | GotContactMsg (Contact.Msg Profile.Model)
+    | ClosedAddContactModal
+    | GotContactMsg Contact.Msg
     | GotSearchMsg Search.Msg
     | GotActionMsg Action.Msg
     | SearchClosed
@@ -1110,7 +1110,7 @@ update msg model =
                     }
                 |> UR.addCmd doNext
 
-        CloseAddContactModal ->
+        ClosedAddContactModal ->
             { model | showContactModal = False }
                 |> UR.init
 
@@ -1118,27 +1118,25 @@ update msg model =
             case profile model of
                 Just userProfile ->
                     let
-                        ( contactModel, cmd, newProfile ) =
-                            Contact.update
-                                subMsg
+                        ( contactModel, cmd, maybeContacts ) =
+                            Contact.update subMsg
                                 model.contactModel
-                                (Profile.updateContacts userProfile
-                                    >> Profile.profileToForm
-                                    >> Profile.mutation model.accountName
-                                )
                                 shared
-                    in
-                    (case newProfile of
-                        Nothing ->
-                            { model | contactModel = contactModel }
+                                model.accountName
 
-                        Just p ->
-                            { model
-                                | contactModel = contactModel
-                                , profile = Loaded p
-                                , showContactModal = False
-                            }
-                    )
+                        maybeAddContacts model_ =
+                            Maybe.map
+                                (\contacts ->
+                                    { model_
+                                        | profile = Loaded { userProfile | contacts = Just contacts }
+                                        , showContactModal = False
+                                    }
+                                )
+                                maybeContacts
+                                |> Maybe.withDefault model_
+                    in
+                    { model | contactModel = contactModel }
+                        |> maybeAddContacts
                         |> UR.init
                         |> UR.addCmd (Cmd.map GotContactMsg cmd)
 
@@ -1373,8 +1371,8 @@ msgToString msg =
         HideFeedbackLocal ->
             [ "HideFeedbackLocal" ]
 
-        CloseAddContactModal ->
-            [ "CloseAddContactModal" ]
+        ClosedAddContactModal ->
+            [ "ClosedAddContactModal" ]
 
         GotContactMsg _ ->
             [ "GotContactMsg" ]

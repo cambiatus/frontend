@@ -1,30 +1,27 @@
 module Profile.Contact exposing
-    ( Country(..)
-    , Model
+    ( Model
     , Msg
     , Normalized
-    , addErrors
     , decode
-    , defaultContactType
     , encode
     , hasSameType
     , init
-    , normalize
     , selectionSet
     , unwrap
     , update
-    , updateType
-    , usesPhone
-    , validator
-    , viewForm
+    , view
     )
 
 import Api.Graphql
 import Cambiatus.Enum.ContactType as ContactType exposing (ContactType(..))
+import Cambiatus.Mutation
 import Cambiatus.Object
 import Cambiatus.Object.Contact
+import Cambiatus.Object.User as User
+import Eos.Account as Eos
 import Graphql.Http
 import Graphql.Operation exposing (RootMutation)
+import Graphql.OptionalArgument exposing (OptionalArgument(..))
 import Graphql.SelectionSet as SelectionSet exposing (SelectionSet, with)
 import Html exposing (Html, button, div, img, p, text)
 import Html.Attributes exposing (class, classList, src, style, type_)
@@ -33,6 +30,7 @@ import Json.Decode as Decode exposing (Decoder)
 import Json.Encode as Encode
 import List.Extra as LE
 import Regex exposing (Regex)
+import RemoteData exposing (RemoteData)
 import Session.Shared exposing (Shared, Translators)
 import Validate
 import View.Form
@@ -44,7 +42,29 @@ import View.Form.Select as Select
 -- MODEL
 
 
-type Model
+type alias Model =
+    { state : UpdatedData
+    , kind : Kind
+    }
+
+
+init : Bool -> Model
+init showTypeSelector =
+    { state = RemoteData.NotAsked
+    , kind =
+        if showTypeSelector then
+            Single (initBasic defaultContactType)
+
+        else
+            Multiple (List.map initBasic ContactType.list)
+    }
+
+
+
+-- TYPES
+
+
+type Kind
     = Single Basic
     | Multiple (List Basic)
 
@@ -58,15 +78,6 @@ type alias Basic =
     }
 
 
-init : Bool -> Model
-init showTypeSelector =
-    if showTypeSelector then
-        Single (initBasic defaultContactType)
-
-    else
-        Multiple (List.map initBasic ContactType.list)
-
-
 initBasic : ContactType -> Basic
 initBasic contactType =
     { country = Brazil
@@ -77,18 +88,20 @@ initBasic contactType =
     }
 
 
+type alias Contact =
+    { contactType : ContactType
+    , contact : String
+    }
+
+
 defaultContactType : ContactType
 defaultContactType =
     Whatsapp
 
 
-
--- TYPES
-
-
-type alias Contact =
-    { contactType : ContactType
-    , contact : String
+type alias Profile =
+    { account : Eos.Name
+    , contacts : Maybe (List Normalized)
     }
 
 
@@ -106,119 +119,113 @@ type Country
     | UnitedStates
 
 
+type alias UpdatedData =
+    RemoteData (Graphql.Http.Error (Maybe Profile)) (Maybe Profile)
+
+
 
 -- UPDATE
 
 
-type Msg profile
+type Msg
     = SelectedCountry ContactType Country
     | ClickedToggleContactFlags ContactType
     | EnteredContactText ContactType String
     | EnteredContactOption String
     | ClickedSubmit
-    | CompletedUpdateContact (Result (Graphql.Http.Error (Maybe profile)) (Maybe profile))
+    | CompletedUpdateContact UpdatedData
 
 
-update :
-    Msg profile
-    -> Model
-    -> (List Normalized -> SelectionSet (Maybe profile) RootMutation)
-    -> Shared
-    -> ( Model, Cmd (Msg profile), Maybe profile )
-update msg model mutationFunction ({ translators } as shared) =
-    case ( msg, model ) of
-        ( SelectedCountry _ country, Single contact ) ->
-            ( Single { contact | country = country, errors = Nothing }
+update : Msg -> Model -> Shared -> Eos.Name -> ( Model, Cmd Msg, Maybe (List Normalized) )
+update msg model ({ translators } as shared) accountName =
+    let
+        toggleFlags ({ showFlags } as contact) =
+            { contact | showFlags = not showFlags }
+
+        setCountry newCountry contact =
+            { contact | country = newCountry, errors = Nothing }
+
+        setContact newContact contact =
+            { contact | contact = newContact }
+
+        updateKind contactType updateFn =
+            { model
+                | kind =
+                    case model.kind of
+                        Single contact ->
+                            updateFn contact
+                                |> Single
+
+                        Multiple contacts ->
+                            updateIfContactType contactType updateFn contacts
+                                |> Multiple
+            }
+    in
+    case msg of
+        SelectedCountry contactType country ->
+            ( updateKind contactType (setCountry country)
             , Cmd.none
             , Nothing
             )
 
-        ( SelectedCountry contactType country, Multiple contacts ) ->
-            ( Multiple
-                (updateIfContactType contactType
-                    (\contact -> { contact | country = country })
-                    contacts
-                )
+        ClickedToggleContactFlags contactType ->
+            ( updateKind contactType toggleFlags
             , Cmd.none
             , Nothing
             )
 
-        ( ClickedToggleContactFlags _, Single contact ) ->
-            ( Single { contact | showFlags = not contact.showFlags }
+        EnteredContactText contactType newContact ->
+            ( updateKind contactType (setContact newContact)
             , Cmd.none
             , Nothing
             )
 
-        ( ClickedToggleContactFlags contactType, Multiple contacts ) ->
-            ( Multiple
-                (updateIfContactType contactType
-                    (\contact -> { contact | showFlags = not contact.showFlags })
-                    contacts
-                )
-            , Cmd.none
-            , Nothing
-            )
+        EnteredContactOption option ->
+            case model.kind of
+                Single contact ->
+                    ( { model
+                        | kind =
+                            Single
+                                { contact
+                                    | contactType =
+                                        ContactType.fromString option
+                                            |> Maybe.withDefault defaultContactType
+                                    , errors = Nothing
+                                    , contact = ""
+                                }
+                      }
+                    , Cmd.none
+                    , Nothing
+                    )
 
-        ( EnteredContactText _ newContact, Single contact ) ->
-            ( Single { contact | contact = newContact }
-            , Cmd.none
-            , Nothing
-            )
+                Multiple _ ->
+                    ( model
+                    , Cmd.none
+                    , Nothing
+                    )
 
-        ( EnteredContactText contactType newContact, Multiple contacts ) ->
-            ( Multiple
-                (updateIfContactType contactType
-                    (\contact -> { contact | contact = newContact })
-                    contacts
-                )
-            , Cmd.none
-            , Nothing
-            )
-
-        ( EnteredContactOption option, Single contact ) ->
-            ( Single
-                { contact
-                    | contactType =
-                        ContactType.fromString option
-                            |> Maybe.withDefault defaultContactType
-                    , errors = Nothing
-                    , contact = ""
-                }
-            , Cmd.none
-            , Nothing
-            )
-
-        ( EnteredContactOption _, Multiple contacts ) ->
-            -- TODO - Impossible (add logging?)
-            ( Multiple contacts
-            , Cmd.none
-            , Nothing
-            )
-
-        ( ClickedSubmit, _ ) ->
-            case submit translators model of
+        ClickedSubmit ->
+            case submit translators model.kind of
                 Err withError ->
-                    ( withError
+                    ( { model | kind = withError }
                     , Cmd.none
                     , Nothing
                     )
 
                 Ok normalized ->
-                    ( model
+                    ( { model | state = RemoteData.Loading }
                     , Api.Graphql.mutation shared
-                        (mutationFunction normalized)
-                        CompletedUpdateContact
+                        (mutation accountName normalized)
+                        (RemoteData.fromResult >> CompletedUpdateContact)
                     , Nothing
                     )
 
-        ( CompletedUpdateContact result, _ ) ->
-            case result of
-                Ok (Just profile) ->
-                    ( model, Cmd.none, Just profile )
-
-                _ ->
-                    -- TODO - Report error, get rid of this
-                    ( model, Cmd.none, Nothing )
+        CompletedUpdateContact result ->
+            ( { model | state = result }
+            , Cmd.none
+            , RemoteData.toMaybe result
+                |> Maybe.andThen (Maybe.andThen .contacts)
+            )
 
 
 updateIfContactType : ContactType -> (Basic -> Basic) -> List Basic -> List Basic
@@ -226,7 +233,7 @@ updateIfContactType contactType fn contacts =
     LE.updateIf (.contactType >> (==) contactType) fn contacts
 
 
-submit : Translators -> Model -> Result Model (List Normalized)
+submit : Translators -> Kind -> Result Kind (List Normalized)
 submit translators model =
     case model of
         Single contact ->
@@ -276,8 +283,8 @@ submitMultiple translators basics =
 -- VIEW
 
 
-viewForm : Translators -> Model -> Html (Msg profile)
-viewForm translators model =
+view : Translators -> Model -> Html Msg
+view translators model =
     let
         submitButton =
             button
@@ -285,7 +292,7 @@ viewForm translators model =
                 , type_ "submit"
                 ]
                 [ text
-                    (case model of
+                    (case model.kind of
                         Single contact ->
                             if usesPhone contact.contactType then
                                 translators.t "contact_modal.phone.submit"
@@ -298,7 +305,7 @@ viewForm translators model =
                     )
                 ]
     in
-    (case model of
+    (case model.kind of
         Single contact ->
             [ viewContactTypeSelect translators contact.contactType
             , viewInput translators contact
@@ -314,7 +321,7 @@ viewForm translators model =
             ]
 
 
-viewInput : Translators -> Basic -> Html (Msg profile)
+viewInput : Translators -> Basic -> Html Msg
 viewInput translators basic =
     div [ class "flex space-x-4" ]
         (if usesPhone basic.contactType then
@@ -325,7 +332,7 @@ viewInput translators basic =
         )
 
 
-viewContactTypeSelect : Translators -> ContactType -> Html (Msg profile)
+viewContactTypeSelect : Translators -> ContactType -> Html Msg
 viewContactTypeSelect translators contactType =
     let
         contactOptions =
@@ -356,7 +363,7 @@ viewContactTypeSelect translators contactType =
         |> Select.toHtml
 
 
-viewFlagsSelect : Translators -> Basic -> Html (Msg profile)
+viewFlagsSelect : Translators -> Basic -> Html Msg
 viewFlagsSelect { t } basic =
     let
         countryOptions =
@@ -420,7 +427,7 @@ viewFlagsSelect { t } basic =
         ]
 
 
-viewPhoneInput : Translators -> Basic -> Html (Msg profile)
+viewPhoneInput : Translators -> Basic -> Html Msg
 viewPhoneInput ({ t } as translators) basic =
     div [ class "w-full" ]
         [ Input.init
@@ -437,7 +444,7 @@ viewPhoneInput ({ t } as translators) basic =
         ]
 
 
-viewProfileInput : Translators -> Basic -> Html (Msg profile)
+viewProfileInput : Translators -> Basic -> Html Msg
 viewProfileInput ({ t } as translators) basic =
     div [ class "w-full" ]
         [ Input.init
@@ -471,11 +478,6 @@ unwrap (Normalized contact) =
 hasSameType : Normalized -> Normalized -> Bool
 hasSameType (Normalized contact1) (Normalized contact2) =
     contact1.contactType == contact2.contactType
-
-
-updateType : ContactType -> Basic -> Basic
-updateType newType basic =
-    { basic | contactType = newType, errors = Nothing }
 
 
 addErrors : List String -> Basic -> Basic
@@ -656,3 +658,34 @@ selectionSet =
         )
         |> with Cambiatus.Object.Contact.type_
         |> with Cambiatus.Object.Contact.externalId
+
+
+profileSelectionSet : SelectionSet Profile Cambiatus.Object.User
+profileSelectionSet =
+    SelectionSet.succeed Profile
+        |> with (Eos.nameSelectionSet User.account)
+        |> with
+            (User.contacts selectionSet
+                |> SelectionSet.map (Maybe.map (List.filterMap identity))
+            )
+
+
+mutation : Eos.Name -> List Normalized -> SelectionSet (Maybe Profile) RootMutation
+mutation account contacts =
+    let
+        contactInput (Normalized { contactType, contact }) =
+            { type_ = Present contactType, externalId = Present contact }
+    in
+    Cambiatus.Mutation.updateUser
+        { input =
+            { account = Eos.nameToString account
+            , avatar = Absent
+            , bio = Absent
+            , contacts = Present (List.map contactInput contacts)
+            , email = Absent
+            , interests = Absent
+            , location = Absent
+            , name = Absent
+            }
+        }
+        profileSelectionSet
