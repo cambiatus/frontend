@@ -23,7 +23,7 @@ import Cambiatus.Mutation
 import Cambiatus.Object.Session
 import Eos.Account as Eos
 import Graphql.Http
-import Graphql.SelectionSet exposing (SelectionSet, with)
+import Graphql.SelectionSet exposing (with)
 import Html exposing (Html, a, button, div, form, h2, img, label, li, p, span, strong, text, textarea, ul)
 import Html.Attributes exposing (autocomplete, autofocus, class, disabled, for, id, placeholder, required, src, title, type_, value)
 import Html.Events exposing (onClick, onInput, onSubmit)

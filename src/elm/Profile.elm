@@ -251,10 +251,6 @@ type alias DeleteKycResult =
 
 deleteKycMutation : Eos.Name -> SelectionSet (Maybe DeleteKycResult) RootMutation
 deleteKycMutation account =
-    let
-        nameString =
-            Eos.nameToString account
-    in
     Cambiatus.Mutation.deleteKyc
         (SelectionSet.succeed DeleteKycResult
             |> with Cambiatus.Object.DeleteKycAddress.status
@@ -270,10 +266,6 @@ type alias DeleteAddressResult =
 
 deleteAddressMutation : Eos.Name -> SelectionSet (Maybe DeleteAddressResult) RootMutation
 deleteAddressMutation account =
-    let
-        nameString =
-            Eos.nameToString account
-    in
     Cambiatus.Mutation.deleteAddress
         (SelectionSet.succeed DeleteAddressResult
             |> with Cambiatus.Object.DeleteKycAddress.status

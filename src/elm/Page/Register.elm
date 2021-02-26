@@ -2,9 +2,7 @@ module Page.Register exposing (Model, Msg, init, jsAddressToMsg, msgToString, up
 
 import Address
 import Api.Graphql
-import Cambiatus.InputObject as InputObject
 import Cambiatus.Mutation as Mutation
-import Cambiatus.Object exposing (Session)
 import Cambiatus.Object.Session
 import Cambiatus.Scalar exposing (Id(..))
 import Community exposing (Invite)
@@ -511,8 +509,6 @@ type Msg
     | AccountTypeSelected AccountType
     | FormMsg EitherFormMsg
     | CompletedSignUp (Result (Graphql.Http.Error (Maybe SignUpResponse)) (Maybe SignUpResponse))
-    | CompletedKycUpsert (Result (Graphql.Http.Error (Maybe ())) (Maybe ()))
-    | CompletedAddressUpsert (Result (Graphql.Http.Error (Maybe ())) (Maybe ()))
 
 
 type EitherFormMsg
@@ -748,10 +744,6 @@ update _ msg model { shared } =
                 |> UR.logDecodeError msg v
 
         AccountKeysGenerated (Ok accountKeys) ->
-            let
-                _ =
-                    Debug.log "generated keys" accountKeys
-            in
             case model.status of
                 FormShowed form ->
                     { model | accountKeys = Just accountKeys }
@@ -808,85 +800,24 @@ update _ msg model { shared } =
                 |> UR.addCmd
                     (Route.replaceUrl shared.navKey (Route.Login Nothing))
 
-        CompletedSignUp ((Ok (Just { user, token })) as resp) ->
-            -- Account was created
-            let
-                _ =
-                    Debug.log "resp" resp
-            in
-            { model
-                | status = AccountCreated
-                , step = SavePassphrase
-            }
-                |> UR.init
-
         CompletedSignUp (Ok resp) ->
-            -- Response was invalid: no token/user info
-            let
-                _ =
-                    Debug.log "error: no account" resp
-            in
-            { model | serverError = Just (t "register.account_error.title") }
-                |> UR.init
-
-        CompletedSignUp (Err error) ->
-            { model | serverError = Just (t "register.account_error.title") }
-                |> UR.init
-                |> UR.logGraphqlError msg error
-
-        CompletedKycUpsert (Ok _) ->
-            case model.status of
-                FormShowed (JuridicalForm form) ->
-                    -- Juridical account still needs the Address to be saved
-                    let
-                        addressData : ( InputObject.AddressUpdateInputRequiredFields, InputObject.AddressUpdateInputOptionalFields )
-                        addressData =
-                            ( { --accountId = form.account
-                                cityId = Tuple.first form.city |> Id
-                              , countryId = Id "1"
-                              , neighborhoodId = Tuple.first form.district |> Id
-                              , stateId = Tuple.first form.state |> Id
-                              , street = form.street
-                              , zip = form.zip
-                              }
-                            , { number = Graphql.OptionalArgument.Present form.number }
-                            )
-                    in
-                    model
-                        |> UR.init
-                        |> UR.addCmd
-                            (saveAddress shared addressData)
-
-                FormShowed (NaturalForm _) ->
-                    -- Natural account is fully created
+            case resp of
+                Just { user, token } ->
                     { model
                         | status = AccountCreated
                         , step = SavePassphrase
                     }
                         |> UR.init
 
-                _ ->
-                    model |> UR.init
+                Nothing ->
+                    { model
+                        | serverError = Just (t "register.account_error.title")
+                    }
+                        |> UR.init
 
-        CompletedKycUpsert (Err error) ->
-            { model
-                | serverError = Just (t "register.form.error.kyc_problem")
-            }
+        CompletedSignUp (Err error) ->
+            { model | serverError = Just (t "register.account_error.title") }
                 |> UR.init
-                |> UR.logGraphqlError msg error
-                |> scrollTop
-
-        CompletedAddressUpsert (Ok _) ->
-            -- Address is saved, Juridical account is created.
-            { model
-                | status = AccountCreated
-                , step = SavePassphrase
-            }
-                |> UR.init
-
-        CompletedAddressUpsert (Err error) ->
-            UR.init
-                { model | serverError = Just (t "register.form.error.address_problem") }
                 |> UR.logGraphqlError msg error
                 |> scrollTop
 
@@ -957,7 +888,7 @@ signUp shared { accountName, ownerKey } invitationId form =
             { account = Eos.nameToString accountName
             , email = email
             , name = name
-            , password = ""
+            , password = shared.graphqlSecret
             , publicKey = ownerKey
             , userType =
                 case form of
@@ -1022,29 +953,6 @@ signUp shared { accountName, ownerKey } invitationId form =
             )
         )
         CompletedSignUp
-
-
-saveKycData : Shared -> InputObject.KycDataUpdateInputRequiredFields -> Cmd Msg
-saveKycData shared requiredFields =
-    Api.Graphql.mutation shared
-        (Mutation.upsertKyc
-            { input = InputObject.buildKycDataUpdateInput requiredFields }
-            Graphql.SelectionSet.empty
-        )
-        CompletedKycUpsert
-
-
-saveAddress :
-    Shared
-    -> ( InputObject.AddressUpdateInputRequiredFields, InputObject.AddressUpdateInputOptionalFields )
-    -> Cmd Msg
-saveAddress shared ( required, optional ) =
-    Api.Graphql.mutation shared
-        (Mutation.upsertAddress
-            { input = InputObject.buildAddressUpdateInput required (\_ -> optional) }
-            Graphql.SelectionSet.empty
-        )
-        CompletedAddressUpsert
 
 
 
@@ -1130,9 +1038,3 @@ msgToString msg =
 
         CompletedLoadCountry _ ->
             [ "CompletedLoadCountry" ]
-
-        CompletedKycUpsert _ ->
-            [ "CompletedKycUpsert" ]
-
-        CompletedAddressUpsert _ ->
-            [ "CompletedAddressUpsert" ]
