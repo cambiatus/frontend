@@ -71,7 +71,7 @@ init : Flags -> Nav.Key -> Url -> UpdateResult
 init flags navKey url =
     let
         shared =
-            Shared.init flags navKey url |> Debug.log "shared init"
+            Shared.init flags navKey url
     in
     case shared.maybeAccount of
         Nothing ->
