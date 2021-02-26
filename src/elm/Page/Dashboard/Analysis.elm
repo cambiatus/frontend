@@ -592,7 +592,7 @@ fetchAnalysis { accountName, selectedCommunity, shared } { profile, statusFilter
                 ( _, _ ) ->
                     Present filterRecord
 
-        args =
+        required =
             { communityId = Eos.symbolToString selectedCommunity }
 
         mapFn =
@@ -603,18 +603,18 @@ fetchAnalysis { accountName, selectedCommunity, shared } { profile, statusFilter
                 else
                     Just (Present s)
 
-        pagination =
-            \a ->
-                { a
+        optionals =
+            \opts ->
+                { opts
                     | first = Present 16
                     , after =
                         Maybe.andThen mapFn maybeCursorAfter
                             |> Maybe.withDefault Absent
+                    , filter = filter
                 }
     in
-    Api.Graphql.query
-        shared
-        (Cambiatus.Query.claimsAnalysisHistory pagination args Claim.claimPaginatedSelectionSet)
+    Api.Graphql.query shared
+        (Cambiatus.Query.claimsAnalysisHistory optionals required Claim.claimPaginatedSelectionSet)
         ClaimsLoaded
 
 
