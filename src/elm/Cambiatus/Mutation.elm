@@ -97,7 +97,6 @@ type alias SignUpOptionalArguments =
     { address : OptionalArgument Cambiatus.InputObject.AddressUpdateInput
     , invitationId : OptionalArgument String
     , kyc : OptionalArgument Cambiatus.InputObject.KycDataUpdateInput
-    , userType : OptionalArgument String
     }
 
 
@@ -107,6 +106,7 @@ type alias SignUpRequiredArguments =
     , name : String
     , password : String
     , publicKey : String
+    , userType : String
     }
 
 
@@ -115,7 +115,7 @@ type alias SignUpRequiredArguments =
   - account - EOS Account, must have 12 chars long and use only [a-z] and [0-5]
   - address - Optional, Address data
   - email - User's email
-  - invitationId - Optinal, used to auto invite an user to a community
+  - invitationId - Optional, used to auto invite an user to a community
   - kyc - Optional, KYC data
   - name - User's Full name
   - publicKey - EOS Account public key, used for creating a new account
@@ -130,13 +130,13 @@ signUp :
 signUp fillInOptionals requiredArgs object_ =
     let
         filledInOptionals =
-            fillInOptionals { address = Absent, invitationId = Absent, kyc = Absent, userType = Absent }
+            fillInOptionals { address = Absent, invitationId = Absent, kyc = Absent }
 
         optionalArgs =
-            [ Argument.optional "address" filledInOptionals.address Cambiatus.InputObject.encodeAddressUpdateInput, Argument.optional "invitationId" filledInOptionals.invitationId Encode.string, Argument.optional "kyc" filledInOptionals.kyc Cambiatus.InputObject.encodeKycDataUpdateInput, Argument.optional "userType" filledInOptionals.userType Encode.string ]
+            [ Argument.optional "address" filledInOptionals.address Cambiatus.InputObject.encodeAddressUpdateInput, Argument.optional "invitationId" filledInOptionals.invitationId Encode.string, Argument.optional "kyc" filledInOptionals.kyc Cambiatus.InputObject.encodeKycDataUpdateInput ]
                 |> List.filterMap identity
     in
-    Object.selectionForCompositeField "signUp" (optionalArgs ++ [ Argument.required "account" requiredArgs.account Encode.string, Argument.required "email" requiredArgs.email Encode.string, Argument.required "name" requiredArgs.name Encode.string, Argument.required "password" requiredArgs.password Encode.string, Argument.required "publicKey" requiredArgs.publicKey Encode.string ]) object_ (identity >> Decode.nullable)
+    Object.selectionForCompositeField "signUp" (optionalArgs ++ [ Argument.required "account" requiredArgs.account Encode.string, Argument.required "email" requiredArgs.email Encode.string, Argument.required "name" requiredArgs.name Encode.string, Argument.required "password" requiredArgs.password Encode.string, Argument.required "publicKey" requiredArgs.publicKey Encode.string, Argument.required "userType" requiredArgs.userType Encode.string ]) object_ (identity >> Decode.nullable)
 
 
 type alias UpdateUserRequiredArguments =

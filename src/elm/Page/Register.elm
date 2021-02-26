@@ -959,8 +959,14 @@ signUp shared { accountName, ownerKey } invitationId form =
             , name = name
             , password = ""
             , publicKey = ownerKey
+            , userType =
+                case form of
+                    JuridicalForm _ ->
+                        "juridical"
+
+                    _ ->
+                        "natural"
             }
-                |> Debug.log "requiredArgs"
 
         ( kycOpts, addressOpts ) =
             case form of
@@ -1004,13 +1010,6 @@ signUp shared { accountName, ownerKey } invitationId form =
                         |> Maybe.withDefault Absent
                 , kyc = kycOpts
                 , address = addressOpts
-                , userType =
-                    case form of
-                        JuridicalForm _ ->
-                            Present "juridical"
-
-                        _ ->
-                            Present "natural"
             }
     in
     Api.Graphql.mutation shared
