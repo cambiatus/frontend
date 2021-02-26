@@ -40,10 +40,10 @@ import Cambiatus.Subscription as Subscription
 import Community
 import Eos exposing (Symbol)
 import Eos.Account as Eos
-import Flags exposing (Endpoints, Flags)
+import Flags exposing (Flags)
 import Graphql.Document
 import Graphql.Http
-import Graphql.Operation exposing (RootQuery, RootSubscription)
+import Graphql.Operation exposing (RootSubscription)
 import Graphql.SelectionSet exposing (SelectionSet)
 import Html exposing (Html, a, button, div, footer, img, nav, p, span, text)
 import Html.Attributes exposing (class, classList, src, style, type_)
@@ -76,12 +76,12 @@ init : Shared -> Eos.Name -> Flags -> ( Model, Cmd Msg )
 init shared accountName flags =
     let
         authModel =
-            Auth.init shared flags.authToken
+            Auth.init shared
     in
     ( initModel shared authModel accountName flags.selectedCommunity
     , Cmd.batch
-        [ Auth.query shared authModel (Profile.query accountName) CompletedLoadProfile
-        , Auth.query shared authModel (Community.settingsQuery flags.selectedCommunity) CompletedLoadSettings
+        [ Api.Graphql.query shared (Profile.query accountName) CompletedLoadProfile
+        , Api.Graphql.query shared (Community.settingsQuery flags.selectedCommunity) CompletedLoadSettings
         , Ports.getRecentSearches () -- run on the page refresh, duplicated in `initLogin`
         , Task.perform GotTime Time.now
         ]
@@ -916,7 +916,7 @@ update msg model =
 
         ClickedTryAgainProfile accountName ->
             UR.init { model | profile = Loading accountName }
-                |> UR.addCmd (Auth.query model.shared model.auth (Profile.query accountName) CompletedLoadProfile)
+                |> UR.addCmd (Api.Graphql.query shared (Profile.query accountName) CompletedLoadProfile)
 
         ClickedLogout ->
             UR.init model
@@ -1041,12 +1041,7 @@ update msg model =
                         |> (\searchModel -> { searchModel | selectedCommunity = communityId })
             }
                 |> UR.init
-                |> UR.addCmd
-                    (Auth.query model.shared
-                        model.auth
-                        (Community.settingsQuery communityId)
-                        CompletedLoadSettings
-                    )
+                |> UR.addCmd (Api.Graphql.query shared (Community.settingsQuery communityId) CompletedLoadSettings)
                 |> UR.addPort
                     { responseAddress = msg
                     , responseData = Encode.null

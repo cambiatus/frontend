@@ -17,7 +17,7 @@ init : Guest.Model -> ( Model, Cmd Msg )
 init guest =
     let
         authModel =
-            Auth.init guest.shared Nothing
+            Auth.init guest.shared
     in
     ( initModel authModel
     , Cmd.none

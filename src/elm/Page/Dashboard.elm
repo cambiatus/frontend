@@ -10,8 +10,8 @@ module Page.Dashboard exposing
     )
 
 import Api
+import Api.Graphql
 import Api.Relay
-import Auth
 import Cambiatus.Query
 import Claim
 import Community exposing (Balance)
@@ -26,7 +26,6 @@ import Html exposing (Html, a, button, div, img, input, p, span, text)
 import Html.Attributes exposing (class, classList, id, src, style, type_, value)
 import Html.Events exposing (onClick)
 import Http
-import I18Next exposing (Delims(..))
 import Icons
 import Json.Decode as Decode exposing (Value)
 import Json.Encode as Encode
@@ -54,8 +53,8 @@ init ({ shared, accountName, selectedCommunity } as loggedIn) =
     ( initModel
     , Cmd.batch
         [ fetchBalance shared accountName
-        , fetchTransfers loggedIn accountName
-        , fetchCommunity loggedIn selectedCommunity
+        , fetchTransfers shared accountName
+        , fetchCommunity shared selectedCommunity
         , fetchAvailableAnalysis loggedIn Nothing
         , Task.perform GotTime Time.now
         ]
@@ -893,10 +892,9 @@ fetchBalance shared accountName =
     Api.getBalances shared accountName CompletedLoadBalances
 
 
-fetchTransfers : LoggedIn.Model -> Eos.Name -> Cmd Msg
-fetchTransfers loggedIn accountName =
-    Auth.query loggedIn.shared
-        loggedIn.auth
+fetchTransfers : Shared -> Eos.Name -> Cmd Msg
+fetchTransfers shared accountName =
+    Api.Graphql.query shared
         (Transfer.transfersUserQuery
             accountName
             (\args ->
@@ -907,7 +905,7 @@ fetchTransfers loggedIn accountName =
 
 
 fetchAvailableAnalysis : LoggedIn.Model -> Maybe String -> Cmd Msg
-fetchAvailableAnalysis ({ shared, accountName, selectedCommunity } as loggedIn) maybeCursor =
+fetchAvailableAnalysis { shared, accountName, selectedCommunity } maybeCursor =
     let
         arg =
             { communityId = Eos.symbolToString selectedCommunity }
@@ -935,16 +933,15 @@ fetchAvailableAnalysis ({ shared, accountName, selectedCommunity } as loggedIn) 
                             |> Maybe.withDefault Absent
                 }
     in
-    Auth.query loggedIn.shared
-        loggedIn.auth
+    Api.Graphql.query shared
         (Cambiatus.Query.claimsAnalysis pagination arg Claim.claimPaginatedSelectionSet)
         ClaimsLoaded
 
 
-fetchCommunity : LoggedIn.Model -> Symbol -> Cmd Msg
-fetchCommunity loggedIn selectedCommunity =
-    Auth.query loggedIn.shared
-        loggedIn.auth
+fetchCommunity : Shared -> Symbol -> Cmd Msg
+fetchCommunity shared selectedCommunity =
+    Api.Graphql.query
+        shared
         (Cambiatus.Query.community { symbol = Eos.symbolToString selectedCommunity } Community.dashboardSelectionSet)
         CommunityLoaded
 
