@@ -891,6 +891,12 @@
     "contact_type": "Tipus de contacte",
     "error": "S'ha produït un error en afegir el vostre contacte",
     "submit_multiple": "Desa",
+    "types": {
+      "phone": "Telèfon",
+      "instagram": "Instagram",
+      "telegram": "Telegram",
+      "whatsapp": "Whatsapp"
+    },
     "phone": {
       "label": "Número de telèfon (amb DDD)",
       "placeholder": "Ex.: 11964337131",

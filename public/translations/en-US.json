@@ -889,6 +889,12 @@
     "contact_type": "Contact type",
     "error": "Something went wrong when adding your contact",
     "submit_multiple": "Save",
+    "types": {
+      "phone": "Phone",
+      "instagram": "Instagram",
+      "telegram": "Telegram",
+      "whatsapp": "Whatsapp"
+    },
     "phone": {
       "label": "Phone Number (with DDD)",
       "placeholder": "Ex.: 11964337131",

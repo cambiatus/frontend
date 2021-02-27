@@ -850,6 +850,12 @@
       "contact_type": "የእውቂያ ዓይነት",
       "error": "ዕውቂያዎን ሲያክሉ አንድ ነገር ተሳስቷል",
       "submit_multiple": "አስቀምጥ",
+      "types": {
+        "phone": "ስልክ",
+        "instagram": "Instagram",
+        "telegram": "Telegram",
+        "whatsapp": "Whatsapp"
+      },
       "phone": {
         "label": "የስልክ ቁጥር (ከዲዲዲ ጋር)",
         "placeholder": "ዘጸ-11964337131",

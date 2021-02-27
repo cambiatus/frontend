@@ -26,6 +26,7 @@ import Graphql.SelectionSet as SelectionSet exposing (SelectionSet, with)
 import Html exposing (Html, button, div, img, p, text)
 import Html.Attributes exposing (class, classList, disabled, src, style, type_)
 import Html.Events exposing (onClick, onSubmit)
+import Icons
 import Json.Decode as Decode exposing (Decoder)
 import Json.Encode as Encode
 import List.Extra as LE
@@ -312,6 +313,7 @@ view translators model =
                 , classList
                     [ ( "button-success", RemoteData.isSuccess model.state )
                     , ( "button-primary", not (RemoteData.isSuccess model.state) )
+                    , ( "mt-7", isMultiple model.kind )
                     ]
                 , disabled isDisabled
                 ]
@@ -330,7 +332,7 @@ view translators model =
             ]
 
         Multiple contacts ->
-            List.map (viewInput translators) contacts
+            List.map (viewInputWithBackground translators) contacts
     )
         ++ [ submitButton
            , if RemoteData.isFailure model.state then
@@ -343,6 +345,41 @@ view translators model =
             [ class "w-full md:w-5/6 mx-auto mt-12"
             , onSubmit ClickedSubmit
             ]
+
+
+viewInputWithBackground : Translators -> Basic -> Html Msg
+viewInputWithBackground translators basic =
+    div [ class "bg-gray-100 p-4 pb-0 rounded mb-4" ]
+        [ div [ class "font-menu font-medium flex items-center mb-4" ]
+            [ contactTypeToIcon "mr-2" basic.contactType
+            , text (contactTypeToString translators basic.contactType)
+            ]
+        , viewInput translators basic
+        ]
+
+
+contactTypeToString : Translators -> ContactType -> String
+contactTypeToString translators contactType =
+    ContactType.toString contactType
+        |> String.toLower
+        |> (\asString -> "contact_form.types." ++ asString)
+        |> translators.t
+
+
+contactTypeToIcon : String -> ContactType -> Html msg
+contactTypeToIcon class_ contactType =
+    case contactType of
+        Phone ->
+            Icons.phone class_
+
+        Instagram ->
+            Icons.instagram class_
+
+        Telegram ->
+            Icons.telegram class_
+
+        Whatsapp ->
+            Icons.whatsapp class_
 
 
 viewInput : Translators -> Basic -> Html Msg
@@ -364,14 +401,10 @@ viewContactTypeSelect translators contactType =
                 (\contactType_ ->
                     let
                         asString =
-                            ContactType.toString contactType_
-
-                        capitalized =
-                            (String.left 1 asString |> String.toUpper)
-                                ++ String.dropLeft 1 (String.toLower asString)
+                            contactTypeToString translators contactType_
                     in
-                    { value = asString
-                    , label = capitalized
+                    { value = ContactType.toString contactType_
+                    , label = asString
                     }
                 )
                 ContactType.list
@@ -512,6 +545,16 @@ addErrors errors basic =
 
         err :: _ ->
             { basic | errors = Just [ err ] }
+
+
+isMultiple : Kind -> Bool
+isMultiple kind =
+    case kind of
+        Multiple _ ->
+            True
+
+        Single _ ->
+            True
 
 
 

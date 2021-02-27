@@ -891,6 +891,12 @@
     "contact_type": "Tipo de Contacto",
     "error": "Algo salió mal al agregar su contacto",
     "submit_multiple": "Salvar",
+    "types": {
+      "phone": "Teléfono",
+      "instagram": "Instagram",
+      "telegram": "Telegram",
+      "whatsapp": "Whatsapp"
+    },
     "phone": {
       "label": "Número de teléfono (con DDD)",
       "placeholder": "Ej.: 11964337131",

@@ -893,6 +893,12 @@
     "contact_type": "Tipo de contato",
     "error": "Algo deu errado ao adicionar seu contato",
     "submit_multiple": "Salvar",
+    "types": {
+      "phone": "Telefone",
+      "instagram": "Instagram",
+      "telegram": "Telegram",
+      "whatsapp": "Whatsapp"
+    },
     "phone": {
       "label": "Número de Telefone (com DDD)",
       "placeholder": "Ex.: 11964337131",
