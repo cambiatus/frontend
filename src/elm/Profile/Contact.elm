@@ -215,7 +215,10 @@ update msg model ({ translators } as shared) accountName =
                     )
 
                 Ok normalized ->
-                    ( { model | state = RemoteData.Loading }
+                    ( { model
+                        | state = RemoteData.Loading
+                        , kind = removeErrors model.kind
+                      }
                     , Api.Graphql.mutation shared
                         (mutation accountName normalized)
                         (RemoteData.fromResult >> CompletedUpdateContact)
@@ -236,8 +239,8 @@ updateIfContactType contactType fn contacts =
 
 
 submit : Translators -> Kind -> Result Kind (List Normalized)
-submit translators model =
-    case model of
+submit translators kind =
+    case kind of
         Single contact ->
             submitSingle translators contact
                 |> Result.mapError Single
@@ -274,7 +277,7 @@ submitMultiple translators basics =
                 ( [], [] )
                 basics
     in
-    if List.length valid == List.length basics then
+    if List.length valid > 0 then
         Ok valid
 
     else
@@ -545,6 +548,17 @@ addErrors errors basic =
 
         err :: _ ->
             { basic | errors = Just [ err ] }
+
+
+removeErrors : Kind -> Kind
+removeErrors kind =
+    case kind of
+        Single contact ->
+            Single { contact | errors = Nothing }
+
+        Multiple contacts ->
+            List.map (\contact -> { contact | errors = Nothing }) contacts
+                |> Multiple
 
 
 isMultiple : Kind -> Bool
