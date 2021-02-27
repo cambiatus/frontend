@@ -30,6 +30,8 @@ import Icons
 import Json.Decode as Decode exposing (Decoder)
 import Json.Encode as Encode
 import List.Extra as LE
+import PhoneNumber exposing (Country)
+import PhoneNumber.Countries as Countries
 import Regex exposing (Regex)
 import RemoteData exposing (RemoteData)
 import Session.Shared exposing (Shared, Translators)
@@ -82,7 +84,7 @@ type alias Basic =
 
 initBasic : ContactType -> Basic
 initBasic contactType =
-    { country = Brazil
+    { country = Countries.countryBR
     , contactType = contactType
     , contact = ""
     , errors = Nothing
@@ -112,13 +114,6 @@ backend, so we have this type to ensure the information is normalized
 -}
 type Normalized
     = Normalized Contact
-
-
-type Country
-    = Brazil
-    | CostaRica
-    | Ethiopia
-    | UnitedStates
 
 
 type alias UpdatedData =
@@ -428,16 +423,7 @@ viewFlagsSelect { t } basic =
     let
         countryOptions =
             basic.country
-                :: List.filter (\country -> country /= basic.country) listCountries
-
-        -- For example, in Brazil we only use +55, not +055
-        readableCountryCode country =
-            case countryCode country |> String.toList of
-                '+' :: rest ->
-                    "+" ++ (LE.dropWhile ((==) '0') rest |> String.fromList)
-
-                code ->
-                    String.fromList code
+                :: List.filter (\country -> country /= basic.country) supportedCountries
 
         flag classes country =
             button
@@ -451,7 +437,7 @@ viewFlagsSelect { t } basic =
                     ]
                     []
                 , p [ class "justify-self-center text-left", style "min-width" "4ch" ]
-                    [ text (readableCountryCode country) ]
+                    [ text ("+" ++ country.countryCode) ]
                 ]
 
         id =
@@ -575,22 +561,6 @@ isMultiple kind =
 -- NORMALIZING
 
 
-countryCode : Country -> String
-countryCode country =
-    case country of
-        Brazil ->
-            "+055"
-
-        CostaRica ->
-            "+506"
-
-        Ethiopia ->
-            "+251"
-
-        UnitedStates ->
-            "+001"
-
-
 normalize : Country -> Validate.Valid Basic -> Normalized
 normalize country validatedContact =
     let
@@ -605,24 +575,18 @@ normalize country validatedContact =
                     "https://instagram.com/" ++ contact
 
                 Phone ->
-                    String.join " " [ countryCode country, contact ]
+                    String.join " " [ country.countryCode, contact ]
 
                 Telegram ->
                     "https://t.me/" ++ contact
 
                 Whatsapp ->
-                    String.join " " [ countryCode country, contact ]
+                    String.join " " [ country.countryCode, contact ]
         }
 
 
 
 -- VALIDATING
-
-
-phoneRegex : Regex
-phoneRegex =
-    Regex.fromString "^\\+?\\(?[0-9]{3}\\)?[-\\s\\.]?\\(?[0-9]{2}?\\)?[-\\s\\.]?[0-9]{3,5}[-\\s\\.]?[0-9]{3,4}$"
-        |> Maybe.withDefault Regex.never
 
 
 telegramRegex : Regex
@@ -649,22 +613,41 @@ validateRegex regex error =
         )
 
 
+validatePhone : String -> Validate.Validator String Basic
+validatePhone error =
+    Validate.fromErrors
+        (\{ country, contact } ->
+            if
+                PhoneNumber.valid
+                    { defaultCountry = country
+                    , otherCountries = []
+                    , types = PhoneNumber.anyType
+                    }
+                    contact
+            then
+                []
+
+            else
+                [ error ]
+        )
+
+
 validator : ContactType -> Translators -> Validate.Validator String Basic
 validator contactType translators =
     let
-        ( regex, field ) =
+        ( specificValidation, field ) =
             case contactType of
                 Phone ->
-                    ( phoneRegex, "phone" )
+                    ( validatePhone, "phone" )
 
                 Whatsapp ->
-                    ( phoneRegex, "phone" )
+                    ( validatePhone, "phone" )
 
                 Instagram ->
-                    ( instagramRegex, "username" )
+                    ( validateRegex instagramRegex, "username" )
 
                 Telegram ->
-                    ( telegramRegex, "username" )
+                    ( validateRegex telegramRegex, "username" )
 
         baseTranslation =
             "contact_form.validation"
@@ -672,7 +655,7 @@ validator contactType translators =
     Validate.all
         [ Validate.ifBlank .contact
             (translators.t (String.join "." [ baseTranslation, field, "blank" ]))
-        , validateRegex regex
+        , specificValidation
             (translators.t (String.join "." [ baseTranslation, field, "invalid" ]))
         ]
 
@@ -681,25 +664,31 @@ validator contactType translators =
 -- COUNTRY
 
 
-listCountries : List Country
-listCountries =
-    [ Brazil, CostaRica, Ethiopia, UnitedStates ]
+supportedCountries : List Country
+supportedCountries =
+    [ Countries.countryBR
+    , Countries.countryCR
+    , Countries.countryET
+    , Countries.countryUS
+    ]
 
 
 countryToFlag : Country -> String
 countryToFlag country =
-    case country of
-        Brazil ->
-            "/icons/flag-brazil.svg"
+    if country == Countries.countryBR then
+        "/icons/flag-brazil.svg"
 
-        CostaRica ->
-            "/icons/flag-costa-rica.svg"
+    else if country == Countries.countryCR then
+        "/icons/flag-costa-rica.svg"
 
-        Ethiopia ->
-            "/icons/flag-ethiopia.svg"
+    else if country == Countries.countryET then
+        "/icons/flag-ethiopia.svg"
 
-        UnitedStates ->
-            "/icons/flag-usa.svg"
+    else if country == Countries.countryUS then
+        "/icons/flag-usa.svg"
+
+    else
+        ""
 
 
 
