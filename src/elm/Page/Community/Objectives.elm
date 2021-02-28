@@ -6,7 +6,7 @@ import Cambiatus.Enum.VerificationType as VerificationType
 import Community exposing (Model)
 import Eos exposing (Symbol)
 import Graphql.Http
-import Html exposing (Html, a, button, div, p, text)
+import Html exposing (Html, a, button, div, p, span, text)
 import Html.Attributes exposing (class, classList)
 import Html.Events exposing (onClick)
 import Icons
@@ -85,6 +85,13 @@ view ({ shared } as loggedIn) model =
                     Page.fullPageGraphQLError (t "community.objectives.title_plural") e
 
                 Loaded community ->
+                    let
+                        isAllActionsCompleted =
+                            community.objectives
+                                |> List.map .actions
+                                |> List.map (\ac -> List.all (\a -> a.isCompleted) ac)
+                                |> List.head
+                    in
                     div []
                         [ Page.viewHeader loggedIn (t "community.objectives.title_plural") (Route.Community model.communityId)
                         , div [ class "container mx-auto px-4 my-10" ]
@@ -93,7 +100,7 @@ view ({ shared } as loggedIn) model =
                                 (community.objectives
                                     |> List.sortBy .id
                                     |> List.reverse
-                                    |> List.indexedMap (viewObjective loggedIn model community)
+                                    |> List.indexedMap (\index objective -> viewObjective loggedIn model community index objective isAllActionsCompleted)
                                 )
                             ]
                         ]
@@ -123,8 +130,8 @@ viewNewObjectiveButton ({ shared } as loggedIn) community =
         text ""
 
 
-viewObjective : LoggedIn.Model -> Model -> Community.Model -> Int -> Community.Objective -> Html Msg
-viewObjective ({ shared } as loggedIn) model community index objective =
+viewObjective : LoggedIn.Model -> Model -> Community.Model -> Int -> Community.Objective -> Maybe Bool -> Html Msg
+viewObjective ({ shared } as loggedIn) model community index objective allCompleted =
     let
         isOpen : Bool
         isOpen =
@@ -157,13 +164,28 @@ viewObjective ({ shared } as loggedIn) model community index objective =
                             )
                         ]
                     ]
-                , button
-                    [ class "h-8" ]
-                    [ if isOpen then
-                        Icons.arrowDown "rotate-180"
+                , div [ class "flex" ]
+                    [ case allCompleted of
+                        Just completed ->
+                            if completed then
+                                div [ class "mx-2 mb-2" ]
+                                    [ span [ class "tag bg-green" ] [ text_ "community.actions.completed" ]
+                                    , span [ class "w-full sm:w-48 mt-2 px-1 sm:mr-4" ] [ text "Edit" ]
+                                    ]
 
-                      else
-                        Icons.arrowDown ""
+                            else
+                                text ""
+
+                        _ ->
+                            text ""
+                    , button
+                        [ class "h-8" ]
+                        [ if isOpen then
+                            Icons.arrowDown "rotate-180"
+
+                          else
+                            Icons.arrowDown ""
+                        ]
                     ]
                 ]
             ]
