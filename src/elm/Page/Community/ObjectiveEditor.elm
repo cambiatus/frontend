@@ -30,14 +30,14 @@ import UpdateResult as UR
 
 initNew : LoggedIn.Model -> Symbol -> ( Model, Cmd Msg )
 initNew { shared } communityId =
-    ( { status = Loading, community = communityId, objectiveId = Nothing, archived = False }
+    ( { status = Loading, community = communityId, objectiveId = Nothing }
     , Api.Graphql.query shared (communityQuery communityId) CompletedCommunityLoad
     )
 
 
 initEdit : LoggedIn.Model -> Symbol -> Int -> ( Model, Cmd Msg )
 initEdit { shared } communityId objectiveId =
-    ( { status = Loading, community = communityId, objectiveId = Just objectiveId, archived = False }
+    ( { status = Loading, community = communityId, objectiveId = Just objectiveId }
     , Api.Graphql.query shared (communityQuery communityId) CompletedCommunityLoad
     )
 
@@ -50,7 +50,6 @@ type alias Model =
     { status : Status
     , community : Symbol
     , objectiveId : Maybe Int
-    , archived : Bool
     }
 
 
@@ -73,6 +72,7 @@ type SaveStatus
     | Saving
     | Saved
     | SaveFailed
+    | Archived
 
 
 type alias ObjectiveForm =
@@ -163,10 +163,10 @@ view ({ shared } as loggedIn) model =
                         [ Page.viewHeader loggedIn (t "community.objectives.title") (Route.Objectives symbol)
                         , case editStatus of
                             NewObjective objForm ->
-                                viewForm loggedIn objForm model.archived
+                                viewForm loggedIn objForm False
 
                             EditObjective _ objForm ->
-                                viewForm loggedIn objForm model.archived
+                                viewForm loggedIn objForm True
                         ]
     in
     { title = title
@@ -193,6 +193,9 @@ viewForm { shared } objForm archived =
 
         isDisabled =
             objForm.save == Saving
+
+        isArchived =
+            objForm.save == Archived
     in
     div [ class "bg-white w-full p-10" ]
         [ div [ class "container mx-auto" ]
@@ -221,12 +224,16 @@ viewForm { shared } objForm archived =
                     , disabled isDisabled
                     ]
                     [ text (t "community.objectives.editor.submit") ]
-                , button
-                    [ class "button button-secondary"
-                    , onClick ClickedArchiveObjetive
-                    , disabled archived
-                    ]
-                    [ text (t "community.objectives.editor.mark_completed") ]
+                , if archived then
+                    button
+                        [ class "button button-secondary"
+                        , onClick ClickedArchiveObjetive
+                        , disabled isArchived
+                        ]
+                        [ text (t "community.objectives.editor.mark_completed") ]
+
+                  else
+                    text ""
                 ]
             ]
         ]
@@ -442,12 +449,13 @@ update msg model loggedIn =
                         |> UR.init
 
         CompletedArchiveMutation (Ok _) ->
-            let
-                newModel =
-                    { model | archived = True }
-            in
-            newModel
+            model
                 |> UR.init
+                |> updateObjective msg (\o -> { o | save = Archived })
+                |> UR.addCmd
+                    (Route.Objectives model.community
+                        |> Route.replaceUrl loggedIn.shared.navKey
+                    )
                 |> UR.addExt (ShowFeedback Success (t "community.objectives.archived_success"))
 
         CompletedArchiveMutation (Err _) ->
