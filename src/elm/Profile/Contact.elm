@@ -575,13 +575,13 @@ normalize country validatedContact =
                     "https://instagram.com/" ++ contact
 
                 Phone ->
-                    String.join " " [ country.countryCode, contact ]
+                    String.join " " [ "+" ++ country.countryCode, contact ]
 
                 Telegram ->
                     "https://t.me/" ++ contact
 
                 Whatsapp ->
-                    String.join " " [ country.countryCode, contact ]
+                    String.join " " [ "+" ++ country.countryCode, contact ]
         }
 
 
