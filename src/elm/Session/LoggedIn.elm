@@ -72,6 +72,8 @@ import View.Modal as Modal
 -- INIT
 
 
+{-| Initialize already logged in user when the page is [re]loaded.
+-}
 init : Shared -> Eos.Name -> Flags -> ( Model, Cmd Msg )
 init shared accountName flags =
     let
@@ -94,6 +96,8 @@ fetchTranslations language _ =
         |> Translation.get language
 
 
+{-| Initialize logged in user after signing-in.
+-}
 initLogin : Shared -> Auth.Model -> Profile.Model -> ( Model, Cmd Msg )
 initLogin shared authModel profile_ =
     let
