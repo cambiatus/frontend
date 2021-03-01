@@ -474,7 +474,7 @@ viewFlagsSelect { t } basic =
 
 
 viewPhoneInput : Translators -> Basic -> Html Msg
-viewPhoneInput ({ t } as translators) basic =
+viewPhoneInput ({ t, tr } as translators) basic =
     div [ class "w-full" ]
         [ Input.init
             { label = t "contact_form.phone.label"
@@ -482,7 +482,11 @@ viewPhoneInput ({ t } as translators) basic =
             , onInput = EnteredContactText basic.contactType
             , disabled = False
             , value = basic.contact
-            , placeholder = Just (t "contact_form.phone.placeholder")
+            , placeholder =
+                Just
+                    (tr "contact_form.phone.placeholder"
+                        [ ( "example_number", phonePlaceholder basic.country ) ]
+                    )
             , problems = basic.errors
             , translators = translators
             }
@@ -686,6 +690,24 @@ countryToFlag country =
 
     else if country == Countries.countryUS then
         "/icons/flag-usa.svg"
+
+    else
+        ""
+
+
+phonePlaceholder : Country -> String
+phonePlaceholder country =
+    if country == Countries.countryBR then
+        "11 91234 5678"
+
+    else if country == Countries.countryCR then
+        "8123 4567"
+
+    else if country == Countries.countryET then
+        "91 234 5678"
+
+    else if country == Countries.countryUS then
+        "209 123 4567"
 
     else
         ""

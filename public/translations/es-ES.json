@@ -899,7 +899,7 @@
     },
     "phone": {
       "label": "Número de teléfono (con DDD)",
-      "placeholder": "Ej.: 11964337131",
+      "placeholder": "Ej.: {{example_number}}",
       "submit": "Agregar el número de teléfono"
     },
     "username": {

@@ -897,7 +897,7 @@
     },
     "phone": {
       "label": "Phone Number (with DDD)",
-      "placeholder": "Ex.: 11964337131",
+      "placeholder": "Ex.: {{example_number}}",
       "submit": "Add Phone Number"
     },
     "username": {

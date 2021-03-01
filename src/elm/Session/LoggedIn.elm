@@ -687,7 +687,9 @@ addContactModal ({ contactModel, shared } as model) =
             , img [ class "mx-auto mt-10", src "/images/girl-with-phone.svg" ] []
             , form
             , p [ class "text-caption text-center uppercase my-4" ]
-                [ text_ "contact_modal.footer" ]
+                []
+
+            -- [ text_ "contact_modal.footer" ]
             ]
         |> Modal.withLarge True
         |> Modal.toHtml

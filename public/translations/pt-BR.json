@@ -901,7 +901,7 @@
     },
     "phone": {
       "label": "Número de Telefone (com DDD)",
-      "placeholder": "Ex.: 11964337131",
+      "placeholder": "Ex.: {{example_number}}",
       "submit": "Adicionar Número de Telefone"
     },
     "username": {
