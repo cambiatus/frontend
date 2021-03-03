@@ -918,6 +918,16 @@
         "blank": "Por favor insira seu perfil",
         "invalid": "Por favor insira um perfil válido"
       }
+    },
+    "feedback": {
+      "single": {
+        "success": "Seu contato foi salvo com sucesso",
+        "failure": "Algo deu errado ao tentar salvar seu contato"
+      },
+      "multiple": {
+        "success": "Seus contatos foram salvos com sucesso",
+        "failure": "Algo deu errado ao tentar salvar seus contatos"
+      }
     }
   }
 }

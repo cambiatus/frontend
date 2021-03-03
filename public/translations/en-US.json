@@ -914,6 +914,16 @@
         "blank": "Please enter your profile name",
         "invalid": "Please enter a valid profile name"
       }
+    },
+    "feedback": {
+      "single": {
+        "success": "Contact saved successfully",
+        "failure": "Something went wrong while trying to save your contact"
+      },
+      "multiple": {
+        "success": "Contacts saved successfully",
+        "failure": "Something went wrong while trying to save your contacts"
+      }
     }
   }
 }

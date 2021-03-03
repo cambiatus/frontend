@@ -1,5 +1,6 @@
 module Profile.Contact exposing
-    ( Model
+    ( ContactResponse(..)
+    , Model
     , Msg
     , Normalized
     , decode
@@ -120,6 +121,19 @@ type alias UpdatedData =
     RemoteData (Graphql.Http.Error (Maybe Profile)) (Maybe Profile)
 
 
+type ContactResponse
+    = NotAsked
+    | WithContacts String (List Normalized)
+    | WithError String
+
+
+contactResponseFromMaybe : Translators -> String -> Maybe (List Normalized) -> ContactResponse
+contactResponseFromMaybe { t } baseTranslation maybeContacts =
+    maybeContacts
+        |> Maybe.map (WithContacts (t <| baseTranslation ++ "success"))
+        |> Maybe.withDefault (WithError (t <| baseTranslation ++ "failure"))
+
+
 
 -- UPDATE
 
@@ -133,7 +147,7 @@ type Msg
     | CompletedUpdateContact UpdatedData
 
 
-update : Msg -> Model -> Shared -> Eos.Name -> ( Model, Cmd Msg, Maybe (List Normalized) )
+update : Msg -> Model -> Shared -> Eos.Name -> ( Model, Cmd Msg, ContactResponse )
 update msg model ({ translators } as shared) accountName =
     let
         toggleFlags ({ showFlags } as contact) =
@@ -162,19 +176,19 @@ update msg model ({ translators } as shared) accountName =
         SelectedCountry contactType country ->
             ( updateKind contactType (setCountry country)
             , Cmd.none
-            , Nothing
+            , NotAsked
             )
 
         ClickedToggleContactFlags contactType ->
             ( updateKind contactType toggleFlags
             , Cmd.none
-            , Nothing
+            , NotAsked
             )
 
         EnteredContactText contactType newContact ->
             ( updateKind contactType (setContact newContact)
             , Cmd.none
-            , Nothing
+            , NotAsked
             )
 
         EnteredContactOption option ->
@@ -192,13 +206,13 @@ update msg model ({ translators } as shared) accountName =
                                 }
                       }
                     , Cmd.none
-                    , Nothing
+                    , NotAsked
                     )
 
                 Multiple _ ->
                     ( model
                     , Cmd.none
-                    , Nothing
+                    , NotAsked
                     )
 
         ClickedSubmit ->
@@ -206,7 +220,7 @@ update msg model ({ translators } as shared) accountName =
                 Err withError ->
                     ( { model | kind = withError }
                     , Cmd.none
-                    , Nothing
+                    , NotAsked
                     )
 
                 Ok normalized ->
@@ -217,14 +231,24 @@ update msg model ({ translators } as shared) accountName =
                     , Api.Graphql.mutation shared
                         (mutation accountName normalized)
                         (RemoteData.fromResult >> CompletedUpdateContact)
-                    , Nothing
+                    , NotAsked
                     )
 
         CompletedUpdateContact result ->
+            let
+                feedbackScope =
+                    case model.kind of
+                        Single _ ->
+                            "single"
+
+                        Multiple _ ->
+                            "multiple"
+            in
             ( { model | state = result }
             , Cmd.none
             , RemoteData.toMaybe result
                 |> Maybe.andThen (Maybe.andThen .contacts)
+                |> contactResponseFromMaybe translators ("contact_form.feedback." ++ feedbackScope ++ ".")
             )
 
 

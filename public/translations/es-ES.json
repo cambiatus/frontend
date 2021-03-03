@@ -916,6 +916,16 @@
         "blank": "Ingrese su nombre de perfil",
         "invalid": "Ingrese un nombre de perfil válido"
       }
+    },
+    "feedback": {
+      "single": {
+        "success": "Tu contacto se ha guardado correctamente",
+        "failure": "Algo salió mal al intentar guardar su contacto"
+      },
+      "multiple": {
+        "success": "Tus contactos se han guardado correctamente",
+        "failure": "Se produjo un error al intentar guardar tus contactos."
+      }
     }
   }
 }

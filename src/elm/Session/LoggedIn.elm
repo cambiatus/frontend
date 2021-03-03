@@ -21,6 +21,7 @@ module Session.LoggedIn exposing
     , msgToString
     , profile
     , readAllNotifications
+    , showFeedback
     , subscriptions
     , update
     , view
@@ -1120,25 +1121,30 @@ update msg model =
             case profile model of
                 Just userProfile ->
                     let
-                        ( contactModel, cmd, maybeContacts ) =
+                        ( contactModel, cmd, contactResponse ) =
                             Contact.update subMsg
                                 model.contactModel
                                 shared
                                 model.accountName
 
-                        maybeAddContacts model_ =
-                            Maybe.map
-                                (\contacts ->
+                        addContactResponse model_ =
+                            case contactResponse of
+                                Contact.NotAsked ->
+                                    model_
+
+                                Contact.WithError errorMessage ->
+                                    { model_ | showContactModal = False }
+                                        |> showFeedback Failure errorMessage
+
+                                Contact.WithContacts successMessage contacts ->
                                     { model_
                                         | profile = Loaded { userProfile | contacts = Just contacts }
                                         , showContactModal = False
                                     }
-                                )
-                                maybeContacts
-                                |> Maybe.withDefault model_
+                                        |> showFeedback Success successMessage
                     in
                     { model | contactModel = contactModel }
-                        |> maybeAddContacts
+                        |> addContactResponse
                         |> UR.init
                         |> UR.addCmd (Cmd.map GotContactMsg cmd)
 
@@ -1215,6 +1221,11 @@ askedAuthentication model =
         , showMainNav = False
         , showAuthModal = True
     }
+
+
+showFeedback : FeedbackStatus -> String -> Model -> Model
+showFeedback feedbackStatus feedback model =
+    { model | feedback = Show feedbackStatus feedback }
 
 
 

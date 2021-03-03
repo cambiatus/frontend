@@ -916,6 +916,16 @@
         "blank": "Introduïu el nom del vostre perfil",
         "invalid": "Introduïu un nom de perfil vàlid"
       }
+    },
+    "feedback": {
+      "single": {
+        "success": "El vostre contacte s'ha desat correctament",
+        "failure": "S'ha produït un error en intentar desar el contacte"
+      },
+      "multiple": {
+        "success": "Els vostres contactes s'han desat correctament",
+        "failure": "S'ha produït un error en intentar desar els vostres contactes"
+      }
     }
   }
 }
