@@ -159,9 +159,13 @@ viewObjective ({ shared } as loggedIn) model community index objective =
                     ]
                 , div [ class "flex" ]
                     [ if objective.isCompleted then
-                        div [ class "mx-2 mb-2" ]
-                            [ span [ class "tag bg-green" ] [ text_ "community.actions.completed" ]
-                            , span [ class "w-full sm:w-48 mt-2 px-1 sm:mr-4" ] [ text "Edit" ]
+                        div [ class "flex align-center justify-center flex-wrap px-0" ]
+                            [ div [ class "mx-8" ] [ span [ class "tag bg-green" ] [ text_ "community.actions.completed" ] ]
+                            , a
+                                [ class "button button-disabled text-gray-900 button-sm w-max sm:w-26 mx-2 px-0"
+                                , Route.href (Route.EditObjective model.communityId objective.id)
+                                ]
+                                [ text_ "menu.edit" ]
                             ]
 
                       else

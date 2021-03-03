@@ -55,6 +55,10 @@ body {
   @apply bg-green text-white rounded-full text-body;
 }
 
+.button-disabled {
+  @apply bg-gray-500 text-white rounded-full text-body;
+}
+
 /* End of Button */
 
 /* Input */
