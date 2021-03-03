@@ -72,7 +72,6 @@ type SaveStatus
     | Saving
     | Saved
     | SaveFailed
-    | Archived
 
 
 type alias ObjectiveForm =
@@ -193,9 +192,6 @@ viewForm { shared } objForm archived =
 
         isDisabled =
             objForm.save == Saving
-
-        isArchived =
-            objForm.save == Archived
     in
     div [ class "bg-white w-full p-10" ]
         [ div [ class "container mx-auto" ]
@@ -228,7 +224,7 @@ viewForm { shared } objForm archived =
                     button
                         [ class "button button-secondary"
                         , onClick ClickedArchiveObjetive
-                        , disabled isArchived
+                        , disabled isDisabled
                         ]
                         [ text (t "community.objectives.editor.mark_completed") ]
 
@@ -451,7 +447,6 @@ update msg model loggedIn =
         CompletedArchiveMutation (Ok _) ->
             model
                 |> UR.init
-                |> updateObjective msg (\o -> { o | save = Archived })
                 |> UR.addCmd
                     (Route.Objectives model.community
                         |> Route.replaceUrl loggedIn.shared.navKey
