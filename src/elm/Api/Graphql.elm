@@ -1,9 +1,10 @@
-module Api.Graphql exposing (mutation, query)
+module Api.Graphql exposing (mutation, query, query2)
 
 import Graphql.Http
 import Graphql.Operation exposing (RootMutation, RootQuery)
 import Graphql.OptionalArgument exposing (OptionalArgument(..))
 import Graphql.SelectionSet exposing (SelectionSet)
+import RemoteData exposing (RemoteData)
 import Session.Shared exposing (Shared)
 
 
@@ -16,6 +17,14 @@ withAuthToken authToken =
 
         Nothing ->
             identity
+
+
+query2 : String -> Maybe String -> SelectionSet a RootQuery -> (RemoteData (Graphql.Http.Error a) a -> msg) -> Cmd msg
+query2 endpoint authToken query_ toMsg =
+    query_
+        |> Graphql.Http.queryRequest endpoint
+        |> withAuthToken authToken
+        |> Graphql.Http.send (RemoteData.fromResult >> toMsg)
 
 
 query : Shared -> SelectionSet a RootQuery -> (Result (Graphql.Http.Error a) a -> msg) -> Cmd msg

@@ -57,6 +57,7 @@ import List.Extra as List
 import Notification exposing (Notification)
 import Ports
 import Profile exposing (Model)
+import RemoteData exposing (RemoteData)
 import Route exposing (Route)
 import Search exposing (State(..))
 import Session.Shared as Shared exposing (Shared)
@@ -74,15 +75,15 @@ import View.Modal as Modal
 
 {-| Initialize already logged in user when the page is [re]loaded.
 -}
-init : Shared -> Eos.Name -> Flags -> ( Model, Cmd Msg )
-init shared accountName flags =
+init : Shared -> Eos.Name -> Flags -> String -> ( Model, Cmd Msg )
+init shared accountName flags authToken =
     let
         authModel =
             Auth.init shared
     in
-    ( initModel shared authModel accountName flags.selectedCommunity
+    ( initModel shared authModel accountName flags.selectedCommunity authToken
     , Cmd.batch
-        [ Api.Graphql.query shared (Profile.query accountName) CompletedLoadProfile
+        [ Api.Graphql.query2 shared.endpoints.graphql (Just authToken) (Profile.query accountName) CompletedLoadProfile
         , Api.Graphql.query shared (Community.settingsQuery flags.selectedCommunity) CompletedLoadSettings
         , Ports.getRecentSearches () -- run on the page refresh, duplicated in `initLogin`
         , Task.perform GotTime Time.now
@@ -98,8 +99,8 @@ fetchTranslations language _ =
 
 {-| Initialize logged in user after signing-in.
 -}
-initLogin : Shared -> Auth.Model -> Profile.Model -> ( Model, Cmd Msg )
-initLogin shared authModel profile_ =
+initLogin : Shared -> Auth.Model -> Profile.Model -> String -> ( Model, Cmd Msg )
+initLogin shared authModel profile_ authToken =
     let
         selectedCommunity : Symbol
         selectedCommunity =
@@ -108,7 +109,7 @@ initLogin shared authModel profile_ =
                 |> Maybe.withDefault Eos.cambiatusSymbol
 
         model =
-            initModel shared authModel profile_.account selectedCommunity
+            initModel shared authModel profile_.account selectedCommunity authToken
     in
     ( { model
         | profile = Loaded profile_
@@ -161,6 +162,7 @@ type alias Model =
     , searchModel : Search.Model
     , claimingAction : Action.Model
     , date : Maybe Posix
+    , authToken : String
     }
 
 
@@ -169,8 +171,8 @@ type FeatureStatus
     | FeatureLoading
 
 
-initModel : Shared -> Auth.Model -> Eos.Name -> Symbol -> Model
-initModel shared authModel accountName selectedCommunity =
+initModel : Shared -> Auth.Model -> Eos.Name -> Symbol -> String -> Model
+initModel shared authModel accountName selectedCommunity authToken =
     { shared = shared
     , accountName = accountName
     , profile = Loading accountName
@@ -191,6 +193,7 @@ initModel shared authModel accountName selectedCommunity =
     , searchModel = Search.init selectedCommunity
     , claimingAction = { status = Action.NotAsked, feedback = Nothing, needsPinConfirmation = False }
     , date = Nothing
+    , authToken = authToken
     }
 
 
@@ -771,7 +774,7 @@ type Msg
     = NoOp
     | CompletedLoadTranslation String (Result Http.Error Translations)
     | ClickedTryAgainTranslation
-    | CompletedLoadProfile (Result (Graphql.Http.Error (Maybe Profile.Model)) (Maybe Profile.Model))
+    | CompletedLoadProfile (RemoteData (Graphql.Http.Error (Maybe Profile.Model)) (Maybe Profile.Model))
     | CompletedLoadSettings (Result (Graphql.Http.Error (Maybe Community.Settings)) (Maybe Community.Settings))
     | ClickedTryAgainProfile Eos.Name
     | ClickedLogout
@@ -864,7 +867,7 @@ update msg model =
             UR.init { model | shared = Shared.toLoadingTranslation shared }
                 |> UR.addCmd (fetchTranslations (Shared.language shared) shared)
 
-        CompletedLoadProfile (Ok profile_) ->
+        CompletedLoadProfile (RemoteData.Success profile_) ->
             let
                 subscriptionDoc =
                     unreadCountSubscription model.accountName
@@ -888,7 +891,7 @@ update msg model =
                     UR.init model
                         |> UR.addCmd (Route.replaceUrl shared.navKey Route.Logout)
 
-        CompletedLoadProfile (Err err) ->
+        CompletedLoadProfile (RemoteData.Failure err) ->
             UR.init
                 { model
                     | profile =
@@ -900,6 +903,9 @@ update msg model =
                                 model.profile
                 }
                 |> UR.logGraphqlError msg err
+
+        CompletedLoadProfile _ ->
+            UR.init model
 
         CompletedLoadSettings (Ok settings_) ->
             case settings_ of
@@ -920,7 +926,12 @@ update msg model =
 
         ClickedTryAgainProfile accountName ->
             UR.init { model | profile = Loading accountName }
-                |> UR.addCmd (Api.Graphql.query shared (Profile.query accountName) CompletedLoadProfile)
+                |> UR.addCmd
+                    (Api.Graphql.query2 shared.endpoints.graphql
+                        (Just model.authToken)
+                        (Profile.query accountName)
+                        CompletedLoadProfile
+                    )
 
         ClickedLogout ->
             UR.init model
@@ -980,7 +991,7 @@ update msg model =
                                 closeModal uResult
                                     |> UR.addExt AuthenticationFailed
 
-                            Auth.CompletedAuth _ ->
+                            Auth.CompletedAuth { user, token } ->
                                 let
                                     cmd =
                                         case model.claimingAction.status of
@@ -995,6 +1006,7 @@ update msg model =
                                                 Cmd.none
                                 in
                                 closeModal uResult
+                                    |> UR.mapModel (\m -> { m | profile = Loaded user, authToken = token })
                                     |> UR.addExt AuthenticationSucceed
                                     |> UR.addCmd cmd
 
@@ -1234,7 +1246,7 @@ msgToString msg =
             [ "ClickedTryAgainTranslation" ]
 
         CompletedLoadProfile r ->
-            [ "CompletedLoadProfile", UR.resultToString r ]
+            [ "CompletedLoadProfile", UR.remoteDataToString r ]
 
         CompletedLoadSettings r ->
             [ "CompletedLoadSettings", UR.resultToString r ]

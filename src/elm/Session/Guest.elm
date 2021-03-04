@@ -1,6 +1,7 @@
 module Session.Guest exposing (External(..), Model, Msg(..), Page(..), addAfterLoginRedirect, init, initModel, msgToString, subscriptions, update, view)
 
 import Api.Graphql
+import Auth
 import Browser.Events
 import Community exposing (Invite)
 import Graphql.Http
@@ -78,7 +79,6 @@ type alias Model =
     { shared : Shared
     , showLanguageNav : Bool
     , afterLoginRedirect : Maybe Route
-    , profile : Maybe Profile.Model
     , community : CommunityStatus
     }
 
@@ -94,7 +94,6 @@ initModel shared =
     { shared = shared
     , showLanguageNav = False
     , afterLoginRedirect = Nothing
-    , profile = Nothing
     , community =
         case getInvitationId shared.url.path of
             Just _ ->
@@ -285,6 +284,7 @@ viewPageHeader model shared =
 
 type External
     = UpdatedGuest Model
+    | LoggedIn Auth.SignInResponse
 
 
 type alias UpdateResult =

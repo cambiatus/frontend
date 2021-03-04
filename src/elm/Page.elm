@@ -1,6 +1,6 @@
 module Page exposing
     ( ExternalMsg(..)
-    , Msg
+    , Msg(..)
     , Session(..)
     , errorToString
     , fullPageError
@@ -73,23 +73,23 @@ init flags navKey url =
         shared =
             Shared.init flags navKey url
     in
-    case shared.maybeAccount of
-        Nothing ->
+    case ( shared.maybeAccount, flags.authToken ) of
+        ( Just ( accountName, _ ), Just authToken ) ->
+            let
+                ( model, cmd ) =
+                    LoggedIn.init shared accountName flags authToken
+            in
+            UR.init (LoggedIn model)
+                |> UR.addCmd (Cmd.map GotLoggedInMsg cmd)
+                |> UR.addCmd (fetchTranslations shared shared.language)
+
+        _ ->
             let
                 ( model, cmd ) =
                     Guest.init shared
             in
             UR.init (Guest model)
                 |> UR.addCmd (Cmd.map GotGuestMsg cmd)
-                |> UR.addCmd (fetchTranslations shared shared.language)
-
-        Just ( accountName, _ ) ->
-            let
-                ( model, cmd ) =
-                    LoggedIn.init shared accountName flags
-            in
-            UR.init (LoggedIn model)
-                |> UR.addCmd (Cmd.map GotLoggedInMsg cmd)
                 |> UR.addCmd (fetchTranslations shared shared.language)
 
 
@@ -430,11 +430,11 @@ updateShared session transform =
 -- TRANSFORM
 
 
-login : Auth.Model -> Profile.Model -> Guest.Model -> ( LoggedIn.Model, Cmd Msg )
-login auth profile guest =
+login : Auth.Model -> Profile.Model -> Guest.Model -> String -> ( LoggedIn.Model, Cmd Msg )
+login auth profile guest authToken =
     let
         ( loggedIn, cmd ) =
-            LoggedIn.initLogin guest.shared auth profile
+            LoggedIn.initLogin guest.shared auth profile authToken
     in
     ( loggedIn
     , Cmd.map GotLoggedInMsg cmd

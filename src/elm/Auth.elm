@@ -3,6 +3,7 @@ module Auth exposing
     , LoginFormData
     , Model
     , Msg
+    , SignInResponse
     , init
     , initRegister
     , isAuth
@@ -20,10 +21,12 @@ import Asset.Icon as Icon
 import Browser.Dom as Dom
 import Browser.Events
 import Cambiatus.Mutation
+import Cambiatus.Object
 import Cambiatus.Object.Session
 import Eos.Account as Eos
 import Graphql.Http
-import Graphql.SelectionSet exposing (with)
+import Graphql.Operation exposing (RootMutation)
+import Graphql.SelectionSet exposing (SelectionSet, with)
 import Html exposing (Html, a, button, div, form, h2, img, label, li, p, span, strong, text, textarea, ul)
 import Html.Attributes exposing (autocomplete, autofocus, class, disabled, for, id, placeholder, required, src, title, type_, value)
 import Html.Events exposing (onClick, onInput, onSubmit)
@@ -559,7 +562,6 @@ type Msg
     | SubmittedLoginPIN
     | GotPinLogin (Result String ( Eos.Name, String ))
     | CompletedSignIn Status (Result (Graphql.Http.Error (Maybe SignInResponse)) (Maybe SignInResponse))
-    | CompletedLoadProfile Status Eos.Name (Result (Graphql.Http.Error (Maybe Profile.Model)) (Maybe Profile.Model))
     | TogglePinVisibility
     | TogglePinConfirmationVisibility
     | KeyPressed Bool
@@ -575,7 +577,7 @@ type alias SignInResponse =
 
 type ExternalMsg
     = ClickedCancel
-    | CompletedAuth Profile.Model
+    | CompletedAuth SignInResponse
     | UpdatedShared Shared
 
 
@@ -762,24 +764,16 @@ update msg shared model =
                 |> UR.init
                 |> UR.addCmd
                     (Api.Graphql.mutation shared
-                        (Cambiatus.Mutation.signIn
-                            { account = Eos.nameToString accountName
-                            , password = shared.graphqlSecret
-                            }
-                            (Graphql.SelectionSet.succeed SignInResponse
-                                |> with (Cambiatus.Object.Session.user Profile.selectionSet)
-                                |> with Cambiatus.Object.Session.token
-                            )
-                        )
+                        (signIn accountName shared)
                         (CompletedSignIn (LoggedInWithPrivateKey privateKey))
                     )
 
-        CompletedSignIn status (Ok (Just { user, token })) ->
+        CompletedSignIn status (Ok (Just ({ token } as signInResponse))) ->
             { model | status = status }
                 |> UR.init
                 |> UR.addExt (UpdatedShared { shared | authToken = Just token })
                 |> UR.addCmd (Ports.storeAuthToken token)
-                |> UR.addExt (CompletedAuth user)
+                |> UR.addExt (CompletedAuth signInResponse)
 
         CompletedSignIn _ (Ok Nothing) ->
             { model | loginError = Just (t "error.unknown") }
@@ -825,9 +819,9 @@ update msg shared model =
         GotPinLogin (Ok ( accountName, privateKey )) ->
             UR.init model
                 |> UR.addCmd
-                    (Api.Graphql.query shared
-                        (Profile.query accountName)
-                        (CompletedLoadProfile (LoggedInWithPrivateKey privateKey) accountName)
+                    (Api.Graphql.mutation shared
+                        (signIn accountName shared)
+                        (CompletedSignIn (LoggedInWithPrivateKey privateKey))
                     )
 
         GotPinLogin (Err err) ->
@@ -842,18 +836,6 @@ update msg shared model =
                             _ ->
                                 model.status
                 }
-
-        CompletedLoadProfile newStatus _ (Ok profile) ->
-            case profile of
-                Just p ->
-                    UR.init { model | status = newStatus }
-                        |> UR.addExt (CompletedAuth p)
-
-                Nothing ->
-                    UR.init model
-
-        CompletedLoadProfile _ _ (Err err) ->
-            loginFailedGraphql err model
 
         TogglePinVisibility ->
             { model | pinVisibility = not model.pinVisibility } |> UR.init
@@ -883,6 +865,18 @@ update msg shared model =
 
             else
                 UR.init model
+
+
+signIn : Eos.Name -> Shared -> SelectionSet (Maybe SignInResponse) RootMutation
+signIn accountName shared =
+    Cambiatus.Mutation.signIn
+        { account = Eos.nameToString accountName
+        , password = shared.graphqlSecret
+        }
+        (Graphql.SelectionSet.succeed SignInResponse
+            |> with (Cambiatus.Object.Session.user Profile.selectionSet)
+            |> with Cambiatus.Object.Session.token
+        )
 
 
 loginFailedGraphql : Graphql.Http.Error e -> Model -> UpdateResult
@@ -983,9 +977,6 @@ msgToString msg =
 
         GotPinLogin r ->
             [ "GotPinLogin", UR.resultToString r ]
-
-        CompletedLoadProfile _ _ r ->
-            [ "CompletedLoadProfile", UR.resultToString r ]
 
         EnteredPin _ ->
             [ "EnteredPin" ]

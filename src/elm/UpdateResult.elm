@@ -12,6 +12,7 @@ module UpdateResult exposing
     , logImpossible
     , map
     , mapModel
+    , remoteDataToString
     , resultToString
     , setModel
     , toModelCmd
@@ -39,6 +40,7 @@ import Json.Decode as Decode
 import Json.Encode exposing (Value)
 import Log exposing (Log)
 import Ports
+import RemoteData exposing (RemoteData(..))
 
 
 {-| Core data structure that enables this project to have an observable update function in our module.
@@ -240,3 +242,21 @@ resultToString r =
 
         Err _ ->
             "Err"
+
+
+{-| Converts a RemoteData Dataset into a string usable by UpdateResult
+-}
+remoteDataToString : RemoteData e a -> String
+remoteDataToString r =
+    case r of
+        NotAsked ->
+            "NotAsked"
+
+        Loading ->
+            "Loading"
+
+        Success _ ->
+            "Success"
+
+        Failure _ ->
+            "Failure"
