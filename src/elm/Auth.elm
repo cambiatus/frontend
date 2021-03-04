@@ -21,7 +21,6 @@ import Asset.Icon as Icon
 import Browser.Dom as Dom
 import Browser.Events
 import Cambiatus.Mutation
-import Cambiatus.Object
 import Cambiatus.Object.Session
 import Eos.Account as Eos
 import Graphql.Http
