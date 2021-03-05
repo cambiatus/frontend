@@ -702,8 +702,8 @@ changeRouteTo maybeRoute model =
                         (updateStatusWith PaymentHistory GotPaymentHistoryMsg)
                         Nothing
 
-                Page.LoggedIn _ ->
-                    PaymentHistory.init Nothing
+                Page.LoggedIn loggedIn ->
+                    PaymentHistory.init (Just loggedIn.authToken)
                         >> updateStatusWith PaymentHistory GotPaymentHistoryMsg model
                         |> withLoggedIn (Route.PaymentHistory accountName)
 
