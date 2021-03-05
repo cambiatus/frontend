@@ -29,6 +29,7 @@ import Html.Events exposing (onClick)
 import Icons
 import List.Extra as LE
 import Page
+import RemoteData exposing (RemoteData)
 import Select
 import Session.Shared as Shared exposing (Shared)
 import Simple.Fuzzy
@@ -44,8 +45,8 @@ import Utils
 
 
 type Msg
-    = RecipientProfileWithTransfersLoaded (Result (Graphql.Http.Error (Maybe ProfileWithTransfers)) (Maybe ProfileWithTransfers))
-    | AutocompleteProfilesLoaded (Result (Graphql.Http.Error (Maybe ProfileWithOnlyAutocomplete)) (Maybe ProfileWithOnlyAutocomplete))
+    = RecipientProfileWithTransfersLoaded (RemoteData (Graphql.Http.Error (Maybe ProfileWithTransfers)) (Maybe ProfileWithTransfers))
+    | AutocompleteProfilesLoaded (RemoteData (Graphql.Http.Error (Maybe ProfileWithOnlyAutocomplete)) (Maybe ProfileWithOnlyAutocomplete))
     | OnSelect (Maybe ProfileBase)
     | SelectMsg (Select.Msg ProfileBase)
     | ClearSelect
@@ -61,10 +62,10 @@ msgToString msg =
             [ "ShowMore" ]
 
         RecipientProfileWithTransfersLoaded r ->
-            [ "RecipientProfileWithTransfersLoaded", UR.resultToString r ]
+            [ "RecipientProfileWithTransfersLoaded", UR.remoteDataToString r ]
 
         AutocompleteProfilesLoaded r ->
-            [ "AutocompleteProfilesLoaded", UR.resultToString r ]
+            [ "AutocompleteProfilesLoaded", UR.remoteDataToString r ]
 
         ClearSelect ->
             [ "ClearSelect" ]
@@ -175,13 +176,14 @@ profileWithTransfersSelectionSet model =
         )
 
 
-fetchProfileWithTransfers : Shared -> Model -> Cmd Msg
-fetchProfileWithTransfers shared model =
+fetchProfileWithTransfers : Shared -> Model -> String -> Cmd Msg
+fetchProfileWithTransfers shared model authToken =
     let
         accountName =
             Eos.Account.nameToString model.recipientProfile.account
     in
     Api.Graphql.query shared
+        (Just authToken)
         (Cambiatus.Query.user
             { account = accountName }
             (profileWithTransfersSelectionSet model)
@@ -189,8 +191,18 @@ fetchProfileWithTransfers shared model =
         RecipientProfileWithTransfersLoaded
 
 
-fetchProfilesForAutocomplete : Shared -> Model -> String -> Cmd Msg
-fetchProfilesForAutocomplete shared model payerAccount =
+
+-- TODO
+
+
+maybeFetchProfileWithTransfers : Shared -> Model -> Maybe String -> Cmd Msg
+maybeFetchProfileWithTransfers shared model maybeAuthToken =
+    Maybe.map (fetchProfileWithTransfers shared model) maybeAuthToken
+        |> Maybe.withDefault Cmd.none
+
+
+fetchProfilesForAutocomplete : Shared -> Model -> String -> String -> Cmd Msg
+fetchProfilesForAutocomplete shared model payerAccount authToken =
     let
         autocompleteSelectionSet : SelectionSet ProfileBase Cambiatus.Object.User
         autocompleteSelectionSet =
@@ -208,6 +220,7 @@ fetchProfilesForAutocomplete shared model payerAccount =
             Eos.Account.nameToString model.recipientProfile.account
     in
     Api.Graphql.query shared
+        (Just authToken)
         (Cambiatus.Query.user
             { account = accountName
             }
@@ -216,9 +229,23 @@ fetchProfilesForAutocomplete shared model payerAccount =
         AutocompleteProfilesLoaded
 
 
-fetchIncomingTransfers : Shared -> Model -> Cmd Msg
-fetchIncomingTransfers shared model =
-    fetchProfileWithTransfers shared model
+
+-- TODO - This needs auth
+
+
+maybeFetchProfilesForAutocomplete : Shared -> Model -> String -> Maybe String -> Cmd Msg
+maybeFetchProfilesForAutocomplete shared model payerAccount maybeAuthToken =
+    Maybe.map (fetchProfilesForAutocomplete shared model payerAccount) maybeAuthToken
+        |> Maybe.withDefault Cmd.none
+
+
+
+-- TODO - This needs auth
+
+
+maybeFetchIncomingTransfers : Shared -> Model -> Maybe String -> Cmd Msg
+maybeFetchIncomingTransfers =
+    maybeFetchProfileWithTransfers
 
 
 datePickerSettings : Shared -> DatePicker.Settings
@@ -246,8 +273,8 @@ type alias SharedModel m =
     { m | shared : Shared }
 
 
-init : SharedModel m -> ( Model, Cmd Msg )
-init { shared } =
+init : Maybe String -> SharedModel m -> ( Model, Cmd Msg )
+init maybeAuthToken { shared } =
     let
         ( datePicker, datePickerCmd ) =
             DatePicker.init
@@ -280,7 +307,7 @@ init { shared } =
     ( initModel
     , Cmd.batch
         [ Cmd.map SetDatePicker datePickerCmd
-        , fetchProfileWithTransfers shared initModel
+        , maybeFetchProfileWithTransfers shared initModel maybeAuthToken
         ]
     )
 
@@ -329,10 +356,10 @@ getTransfers maybeObj =
 -- UPDATE
 
 
-update : Msg -> Model -> SharedModel m -> UR.UpdateResult Model Msg extMsg
-update msg model { shared } =
+update : Msg -> Model -> Maybe String -> SharedModel m -> UR.UpdateResult Model Msg extMsg
+update msg model maybeAuthToken { shared } =
     case msg of
-        AutocompleteProfilesLoaded (Ok maybeProfileWithPayers) ->
+        AutocompleteProfilesLoaded (RemoteData.Success maybeProfileWithPayers) ->
             case maybeProfileWithPayers of
                 Just profileWithPayers ->
                     let
@@ -362,12 +389,15 @@ update msg model { shared } =
                     model
                         |> UR.init
 
-        AutocompleteProfilesLoaded (Err err) ->
+        AutocompleteProfilesLoaded (RemoteData.Failure err) ->
             model
                 |> UR.init
                 |> UR.logGraphqlError msg err
 
-        RecipientProfileWithTransfersLoaded (Ok maybeProfile) ->
+        AutocompleteProfilesLoaded _ ->
+            UR.init model
+
+        RecipientProfileWithTransfersLoaded (RemoteData.Success maybeProfile) ->
             case maybeProfile of
                 Just profile ->
                     let
@@ -404,15 +434,18 @@ update msg model { shared } =
                     model
                         |> UR.init
 
-        RecipientProfileWithTransfersLoaded (Err err) ->
+        RecipientProfileWithTransfersLoaded (RemoteData.Failure err) ->
             { model | queryStatus = Failed err }
                 |> UR.init
                 |> UR.logGraphqlError msg err
 
+        RecipientProfileWithTransfersLoaded _ ->
+            UR.init model
+
         ShowMore ->
             model
                 |> UR.init
-                |> UR.addCmd (fetchIncomingTransfers shared model)
+                |> UR.addCmd (maybeFetchIncomingTransfers shared model maybeAuthToken)
 
         OnSelect maybeProfile ->
             let
@@ -425,7 +458,7 @@ update msg model { shared } =
             in
             newModel
                 |> UR.init
-                |> UR.addCmd (fetchIncomingTransfers shared newModel)
+                |> UR.addCmd (maybeFetchIncomingTransfers shared newModel maybeAuthToken)
 
         SelectMsg subMsg ->
             let
@@ -436,7 +469,7 @@ update msg model { shared } =
                 Just payer ->
                     { model | autocompleteState = updated }
                         |> UR.init
-                        |> UR.addCmd (fetchProfilesForAutocomplete shared model payer)
+                        |> UR.addCmd (maybeFetchProfilesForAutocomplete shared model payer maybeAuthToken)
                         |> UR.addCmd cmd
 
                 Nothing ->
@@ -455,7 +488,7 @@ update msg model { shared } =
             in
             newModel
                 |> UR.init
-                |> UR.addCmd (fetchIncomingTransfers shared newModel)
+                |> UR.addCmd (maybeFetchIncomingTransfers shared newModel maybeAuthToken)
 
         SetDatePicker subMsg ->
             let
@@ -475,7 +508,7 @@ update msg model { shared } =
                     in
                     newModel
                         |> UR.init
-                        |> UR.addCmd (fetchIncomingTransfers shared newModel)
+                        |> UR.addCmd (maybeFetchIncomingTransfers shared newModel maybeAuthToken)
 
                 _ ->
                     { model | datePicker = newDatePicker }
@@ -492,7 +525,7 @@ update msg model { shared } =
             in
             newModel
                 |> UR.init
-                |> UR.addCmd (fetchIncomingTransfers shared newModel)
+                |> UR.addCmd (maybeFetchIncomingTransfers shared newModel maybeAuthToken)
 
 
 

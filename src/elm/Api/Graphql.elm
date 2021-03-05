@@ -1,4 +1,4 @@
-module Api.Graphql exposing (mutation, query, query2)
+module Api.Graphql exposing (mutation, query)
 
 import Graphql.Http
 import Graphql.Operation exposing (RootMutation, RootQuery)
@@ -19,25 +19,17 @@ withAuthToken authToken =
             identity
 
 
-query2 : String -> Maybe String -> SelectionSet a RootQuery -> (RemoteData (Graphql.Http.Error a) a -> msg) -> Cmd msg
-query2 endpoint authToken query_ toMsg =
+query : Shared -> Maybe String -> SelectionSet a RootQuery -> (RemoteData (Graphql.Http.Error a) a -> msg) -> Cmd msg
+query { endpoints } maybeAuthToken query_ toMsg =
     query_
-        |> Graphql.Http.queryRequest endpoint
-        |> withAuthToken authToken
+        |> Graphql.Http.queryRequest endpoints.graphql
+        |> withAuthToken maybeAuthToken
         |> Graphql.Http.send (RemoteData.fromResult >> toMsg)
 
 
-query : Shared -> SelectionSet a RootQuery -> (Result (Graphql.Http.Error a) a -> msg) -> Cmd msg
-query { endpoints, authToken } query_ toMsg =
-    query_
-        |> Graphql.Http.queryRequest endpoints.graphql
-        |> withAuthToken authToken
-        |> Graphql.Http.send toMsg
-
-
-mutation : Shared -> SelectionSet a RootMutation -> (Result (Graphql.Http.Error a) a -> msg) -> Cmd msg
-mutation { endpoints, authToken } mutation_ toMsg =
+mutation : Shared -> Maybe String -> SelectionSet a RootMutation -> (RemoteData (Graphql.Http.Error a) a -> msg) -> Cmd msg
+mutation { endpoints } maybeAuthToken mutation_ toMsg =
     mutation_
         |> Graphql.Http.mutationRequest endpoints.graphql
-        |> withAuthToken authToken
-        |> Graphql.Http.send toMsg
+        |> withAuthToken maybeAuthToken
+        |> Graphql.Http.send (RemoteData.fromResult >> toMsg)

@@ -20,6 +20,7 @@ import Http
 import Page exposing (Session(..), toShared)
 import Profile exposing (Model)
 import Profile.EditKycForm as KycForm
+import RemoteData exposing (RemoteData)
 import Route
 import Session.LoggedIn as LoggedIn exposing (External(..), FeedbackStatus(..))
 import Session.Shared exposing (Translators)
@@ -80,6 +81,7 @@ init session invitationId =
     ( initModel invitationId
     , Api.Graphql.query
         (toShared session)
+        Nothing
         (Community.inviteQuery invitationId)
         CompletedLoad
     )
@@ -296,7 +298,7 @@ type alias UpdateResult =
 
 
 type Msg
-    = CompletedLoad (Result (Graphql.Http.Error (Maybe Invite)) (Maybe Invite))
+    = CompletedLoad (RemoteData (Graphql.Http.Error (Maybe Invite)) (Maybe Invite))
     | OpenConfirmationModal
     | CloseConfirmationModal
     | InvitationRejected
@@ -373,7 +375,7 @@ update session msg model =
                     model
                         |> UR.init
 
-        CompletedLoad (Ok (Just invite)) ->
+        CompletedLoad (RemoteData.Success (Just invite)) ->
             let
                 userCommunities =
                     case session of
@@ -404,13 +406,16 @@ update session msg model =
             in
             UR.init { model | pageStatus = newPageStatus invite }
 
-        CompletedLoad (Ok Nothing) ->
+        CompletedLoad (RemoteData.Success Nothing) ->
             UR.init { model | pageStatus = NotFound }
 
-        CompletedLoad (Err error) ->
+        CompletedLoad (RemoteData.Failure error) ->
             { model | pageStatus = Failed error }
                 |> UR.init
                 |> UR.logGraphqlError msg error
+
+        CompletedLoad _ ->
+            UR.init model
 
         OpenConfirmationModal ->
             { model | confirmationModalStatus = Open }
@@ -508,7 +513,7 @@ msgToString : Msg -> List String
 msgToString msg =
     case msg of
         CompletedLoad r ->
-            [ "CompletedLoad", UR.resultToString r ]
+            [ "CompletedLoad", UR.remoteDataToString r ]
 
         OpenConfirmationModal ->
             [ "OpenConfirmationModal" ]

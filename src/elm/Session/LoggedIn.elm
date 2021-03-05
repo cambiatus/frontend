@@ -83,8 +83,8 @@ init shared accountName flags authToken =
     in
     ( initModel shared authModel accountName flags.selectedCommunity authToken
     , Cmd.batch
-        [ Api.Graphql.query2 shared.endpoints.graphql (Just authToken) (Profile.query accountName) CompletedLoadProfile
-        , Api.Graphql.query shared (Community.settingsQuery flags.selectedCommunity) CompletedLoadSettings
+        [ Api.Graphql.query shared (Just authToken) (Profile.query accountName) CompletedLoadProfile
+        , Api.Graphql.query shared (Just authToken) (Community.settingsQuery flags.selectedCommunity) CompletedLoadSettings
         , Ports.getRecentSearches () -- run on the page refresh, duplicated in `initLogin`
         , Task.perform GotTime Time.now
         ]
@@ -775,7 +775,7 @@ type Msg
     | CompletedLoadTranslation String (Result Http.Error Translations)
     | ClickedTryAgainTranslation
     | CompletedLoadProfile (RemoteData (Graphql.Http.Error (Maybe Profile.Model)) (Maybe Profile.Model))
-    | CompletedLoadSettings (Result (Graphql.Http.Error (Maybe Community.Settings)) (Maybe Community.Settings))
+    | CompletedLoadSettings (RemoteData (Graphql.Http.Error (Maybe Community.Settings)) (Maybe Community.Settings))
     | ClickedTryAgainProfile Eos.Name
     | ClickedLogout
     | ShowNotificationModal Bool
@@ -836,7 +836,7 @@ update msg model =
         SearchClosed ->
             { model
                 | searchModel =
-                    Search.closeSearch shared model.searchModel
+                    Search.closeSearch shared model.authToken model.searchModel
                         |> Tuple.first
             }
                 |> UR.init
@@ -844,7 +844,7 @@ update msg model =
         GotSearchMsg searchMsg ->
             let
                 ( searchModel, searchCmd ) =
-                    Search.update shared model.searchModel searchMsg
+                    Search.update shared model.authToken model.searchModel searchMsg
             in
             { model | searchModel = searchModel }
                 |> UR.init
@@ -907,7 +907,7 @@ update msg model =
         CompletedLoadProfile _ ->
             UR.init model
 
-        CompletedLoadSettings (Ok settings_) ->
+        CompletedLoadSettings (RemoteData.Success settings_) ->
             case settings_ of
                 Just settings ->
                     { model
@@ -920,14 +920,17 @@ update msg model =
                 Nothing ->
                     UR.init model
 
-        CompletedLoadSettings (Err err) ->
+        CompletedLoadSettings (RemoteData.Failure err) ->
             UR.init model
                 |> UR.logGraphqlError msg err
+
+        CompletedLoadSettings _ ->
+            UR.init model
 
         ClickedTryAgainProfile accountName ->
             UR.init { model | profile = Loading accountName }
                 |> UR.addCmd
-                    (Api.Graphql.query2 shared.endpoints.graphql
+                    (Api.Graphql.query shared
                         (Just model.authToken)
                         (Profile.query accountName)
                         CompletedLoadProfile
@@ -1009,11 +1012,6 @@ update msg model =
                                     |> UR.mapModel (\m -> { m | profile = Loaded user, authToken = token })
                                     |> UR.addExt AuthenticationSucceed
                                     |> UR.addCmd cmd
-
-                            Auth.UpdatedShared newShared ->
-                                UR.mapModel
-                                    (\m -> { m | shared = newShared })
-                                    uResult
                     )
 
         CompletedLoadUnread payload ->
@@ -1052,12 +1050,12 @@ update msg model =
                 | selectedCommunity = communityId
                 , showCommunitySelector = False
                 , searchModel =
-                    Search.closeSearch shared model.searchModel
+                    Search.closeSearch shared model.authToken model.searchModel
                         |> Tuple.first
                         |> (\searchModel -> { searchModel | selectedCommunity = communityId })
             }
                 |> UR.init
-                |> UR.addCmd (Api.Graphql.query shared (Community.settingsQuery communityId) CompletedLoadSettings)
+                |> UR.addCmd (Api.Graphql.query shared (Just model.authToken) (Community.settingsQuery communityId) CompletedLoadSettings)
                 |> UR.addPort
                     { responseAddress = msg
                     , responseData = Encode.null
@@ -1249,7 +1247,7 @@ msgToString msg =
             [ "CompletedLoadProfile", UR.remoteDataToString r ]
 
         CompletedLoadSettings r ->
-            [ "CompletedLoadSettings", UR.resultToString r ]
+            [ "CompletedLoadSettings", UR.remoteDataToString r ]
 
         ClickedTryAgainProfile _ ->
             [ "ClickedTryAgainProfile" ]

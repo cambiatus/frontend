@@ -102,16 +102,17 @@ type alias FoundData =
     RemoteData (Graphql.Http.Error SearchResults) SearchResults
 
 
-sendSearchQuery : Symbol -> Shared -> String -> Cmd Msg
-sendSearchQuery selectedCommunity shared queryString =
+sendSearchQuery : Symbol -> Shared -> String -> String -> Cmd Msg
+sendSearchQuery selectedCommunity shared queryString authToken =
     let
         req =
             { communityId = Eos.symbolToString selectedCommunity }
     in
     Api.Graphql.query
         shared
+        (Just authToken)
         (Cambiatus.Query.search req (searchResultSelectionSet queryString))
-        (RemoteData.fromResult >> GotSearchResults)
+        GotSearchResults
 
 
 searchResultSelectionSet : String -> SelectionSet SearchResults Cambiatus.Object.SearchResult
@@ -148,8 +149,8 @@ type Msg
     | FoundItemClicked Route
 
 
-update : Shared -> Model -> Msg -> ( Model, Cmd Msg )
-update shared model msg =
+update : Shared -> String -> Model -> Msg -> ( Model, Cmd Msg )
+update shared authToken model msg =
     case msg of
         NoOp ->
             ( model, Cmd.none )
@@ -167,6 +168,7 @@ update shared model msg =
 
         RecentQueryClicked q ->
             update shared
+                authToken
                 { model
                     | state = ResultsShowed RemoteData.Loading Nothing
                     , currentQuery = q
@@ -247,7 +249,7 @@ update shared model msg =
               }
             , Cmd.batch
                 [ storeRecentSearches
-                , sendSearchQuery selectedCommunity shared model.currentQuery
+                , sendSearchQuery selectedCommunity shared model.currentQuery authToken
                 ]
             )
 
@@ -569,6 +571,6 @@ isActive model =
             True
 
 
-closeSearch : Shared -> Model -> ( Model, Cmd Msg )
-closeSearch shared model =
-    update shared model CancelClicked
+closeSearch : Shared -> String -> Model -> ( Model, Cmd Msg )
+closeSearch shared authToken model =
+    update shared authToken model CancelClicked

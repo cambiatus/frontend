@@ -22,6 +22,7 @@ import Page.Register.DefaultForm as DefaultForm
 import Page.Register.JuridicalForm as JuridicalForm
 import Page.Register.NaturalForm as NaturalForm
 import Profile
+import RemoteData exposing (RemoteData)
 import Result
 import Route
 import Session.Guest as Guest exposing (External(..))
@@ -62,8 +63,8 @@ init invitationId { shared } =
         loadInvitationData =
             case invitationId of
                 Just id ->
-                    Api.Graphql.query
-                        shared
+                    Api.Graphql.query shared
+                        Nothing
                         (Community.inviteQuery id)
                         CompletedLoadInvite
 
@@ -504,11 +505,11 @@ type Msg
     | PdfDownloaded
     | CopyToClipboard String
     | CopiedToClipboard
-    | CompletedLoadInvite (Result (Graphql.Http.Error (Maybe Invite)) (Maybe Invite))
-    | CompletedLoadCountry (Result (Graphql.Http.Error (Maybe Address.Country)) (Maybe Address.Country))
+    | CompletedLoadInvite (RemoteData (Graphql.Http.Error (Maybe Invite)) (Maybe Invite))
+    | CompletedLoadCountry (RemoteData (Graphql.Http.Error (Maybe Address.Country)) (Maybe Address.Country))
     | AccountTypeSelected AccountType
     | FormMsg EitherFormMsg
-    | CompletedSignUp (Result (Graphql.Http.Error (Maybe SignUpResponse)) (Maybe SignUpResponse))
+    | CompletedSignUp (RemoteData (Graphql.Http.Error (Maybe SignUpResponse)) (Maybe SignUpResponse))
 
 
 type EitherFormMsg
@@ -800,9 +801,9 @@ update _ msg model { shared } =
                 |> UR.addCmd
                     (Route.replaceUrl shared.navKey (Route.Login Nothing))
 
-        CompletedSignUp (Ok resp) ->
+        CompletedSignUp (RemoteData.Success resp) ->
             case resp of
-                Just { user, token } ->
+                Just _ ->
                     { model
                         | status = AccountCreated
                         , step = SavePassphrase
@@ -815,18 +816,23 @@ update _ msg model { shared } =
                     }
                         |> UR.init
 
-        CompletedSignUp (Err error) ->
+        CompletedSignUp (RemoteData.Failure error) ->
             { model | serverError = Just (t "register.account_error.title") }
                 |> UR.init
                 |> UR.logGraphqlError msg error
                 |> scrollTop
 
-        CompletedLoadInvite (Ok (Just invitation)) ->
+        CompletedSignUp _ ->
+            UR.init model
+
+        CompletedLoadInvite (RemoteData.Success (Just invitation)) ->
             if invitation.community.hasKyc then
                 let
                     loadCountryData =
                         Api.Graphql.query
                             shared
+                            -- TODO - This needs auth
+                            Nothing
                             (Address.countryQuery "Costa Rica")
                             CompletedLoadCountry
                 in
@@ -845,10 +851,10 @@ update _ msg model { shared } =
                 }
                     |> UR.init
 
-        CompletedLoadInvite (Ok Nothing) ->
+        CompletedLoadInvite (RemoteData.Success Nothing) ->
             UR.init { model | status = NotFound }
 
-        CompletedLoadInvite (Err error) ->
+        CompletedLoadInvite (RemoteData.Failure error) ->
             { model
                 | status = ErrorShowed (FailedInvite error)
                 , serverError = Just (t "error.unknown")
@@ -856,20 +862,26 @@ update _ msg model { shared } =
                 |> UR.init
                 |> UR.logGraphqlError msg error
 
-        CompletedLoadCountry (Ok (Just country)) ->
+        CompletedLoadInvite _ ->
+            UR.init model
+
+        CompletedLoadCountry (RemoteData.Success (Just country)) ->
             { model
                 | country = Just country
                 , status = AccountTypeSelectorShowed
             }
                 |> UR.init
 
-        CompletedLoadCountry (Ok Nothing) ->
+        CompletedLoadCountry (RemoteData.Success Nothing) ->
             UR.init { model | status = NotFound }
 
-        CompletedLoadCountry (Err error) ->
+        CompletedLoadCountry (RemoteData.Failure error) ->
             { model | status = ErrorShowed (FailedCountry error) }
                 |> UR.init
                 |> UR.logGraphqlError msg error
+
+        CompletedLoadCountry _ ->
+            UR.init model
 
 
 type alias SignUpResponse =
@@ -944,6 +956,7 @@ signUp shared { accountName, ownerKey } invitationId form =
             }
     in
     Api.Graphql.mutation shared
+        Nothing
         (Mutation.signUp
             fillOptionals
             requiredArgs

@@ -13,6 +13,7 @@ import Icons
 import Json.Decode
 import Page
 import Profile exposing (Model)
+import RemoteData exposing (RemoteData)
 import Route
 import Session.LoggedIn exposing (External(..), FeedbackStatus(..))
 import Session.Shared exposing (Translators)
@@ -28,6 +29,7 @@ init loggedIn =
     let
         profileQuery =
             Api.Graphql.query loggedIn.shared
+                (Just loggedIn.authToken)
                 (Profile.query loggedIn.accountName)
                 CompletedProfileLoad
     in
@@ -292,7 +294,7 @@ viewAvatar url =
 
 
 type Msg
-    = CompletedProfileLoad (Result (Graphql.Http.Error (Maybe Profile.Model)) (Maybe Profile.Model))
+    = CompletedProfileLoad (RemoteData (Graphql.Http.Error (Maybe Profile.Model)) (Maybe Profile.Model))
     | OnFieldInput Field String
     | AddInterest
     | RemoveInterest String
@@ -320,10 +322,10 @@ update msg model loggedIn =
             loggedIn.shared.translators
     in
     case msg of
-        CompletedProfileLoad (Ok Nothing) ->
+        CompletedProfileLoad (RemoteData.Success Nothing) ->
             UR.init model
 
-        CompletedProfileLoad (Ok (Just profile)) ->
+        CompletedProfileLoad (RemoteData.Success (Just profile)) ->
             let
                 nullable a =
                     Maybe.withDefault "" a
@@ -354,9 +356,12 @@ update msg model loggedIn =
                 |> redirect
                 |> showSuccessMsg
 
-        CompletedProfileLoad (Err err) ->
+        CompletedProfileLoad (RemoteData.Failure err) ->
             UR.init { model | status = LoadingFailed err }
                 |> UR.logGraphqlError msg err
+
+        CompletedProfileLoad _ ->
+            UR.init model
 
         OnFieldInput field data ->
             let
@@ -421,6 +426,7 @@ update msg model loggedIn =
                         |> UR.init
                         |> UR.addCmd
                             (Api.Graphql.mutation loggedIn.shared
+                                (Just loggedIn.authToken)
                                 (Profile.mutation (Profile.profileToForm newProfile))
                                 CompletedProfileLoad
                             )
@@ -470,8 +476,8 @@ modelToProfile model profile =
 msgToString : Msg -> List String
 msgToString msg =
     case msg of
-        CompletedProfileLoad _ ->
-            [ "CompletedProfileLoad" ]
+        CompletedProfileLoad r ->
+            [ "CompletedProfileLoad", UR.remoteDataToString r ]
 
         OnFieldInput _ _ ->
             [ "OnFieldInput" ]

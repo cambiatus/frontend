@@ -29,6 +29,7 @@ import Json.Decode as Decode
 import Json.Encode as Encode exposing (Value)
 import List.Extra as List
 import Page
+import RemoteData exposing (RemoteData)
 import Route
 import Session.LoggedIn as LoggedIn exposing (External(..), FeedbackStatus(..))
 import Session.Shared exposing (Shared)
@@ -49,9 +50,9 @@ initNew _ =
 
 
 initEdit : LoggedIn.Model -> Symbol -> ( Model, Cmd Msg )
-initEdit { shared } symbol =
+initEdit { shared, authToken } symbol =
     ( Loading symbol
-    , Api.Graphql.query shared (Community.communityQuery symbol) CompletedCommunityLoad
+    , Api.Graphql.query shared (Just authToken) (Community.communityQuery symbol) CompletedCommunityLoad
     )
 
 
@@ -596,7 +597,7 @@ type alias UpdateResult =
 
 
 type Msg
-    = CompletedCommunityLoad (Result (Graphql.Http.Error (Maybe Community.Model)) (Maybe Community.Model))
+    = CompletedCommunityLoad (RemoteData (Graphql.Http.Error (Maybe Community.Model)) (Maybe Community.Model))
     | EnteredTitle String
     | EnteredDescription String
     | EnteredSymbol String
@@ -621,7 +622,7 @@ update msg model loggedIn =
             loggedIn.shared.translators.t
     in
     case msg of
-        CompletedCommunityLoad (Ok community) ->
+        CompletedCommunityLoad (RemoteData.Success community) ->
             case community of
                 Just c ->
                     if LoggedIn.isAccount c.creator loggedIn then
@@ -636,10 +637,13 @@ update msg model loggedIn =
                     NotFound
                         |> UR.init
 
-        CompletedCommunityLoad (Err err) ->
+        CompletedCommunityLoad (RemoteData.Failure err) ->
             LoadingFailed err
                 |> UR.init
                 |> UR.logGraphqlError msg err
+
+        CompletedCommunityLoad _ ->
+            UR.init model
 
         EnteredTitle input ->
             UR.init model
@@ -1002,7 +1006,7 @@ msgToString : Msg -> List String
 msgToString msg =
     case msg of
         CompletedCommunityLoad r ->
-            [ "CompletedCommunityLoad", UR.resultToString r ]
+            [ "CompletedCommunityLoad", UR.remoteDataToString r ]
 
         EnteredTitle _ ->
             [ "EnteredTitle" ]

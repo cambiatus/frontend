@@ -18,6 +18,7 @@ import Kyc.CostaRica.Dimex as Dimex
 import Kyc.CostaRica.Nite as Nite
 import Kyc.CostaRica.Phone as Phone
 import Profile
+import RemoteData exposing (RemoteData)
 import Session.LoggedIn as LoggedIn exposing (External(..), FeedbackStatus(..))
 import Session.Shared exposing (Translators)
 import Validate exposing (Validator, ifBlank, validate)
@@ -28,7 +29,7 @@ type Msg
     | DocumentNumberEntered String
     | PhoneNumberEntered String
     | Submitted Model
-    | Saved (Result (Graphql.Http.Error (Maybe ProfileKyc)) (Maybe ProfileKyc))
+    | Saved (RemoteData (Graphql.Http.Error (Maybe ProfileKyc)) (Maybe ProfileKyc))
 
 
 type CostaRicaDoc
@@ -271,15 +272,18 @@ update translators model msg =
             in
             { m | validationErrors = errors }
 
-        Saved (Ok _) ->
+        Saved (RemoteData.Success _) ->
             model
 
-        Saved (Err _) ->
+        Saved (RemoteData.Failure _) ->
             let
                 errorForm =
                     { model | serverError = Just (t "error.unknown") }
             in
             errorForm
+
+        Saved _ ->
+            model
 
 
 modelToProfileKyc : Model -> ProfileKyc
@@ -293,11 +297,12 @@ modelToProfileKyc model =
 
 
 saveKycData : LoggedIn.Model -> Model -> Cmd Msg
-saveKycData { accountName, shared } model =
+saveKycData { shared, authToken } model =
     let
         data =
             modelToProfileKyc model
     in
     Api.Graphql.mutation shared
+        (Just authToken)
         (Profile.upsertKycMutation data)
         Saved

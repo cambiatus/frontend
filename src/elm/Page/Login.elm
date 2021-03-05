@@ -102,9 +102,6 @@ update msg model guest =
                                             |> Route.replaceUrl guest.shared.navKey
                                         )
                                     |> UR.addExt (LoggedIn signInResponse)
-
-                            Auth.UpdatedShared newShared ->
-                                UR.addExt (UpdatedGuest { guest | shared = newShared }) uResult
                     )
 
 

@@ -11,6 +11,7 @@ import Html.Attributes exposing (class, src)
 import Icons
 import Page
 import Profile
+import RemoteData exposing (RemoteData)
 import Route
 import Session.LoggedIn as LoggedIn exposing (External(..))
 import Strftime
@@ -25,7 +26,7 @@ import Utils
 
 
 init : LoggedIn.Model -> Int -> ( Model, Cmd Msg )
-init { shared } transferId =
+init { shared, authToken } transferId =
     let
         model =
             { status = Loading transferId
@@ -33,7 +34,7 @@ init { shared } transferId =
             }
     in
     ( model
-    , Api.Graphql.query shared (transferQuery transferId) CompletedTransferLoad
+    , Api.Graphql.query shared (Just authToken) (transferQuery transferId) CompletedTransferLoad
     )
 
 
@@ -275,7 +276,7 @@ viewDetail title content =
 
 
 type Msg
-    = CompletedTransferLoad (Result (Graphql.Http.Error (Maybe Transfer)) (Maybe Transfer))
+    = CompletedTransferLoad (RemoteData (Graphql.Http.Error (Maybe Transfer)) (Maybe Transfer))
 
 
 type alias UpdateResult =
@@ -302,7 +303,7 @@ findState maybeTransfer { accountName } =
 update : Msg -> Model -> LoggedIn.Model -> UpdateResult
 update msg model user =
     case msg of
-        CompletedTransferLoad (Ok transfer) ->
+        CompletedTransferLoad (RemoteData.Success transfer) ->
             let
                 -- find out state either transferred or received
                 state =
@@ -311,11 +312,14 @@ update msg model user =
             { model | status = Loaded transfer state }
                 |> UR.init
 
-        CompletedTransferLoad (Err error) ->
+        CompletedTransferLoad (RemoteData.Failure error) ->
             model
                 |> updateStatus (LoadFailed error)
                 |> UR.init
                 |> UR.logGraphqlError msg error
+
+        CompletedTransferLoad _ ->
+            UR.init model
 
 
 updateStatus : Status -> Model -> Model
@@ -327,4 +331,4 @@ msgToString : Msg -> List String
 msgToString msg =
     case msg of
         CompletedTransferLoad r ->
-            [ "CompletedTransferLoad", UR.resultToString r ]
+            [ "CompletedTransferLoad", UR.remoteDataToString r ]

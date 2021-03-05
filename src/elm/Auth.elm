@@ -35,6 +35,7 @@ import Json.Encode as Encode exposing (Value)
 import Log
 import Ports
 import Profile exposing (Model)
+import RemoteData exposing (RemoteData)
 import Route
 import Session.Shared exposing (Shared, Translators)
 import Task
@@ -560,7 +561,7 @@ type Msg
     | GotPrivateKeyLogin (Result String ( Eos.Name, String ))
     | SubmittedLoginPIN
     | GotPinLogin (Result String ( Eos.Name, String ))
-    | CompletedSignIn Status (Result (Graphql.Http.Error (Maybe SignInResponse)) (Maybe SignInResponse))
+    | CompletedSignIn Status (RemoteData (Graphql.Http.Error (Maybe SignInResponse)) (Maybe SignInResponse))
     | TogglePinVisibility
     | TogglePinConfirmationVisibility
     | KeyPressed Bool
@@ -577,7 +578,6 @@ type alias SignInResponse =
 type ExternalMsg
     = ClickedCancel
     | CompletedAuth SignInResponse
-    | UpdatedShared Shared
 
 
 trimPinNumber : Int -> String -> String -> String
@@ -763,23 +763,26 @@ update msg shared model =
                 |> UR.init
                 |> UR.addCmd
                     (Api.Graphql.mutation shared
+                        Nothing
                         (signIn accountName shared)
                         (CompletedSignIn (LoggedInWithPrivateKey privateKey))
                     )
 
-        CompletedSignIn status (Ok (Just ({ token } as signInResponse))) ->
+        CompletedSignIn status (RemoteData.Success (Just ({ token } as signInResponse))) ->
             { model | status = status }
                 |> UR.init
-                |> UR.addExt (UpdatedShared { shared | authToken = Just token })
                 |> UR.addCmd (Ports.storeAuthToken token)
                 |> UR.addExt (CompletedAuth signInResponse)
 
-        CompletedSignIn _ (Ok Nothing) ->
+        CompletedSignIn _ (RemoteData.Success Nothing) ->
             { model | loginError = Just (t "error.unknown") }
                 |> UR.init
 
-        CompletedSignIn _ (Err err) ->
+        CompletedSignIn _ (RemoteData.Failure err) ->
             loginFailedGraphql err model
+
+        CompletedSignIn _ _ ->
+            UR.init model
 
         GotPrivateKeyLogin (Err err) ->
             UR.init
@@ -819,6 +822,7 @@ update msg shared model =
             UR.init model
                 |> UR.addCmd
                     (Api.Graphql.mutation shared
+                        Nothing
                         (signIn accountName shared)
                         (CompletedSignIn (LoggedInWithPrivateKey privateKey))
                     )

@@ -14,15 +14,16 @@ import Json.Decode exposing (Value)
 import Json.Encode
 import Page
 import Ports
+import RemoteData exposing (RemoteData)
 import Route
 import Session.LoggedIn as LoggedIn exposing (External(..), FeedbackStatus(..))
 import UpdateResult as UR
 
 
 init : LoggedIn.Model -> Symbol -> ( Model, Cmd Msg )
-init { shared } symbol =
+init { shared, authToken } symbol =
     ( initModel symbol
-    , Api.Graphql.query shared (Community.communityQuery symbol) CompletedLoad
+    , Api.Graphql.query shared (Just authToken) (Community.communityQuery symbol) CompletedLoad
     )
 
 
@@ -59,7 +60,7 @@ type Feature
 
 
 type Msg
-    = CompletedLoad (Result (Graphql.Http.Error (Maybe Community.Model)) (Maybe Community.Model))
+    = CompletedLoad (RemoteData (Graphql.Http.Error (Maybe Community.Model)) (Maybe Community.Model))
     | ToggleShop Bool
     | ToggleObjectives Bool
     | ToggleKyc Bool
@@ -179,7 +180,7 @@ update msg model loggedIn =
             loggedIn.shared.translators.t
     in
     case msg of
-        CompletedLoad (Ok (Just community)) ->
+        CompletedLoad (RemoteData.Success (Just community)) ->
             let
                 newStatus =
                     if community.creator == loggedIn.accountName then
@@ -196,12 +197,15 @@ update msg model loggedIn =
                     , hasKyc = community.hasKyc
                 }
 
-        CompletedLoad (Ok Nothing) ->
+        CompletedLoad (RemoteData.Success Nothing) ->
             UR.init model
 
-        CompletedLoad (Err err) ->
+        CompletedLoad (RemoteData.Failure err) ->
             UR.init { model | status = LoadingFailed err }
                 |> UR.logGraphqlError msg err
+
+        CompletedLoad _ ->
+            UR.init model
 
         ToggleShop state ->
             { model | hasShop = state }
@@ -332,7 +336,7 @@ msgToString : Msg -> List String
 msgToString msg =
     case msg of
         CompletedLoad r ->
-            [ "CompletedLoad", UR.resultToString r ]
+            [ "CompletedLoad", UR.remoteDataToString r ]
 
         ToggleShop _ ->
             [ "ToggleShop" ]

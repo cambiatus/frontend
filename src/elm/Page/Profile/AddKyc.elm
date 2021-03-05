@@ -16,6 +16,7 @@ import Http
 import Page
 import Profile exposing (Model)
 import Profile.EditKycForm as KycForm
+import RemoteData exposing (RemoteData)
 import Route
 import Session.LoggedIn as LoggedIn exposing (External(..), FeedbackStatus(..), ProfileStatus(..))
 import UpdateResult as UR
@@ -40,6 +41,7 @@ init loggedIn =
     let
         profileQuery =
             Api.Graphql.query loggedIn.shared
+                (Just loggedIn.authToken)
                 (Profile.query loggedIn.accountName)
                 CompletedProfileLoad
     in
@@ -56,7 +58,7 @@ init loggedIn =
 
 type Msg
     = FormMsg KycForm.Msg
-    | CompletedProfileLoad (Result (Graphql.Http.Error (Maybe Profile.Model)) (Maybe Profile.Model))
+    | CompletedProfileLoad (RemoteData (Graphql.Http.Error (Maybe Profile.Model)) (Maybe Profile.Model))
 
 
 type alias UpdateResult =
@@ -70,10 +72,10 @@ update msg model loggedIn =
             loggedIn.shared.translators
     in
     case msg of
-        CompletedProfileLoad (Ok Nothing) ->
+        CompletedProfileLoad (RemoteData.Success Nothing) ->
             UR.init model
 
-        CompletedProfileLoad (Ok (Just profile)) ->
+        CompletedProfileLoad (RemoteData.Success (Just profile)) ->
             case profile.kyc of
                 Just _ ->
                     -- Users with already filled KYC data are restricted from seeing this page.
@@ -95,9 +97,12 @@ update msg model loggedIn =
                     }
                         |> UR.init
 
-        CompletedProfileLoad (Err err) ->
+        CompletedProfileLoad (RemoteData.Failure err) ->
             UR.init { model | status = LoadingFailed loggedIn.accountName err }
                 |> UR.logGraphqlError msg err
+
+        CompletedProfileLoad _ ->
+            UR.init model
 
         FormMsg kycFormMsg ->
             let
@@ -198,7 +203,7 @@ msgToString : Msg -> List String
 msgToString msg =
     case msg of
         CompletedProfileLoad r ->
-            [ "CompletedProfileLoad", UR.resultToString r ]
+            [ "CompletedProfileLoad", UR.remoteDataToString r ]
 
         FormMsg _ ->
             [ "FormMsg" ]

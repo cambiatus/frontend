@@ -314,12 +314,12 @@ update msg model =
         ( GotPaymentHistoryMsg subMsg, PaymentHistory subModel ) ->
             case model.session of
                 Page.Guest _ ->
-                    PaymentHistory.update subMsg subModel
+                    PaymentHistory.update subMsg subModel Nothing
                         >> updateGuestUResult PaymentHistory GotPaymentHistoryMsg model
                         |> withGuest
 
-                Page.LoggedIn _ ->
-                    PaymentHistory.update subMsg subModel
+                Page.LoggedIn loggedIn ->
+                    PaymentHistory.update subMsg subModel (Just loggedIn.authToken)
                         >> updateLoggedInUResult PaymentHistory GotPaymentHistoryMsg model
                         |> withLoggedIn
 
@@ -698,12 +698,12 @@ changeRouteTo maybeRoute model =
             case session of
                 Page.Guest _ ->
                     withGuest
-                        PaymentHistory.init
+                        (PaymentHistory.init Nothing)
                         (updateStatusWith PaymentHistory GotPaymentHistoryMsg)
                         Nothing
 
                 Page.LoggedIn _ ->
-                    PaymentHistory.init
+                    PaymentHistory.init Nothing
                         >> updateStatusWith PaymentHistory GotPaymentHistoryMsg model
                         |> withLoggedIn (Route.PaymentHistory accountName)
 

@@ -15,6 +15,7 @@ import Json.Decode as Decode
 import List
 import Ports
 import Profile exposing (Model)
+import RemoteData exposing (RemoteData)
 import Route exposing (Route)
 import Session.Shared as Shared exposing (Shared)
 import Translation
@@ -33,7 +34,7 @@ init shared =
     in
     case getInvitationId shared.url.path of
         Just id ->
-            ( defaultModel, Api.Graphql.query shared (Community.inviteQuery id) CompletedLoadInvite )
+            ( defaultModel, Api.Graphql.query shared Nothing (Community.inviteQuery id) CompletedLoadInvite )
 
         Nothing ->
             ( { defaultModel | community = Default }, Cmd.none )
@@ -297,7 +298,7 @@ type Msg
     | ShowLanguageNav Bool
     | ClickedLanguage String
     | KeyDown String
-    | CompletedLoadInvite (Result (Graphql.Http.Error (Maybe Invite)) (Maybe Invite))
+    | CompletedLoadInvite (RemoteData (Graphql.Http.Error (Maybe Invite)) (Maybe Invite))
 
 
 update : Msg -> Model -> UpdateResult
@@ -338,7 +339,7 @@ update msg ({ shared } as model) =
                 model
                     |> UR.init
 
-        CompletedLoadInvite (Ok (Just invitation)) ->
+        CompletedLoadInvite (RemoteData.Success (Just invitation)) ->
             { model | community = Loaded invitation.community }
                 |> UR.init
 

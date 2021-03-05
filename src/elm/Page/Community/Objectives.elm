@@ -12,6 +12,7 @@ import Html.Events exposing (onClick)
 import Icons
 import Page
 import Profile
+import RemoteData exposing (RemoteData)
 import Route
 import Session.LoggedIn as LoggedIn exposing (External(..))
 import Strftime
@@ -22,10 +23,10 @@ import Utils
 
 
 init : LoggedIn.Model -> Symbol -> ( Model, Cmd Msg )
-init { shared } symbol =
+init { shared, authToken } symbol =
     ( initModel symbol
     , Cmd.batch
-        [ Api.Graphql.query shared (Community.communityQuery symbol) CompletedLoad
+        [ Api.Graphql.query shared (Just authToken) (Community.communityQuery symbol) CompletedLoad
         , Task.perform GotTime Time.now
         ]
     )
@@ -336,7 +337,7 @@ type alias UpdateResult =
 
 
 type Msg
-    = CompletedLoad (Result (Graphql.Http.Error (Maybe Community.Model)) (Maybe Community.Model))
+    = CompletedLoad (RemoteData (Graphql.Http.Error (Maybe Community.Model)) (Maybe Community.Model))
     | GotTime Posix
     | OpenObjective Int
 
@@ -344,7 +345,7 @@ type Msg
 update : Msg -> Model -> LoggedIn.Model -> UpdateResult
 update msg model loggedIn =
     case msg of
-        CompletedLoad (Ok community) ->
+        CompletedLoad (RemoteData.Success community) ->
             case community of
                 Just cmm ->
                     let
@@ -363,10 +364,13 @@ update msg model loggedIn =
                 Nothing ->
                     UR.init { model | status = NotFound }
 
-        CompletedLoad (Err error) ->
+        CompletedLoad (RemoteData.Failure error) ->
             { model | status = Failed error }
                 |> UR.init
                 |> UR.logGraphqlError msg error
+
+        CompletedLoad _ ->
+            UR.init model
 
         GotTime date ->
             UR.init { model | date = Just date }
@@ -385,7 +389,7 @@ msgToString : Msg -> List String
 msgToString msg =
     case msg of
         CompletedLoad r ->
-            [ "CompletedLoad", UR.resultToString r ]
+            [ "CompletedLoad", UR.remoteDataToString r ]
 
         GotTime _ ->
             [ "GotTime" ]

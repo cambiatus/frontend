@@ -44,7 +44,6 @@ type alias Shared =
     , url : Url
     , contracts : { token : String, community : String }
     , graphqlSecret : String
-    , authToken : Maybe String
     }
 
 
@@ -65,7 +64,6 @@ init ({ environment, maybeAccount, endpoints, allowCommunityCreation, tokenContr
     , url = url
     , contracts = { token = tokenContract, community = communityContract }
     , graphqlSecret = flags.graphqlSecret
-    , authToken = flags.authToken
     }
 
 
