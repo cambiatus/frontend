@@ -285,7 +285,7 @@ viewPageHeader model shared =
 
 type External
     = UpdatedGuest Model
-    | LoggedIn Auth.SignInResponse
+    | LoggedIn Auth.SignInResponse Auth.Model
 
 
 type alias UpdateResult =

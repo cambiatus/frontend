@@ -577,7 +577,7 @@ type alias SignInResponse =
 
 type ExternalMsg
     = ClickedCancel
-    | CompletedAuth SignInResponse
+    | CompletedAuth SignInResponse Model
 
 
 trimPinNumber : Int -> String -> String -> String
@@ -769,10 +769,14 @@ update msg shared model =
                     )
 
         CompletedSignIn status (RemoteData.Success (Just ({ token } as signInResponse))) ->
-            { model | status = status }
+            let
+                newModel =
+                    { model | status = status }
+            in
+            newModel
                 |> UR.init
                 |> UR.addCmd (Ports.storeAuthToken token)
-                |> UR.addExt (CompletedAuth signInResponse)
+                |> UR.addExt (CompletedAuth signInResponse newModel)
 
         CompletedSignIn _ (RemoteData.Success Nothing) ->
             { model | loginError = Just (t "error.unknown") }

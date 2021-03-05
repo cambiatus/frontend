@@ -994,7 +994,7 @@ update msg model =
                                 closeModal uResult
                                     |> UR.addExt AuthenticationFailed
 
-                            Auth.CompletedAuth { user, token } ->
+                            Auth.CompletedAuth { user, token } auth ->
                                 let
                                     cmd =
                                         case model.claimingAction.status of
@@ -1009,7 +1009,14 @@ update msg model =
                                                 Cmd.none
                                 in
                                 closeModal uResult
-                                    |> UR.mapModel (\m -> { m | profile = Loaded user, authToken = token })
+                                    |> UR.mapModel
+                                        (\m ->
+                                            { m
+                                                | profile = Loaded user
+                                                , authToken = token
+                                                , auth = auth
+                                            }
+                                        )
                                     |> UR.addExt AuthenticationSucceed
                                     |> UR.addCmd cmd
                     )

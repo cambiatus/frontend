@@ -1,6 +1,5 @@
 module Main exposing (main)
 
-import Auth
 import Browser exposing (Document)
 import Browser.Navigation as Nav
 import Flags
@@ -472,15 +471,15 @@ updateGuestUResult toStatus toMsg model uResult =
                     , cmds_
                     )
 
-                Guest.LoggedIn signInResponse ->
+                Guest.LoggedIn signInResponse auth ->
                     let
-                        ( shared, auth ) =
+                        shared =
                             case m.session of
                                 Page.Guest guest ->
-                                    ( guest.shared, Auth.init guest.shared )
+                                    guest.shared
 
                                 Page.LoggedIn loggedIn ->
-                                    ( loggedIn.shared, loggedIn.auth )
+                                    loggedIn.shared
 
                         ( session, cmd ) =
                             LoggedIn.initLogin shared auth signInResponse.user signInResponse.token
