@@ -88,10 +88,8 @@ type alias TransferData =
 
 type alias OrderData =
     { amount : Float
-    , community : Community
     , fromId : Eos.Name
     , toId : Eos.Name
-    , communityId : String
     , product : Product
     }
 
@@ -113,6 +111,7 @@ type alias Product =
     { id : Int
     , title : String
     , image : Maybe String
+    , community : Community
     }
 
 
@@ -196,16 +195,15 @@ saleHistorySelectionSet : SelectionSet OrderData Cambiatus.Object.Order
 saleHistorySelectionSet =
     SelectionSet.succeed OrderData
         |> with Order.amount
-        |> with (Order.community logoSelectionSet)
         |> with (Eos.nameSelectionSet Order.fromId)
         |> with (Eos.nameSelectionSet Order.toId)
-        |> with Order.communityId
         |> with
             (Order.product
                 (SelectionSet.succeed Product
                     |> with Product.id
                     |> with Product.title
                     |> with Product.image
+                    |> with (Product.community logoSelectionSet)
                 )
             )
 

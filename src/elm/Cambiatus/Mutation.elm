@@ -23,7 +23,7 @@ type alias CompleteObjectiveRequiredArguments =
     { input : Cambiatus.InputObject.CompleteObjectiveInput }
 
 
-{-| Complete an objective
+{-| [Auth required - Admin only] Complete an objective
 -}
 completeObjective :
     CompleteObjectiveRequiredArguments
@@ -33,7 +33,7 @@ completeObjective requiredArgs object_ =
     Object.selectionForCompositeField "completeObjective" [ Argument.required "input" requiredArgs.input Cambiatus.InputObject.encodeCompleteObjectiveInput ] object_ (identity >> Decode.nullable)
 
 
-{-| A mutation to delete user's address data
+{-| [Auth required] A mutation to delete user's address data
 -}
 deleteAddress :
     SelectionSet decodesTo Cambiatus.Object.DeleteKycAddress
@@ -42,7 +42,7 @@ deleteAddress object_ =
     Object.selectionForCompositeField "deleteAddress" [] object_ (identity >> Decode.nullable)
 
 
-{-| A mutation to delete user's kyc data
+{-| [Auth required] A mutation to delete user's kyc data
 -}
 deleteKyc :
     SelectionSet decodesTo Cambiatus.Object.DeleteKycAddress
@@ -55,7 +55,7 @@ type alias ReadNotificationRequiredArguments =
     { input : Cambiatus.InputObject.ReadNotificationInput }
 
 
-{-| Mark a notification history as read
+{-| [Auth required] Mark a notification history as read
 -}
 readNotification :
     ReadNotificationRequiredArguments
@@ -69,7 +69,7 @@ type alias RegisterPushRequiredArguments =
     { input : Cambiatus.InputObject.PushSubscriptionInput }
 
 
-{-| Register an push subscription on Cambiatus
+{-| [Auth required] Register an push subscription on Cambiatus
 -}
 registerPush :
     RegisterPushRequiredArguments
@@ -143,7 +143,7 @@ type alias UpdateUserRequiredArguments =
     { input : Cambiatus.InputObject.UserUpdateInput }
 
 
-{-| A mutation to update a user
+{-| [Auth required] A mutation to update a user
 -}
 updateUser :
     UpdateUserRequiredArguments
@@ -157,7 +157,7 @@ type alias UpsertAddressRequiredArguments =
     { input : Cambiatus.InputObject.AddressUpdateInput }
 
 
-{-| Updates user's address if it already exists or inserts a new one if user hasn't it yet.
+{-| [Auth required] Updates user's address if it already exists or inserts a new one if user hasn't it yet.
 -}
 upsertAddress :
     UpsertAddressRequiredArguments
@@ -171,7 +171,7 @@ type alias UpsertKycRequiredArguments =
     { input : Cambiatus.InputObject.KycDataUpdateInput }
 
 
-{-| Updates user's KYC info if it already exists or inserts a new one if user hasn't it yet.
+{-| [Auth required] Updates user's KYC info if it already exists or inserts a new one if user hasn't it yet.
 -}
 upsertKyc :
     UpsertKycRequiredArguments

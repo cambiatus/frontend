@@ -242,14 +242,17 @@ viewNotificationMint shared history notification =
 
 
 viewNotificationSaleHistory : LoggedIn.Model -> History -> OrderData -> Html Msg
-viewNotificationSaleHistory ({ shared } as loggedIn) notification sale =
+viewNotificationSaleHistory loggedIn notification sale =
     let
+        logoString =
+            sale.product.community.logo
+
         maybeLogo =
-            if String.isEmpty sale.community.logo then
+            if String.isEmpty logoString then
                 Nothing
 
             else
-                Just sale.community.logo
+                Just logoString
 
         date =
             Just notification.insertedAt

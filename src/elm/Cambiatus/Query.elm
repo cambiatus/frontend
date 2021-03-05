@@ -23,7 +23,7 @@ type alias ClaimRequiredArguments =
     { input : Cambiatus.InputObject.ClaimInput }
 
 
-{-| A single claim
+{-| [Auth required] A single claim
 -}
 claim :
     ClaimRequiredArguments
@@ -45,7 +45,7 @@ type alias ClaimsAnalysisRequiredArguments =
     { communityId : String }
 
 
-{-| A list of claims
+{-| [Auth required] A list of claims
 -}
 claimsAnalysis :
     (ClaimsAnalysisOptionalArguments -> ClaimsAnalysisOptionalArguments)
@@ -94,7 +94,7 @@ claimsAnalysisHistory fillInOptionals requiredArgs object_ =
     Object.selectionForCompositeField "claimsAnalysisHistory" (optionalArgs ++ [ Argument.required "communityId" requiredArgs.communityId Encode.string ]) object_ (identity >> Decode.nullable)
 
 
-{-| A list of communities in Cambiatus
+{-| [Auth required] A list of communities in Cambiatus
 -}
 communities :
     SelectionSet decodesTo Cambiatus.Object.Community
@@ -107,7 +107,7 @@ type alias CommunityRequiredArguments =
     { symbol : String }
 
 
-{-| A single community
+{-| [Auth required] A single community
 -}
 community :
     CommunityRequiredArguments
@@ -121,7 +121,7 @@ type alias CountryRequiredArguments =
     { input : Cambiatus.InputObject.CountryInput }
 
 
-{-| List of supported countries
+{-| [Auth required] List of supported countries
 -}
 country :
     CountryRequiredArguments
@@ -145,6 +145,8 @@ invite requiredArgs object_ =
     Object.selectionForCompositeField "invite" [ Argument.required "input" requiredArgs.input Cambiatus.InputObject.encodeInviteInput ] object_ (identity >> Decode.nullable)
 
 
+{-| [Auth required] User's notifications
+-}
 notificationHistory :
     SelectionSet decodesTo Cambiatus.Object.NotificationHistory
     -> SelectionSet (List decodesTo) RootQuery
@@ -156,7 +158,7 @@ type alias ObjectiveRequiredArguments =
     { input : Cambiatus.InputObject.ObjectiveInput }
 
 
-{-| A single objective
+{-| [Auth required] A single objective
 -}
 objective :
     ObjectiveRequiredArguments
@@ -170,6 +172,8 @@ type alias ProductRequiredArguments =
     { id : Int }
 
 
+{-| [Auth required] Gets a single product
+-}
 product :
     ProductRequiredArguments
     -> SelectionSet decodesTo Cambiatus.Object.Product
@@ -186,6 +190,8 @@ type alias ProductsRequiredArguments =
     { communityId : String }
 
 
+{-| [Auth required] Products in a community
+-}
 products :
     (ProductsOptionalArguments -> ProductsOptionalArguments)
     -> ProductsRequiredArguments
@@ -207,6 +213,8 @@ type alias SearchRequiredArguments =
     { communityId : String }
 
 
+{-| [Auth required] Searches the community for a product or action
+-}
 search :
     SearchRequiredArguments
     -> SelectionSet decodesTo Cambiatus.Object.SearchResult
@@ -219,7 +227,7 @@ type alias TransferRequiredArguments =
     { input : Cambiatus.InputObject.TransferInput }
 
 
-{-| A single Transfer
+{-| [Auth required] A single Transfer
 -}
 transfer :
     TransferRequiredArguments
@@ -233,7 +241,7 @@ type alias UserRequiredArguments =
     { account : String }
 
 
-{-| A users
+{-| [Auth required] A user
 -}
 user :
     UserRequiredArguments
