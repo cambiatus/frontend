@@ -880,5 +880,52 @@
     "more": "Mostrar más",
     "no_transfers_found": "No se encontraron transferencias según sus criterios.",
     "pick_date": "Selecciona una fecha..."
+  },
+  "contact_modal": {
+    "new": "Nuevo",
+    "title": "Agrega tu Número de Teléfono",
+    "footer": "Puedes agregarlo más tarde en el área del perfil"
+  },
+  "contact_form": {
+    "country": "País",
+    "contact_type": "Tipo de Contacto",
+    "error": "Algo salió mal al agregar su contacto",
+    "submit_multiple": "Salvar",
+    "types": {
+      "phone": "Teléfono",
+      "instagram": "Instagram",
+      "telegram": "Telegram",
+      "whatsapp": "Whatsapp"
+    },
+    "phone": {
+      "label": "Número de teléfono (con DDD)",
+      "placeholder": "Ej.: {{example_number}}",
+      "submit": "Agregar el número de teléfono"
+    },
+    "username": {
+      "label": "Nombre de Usuario",
+      "placeholder": "Ej.: cambiatus",
+      "submit": "Agregar Perfil"
+    },
+    "validation": {
+      "phone": {
+        "blank": "Por favor, introduzca su número de teléfono",
+        "invalid": "Por favor ingrese un número de teléfono válido"
+      },
+      "username": {
+        "blank": "Ingrese su nombre de perfil",
+        "invalid": "Ingrese un nombre de perfil válido"
+      }
+    },
+    "feedback": {
+      "single": {
+        "success": "Tu contacto se ha guardado correctamente",
+        "failure": "Algo salió mal al intentar guardar su contacto"
+      },
+      "multiple": {
+        "success": "Tus contactos se han guardado correctamente",
+        "failure": "Se produjo un error al intentar guardar tus contactos."
+      }
+    }
   }
 }

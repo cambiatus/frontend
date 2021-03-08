@@ -516,7 +516,7 @@ updateLoggedInUResult toStatus toMsg model uResult =
                         Page.LoggedIn loggedIn ->
                             ( { m
                                 | session =
-                                    Page.LoggedIn { loggedIn | feedback = Show status message }
+                                    Page.LoggedIn (LoggedIn.showFeedback status message loggedIn)
                               }
                             , cmds_
                             )

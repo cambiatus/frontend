@@ -187,19 +187,19 @@ langFlag st =
     let
         iconLink =
             if String.startsWith "cat" st then
-                "/icons/cat-lang.svg"
+                "/icons/flag-catalan.svg"
 
             else if String.startsWith "p" st then
-                "/icons/portuguese-lang.svg"
+                "/icons/flag-brazil.svg"
 
             else if String.startsWith "es" st then
-                "/icons/spain-lang.svg"
+                "/icons/flag-spain.svg"
 
             else if String.startsWith "amh" st then
-                "/icons/amh-lang.svg"
+                "/icons/flag-ethiopia.svg"
 
             else
-                "/icons/en-lang.svg"
+                "/icons/flag-usa.svg"
     in
     img
         [ class "object-cover w-6 h-6 lang-flag"

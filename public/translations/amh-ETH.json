@@ -839,5 +839,52 @@
       "more": "ተጨማሪ አሳይ",
       "no_transfers_found": "በእርሶ መስፈርት መሰረት ምንም የተላለፈ የለም.",
       "pick_date": "ቀን ምረጥ..."
+    },
+    "contact_modal": {
+      "new": "አዲስ",
+      "title": "የስልክ ቁጥርዎን ያክሉ",
+      "footer": "በኋላ ላይ በመገለጫው አካባቢ ውስጥ ማከል ይችላሉ"
+    },
+    "contact_form": {
+      "country": "ሀገር",
+      "contact_type": "የእውቂያ ዓይነት",
+      "error": "ዕውቂያዎን ሲያክሉ አንድ ነገር ተሳስቷል",
+      "submit_multiple": "አስቀምጥ",
+      "types": {
+        "phone": "ስልክ",
+        "instagram": "Instagram",
+        "telegram": "Telegram",
+        "whatsapp": "Whatsapp"
+      },
+      "phone": {
+        "label": "የስልክ ቁጥር (ከዲዲዲ ጋር)",
+        "placeholder": "ዘጸ-{{example_number}}",
+        "submit": "ስልክ ቁጥር ያክሉ"
+      },
+      "username": {
+        "label": "የተጠቃሚ ስም",
+        "placeholder": "ዘፀ: cambiatus",
+        "submit": "መገለጫ ያክሉ"
+      },
+      "validation": {
+        "phone": {
+          "blank": "እባክዎን የስልክ ቁጥርዎን ያስገቡ",
+          "invalid": "እባክዎ ትክክለኛ የስልክ ቁጥር ያስገቡ"
+        },
+        "username": {
+          "blank": "እባክዎን የመገለጫ ስምዎን ያስገቡ",
+          "invalid": "እባክዎ ትክክለኛ የመገለጫ ስም ያስገቡ"
+        }
+      },
+      "feedback": {
+        "single": {
+          "success": "የእርስዎ እውቂያ በተሳካ ሁኔታ ተቀምጧል",
+          "failure": "ዕውቂያዎን ለማስቀመጥ ሲሞክሩ የሆነ ችግር ተፈጥሯል"
+        },
+        "multiple": {
+          "success": "እውቂያዎችዎ በተሳካ ሁኔታ ተቀምጠዋል",
+          "failure": "እውቂያዎችዎን ለማስቀመጥ ሲሞክሩ የሆነ ችግር ተፈጥሯል"
+        }
+      }
     }
   }
