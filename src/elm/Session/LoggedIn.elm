@@ -257,6 +257,7 @@ type Page
     | ProfileEditor
     | ProfileAddKyc
     | ProfileClaims
+    | ProfileAddContact
     | PaymentHistory
     | Transfer
     | ViewTransfer

@@ -25,6 +25,7 @@ import Page.NotFound as NotFound
 import Page.Notification as Notification
 import Page.PaymentHistory as PaymentHistory
 import Page.Profile as Profile
+import Page.Profile.AddContact as ProfileAddContact
 import Page.Profile.AddKyc as ProfileAddKyc
 import Page.Profile.Claims as ProfileClaims
 import Page.Profile.Editor as ProfileEditor
@@ -161,6 +162,7 @@ type Status
     | ProfileEditor ProfileEditor.Model
     | ProfileAddKyc ProfileAddKyc.Model
     | ProfileClaims ProfileClaims.Model
+    | ProfileAddContact ProfileAddContact.Model
     | Register (Maybe String) Register.Model
     | Shop Shop.Filter Shop.Model
     | ShopEditor (Maybe String) ShopEditor.Model
@@ -198,6 +200,7 @@ type Msg
     | GotProfileEditorMsg ProfileEditor.Msg
     | GotProfileAddKycMsg ProfileAddKyc.Msg
     | GotProfileClaimsMsg ProfileClaims.Msg
+    | GotProfileAddContactMsg ProfileAddContact.Msg
     | GotRegisterMsg Register.Msg
     | GotShopMsg Shop.Msg
     | GotShopEditorMsg ShopEditor.Msg
@@ -385,6 +388,11 @@ update msg model =
         ( GotProfileClaimsMsg subMsg, ProfileClaims subModel ) ->
             ProfileClaims.update subMsg subModel
                 >> updateLoggedInUResult ProfileClaims GotProfileClaimsMsg model
+                |> withLoggedIn
+
+        ( GotProfileAddContactMsg subMsg, ProfileAddContact subModel ) ->
+            ProfileAddContact.update subMsg subModel
+                >> updateLoggedInUResult ProfileAddContact GotProfileAddContactMsg model
                 |> withLoggedIn
 
         ( GotCommunitySettingsMsg subMsg, CommunitySettings subModel ) ->
@@ -747,6 +755,11 @@ changeRouteTo maybeRoute model =
                 >> updateStatusWith ProfileClaims GotProfileClaimsMsg model
                 |> withLoggedIn (Route.ProfileClaims account)
 
+        Just Route.ProfileAddContact ->
+            ProfileAddContact.init
+                >> updateStatusWith ProfileAddContact GotProfileAddContactMsg model
+                |> withLoggedIn Route.ProfileAddContact
+
         Just Route.Dashboard ->
             Dashboard.init
                 >> updateStatusWith Dashboard GotDashboardMsg model
@@ -995,6 +1008,9 @@ msgToString msg =
         GotProfileClaimsMsg subMsg ->
             "GotProfileClaimsMsg" :: ProfileClaims.msgToString subMsg
 
+        GotProfileAddContactMsg subMsg ->
+            "GotProfileAddContactMsg" :: ProfileAddContact.msgToString subMsg
+
         GotRegisterMsg subMsg ->
             "GotRegisterMsg" :: Register.msgToString subMsg
 
@@ -1175,6 +1191,9 @@ view model =
 
         ProfileClaims subModel ->
             viewLoggedIn subModel LoggedIn.ProfileClaims GotProfileClaimsMsg ProfileClaims.view
+
+        ProfileAddContact subModel ->
+            viewLoggedIn subModel LoggedIn.ProfileAddContact GotProfileAddContactMsg ProfileAddContact.view
 
         Shop _ subModel ->
             viewLoggedIn subModel LoggedIn.Shop GotShopMsg Shop.view

@@ -400,6 +400,16 @@ viewUserInfo loggedIn profile pageType =
                     (text (String.join ", " profile.interests))
                     Top
                     Nothing
+                 , viewProfileItem (text "Contact Options")
+                    (a
+                        [ class "button-secondary button-sm uppercase cursor-pointer"
+                        , Route.href Route.ProfileAddContact
+                        ]
+                        [ text (t "menu.add")
+                        ]
+                    )
+                    Center
+                    Nothing
                  ]
                     ++ (case pageType of
                             Private ->
