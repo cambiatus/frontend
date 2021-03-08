@@ -65,8 +65,10 @@ const LANGUAGE_KEY = 'bespiral.language'
 const AUTH_PREF_KEY = 'bespiral.auth.pref'
 const PUSH_PREF = 'bespiral.push.pref'
 const SELECTED_COMMUNITY_KEY = 'bespiral.selected_community'
+const AUTH_TOKEN = 'bespiral.auth_token'
 const RECENT_SEARCHES = 'bespiral.recent_search'
 const env = process.env.NODE_ENV || 'development'
+const graphqlSecret = process.env.GRAPHQL_SECRET || ''
 const config = configuration[env]
 
 function getUserLanguage () {
@@ -83,13 +85,15 @@ function getUserLanguage () {
 
 function flags () {
   const user = JSON.parse(window.localStorage.getItem(USER_KEY))
-  var flags_ = {
+  return {
     env: env,
+    graphqlSecret: graphqlSecret,
     endpoints: config.endpoints,
     language: getUserLanguage(),
     accountName: (user && user.accountName) || null,
     isPinAvailable: !!(user && user.encryptedKey),
     authPreference: window.localStorage.getItem(AUTH_PREF_KEY),
+    authToken: window.localStorage.getItem(AUTH_TOKEN),
     logo: config.logo,
     logoMobile: config.logoMobile,
     now: Date.now(),
@@ -98,7 +102,6 @@ function flags () {
     tokenContract: config.tokenContract,
     communityContract: config.communityContract
   }
-  return flags_
 }
 
 // Start elm app with flags
@@ -199,6 +202,10 @@ app.ports.getRecentSearches.subscribe(() => {
 function storeAuthPreference (auth) {
   window.localStorage.setItem(AUTH_PREF_KEY, auth)
 }
+
+app.ports.storeAuthToken.subscribe(token =>
+  window.localStorage.setItem(AUTH_TOKEN, token)
+)
 
 // STORE ACCOUNTNAME
 
@@ -578,6 +585,7 @@ async function handleJavascriptPort (arg) {
       window.localStorage.removeItem(USER_KEY)
       window.localStorage.removeItem(AUTH_PREF_KEY)
       window.localStorage.removeItem(SELECTED_COMMUNITY_KEY)
+      window.localStorage.removeItem(AUTH_TOKEN)
       Sentry.addBreadcrumb({
         category: 'auth',
         message: 'User logged out'

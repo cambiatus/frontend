@@ -201,12 +201,9 @@ query account =
         selectionSet
 
 
-mutation : Eos.Name -> ProfileForm -> SelectionSet (Maybe Model) RootMutation
-mutation account form =
+mutation : ProfileForm -> SelectionSet (Maybe Model) RootMutation
+mutation form =
     let
-        nameString =
-            Eos.nameToString account
-
         interestString =
             form.interest
                 :: form.interests
@@ -222,8 +219,7 @@ mutation account form =
     in
     Cambiatus.Mutation.updateUser
         { input =
-            { account = nameString
-            , name = Present form.name
+            { name = Present form.name
             , email = Present form.email
             , bio = Present form.bio
             , contacts = Present (List.map (Contact.unwrap >> contactInput) form.contacts)
@@ -239,16 +235,11 @@ mutation account form =
 -- UPDATE/INSERT KYC
 
 
-upsertKycMutation : Eos.Name -> ProfileKyc -> SelectionSet (Maybe ProfileKyc) RootMutation
-upsertKycMutation account data =
-    let
-        nameString =
-            Eos.nameToString account
-    in
+upsertKycMutation : ProfileKyc -> SelectionSet (Maybe ProfileKyc) RootMutation
+upsertKycMutation data =
     Cambiatus.Mutation.upsertKyc
         { input =
-            { accountId = nameString
-            , countryId = Id "1"
+            { countryId = Id "1"
             , documentType = data.documentType
             , document = data.document
             , phone = data.phone
@@ -270,15 +261,7 @@ type alias DeleteKycResult =
 
 deleteKycMutation : Eos.Name -> SelectionSet (Maybe DeleteKycResult) RootMutation
 deleteKycMutation account =
-    let
-        nameString =
-            Eos.nameToString account
-    in
     Cambiatus.Mutation.deleteKyc
-        { input =
-            { account = nameString
-            }
-        }
         (SelectionSet.succeed DeleteKycResult
             |> with Cambiatus.Object.DeleteKycAddress.status
             |> with Cambiatus.Object.DeleteKycAddress.reason
@@ -293,15 +276,7 @@ type alias DeleteAddressResult =
 
 deleteAddressMutation : Eos.Name -> SelectionSet (Maybe DeleteAddressResult) RootMutation
 deleteAddressMutation account =
-    let
-        nameString =
-            Eos.nameToString account
-    in
     Cambiatus.Mutation.deleteAddress
-        { input =
-            { account = nameString
-            }
-        }
         (SelectionSet.succeed DeleteAddressResult
             |> with Cambiatus.Object.DeleteKycAddress.status
             |> with Cambiatus.Object.DeleteKycAddress.reason

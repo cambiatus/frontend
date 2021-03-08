@@ -27,6 +27,7 @@ import Http
 import Json.Decode as Decode
 import Json.Encode as Encode exposing (Value)
 import Page
+import RemoteData exposing (RemoteData)
 import Result exposing (Result)
 import Route
 import Session.LoggedIn as LoggedIn exposing (External(..), FeedbackStatus(..))
@@ -515,7 +516,7 @@ type alias UpdateResult =
 
 type Msg
     = CompletedBalancesLoad (Result Http.Error (List Balance))
-    | CompletedSaleLoad (Result (Graphql.Http.Error (Maybe Product)) (Maybe Product))
+    | CompletedSaleLoad (RemoteData (Graphql.Http.Error (Maybe Product)) (Maybe Product))
     | CompletedImageUpload (Result Http.Error String)
     | EnteredImage (List File)
     | EnteredTitle String
@@ -561,7 +562,10 @@ update msg model loggedIn =
                                     Cmd.none
 
                                 Just id ->
-                                    Api.Graphql.query loggedIn.shared (Shop.productQuery id) CompletedSaleLoad
+                                    Api.Graphql.query loggedIn.shared
+                                        (Just loggedIn.authToken)
+                                        (Shop.productQuery id)
+                                        CompletedSaleLoad
                     in
                     LoadingSaleUpdate balances saleId
                         |> UR.init
@@ -577,7 +581,7 @@ update msg model loggedIn =
                 |> UR.init
                 |> UR.logHttpError msg error
 
-        CompletedSaleLoad (Ok maybeSale) ->
+        CompletedSaleLoad (RemoteData.Success maybeSale) ->
             case ( model, maybeSale ) of
                 ( LoadingSaleUpdate balances _, Just sale ) ->
                     let
@@ -614,10 +618,13 @@ update msg model loggedIn =
                         |> UR.init
                         |> UR.logImpossible msg []
 
-        CompletedSaleLoad (Err error) ->
+        CompletedSaleLoad (RemoteData.Failure error) ->
             LoadSaleFailed error
                 |> UR.init
                 |> UR.logGraphqlError msg error
+
+        CompletedSaleLoad _ ->
+            UR.init model
 
         CompletedImageUpload (Ok url) ->
             case model of
@@ -1221,7 +1228,7 @@ msgToString msg =
             [ "CompletedBalancesLoad", UR.resultToString r ]
 
         CompletedSaleLoad r ->
-            [ "CompletedSaleLoad", UR.resultToString r ]
+            [ "CompletedSaleLoad", UR.remoteDataToString r ]
 
         CompletedImageUpload r ->
             [ "CompletedImageUpload", UR.resultToString r ]

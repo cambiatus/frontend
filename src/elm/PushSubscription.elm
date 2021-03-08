@@ -39,7 +39,7 @@ activatePushMutation : Eos.Name -> PushSubscription -> SelectionSet () RootMutat
 activatePushMutation name { endpoint, keys } =
     let
         input =
-            { input = { account = Eos.nameToString name, authKey = keys.auth, pKey = keys.p256dh, endpoint = endpoint } }
+            { input = { authKey = keys.auth, pKey = keys.p256dh, endpoint = endpoint } }
     in
     Mutation.registerPush input SelectionSet.empty
         |> SelectionSet.map (\_ -> ())

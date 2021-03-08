@@ -140,6 +140,13 @@ orderCount =
     Object.selectionForField "Int" "orderCount" [] Decode.int
 
 
+orders :
+    SelectionSet decodesTo Cambiatus.Object.Order
+    -> SelectionSet (List decodesTo) Cambiatus.Object.Community
+orders object_ =
+    Object.selectionForCompositeField "orders" [] object_ (identity >> Decode.list)
+
+
 precision : SelectionSet Int Cambiatus.Object.Community
 precision =
     Object.selectionForField "Int" "precision" [] Decode.int

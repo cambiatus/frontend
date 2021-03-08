@@ -147,8 +147,8 @@ type Msg
     | CompletedUpdateContact UpdatedData
 
 
-update : Msg -> Model -> Shared -> Eos.Name -> ( Model, Cmd Msg, ContactResponse )
-update msg model ({ translators } as shared) accountName =
+update : Msg -> Model -> Shared -> String -> ( Model, Cmd Msg, ContactResponse )
+update msg model ({ translators } as shared) authToken =
     let
         toggleFlags ({ showFlags } as contact) =
             { contact | showFlags = not showFlags }
@@ -229,8 +229,9 @@ update msg model ({ translators } as shared) accountName =
                         , kind = removeErrors model.kind
                       }
                     , Api.Graphql.mutation shared
-                        (mutation accountName normalized)
-                        (RemoteData.fromResult >> CompletedUpdateContact)
+                        (Just authToken)
+                        (mutation normalized)
+                        CompletedUpdateContact
                     , NotAsked
                     )
 
@@ -786,16 +787,15 @@ profileSelectionSet =
             )
 
 
-mutation : Eos.Name -> List Normalized -> SelectionSet (Maybe Profile) RootMutation
-mutation account contacts =
+mutation : List Normalized -> SelectionSet (Maybe Profile) RootMutation
+mutation contacts =
     let
         contactInput (Normalized { contactType, contact }) =
             { type_ = Present contactType, externalId = Present contact }
     in
     Cambiatus.Mutation.updateUser
         { input =
-            { account = Eos.nameToString account
-            , avatar = Absent
+            { avatar = Absent
             , bio = Absent
             , contacts = Present (List.map contactInput contacts)
             , email = Absent

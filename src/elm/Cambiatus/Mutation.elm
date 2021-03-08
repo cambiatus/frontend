@@ -23,7 +23,7 @@ type alias CompleteObjectiveRequiredArguments =
     { input : Cambiatus.InputObject.CompleteObjectiveInput }
 
 
-{-| Complete an objective
+{-| [Auth required - Admin only] Complete an objective
 -}
 completeObjective :
     CompleteObjectiveRequiredArguments
@@ -33,39 +33,29 @@ completeObjective requiredArgs object_ =
     Object.selectionForCompositeField "completeObjective" [ Argument.required "input" requiredArgs.input Cambiatus.InputObject.encodeCompleteObjectiveInput ] object_ (identity >> Decode.nullable)
 
 
-type alias DeleteAddressRequiredArguments =
-    { input : Cambiatus.InputObject.KycAddressDeletionInput }
-
-
-{-| A mutation to delete user's address data
+{-| [Auth required] A mutation to delete user's address data
 -}
 deleteAddress :
-    DeleteAddressRequiredArguments
-    -> SelectionSet decodesTo Cambiatus.Object.DeleteKycAddress
+    SelectionSet decodesTo Cambiatus.Object.DeleteKycAddress
     -> SelectionSet (Maybe decodesTo) RootMutation
-deleteAddress requiredArgs object_ =
-    Object.selectionForCompositeField "deleteAddress" [ Argument.required "input" requiredArgs.input Cambiatus.InputObject.encodeKycAddressDeletionInput ] object_ (identity >> Decode.nullable)
+deleteAddress object_ =
+    Object.selectionForCompositeField "deleteAddress" [] object_ (identity >> Decode.nullable)
 
 
-type alias DeleteKycRequiredArguments =
-    { input : Cambiatus.InputObject.KycAddressDeletionInput }
-
-
-{-| A mutation to delete user's kyc data
+{-| [Auth required] A mutation to delete user's kyc data
 -}
 deleteKyc :
-    DeleteKycRequiredArguments
-    -> SelectionSet decodesTo Cambiatus.Object.DeleteKycAddress
+    SelectionSet decodesTo Cambiatus.Object.DeleteKycAddress
     -> SelectionSet (Maybe decodesTo) RootMutation
-deleteKyc requiredArgs object_ =
-    Object.selectionForCompositeField "deleteKyc" [ Argument.required "input" requiredArgs.input Cambiatus.InputObject.encodeKycAddressDeletionInput ] object_ (identity >> Decode.nullable)
+deleteKyc object_ =
+    Object.selectionForCompositeField "deleteKyc" [] object_ (identity >> Decode.nullable)
 
 
 type alias ReadNotificationRequiredArguments =
     { input : Cambiatus.InputObject.ReadNotificationInput }
 
 
-{-| Mark a notification history as read
+{-| [Auth required] Mark a notification history as read
 -}
 readNotification :
     ReadNotificationRequiredArguments
@@ -79,7 +69,7 @@ type alias RegisterPushRequiredArguments =
     { input : Cambiatus.InputObject.PushSubscriptionInput }
 
 
-{-| Register an push subscription on Cambiatus
+{-| [Auth required] Register an push subscription on Cambiatus
 -}
 registerPush :
     RegisterPushRequiredArguments
@@ -87,6 +77,20 @@ registerPush :
     -> SelectionSet decodesTo RootMutation
 registerPush requiredArgs object_ =
     Object.selectionForCompositeField "registerPush" [ Argument.required "input" requiredArgs.input Cambiatus.InputObject.encodePushSubscriptionInput ] object_ identity
+
+
+type alias SignInRequiredArguments =
+    { account : String
+    , password : String
+    }
+
+
+signIn :
+    SignInRequiredArguments
+    -> SelectionSet decodesTo Cambiatus.Object.Session
+    -> SelectionSet (Maybe decodesTo) RootMutation
+signIn requiredArgs object_ =
+    Object.selectionForCompositeField "signIn" [ Argument.required "account" requiredArgs.account Encode.string, Argument.required "password" requiredArgs.password Encode.string ] object_ (identity >> Decode.nullable)
 
 
 type alias SignUpOptionalArguments =
@@ -100,6 +104,7 @@ type alias SignUpRequiredArguments =
     { account : String
     , email : String
     , name : String
+    , password : String
     , publicKey : String
     , userType : String
     }
@@ -108,10 +113,10 @@ type alias SignUpRequiredArguments =
 {-| Creates a new user account
 
   - account - EOS Account, must have 12 chars long and use only [a-z] and [0-5]
-  - address - Address data
+  - address - Optional, Address data
   - email - User's email
-  - invitationId - Optinal, used to auto invite an user to a community
-  - kyc - KYC data
+  - invitationId - Optional, used to auto invite an user to a community
+  - kyc - Optional, KYC data
   - name - User's Full name
   - publicKey - EOS Account public key, used for creating a new account
   - userType - User type informs if its a 'natural' or 'juridical' user for regular users and companies
@@ -120,8 +125,8 @@ type alias SignUpRequiredArguments =
 signUp :
     (SignUpOptionalArguments -> SignUpOptionalArguments)
     -> SignUpRequiredArguments
-    -> SelectionSet decodesTo Cambiatus.Object.SignUpResponse
-    -> SelectionSet decodesTo RootMutation
+    -> SelectionSet decodesTo Cambiatus.Object.Session
+    -> SelectionSet (Maybe decodesTo) RootMutation
 signUp fillInOptionals requiredArgs object_ =
     let
         filledInOptionals =
@@ -131,14 +136,14 @@ signUp fillInOptionals requiredArgs object_ =
             [ Argument.optional "address" filledInOptionals.address Cambiatus.InputObject.encodeAddressUpdateInput, Argument.optional "invitationId" filledInOptionals.invitationId Encode.string, Argument.optional "kyc" filledInOptionals.kyc Cambiatus.InputObject.encodeKycDataUpdateInput ]
                 |> List.filterMap identity
     in
-    Object.selectionForCompositeField "signUp" (optionalArgs ++ [ Argument.required "account" requiredArgs.account Encode.string, Argument.required "email" requiredArgs.email Encode.string, Argument.required "name" requiredArgs.name Encode.string, Argument.required "publicKey" requiredArgs.publicKey Encode.string, Argument.required "userType" requiredArgs.userType Encode.string ]) object_ identity
+    Object.selectionForCompositeField "signUp" (optionalArgs ++ [ Argument.required "account" requiredArgs.account Encode.string, Argument.required "email" requiredArgs.email Encode.string, Argument.required "name" requiredArgs.name Encode.string, Argument.required "password" requiredArgs.password Encode.string, Argument.required "publicKey" requiredArgs.publicKey Encode.string, Argument.required "userType" requiredArgs.userType Encode.string ]) object_ (identity >> Decode.nullable)
 
 
 type alias UpdateUserRequiredArguments =
     { input : Cambiatus.InputObject.UserUpdateInput }
 
 
-{-| A mutation to update a user
+{-| [Auth required] A mutation to update a user
 -}
 updateUser :
     UpdateUserRequiredArguments
@@ -152,7 +157,7 @@ type alias UpsertAddressRequiredArguments =
     { input : Cambiatus.InputObject.AddressUpdateInput }
 
 
-{-| Updates user's address if it already exists or inserts a new one if user hasn't it yet.
+{-| [Auth required] Updates user's address if it already exists or inserts a new one if user hasn't it yet.
 -}
 upsertAddress :
     UpsertAddressRequiredArguments
@@ -166,7 +171,7 @@ type alias UpsertKycRequiredArguments =
     { input : Cambiatus.InputObject.KycDataUpdateInput }
 
 
-{-| Updates user's KYC info if it already exists or inserts a new one if user hasn't it yet.
+{-| [Auth required] Updates user's KYC info if it already exists or inserts a new one if user hasn't it yet.
 -}
 upsertKyc :
     UpsertKycRequiredArguments

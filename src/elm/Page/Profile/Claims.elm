@@ -25,6 +25,7 @@ import Json.Decode as Decode exposing (Value)
 import Json.Encode as Encode
 import List.Extra as List
 import Page
+import RemoteData exposing (RemoteData)
 import Route
 import Session.LoggedIn as LoggedIn exposing (External(..))
 import UpdateResult as UR
@@ -168,7 +169,7 @@ type alias UpdateResult =
 
 
 type Msg
-    = ClaimsLoaded (Result (Graphql.Http.Error (Maybe ProfileClaims)) (Maybe ProfileClaims))
+    = ClaimsLoaded (RemoteData (Graphql.Http.Error (Maybe ProfileClaims)) (Maybe ProfileClaims))
     | ClaimMsg Claim.Msg
     | VoteClaim Claim.ClaimId Bool
     | GotVoteResult Claim.ClaimId (Result (Maybe Value) String)
@@ -177,7 +178,7 @@ type Msg
 update : Msg -> Model -> LoggedIn.Model -> UpdateResult
 update msg model loggedIn =
     case msg of
-        ClaimsLoaded (Ok results) ->
+        ClaimsLoaded (RemoteData.Success results) ->
             case results of
                 Just claims ->
                     { model | status = Loaded claims }
@@ -187,9 +188,12 @@ update msg model loggedIn =
                     { model | status = NotFound }
                         |> UR.init
 
-        ClaimsLoaded (Err e) ->
+        ClaimsLoaded (RemoteData.Failure e) ->
             { model | status = Failed e }
                 |> UR.init
+
+        ClaimsLoaded _ ->
+            UR.init model
 
         ClaimMsg m ->
             let
@@ -293,9 +297,9 @@ update msg model loggedIn =
 
 
 profileClaimQuery : LoggedIn.Model -> String -> Cmd Msg
-profileClaimQuery ({ shared } as loggedIn) accountName =
-    Api.Graphql.query
-        shared
+profileClaimQuery ({ shared, authToken } as loggedIn) accountName =
+    Api.Graphql.query shared
+        (Just authToken)
         (Cambiatus.Query.user { account = accountName } (selectionSet loggedIn.selectedCommunity))
         ClaimsLoaded
 
@@ -335,7 +339,7 @@ msgToString : Msg -> List String
 msgToString msg =
     case msg of
         ClaimsLoaded r ->
-            [ "ClaimsLoaded", UR.resultToString r ]
+            [ "ClaimsLoaded", UR.remoteDataToString r ]
 
         ClaimMsg _ ->
             [ "ClaimMsg" ]

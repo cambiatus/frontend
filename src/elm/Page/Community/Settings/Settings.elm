@@ -7,6 +7,7 @@ import Graphql.Http
 import Html exposing (Html, a, button, div, span, text)
 import Html.Attributes exposing (class, style)
 import Page
+import RemoteData exposing (RemoteData)
 import Route exposing (Route)
 import Session.LoggedIn as LoggedIn exposing (External(..))
 import Session.Shared exposing (Shared)
@@ -14,9 +15,9 @@ import UpdateResult as UR
 
 
 init : LoggedIn.Model -> Symbol -> ( Model, Cmd Msg )
-init { shared } symbol =
+init { shared, authToken } symbol =
     ( initModel symbol
-    , Api.Graphql.query shared (Community.communityQuery symbol) CompletedLoad
+    , Api.Graphql.query shared (Just authToken) (Community.communityQuery symbol) CompletedLoad
     )
 
 
@@ -38,7 +39,7 @@ type Status
 
 
 type Msg
-    = CompletedLoad (Result (Graphql.Http.Error (Maybe Community.Model)) (Maybe Community.Model))
+    = CompletedLoad (RemoteData (Graphql.Http.Error (Maybe Community.Model)) (Maybe Community.Model))
 
 
 initModel : Symbol -> Model
@@ -136,7 +137,7 @@ settingCard title action description route =
 update : Msg -> Model -> LoggedIn.Model -> UpdateResult
 update msg model loggedIn =
     case msg of
-        CompletedLoad (Ok (Just community)) ->
+        CompletedLoad (RemoteData.Success (Just community)) ->
             let
                 newStatus =
                     if community.creator == loggedIn.accountName then
@@ -147,16 +148,19 @@ update msg model loggedIn =
             in
             UR.init { model | status = newStatus }
 
-        CompletedLoad (Ok Nothing) ->
+        CompletedLoad (RemoteData.Success Nothing) ->
             UR.init model
 
-        CompletedLoad (Err err) ->
+        CompletedLoad (RemoteData.Failure err) ->
             UR.init { model | status = LoadingFailed err }
                 |> UR.logGraphqlError msg err
+
+        CompletedLoad _ ->
+            UR.init model
 
 
 msgToString : Msg -> List String
 msgToString msg =
     case msg of
         CompletedLoad r ->
-            [ "CompletedLoad", UR.resultToString r ]
+            [ "CompletedLoad", UR.remoteDataToString r ]

@@ -22,6 +22,7 @@ import Html.Events exposing (onClick)
 import Icons
 import Json.Encode exposing (Value)
 import Page
+import RemoteData exposing (RemoteData)
 import Route
 import Session.LoggedIn as LoggedIn exposing (External(..), FeedbackStatus(..))
 import Session.Shared exposing (Translators)
@@ -37,10 +38,10 @@ import Utils
 
 
 init : LoggedIn.Model -> Symbol -> ( Model, Cmd Msg )
-init ({ shared } as loggedIn) symbol =
+init ({ shared, authToken } as loggedIn) symbol =
     ( initModel loggedIn symbol
     , Cmd.batch
-        [ Api.Graphql.query shared (Community.communityQuery symbol) CompletedLoadCommunity
+        [ Api.Graphql.query shared (Just authToken) (Community.communityQuery symbol) CompletedLoadCommunity
         , Task.perform GotTime Time.now
         ]
     )
@@ -302,7 +303,7 @@ type alias UpdateResult =
 type Msg
     = NoOp
     | GotTime Posix
-    | CompletedLoadCommunity (Result (Graphql.Http.Error (Maybe Community.Model)) (Maybe Community.Model))
+    | CompletedLoadCommunity (RemoteData (Graphql.Http.Error (Maybe Community.Model)) (Maybe Community.Model))
       -- Objective
     | ClickedOpenObjective Int
     | ClickedCloseObjective
@@ -340,7 +341,7 @@ update msg model ({ shared } as loggedIn) =
             model
                 |> UR.init
 
-        CompletedLoadCommunity (Ok community) ->
+        CompletedLoadCommunity (RemoteData.Success community) ->
             case community of
                 Just c ->
                     { model
@@ -352,10 +353,14 @@ update msg model ({ shared } as loggedIn) =
                     { model | pageStatus = NotFound }
                         |> UR.init
 
-        CompletedLoadCommunity (Err err) ->
+        CompletedLoadCommunity (RemoteData.Failure err) ->
             { model | pageStatus = Failed err }
                 |> UR.init
                 |> UR.logGraphqlError msg err
+
+        CompletedLoadCommunity _ ->
+            model
+                |> UR.init
 
         ClickedOpenObjective index ->
             { model | openObjectiveId = Just index }
@@ -386,7 +391,7 @@ msgToString msg =
             [ "GotCommunityActionMsg" ]
 
         CompletedLoadCommunity r ->
-            [ "CompletedLoadCommunity", UR.resultToString r ]
+            [ "CompletedLoadCommunity", UR.remoteDataToString r ]
 
         ClickedOpenObjective _ ->
             [ "ClickedOpenObjective" ]

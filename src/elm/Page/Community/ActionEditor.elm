@@ -42,6 +42,7 @@ import Json.Encode as Encode
 import MaskedInput.Text as MaskedDate
 import Page
 import Profile
+import RemoteData exposing (RemoteData)
 import Route
 import Select
 import Session.LoggedIn as LoggedIn exposing (External(..), FeedbackStatus(..))
@@ -77,6 +78,7 @@ init loggedIn symbol objectiveId actionId =
       , multiSelectState = Select.newState ""
       }
     , Api.Graphql.query loggedIn.shared
+        (Just loggedIn.authToken)
         (Community.communityQuery symbol)
         CompletedCommunityLoad
     )
@@ -452,7 +454,7 @@ type alias UpdateResult =
 
 
 type Msg
-    = CompletedCommunityLoad (Result (Graphql.Http.Error (Maybe Community.Model)) (Maybe Community.Model))
+    = CompletedCommunityLoad (RemoteData (Graphql.Http.Error (Maybe Community.Model)) (Maybe Community.Model))
     | OnSelectVerifier (Maybe Profile.Minimal)
     | OnRemoveVerifier Profile.Minimal
     | SelectMsg (Select.Msg Profile.Minimal)
@@ -537,12 +539,12 @@ update msg model ({ shared } as loggedIn) =
             model.form
     in
     case msg of
-        CompletedCommunityLoad (Err err) ->
+        CompletedCommunityLoad (RemoteData.Failure err) ->
             { model | status = LoadFailed err }
                 |> UR.init
                 |> UR.logGraphqlError msg err
 
-        CompletedCommunityLoad (Ok c) ->
+        CompletedCommunityLoad (RemoteData.Success c) ->
             case c of
                 Just community ->
                     if community.creator == loggedIn.accountName then
@@ -610,6 +612,9 @@ update msg model ({ shared } as loggedIn) =
                     { model | status = NotFound }
                         |> UR.init
                         |> UR.logImpossible msg []
+
+        CompletedCommunityLoad _ ->
+            UR.init model
 
         OnSelectVerifier maybeProfile ->
             let

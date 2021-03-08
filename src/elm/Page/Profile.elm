@@ -27,6 +27,7 @@ import Json.Encode as Encode
 import Page
 import Profile exposing (DeleteKycAndAddressResult, Model)
 import PushSubscription exposing (PushSubscription)
+import RemoteData exposing (RemoteData)
 import Route
 import Session.LoggedIn as LoggedIn exposing (External(..), FeedbackStatus(..), ProfileStatus(..))
 import Session.Shared exposing (Shared, Translators)
@@ -45,6 +46,7 @@ init loggedIn =
     let
         profileQuery =
             Api.Graphql.query loggedIn.shared
+                (Just loggedIn.authToken)
                 (Profile.query loggedIn.accountName)
                 CompletedProfileLoad
     in
@@ -616,7 +618,7 @@ type alias UpdateResult =
 
 type Msg
     = Ignored
-    | CompletedProfileLoad (Result (Graphql.Http.Error (Maybe Profile.Model)) (Maybe Profile.Model))
+    | CompletedProfileLoad (RemoteData (Graphql.Http.Error (Maybe Profile.Model)) (Maybe Profile.Model))
     | DownloadPdf String
     | DownloadPdfProcessed Bool
     | ClickedClosePdfDownloadError
@@ -632,10 +634,10 @@ type Msg
     | ToggleDeleteKycModal
     | AddKycClicked
     | DeleteKycAccepted
-    | DeleteKycAndAddressCompleted (Result (Graphql.Http.Error DeleteKycAndAddressResult) DeleteKycAndAddressResult)
+    | DeleteKycAndAddressCompleted (RemoteData (Graphql.Http.Error DeleteKycAndAddressResult) DeleteKycAndAddressResult)
     | CheckPushPref
     | GotPushSub PushSubscription
-    | CompletedPushUpload (Result (Graphql.Http.Error ()) ())
+    | CompletedPushUpload (RemoteData (Graphql.Http.Error ()) ())
 
 
 update : Msg -> Model -> LoggedIn.Model -> UpdateResult
@@ -684,26 +686,30 @@ update msg model loggedIn =
             let
                 reloadProfile =
                     Api.Graphql.query loggedIn.shared
+                        (Just loggedIn.authToken)
                         (Profile.query loggedIn.accountName)
                         CompletedProfileLoad
             in
             case resp of
-                Ok _ ->
+                RemoteData.Success _ ->
                     model
                         |> UR.init
                         |> UR.addCmd reloadProfile
                         |> UR.addExt (ShowFeedback Success (t "community.kyc.delete.success"))
 
-                Err err ->
+                RemoteData.Failure err ->
                     model
                         |> UR.init
                         |> UR.logGraphqlError msg err
                         |> UR.addCmd reloadProfile
 
-        CompletedProfileLoad (Ok Nothing) ->
+                _ ->
+                    UR.init model
+
+        CompletedProfileLoad (RemoteData.Success Nothing) ->
             UR.init model
 
-        CompletedProfileLoad (Ok (Just profile)) ->
+        CompletedProfileLoad (RemoteData.Success (Just profile)) ->
             { model | status = Loaded profile }
                 |> UR.init
                 |> UR.addExt
@@ -712,9 +718,12 @@ update msg model loggedIn =
                         { loggedIn | profile = Loaded profile }
                     )
 
-        CompletedProfileLoad (Err err) ->
+        CompletedProfileLoad (RemoteData.Failure err) ->
             UR.init { model | status = LoadingFailed loggedIn.accountName err }
                 |> UR.logGraphqlError msg err
+
+        CompletedProfileLoad _ ->
+            UR.init model
 
         ClickedChangePin ->
             if LoggedIn.isAuth loggedIn then
@@ -860,7 +869,7 @@ update msg model loggedIn =
 
         CompletedPushUpload res ->
             case res of
-                Ok _ ->
+                RemoteData.Success _ ->
                     model
                         |> UR.init
                         |> UR.addPort
@@ -871,10 +880,13 @@ update msg model loggedIn =
                                     [ ( "name", Encode.string "completedPushUpload" ) ]
                             }
 
-                Err err ->
+                RemoteData.Failure err ->
                     model
                         |> UR.init
                         |> UR.logGraphqlError msg err
+
+                _ ->
+                    UR.init model
 
 
 decodePushPref : Value -> Maybe Msg
@@ -892,15 +904,17 @@ decodeIsPdfDownloaded val =
 
 
 uploadPushSubscription : LoggedIn.Model -> PushSubscription -> Cmd Msg
-uploadPushSubscription { accountName, shared } data =
+uploadPushSubscription { accountName, shared, authToken } data =
     Api.Graphql.mutation shared
+        (Just authToken)
         (PushSubscription.activatePushMutation accountName data)
         CompletedPushUpload
 
 
 deleteKycAndAddress : LoggedIn.Model -> Cmd Msg
-deleteKycAndAddress { accountName, shared } =
+deleteKycAndAddress { accountName, shared, authToken } =
     Api.Graphql.mutation shared
+        (Just authToken)
         (Profile.deleteKycAndAddressMutation accountName)
         DeleteKycAndAddressCompleted
 
@@ -966,7 +980,7 @@ msgToString msg =
             [ "DeleteKycAndAddressCompleted" ]
 
         CompletedProfileLoad r ->
-            [ "CompletedProfileLoad", UR.resultToString r ]
+            [ "CompletedProfileLoad", UR.remoteDataToString r ]
 
         DownloadPdf _ ->
             [ "DownloadPdf" ]

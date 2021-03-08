@@ -25,6 +25,8 @@ type alias Flags =
     , selectedCommunity : Symbol
     , tokenContract : String
     , communityContract : String
+    , graphqlSecret : String
+    , authToken : Maybe String
     }
 
 
@@ -41,6 +43,8 @@ default =
     , selectedCommunity = Eos.cambiatusSymbol
     , tokenContract = "bes.token"
     , communityContract = "bes.cmm"
+    , graphqlSecret = ""
+    , authToken = Nothing
     }
 
 
@@ -65,6 +69,8 @@ decode =
         |> required "selectedCommunity" Eos.symbolDecoder
         |> required "tokenContract" Decode.string
         |> required "communityContract" Decode.string
+        |> required "graphqlSecret" Decode.string
+        |> required "authToken" (Decode.nullable Decode.string)
 
 
 type alias Endpoints =

@@ -3,6 +3,7 @@ module Auth exposing
     , LoginFormData
     , Model
     , Msg
+    , SignInResponse
     , init
     , initRegister
     , isAuth
@@ -19,18 +20,22 @@ import Api.Graphql
 import Asset.Icon as Icon
 import Browser.Dom as Dom
 import Browser.Events
+import Cambiatus.Mutation
+import Cambiatus.Object.Session
 import Eos.Account as Eos
 import Graphql.Http
-import Graphql.OptionalArgument exposing (OptionalArgument(..))
+import Graphql.Operation exposing (RootMutation)
+import Graphql.SelectionSet exposing (SelectionSet, with)
 import Html exposing (Html, a, button, div, form, h2, img, label, li, p, span, strong, text, textarea, ul)
 import Html.Attributes exposing (autocomplete, autofocus, class, disabled, for, id, placeholder, required, src, title, type_, value)
 import Html.Events exposing (onClick, onInput, onSubmit)
-import I18Next exposing (t)
 import Json.Decode as Decode
 import Json.Decode.Pipeline as Decode
 import Json.Encode as Encode exposing (Value)
 import Log
+import Ports
 import Profile exposing (Model)
+import RemoteData exposing (RemoteData)
 import Route
 import Session.Shared exposing (Shared, Translators)
 import Task
@@ -556,7 +561,7 @@ type Msg
     | GotPrivateKeyLogin (Result String ( Eos.Name, String ))
     | SubmittedLoginPIN
     | GotPinLogin (Result String ( Eos.Name, String ))
-    | CompletedLoadProfile Status Eos.Name (Result (Graphql.Http.Error (Maybe Profile.Model)) (Maybe Profile.Model))
+    | CompletedSignIn Status (RemoteData (Graphql.Http.Error (Maybe SignInResponse)) (Maybe SignInResponse))
     | TogglePinVisibility
     | TogglePinConfirmationVisibility
     | KeyPressed Bool
@@ -564,10 +569,15 @@ type Msg
     | EnteredPinConf String
 
 
+type alias SignInResponse =
+    { user : Profile.Model
+    , token : String
+    }
+
+
 type ExternalMsg
     = ClickedCancel
-    | CompletedAuth Profile.Model
-    | UpdatedShared Shared
+    | CompletedAuth SignInResponse Model
 
 
 trimPinNumber : Int -> String -> String -> String
@@ -589,6 +599,10 @@ trimPinNumber desiredLength oldPin newPin =
 
 update : Msg -> Shared -> Model -> UpdateResult
 update msg shared model =
+    let
+        { t } =
+            shared.translators
+    in
     case msg of
         EnteredPin pin ->
             let
@@ -745,12 +759,34 @@ update msg shared model =
                     }
 
         GotPrivateKeyLogin (Ok ( accountName, privateKey )) ->
-            UR.init model
+            model
+                |> UR.init
                 |> UR.addCmd
-                    (Api.Graphql.query shared
-                        (Profile.query accountName)
-                        (CompletedLoadProfile (LoggedInWithPrivateKey privateKey) accountName)
+                    (Api.Graphql.mutation shared
+                        Nothing
+                        (signIn accountName shared)
+                        (CompletedSignIn (LoggedInWithPrivateKey privateKey))
                     )
+
+        CompletedSignIn status (RemoteData.Success (Just ({ token } as signInResponse))) ->
+            let
+                newModel =
+                    { model | status = status }
+            in
+            newModel
+                |> UR.init
+                |> UR.addCmd (Ports.storeAuthToken token)
+                |> UR.addExt (CompletedAuth signInResponse newModel)
+
+        CompletedSignIn _ (RemoteData.Success Nothing) ->
+            { model | loginError = Just (t "error.unknown") }
+                |> UR.init
+
+        CompletedSignIn _ (RemoteData.Failure err) ->
+            loginFailedGraphql err model
+
+        CompletedSignIn _ _ ->
+            UR.init model
 
         GotPrivateKeyLogin (Err err) ->
             UR.init
@@ -789,9 +825,10 @@ update msg shared model =
         GotPinLogin (Ok ( accountName, privateKey )) ->
             UR.init model
                 |> UR.addCmd
-                    (Api.Graphql.query shared
-                        (Profile.query accountName)
-                        (CompletedLoadProfile (LoggedInWithPrivateKey privateKey) accountName)
+                    (Api.Graphql.mutation shared
+                        Nothing
+                        (signIn accountName shared)
+                        (CompletedSignIn (LoggedInWithPrivateKey privateKey))
                     )
 
         GotPinLogin (Err err) ->
@@ -806,18 +843,6 @@ update msg shared model =
                             _ ->
                                 model.status
                 }
-
-        CompletedLoadProfile newStatus _ (Ok profile) ->
-            case profile of
-                Just p ->
-                    UR.init { model | status = newStatus }
-                        |> UR.addExt (CompletedAuth p)
-
-                Nothing ->
-                    UR.init model
-
-        CompletedLoadProfile _ _ (Err err) ->
-            loginFailedGraphql err model
 
         TogglePinVisibility ->
             { model | pinVisibility = not model.pinVisibility } |> UR.init
@@ -849,7 +874,19 @@ update msg shared model =
                 UR.init model
 
 
-loginFailedGraphql : Graphql.Http.Error (Maybe Profile.Model) -> Model -> UpdateResult
+signIn : Eos.Name -> Shared -> SelectionSet (Maybe SignInResponse) RootMutation
+signIn accountName shared =
+    Cambiatus.Mutation.signIn
+        { account = Eos.nameToString accountName
+        , password = shared.graphqlSecret
+        }
+        (Graphql.SelectionSet.succeed SignInResponse
+            |> with (Cambiatus.Object.Session.user Profile.selectionSet)
+            |> with Cambiatus.Object.Session.token
+        )
+
+
+loginFailedGraphql : Graphql.Http.Error e -> Model -> UpdateResult
 loginFailedGraphql httpError model =
     UR.init
         { model
@@ -918,6 +955,9 @@ msgToString msg =
         Ignored ->
             [ "Ignored" ]
 
+        CompletedSignIn _ _ ->
+            [ "CompletedSignIn" ]
+
         ClickedViewOptions ->
             [ "ClickedViewOptions" ]
 
@@ -944,9 +984,6 @@ msgToString msg =
 
         GotPinLogin r ->
             [ "GotPinLogin", UR.resultToString r ]
-
-        CompletedLoadProfile _ _ r ->
-            [ "CompletedLoadProfile", UR.resultToString r ]
 
         EnteredPin _ ->
             [ "EnteredPin" ]

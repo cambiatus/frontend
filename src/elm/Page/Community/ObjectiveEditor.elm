@@ -18,6 +18,7 @@ import I18Next exposing (t)
 import Json.Decode as Decode
 import Json.Encode as Encode exposing (Value)
 import Page
+import RemoteData exposing (RemoteData)
 import Route
 import Session.LoggedIn as LoggedIn exposing (External(..), FeedbackStatus(..))
 import UpdateResult as UR
@@ -28,16 +29,16 @@ import UpdateResult as UR
 
 
 initNew : LoggedIn.Model -> Symbol -> ( Model, Cmd Msg )
-initNew { shared } communityId =
+initNew { shared, authToken } communityId =
     ( { status = Loading, community = communityId, objectiveId = Nothing }
-    , Api.Graphql.query shared (communityQuery communityId) CompletedCommunityLoad
+    , Api.Graphql.query shared (Just authToken) (communityQuery communityId) CompletedCommunityLoad
     )
 
 
 initEdit : LoggedIn.Model -> Symbol -> Int -> ( Model, Cmd Msg )
-initEdit { shared } communityId objectiveId =
+initEdit { shared, authToken } communityId objectiveId =
     ( { status = Loading, community = communityId, objectiveId = Just objectiveId }
-    , Api.Graphql.query shared (communityQuery communityId) CompletedCommunityLoad
+    , Api.Graphql.query shared (Just authToken) (communityQuery communityId) CompletedCommunityLoad
     )
 
 
@@ -98,7 +99,7 @@ type alias UpdateResult =
 
 
 type Msg
-    = CompletedCommunityLoad (Result (Graphql.Http.Error (Maybe Community)) (Maybe Community))
+    = CompletedCommunityLoad (RemoteData (Graphql.Http.Error (Maybe Community)) (Maybe Community))
     | EnteredDescription String
     | ClickedSaveObjective
     | GotSaveObjectiveResponse (Result Value String)
@@ -298,7 +299,7 @@ update msg model loggedIn =
             loggedIn.shared.translators.t
     in
     case msg of
-        CompletedCommunityLoad (Ok community) ->
+        CompletedCommunityLoad (RemoteData.Success community) ->
             case community of
                 Just cmm ->
                     if cmm.creator == loggedIn.accountName then
@@ -332,9 +333,12 @@ update msg model loggedIn =
                     { model | status = NotFound }
                         |> UR.init
 
-        CompletedCommunityLoad (Err err) ->
+        CompletedCommunityLoad (RemoteData.Failure err) ->
             { model | status = LoadCommunityFailed err }
                 |> UR.init
+
+        CompletedCommunityLoad _ ->
+            UR.init model
 
         EnteredDescription val ->
             UR.init model

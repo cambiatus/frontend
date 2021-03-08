@@ -26,6 +26,7 @@ import Json.Encode as Encode
 import List.Extra as LE
 import Page exposing (Session(..))
 import Profile
+import RemoteData exposing (RemoteData)
 import Route
 import Session.LoggedIn as LoggedIn exposing (External(..))
 import Session.Shared exposing (Shared, Translators)
@@ -39,7 +40,7 @@ import UpdateResult as UR
 
 
 init : LoggedIn.Model -> String -> ( Model, Cmd Msg )
-init { shared, accountName } saleId =
+init { shared, accountName, authToken } saleId =
     let
         currentStatus =
             initStatus saleId
@@ -53,7 +54,7 @@ init { shared, accountName } saleId =
     in
     ( model
     , Cmd.batch
-        [ initCmd shared currentStatus
+        [ initCmd shared currentStatus authToken
         , Api.getBalances shared accountName CompletedLoadBalances
         ]
     )
@@ -69,11 +70,12 @@ initStatus saleId =
             InvalidId saleId
 
 
-initCmd : Shared -> Status -> Cmd Msg
-initCmd shared status =
+initCmd : Shared -> Status -> String -> Cmd Msg
+initCmd shared status authToken =
     case status of
         LoadingSale id ->
             Api.Graphql.query shared
+                (Just authToken)
                 (Shop.productQuery id)
                 CompletedSaleLoad
 
@@ -152,7 +154,7 @@ type Validation
 
 
 type Msg
-    = CompletedSaleLoad (Result (Graphql.Http.Error (Maybe Product)) (Maybe Product))
+    = CompletedSaleLoad (RemoteData (Graphql.Http.Error (Maybe Product)) (Maybe Product))
     | CompletedLoadBalances (Result Http.Error (List Balance))
     | ClickedBuy Product
     | ClickedEdit Product
@@ -174,7 +176,7 @@ update msg model loggedIn =
             loggedIn.shared.translators
     in
     case msg of
-        CompletedSaleLoad (Ok maybeSale) ->
+        CompletedSaleLoad (RemoteData.Success maybeSale) ->
             { model | status = LoadedSale maybeSale }
                 |> UR.init
 
@@ -208,10 +210,13 @@ update msg model loggedIn =
                     model
                         |> UR.init
 
-        CompletedSaleLoad (Err err) ->
+        CompletedSaleLoad (RemoteData.Failure err) ->
             { model | status = LoadingFailed err }
                 |> UR.init
                 |> UR.logGraphqlError msg err
+
+        CompletedSaleLoad _ ->
+            UR.init model
 
         ClickedQuestions sale ->
             model
