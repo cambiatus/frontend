@@ -194,7 +194,7 @@ initModel shared authModel accountName selectedCommunity authToken =
     , hasShop = FeatureLoading
     , hasObjectives = FeatureLoading
     , hasKyc = FeatureLoading
-    , contactModel = Contact.init True
+    , contactModel = Contact.initSingle
     , showContactModal = False
     , searchModel = Search.init selectedCommunity
     , claimingAction = { status = Action.NotAsked, feedback = Nothing, needsPinConfirmation = False }

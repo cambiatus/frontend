@@ -7,26 +7,53 @@ module Page.Profile.AddContact exposing
     , view
     )
 
-import Html exposing (Html, div)
+import Api.Graphql
+import Graphql.Http
+import Html exposing (Html, div, text)
 import Html.Attributes exposing (class)
+import Http
 import Page
+import Profile
 import Profile.Contact as Contact
+import RemoteData exposing (RemoteData)
 import Route
 import Session.LoggedIn as LoggedIn
 import UpdateResult as UR
 
 
 type alias Model =
-    Contact.Model
+    RemoteData String Contact.Model
 
 
 init : LoggedIn.Model -> ( Model, Cmd Msg )
-init _ =
-    ( Contact.init False, Cmd.none )
+init loggedIn =
+    case loggedIn.profile of
+        LoggedIn.Loaded profile ->
+            ( profile.contacts
+                |> Maybe.withDefault []
+                |> Contact.initMultiple
+                |> RemoteData.Success
+            , Cmd.none
+            )
+
+        LoggedIn.LoadingFailed _ _ ->
+            -- TODO - Add I18N
+            ( RemoteData.Failure "Something went wrong", Cmd.none )
+
+        _ ->
+            let
+                profileQuery =
+                    Api.Graphql.query loggedIn.shared
+                        (Just loggedIn.authToken)
+                        (Profile.query loggedIn.accountName)
+                        CompletedProfileLoad
+            in
+            ( RemoteData.Loading, profileQuery )
 
 
 type Msg
     = GotContactMsg Contact.Msg
+    | CompletedProfileLoad (RemoteData (Graphql.Http.Error (Maybe Profile.Model)) (Maybe Profile.Model))
 
 
 type alias UpdateResult =
@@ -36,28 +63,47 @@ type alias UpdateResult =
 update : Msg -> Model -> LoggedIn.Model -> UpdateResult
 update msg model { shared, authToken } =
     case msg of
+        CompletedProfileLoad result ->
+            result
+                |> RemoteData.map
+                    (Maybe.map .contacts
+                        >> Maybe.andThen identity
+                        >> Maybe.withDefault []
+                        >> Contact.initMultiple
+                    )
+                -- TODO - Add I18N
+                |> RemoteData.mapError (\_ -> "Something went wrong")
+                |> UR.init
+
         GotContactMsg subMsg ->
-            let
-                ( newModel, cmd, newContacts ) =
-                    Contact.update subMsg model shared authToken
+            case model of
+                RemoteData.Success contactModel ->
+                    let
+                        ( newModel, cmd, newContacts ) =
+                            Contact.update subMsg contactModel shared authToken
 
-                actOnNewContacts updateResult =
-                    case newContacts of
-                        Contact.WithContacts successMessage _ ->
-                            updateResult
-                                |> UR.addExt (LoggedIn.ShowFeedback LoggedIn.Success successMessage)
-                                |> UR.addCmd (Route.replaceUrl shared.navKey Route.Profile)
+                        actOnNewContacts updateResult =
+                            case newContacts of
+                                Contact.WithContacts successMessage _ ->
+                                    updateResult
+                                        |> UR.addExt (LoggedIn.ShowFeedback LoggedIn.Success successMessage)
+                                        |> UR.addCmd (Route.replaceUrl shared.navKey Route.Profile)
 
-                        Contact.WithError errorMessage ->
-                            updateResult
-                                |> UR.addExt (LoggedIn.ShowFeedback LoggedIn.Failure errorMessage)
+                                Contact.WithError errorMessage ->
+                                    updateResult
+                                        |> UR.addExt (LoggedIn.ShowFeedback LoggedIn.Failure errorMessage)
 
-                        Contact.NotAsked ->
-                            updateResult
-            in
-            UR.init newModel
-                |> UR.addCmd (Cmd.map GotContactMsg cmd)
-                |> actOnNewContacts
+                                Contact.NotAsked ->
+                                    updateResult
+                    in
+                    newModel
+                        |> RemoteData.Success
+                        |> UR.init
+                        |> UR.addCmd (Cmd.map GotContactMsg cmd)
+                        |> actOnNewContacts
+
+                _ ->
+                    UR.init model
 
 
 view : LoggedIn.Model -> Model -> { title : String, content : Html Msg }
@@ -65,9 +111,21 @@ view ({ shared } as loggedIn) model =
     { title = "Add contact options"
     , content =
         div [ class "bg-white pb-8" ]
+            -- TODO - Add I18N
             [ Page.viewHeader loggedIn "Contact Options" Route.Profile
-            , Contact.view shared.translators model
-                |> Html.map GotContactMsg
+            , case model of
+                RemoteData.Success contacts ->
+                    Contact.view shared.translators contacts
+                        |> Html.map GotContactMsg
+
+                RemoteData.Loading ->
+                    Page.fullPageLoading shared
+
+                RemoteData.Failure err ->
+                    Page.fullPageError err Http.NetworkError
+
+                RemoteData.NotAsked ->
+                    text ""
             ]
     }
 
@@ -75,5 +133,8 @@ view ({ shared } as loggedIn) model =
 msgToString : Msg -> List String
 msgToString msg =
     case msg of
+        CompletedProfileLoad r ->
+            [ "CompletedProfileLoad", UR.remoteDataToString r ]
+
         GotContactMsg _ ->
             [ "GotContactMsg" ]

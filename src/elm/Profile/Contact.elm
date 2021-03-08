@@ -6,7 +6,8 @@ module Profile.Contact exposing
     , decode
     , encode
     , hasSameType
-    , init
+    , initMultiple
+    , initSingle
     , selectionSet
     , unwrap
     , update
@@ -53,15 +54,27 @@ type alias Model =
     }
 
 
-init : Bool -> Model
-init showTypeSelector =
+initSingle : Model
+initSingle =
+    { state = RemoteData.NotAsked
+    , kind = Single (initBasic defaultContactType)
+    }
+
+
+initMultiple : List Normalized -> Model
+initMultiple initialContacts =
     { state = RemoteData.NotAsked
     , kind =
-        if showTypeSelector then
-            Single (initBasic defaultContactType)
-
-        else
-            Multiple (List.map initBasic ContactType.list)
+        Multiple
+            (List.map
+                (\type_ ->
+                    initialContacts
+                        |> LE.find (\(Normalized { contactType }) -> type_ == contactType)
+                        |> Maybe.map initBasicWith
+                        |> Maybe.withDefault (initBasic type_)
+                )
+                ContactType.list
+            )
     }
 
 
@@ -91,6 +104,48 @@ initBasic contactType =
     , errors = Nothing
     , showFlags = False
     }
+
+
+initBasicWith : Normalized -> Basic
+initBasicWith ((Normalized { contactType }) as normalized) =
+    let
+        initial =
+            initBasic contactType
+
+        ( maybeCountry, newContact ) =
+            countryFromNormalized normalized
+    in
+    { initial
+        | contact = newContact
+        , country =
+            maybeCountry
+                |> Maybe.withDefault Countries.countryBR
+    }
+
+
+countryFromNormalized : Normalized -> ( Maybe Country, String )
+countryFromNormalized (Normalized { contactType, contact }) =
+    if usesPhone contactType then
+        let
+            countryCode =
+                String.dropLeft 1 contact
+                    |> String.toList
+                    |> LE.takeWhile ((/=) ' ')
+                    |> String.fromList
+
+            country =
+                List.filter (.countryCode >> (==) countryCode) supportedCountries
+                    |> List.head
+
+            newContact =
+                Maybe.map (.countryCode >> String.length >> (+) 1) country
+                    |> Maybe.withDefault 0
+                    |> (\n -> String.dropLeft n contact |> String.trim)
+        in
+        ( country, newContact )
+
+    else
+        ( Nothing, contact )
 
 
 type alias Contact =

@@ -337,6 +337,30 @@ viewUserInfo loggedIn profile pageType =
 
                 Nothing ->
                     []
+
+        viewContact =
+            case pageType of
+                Private ->
+                    viewProfileItem (text "Contact Options")
+                        (a
+                            [ class "button-secondary button-sm uppercase cursor-pointer"
+                            , Route.href Route.ProfileAddContact
+                            ]
+                            [ text
+                                (if Maybe.map List.isEmpty profile.contacts |> Maybe.withDefault False then
+                                    t "menu.add"
+
+                                 else
+                                    t "menu.edit"
+                                )
+                            ]
+                        )
+                        Center
+                        Nothing
+
+                -- TODO - Add public profile (#472)
+                Public ->
+                    text ""
     in
     div [ class "bg-white mb-6" ]
         [ div [ class "container p-4 mx-auto" ]
@@ -400,16 +424,7 @@ viewUserInfo loggedIn profile pageType =
                     (text (String.join ", " profile.interests))
                     Top
                     Nothing
-                 , viewProfileItem (text "Contact Options")
-                    (a
-                        [ class "button-secondary button-sm uppercase cursor-pointer"
-                        , Route.href Route.ProfileAddContact
-                        ]
-                        [ text (t "menu.add")
-                        ]
-                    )
-                    Center
-                    Nothing
+                 , viewContact
                  ]
                     ++ (case pageType of
                             Private ->
