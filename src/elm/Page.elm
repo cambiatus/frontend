@@ -34,6 +34,7 @@ module Page exposing
     , viewTitle
     )
 
+import Api.Graphql
 import Asset.Icon as Icon
 import Auth
 import Browser.Navigation as Nav
@@ -52,6 +53,7 @@ import Json.Decode as Decode exposing (Decoder)
 import Json.Encode exposing (Value)
 import Ports
 import Profile
+import RemoteData exposing (RemoteData)
 import Route exposing (Route)
 import Session.Guest as Guest
 import Session.LoggedIn as LoggedIn
@@ -83,7 +85,22 @@ init flags navKey url =
                 |> UR.addCmd (Cmd.map GotLoggedInMsg cmd)
                 |> UR.addCmd (fetchTranslations shared shared.language)
 
-        _ ->
+        ( Just ( accountName, _ ), Nothing ) ->
+            let
+                ( model, cmd ) =
+                    Guest.init shared
+            in
+            Guest model
+                |> UR.init
+                |> UR.addCmd (Cmd.map GotGuestMsg cmd)
+                |> UR.addCmd
+                    (Api.Graphql.mutation shared
+                        Nothing
+                        (Auth.signIn accountName shared)
+                        SignedIn
+                    )
+
+        ( Nothing, _ ) ->
             let
                 ( model, cmd ) =
                     Guest.init shared
@@ -379,6 +396,7 @@ type ExternalMsg
 
 type Msg
     = CompletedLoadTranslation String (Result Http.Error Translations)
+    | SignedIn (RemoteData (Graphql.Http.Error (Maybe Auth.SignInResponse)) (Maybe Auth.SignInResponse))
     | GotGuestMsg Guest.Msg
     | GotLoggedInMsg LoggedIn.Msg
 
@@ -410,6 +428,30 @@ update msg session =
                     (\extMsg uR ->
                         UR.addExt (LoggedInExternalMsg extMsg) uR
                     )
+
+        ( SignedIn (RemoteData.Success (Just { user, token })), Guest guest ) ->
+            let
+                shared =
+                    guest.shared
+
+                ( loggedIn, cmd ) =
+                    LoggedIn.initLogin shared (Auth.init shared) user token
+            in
+            LoggedIn loggedIn
+                |> UR.init
+                |> UR.addCmd (Cmd.map GotLoggedInMsg cmd)
+                |> UR.addCmd (Ports.storeAuthToken token)
+                |> UR.addCmd (fetchTranslations shared shared.language)
+                |> UR.addCmd
+                    (guest.afterLoginRedirect
+                        |> Maybe.withDefault Route.Dashboard
+                        |> Route.replaceUrl shared.navKey
+                    )
+
+        ( SignedIn (RemoteData.Failure error), Guest guest ) ->
+            UR.init session
+                |> UR.addCmd (Route.replaceUrl guest.shared.navKey (Route.Login guest.afterLoginRedirect))
+                |> UR.logGraphqlError msg error
 
         ( _, _ ) ->
             UR.init session
@@ -488,6 +530,9 @@ msgToString msg =
     case msg of
         CompletedLoadTranslation _ r ->
             [ "CompletedLoadTranslation", UR.resultToString r ]
+
+        SignedIn r ->
+            [ "SignedIn", UR.remoteDataToString r ]
 
         GotGuestMsg subMsg ->
             "GotGuestMsg" :: Guest.msgToString subMsg

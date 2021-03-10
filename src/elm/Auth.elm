@@ -10,6 +10,7 @@ module Auth exposing
     , jsAddressToMsg
     , maybePrivateKey
     , msgToString
+    , signIn
     , subscriptions
     , update
     , view
