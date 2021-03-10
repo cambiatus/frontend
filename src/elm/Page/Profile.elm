@@ -18,7 +18,7 @@ import Eos exposing (Symbol)
 import Eos.Account as Eos
 import Graphql.Http
 import Html exposing (Html, a, br, button, div, label, li, p, span, text, ul)
-import Html.Attributes exposing (class, classList, href)
+import Html.Attributes exposing (class, classList, href, target)
 import Html.Events exposing (onClick)
 import Http
 import Icons
@@ -26,6 +26,7 @@ import Json.Decode as Decode exposing (Value)
 import Json.Encode as Encode
 import Page
 import Profile exposing (DeleteKycAndAddressResult, Model)
+import Profile.Contact as Contact
 import PushSubscription exposing (PushSubscription)
 import RemoteData exposing (RemoteData)
 import Route
@@ -246,7 +247,7 @@ type ProfilePage
 viewUserInfo : LoggedIn.Model -> Profile.Model -> ProfilePage -> Html msg
 viewUserInfo loggedIn profile pageType =
     let
-        { t } =
+        ({ t } as translators) =
             loggedIn.shared.translators
 
         userName =
@@ -358,9 +359,11 @@ viewUserInfo loggedIn profile pageType =
                         Center
                         Nothing
 
-                -- TODO - Add public profile (#472)
                 Public ->
-                    text ""
+                    profile.contacts
+                        |> Maybe.withDefault []
+                        |> List.map (viewContactButton translators)
+                        |> div [ class "flex flex-col space-y-4 mt-4 mb-2" ]
     in
     div [ class "bg-white mb-6" ]
         [ div [ class "container p-4 mx-auto" ]
@@ -412,6 +415,12 @@ viewUserInfo loggedIn profile pageType =
 
                 Private ->
                     text ""
+            , case pageType of
+                Public ->
+                    viewContact
+
+                Private ->
+                    text ""
             , ul [ class "divide-y divide-gray-500" ]
                 ([ viewProfileItem
                     (text (t "profile.locations"))
@@ -424,7 +433,12 @@ viewUserInfo loggedIn profile pageType =
                     (text (String.join ", " profile.interests))
                     Top
                     Nothing
-                 , viewContact
+                 , case pageType of
+                    Public ->
+                        text ""
+
+                    Private ->
+                        viewContact
                  ]
                     ++ (case pageType of
                             Private ->
@@ -592,6 +606,25 @@ viewDangerButton label msg =
         , onClick msg
         ]
         [ text label
+        ]
+
+
+viewContactButton : Translators -> Contact.Normalized -> Html msg
+viewContactButton translators normalized =
+    let
+        { contact, contactType } =
+            Contact.unwrap normalized
+    in
+    a
+        [ class
+            ("button-secondary uppercase bg-gray-100 py-2 flex items-center justify-center border-none hover:bg-gray-200 text-"
+                ++ Contact.contactTypeColor contactType
+            )
+        , Contact.toHref normalized
+        , target "_blank"
+        ]
+        [ Contact.contactTypeToIcon "mr-2" contactType
+        , text (Contact.contactTypeToString translators contactType)
         ]
 
 

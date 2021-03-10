@@ -3,12 +3,16 @@ module Profile.Contact exposing
     , Model
     , Msg
     , Normalized
+    , contactTypeColor
+    , contactTypeToIcon
+    , contactTypeToString
     , decode
     , encode
     , hasSameType
     , initMultiple
     , initSingle
     , selectionSet
+    , toHref
     , unwrap
     , update
     , view
@@ -25,8 +29,8 @@ import Graphql.Http
 import Graphql.Operation exposing (RootMutation)
 import Graphql.OptionalArgument exposing (OptionalArgument(..))
 import Graphql.SelectionSet as SelectionSet exposing (SelectionSet, with)
-import Html exposing (Html, button, div, img, p, text)
-import Html.Attributes exposing (class, classList, disabled, src, style, type_)
+import Html exposing (Attribute, Html, button, div, img, p, text)
+import Html.Attributes exposing (class, classList, disabled, href, src, style, type_)
 import Html.Events exposing (onClick, onSubmit)
 import Icons
 import Json.Decode as Decode exposing (Decoder)
@@ -459,6 +463,43 @@ contactTypeToIcon class_ contactType =
 
         Whatsapp ->
             Icons.whatsapp class_
+
+
+toHref : Normalized -> Attribute msg
+toHref (Normalized { contactType, contact }) =
+    case contactType of
+        Phone ->
+            href ("tel:" ++ contact)
+
+        Instagram ->
+            href contact
+
+        Telegram ->
+            href contact
+
+        Whatsapp ->
+            href
+                ("https://api.whatsapp.com/send?phone="
+                    ++ (String.dropLeft 1 contact
+                            |> String.filter Char.isAlphaNum
+                       )
+                )
+
+
+contactTypeColor : ContactType -> String
+contactTypeColor contactType =
+    case contactType of
+        Phone ->
+            "phone"
+
+        Instagram ->
+            "instagram"
+
+        Telegram ->
+            "telegram"
+
+        Whatsapp ->
+            "whatsapp"
 
 
 viewInput : Translators -> Basic -> Html Msg
