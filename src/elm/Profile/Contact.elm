@@ -421,6 +421,7 @@ view translators model =
            ]
         |> Html.form
             [ class "w-full md:w-5/6 mx-auto mt-12"
+            , classList [ ( "px-4 lg:w-2/3", isMultiple model.kind ) ]
             , onSubmit ClickedSubmit
             ]
 
