@@ -88,11 +88,12 @@ init flags navKey url =
         ( Just ( accountName, _ ), Nothing ) ->
             let
                 ( model, cmd ) =
-                    Guest.init shared
+                    Guest.initLoggingIn shared
             in
             Guest model
                 |> UR.init
                 |> UR.addCmd (Cmd.map GotGuestMsg cmd)
+                |> UR.addCmd (fetchTranslations shared shared.language)
                 |> UR.addCmd
                     (Api.Graphql.mutation shared
                         Nothing
@@ -441,7 +442,6 @@ update msg session =
                 |> UR.init
                 |> UR.addCmd (Cmd.map GotLoggedInMsg cmd)
                 |> UR.addCmd (Ports.storeAuthToken token)
-                |> UR.addCmd (fetchTranslations shared shared.language)
                 |> UR.addCmd
                     (guest.afterLoginRedirect
                         |> Maybe.withDefault Route.Dashboard

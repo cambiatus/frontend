@@ -662,7 +662,11 @@ changeRouteTo maybeRoute model =
                                 |> Page.Guest
                         , status = Redirect
                       }
-                    , Route.replaceUrl shared.navKey (Route.Login (Just route))
+                    , if guest.isLoggingIn then
+                        Cmd.none
+
+                      else
+                        Route.replaceUrl shared.navKey (Route.Login (Just route))
                     )
     in
     case maybeRoute of
