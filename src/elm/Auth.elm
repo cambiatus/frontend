@@ -27,7 +27,7 @@ import Graphql.Http
 import Graphql.Operation exposing (RootMutation)
 import Graphql.SelectionSet exposing (SelectionSet, with)
 import Html exposing (Html, a, button, div, form, h2, img, label, li, p, span, strong, text, textarea, ul)
-import Html.Attributes exposing (autocomplete, autofocus, class, disabled, for, id, placeholder, required, src, title, type_, value)
+import Html.Attributes exposing (autocomplete, autofocus, class, classList, disabled, for, id, placeholder, required, src, title, type_, value)
 import Html.Events exposing (onClick, onInput, onSubmit)
 import Json.Decode as Decode
 import Json.Decode.Pipeline as Decode
@@ -273,7 +273,7 @@ view isModal shared model =
         LoginWithPin ->
             case shared.maybeAccount of
                 Just ( _, True ) ->
-                    viewLoginWithPin False shared model
+                    viewLoginWithPin isModal False shared model
 
                 _ ->
                     viewLoginSteps isModal shared model LoginStepPassphrase
@@ -281,7 +281,7 @@ view isModal shared model =
         LoggingInWithPin ->
             case shared.maybeAccount of
                 Just ( _, True ) ->
-                    viewLoginWithPin True shared model
+                    viewLoginWithPin isModal True shared model
 
                 _ ->
                     viewLoginSteps isModal shared model LoginStepPassphrase
@@ -289,7 +289,7 @@ view isModal shared model =
         LoggedInWithPin _ ->
             case shared.maybeAccount of
                 Just ( _, True ) ->
-                    viewLoginWithPin True shared model
+                    viewLoginWithPin isModal True shared model
 
                 _ ->
                     viewLoginSteps isModal shared model LoginStepPassphrase
@@ -491,14 +491,19 @@ viewMultipleAccount accounts form isDisabled shared model =
 
 {-| Popup asking the logged-in user to enter the PIN when needed.
 -}
-viewLoginWithPin : Bool -> Shared -> Model -> List (Html Msg)
-viewLoginWithPin isDisabled shared model =
+viewLoginWithPin : Bool -> Bool -> Shared -> Model -> List (Html Msg)
+viewLoginWithPin isModal isDisabled shared model =
     let
         { t } =
             shared.translators
+
+        nonModalClasses =
+            "w-full px-4 md:max-w-sm md:mx-auto md:px-0 "
     in
-    [ div []
-        [ p [ class "modal-header px-0" ]
+    [ div [ classList [ ( nonModalClasses ++ "md:pt-20 text-white", not isModal ) ] ]
+        [ p
+            [ class "modal-header px-0"
+            ]
             [ text <| t "auth.login.modalFormTitle"
             ]
         , p [ class "text-sm" ]
@@ -507,6 +512,7 @@ viewLoginWithPin isDisabled shared model =
         ]
     , Html.form
         [ onSubmit SubmittedLoginPIN
+        , classList [ ( nonModalClasses, not isModal ) ]
         ]
         [ viewPin model shared
         , button
