@@ -31,6 +31,7 @@ import List.Extra as LE
 import Page
 import RemoteData exposing (RemoteData)
 import Select
+import Session.LoggedIn as LoggedIn
 import Session.Shared as Shared exposing (Shared)
 import Simple.Fuzzy
 import Strftime
@@ -191,16 +192,6 @@ fetchProfileWithTransfers shared model authToken =
         RecipientProfileWithTransfersLoaded
 
 
-
--- TODO
-
-
-maybeFetchProfileWithTransfers : Shared -> Model -> Maybe String -> Cmd Msg
-maybeFetchProfileWithTransfers shared model maybeAuthToken =
-    Maybe.map (fetchProfileWithTransfers shared model) maybeAuthToken
-        |> Maybe.withDefault Cmd.none
-
-
 fetchProfilesForAutocomplete : Shared -> Model -> String -> String -> Cmd Msg
 fetchProfilesForAutocomplete shared model payerAccount authToken =
     let
@@ -229,25 +220,6 @@ fetchProfilesForAutocomplete shared model payerAccount authToken =
         AutocompleteProfilesLoaded
 
 
-
--- TODO - This needs auth
-
-
-maybeFetchProfilesForAutocomplete : Shared -> Model -> String -> Maybe String -> Cmd Msg
-maybeFetchProfilesForAutocomplete shared model payerAccount maybeAuthToken =
-    Maybe.map (fetchProfilesForAutocomplete shared model payerAccount) maybeAuthToken
-        |> Maybe.withDefault Cmd.none
-
-
-
--- TODO - This needs auth
-
-
-maybeFetchIncomingTransfers : Shared -> Model -> Maybe String -> Cmd Msg
-maybeFetchIncomingTransfers =
-    maybeFetchProfileWithTransfers
-
-
 datePickerSettings : Shared -> DatePicker.Settings
 datePickerSettings shared =
     { defaultSettings
@@ -266,15 +238,8 @@ datePickerSettings shared =
     }
 
 
-{-| A generic representation of `Guest.Model` and `LoggedIn.Model`. We need this since the Payment History page
-works for guests and for logged-in users and `init`, `update`, and `view` functions have to accept both of these models.
--}
-type alias SharedModel m =
-    { m | shared : Shared }
-
-
-init : Maybe String -> SharedModel m -> ( Model, Cmd Msg )
-init maybeAuthToken { shared } =
+init : LoggedIn.Model -> ( Model, Cmd Msg )
+init { shared, authToken } =
     let
         ( datePicker, datePickerCmd ) =
             DatePicker.init
@@ -307,7 +272,7 @@ init maybeAuthToken { shared } =
     ( initModel
     , Cmd.batch
         [ Cmd.map SetDatePicker datePickerCmd
-        , maybeFetchProfileWithTransfers shared initModel maybeAuthToken
+        , fetchProfileWithTransfers shared initModel authToken
         ]
     )
 
@@ -356,8 +321,8 @@ getTransfers maybeObj =
 -- UPDATE
 
 
-update : Msg -> Model -> Maybe String -> SharedModel m -> UR.UpdateResult Model Msg extMsg
-update msg model maybeAuthToken { shared } =
+update : Msg -> Model -> LoggedIn.Model -> UR.UpdateResult Model Msg extMsg
+update msg model { shared, authToken } =
     case msg of
         AutocompleteProfilesLoaded (RemoteData.Success maybeProfileWithPayers) ->
             case maybeProfileWithPayers of
@@ -445,7 +410,7 @@ update msg model maybeAuthToken { shared } =
         ShowMore ->
             model
                 |> UR.init
-                |> UR.addCmd (maybeFetchIncomingTransfers shared model maybeAuthToken)
+                |> UR.addCmd (fetchProfileWithTransfers shared model authToken)
 
         OnSelect maybeProfile ->
             let
@@ -458,7 +423,7 @@ update msg model maybeAuthToken { shared } =
             in
             newModel
                 |> UR.init
-                |> UR.addCmd (maybeFetchIncomingTransfers shared newModel maybeAuthToken)
+                |> UR.addCmd (fetchProfileWithTransfers shared newModel authToken)
 
         SelectMsg subMsg ->
             let
@@ -469,7 +434,7 @@ update msg model maybeAuthToken { shared } =
                 Just payer ->
                     { model | autocompleteState = updated }
                         |> UR.init
-                        |> UR.addCmd (maybeFetchProfilesForAutocomplete shared model payer maybeAuthToken)
+                        |> UR.addCmd (fetchProfilesForAutocomplete shared model payer authToken)
                         |> UR.addCmd cmd
 
                 Nothing ->
@@ -488,7 +453,7 @@ update msg model maybeAuthToken { shared } =
             in
             newModel
                 |> UR.init
-                |> UR.addCmd (maybeFetchIncomingTransfers shared newModel maybeAuthToken)
+                |> UR.addCmd (fetchProfileWithTransfers shared newModel authToken)
 
         SetDatePicker subMsg ->
             let
@@ -508,7 +473,7 @@ update msg model maybeAuthToken { shared } =
                     in
                     newModel
                         |> UR.init
-                        |> UR.addCmd (maybeFetchIncomingTransfers shared newModel maybeAuthToken)
+                        |> UR.addCmd (fetchProfileWithTransfers shared newModel authToken)
 
                 _ ->
                     { model | datePicker = newDatePicker }
@@ -525,14 +490,14 @@ update msg model maybeAuthToken { shared } =
             in
             newModel
                 |> UR.init
-                |> UR.addCmd (maybeFetchIncomingTransfers shared newModel maybeAuthToken)
+                |> UR.addCmd (fetchProfileWithTransfers shared newModel authToken)
 
 
 
 -- VIEW
 
 
-view : SharedModel m -> Model -> { title : String, content : Html Msg }
+view : LoggedIn.Model -> Model -> { title : String, content : Html Msg }
 view { shared } model =
     let
         pageTitle =
