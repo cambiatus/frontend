@@ -422,9 +422,14 @@ update msg model loggedIn =
                                     String.fromFloat claim.action.verifierReward
                                         ++ " "
                                         ++ Eos.symbolToSymbolCodeString claim.action.objective.community.symbol
+
+                                updatedClaims =
+                                    List.updateIf (\c -> c.id == claim.id)
+                                        (\_ -> claim)
+                                        claims
                             in
                             { model
-                                | status = Loaded claims pageInfo
+                                | status = Loaded updatedClaims pageInfo
                             }
                                 |> UR.init
                                 |> UR.addExt (LoggedIn.ShowFeedback LoggedIn.Success (message value))
