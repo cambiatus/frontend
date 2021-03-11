@@ -778,6 +778,7 @@
     "empty": "No results, ",
     "clear_filters": "clear the filters",
     "show_more": "Show next 16 items",
+    "error": "Something went wrong when loading actions",
     "filter": {
       "user": "User",
       "status": {

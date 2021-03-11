@@ -780,6 +780,7 @@
     "empty": "Sense resultats, ",
     "clear_filters": "esborreu els filtres",
     "show_more": "mostra els següents 16 articles",
+    "error": "S'ha produït un error en carregar les accions",
     "filter": {
       "user": "Usuari",
       "status": {

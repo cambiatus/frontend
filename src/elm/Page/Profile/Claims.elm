@@ -180,8 +180,8 @@ update msg model loggedIn =
     case msg of
         ClaimsLoaded (RemoteData.Success results) ->
             case results of
-                Just claims ->
-                    { model | status = Loaded claims }
+                Just { claims } ->
+                    { model | status = Loaded { claims = List.reverse claims } }
                         |> UR.init
 
                 Nothing ->

@@ -21,6 +21,7 @@ import Graphql.OptionalArgument exposing (OptionalArgument(..))
 import Html exposing (Html, button, div, img, option, select, span, text)
 import Html.Attributes exposing (class, selected, src, value)
 import Html.Events exposing (onClick)
+import Http
 import Icons
 import Json.Decode as Decode exposing (Value)
 import Json.Encode as Encode
@@ -166,7 +167,7 @@ view ({ shared } as loggedIn) model =
                         ]
 
                 Failed ->
-                    text ""
+                    Page.fullPageError (t "all_analysis.error") Http.Timeout
     in
     { title = pageTitle
     , content = content
@@ -562,7 +563,7 @@ update msg model loggedIn =
 
 
 fetchAnalysis : LoggedIn.Model -> Filter -> Maybe String -> Cmd Msg
-fetchAnalysis { accountName, selectedCommunity, shared } { profile, statusFilter } maybeCursorAfter =
+fetchAnalysis { selectedCommunity, shared, authToken } { profile, statusFilter } maybeCursorAfter =
     let
         optionalClaimer =
             case profile of
@@ -621,7 +622,7 @@ fetchAnalysis { accountName, selectedCommunity, shared } { profile, statusFilter
                 }
     in
     Api.Graphql.query shared
-        Nothing
+        (Just authToken)
         (Cambiatus.Query.claimsAnalysisHistory optionals required Claim.claimPaginatedSelectionSet)
         ClaimsLoaded
 
