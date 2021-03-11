@@ -493,14 +493,22 @@ update session msg model =
                             )
 
         CompletedSignIn loggedIn (RemoteData.Success (Just { user, token })) ->
+            let
+                maybeUpdateCommunity loggedInModel =
+                    getInvite model
+                        |> Maybe.map
+                            (.community >> LoggedIn.addCommunity loggedInModel)
+                        |> Maybe.withDefault loggedInModel
+            in
             model
                 |> UR.init
                 |> UR.addExt
-                    (LoggedIn.UpdatedLoggedIn
-                        { loggedIn
-                            | profile = LoggedIn.Loaded user
-                            , authToken = token
-                        }
+                    ({ loggedIn
+                        | profile = LoggedIn.Loaded user
+                        , authToken = token
+                     }
+                        |> maybeUpdateCommunity
+                        |> LoggedIn.UpdatedLoggedIn
                     )
                 |> UR.addCmd (Route.replaceUrl loggedIn.shared.navKey Route.Dashboard)
 
@@ -511,6 +519,22 @@ update session msg model =
 
         CompletedSignIn _ _ ->
             UR.init model
+
+
+getInvite : Model -> Maybe Invite
+getInvite model =
+    case model.pageStatus of
+        JoinConfirmation invite ->
+            Just invite
+
+        AlreadyMemberNotice invite ->
+            Just invite
+
+        KycInfo invite ->
+            Just invite
+
+        _ ->
+            Nothing
 
 
 

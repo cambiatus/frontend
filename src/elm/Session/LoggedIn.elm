@@ -8,6 +8,7 @@ module Session.LoggedIn exposing
     , Msg(..)
     , Page(..)
     , ProfileStatus(..)
+    , addCommunity
     , addNotification
     , askedAuthentication
     , init
@@ -1159,6 +1160,34 @@ addNotification notification model =
 readAllNotifications : Model -> Model
 readAllNotifications model =
     { model | notification = Notification.readAll model.notification }
+
+
+addCommunity : Model -> Community.Model -> Model
+addCommunity model community =
+    let
+        communityInfo =
+            { id = community.symbol
+            , name = community.title
+            , logo = community.logo
+            , hasShop = community.hasShop
+            , hasActions = community.hasObjectives
+            , hasKyc = community.hasKyc
+            }
+    in
+    { model
+        | selectedCommunity = community.symbol
+        , profile =
+            case model.profile of
+                Loaded profile_ ->
+                    Loaded
+                        { profile_
+                            | communities =
+                                communityInfo :: profile_.communities
+                        }
+
+                _ ->
+                    model.profile
+    }
 
 
 
