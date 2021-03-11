@@ -612,7 +612,7 @@ viewDangerButton label msg =
 viewContactButton : Translators -> Contact.Normalized -> Html msg
 viewContactButton translators normalized =
     let
-        { contact, contactType } =
+        { contactType } =
             Contact.unwrap normalized
     in
     a
