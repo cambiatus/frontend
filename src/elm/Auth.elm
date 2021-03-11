@@ -26,6 +26,7 @@ import Cambiatus.Object.Session
 import Eos.Account as Eos
 import Graphql.Http
 import Graphql.Operation exposing (RootMutation)
+import Graphql.OptionalArgument as OptionalArgument
 import Graphql.SelectionSet exposing (SelectionSet, with)
 import Html exposing (Html, a, button, div, form, h2, img, label, li, p, span, strong, text, textarea, ul)
 import Html.Attributes exposing (autocomplete, autofocus, class, classList, disabled, for, id, placeholder, required, src, title, type_, value)
@@ -771,7 +772,7 @@ update msg shared model =
                 |> UR.addCmd
                     (Api.Graphql.mutation shared
                         Nothing
-                        (signIn accountName shared)
+                        (signIn accountName shared Nothing)
                         (CompletedSignIn (LoggedInWithPrivateKey privateKey))
                     )
 
@@ -834,7 +835,7 @@ update msg shared model =
                 |> UR.addCmd
                     (Api.Graphql.mutation shared
                         Nothing
-                        (signIn accountName shared)
+                        (signIn accountName shared Nothing)
                         (CompletedSignIn (LoggedInWithPrivateKey privateKey))
                     )
 
@@ -881,9 +882,10 @@ update msg shared model =
                 UR.init model
 
 
-signIn : Eos.Name -> Shared -> SelectionSet (Maybe SignInResponse) RootMutation
-signIn accountName shared =
+signIn : Eos.Name -> Shared -> Maybe String -> SelectionSet (Maybe SignInResponse) RootMutation
+signIn accountName shared maybeInvitationId =
     Cambiatus.Mutation.signIn
+        (\opts -> { opts | invitationId = OptionalArgument.fromMaybe maybeInvitationId })
         { account = Eos.nameToString accountName
         , password = shared.graphqlSecret
         }

@@ -97,7 +97,7 @@ init flags navKey url =
                 |> UR.addCmd
                     (Api.Graphql.mutation shared
                         Nothing
-                        (Auth.signIn accountName shared)
+                        (Auth.signIn accountName shared Nothing)
                         SignedIn
                     )
 
