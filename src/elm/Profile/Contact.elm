@@ -116,8 +116,24 @@ initBasicWith ((Normalized { contactType }) as normalized) =
         initial =
             initBasic contactType
 
-        ( maybeCountry, newContact ) =
+        ( maybeCountry, newPhoneContact ) =
             countryFromNormalized normalized
+
+        newContact =
+            case contactType of
+                Phone ->
+                    newPhoneContact
+
+                Whatsapp ->
+                    newPhoneContact
+
+                Telegram ->
+                    newPhoneContact
+                        |> String.dropLeft (String.length "https://t.me/")
+
+                Instagram ->
+                    newPhoneContact
+                        |> String.dropLeft (String.length "https://instagram.com/")
     in
     { initial
         | contact = newContact
