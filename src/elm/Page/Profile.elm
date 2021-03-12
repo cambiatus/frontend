@@ -265,6 +265,14 @@ viewUserInfo loggedIn profile pageType =
         account =
             Eos.nameToString profile.account
 
+        isPublic =
+            case pageType of
+                Public ->
+                    True
+
+                Private ->
+                    False
+
         viewAddress =
             case profile.address of
                 Just addr ->
@@ -364,64 +372,78 @@ viewUserInfo loggedIn profile pageType =
                         |> Maybe.withDefault []
                         |> List.map (viewContactButton translators)
                         |> div [ class "flex flex-col space-y-4 mt-4 mb-2" ]
-    in
-    div [ class "bg-white mb-6" ]
-        [ div [ class "container p-4 mx-auto" ]
-            [ div
-                [ classList <|
-                    let
-                        hasBottomBorder =
-                            case pageType of
-                                Private ->
-                                    True
 
-                                Public ->
-                                    False
-                    in
-                    [ ( "pb-4", True )
-                    , ( "border-b border-gray-500", hasBottomBorder )
+        leftSide =
+            div
+                [ classList
+                    [ ( "py-4 md:w-1/2 bg-white border-r border-gray-500 flex", isPublic )
+                    , ( "container mx-auto px-4", not isPublic )
                     ]
                 ]
-                [ div [ class "flex mb-4 items-center flex-wrap" ]
-                    [ Avatar.view profile.avatar "w-20 h-20 mr-6 xs-max:w-16 xs-max:h-16 xs-max:mr-3"
-                    , div [ class "flex-grow flex items-center justify-between" ]
-                        [ ul [ class "text-sm text-gray-900" ]
-                            [ li [ class "font-medium text-body-black text-2xl xs-max:text-xl" ]
-                                [ text userName ]
-                            , li [] [ a [ href <| "mailto:" ++ email ] [ text email ] ]
-                            , li [] [ text account ]
+                [ div
+                    [ classList [ ( "w-full px-4 md:container md:mx-auto md:max-w-md self-center", isPublic ) ]
+                    ]
+                    [ div
+                        [ classList <|
+                            let
+                                hasBottomBorder =
+                                    not isPublic
+                            in
+                            [ ( "pb-4", True )
+                            , ( "border-b border-gray-500", hasBottomBorder )
+                            , ( "w-full px-4 md:container md:mx-auto md:max-w-md", isPublic )
                             ]
-                        , case pageType of
-                            Private ->
-                                a
-                                    [ class "ml-2"
-                                    , Route.href Route.ProfileEditor
-                                    ]
-                                    [ Icons.edit "" ]
-
-                            Public ->
-                                text ""
                         ]
+                        [ div [ class "flex mb-4 items-center flex-wrap" ]
+                            [ Avatar.view profile.avatar "w-20 h-20 mr-6 xs-max:w-16 xs-max:h-16 xs-max:mr-3"
+                            , div [ class "flex-grow flex items-center justify-between" ]
+                                [ ul [ class "text-sm text-gray-900" ]
+                                    [ li [ class "font-medium text-body-black text-2xl xs-max:text-xl" ]
+                                        [ text userName ]
+                                    , li [] [ a [ href <| "mailto:" ++ email ] [ text email ] ]
+                                    , li [] [ text account ]
+                                    ]
+                                , case pageType of
+                                    Private ->
+                                        a
+                                            [ class "ml-2"
+                                            , Route.href Route.ProfileEditor
+                                            ]
+                                            [ Icons.edit "" ]
+
+                                    Public ->
+                                        text ""
+                                ]
+                            ]
+                        , p [ class "text-sm text-gray-900" ]
+                            [ text bio ]
+                        ]
+                    , case pageType of
+                        Public ->
+                            viewTransferButton
+                                loggedIn.shared
+                                loggedIn.selectedCommunity
+                                account
+
+                        Private ->
+                            text ""
+                    , case pageType of
+                        Public ->
+                            viewContact
+
+                        Private ->
+                            text ""
                     ]
-                , p [ class "text-sm text-gray-900" ]
-                    [ text bio ]
                 ]
-            , case pageType of
-                Public ->
-                    viewTransferButton
-                        loggedIn.shared
-                        loggedIn.selectedCommunity
-                        account
 
-                Private ->
-                    text ""
-            , case pageType of
-                Public ->
-                    viewContact
-
-                Private ->
-                    text ""
-            , ul [ class "divide-y divide-gray-500" ]
+        rightSide =
+            ul
+                [ class "divide-y divide-gray-500"
+                , classList
+                    [ ( "bg-white px-4 w-full md:max-w-md md:bg-gray-100", isPublic )
+                    , ( "container mx-auto px-4", not isPublic )
+                    ]
+                ]
                 ([ viewProfileItem
                     (text (t "profile.locations"))
                     (text location)
@@ -448,7 +470,16 @@ viewUserInfo loggedIn profile pageType =
                                 []
                        )
                 )
+    in
+    div
+        [ class "flex-grow"
+        , classList
+            [ ( "md:flex", isPublic )
+            , ( "bg-white p-4 mb-6", not isPublic )
             ]
+        ]
+        [ leftSide
+        , rightSide
         ]
 
 

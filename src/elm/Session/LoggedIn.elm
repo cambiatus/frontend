@@ -441,7 +441,7 @@ viewPageBody ({ shared } as model) profile_ page content =
                     []
                 ]
     in
-    [ div [ class "flex-grow" ]
+    [ div [ class "flex-grow flex flex-col" ]
         [ case model.hasKyc of
             FeatureLoading ->
                 div [ class "full-spinner-container h-full" ]
