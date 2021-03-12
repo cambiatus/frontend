@@ -850,6 +850,8 @@
       "contact_type": "የእውቂያ ዓይነት",
       "error": "ዕውቂያዎን ሲያክሉ አንድ ነገር ተሳስቷል",
       "submit_multiple": "አስቀምጥ",
+      "profile_loading_failed": "መገለጫዎን ሲጭን አንድ ነገር ተሳስቷል",
+      "options": "የእውቂያ አማራጮች",
       "types": {
         "phone": "ስልክ",
         "instagram": "Instagram",

@@ -18,6 +18,7 @@ import Profile.Contact as Contact
 import RemoteData exposing (RemoteData)
 import Route
 import Session.LoggedIn as LoggedIn
+import Session.Shared exposing (Translators)
 import UpdateResult as UR
 
 
@@ -26,7 +27,7 @@ type alias Model =
 
 
 init : LoggedIn.Model -> ( Model, Cmd Msg )
-init loggedIn =
+init ({ shared } as loggedIn) =
     case loggedIn.profile of
         LoggedIn.Loaded profile ->
             ( profile.contacts
@@ -37,8 +38,9 @@ init loggedIn =
             )
 
         LoggedIn.LoadingFailed _ _ ->
-            -- TODO - Add I18N
-            ( RemoteData.Failure "Something went wrong", Cmd.none )
+            ( RemoteData.Failure (shared.translators.t "contact_form.profile_loading_failed")
+            , Cmd.none
+            )
 
         _ ->
             let
@@ -71,8 +73,7 @@ update msg model { shared, authToken } =
                         >> Maybe.withDefault []
                         >> Contact.initMultiple
                     )
-                -- TODO - Add I18N
-                |> RemoteData.mapError (\_ -> "Something went wrong")
+                |> RemoteData.mapError (\_ -> shared.translators.t "Something went wrong")
                 |> UR.init
 
         GotContactMsg subMsg ->
@@ -111,8 +112,7 @@ view ({ shared } as loggedIn) model =
     { title = "Add contact options"
     , content =
         div [ class "bg-white pb-8" ]
-            -- TODO - Add I18N
-            [ Page.viewHeader loggedIn "Contact Options" Route.Profile
+            [ Page.viewHeader loggedIn (shared.translators.t "contact_form.options") Route.Profile
             , case model of
                 RemoteData.Success contacts ->
                     Contact.view shared.translators contacts

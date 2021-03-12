@@ -891,6 +891,8 @@
     "contact_type": "Tipus de contacte",
     "error": "S'ha produït un error en afegir el vostre contacte",
     "submit_multiple": "Desa",
+    "profile_loading_failed": "S'ha produït un error en carregar el vostre perfil",
+    "options": "Opcions de Contacte",
     "types": {
       "phone": "Telèfon",
       "instagram": "Instagram",

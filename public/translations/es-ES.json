@@ -891,6 +891,8 @@
     "contact_type": "Tipo de Contacto",
     "error": "Algo salió mal al agregar su contacto",
     "submit_multiple": "Salvar",
+    "profile_loading_failed": "Algo salió mal al cargar tu perfil",
+    "options": "Opciones de Contacto",
     "types": {
       "phone": "Teléfono",
       "instagram": "Instagram",

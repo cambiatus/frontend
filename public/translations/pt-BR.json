@@ -893,6 +893,8 @@
     "contact_type": "Tipo de contato",
     "error": "Algo deu errado ao adicionar seu contato",
     "submit_multiple": "Salvar",
+    "profile_loading_failed": "Algo de errado aconteceu ao carregar seu perfil",
+    "options": "Opções de Contato",
     "types": {
       "phone": "Telefone",
       "instagram": "Instagram",

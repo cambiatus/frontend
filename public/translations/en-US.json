@@ -889,6 +889,8 @@
     "contact_type": "Contact type",
     "error": "Something went wrong when adding your contact",
     "submit_multiple": "Save",
+    "profile_loading_failed": "Something went wrong loading your profile",
+    "options": "Contact Options",
     "types": {
       "phone": "Phone",
       "instagram": "Instagram",
