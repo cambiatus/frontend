@@ -18,7 +18,7 @@ import Eos exposing (Symbol)
 import Eos.Account as Eos
 import Graphql.Http
 import Html exposing (Html, a, br, button, div, label, li, p, span, text, ul)
-import Html.Attributes exposing (class, classList, href, target)
+import Html.Attributes exposing (class, href, target)
 import Html.Events exposing (onClick)
 import Http
 import Icons
@@ -114,12 +114,12 @@ view ({ shared } as loggedIn) model =
                     Page.fullPageError (shared.translators.t "profile.title") Http.Timeout
 
                 Loaded profile ->
-                    div []
+                    div [ class "flex-grow flex flex-col" ]
                         [ Page.viewHeader loggedIn (shared.translators.t "menu.profile") Route.Dashboard
                         , viewUserInfo loggedIn
                             profile
                             Private
-                        , viewSettings loggedIn model profile
+                            (viewSettings loggedIn model profile)
                         , viewNewPinModal model shared
                         , viewDownloadPdfErrorModal model loggedIn
                         , viewDeleteKycModal shared.translators model
@@ -220,8 +220,8 @@ viewSettings loggedIn model profile =
                         Center
                         Nothing
     in
-    div [ class "bg-white mb-6" ]
-        [ ul [ class "container divide-y divide-gray-500 mx-auto px-4" ]
+    div [ class "bg-white mb-6 w-full md:bg-gray-100 md:max-w-xl" ]
+        [ ul [ class "w-full divide-y divide-gray-500 px-4" ]
             [ viewProfileItem
                 (text (t "profile.12words.title"))
                 (viewButton (t "profile.12words.button") downloadAction)
@@ -244,8 +244,8 @@ type ProfilePage
     | Public
 
 
-viewUserInfo : LoggedIn.Model -> Profile.Model -> ProfilePage -> Html msg
-viewUserInfo loggedIn profile pageType =
+viewUserInfo : LoggedIn.Model -> Profile.Model -> ProfilePage -> Html msg -> Html msg
+viewUserInfo loggedIn profile pageType privateView =
     let
         ({ t } as translators) =
             loggedIn.shared.translators
@@ -264,14 +264,6 @@ viewUserInfo loggedIn profile pageType =
 
         account =
             Eos.nameToString profile.account
-
-        isPublic =
-            case pageType of
-                Public ->
-                    True
-
-                Private ->
-                    False
 
         viewAddress =
             case profile.address of
@@ -375,25 +367,11 @@ viewUserInfo loggedIn profile pageType =
 
         leftSide =
             div
-                [ classList
-                    [ ( "py-4 md:w-1/2 bg-white border-r border-gray-500 flex", isPublic )
-                    , ( "container mx-auto px-4", not isPublic )
-                    ]
-                ]
+                [ class "py-4 bg-white border-r border-gray-500 flex md:w-1/2" ]
                 [ div
-                    [ classList [ ( "w-full px-4 md:container md:mx-auto md:max-w-md self-center", isPublic ) ]
-                    ]
+                    [ class "w-full px-4 md:container md:mx-auto md:max-w-lg self-center" ]
                     [ div
-                        [ classList <|
-                            let
-                                hasBottomBorder =
-                                    not isPublic
-                            in
-                            [ ( "pb-4", True )
-                            , ( "border-b border-gray-500", hasBottomBorder )
-                            , ( "w-full px-4 md:container md:mx-auto md:max-w-md", isPublic )
-                            ]
-                        ]
+                        [ class "pb-4 w-full px-4 md:container md:mx-auto md:max-w-lg" ]
                         [ div [ class "flex mb-4 items-center flex-wrap justify-center" ]
                             [ Avatar.view profile.avatar "w-20 h-20 mr-6 xs-max:w-16 xs-max:h-16 xs-max:mr-3"
                             , div [ class "flex-grow flex items-center justify-between" ]
@@ -437,17 +415,8 @@ viewUserInfo loggedIn profile pageType =
                 ]
 
         rightSide =
-            div
-                [ class "w-full md:w-1/2"
-                , classList [ ( "bg-white md:bg-gray-100", isPublic ) ]
-                ]
-                [ ul
-                    [ class "divide-y divide-gray-500"
-                    , classList
-                        [ ( "px-4 w-full md:max-w-md", isPublic )
-                        , ( "container mx-auto px-4", not isPublic )
-                        ]
-                    ]
+            div [ class "w-full bg-white md:w-1/2 md:bg-gray-100" ]
+                [ ul [ class "divide-y divide-gray-500 px-4 w-full md:max-w-xl mb-4" ]
                     ([ viewProfileItem
                         (text (t "profile.locations"))
                         (text location)
@@ -474,15 +443,10 @@ viewUserInfo loggedIn profile pageType =
                                     []
                            )
                     )
+                , privateView
                 ]
     in
-    div
-        [ class "flex-grow"
-        , classList
-            [ ( "md:flex", isPublic )
-            , ( "bg-white p-4 mb-6", not isPublic )
-            ]
-        ]
+    div [ class "flex-grow md:flex" ]
         [ leftSide
         , rightSide
         ]

@@ -18,7 +18,6 @@ import Profile.Contact as Contact
 import RemoteData exposing (RemoteData)
 import Route
 import Session.LoggedIn as LoggedIn
-import Session.Shared exposing (Translators)
 import UpdateResult as UR
 
 
