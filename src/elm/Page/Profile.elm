@@ -394,7 +394,7 @@ viewUserInfo loggedIn profile pageType =
                             , ( "w-full px-4 md:container md:mx-auto md:max-w-md", isPublic )
                             ]
                         ]
-                        [ div [ class "flex mb-4 items-center flex-wrap" ]
+                        [ div [ class "flex mb-4 items-center flex-wrap justify-center" ]
                             [ Avatar.view profile.avatar "w-20 h-20 mr-6 xs-max:w-16 xs-max:h-16 xs-max:mr-3"
                             , div [ class "flex-grow flex items-center justify-between" ]
                                 [ ul [ class "text-sm text-gray-900" ]
@@ -437,39 +437,44 @@ viewUserInfo loggedIn profile pageType =
                 ]
 
         rightSide =
-            ul
-                [ class "divide-y divide-gray-500"
-                , classList
-                    [ ( "bg-white px-4 w-full md:max-w-md md:bg-gray-100", isPublic )
-                    , ( "container mx-auto px-4", not isPublic )
-                    ]
+            div
+                [ class "w-full md:w-1/2"
+                , classList [ ( "bg-white md:bg-gray-100", isPublic ) ]
                 ]
-                ([ viewProfileItem
-                    (text (t "profile.locations"))
-                    (text location)
-                    Center
-                    Nothing
-                 , viewAddress
-                 , viewProfileItem
-                    (text (t "profile.interests"))
-                    (text (String.join ", " profile.interests))
-                    Top
-                    Nothing
-                 , case pageType of
-                    Public ->
-                        text ""
+                [ ul
+                    [ class "divide-y divide-gray-500"
+                    , classList
+                        [ ( "px-4 w-full md:max-w-md", isPublic )
+                        , ( "container mx-auto px-4", not isPublic )
+                        ]
+                    ]
+                    ([ viewProfileItem
+                        (text (t "profile.locations"))
+                        (text location)
+                        Center
+                        Nothing
+                     , viewAddress
+                     , viewProfileItem
+                        (text (t "profile.interests"))
+                        (text (String.join ", " profile.interests))
+                        Top
+                        Nothing
+                     , case pageType of
+                        Public ->
+                            text ""
 
-                    Private ->
-                        viewContact
-                 ]
-                    ++ (case pageType of
-                            Private ->
-                                viewKyc
+                        Private ->
+                            viewContact
+                     ]
+                        ++ (case pageType of
+                                Private ->
+                                    viewKyc
 
-                            Public ->
-                                []
-                       )
-                )
+                                Public ->
+                                    []
+                           )
+                    )
+                ]
     in
     div
         [ class "flex-grow"
