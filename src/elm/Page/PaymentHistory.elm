@@ -29,7 +29,9 @@ import Html.Events exposing (onClick)
 import Icons
 import List.Extra as LE
 import Page
+import RemoteData exposing (RemoteData)
 import Select
+import Session.LoggedIn as LoggedIn
 import Session.Shared as Shared exposing (Shared)
 import Simple.Fuzzy
 import Strftime
@@ -44,8 +46,8 @@ import Utils
 
 
 type Msg
-    = RecipientProfileWithTransfersLoaded (Result (Graphql.Http.Error (Maybe ProfileWithTransfers)) (Maybe ProfileWithTransfers))
-    | AutocompleteProfilesLoaded (Result (Graphql.Http.Error (Maybe ProfileWithOnlyAutocomplete)) (Maybe ProfileWithOnlyAutocomplete))
+    = RecipientProfileWithTransfersLoaded (RemoteData (Graphql.Http.Error (Maybe ProfileWithTransfers)) (Maybe ProfileWithTransfers))
+    | AutocompleteProfilesLoaded (RemoteData (Graphql.Http.Error (Maybe ProfileWithOnlyAutocomplete)) (Maybe ProfileWithOnlyAutocomplete))
     | OnSelect (Maybe ProfileBase)
     | SelectMsg (Select.Msg ProfileBase)
     | ClearSelect
@@ -61,10 +63,10 @@ msgToString msg =
             [ "ShowMore" ]
 
         RecipientProfileWithTransfersLoaded r ->
-            [ "RecipientProfileWithTransfersLoaded", UR.resultToString r ]
+            [ "RecipientProfileWithTransfersLoaded", UR.remoteDataToString r ]
 
         AutocompleteProfilesLoaded r ->
-            [ "AutocompleteProfilesLoaded", UR.resultToString r ]
+            [ "AutocompleteProfilesLoaded", UR.remoteDataToString r ]
 
         ClearSelect ->
             [ "ClearSelect" ]
@@ -175,13 +177,14 @@ profileWithTransfersSelectionSet model =
         )
 
 
-fetchProfileWithTransfers : Shared -> Model -> Cmd Msg
-fetchProfileWithTransfers shared model =
+fetchProfileWithTransfers : Shared -> Model -> String -> Cmd Msg
+fetchProfileWithTransfers shared model authToken =
     let
         accountName =
             Eos.Account.nameToString model.recipientProfile.account
     in
     Api.Graphql.query shared
+        (Just authToken)
         (Cambiatus.Query.user
             { account = accountName }
             (profileWithTransfersSelectionSet model)
@@ -189,8 +192,8 @@ fetchProfileWithTransfers shared model =
         RecipientProfileWithTransfersLoaded
 
 
-fetchProfilesForAutocomplete : Shared -> Model -> String -> Cmd Msg
-fetchProfilesForAutocomplete shared model payerAccount =
+fetchProfilesForAutocomplete : Shared -> Model -> String -> String -> Cmd Msg
+fetchProfilesForAutocomplete shared model payerAccount authToken =
     let
         autocompleteSelectionSet : SelectionSet ProfileBase Cambiatus.Object.User
         autocompleteSelectionSet =
@@ -208,17 +211,13 @@ fetchProfilesForAutocomplete shared model payerAccount =
             Eos.Account.nameToString model.recipientProfile.account
     in
     Api.Graphql.query shared
+        (Just authToken)
         (Cambiatus.Query.user
             { account = accountName
             }
             selectionSet
         )
         AutocompleteProfilesLoaded
-
-
-fetchIncomingTransfers : Shared -> Model -> Cmd Msg
-fetchIncomingTransfers shared model =
-    fetchProfileWithTransfers shared model
 
 
 datePickerSettings : Shared -> DatePicker.Settings
@@ -239,15 +238,8 @@ datePickerSettings shared =
     }
 
 
-{-| A generic representation of `Guest.Model` and `LoggedIn.Model`. We need this since the Payment History page
-works for guests and for logged-in users and `init`, `update`, and `view` functions have to accept both of these models.
--}
-type alias SharedModel m =
-    { m | shared : Shared }
-
-
-init : SharedModel m -> ( Model, Cmd Msg )
-init { shared } =
+init : LoggedIn.Model -> ( Model, Cmd Msg )
+init { shared, authToken } =
     let
         ( datePicker, datePickerCmd ) =
             DatePicker.init
@@ -280,7 +272,7 @@ init { shared } =
     ( initModel
     , Cmd.batch
         [ Cmd.map SetDatePicker datePickerCmd
-        , fetchProfileWithTransfers shared initModel
+        , fetchProfileWithTransfers shared initModel authToken
         ]
     )
 
@@ -329,10 +321,10 @@ getTransfers maybeObj =
 -- UPDATE
 
 
-update : Msg -> Model -> SharedModel m -> UR.UpdateResult Model Msg extMsg
-update msg model { shared } =
+update : Msg -> Model -> LoggedIn.Model -> UR.UpdateResult Model Msg extMsg
+update msg model { shared, authToken } =
     case msg of
-        AutocompleteProfilesLoaded (Ok maybeProfileWithPayers) ->
+        AutocompleteProfilesLoaded (RemoteData.Success maybeProfileWithPayers) ->
             case maybeProfileWithPayers of
                 Just profileWithPayers ->
                     let
@@ -362,12 +354,15 @@ update msg model { shared } =
                     model
                         |> UR.init
 
-        AutocompleteProfilesLoaded (Err err) ->
+        AutocompleteProfilesLoaded (RemoteData.Failure err) ->
             model
                 |> UR.init
                 |> UR.logGraphqlError msg err
 
-        RecipientProfileWithTransfersLoaded (Ok maybeProfile) ->
+        AutocompleteProfilesLoaded _ ->
+            UR.init model
+
+        RecipientProfileWithTransfersLoaded (RemoteData.Success maybeProfile) ->
             case maybeProfile of
                 Just profile ->
                     let
@@ -404,15 +399,18 @@ update msg model { shared } =
                     model
                         |> UR.init
 
-        RecipientProfileWithTransfersLoaded (Err err) ->
+        RecipientProfileWithTransfersLoaded (RemoteData.Failure err) ->
             { model | queryStatus = Failed err }
                 |> UR.init
                 |> UR.logGraphqlError msg err
 
+        RecipientProfileWithTransfersLoaded _ ->
+            UR.init model
+
         ShowMore ->
             model
                 |> UR.init
-                |> UR.addCmd (fetchIncomingTransfers shared model)
+                |> UR.addCmd (fetchProfileWithTransfers shared model authToken)
 
         OnSelect maybeProfile ->
             let
@@ -425,7 +423,7 @@ update msg model { shared } =
             in
             newModel
                 |> UR.init
-                |> UR.addCmd (fetchIncomingTransfers shared newModel)
+                |> UR.addCmd (fetchProfileWithTransfers shared newModel authToken)
 
         SelectMsg subMsg ->
             let
@@ -436,7 +434,7 @@ update msg model { shared } =
                 Just payer ->
                     { model | autocompleteState = updated }
                         |> UR.init
-                        |> UR.addCmd (fetchProfilesForAutocomplete shared model payer)
+                        |> UR.addCmd (fetchProfilesForAutocomplete shared model payer authToken)
                         |> UR.addCmd cmd
 
                 Nothing ->
@@ -455,7 +453,7 @@ update msg model { shared } =
             in
             newModel
                 |> UR.init
-                |> UR.addCmd (fetchIncomingTransfers shared newModel)
+                |> UR.addCmd (fetchProfileWithTransfers shared newModel authToken)
 
         SetDatePicker subMsg ->
             let
@@ -475,7 +473,7 @@ update msg model { shared } =
                     in
                     newModel
                         |> UR.init
-                        |> UR.addCmd (fetchIncomingTransfers shared newModel)
+                        |> UR.addCmd (fetchProfileWithTransfers shared newModel authToken)
 
                 _ ->
                     { model | datePicker = newDatePicker }
@@ -492,14 +490,14 @@ update msg model { shared } =
             in
             newModel
                 |> UR.init
-                |> UR.addCmd (fetchIncomingTransfers shared newModel)
+                |> UR.addCmd (fetchProfileWithTransfers shared newModel authToken)
 
 
 
 -- VIEW
 
 
-view : SharedModel m -> Model -> { title : String, content : Html Msg }
+view : LoggedIn.Model -> Model -> { title : String, content : Html Msg }
 view { shared } model =
     let
         pageTitle =

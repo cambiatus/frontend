@@ -27,6 +27,7 @@ import Json.Encode as Encode
 import List.Extra as LE
 import Page exposing (Session(..))
 import Profile exposing (viewProfileNameTag)
+import RemoteData exposing (RemoteData)
 import Route
 import Session.LoggedIn as LoggedIn exposing (External(..))
 import Shop exposing (Filter, Product)
@@ -49,6 +50,7 @@ init loggedIn filter =
     ( model
     , Cmd.batch
         [ Api.Graphql.query loggedIn.shared
+            (Just loggedIn.authToken)
             (Shop.productsQuery filter loggedIn.accountName loggedIn.selectedCommunity)
             CompletedSalesLoad
         , Api.getBalances loggedIn.shared loggedIn.accountName CompletedLoadBalances
@@ -397,7 +399,7 @@ type alias UpdateResult =
 type Msg
     = Ignored
     | GotTime Posix
-    | CompletedSalesLoad (Result (Graphql.Http.Error (List Product)) (List Product))
+    | CompletedSalesLoad (RemoteData (Graphql.Http.Error (List Product)) (List Product))
     | ClickedSendTransfer Card Int
     | ClickedMessages Int Eos.Name
     | ClickedFilter Filter
@@ -415,12 +417,15 @@ update msg model loggedIn =
         GotTime date ->
             UR.init { model | date = Just date }
 
-        CompletedSalesLoad (Ok sales) ->
+        CompletedSalesLoad (RemoteData.Success sales) ->
             UR.init { model | cards = Loaded (List.map cardFromSale sales) }
 
-        CompletedSalesLoad (Err err) ->
+        CompletedSalesLoad (RemoteData.Failure err) ->
             UR.init { model | cards = LoadingFailed err }
                 |> UR.logGraphqlError msg err
+
+        CompletedSalesLoad _ ->
+            UR.init model
 
         ClickedSendTransfer card cardIndex ->
             let
@@ -642,12 +647,8 @@ jsAddressToMsg : List String -> Value -> Maybe Msg
 jsAddressToMsg addr _ =
     case addr of
         "TransferSuccess" :: [ index ] ->
-            case String.toInt index of
-                Just x ->
-                    Just (TransferSuccess x)
-
-                Nothing ->
-                    Nothing
+            String.toInt index
+                |> Maybe.map TransferSuccess
 
         _ ->
             Nothing
@@ -663,7 +664,7 @@ msgToString msg =
             [ "GotTime" ]
 
         CompletedSalesLoad r ->
-            [ "CompletedSalesLoad", UR.resultToString r ]
+            [ "CompletedSalesLoad", UR.remoteDataToString r ]
 
         ClickedSendTransfer _ _ ->
             [ "ClickedSendTransfer" ]

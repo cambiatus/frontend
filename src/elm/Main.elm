@@ -1,6 +1,5 @@
 module Main exposing (main)
 
-import Auth
 import Browser exposing (Document)
 import Browser.Navigation as Nav
 import Flags
@@ -312,16 +311,9 @@ update msg model =
                 |> withGuest
 
         ( GotPaymentHistoryMsg subMsg, PaymentHistory subModel ) ->
-            case model.session of
-                Page.Guest _ ->
-                    PaymentHistory.update subMsg subModel
-                        >> updateGuestUResult PaymentHistory GotPaymentHistoryMsg model
-                        |> withGuest
-
-                Page.LoggedIn _ ->
-                    PaymentHistory.update subMsg subModel
-                        >> updateLoggedInUResult PaymentHistory GotPaymentHistoryMsg model
-                        |> withLoggedIn
+            PaymentHistory.update subMsg subModel
+                >> updateLoggedInUResult PaymentHistory GotPaymentHistoryMsg model
+                |> withLoggedIn
 
         ( GotLoginMsg subMsg, Login subModel ) ->
             Login.update subMsg subModel
@@ -470,6 +462,26 @@ updateGuestUResult toStatus toMsg model uResult =
                 Guest.UpdatedGuest guest ->
                     ( { m | session = Page.Guest guest }
                     , cmds_
+                    )
+
+                Guest.LoggedIn signInResponse auth ->
+                    let
+                        shared =
+                            case m.session of
+                                Page.Guest guest ->
+                                    guest.shared
+
+                                Page.LoggedIn loggedIn ->
+                                    loggedIn.shared
+
+                        ( session, cmd ) =
+                            LoggedIn.initLogin shared auth signInResponse.user signInResponse.token
+                    in
+                    ( { m
+                        | session =
+                            Page.LoggedIn session
+                      }
+                    , Cmd.map (Page.GotLoggedInMsg >> GotPageMsg) cmd :: cmds_
                     )
         )
         ( { model | status = toStatus uResult.model }
@@ -637,48 +649,18 @@ changeRouteTo maybeRoute model =
                     fn loggedIn
 
                 Page.Guest guest ->
-                    case guest.profile of
-                        Nothing ->
-                            ( { model
-                                | session =
-                                    Guest.addAfterLoginRedirect route guest
-                                        |> Page.Guest
-                                , status = Redirect
-                              }
-                            , Route.replaceUrl shared.navKey (Route.Login (Just route))
-                            )
+                    ( { model
+                        | session =
+                            Guest.addAfterLoginRedirect route guest
+                                |> Page.Guest
+                        , status = Redirect
+                      }
+                    , if guest.isLoggingIn then
+                        Cmd.none
 
-                        Just profile ->
-                            let
-                                authModel =
-                                    case model.status of
-                                        Login subModel ->
-                                            subModel.auth
-
-                                        Register _ subModel ->
-                                            Maybe.map
-                                                (\r ->
-                                                    Auth.initRegister r.privateKey
-                                                )
-                                                subModel.accountKeys
-                                                |> Maybe.withDefault
-                                                    (Auth.init guest.shared)
-
-                                        _ ->
-                                            Auth.init guest.shared
-
-                                ( loggedIn, cmd ) =
-                                    Page.login authModel profile guest
-
-                                ( newModel, newCmd ) =
-                                    fn loggedIn
-                            in
-                            ( { newModel | session = Page.LoggedIn loggedIn }
-                            , Cmd.batch
-                                [ Cmd.map GotPageMsg cmd
-                                , newCmd
-                                ]
-                            )
+                      else
+                        Route.replaceUrl shared.navKey (Route.Login (Just route))
+                    )
     in
     case maybeRoute of
         Nothing ->
@@ -709,17 +691,9 @@ changeRouteTo maybeRoute model =
                 maybeRedirect
 
         Just (Route.PaymentHistory accountName) ->
-            case session of
-                Page.Guest _ ->
-                    withGuest
-                        PaymentHistory.init
-                        (updateStatusWith PaymentHistory GotPaymentHistoryMsg)
-                        Nothing
-
-                Page.LoggedIn _ ->
-                    PaymentHistory.init
-                        >> updateStatusWith PaymentHistory GotPaymentHistoryMsg model
-                        |> withLoggedIn (Route.PaymentHistory accountName)
+            PaymentHistory.init
+                >> updateStatusWith PaymentHistory GotPaymentHistoryMsg model
+                |> withLoggedIn (Route.PaymentHistory accountName)
 
         Just (Route.LoginWithPrivateKey maybeRedirect) ->
             withGuest
@@ -1133,12 +1107,7 @@ view model =
             viewPage Guest.Other LoggedIn.Other GotInviteMsg (Invite.view model.session subModel)
 
         PaymentHistory subModel ->
-            case model.session of
-                Page.Guest _ ->
-                    viewGuest subModel Guest.PaymentHistory GotPaymentHistoryMsg PaymentHistory.view
-
-                Page.LoggedIn _ ->
-                    viewLoggedIn subModel LoggedIn.PaymentHistory GotPaymentHistoryMsg PaymentHistory.view
+            viewLoggedIn subModel LoggedIn.PaymentHistory GotPaymentHistoryMsg PaymentHistory.view
 
         Register _ subModel ->
             viewGuest subModel Guest.Register GotRegisterMsg Register.view

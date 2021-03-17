@@ -2,10 +2,8 @@ module Page.Register exposing (Model, Msg, init, jsAddressToMsg, msgToString, up
 
 import Address
 import Api.Graphql
-import Cambiatus.Enum.SignUpStatus as SignUpStatus
-import Cambiatus.InputObject as InputObject
 import Cambiatus.Mutation as Mutation
-import Cambiatus.Object.SignUpResponse
+import Cambiatus.Object.Session
 import Cambiatus.Scalar exposing (Id(..))
 import Community exposing (Invite)
 import Eos.Account as Eos
@@ -23,6 +21,8 @@ import Page.Register.Common exposing (ProblemEvent(..))
 import Page.Register.DefaultForm as DefaultForm
 import Page.Register.JuridicalForm as JuridicalForm
 import Page.Register.NaturalForm as NaturalForm
+import Profile
+import RemoteData exposing (RemoteData)
 import Result
 import Route
 import Session.Guest as Guest exposing (External(..))
@@ -63,8 +63,8 @@ init invitationId { shared } =
         loadInvitationData =
             case invitationId of
                 Just id ->
-                    Api.Graphql.query
-                        shared
+                    Api.Graphql.query shared
+                        Nothing
                         (Community.inviteQuery id)
                         CompletedLoadInvite
 
@@ -505,13 +505,11 @@ type Msg
     | PdfDownloaded
     | CopyToClipboard String
     | CopiedToClipboard
-    | CompletedLoadInvite (Result (Graphql.Http.Error (Maybe Invite)) (Maybe Invite))
-    | CompletedLoadCountry (Result (Graphql.Http.Error (Maybe Address.Country)) (Maybe Address.Country))
+    | CompletedLoadInvite (RemoteData (Graphql.Http.Error (Maybe Invite)) (Maybe Invite))
+    | CompletedLoadCountry (RemoteData (Graphql.Http.Error (Maybe Address.Country)) (Maybe Address.Country))
     | AccountTypeSelected AccountType
     | FormMsg EitherFormMsg
-    | CompletedSignUp (Result (Graphql.Http.Error SignUpResponse) SignUpResponse)
-    | CompletedKycUpsert (Result (Graphql.Http.Error (Maybe ())) (Maybe ()))
-    | CompletedAddressUpsert (Result (Graphql.Http.Error (Maybe ())) (Maybe ()))
+    | CompletedSignUp (RemoteData (Graphql.Http.Error (Maybe SignUpResponse)) (Maybe SignUpResponse))
 
 
 type EitherFormMsg
@@ -803,122 +801,37 @@ update _ msg model { shared } =
                 |> UR.addCmd
                     (Route.replaceUrl shared.navKey (Route.Login Nothing))
 
-        CompletedSignUp (Ok response) ->
-            case response.status of
-                SignUpStatus.Success ->
-                    case model.status of
-                        FormShowed (DefaultForm _) ->
-                            -- For Default form the account is already created
-                            { model
-                                | status = AccountCreated
-                                , step = SavePassphrase
-                            }
-                                |> UR.init
-
-                        FormShowed (NaturalForm form) ->
-                            model
-                                |> UR.init
-                                |> UR.addCmd
-                                    (saveKycData shared
-                                        { accountId = form.account
-                                        , countryId = Id "1"
-                                        , document = form.document
-                                        , documentType = NaturalForm.documentTypeToString form.documentType
-                                        , phone = form.phone
-                                        , userType = "natural"
-                                        }
-                                    )
-
-                        FormShowed (JuridicalForm form) ->
-                            model
-                                |> UR.init
-                                |> UR.addCmd
-                                    (saveKycData shared
-                                        { accountId = form.account
-                                        , countryId = Id "1"
-                                        , document = form.document
-                                        , documentType = JuridicalForm.companyTypeToString form.companyType
-                                        , phone = form.phone
-                                        , userType = "juridical"
-                                        }
-                                    )
-
-                        _ ->
-                            model |> UR.init
-
-                SignUpStatus.Error ->
-                    UR.init
-                        { model
-                            | serverError = Just (t "register.account_error.title")
-                        }
-
-        CompletedSignUp (Err error) ->
-            { model | serverError = Just (t "register.account_error.title") }
-                |> UR.init
-                |> UR.logGraphqlError msg error
-
-        CompletedKycUpsert (Ok _) ->
-            case model.status of
-                FormShowed (JuridicalForm form) ->
-                    -- Juridical account still needs the Address to be saved
-                    let
-                        addressData : ( InputObject.AddressUpdateInputRequiredFields, InputObject.AddressUpdateInputOptionalFields )
-                        addressData =
-                            ( { accountId = form.account
-                              , cityId = Tuple.first form.city |> Id
-                              , countryId = Id "1"
-                              , neighborhoodId = Tuple.first form.district |> Id
-                              , stateId = Tuple.first form.state |> Id
-                              , street = form.street
-                              , zip = form.zip
-                              }
-                            , { number = Graphql.OptionalArgument.Present form.number }
-                            )
-                    in
-                    model
-                        |> UR.init
-                        |> UR.addCmd
-                            (saveAddress shared addressData)
-
-                FormShowed (NaturalForm _) ->
-                    -- Natural account is fully created
+        CompletedSignUp (RemoteData.Success resp) ->
+            case resp of
+                Just _ ->
                     { model
                         | status = AccountCreated
                         , step = SavePassphrase
                     }
                         |> UR.init
 
-                _ ->
-                    model |> UR.init
+                Nothing ->
+                    { model
+                        | serverError = Just (t "register.account_error.title")
+                    }
+                        |> UR.init
 
-        CompletedKycUpsert (Err error) ->
-            { model
-                | serverError = Just (t "register.form.error.kyc_problem")
-            }
+        CompletedSignUp (RemoteData.Failure error) ->
+            { model | serverError = Just (t "register.account_error.title") }
                 |> UR.init
                 |> UR.logGraphqlError msg error
                 |> scrollTop
 
-        CompletedAddressUpsert (Ok _) ->
-            -- Address is saved, Juridical account is created.
-            { model
-                | status = AccountCreated
-                , step = SavePassphrase
-            }
-                |> UR.init
+        CompletedSignUp _ ->
+            UR.init model
 
-        CompletedAddressUpsert (Err error) ->
-            UR.init
-                { model | serverError = Just (t "register.form.error.address_problem") }
-                |> UR.logGraphqlError msg error
-                |> scrollTop
-
-        CompletedLoadInvite (Ok (Just invitation)) ->
+        CompletedLoadInvite (RemoteData.Success (Just invitation)) ->
             if invitation.community.hasKyc then
                 let
                     loadCountryData =
                         Api.Graphql.query
                             shared
+                            Nothing
                             (Address.countryQuery "Costa Rica")
                             CompletedLoadCountry
                 in
@@ -937,10 +850,10 @@ update _ msg model { shared } =
                 }
                     |> UR.init
 
-        CompletedLoadInvite (Ok Nothing) ->
+        CompletedLoadInvite (RemoteData.Success Nothing) ->
             UR.init { model | status = NotFound }
 
-        CompletedLoadInvite (Err error) ->
+        CompletedLoadInvite (RemoteData.Failure error) ->
             { model
                 | status = ErrorShowed (FailedInvite error)
                 , serverError = Just (t "error.unknown")
@@ -948,25 +861,31 @@ update _ msg model { shared } =
                 |> UR.init
                 |> UR.logGraphqlError msg error
 
-        CompletedLoadCountry (Ok (Just country)) ->
+        CompletedLoadInvite _ ->
+            UR.init model
+
+        CompletedLoadCountry (RemoteData.Success (Just country)) ->
             { model
                 | country = Just country
                 , status = AccountTypeSelectorShowed
             }
                 |> UR.init
 
-        CompletedLoadCountry (Ok Nothing) ->
+        CompletedLoadCountry (RemoteData.Success Nothing) ->
             UR.init { model | status = NotFound }
 
-        CompletedLoadCountry (Err error) ->
+        CompletedLoadCountry (RemoteData.Failure error) ->
             { model | status = ErrorShowed (FailedCountry error) }
                 |> UR.init
                 |> UR.logGraphqlError msg error
 
+        CompletedLoadCountry _ ->
+            UR.init model
+
 
 type alias SignUpResponse =
-    { reason : Maybe String
-    , status : SignUpStatus.SignUpStatus
+    { user : Profile.Minimal
+    , token : String
     }
 
 
@@ -980,6 +899,7 @@ signUp shared { accountName, ownerKey } invitationId form =
             { account = Eos.nameToString accountName
             , email = email
             , name = name
+            , password = shared.graphqlSecret
             , publicKey = ownerKey
             , userType =
                 case form of
@@ -990,48 +910,61 @@ signUp shared { accountName, ownerKey } invitationId form =
                         "natural"
             }
 
+        ( kycOpts, addressOpts ) =
+            case form of
+                DefaultForm _ ->
+                    ( Absent, Absent )
+
+                NaturalForm f ->
+                    ( Present
+                        { countryId = Id "1"
+                        , document = f.document
+                        , documentType = NaturalForm.documentTypeToString f.documentType
+                        , phone = f.phone
+                        , userType = "natural"
+                        }
+                    , Absent
+                    )
+
+                JuridicalForm f ->
+                    ( Present
+                        { countryId = Id "1"
+                        , document = f.document
+                        , documentType = JuridicalForm.companyTypeToString f.companyType
+                        , phone = f.phone
+                        , userType = "juridical"
+                        }
+                    , Present
+                        { countryId = Id "1"
+                        , cityId = Tuple.first f.city |> Id
+                        , neighborhoodId = Tuple.first f.district |> Id
+                        , number = Present f.number
+                        , stateId = Tuple.first f.state |> Id
+                        , street = f.street
+                        , zip = f.zip
+                        }
+                    )
+
         fillOptionals opts =
             { opts
                 | invitationId =
                     Maybe.map Present invitationId
                         |> Maybe.withDefault Absent
-                , kyc = Absent
-                , address = Absent
+                , kyc = kycOpts
+                , address = addressOpts
             }
     in
     Api.Graphql.mutation shared
+        Nothing
         (Mutation.signUp
             fillOptionals
             requiredArgs
             (Graphql.SelectionSet.succeed SignUpResponse
-                |> with Cambiatus.Object.SignUpResponse.reason
-                |> with Cambiatus.Object.SignUpResponse.status
+                |> with (Cambiatus.Object.Session.user Profile.minimalSelectionSet)
+                |> with Cambiatus.Object.Session.token
             )
         )
         CompletedSignUp
-
-
-saveKycData : Shared -> InputObject.KycDataUpdateInputRequiredFields -> Cmd Msg
-saveKycData shared requiredFields =
-    Api.Graphql.mutation shared
-        (Mutation.upsertKyc
-            { input = InputObject.buildKycDataUpdateInput requiredFields }
-            Graphql.SelectionSet.empty
-        )
-        CompletedKycUpsert
-
-
-saveAddress :
-    Shared
-    -> ( InputObject.AddressUpdateInputRequiredFields, InputObject.AddressUpdateInputOptionalFields )
-    -> Cmd Msg
-saveAddress shared ( required, optional ) =
-    Api.Graphql.mutation shared
-        (Mutation.upsertAddress
-            { input = InputObject.buildAddressUpdateInput required (\_ -> optional) }
-            Graphql.SelectionSet.empty
-        )
-        CompletedAddressUpsert
 
 
 
@@ -1117,9 +1050,3 @@ msgToString msg =
 
         CompletedLoadCountry _ ->
             [ "CompletedLoadCountry" ]
-
-        CompletedKycUpsert _ ->
-            [ "CompletedKycUpsert" ]
-
-        CompletedAddressUpsert _ ->
-            [ "CompletedAddressUpsert" ]

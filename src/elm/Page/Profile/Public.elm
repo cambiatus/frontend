@@ -8,6 +8,7 @@ import Json.Decode exposing (Value)
 import Page
 import Page.Profile exposing (ProfilePage(..), viewUserInfo)
 import Profile exposing (Model)
+import RemoteData exposing (RemoteData)
 import Route
 import Session.LoggedIn as LoggedIn exposing (External(..), FeedbackStatus(..))
 import UpdateResult as UR
@@ -18,6 +19,7 @@ init loggedIn accountName =
     let
         profileQuery =
             Api.Graphql.query loggedIn.shared
+                (Just loggedIn.authToken)
                 (Profile.query (Eos.stringToName accountName))
                 CompletedProfileLoad
     in
@@ -31,7 +33,7 @@ type alias UpdateResult =
 
 
 type Msg
-    = CompletedProfileLoad (Result (Graphql.Http.Error (Maybe Profile.Model)) (Maybe Profile.Model))
+    = CompletedProfileLoad (RemoteData (Graphql.Http.Error (Maybe Profile.Model)) (Maybe Profile.Model))
 
 
 type alias Model =
@@ -93,17 +95,20 @@ view loggedIn status =
 
 
 update : Msg -> Model -> LoggedIn.Model -> UpdateResult
-update msg _ _ =
+update msg model _ =
     case msg of
-        CompletedProfileLoad (Ok Nothing) ->
+        CompletedProfileLoad (RemoteData.Success Nothing) ->
             UR.init NotFound
 
-        CompletedProfileLoad (Ok (Just profile)) ->
+        CompletedProfileLoad (RemoteData.Success (Just profile)) ->
             UR.init (Loaded profile)
 
-        CompletedProfileLoad (Err err) ->
+        CompletedProfileLoad (RemoteData.Failure err) ->
             UR.init (LoadingFailed err)
                 |> UR.logGraphqlError msg err
+
+        CompletedProfileLoad _ ->
+            UR.init model
 
 
 jsAddressToMsg : List String -> Value -> Maybe Msg
@@ -116,5 +121,5 @@ jsAddressToMsg addr _ =
 msgToString : Msg -> List String
 msgToString msg =
     case msg of
-        CompletedProfileLoad _ ->
-            [ "CompletedProfileLoad" ]
+        CompletedProfileLoad r ->
+            [ "CompletedProfileLoad", UR.remoteDataToString r ]

@@ -94,17 +94,14 @@ update msg model guest =
                             Auth.ClickedCancel ->
                                 uResult
 
-                            Auth.CompletedAuth profile ->
+                            Auth.CompletedAuth signInResponse authModel ->
                                 uResult
                                     |> UR.addCmd
                                         (guest.afterLoginRedirect
                                             |> Maybe.withDefault Route.Dashboard
                                             |> Route.replaceUrl guest.shared.navKey
                                         )
-                                    |> UR.addExt (UpdatedGuest { guest | profile = Just profile })
-
-                            Auth.UpdatedShared newShared ->
-                                UR.addExt (UpdatedGuest { guest | shared = newShared }) uResult
+                                    |> UR.addExt (LoggedIn signInResponse authModel)
                     )
 
 

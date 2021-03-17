@@ -24,18 +24,6 @@ amount =
     Object.selectionForField "Float" "amount" [] Decode.float
 
 
-community :
-    SelectionSet decodesTo Cambiatus.Object.Community
-    -> SelectionSet decodesTo Cambiatus.Object.Order
-community object_ =
-    Object.selectionForCompositeField "community" [] object_ identity
-
-
-communityId : SelectionSet String Cambiatus.Object.Order
-communityId =
-    Object.selectionForField "String" "communityId" [] Decode.string
-
-
 createdAt : SelectionSet Cambiatus.ScalarCodecs.DateTime Cambiatus.Object.Order
 createdAt =
     Object.selectionForField "ScalarCodecs.DateTime" "createdAt" [] (Cambiatus.ScalarCodecs.codecs |> Cambiatus.Scalar.unwrapCodecs |> .codecDateTime |> .decoder)

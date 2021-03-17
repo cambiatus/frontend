@@ -7,6 +7,7 @@ port module Ports exposing
     , javascriptOut
     , javascriptOutCmd
     , mapAddress
+    , storeAuthToken
     , storeLanguage
     , storeRecentSearches
     )
@@ -72,6 +73,11 @@ port storeRecentSearches : String -> Cmd msg
 {-| Ping JS to send back the recent searches from the `localStorage`.
 -}
 port getRecentSearches : () -> Cmd msg
+
+
+{-| Stores the auth token given by the server after signing in.
+-}
+port storeAuthToken : String -> Cmd msg
 
 
 

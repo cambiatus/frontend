@@ -24,6 +24,7 @@ import Json.Decode as Decode exposing (Value)
 import Json.Encode as Encode exposing (Value)
 import Page
 import Profile
+import RemoteData exposing (RemoteData)
 import Route
 import Select
 import Session.LoggedIn as LoggedIn exposing (External(..))
@@ -35,9 +36,9 @@ import Utils
 
 
 init : LoggedIn.Model -> Symbol -> Maybe String -> ( Model, Cmd Msg )
-init { shared } symbol maybeTo =
+init { shared, authToken } symbol maybeTo =
     ( initModel symbol maybeTo
-    , Api.Graphql.query shared (Community.communityQuery symbol) CompletedLoad
+    , Api.Graphql.query shared (Just authToken) (Community.communityQuery symbol) CompletedLoad
     )
 
 
@@ -275,7 +276,7 @@ type alias UpdateResult =
 
 
 type Msg
-    = CompletedLoad (Result (Graphql.Http.Error (Maybe Community.Model)) (Maybe Community.Model))
+    = CompletedLoad (RemoteData (Graphql.Http.Error (Maybe Community.Model)) (Maybe Community.Model))
     | OnSelect (Maybe Profile.Minimal)
     | SelectMsg (Select.Msg Profile.Minimal)
     | EnteredAmount String
@@ -314,7 +315,7 @@ update msg model ({ shared } as loggedIn) =
                 |> UR.logImpossible msg desc
     in
     case msg of
-        CompletedLoad (Ok community) ->
+        CompletedLoad (RemoteData.Success community) ->
             case community of
                 Just cmm ->
                     UR.init { model | status = Loaded cmm (getProfile model.maybeTo cmm) }
@@ -322,10 +323,13 @@ update msg model ({ shared } as loggedIn) =
                 Nothing ->
                     UR.init { model | status = NotFound }
 
-        CompletedLoad (Err error) ->
+        CompletedLoad (RemoteData.Failure error) ->
             { model | status = Failed error }
                 |> UR.init
                 |> UR.logGraphqlError msg error
+
+        CompletedLoad _ ->
+            UR.init model
 
         OnSelect maybeProfile ->
             case model.status of
@@ -584,7 +588,7 @@ msgToString : Msg -> List String
 msgToString msg =
     case msg of
         CompletedLoad r ->
-            [ "CompletedLoad", UR.resultToString r ]
+            [ "CompletedLoad", UR.remoteDataToString r ]
 
         OnSelect _ ->
             [ "OnSelect" ]

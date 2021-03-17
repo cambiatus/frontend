@@ -1,6 +1,6 @@
 module Page exposing
     ( ExternalMsg(..)
-    , Msg
+    , Msg(..)
     , Session(..)
     , errorToString
     , fullPageError
@@ -34,6 +34,7 @@ module Page exposing
     , viewTitle
     )
 
+import Api.Graphql
 import Asset.Icon as Icon
 import Auth
 import Browser.Navigation as Nav
@@ -52,6 +53,7 @@ import Json.Decode as Decode exposing (Decoder)
 import Json.Encode exposing (Value)
 import Ports
 import Profile
+import RemoteData exposing (RemoteData)
 import Route exposing (Route)
 import Session.Guest as Guest
 import Session.LoggedIn as LoggedIn
@@ -73,23 +75,39 @@ init flags navKey url =
         shared =
             Shared.init flags navKey url
     in
-    case shared.maybeAccount of
-        Nothing ->
+    case ( shared.maybeAccount, flags.authToken ) of
+        ( Just ( accountName, _ ), Just authToken ) ->
+            let
+                ( model, cmd ) =
+                    LoggedIn.init shared accountName flags authToken
+            in
+            UR.init (LoggedIn model)
+                |> UR.addCmd (Cmd.map GotLoggedInMsg cmd)
+                |> UR.addCmd (fetchTranslations shared shared.language)
+
+        ( Just ( accountName, _ ), Nothing ) ->
+            let
+                ( model, cmd ) =
+                    Guest.initLoggingIn shared
+            in
+            Guest model
+                |> UR.init
+                |> UR.addCmd (Cmd.map GotGuestMsg cmd)
+                |> UR.addCmd (fetchTranslations shared shared.language)
+                |> UR.addCmd
+                    (Api.Graphql.mutation shared
+                        Nothing
+                        (Auth.signIn accountName shared Nothing)
+                        SignedIn
+                    )
+
+        ( Nothing, _ ) ->
             let
                 ( model, cmd ) =
                     Guest.init shared
             in
             UR.init (Guest model)
                 |> UR.addCmd (Cmd.map GotGuestMsg cmd)
-                |> UR.addCmd (fetchTranslations shared shared.language)
-
-        Just ( accountName, _ ) ->
-            let
-                ( model, cmd ) =
-                    LoggedIn.init shared accountName flags
-            in
-            UR.init (LoggedIn model)
-                |> UR.addCmd (Cmd.map GotLoggedInMsg cmd)
                 |> UR.addCmd (fetchTranslations shared shared.language)
 
 
@@ -379,6 +397,7 @@ type ExternalMsg
 
 type Msg
     = CompletedLoadTranslation String (Result Http.Error Translations)
+    | SignedIn (RemoteData (Graphql.Http.Error (Maybe Auth.SignInResponse)) (Maybe Auth.SignInResponse))
     | GotGuestMsg Guest.Msg
     | GotLoggedInMsg LoggedIn.Msg
 
@@ -411,6 +430,29 @@ update msg session =
                         UR.addExt (LoggedInExternalMsg extMsg) uR
                     )
 
+        ( SignedIn (RemoteData.Success (Just { user, token })), Guest guest ) ->
+            let
+                shared =
+                    guest.shared
+
+                ( loggedIn, cmd ) =
+                    LoggedIn.initLogin shared (Auth.init shared) user token
+            in
+            LoggedIn loggedIn
+                |> UR.init
+                |> UR.addCmd (Cmd.map GotLoggedInMsg cmd)
+                |> UR.addCmd (Ports.storeAuthToken token)
+                |> UR.addCmd
+                    (guest.afterLoginRedirect
+                        |> Maybe.withDefault Route.Dashboard
+                        |> Route.replaceUrl shared.navKey
+                    )
+
+        ( SignedIn (RemoteData.Failure error), Guest guest ) ->
+            UR.init session
+                |> UR.addCmd (Route.replaceUrl guest.shared.navKey (Route.Login guest.afterLoginRedirect))
+                |> UR.logGraphqlError msg error
+
         ( _, _ ) ->
             UR.init session
                 |> UR.logImpossible msg []
@@ -430,11 +472,11 @@ updateShared session transform =
 -- TRANSFORM
 
 
-login : Auth.Model -> Profile.Model -> Guest.Model -> ( LoggedIn.Model, Cmd Msg )
-login auth profile guest =
+login : Auth.Model -> Profile.Model -> Guest.Model -> String -> ( LoggedIn.Model, Cmd Msg )
+login auth profile guest authToken =
     let
         ( loggedIn, cmd ) =
-            LoggedIn.initLogin guest.shared auth profile
+            LoggedIn.initLogin guest.shared auth profile authToken
     in
     ( loggedIn
     , Cmd.map GotLoggedInMsg cmd
@@ -488,6 +530,9 @@ msgToString msg =
     case msg of
         CompletedLoadTranslation _ r ->
             [ "CompletedLoadTranslation", UR.resultToString r ]
+
+        SignedIn r ->
+            [ "SignedIn", UR.remoteDataToString r ]
 
         GotGuestMsg subMsg ->
             "GotGuestMsg" :: Guest.msgToString subMsg

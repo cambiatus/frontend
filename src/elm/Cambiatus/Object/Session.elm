@@ -2,9 +2,8 @@
 -- https://github.com/dillonkearns/elm-graphql
 
 
-module Cambiatus.Object.SignUpResponse exposing (..)
+module Cambiatus.Object.Session exposing (..)
 
-import Cambiatus.Enum.SignUpStatus
 import Cambiatus.InputObject
 import Cambiatus.Interface
 import Cambiatus.Object
@@ -20,18 +19,13 @@ import Graphql.SelectionSet exposing (SelectionSet)
 import Json.Decode as Decode
 
 
-reason : SelectionSet (Maybe String) Cambiatus.Object.SignUpResponse
-reason =
-    Object.selectionForField "(Maybe String)" "reason" [] (Decode.string |> Decode.nullable)
-
-
-status : SelectionSet Cambiatus.Enum.SignUpStatus.SignUpStatus Cambiatus.Object.SignUpResponse
-status =
-    Object.selectionForField "Enum.SignUpStatus.SignUpStatus" "status" [] Cambiatus.Enum.SignUpStatus.decoder
+token : SelectionSet String Cambiatus.Object.Session
+token =
+    Object.selectionForField "String" "token" [] Decode.string
 
 
 user :
     SelectionSet decodesTo Cambiatus.Object.User
-    -> SelectionSet (Maybe decodesTo) Cambiatus.Object.SignUpResponse
+    -> SelectionSet decodesTo Cambiatus.Object.Session
 user object_ =
-    Object.selectionForCompositeField "user" [] object_ (identity >> Decode.nullable)
+    Object.selectionForCompositeField "user" [] object_ identity

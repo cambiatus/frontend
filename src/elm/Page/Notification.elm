@@ -12,6 +12,7 @@ import Html.Events exposing (onClick)
 import I18Next exposing (Delims(..))
 import Notification exposing (History, MintData, NotificationType(..), OrderData, TransferData)
 import Page
+import RemoteData exposing (RemoteData)
 import Route
 import Session.LoggedIn as LoggedIn exposing (External(..))
 import Session.Shared exposing (Shared)
@@ -26,10 +27,11 @@ import Utils
 
 
 init : LoggedIn.Model -> ( Model, Cmd Msg )
-init ({ shared } as loggedIn) =
+init ({ shared, authToken } as loggedIn) =
     ( initModel
     , Api.Graphql.query
         shared
+        (Just authToken)
         (Notification.notificationHistoryQuery loggedIn.accountName)
         CompletedLoadNotificationHistory
     )
@@ -240,14 +242,17 @@ viewNotificationMint shared history notification =
 
 
 viewNotificationSaleHistory : LoggedIn.Model -> History -> OrderData -> Html Msg
-viewNotificationSaleHistory ({ shared } as loggedIn) notification sale =
+viewNotificationSaleHistory loggedIn notification sale =
     let
+        logoString =
+            sale.product.community.logo
+
         maybeLogo =
-            if String.isEmpty sale.community.logo then
+            if String.isEmpty logoString then
                 Nothing
 
             else
-                Just sale.community.logo
+                Just logoString
 
         date =
             Just notification.insertedAt
@@ -350,26 +355,30 @@ type alias UpdateResult =
 
 
 type Msg
-    = CompletedLoadNotificationHistory (Result (Graphql.Http.Error (List History)) (List History))
+    = CompletedLoadNotificationHistory (RemoteData (Graphql.Http.Error (List History)) (List History))
     | MarkAsRead Int Payload
-    | CompletedReading (Result (Graphql.Http.Error History) History)
+    | CompletedReading (RemoteData (Graphql.Http.Error History) History)
 
 
 update : Msg -> Model -> LoggedIn.Model -> UpdateResult
 update msg model loggedIn =
     case msg of
-        CompletedLoadNotificationHistory (Ok notifications) ->
+        CompletedLoadNotificationHistory (RemoteData.Success notifications) ->
             Loaded notifications
                 |> UR.init
 
-        CompletedLoadNotificationHistory (Err err) ->
+        CompletedLoadNotificationHistory (RemoteData.Failure err) ->
             UR.init model
                 |> UR.logGraphqlError msg err
+
+        CompletedLoadNotificationHistory _ ->
+            UR.init model
 
         MarkAsRead notificationId data ->
             let
                 cmd =
                     Api.Graphql.mutation loggedIn.shared
+                        (Just loggedIn.authToken)
                         (Notification.markAsReadMutation notificationId)
                         CompletedReading
             in
@@ -397,7 +406,7 @@ update msg model loggedIn =
                                 |> Route.replaceUrl loggedIn.shared.navKey
                             )
 
-        CompletedReading (Ok hist) ->
+        CompletedReading (RemoteData.Success hist) ->
             case model of
                 Loaded histories ->
                     let
@@ -420,20 +429,23 @@ update msg model loggedIn =
                         |> UR.init
                         |> UR.logImpossible msg []
 
-        CompletedReading (Err e) ->
+        CompletedReading (RemoteData.Failure e) ->
             model
                 |> UR.init
                 |> UR.logGraphqlError msg e
+
+        CompletedReading _ ->
+            UR.init model
 
 
 msgToString : Msg -> List String
 msgToString msg =
     case msg of
         CompletedLoadNotificationHistory r ->
-            [ "CompletedLoadNotificationHistory", UR.resultToString r ]
+            [ "CompletedLoadNotificationHistory", UR.remoteDataToString r ]
 
         MarkAsRead _ _ ->
             [ "MarkAsRead" ]
 
         CompletedReading r ->
-            [ "CompletedReading", UR.resultToString r ]
+            [ "CompletedReading", UR.remoteDataToString r ]

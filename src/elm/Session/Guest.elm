@@ -1,6 +1,7 @@
-module Session.Guest exposing (External(..), Model, Msg(..), Page(..), addAfterLoginRedirect, init, initModel, msgToString, subscriptions, update, view)
+module Session.Guest exposing (External(..), Model, Msg(..), Page(..), addAfterLoginRedirect, init, initLoggingIn, initModel, msgToString, subscriptions, update, view)
 
 import Api.Graphql
+import Auth
 import Browser.Events
 import Community exposing (Invite)
 import Graphql.Http
@@ -14,6 +15,7 @@ import Json.Decode as Decode
 import List
 import Ports
 import Profile exposing (Model)
+import RemoteData exposing (RemoteData)
 import Route exposing (Route)
 import Session.Shared as Shared exposing (Shared)
 import Translation
@@ -32,10 +34,15 @@ init shared =
     in
     case getInvitationId shared.url.path of
         Just id ->
-            ( defaultModel, Api.Graphql.query shared (Community.inviteQuery id) CompletedLoadInvite )
+            ( defaultModel, Api.Graphql.query shared Nothing (Community.inviteQuery id) CompletedLoadInvite )
 
         Nothing ->
             ( { defaultModel | community = Default }, Cmd.none )
+
+
+initLoggingIn : Shared -> ( Model, Cmd Msg )
+initLoggingIn =
+    init >> Tuple.mapFirst (\m -> { m | isLoggingIn = True })
 
 
 getInvitationId : String -> Maybe String
@@ -78,8 +85,8 @@ type alias Model =
     { shared : Shared
     , showLanguageNav : Bool
     , afterLoginRedirect : Maybe Route
-    , profile : Maybe Profile.Model
     , community : CommunityStatus
+    , isLoggingIn : Bool
     }
 
 
@@ -94,7 +101,6 @@ initModel shared =
     { shared = shared
     , showLanguageNav = False
     , afterLoginRedirect = Nothing
-    , profile = Nothing
     , community =
         case getInvitationId shared.url.path of
             Just _ ->
@@ -102,6 +108,7 @@ initModel shared =
 
             Nothing ->
                 Default
+    , isLoggingIn = False
     }
 
 
@@ -285,6 +292,7 @@ viewPageHeader model shared =
 
 type External
     = UpdatedGuest Model
+    | LoggedIn Auth.SignInResponse Auth.Model
 
 
 type alias UpdateResult =
@@ -297,7 +305,7 @@ type Msg
     | ShowLanguageNav Bool
     | ClickedLanguage String
     | KeyDown String
-    | CompletedLoadInvite (Result (Graphql.Http.Error (Maybe Invite)) (Maybe Invite))
+    | CompletedLoadInvite (RemoteData (Graphql.Http.Error (Maybe Invite)) (Maybe Invite))
 
 
 update : Msg -> Model -> UpdateResult
@@ -338,7 +346,7 @@ update msg ({ shared } as model) =
                 model
                     |> UR.init
 
-        CompletedLoadInvite (Ok (Just invitation)) ->
+        CompletedLoadInvite (RemoteData.Success (Just invitation)) ->
             { model | community = Loaded invitation.community }
                 |> UR.init
 

@@ -21,12 +21,14 @@ import Graphql.OptionalArgument exposing (OptionalArgument(..))
 import Html exposing (Html, button, div, img, option, select, span, text)
 import Html.Attributes exposing (class, selected, src, value)
 import Html.Events exposing (onClick)
+import Http
 import Icons
 import Json.Decode as Decode exposing (Value)
 import Json.Encode as Encode
 import List.Extra as List
 import Page
 import Profile
+import RemoteData exposing (RemoteData)
 import Route
 import Select
 import Session.LoggedIn as LoggedIn exposing (External(..))
@@ -36,11 +38,11 @@ import UpdateResult as UR
 
 
 init : LoggedIn.Model -> ( Model, Cmd Msg )
-init ({ shared, selectedCommunity } as loggedIn) =
+init ({ shared, selectedCommunity, authToken } as loggedIn) =
     ( initModel
     , Cmd.batch
         [ fetchAnalysis loggedIn initFilter Nothing
-        , Api.Graphql.query shared (Community.communityQuery selectedCommunity) CompletedCommunityLoad
+        , Api.Graphql.query shared (Just authToken) (Community.communityQuery selectedCommunity) CompletedCommunityLoad
         ]
     )
 
@@ -165,7 +167,7 @@ view ({ shared } as loggedIn) model =
                         ]
 
                 Failed ->
-                    text ""
+                    Page.fullPageError (t "all_analysis.error") Http.Timeout
     in
     { title = pageTitle
     , content = content
@@ -305,13 +307,13 @@ type alias UpdateResult =
 
 
 type Msg
-    = ClaimsLoaded (Result (Graphql.Http.Error (Maybe Claim.Paginated)) (Maybe Claim.Paginated))
+    = ClaimsLoaded (RemoteData (Graphql.Http.Error (Maybe Claim.Paginated)) (Maybe Claim.Paginated))
     | ClaimMsg Claim.Msg
     | VoteClaim Claim.ClaimId Bool
     | GotVoteResult Claim.ClaimId (Result (Maybe Value) String)
     | SelectMsg (Select.Msg Profile.Minimal)
     | OnSelectVerifier (Maybe Profile.Minimal)
-    | CompletedCommunityLoad (Result (Graphql.Http.Error (Maybe Community.Model)) (Maybe Community.Model))
+    | CompletedCommunityLoad (RemoteData (Graphql.Http.Error (Maybe Community.Model)) (Maybe Community.Model))
     | ShowMore
     | ClearSelectSelection
     | SelectStatusFilter StatusFilter
@@ -321,7 +323,7 @@ type Msg
 update : Msg -> Model -> LoggedIn.Model -> UpdateResult
 update msg model loggedIn =
     case msg of
-        ClaimsLoaded (Ok results) ->
+        ClaimsLoaded (RemoteData.Success results) ->
             case model.status of
                 Loaded claims _ ->
                     let
@@ -346,8 +348,11 @@ update msg model loggedIn =
                     }
                         |> UR.init
 
-        ClaimsLoaded (Err _) ->
+        ClaimsLoaded (RemoteData.Failure _) ->
             { model | status = Failed } |> UR.init
+
+        ClaimsLoaded _ ->
+            UR.init model
 
         ClaimMsg m ->
             let
@@ -417,9 +422,14 @@ update msg model loggedIn =
                                     String.fromFloat claim.action.verifierReward
                                         ++ " "
                                         ++ Eos.symbolToSymbolCodeString claim.action.objective.community.symbol
+
+                                updatedClaims =
+                                    List.updateIf (\c -> c.id == claim.id)
+                                        (\_ -> claim)
+                                        claims
                             in
                             { model
-                                | status = Loaded claims pageInfo
+                                | status = Loaded updatedClaims pageInfo
                             }
                                 |> UR.init
                                 |> UR.addExt (LoggedIn.ShowFeedback LoggedIn.Success (message value))
@@ -479,7 +489,7 @@ update msg model loggedIn =
                 _ ->
                     UR.init model
 
-        CompletedCommunityLoad (Ok community) ->
+        CompletedCommunityLoad (RemoteData.Success community) ->
             case community of
                 Just cmm ->
                     UR.init { model | communityStatus = LoadedCommunity cmm }
@@ -487,10 +497,13 @@ update msg model loggedIn =
                 Nothing ->
                     UR.init { model | communityStatus = FailedCommunity }
 
-        CompletedCommunityLoad (Err error) ->
+        CompletedCommunityLoad (RemoteData.Failure error) ->
             { model | communityStatus = FailedCommunity }
                 |> UR.init
                 |> UR.logGraphqlError msg error
+
+        CompletedCommunityLoad _ ->
+            UR.init model
 
         ShowMore ->
             case model.status of
@@ -555,7 +568,7 @@ update msg model loggedIn =
 
 
 fetchAnalysis : LoggedIn.Model -> Filter -> Maybe String -> Cmd Msg
-fetchAnalysis { accountName, selectedCommunity, shared } { profile, statusFilter } maybeCursorAfter =
+fetchAnalysis { selectedCommunity, shared, authToken } { profile, statusFilter } maybeCursorAfter =
     let
         optionalClaimer =
             case profile of
@@ -592,13 +605,8 @@ fetchAnalysis { accountName, selectedCommunity, shared } { profile, statusFilter
                 ( _, _ ) ->
                     Present filterRecord
 
-        args =
-            { input =
-                { symbol = Eos.symbolToString selectedCommunity
-                , account = Eos.nameToString accountName
-                , filter = filter
-                }
-            }
+        required =
+            { communityId = Eos.symbolToString selectedCommunity }
 
         mapFn =
             \s ->
@@ -608,18 +616,19 @@ fetchAnalysis { accountName, selectedCommunity, shared } { profile, statusFilter
                 else
                     Just (Present s)
 
-        pagination =
-            \a ->
-                { a
+        optionals =
+            \opts ->
+                { opts
                     | first = Present 16
                     , after =
                         Maybe.andThen mapFn maybeCursorAfter
                             |> Maybe.withDefault Absent
+                    , filter = filter
                 }
     in
-    Api.Graphql.query
-        shared
-        (Cambiatus.Query.claimsAnalysisHistory pagination args Claim.claimPaginatedSelectionSet)
+    Api.Graphql.query shared
+        (Just authToken)
+        (Cambiatus.Query.claimsAnalysisHistory optionals required Claim.claimPaginatedSelectionSet)
         ClaimsLoaded
 
 
@@ -704,7 +713,7 @@ msgToString : Msg -> List String
 msgToString msg =
     case msg of
         ClaimsLoaded r ->
-            [ "ChecksLoaded", UR.resultToString r ]
+            [ "ChecksLoaded", UR.remoteDataToString r ]
 
         ClaimMsg _ ->
             [ "ClaimMsg" ]
@@ -722,7 +731,7 @@ msgToString msg =
             [ "OnSelectVerifier" ]
 
         CompletedCommunityLoad r ->
-            [ "CompletedCommunityLoad", UR.resultToString r ]
+            [ "CompletedCommunityLoad", UR.remoteDataToString r ]
 
         ShowMore ->
             [ "ShowMore" ]

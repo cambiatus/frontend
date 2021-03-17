@@ -14,6 +14,7 @@ import Json.Decode as Decode exposing (Value)
 import Json.Encode as Encode
 import Page
 import Profile
+import RemoteData exposing (RemoteData)
 import Route
 import Session.LoggedIn as LoggedIn exposing (External)
 import Session.Shared exposing (Shared, Translators)
@@ -28,9 +29,9 @@ import Utils
 
 
 init : LoggedIn.Model -> Claim.ClaimId -> ( Model, Cmd Msg )
-init { shared } claimId =
+init { shared, authToken } claimId =
     ( initModel claimId
-    , fetchClaim claimId shared
+    , fetchClaim claimId shared authToken
     )
 
 
@@ -397,7 +398,7 @@ type alias UpdateResult =
 
 
 type Msg
-    = ClaimLoaded (Result (Graphql.Http.Error Claim.Model) Claim.Model)
+    = ClaimLoaded (RemoteData (Graphql.Http.Error Claim.Model) Claim.Model)
     | VoteClaim Claim.ClaimId Bool
     | GotVoteResult Claim.ClaimId (Result (Maybe Value) String)
     | ClaimMsg Claim.Msg
@@ -410,17 +411,20 @@ update msg model loggedIn =
             loggedIn.shared.translators
     in
     case msg of
-        ClaimLoaded (Ok response) ->
+        ClaimLoaded (RemoteData.Success response) ->
             { model
                 | statusClaim = Loaded response
                 , isValidated = Claim.isValidated response loggedIn.accountName
             }
                 |> UR.init
 
-        ClaimLoaded (Err err) ->
+        ClaimLoaded (RemoteData.Failure err) ->
             { model | statusClaim = Failed err }
                 |> UR.init
                 |> UR.logGraphqlError msg err
+
+        ClaimLoaded _ ->
+            UR.init model
 
         ClaimMsg m ->
             Claim.updateClaimModalStatus m model
@@ -509,10 +513,11 @@ update msg model loggedIn =
 -- HELPERS
 
 
-fetchClaim : Claim.ClaimId -> Shared -> Cmd Msg
-fetchClaim claimId shared =
+fetchClaim : Claim.ClaimId -> Shared -> String -> Cmd Msg
+fetchClaim claimId shared authToken =
     Api.Graphql.query
         shared
+        (Just authToken)
         (Cambiatus.Query.claim { input = { id = claimId } } Claim.selectionSet)
         ClaimLoaded
 
@@ -546,7 +551,7 @@ msgToString : Msg -> List String
 msgToString msg =
     case msg of
         ClaimLoaded r ->
-            [ "ClaimLoaded", UR.resultToString r ]
+            [ "ClaimLoaded", UR.remoteDataToString r ]
 
         VoteClaim claimId _ ->
             [ "VoteClaim", String.fromInt claimId ]

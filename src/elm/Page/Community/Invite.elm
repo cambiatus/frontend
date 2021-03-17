@@ -7,8 +7,8 @@ module Page.Community.Invite exposing
     , view
     )
 
-import Api
 import Api.Graphql
+import Auth exposing (SignInResponse)
 import Community exposing (Invite)
 import Eos exposing (symbolToString)
 import Eos.Account exposing (nameToString)
@@ -20,6 +20,7 @@ import Http
 import Page exposing (Session(..), toShared)
 import Profile exposing (Model)
 import Profile.EditKycForm as KycForm
+import RemoteData exposing (RemoteData)
 import Route
 import Session.LoggedIn as LoggedIn exposing (External(..), FeedbackStatus(..))
 import Session.Shared exposing (Translators)
@@ -80,6 +81,7 @@ init session invitationId =
     ( initModel invitationId
     , Api.Graphql.query
         (toShared session)
+        Nothing
         (Community.inviteQuery invitationId)
         CompletedLoad
     )
@@ -296,12 +298,12 @@ type alias UpdateResult =
 
 
 type Msg
-    = CompletedLoad (Result (Graphql.Http.Error (Maybe Invite)) (Maybe Invite))
+    = CompletedLoad (RemoteData (Graphql.Http.Error (Maybe Invite)) (Maybe Invite))
     | OpenConfirmationModal
     | CloseConfirmationModal
     | InvitationRejected
     | InvitationAccepted InvitationId Invite
-    | CompletedSignIn LoggedIn.Model (Result Http.Error Profile.Model)
+    | CompletedSignIn LoggedIn.Model (RemoteData (Graphql.Http.Error (Maybe SignInResponse)) (Maybe SignInResponse))
     | FormMsg KycForm.Msg
 
 
@@ -310,19 +312,19 @@ update session msg model =
     case msg of
         FormMsg kycFormMsg ->
             case session of
-                LoggedIn loggedIn ->
+                LoggedIn ({ accountName, shared } as loggedIn) ->
                     let
                         newForm =
                             case model.kycForm of
                                 Just f ->
                                     KycForm.update
-                                        loggedIn.shared.translators
+                                        shared.translators
                                         f
                                         kycFormMsg
 
                                 Nothing ->
                                     KycForm.update
-                                        loggedIn.shared.translators
+                                        shared.translators
                                         KycForm.init
                                         kycFormMsg
 
@@ -359,9 +361,9 @@ update session msg model =
                                     model
                                         |> UR.init
                                         |> UR.addCmd
-                                            (Api.signInInvitation loggedIn.shared
-                                                loggedIn.accountName
-                                                model.invitationId
+                                            (Api.Graphql.mutation shared
+                                                Nothing
+                                                (Auth.signIn accountName shared (Just model.invitationId))
                                                 (CompletedSignIn loggedIn)
                                             )
 
@@ -373,7 +375,7 @@ update session msg model =
                     model
                         |> UR.init
 
-        CompletedLoad (Ok (Just invite)) ->
+        CompletedLoad (RemoteData.Success (Just invite)) ->
             let
                 userCommunities =
                     case session of
@@ -404,13 +406,16 @@ update session msg model =
             in
             UR.init { model | pageStatus = newPageStatus invite }
 
-        CompletedLoad (Ok Nothing) ->
+        CompletedLoad (RemoteData.Success Nothing) ->
             UR.init { model | pageStatus = NotFound }
 
-        CompletedLoad (Err error) ->
+        CompletedLoad (RemoteData.Failure error) ->
             { model | pageStatus = Failed error }
                 |> UR.init
                 |> UR.logGraphqlError msg error
+
+        CompletedLoad _ ->
+            UR.init model
 
         OpenConfirmationModal ->
             { model | confirmationModalStatus = Open }
@@ -464,14 +469,14 @@ update session msg model =
                         || not invite.community.hasKyc
             in
             case session of
-                LoggedIn loggedIn ->
+                LoggedIn ({ shared, accountName } as loggedIn) ->
                     if allowedToJoinCommunity then
                         model
                             |> UR.init
                             |> UR.addCmd
-                                (Api.signInInvitation loggedIn.shared
-                                    loggedIn.accountName
-                                    invitationId
+                                (Api.Graphql.mutation shared
+                                    Nothing
+                                    (Auth.signIn accountName shared (Just model.invitationId))
                                     (CompletedSignIn loggedIn)
                                 )
 
@@ -487,17 +492,49 @@ update session msg model =
                                 |> Route.replaceUrl guest.shared.navKey
                             )
 
-        CompletedSignIn { shared } (Ok _) ->
+        CompletedSignIn loggedIn (RemoteData.Success (Just { user, token })) ->
+            let
+                maybeUpdateCommunity loggedInModel =
+                    getInvite model
+                        |> Maybe.map
+                            (.community >> LoggedIn.addCommunity loggedInModel)
+                        |> Maybe.withDefault loggedInModel
+            in
             model
                 |> UR.init
-                |> UR.addCmd
-                    (Route.Dashboard
-                        |> Route.replaceUrl shared.navKey
+                |> UR.addExt
+                    ({ loggedIn
+                        | profile = LoggedIn.Loaded user
+                        , authToken = token
+                     }
+                        |> maybeUpdateCommunity
+                        |> LoggedIn.UpdatedLoggedIn
                     )
+                |> UR.addCmd (Route.replaceUrl loggedIn.shared.navKey Route.Dashboard)
 
-        CompletedSignIn _ (Err err) ->
-            { model | pageStatus = Error err }
+        CompletedSignIn _ (RemoteData.Failure error) ->
+            { model | pageStatus = Error Http.NetworkError }
                 |> UR.init
+                |> UR.logGraphqlError msg error
+
+        CompletedSignIn _ _ ->
+            UR.init model
+
+
+getInvite : Model -> Maybe Invite
+getInvite model =
+    case model.pageStatus of
+        JoinConfirmation invite ->
+            Just invite
+
+        AlreadyMemberNotice invite ->
+            Just invite
+
+        KycInfo invite ->
+            Just invite
+
+        _ ->
+            Nothing
 
 
 
@@ -508,7 +545,7 @@ msgToString : Msg -> List String
 msgToString msg =
     case msg of
         CompletedLoad r ->
-            [ "CompletedLoad", UR.resultToString r ]
+            [ "CompletedLoad", UR.remoteDataToString r ]
 
         OpenConfirmationModal ->
             [ "OpenConfirmationModal" ]
@@ -525,5 +562,5 @@ msgToString msg =
         FormMsg _ ->
             [ "FormMsg" ]
 
-        CompletedSignIn _ _ ->
-            [ "CompletedSignIn" ]
+        CompletedSignIn _ r ->
+            [ "CompletedSignIn", UR.remoteDataToString r ]

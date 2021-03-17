@@ -784,6 +784,7 @@
     "empty": "Nenhum resultado, ",
     "clear_filters": "limpar os filtros",
     "show_more": "Mostrar próximos 16 items",
+    "error": "Algo deu errado ao carregar ações",
     "filter": {
       "user": "Usuário",
       "status": {

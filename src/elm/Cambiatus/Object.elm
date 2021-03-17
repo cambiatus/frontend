@@ -97,8 +97,8 @@ type SearchResult
     = SearchResult
 
 
-type SignUpResponse
-    = SignUpResponse
+type Session
+    = Session
 
 
 type State
