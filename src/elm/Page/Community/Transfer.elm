@@ -20,6 +20,7 @@ import Graphql.Http
 import Html exposing (Html, button, div, form, input, span, text, textarea)
 import Html.Attributes exposing (class, classList, disabled, maxlength, placeholder, rows, type_, value)
 import Html.Events exposing (onInput, onSubmit)
+import I18Next
 import Json.Decode as Decode exposing (Value)
 import Json.Encode as Encode exposing (Value)
 import Page
@@ -85,7 +86,7 @@ type TransferStatus
 
 type Validation
     = Valid
-    | Invalid String
+    | Invalid String (Maybe I18Next.Replacements)
 
 
 type alias Form =
@@ -109,8 +110,8 @@ emptyForm =
     }
 
 
-validateForm : Shared.Translators -> Eos.Name -> Form -> Form
-validateForm { t, tr } currentAccount form =
+validateForm : Eos.Name -> Form -> Form
+validateForm currentAccount form =
     let
         isAllowedChar : Char -> Bool
         isAllowedChar c =
@@ -121,28 +122,26 @@ validateForm { t, tr } currentAccount form =
             case form.selectedProfile of
                 Just profile ->
                     if profile.account == currentAccount then
-                        Invalid (t "transfer.to_self")
+                        Invalid "transfer.to_self" Nothing
 
                     else
                         Valid
 
                 Nothing ->
-                    Invalid (t "transfer.no_profile")
+                    Invalid "transfer.no_profile" Nothing
         , amountValidation =
             if (String.toList form.amount |> List.any isAllowedChar) || String.length form.amount > 0 then
                 Valid
 
             else
-                Invalid (t "transfer.no_amount")
+                Invalid "transfer.no_amount" Nothing
         , memoValidation =
             if String.length form.memo <= memoMaxLength then
                 Valid
 
             else
-                Invalid
-                    (tr "transfer.memo_too_long"
-                        [ ( "maxlength", String.fromInt memoMaxLength ) ]
-                    )
+                Invalid "transfer.memo_too_long"
+                    (Just [ ( "maxlength", String.fromInt memoMaxLength ) ])
     }
 
 
@@ -207,7 +206,7 @@ viewForm ({ shared } as loggedIn) model f community isDisabled =
                     [ text_ "account.my_wallet.transfer.send_to" ]
                 , div [ class "" ]
                     [ viewAutoCompleteAccount shared model f isDisabled community ]
-                , viewError f.selectedProfileValidation
+                , viewError shared.translators f.selectedProfileValidation
                 ]
             , div [ class "mb-10" ]
                 [ span [ class "input-label" ]
@@ -230,7 +229,7 @@ viewForm ({ shared } as loggedIn) model f community isDisabled =
                         [ class "w-1/5 flex text-white items-center justify-center bg-indigo-500 text-body uppercase rounded-r-sm" ]
                         [ text (Eos.symbolToSymbolCodeString community.symbol) ]
                     ]
-                , viewError f.amountValidation
+                , viewError shared.translators f.amountValidation
                 ]
             , div [ class "mb-10" ]
                 [ span [ class "input-label" ]
@@ -244,7 +243,7 @@ viewForm ({ shared } as loggedIn) model f community isDisabled =
                     ]
                     []
                 , View.Form.InputCounter.view shared.translators.tr memoMaxLength f.memo
-                , viewError f.memoValidation
+                , viewError shared.translators f.memoValidation
                 ]
             , div [ class "mt-6" ]
                 [ button
@@ -259,14 +258,17 @@ viewForm ({ shared } as loggedIn) model f community isDisabled =
         ]
 
 
-viewError : Validation -> Html msg
-viewError validation =
+viewError : Shared.Translators -> Validation -> Html msg
+viewError { t, tr } validation =
     case validation of
         Valid ->
             text ""
 
-        Invalid e ->
-            span [ class "form-error" ] [ text e ]
+        Invalid e (Just replacements) ->
+            span [ class "form-error" ] [ text (tr e replacements) ]
+
+        Invalid e Nothing ->
+            span [ class "form-error" ] [ text (t e) ]
 
 
 viewAutoCompleteAccount : Shared.Shared -> Model -> Form -> Bool -> Community.Model -> Html Msg
@@ -432,7 +434,7 @@ update msg model ({ shared } as loggedIn) =
                         Just to ->
                             let
                                 newForm =
-                                    validateForm loggedIn.shared.translators loggedIn.accountName form
+                                    validateForm loggedIn.accountName form
 
                                 subscriptionDoc =
                                     Transfer.transferSucceedSubscription model.communityId (Eos.nameToString loggedIn.accountName) (Eos.nameToString to.account)
@@ -456,7 +458,7 @@ update msg model ({ shared } as loggedIn) =
                                     |> UR.init
 
                         Nothing ->
-                            { model | status = Loaded c (EditingTransfer (validateForm loggedIn.shared.translators loggedIn.accountName form)) }
+                            { model | status = Loaded c (EditingTransfer (validateForm loggedIn.accountName form)) }
                                 |> UR.init
 
                 _ ->
