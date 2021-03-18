@@ -23,6 +23,7 @@ import Html.Events exposing (onInput, onSubmit)
 import I18Next
 import Json.Decode as Decode exposing (Value)
 import Json.Encode as Encode exposing (Value)
+import List.Extra as LE
 import Page
 import Profile
 import RemoteData exposing (RemoteData)
@@ -109,9 +110,17 @@ emptyForm =
     }
 
 
-validAmountCharacter : Char -> Bool
-validAmountCharacter c =
-    Char.isDigit c || c == '.'
+validAmountCharacter : Symbol -> Char -> Bool
+validAmountCharacter symbol c =
+    let
+        separator =
+            if Eos.getSymbolPrecision symbol > 0 then
+                c == '.'
+
+            else
+                False
+    in
+    Char.isDigit c || separator
 
 
 validateSelectedProfile : Eos.Name -> Form -> Form
@@ -131,11 +140,27 @@ validateSelectedProfile currentAccount form =
     }
 
 
-validateAmount : Form -> Form
-validateAmount form =
+validateAmount : Symbol -> Form -> Form
+validateAmount symbol form =
+    let
+        symbolPrecision =
+            Eos.getSymbolPrecision symbol
+
+        amountPrecision =
+            String.toList form.amount
+                |> LE.dropWhile (\c -> c /= '.')
+                |> List.drop 1
+                |> List.length
+    in
     { form
         | amountValidation =
-            if String.all validAmountCharacter form.amount && String.length form.amount > 0 then
+            if amountPrecision > symbolPrecision then
+                Invalid "error.contracts.transfer.symbol precision mismatch" Nothing
+
+            else if
+                String.all (validAmountCharacter symbol) form.amount
+                    && (String.length form.amount > 0)
+            then
                 Valid
 
             else
@@ -155,11 +180,11 @@ validateMemo form =
     }
 
 
-validateForm : Eos.Name -> Form -> Form
-validateForm currentAccount form =
+validateForm : Eos.Name -> Symbol -> Form -> Form
+validateForm currentAccount symbol form =
     form
         |> validateSelectedProfile currentAccount
-        |> validateAmount
+        |> validateAmount symbol
         |> validateMemo
 
 
@@ -414,7 +439,7 @@ update msg model ({ shared } as loggedIn) =
             let
                 getNumericValues : String -> String
                 getNumericValues =
-                    String.filter validAmountCharacter
+                    String.filter (validAmountCharacter loggedIn.selectedCommunity)
             in
             case model.status of
                 Loaded community (EditingTransfer form) ->
@@ -422,7 +447,7 @@ update msg model ({ shared } as loggedIn) =
                         | status =
                             EditingTransfer
                                 ({ form | amount = getNumericValues value }
-                                    |> validateAmount
+                                    |> validateAmount loggedIn.selectedCommunity
                                 )
                                 |> Loaded community
                     }
@@ -454,7 +479,9 @@ update msg model ({ shared } as loggedIn) =
                         Just to ->
                             let
                                 newForm =
-                                    validateForm loggedIn.accountName form
+                                    validateForm loggedIn.accountName
+                                        loggedIn.selectedCommunity
+                                        form
 
                                 subscriptionDoc =
                                     Transfer.transferSucceedSubscription model.communityId (Eos.nameToString loggedIn.accountName) (Eos.nameToString to.account)
@@ -479,7 +506,16 @@ update msg model ({ shared } as loggedIn) =
                                     |> UR.init
 
                         Nothing ->
-                            { model | status = Loaded c (EditingTransfer (validateForm loggedIn.accountName form)) }
+                            { model
+                                | status =
+                                    Loaded c
+                                        (EditingTransfer
+                                            (validateForm loggedIn.accountName
+                                                loggedIn.selectedCommunity
+                                                form
+                                            )
+                                        )
+                            }
                                 |> UR.init
 
                 _ ->
