@@ -81,7 +81,6 @@ type TransferStatus
     = EditingTransfer Form
     | CreatingSubscription Form
     | SendingTransfer Form
-    | SendingTransferFailed Form
 
 
 type Validation
@@ -110,13 +109,13 @@ emptyForm =
     }
 
 
-validateForm : Eos.Name -> Form -> Form
-validateForm currentAccount form =
-    let
-        isAllowedChar : Char -> Bool
-        isAllowedChar c =
-            Char.isDigit c || c == ','
-    in
+validAmountCharacter : Char -> Bool
+validAmountCharacter c =
+    Char.isDigit c || c == '.'
+
+
+validateSelectedProfile : Eos.Name -> Form -> Form
+validateSelectedProfile currentAccount form =
     { form
         | selectedProfileValidation =
             case form.selectedProfile of
@@ -129,20 +128,39 @@ validateForm currentAccount form =
 
                 Nothing ->
                     Invalid "transfer.no_profile" Nothing
-        , amountValidation =
-            if (String.toList form.amount |> List.any isAllowedChar) || String.length form.amount > 0 then
+    }
+
+
+validateAmount : Form -> Form
+validateAmount form =
+    { form
+        | amountValidation =
+            if String.all validAmountCharacter form.amount && String.length form.amount > 0 then
                 Valid
 
             else
                 Invalid "transfer.no_amount" Nothing
-        , memoValidation =
+    }
+
+
+validateMemo : Form -> Form
+validateMemo form =
+    { form
+        | memoValidation =
             if String.length form.memo <= memoMaxLength then
                 Valid
 
             else
-                Invalid "transfer.memo_too_long"
-                    (Just [ ( "maxlength", String.fromInt memoMaxLength ) ])
+                Invalid "transfer.memo_too_long" (Just [ ( "maxlength", String.fromInt memoMaxLength ) ])
     }
+
+
+validateForm : Eos.Name -> Form -> Form
+validateForm currentAccount form =
+    form
+        |> validateSelectedProfile currentAccount
+        |> validateAmount
+        |> validateMemo
 
 
 isFormValid : Form -> Bool
@@ -183,9 +201,6 @@ view ({ shared } as loggedIn) model =
 
                 Loaded community (SendingTransfer f) ->
                     viewForm loggedIn model f community True
-
-                Loaded community (SendingTransferFailed f) ->
-                    viewForm loggedIn model f community False
     in
     { title = shared.translators.t "transfer.title"
     , content = content
@@ -376,7 +391,10 @@ update msg model ({ shared } as loggedIn) =
                 Loaded community (EditingTransfer form) ->
                     { model
                         | status =
-                            EditingTransfer { form | selectedProfile = maybeProfile }
+                            EditingTransfer
+                                ({ form | selectedProfile = maybeProfile }
+                                    |> validateSelectedProfile loggedIn.accountName
+                                )
                                 |> Loaded community
                     }
                         |> UR.init
@@ -395,18 +413,17 @@ update msg model ({ shared } as loggedIn) =
         EnteredAmount value ->
             let
                 getNumericValues : String -> String
-                getNumericValues v =
-                    v
-                        |> String.toList
-                        |> List.filter (\d -> Char.isDigit d || d == '.')
-                        |> List.map String.fromChar
-                        |> String.join ""
+                getNumericValues =
+                    String.filter validAmountCharacter
             in
             case model.status of
                 Loaded community (EditingTransfer form) ->
                     { model
                         | status =
-                            EditingTransfer { form | amount = getNumericValues value }
+                            EditingTransfer
+                                ({ form | amount = getNumericValues value }
+                                    |> validateAmount
+                                )
                                 |> Loaded community
                     }
                         |> UR.init
@@ -419,7 +436,10 @@ update msg model ({ shared } as loggedIn) =
                 Loaded community (EditingTransfer form) ->
                     { model
                         | status =
-                            EditingTransfer { form | memo = value }
+                            EditingTransfer
+                                ({ form | memo = value }
+                                    |> validateMemo
+                                )
                                 |> Loaded community
                     }
                         |> UR.init
@@ -452,6 +472,7 @@ update msg model ({ shared } as loggedIn) =
                                                 , ( "subscription", Encode.string subscriptionDoc )
                                                 ]
                                         }
+                                    |> UR.addExt LoggedIn.HideFeedback
 
                             else
                                 { model | status = Loaded c (EditingTransfer newForm) }
@@ -538,7 +559,7 @@ update msg model ({ shared } as loggedIn) =
             in
             case model.status of
                 Loaded c (SendingTransfer form) ->
-                    { model | status = Loaded c (SendingTransferFailed form) }
+                    { model | status = Loaded c (EditingTransfer form) }
                         |> UR.init
                         |> UR.addExt
                             (LoggedIn.ShowFeedback
