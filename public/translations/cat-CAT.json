@@ -360,7 +360,11 @@
     "no_transfers_yet": "Encara no hi ha transferències.",
     "info": "{{from}} ha transferit {{value}} a {{to}}",
     "you": "tu",
-    "title": "Transferència"
+    "title": "Transferència",
+    "to_self": "No es pot transferir a si mateix",
+    "no_profile": "Seleccioneu un usuari",
+    "no_amount": "Introduïu un import",
+    "memo_too_long": "La nota no pot tenir més de {{maxlength}} caràcters"
   },
   "notifications": {
     "title": "Notificacions",

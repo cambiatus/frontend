@@ -18,7 +18,7 @@ import Eos.EosError as EosError
 import Graphql.Document
 import Graphql.Http
 import Html exposing (Html, button, div, form, input, span, text, textarea)
-import Html.Attributes exposing (class, classList, disabled, maxlength, placeholder, required, rows, type_, value)
+import Html.Attributes exposing (class, classList, disabled, maxlength, placeholder, rows, type_, value)
 import Html.Events exposing (onInput, onSubmit)
 import Json.Decode as Decode exposing (Value)
 import Json.Encode as Encode exposing (Value)
@@ -109,8 +109,8 @@ emptyForm =
     }
 
 
-validateForm : Form -> Form
-validateForm form =
+validateForm : Shared.Translators -> Eos.Name -> Form -> Form
+validateForm { t, tr } currentAccount form =
     let
         isAllowedChar : Char -> Bool
         isAllowedChar c =
@@ -119,23 +119,30 @@ validateForm form =
     { form
         | selectedProfileValidation =
             case form.selectedProfile of
-                Just _ ->
-                    Valid
+                Just profile ->
+                    if profile.account == currentAccount then
+                        Invalid (t "transfer.to_self")
+
+                    else
+                        Valid
 
                 Nothing ->
-                    Invalid ""
+                    Invalid (t "transfer.no_profile")
         , amountValidation =
             if (String.toList form.amount |> List.any isAllowedChar) || String.length form.amount > 0 then
                 Valid
 
             else
-                Invalid ""
+                Invalid (t "transfer.no_amount")
         , memoValidation =
             if String.length form.memo <= memoMaxLength then
                 Valid
 
             else
-                Invalid ""
+                Invalid
+                    (tr "transfer.memo_too_long"
+                        [ ( "maxlength", String.fromInt memoMaxLength ) ]
+                    )
     }
 
 
@@ -164,7 +171,7 @@ view ({ shared } as loggedIn) model =
                     Page.fullPageLoading shared
 
                 NotFound ->
-                    Page.viewCardEmpty [ text "Community not found" ]
+                    Page.viewCardEmpty [ text (shared.translators.t "community.not_found") ]
 
                 Failed e ->
                     Page.fullPageGraphQLError (shared.translators.t "community.objectives.title_plural") e
@@ -200,6 +207,7 @@ viewForm ({ shared } as loggedIn) model f community isDisabled =
                     [ text_ "account.my_wallet.transfer.send_to" ]
                 , div [ class "" ]
                     [ viewAutoCompleteAccount shared model f isDisabled community ]
+                , viewError f.selectedProfileValidation
                 ]
             , div [ class "mb-10" ]
                 [ span [ class "input-label" ]
@@ -214,7 +222,6 @@ viewForm ({ shared } as loggedIn) model f community isDisabled =
                         [ class "block w-4/5 border-none px-4 py-3 outline-none"
                         , placeholder "0"
                         , disabled isDisabled
-                        , required True
                         , onInput EnteredAmount
                         , value f.amount
                         ]
@@ -223,6 +230,7 @@ viewForm ({ shared } as loggedIn) model f community isDisabled =
                         [ class "w-1/5 flex text-white items-center justify-center bg-indigo-500 text-body uppercase rounded-r-sm" ]
                         [ text (Eos.symbolToSymbolCodeString community.symbol) ]
                     ]
+                , viewError f.amountValidation
                 ]
             , div [ class "mb-10" ]
                 [ span [ class "input-label" ]
@@ -236,6 +244,7 @@ viewForm ({ shared } as loggedIn) model f community isDisabled =
                     ]
                     []
                 , View.Form.InputCounter.view shared.translators.tr memoMaxLength f.memo
+                , viewError f.memoValidation
                 ]
             , div [ class "mt-6" ]
                 [ button
@@ -248,6 +257,16 @@ viewForm ({ shared } as loggedIn) model f community isDisabled =
                 ]
             ]
         ]
+
+
+viewError : Validation -> Html msg
+viewError validation =
+    case validation of
+        Valid ->
+            text ""
+
+        Invalid e ->
+            span [ class "form-error" ] [ text e ]
 
 
 viewAutoCompleteAccount : Shared.Shared -> Model -> Form -> Bool -> Community.Model -> Html Msg
@@ -413,7 +432,7 @@ update msg model ({ shared } as loggedIn) =
                         Just to ->
                             let
                                 newForm =
-                                    validateForm form
+                                    validateForm loggedIn.shared.translators loggedIn.accountName form
 
                                 subscriptionDoc =
                                     Transfer.transferSucceedSubscription model.communityId (Eos.nameToString loggedIn.accountName) (Eos.nameToString to.account)
@@ -437,7 +456,8 @@ update msg model ({ shared } as loggedIn) =
                                     |> UR.init
 
                         Nothing ->
-                            { model | status = Loaded c (EditingTransfer (validateForm form)) } |> UR.init
+                            { model | status = Loaded c (EditingTransfer (validateForm loggedIn.shared.translators loggedIn.accountName form)) }
+                                |> UR.init
 
                 _ ->
                     model |> UR.init
