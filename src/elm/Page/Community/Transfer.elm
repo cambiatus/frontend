@@ -18,7 +18,7 @@ import Eos.EosError as EosError
 import Graphql.Document
 import Graphql.Http
 import Html exposing (Html, button, div, form, input, span, text, textarea)
-import Html.Attributes exposing (class, disabled, placeholder, required, rows, type_, value)
+import Html.Attributes exposing (class, classList, disabled, maxlength, placeholder, required, rows, type_, value)
 import Html.Events exposing (onInput, onSubmit)
 import Json.Decode as Decode exposing (Value)
 import Json.Encode as Encode exposing (Value)
@@ -33,6 +33,7 @@ import Task
 import Transfer
 import UpdateResult as UR
 import Utils
+import View.Form.InputCounter
 
 
 init : LoggedIn.Model -> Symbol -> Maybe String -> ( Model, Cmd Msg )
@@ -93,6 +94,7 @@ type alias Form =
     , amount : String
     , amountValidation : Validation
     , memo : String
+    , memoValidation : Validation
     }
 
 
@@ -103,6 +105,7 @@ emptyForm =
     , amount = ""
     , amountValidation = Valid
     , memo = ""
+    , memoValidation = Valid
     }
 
 
@@ -127,12 +130,25 @@ validateForm form =
 
             else
                 Invalid ""
+        , memoValidation =
+            if String.length form.memo <= memoMaxLength then
+                Valid
+
+            else
+                Invalid ""
     }
 
 
 isFormValid : Form -> Bool
 isFormValid form =
-    form.selectedProfileValidation == Valid && form.amountValidation == Valid
+    (form.selectedProfileValidation == Valid)
+        && (form.amountValidation == Valid)
+        && (form.memoValidation == Valid)
+
+
+memoMaxLength : Int
+memoMaxLength =
+    255
 
 
 
@@ -216,12 +232,15 @@ viewForm ({ shared } as loggedIn) model f community isDisabled =
                     , rows 5
                     , disabled isDisabled
                     , onInput EnteredMemo
+                    , maxlength memoMaxLength
                     ]
                     []
+                , View.Form.InputCounter.view shared.translators.tr memoMaxLength f.memo
                 ]
             , div [ class "mt-6" ]
                 [ button
                     [ class "button button-primary w-full"
+                    , classList [ ( "button-disabled", isDisabled ) ]
                     , disabled isDisabled
                     , type_ "submit"
                     ]
