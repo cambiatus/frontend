@@ -356,7 +356,11 @@
     "no_transfers_yet": "No transfers yet.",
     "info": "{{from}} transferred {{value}} to {{to}}",
     "you": "you",
-    "title": "Transfer"
+    "title": "Transfer",
+    "to_self": "You can't transfer to yourself",
+    "no_profile": "Select a user",
+    "no_amount": "Enter an amount",
+    "memo_too_long": "The memo can't be longer than {{maxlength}} characters"
   },
   "notifications": {
     "title": "Notifications",

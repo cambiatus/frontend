@@ -360,7 +360,11 @@
     "no_transfers_yet": "Aún no hay transferencias",
     "info": "{{from}} transfirió {{value}} a {{to}}",
     "you": "tu",
-    "title": "Transferencia"
+    "title": "Transferencia",
+    "to_self": "No puedes transferirte a ti mismo",
+    "no_profile": "Selecciona un usuario",
+    "no_amount": "Ingrese una cantidad",
+    "memo_too_long": "La nota no puede tener más de {{maxlength}} caracteres"
   },
   "notifications": {
     "title": "Notificaciones",

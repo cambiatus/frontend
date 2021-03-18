@@ -20,6 +20,7 @@ module Eos exposing
     , encodeSymbol
     , encodeTableQuery
     , encodeTransaction
+    , getSymbolPrecision
     , symbolDecoder
     , symbolFromString
     , symbolSelectionSet

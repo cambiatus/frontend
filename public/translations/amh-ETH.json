@@ -318,7 +318,11 @@
       "no_transfers_yet": "እስከአሁን ምንም አልተላለፈም.",
       "info": "{{from}} ተላልፏል {{value}} ለ {{to}}",
       "you": "እርሶ",
-      "title": "የተላለፈ"
+      "title": "የተላለፈ",
+      "to_self": "ወደራስዎ ማስተላለፍ አይችሉም",
+      "no_profile": "አንድ ተጠቃሚ ይምረጡ",
+      "no_amount": "አንድ መጠን ያስገቡ",
+      "memo_too_long": "ማስታወሻው ከ {{maxlength}} ቁምፊዎች ሊረዝም አይችልም"
     },
     "notifications": {
       "title": "ማሳሰቢያዎች",

@@ -18,10 +18,12 @@ import Eos.EosError as EosError
 import Graphql.Document
 import Graphql.Http
 import Html exposing (Html, button, div, form, input, span, text, textarea)
-import Html.Attributes exposing (class, disabled, placeholder, required, rows, type_, value)
+import Html.Attributes exposing (class, classList, disabled, maxlength, placeholder, rows, type_, value)
 import Html.Events exposing (onInput, onSubmit)
+import I18Next
 import Json.Decode as Decode exposing (Value)
 import Json.Encode as Encode exposing (Value)
+import List.Extra as LE
 import Page
 import Profile
 import RemoteData exposing (RemoteData)
@@ -33,6 +35,7 @@ import Task
 import Transfer
 import UpdateResult as UR
 import Utils
+import View.Form.InputCounter
 
 
 init : LoggedIn.Model -> Symbol -> Maybe String -> ( Model, Cmd Msg )
@@ -79,12 +82,11 @@ type TransferStatus
     = EditingTransfer Form
     | CreatingSubscription Form
     | SendingTransfer Form
-    | SendingTransferFailed Form
 
 
 type Validation
     = Valid
-    | Invalid String
+    | Invalid String (Maybe I18Next.Replacements)
 
 
 type alias Form =
@@ -93,6 +95,7 @@ type alias Form =
     , amount : String
     , amountValidation : Validation
     , memo : String
+    , memoValidation : Validation
     }
 
 
@@ -103,36 +106,98 @@ emptyForm =
     , amount = ""
     , amountValidation = Valid
     , memo = ""
+    , memoValidation = Valid
     }
 
 
-validateForm : Form -> Form
-validateForm form =
+validAmountCharacter : Symbol -> Char -> Bool
+validAmountCharacter symbol c =
     let
-        isAllowedChar : Char -> Bool
-        isAllowedChar c =
-            Char.isDigit c || c == ','
+        separator =
+            if Eos.getSymbolPrecision symbol > 0 then
+                c == '.'
+
+            else
+                False
     in
+    Char.isDigit c || separator
+
+
+validateSelectedProfile : Eos.Name -> Form -> Form
+validateSelectedProfile currentAccount form =
     { form
         | selectedProfileValidation =
             case form.selectedProfile of
-                Just _ ->
-                    Valid
+                Just profile ->
+                    if profile.account == currentAccount then
+                        Invalid "transfer.to_self" Nothing
+
+                    else
+                        Valid
 
                 Nothing ->
-                    Invalid ""
-        , amountValidation =
-            if (String.toList form.amount |> List.any isAllowedChar) || String.length form.amount > 0 then
+                    Invalid "transfer.no_profile" Nothing
+    }
+
+
+validateAmount : Symbol -> Form -> Form
+validateAmount symbol form =
+    let
+        symbolPrecision =
+            Eos.getSymbolPrecision symbol
+
+        amountPrecision =
+            String.toList form.amount
+                |> LE.dropWhile (\c -> c /= '.')
+                |> List.drop 1
+                |> List.length
+    in
+    { form
+        | amountValidation =
+            if amountPrecision > symbolPrecision then
+                Invalid "error.contracts.transfer.symbol precision mismatch" Nothing
+
+            else if
+                String.all (validAmountCharacter symbol) form.amount
+                    && (String.length form.amount > 0)
+            then
                 Valid
 
             else
-                Invalid ""
+                Invalid "transfer.no_amount" Nothing
     }
+
+
+validateMemo : Form -> Form
+validateMemo form =
+    { form
+        | memoValidation =
+            if String.length form.memo <= memoMaxLength then
+                Valid
+
+            else
+                Invalid "transfer.memo_too_long" (Just [ ( "maxlength", String.fromInt memoMaxLength ) ])
+    }
+
+
+validateForm : Eos.Name -> Symbol -> Form -> Form
+validateForm currentAccount symbol form =
+    form
+        |> validateSelectedProfile currentAccount
+        |> validateAmount symbol
+        |> validateMemo
 
 
 isFormValid : Form -> Bool
 isFormValid form =
-    form.selectedProfileValidation == Valid && form.amountValidation == Valid
+    (form.selectedProfileValidation == Valid)
+        && (form.amountValidation == Valid)
+        && (form.memoValidation == Valid)
+
+
+memoMaxLength : Int
+memoMaxLength =
+    255
 
 
 
@@ -148,7 +213,7 @@ view ({ shared } as loggedIn) model =
                     Page.fullPageLoading shared
 
                 NotFound ->
-                    Page.viewCardEmpty [ text "Community not found" ]
+                    Page.viewCardEmpty [ text (shared.translators.t "community.not_found") ]
 
                 Failed e ->
                     Page.fullPageGraphQLError (shared.translators.t "community.objectives.title_plural") e
@@ -161,9 +226,6 @@ view ({ shared } as loggedIn) model =
 
                 Loaded community (SendingTransfer f) ->
                     viewForm loggedIn model f community True
-
-                Loaded community (SendingTransferFailed f) ->
-                    viewForm loggedIn model f community False
     in
     { title = shared.translators.t "transfer.title"
     , content = content
@@ -184,6 +246,7 @@ viewForm ({ shared } as loggedIn) model f community isDisabled =
                     [ text_ "account.my_wallet.transfer.send_to" ]
                 , div [ class "" ]
                     [ viewAutoCompleteAccount shared model f isDisabled community ]
+                , viewError shared.translators f.selectedProfileValidation
                 ]
             , div [ class "mb-10" ]
                 [ span [ class "input-label" ]
@@ -198,7 +261,6 @@ viewForm ({ shared } as loggedIn) model f community isDisabled =
                         [ class "block w-4/5 border-none px-4 py-3 outline-none"
                         , placeholder "0"
                         , disabled isDisabled
-                        , required True
                         , onInput EnteredAmount
                         , value f.amount
                         ]
@@ -207,6 +269,7 @@ viewForm ({ shared } as loggedIn) model f community isDisabled =
                         [ class "w-1/5 flex text-white items-center justify-center bg-indigo-500 text-body uppercase rounded-r-sm" ]
                         [ text (Eos.symbolToSymbolCodeString community.symbol) ]
                     ]
+                , viewError shared.translators f.amountValidation
                 ]
             , div [ class "mb-10" ]
                 [ span [ class "input-label" ]
@@ -216,12 +279,16 @@ viewForm ({ shared } as loggedIn) model f community isDisabled =
                     , rows 5
                     , disabled isDisabled
                     , onInput EnteredMemo
+                    , maxlength memoMaxLength
                     ]
                     []
+                , View.Form.InputCounter.view shared.translators.tr memoMaxLength f.memo
+                , viewError shared.translators f.memoValidation
                 ]
             , div [ class "mt-6" ]
                 [ button
                     [ class "button button-primary w-full"
+                    , classList [ ( "button-disabled", isDisabled ) ]
                     , disabled isDisabled
                     , type_ "submit"
                     ]
@@ -229,6 +296,19 @@ viewForm ({ shared } as loggedIn) model f community isDisabled =
                 ]
             ]
         ]
+
+
+viewError : Shared.Translators -> Validation -> Html msg
+viewError { t, tr } validation =
+    case validation of
+        Valid ->
+            text ""
+
+        Invalid e (Just replacements) ->
+            span [ class "form-error" ] [ text (tr e replacements) ]
+
+        Invalid e Nothing ->
+            span [ class "form-error" ] [ text (t e) ]
 
 
 viewAutoCompleteAccount : Shared.Shared -> Model -> Form -> Bool -> Community.Model -> Html Msg
@@ -336,7 +416,10 @@ update msg model ({ shared } as loggedIn) =
                 Loaded community (EditingTransfer form) ->
                     { model
                         | status =
-                            EditingTransfer { form | selectedProfile = maybeProfile }
+                            EditingTransfer
+                                ({ form | selectedProfile = maybeProfile }
+                                    |> validateSelectedProfile loggedIn.accountName
+                                )
                                 |> Loaded community
                     }
                         |> UR.init
@@ -355,18 +438,17 @@ update msg model ({ shared } as loggedIn) =
         EnteredAmount value ->
             let
                 getNumericValues : String -> String
-                getNumericValues v =
-                    v
-                        |> String.toList
-                        |> List.filter (\d -> Char.isDigit d || d == '.')
-                        |> List.map String.fromChar
-                        |> String.join ""
+                getNumericValues =
+                    String.filter (validAmountCharacter loggedIn.selectedCommunity)
             in
             case model.status of
                 Loaded community (EditingTransfer form) ->
                     { model
                         | status =
-                            EditingTransfer { form | amount = getNumericValues value }
+                            EditingTransfer
+                                ({ form | amount = getNumericValues value }
+                                    |> validateAmount loggedIn.selectedCommunity
+                                )
                                 |> Loaded community
                     }
                         |> UR.init
@@ -379,7 +461,10 @@ update msg model ({ shared } as loggedIn) =
                 Loaded community (EditingTransfer form) ->
                     { model
                         | status =
-                            EditingTransfer { form | memo = value }
+                            EditingTransfer
+                                ({ form | memo = value }
+                                    |> validateMemo
+                                )
                                 |> Loaded community
                     }
                         |> UR.init
@@ -394,7 +479,9 @@ update msg model ({ shared } as loggedIn) =
                         Just to ->
                             let
                                 newForm =
-                                    validateForm form
+                                    validateForm loggedIn.accountName
+                                        loggedIn.selectedCommunity
+                                        form
 
                                 subscriptionDoc =
                                     Transfer.transferSucceedSubscription model.communityId (Eos.nameToString loggedIn.accountName) (Eos.nameToString to.account)
@@ -412,13 +499,24 @@ update msg model ({ shared } as loggedIn) =
                                                 , ( "subscription", Encode.string subscriptionDoc )
                                                 ]
                                         }
+                                    |> UR.addExt LoggedIn.HideFeedback
 
                             else
                                 { model | status = Loaded c (EditingTransfer newForm) }
                                     |> UR.init
 
                         Nothing ->
-                            { model | status = Loaded c (EditingTransfer (validateForm form)) } |> UR.init
+                            { model
+                                | status =
+                                    Loaded c
+                                        (EditingTransfer
+                                            (validateForm loggedIn.accountName
+                                                loggedIn.selectedCommunity
+                                                form
+                                            )
+                                        )
+                            }
+                                |> UR.init
 
                 _ ->
                     model |> UR.init
@@ -497,7 +595,7 @@ update msg model ({ shared } as loggedIn) =
             in
             case model.status of
                 Loaded c (SendingTransfer form) ->
-                    { model | status = Loaded c (SendingTransferFailed form) }
+                    { model | status = Loaded c (EditingTransfer form) }
                         |> UR.init
                         |> UR.addExt
                             (LoggedIn.ShowFeedback
