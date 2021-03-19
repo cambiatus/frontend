@@ -71,12 +71,26 @@ const env = process.env.NODE_ENV || 'development'
 const graphqlSecret = process.env.GRAPHQL_SECRET || ''
 const config = configuration[env]
 
+const operationsBeforeLoad = []
+
+let setItem = (key, value) => {
+  operationsBeforeLoad.push({ method: 'set', key, value })
+  window.localStorage.setItem(key, value)
+}
+
+let getItem = (key) => window.localStorage.getItem(key)
+
+let removeItem = (key) => {
+  operationsBeforeLoad.push({ method: 'remove', key })
+  window.localStorage.removeItem(key)
+}
+
 function getUserLanguage () {
   const urlParams = new URLSearchParams(window.location.search)
 
   return (
     urlParams.get('lang') ||
-    window.localStorage.getItem(LANGUAGE_KEY) ||
+    getItem(LANGUAGE_KEY) ||
     navigator.language ||
     navigator.userLanguage ||
     'en-US'
@@ -84,7 +98,7 @@ function getUserLanguage () {
 }
 
 function flags () {
-  const user = JSON.parse(window.localStorage.getItem(USER_KEY))
+  const user = JSON.parse(getItem(USER_KEY))
   return {
     env: env,
     graphqlSecret: graphqlSecret,
@@ -92,8 +106,8 @@ function flags () {
     language: getUserLanguage(),
     accountName: (user && user.accountName) || null,
     isPinAvailable: !!(user && user.encryptedKey),
-    authPreference: window.localStorage.getItem(AUTH_PREF_KEY),
-    authToken: window.localStorage.getItem(AUTH_TOKEN),
+    authPreference: getItem(AUTH_PREF_KEY),
+    authToken: getItem(AUTH_TOKEN),
     logo: config.logo,
     logoMobile: config.logoMobile,
     now: Date.now(),
@@ -184,27 +198,27 @@ eos = Eos(config.eosOptions)
 app.ports.storeLanguage.subscribe(storeLanguage)
 
 function storeLanguage (lang) {
-  window.localStorage.setItem(LANGUAGE_KEY, lang)
+  setItem(LANGUAGE_KEY, lang)
 }
 
 // STORE RECENT SEARCHES
 app.ports.storeRecentSearches.subscribe(query =>
-  window.localStorage.setItem(RECENT_SEARCHES, query)
+  setItem(RECENT_SEARCHES, query)
 )
 
 // RETRIEVE RECENT SEARCHES
 app.ports.getRecentSearches.subscribe(() => {
-  app.ports.gotRecentSearches.send(window.localStorage.getItem(RECENT_SEARCHES) || '[]')
+  app.ports.gotRecentSearches.send(getItem(RECENT_SEARCHES) || '[]')
 })
 
 // STORE AUTH PREFERENCE
 
 function storeAuthPreference (auth) {
-  window.localStorage.setItem(AUTH_PREF_KEY, auth)
+  setItem(AUTH_PREF_KEY, auth)
 }
 
 app.ports.storeAuthToken.subscribe(token =>
-  window.localStorage.setItem(AUTH_TOKEN, token)
+  setItem(AUTH_TOKEN, token)
 )
 
 // STORE ACCOUNTNAME
@@ -213,14 +227,14 @@ function storeAccountName (accountName) {
   var storeData = {
     accountName: accountName
   }
-  window.localStorage.removeItem(USER_KEY)
-  window.localStorage.setItem(USER_KEY, JSON.stringify(storeData))
+  removeItem(USER_KEY)
+  setItem(USER_KEY, JSON.stringify(storeData))
 }
 
 // STORE PUSH PREF
 
 function storePushPref (pref) {
-  window.localStorage.setItem(PUSH_PREF, pref)
+  setItem(PUSH_PREF, pref)
 }
 
 // STORE PIN
@@ -240,12 +254,12 @@ async function storePin (data, pin) {
     storeData.encryptedPassphrase = sjcl.encrypt(pin, data.passphrase)
   }
 
-  window.localStorage.removeItem(USER_KEY)
-  window.localStorage.setItem(USER_KEY, JSON.stringify(storeData))
+  removeItem(USER_KEY)
+  setItem(USER_KEY, JSON.stringify(storeData))
 }
 
 function getSelectedCommunity () {
-  return window.localStorage.getItem(SELECTED_COMMUNITY_KEY)
+  return getItem(SELECTED_COMMUNITY_KEY)
 }
 
 function downloadPdf (accountName, passphrase, responseAddress, responseData) {
@@ -329,7 +343,7 @@ async function handleJavascriptPort (arg) {
       if (ecc.isValidPrivate(privateKey)) {
         const publicKey = ecc.privateToPublic(privateKey)
         const accounts = await eos.getKeyAccounts(publicKey)
-        const user = JSON.parse(window.localStorage.getItem(USER_KEY))
+        const user = JSON.parse(getItem(USER_KEY))
         debugLog('loginWithPrivateKey port accounts', accounts)
 
         if (
@@ -433,7 +447,7 @@ async function handleJavascriptPort (arg) {
     case 'changePin': {
       debugLog('changePin port started', '')
 
-      const userStorage = JSON.parse(window.localStorage.getItem(USER_KEY))
+      const userStorage = JSON.parse(getItem(USER_KEY))
       const currentPin = arg.data.currentPin
       const newPin = arg.data.newPin
       const decryptedKey = sjcl.decrypt(currentPin, userStorage.encryptedKey)
@@ -466,7 +480,7 @@ async function handleJavascriptPort (arg) {
     }
     case 'loginWithPin': {
       debugLog('loginWithPin port started', '')
-      const store = JSON.parse(window.localStorage.getItem(USER_KEY))
+      const store = JSON.parse(getItem(USER_KEY))
       const pin = arg.data.pin
       if (store && store.encryptedKey && store.accountName) {
         try {
@@ -480,7 +494,7 @@ async function handleJavascriptPort (arg) {
           storeAuthPreference('pin')
 
           // Set default selected community
-          window.localStorage.setItem(
+          setItem(
             SELECTED_COMMUNITY_KEY,
             flags().selectedCommunity
           )
@@ -582,10 +596,10 @@ async function handleJavascriptPort (arg) {
     }
     case 'logout': {
       debugLog('logout port started', '')
-      window.localStorage.removeItem(USER_KEY)
-      window.localStorage.removeItem(AUTH_PREF_KEY)
-      window.localStorage.removeItem(SELECTED_COMMUNITY_KEY)
-      window.localStorage.removeItem(AUTH_TOKEN)
+      removeItem(USER_KEY)
+      removeItem(AUTH_PREF_KEY)
+      removeItem(SELECTED_COMMUNITY_KEY)
+      removeItem(AUTH_TOKEN)
       Sentry.addBreadcrumb({
         category: 'auth',
         message: 'User logged out'
@@ -641,12 +655,12 @@ async function handleJavascriptPort (arg) {
         app.ports.javascriptInPort.send(response)
       }
 
-      sendResponse(window.localStorage.getItem(PUSH_PREF) !== null)
+      sendResponse(getItem(PUSH_PREF) !== null)
       break
     }
     case 'disablePushPref': {
       debugLog('disablePushPref port started', '')
-      window.localStorage.removeItem(PUSH_PREF)
+      removeItem(PUSH_PREF)
       pushSub.unsubscribeFromPush()
       const response = {
         address: arg.responseAddress,
@@ -670,7 +684,7 @@ async function handleJavascriptPort (arg) {
     }
     case 'downloadAuthPdfFromProfile': {
       debugLog('downloadAuthPdfFromProfile port started', '')
-      const store = JSON.parse(window.localStorage.getItem(USER_KEY))
+      const store = JSON.parse(getItem(USER_KEY))
       const pin = arg.data.pin
 
       // `.encryptedPassphrase` property was added in https://github.com/cambiatus/frontend/pull/270 while redesigning
@@ -953,15 +967,15 @@ async function handleJavascriptPort (arg) {
         type: 'navigation',
         category: 'navigation',
         data: {
-          from: window.localStorage.getItem(SELECTED_COMMUNITY_KEY),
+          from: getItem(SELECTED_COMMUNITY_KEY),
           to: arg.data.selectedCommunity
         },
         message: 'Changed to community ' + arg.data.selectedCommunity,
         level: Sentry.Severity.Info
       })
 
-      window.localStorage.removeItem(SELECTED_COMMUNITY_KEY)
-      window.localStorage.setItem(
+      removeItem(SELECTED_COMMUNITY_KEY)
+      setItem(
         SELECTED_COMMUNITY_KEY,
         arg.data.selectedCommunity
       )
