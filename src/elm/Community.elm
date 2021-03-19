@@ -6,6 +6,7 @@ module Community exposing
     , CreateCommunityData
     , CreateTokenData
     , DashboardInfo
+    , InitialLoad
     , Invite
     , Metadata
     , Model
@@ -28,6 +29,7 @@ module Community exposing
     , encodeCreateTokenData
     , encodeUpdateLogoData
     , encodeUpdateObjectiveAction
+    , initialQuery
     , inviteQuery
     , logoBackground
     , logoTitleQuery
@@ -197,6 +199,25 @@ settingsSelectionSet =
         |> with Community.hasKyc
 
 
+type alias InitialLoad =
+    { name : String
+    , symbol : Symbol
+    , hasObjectives : Bool
+    , hasShop : Bool
+    , hasKyc : Bool
+    }
+
+
+initialLoadSelectionSet : SelectionSet InitialLoad Cambiatus.Object.Community
+initialLoadSelectionSet =
+    SelectionSet.succeed InitialLoad
+        |> with Community.name
+        |> with (Eos.symbolSelectionSet Community.symbol)
+        |> with Community.hasObjectives
+        |> with Community.hasShop
+        |> with Community.hasKyc
+
+
 
 -- Communities Query
 
@@ -249,6 +270,15 @@ communityQuery symbol =
 settingsQuery : Symbol -> SelectionSet (Maybe Settings) RootQuery
 settingsQuery symbol =
     Query.community { symbol = symbolToString symbol } settingsSelectionSet
+
+
+initialQuery : String -> SelectionSet (Maybe InitialLoad) RootQuery
+initialQuery urlCommunityName =
+    Query.communities initialLoadSelectionSet
+        |> SelectionSet.map
+            (List.filter (.name >> String.toLower >> (==) (String.toLower urlCommunityName))
+                >> List.head
+            )
 
 
 logoUrl : Maybe String -> String

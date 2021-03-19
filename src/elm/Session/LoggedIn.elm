@@ -35,6 +35,7 @@ import Auth
 import Avatar
 import Browser.Dom as Dom
 import Browser.Events
+import Browser.Navigation
 import Cambiatus.Object
 import Cambiatus.Object.UnreadNotifications
 import Cambiatus.Subscription as Subscription
@@ -67,6 +68,7 @@ import Task
 import Time exposing (Posix)
 import Translation
 import UpdateResult as UR
+import Url exposing (Url)
 import View.Modal as Modal
 
 
@@ -76,20 +78,36 @@ import View.Modal as Modal
 
 {-| Initialize already logged in user when the page is [re]loaded.
 -}
-init : Shared -> Eos.Name -> Flags -> String -> ( Model, Cmd Msg )
-init shared accountName flags authToken =
+init : Shared -> Eos.Name -> Flags -> String -> Url -> ( Model, Cmd Msg )
+init shared accountName flags authToken url =
     let
         authModel =
             Auth.init shared
+
+        urlCommunity =
+            if getCommunityName url == "app" then
+                "cambiatus"
+
+            else
+                getCommunityName url
     in
     ( initModel shared authModel accountName flags.selectedCommunity authToken
     , Cmd.batch
         [ Api.Graphql.query shared (Just authToken) (Profile.query accountName) CompletedLoadProfile
         , Api.Graphql.query shared (Just authToken) (Community.settingsQuery flags.selectedCommunity) CompletedLoadSettings
+        , Api.Graphql.query shared (Just authToken) (Community.initialQuery urlCommunity) (CompletedInitialLoad url)
         , Ports.getRecentSearches () -- run on the page refresh, duplicated in `initLogin`
         , Task.perform GotTime Time.now
         ]
     )
+
+
+getCommunityName : Url -> String
+getCommunityName url =
+    url.host
+        |> String.split "."
+        |> List.head
+        |> Maybe.withDefault "app"
 
 
 fetchTranslations : String -> Shared -> Cmd Msg
@@ -318,13 +336,9 @@ viewFeedback status message =
 
 viewHelper : (Msg -> pageMsg) -> Page -> Profile.Model -> Model -> Html pageMsg -> Html pageMsg
 viewHelper pageMsg page profile_ ({ shared } as model) content =
-    let
-        { t } =
-            shared.translators
-    in
     div
         [ class "min-h-screen flex flex-col" ]
-        ([ div [ class "bg-white" ]
+        (div [ class "bg-white" ]
             [ div [ class "container mx-auto" ]
                 [ viewHeader model profile_
                     |> Html.map pageMsg
@@ -341,8 +355,7 @@ viewHelper pageMsg page profile_ ({ shared } as model) content =
                 Hidden ->
                     text ""
             ]
-         ]
-            ++ (let
+            :: (let
                     viewClaimWithProofs action proof =
                         [ Action.viewClaimWithProofs proof shared.translators (isAuth model) action
                             |> Html.map (GotActionMsg >> pageMsg)
@@ -777,6 +790,7 @@ type Msg
     | ClickedTryAgainTranslation
     | CompletedLoadProfile (RemoteData (Graphql.Http.Error (Maybe Profile.Model)) (Maybe Profile.Model))
     | CompletedLoadSettings (RemoteData (Graphql.Http.Error (Maybe Community.Settings)) (Maybe Community.Settings))
+    | CompletedInitialLoad Url (RemoteData (Graphql.Http.Error (Maybe Community.InitialLoad)) (Maybe Community.InitialLoad))
     | ClickedTryAgainProfile Eos.Name
     | ClickedLogout
     | ShowNotificationModal Bool
@@ -926,6 +940,34 @@ update msg model =
                 |> UR.logGraphqlError msg err
 
         CompletedLoadSettings _ ->
+            UR.init model
+
+        CompletedInitialLoad url (RemoteData.Success maybeCommunity) ->
+            case maybeCommunity of
+                Just community ->
+                    { model
+                        | hasShop = FeatureLoaded community.hasShop
+                        , hasObjectives = FeatureLoaded community.hasObjectives
+                        , hasKyc = FeatureLoaded community.hasKyc
+                        , selectedCommunity = community.symbol
+                    }
+                        |> UR.init
+
+                Nothing ->
+                    UR.init model
+                        |> UR.addCmd
+                            (if String.startsWith "app" url.host then
+                                Cmd.none
+
+                             else
+                                Browser.Navigation.load
+                                    (Url.toString url
+                                        |> String.replace (getCommunityName url) "app"
+                                    )
+                            )
+
+        -- TODO
+        CompletedInitialLoad _ _ ->
             UR.init model
 
         ClickedTryAgainProfile accountName ->
@@ -1284,6 +1326,9 @@ msgToString msg =
 
         CompletedLoadSettings r ->
             [ "CompletedLoadSettings", UR.remoteDataToString r ]
+
+        CompletedInitialLoad _ r ->
+            [ "CompletedInitialLoad", UR.remoteDataToString r ]
 
         ClickedTryAgainProfile _ ->
             [ "ClickedTryAgainProfile" ]
