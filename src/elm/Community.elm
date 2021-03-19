@@ -202,6 +202,7 @@ settingsSelectionSet =
 type alias InitialLoad =
     { name : String
     , symbol : Symbol
+    , members : List Eos.Name
     , hasObjectives : Bool
     , hasShop : Bool
     , hasKyc : Bool
@@ -213,6 +214,7 @@ initialLoadSelectionSet =
     SelectionSet.succeed InitialLoad
         |> with Community.name
         |> with (Eos.symbolSelectionSet Community.symbol)
+        |> with (Community.members (Eos.nameSelectionSet Profile.account))
         |> with Community.hasObjectives
         |> with Community.hasShop
         |> with Community.hasKyc

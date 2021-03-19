@@ -943,28 +943,39 @@ update msg model =
             UR.init model
 
         CompletedInitialLoad url (RemoteData.Success maybeCommunity) ->
+            let
+                redirect =
+                    if String.startsWith "app." url.host then
+                        Cmd.none
+
+                    else
+                        Browser.Navigation.load
+                            (Url.toString url
+                                |> String.replace (getCommunityName url ++ ".") "app."
+                            )
+            in
             case maybeCommunity of
                 Just community ->
-                    { model
-                        | hasShop = FeatureLoaded community.hasShop
-                        , hasObjectives = FeatureLoaded community.hasObjectives
-                        , hasKyc = FeatureLoaded community.hasKyc
-                        , selectedCommunity = community.symbol
-                    }
-                        |> UR.init
+                    if
+                        Maybe.map (\p -> List.member p.account community.members) (profile model)
+                            |> Maybe.withDefault False
+                    then
+                        { model
+                            | hasShop = FeatureLoaded community.hasShop
+                            , hasObjectives = FeatureLoaded community.hasObjectives
+                            , hasKyc = FeatureLoaded community.hasKyc
+                            , selectedCommunity = community.symbol
+                        }
+                            |> UR.init
+
+                    else
+                        -- TODO
+                        UR.init model
+                            |> UR.addCmd redirect
 
                 Nothing ->
                     UR.init model
-                        |> UR.addCmd
-                            (if String.startsWith "app" url.host then
-                                Cmd.none
-
-                             else
-                                Browser.Navigation.load
-                                    (Url.toString url
-                                        |> String.replace (getCommunityName url) "app"
-                                    )
-                            )
+                        |> UR.addCmd redirect
 
         -- TODO
         CompletedInitialLoad _ _ ->
