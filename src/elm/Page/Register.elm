@@ -831,7 +831,6 @@ update _ msg model { shared } =
                     loadCountryData =
                         Api.Graphql.query
                             shared
-                            -- TODO - This needs auth
                             Nothing
                             (Address.countryQuery "Costa Rica")
                             CompletedLoadCountry

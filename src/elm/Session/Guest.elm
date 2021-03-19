@@ -1,4 +1,4 @@
-module Session.Guest exposing (External(..), Model, Msg(..), Page(..), addAfterLoginRedirect, init, initModel, msgToString, subscriptions, update, view)
+module Session.Guest exposing (External(..), Model, Msg(..), Page(..), addAfterLoginRedirect, init, initLoggingIn, initModel, msgToString, subscriptions, update, view)
 
 import Api.Graphql
 import Auth
@@ -38,6 +38,11 @@ init shared =
 
         Nothing ->
             ( { defaultModel | community = Default }, Cmd.none )
+
+
+initLoggingIn : Shared -> ( Model, Cmd Msg )
+initLoggingIn =
+    init >> Tuple.mapFirst (\m -> { m | isLoggingIn = True })
 
 
 getInvitationId : String -> Maybe String
@@ -81,6 +86,7 @@ type alias Model =
     , showLanguageNav : Bool
     , afterLoginRedirect : Maybe Route
     , community : CommunityStatus
+    , isLoggingIn : Bool
     }
 
 
@@ -102,6 +108,7 @@ initModel shared =
 
             Nothing ->
                 Default
+    , isLoggingIn = False
     }
 
 

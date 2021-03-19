@@ -79,18 +79,36 @@ registerPush requiredArgs object_ =
     Object.selectionForCompositeField "registerPush" [ Argument.required "input" requiredArgs.input Cambiatus.InputObject.encodePushSubscriptionInput ] object_ identity
 
 
+type alias SignInOptionalArguments =
+    { invitationId : OptionalArgument String }
+
+
 type alias SignInRequiredArguments =
     { account : String
     , password : String
     }
 
 
+{-|
+
+  - invitationId - Optional, used to auto invite an user to a community
+
+-}
 signIn :
-    SignInRequiredArguments
+    (SignInOptionalArguments -> SignInOptionalArguments)
+    -> SignInRequiredArguments
     -> SelectionSet decodesTo Cambiatus.Object.Session
     -> SelectionSet (Maybe decodesTo) RootMutation
-signIn requiredArgs object_ =
-    Object.selectionForCompositeField "signIn" [ Argument.required "account" requiredArgs.account Encode.string, Argument.required "password" requiredArgs.password Encode.string ] object_ (identity >> Decode.nullable)
+signIn fillInOptionals requiredArgs object_ =
+    let
+        filledInOptionals =
+            fillInOptionals { invitationId = Absent }
+
+        optionalArgs =
+            [ Argument.optional "invitationId" filledInOptionals.invitationId Encode.string ]
+                |> List.filterMap identity
+    in
+    Object.selectionForCompositeField "signIn" (optionalArgs ++ [ Argument.required "account" requiredArgs.account Encode.string, Argument.required "password" requiredArgs.password Encode.string ]) object_ (identity >> Decode.nullable)
 
 
 type alias SignUpOptionalArguments =
