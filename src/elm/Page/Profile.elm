@@ -220,7 +220,7 @@ viewSettings loggedIn model profile =
                         Center
                         Nothing
     in
-    div [ class "bg-white mb-6 w-full md:bg-gray-100 md:max-w-xl" ]
+    div [ class "bg-white mb-6 w-full md:bg-gray-100" ]
         [ ul [ class "w-full divide-y divide-gray-500 px-4" ]
             [ viewProfileItem
                 (text (t "profile.12words.title"))
@@ -367,11 +367,11 @@ viewUserInfo loggedIn profile pageType privateView =
 
         leftSide =
             div
-                [ class "py-4 bg-white border-r border-gray-500 flex md:w-1/2" ]
+                [ class "p-4 bg-white border-white border-r md:border-gray-500 flex md:w-1/2" ]
                 [ div
-                    [ class "w-full px-4 md:container md:mx-auto md:max-w-lg self-center" ]
+                    [ class "w-full md:container md:mx-auto md:max-w-lg self-center" ]
                     [ div
-                        [ class "pb-4 w-full px-4 md:container md:mx-auto md:max-w-lg" ]
+                        [ class "pb-4 w-full md:container md:mx-auto" ]
                         [ div [ class "flex mb-4 items-center flex-wrap justify-center" ]
                             [ Avatar.view profile.avatar "w-20 h-20 mr-6 xs-max:w-16 xs-max:h-16 xs-max:mr-3"
                             , div [ class "flex-grow flex items-center justify-between" ]
@@ -416,7 +416,7 @@ viewUserInfo loggedIn profile pageType privateView =
 
         rightSide =
             div [ class "w-full bg-white md:w-1/2 md:bg-gray-100" ]
-                [ ul [ class "divide-y divide-gray-500 px-4 w-full md:max-w-xl mb-4" ]
+                [ ul [ class "divide-y divide-gray-500 px-4 w-full mb-4" ]
                     ([ viewProfileItem
                         (text (t "profile.locations"))
                         (text location)
@@ -446,9 +446,12 @@ viewUserInfo loggedIn profile pageType privateView =
                 , privateView
                 ]
     in
-    div [ class "flex-grow md:flex" ]
-        [ leftSide
-        , rightSide
+    div [ class "flex-grow flex bg-gray-100 relative" ]
+        [ div [ class "z-10 flex flex-col w-full container mx-auto md:flex-row" ]
+            [ leftSide
+            , rightSide
+            ]
+        , div [ class "z-0 absolute w-full md:w-1/2 h-full max-h-100 bg-white" ] []
         ]
 
 
