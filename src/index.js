@@ -87,7 +87,7 @@ let removeItem = (key) => {
 
 const setupIframe = (isInitial) => {
   const iframe = document.createElement('iframe')
-  const src = 'http://localhost:8080'
+  const src = config.endpoints.globalStorage
 
   iframe.onload = () => {
     const contentWindow = iframe.contentWindow
