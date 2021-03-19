@@ -3,7 +3,8 @@ module Page.Profile.Public exposing (Model, Msg, Status, init, initModel, jsAddr
 import Api.Graphql
 import Eos.Account as Eos
 import Graphql.Http
-import Html exposing (Html, div)
+import Html exposing (Html, div, text)
+import Html.Attributes exposing (class)
 import Json.Decode exposing (Value)
 import Page
 import Page.Profile exposing (ProfilePage(..), viewUserInfo)
@@ -72,11 +73,12 @@ view loggedIn status =
                     Page.fullPageLoading loggedIn.shared
 
                 Loaded profile ->
-                    div []
+                    div [ class "flex-grow flex flex-col" ]
                         [ Page.viewHeader loggedIn (t "menu.profile") Route.Dashboard
                         , viewUserInfo loggedIn
                             profile
                             Public
+                            (text "")
                         ]
 
                 NotFound ->

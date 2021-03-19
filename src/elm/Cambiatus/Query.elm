@@ -121,7 +121,7 @@ type alias CountryRequiredArguments =
     { input : Cambiatus.InputObject.CountryInput }
 
 
-{-| List of supported countries
+{-| [Auth required] List of supported countries
 -}
 country :
     CountryRequiredArguments
