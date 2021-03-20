@@ -79,7 +79,7 @@ init flags navKey url =
         ( Just ( accountName, _ ), Just authToken ) ->
             let
                 ( model, cmd ) =
-                    LoggedIn.init shared accountName flags authToken url
+                    LoggedIn.init shared accountName flags authToken
             in
             UR.init (LoggedIn model)
                 |> UR.addCmd (Cmd.map GotLoggedInMsg cmd)

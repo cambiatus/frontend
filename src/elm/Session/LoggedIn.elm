@@ -38,6 +38,7 @@ import Browser.Events
 import Browser.Navigation
 import Cambiatus.Object
 import Cambiatus.Object.UnreadNotifications
+import Cambiatus.Query
 import Cambiatus.Subscription as Subscription
 import Community
 import Eos exposing (Symbol)
@@ -46,7 +47,7 @@ import Flags exposing (Flags)
 import Graphql.Document
 import Graphql.Http
 import Graphql.Operation exposing (RootSubscription)
-import Graphql.SelectionSet exposing (SelectionSet)
+import Graphql.SelectionSet as SelectionSet exposing (SelectionSet)
 import Html exposing (Html, a, button, div, footer, img, nav, p, span, text)
 import Html.Attributes exposing (class, classList, src, style, type_)
 import Html.Events exposing (onClick, onMouseEnter)
@@ -78,24 +79,16 @@ import View.Modal as Modal
 
 {-| Initialize already logged in user when the page is [re]loaded.
 -}
-init : Shared -> Eos.Name -> Flags -> String -> Url -> ( Model, Cmd Msg )
-init shared accountName flags authToken url =
+init : Shared -> Eos.Name -> Flags -> String -> ( Model, Cmd Msg )
+init shared accountName flags authToken =
     let
         authModel =
             Auth.init shared
-
-        urlCommunity =
-            if getCommunityName url == "app" then
-                "cambiatus"
-
-            else
-                getCommunityName url
     in
     ( initModel shared authModel accountName flags.selectedCommunity authToken
     , Cmd.batch
         [ Api.Graphql.query shared (Just authToken) (Profile.query accountName) CompletedLoadProfile
         , Api.Graphql.query shared (Just authToken) (Community.settingsQuery flags.selectedCommunity) CompletedLoadSettings
-        , Api.Graphql.query shared (Just authToken) (Community.initialQuery urlCommunity) (CompletedInitialLoad url)
         , Ports.getRecentSearches () -- run on the page refresh, duplicated in `initLogin`
         , Task.perform GotTime Time.now
         ]
@@ -121,23 +114,23 @@ fetchTranslations language _ =
 initLogin : Shared -> Auth.Model -> Profile.Model -> String -> ( Model, Cmd Msg )
 initLogin shared authModel profile_ authToken =
     let
-        selectedCommunity : Symbol
-        selectedCommunity =
+        communitySymbol =
             List.head profile_.communities
                 |> Maybe.map .id
                 |> Maybe.withDefault Eos.cambiatusSymbol
 
         model =
-            initModel shared authModel profile_.account selectedCommunity authToken
+            initModel shared authModel profile_.account communitySymbol authToken
     in
     ( { model
         | profile = Loaded profile_
       }
     , Cmd.batch
-        [ Task.perform
-            (\_ -> SelectCommunity selectedCommunity Cmd.none)
-            (Task.succeed ())
-        , Ports.getRecentSearches () -- run on the passphrase login, duplicated in `init`
+        -- TODO
+        -- [ Task.perform
+        --     (\_ -> SelectedCommunity community)
+        --     (Task.succeed ())
+        [ Ports.getRecentSearches () -- run on the passphrase login, duplicated in `init`
         ]
     )
 
@@ -639,7 +632,7 @@ communitySelectorModal model =
         viewCommunityItem c =
             div
                 [ class "flex items-center p-4 text-body cursor-pointer hover:text-black hover:bg-gray-100"
-                , onClick <| SelectCommunity c.id (Route.replaceUrl model.shared.navKey Route.Dashboard)
+                , onClick <| SelectedCommunity c
                 ]
                 [ img [ src c.logo, class "h-16 w-16 mr-5 object-scale-down" ] []
                 , text c.name
@@ -790,7 +783,7 @@ type Msg
     | ClickedTryAgainTranslation
     | CompletedLoadProfile (RemoteData (Graphql.Http.Error (Maybe Profile.Model)) (Maybe Profile.Model))
     | CompletedLoadSettings (RemoteData (Graphql.Http.Error (Maybe Community.Settings)) (Maybe Community.Settings))
-    | CompletedInitialLoad Url (RemoteData (Graphql.Http.Error (Maybe Community.InitialLoad)) (Maybe Community.InitialLoad))
+    | CompletedLoadUrlCommunity (RemoteData (Graphql.Http.Error (Maybe Profile.CommunityInfo)) (Maybe Profile.CommunityInfo))
     | ClickedTryAgainProfile Eos.Name
     | ClickedLogout
     | ShowNotificationModal Bool
@@ -804,7 +797,7 @@ type Msg
     | KeyDown String
     | OpenCommunitySelector
     | CloseCommunitySelector
-    | SelectCommunity Symbol (Cmd Msg)
+    | SelectedCommunity Profile.CommunityInfo
     | HideFeedbackLocal
     | GotSearchMsg Search.Msg
     | GotActionMsg Action.Msg
@@ -817,9 +810,6 @@ update msg model =
     let
         shared =
             model.shared
-
-        { t, tr } =
-            shared.translators
 
         focusMainContent b alternative =
             if b then
@@ -887,11 +877,39 @@ update msg model =
                 subscriptionDoc =
                     unreadCountSubscription model.accountName
                         |> Graphql.Document.serializeSubscription
+
+                urlCommunity =
+                    if getCommunityName shared.url == "app" then
+                        "cambiatus"
+
+                    else
+                        getCommunityName shared.url
             in
             case profile_ of
                 Just p ->
                     { model | profile = Loaded p }
-                        |> UR.init
+                        |> (case List.find (.name >> (==) urlCommunity) p.communities of
+                                Just c ->
+                                    selectCommunity c
+
+                                Nothing ->
+                                    UR.init
+                                        >> UR.addCmd
+                                            (Api.Graphql.query shared
+                                                (Just model.authToken)
+                                                (Cambiatus.Query.communities Profile.communityInfoSelectionSet
+                                                    |> SelectionSet.map
+                                                        (List.filter
+                                                            (.name
+                                                                >> String.toLower
+                                                                >> (==) (String.toLower urlCommunity)
+                                                            )
+                                                            >> List.head
+                                                        )
+                                                )
+                                                CompletedLoadUrlCommunity
+                                            )
+                           )
                         |> UR.addPort
                             { responseAddress = CompletedLoadUnread (Encode.string "")
                             , responseData = Encode.null
@@ -942,34 +960,37 @@ update msg model =
         CompletedLoadSettings _ ->
             UR.init model
 
-        CompletedInitialLoad url (RemoteData.Success maybeCommunity) ->
+        CompletedLoadUrlCommunity (RemoteData.Success maybeCommunity) ->
             let
                 redirect =
-                    if String.startsWith "app." url.host then
+                    if String.startsWith "app." shared.url.host then
                         Cmd.none
 
                     else
                         Browser.Navigation.load
-                            (Url.toString url
-                                |> String.replace (getCommunityName url ++ ".") "app."
+                            (Url.toString shared.url
+                                |> String.replace (getCommunityName shared.url ++ ".") "app."
                             )
             in
             case maybeCommunity of
                 Just community ->
-                    if
-                        Maybe.map (\p -> List.member p.account community.members) (profile model)
-                            |> Maybe.withDefault False
-                    then
+                    let
+                        isMember =
+                            Maybe.map (\p -> List.member community p.communities) (profile model)
+                                |> Maybe.withDefault False
+                    in
+                    if isMember then
                         { model
                             | hasShop = FeatureLoaded community.hasShop
-                            , hasObjectives = FeatureLoaded community.hasObjectives
+                            , hasObjectives = FeatureLoaded community.hasActions
                             , hasKyc = FeatureLoaded community.hasKyc
-                            , selectedCommunity = community.symbol
+                            , selectedCommunity = community.id
                         }
                             |> UR.init
 
                     else
-                        -- TODO
+                        -- Profile is loaded, but user is not a member of the community
+                        -- Need to change this to use auto invite communities
                         UR.init model
                             |> UR.addCmd redirect
 
@@ -978,7 +999,7 @@ update msg model =
                         |> UR.addCmd redirect
 
         -- TODO
-        CompletedInitialLoad _ _ ->
+        CompletedLoadUrlCommunity _ ->
             UR.init model
 
         ClickedTryAgainProfile accountName ->
@@ -1106,27 +1127,8 @@ update msg model =
             { model | showCommunitySelector = False }
                 |> UR.init
 
-        SelectCommunity communityId doNext ->
-            { model
-                | selectedCommunity = communityId
-                , showCommunitySelector = False
-                , searchModel =
-                    Search.closeSearch shared model.authToken model.searchModel
-                        |> Tuple.first
-                        |> (\searchModel -> { searchModel | selectedCommunity = communityId })
-            }
-                |> UR.init
-                |> UR.addCmd (Api.Graphql.query shared (Just model.authToken) (Community.settingsQuery communityId) CompletedLoadSettings)
-                |> UR.addPort
-                    { responseAddress = msg
-                    , responseData = Encode.null
-                    , data =
-                        Encode.object
-                            [ ( "selectedCommunity", Eos.encodeSymbol communityId )
-                            , ( "name", Encode.string "setSelectedCommunity" )
-                            ]
-                    }
-                |> UR.addCmd doNext
+        SelectedCommunity communityInfo ->
+            selectCommunity communityInfo model
 
 
 handleActionMsg : Model -> Action.Msg -> UpdateResult
@@ -1174,6 +1176,38 @@ handleActionMsg ({ shared } as model) actionMsg =
                 _ ->
                     Cmd.none
             )
+
+
+selectCommunity : Profile.CommunityInfo -> Model -> UpdateResult
+selectCommunity community ({ shared } as model) =
+    let
+        communityUrl =
+            "http://"
+                ++ (if String.toLower community.name == "cambiatus" then
+                        "app"
+
+                    else
+                        String.toLower community.name
+                   )
+                -- TODO - Change URL to be dynamic
+                ++ ".localhost:3000/dashboard"
+    in
+    if community.id == model.selectedCommunity then
+        { model
+            | selectedCommunity = community.id
+            , showCommunitySelector = False
+            , searchModel =
+                Search.closeSearch shared model.authToken model.searchModel
+                    |> Tuple.first
+                    |> (\searchModel -> { searchModel | selectedCommunity = community.id })
+        }
+            |> UR.init
+            |> UR.addCmd (Api.Graphql.query shared (Just model.authToken) (Community.settingsQuery community.id) CompletedLoadSettings)
+            |> UR.addCmd (Api.Graphql.query shared (Just model.authToken) (Community.settingsQuery community.id) CompletedLoadSettings)
+
+    else
+        UR.init model
+            |> UR.addCmd (Browser.Navigation.load communityUrl)
 
 
 closeModal : UpdateResult -> UpdateResult
@@ -1338,7 +1372,7 @@ msgToString msg =
         CompletedLoadSettings r ->
             [ "CompletedLoadSettings", UR.remoteDataToString r ]
 
-        CompletedInitialLoad _ r ->
+        CompletedLoadUrlCommunity r ->
             [ "CompletedInitialLoad", UR.remoteDataToString r ]
 
         ClickedTryAgainProfile _ ->
@@ -1380,7 +1414,7 @@ msgToString msg =
         CloseCommunitySelector ->
             [ "CloseCommunitySelector" ]
 
-        SelectCommunity _ _ ->
+        SelectedCommunity _ ->
             [ "SelectCommunity" ]
 
         HideFeedbackLocal ->

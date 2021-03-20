@@ -6,6 +6,7 @@ module Profile exposing
     , Model
     , ProfileCreate
     , ProfileForm
+    , communityInfoSelectionSet
     , decode
     , deleteKycAndAddressMutation
     , emptyProfileForm
