@@ -298,10 +298,16 @@ update msg model loggedIn =
 
 profileClaimQuery : LoggedIn.Model -> String -> Cmd Msg
 profileClaimQuery ({ shared, authToken } as loggedIn) accountName =
-    Api.Graphql.query shared
-        (Just authToken)
-        (Cambiatus.Query.user { account = accountName } (selectionSet loggedIn.selectedCommunity))
-        ClaimsLoaded
+    -- TODO
+    case loggedIn.selectedCommunity of
+        RemoteData.Success community ->
+            Api.Graphql.query shared
+                (Just authToken)
+                (Cambiatus.Query.user { account = accountName } (selectionSet community.symbol))
+                ClaimsLoaded
+
+        _ ->
+            Cmd.none
 
 
 selectionSet : Eos.Symbol -> SelectionSet ProfileClaims Cambiatus.Object.User

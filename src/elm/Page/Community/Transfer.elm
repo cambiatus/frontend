@@ -436,23 +436,29 @@ update msg model ({ shared } as loggedIn) =
                 |> UR.addCmd cmd
 
         EnteredAmount value ->
-            let
-                getNumericValues : String -> String
-                getNumericValues =
-                    String.filter (validAmountCharacter loggedIn.selectedCommunity)
-            in
-            case model.status of
-                Loaded community (EditingTransfer form) ->
-                    { model
-                        | status =
-                            EditingTransfer
-                                ({ form | amount = getNumericValues value }
-                                    |> validateAmount loggedIn.selectedCommunity
-                                )
-                                |> Loaded community
-                    }
-                        |> UR.init
+            case loggedIn.selectedCommunity of
+                RemoteData.Success selectedCommunity ->
+                    let
+                        getNumericValues : String -> String
+                        getNumericValues =
+                            String.filter (validAmountCharacter selectedCommunity.symbol)
+                    in
+                    case model.status of
+                        Loaded community (EditingTransfer form) ->
+                            { model
+                                | status =
+                                    EditingTransfer
+                                        ({ form | amount = getNumericValues value }
+                                            |> validateAmount selectedCommunity.symbol
+                                        )
+                                        |> Loaded community
+                            }
+                                |> UR.init
 
+                        _ ->
+                            model |> UR.init
+
+                -- TODO
                 _ ->
                     model |> UR.init
 
@@ -479,9 +485,15 @@ update msg model ({ shared } as loggedIn) =
                         Just to ->
                             let
                                 newForm =
-                                    validateForm loggedIn.accountName
-                                        loggedIn.selectedCommunity
-                                        form
+                                    -- TODO
+                                    case loggedIn.selectedCommunity of
+                                        RemoteData.Success community ->
+                                            validateForm loggedIn.accountName
+                                                community.symbol
+                                                form
+
+                                        _ ->
+                                            form
 
                                 subscriptionDoc =
                                     Transfer.transferSucceedSubscription model.communityId (Eos.nameToString loggedIn.accountName) (Eos.nameToString to.account)
@@ -506,17 +518,23 @@ update msg model ({ shared } as loggedIn) =
                                     |> UR.init
 
                         Nothing ->
-                            { model
-                                | status =
-                                    Loaded c
-                                        (EditingTransfer
-                                            (validateForm loggedIn.accountName
-                                                loggedIn.selectedCommunity
-                                                form
-                                            )
-                                        )
-                            }
-                                |> UR.init
+                            -- TODO
+                            case loggedIn.selectedCommunity of
+                                RemoteData.Success community ->
+                                    { model
+                                        | status =
+                                            Loaded c
+                                                (EditingTransfer
+                                                    (validateForm loggedIn.accountName
+                                                        community.symbol
+                                                        form
+                                                    )
+                                                )
+                                    }
+                                        |> UR.init
+
+                                _ ->
+                                    UR.init model
 
                 _ ->
                     model |> UR.init

@@ -439,7 +439,14 @@ viewForm ({ shared } as loggedIn) balances imageStatus isEdit isDisabled deleteM
                             ]
                             []
                         , span [ class "w-1/5 flex text-white items-center justify-center bg-indigo-500 text-body uppercase rounded-r-sm" ]
-                            [ text (Eos.symbolToSymbolCodeString loggedIn.selectedCommunity) ]
+                            -- TODO
+                            (case loggedIn.selectedCommunity of
+                                RemoteData.Success community ->
+                                    [ text (Eos.symbolToSymbolCodeString community.symbol) ]
+
+                                _ ->
+                                    []
+                            )
                         ]
                     , viewFieldErrors (listErrors shared.translations form.price)
                     ]
@@ -799,43 +806,61 @@ update msg model loggedIn =
                                 |> UR.init
 
                     EditingUpdate balances sale (Uploaded url) _ form ->
-                        if isValidForm form then
-                            performRequest
-                                ClickedSave
-                                (Saving balances sale (Uploaded url) form)
-                                loggedIn
-                                "updatesale"
-                                (encodeUpdateForm sale form loggedIn.selectedCommunity)
+                        -- TODO
+                        case loggedIn.selectedCommunity of
+                            RemoteData.Success community ->
+                                if isValidForm form then
+                                    performRequest
+                                        ClickedSave
+                                        (Saving balances sale (Uploaded url) form)
+                                        loggedIn
+                                        "updatesale"
+                                        (encodeUpdateForm sale form community.symbol)
 
-                        else
-                            validatedModel
-                                |> UR.init
+                                else
+                                    validatedModel
+                                        |> UR.init
+
+                            _ ->
+                                validatedModel |> UR.init
 
                     EditingUpdate balances sale (UploadFailed error) _ form ->
-                        if isValidForm form then
-                            performRequest
-                                ClickedSave
-                                (Saving balances sale (UploadFailed error) form)
-                                loggedIn
-                                "updatesale"
-                                (encodeUpdateForm sale form loggedIn.selectedCommunity)
+                        -- TODO
+                        case loggedIn.selectedCommunity of
+                            RemoteData.Success community ->
+                                if isValidForm form then
+                                    performRequest
+                                        ClickedSave
+                                        (Saving balances sale (UploadFailed error) form)
+                                        loggedIn
+                                        "updatesale"
+                                        (encodeUpdateForm sale form community.symbol)
 
-                        else
-                            validatedModel
-                                |> UR.init
+                                else
+                                    validatedModel
+                                        |> UR.init
+
+                            _ ->
+                                validatedModel |> UR.init
 
                     EditingUpdate balances sale NoImage _ form ->
-                        if isValidForm form then
-                            performRequest
-                                ClickedSave
-                                (Saving balances sale NoImage form)
-                                loggedIn
-                                "updatesale"
-                                (encodeUpdateForm sale form loggedIn.selectedCommunity)
+                        -- TODO
+                        case loggedIn.selectedCommunity of
+                            RemoteData.Success community ->
+                                if isValidForm form then
+                                    performRequest
+                                        ClickedSave
+                                        (Saving balances sale NoImage form)
+                                        loggedIn
+                                        "updatesale"
+                                        (encodeUpdateForm sale form community.symbol)
 
-                        else
-                            validatedModel
-                                |> UR.init
+                                else
+                                    validatedModel
+                                        |> UR.init
+
+                            _ ->
+                                validatedModel |> UR.init
 
                     _ ->
                         validatedModel
@@ -1072,7 +1097,8 @@ encodeCreateForm loggedIn form =
             String.toFloat (getInput form.price)
 
         quantity =
-            case Maybe.map2 (\p s -> Eos.Asset p s) price (Just loggedIn.selectedCommunity) of
+            -- TODO
+            case Maybe.map2 (\p c -> Eos.Asset p c.symbol) price (RemoteData.toMaybe loggedIn.selectedCommunity) of
                 Nothing ->
                     Encode.string ""
 

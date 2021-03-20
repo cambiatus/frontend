@@ -4,10 +4,12 @@ module Community exposing
     , Balance
     , ClaimResponse
     , CreateCommunityData
-    , CreateTokenData
-    , DashboardInfo
+    ,  CreateTokenData
+       -- , DashboardInfo
+
     , Invite
     , Metadata
+    , Minimal
     , Model
     , Objective
     , Settings
@@ -17,10 +19,12 @@ module Community exposing
     , WithObjectives
     , claimSelectionSet
     , communitiesQuery
+    , communityNameQuery
     , communityQuery
     , communitySelectionSet
-    , createCommunityData
-    , dashboardSelectionSet
+    ,  createCommunityData
+       -- , dashboardSelectionSet
+
     , decodeBalance
     , decodeTransaction
     , encodeCreateCommunityData
@@ -32,10 +36,13 @@ module Community exposing
     , logoBackground
     , logoTitleQuery
     , logoUrl
+    , minimalQuery
+    , minimalSelectionSet
     , newCommunitySubscription
     , objectiveSelectionSet
     , settingsQuery
     , settingsSelectionSet
+    , toMinimal
     , toVerifications
     )
 
@@ -69,19 +76,31 @@ import View.Tag as Tag
 
 
 
--- DashboardInfo for Dashboard
+-- Minimal set of info
 
 
-type alias DashboardInfo =
-    { name : String
+type alias Minimal =
+    { symbol : Symbol
+    , name : String
     , logo : String
-    , memberCount : Int
-    , transferCount : Int
-    , actionCount : Int
-    , saleCount : Int
+    , hasShop : Bool
     , hasObjectives : Bool
+    , hasKyc : Bool
     , creator : Eos.Name
     , validators : List Eos.Name
+    }
+
+
+toMinimal : Model -> Minimal
+toMinimal model =
+    { symbol = model.symbol
+    , name = model.name
+    , logo = model.logo
+    , hasShop = model.hasShop
+    , hasObjectives = model.hasObjectives
+    , hasKyc = model.hasKyc
+    , creator = model.creator
+    , validators = model.validators
     }
 
 
@@ -105,7 +124,7 @@ type alias Metadata =
 
 
 type alias Model =
-    { title : String
+    { name : String
     , description : String
     , symbol : Symbol
     , logo : String
@@ -125,6 +144,7 @@ type alias Model =
     , hasObjectives : Bool
     , hasShop : Bool
     , hasKyc : Bool
+    , validators : List Eos.Name
     }
 
 
@@ -143,16 +163,15 @@ communitiesSelectionSet =
         |> with Community.memberCount
 
 
-dashboardSelectionSet : SelectionSet DashboardInfo Cambiatus.Object.Community
-dashboardSelectionSet =
-    SelectionSet.succeed DashboardInfo
+minimalSelectionSet : SelectionSet Minimal Cambiatus.Object.Community
+minimalSelectionSet =
+    SelectionSet.succeed Minimal
+        |> with (Eos.symbolSelectionSet Community.symbol)
         |> with Community.name
         |> with Community.logo
-        |> with Community.memberCount
-        |> with Community.transferCount
-        |> with Community.actionCount
-        |> with Community.productCount
+        |> with Community.hasShop
         |> with Community.hasObjectives
+        |> with Community.hasKyc
         |> with (Eos.nameSelectionSet Community.creator)
         |> with (Community.validators (Eos.nameSelectionSet Profile.account))
 
@@ -180,6 +199,7 @@ communitySelectionSet =
         |> with Community.hasObjectives
         |> with Community.hasShop
         |> with Community.hasKyc
+        |> with (Community.validators (Eos.nameSelectionSet Profile.account))
 
 
 type alias Settings =
@@ -206,6 +226,11 @@ communitiesQuery =
     Query.communities communitiesSelectionSet
 
 
+minimalQuery : SelectionSet (List Minimal) RootQuery
+minimalQuery =
+    Query.communities minimalSelectionSet
+
+
 
 -- NEW COMMUNITY NAME
 
@@ -230,9 +255,9 @@ newCommunitySubscription symbol =
     Subscription.newcommunity args selectionSet
 
 
-logoTitleQuery : Symbol -> SelectionSet (Maybe DashboardInfo) RootQuery
+logoTitleQuery : Symbol -> SelectionSet (Maybe Minimal) RootQuery
 logoTitleQuery symbol =
-    Query.community { symbol = symbolToString symbol } dashboardSelectionSet
+    Query.community { symbol = symbolToString symbol } minimalSelectionSet
 
 
 type alias WithObjectives =
@@ -244,6 +269,19 @@ type alias WithObjectives =
 communityQuery : Symbol -> SelectionSet (Maybe Model) RootQuery
 communityQuery symbol =
     Query.community { symbol = symbolToString symbol } communitySelectionSet
+
+
+communityNameQuery : String -> SelectionSet (Maybe Model) RootQuery
+communityNameQuery name =
+    Query.communities communitySelectionSet
+        |> SelectionSet.map
+            (List.filter
+                (.name
+                    >> String.toLower
+                    >> (==) (String.toLower name)
+                )
+                >> List.head
+            )
 
 
 settingsQuery : Symbol -> SelectionSet (Maybe Settings) RootQuery

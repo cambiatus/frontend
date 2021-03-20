@@ -98,7 +98,7 @@ view loggedIn model =
         title =
             case model.pageStatus of
                 Loaded community ->
-                    community.title
+                    community.name
 
                 Loading ->
                     t ""
@@ -119,7 +119,7 @@ view loggedIn model =
 
                 Loaded community ->
                     div []
-                        [ Page.viewHeader loggedIn community.title Route.Dashboard
+                        [ Page.viewHeader loggedIn community.name Route.Dashboard
                         , div [ class "bg-white p-4" ]
                             [ div [ class "container mx-auto px-4" ]
                                 [ div [ class "h-24 w-24 rounded-full mx-auto" ]
@@ -127,7 +127,7 @@ view loggedIn model =
                                     ]
                                 , div [ class "flex flex-wrap w-full items-center" ]
                                     [ p [ class "text-4xl font-bold" ]
-                                        [ text community.title ]
+                                        [ text community.name ]
                                     ]
                                 , p [ class "text-grey-200 text-sm" ] [ text community.description ]
                                 ]

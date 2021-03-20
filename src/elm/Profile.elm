@@ -105,7 +105,7 @@ buildModel name account avatar email bio location interests communities analysis
 
 
 type alias CommunityInfo =
-    { id : Symbol
+    { symbol : Symbol
     , name : String
     , logo : String
     , hasShop : Bool

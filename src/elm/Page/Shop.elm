@@ -49,10 +49,16 @@ init loggedIn filter =
     in
     ( model
     , Cmd.batch
-        [ Api.Graphql.query loggedIn.shared
-            (Just loggedIn.authToken)
-            (Shop.productsQuery filter loggedIn.accountName loggedIn.selectedCommunity)
-            CompletedSalesLoad
+        [ -- TODO
+          case loggedIn.selectedCommunity of
+            RemoteData.Success community ->
+                Api.Graphql.query loggedIn.shared
+                    (Just loggedIn.authToken)
+                    (Shop.productsQuery filter loggedIn.accountName community.symbol)
+                    CompletedSalesLoad
+
+            _ ->
+                Cmd.none
         , Api.getBalances loggedIn.shared loggedIn.accountName CompletedLoadBalances
         , Task.perform GotTime Time.now
         ]
@@ -154,17 +160,20 @@ view loggedIn model =
                 LoggedIn.Loaded profile ->
                     let
                         selectedCommunity =
-                            profile.communities
-                                |> List.filter (\p -> p.id == loggedIn.selectedCommunity)
-                                |> List.head
+                            -- TODO
+                            RemoteData.toMaybe loggedIn.selectedCommunity
+                                |> Maybe.map (\community -> List.filter (\p -> p.symbol == community.symbol) profile.communities)
+                                |> Maybe.andThen List.head
+                                |> Maybe.map (\c -> { name = c.name, symbol = c.symbol })
+                                |> Maybe.withDefault { name = "Cambiatus", symbol = Eos.cambiatusSymbol }
                     in
-                    case selectedCommunity of
-                        Just c ->
-                            c.name
+                    selectedCommunity.name
 
-                        Nothing ->
-                            Eos.symbolToSymbolCodeString loggedIn.selectedCommunity
-
+                -- case selectedCommunity of
+                -- Just c ->
+                --     c.name
+                -- Nothing ->
+                --     Eos.symbolToSymbolCodeString loggedIn.selectedCommunity
                 _ ->
                     ""
 

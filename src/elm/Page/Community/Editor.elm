@@ -135,7 +135,7 @@ editForm community =
                     , defaultLogos ++ [ Uploaded community.logo ]
                     )
     in
-    { name = community.title
+    { name = community.name
     , description = community.description
     , symbol = Eos.symbolToString community.symbol
     , logoSelected = logoSelected

@@ -381,10 +381,16 @@ viewUserInfo loggedIn profile pageType =
                 ]
             , case pageType of
                 Public ->
-                    viewTransferButton
-                        loggedIn.shared
-                        loggedIn.selectedCommunity
-                        account
+                    -- TODO
+                    case loggedIn.selectedCommunity of
+                        RemoteData.Success community ->
+                            viewTransferButton
+                                loggedIn.shared
+                                community.symbol
+                                account
+
+                        _ ->
+                            text ""
 
                 Private ->
                     text ""

@@ -38,11 +38,10 @@ import UpdateResult as UR
 
 
 init : LoggedIn.Model -> ( Model, Cmd Msg )
-init ({ shared, selectedCommunity, authToken } as loggedIn) =
+init loggedIn =
     ( initModel
     , Cmd.batch
         [ fetchAnalysis loggedIn initFilter Nothing
-        , Api.Graphql.query shared (Just authToken) (Community.communityQuery selectedCommunity) CompletedCommunityLoad
         ]
     )
 
@@ -53,7 +52,6 @@ init ({ shared, selectedCommunity, authToken } as loggedIn) =
 
 type alias Model =
     { status : Status
-    , communityStatus : CommunityStatus
     , claimModalStatus : Claim.ModalStatus
     , autoCompleteState : Select.State
     , reloadOnNextQuery : Bool
@@ -64,7 +62,6 @@ type alias Model =
 initModel : Model
 initModel =
     { status = Loading
-    , communityStatus = LoadingCommunity
     , claimModalStatus = Claim.Closed
     , autoCompleteState = Select.newState ""
     , reloadOnNextQuery = False
@@ -76,12 +73,6 @@ type Status
     = Loading
     | Loaded (List Claim.Model) (Maybe Api.Relay.PageInfo)
     | Failed
-
-
-type CommunityStatus
-    = LoadingCommunity
-    | LoadedCommunity Community.Model
-    | FailedCommunity
 
 
 type alias Filter =
@@ -187,8 +178,8 @@ viewFilters ({ shared } as loggedIn) model =
         [ div []
             [ span [ class "input-label" ]
                 [ text_ "all_analysis.filter.user" ]
-            , case model.communityStatus of
-                LoadedCommunity community ->
+            , case loggedIn.selectedCommunity of
+                RemoteData.Success community ->
                     let
                         selectedUsers =
                             Maybe.map (\v -> [ v ]) model.filters.profile
@@ -313,7 +304,6 @@ type Msg
     | GotVoteResult Claim.ClaimId (Result (Maybe Value) String)
     | SelectMsg (Select.Msg Profile.Minimal)
     | OnSelectVerifier (Maybe Profile.Minimal)
-    | CompletedCommunityLoad (RemoteData (Graphql.Http.Error (Maybe Community.Model)) (Maybe Community.Model))
     | ShowMore
     | ClearSelectSelection
     | SelectStatusFilter StatusFilter
@@ -489,22 +479,6 @@ update msg model loggedIn =
                 _ ->
                     UR.init model
 
-        CompletedCommunityLoad (RemoteData.Success community) ->
-            case community of
-                Just cmm ->
-                    UR.init { model | communityStatus = LoadedCommunity cmm }
-
-                Nothing ->
-                    UR.init { model | communityStatus = FailedCommunity }
-
-        CompletedCommunityLoad (RemoteData.Failure error) ->
-            { model | communityStatus = FailedCommunity }
-                |> UR.init
-                |> UR.logGraphqlError msg error
-
-        CompletedCommunityLoad _ ->
-            UR.init model
-
         ShowMore ->
             case model.status of
                 Loaded _ pageInfo ->
@@ -606,7 +580,17 @@ fetchAnalysis { selectedCommunity, shared, authToken } { profile, statusFilter }
                     Present filterRecord
 
         required =
-            { communityId = Eos.symbolToString selectedCommunity }
+            -- TODO
+            { communityId =
+                Eos.symbolToString
+                    (case selectedCommunity of
+                        RemoteData.Success community ->
+                            community.symbol
+
+                        _ ->
+                            Eos.cambiatusSymbol
+                    )
+            }
 
         mapFn =
             \s ->
@@ -729,9 +713,6 @@ msgToString msg =
 
         OnSelectVerifier _ ->
             [ "OnSelectVerifier" ]
-
-        CompletedCommunityLoad r ->
-            [ "CompletedCommunityLoad", UR.remoteDataToString r ]
 
         ShowMore ->
             [ "ShowMore" ]

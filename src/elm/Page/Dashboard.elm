@@ -50,12 +50,11 @@ import View.Modal as Modal
 
 
 init : LoggedIn.Model -> ( Model, Cmd Msg )
-init ({ shared, accountName, selectedCommunity, authToken } as loggedIn) =
+init ({ shared, accountName, authToken } as loggedIn) =
     ( initModel
     , Cmd.batch
         [ fetchBalance shared accountName
         , fetchTransfers shared accountName authToken
-        , fetchCommunity shared selectedCommunity authToken
         , fetchAvailableAnalysis loggedIn Nothing
         , Task.perform GotTime Time.now
         ]
@@ -77,7 +76,7 @@ subscriptions _ =
 
 type alias Model =
     { date : Maybe Posix
-    , community : GraphqlStatus (Maybe Community.DashboardInfo) Community.DashboardInfo
+    , community : GraphqlStatus (Maybe Community.Minimal) Community.Minimal
     , balance : Status Balance
     , analysis : GraphqlStatus (Maybe Claim.Paginated) (List ClaimStatus)
     , lastSocket : String
@@ -184,7 +183,7 @@ view ({ shared, accountName } as loggedIn) model =
     }
 
 
-viewHeader : LoggedIn.Model -> Community.DashboardInfo -> Bool -> Html Msg
+viewHeader : LoggedIn.Model -> Community.Minimal -> Bool -> Html Msg
 viewHeader loggedIn community isCommunityAdmin =
     div [ class "flex inline-block text-gray-600 font-light mt-6 mb-5" ]
         [ div []
@@ -195,7 +194,7 @@ viewHeader loggedIn community isCommunityAdmin =
             ]
         , if isCommunityAdmin then
             a
-                [ Route.href (Route.CommunitySettings loggedIn.selectedCommunity)
+                [ Route.href (Route.CommunitySettings community.symbol)
                 , class "ml-auto"
                 ]
                 [ Icons.settings ]
@@ -536,32 +535,43 @@ viewBalance ({ shared } as loggedIn) _ balance =
     div [ class "flex-wrap flex lg:space-x-3" ]
         [ div [ class "flex w-full lg:w-1/3 bg-white rounded h-64 p-4" ]
             [ div [ class "w-full" ]
-                [ div [ class "input-label mb-2" ]
+                ([ div [ class "input-label mb-2" ]
                     [ text_ "account.my_wallet.balances.current" ]
-                , div [ class "flex items-center mb-4" ]
+                 , div [ class "flex items-center mb-4" ]
                     [ div [ class "text-indigo-500 font-bold text-3xl" ]
                         [ text balanceText ]
                     , div [ class "text-indigo-500 ml-2" ]
                         [ text symbolText ]
                     ]
-                , a
-                    [ class "button button-primary w-full font-medium mb-2"
-                    , Route.href <| Route.Transfer loggedIn.selectedCommunity Nothing
-                    ]
-                    [ text_ "dashboard.transfer" ]
-                , a
-                    [ class "flex w-full items-center justify-between h-12 text-gray-600 border-b"
-                    , Route.href <| Route.Community loggedIn.selectedCommunity
-                    ]
-                    [ text <| shared.translators.tr "dashboard.explore" [ ( "symbol", Eos.symbolToSymbolCodeString loggedIn.selectedCommunity ) ]
-                    , Icons.arrowDown "rotate--90"
-                    ]
-                , button
-                    [ class "flex w-full items-center justify-between h-12 text-gray-600"
-                    , onClick CreateInvite
-                    ]
-                    [ text_ "dashboard.invite", Icons.arrowDown "rotate--90 text-gray-600" ]
-                ]
+
+                 -- TODO
+                 ]
+                    ++ (case loggedIn.selectedCommunity of
+                            RemoteData.Success community ->
+                                [ a
+                                    [ class "button button-primary w-full font-medium mb-2"
+                                    , Route.href <| Route.Transfer community.symbol Nothing
+                                    ]
+                                    [ text_ "dashboard.transfer" ]
+                                , a
+                                    [ class "flex w-full items-center justify-between h-12 text-gray-600 border-b"
+                                    , Route.href <| Route.Community community.symbol
+                                    ]
+                                    [ text <| shared.translators.tr "dashboard.explore" [ ( "symbol", Eos.symbolToSymbolCodeString community.symbol ) ]
+                                    , Icons.arrowDown "rotate--90"
+                                    ]
+                                ]
+
+                            _ ->
+                                []
+                       )
+                    ++ [ button
+                            [ class "flex w-full items-center justify-between h-12 text-gray-600"
+                            , onClick CreateInvite
+                            ]
+                            [ text_ "dashboard.invite", Icons.arrowDown "rotate--90 text-gray-600" ]
+                       ]
+                )
             ]
         , div [ class "w-full lg:w-1/3 mt-4 lg:mt-0" ]
             [ viewQuickLinks loggedIn
@@ -632,7 +642,7 @@ type Msg
     | CompletedLoadBalances (Result Http.Error (List Balance))
     | CompletedLoadUserTransfers (RemoteData (Graphql.Http.Error (Maybe QueryTransfers)) (Maybe QueryTransfers))
     | ClaimsLoaded (RemoteData (Graphql.Http.Error (Maybe Claim.Paginated)) (Maybe Claim.Paginated))
-    | CommunityLoaded (RemoteData (Graphql.Http.Error (Maybe Community.DashboardInfo)) (Maybe Community.DashboardInfo))
+    | CommunityLoaded (RemoteData (Graphql.Http.Error (Maybe Community.Minimal)) (Maybe Community.Minimal))
     | ClaimMsg Claim.Msg
     | VoteClaim Claim.ClaimId Bool
     | GotVoteResult Claim.ClaimId (Result (Maybe Value) String)
@@ -656,7 +666,13 @@ update msg model loggedIn =
         CompletedLoadBalances (Ok balances) ->
             let
                 findBalance balance =
-                    balance.asset.symbol == loggedIn.selectedCommunity
+                    -- TODO
+                    case loggedIn.selectedCommunity of
+                        RemoteData.Success community ->
+                            balance.asset.symbol == community.symbol
+
+                        _ ->
+                            False
 
                 -- Try to find the balance, if not found default to the first balance
                 statusBalance =
@@ -919,7 +935,14 @@ fetchAvailableAnalysis : LoggedIn.Model -> Maybe String -> Cmd Msg
 fetchAvailableAnalysis { shared, selectedCommunity, authToken } maybeCursor =
     let
         arg =
-            { communityId = Eos.symbolToString selectedCommunity }
+            -- TODO
+            { communityId =
+                Eos.symbolToString
+                    (RemoteData.toMaybe selectedCommunity
+                        |> Maybe.map .symbol
+                        |> Maybe.withDefault Eos.cambiatusSymbol
+                    )
+            }
 
         pagination =
             \a ->
@@ -954,7 +977,7 @@ fetchCommunity : Shared -> Symbol -> String -> Cmd Msg
 fetchCommunity shared selectedCommunity authToken =
     Api.Graphql.query shared
         (Just authToken)
-        (Cambiatus.Query.community { symbol = Eos.symbolToString selectedCommunity } Community.dashboardSelectionSet)
+        (Cambiatus.Query.community { symbol = Eos.symbolToString selectedCommunity } Community.minimalSelectionSet)
         CommunityLoaded
 
 

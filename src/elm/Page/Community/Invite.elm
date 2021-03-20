@@ -112,7 +112,7 @@ view session model =
                         ++ " "
                         ++ t "community.invitation.title"
                         ++ " "
-                        ++ invite.community.title
+                        ++ invite.community.name
 
                 _ ->
                     ""
@@ -131,7 +131,7 @@ view session model =
                 AlreadyMemberNotice invite ->
                     let
                         inner =
-                            viewExistingMemberNotice shared.translators invite.community.title
+                            viewExistingMemberNotice shared.translators invite.community.name
                     in
                     div []
                         [ viewHeader
@@ -202,7 +202,7 @@ viewNewMemberConfirmation { t } invitationId ({ community } as invite) =
     div []
         [ div [ class "mt-6 px-4 text-center" ]
             [ span [ class "mr-1" ] [ text (t "community.invitation.subtitle") ]
-            , text community.title
+            , text community.name
             , text "?"
             ]
         , div [ class "flex flex-wrap justify-center w-full mt-6" ]
@@ -247,7 +247,7 @@ viewContent { t } { creator, community } innerContent =
                     , text (t "community.invitation.title")
                     , text " "
                     , span [ class "font-medium" ]
-                        [ text community.title ]
+                        [ text community.name ]
                     ]
                 ]
             , innerContent
@@ -393,7 +393,7 @@ update session msg model =
                 isAlreadyMember =
                     let
                         isMember c =
-                            symbolToString c.id == symbolToString invite.community.symbol
+                            symbolToString c.symbol == symbolToString invite.community.symbol
                     in
                     List.any isMember userCommunities
 
