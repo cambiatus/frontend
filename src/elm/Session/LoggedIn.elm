@@ -68,6 +68,7 @@ import Shop
 import Task
 import Time exposing (Posix)
 import Translation
+import Tuple
 import UpdateResult as UR
 import Url exposing (Url)
 import View.Modal as Modal
@@ -114,23 +115,27 @@ fetchTranslations language _ =
 initLogin : Shared -> Auth.Model -> Profile.Model -> String -> ( Model, Cmd Msg )
 initLogin shared authModel profile_ authToken =
     let
-        communitySymbol =
+        maybeCommunity =
             List.head profile_.communities
+
+        communitySymbol =
+            maybeCommunity
                 |> Maybe.map .id
                 |> Maybe.withDefault Eos.cambiatusSymbol
 
-        model =
+        initialModel =
             initModel shared authModel profile_.account communitySymbol authToken
+
+        ( model, cmd ) =
+            Maybe.map (\community -> selectCommunity community initialModel) maybeCommunity
+                |> Maybe.withDefault ( initialModel, Cmd.none )
     in
     ( { model
         | profile = Loaded profile_
       }
     , Cmd.batch
-        -- TODO
-        -- [ Task.perform
-        --     (\_ -> SelectedCommunity community)
-        --     (Task.succeed ())
-        [ Ports.getRecentSearches () -- run on the passphrase login, duplicated in `init`
+        [ cmd
+        , Ports.getRecentSearches () -- run on the passphrase login, duplicated in `init`
         ]
     )
 
@@ -887,29 +892,37 @@ update msg model =
             in
             case profile_ of
                 Just p ->
-                    { model | profile = Loaded p }
-                        |> (case List.find (.name >> (==) urlCommunity) p.communities of
-                                Just c ->
-                                    selectCommunity c
+                    let
+                        model_ =
+                            { model | profile = Loaded p }
+                    in
+                    (case List.find (.name >> (==) urlCommunity) p.communities of
+                        Just c ->
+                            let
+                                ( modelWithCommunity, cmd ) =
+                                    selectCommunity c model_
+                            in
+                            UR.init modelWithCommunity
+                                |> UR.addCmd cmd
 
-                                Nothing ->
-                                    UR.init
-                                        >> UR.addCmd
-                                            (Api.Graphql.query shared
-                                                (Just model.authToken)
-                                                (Cambiatus.Query.communities Profile.communityInfoSelectionSet
-                                                    |> SelectionSet.map
-                                                        (List.filter
-                                                            (.name
-                                                                >> String.toLower
-                                                                >> (==) (String.toLower urlCommunity)
-                                                            )
-                                                            >> List.head
-                                                        )
+                        Nothing ->
+                            UR.init model_
+                                |> UR.addCmd
+                                    (Api.Graphql.query shared
+                                        (Just model.authToken)
+                                        (Cambiatus.Query.communities Profile.communityInfoSelectionSet
+                                            |> SelectionSet.map
+                                                (List.filter
+                                                    (.name
+                                                        >> String.toLower
+                                                        >> (==) (String.toLower urlCommunity)
+                                                    )
+                                                    >> List.head
                                                 )
-                                                CompletedLoadUrlCommunity
-                                            )
-                           )
+                                        )
+                                        CompletedLoadUrlCommunity
+                                    )
+                    )
                         |> UR.addPort
                             { responseAddress = CompletedLoadUnread (Encode.string "")
                             , responseData = Encode.null
@@ -989,8 +1002,8 @@ update msg model =
                             |> UR.init
 
                     else
-                        -- Profile is loaded, but user is not a member of the community
-                        -- Need to change this to use auto invite communities
+                        -- Everything is loaded, but user is not a member of the community
+                        -- TODO - Need to change this to use auto invite communities
                         UR.init model
                             |> UR.addCmd redirect
 
@@ -1128,7 +1141,12 @@ update msg model =
                 |> UR.init
 
         SelectedCommunity communityInfo ->
-            selectCommunity communityInfo model
+            let
+                ( model_, cmd ) =
+                    selectCommunity communityInfo model
+            in
+            UR.init model_
+                |> UR.addCmd cmd
 
 
 handleActionMsg : Model -> Action.Msg -> UpdateResult
@@ -1178,7 +1196,7 @@ handleActionMsg ({ shared } as model) actionMsg =
             )
 
 
-selectCommunity : Profile.CommunityInfo -> Model -> UpdateResult
+selectCommunity : Profile.CommunityInfo -> Model -> ( Model, Cmd Msg )
 selectCommunity community ({ shared } as model) =
     let
         communityUrl =
@@ -1193,21 +1211,22 @@ selectCommunity community ({ shared } as model) =
                 ++ ".localhost:3000/dashboard"
     in
     if community.id == model.selectedCommunity then
-        { model
+        ( { model
             | selectedCommunity = community.id
             , showCommunitySelector = False
             , searchModel =
                 Search.closeSearch shared model.authToken model.searchModel
                     |> Tuple.first
                     |> (\searchModel -> { searchModel | selectedCommunity = community.id })
-        }
-            |> UR.init
-            |> UR.addCmd (Api.Graphql.query shared (Just model.authToken) (Community.settingsQuery community.id) CompletedLoadSettings)
-            |> UR.addCmd (Api.Graphql.query shared (Just model.authToken) (Community.settingsQuery community.id) CompletedLoadSettings)
+          }
+        , Cmd.batch
+            [ Api.Graphql.query shared (Just model.authToken) (Community.settingsQuery community.id) CompletedLoadSettings
+            , Api.Graphql.query shared (Just model.authToken) (Community.settingsQuery community.id) CompletedLoadSettings
+            ]
+        )
 
     else
-        UR.init model
-            |> UR.addCmd (Browser.Navigation.load communityUrl)
+        ( model, Browser.Navigation.load communityUrl )
 
 
 closeModal : UpdateResult -> UpdateResult
