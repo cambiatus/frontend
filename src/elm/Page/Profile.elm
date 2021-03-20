@@ -342,7 +342,7 @@ viewUserInfo loggedIn profile pageType privateView =
         viewContact =
             case pageType of
                 Private ->
-                    viewProfileItem (text "Contact Options")
+                    viewProfileItem (text (t "contact_form.options"))
                         (a
                             [ class "button-secondary button-sm uppercase cursor-pointer"
                             , Route.href Route.ProfileAddContact

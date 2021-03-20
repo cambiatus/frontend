@@ -108,7 +108,7 @@ update msg model { shared, authToken } =
 
 view : LoggedIn.Model -> Model -> { title : String, content : Html Msg }
 view ({ shared } as loggedIn) model =
-    { title = "Add contact options"
+    { title = shared.translators.t "contact_form.options"
     , content =
         div [ class "bg-white pb-8" ]
             [ Page.viewHeader loggedIn (shared.translators.t "contact_form.options") Route.Profile
