@@ -48,7 +48,7 @@ import Flags exposing (Flags)
 import Graphql.Document
 import Graphql.Http
 import Graphql.Operation exposing (RootSubscription)
-import Graphql.SelectionSet as SelectionSet exposing (SelectionSet)
+import Graphql.SelectionSet exposing (SelectionSet)
 import Html exposing (Html, a, button, div, footer, img, nav, p, span, text)
 import Html.Attributes exposing (class, classList, src, style, type_)
 import Html.Events exposing (onClick, onMouseEnter)
@@ -90,7 +90,6 @@ init shared accountName flags authToken =
     ( initModel shared authModel accountName flags.selectedCommunity authToken
     , Cmd.batch
         [ Api.Graphql.query shared (Just authToken) (Profile.query accountName) CompletedLoadProfile
-        , Api.Graphql.query shared (Just authToken) (Community.settingsQuery flags.selectedCommunity) CompletedLoadSettings
         , Ports.getRecentSearches () -- run on the page refresh, duplicated in `initLogin`
         , Task.perform GotTime Time.now
         ]
@@ -612,13 +611,8 @@ viewCommunitySelector ({ shared } as model) =
                 _ ->
                     False
     in
-    -- TODO
-    case
-        RemoteData.map (.symbol >> findCommunity) model.selectedCommunity
-            |> RemoteData.toMaybe
-            |> Maybe.andThen identity
-    of
-        Just community ->
+    case RemoteData.map (.symbol >> findCommunity) model.selectedCommunity of
+        RemoteData.Success (Just community) ->
             button [ class "flex items-center", onClick OpenCommunitySelector ]
                 [ img [ class "h-10", src community.logo ] []
                 , if hasMultipleCommunities then
@@ -628,7 +622,7 @@ viewCommunitySelector ({ shared } as model) =
                     text ""
                 ]
 
-        Nothing ->
+        RemoteData.Success Nothing ->
             button [ class "flex items-center", onClick OpenCommunitySelector ]
                 [ img [ class "lg:hidden h-8", src shared.logoMobile ] []
                 , img
@@ -637,6 +631,9 @@ viewCommunitySelector ({ shared } as model) =
                     ]
                     []
                 ]
+
+        _ ->
+            text ""
 
 
 communitySelectorModal : Model -> Html Msg
@@ -795,6 +792,7 @@ type alias UpdateResult =
 type ExternalMsg
     = AuthenticationSucceed
     | AuthenticationFailed
+    | CommunityLoaded Community.Model
 
 
 type Msg
@@ -802,7 +800,6 @@ type Msg
     | CompletedLoadTranslation String (Result Http.Error Translations)
     | ClickedTryAgainTranslation
     | CompletedLoadProfile (RemoteData (Graphql.Http.Error (Maybe Profile.Model)) (Maybe Profile.Model))
-    | CompletedLoadSettings (RemoteData (Graphql.Http.Error (Maybe Community.Settings)) (Maybe Community.Settings))
     | CompletedLoadCommunity (RemoteData (Graphql.Http.Error (Maybe Community.Model)) (Maybe Community.Model))
     | ClickedTryAgainProfile Eos.Name
     | ClickedLogout
@@ -909,7 +906,10 @@ update msg model =
                 Just p ->
                     let
                         model_ =
-                            { model | profile = Loaded p }
+                            { model
+                                | profile = Loaded p
+                                , selectedCommunity = RemoteData.Loading
+                            }
                     in
                     (case List.find (.name >> (==) urlCommunity) p.communities of
                         Just c ->
@@ -959,26 +959,6 @@ update msg model =
         CompletedLoadProfile _ ->
             UR.init model
 
-        CompletedLoadSettings (RemoteData.Success settings_) ->
-            case settings_ of
-                Just settings ->
-                    { model
-                        | hasShop = FeatureLoaded settings.hasShop
-                        , hasObjectives = FeatureLoaded settings.hasObjectives
-                        , hasKyc = FeatureLoaded settings.hasKyc
-                    }
-                        |> UR.init
-
-                Nothing ->
-                    UR.init model
-
-        CompletedLoadSettings (RemoteData.Failure err) ->
-            UR.init model
-                |> UR.logGraphqlError msg err
-
-        CompletedLoadSettings _ ->
-            UR.init model
-
         CompletedLoadCommunity (RemoteData.Success maybeCommunity) ->
             let
                 redirect =
@@ -1012,6 +992,7 @@ update msg model =
                             , selectedCommunity = RemoteData.Success community
                         }
                             |> UR.init
+                            |> UR.addExt (CommunityLoaded community)
 
                     else
                         -- Everything is loaded, but user is not a member of the community
@@ -1234,6 +1215,7 @@ selectCommunity { name, symbol } ({ shared } as model) =
             if symbol == selectedCommunity.symbol then
                 ( { model
                     | showCommunitySelector = False
+                    , selectedCommunity = RemoteData.Loading
                     , searchModel =
                         Search.closeSearch shared model.authToken model.searchModel
                             |> Tuple.first
@@ -1410,9 +1392,6 @@ msgToString msg =
 
         CompletedLoadProfile r ->
             [ "CompletedLoadProfile", UR.remoteDataToString r ]
-
-        CompletedLoadSettings r ->
-            [ "CompletedLoadSettings", UR.remoteDataToString r ]
 
         CompletedLoadCommunity r ->
             [ "CompletedInitialLoad", UR.remoteDataToString r ]

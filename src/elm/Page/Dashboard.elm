@@ -1,6 +1,6 @@
 module Page.Dashboard exposing
     ( Model
-    , Msg
+    , Msg(..)
     , init
     , jsAddressToMsg
     , msgToString
@@ -15,7 +15,7 @@ import Api.Relay
 import Cambiatus.Query
 import Claim
 import Community exposing (Balance)
-import Eos exposing (Symbol)
+import Eos
 import Eos.Account as Eos
 import Eos.EosError as EosError
 import FormatNumber
@@ -50,12 +50,10 @@ import View.Modal as Modal
 
 
 init : LoggedIn.Model -> ( Model, Cmd Msg )
-init ({ shared, accountName, authToken } as loggedIn) =
+init { shared, accountName, authToken } =
     ( initModel
     , Cmd.batch
-        [ fetchBalance shared accountName
-        , fetchTransfers shared accountName authToken
-        , fetchAvailableAnalysis loggedIn Nothing
+        [ fetchTransfers shared accountName authToken
         , Task.perform GotTime Time.now
         ]
     )
@@ -76,8 +74,7 @@ subscriptions _ =
 
 type alias Model =
     { date : Maybe Posix
-    , community : GraphqlStatus (Maybe Community.Minimal) Community.Minimal
-    , balance : Status Balance
+    , balance : RemoteData Http.Error (Maybe Balance)
     , analysis : GraphqlStatus (Maybe Claim.Paginated) (List ClaimStatus)
     , lastSocket : String
     , transfers : GraphqlStatus (Maybe QueryTransfers) (List Transfer)
@@ -90,8 +87,7 @@ type alias Model =
 initModel : Model
 initModel =
     { date = Nothing
-    , community = LoadingGraphql
-    , balance = Loading
+    , balance = RemoteData.NotAsked
     , analysis = LoadingGraphql
     , lastSocket = ""
     , transfers = LoadingGraphql
@@ -99,13 +95,6 @@ initModel =
     , claimModalStatus = Claim.Closed
     , copied = False
     }
-
-
-type Status a
-    = Loading
-    | Loaded a
-    | NotFound
-    | Failed Http.Error
 
 
 type GraphqlStatus err a
@@ -139,30 +128,31 @@ view ({ shared, accountName } as loggedIn) model =
             shared.translators.t
 
         isCommunityAdmin =
-            case model.community of
-                LoadedGraphql community _ ->
+            case loggedIn.selectedCommunity of
+                RemoteData.Success community ->
                     community.creator == accountName
 
                 _ ->
                     False
 
         areObjectivesEnabled =
-            case model.community of
-                LoadedGraphql community _ ->
+            case loggedIn.selectedCommunity of
+                RemoteData.Success community ->
                     community.hasObjectives == True
 
                 _ ->
                     False
 
         content =
-            case ( model.balance, loggedIn.profile, model.community ) of
-                ( Loading, _, _ ) ->
+            case ( model.balance, loggedIn.profile, loggedIn.selectedCommunity ) of
+                ( RemoteData.Loading, _, _ ) ->
                     Page.fullPageLoading shared
 
-                ( Failed e, _, _ ) ->
+                ( RemoteData.Failure e, _, _ ) ->
                     Page.fullPageError (t "dashboard.sorry") e
 
-                ( Loaded balance, LoggedIn.Loaded profile, LoadedGraphql community _ ) ->
+                -- TODO
+                ( RemoteData.Success (Just balance), LoggedIn.Loaded profile, RemoteData.Success community ) ->
                     div [ class "container mx-auto px-4 mb-10" ]
                         [ viewHeader loggedIn community isCommunityAdmin
                         , viewBalance loggedIn model balance
@@ -183,7 +173,7 @@ view ({ shared, accountName } as loggedIn) model =
     }
 
 
-viewHeader : LoggedIn.Model -> Community.Minimal -> Bool -> Html Msg
+viewHeader : LoggedIn.Model -> Community.Model -> Bool -> Html Msg
 viewHeader loggedIn community isCommunityAdmin =
     div [ class "flex inline-block text-gray-600 font-light mt-6 mb-5" ]
         [ div []
@@ -639,10 +629,10 @@ type alias UpdateResult =
 
 type Msg
     = GotTime Posix
-    | CompletedLoadBalances (Result Http.Error (List Balance))
+    | CompletedLoadCommunity Community.Model
+    | CompletedLoadBalance (Result Http.Error (Maybe Balance))
     | CompletedLoadUserTransfers (RemoteData (Graphql.Http.Error (Maybe QueryTransfers)) (Maybe QueryTransfers))
     | ClaimsLoaded (RemoteData (Graphql.Http.Error (Maybe Claim.Paginated)) (Maybe Claim.Paginated))
-    | CommunityLoaded (RemoteData (Graphql.Http.Error (Maybe Community.Minimal)) (Maybe Community.Minimal))
     | ClaimMsg Claim.Msg
     | VoteClaim Claim.ClaimId Bool
     | GotVoteResult Claim.ClaimId (Result (Maybe Value) String)
@@ -654,47 +644,27 @@ type Msg
 
 
 update : Msg -> Model -> LoggedIn.Model -> UpdateResult
-update msg model loggedIn =
-    let
-        { t } =
-            loggedIn.shared.translators
-    in
+update msg model ({ shared, accountName } as loggedIn) =
     case msg of
         GotTime date ->
             UR.init { model | date = Just date }
 
-        CompletedLoadBalances (Ok balances) ->
-            let
-                findBalance balance =
-                    -- TODO
-                    case loggedIn.selectedCommunity of
-                        RemoteData.Success community ->
-                            balance.asset.symbol == community.symbol
-
-                        _ ->
-                            False
-
-                -- Try to find the balance, if not found default to the first balance
-                statusBalance =
-                    case List.find findBalance balances of
-                        Just b ->
-                            Loaded b
-
-                        Nothing ->
-                            case List.head balances of
-                                Just b ->
-                                    Loaded b
-
-                                Nothing ->
-                                    NotFound
-            in
+        -- TODO
+        CompletedLoadCommunity community ->
             UR.init
                 { model
-                    | balance = statusBalance
+                    | balance = RemoteData.Loading
+                    , analysis = LoadingGraphql
                 }
+                |> UR.addCmd (fetchBalance shared accountName community)
+                -- TOOD
+                |> UR.addCmd (fetchAvailableAnalysis loggedIn Nothing (Just community))
 
-        CompletedLoadBalances (Err httpError) ->
-            UR.init { model | balance = Failed httpError }
+        CompletedLoadBalance (Ok balance) ->
+            UR.init { model | balance = RemoteData.Success balance }
+
+        CompletedLoadBalance (Err httpError) ->
+            UR.init { model | balance = RemoteData.Failure httpError }
                 |> UR.logHttpError msg httpError
 
         ClaimsLoaded (RemoteData.Success claims) ->
@@ -808,7 +778,8 @@ update msg model loggedIn =
                                     case pageInfo of
                                         Just page ->
                                             if page.hasNextPage then
-                                                fetchAvailableAnalysis loggedIn page.endCursor
+                                                -- TODO
+                                                fetchAvailableAnalysis loggedIn page.endCursor Nothing
 
                                             else
                                                 Cmd.none
@@ -844,27 +815,10 @@ update msg model loggedIn =
                 _ ->
                     model |> UR.init
 
-        CommunityLoaded (RemoteData.Success community) ->
-            case community of
-                Just c ->
-                    { model | community = LoadedGraphql c Nothing }
-                        |> UR.init
-
-                Nothing ->
-                    model
-                        |> UR.init
-
-        CommunityLoaded (RemoteData.Failure err) ->
-            { model | community = FailedGraphql err }
-                |> UR.init
-                |> UR.logGraphqlError msg err
-
-        CommunityLoaded _ ->
-            UR.init model
-
         CreateInvite ->
             case model.balance of
-                Loaded b ->
+                -- TODO
+                RemoteData.Success (Just b) ->
                     UR.init
                         { model | inviteModalStatus = InviteModalLoading }
                         |> UR.addCmd
@@ -913,9 +867,25 @@ update msg model loggedIn =
 -- HELPERS
 
 
-fetchBalance : Shared -> Eos.Name -> Cmd Msg
-fetchBalance shared accountName =
-    Api.getBalances shared accountName CompletedLoadBalances
+fetchBalance : Shared -> Eos.Name -> Community.Model -> Cmd Msg
+fetchBalance shared accountName community =
+    Api.getBalances shared
+        accountName
+        (Result.map
+            (\balances ->
+                let
+                    maybeBalance =
+                        List.find (.asset >> .symbol >> (==) community.symbol) balances
+                in
+                case maybeBalance of
+                    Just b ->
+                        Just b
+
+                    Nothing ->
+                        List.head balances
+            )
+            >> CompletedLoadBalance
+        )
 
 
 fetchTransfers : Shared -> Eos.Name -> String -> Cmd Msg
@@ -931,15 +901,14 @@ fetchTransfers shared accountName authToken =
         CompletedLoadUserTransfers
 
 
-fetchAvailableAnalysis : LoggedIn.Model -> Maybe String -> Cmd Msg
-fetchAvailableAnalysis { shared, selectedCommunity, authToken } maybeCursor =
+fetchAvailableAnalysis : LoggedIn.Model -> Maybe String -> Maybe Community.Model -> Cmd Msg
+fetchAvailableAnalysis { shared, authToken } maybeCursor maybeCommunity =
     let
         arg =
             -- TODO
             { communityId =
                 Eos.symbolToString
-                    (RemoteData.toMaybe selectedCommunity
-                        |> Maybe.map .symbol
+                    (Maybe.map .symbol maybeCommunity
                         |> Maybe.withDefault Eos.cambiatusSymbol
                     )
             }
@@ -971,14 +940,6 @@ fetchAvailableAnalysis { shared, selectedCommunity, authToken } maybeCursor =
         (Just authToken)
         (Cambiatus.Query.claimsAnalysis pagination arg Claim.claimPaginatedSelectionSet)
         ClaimsLoaded
-
-
-fetchCommunity : Shared -> Symbol -> String -> Cmd Msg
-fetchCommunity shared selectedCommunity authToken =
-    Api.Graphql.query shared
-        (Just authToken)
-        (Cambiatus.Query.community { symbol = Eos.symbolToString selectedCommunity } Community.minimalSelectionSet)
-        CommunityLoaded
 
 
 setClaimStatus : List ClaimStatus -> Claim.ClaimId -> (Claim.Model -> ClaimStatus) -> List ClaimStatus
@@ -1063,8 +1024,11 @@ msgToString msg =
         GotTime _ ->
             [ "GotTime" ]
 
-        CompletedLoadBalances result ->
-            [ "CompletedLoadBalances", UR.resultToString result ]
+        CompletedLoadCommunity _ ->
+            [ "CompletedLoadCommunity" ]
+
+        CompletedLoadBalance result ->
+            [ "CompletedLoadBalance", UR.resultToString result ]
 
         CompletedLoadUserTransfers result ->
             [ "CompletedLoadUserTransfers", UR.remoteDataToString result ]
@@ -1080,9 +1044,6 @@ msgToString msg =
 
         GotVoteResult _ result ->
             [ "GotVoteResult", UR.resultToString result ]
-
-        CommunityLoaded result ->
-            [ "CommunityLoaded", UR.remoteDataToString result ]
 
         CreateInvite ->
             [ "CreateInvite" ]

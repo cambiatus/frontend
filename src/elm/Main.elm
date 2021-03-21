@@ -297,6 +297,16 @@ update msg model =
 
                             Page.LoggedInExternalMsg LoggedIn.AuthenticationFailed ->
                                 ( { m | afterAuthMsg = Nothing }, Cmd.none )
+
+                            -- TODO
+                            Page.LoggedInExternalMsg (LoggedIn.CommunityLoaded community) ->
+                                case m.status of
+                                    Dashboard dashboard ->
+                                        -- ( m, Cmd.none )
+                                        update (GotDashboardMsg (Dashboard.CompletedLoadCommunity community)) m
+
+                                    _ ->
+                                        ( m, Cmd.none )
                     )
                     msgToString
 

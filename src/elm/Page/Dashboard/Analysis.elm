@@ -12,7 +12,6 @@ import Api.Graphql
 import Api.Relay
 import Cambiatus.Query
 import Claim
-import Community
 import Eos
 import Eos.Account as Eos
 import Eos.EosError as EosError
