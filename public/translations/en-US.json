@@ -381,6 +381,7 @@
     "title": "Community",
     "create_button": "Create Community",
     "not_found": "Community Not Found",
+    "error_loading": "Error loading community",
     "create": {
       "title": "Create community",
       "success": "Successfully saved community",

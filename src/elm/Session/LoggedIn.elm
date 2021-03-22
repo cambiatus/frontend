@@ -1,7 +1,7 @@
 module Session.LoggedIn exposing
-    ( External(..)
+    ( BroadcastMsg(..)
+    , External(..)
     , ExternalMsg(..)
-    , FeatureStatus(..)
     , FeedbackStatus(..)
     , FeedbackVisibility(..)
     , Model
@@ -27,8 +27,6 @@ module Session.LoggedIn exposing
     , view
     , viewFooter
     )
-
--- TODO - Use Community.Model instead of Community.Minimal
 
 import Action
 import Api
@@ -162,7 +160,7 @@ type alias Model =
     { shared : Shared
     , accountName : Eos.Name
     , profile : ProfileStatus
-    , selectedCommunity : RemoteData String Community.Model
+    , selectedCommunity : RemoteData (Graphql.Http.Error Community.Model) Community.Model
     , showUserNav : Bool
     , showLanguageItems : Bool
     , showNotificationModal : Bool
@@ -173,9 +171,6 @@ type alias Model =
     , auth : Auth.Model
     , showCommunitySelector : Bool
     , feedback : FeedbackVisibility
-    , hasShop : FeatureStatus
-    , hasObjectives : FeatureStatus
-    , hasKyc : FeatureStatus
     , searchModel : Search.Model
     , claimingAction : Action.Model
     , date : Maybe Posix
@@ -183,19 +178,11 @@ type alias Model =
     }
 
 
-type FeatureStatus
-    = FeatureLoaded Bool
-    | FeatureLoading
-
-
 initModel : Shared -> Auth.Model -> Eos.Name -> Symbol -> String -> Model
 initModel shared authModel accountName selectedCommunity authToken =
     { shared = shared
     , accountName = accountName
     , profile = Loading accountName
-
-    -- TODO
-    -- , selectedCommunity = selectedCommunity
     , selectedCommunity = RemoteData.NotAsked
     , showUserNav = False
     , showLanguageItems = False
@@ -207,9 +194,6 @@ initModel shared authModel accountName selectedCommunity authToken =
     , auth = authModel
     , feedback = Hidden
     , showCommunitySelector = False
-    , hasShop = FeatureLoading
-    , hasObjectives = FeatureLoading
-    , hasKyc = FeatureLoading
     , searchModel = Search.init selectedCommunity
     , claimingAction = { status = Action.NotAsked, feedback = Nothing, needsPinConfirmation = False }
     , date = Nothing
@@ -454,23 +438,30 @@ viewPageBody ({ shared } as model) profile_ page content =
                 ]
     in
     [ div [ class "flex-grow" ]
-        [ case model.hasKyc of
-            FeatureLoading ->
+        [ case model.selectedCommunity of
+            RemoteData.Loading ->
                 div [ class "full-spinner-container h-full" ]
                     [ div [ class "spinner spinner--delay mt-8" ] [] ]
 
-            FeatureLoaded isKycEnabled ->
+            RemoteData.NotAsked ->
+                div [ class "full-spinner-container h-full" ]
+                    [ div [ class "spinner spinner--delay mt-8" ] [] ]
+
+            RemoteData.Success { hasKyc } ->
                 let
                     isContentAllowed =
                         List.member page availableWithoutKyc
-                            || not isKycEnabled
-                            || (isKycEnabled && hasUserKycFilled)
+                            || not hasKyc
+                            || (hasKyc && hasUserKycFilled)
                 in
                 if isContentAllowed then
                     content
 
                 else
                     viewKycRestriction
+
+            RemoteData.Failure _ ->
+                text ""
         ]
     ]
 
@@ -710,19 +701,23 @@ viewMainMenu page model =
             [ Icons.dashboard iconClass
             , text (model.shared.translators.t "menu.dashboard")
             ]
-        , case model.hasShop of
-            FeatureLoaded True ->
-                a
-                    [ classList
-                        [ ( menuItemClass, True )
-                        , ( activeClass, isActive page (Route.Shop Shop.All) )
+        , case model.selectedCommunity of
+            RemoteData.Success { hasShop } ->
+                if hasShop then
+                    a
+                        [ classList
+                            [ ( menuItemClass, True )
+                            , ( activeClass, isActive page (Route.Shop Shop.All) )
+                            ]
+                        , Route.href (Route.Shop Shop.All)
+                        , onClick closeClaimWithPhoto
                         ]
-                    , Route.href (Route.Shop Shop.All)
-                    , onClick closeClaimWithPhoto
-                    ]
-                    [ Icons.shop iconClass
-                    , text (model.shared.translators.t "menu.shop")
-                    ]
+                        [ Icons.shop iconClass
+                        , text (model.shared.translators.t "menu.shop")
+                        ]
+
+                else
+                    text ""
 
             _ ->
                 text ""
@@ -792,7 +787,11 @@ type alias UpdateResult =
 type ExternalMsg
     = AuthenticationSucceed
     | AuthenticationFailed
-    | CommunityLoaded Community.Model
+    | Broadcast BroadcastMsg
+
+
+type BroadcastMsg
+    = CommunityLoaded Community.Model
 
 
 type Msg
@@ -956,7 +955,10 @@ update msg model =
                 }
                 |> UR.logGraphqlError msg err
 
-        CompletedLoadProfile _ ->
+        CompletedLoadProfile RemoteData.NotAsked ->
+            UR.init model
+
+        CompletedLoadProfile RemoteData.Loading ->
             UR.init model
 
         CompletedLoadCommunity (RemoteData.Success maybeCommunity) ->
@@ -984,15 +986,9 @@ update msg model =
                                 |> Maybe.withDefault False
                     in
                     if isMember then
-                        { model
-                          -- TODO - Get rid of hasShop, hasObjectives and hasKyc in LoggedIn.Model
-                            | hasShop = FeatureLoaded community.hasShop
-                            , hasObjectives = FeatureLoaded community.hasObjectives
-                            , hasKyc = FeatureLoaded community.hasKyc
-                            , selectedCommunity = RemoteData.Success community
-                        }
+                        { model | selectedCommunity = RemoteData.Success community }
                             |> UR.init
-                            |> UR.addExt (CommunityLoaded community)
+                            |> UR.addExt (CommunityLoaded community |> Broadcast)
 
                     else
                         -- Everything is loaded, but user is not a member of the community

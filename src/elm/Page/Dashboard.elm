@@ -4,6 +4,7 @@ module Page.Dashboard exposing
     , init
     , jsAddressToMsg
     , msgToString
+    , receiveBroadcast
     , subscriptions
     , update
     , view
@@ -34,7 +35,7 @@ import Page
 import Profile
 import RemoteData exposing (RemoteData)
 import Route
-import Session.LoggedIn as LoggedIn exposing (External(..), FeatureStatus(..))
+import Session.LoggedIn as LoggedIn
 import Session.Shared exposing (Shared)
 import Shop
 import Task
@@ -50,11 +51,18 @@ import View.Modal as Modal
 
 
 init : LoggedIn.Model -> ( Model, Cmd Msg )
-init { shared, accountName, authToken } =
+init ({ shared, accountName, authToken } as loggedIn) =
     ( initModel
     , Cmd.batch
         [ fetchTransfers shared accountName authToken
         , Task.perform GotTime Time.now
+        , case loggedIn.selectedCommunity of
+            RemoteData.Success community ->
+                Task.succeed community
+                    |> Task.perform CompletedLoadCommunity
+
+            _ ->
+                Cmd.none
         ]
     )
 
@@ -148,10 +156,12 @@ view ({ shared, accountName } as loggedIn) model =
                 ( RemoteData.Loading, _, _ ) ->
                     Page.fullPageLoading shared
 
+                ( RemoteData.NotAsked, _, _ ) ->
+                    Page.fullPageLoading shared
+
                 ( RemoteData.Failure e, _, _ ) ->
                     Page.fullPageError (t "dashboard.sorry") e
 
-                -- TODO
                 ( RemoteData.Success (Just balance), LoggedIn.Loaded profile, RemoteData.Success community ) ->
                     div [ class "container mx-auto px-4 mb-10" ]
                         [ viewHeader loggedIn community isCommunityAdmin
@@ -165,7 +175,7 @@ view ({ shared, accountName } as loggedIn) model =
                         , viewInvitationModal loggedIn model
                         ]
 
-                ( _, _, _ ) ->
+                ( RemoteData.Success _, _, _ ) ->
                     Page.fullPageNotFound (t "dashboard.sorry") ""
     in
     { title = t "menu.dashboard"
@@ -577,8 +587,8 @@ viewQuickLinks ({ shared } as loggedIn) =
     in
     div [ class "flex-wrap flex" ]
         [ div [ class "w-1/2 lg:w-full" ]
-            [ case loggedIn.hasObjectives of
-                FeatureLoaded True ->
+            [ case RemoteData.map .hasObjectives loggedIn.selectedCommunity of
+                RemoteData.Success True ->
                     a
                         [ class "flex flex-wrap mr-2 px-4 py-6 rounded bg-white hover:shadow lg:flex-no-wrap lg:justify-between lg:items-center lg:mb-6 lg:mr-0"
                         , Route.href (Route.ProfileClaims (Eos.nameToString loggedIn.accountName))
@@ -597,8 +607,8 @@ viewQuickLinks ({ shared } as loggedIn) =
                     text ""
             ]
         , div [ class "w-1/2 lg:w-full" ]
-            [ case loggedIn.hasShop of
-                FeatureLoaded True ->
+            [ case RemoteData.map .hasShop loggedIn.selectedCommunity of
+                RemoteData.Success True ->
                     a
                         [ class "flex flex-wrap ml-2 px-4 py-6 rounded bg-white hover:shadow lg:flex-no-wrap lg:justify-between lg:items-center lg:ml-0"
                         , Route.href (Route.Shop Shop.UserSales)
@@ -624,7 +634,7 @@ viewQuickLinks ({ shared } as loggedIn) =
 
 
 type alias UpdateResult =
-    UR.UpdateResult Model Msg (External Msg)
+    UR.UpdateResult Model Msg (LoggedIn.External Msg)
 
 
 type Msg
@@ -791,7 +801,7 @@ update msg model ({ shared, accountName } as loggedIn) =
                                 | analysis = LoadedGraphql (setClaimStatus claims claimId ClaimVoted) pageInfo
                             }
                                 |> UR.init
-                                |> UR.addExt (ShowFeedback LoggedIn.Success (message value))
+                                |> UR.addExt (LoggedIn.ShowFeedback LoggedIn.Success (message value))
                                 |> UR.addCmd cmd
 
                         Nothing ->
@@ -810,7 +820,7 @@ update msg model ({ shared, accountName } as loggedIn) =
                 LoadedGraphql claims pageInfo ->
                     { model | analysis = LoadedGraphql (setClaimStatus claims claimId ClaimVoteFailed) pageInfo }
                         |> UR.init
-                        |> UR.addExt (ShowFeedback LoggedIn.Failure errorMessage)
+                        |> UR.addExt (LoggedIn.ShowFeedback LoggedIn.Failure errorMessage)
 
                 _ ->
                     model |> UR.init
@@ -988,6 +998,13 @@ unwrapClaimStatus claimStatus =
 
         ClaimVoteFailed claim ->
             claim
+
+
+receiveBroadcast : LoggedIn.BroadcastMsg -> Msg
+receiveBroadcast broadcastMsg =
+    case broadcastMsg of
+        LoggedIn.CommunityLoaded community ->
+            CompletedLoadCommunity community
 
 
 jsAddressToMsg : List String -> Value -> Maybe Msg

@@ -39,6 +39,7 @@ import Route exposing (Route)
 import Session.Guest as Guest
 import Session.LoggedIn as LoggedIn exposing (External(..), FeedbackVisibility(..))
 import Shop
+import Task
 import UpdateResult as UR exposing (UpdateResult)
 import Url exposing (Url)
 
@@ -298,15 +299,8 @@ update msg model =
                             Page.LoggedInExternalMsg LoggedIn.AuthenticationFailed ->
                                 ( { m | afterAuthMsg = Nothing }, Cmd.none )
 
-                            -- TODO
-                            Page.LoggedInExternalMsg (LoggedIn.CommunityLoaded community) ->
-                                case m.status of
-                                    Dashboard dashboard ->
-                                        -- ( m, Cmd.none )
-                                        update (GotDashboardMsg (Dashboard.CompletedLoadCommunity community)) m
-
-                                    _ ->
-                                        ( m, Cmd.none )
+                            Page.LoggedInExternalMsg (LoggedIn.Broadcast broadcastMsg) ->
+                                ( m, broadcast broadcastMsg m.status )
                     )
                     msgToString
 
@@ -448,6 +442,33 @@ update msg model =
             ( model
             , Log.impossible ("Main" :: msgToString msg |> String.join ".")
             )
+
+
+broadcast : LoggedIn.BroadcastMsg -> Status -> Cmd Msg
+broadcast broadcastMessage status =
+    let
+        maybeMsg =
+            case status of
+                Dashboard _ ->
+                    Dashboard.receiveBroadcast broadcastMessage
+                        |> GotDashboardMsg
+                        |> Just
+
+                _ ->
+                    Nothing
+    in
+    case maybeMsg of
+        Just msg ->
+            spawnMessage msg
+
+        Nothing ->
+            Cmd.none
+
+
+spawnMessage : Msg -> Cmd Msg
+spawnMessage msg =
+    Task.succeed ()
+        |> Task.perform (\_ -> msg)
 
 
 updateStatusWith : (subModel -> Status) -> (subMsg -> Msg) -> Model -> ( subModel, Cmd subMsg ) -> ( Model, Cmd Msg )

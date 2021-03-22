@@ -385,6 +385,7 @@
     "title": "Comunidad",
     "create_button": "Crear Comunidad",
     "not_found": "Comunidad no encontrada",
+    "error_loading": "Error al cargar la comunidad",
     "create": {
       "title": "Crear comunidad",
       "success": "Comunidad guardada con éxito",

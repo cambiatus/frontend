@@ -1270,17 +1270,23 @@ view ({ shared } as loggedIn) model =
     in
     { title = title
     , content =
-        case loggedIn.hasObjectives of
-            LoggedIn.FeatureLoaded True ->
+        case RemoteData.map .hasObjectives loggedIn.selectedCommunity of
+            RemoteData.Success True ->
                 content
 
-            LoggedIn.FeatureLoaded False ->
+            RemoteData.Success False ->
                 Page.fullPageNotFound
                     (t "error.pageNotFound")
                     (t "community.objectives.disabled.description")
 
-            LoggedIn.FeatureLoading ->
+            RemoteData.Loading ->
                 Page.fullPageLoading shared
+
+            RemoteData.NotAsked ->
+                Page.fullPageLoading shared
+
+            RemoteData.Failure e ->
+                Page.fullPageGraphQLError (t "community.error_loading") e
     }
 
 
