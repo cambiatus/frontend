@@ -161,7 +161,7 @@ type alias Model =
     { shared : Shared
     , accountName : Eos.Name
     , profile : ProfileStatus
-    , selectedCommunity : RemoteData (Graphql.Http.Error Community.Model) Community.Model
+    , selectedCommunity : RemoteData (Graphql.Http.Error (Maybe Community.Model)) Community.Model
     , showUserNav : Bool
     , showLanguageItems : Bool
     , showNotificationModal : Bool
@@ -1001,9 +1001,14 @@ update msg model =
                     UR.init model
                         |> UR.addCmd redirect
 
-        -- TODO
-        CompletedLoadCommunity _ ->
-            UR.init model
+        CompletedLoadCommunity (RemoteData.Failure e) ->
+            UR.init { model | selectedCommunity = RemoteData.Failure e }
+
+        CompletedLoadCommunity RemoteData.NotAsked ->
+            UR.init { model | selectedCommunity = RemoteData.NotAsked }
+
+        CompletedLoadCommunity RemoteData.Loading ->
+            UR.init { model | selectedCommunity = RemoteData.Loading }
 
         ClickedTryAgainProfile accountName ->
             UR.init { model | profile = Loading accountName }
@@ -1204,9 +1209,9 @@ selectCommunity { name, symbol } ({ shared } as model) =
                         String.toLower name
                    )
                 -- TODO - Change URL to be dynamic
+                -- TODO - Issue when URL is just `localhost:3000/dashboard`
                 ++ ".localhost:3000/dashboard"
     in
-    -- TODO
     case model.selectedCommunity of
         RemoteData.Success selectedCommunity ->
             if symbol == selectedCommunity.symbol then
