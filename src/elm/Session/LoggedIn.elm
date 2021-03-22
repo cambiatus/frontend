@@ -93,14 +93,6 @@ init shared accountName authToken =
     )
 
 
-getCommunityName : Url -> String
-getCommunityName url =
-    url.host
-        |> String.split "."
-        |> List.head
-        |> Maybe.withDefault "app"
-
-
 fetchTranslations : String -> Shared -> Cmd Msg
 fetchTranslations language _ =
     CompletedLoadTranslation language
@@ -876,23 +868,29 @@ update msg model =
                     unreadCountSubscription model.accountName
                         |> Graphql.Document.serializeSubscription
 
-                urlCommunity =
-                    if getCommunityName shared.url == "app" then
-                        "cambiatus"
+                communityName =
+                    String.split "." shared.url.host
+                        |> List.head
+                        |> Maybe.withDefault "app"
+                        |> String.toLower
+                        |> (\name ->
+                                if name == "app" then
+                                    "cambiatus"
 
-                    else
-                        getCommunityName shared.url
+                                else
+                                    name
+                           )
             in
             case profile_ of
                 Just p ->
                     let
                         model_ =
-                            { model
-                                | profile = Loaded p
-                                , selectedCommunity = RemoteData.Loading
-                            }
+                            { model | profile = Loaded p }
                     in
-                    (case List.find (.name >> (==) urlCommunity) p.communities of
+                    (case
+                        List.find (.name >> String.toLower >> (==) communityName)
+                            p.communities
+                     of
                         Just c ->
                             let
                                 ( modelWithCommunity, cmd ) =
@@ -901,12 +899,14 @@ update msg model =
                             UR.init modelWithCommunity
                                 |> UR.addCmd cmd
 
+                        -- If user is not a part of the community, it may exist
+                        -- and have auto invite, so we check for that
                         Nothing ->
                             UR.init model_
                                 |> UR.addCmd
                                     (Api.Graphql.query shared
                                         (Just model.authToken)
-                                        (Community.communityNameQuery urlCommunity)
+                                        (Community.communityNameQuery communityName)
                                         CompletedLoadCommunity
                                     )
                     )
@@ -944,17 +944,6 @@ update msg model =
             UR.init model
 
         CompletedLoadCommunity (RemoteData.Success maybeCommunity) ->
-            let
-                redirect =
-                    if String.startsWith "app." shared.url.host then
-                        Cmd.none
-
-                    else
-                        Browser.Navigation.load
-                            (Url.toString shared.url
-                                |> String.replace (getCommunityName shared.url ++ ".") "app."
-                            )
-            in
             case maybeCommunity of
                 Just community ->
                     let
@@ -975,12 +964,21 @@ update msg model =
                     else
                         -- Everything is loaded, but user is not a member of the community
                         -- TODO - Need to change this to use auto invite communities
+                        let
+                            communityUrl =
+                                if String.toLower community.name == "cambiatus" then
+                                    "app"
+
+                                else
+                                    String.toLower community.name
+                        in
                         UR.init model
-                            |> UR.addCmd redirect
+                            |> UR.addCmd (redirectToCommunity shared.url communityUrl)
 
                 Nothing ->
+                    -- The community doesn't exist, so redirect to the cambiatus community
                     UR.init model
-                        |> UR.addCmd redirect
+                        |> UR.addCmd (redirectToCommunity shared.url "app")
 
         CompletedLoadCommunity (RemoteData.Failure e) ->
             UR.init { model | selectedCommunity = RemoteData.Failure e }
@@ -1127,40 +1125,42 @@ update msg model =
 
 handleActionMsg : Model -> Action.Msg -> UpdateResult
 handleActionMsg ({ shared } as model) actionMsg =
-    let
-        { t, tr } =
-            shared.translators
-
-        actionModelToLoggedIn : Action.Model -> Model
-        actionModelToLoggedIn a =
-            { model
-                | claimingAction = a
-                , feedback =
-                    case ( a.feedback, actionMsg ) of
-                        ( _, Action.Tick _ ) ->
-                            -- Don't change feedback each second
-                            model.feedback
-
-                        ( Just (Action.Failure s), _ ) ->
-                            Show Failure s
-
-                        ( Just (Action.Success s), _ ) ->
-                            Show Success s
-
-                        ( Nothing, _ ) ->
-                            model.feedback
-            }
-                |> (if a.needsPinConfirmation then
-                        askedAuthentication
-
-                    else
-                        identity
-                   )
-    in
-    -- TODO
     case model.selectedCommunity of
         RemoteData.Success community ->
-            Action.update (isAuth model) shared (Api.uploadImage shared) community.symbol model.accountName actionMsg model.claimingAction
+            let
+                actionModelToLoggedIn : Action.Model -> Model
+                actionModelToLoggedIn a =
+                    { model
+                        | claimingAction = a
+                        , feedback =
+                            case ( a.feedback, actionMsg ) of
+                                ( _, Action.Tick _ ) ->
+                                    -- Don't change feedback each second
+                                    model.feedback
+
+                                ( Just (Action.Failure s), _ ) ->
+                                    Show Failure s
+
+                                ( Just (Action.Success s), _ ) ->
+                                    Show Success s
+
+                                ( Nothing, _ ) ->
+                                    model.feedback
+                    }
+                        |> (if a.needsPinConfirmation then
+                                askedAuthentication
+
+                            else
+                                identity
+                           )
+            in
+            Action.update (isAuth model)
+                shared
+                (Api.uploadImage shared)
+                community.symbol
+                model.accountName
+                actionMsg
+                model.claimingAction
                 |> UR.map
                     actionModelToLoggedIn
                     GotActionMsg
@@ -1182,35 +1182,57 @@ selectCommunity : { community | name : String, symbol : Eos.Symbol } -> Model ->
 selectCommunity { name, symbol } ({ shared } as model) =
     let
         communityUrl =
-            "http://"
-                ++ (if String.toLower name == "cambiatus" then
-                        "app"
+            if String.toLower name == "cambiatus" then
+                "app"
 
-                    else
-                        String.toLower name
-                   )
-                -- TODO - Change URL to be dynamic
-                -- TODO - Issue when URL is just `localhost:3000/dashboard`
-                ++ ".localhost:3000/dashboard"
+            else
+                String.toLower name
+
+        loadCommunity =
+            ( { model
+                | showCommunitySelector = False
+                , selectedCommunity = RemoteData.Loading
+              }
+            , Api.Graphql.query shared
+                (Just model.authToken)
+                (Community.communityQuery symbol)
+                CompletedLoadCommunity
+            )
     in
     case model.selectedCommunity of
         RemoteData.Success selectedCommunity ->
             if symbol == selectedCommunity.symbol then
-                ( { model
-                    | showCommunitySelector = False
-                    , selectedCommunity = RemoteData.Loading
-                  }
-                , Api.Graphql.query shared
-                    (Just model.authToken)
-                    (Community.communityQuery symbol)
-                    CompletedLoadCommunity
-                )
+                ( { model | showCommunitySelector = False }, Cmd.none )
 
             else
-                ( model, Browser.Navigation.load communityUrl )
+                ( { model | showCommunitySelector = False }
+                , redirectToCommunity shared.url communityUrl
+                )
 
-        _ ->
-            ( model, Browser.Navigation.load communityUrl )
+        RemoteData.NotAsked ->
+            loadCommunity
+
+        RemoteData.Failure _ ->
+            loadCommunity
+
+        RemoteData.Loading ->
+            ( model, Cmd.none )
+
+
+redirectToCommunity : Url -> String -> Cmd msg
+redirectToCommunity currentUrl communityUrl =
+    (case currentUrl.host |> String.split "." of
+        [] ->
+            { currentUrl | host = "app.cambiatus.io" }
+
+        [ singlePart ] ->
+            { currentUrl | host = String.join "." [ communityUrl, singlePart ] }
+
+        _ :: rest ->
+            { currentUrl | host = String.join "." (communityUrl :: rest) }
+    )
+        |> Url.toString
+        |> Browser.Navigation.load
 
 
 closeModal : UpdateResult -> UpdateResult

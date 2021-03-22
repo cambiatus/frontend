@@ -129,7 +129,6 @@ const setupIframe = (isInitial) => {
 
 let hasRunMain = false
 // Receive a `getMany` message, and write all of the content to localStorage
-// TODO - can we leave this here?
 window.onmessage = (e) => {
   const payload = e.data
 
