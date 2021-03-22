@@ -18,6 +18,7 @@ module Session.LoggedIn exposing
     , isAuth
     , jsAddressToMsg
     , mapExternal
+    , maybeInitWith
     , maybePrivateKey
     , msgToString
     , profile
@@ -1340,6 +1341,21 @@ unreadCountSubscription name =
             { input = { account = stringName } }
     in
     Subscription.unreads args unreadSelection
+
+
+
+-- BROADCAST
+
+
+maybeInitWith : (a -> msg) -> (Model -> RemoteData e a) -> Model -> Cmd msg
+maybeInitWith toMsg attribute model =
+    case attribute model of
+        RemoteData.Success value ->
+            Task.succeed value
+                |> Task.perform toMsg
+
+        _ ->
+            Cmd.none
 
 
 jsAddressToMsg : List String -> Value -> Maybe Msg

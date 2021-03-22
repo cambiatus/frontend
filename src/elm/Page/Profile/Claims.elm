@@ -30,20 +30,13 @@ import Page
 import RemoteData exposing (RemoteData)
 import Route
 import Session.LoggedIn as LoggedIn exposing (External(..))
-import Task
 import UpdateResult as UR
 
 
 init : LoggedIn.Model -> String -> ( Model, Cmd Msg )
 init loggedIn account =
     ( initModel account
-    , case loggedIn.selectedCommunity of
-        RemoteData.Success community ->
-            Task.succeed community
-                |> Task.perform CompletedLoadCommunity
-
-        _ ->
-            Cmd.none
+    , LoggedIn.maybeInitWith CompletedLoadCommunity .selectedCommunity loggedIn
     )
 
 

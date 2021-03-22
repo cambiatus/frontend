@@ -50,13 +50,7 @@ init loggedIn filter =
     in
     ( model
     , Cmd.batch
-        [ case loggedIn.selectedCommunity of
-            RemoteData.Success community ->
-                Task.succeed community
-                    |> Task.perform CompletedLoadCommunity
-
-            _ ->
-                Cmd.none
+        [ LoggedIn.maybeInitWith CompletedLoadCommunity .selectedCommunity loggedIn
         , Api.getBalances loggedIn.shared loggedIn.accountName CompletedLoadBalances
         , Task.perform GotTime Time.now
         ]

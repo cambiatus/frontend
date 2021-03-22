@@ -38,15 +38,9 @@ import View.Form.InputCounter
 
 
 init : LoggedIn.Model -> Maybe String -> ( Model, Cmd Msg )
-init { selectedCommunity } maybeTo =
+init loggedIn maybeTo =
     ( initModel maybeTo
-    , case selectedCommunity of
-        RemoteData.Success community ->
-            Task.succeed community
-                |> Task.perform CompletedLoadCommunity
-
-        _ ->
-            Cmd.none
+    , LoggedIn.maybeInitWith CompletedLoadCommunity .selectedCommunity loggedIn
     )
 
 

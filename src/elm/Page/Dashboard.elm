@@ -56,13 +56,7 @@ init ({ shared, accountName, authToken } as loggedIn) =
     , Cmd.batch
         [ fetchTransfers shared accountName authToken
         , Task.perform GotTime Time.now
-        , case loggedIn.selectedCommunity of
-            RemoteData.Success community ->
-                Task.succeed community
-                    |> Task.perform CompletedLoadCommunity
-
-            _ ->
-                Cmd.none
+        , LoggedIn.maybeInitWith CompletedLoadCommunity .selectedCommunity loggedIn
         ]
     )
 
