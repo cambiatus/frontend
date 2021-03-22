@@ -4,12 +4,9 @@ module Community exposing
     , Balance
     , ClaimResponse
     , CreateCommunityData
-    ,  CreateTokenData
-       -- , DashboardInfo
-
+    , CreateTokenData
     , Invite
     , Metadata
-    , Minimal
     , Model
     , Objective
     , Settings
@@ -22,9 +19,7 @@ module Community exposing
     , communityNameQuery
     , communityQuery
     , communitySelectionSet
-    ,  createCommunityData
-       -- , dashboardSelectionSet
-
+    , createCommunityData
     , decodeBalance
     , decodeTransaction
     , encodeCreateCommunityData
@@ -34,15 +29,11 @@ module Community exposing
     , encodeUpdateObjectiveAction
     , inviteQuery
     , logoBackground
-    , logoTitleQuery
     , logoUrl
-    , minimalQuery
-    , minimalSelectionSet
     , newCommunitySubscription
     , objectiveSelectionSet
     , settingsQuery
     , settingsSelectionSet
-    , toMinimal
     , toVerifications
     )
 
@@ -73,35 +64,6 @@ import Profile
 import Time exposing (Posix)
 import Utils
 import View.Tag as Tag
-
-
-
--- Minimal set of info
-
-
-type alias Minimal =
-    { symbol : Symbol
-    , name : String
-    , logo : String
-    , hasShop : Bool
-    , hasObjectives : Bool
-    , hasKyc : Bool
-    , creator : Eos.Name
-    , validators : List Eos.Name
-    }
-
-
-toMinimal : Model -> Minimal
-toMinimal model =
-    { symbol = model.symbol
-    , name = model.name
-    , logo = model.logo
-    , hasShop = model.hasShop
-    , hasObjectives = model.hasObjectives
-    , hasKyc = model.hasKyc
-    , creator = model.creator
-    , validators = model.validators
-    }
 
 
 
@@ -163,19 +125,6 @@ communitiesSelectionSet =
         |> with Community.memberCount
 
 
-minimalSelectionSet : SelectionSet Minimal Cambiatus.Object.Community
-minimalSelectionSet =
-    SelectionSet.succeed Minimal
-        |> with (Eos.symbolSelectionSet Community.symbol)
-        |> with Community.name
-        |> with Community.logo
-        |> with Community.hasShop
-        |> with Community.hasObjectives
-        |> with Community.hasKyc
-        |> with (Eos.nameSelectionSet Community.creator)
-        |> with (Community.validators (Eos.nameSelectionSet Profile.account))
-
-
 communitySelectionSet : SelectionSet Model Cambiatus.Object.Community
 communitySelectionSet =
     SelectionSet.succeed Model
@@ -226,11 +175,6 @@ communitiesQuery =
     Query.communities communitiesSelectionSet
 
 
-minimalQuery : SelectionSet (List Minimal) RootQuery
-minimalQuery =
-    Query.communities minimalSelectionSet
-
-
 
 -- NEW COMMUNITY NAME
 
@@ -253,11 +197,6 @@ newCommunitySubscription symbol =
             { input = { symbol = stringSymbol } }
     in
     Subscription.newcommunity args selectionSet
-
-
-logoTitleQuery : Symbol -> SelectionSet (Maybe Minimal) RootQuery
-logoTitleQuery symbol =
-    Query.community { symbol = symbolToString symbol } minimalSelectionSet
 
 
 type alias WithObjectives =
