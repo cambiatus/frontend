@@ -43,7 +43,6 @@ import Cambiatus.Subscription as Subscription
 import Community
 import Eos exposing (Symbol)
 import Eos.Account as Eos
-import Flags exposing (Flags)
 import Graphql.Document
 import Graphql.Http
 import Graphql.Operation exposing (RootSubscription)
@@ -68,7 +67,6 @@ import Shop
 import Task
 import Time exposing (Posix)
 import Translation
-import Tuple
 import UpdateResult as UR
 import Url exposing (Url)
 import View.Modal as Modal
@@ -80,13 +78,13 @@ import View.Modal as Modal
 
 {-| Initialize already logged in user when the page is [re]loaded.
 -}
-init : Shared -> Eos.Name -> Flags -> String -> ( Model, Cmd Msg )
-init shared accountName flags authToken =
+init : Shared -> Eos.Name -> String -> ( Model, Cmd Msg )
+init shared accountName authToken =
     let
         authModel =
             Auth.init shared
     in
-    ( initModel shared authModel accountName flags.selectedCommunity authToken
+    ( initModel shared authModel accountName authToken
     , Cmd.batch
         [ Api.Graphql.query shared (Just authToken) (Profile.query accountName) CompletedLoadProfile
         , Ports.getRecentSearches () -- run on the page refresh, duplicated in `initLogin`
@@ -113,28 +111,11 @@ fetchTranslations language _ =
 -}
 initLogin : Shared -> Auth.Model -> Profile.Model -> String -> ( Model, Cmd Msg )
 initLogin shared authModel profile_ authToken =
-    let
-        maybeCommunity =
-            List.head profile_.communities
-
-        communitySymbol =
-            maybeCommunity
-                |> Maybe.map .symbol
-                |> Maybe.withDefault Eos.cambiatusSymbol
-
-        initialModel =
-            initModel shared authModel profile_.account communitySymbol authToken
-
-        ( model, cmd ) =
-            Maybe.map (\community -> selectCommunity community initialModel) maybeCommunity
-                |> Maybe.withDefault ( initialModel, Cmd.none )
-    in
-    ( { model
-        | profile = Loaded profile_
-      }
+    ( initModel shared authModel profile_.account authToken
     , Cmd.batch
-        [ cmd
-        , Ports.getRecentSearches () -- run on the passphrase login, duplicated in `init`
+        [ Ports.getRecentSearches () -- run on the passphrase login, duplicated in `init`
+        , Task.succeed (RemoteData.Success (Just profile_))
+            |> Task.perform CompletedLoadProfile
         ]
     )
 
@@ -179,8 +160,8 @@ type alias Model =
     }
 
 
-initModel : Shared -> Auth.Model -> Eos.Name -> Symbol -> String -> Model
-initModel shared authModel accountName selectedCommunity authToken =
+initModel : Shared -> Auth.Model -> Eos.Name -> String -> Model
+initModel shared authModel accountName authToken =
     { shared = shared
     , accountName = accountName
     , profile = Loading accountName
@@ -195,7 +176,7 @@ initModel shared authModel accountName selectedCommunity authToken =
     , auth = authModel
     , feedback = Hidden
     , showCommunitySelector = False
-    , searchModel = Search.init selectedCommunity
+    , searchModel = Search.init
     , claimingAction = { status = Action.NotAsked, feedback = Nothing, needsPinConfirmation = False }
     , date = Nothing
     , authToken = authToken
@@ -349,7 +330,6 @@ viewHelper pageMsg page profile_ ({ shared } as model) content =
                 in
                 case ( Search.isActive model.searchModel, model.claimingAction.status ) of
                     ( True, _ ) ->
-                        -- TODO
                         case model.selectedCommunity of
                             RemoteData.Success community ->
                                 [ Search.viewSearchBody
@@ -856,21 +836,22 @@ update msg model =
             handleActionMsg model actionMsg
 
         SearchClosed ->
-            { model
-                | searchModel =
-                    Search.closeSearch shared model.authToken model.searchModel
-                        |> Tuple.first
-            }
+            { model | searchModel = Search.closeSearch model.searchModel }
                 |> UR.init
 
         GotSearchMsg searchMsg ->
-            let
-                ( searchModel, searchCmd ) =
-                    Search.update shared model.authToken model.searchModel searchMsg
-            in
-            { model | searchModel = searchModel }
-                |> UR.init
-                |> UR.addCmd (Cmd.map GotSearchMsg searchCmd)
+            case model.selectedCommunity of
+                RemoteData.Success community ->
+                    let
+                        ( searchModel, searchCmd ) =
+                            Search.update shared model.authToken community.symbol model.searchModel searchMsg
+                    in
+                    { model | searchModel = searchModel }
+                        |> UR.init
+                        |> UR.addCmd (Cmd.map GotSearchMsg searchCmd)
+
+                _ ->
+                    UR.init model
 
         CompletedLoadTranslation lang (Ok transl) ->
             case model.profile of
@@ -1218,10 +1199,6 @@ selectCommunity { name, symbol } ({ shared } as model) =
                 ( { model
                     | showCommunitySelector = False
                     , selectedCommunity = RemoteData.Loading
-                    , searchModel =
-                        Search.closeSearch shared model.authToken model.searchModel
-                            |> Tuple.first
-                            |> (\searchModel -> { searchModel | selectedCommunity = symbol })
                   }
                 , Api.Graphql.query shared
                     (Just model.authToken)

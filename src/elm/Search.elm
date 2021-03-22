@@ -52,16 +52,14 @@ type alias Model =
     { state : State
     , currentQuery : String
     , recentQueries : List String
-    , selectedCommunity : Symbol
     }
 
 
-init : Symbol -> Model
-init selectedCommunity =
+init : Model
+init =
     { state = Inactive
     , currentQuery = ""
     , recentQueries = []
-    , selectedCommunity = selectedCommunity
     }
 
 
@@ -149,8 +147,8 @@ type Msg
     | FoundItemClicked Route
 
 
-update : Shared -> String -> Model -> Msg -> ( Model, Cmd Msg )
-update shared authToken model msg =
+update : Shared -> String -> Symbol -> Model -> Msg -> ( Model, Cmd Msg )
+update shared authToken symbol model msg =
     case msg of
         NoOp ->
             ( model, Cmd.none )
@@ -169,6 +167,7 @@ update shared authToken model msg =
         RecentQueryClicked q ->
             update shared
                 authToken
+                symbol
                 { model
                     | state = ResultsShowed RemoteData.Loading Nothing
                     , currentQuery = q
@@ -203,10 +202,7 @@ update shared authToken model msg =
                     ( model, Cmd.none )
 
         CancelClicked ->
-            ( { model
-                | state = Inactive
-                , currentQuery = ""
-              }
+            ( closeSearch model
             , Cmd.none
             )
 
@@ -239,9 +235,6 @@ update shared authToken model msg =
                         |> Encode.list Encode.string
                         |> Encode.encode 0
                         |> Ports.storeRecentSearches
-
-                selectedCommunity =
-                    model.selectedCommunity
             in
             ( { model
                 | recentQueries = newRecentSearches
@@ -249,7 +242,7 @@ update shared authToken model msg =
               }
             , Cmd.batch
                 [ storeRecentSearches
-                , sendSearchQuery selectedCommunity shared model.currentQuery authToken
+                , sendSearchQuery symbol shared model.currentQuery authToken
                 ]
             )
 
@@ -571,6 +564,6 @@ isActive model =
             True
 
 
-closeSearch : Shared -> String -> Model -> ( Model, Cmd Msg )
-closeSearch shared authToken model =
-    update shared authToken model CancelClicked
+closeSearch : Model -> Model
+closeSearch model =
+    { model | state = Inactive, currentQuery = "" }

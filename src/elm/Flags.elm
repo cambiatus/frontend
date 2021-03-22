@@ -7,7 +7,6 @@ module Flags exposing
     , defaultEndpoints
     )
 
-import Eos exposing (Symbol)
 import Eos.Account as Eos
 import Json.Decode as Decode exposing (Decoder, nullable, string)
 import Json.Decode.Pipeline as Decode exposing (optional, required)
@@ -22,7 +21,6 @@ type alias Flags =
     , logoMobile : String
     , now : Int
     , allowCommunityCreation : Bool
-    , selectedCommunity : Symbol
     , tokenContract : String
     , communityContract : String
     , graphqlSecret : String
@@ -40,7 +38,6 @@ default =
     , logoMobile = "/images/logo-cambiatus-mobile.svg"
     , now = 0
     , allowCommunityCreation = True
-    , selectedCommunity = Eos.cambiatusSymbol
     , tokenContract = "bes.token"
     , communityContract = "bes.cmm"
     , graphqlSecret = ""
@@ -66,7 +63,6 @@ decode =
         |> required "logoMobile" Decode.string
         |> required "now" Decode.int
         |> required "allowCommunityCreation" Decode.bool
-        |> required "selectedCommunity" Eos.symbolDecoder
         |> required "tokenContract" Decode.string
         |> required "communityContract" Decode.string
         |> required "graphqlSecret" Decode.string

@@ -180,7 +180,6 @@ const main = () => {
       logoMobile: config.logoMobile,
       now: Date.now(),
       allowCommunityCreation: config.allowCommunityCreation,
-      selectedCommunity: getSelectedCommunity() || config.selectedCommunity,
       tokenContract: config.tokenContract,
       communityContract: config.communityContract
     }
@@ -324,10 +323,6 @@ const main = () => {
 
     removeItem(USER_KEY)
     setItem(USER_KEY, JSON.stringify(storeData))
-  }
-
-  function getSelectedCommunity () {
-    return getItem(SELECTED_COMMUNITY_KEY)
   }
 
   function downloadPdf (accountName, passphrase, responseAddress, responseData) {
@@ -560,12 +555,6 @@ const main = () => {
             Sentry.setUser({ account: store.accountName })
 
             storeAuthPreference('pin')
-
-            // Set default selected community
-            setItem(
-              SELECTED_COMMUNITY_KEY,
-              flags().selectedCommunity
-            )
 
             Sentry.addBreadcrumb({
               category: 'auth',
@@ -1026,28 +1015,6 @@ const main = () => {
           addressData: arg.responseData
         }
         app.ports.javascriptInPort.send(response)
-        break
-      }
-      case 'setSelectedCommunity': {
-        debugLog('setSelectedCommunity port started', '')
-
-        Sentry.addBreadcrumb({
-          type: 'navigation',
-          category: 'navigation',
-          data: {
-            from: getItem(SELECTED_COMMUNITY_KEY),
-            to: arg.data.selectedCommunity
-          },
-          message: 'Changed to community ' + arg.data.selectedCommunity,
-          level: Sentry.Severity.Info
-        })
-
-        removeItem(SELECTED_COMMUNITY_KEY)
-        setItem(
-          SELECTED_COMMUNITY_KEY,
-          arg.data.selectedCommunity
-        )
-
         break
       }
       default: {
