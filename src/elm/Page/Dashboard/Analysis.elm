@@ -4,6 +4,7 @@ module Page.Dashboard.Analysis exposing
     , init
     , jsAddressToMsg
     , msgToString
+    , receiveBroadcast
     , update
     , view
     )
@@ -12,6 +13,7 @@ import Api.Graphql
 import Api.Relay
 import Cambiatus.Query
 import Claim
+import Community
 import Eos
 import Eos.Account as Eos
 import Eos.EosError as EosError
@@ -39,9 +41,12 @@ import UpdateResult as UR
 init : LoggedIn.Model -> ( Model, Cmd Msg )
 init loggedIn =
     ( initModel
-    , Cmd.batch
-        [ fetchAnalysis loggedIn initFilter Nothing
-        ]
+    , case loggedIn.selectedCommunity of
+        RemoteData.Success community ->
+            fetchAnalysis loggedIn initFilter Nothing community
+
+        _ ->
+            Cmd.none
     )
 
 
@@ -298,6 +303,7 @@ type alias UpdateResult =
 
 type Msg
     = ClaimsLoaded (RemoteData (Graphql.Http.Error (Maybe Claim.Paginated)) (Maybe Claim.Paginated))
+    | CompletedLoadCommunity Community.Model
     | ClaimMsg Claim.Msg
     | VoteClaim Claim.ClaimId Bool
     | GotVoteResult Claim.ClaimId (Result (Maybe Value) String)
@@ -342,6 +348,10 @@ update msg model loggedIn =
 
         ClaimsLoaded _ ->
             UR.init model
+
+        CompletedLoadCommunity community ->
+            UR.init model
+                |> UR.addCmd (fetchAnalysis loggedIn model.filters Nothing community)
 
         ClaimMsg m ->
             let
@@ -461,8 +471,8 @@ update msg model loggedIn =
                 oldFilters =
                     model.filters
             in
-            case model.status of
-                Loaded _ _ ->
+            case ( model.status, loggedIn.selectedCommunity ) of
+                ( Loaded _ _, RemoteData.Success community ) ->
                     let
                         newModel =
                             { model
@@ -473,14 +483,14 @@ update msg model loggedIn =
                     in
                     newModel
                         |> UR.init
-                        |> UR.addCmd (fetchAnalysis loggedIn newModel.filters Nothing)
+                        |> UR.addCmd (fetchAnalysis loggedIn newModel.filters Nothing community)
 
                 _ ->
                     UR.init model
 
         ShowMore ->
-            case model.status of
-                Loaded _ pageInfo ->
+            case ( model.status, loggedIn.selectedCommunity ) of
+                ( Loaded _ pageInfo, RemoteData.Success community ) ->
                     let
                         cursor : Maybe String
                         cursor =
@@ -488,14 +498,14 @@ update msg model loggedIn =
                     in
                     model
                         |> UR.init
-                        |> UR.addCmd (fetchAnalysis loggedIn model.filters cursor)
+                        |> UR.addCmd (fetchAnalysis loggedIn model.filters cursor community)
 
                 _ ->
                     UR.init model
 
         ClearSelectSelection ->
-            case model.status of
-                Loaded _ _ ->
+            case ( model.status, loggedIn.selectedCommunity ) of
+                ( Loaded _ _, RemoteData.Success community ) ->
                     let
                         oldFilters =
                             model.filters
@@ -509,7 +519,7 @@ update msg model loggedIn =
                     in
                     newModel
                         |> UR.init
-                        |> UR.addCmd (fetchAnalysis loggedIn newModel.filters Nothing)
+                        |> UR.addCmd (fetchAnalysis loggedIn newModel.filters Nothing community)
 
                 _ ->
                     UR.init model
@@ -528,7 +538,14 @@ update msg model loggedIn =
             in
             newModel
                 |> UR.init
-                |> UR.addCmd (fetchAnalysis loggedIn newModel.filters Nothing)
+                |> UR.addCmd
+                    (case loggedIn.selectedCommunity of
+                        RemoteData.Success community ->
+                            fetchAnalysis loggedIn newModel.filters Nothing community
+
+                        _ ->
+                            Cmd.none
+                    )
 
         ClearFilters ->
             { model
@@ -537,11 +554,18 @@ update msg model loggedIn =
                 , status = Loading
             }
                 |> UR.init
-                |> UR.addCmd (fetchAnalysis loggedIn initFilter Nothing)
+                |> UR.addCmd
+                    (case loggedIn.selectedCommunity of
+                        RemoteData.Success community ->
+                            fetchAnalysis loggedIn initFilter Nothing community
+
+                        _ ->
+                            Cmd.none
+                    )
 
 
-fetchAnalysis : LoggedIn.Model -> Filter -> Maybe String -> Cmd Msg
-fetchAnalysis { selectedCommunity, shared, authToken } { profile, statusFilter } maybeCursorAfter =
+fetchAnalysis : LoggedIn.Model -> Filter -> Maybe String -> Community.Model -> Cmd Msg
+fetchAnalysis { shared, authToken } { profile, statusFilter } maybeCursorAfter community =
     let
         optionalClaimer =
             case profile of
@@ -579,17 +603,7 @@ fetchAnalysis { selectedCommunity, shared, authToken } { profile, statusFilter }
                     Present filterRecord
 
         required =
-            -- TODO
-            { communityId =
-                Eos.symbolToString
-                    (case selectedCommunity of
-                        RemoteData.Success community ->
-                            community.symbol
-
-                        _ ->
-                            Eos.cambiatusSymbol
-                    )
-            }
+            { communityId = Eos.symbolToString community.symbol }
 
         mapFn =
             \s ->
@@ -667,6 +681,13 @@ viewSelectedVerifiers ({ shared } as loggedIn) selectedVerifiers =
             )
 
 
+receiveBroadcast : LoggedIn.BroadcastMsg -> Maybe Msg
+receiveBroadcast broadcastMsg =
+    case broadcastMsg of
+        LoggedIn.CommunityLoaded community ->
+            Just (CompletedLoadCommunity community)
+
+
 jsAddressToMsg : List String -> Encode.Value -> Maybe Msg
 jsAddressToMsg addr val =
     case addr of
@@ -697,6 +718,9 @@ msgToString msg =
     case msg of
         ClaimsLoaded r ->
             [ "ChecksLoaded", UR.remoteDataToString r ]
+
+        CompletedLoadCommunity _ ->
+            [ "CompletedLoadCommunity" ]
 
         ClaimMsg _ ->
             [ "ClaimMsg" ]

@@ -4,6 +4,7 @@ module Page.Profile.Claims exposing
     , init
     , jsAddressToMsg
     , msgToString
+    , receiveBroadcast
     , update
     , view
     )
@@ -13,6 +14,7 @@ import Cambiatus.Object
 import Cambiatus.Object.User as Profile
 import Cambiatus.Query
 import Claim
+import Community
 import Eos
 import Eos.Account as Eos
 import Eos.EosError as EosError
@@ -28,13 +30,20 @@ import Page
 import RemoteData exposing (RemoteData)
 import Route
 import Session.LoggedIn as LoggedIn exposing (External(..))
+import Task
 import UpdateResult as UR
 
 
 init : LoggedIn.Model -> String -> ( Model, Cmd Msg )
 init loggedIn account =
     ( initModel account
-    , profileClaimQuery loggedIn account
+    , case loggedIn.selectedCommunity of
+        RemoteData.Success community ->
+            Task.succeed community
+                |> Task.perform CompletedLoadCommunity
+
+        _ ->
+            Cmd.none
     )
 
 
@@ -170,6 +179,7 @@ type alias UpdateResult =
 
 type Msg
     = ClaimsLoaded (RemoteData (Graphql.Http.Error (Maybe ProfileClaims)) (Maybe ProfileClaims))
+    | CompletedLoadCommunity Community.Model
     | ClaimMsg Claim.Msg
     | VoteClaim Claim.ClaimId Bool
     | GotVoteResult Claim.ClaimId (Result (Maybe Value) String)
@@ -194,6 +204,10 @@ update msg model loggedIn =
 
         ClaimsLoaded _ ->
             UR.init model
+
+        CompletedLoadCommunity community ->
+            UR.init model
+                |> UR.addCmd (profileClaimQuery loggedIn model.accountString community)
 
         ClaimMsg m ->
             let
@@ -296,24 +310,25 @@ update msg model loggedIn =
                     model |> UR.init
 
 
-profileClaimQuery : LoggedIn.Model -> String -> Cmd Msg
-profileClaimQuery ({ shared, authToken } as loggedIn) accountName =
-    -- TODO
-    case loggedIn.selectedCommunity of
-        RemoteData.Success community ->
-            Api.Graphql.query shared
-                (Just authToken)
-                (Cambiatus.Query.user { account = accountName } (selectionSet community.symbol))
-                ClaimsLoaded
-
-        _ ->
-            Cmd.none
+profileClaimQuery : LoggedIn.Model -> String -> Community.Model -> Cmd Msg
+profileClaimQuery { shared, authToken } accountName community =
+    Api.Graphql.query shared
+        (Just authToken)
+        (Cambiatus.Query.user { account = accountName } (selectionSet community.symbol))
+        ClaimsLoaded
 
 
 selectionSet : Eos.Symbol -> SelectionSet ProfileClaims Cambiatus.Object.User
 selectionSet communityId =
     SelectionSet.succeed ProfileClaims
         |> with (Profile.claims (\_ -> { communityId = Present (Eos.symbolToString communityId) }) Claim.selectionSet)
+
+
+receiveBroadcast : LoggedIn.BroadcastMsg -> Maybe Msg
+receiveBroadcast broadcastMsg =
+    case broadcastMsg of
+        LoggedIn.CommunityLoaded community ->
+            Just (CompletedLoadCommunity community)
 
 
 jsAddressToMsg : List String -> Encode.Value -> Maybe Msg
@@ -346,6 +361,9 @@ msgToString msg =
     case msg of
         ClaimsLoaded r ->
             [ "ClaimsLoaded", UR.remoteDataToString r ]
+
+        CompletedLoadCommunity _ ->
+            [ "CompletedLoadCommunity" ]
 
         ClaimMsg _ ->
             [ "ClaimMsg" ]

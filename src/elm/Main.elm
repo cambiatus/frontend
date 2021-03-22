@@ -451,8 +451,23 @@ broadcast broadcastMessage status =
             case status of
                 Dashboard _ ->
                     Dashboard.receiveBroadcast broadcastMessage
-                        |> GotDashboardMsg
-                        |> Just
+                        |> Maybe.map GotDashboardMsg
+
+                Shop _ _ ->
+                    Shop.receiveBroadcast broadcastMessage
+                        |> Maybe.map GotShopMsg
+
+                Transfer _ ->
+                    Transfer.receiveBroadcast broadcastMessage
+                        |> Maybe.map GotTransferMsg
+
+                Analysis _ ->
+                    Analysis.receiveBroadcast broadcastMessage
+                        |> Maybe.map GotAnalysisMsg
+
+                ProfileClaims _ ->
+                    ProfileClaims.receiveBroadcast broadcastMessage
+                        |> Maybe.map GotProfileClaimsMsg
 
                 _ ->
                     Nothing
@@ -856,10 +871,10 @@ changeRouteTo maybeRoute model =
             Invite.init session invitationId
                 |> updateStatusWith Invite GotInviteMsg model
 
-        Just (Route.Transfer symbol maybeTo) ->
-            (\l -> Transfer.init l symbol maybeTo)
+        Just (Route.Transfer maybeTo) ->
+            (\l -> Transfer.init l maybeTo)
                 >> updateStatusWith Transfer GotTransferMsg model
-                |> withLoggedIn (Route.Transfer symbol maybeTo)
+                |> withLoggedIn (Route.Transfer maybeTo)
 
         Just Route.Analysis ->
             (\l -> Analysis.init l)

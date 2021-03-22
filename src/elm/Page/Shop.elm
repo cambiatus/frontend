@@ -4,6 +4,7 @@ module Page.Shop exposing
     , init
     , jsAddressToMsg
     , msgToString
+    , receiveBroadcast
     , subscriptions
     , update
     , view
@@ -49,13 +50,10 @@ init loggedIn filter =
     in
     ( model
     , Cmd.batch
-        [ -- TODO
-          case loggedIn.selectedCommunity of
+        [ case loggedIn.selectedCommunity of
             RemoteData.Success community ->
-                Api.Graphql.query loggedIn.shared
-                    (Just loggedIn.authToken)
-                    (Shop.productsQuery filter loggedIn.accountName community.symbol)
-                    CompletedSalesLoad
+                Task.succeed community
+                    |> Task.perform CompletedLoadCommunity
 
             _ ->
                 Cmd.none
@@ -158,22 +156,12 @@ view loggedIn model =
         selectedCommunityName =
             case loggedIn.profile of
                 LoggedIn.Loaded profile ->
-                    let
-                        selectedCommunity =
-                            -- TODO
-                            RemoteData.toMaybe loggedIn.selectedCommunity
-                                |> Maybe.map (\community -> List.filter (\p -> p.symbol == community.symbol) profile.communities)
-                                |> Maybe.andThen List.head
-                                |> Maybe.map (\c -> { name = c.name, symbol = c.symbol })
-                                |> Maybe.withDefault { name = "Cambiatus", symbol = Eos.cambiatusSymbol }
-                    in
-                    selectedCommunity.name
+                    RemoteData.toMaybe loggedIn.selectedCommunity
+                        |> Maybe.map (\community -> List.filter (\p -> p.symbol == community.symbol) profile.communities)
+                        |> Maybe.andThen List.head
+                        |> Maybe.map .name
+                        |> Maybe.withDefault ""
 
-                -- case selectedCommunity of
-                -- Just c ->
-                --     c.name
-                -- Nothing ->
-                --     Eos.symbolToSymbolCodeString loggedIn.selectedCommunity
                 _ ->
                     ""
 
@@ -415,6 +403,7 @@ type Msg
     = Ignored
     | GotTime Posix
     | CompletedSalesLoad (RemoteData (Graphql.Http.Error (List Product)) (List Product))
+    | CompletedLoadCommunity Community.Model
     | ClickedSendTransfer Card Int
     | ClickedMessages Int Eos.Name
     | ClickedFilter Filter
@@ -441,6 +430,15 @@ update msg model loggedIn =
 
         CompletedSalesLoad _ ->
             UR.init model
+
+        CompletedLoadCommunity community ->
+            UR.init model
+                |> UR.addCmd
+                    (Api.Graphql.query loggedIn.shared
+                        (Just loggedIn.authToken)
+                        (Shop.productsQuery model.filter loggedIn.accountName community.symbol)
+                        CompletedSalesLoad
+                    )
 
         ClickedSendTransfer card cardIndex ->
             let
@@ -669,6 +667,13 @@ jsAddressToMsg addr _ =
             Nothing
 
 
+receiveBroadcast : LoggedIn.BroadcastMsg -> Maybe Msg
+receiveBroadcast broadcastMsg =
+    case broadcastMsg of
+        LoggedIn.CommunityLoaded community ->
+            Just (CompletedLoadCommunity community)
+
+
 msgToString : Msg -> List String
 msgToString msg =
     case msg of
@@ -680,6 +685,9 @@ msgToString msg =
 
         CompletedSalesLoad r ->
             [ "CompletedSalesLoad", UR.remoteDataToString r ]
+
+        CompletedLoadCommunity _ ->
+            [ "CompletedLoadCommunity" ]
 
         ClickedSendTransfer _ _ ->
             [ "ClickedSendTransfer" ]

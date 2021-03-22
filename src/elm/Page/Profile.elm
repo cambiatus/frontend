@@ -14,7 +14,7 @@ module Page.Profile exposing
 import Api.Graphql
 import Avatar
 import Browser.Dom as Dom
-import Eos exposing (Symbol)
+import Eos
 import Eos.Account as Eos
 import Graphql.Http
 import Html exposing (Html, a, br, button, div, label, li, p, span, text, ul)
@@ -381,12 +381,10 @@ viewUserInfo loggedIn profile pageType =
                 ]
             , case pageType of
                 Public ->
-                    -- TODO
                     case loggedIn.selectedCommunity of
-                        RemoteData.Success community ->
+                        RemoteData.Success _ ->
                             viewTransferButton
                                 loggedIn.shared
-                                community.symbol
                                 account
 
                         _ ->
@@ -455,8 +453,8 @@ viewProfileItem lbl content vAlign extraContent =
         ]
 
 
-viewTransferButton : Shared -> Symbol -> String -> Html msg
-viewTransferButton shared symbol user =
+viewTransferButton : Shared -> String -> Html msg
+viewTransferButton shared user =
     let
         text_ s =
             text (shared.translators.t s)
@@ -464,7 +462,7 @@ viewTransferButton shared symbol user =
     div [ class "mt-3 mb-2" ]
         [ a
             [ class "button button-primary w-full"
-            , Route.href (Route.Transfer symbol (Just user))
+            , Route.href (Route.Transfer (Just user))
             ]
             [ text_ "transfer.title" ]
         ]

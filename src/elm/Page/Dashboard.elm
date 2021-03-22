@@ -543,14 +543,12 @@ viewBalance ({ shared } as loggedIn) _ balance =
                     , div [ class "text-indigo-500 ml-2" ]
                         [ text symbolText ]
                     ]
-
-                 -- TODO
                  ]
                     ++ (case loggedIn.selectedCommunity of
                             RemoteData.Success community ->
                                 [ a
                                     [ class "button button-primary w-full font-medium mb-2"
-                                    , Route.href <| Route.Transfer community.symbol Nothing
+                                    , Route.href <| Route.Transfer Nothing
                                     ]
                                     [ text_ "dashboard.transfer" ]
                                 , a
@@ -659,7 +657,6 @@ update msg model ({ shared, accountName } as loggedIn) =
         GotTime date ->
             UR.init { model | date = Just date }
 
-        -- TODO
         CompletedLoadCommunity community ->
             UR.init
                 { model
@@ -667,8 +664,7 @@ update msg model ({ shared, accountName } as loggedIn) =
                     , analysis = LoadingGraphql
                 }
                 |> UR.addCmd (fetchBalance shared accountName community)
-                -- TOOD
-                |> UR.addCmd (fetchAvailableAnalysis loggedIn Nothing (Just community))
+                |> UR.addCmd (fetchAvailableAnalysis loggedIn Nothing community)
 
         CompletedLoadBalance (Ok balance) ->
             UR.init { model | balance = RemoteData.Success balance }
@@ -785,16 +781,15 @@ update msg model ({ shared, accountName } as loggedIn) =
                                         ++ Eos.symbolToSymbolCodeString claim.action.objective.community.symbol
 
                                 cmd =
-                                    case pageInfo of
-                                        Just page ->
+                                    case ( pageInfo, loggedIn.selectedCommunity ) of
+                                        ( Just page, RemoteData.Success community ) ->
                                             if page.hasNextPage then
-                                                -- TODO
-                                                fetchAvailableAnalysis loggedIn page.endCursor Nothing
+                                                fetchAvailableAnalysis loggedIn page.endCursor community
 
                                             else
                                                 Cmd.none
 
-                                        Nothing ->
+                                        ( _, _ ) ->
                                             Cmd.none
                             in
                             { model
@@ -827,7 +822,6 @@ update msg model ({ shared, accountName } as loggedIn) =
 
         CreateInvite ->
             case model.balance of
-                -- TODO
                 RemoteData.Success (Just b) ->
                     UR.init
                         { model | inviteModalStatus = InviteModalLoading }
@@ -838,6 +832,7 @@ update msg model ({ shared, accountName } as loggedIn) =
 
                 _ ->
                     UR.init model
+                        |> UR.logImpossible msg [ "balanceNotLoaded" ]
 
         CloseInviteModal ->
             UR.init
@@ -911,17 +906,11 @@ fetchTransfers shared accountName authToken =
         CompletedLoadUserTransfers
 
 
-fetchAvailableAnalysis : LoggedIn.Model -> Maybe String -> Maybe Community.Model -> Cmd Msg
-fetchAvailableAnalysis { shared, authToken } maybeCursor maybeCommunity =
+fetchAvailableAnalysis : LoggedIn.Model -> Maybe String -> Community.Model -> Cmd Msg
+fetchAvailableAnalysis { shared, authToken } maybeCursor community =
     let
         arg =
-            -- TODO
-            { communityId =
-                Eos.symbolToString
-                    (Maybe.map .symbol maybeCommunity
-                        |> Maybe.withDefault Eos.cambiatusSymbol
-                    )
-            }
+            { communityId = Eos.symbolToString community.symbol }
 
         pagination =
             \a ->
@@ -1000,11 +989,11 @@ unwrapClaimStatus claimStatus =
             claim
 
 
-receiveBroadcast : LoggedIn.BroadcastMsg -> Msg
+receiveBroadcast : LoggedIn.BroadcastMsg -> Maybe Msg
 receiveBroadcast broadcastMsg =
     case broadcastMsg of
         LoggedIn.CommunityLoaded community ->
-            CompletedLoadCommunity community
+            Just (CompletedLoadCommunity community)
 
 
 jsAddressToMsg : List String -> Value -> Maybe Msg

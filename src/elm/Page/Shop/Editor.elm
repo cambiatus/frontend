@@ -444,15 +444,13 @@ viewForm ({ shared } as loggedIn) balances imageStatus isEdit isDisabled deleteM
                             , Html.Attributes.max "12"
                             ]
                             []
-                        , span [ class "w-1/5 flex text-white items-center justify-center bg-indigo-500 text-body uppercase rounded-r-sm" ]
-                            -- TODO
-                            (case loggedIn.selectedCommunity of
-                                RemoteData.Success community ->
+                        , case loggedIn.selectedCommunity of
+                            RemoteData.Success community ->
+                                span [ class "w-1/5 flex text-white items-center justify-center bg-indigo-500 text-body uppercase rounded-r-sm" ]
                                     [ text (Eos.symbolToSymbolCodeString community.symbol) ]
 
-                                _ ->
-                                    []
-                            )
+                            _ ->
+                                text ""
                         ]
                     , viewFieldErrors (listErrors shared.translations form.price)
                     ]
@@ -812,7 +810,6 @@ update msg model loggedIn =
                                 |> UR.init
 
                     EditingUpdate balances sale (Uploaded url) _ form ->
-                        -- TODO
                         case loggedIn.selectedCommunity of
                             RemoteData.Success community ->
                                 if isValidForm form then
@@ -831,7 +828,6 @@ update msg model loggedIn =
                                 validatedModel |> UR.init
 
                     EditingUpdate balances sale (UploadFailed error) _ form ->
-                        -- TODO
                         case loggedIn.selectedCommunity of
                             RemoteData.Success community ->
                                 if isValidForm form then
@@ -850,7 +846,6 @@ update msg model loggedIn =
                                 validatedModel |> UR.init
 
                     EditingUpdate balances sale NoImage _ form ->
-                        -- TODO
                         case loggedIn.selectedCommunity of
                             RemoteData.Success community ->
                                 if isValidForm form then
@@ -1103,7 +1098,6 @@ encodeCreateForm loggedIn form =
             String.toFloat (getInput form.price)
 
         quantity =
-            -- TODO
             case Maybe.map2 (\p c -> Eos.Asset p c.symbol) price (RemoteData.toMaybe loggedIn.selectedCommunity) of
                 Nothing ->
                     Encode.string ""

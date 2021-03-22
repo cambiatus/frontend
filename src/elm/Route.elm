@@ -43,7 +43,7 @@ type Route
     | ViewSale String
     | ViewTransfer Int
     | Invite String
-    | Transfer Symbol (Maybe String)
+    | Transfer (Maybe String)
     | Analysis
 
 
@@ -115,7 +115,7 @@ parser url =
         , Url.map EditSale (s "shop" </> string </> s "edit")
         , Url.map ViewTransfer (s "transfer" </> int)
         , Url.map Invite (s "invite" </> string)
-        , Url.map Transfer (s "community" </> Eos.symbolUrlParser </> s "transfer" <?> Query.string "to")
+        , Url.map Transfer (s "community" </> s "transfer" <?> Query.string "to")
         , Url.map Analysis (s "dashboard" </> s "analysis")
         ]
 
@@ -316,9 +316,8 @@ routeToString route =
                 Invite invitationId ->
                     ( [ "invite", invitationId ], [] )
 
-                Transfer communityId maybeTo ->
+                Transfer maybeTo ->
                     ( [ "community"
-                      , Eos.symbolToString communityId
                       , "transfer"
                       ]
                     , [ Url.Builder.string "to" (Maybe.withDefault "" maybeTo) ]
