@@ -155,9 +155,9 @@ view ({ shared } as loggedIn) model =
                 Unauthorized ->
                     text "not allowed to edit"
 
-                Loaded { symbol } editStatus ->
+                Loaded _ editStatus ->
                     div []
-                        [ Page.viewHeader loggedIn (t "community.objectives.title") (Route.Objectives symbol)
+                        [ Page.viewHeader loggedIn (t "community.objectives.title") Route.Objectives
                         , case editStatus of
                             NewObjective objForm ->
                                 viewForm loggedIn objForm

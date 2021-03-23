@@ -1,18 +1,17 @@
-module Page.Community.Objectives exposing (Model, Msg, init, msgToString, update, view)
+module Page.Community.Objectives exposing (Model, Msg, init, msgToString, receiveBroadcast, update, view)
 
 import Action exposing (Action)
-import Api.Graphql
 import Cambiatus.Enum.VerificationType as VerificationType
+import Cambiatus.Query exposing (community)
 import Community exposing (Model)
-import Eos exposing (Symbol)
-import Graphql.Http
+import Eos
 import Html exposing (Html, a, button, div, p, text)
 import Html.Attributes exposing (class, classList)
 import Html.Events exposing (onClick)
 import Icons
 import Page
 import Profile
-import RemoteData exposing (RemoteData)
+import RemoteData
 import Route
 import Session.LoggedIn as LoggedIn exposing (External(..))
 import Strftime
@@ -22,11 +21,11 @@ import UpdateResult as UR
 import Utils
 
 
-init : LoggedIn.Model -> Symbol -> ( Model, Cmd Msg )
-init { shared, authToken } symbol =
-    ( initModel symbol
+init : LoggedIn.Model -> ( Model, Cmd Msg )
+init loggedIn =
+    ( initModel
     , Cmd.batch
-        [ Api.Graphql.query shared (Just authToken) (Community.communityQuery symbol) CompletedLoad
+        [ LoggedIn.maybeInitWith CompletedLoadCommunity .selectedCommunity loggedIn
         , Task.perform GotTime Time.now
         ]
     )
@@ -37,17 +36,15 @@ init { shared, authToken } symbol =
 
 
 type alias Model =
-    { communityId : Symbol
-    , status : Status
+    { status : Status
     , openObjective : Maybe Int
     , date : Maybe Posix
     }
 
 
-initModel : Symbol -> Model
-initModel symbol =
-    { communityId = symbol
-    , status = Loading
+initModel : Model
+initModel =
+    { status = Loading
     , openObjective = Nothing
     , date = Nothing
     }
@@ -55,9 +52,7 @@ initModel symbol =
 
 type Status
     = Loading
-    | Loaded Community.Model
-    | NotFound
-    | Failed (Graphql.Http.Error (Maybe Community.Model))
+    | Loaded
     | Unauthorized
 
 
@@ -75,17 +70,8 @@ view ({ shared } as loggedIn) model =
             t "community.objectives.title_plural"
 
         content =
-            case model.status of
-                Loading ->
-                    Page.fullPageLoading shared
-
-                NotFound ->
-                    Page.viewCardEmpty [ text "Community not found" ]
-
-                Failed e ->
-                    Page.fullPageGraphQLError (t "community.objectives.title_plural") e
-
-                Loaded community ->
+            case ( loggedIn.selectedCommunity, model.status ) of
+                ( RemoteData.Success community, Loaded ) ->
                     div []
                         [ Page.viewHeader loggedIn (t "community.objectives.title_plural") Route.Community
                         , div [ class "container mx-auto px-4 my-10" ]
@@ -99,12 +85,24 @@ view ({ shared } as loggedIn) model =
                             ]
                         ]
 
-                Unauthorized ->
+                ( RemoteData.Success _, Unauthorized ) ->
                     div []
                         [ Page.viewHeader loggedIn title Route.Dashboard
                         , div [ class "card" ]
                             [ text (shared.translators.t "community.edit.unauthorized") ]
                         ]
+
+                ( RemoteData.Failure e, _ ) ->
+                    Page.fullPageGraphQLError (t "community.objectives.title_plural") e
+
+                ( RemoteData.Loading, _ ) ->
+                    Page.fullPageLoading shared
+
+                ( RemoteData.NotAsked, _ ) ->
+                    Page.fullPageLoading shared
+
+                ( _, Loading ) ->
+                    Page.fullPageLoading shared
     in
     { title = title
     , content = content
@@ -173,7 +171,7 @@ viewObjective ({ shared } as loggedIn) model community index objective =
                 [ div [ class "flex flex-wrap mt-2" ]
                     [ a
                         [ class "button button-secondary button-sm w-full sm:w-48 mt-2 px-1 sm:mr-4"
-                        , Route.href (Route.EditObjective model.communityId objective.id)
+                        , Route.href (Route.EditObjective community.symbol objective.id)
                         ]
                         [ text_ "community.objectives.edit" ]
                     , a
@@ -197,6 +195,9 @@ viewObjective ({ shared } as loggedIn) model community index objective =
 viewAction : LoggedIn.Model -> Model -> Int -> Action -> Html Msg
 viewAction ({ shared } as loggedIn) model objectiveId action =
     let
+        symbol =
+            action.objective.community.symbol
+
         posixDeadline : Posix
         posixDeadline =
             action.deadline
@@ -248,7 +249,7 @@ viewAction ({ shared } as loggedIn) model objectiveId action =
                     , p [ class "uppercase text-body" ]
                         [ String.fromFloat action.reward
                             ++ " "
-                            ++ Eos.symbolToString model.communityId
+                            ++ Eos.symbolToString symbol
                             |> text
                         ]
                     ]
@@ -259,7 +260,7 @@ viewAction ({ shared } as loggedIn) model objectiveId action =
                         , p [ class "uppercase text-body text-white" ]
                             [ String.fromFloat action.verifierReward
                                 ++ " "
-                                ++ Eos.symbolToString model.communityId
+                                ++ Eos.symbolToString symbol
                                 |> text
                             ]
                         ]
@@ -320,7 +321,7 @@ viewAction ({ shared } as loggedIn) model objectiveId action =
                     ]
                 , a
                     [ class "button button-primary button-sm w-full sm:w-40 mt-8"
-                    , Route.href (Route.EditAction model.communityId objectiveId action.id)
+                    , Route.href (Route.EditAction symbol objectiveId action.id)
                     ]
                     [ text_ "community.actions.edit" ]
                 ]
@@ -337,7 +338,7 @@ type alias UpdateResult =
 
 
 type Msg
-    = CompletedLoad (RemoteData (Graphql.Http.Error (Maybe Community.Model)) (Maybe Community.Model))
+    = CompletedLoadCommunity Community.Model
     | GotTime Posix
     | OpenObjective Int
 
@@ -345,32 +346,19 @@ type Msg
 update : Msg -> Model -> LoggedIn.Model -> UpdateResult
 update msg model loggedIn =
     case msg of
-        CompletedLoad (RemoteData.Success community) ->
-            case community of
-                Just cmm ->
-                    let
-                        newStatus =
-                            if not cmm.hasObjectives then
-                                Unauthorized
+        CompletedLoadCommunity community ->
+            UR.init
+                { model
+                    | status =
+                        if not community.hasObjectives then
+                            Unauthorized
 
-                            else if cmm.creator == loggedIn.accountName then
-                                Loaded cmm
+                        else if community.creator == loggedIn.accountName then
+                            Loaded
 
-                            else
-                                Unauthorized
-                    in
-                    UR.init { model | status = newStatus }
-
-                Nothing ->
-                    UR.init { model | status = NotFound }
-
-        CompletedLoad (RemoteData.Failure error) ->
-            { model | status = Failed error }
-                |> UR.init
-                |> UR.logGraphqlError msg error
-
-        CompletedLoad _ ->
-            UR.init model
+                        else
+                            Unauthorized
+                }
 
         GotTime date ->
             UR.init { model | date = Just date }
@@ -385,11 +373,18 @@ update msg model loggedIn =
                     |> UR.init
 
 
+receiveBroadcast : LoggedIn.BroadcastMsg -> Maybe Msg
+receiveBroadcast broadcastMsg =
+    case broadcastMsg of
+        LoggedIn.CommunityLoaded community ->
+            Just (CompletedLoadCommunity community)
+
+
 msgToString : Msg -> List String
 msgToString msg =
     case msg of
-        CompletedLoad r ->
-            [ "CompletedLoad", UR.remoteDataToString r ]
+        CompletedLoadCommunity _ ->
+            [ "CompletedLoadCommunity" ]
 
         GotTime _ ->
             [ "GotTime" ]

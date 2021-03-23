@@ -106,7 +106,7 @@ viewSettingsList shared community =
         ]
         [ settingCard (translate "settings.features.title") (translate "menu.edit") featuresDescription (Route.CommunitySettingsFeatures community.symbol)
         , if community.hasObjectives then
-            settingCard (translate "settings.actions.title") (translate "menu.edit") "" (Route.Objectives community.symbol)
+            settingCard (translate "settings.actions.title") (translate "menu.edit") "" Route.Objectives
 
           else
             text ""

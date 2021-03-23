@@ -1051,7 +1051,7 @@ update msg model ({ shared } as loggedIn) =
         GotSaveAction (Ok _) ->
             model
                 |> UR.init
-                |> UR.addCmd (Route.replaceUrl loggedIn.shared.navKey (Route.Objectives model.communityId))
+                |> UR.addCmd (Route.replaceUrl loggedIn.shared.navKey Route.Objectives)
                 |> UR.addExt (ShowFeedback Success (t "community.actions.save_success"))
 
         GotSaveAction (Err val) ->
@@ -1234,7 +1234,7 @@ view ({ shared } as loggedIn) model =
 
                 ( RemoteData.Success community, Authorized ) ->
                     div [ class "bg-white" ]
-                        [ Page.viewHeader loggedIn (t "community.actions.title") (Route.Objectives model.communityId)
+                        [ Page.viewHeader loggedIn (t "community.actions.title") Route.Objectives
                         , viewForm loggedIn community model
                         ]
 
