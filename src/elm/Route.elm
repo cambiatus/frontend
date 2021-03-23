@@ -1,7 +1,6 @@
 module Route exposing (Route(..), fromUrl, href, pushUrl, replaceUrl)
 
 import Browser.Navigation as Nav
-import Eos exposing (Symbol)
 import Html exposing (Attribute)
 import Html.Attributes as Attr
 import Shop
@@ -34,8 +33,8 @@ type Route
     | Objectives
     | NewObjective
     | EditObjective Int
-    | NewAction Symbol Int
-    | EditAction Symbol Int Int
+    | NewAction Int
+    | EditAction Int Int
     | Claim Int Int Int
     | Shop Shop.Filter
     | NewSale
@@ -95,8 +94,8 @@ parser url =
         , Url.map Objectives (s "community" </> s "objectives")
         , Url.map NewObjective (s "community" </> s "objectives" </> s "new")
         , Url.map EditObjective (s "community" </> s "objectives" </> int </> s "edit")
-        , Url.map NewAction (s "community" </> Eos.symbolUrlParser </> s "objectives" </> int </> s "action" </> s "new")
-        , Url.map EditAction (s "community" </> Eos.symbolUrlParser </> s "objectives" </> int </> s "action" </> int </> s "edit")
+        , Url.map NewAction (s "community" </> s "objectives" </> int </> s "action" </> s "new")
+        , Url.map EditAction (s "community" </> s "objectives" </> int </> s "action" </> int </> s "edit")
         , Url.map Claim (s "objectives" </> int </> s "action" </> int </> s "claim" </> int)
         , Url.map Shop
             (s "shop"
@@ -275,13 +274,13 @@ routeToString route =
                 EditObjective objectiveId ->
                     ( [ "community", "objectives", String.fromInt objectiveId, "edit" ], [] )
 
-                NewAction symbol objectiveId ->
-                    ( [ "community", Eos.symbolToString symbol, "objectives", String.fromInt objectiveId, "action", "new" ]
+                NewAction objectiveId ->
+                    ( [ "community", "objectives", String.fromInt objectiveId, "action", "new" ]
                     , []
                     )
 
-                EditAction symbol objectiveId actionId ->
-                    ( [ "community", Eos.symbolToString symbol, "objectives", String.fromInt objectiveId, "action", String.fromInt actionId, "edit" ]
+                EditAction objectiveId actionId ->
+                    ( [ "community", "objectives", String.fromInt objectiveId, "action", String.fromInt actionId, "edit" ]
                     , []
                     )
 

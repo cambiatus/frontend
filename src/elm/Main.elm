@@ -836,15 +836,15 @@ changeRouteTo maybeRoute model =
                 >> updateStatusWith ObjectiveEditor GotObjectiveEditorMsg model
                 |> withLoggedIn (Route.EditObjective objectiveId)
 
-        Just (Route.NewAction symbol objectiveId) ->
-            (\l -> ActionEditor.init l symbol objectiveId Nothing)
+        Just (Route.NewAction objectiveId) ->
+            (\l -> ActionEditor.init l objectiveId Nothing)
                 >> updateStatusWith ActionEditor GotActionEditorMsg model
-                |> withLoggedIn (Route.NewAction symbol objectiveId)
+                |> withLoggedIn (Route.NewAction objectiveId)
 
-        Just (Route.EditAction symbol objectiveId actionId) ->
-            (\l -> ActionEditor.init l symbol objectiveId (Just actionId))
+        Just (Route.EditAction objectiveId actionId) ->
+            (\l -> ActionEditor.init l objectiveId (Just actionId))
                 >> updateStatusWith ActionEditor GotActionEditorMsg model
-                |> withLoggedIn (Route.EditAction symbol objectiveId actionId)
+                |> withLoggedIn (Route.EditAction objectiveId actionId)
 
         Just (Route.Claim objectiveId actionId claimId) ->
             (\l -> Claim.init l claimId)

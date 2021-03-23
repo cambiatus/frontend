@@ -175,8 +175,7 @@ viewObjective ({ shared } as loggedIn) model community index objective =
                         [ text_ "community.objectives.edit" ]
                     , a
                         [ class "button button-secondary button-sm w-full sm:w-48 mt-2 px-1 mb-4"
-                        , Route.href
-                            (Route.NewAction community.symbol objective.id)
+                        , Route.href (Route.NewAction objective.id)
                         ]
                         [ text_ "community.actions.new" ]
                     ]
@@ -320,7 +319,7 @@ viewAction ({ shared } as loggedIn) model objectiveId action =
                     ]
                 , a
                     [ class "button button-primary button-sm w-full sm:w-40 mt-8"
-                    , Route.href (Route.EditAction symbol objectiveId action.id)
+                    , Route.href (Route.EditAction objectiveId action.id)
                     ]
                     [ text_ "community.actions.edit" ]
                 ]

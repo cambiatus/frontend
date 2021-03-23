@@ -30,7 +30,7 @@ import DataValidator
         , updateInput
         , validate
         )
-import Eos exposing (Symbol)
+import Eos
 import Eos.Account as Eos
 import Html exposing (Html, b, button, div, input, label, p, span, text, textarea)
 import Html.Attributes exposing (checked, class, classList, for, id, name, placeholder, rows, type_, value)
@@ -67,10 +67,9 @@ type alias ActionId =
     Int
 
 
-init : LoggedIn.Model -> Symbol -> ObjectiveId -> Maybe ActionId -> ( Model, Cmd Msg )
-init loggedIn symbol objectiveId actionId =
+init : LoggedIn.Model -> ObjectiveId -> Maybe ActionId -> ( Model, Cmd Msg )
+init loggedIn objectiveId actionId =
     ( { status = NotFound
-      , communityId = symbol
       , objectiveId = objectiveId
       , actionId = actionId
       , form = initForm
@@ -86,7 +85,6 @@ init loggedIn symbol objectiveId actionId =
 
 type alias Model =
     { status : Status
-    , communityId : Symbol
     , objectiveId : ObjectiveId
     , actionId : Maybe ActionId
     , form : Form
@@ -1037,22 +1035,28 @@ update msg model ({ shared } as loggedIn) =
                 newModel =
                     { model | form = { oldForm | saveStatus = Saving } }
             in
-            if LoggedIn.isAuth loggedIn then
-                upsertAction loggedIn newModel isoDate
+            case ( loggedIn.selectedCommunity, LoggedIn.isAuth loggedIn ) of
+                ( RemoteData.Success community, True ) ->
+                    upsertAction loggedIn community newModel isoDate
 
-            else
-                newModel
-                    |> UR.init
-                    |> UR.addExt
-                        (Just (SaveAction isoDate)
-                            |> RequiredAuthentication
-                        )
+                ( RemoteData.Success _, False ) ->
+                    newModel
+                        |> UR.init
+                        |> UR.addExt
+                            (Just (SaveAction isoDate)
+                                |> RequiredAuthentication
+                            )
+
+                _ ->
+                    UR.init newModel
 
         GotSaveAction (Ok _) ->
             model
                 |> UR.init
                 |> UR.addCmd (Route.replaceUrl loggedIn.shared.navKey Route.Objectives)
                 |> UR.addExt (ShowFeedback Success (t "community.actions.save_success"))
+                -- TODO - This only works sometimes
+                |> UR.addExt LoggedIn.ReloadCommunity
 
         GotSaveAction (Err val) ->
             let
@@ -1077,16 +1081,16 @@ update msg model ({ shared } as loggedIn) =
                 UR.init model
 
 
-upsertAction : LoggedIn.Model -> Model -> Int -> UpdateResult
-upsertAction loggedIn model isoDate =
+upsertAction : LoggedIn.Model -> Community.Model -> Model -> Int -> UpdateResult
+upsertAction loggedIn community model isoDate =
     let
         verifierReward =
             case model.form.verification of
                 Automatic ->
-                    Eos.Asset 0.0 model.communityId |> Eos.assetToString
+                    Eos.Asset 0.0 community.symbol |> Eos.assetToString
 
                 Manual { verifierRewardValidator } ->
-                    Eos.Asset (getInput verifierRewardValidator |> String.toFloat |> Maybe.withDefault 0.0) model.communityId
+                    Eos.Asset (getInput verifierRewardValidator |> String.toFloat |> Maybe.withDefault 0.0) community.symbol
                         |> Eos.assetToString
 
         usages =
@@ -1181,7 +1185,7 @@ upsertAction loggedIn model isoDate =
                             { actionId = model.actionId |> Maybe.withDefault 0
                             , objectiveId = model.objectiveId
                             , description = getInput model.form.description
-                            , reward = Eos.Asset (getInput model.form.reward |> String.toFloat |> Maybe.withDefault 0.0) model.communityId |> Eos.assetToString
+                            , reward = Eos.Asset (getInput model.form.reward |> String.toFloat |> Maybe.withDefault 0.0) community.symbol |> Eos.assetToString
                             , verifierReward = verifierReward
                             , deadline = isoDate
                             , usages = usages
