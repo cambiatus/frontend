@@ -481,6 +481,10 @@ broadcast broadcastMessage status =
                     Objectives.receiveBroadcast broadcastMessage
                         |> Maybe.map GotObjectivesMsg
 
+                CommunitySettingsFeatures _ ->
+                    CommunitySettingsFeatures.receiveBroadcast broadcastMessage
+                        |> Maybe.map GotCommunitySettingsFeaturesMsg
+
                 _ ->
                     Nothing
     in
@@ -793,10 +797,10 @@ changeRouteTo maybeRoute model =
                 >> updateStatusWith CommunitySettings GotCommunitySettingsMsg model
                 |> withLoggedIn (Route.CommunitySettings symbol)
 
-        Just (Route.CommunitySettingsFeatures symbol) ->
-            (\l -> CommunitySettingsFeatures.init l symbol)
+        Just Route.CommunitySettingsFeatures ->
+            CommunitySettingsFeatures.init
                 >> updateStatusWith CommunitySettingsFeatures GotCommunitySettingsFeaturesMsg model
-                |> withLoggedIn (Route.CommunitySettingsFeatures symbol)
+                |> withLoggedIn Route.CommunitySettingsFeatures
 
         Just Route.NewCommunity ->
             CommunityEditor.initNew

@@ -1,11 +1,8 @@
-module Page.Community.Settings.Features exposing (Model, Msg, init, jsAddressToMsg, msgToString, update, view)
+module Page.Community.Settings.Features exposing (Model, Msg, init, jsAddressToMsg, msgToString, receiveBroadcast, update, view)
 
-import Api.Graphql
-import Browser.Navigation as Navigation
 import Community
 import Eos exposing (Symbol)
 import Eos.Account
-import Graphql.Http
 import Html exposing (Html, div, input, label, span, text)
 import Html.Attributes exposing (checked, class, for, id, name, style, type_)
 import Html.Events exposing (onCheck)
@@ -14,23 +11,22 @@ import Json.Decode exposing (Value)
 import Json.Encode
 import Page
 import Ports
-import RemoteData exposing (RemoteData)
+import RemoteData
 import Route
-import Session.LoggedIn as LoggedIn exposing (External(..), FeedbackStatus(..))
+import Session.LoggedIn as LoggedIn exposing (External, FeedbackStatus(..))
 import UpdateResult as UR
 
 
-init : LoggedIn.Model -> Symbol -> ( Model, Cmd Msg )
-init { shared, authToken } symbol =
-    ( initModel symbol
-    , Api.Graphql.query shared (Just authToken) (Community.communityQuery symbol) CompletedLoad
+init : LoggedIn.Model -> ( Model, Cmd Msg )
+init loggedIn =
+    ( initModel
+    , LoggedIn.maybeInitWith CompletedLoadCommunity .selectedCommunity loggedIn
     )
 
 
-initModel : Symbol -> Model
-initModel symbol =
+initModel : Model
+initModel =
     { status = Loading
-    , symbol = symbol
     , hasShop = False
     , hasObjectives = False
     , hasKyc = False
@@ -39,7 +35,6 @@ initModel symbol =
 
 type alias Model =
     { status : Status
-    , symbol : Symbol
     , hasShop : Bool
     , hasObjectives : Bool
     , hasKyc : Bool
@@ -48,8 +43,7 @@ type alias Model =
 
 type Status
     = Loading
-    | LoadingFailed (Graphql.Http.Error (Maybe Community.Model))
-    | Loaded Community.Model
+    | Authorized
     | Unauthorized
 
 
@@ -60,7 +54,7 @@ type Feature
 
 
 type Msg
-    = CompletedLoad (RemoteData (Graphql.Http.Error (Maybe Community.Model)) (Maybe Community.Model))
+    = CompletedLoadCommunity Community.Model
     | ToggleShop Bool
     | ToggleObjectives Bool
     | ToggleKyc Bool
@@ -81,26 +75,32 @@ view loggedIn model =
             translate "settings.features.title"
 
         content =
-            case model.status of
-                Loaded _ ->
+            case ( loggedIn.selectedCommunity, model.status ) of
+                ( RemoteData.Failure e, _ ) ->
+                    Page.fullPageGraphQLError title e
+
+                ( RemoteData.Loading, _ ) ->
+                    Page.fullPageLoading loggedIn.shared
+
+                ( RemoteData.NotAsked, _ ) ->
+                    Page.fullPageLoading loggedIn.shared
+
+                ( _, Loading ) ->
+                    Page.fullPageLoading loggedIn.shared
+
+                ( RemoteData.Success community, Authorized ) ->
                     div [ class "bg-white flex flex-col items-center" ]
-                        [ Page.viewHeader loggedIn title (Route.CommunitySettings model.symbol)
+                        [ Page.viewHeader loggedIn title (Route.CommunitySettings community.symbol)
                         , div
                             [ class "container divide-y px-4"
                             ]
-                            [ toggleView loggedIn (translate "community.objectives.title_plural") model.hasObjectives ToggleObjectives "actions"
-                            , toggleView loggedIn (translate "menu.shop") model.hasShop ToggleShop "shop"
-                            , toggleView loggedIn (translate "community.kyc.title") model.hasKyc ToggleKyc "kyc"
+                            [ toggleView loggedIn (translate "community.objectives.title_plural") community.hasObjectives ToggleObjectives "actions"
+                            , toggleView loggedIn (translate "menu.shop") community.hasShop ToggleShop "shop"
+                            , toggleView loggedIn (translate "community.kyc.title") community.hasKyc ToggleKyc "kyc"
                             ]
                         ]
 
-                LoadingFailed error ->
-                    Page.fullPageGraphQLError title error
-
-                Loading ->
-                    Page.fullPageLoading loggedIn.shared
-
-                Unauthorized ->
+                ( RemoteData.Success _, Unauthorized ) ->
                     div []
                         [ Page.viewHeader loggedIn title Route.Dashboard
                         , div [ class "card" ]
@@ -180,11 +180,11 @@ update msg model loggedIn =
             loggedIn.shared.translators.t
     in
     case msg of
-        CompletedLoad (RemoteData.Success (Just community)) ->
+        CompletedLoadCommunity community ->
             let
                 newStatus =
                     if community.creator == loggedIn.accountName then
-                        Loaded community
+                        Authorized
 
                     else
                         Unauthorized
@@ -196,16 +196,6 @@ update msg model loggedIn =
                     , hasObjectives = community.hasObjectives
                     , hasKyc = community.hasKyc
                 }
-
-        CompletedLoad (RemoteData.Success Nothing) ->
-            UR.init model
-
-        CompletedLoad (RemoteData.Failure err) ->
-            UR.init { model | status = LoadingFailed err }
-                |> UR.logGraphqlError msg err
-
-        CompletedLoad _ ->
-            UR.init model
 
         ToggleShop state ->
             { model | hasShop = state }
@@ -222,10 +212,29 @@ update msg model loggedIn =
                 |> UR.init
 
         SaveSuccess ->
+            let
+                addBroadcast uResult =
+                    case loggedIn.selectedCommunity of
+                        RemoteData.Success community ->
+                            uResult
+                                |> UR.addExt (LoggedIn.BroadcastToLoggedIn (LoggedIn.CommunityLoaded (updateCommunity community model)))
+
+                        _ ->
+                            uResult
+            in
             model
                 |> UR.init
-                |> UR.addExt (ShowFeedback Success (translate "settings.success"))
-                |> UR.addCmd Navigation.reload
+                |> UR.addExt (LoggedIn.ShowFeedback Success (translate "settings.success"))
+                |> addBroadcast
+
+
+updateCommunity : Community.Model -> Model -> Community.Model
+updateCommunity community model =
+    { community
+        | hasShop = model.hasShop
+        , hasObjectives = model.hasObjectives
+        , hasKyc = model.hasKyc
+    }
 
 
 saveFeaturePort : LoggedIn.Model -> Feature -> Status -> Bool -> (UR.UpdateResult Model Msg (External Msg) -> UR.UpdateResult Model Msg (External Msg))
@@ -247,22 +256,22 @@ saveFeaturePort loggedIn feature status state =
                 Kyc ->
                     ToggleKyc
     in
-    case status of
-        Loaded community ->
+    case ( loggedIn.selectedCommunity, status ) of
+        ( RemoteData.Success community, Authorized ) ->
             if LoggedIn.isAuth loggedIn then
                 UR.addPort (saveFeature feature state authorization loggedIn community)
 
             else
                 UR.addExt (Just (function state) |> LoggedIn.RequiredAuthentication)
 
-        Loading ->
-            UR.addExt (ShowFeedback Failure "Error")
+        ( _, Authorized ) ->
+            UR.addExt (Just (function state) |> LoggedIn.RequiredAuthentication)
 
-        LoadingFailed _ ->
-            UR.addExt (ShowFeedback Failure "Error")
+        ( _, Loading ) ->
+            UR.addExt (LoggedIn.ShowFeedback Failure "Error")
 
-        Unauthorized ->
-            UR.addExt (ShowFeedback Failure "Error")
+        ( _, Unauthorized ) ->
+            UR.addExt (LoggedIn.ShowFeedback Failure "Error")
 
 
 saveFeature : Feature -> Bool -> Eos.Authorization -> LoggedIn.Model -> Community.Model -> Ports.JavascriptOutModel Msg
@@ -322,6 +331,13 @@ saveFeature feature state authorization { shared, accountName } community =
     }
 
 
+receiveBroadcast : LoggedIn.BroadcastMsg -> Maybe Msg
+receiveBroadcast broadcastMsg =
+    case broadcastMsg of
+        LoggedIn.CommunityLoaded community ->
+            Just (CompletedLoadCommunity community)
+
+
 jsAddressToMsg : List String -> Value -> Maybe Msg
 jsAddressToMsg addr _ =
     case addr of
@@ -335,8 +351,8 @@ jsAddressToMsg addr _ =
 msgToString : Msg -> List String
 msgToString msg =
     case msg of
-        CompletedLoad r ->
-            [ "CompletedLoad", UR.remoteDataToString r ]
+        CompletedLoadCommunity _ ->
+            [ "CompletedLoadCommunity" ]
 
         ToggleShop _ ->
             [ "ToggleShop" ]
