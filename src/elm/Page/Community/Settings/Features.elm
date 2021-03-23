@@ -1,7 +1,7 @@
 module Page.Community.Settings.Features exposing (Model, Msg, init, jsAddressToMsg, msgToString, receiveBroadcast, update, view)
 
 import Community
-import Eos exposing (Symbol)
+import Eos
 import Eos.Account
 import Html exposing (Html, div, input, label, span, text)
 import Html.Attributes exposing (checked, class, for, id, name, style, type_)
@@ -90,7 +90,7 @@ view loggedIn model =
 
                 ( RemoteData.Success community, Authorized ) ->
                     div [ class "bg-white flex flex-col items-center" ]
-                        [ Page.viewHeader loggedIn title (Route.CommunitySettings community.symbol)
+                        [ Page.viewHeader loggedIn title Route.CommunitySettings
                         , div
                             [ class "container divide-y px-4"
                             ]

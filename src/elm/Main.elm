@@ -485,6 +485,10 @@ broadcast broadcastMessage status =
                     CommunitySettingsFeatures.receiveBroadcast broadcastMessage
                         |> Maybe.map GotCommunitySettingsFeaturesMsg
 
+                CommunitySettings _ ->
+                    CommunitySettings.receiveBroadcast broadcastMessage
+                        |> Maybe.map GotCommunitySettingsMsg
+
                 _ ->
                     Nothing
     in
@@ -792,10 +796,10 @@ changeRouteTo maybeRoute model =
                 >> updateStatusWith Community GotCommunityMsg model
                 |> withLoggedIn Route.Community
 
-        Just (Route.CommunitySettings symbol) ->
-            (\l -> CommunitySettings.init l symbol)
+        Just Route.CommunitySettings ->
+            CommunitySettings.init
                 >> updateStatusWith CommunitySettings GotCommunitySettingsMsg model
-                |> withLoggedIn (Route.CommunitySettings symbol)
+                |> withLoggedIn Route.CommunitySettings
 
         Just Route.CommunitySettingsFeatures ->
             CommunitySettingsFeatures.init

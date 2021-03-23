@@ -188,7 +188,7 @@ viewHeader loggedIn community isCommunityAdmin =
             ]
         , if isCommunityAdmin then
             a
-                [ Route.href (Route.CommunitySettings community.symbol)
+                [ Route.href Route.CommunitySettings
                 , class "ml-auto"
                 ]
                 [ Icons.settings ]
