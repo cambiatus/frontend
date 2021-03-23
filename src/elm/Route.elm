@@ -32,8 +32,8 @@ type Route
     | CommunitySettingsFeatures
     | EditCommunity
     | Objectives
-    | NewObjective Symbol
-    | EditObjective Symbol Int
+    | NewObjective
+    | EditObjective Int
     | NewAction Symbol Int
     | EditAction Symbol Int Int
     | Claim Int Int Int
@@ -93,8 +93,8 @@ parser url =
         , Url.map CommunitySettings (s "community" </> s "settings")
         , Url.map CommunitySettingsFeatures (s "community" </> s "settings" </> s "features")
         , Url.map Objectives (s "community" </> s "objectives")
-        , Url.map NewObjective (s "community" </> Eos.symbolUrlParser </> s "objectives" </> s "new")
-        , Url.map EditObjective (s "community" </> Eos.symbolUrlParser </> s "objectives" </> int </> s "edit")
+        , Url.map NewObjective (s "community" </> s "objectives" </> s "new")
+        , Url.map EditObjective (s "community" </> s "objectives" </> int </> s "edit")
         , Url.map NewAction (s "community" </> Eos.symbolUrlParser </> s "objectives" </> int </> s "action" </> s "new")
         , Url.map EditAction (s "community" </> Eos.symbolUrlParser </> s "objectives" </> int </> s "action" </> int </> s "edit")
         , Url.map Claim (s "objectives" </> int </> s "action" </> int </> s "claim" </> int)
@@ -269,11 +269,11 @@ routeToString route =
                 Objectives ->
                     ( [ "community", "objectives" ], [] )
 
-                NewObjective symbol ->
-                    ( [ "community", Eos.symbolToString symbol, "objectives", "new" ], [] )
+                NewObjective ->
+                    ( [ "community", "objectives", "new" ], [] )
 
-                EditObjective symbol objectiveId ->
-                    ( [ "community", Eos.symbolToString symbol, "objectives", String.fromInt objectiveId, "edit" ], [] )
+                EditObjective objectiveId ->
+                    ( [ "community", "objectives", String.fromInt objectiveId, "edit" ], [] )
 
                 NewAction symbol objectiveId ->
                     ( [ "community", Eos.symbolToString symbol, "objectives", String.fromInt objectiveId, "action", "new" ]

@@ -739,11 +739,7 @@ update msg model loggedIn =
                 Saving community form ->
                     model
                         |> UR.init
-                        |> UR.addExt
-                            (updateCommunity form community
-                                |> LoggedIn.CommunityLoaded
-                                |> LoggedIn.BroadcastToLoggedIn
-                            )
+                        |> UR.addExt (updateCommunity form community |> LoggedIn.UpdatedCommunity)
                         |> UR.addCmd (Route.Community |> Route.replaceUrl loggedIn.shared.navKey)
                         |> UR.addExt (ShowFeedback Success (t "community.create.success"))
 

@@ -217,7 +217,7 @@ update msg model loggedIn =
                     case loggedIn.selectedCommunity of
                         RemoteData.Success community ->
                             uResult
-                                |> UR.addExt (LoggedIn.BroadcastToLoggedIn (LoggedIn.CommunityLoaded (updateCommunity community model)))
+                                |> UR.addExt (LoggedIn.UpdatedCommunity (updateCommunity community model))
 
                         _ ->
                             uResult

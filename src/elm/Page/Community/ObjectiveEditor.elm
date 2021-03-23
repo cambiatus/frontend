@@ -1,16 +1,9 @@
-module Page.Community.ObjectiveEditor exposing (Model, Msg, initEdit, initNew, jsAddressToMsg, msgToString, update, view)
+module Page.Community.ObjectiveEditor exposing (Model, Msg, initEdit, initNew, jsAddressToMsg, msgToString, receiveBroadcast, update, view)
 
-import Api.Graphql
-import Cambiatus.Object
 import Cambiatus.Object.Community as Community
-import Cambiatus.Object.Objective as Objective
-import Cambiatus.Query as Query
 import Community
-import Eos exposing (Symbol, symbolToString)
+import Eos
 import Eos.Account as Eos
-import Graphql.Http
-import Graphql.Operation exposing (RootQuery)
-import Graphql.SelectionSet as SelectionSet exposing (SelectionSet, with)
 import Html exposing (Html, button, div, span, text, textarea)
 import Html.Attributes exposing (class, disabled, maxlength, placeholder, required, rows, type_, value)
 import Html.Events exposing (onClick, onInput)
@@ -18,7 +11,7 @@ import I18Next exposing (t)
 import Json.Decode as Decode
 import Json.Encode as Encode exposing (Value)
 import Page
-import RemoteData exposing (RemoteData)
+import RemoteData
 import Route
 import Session.LoggedIn as LoggedIn exposing (External(..), FeedbackStatus(..))
 import UpdateResult as UR
@@ -28,17 +21,17 @@ import UpdateResult as UR
 -- INIT
 
 
-initNew : LoggedIn.Model -> Symbol -> ( Model, Cmd Msg )
-initNew { shared, authToken } communityId =
-    ( { status = Loading, community = communityId, objectiveId = Nothing }
-    , Api.Graphql.query shared (Just authToken) (communityQuery communityId) CompletedCommunityLoad
+initNew : LoggedIn.Model -> ( Model, Cmd Msg )
+initNew loggedIn =
+    ( { status = Loading, objectiveId = Nothing }
+    , LoggedIn.maybeInitWith CompletedLoadCommunity .selectedCommunity loggedIn
     )
 
 
-initEdit : LoggedIn.Model -> Symbol -> Int -> ( Model, Cmd Msg )
-initEdit { shared, authToken } communityId objectiveId =
-    ( { status = Loading, community = communityId, objectiveId = Just objectiveId }
-    , Api.Graphql.query shared (Just authToken) (communityQuery communityId) CompletedCommunityLoad
+initEdit : LoggedIn.Model -> Int -> ( Model, Cmd Msg )
+initEdit loggedIn objectiveId =
+    ( { status = Loading, objectiveId = Just objectiveId }
+    , LoggedIn.maybeInitWith CompletedLoadCommunity .selectedCommunity loggedIn
     )
 
 
@@ -48,18 +41,15 @@ initEdit { shared, authToken } communityId objectiveId =
 
 type alias Model =
     { status : Status
-    , community : Symbol
     , objectiveId : Maybe Int
     }
 
 
 type Status
     = Loading
-    | Loaded Community EditStatus
-      -- Errors
-    | LoadCommunityFailed (Graphql.Http.Error (Maybe Community))
-    | NotFound
+    | Authorized EditStatus
     | Unauthorized
+    | NotFound
 
 
 type EditStatus
@@ -80,26 +70,12 @@ type alias ObjectiveForm =
     }
 
 
-type alias Community =
-    { symbol : Symbol
-    , creator : Eos.Name
-    , objectives : List Objective
-    , precision : Int
-    }
-
-
-type alias Objective =
-    { id : Int
-    , description : String
-    }
-
-
 type alias UpdateResult =
     UR.UpdateResult Model Msg (External Msg)
 
 
 type Msg
-    = CompletedCommunityLoad (RemoteData (Graphql.Http.Error (Maybe Community)) (Maybe Community))
+    = CompletedLoadCommunity Community.Model
     | EnteredDescription String
     | ClickedSaveObjective
     | GotSaveObjectiveResponse (Result Value String)
@@ -124,7 +100,7 @@ view ({ shared } as loggedIn) model =
 
         title =
             case model.status of
-                Loaded _ editStatus ->
+                Authorized editStatus ->
                     let
                         action =
                             case editStatus of
@@ -142,20 +118,26 @@ view ({ shared } as loggedIn) model =
                     ""
 
         content =
-            case model.status of
-                Loading ->
+            case ( loggedIn.selectedCommunity, model.status ) of
+                ( _, Loading ) ->
                     Page.fullPageLoading shared
 
-                NotFound ->
+                ( _, NotFound ) ->
                     Page.fullPageNotFound (t "community.objectives.editor.not_found") ""
 
-                LoadCommunityFailed err ->
-                    Page.fullPageGraphQLError (t "community.objectives.editor.error") err
+                ( RemoteData.Loading, _ ) ->
+                    Page.fullPageLoading shared
 
-                Unauthorized ->
+                ( RemoteData.NotAsked, _ ) ->
+                    Page.fullPageLoading shared
+
+                ( RemoteData.Failure e, _ ) ->
+                    Page.fullPageGraphQLError (t "community.objectives.editor.error") e
+
+                ( RemoteData.Success _, Unauthorized ) ->
                     text "not allowed to edit"
 
-                Loaded _ editStatus ->
+                ( RemoteData.Success _, Authorized editStatus ) ->
                     div []
                         [ Page.viewHeader loggedIn (t "community.objectives.title") Route.Objectives
                         , case editStatus of
@@ -231,25 +213,7 @@ viewForm { shared } objForm =
 -- UPDATE
 
 
-communityQuery : Symbol -> SelectionSet (Maybe Community) RootQuery
-communityQuery symbol =
-    Query.community { symbol = symbolToString symbol } <|
-        (SelectionSet.succeed Community
-            |> with (Eos.symbolSelectionSet Community.symbol)
-            |> with (Eos.nameSelectionSet Community.creator)
-            |> with (Community.objectives objectiveSelectionSet)
-            |> with Community.precision
-        )
-
-
-objectiveSelectionSet : SelectionSet Objective Cambiatus.Object.Objective
-objectiveSelectionSet =
-    SelectionSet.succeed Objective
-        |> with Objective.id
-        |> with Objective.description
-
-
-loadObjectiveForm : Community -> Int -> ObjectiveForm
+loadObjectiveForm : Community.Model -> Int -> ObjectiveForm
 loadObjectiveForm community objectiveId =
     let
         maybeObjective =
@@ -274,21 +238,21 @@ loadObjectiveForm community objectiveId =
 updateObjective : Msg -> (ObjectiveForm -> ObjectiveForm) -> UpdateResult -> UpdateResult
 updateObjective msg fn uResult =
     case uResult.model.status of
-        Loaded community (NewObjective objForm) ->
+        Authorized (NewObjective objForm) ->
             UR.mapModel
                 (\m ->
                     { m
                         | status =
-                            Loaded community (NewObjective (fn objForm))
+                            Authorized (NewObjective (fn objForm))
                     }
                 )
                 uResult
 
-        Loaded community (EditObjective objId objForm) ->
+        Authorized (EditObjective objId objForm) ->
             UR.mapModel
                 (\m ->
                     { m
-                        | status = Loaded community (EditObjective objId (fn objForm))
+                        | status = Authorized (EditObjective objId (fn objForm))
                     }
                 )
                 uResult
@@ -305,46 +269,32 @@ update msg model loggedIn =
             loggedIn.shared.translators.t
     in
     case msg of
-        CompletedCommunityLoad (RemoteData.Success community) ->
-            case community of
-                Just cmm ->
-                    if cmm.creator == loggedIn.accountName then
-                        case model.objectiveId of
-                            Just objectiveId ->
-                                if List.any (\o -> o.id == objectiveId) cmm.objectives then
-                                    { model
-                                        | status =
-                                            Loaded
-                                                cmm
-                                                (EditObjective
-                                                    objectiveId
-                                                    (loadObjectiveForm cmm objectiveId)
-                                                )
-                                    }
-                                        |> UR.init
+        CompletedLoadCommunity community ->
+            if community.creator == loggedIn.accountName then
+                case model.objectiveId of
+                    Just objectiveId ->
+                        if List.any (\o -> o.id == objectiveId) community.objectives then
+                            { model
+                                | status =
+                                    Authorized
+                                        (EditObjective
+                                            objectiveId
+                                            (loadObjectiveForm community objectiveId)
+                                        )
+                            }
+                                |> UR.init
 
-                                else
-                                    { model | status = NotFound }
-                                        |> UR.init
+                        else
+                            { model | status = NotFound }
+                                |> UR.init
 
-                            Nothing ->
-                                { model | status = Loaded cmm (NewObjective initObjectiveForm) }
-                                    |> UR.init
-
-                    else
-                        { model | status = Unauthorized }
+                    Nothing ->
+                        { model | status = Authorized (NewObjective initObjectiveForm) }
                             |> UR.init
 
-                Nothing ->
-                    { model | status = NotFound }
-                        |> UR.init
-
-        CompletedCommunityLoad (RemoteData.Failure err) ->
-            { model | status = LoadCommunityFailed err }
-                |> UR.init
-
-        CompletedCommunityLoad _ ->
-            UR.init model
+            else
+                { model | status = Unauthorized }
+                    |> UR.init
 
         EnteredDescription val ->
             UR.init model
@@ -357,8 +307,8 @@ update msg model loggedIn =
                         |> updateObjective msg (\o -> { o | save = Saving })
 
                 save form isEdit _ =
-                    case isEdit of
-                        Just objectiveId ->
+                    case ( loggedIn.selectedCommunity, isEdit ) of
+                        ( RemoteData.Success _, Just objectiveId ) ->
                             newModel
                                 |> UR.addPort
                                     { responseAddress = ClickedSaveObjective
@@ -381,7 +331,7 @@ update msg model loggedIn =
                                             ]
                                     }
 
-                        Nothing ->
+                        ( RemoteData.Success community, Nothing ) ->
                             newModel
                                 |> UR.addPort
                                     { responseAddress = ClickedSaveObjective
@@ -395,7 +345,7 @@ update msg model loggedIn =
                                                     , permissionName = Eos.samplePermission
                                                     }
                                               , data =
-                                                    { asset = Eos.Asset 0 model.community
+                                                    { asset = Eos.Asset 0 community.symbol
                                                     , description = form.description
                                                     , creator = loggedIn.accountName
                                                     }
@@ -403,14 +353,17 @@ update msg model loggedIn =
                                               }
                                             ]
                                     }
+
+                        _ ->
+                            newModel
             in
             if LoggedIn.isAuth loggedIn then
-                case model.status of
-                    Loaded c (NewObjective objForm) ->
-                        save objForm Nothing c.precision
+                case ( loggedIn.selectedCommunity, model.status ) of
+                    ( RemoteData.Success community, Authorized (NewObjective objForm) ) ->
+                        save objForm Nothing community.precision
 
-                    Loaded c (EditObjective objectiveId objForm) ->
-                        save objForm (Just objectiveId) c.precision
+                    ( RemoteData.Success community, Authorized (EditObjective objectiveId objForm) ) ->
+                        save objForm (Just objectiveId) community.precision
 
                     _ ->
                         newModel
@@ -424,8 +377,10 @@ update msg model loggedIn =
         GotSaveObjectiveResponse (Ok _) ->
             UR.init model
                 |> updateObjective msg (\o -> { o | save = Saved })
-                |> UR.addCmd (Route.replaceUrl loggedIn.shared.navKey Route.Community)
                 |> UR.addExt (ShowFeedback Success (t "community.objectives.create_success"))
+                -- TODO - This only works sometimes
+                |> UR.addExt LoggedIn.ReloadCommunity
+                |> UR.addCmd (Route.replaceUrl loggedIn.shared.navKey Route.Community)
 
         GotSaveObjectiveResponse (Err v) ->
             UR.init model
@@ -436,6 +391,13 @@ update msg model loggedIn =
 
 
 -- UTILS
+
+
+receiveBroadcast : LoggedIn.BroadcastMsg -> Maybe Msg
+receiveBroadcast broadcastMsg =
+    case broadcastMsg of
+        LoggedIn.CommunityLoaded community ->
+            Just (CompletedLoadCommunity community)
 
 
 jsAddressToMsg : List String -> Value -> Maybe Msg
@@ -460,8 +422,8 @@ jsAddressToMsg addr val =
 msgToString : Msg -> List String
 msgToString msg =
     case msg of
-        CompletedCommunityLoad _ ->
-            [ "CompletedCommunityLoad" ]
+        CompletedLoadCommunity _ ->
+            [ "CompletedLoadCommunity" ]
 
         EnteredDescription _ ->
             [ "EnteredDescription" ]

@@ -114,7 +114,7 @@ viewNewObjectiveButton ({ shared } as loggedIn) community =
     if LoggedIn.isAccount community.creator loggedIn then
         a
             [ class "button button-primary button-sm w-full md:w-64"
-            , Route.href (Route.NewObjective community.symbol)
+            , Route.href Route.NewObjective
             ]
             [ text (shared.translators.t "community.objectives.new") ]
 
@@ -171,7 +171,7 @@ viewObjective ({ shared } as loggedIn) model community index objective =
                 [ div [ class "flex flex-wrap mt-2" ]
                     [ a
                         [ class "button button-secondary button-sm w-full sm:w-48 mt-2 px-1 sm:mr-4"
-                        , Route.href (Route.EditObjective community.symbol objective.id)
+                        , Route.href (Route.EditObjective objective.id)
                         ]
                         [ text_ "community.objectives.edit" ]
                     , a

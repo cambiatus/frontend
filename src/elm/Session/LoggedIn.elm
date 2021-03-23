@@ -729,7 +729,8 @@ viewFooter _ =
 -}
 type External msg
     = UpdatedLoggedIn Model
-    | BroadcastToLoggedIn BroadcastMsg
+    | UpdatedCommunity Community.Model
+    | ReloadCommunity
     | RequiredAuthentication (Maybe msg)
     | ShowFeedback FeedbackStatus String
     | HideFeedback
@@ -741,8 +742,11 @@ mapExternal transform ext =
         UpdatedLoggedIn m ->
             UpdatedLoggedIn m
 
-        BroadcastToLoggedIn broadcastMsg ->
-            BroadcastToLoggedIn broadcastMsg
+        UpdatedCommunity community ->
+            UpdatedCommunity community
+
+        ReloadCommunity ->
+            ReloadCommunity
 
         RequiredAuthentication maybeM ->
             RequiredAuthentication (Maybe.map transform maybeM)
@@ -759,7 +763,8 @@ updateExternal :
     -> Model
     ->
         { model : Model
-        , cmd : Cmd msg
+        , cmd : Cmd Msg
+        , externalCmd : Cmd msg
         , broadcastMsg : Maybe BroadcastMsg
         , afterAuthMsg : Maybe msg
         }
@@ -768,31 +773,50 @@ updateExternal externalMsg model =
         UpdatedLoggedIn newModel ->
             { model = newModel
             , cmd = Cmd.none
+            , externalCmd = Cmd.none
             , broadcastMsg = Nothing
             , afterAuthMsg = Nothing
             }
 
-        BroadcastToLoggedIn broadcastMsg ->
-            case broadcastMsg of
-                CommunityLoaded community ->
-                    case setCommunity community model of
-                        Err cmd ->
-                            { model = model
-                            , cmd = cmd
-                            , broadcastMsg = Nothing
-                            , afterAuthMsg = Nothing
-                            }
+        UpdatedCommunity community ->
+            case setCommunity community model of
+                Err cmd ->
+                    { model = model
+                    , cmd = cmd
+                    , externalCmd = Cmd.none
+                    , broadcastMsg = Nothing
+                    , afterAuthMsg = Nothing
+                    }
 
-                        Ok ( newModel, broadcastResponse ) ->
-                            { model = newModel
-                            , cmd = Cmd.none
-                            , broadcastMsg = Just broadcastResponse
-                            , afterAuthMsg = Nothing
-                            }
+                Ok ( newModel, broadcastResponse ) ->
+                    { model = newModel
+                    , cmd = Cmd.none
+                    , externalCmd = Cmd.none
+                    , broadcastMsg = Just broadcastResponse
+                    , afterAuthMsg = Nothing
+                    }
+
+        ReloadCommunity ->
+            let
+                ( newModel, cmd ) =
+                    case model.selectedCommunity of
+                        RemoteData.Success community ->
+                            loadCommunity model community.symbol
+
+                        _ ->
+                            ( model, Cmd.none )
+            in
+            { model = newModel
+            , cmd = cmd
+            , externalCmd = Cmd.none
+            , broadcastMsg = Nothing
+            , afterAuthMsg = Nothing
+            }
 
         RequiredAuthentication maybeMsg ->
             { model = askedAuthentication model
             , cmd = Cmd.none
+            , externalCmd = Cmd.none
             , broadcastMsg = Nothing
             , afterAuthMsg = maybeMsg
             }
@@ -800,6 +824,7 @@ updateExternal externalMsg model =
         ShowFeedback status message ->
             { model = { model | feedback = Show status message }
             , cmd = Cmd.none
+            , externalCmd = Cmd.none
             , broadcastMsg = Nothing
             , afterAuthMsg = Nothing
             }
@@ -807,6 +832,7 @@ updateExternal externalMsg model =
         HideFeedback ->
             { model = { model | feedback = Hidden }
             , cmd = Cmd.none
+            , externalCmd = Cmd.none
             , broadcastMsg = Nothing
             , afterAuthMsg = Nothing
             }
@@ -1127,15 +1153,7 @@ update msg model =
                         String.toLower name
 
                 ( loadCommunityModel, loadCommunityCmd ) =
-                    ( { model
-                        | showCommunitySelector = False
-                        , selectedCommunity = RemoteData.Loading
-                      }
-                    , Api.Graphql.query shared
-                        (Just model.authToken)
-                        (Community.communityQuery symbol)
-                        CompletedLoadCommunity
-                    )
+                    loadCommunity model symbol
             in
             case model.selectedCommunity of
                 RemoteData.Success selectedCommunity ->
@@ -1211,6 +1229,19 @@ handleActionMsg ({ shared } as model) actionMsg =
 
         _ ->
             UR.init model
+
+
+loadCommunity : Model -> Eos.Symbol -> ( Model, Cmd Msg )
+loadCommunity ({ shared } as model) symbol =
+    ( { model
+        | showCommunitySelector = False
+        , selectedCommunity = RemoteData.Loading
+      }
+    , Api.Graphql.query shared
+        (Just model.authToken)
+        (Community.communityQuery symbol)
+        CompletedLoadCommunity
+    )
 
 
 setCommunity : Community.Model -> Model -> Result (Cmd msg) ( Model, BroadcastMsg )

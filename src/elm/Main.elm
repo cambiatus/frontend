@@ -489,6 +489,10 @@ broadcast broadcastMessage status =
                     CommunitySettings.receiveBroadcast broadcastMessage
                         |> Maybe.map GotCommunitySettingsMsg
 
+                ObjectiveEditor _ ->
+                    ObjectiveEditor.receiveBroadcast broadcastMessage
+                        |> Maybe.map GotObjectiveEditorMsg
+
                 _ ->
                     Nothing
     in
@@ -591,7 +595,8 @@ updateLoggedInUResult toStatus toMsg model uResult =
                         | session = Page.LoggedIn updateResult.model
                         , afterAuthMsg = Maybe.map toMsg updateResult.afterAuthMsg
                       }
-                    , Cmd.map toMsg updateResult.cmd
+                    , Cmd.map toMsg updateResult.externalCmd
+                        :: Cmd.map (Page.GotLoggedInMsg >> GotPageMsg) updateResult.cmd
                         :: broadcastCmd
                         :: cmds_
                     )
@@ -821,15 +826,15 @@ changeRouteTo maybeRoute model =
                 >> updateStatusWith Objectives GotObjectivesMsg model
                 |> withLoggedIn Route.Objectives
 
-        Just (Route.NewObjective symbol) ->
-            (\l -> ObjectiveEditor.initNew l symbol)
+        Just Route.NewObjective ->
+            ObjectiveEditor.initNew
                 >> updateStatusWith ObjectiveEditor GotObjectiveEditorMsg model
-                |> withLoggedIn (Route.NewObjective symbol)
+                |> withLoggedIn Route.NewObjective
 
-        Just (Route.EditObjective symbol objectiveId) ->
-            (\l -> ObjectiveEditor.initEdit l symbol objectiveId)
+        Just (Route.EditObjective objectiveId) ->
+            (\l -> ObjectiveEditor.initEdit l objectiveId)
                 >> updateStatusWith ObjectiveEditor GotObjectiveEditorMsg model
-                |> withLoggedIn (Route.EditObjective symbol objectiveId)
+                |> withLoggedIn (Route.EditObjective objectiveId)
 
         Just (Route.NewAction symbol objectiveId) ->
             (\l -> ActionEditor.init l symbol objectiveId Nothing)
