@@ -83,10 +83,14 @@ init shared accountName authToken =
     let
         authModel =
             Auth.init shared
+
+        communityName =
+            communityNameFromUrl shared.url
     in
     ( initModel shared authModel accountName authToken
     , Cmd.batch
         [ Api.Graphql.query shared (Just authToken) (Profile.query accountName) CompletedLoadProfile
+        , Api.Graphql.query shared (Just authToken) (Community.communityNameQuery communityName) CompletedLoadCommunity
         , Ports.getRecentSearches () -- run on the page refresh, duplicated in `initLogin`
         , Task.perform GotTime Time.now
         ]
@@ -103,11 +107,21 @@ fetchTranslations language _ =
 -}
 initLogin : Shared -> Auth.Model -> Profile.Model -> String -> ( Model, Cmd Msg )
 initLogin shared authModel profile_ authToken =
+    let
+        loadedProfile =
+            Just profile_
+                |> RemoteData.Success
+                |> Task.succeed
+                |> Task.perform CompletedLoadProfile
+
+        communityName =
+            communityNameFromUrl shared.url
+    in
     ( initModel shared authModel profile_.account authToken
     , Cmd.batch
         [ Ports.getRecentSearches () -- run on the passphrase login, duplicated in `init`
-        , Task.succeed (RemoteData.Success (Just profile_))
-            |> Task.perform CompletedLoadProfile
+        , loadedProfile
+        , Api.Graphql.query shared (Just authToken) (Community.communityNameQuery communityName) CompletedLoadCommunity
         ]
     )
 
@@ -157,7 +171,7 @@ initModel shared authModel accountName authToken =
     { shared = shared
     , accountName = accountName
     , profile = Loading accountName
-    , selectedCommunity = RemoteData.NotAsked
+    , selectedCommunity = RemoteData.Loading
     , showUserNav = False
     , showLanguageItems = False
     , showNotificationModal = False
@@ -867,49 +881,11 @@ update msg model =
                 subscriptionDoc =
                     unreadCountSubscription model.accountName
                         |> Graphql.Document.serializeSubscription
-
-                communityName =
-                    String.split "." shared.url.host
-                        |> List.head
-                        |> Maybe.withDefault "app"
-                        |> String.toLower
-                        |> (\name ->
-                                if name == "app" then
-                                    "cambiatus"
-
-                                else
-                                    name
-                           )
             in
             case profile_ of
                 Just p ->
-                    let
-                        model_ =
-                            { model | profile = Loaded p }
-                    in
-                    (case
-                        List.find (.name >> String.toLower >> (==) communityName)
-                            p.communities
-                     of
-                        Just c ->
-                            let
-                                ( modelWithCommunity, cmd ) =
-                                    selectCommunity c model_
-                            in
-                            UR.init modelWithCommunity
-                                |> UR.addCmd cmd
-
-                        -- If user is not a part of the community, it may exist
-                        -- and have auto invite, so we check for that
-                        Nothing ->
-                            UR.init model_
-                                |> UR.addCmd
-                                    (Api.Graphql.query shared
-                                        (Just model.authToken)
-                                        (Community.communityNameQuery communityName)
-                                        CompletedLoadCommunity
-                                    )
-                    )
+                    { model | profile = Loaded p }
+                        |> UR.init
                         |> UR.addPort
                             { responseAddress = CompletedLoadUnread (Encode.string "")
                             , responseData = Encode.null
@@ -948,13 +924,7 @@ update msg model =
                 Just community ->
                     let
                         isMember =
-                            Maybe.map
-                                (.communities
-                                    >> List.map .symbol
-                                    >> List.member community.symbol
-                                )
-                                (profile model)
-                                |> Maybe.withDefault False
+                            List.any (.account >> (==) model.accountName) community.members
                     in
                     if isMember then
                         { model | selectedCommunity = RemoteData.Success community }
@@ -962,18 +932,10 @@ update msg model =
                             |> UR.addExt (CommunityLoaded community |> Broadcast)
 
                     else
-                        -- Everything is loaded, but user is not a member of the community
+                        -- Community is loaded, but user is not a member of it
                         -- TODO - Need to change this to use auto invite communities
-                        let
-                            communityUrl =
-                                if String.toLower community.name == "cambiatus" then
-                                    "app"
-
-                                else
-                                    String.toLower community.name
-                        in
                         UR.init model
-                            |> UR.addCmd (redirectToCommunity shared.url communityUrl)
+                            |> UR.addCmd (redirectToCommunity shared.url "app")
 
                 Nothing ->
                     -- The community doesn't exist, so redirect to the cambiatus community
@@ -1217,6 +1179,22 @@ selectCommunity { name, symbol } ({ shared } as model) =
 
         RemoteData.Loading ->
             ( model, Cmd.none )
+
+
+communityNameFromUrl : Url -> String
+communityNameFromUrl url =
+    url.host
+        |> String.toLower
+        |> String.split "."
+        |> List.head
+        |> Maybe.withDefault "app"
+        |> (\name ->
+                if name == "app" then
+                    "cambiatus"
+
+                else
+                    name
+           )
 
 
 redirectToCommunity : Url -> String -> Cmd msg
