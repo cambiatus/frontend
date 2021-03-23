@@ -473,6 +473,10 @@ broadcast broadcastMessage status =
                     ActionEditor.receiveBroadcast broadcastMessage
                         |> Maybe.map GotActionEditorMsg
 
+                CommunityEditor _ ->
+                    CommunityEditor.receiveBroadcast broadcastMessage
+                        |> Maybe.map GotCommunityEditorMsg
+
                 _ ->
                     Nothing
     in
@@ -554,50 +558,34 @@ updateLoggedInUResult : (subModel -> Status) -> (subMsg -> Msg) -> Model -> Upda
 updateLoggedInUResult toStatus toMsg model uResult =
     List.foldl
         (\commExtMsg ( m, cmds_ ) ->
-            case commExtMsg of
-                LoggedIn.UpdatedLoggedIn loggedIn ->
-                    ( { m | session = Page.LoggedIn loggedIn }
-                    , cmds_
+            case ( commExtMsg, m.session ) of
+                ( LoggedIn.UpdatedLoggedIn loggedIn, Page.Guest _ ) ->
+                    ( { m | session = Page.LoggedIn loggedIn }, cmds_ )
+
+                ( _, Page.LoggedIn loggedIn ) ->
+                    let
+                        updateResult =
+                            LoggedIn.updateExternal commExtMsg loggedIn
+
+                        broadcastCmd =
+                            case updateResult.broadcastMsg of
+                                Nothing ->
+                                    Cmd.none
+
+                                Just broadcastMsg ->
+                                    broadcast broadcastMsg m.status
+                    in
+                    ( { m
+                        | session = Page.LoggedIn updateResult.model
+                        , afterAuthMsg = Maybe.map toMsg updateResult.afterAuthMsg
+                      }
+                    , Cmd.map toMsg updateResult.cmd
+                        :: broadcastCmd
+                        :: cmds_
                     )
 
-                LoggedIn.RequiredAuthentication maybeMsg ->
-                    case m.session of
-                        Page.LoggedIn loggedIn ->
-                            ( { m
-                                | session = Page.LoggedIn (LoggedIn.askedAuthentication loggedIn)
-                                , afterAuthMsg = Maybe.map toMsg maybeMsg
-                              }
-                            , cmds_
-                            )
-
-                        _ ->
-                            ( m, cmds_ )
-
-                LoggedIn.ShowFeedback status message ->
-                    case m.session of
-                        Page.LoggedIn loggedIn ->
-                            ( { m
-                                | session =
-                                    Page.LoggedIn { loggedIn | feedback = Show status message }
-                              }
-                            , cmds_
-                            )
-
-                        _ ->
-                            ( m, cmds_ )
-
-                LoggedIn.HideFeedback ->
-                    case m.session of
-                        Page.LoggedIn loggedIn ->
-                            ( { m
-                                | session =
-                                    Page.LoggedIn { loggedIn | feedback = Hidden }
-                              }
-                            , cmds_
-                            )
-
-                        _ ->
-                            ( m, cmds_ )
+                ( _, Page.Guest _ ) ->
+                    ( m, cmds_ )
         )
         ( { model | status = toStatus uResult.model }
         , []
@@ -811,10 +799,10 @@ changeRouteTo maybeRoute model =
                 >> updateStatusWith CommunityEditor GotCommunityEditorMsg model
                 |> withLoggedIn Route.NewCommunity
 
-        Just (Route.EditCommunity symbol) ->
-            (\l -> CommunityEditor.initEdit l symbol)
+        Just Route.EditCommunity ->
+            CommunityEditor.initEdit
                 >> updateStatusWith CommunityEditor GotCommunityEditorMsg model
-                |> withLoggedIn (Route.EditCommunity symbol)
+                |> withLoggedIn Route.EditCommunity
 
         Just (Route.Objectives symbol) ->
             (\l -> Objectives.init l symbol)

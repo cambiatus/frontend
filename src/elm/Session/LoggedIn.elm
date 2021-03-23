@@ -25,6 +25,7 @@ module Session.LoggedIn exposing
     , readAllNotifications
     , subscriptions
     , update
+    , updateExternal
     , view
     , viewFooter
     )
@@ -41,7 +42,7 @@ import Cambiatus.Object
 import Cambiatus.Object.UnreadNotifications
 import Cambiatus.Subscription as Subscription
 import Community
-import Eos exposing (Symbol)
+import Eos
 import Eos.Account as Eos
 import Graphql.Document
 import Graphql.Http
@@ -568,18 +569,8 @@ viewHeader ({ shared } as model) profile_ =
 
 
 viewCommunitySelector : Model -> Html Msg
-viewCommunitySelector ({ shared } as model) =
+viewCommunitySelector model =
     let
-        findCommunity : Symbol -> Maybe Profile.CommunityInfo
-        findCommunity symbol =
-            case model.profile of
-                Loaded p ->
-                    p.communities
-                        |> List.find (\c -> c.symbol == symbol)
-
-                _ ->
-                    Nothing
-
         hasMultipleCommunities : Bool
         hasMultipleCommunities =
             case model.profile of
@@ -589,8 +580,8 @@ viewCommunitySelector ({ shared } as model) =
                 _ ->
                     False
     in
-    case RemoteData.map (.symbol >> findCommunity) model.selectedCommunity of
-        RemoteData.Success (Just community) ->
+    case model.selectedCommunity of
+        RemoteData.Success community ->
             button [ class "flex items-center", onClick OpenCommunitySelector ]
                 [ img [ class "h-10", src community.logo ] []
                 , if hasMultipleCommunities then
@@ -598,16 +589,6 @@ viewCommunitySelector ({ shared } as model) =
 
                   else
                     text ""
-                ]
-
-        RemoteData.Success Nothing ->
-            button [ class "flex items-center", onClick OpenCommunitySelector ]
-                [ img [ class "lg:hidden h-8", src shared.logoMobile ] []
-                , img
-                    [ class "hidden lg:block lg:visible h-6"
-                    , src shared.logo
-                    ]
-                    []
                 ]
 
         _ ->
@@ -744,8 +725,11 @@ viewFooter _ =
 -- UPDATE
 
 
+{-| Messages that pages can fire and LoggedIn will react to
+-}
 type External msg
     = UpdatedLoggedIn Model
+    | BroadcastToLoggedIn BroadcastMsg
     | RequiredAuthentication (Maybe msg)
     | ShowFeedback FeedbackStatus String
     | HideFeedback
@@ -757,6 +741,9 @@ mapExternal transform ext =
         UpdatedLoggedIn m ->
             UpdatedLoggedIn m
 
+        BroadcastToLoggedIn broadcastMsg ->
+            BroadcastToLoggedIn broadcastMsg
+
         RequiredAuthentication maybeM ->
             RequiredAuthentication (Maybe.map transform maybeM)
 
@@ -767,10 +754,70 @@ mapExternal transform ext =
             HideFeedback
 
 
+updateExternal :
+    External msg
+    -> Model
+    ->
+        { model : Model
+        , cmd : Cmd msg
+        , broadcastMsg : Maybe BroadcastMsg
+        , afterAuthMsg : Maybe msg
+        }
+updateExternal externalMsg model =
+    case externalMsg of
+        UpdatedLoggedIn newModel ->
+            { model = newModel
+            , cmd = Cmd.none
+            , broadcastMsg = Nothing
+            , afterAuthMsg = Nothing
+            }
+
+        BroadcastToLoggedIn broadcastMsg ->
+            case broadcastMsg of
+                CommunityLoaded community ->
+                    case setCommunity community model of
+                        Err cmd ->
+                            { model = model
+                            , cmd = cmd
+                            , broadcastMsg = Nothing
+                            , afterAuthMsg = Nothing
+                            }
+
+                        Ok ( newModel, broadcastResponse ) ->
+                            { model = newModel
+                            , cmd = Cmd.none
+                            , broadcastMsg = Just broadcastResponse
+                            , afterAuthMsg = Nothing
+                            }
+
+        RequiredAuthentication maybeMsg ->
+            { model = askedAuthentication model
+            , cmd = Cmd.none
+            , broadcastMsg = Nothing
+            , afterAuthMsg = maybeMsg
+            }
+
+        ShowFeedback status message ->
+            { model = { model | feedback = Show status message }
+            , cmd = Cmd.none
+            , broadcastMsg = Nothing
+            , afterAuthMsg = Nothing
+            }
+
+        HideFeedback ->
+            { model = { model | feedback = Hidden }
+            , cmd = Cmd.none
+            , broadcastMsg = Nothing
+            , afterAuthMsg = Nothing
+            }
+
+
 type alias UpdateResult =
     UR.UpdateResult Model Msg ExternalMsg
 
 
+{-| Messages that LoggedIn can fire, and pages/Main will react to
+-}
 type ExternalMsg
     = AuthenticationSucceed
     | AuthenticationFailed
@@ -922,20 +969,14 @@ update msg model =
         CompletedLoadCommunity (RemoteData.Success maybeCommunity) ->
             case maybeCommunity of
                 Just community ->
-                    let
-                        isMember =
-                            List.any (.account >> (==) model.accountName) community.members
-                    in
-                    if isMember then
-                        { model | selectedCommunity = RemoteData.Success community }
-                            |> UR.init
-                            |> UR.addExt (CommunityLoaded community |> Broadcast)
+                    case setCommunity community model of
+                        Err cmd ->
+                            UR.init model
+                                |> UR.addCmd cmd
 
-                    else
-                        -- Community is loaded, but user is not a member of it
-                        -- TODO - Need to change this to use auto invite communities
-                        UR.init model
-                            |> UR.addCmd (redirectToCommunity shared.url "app")
+                        Ok ( newModel, broadcastMsg ) ->
+                            UR.init newModel
+                                |> UR.addExt (Broadcast broadcastMsg)
 
                 Nothing ->
                     -- The community doesn't exist, so redirect to the cambiatus community
@@ -1076,13 +1117,45 @@ update msg model =
             { model | showCommunitySelector = False }
                 |> UR.init
 
-        SelectedCommunity communityInfo ->
+        SelectedCommunity { symbol, name } ->
             let
-                ( model_, cmd ) =
-                    selectCommunity communityInfo model
+                communityUrl =
+                    if String.toLower name == "cambiatus" then
+                        "app"
+
+                    else
+                        String.toLower name
+
+                ( loadCommunityModel, loadCommunityCmd ) =
+                    ( { model
+                        | showCommunitySelector = False
+                        , selectedCommunity = RemoteData.Loading
+                      }
+                    , Api.Graphql.query shared
+                        (Just model.authToken)
+                        (Community.communityQuery symbol)
+                        CompletedLoadCommunity
+                    )
             in
-            UR.init model_
-                |> UR.addCmd cmd
+            case model.selectedCommunity of
+                RemoteData.Success selectedCommunity ->
+                    if symbol == selectedCommunity.symbol then
+                        UR.init { model | showCommunitySelector = False }
+
+                    else
+                        UR.init { model | showCommunitySelector = False }
+                            |> UR.addCmd (redirectToCommunity shared.url communityUrl)
+
+                RemoteData.NotAsked ->
+                    UR.init loadCommunityModel
+                        |> UR.addCmd loadCommunityCmd
+
+                RemoteData.Failure _ ->
+                    UR.init loadCommunityModel
+                        |> UR.addCmd loadCommunityCmd
+
+                RemoteData.Loading ->
+                    UR.init model
 
 
 handleActionMsg : Model -> Action.Msg -> UpdateResult
@@ -1140,45 +1213,48 @@ handleActionMsg ({ shared } as model) actionMsg =
             UR.init model
 
 
-selectCommunity : { community | name : String, symbol : Eos.Symbol } -> Model -> ( Model, Cmd Msg )
-selectCommunity { name, symbol } ({ shared } as model) =
+setCommunity : Community.Model -> Model -> Result (Cmd msg) ( Model, BroadcastMsg )
+setCommunity community model =
     let
-        communityUrl =
-            if String.toLower name == "cambiatus" then
-                "app"
-
-            else
-                String.toLower name
-
-        loadCommunity =
-            ( { model
-                | showCommunitySelector = False
-                , selectedCommunity = RemoteData.Loading
-              }
-            , Api.Graphql.query shared
-                (Just model.authToken)
-                (Community.communityQuery symbol)
-                CompletedLoadCommunity
-            )
+        isMember =
+            List.any (.account >> (==) model.accountName) community.members
     in
-    case model.selectedCommunity of
-        RemoteData.Success selectedCommunity ->
-            if symbol == selectedCommunity.symbol then
-                ( { model | showCommunitySelector = False }, Cmd.none )
+    if isMember then
+        let
+            newProfile =
+                case profile model of
+                    Nothing ->
+                        model.profile
 
-            else
-                ( { model | showCommunitySelector = False }
-                , redirectToCommunity shared.url communityUrl
-                )
+                    Just profile_ ->
+                        Loaded
+                            { profile_
+                                | communities =
+                                    List.updateIf (.symbol >> (==) community.symbol)
+                                        (\c ->
+                                            { c
+                                                | name = community.name
+                                                , logo = community.logo
+                                                , hasShop = community.hasShop
+                                                , hasActions = community.hasObjectives
+                                                , hasKyc = community.hasKyc
+                                            }
+                                        )
+                                        profile_.communities
+                            }
+        in
+        Ok
+            ( { model
+                | selectedCommunity = RemoteData.Success community
+                , profile = newProfile
+              }
+            , CommunityLoaded community
+            )
 
-        RemoteData.NotAsked ->
-            loadCommunity
-
-        RemoteData.Failure _ ->
-            loadCommunity
-
-        RemoteData.Loading ->
-            ( model, Cmd.none )
+    else
+        -- Community is loaded, but user is not a member of it
+        -- TODO - Need to change this to use auto invite communities
+        Err (redirectToCommunity model.shared.url "app")
 
 
 communityNameFromUrl : Url -> String

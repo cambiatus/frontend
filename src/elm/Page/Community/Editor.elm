@@ -5,13 +5,13 @@ module Page.Community.Editor exposing
     , initNew
     , jsAddressToMsg
     , msgToString
+    , receiveBroadcast
     , subscriptions
     , update
     , view
     )
 
 import Api
-import Api.Graphql
 import Asset.Icon as Icon
 import Browser.Events as Events
 import Community exposing (Model)
@@ -20,7 +20,6 @@ import Eos exposing (Symbol)
 import Eos.Account as Eos
 import File exposing (File)
 import Graphql.Document
-import Graphql.Http
 import Html exposing (Html, br, button, div, input, label, span, text, textarea)
 import Html.Attributes exposing (accept, class, classList, disabled, for, id, maxlength, minlength, multiple, placeholder, required, type_, value)
 import Html.Events exposing (onClick, onInput, onSubmit)
@@ -29,7 +28,6 @@ import Json.Decode as Decode
 import Json.Encode as Encode exposing (Value)
 import List.Extra as List
 import Page
-import RemoteData exposing (RemoteData)
 import Route
 import Session.LoggedIn as LoggedIn exposing (External(..), FeedbackStatus(..))
 import Session.Shared exposing (Shared)
@@ -49,10 +47,10 @@ initNew _ =
     )
 
 
-initEdit : LoggedIn.Model -> Symbol -> ( Model, Cmd Msg )
-initEdit { shared, authToken } symbol =
-    ( Loading symbol
-    , Api.Graphql.query shared (Just authToken) (Community.communityQuery symbol) CompletedCommunityLoad
+initEdit : LoggedIn.Model -> ( Model, Cmd Msg )
+initEdit loggedIn =
+    ( Loading
+    , LoggedIn.maybeInitWith CompletedLoadCommunity .selectedCommunity loggedIn
     )
 
 
@@ -73,12 +71,9 @@ type alias Model =
     Status
 
 
-type
-    Status
-    -- Edit Community
-    = Loading Symbol
-    | NotFound
-    | LoadingFailed (Graphql.Http.Error (Maybe Community.Model))
+type Status
+    = -- Edit Community
+      Loading
     | Unauthorized Community.Model
     | Editing Community.Model (Dict String FormError) Form
     | WaitingEditLogoUpload Community.Model Form
@@ -232,14 +227,8 @@ view ({ shared } as loggedIn) model =
 
         content =
             case model of
-                Loading _ ->
+                Loading ->
                     Page.fullPageLoading shared
-
-                LoadingFailed e ->
-                    Page.fullPageGraphQLError (t "community.edit.title") e
-
-                NotFound ->
-                    Page.viewCardEmpty [ text "Community not found" ]
 
                 Unauthorized _ ->
                     div [ class "container mx-auto px-4" ]
@@ -597,7 +586,7 @@ type alias UpdateResult =
 
 
 type Msg
-    = CompletedCommunityLoad (RemoteData (Graphql.Http.Error (Maybe Community.Model)) (Maybe Community.Model))
+    = CompletedLoadCommunity Community.Model
     | EnteredTitle String
     | EnteredDescription String
     | EnteredSymbol String
@@ -622,28 +611,19 @@ update msg model loggedIn =
             loggedIn.shared.translators.t
     in
     case msg of
-        CompletedCommunityLoad (RemoteData.Success community) ->
-            case community of
-                Just c ->
-                    if LoggedIn.isAccount c.creator loggedIn then
-                        Editing c Dict.empty (editForm c)
+        CompletedLoadCommunity community ->
+            case model of
+                Loading ->
+                    if LoggedIn.isAccount community.creator loggedIn then
+                        Editing community Dict.empty (editForm community)
                             |> UR.init
 
                     else
-                        Unauthorized c
+                        Unauthorized community
                             |> UR.init
 
-                Nothing ->
-                    NotFound
-                        |> UR.init
-
-        CompletedCommunityLoad (RemoteData.Failure err) ->
-            LoadingFailed err
-                |> UR.init
-                |> UR.logGraphqlError msg err
-
-        CompletedCommunityLoad _ ->
-            UR.init model
+                _ ->
+                    UR.init model
 
         EnteredTitle input ->
             UR.init model
@@ -756,9 +736,14 @@ update msg model loggedIn =
 
         GotSaveResponse (Ok _) ->
             case model of
-                Saving _ _ ->
+                Saving community form ->
                     model
                         |> UR.init
+                        |> UR.addExt
+                            (updateCommunity form community
+                                |> LoggedIn.CommunityLoaded
+                                |> LoggedIn.BroadcastToLoggedIn
+                            )
                         |> UR.addCmd (Route.Community |> Route.replaceUrl loggedIn.shared.navKey)
                         |> UR.addExt (ShowFeedback Success (t "community.create.success"))
 
@@ -831,13 +816,7 @@ update msg model loggedIn =
 updateForm : (Form -> Form) -> UpdateResult -> UpdateResult
 updateForm transform ({ model } as uResult) =
     case model of
-        Loading _ ->
-            uResult
-
-        LoadingFailed _ ->
-            uResult
-
-        NotFound ->
+        Loading ->
             uResult
 
         Unauthorized _ ->
@@ -866,6 +845,34 @@ updateForm transform ({ model } as uResult) =
         Creating form ->
             Creating (transform form)
                 |> UR.setModel uResult
+
+
+updateCommunity : Form -> Community.Model -> Community.Model
+updateCommunity form community =
+    { community
+        | name = form.name
+        , description = form.description
+        , symbol =
+            Eos.symbolFromString form.symbol
+                |> Maybe.withDefault community.symbol
+        , logo =
+            case List.getAt form.logoSelected form.logoList of
+                Just (Uploaded logo) ->
+                    logo
+
+                _ ->
+                    community.logo
+        , invitedReward =
+            String.toFloat form.invitedReward
+                |> Maybe.withDefault community.invitedReward
+        , inviterReward =
+            String.toFloat form.inviterReward
+                |> Maybe.withDefault community.inviterReward
+        , minBalance = String.toFloat form.minBalance
+        , hasShop = form.hasShop
+        , hasObjectives = form.hasObjectives
+        , hasKyc = form.hasKyc
+    }
 
 
 save : Msg -> LoggedIn.Model -> UpdateResult -> UpdateResult
@@ -961,6 +968,13 @@ save msg loggedIn ({ model } as uResult) =
                 |> UR.logImpossible msg []
 
 
+receiveBroadcast : LoggedIn.BroadcastMsg -> Maybe Msg
+receiveBroadcast broadcastMsg =
+    case broadcastMsg of
+        LoggedIn.CommunityLoaded community ->
+            Just (CompletedLoadCommunity community)
+
+
 jsAddressToMsg : List String -> Value -> Maybe Msg
 jsAddressToMsg addr val =
     case addr of
@@ -1002,8 +1016,8 @@ jsAddressToMsg addr val =
 msgToString : Msg -> List String
 msgToString msg =
     case msg of
-        CompletedCommunityLoad r ->
-            [ "CompletedCommunityLoad", UR.remoteDataToString r ]
+        CompletedLoadCommunity _ ->
+            [ "CompletedLoadCommunity" ]
 
         EnteredTitle _ ->
             [ "EnteredTitle" ]
