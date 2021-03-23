@@ -2,7 +2,6 @@ module Page.Community.Objectives exposing (Model, Msg, init, msgToString, receiv
 
 import Action exposing (Action)
 import Cambiatus.Enum.VerificationType as VerificationType
-import Cambiatus.Query exposing (community)
 import Community exposing (Model)
 import Eos
 import Html exposing (Html, a, button, div, p, text)
