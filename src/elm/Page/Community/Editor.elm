@@ -754,15 +754,12 @@ update msg model loggedIn =
                 _ ->
                     uResult
 
-        GotSaveResponse (Ok symbol) ->
+        GotSaveResponse (Ok _) ->
             case model of
                 Saving _ _ ->
                     model
                         |> UR.init
-                        |> UR.addCmd
-                            (Route.Community symbol
-                                |> Route.replaceUrl loggedIn.shared.navKey
-                            )
+                        |> UR.addCmd (Route.Community |> Route.replaceUrl loggedIn.shared.navKey)
                         |> UR.addExt (ShowFeedback Success (t "community.create.success"))
 
                 _ ->
@@ -801,11 +798,11 @@ update msg model loggedIn =
                             Eos.symbolFromString form.symbol
                     in
                     case sym of
-                        Just s ->
+                        Just _ ->
                             model
                                 |> UR.init
                                 |> UR.addCmd
-                                    (Route.Community s
+                                    (Route.Community
                                         |> Route.replaceUrl loggedIn.shared.navKey
                                     )
 

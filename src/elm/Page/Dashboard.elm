@@ -547,7 +547,7 @@ viewBalance ({ shared } as loggedIn) _ balance =
                                     [ text_ "dashboard.transfer" ]
                                 , a
                                     [ class "flex w-full items-center justify-between h-12 text-gray-600 border-b"
-                                    , Route.href <| Route.Community community.symbol
+                                    , Route.href Route.Community
                                     ]
                                     [ text <| shared.translators.tr "dashboard.explore" [ ( "symbol", Eos.symbolToSymbolCodeString community.symbol ) ]
                                     , Icons.arrowDown "rotate--90"

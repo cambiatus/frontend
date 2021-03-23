@@ -424,10 +424,7 @@ update msg model loggedIn =
         GotSaveObjectiveResponse (Ok _) ->
             UR.init model
                 |> updateObjective msg (\o -> { o | save = Saved })
-                |> UR.addCmd
-                    (Route.replaceUrl loggedIn.shared.navKey
-                        (Route.Community model.community)
-                    )
+                |> UR.addCmd (Route.replaceUrl loggedIn.shared.navKey Route.Community)
                 |> UR.addExt (ShowFeedback Success (t "community.objectives.create_success"))
 
         GotSaveObjectiveResponse (Err v) ->

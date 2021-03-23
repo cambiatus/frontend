@@ -4,12 +4,12 @@ module Page.Community.ActionEditor exposing
     , init
     , jsAddressToMsg
     , msgToString
+    , receiveBroadcast
     , update
     , view
     )
 
 import Action exposing (Action)
-import Api.Graphql
 import Cambiatus.Enum.VerificationType as VerificationType
 import Cambiatus.Scalar exposing (DateTime(..))
 import Community exposing (Model)
@@ -32,7 +32,6 @@ import DataValidator
         )
 import Eos exposing (Symbol)
 import Eos.Account as Eos
-import Graphql.Http
 import Html exposing (Html, b, button, div, input, label, p, span, text, textarea)
 import Html.Attributes exposing (checked, class, classList, for, id, name, placeholder, rows, type_, value)
 import Html.Events exposing (onCheck, onClick, onInput)
@@ -42,7 +41,7 @@ import Json.Encode as Encode
 import MaskedInput.Text as MaskedDate
 import Page
 import Profile
-import RemoteData exposing (RemoteData)
+import RemoteData
 import Route
 import Select
 import Session.LoggedIn as LoggedIn exposing (External(..), FeedbackStatus(..))
@@ -70,17 +69,14 @@ type alias ActionId =
 
 init : LoggedIn.Model -> Symbol -> ObjectiveId -> Maybe ActionId -> ( Model, Cmd Msg )
 init loggedIn symbol objectiveId actionId =
-    ( { status = Loading
+    ( { status = NotFound
       , communityId = symbol
       , objectiveId = objectiveId
       , actionId = actionId
       , form = initForm
       , multiSelectState = Select.newState ""
       }
-    , Api.Graphql.query loggedIn.shared
-        (Just loggedIn.authToken)
-        (Community.communityQuery symbol)
-        CompletedCommunityLoad
+    , LoggedIn.maybeInitWith CompletedLoadCommunity .selectedCommunity loggedIn
     )
 
 
@@ -99,10 +95,7 @@ type alias Model =
 
 
 type Status
-    = Loading
-    | Loaded Community.Model
-      -- Errors
-    | LoadFailed (Graphql.Http.Error (Maybe Community.Model))
+    = Authorized
     | NotFound
     | Unauthorized
 
@@ -454,7 +447,7 @@ type alias UpdateResult =
 
 
 type Msg
-    = CompletedCommunityLoad (RemoteData (Graphql.Http.Error (Maybe Community.Model)) (Maybe Community.Model))
+    = CompletedLoadCommunity Community.Model
     | OnSelectVerifier (Maybe Profile.Minimal)
     | OnRemoveVerifier Profile.Minimal
     | SelectMsg (Select.Msg Profile.Minimal)
@@ -539,82 +532,65 @@ update msg model ({ shared } as loggedIn) =
             model.form
     in
     case msg of
-        CompletedCommunityLoad (RemoteData.Failure err) ->
-            { model | status = LoadFailed err }
-                |> UR.init
-                |> UR.logGraphqlError msg err
+        CompletedLoadCommunity community ->
+            if community.creator == loggedIn.accountName then
+                -- Check the action belongs to the objective
+                let
+                    maybeObjective =
+                        List.filterMap
+                            (\o ->
+                                if o.id == model.objectiveId then
+                                    Just o
 
-        CompletedCommunityLoad (RemoteData.Success c) ->
-            case c of
-                Just community ->
-                    if community.creator == loggedIn.accountName then
-                        -- Check the action belongs to the objective
+                                else
+                                    Nothing
+                            )
+                            community.objectives
+                            |> List.head
+                in
+                case ( maybeObjective, model.actionId ) of
+                    ( Just objective, Just actionId ) ->
+                        -- Edit form
                         let
-                            maybeObjective =
+                            maybeAction =
                                 List.filterMap
-                                    (\o ->
-                                        if o.id == model.objectiveId then
-                                            Just o
+                                    (\a ->
+                                        if a.id == actionId then
+                                            Just a
 
                                         else
                                             Nothing
                                     )
-                                    community.objectives
+                                    objective.actions
                                     |> List.head
                         in
-                        case maybeObjective of
-                            Just objective ->
-                                case model.actionId of
-                                    Just actionId ->
-                                        -- Edit form
-                                        let
-                                            maybeAction =
-                                                List.filterMap
-                                                    (\a ->
-                                                        if a.id == actionId then
-                                                            Just a
-
-                                                        else
-                                                            Nothing
-                                                    )
-                                                    objective.actions
-                                                    |> List.head
-                                        in
-                                        case maybeAction of
-                                            Just action ->
-                                                { model
-                                                    | status = Loaded community
-                                                    , form = editForm model.form action
-                                                }
-                                                    |> UR.init
-
-                                            Nothing ->
-                                                { model | status = NotFound }
-                                                    |> UR.init
-
-                                    Nothing ->
-                                        -- New form
-                                        { model
-                                            | status = Loaded community
-                                            , form = initForm
-                                        }
-                                            |> UR.init
+                        case maybeAction of
+                            Just action ->
+                                { model
+                                    | status = Authorized
+                                    , form = editForm model.form action
+                                }
+                                    |> UR.init
 
                             Nothing ->
                                 { model | status = NotFound }
                                     |> UR.init
 
-                    else
-                        { model | status = Unauthorized }
+                    ( Just _, Nothing ) ->
+                        -- New form
+                        { model
+                            | status = Authorized
+                            , form = initForm
+                        }
                             |> UR.init
 
-                Nothing ->
-                    { model | status = NotFound }
-                        |> UR.init
-                        |> UR.logImpossible msg []
+                    ( Nothing, _ ) ->
+                        { model | status = NotFound }
+                            |> UR.init
 
-        CompletedCommunityLoad _ ->
-            UR.init model
+            else
+                { model | status = Unauthorized }
+                    |> UR.init
 
         OnSelectVerifier maybeProfile ->
             let
@@ -1249,24 +1225,27 @@ view ({ shared } as loggedIn) model =
                 ++ t "community.actions.title"
 
         content =
-            case model.status of
-                Loading ->
+            case ( loggedIn.selectedCommunity, model.status ) of
+                ( RemoteData.Loading, _ ) ->
                     Page.fullPageLoading shared
 
-                Loaded community ->
+                ( RemoteData.NotAsked, _ ) ->
+                    Page.fullPageLoading shared
+
+                ( RemoteData.Success community, Authorized ) ->
                     div [ class "bg-white" ]
                         [ Page.viewHeader loggedIn (t "community.actions.title") (Route.Objectives model.communityId)
                         , viewForm loggedIn community model
                         ]
 
-                LoadFailed err ->
-                    Page.fullPageGraphQLError (t "error.invalidSymbol") err
+                ( RemoteData.Success _, Unauthorized ) ->
+                    Page.fullPageNotFound "not authorized" ""
 
-                NotFound ->
+                ( RemoteData.Success _, NotFound ) ->
                     Page.fullPageNotFound (t "community.actions.form.not_found") ""
 
-                Unauthorized ->
-                    Page.fullPageNotFound "not authorized" ""
+                ( RemoteData.Failure e, _ ) ->
+                    Page.fullPageGraphQLError (t "error.invalidSymbol") e
     in
     { title = title
     , content =
@@ -1666,7 +1645,7 @@ viewManualVerificationForm ({ shared } as loggedIn) model community =
                 , span [ class "input-label" ]
                     [ text (tr "community.actions.form.verifiers_label_count" [ ( "count", getInput minVotesValidator ) ]) ]
                 , div []
-                    [ viewVerifierSelect shared model False
+                    [ viewVerifierSelect loggedIn model False
                     , viewFieldErrors (listErrors shared.translations verifiersValidator)
                     , viewSelectedVerifiers loggedIn (getInput verifiersValidator)
                     ]
@@ -1827,12 +1806,12 @@ selectConfiguration shared isDisabled =
         isDisabled
 
 
-viewVerifierSelect : Shared -> Model -> Bool -> Html Msg
-viewVerifierSelect shared model isDisabled =
+viewVerifierSelect : LoggedIn.Model -> Model -> Bool -> Html Msg
+viewVerifierSelect loggedIn model isDisabled =
     let
         users =
-            case model.status of
-                Loaded community ->
+            case ( loggedIn.selectedCommunity, model.status ) of
+                ( RemoteData.Success community, Authorized ) ->
                     community.members
 
                 _ ->
@@ -1845,7 +1824,7 @@ viewVerifierSelect shared model isDisabled =
         Manual { verifiersValidator } ->
             div []
                 [ Html.map SelectMsg
-                    (Select.view (selectConfiguration shared isDisabled)
+                    (Select.view (selectConfiguration loggedIn.shared isDisabled)
                         model.multiSelectState
                         users
                         (getInput verifiersValidator)
@@ -1855,6 +1834,13 @@ viewVerifierSelect shared model isDisabled =
 
 
 -- UTILS
+
+
+receiveBroadcast : LoggedIn.BroadcastMsg -> Maybe Msg
+receiveBroadcast broadcastMsg =
+    case broadcastMsg of
+        LoggedIn.CommunityLoaded community ->
+            Just (CompletedLoadCommunity community)
 
 
 jsAddressToMsg : List String -> Value -> Maybe Msg
@@ -1891,8 +1877,8 @@ jsAddressToMsg addr val =
 msgToString : Msg -> List String
 msgToString msg =
     case msg of
-        CompletedCommunityLoad _ ->
-            [ "CompletedCommunityLoad" ]
+        CompletedLoadCommunity _ ->
+            [ "CompletedLoadCommunity" ]
 
         OnSelectVerifier _ ->
             [ "OnSelectVerifier" ]

@@ -469,6 +469,10 @@ broadcast broadcastMessage status =
                     ProfileClaims.receiveBroadcast broadcastMessage
                         |> Maybe.map GotProfileClaimsMsg
 
+                ActionEditor _ ->
+                    ActionEditor.receiveBroadcast broadcastMessage
+                        |> Maybe.map GotActionEditorMsg
+
                 _ ->
                     Nothing
     in
@@ -787,10 +791,10 @@ changeRouteTo maybeRoute model =
                 >> updateStatusWith Dashboard GotDashboardMsg model
                 |> withLoggedIn Route.Dashboard
 
-        Just (Route.Community symbol) ->
-            (\l -> CommunityPage.init l symbol)
+        Just Route.Community ->
+            (\l -> CommunityPage.init l)
                 >> updateStatusWith Community GotCommunityMsg model
-                |> withLoggedIn (Route.Community symbol)
+                |> withLoggedIn Route.Community
 
         Just (Route.CommunitySettings symbol) ->
             (\l -> CommunitySettings.init l symbol)

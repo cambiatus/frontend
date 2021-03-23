@@ -87,7 +87,7 @@ view ({ shared } as loggedIn) model =
 
                 Loaded community ->
                     div []
-                        [ Page.viewHeader loggedIn (t "community.objectives.title_plural") (Route.Community model.communityId)
+                        [ Page.viewHeader loggedIn (t "community.objectives.title_plural") Route.Community
                         , div [ class "container mx-auto px-4 my-10" ]
                             [ div [ class "flex justify-end mb-10" ] [ viewNewObjectiveButton loggedIn community ]
                             , div []
