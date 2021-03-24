@@ -25,6 +25,7 @@ import Page.NotFound as NotFound
 import Page.Notification as Notification
 import Page.PaymentHistory as PaymentHistory
 import Page.Profile as Profile
+import Page.Profile.AddContact as ProfileAddContact
 import Page.Profile.AddKyc as ProfileAddKyc
 import Page.Profile.Claims as ProfileClaims
 import Page.Profile.Editor as ProfileEditor
@@ -161,6 +162,7 @@ type Status
     | ProfileEditor ProfileEditor.Model
     | ProfileAddKyc ProfileAddKyc.Model
     | ProfileClaims ProfileClaims.Model
+    | ProfileAddContact ProfileAddContact.Model
     | Register (Maybe String) Register.Model
     | Shop Shop.Filter Shop.Model
     | ShopEditor (Maybe String) ShopEditor.Model
@@ -198,6 +200,7 @@ type Msg
     | GotProfileEditorMsg ProfileEditor.Msg
     | GotProfileAddKycMsg ProfileAddKyc.Msg
     | GotProfileClaimsMsg ProfileClaims.Msg
+    | GotProfileAddContactMsg ProfileAddContact.Msg
     | GotRegisterMsg Register.Msg
     | GotShopMsg Shop.Msg
     | GotShopEditorMsg ShopEditor.Msg
@@ -380,6 +383,11 @@ update msg model =
                 >> updateLoggedInUResult ProfileClaims GotProfileClaimsMsg model
                 |> withLoggedIn
 
+        ( GotProfileAddContactMsg subMsg, ProfileAddContact subModel ) ->
+            ProfileAddContact.update subMsg subModel
+                >> updateLoggedInUResult ProfileAddContact GotProfileAddContactMsg model
+                |> withLoggedIn
+
         ( GotCommunitySettingsMsg subMsg, CommunitySettings subModel ) ->
             CommunitySettings.update subMsg subModel
                 >> updateLoggedInUResult CommunitySettings GotCommunitySettingsMsg model
@@ -528,7 +536,7 @@ updateLoggedInUResult toStatus toMsg model uResult =
                         Page.LoggedIn loggedIn ->
                             ( { m
                                 | session =
-                                    Page.LoggedIn { loggedIn | feedback = Show status message }
+                                    Page.LoggedIn (LoggedIn.showFeedback status message loggedIn)
                               }
                             , cmds_
                             )
@@ -547,6 +555,14 @@ updateLoggedInUResult toStatus toMsg model uResult =
                             )
 
                         _ ->
+                            ( m, cmds_ )
+
+                LoggedIn.ShowContactModal ->
+                    case m.session of
+                        Page.LoggedIn loggedIn ->
+                            ( { m | session = Page.LoggedIn (LoggedIn.showContactModal loggedIn) }, cmds_ )
+
+                        Page.Guest _ ->
                             ( m, cmds_ )
         )
         ( { model | status = toStatus uResult.model }
@@ -735,6 +751,11 @@ changeRouteTo maybeRoute model =
             (\l -> ProfileClaims.init l account)
                 >> updateStatusWith ProfileClaims GotProfileClaimsMsg model
                 |> withLoggedIn (Route.ProfileClaims account)
+
+        Just Route.ProfileAddContact ->
+            ProfileAddContact.init
+                >> updateStatusWith ProfileAddContact GotProfileAddContactMsg model
+                |> withLoggedIn Route.ProfileAddContact
 
         Just Route.Dashboard ->
             Dashboard.init
@@ -984,6 +1005,9 @@ msgToString msg =
         GotProfileClaimsMsg subMsg ->
             "GotProfileClaimsMsg" :: ProfileClaims.msgToString subMsg
 
+        GotProfileAddContactMsg subMsg ->
+            "GotProfileAddContactMsg" :: ProfileAddContact.msgToString subMsg
+
         GotRegisterMsg subMsg ->
             "GotRegisterMsg" :: Register.msgToString subMsg
 
@@ -1159,6 +1183,9 @@ view model =
 
         ProfileClaims subModel ->
             viewLoggedIn subModel LoggedIn.ProfileClaims GotProfileClaimsMsg ProfileClaims.view
+
+        ProfileAddContact subModel ->
+            viewLoggedIn subModel LoggedIn.ProfileAddContact GotProfileAddContactMsg ProfileAddContact.view
 
         Shop _ subModel ->
             viewLoggedIn subModel LoggedIn.Shop GotShopMsg Shop.view

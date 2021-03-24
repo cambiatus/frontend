@@ -885,5 +885,54 @@
     "more": "Mostra més",
     "no_transfers_found": "No s'ha trobat transferència segons els vostres criteris.",
     "pick_date": "Escolliu una data..."
+  },
+  "contact_modal": {
+    "new": "Novetat",
+    "title": "Afegiu el vostre Número de Telèfon",
+    "footer": "Podeu afegir-lo més endavant a l'àrea del perfil"
+  },
+  "contact_form": {
+    "country": "País",
+    "contact_type": "Tipus de contacte",
+    "error": "S'ha produït un error en afegir el vostre contacte",
+    "submit_multiple": "Desa",
+    "profile_loading_failed": "S'ha produït un error en carregar el vostre perfil",
+    "options": "Opcions de Contacte",
+    "types": {
+      "phone": "Telèfon",
+      "instagram": "Instagram",
+      "telegram": "Telegram",
+      "whatsapp": "Whatsapp"
+    },
+    "phone": {
+      "label": "Número de telèfon (amb DDD)",
+      "placeholder": "Ex.: {{example_number}}",
+      "submit": "Afegiu un Número de Telèfon"
+    },
+    "username": {
+      "label": "Nom d'usuari",
+      "placeholder": "Ex.: cambiatus",
+      "submit": "Afegeix un perfil"
+    },
+    "validation": {
+      "phone": {
+        "blank": "Introduïu el vostre número de telèfon",
+        "invalid": "Siusplau introdueixi un número de telèfon vàlid"
+      },
+      "username": {
+        "blank": "Introduïu el nom del vostre perfil",
+        "invalid": "Introduïu un nom de perfil vàlid"
+      }
+    },
+    "feedback": {
+      "single": {
+        "success": "El vostre contacte s'ha desat correctament",
+        "failure": "S'ha produït un error en intentar desar el contacte"
+      },
+      "multiple": {
+        "success": "Els vostres contactes s'han desat correctament",
+        "failure": "S'ha produït un error en intentar desar els vostres contactes"
+      }
+    }
   }
 }

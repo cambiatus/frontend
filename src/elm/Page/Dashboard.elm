@@ -833,6 +833,7 @@ update msg model loggedIn =
                 Just c ->
                     { model | community = LoadedGraphql c Nothing }
                         |> UR.init
+                        |> UR.addExt ShowContactModal
 
                 Nothing ->
                     model

@@ -18,7 +18,7 @@ import Eos exposing (Symbol)
 import Eos.Account as Eos
 import Graphql.Http
 import Html exposing (Html, a, br, button, div, label, li, p, span, text, ul)
-import Html.Attributes exposing (class, classList, href)
+import Html.Attributes exposing (class, href, target)
 import Html.Events exposing (onClick)
 import Http
 import Icons
@@ -26,6 +26,7 @@ import Json.Decode as Decode exposing (Value)
 import Json.Encode as Encode
 import Page
 import Profile exposing (DeleteKycAndAddressResult, Model)
+import Profile.Contact as Contact
 import PushSubscription exposing (PushSubscription)
 import RemoteData exposing (RemoteData)
 import Route
@@ -113,12 +114,12 @@ view ({ shared } as loggedIn) model =
                     Page.fullPageError (shared.translators.t "profile.title") Http.Timeout
 
                 Loaded profile ->
-                    div []
+                    div [ class "flex-grow flex flex-col" ]
                         [ Page.viewHeader loggedIn (shared.translators.t "menu.profile") Route.Dashboard
                         , viewUserInfo loggedIn
                             profile
                             Private
-                        , viewSettings loggedIn model profile
+                            (viewSettings loggedIn model profile)
                         , viewNewPinModal model shared
                         , viewDownloadPdfErrorModal model loggedIn
                         , viewDeleteKycModal shared.translators model
@@ -219,8 +220,8 @@ viewSettings loggedIn model profile =
                         Center
                         Nothing
     in
-    div [ class "bg-white mb-6" ]
-        [ ul [ class "container divide-y divide-gray-500 mx-auto px-4" ]
+    div [ class "bg-white mb-6 w-full md:bg-gray-100" ]
+        [ ul [ class "w-full divide-y divide-gray-500" ]
             [ viewProfileItem
                 (text (t "profile.12words.title"))
                 (viewButton (t "profile.12words.button") downloadAction)
@@ -243,10 +244,10 @@ type ProfilePage
     | Public
 
 
-viewUserInfo : LoggedIn.Model -> Profile.Model -> ProfilePage -> Html msg
-viewUserInfo loggedIn profile pageType =
+viewUserInfo : LoggedIn.Model -> Profile.Model -> ProfilePage -> Html msg -> Html msg
+viewUserInfo loggedIn profile pageType privateView =
     let
-        { t } =
+        ({ t } as translators) =
             loggedIn.shared.translators
 
         userName =
@@ -323,93 +324,136 @@ viewUserInfo loggedIn profile pageType =
                                 _ ->
                                     "Unknown Document"
                     in
-                    [ viewProfileItem
-                        (text (t "community.kyc.phoneLabel"))
-                        (text kyc.phone)
-                        Center
-                        Nothing
-                    , viewProfileItem
+                    viewProfileItem
                         (text documentLabel)
                         (text kyc.document)
                         Center
                         Nothing
-                    ]
 
                 Nothing ->
-                    []
-    in
-    div [ class "bg-white mb-6" ]
-        [ div [ class "container p-4 mx-auto" ]
-            [ div
-                [ classList <|
-                    let
-                        hasBottomBorder =
-                            case pageType of
+                    text ""
+
+        viewContact =
+            case pageType of
+                Private ->
+                    viewProfileItem (text (t "contact_form.options"))
+                        (a
+                            [ class "button-secondary button-sm uppercase cursor-pointer"
+                            , Route.href Route.ProfileAddContact
+                            ]
+                            [ text
+                                (if Maybe.map List.isEmpty profile.contacts |> Maybe.withDefault False then
+                                    t "menu.add"
+
+                                 else
+                                    t "menu.edit"
+                                )
+                            ]
+                        )
+                        Center
+                        Nothing
+
+                Public ->
+                    profile.contacts
+                        |> Maybe.withDefault []
+                        |> List.map (viewContactButton translators)
+                        |> div [ class "flex flex-col space-y-4 mt-4 mb-2" ]
+
+        leftSide =
+            div
+                [ class "p-4 bg-white border-white border-r md:border-gray-500 flex md:w-1/2" ]
+                [ div
+                    [ class "w-full container mx-auto md:max-w-lg self-center" ]
+                    [ div
+                        [ class "pb-4 w-full" ]
+                        [ div [ class "flex mb-4 items-center flex-wrap justify-center" ]
+                            [ Avatar.view profile.avatar "w-20 h-20 mr-6 xs-max:w-16 xs-max:h-16 xs-max:mr-3"
+                            , div [ class "flex-grow flex items-center justify-between" ]
+                                [ ul [ class "text-sm text-gray-900" ]
+                                    [ li [ class "font-medium text-body-black text-2xl xs-max:text-xl" ]
+                                        [ text userName ]
+                                    , li [] [ a [ href <| "mailto:" ++ email ] [ text email ] ]
+                                    , li [] [ text account ]
+                                    ]
+                                , case pageType of
+                                    Private ->
+                                        a
+                                            [ class "ml-2"
+                                            , Route.href Route.ProfileEditor
+                                            ]
+                                            [ Icons.edit "" ]
+
+                                    Public ->
+                                        text ""
+                                ]
+                            ]
+                        , p [ class "text-sm text-gray-900" ]
+                            [ text bio ]
+                        ]
+                    , case pageType of
+                        Public ->
+                            viewTransferButton
+                                loggedIn.shared
+                                loggedIn.selectedCommunity
+                                account
+
+                        Private ->
+                            text ""
+                    , case pageType of
+                        Public ->
+                            viewContact
+
+                        Private ->
+                            text ""
+                    ]
+                ]
+
+        rightSide =
+            div [ class "w-full bg-gray-100 md:w-1/2" ]
+                [ div [ class "w-full bg-white md:bg-gray-100" ]
+                    [ div [ class "px-4" ]
+                        [ ul [ class "container mx-auto divide-y divide-gray-500 w-full mb-4 bg-white md:bg-gray-100" ]
+                            [ viewProfileItem
+                                (text (t "profile.locations"))
+                                (text location)
+                                Center
+                                Nothing
+                            , viewAddress
+                            , viewProfileItem
+                                (text (t "profile.interests"))
+                                (text (String.join ", " profile.interests))
+                                Top
+                                Nothing
+                            , case pageType of
+                                Public ->
+                                    text ""
+
                                 Private ->
-                                    True
+                                    viewContact
+                            , case pageType of
+                                Private ->
+                                    viewKyc
 
                                 Public ->
-                                    False
-                    in
-                    [ ( "pb-4", True )
-                    , ( "border-b border-gray-500", hasBottomBorder )
-                    ]
-                ]
-                [ div [ class "flex mb-4 items-center flex-wrap" ]
-                    [ Avatar.view profile.avatar "w-20 h-20 mr-6 xs-max:w-16 xs-max:h-16 xs-max:mr-3"
-                    , div [ class "flex-grow flex items-center justify-between" ]
-                        [ ul [ class "text-sm text-gray-900" ]
-                            [ li [ class "font-medium text-body-black text-2xl xs-max:text-xl" ]
-                                [ text userName ]
-                            , li [] [ a [ href <| "mailto:" ++ email ] [ text email ] ]
-                            , li [] [ text account ]
+                                    text ""
                             ]
-                        , case pageType of
-                            Private ->
-                                a
-                                    [ class "ml-2"
-                                    , Route.href Route.ProfileEditor
-                                    ]
-                                    [ Icons.edit "" ]
-
-                            Public ->
-                                text ""
                         ]
                     ]
-                , p [ class "text-sm text-gray-900" ]
-                    [ text bio ]
+                , div [ class "bg-white w-full md:bg-gray-100" ]
+                    [ div [ class "px-4" ]
+                        [ div [ class "container mx-auto" ]
+                            [ privateView
+                            ]
+                        ]
+                    ]
                 ]
-            , case pageType of
-                Public ->
-                    viewTransferButton
-                        loggedIn.shared
-                        loggedIn.selectedCommunity
-                        account
-
-                Private ->
-                    text ""
-            , ul [ class "divide-y divide-gray-500" ]
-                ([ viewProfileItem
-                    (text (t "profile.locations"))
-                    (text location)
-                    Center
-                    Nothing
-                 , viewAddress
-                 , viewProfileItem
-                    (text (t "profile.interests"))
-                    (text (String.join ", " profile.interests))
-                    Top
-                    Nothing
-                 ]
-                    ++ (case pageType of
-                            Private ->
-                                viewKyc
-
-                            Public ->
-                                []
-                       )
-                )
+    in
+    div [ class "flex-grow flex bg-gray-100 relative" ]
+        [ div [ class "z-10 flex flex-col w-full md:container md:mx-auto md:flex-row bg-grey-100" ]
+            [ leftSide
+            , rightSide
             ]
+        , div [ class "z-0 absolute w-full md:w-1/2 h-full max-h-100 md:bg-white" ] []
         ]
 
 
@@ -567,6 +611,22 @@ viewDangerButton label msg =
         , onClick msg
         ]
         [ text label
+        ]
+
+
+viewContactButton : Translators -> Contact.Normalized -> Html msg
+viewContactButton translators normalized =
+    let
+        { contactType } =
+            Contact.unwrap normalized
+    in
+    a
+        [ class ("button-secondary uppercase bg-gray-100 py-2 flex items-center justify-center border-none hover:bg-gray-200 " ++ Contact.contactTypeColor contactType)
+        , Contact.toHref normalized
+        , target "_blank"
+        ]
+        [ Contact.contactTypeToIcon "mr-2 w-6 h-6" True contactType
+        , text (Contact.contactTypeToString translators contactType)
         ]
 
 
