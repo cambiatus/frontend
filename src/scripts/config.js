@@ -17,7 +17,9 @@ const dev = {
     chat: 'https://app.cambiatus.io/chat',
     eosio: 'https://staging.cambiatus.io/',
     graphql: 'http://staging.cambiatus.io/api/graph',
-    globalStorage: 'http://localhost:8080',
+    globalStorage: 'http://localhost:3000/globalstorage',
+    // TODO - Use this after deploying to staging
+    // globalStorage: 'http://staging.cambiatus.io/globalstorage',
     socket: 'wss://staging.cambiatus.io/socket'
   },
   logo: '/images/logo-cambiatus.png',
