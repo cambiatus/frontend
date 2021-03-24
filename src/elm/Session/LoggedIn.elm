@@ -318,9 +318,14 @@ viewFeedback status message =
 
 viewHelper : (Msg -> pageMsg) -> Page -> Profile.Model -> Model -> Html pageMsg -> Html pageMsg
 viewHelper pageMsg page profile_ ({ shared } as model) content =
+    let
+        viewClaimWithProofs action proof =
+            Action.viewClaimWithProofs proof shared.translators (isAuth model) action
+                |> Html.map (GotActionMsg >> pageMsg)
+    in
     div
         [ class "min-h-screen flex flex-col" ]
-        (div [ class "bg-white" ]
+        [ div [ class "bg-white" ]
             [ div [ class "container mx-auto" ]
                 [ viewHeader model profile_
                     |> Html.map pageMsg
@@ -336,60 +341,51 @@ viewHelper pageMsg page profile_ ({ shared } as model) content =
 
                 Hidden ->
                     text ""
+            , case ( Search.isActive model.searchModel, model.claimingAction.status ) of
+                ( True, _ ) ->
+                    case model.selectedCommunity of
+                        RemoteData.Success community ->
+                            Search.viewSearchBody
+                                shared.translators
+                                community.symbol
+                                model.date
+                                (GotSearchMsg >> pageMsg)
+                                (GotActionMsg >> pageMsg)
+                                model.searchModel
+
+                        _ ->
+                            text ""
+
+                ( False, Action.PhotoUploaderShowed action p ) ->
+                    viewClaimWithProofs action p
+
+                ( False, Action.ClaimInProgress action (Just p) ) ->
+                    viewClaimWithProofs action p
+
+                _ ->
+                    viewPageBody model profile_ page content
+            , viewFooter shared
+            , Action.viewClaimConfirmation shared.translators model.claimingAction
+                |> Html.map (GotActionMsg >> pageMsg)
+            , Modal.initWith
+                { closeMsg = ClosedAuthModal
+                , isVisible = model.showAuthModal
+                }
+                |> Modal.withBody
+                    (Auth.view True shared model.auth
+                        |> List.map (Html.map GotAuthMsg)
+                    )
+                |> Modal.toHtml
+                |> Html.map pageMsg
+            , communitySelectorModal model
+                |> Html.map pageMsg
+            , addContactModal model
+                |> Html.map pageMsg
             ]
-            :: (let
-                    viewClaimWithProofs action proof =
-                        [ Action.viewClaimWithProofs proof shared.translators (isAuth model) action
-                            |> Html.map (GotActionMsg >> pageMsg)
-                        ]
-                in
-                case ( Search.isActive model.searchModel, model.claimingAction.status ) of
-                    ( True, _ ) ->
-                        case model.selectedCommunity of
-                            RemoteData.Success community ->
-                                [ Search.viewSearchBody
-                                    shared.translators
-                                    community.symbol
-                                    model.date
-                                    (GotSearchMsg >> pageMsg)
-                                    (GotActionMsg >> pageMsg)
-                                    model.searchModel
-                                ]
-
-                            _ ->
-                                []
-
-                    ( False, Action.PhotoUploaderShowed action p ) ->
-                        viewClaimWithProofs action p
-
-                    ( False, Action.ClaimInProgress action (Just p) ) ->
-                        viewClaimWithProofs action p
-
-                    _ ->
-                        viewPageBody model profile_ page content
-               )
-            ++ [ viewFooter shared
-               , Action.viewClaimConfirmation shared.translators model.claimingAction
-                    |> Html.map (GotActionMsg >> pageMsg)
-               , Modal.initWith
-                    { closeMsg = ClosedAuthModal
-                    , isVisible = model.showAuthModal
-                    }
-                    |> Modal.withBody
-                        (Auth.view True shared model.auth
-                            |> List.map (Html.map GotAuthMsg)
-                        )
-                    |> Modal.toHtml
-                    |> Html.map pageMsg
-               , communitySelectorModal model
-                    |> Html.map pageMsg
-               , addContactModal model
-                    |> Html.map pageMsg
-               ]
-        )
+        ]
 
 
-viewPageBody : Model -> Profile.Model -> Page -> Html pageMsg -> List (Html pageMsg)
+viewPageBody : Model -> Profile.Model -> Page -> Html pageMsg -> Html pageMsg
 viewPageBody ({ shared } as model) profile_ page content =
     let
         { t } =
@@ -435,7 +431,7 @@ viewPageBody ({ shared } as model) profile_ page content =
                     []
                 ]
     in
-    [ div [ class "flex-grow flex flex-col" ]
+    div [ class "flex-grow flex flex-col" ]
         [ case model.selectedCommunity of
             RemoteData.Loading ->
                 div [ class "full-spinner-container h-full" ]
@@ -461,7 +457,6 @@ viewPageBody ({ shared } as model) profile_ page content =
             RemoteData.Failure _ ->
                 text ""
         ]
-    ]
 
 
 viewHeader : Model -> Profile.Model -> Html Msg
