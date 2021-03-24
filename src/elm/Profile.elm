@@ -24,6 +24,7 @@ module Profile exposing
     , selectConfig
     , selectFilter
     , selectionSet
+    , updateContacts
     , upsertKycMutation
     , username
     , view
@@ -54,6 +55,7 @@ import Json.Decode.Pipeline as Decode exposing (optional, required)
 import Json.Encode as Encode
 import Kyc exposing (ProfileKyc)
 import Profile.Address as Address exposing (Address)
+import Profile.Contact as Contact
 import Select
 import Session.Shared exposing (Shared)
 import Simple.Fuzzy
@@ -77,6 +79,7 @@ type alias Model =
         , bio : Maybe String
         , localization : Maybe String
         , account : Eos.Name
+        , contacts : Maybe (List Contact.Normalized)
         , interests : List String
         , communities : List CommunityInfo
         , analysisCount : Int
@@ -89,7 +92,7 @@ type alias Model =
 -- buildModel : Maybe String -> Eos.Name -> Avatar -> Maybe String -> Maybe String -> Maybe String -> Eos.Name -> List String -> List CommunityInfo -> Int -> Maybe ProfileKyc -> Maybe Address
 
 
-buildModel name account avatar email bio location interests communities analysis kyc address =
+buildModel name account avatar email bio location interests contacts communities analysis kyc address =
     { name = name
     , account = account
     , avatar = avatar
@@ -97,6 +100,7 @@ buildModel name account avatar email bio location interests communities analysis
     , bio = bio
     , localization = location
     , interests = interests
+    , contacts = contacts
     , communities = communities
     , analysisCount = analysis
     , kyc = kyc
@@ -129,6 +133,10 @@ selectionSet =
                     (\maybeInterests ->
                         Maybe.map (String.split ",") maybeInterests |> Maybe.withDefault []
                     )
+            )
+        |> with
+            (User.contacts Contact.selectionSet
+                |> SelectionSet.map (Maybe.map (List.filterMap identity))
             )
         |> with (User.communities communityInfoSelectionSet)
         |> with User.analysisCount
@@ -165,6 +173,7 @@ decode =
         |> optional "bio" (nullable string) Nothing
         |> optional "localization" (nullable string) Nothing
         |> optional "interests" decodeInterests []
+        |> optional "contacts" (Decode.list Contact.decode |> Decode.map Just) Nothing
         |> Decode.hardcoded []
         |> Decode.at [ "data", "user" ]
         |> optional "analysisCount" int 0
@@ -205,15 +214,16 @@ mutation form =
         avatarInput =
             Maybe.map Present form.avatar
                 |> Maybe.withDefault Absent
+
+        contactInput { contactType, contact } =
+            { type_ = Present contactType, externalId = Present contact }
     in
     Cambiatus.Mutation.updateUser
         { input =
             { name = Present form.name
             , email = Present form.email
             , bio = Present form.bio
-
-            -- TODO: Implement add/edit contacts
-            , contacts = Absent
+            , contacts = Present (List.map (Contact.unwrap >> contactInput) form.contacts)
             , interests = Present interestString
             , location = Present form.localization
             , avatar = avatarInput
@@ -341,6 +351,7 @@ type alias ProfileForm =
     , bio : String
     , localization : String
     , avatar : Maybe String
+    , contacts : List Contact.Normalized
     , interest : String
     , interests : List String
     , errors : Dict String String
@@ -354,6 +365,7 @@ emptyProfileForm =
     , bio = ""
     , localization = ""
     , avatar = Nothing
+    , contacts = []
     , interest = ""
     , interests = []
     , errors = Dict.empty
@@ -361,12 +373,13 @@ emptyProfileForm =
 
 
 profileToForm : Model -> ProfileForm
-profileToForm { name, email, bio, localization, avatar, interests } =
+profileToForm { name, email, bio, localization, avatar, interests, contacts } =
     { name = Maybe.withDefault "" name
     , email = Maybe.withDefault "" email
     , bio = Maybe.withDefault "" bio
     , localization = Maybe.withDefault "" localization
     , avatar = Avatar.toMaybeString avatar
+    , contacts = Maybe.withDefault [] contacts
     , interest = ""
     , interests = interests
     , errors = Dict.empty
@@ -381,6 +394,7 @@ encodeProfileForm account form =
         , ( "bio", Encode.string form.bio )
         , ( "localization", Encode.string form.localization )
         , ( "account", Eos.encodeName account )
+        , ( "contacts", Encode.list Contact.encode form.contacts )
         , ( "interests"
           , Encode.list Encode.string form.interests
           )
@@ -423,6 +437,27 @@ pinValidationAttrs =
     , Html.Attributes.attribute "inputmode" "numeric"
     , title "Use only numbers."
     ]
+
+
+updateContacts : Model -> List Contact.Normalized -> Model
+updateContacts ({ contacts } as profile) newContacts =
+    { profile
+        | contacts =
+            case contacts of
+                Nothing ->
+                    Just newContacts
+
+                Just contactsList ->
+                    Just
+                        (List.filter
+                            (\contact ->
+                                List.any (Contact.hasSameType contact) newContacts
+                                    |> not
+                            )
+                            contactsList
+                            ++ newContacts
+                        )
+    }
 
 
 

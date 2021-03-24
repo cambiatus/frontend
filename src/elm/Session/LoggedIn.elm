@@ -23,6 +23,8 @@ module Session.LoggedIn exposing
     , msgToString
     , profile
     , readAllNotifications
+    , showContactModal
+    , showFeedback
     , subscriptions
     , update
     , updateExternal
@@ -60,6 +62,7 @@ import List.Extra as List
 import Notification exposing (Notification)
 import Ports
 import Profile exposing (Model)
+import Profile.Contact as Contact
 import RemoteData exposing (RemoteData)
 import Route exposing (Route)
 import Search exposing (State(..))
@@ -160,6 +163,8 @@ type alias Model =
     , auth : Auth.Model
     , showCommunitySelector : Bool
     , feedback : FeedbackVisibility
+    , contactModel : Contact.Model
+    , showContactModal : Bool
     , searchModel : Search.Model
     , claimingAction : Action.Model
     , date : Maybe Posix
@@ -183,6 +188,8 @@ initModel shared authModel accountName authToken =
     , auth = authModel
     , feedback = Hidden
     , showCommunitySelector = False
+    , contactModel = Contact.initSingle
+    , showContactModal = False
     , searchModel = Search.init
     , claimingAction = { status = Action.NotAsked, feedback = Nothing, needsPinConfirmation = False }
     , date = Nothing
@@ -244,6 +251,7 @@ type Page
     | ProfileEditor
     | ProfileAddKyc
     | ProfileClaims
+    | ProfileAddContact
     | PaymentHistory
     | Transfer
     | ViewTransfer
@@ -375,6 +383,8 @@ viewHelper pageMsg page profile_ ({ shared } as model) content =
                     |> Html.map pageMsg
                , communitySelectorModal model
                     |> Html.map pageMsg
+               , addContactModal model
+                    |> Html.map pageMsg
                ]
         )
 
@@ -425,7 +435,7 @@ viewPageBody ({ shared } as model) profile_ page content =
                     []
                 ]
     in
-    [ div [ class "flex-grow" ]
+    [ div [ class "flex-grow flex flex-col" ]
         [ case model.selectedCommunity of
             RemoteData.Loading ->
                 div [ class "full-spinner-container h-full" ]
@@ -642,6 +652,40 @@ communitySelectorModal model =
         text ""
 
 
+addContactModal : Model -> Html Msg
+addContactModal ({ contactModel, shared } as model) =
+    let
+        text_ s =
+            shared.translators.t s
+                |> text
+
+        header =
+            div [ class "mt-4" ]
+                [ p [ class "inline bg-purple-100 text-white rounded-full py-0.5 px-2 text-caption uppercase" ]
+                    [ text_ "contact_modal.new" ]
+                , p [ class "text-heading font-bold mt-2" ]
+                    [ text_ "contact_modal.title" ]
+                ]
+
+        form =
+            Contact.view shared.translators contactModel
+                |> Html.map GotContactMsg
+    in
+    Modal.initWith
+        { closeMsg = ClosedAddContactModal
+        , isVisible = model.showContactModal
+        }
+        |> Modal.withBody
+            [ header
+            , img [ class "mx-auto mt-10", src "/images/girl-with-phone.svg" ] []
+            , form
+            , p [ class "text-caption text-center uppercase my-4" ]
+                [ text_ "contact_modal.footer" ]
+            ]
+        |> Modal.withLarge True
+        |> Modal.toHtml
+
+
 viewMainMenu : Page -> Model -> Html Msg
 viewMainMenu page model =
     let
@@ -734,6 +778,7 @@ type External msg
     | RequiredAuthentication (Maybe msg)
     | ShowFeedback FeedbackStatus String
     | HideFeedback
+    | ShowContactModal
 
 
 mapExternal : (msg -> msg2) -> External msg -> External msg2
@@ -756,6 +801,9 @@ mapExternal transform ext =
 
         HideFeedback ->
             HideFeedback
+
+        ShowContactModal ->
+            ShowContactModal
 
 
 updateExternal :
@@ -837,6 +885,14 @@ updateExternal externalMsg model =
             , afterAuthMsg = Nothing
             }
 
+        ShowContactModal ->
+            { model = showContactModal model
+            , cmd = Cmd.none
+            , externalCmd = Cmd.none
+            , broadcastMsg = Nothing
+            , afterAuthMsg = Nothing
+            }
+
 
 type alias UpdateResult =
     UR.UpdateResult Model Msg ExternalMsg
@@ -875,10 +931,36 @@ type Msg
     | CloseCommunitySelector
     | SelectedCommunity Profile.CommunityInfo
     | HideFeedbackLocal
+    | ClosedAddContactModal
+    | GotContactMsg Contact.Msg
     | GotSearchMsg Search.Msg
     | GotActionMsg Action.Msg
     | SearchClosed
     | GotTime Posix
+
+
+showContactModal : Model -> Model
+showContactModal ({ shared } as model) =
+    let
+        addContactLimitDate =
+            -- 01/01/2022
+            1641006000000
+
+        showContactModalFromDate =
+            addContactLimitDate - Time.posixToMillis shared.now > 0
+    in
+    case profile model of
+        Just profile_ ->
+            { model
+                | showContactModal =
+                    showContactModalFromDate
+                        && (Maybe.map (List.length >> (>) 1) profile_.contacts
+                                |> Maybe.withDefault False
+                           )
+            }
+
+        Nothing ->
+            model
 
 
 update : Msg -> Model -> UpdateResult
@@ -958,6 +1040,7 @@ update msg model =
             case profile_ of
                 Just p ->
                     { model | profile = Loaded p }
+                        |> showContactModal
                         |> UR.init
                         |> UR.addPort
                             { responseAddress = CompletedLoadUnread (Encode.string "")
@@ -1175,6 +1258,44 @@ update msg model =
                 RemoteData.Loading ->
                     UR.init model
 
+        ClosedAddContactModal ->
+            { model | showContactModal = False }
+                |> UR.init
+
+        GotContactMsg subMsg ->
+            case profile model of
+                Just userProfile ->
+                    let
+                        ( contactModel, cmd, contactResponse ) =
+                            Contact.update subMsg
+                                model.contactModel
+                                shared
+                                model.authToken
+
+                        addContactResponse model_ =
+                            case contactResponse of
+                                Contact.NotAsked ->
+                                    model_
+
+                                Contact.WithError errorMessage ->
+                                    { model_ | showContactModal = False }
+                                        |> showFeedback Failure errorMessage
+
+                                Contact.WithContacts successMessage contacts ->
+                                    { model_
+                                        | profile = Loaded { userProfile | contacts = Just contacts }
+                                        , showContactModal = False
+                                    }
+                                        |> showFeedback Success successMessage
+                    in
+                    { model | contactModel = contactModel }
+                        |> addContactResponse
+                        |> UR.init
+                        |> UR.addCmd (Cmd.map GotContactMsg cmd)
+
+                Nothing ->
+                    model |> UR.init
+
 
 handleActionMsg : Model -> Action.Msg -> UpdateResult
 handleActionMsg ({ shared } as model) actionMsg =
@@ -1329,6 +1450,7 @@ closeModal ({ model } as uResult) =
                 , showUserNav = False
                 , showMainNav = False
                 , showAuthModal = False
+                , showContactModal = False
             }
     }
 
@@ -1341,6 +1463,11 @@ askedAuthentication model =
         , showMainNav = False
         , showAuthModal = True
     }
+
+
+showFeedback : FeedbackStatus -> String -> Model -> Model
+showFeedback feedbackStatus feedback model =
+    { model | feedback = Show feedbackStatus feedback }
 
 
 
@@ -1541,3 +1668,9 @@ msgToString msg =
 
         HideFeedbackLocal ->
             [ "HideFeedbackLocal" ]
+
+        ClosedAddContactModal ->
+            [ "ClosedAddContactModal" ]
+
+        GotContactMsg _ ->
+            [ "GotContactMsg" ]

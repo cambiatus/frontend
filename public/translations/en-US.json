@@ -884,5 +884,54 @@
     "more": "Show More",
     "no_transfers_found": "No transfers were found according to your criteria.",
     "pick_date": "Pick a date..."
+  },
+  "contact_modal": {
+    "new": "New",
+    "title": "Add your Phone Number",
+    "footer": "You can add it later in the profile's area"
+  },
+  "contact_form": {
+    "country": "Country",
+    "contact_type": "Contact type",
+    "error": "Something went wrong when adding your contact",
+    "submit_multiple": "Save",
+    "profile_loading_failed": "Something went wrong loading your profile",
+    "options": "Contact Options",
+    "types": {
+      "phone": "Phone",
+      "instagram": "Instagram",
+      "telegram": "Telegram",
+      "whatsapp": "Whatsapp"
+    },
+    "phone": {
+      "label": "Phone Number (with DDD)",
+      "placeholder": "Ex.: {{example_number}}",
+      "submit": "Add Phone Number"
+    },
+    "username": {
+      "label": "Username",
+      "placeholder": "Ex.: cambiatus",
+      "submit": "Add Profile"
+    },
+    "validation": {
+      "phone": {
+        "blank": "Please enter your phone number",
+        "invalid": "Please enter a valid phone number"
+      },
+      "username": {
+        "blank": "Please enter your profile name",
+        "invalid": "Please enter a valid profile name"
+      }
+    },
+    "feedback": {
+      "single": {
+        "success": "Contact saved successfully",
+        "failure": "Something went wrong while trying to save your contact"
+      },
+      "multiple": {
+        "success": "Contacts saved successfully",
+        "failure": "Something went wrong while trying to save your contacts"
+      }
+    }
   }
 }

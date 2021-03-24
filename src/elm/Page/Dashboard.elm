@@ -659,6 +659,7 @@ update msg model ({ shared, accountName } as loggedIn) =
                 }
                 |> UR.addCmd (fetchBalance shared accountName community)
                 |> UR.addCmd (fetchAvailableAnalysis loggedIn Nothing community)
+                |> UR.addExt LoggedIn.ShowContactModal
 
         CompletedLoadBalance (Ok balance) ->
             UR.init { model | balance = RemoteData.Success balance }

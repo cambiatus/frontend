@@ -22,6 +22,7 @@ type Route
     | ProfileAddKyc
     | ProfilePublic String
     | ProfileClaims String
+    | ProfileAddContact
     | PaymentHistory String
     | Profile
     | Dashboard
@@ -81,6 +82,7 @@ parser url =
         , Url.map Profile (s "profile")
         , Url.map ProfileEditor (s "profile" </> s "edit")
         , Url.map ProfileAddKyc (s "profile" </> s "add-kyc")
+        , Url.map ProfileAddContact (s "profile" </> s "add-contact")
         , Url.map ProfilePublic (s "profile" </> string)
         , Url.map ProfileClaims (s "profile" </> string </> s "claims")
         , Url.map PaymentHistory (s "payments" </> string)
@@ -240,6 +242,9 @@ routeToString route =
 
                 ProfileClaims account ->
                     ( [ "profile", account, "claims" ], [] )
+
+                ProfileAddContact ->
+                    ( [ "profile", "add-contact" ], [] )
 
                 PaymentHistory accountName ->
                     ( [ "payments", accountName ], [] )

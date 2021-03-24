@@ -888,5 +888,54 @@
     "more": "Mostre mais",
     "no_transfers_found": "Nenhuma transferência foi encontrada de acordo com seus critérios.",
     "pick_date": "Escolha uma data..."
+  },
+  "contact_modal": {
+    "new": "Novo",
+    "title": "Adicione seu Número de Telefone",
+    "footer": "Você pode fazer isso mais tarde na área do perfil"
+  },
+  "contact_form": {
+    "country": "País",
+    "contact_type": "Tipo de contato",
+    "error": "Algo deu errado ao adicionar seu contato",
+    "submit_multiple": "Salvar",
+    "profile_loading_failed": "Algo de errado aconteceu ao carregar seu perfil",
+    "options": "Opções de Contato",
+    "types": {
+      "phone": "Telefone",
+      "instagram": "Instagram",
+      "telegram": "Telegram",
+      "whatsapp": "Whatsapp"
+    },
+    "phone": {
+      "label": "Número de Telefone (com DDD)",
+      "placeholder": "Ex.: {{example_number}}",
+      "submit": "Adicionar Número de Telefone"
+    },
+    "username": {
+      "label": "Nome de Usuário",
+      "placeholder": "Ex.: cambiatus",
+      "submit": "Adicionar Perfil"
+    },
+    "validation": {
+      "phone": {
+        "blank": "Por favor insira seu número de telefone",
+        "invalid": "Por favor insira um número de telefone válido"
+      },
+      "username": {
+        "blank": "Por favor insira seu perfil",
+        "invalid": "Por favor insira um perfil válido"
+      }
+    },
+    "feedback": {
+      "single": {
+        "success": "Seu contato foi salvo com sucesso",
+        "failure": "Algo deu errado ao tentar salvar seu contato"
+      },
+      "multiple": {
+        "success": "Seus contatos foram salvos com sucesso",
+        "failure": "Algo deu errado ao tentar salvar seus contatos"
+      }
+    }
   }
 }
