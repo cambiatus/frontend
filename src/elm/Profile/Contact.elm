@@ -506,20 +506,20 @@ toHref (Normalized { contactType, contact }) =
                 )
 
 
-contactTypeColor : ContactType -> Html.Attribute msg
+contactTypeColor : ContactType -> String
 contactTypeColor contactType =
     case contactType of
         Phone ->
-            style "color" "#999999"
+            "text-phone"
 
         Instagram ->
-            style "color" "#e1306c"
+            "text-instagram"
 
         Telegram ->
-            style "color" "#30a8db"
+            "text-telegram"
 
         Whatsapp ->
-            style "color" "#25d366"
+            "text-whatsapp"
 
 
 viewInput : Translators -> Basic -> Html Msg
