@@ -556,6 +556,14 @@ updateLoggedInUResult toStatus toMsg model uResult =
 
                         _ ->
                             ( m, cmds_ )
+
+                LoggedIn.ShowContactModal ->
+                    case m.session of
+                        Page.LoggedIn loggedIn ->
+                            ( { m | session = Page.LoggedIn (LoggedIn.showContactModal loggedIn) }, cmds_ )
+
+                        Page.Guest _ ->
+                            ( m, cmds_ )
         )
         ( { model | status = toStatus uResult.model }
         , []

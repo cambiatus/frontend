@@ -450,7 +450,7 @@ viewInputWithBackground : Translators -> Basic -> Html Msg
 viewInputWithBackground translators basic =
     div [ class "bg-gray-100 p-4 pb-0 rounded mb-4" ]
         [ div [ class "font-menu font-medium flex items-center mb-4" ]
-            [ contactTypeToIcon "mr-2" basic.contactType
+            [ contactTypeToIcon "mr-2" False basic.contactType
             , text (contactTypeToString translators basic.contactType)
             ]
         , viewInput translators basic
@@ -465,8 +465,8 @@ contactTypeToString translators contactType =
         |> translators.t
 
 
-contactTypeToIcon : String -> ContactType -> Html msg
-contactTypeToIcon class_ contactType =
+contactTypeToIcon : String -> Bool -> ContactType -> Html msg
+contactTypeToIcon class_ isInverted contactType =
     case contactType of
         Phone ->
             Icons.phone class_
@@ -478,7 +478,11 @@ contactTypeToIcon class_ contactType =
             Icons.telegram class_
 
         Whatsapp ->
-            Icons.whatsapp class_
+            if isInverted then
+                Icons.whatsappInverted class_
+
+            else
+                Icons.whatsapp class_
 
 
 toHref : Normalized -> Attribute msg
@@ -502,20 +506,20 @@ toHref (Normalized { contactType, contact }) =
                 )
 
 
-contactTypeColor : ContactType -> String
+contactTypeColor : ContactType -> Html.Attribute msg
 contactTypeColor contactType =
     case contactType of
         Phone ->
-            "phone"
+            style "color" "#999999"
 
         Instagram ->
-            "instagram"
+            style "color" "#e1306c"
 
         Telegram ->
-            "telegram"
+            style "color" "#30a8db"
 
         Whatsapp ->
-            "whatsapp"
+            style "color" "#25d366"
 
 
 viewInput : Translators -> Basic -> Html Msg

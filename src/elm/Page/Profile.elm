@@ -221,7 +221,7 @@ viewSettings loggedIn model profile =
                         Nothing
     in
     div [ class "bg-white mb-6 w-full md:bg-gray-100" ]
-        [ ul [ class "w-full divide-y divide-gray-500 px-4" ]
+        [ ul [ class "w-full divide-y divide-gray-500" ]
             [ viewProfileItem
                 (text (t "profile.12words.title"))
                 (viewButton (t "profile.12words.button") downloadAction)
@@ -324,20 +324,14 @@ viewUserInfo loggedIn profile pageType privateView =
                                 _ ->
                                     "Unknown Document"
                     in
-                    [ viewProfileItem
-                        (text (t "community.kyc.phoneLabel"))
-                        (text kyc.phone)
-                        Center
-                        Nothing
-                    , viewProfileItem
+                    viewProfileItem
                         (text documentLabel)
                         (text kyc.document)
                         Center
                         Nothing
-                    ]
 
                 Nothing ->
-                    []
+                    text ""
 
         viewContact =
             case pageType of
@@ -369,9 +363,9 @@ viewUserInfo loggedIn profile pageType privateView =
             div
                 [ class "p-4 bg-white border-white border-r md:border-gray-500 flex md:w-1/2" ]
                 [ div
-                    [ class "w-full md:container md:mx-auto md:max-w-lg self-center" ]
+                    [ class "w-full container mx-auto md:max-w-lg self-center" ]
                     [ div
-                        [ class "pb-4 w-full md:container md:mx-auto" ]
+                        [ class "pb-4 w-full" ]
                         [ div [ class "flex mb-4 items-center flex-wrap justify-center" ]
                             [ Avatar.view profile.avatar "w-20 h-20 mr-6 xs-max:w-16 xs-max:h-16 xs-max:mr-3"
                             , div [ class "flex-grow flex items-center justify-between" ]
@@ -415,43 +409,51 @@ viewUserInfo loggedIn profile pageType privateView =
                 ]
 
         rightSide =
-            div [ class "w-full bg-white md:w-1/2 md:bg-gray-100" ]
-                [ ul [ class "divide-y divide-gray-500 px-4 w-full mb-4" ]
-                    ([ viewProfileItem
-                        (text (t "profile.locations"))
-                        (text location)
-                        Center
-                        Nothing
-                     , viewAddress
-                     , viewProfileItem
-                        (text (t "profile.interests"))
-                        (text (String.join ", " profile.interests))
-                        Top
-                        Nothing
-                     , case pageType of
-                        Public ->
-                            text ""
+            div [ class "w-full bg-gray-100 md:w-1/2" ]
+                [ div [ class "w-full bg-white md:bg-gray-100" ]
+                    [ div [ class "px-4" ]
+                        [ ul [ class "container mx-auto divide-y divide-gray-500 w-full mb-4 bg-white md:bg-gray-100" ]
+                            [ viewProfileItem
+                                (text (t "profile.locations"))
+                                (text location)
+                                Center
+                                Nothing
+                            , viewAddress
+                            , viewProfileItem
+                                (text (t "profile.interests"))
+                                (text (String.join ", " profile.interests))
+                                Top
+                                Nothing
+                            , case pageType of
+                                Public ->
+                                    text ""
 
-                        Private ->
-                            viewContact
-                     ]
-                        ++ (case pageType of
+                                Private ->
+                                    viewContact
+                            , case pageType of
                                 Private ->
                                     viewKyc
 
                                 Public ->
-                                    []
-                           )
-                    )
-                , privateView
+                                    text ""
+                            ]
+                        ]
+                    ]
+                , div [ class "bg-white w-full md:bg-gray-100" ]
+                    [ div [ class "px-4" ]
+                        [ div [ class "container mx-auto" ]
+                            [ privateView
+                            ]
+                        ]
+                    ]
                 ]
     in
     div [ class "flex-grow flex bg-gray-100 relative" ]
-        [ div [ class "z-10 flex flex-col w-full container mx-auto md:flex-row" ]
+        [ div [ class "z-10 flex flex-col w-full md:container md:mx-auto md:flex-row bg-grey-100" ]
             [ leftSide
             , rightSide
             ]
-        , div [ class "z-0 absolute w-full md:w-1/2 h-full max-h-100 bg-white" ] []
+        , div [ class "z-0 absolute w-full md:w-1/2 h-full max-h-100 md:bg-white" ] []
         ]
 
 
@@ -619,14 +621,12 @@ viewContactButton translators normalized =
             Contact.unwrap normalized
     in
     a
-        [ class
-            ("button-secondary uppercase bg-gray-100 py-2 flex items-center justify-center border-none hover:bg-gray-200 text-"
-                ++ Contact.contactTypeColor contactType
-            )
+        [ class "button-secondary uppercase bg-gray-100 py-2 flex items-center justify-center border-none hover:bg-gray-200"
+        , Contact.contactTypeColor contactType
         , Contact.toHref normalized
         , target "_blank"
         ]
-        [ Contact.contactTypeToIcon "mr-2" contactType
+        [ Contact.contactTypeToIcon "mr-2 w-6 h-6" True contactType
         , text (Contact.contactTypeToString translators contactType)
         ]
 

@@ -98,11 +98,7 @@ module.exports = {
         'light-grey': '#EEEEEE',
         'text-grey': '#666666',
         'border-grey': '#E0E0E0',
-        'body-black': '#4a4a4a',
-        instagram: '#e1306c',
-        telegram: '#30a8db',
-        phone: '#999999',
-        whatsapp: '#25d366'
+        'body-black': '#4a4a4a'
       },
       boxShadow: {
         outline: '0 0 0 3px rgb(250, 177, 92, 0.75)'

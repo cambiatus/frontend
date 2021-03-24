@@ -22,6 +22,7 @@ module Session.LoggedIn exposing
     , msgToString
     , profile
     , readAllNotifications
+    , showContactModal
     , showFeedback
     , subscriptions
     , update
@@ -787,6 +788,7 @@ type External msg
     | RequiredAuthentication (Maybe msg)
     | ShowFeedback FeedbackStatus String
     | HideFeedback
+    | ShowContactModal
 
 
 mapExternal : (msg -> msg2) -> External msg -> External msg2
@@ -803,6 +805,9 @@ mapExternal transform ext =
 
         HideFeedback ->
             HideFeedback
+
+        ShowContactModal ->
+            ShowContactModal
 
 
 type alias UpdateResult =
@@ -841,6 +846,30 @@ type Msg
     | GotActionMsg Action.Msg
     | SearchClosed
     | GotTime Posix
+
+
+showContactModal : Model -> Model
+showContactModal ({ shared } as model) =
+    let
+        addContactLimitDate =
+            -- 01/01/2022
+            1641006000000
+
+        showContactModalFromDate =
+            addContactLimitDate - Time.posixToMillis shared.now > 0
+    in
+    case profile model of
+        Just profile_ ->
+            { model
+                | showContactModal =
+                    showContactModalFromDate
+                        && (Maybe.map (List.length >> (>) 1) profile_.contacts
+                                |> Maybe.withDefault False
+                           )
+            }
+
+        Nothing ->
+            model
 
 
 update : Msg -> Model -> UpdateResult
@@ -918,24 +947,11 @@ update msg model =
                 subscriptionDoc =
                     unreadCountSubscription model.accountName
                         |> Graphql.Document.serializeSubscription
-
-                addContactLimitDate =
-                    -- 01/01/2022
-                    1641006000000
-
-                showContactModalFromDate =
-                    addContactLimitDate - Time.posixToMillis shared.now > 0
             in
             case profile_ of
                 Just p ->
-                    { model
-                        | profile = Loaded p
-                        , showContactModal =
-                            showContactModalFromDate
-                                && (Maybe.map (List.length >> (>) 1) p.contacts
-                                        |> Maybe.withDefault False
-                                   )
-                    }
+                    { model | profile = Loaded p }
+                        |> showContactModal
                         |> UR.init
                         |> UR.addPort
                             { responseAddress = CompletedLoadUnread (Encode.string "")
