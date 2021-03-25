@@ -858,7 +858,29 @@
     "success": "La configuració s'ha desat correctament",
     "community_info": {
       "title": "Informació de la Comunitat",
-      "description": "Logo, nome, des crição"
+      "description": "Logo, nom, descripció, url",
+      "guidance": "Orientació",
+      "logo": {
+        "title": "Logotip de la comunitat",
+        "description": "El fitxer ha de ser en format PNG, JPG o SVG. Ha de mesurar 80px d’amplada i 80px d’alçada per poder-se veure millor a la interfície."
+      },
+      "fields": {
+        "name": "Nom de la Comunitat",
+        "description": "Què és la comunitat.",
+        "url": "URL personalitzat de la comunitat."
+      },
+      "placeholders": {
+        "name": "Doneu un nom a la vostra comunitat",
+        "description": "Digueu alguna cosa sobre la vostra comunitat",
+        "url": "Trieu un URL personalitzat"
+      },
+      "constraints": {
+        "length": "Màxim de 30 caràcters",
+        "characters": "Utilitzeu les lletres de la a la z i els números del 0 al 9.",
+        "bad_words": "No utilitzeu paraules dolentes.",
+        "casing": "No utilitzeu majúscules.",
+        "accents": "No utilitzeu caràcters especials ni lletres amb accents. Per exemple. @!?:; âãá"
+      }
     },
     "currency": {
       "title": "Moeda",

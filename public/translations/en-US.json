@@ -856,7 +856,29 @@
     "success": "Settings saved successfully",
     "community_info": {
       "title": "Community Information",
-      "description": "Logo, name, description"
+      "description": "Logo, name, description, url",
+      "guidance": "Guidance",
+      "logo": {
+        "title": "Community logo",
+        "description": "Your file must be in PNG, JPG or SVG format. It should measure 80px in width and 80px in height to be better viewed on the interface."
+      },
+      "fields": {
+        "name": "Community name",
+        "description": "What is the community",
+        "url": "Community custom URL"
+      },
+      "placeholders": {
+        "name": "Give your community a name",
+        "description": "Say something about your community",
+        "url": "Choose a personalized URL"
+      },
+      "constraints": {
+        "length": "Maximum of 30 characters.",
+        "characters": "Use letters a to z, and numbers 0 to 9.",
+        "bad_words": "Do not use bad words.",
+        "casing": "Do not use uppercase.",
+        "accents": "Do not use special characters and letters with accents. Eg. @!?:;âãá"
+      }
     },
     "currency": {
       "title": "Currency",

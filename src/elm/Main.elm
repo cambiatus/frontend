@@ -15,6 +15,7 @@ import Page.Community.Invite as Invite
 import Page.Community.ObjectiveEditor as ObjectiveEditor
 import Page.Community.Objectives as Objectives
 import Page.Community.Settings.Features as CommunitySettingsFeatures
+import Page.Community.Settings.Info as CommunitySettingsInfo
 import Page.Community.Settings.Settings as CommunitySettings
 import Page.Community.Transfer as Transfer
 import Page.Dashboard as Dashboard
@@ -151,6 +152,7 @@ type Status
     | CommunityEditor CommunityEditor.Model
     | CommunitySettings CommunitySettings.Model
     | CommunitySettingsFeatures CommunitySettingsFeatures.Model
+    | CommunitySettingsInfo CommunitySettingsInfo.Model
     | Objectives Objectives.Model
     | ObjectiveEditor ObjectiveEditor.Model
     | ActionEditor ActionEditor.Model
@@ -189,6 +191,7 @@ type Msg
     | GotCommunityEditorMsg CommunityEditor.Msg
     | GotCommunitySettingsMsg CommunitySettings.Msg
     | GotCommunitySettingsFeaturesMsg CommunitySettingsFeatures.Msg
+    | GotCommunitySettingsInfoMsg CommunitySettingsInfo.Msg
     | GotObjectivesMsg Objectives.Msg
     | GotActionEditorMsg ActionEditor.Msg
     | GotObjectiveEditorMsg ObjectiveEditor.Msg
@@ -402,6 +405,11 @@ update msg model =
                 >> updateLoggedInUResult CommunitySettingsFeatures GotCommunitySettingsFeaturesMsg model
                 |> withLoggedIn
 
+        ( GotCommunitySettingsInfoMsg subMsg, CommunitySettingsInfo subModel ) ->
+            CommunitySettingsInfo.update subMsg subModel
+                >> updateLoggedInUResult CommunitySettingsInfo GotCommunitySettingsInfoMsg model
+                |> withLoggedIn
+
         ( GotShopMsg subMsg, Shop maybeFilter subModel ) ->
             Shop.update subMsg subModel
                 >> updateLoggedInUResult (Shop maybeFilter) GotShopMsg model
@@ -492,6 +500,10 @@ broadcast broadcastMessage status =
                 CommunitySettingsFeatures _ ->
                     CommunitySettingsFeatures.receiveBroadcast broadcastMessage
                         |> Maybe.map GotCommunitySettingsFeaturesMsg
+
+                CommunitySettingsInfo _ ->
+                    CommunitySettingsInfo.receiveBroadcast broadcastMessage
+                        |> Maybe.map GotCommunitySettingsInfoMsg
 
                 CommunitySettings _ ->
                     CommunitySettings.receiveBroadcast broadcastMessage
@@ -832,6 +844,11 @@ changeRouteTo maybeRoute model =
                 >> updateStatusWith CommunitySettingsFeatures GotCommunitySettingsFeaturesMsg model
                 |> withLoggedIn Route.CommunitySettingsFeatures
 
+        Just Route.CommunitySettingsInfo ->
+            CommunitySettingsInfo.init
+                >> updateStatusWith CommunitySettingsInfo GotCommunitySettingsInfoMsg model
+                |> withLoggedIn Route.CommunitySettingsInfo
+
         Just Route.NewCommunity ->
             CommunityEditor.initNew
                 >> updateStatusWith CommunityEditor GotCommunityEditorMsg model
@@ -1021,6 +1038,9 @@ msgToString msg =
         GotCommunitySettingsFeaturesMsg subMsg ->
             "GotCommunitySettingsFeaturesMsg" :: CommunitySettingsFeatures.msgToString subMsg
 
+        GotCommunitySettingsInfoMsg subMsg ->
+            "GotCommunitySettingsInfoMsg" :: CommunitySettingsInfo.msgToString subMsg
+
         GotObjectivesMsg subMsg ->
             "GotObjectives" :: Objectives.msgToString subMsg
 
@@ -1205,6 +1225,9 @@ view model =
 
         CommunitySettingsFeatures subModel ->
             viewLoggedIn subModel LoggedIn.CommunitySettingsFeatures GotCommunitySettingsFeaturesMsg CommunitySettingsFeatures.view
+
+        CommunitySettingsInfo subModel ->
+            viewLoggedIn subModel LoggedIn.CommunitySettingsInfo GotCommunitySettingsInfoMsg CommunitySettingsInfo.view
 
         CommunityEditor subModel ->
             viewLoggedIn subModel LoggedIn.CommunityEditor GotCommunityEditorMsg CommunityEditor.view

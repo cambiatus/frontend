@@ -860,7 +860,29 @@
     "success": "Configurações salvas com sucesso",
     "community_info": {
       "title": "Informações da Comunidade",
-      "description": "Logo, nome, descrição"
+      "description": "Logo, nome, descrição, url",
+      "guidance": "Orientação",
+      "logo": {
+        "title": "Logo da comunidade",
+        "description": "Seu arquivo deve estar no formato PNG, JPG ou SVG. Ele deve medir 80px em largura e 80px em altura para ser melhor visualizado na interface."
+      },
+      "fields": {
+        "name": "Nome da comunidade",
+        "description": "O que é a comunidade",
+        "url": "URL personalizado da comunidade"
+      },
+      "placeholders": {
+        "name": "Dê um nome à sua comunidade",
+        "description": "Diga algo sobre sua comunidade",
+        "url": "Escolha um URL personalizado"
+      },
+      "constraints": {
+        "length": "Maximo de 30 caractéres.",
+        "characters": "Use letras de a a z, e números de 0 a 9.",
+        "bad_words": "Não use palavrões.",
+        "casing": "Não use letra maiúscula.",
+        "accents": "Não use caractéres especiais e letras com acentos. Ex. @!?:;âãá"
+      }
     },
     "currency": {
       "title": "Moeda",

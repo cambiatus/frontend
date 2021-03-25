@@ -228,6 +228,7 @@ type Page
     | Community
     | CommunitySettings
     | CommunitySettingsFeatures
+    | CommunitySettingsInfo
     | CommunityEditor
     | Objectives
     | ObjectiveEditor

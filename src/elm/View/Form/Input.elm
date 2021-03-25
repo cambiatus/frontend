@@ -1,4 +1,4 @@
-module View.Form.Input exposing (init, input, toHtml, withAttrs, withCounter)
+module View.Form.Input exposing (init, input, toHtml, toHtmlTextArea, withAttrs, withCounter, withElement)
 
 {- | Creates a Cambiatus-style text input that supports error reporting, placeholders, localization
    and character counters.
@@ -40,6 +40,13 @@ type alias RequiredInputOptions a =
     }
 
 
+{-| Lists out the possible input types
+-}
+type InputType
+    = Input
+    | TextArea
+
+
 {-| Initializes an input
 -}
 init : RequiredInputOptions a -> InputOptions a
@@ -54,16 +61,17 @@ init options =
     , maximumCounterValue = Nothing
     , translators = options.translators
     , extraAttrs = []
+    , extraElement = Nothing
     }
 
 
 {-| Converts a Cambiatus input into Html to be used in view code
 -}
-toHtml : InputOptions a -> Html a
-toHtml options =
+toHtmlWith : InputType -> InputOptions a -> Html a
+toHtmlWith inputType options =
     div [ class "mb-10 relative" ]
         [ View.Form.label options.id options.label
-        , input options
+        , input inputType options
         , case options.maximumCounterValue of
             Just number ->
                 View.Form.InputCounter.view options.translators.tr number options.value
@@ -78,21 +86,52 @@ toHtml options =
         ]
 
 
+{-| Converts a Cambiatus input into Html to be used in view code, using Html.input
+-}
+toHtml : InputOptions a -> Html a
+toHtml =
+    toHtmlWith Input
+
+
+{-| Converts a Cambiatus input into Html to be used in view code, using Html.textarea
+-}
+toHtmlTextArea : InputOptions a -> Html a
+toHtmlTextArea =
+    toHtmlWith TextArea
+
+
 {-| Basic Cambiatus-style input
 -}
-input : InputOptions a -> Html a
-input options =
-    Html.input
-        ([ id options.id
-         , onInput options.onInput
-         , class "input min-w-full"
-         , disabled options.disabled
-         , value options.value
-         , placeholder (Maybe.withDefault "" options.placeholder)
-         ]
-            ++ options.extraAttrs
-        )
-        []
+input : InputType -> InputOptions a -> Html a
+input inputType options =
+    let
+        inputElement =
+            case inputType of
+                Input ->
+                    Html.input
+
+                TextArea ->
+                    Html.textarea
+    in
+    div [ class "relative" ]
+        [ inputElement
+            ([ id options.id
+             , onInput options.onInput
+             , class "input min-w-full relative"
+             , disabled options.disabled
+             , value options.value
+             , placeholder (Maybe.withDefault "" options.placeholder)
+             ]
+                ++ options.extraAttrs
+            )
+            []
+        , case options.extraElement of
+            Nothing ->
+                text ""
+
+            Just extraElement ->
+                div [ class "absolute inset-y-0 right-0 flex items-center pr-3" ] [ extraElement ]
+        ]
 
 
 {-| Adds a character counter to your input. This does not limit the amount of characters automatically.
@@ -109,6 +148,13 @@ withCounter maximum options =
 withAttrs : List (Html.Attribute a) -> InputOptions a -> InputOptions a
 withAttrs attrs options =
     { options | extraAttrs = attrs }
+
+
+{-| Adds an HTML element to be displayed on the right side of the input
+-}
+withElement : Html a -> InputOptions a -> InputOptions a
+withElement element options =
+    { options | extraElement = Just element }
 
 
 
@@ -131,4 +177,5 @@ type alias InputOptions a =
     , translators : Translators
     , maximumCounterValue : Maybe Int
     , extraAttrs : List (Html.Attribute a)
+    , extraElement : Maybe (Html a)
     }

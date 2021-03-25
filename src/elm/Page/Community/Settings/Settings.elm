@@ -98,12 +98,13 @@ viewSettingsList shared community =
         , style "grid-template-rows" "auto"
         , style "grid-gap" "16px"
         ]
-        [ settingCard (translate "settings.features.title") (translate "menu.edit") featuresDescription Route.CommunitySettingsFeatures
+        [ settingCard (translate "settings.community_info.title") (translate "menu.edit") (translate "settings.community_info.description") Route.CommunitySettingsInfo
         , if community.hasObjectives then
             settingCard (translate "settings.actions.title") (translate "menu.edit") "" Route.Objectives
 
           else
             text ""
+        , settingCard (translate "settings.features.title") (translate "menu.edit") featuresDescription Route.CommunitySettingsFeatures
         ]
 
 
