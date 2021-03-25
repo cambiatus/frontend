@@ -217,7 +217,11 @@ update msg model loggedIn =
                     case loggedIn.selectedCommunity of
                         RemoteData.Success community ->
                             uResult
-                                |> UR.addExt (LoggedIn.UpdatedCommunity (updateCommunity community model))
+                                |> UR.addExt
+                                    (updateCommunity community model
+                                        |> LoggedIn.CommunityLoaded
+                                        |> LoggedIn.ExternalBroadcast
+                                    )
 
                         _ ->
                             uResult
@@ -336,6 +340,9 @@ receiveBroadcast broadcastMsg =
     case broadcastMsg of
         LoggedIn.CommunityLoaded community ->
             Just (CompletedLoadCommunity community)
+
+        _ ->
+            Nothing
 
 
 jsAddressToMsg : List String -> Value -> Maybe Msg

@@ -3,12 +3,11 @@ module Page.Profile.AddContact exposing
     , Msg
     , init
     , msgToString
+    , receiveBroadcast
     , update
     , view
     )
 
-import Api.Graphql
-import Graphql.Http
 import Html exposing (Html, div, text)
 import Html.Attributes exposing (class)
 import Http
@@ -26,35 +25,15 @@ type alias Model =
 
 
 init : LoggedIn.Model -> ( Model, Cmd Msg )
-init ({ shared } as loggedIn) =
-    case loggedIn.profile of
-        LoggedIn.Loaded profile ->
-            ( profile.contacts
-                |> Maybe.withDefault []
-                |> Contact.initMultiple
-                |> RemoteData.Success
-            , Cmd.none
-            )
-
-        LoggedIn.LoadingFailed _ _ ->
-            ( RemoteData.Failure (shared.translators.t "contact_form.profile_loading_failed")
-            , Cmd.none
-            )
-
-        _ ->
-            let
-                profileQuery =
-                    Api.Graphql.query loggedIn.shared
-                        (Just loggedIn.authToken)
-                        (Profile.query loggedIn.accountName)
-                        CompletedProfileLoad
-            in
-            ( RemoteData.Loading, profileQuery )
+init loggedIn =
+    ( RemoteData.Loading
+    , LoggedIn.maybeInitWith CompletedLoadProfile .profile loggedIn
+    )
 
 
 type Msg
     = GotContactMsg Contact.Msg
-    | CompletedProfileLoad (RemoteData (Graphql.Http.Error (Maybe Profile.Model)) (Maybe Profile.Model))
+    | CompletedLoadProfile Profile.Model
 
 
 type alias UpdateResult =
@@ -62,17 +41,13 @@ type alias UpdateResult =
 
 
 update : Msg -> Model -> LoggedIn.Model -> UpdateResult
-update msg model { shared, authToken } =
+update msg model ({ shared, authToken } as loggedIn) =
     case msg of
-        CompletedProfileLoad result ->
-            result
-                |> RemoteData.map
-                    (Maybe.map .contacts
-                        >> Maybe.andThen identity
-                        >> Maybe.withDefault []
-                        >> Contact.initMultiple
-                    )
-                |> RemoteData.mapError (\_ -> shared.translators.t "Something went wrong")
+        CompletedLoadProfile profile ->
+            profile.contacts
+                |> Maybe.withDefault []
+                |> Contact.initMultiple
+                |> RemoteData.Success
                 |> UR.init
 
         GotContactMsg subMsg ->
@@ -84,10 +59,21 @@ update msg model { shared, authToken } =
 
                         actOnNewContacts updateResult =
                             case newContacts of
-                                Contact.WithContacts successMessage _ ->
-                                    updateResult
-                                        |> UR.addExt (LoggedIn.ShowFeedback LoggedIn.Success successMessage)
-                                        |> UR.addCmd (Route.replaceUrl shared.navKey Route.Profile)
+                                Contact.WithContacts successMessage contacts ->
+                                    case loggedIn.profile of
+                                        RemoteData.Success profile ->
+                                            updateResult
+                                                |> UR.addExt (LoggedIn.ShowFeedback LoggedIn.Success successMessage)
+                                                |> UR.addExt
+                                                    ({ profile | contacts = Just contacts }
+                                                        |> LoggedIn.ProfileLoaded
+                                                        |> LoggedIn.ExternalBroadcast
+                                                    )
+                                                |> UR.addCmd (Route.replaceUrl shared.navKey Route.Profile)
+
+                                        _ ->
+                                            updateResult
+                                                |> UR.logImpossible msg [ "WithContacts", "NoProfile" ]
 
                                 Contact.WithError errorMessage ->
                                     updateResult
@@ -129,11 +115,21 @@ view ({ shared } as loggedIn) model =
     }
 
 
+receiveBroadcast : LoggedIn.BroadcastMsg -> Maybe Msg
+receiveBroadcast broadcastMsg =
+    case broadcastMsg of
+        LoggedIn.ProfileLoaded profile ->
+            Just (CompletedLoadProfile profile)
+
+        _ ->
+            Nothing
+
+
 msgToString : Msg -> List String
 msgToString msg =
     case msg of
-        CompletedProfileLoad r ->
-            [ "CompletedProfileLoad", UR.remoteDataToString r ]
+        CompletedLoadProfile _ ->
+            [ "CompletedLoadProfile" ]
 
         GotContactMsg _ ->
             [ "GotContactMsg" ]

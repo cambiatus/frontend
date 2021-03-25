@@ -1,6 +1,7 @@
-module Route exposing (Route(..), fromUrl, href, pushUrl, replaceUrl)
+module Route exposing (Route(..), externalCommunityLink, fromUrl, href, pushUrl, replaceUrl)
 
 import Browser.Navigation as Nav
+import Eos
 import Html exposing (Attribute)
 import Html.Attributes as Attr
 import Shop
@@ -143,6 +144,45 @@ fromUrl url =
 pushUrl : Nav.Key -> Route -> Cmd msg
 pushUrl key route =
     Nav.pushUrl key (routeToString route)
+
+
+externalCommunityLink : Url -> Maybe { community | symbol : Eos.Symbol, name : String } -> Maybe Route -> Url
+externalCommunityLink currentUrl maybeCommunity maybeRoute =
+    let
+        defaultSubdomain =
+            "app"
+
+        communityStub =
+            case maybeCommunity of
+                Nothing ->
+                    defaultSubdomain
+
+                -- TODO - Use community subdomain
+                Just community ->
+                    if community.symbol == Eos.cambiatusSymbol then
+                        defaultSubdomain
+
+                    else
+                        String.toLower community.name
+
+        communityUrl =
+            case currentUrl.host |> String.split "." of
+                [] ->
+                    -- This will never happen
+                    { currentUrl | host = "app.cambiatus.io" }
+
+                [ singlePart ] ->
+                    { currentUrl | host = String.join "." [ communityStub, singlePart ] }
+
+                _ :: rest ->
+                    { currentUrl | host = String.join "." (communityStub :: rest) }
+    in
+    case maybeRoute of
+        Nothing ->
+            communityUrl
+
+        Just route ->
+            { communityUrl | path = routeToString route }
 
 
 

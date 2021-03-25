@@ -7,7 +7,6 @@ module Session.LoggedIn exposing
     , Model
     , Msg(..)
     , Page(..)
-    , ProfileStatus(..)
     , addCommunity
     , addNotification
     , askedAuthentication
@@ -73,6 +72,7 @@ import Time exposing (Posix)
 import Translation
 import UpdateResult as UR
 import Url exposing (Url)
+import View.Components
 import View.Modal as Modal
 
 
@@ -151,7 +151,7 @@ subscriptions model =
 type alias Model =
     { shared : Shared
     , accountName : Eos.Name
-    , profile : ProfileStatus
+    , profile : RemoteData (Graphql.Http.Error (Maybe Profile.Model)) Profile.Model
     , selectedCommunity : RemoteData (Graphql.Http.Error (Maybe Community.Model)) Community.Model
     , showUserNav : Bool
     , showLanguageItems : Bool
@@ -176,7 +176,7 @@ initModel : Shared -> Auth.Model -> Eos.Name -> String -> Model
 initModel shared authModel accountName authToken =
     { shared = shared
     , accountName = accountName
-    , profile = Loading accountName
+    , profile = RemoteData.Loading
     , selectedCommunity = RemoteData.Loading
     , showUserNav = False
     , showLanguageItems = False
@@ -205,12 +205,6 @@ type FeedbackStatus
 type FeedbackVisibility
     = Show FeedbackStatus String
     | Hidden
-
-
-type ProfileStatus
-    = Loading Eos.Name
-    | LoadingFailed Eos.Name (Graphql.Http.Error (Maybe Profile.Model))
-    | Loaded Profile.Model
 
 
 isAuth : Model -> Bool
@@ -271,17 +265,20 @@ view thisMsg page ({ shared } as model) content =
                 "An error occurred while loading translation."
                 |> Html.map thisMsg
 
-        ( _, Loading _ ) ->
-            Shared.viewFullLoading
+        ( _, RemoteData.Loading ) ->
+            View.Components.loadingLogoAnimated shared.translators
 
-        ( _, LoadingFailed accountName err ) ->
+        ( _, RemoteData.NotAsked ) ->
+            View.Components.loadingLogoAnimated shared.translators
+
+        ( _, RemoteData.Failure err ) ->
             Shared.viewFullGraphqlError shared
                 err
-                (ClickedTryAgainProfile accountName)
+                (ClickedTryAgainProfile model.accountName)
                 "An error occurred while loading profile."
                 |> Html.map thisMsg
 
-        ( _, Loaded profile_ ) ->
+        ( _, RemoteData.Success profile_ ) ->
             viewHelper thisMsg page profile_ model content
 
 
@@ -318,14 +315,9 @@ viewFeedback status message =
 
 viewHelper : (Msg -> pageMsg) -> Page -> Profile.Model -> Model -> Html pageMsg -> Html pageMsg
 viewHelper pageMsg page profile_ ({ shared } as model) content =
-    let
-        viewClaimWithProofs action proof =
-            Action.viewClaimWithProofs proof shared.translators (isAuth model) action
-                |> Html.map (GotActionMsg >> pageMsg)
-    in
     div
         [ class "min-h-screen flex flex-col" ]
-        [ div [ class "bg-white" ]
+        (div [ class "bg-white" ]
             [ div [ class "container mx-auto" ]
                 [ viewHeader model profile_
                     |> Html.map pageMsg
@@ -341,51 +333,60 @@ viewHelper pageMsg page profile_ ({ shared } as model) content =
 
                 Hidden ->
                     text ""
-            , case ( Search.isActive model.searchModel, model.claimingAction.status ) of
-                ( True, _ ) ->
-                    case model.selectedCommunity of
-                        RemoteData.Success community ->
-                            Search.viewSearchBody
-                                shared.translators
-                                community.symbol
-                                model.date
-                                (GotSearchMsg >> pageMsg)
-                                (GotActionMsg >> pageMsg)
-                                model.searchModel
-
-                        _ ->
-                            text ""
-
-                ( False, Action.PhotoUploaderShowed action p ) ->
-                    viewClaimWithProofs action p
-
-                ( False, Action.ClaimInProgress action (Just p) ) ->
-                    viewClaimWithProofs action p
-
-                _ ->
-                    viewPageBody model profile_ page content
-            , viewFooter shared
-            , Action.viewClaimConfirmation shared.translators model.claimingAction
-                |> Html.map (GotActionMsg >> pageMsg)
-            , Modal.initWith
-                { closeMsg = ClosedAuthModal
-                , isVisible = model.showAuthModal
-                }
-                |> Modal.withBody
-                    (Auth.view True shared model.auth
-                        |> List.map (Html.map GotAuthMsg)
-                    )
-                |> Modal.toHtml
-                |> Html.map pageMsg
-            , communitySelectorModal model
-                |> Html.map pageMsg
-            , addContactModal model
-                |> Html.map pageMsg
             ]
-        ]
+            :: (let
+                    viewClaimWithProofs action proof =
+                        [ Action.viewClaimWithProofs proof shared.translators (isAuth model) action
+                            |> Html.map (GotActionMsg >> pageMsg)
+                        ]
+                in
+                case ( Search.isActive model.searchModel, model.claimingAction.status ) of
+                    ( True, _ ) ->
+                        case model.selectedCommunity of
+                            RemoteData.Success community ->
+                                [ Search.viewSearchBody
+                                    shared.translators
+                                    community.symbol
+                                    model.date
+                                    (GotSearchMsg >> pageMsg)
+                                    (GotActionMsg >> pageMsg)
+                                    model.searchModel
+                                ]
+
+                            _ ->
+                                []
+
+                    ( False, Action.PhotoUploaderShowed action p ) ->
+                        viewClaimWithProofs action p
+
+                    ( False, Action.ClaimInProgress action (Just p) ) ->
+                        viewClaimWithProofs action p
+
+                    _ ->
+                        viewPageBody model profile_ page content
+               )
+            ++ [ viewFooter shared
+               , Action.viewClaimConfirmation shared.translators model.claimingAction
+                    |> Html.map (GotActionMsg >> pageMsg)
+               , Modal.initWith
+                    { closeMsg = ClosedAuthModal
+                    , isVisible = model.showAuthModal
+                    }
+                    |> Modal.withBody
+                        (Auth.view True shared model.auth
+                            |> List.map (Html.map GotAuthMsg)
+                        )
+                    |> Modal.toHtml
+                    |> Html.map pageMsg
+               , communitySelectorModal model
+                    |> Html.map pageMsg
+               , addContactModal model
+                    |> Html.map pageMsg
+               ]
+        )
 
 
-viewPageBody : Model -> Profile.Model -> Page -> Html pageMsg -> Html pageMsg
+viewPageBody : Model -> Profile.Model -> Page -> Html pageMsg -> List (Html pageMsg)
 viewPageBody ({ shared } as model) profile_ page content =
     let
         { t } =
@@ -431,7 +432,7 @@ viewPageBody ({ shared } as model) profile_ page content =
                     []
                 ]
     in
-    div [ class "flex-grow flex flex-col" ]
+    [ div [ class "flex-grow flex flex-col" ]
         [ case model.selectedCommunity of
             RemoteData.Loading ->
                 div [ class "full-spinner-container h-full" ]
@@ -457,6 +458,7 @@ viewPageBody ({ shared } as model) profile_ page content =
             RemoteData.Failure _ ->
                 text ""
         ]
+    ]
 
 
 viewHeader : Model -> Profile.Model -> Html Msg
@@ -579,7 +581,7 @@ viewCommunitySelector model =
         hasMultipleCommunities : Bool
         hasMultipleCommunities =
             case model.profile of
-                Loaded p ->
+                RemoteData.Success p ->
                     List.length p.communities > 1
 
                 _ ->
@@ -621,7 +623,7 @@ communitySelectorModal model =
     in
     if model.showCommunitySelector then
         case model.profile of
-            Loaded pro ->
+            RemoteData.Success pro ->
                 if List.isEmpty pro.communities then
                     text ""
 
@@ -768,8 +770,9 @@ viewFooter _ =
 -}
 type External msg
     = UpdatedLoggedIn Model
-    | UpdatedCommunity Community.Model
+    | ExternalBroadcast BroadcastMsg
     | ReloadCommunity
+    | ReloadProfile
     | RequiredAuthentication (Maybe msg)
     | ShowFeedback FeedbackStatus String
     | HideFeedback
@@ -782,11 +785,14 @@ mapExternal transform ext =
         UpdatedLoggedIn m ->
             UpdatedLoggedIn m
 
-        UpdatedCommunity community ->
-            UpdatedCommunity community
+        ExternalBroadcast broadcastMsg ->
+            ExternalBroadcast broadcastMsg
 
         ReloadCommunity ->
             ReloadCommunity
+
+        ReloadProfile ->
+            ReloadProfile
 
         RequiredAuthentication maybeM ->
             RequiredAuthentication (Maybe.map transform maybeM)
@@ -821,21 +827,31 @@ updateExternal externalMsg model =
             , afterAuthMsg = Nothing
             }
 
-        UpdatedCommunity community ->
-            case setCommunity community model of
-                Err cmd ->
-                    { model = model
-                    , cmd = cmd
-                    , externalCmd = Cmd.none
-                    , broadcastMsg = Nothing
-                    , afterAuthMsg = Nothing
-                    }
+        ExternalBroadcast broadcastMsg ->
+            case broadcastMsg of
+                CommunityLoaded community ->
+                    case setCommunity community model of
+                        Err cmd ->
+                            { model = model
+                            , cmd = cmd
+                            , externalCmd = Cmd.none
+                            , broadcastMsg = Nothing
+                            , afterAuthMsg = Nothing
+                            }
 
-                Ok ( newModel, broadcastResponse ) ->
-                    { model = newModel
+                        Ok newModel ->
+                            { model = newModel
+                            , cmd = Cmd.none
+                            , externalCmd = Cmd.none
+                            , broadcastMsg = Just broadcastMsg
+                            , afterAuthMsg = Nothing
+                            }
+
+                ProfileLoaded profile_ ->
+                    { model = { model | profile = RemoteData.Success profile_ }
                     , cmd = Cmd.none
                     , externalCmd = Cmd.none
-                    , broadcastMsg = Just broadcastResponse
+                    , broadcastMsg = Just broadcastMsg
                     , afterAuthMsg = Nothing
                     }
 
@@ -851,6 +867,18 @@ updateExternal externalMsg model =
             in
             { model = newModel
             , cmd = cmd
+            , externalCmd = Cmd.none
+            , broadcastMsg = Nothing
+            , afterAuthMsg = Nothing
+            }
+
+        ReloadProfile ->
+            { model = model
+            , cmd =
+                Api.Graphql.query model.shared
+                    (Just model.authToken)
+                    (Profile.query model.accountName)
+                    CompletedLoadProfile
             , externalCmd = Cmd.none
             , broadcastMsg = Nothing
             , afterAuthMsg = Nothing
@@ -903,6 +931,7 @@ type ExternalMsg
 
 type BroadcastMsg
     = CommunityLoaded Community.Model
+    | ProfileLoaded Profile.Model
 
 
 type Msg
@@ -1011,7 +1040,7 @@ update msg model =
 
         CompletedLoadTranslation lang (Ok transl) ->
             case model.profile of
-                Loaded _ ->
+                RemoteData.Success _ ->
                     UR.init { model | shared = Shared.loadTranslation (Ok ( lang, transl )) shared }
                         |> UR.addCmd (Ports.storeLanguage lang)
 
@@ -1034,9 +1063,10 @@ update msg model =
             in
             case profile_ of
                 Just p ->
-                    { model | profile = Loaded p }
+                    { model | profile = RemoteData.Success p }
                         |> showContactModal
                         |> UR.init
+                        |> UR.addExt (ProfileLoaded p |> Broadcast)
                         |> UR.addPort
                             { responseAddress = CompletedLoadUnread (Encode.string "")
                             , responseData = Encode.null
@@ -1056,8 +1086,8 @@ update msg model =
                 { model
                     | profile =
                         case model.profile of
-                            Loading accountName ->
-                                LoadingFailed accountName err
+                            RemoteData.Loading ->
+                                RemoteData.Failure err
 
                             _ ->
                                 model.profile
@@ -1078,17 +1108,18 @@ update msg model =
                             UR.init model
                                 |> UR.addCmd cmd
 
-                        Ok ( newModel, broadcastMsg ) ->
+                        Ok newModel ->
                             UR.init newModel
-                                |> UR.addExt (Broadcast broadcastMsg)
+                                |> UR.addExt (CommunityLoaded community |> Broadcast)
 
                 Nothing ->
                     -- The community doesn't exist, so redirect to the cambiatus community
                     UR.init model
-                        |> UR.addCmd (redirectToCommunity shared.url "app")
+                        |> UR.addCmd (redirectToCommunity shared.url Nothing Nothing)
 
         CompletedLoadCommunity (RemoteData.Failure e) ->
             UR.init { model | selectedCommunity = RemoteData.Failure e }
+                |> UR.logGraphqlError msg e
 
         CompletedLoadCommunity RemoteData.NotAsked ->
             UR.init { model | selectedCommunity = RemoteData.NotAsked }
@@ -1097,7 +1128,7 @@ update msg model =
             UR.init { model | selectedCommunity = RemoteData.Loading }
 
         ClickedTryAgainProfile accountName ->
-            UR.init { model | profile = Loading accountName }
+            UR.init { model | profile = RemoteData.Loading }
                 |> UR.addCmd
                     (Api.Graphql.query shared
                         (Just model.authToken)
@@ -1181,7 +1212,7 @@ update msg model =
                                     |> UR.mapModel
                                         (\m ->
                                             { m
-                                                | profile = Loaded user
+                                                | profile = RemoteData.Success user
                                                 , authToken = token
                                                 , auth = auth
                                             }
@@ -1221,15 +1252,8 @@ update msg model =
             { model | showCommunitySelector = False }
                 |> UR.init
 
-        SelectedCommunity { symbol, name } ->
+        SelectedCommunity ({ symbol } as newCommunity) ->
             let
-                communityUrl =
-                    if String.toLower name == "cambiatus" then
-                        "app"
-
-                    else
-                        String.toLower name
-
                 ( loadCommunityModel, loadCommunityCmd ) =
                     loadCommunity model symbol
             in
@@ -1240,7 +1264,11 @@ update msg model =
 
                     else
                         UR.init { model | showCommunitySelector = False }
-                            |> UR.addCmd (redirectToCommunity shared.url communityUrl)
+                            |> UR.addCmd
+                                (redirectToCommunity shared.url
+                                    (Just newCommunity)
+                                    Nothing
+                                )
 
                 RemoteData.NotAsked ->
                     UR.init loadCommunityModel
@@ -1278,7 +1306,7 @@ update msg model =
 
                                 Contact.WithContacts successMessage contacts ->
                                     { model_
-                                        | profile = Loaded { userProfile | contacts = Just contacts }
+                                        | profile = RemoteData.Success { userProfile | contacts = Just contacts }
                                         , showContactModal = False
                                     }
                                         |> showFeedback Success successMessage
@@ -1360,7 +1388,7 @@ loadCommunity ({ shared } as model) symbol =
     )
 
 
-setCommunity : Community.Model -> Model -> Result (Cmd msg) ( Model, BroadcastMsg )
+setCommunity : Community.Model -> Model -> Result (Cmd msg) Model
 setCommunity community model =
     let
         isMember =
@@ -1374,7 +1402,7 @@ setCommunity community model =
                         model.profile
 
                     Just profile_ ->
-                        Loaded
+                        RemoteData.Success
                             { profile_
                                 | communities =
                                     List.updateIf (.symbol >> (==) community.symbol)
@@ -1391,17 +1419,15 @@ setCommunity community model =
                             }
         in
         Ok
-            ( { model
+            { model
                 | selectedCommunity = RemoteData.Success community
                 , profile = newProfile
-              }
-            , CommunityLoaded community
-            )
+            }
 
     else
         -- Community is loaded, but user is not a member of it
         -- TODO - Need to change this to use auto invite communities
-        Err (redirectToCommunity model.shared.url "app")
+        Err (redirectToCommunity model.shared.url Nothing Nothing)
 
 
 communityNameFromUrl : Url -> String
@@ -1420,18 +1446,9 @@ communityNameFromUrl url =
            )
 
 
-redirectToCommunity : Url -> String -> Cmd msg
-redirectToCommunity currentUrl communityUrl =
-    (case currentUrl.host |> String.split "." of
-        [] ->
-            { currentUrl | host = "app.cambiatus.io" }
-
-        [ singlePart ] ->
-            { currentUrl | host = String.join "." [ communityUrl, singlePart ] }
-
-        _ :: rest ->
-            { currentUrl | host = String.join "." (communityUrl :: rest) }
-    )
+redirectToCommunity : Url -> Maybe { community | name : String, symbol : Eos.Symbol } -> Maybe Route -> Cmd msg
+redirectToCommunity currentUrl maybeCommunity maybeRoute =
+    Route.externalCommunityLink currentUrl maybeCommunity maybeRoute
         |> Url.toString
         |> Browser.Navigation.load
 
@@ -1481,7 +1498,7 @@ readAllNotifications model =
     { model | notification = Notification.readAll model.notification }
 
 
-addCommunity : Model -> Community.Model -> Model
+addCommunity : Model -> Community.Model -> ( Model, Cmd msg )
 addCommunity model community =
     let
         info =
@@ -1492,21 +1509,21 @@ addCommunity model community =
             , hasActions = community.hasObjectives
             , hasKyc = community.hasKyc
             }
-    in
-    { model
-        | selectedCommunity = RemoteData.Success community
-        , profile =
+
+        newProfile =
             case model.profile of
-                Loaded profile_ ->
-                    Loaded
-                        { profile_
-                            | communities =
-                                info :: profile_.communities
-                        }
+                RemoteData.Success profile_ ->
+                    RemoteData.Success { profile_ | communities = info :: profile_.communities }
 
                 _ ->
                     model.profile
-    }
+    in
+    ( { model
+        | selectedCommunity = RemoteData.Success community
+        , profile = newProfile
+      }
+    , redirectToCommunity model.shared.url (Just community) (Just Route.Dashboard)
+    )
 
 
 
@@ -1515,12 +1532,7 @@ addCommunity model community =
 
 profile : Model -> Maybe Profile.Model
 profile model =
-    case model.profile of
-        Loaded profile_ ->
-            Just profile_
-
-        _ ->
-            Nothing
+    RemoteData.toMaybe model.profile
 
 
 isAccount : Eos.Name -> Model -> Bool

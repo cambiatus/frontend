@@ -739,7 +739,11 @@ update msg model loggedIn =
                 Saving community form ->
                     model
                         |> UR.init
-                        |> UR.addExt (updateCommunity form community |> LoggedIn.UpdatedCommunity)
+                        |> UR.addExt
+                            (updateCommunity form community
+                                |> LoggedIn.CommunityLoaded
+                                |> LoggedIn.ExternalBroadcast
+                            )
                         |> UR.addCmd (Route.Community |> Route.replaceUrl loggedIn.shared.navKey)
                         |> UR.addExt (ShowFeedback Success (t "community.create.success"))
 
@@ -969,6 +973,9 @@ receiveBroadcast broadcastMsg =
     case broadcastMsg of
         LoggedIn.CommunityLoaded community ->
             Just (CompletedLoadCommunity community)
+
+        _ ->
+            Nothing
 
 
 jsAddressToMsg : List String -> Value -> Maybe Msg

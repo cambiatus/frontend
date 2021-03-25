@@ -148,13 +148,9 @@ view loggedIn model =
             loggedIn.shared.translators
 
         selectedCommunityName =
-            case loggedIn.profile of
-                LoggedIn.Loaded profile ->
-                    RemoteData.toMaybe loggedIn.selectedCommunity
-                        |> Maybe.map (\community -> List.filter (\p -> p.symbol == community.symbol) profile.communities)
-                        |> Maybe.andThen List.head
-                        |> Maybe.map .name
-                        |> Maybe.withDefault ""
+            case loggedIn.selectedCommunity of
+                RemoteData.Success community ->
+                    community.name
 
                 _ ->
                     ""
@@ -394,8 +390,7 @@ type alias UpdateResult =
 
 
 type Msg
-    = Ignored
-    | GotTime Posix
+    = GotTime Posix
     | CompletedSalesLoad (RemoteData (Graphql.Http.Error (List Product)) (List Product))
     | CompletedLoadCommunity Community.Model
     | ClickedSendTransfer Card Int
@@ -409,9 +404,6 @@ type Msg
 update : Msg -> Model -> LoggedIn.Model -> UpdateResult
 update msg model loggedIn =
     case msg of
-        Ignored ->
-            UR.init model
-
         GotTime date ->
             UR.init { model | date = Just date }
 
@@ -667,13 +659,13 @@ receiveBroadcast broadcastMsg =
         LoggedIn.CommunityLoaded community ->
             Just (CompletedLoadCommunity community)
 
+        _ ->
+            Nothing
+
 
 msgToString : Msg -> List String
 msgToString msg =
     case msg of
-        Ignored ->
-            [ "Ignored" ]
-
         GotTime _ ->
             [ "GotTime" ]
 

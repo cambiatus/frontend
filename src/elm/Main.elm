@@ -501,6 +501,14 @@ broadcast broadcastMessage status =
                     ObjectiveEditor.receiveBroadcast broadcastMessage
                         |> Maybe.map GotObjectiveEditorMsg
 
+                ProfileAddContact _ ->
+                    ProfileAddContact.receiveBroadcast broadcastMessage
+                        |> Maybe.map GotProfileAddContactMsg
+
+                ProfileEditor _ ->
+                    ProfileEditor.receiveBroadcast broadcastMessage
+                        |> Maybe.map GotProfileEditorMsg
+
                 _ ->
                     Nothing
     in

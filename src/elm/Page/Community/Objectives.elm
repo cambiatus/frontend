@@ -377,6 +377,9 @@ receiveBroadcast broadcastMsg =
         LoggedIn.CommunityLoaded community ->
             Just (CompletedLoadCommunity community)
 
+        _ ->
+            Nothing
+
 
 msgToString : Msg -> List String
 msgToString msg =

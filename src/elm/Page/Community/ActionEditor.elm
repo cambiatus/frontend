@@ -1846,6 +1846,9 @@ receiveBroadcast broadcastMsg =
         LoggedIn.CommunityLoaded community ->
             Just (CompletedLoadCommunity community)
 
+        _ ->
+            Nothing
+
 
 jsAddressToMsg : List String -> Value -> Maybe Msg
 jsAddressToMsg addr val =

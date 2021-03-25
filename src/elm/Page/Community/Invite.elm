@@ -381,7 +381,7 @@ update session msg model =
                     case session of
                         LoggedIn { profile } ->
                             case profile of
-                                LoggedIn.Loaded p ->
+                                RemoteData.Success p ->
                                     p.communities
 
                                 _ ->
@@ -447,7 +447,7 @@ update session msg model =
                     case session of
                         LoggedIn { profile } ->
                             case profile of
-                                LoggedIn.Loaded p ->
+                                RemoteData.Success p ->
                                     p.kyc
 
                                 _ ->
@@ -494,23 +494,23 @@ update session msg model =
 
         CompletedSignIn loggedIn (RemoteData.Success (Just { user, token })) ->
             let
-                maybeUpdateCommunity loggedInModel =
-                    getInvite model
-                        |> Maybe.map
-                            (.community >> LoggedIn.addCommunity loggedInModel)
-                        |> Maybe.withDefault loggedInModel
+                newLoggedIn =
+                    { loggedIn | authToken = token }
+
+                ( withCommunity, cmd ) =
+                    case getInvite model of
+                        Just invite ->
+                            invite.community
+                                |> LoggedIn.addCommunity newLoggedIn
+
+                        Nothing ->
+                            ( newLoggedIn, Cmd.none )
             in
             model
                 |> UR.init
-                |> UR.addExt
-                    ({ loggedIn
-                        | profile = LoggedIn.Loaded user
-                        , authToken = token
-                     }
-                        |> maybeUpdateCommunity
-                        |> LoggedIn.UpdatedLoggedIn
-                    )
-                |> UR.addCmd (Route.replaceUrl loggedIn.shared.navKey Route.Dashboard)
+                |> UR.addExt (withCommunity |> LoggedIn.UpdatedLoggedIn)
+                |> UR.addExt (LoggedIn.ProfileLoaded user |> LoggedIn.ExternalBroadcast)
+                |> UR.addCmd cmd
 
         CompletedSignIn _ (RemoteData.Failure error) ->
             { model | pageStatus = Error Http.NetworkError }

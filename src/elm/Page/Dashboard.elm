@@ -32,7 +32,6 @@ import Json.Decode as Decode exposing (Value)
 import Json.Encode as Encode
 import List.Extra as List
 import Page
-import Profile
 import RemoteData exposing (RemoteData)
 import Route
 import Session.LoggedIn as LoggedIn
@@ -146,22 +145,22 @@ view ({ shared, accountName } as loggedIn) model =
                     False
 
         content =
-            case ( model.balance, loggedIn.profile, loggedIn.selectedCommunity ) of
-                ( RemoteData.Loading, _, _ ) ->
+            case ( model.balance, loggedIn.selectedCommunity ) of
+                ( RemoteData.Loading, _ ) ->
                     Page.fullPageLoading shared
 
-                ( RemoteData.NotAsked, _, _ ) ->
+                ( RemoteData.NotAsked, _ ) ->
                     Page.fullPageLoading shared
 
-                ( RemoteData.Failure e, _, _ ) ->
+                ( RemoteData.Failure e, _ ) ->
                     Page.fullPageError (t "dashboard.sorry") e
 
-                ( RemoteData.Success (Just balance), LoggedIn.Loaded profile, RemoteData.Success community ) ->
+                ( RemoteData.Success (Just balance), RemoteData.Success community ) ->
                     div [ class "container mx-auto px-4 mb-10" ]
                         [ viewHeader loggedIn community isCommunityAdmin
                         , viewBalance loggedIn model balance
                         , if areObjectivesEnabled && List.any (\account -> account == loggedIn.accountName) community.validators then
-                            viewAnalysisList loggedIn profile model
+                            viewAnalysisList loggedIn model
 
                           else
                             text ""
@@ -169,7 +168,7 @@ view ({ shared, accountName } as loggedIn) model =
                         , viewInvitationModal loggedIn model
                         ]
 
-                ( RemoteData.Success _, _, _ ) ->
+                ( RemoteData.Success _, _ ) ->
                     Page.fullPageNotFound (t "dashboard.sorry") ""
     in
     { title = t "menu.dashboard"
@@ -304,8 +303,8 @@ viewInvitationModal { shared } model =
         |> Modal.toHtml
 
 
-viewAnalysisList : LoggedIn.Model -> Profile.Model -> Model -> Html Msg
-viewAnalysisList loggedIn profile model =
+viewAnalysisList : LoggedIn.Model -> Model -> Html Msg
+viewAnalysisList loggedIn model =
     let
         text_ s =
             text <| loggedIn.shared.translators.t s
@@ -989,6 +988,9 @@ receiveBroadcast broadcastMsg =
     case broadcastMsg of
         LoggedIn.CommunityLoaded community ->
             Just (CompletedLoadCommunity community)
+
+        _ ->
+            Nothing
 
 
 jsAddressToMsg : List String -> Value -> Maybe Msg
