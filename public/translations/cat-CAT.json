@@ -874,6 +874,21 @@
         "description": "Digueu alguna cosa sobre la vostra comunitat",
         "url": "Trieu un URL personalitzat"
       },
+      "errors": {
+        "logo_upload": "S'ha produït un error en penjar el logotip",
+        "name": {
+          "blank": "La vostra comunitat necessita un nom"
+        },
+        "description": {
+          "blank": "La vostra comunitat necessita una descripció"
+        },
+        "url": {
+          "blank": "La vostra comunitat necessita un URL",
+          "invalid_char": "No utilitzeu caràcters especials",
+          "invalid_case": "Només es permet la minúscula",
+          "too_short": "L'URL ha de tenir com a mínim 2 caràcters"
+        }
+      },
       "constraints": {
         "length": "Màxim de 30 caràcters",
         "characters": "Utilitzeu les lletres de la a la z i els números del 0 al 9.",

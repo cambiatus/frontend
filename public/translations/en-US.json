@@ -872,6 +872,21 @@
         "description": "Say something about your community",
         "url": "Choose a personalized URL"
       },
+      "errors": {
+        "logo_upload": "There was an error uploading the logo",
+        "name": {
+          "blank": "Your community needs a name"
+        },
+        "description": {
+          "blank": "Your community needs a description"
+        },
+        "url": {
+          "blank": "Your community needs a URL",
+          "invalid_char": "Do not use special characters",
+          "invalid_case": "Only downcase is allowed",
+          "too_short": "The URL must have at least 2 characters"
+        }
+      },
       "constraints": {
         "length": "Maximum of 30 characters.",
         "characters": "Use letters a to z, and numbers 0 to 9.",

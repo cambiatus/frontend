@@ -32,8 +32,11 @@ import View.Form.Input
 type alias Model =
     { logoUrl : Maybe String
     , nameInput : String
+    , nameErrors : List String
     , descriptionInput : String
+    , descriptionErrors : List String
     , urlInput : String
+    , urlErrors : List String
     }
 
 
@@ -41,8 +44,11 @@ init : LoggedIn.Model -> ( Model, Cmd Msg )
 init loggedIn =
     ( { logoUrl = Nothing
       , nameInput = ""
+      , nameErrors = []
       , descriptionInput = ""
+      , descriptionErrors = []
       , urlInput = ""
+      , urlErrors = []
       }
     , LoggedIn.maybeInitWith CompletedLoadCommunity .selectedCommunity loggedIn
     )
@@ -81,7 +87,9 @@ update msg model loggedIn =
                 , descriptionInput = community.description
 
                 -- TODO - use community subdomain
-                , urlInput = String.toLower community.name
+                , urlInput =
+                    String.toLower community.name
+                        |> String.replace " " "_"
             }
                 |> UR.init
 
@@ -89,7 +97,6 @@ update msg model loggedIn =
             UR.init model
                 |> UR.addCmd (Api.uploadImage loggedIn.shared file CompletedLogoUpload)
 
-        -- TODO
         EnteredLogo [] ->
             UR.init model
 
@@ -97,24 +104,130 @@ update msg model loggedIn =
             { model | logoUrl = Just url }
                 |> UR.init
 
-        CompletedLogoUpload (Err _) ->
-            -- TODO - Show error
+        CompletedLogoUpload (Err e) ->
             UR.init model
+                |> UR.addExt
+                    (LoggedIn.ShowFeedback LoggedIn.Failure
+                        (loggedIn.shared.translators.t "settings.community_info.errors.logo_upload")
+                    )
+                |> UR.logHttpError msg e
 
         EnteredName name ->
             { model | nameInput = name }
+                |> validateName
                 |> UR.init
 
         EnteredDescription description ->
             { model | descriptionInput = description }
+                |> validateDescription
                 |> UR.init
 
         EnteredUrl url ->
             { model | urlInput = url }
+                |> validateUrl
                 |> UR.init
 
         ClickedSave ->
-            UR.init model
+            if isModelValid model then
+                -- TODO - Update community
+                UR.init model
+
+            else
+                UR.init model
+
+
+type Field
+    = NameField
+    | DescriptionField
+    | UrlField
+
+
+error : Field -> String -> String
+error field key =
+    let
+        fieldString =
+            case field of
+                NameField ->
+                    "name"
+
+                DescriptionField ->
+                    "description"
+
+                UrlField ->
+                    "url"
+    in
+    String.join "." [ "settings.community_info.errors", fieldString, key ]
+
+
+isModelValid : Model -> Bool
+isModelValid model =
+    let
+        validatedModel =
+            validateModel model
+    in
+    List.all (\f -> f validatedModel |> List.isEmpty) [ .nameErrors, .descriptionErrors, .urlErrors ]
+
+
+validateModel : Model -> Model
+validateModel model =
+    model
+        |> validateName
+        |> validateDescription
+        |> validateUrl
+
+
+validateName : Model -> Model
+validateName model =
+    { model
+        | nameErrors =
+            if String.isEmpty model.nameInput then
+                [ error NameField "blank" ]
+
+            else
+                []
+    }
+
+
+validateDescription : Model -> Model
+validateDescription model =
+    { model
+        | descriptionErrors =
+            if String.isEmpty model.descriptionInput then
+                [ error DescriptionField "blank" ]
+
+            else
+                []
+    }
+
+
+validateUrl : Model -> Model
+validateUrl model =
+    let
+        isAllowed character =
+            Char.isAlphaNum character || character == '-'
+
+        validateLength =
+            if String.length model.urlInput > 1 then
+                []
+
+            else
+                [ error UrlField "too_short" ]
+
+        validateChars =
+            if String.all isAllowed model.urlInput then
+                []
+
+            else
+                [ error UrlField "invalid_char" ]
+
+        validateCase =
+            if String.filter Char.isAlphaNum model.urlInput |> String.all Char.isLower then
+                []
+
+            else
+                [ error UrlField "invalid_case" ]
+    in
+    { model | urlErrors = validateChars ++ validateCase ++ validateLength }
 
 
 
@@ -229,7 +342,10 @@ viewName shared model =
         , disabled = False
         , value = model.nameInput
         , placeholder = Just (t "settings.community_info.placeholders.name")
-        , problems = Just [ "TODO" ]
+        , problems =
+            List.map t model.nameErrors
+                |> List.head
+                |> Maybe.map (\x -> [ x ])
         , translators = shared.translators
         }
         |> View.Form.Input.toHtml
@@ -248,7 +364,10 @@ viewDescription shared model =
         , disabled = False
         , value = model.descriptionInput
         , placeholder = Just (t "settings.community_info.placeholders.description")
-        , problems = Just [ "TODO" ]
+        , problems =
+            List.map t model.descriptionErrors
+                |> List.head
+                |> Maybe.map (\x -> [ x ])
         , translators = shared.translators
         }
         |> View.Form.Input.toHtmlTextArea
@@ -271,7 +390,10 @@ viewUrl shared model =
             , disabled = False
             , value = model.urlInput
             , placeholder = Just (t "settings.community_info.placeholders.url")
-            , problems = Just [ "TODO" ]
+            , problems =
+                List.map t model.urlErrors
+                    |> List.head
+                    |> Maybe.map (\x -> [ x ])
             , translators = shared.translators
             }
             |> View.Form.Input.withCounter 30

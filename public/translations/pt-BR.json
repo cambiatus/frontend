@@ -876,6 +876,21 @@
         "description": "Diga algo sobre sua comunidade",
         "url": "Escolha um URL personalizado"
       },
+      "errors": {
+        "logo_upload": "Houve um erro ao fazer o upload da logo",
+        "name": {
+          "blank": "Sua comunidade precisa de um nome"
+        },
+        "description": {
+          "blank": "Sua comunidade precisa de uma descrição"
+        },
+        "url": {
+          "blank": "Sua communidade precisa de uma URL",
+          "invalid_char": "Não use caracteres especiais",
+          "invalid_case": "Somente letras minúsculas são permitidas",
+          "too_short": "O URL precisa de pelo menos 2 caracteres"
+        }
+      },
       "constraints": {
         "length": "Maximo de 30 caractéres.",
         "characters": "Use letras de a a z, e números de 0 a 9.",
