@@ -386,6 +386,7 @@
     "create_button": "Crear comunitat",
     "not_found": "Comunitat no trobada",
     "error_loading": "Error en carregar la comunitat",
+    "error_saving": "Error en desar la comunitat",
     "create": {
       "title": "Crear comunitat",
       "success": "El perfil s'ha desat correctament",

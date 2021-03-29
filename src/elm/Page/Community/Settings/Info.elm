@@ -2,6 +2,7 @@ module Page.Community.Settings.Info exposing
     ( Model
     , Msg
     , init
+    , jsAddressToMsg
     , msgToString
     , receiveBroadcast
     , update
@@ -10,12 +11,16 @@ module Page.Community.Settings.Info exposing
 
 import Api
 import Community
+import Eos
+import Eos.Account as Eos
 import File exposing (File)
 import Html exposing (Html, button, div, form, img, input, label, li, span, text, ul)
-import Html.Attributes exposing (accept, class, for, id, maxlength, multiple, src, type_)
+import Html.Attributes exposing (accept, class, disabled, for, id, maxlength, multiple, src, type_)
 import Html.Events exposing (onSubmit)
 import Http
 import Icons
+import Json.Decode as Decode exposing (Value)
+import Json.Encode as Encode
 import Page
 import RemoteData
 import Route
@@ -30,33 +35,30 @@ import View.Form.Input
 
 
 type alias Model =
-    { logoUrl : Maybe String
+    { logoUrl : String
     , nameInput : String
     , nameErrors : List String
     , descriptionInput : String
     , descriptionErrors : List String
     , urlInput : String
     , urlErrors : List String
+    , isLoading : Bool
     }
 
 
 init : LoggedIn.Model -> ( Model, Cmd Msg )
 init loggedIn =
-    ( { logoUrl = Nothing
+    ( { logoUrl = ""
       , nameInput = ""
       , nameErrors = []
       , descriptionInput = ""
       , descriptionErrors = []
       , urlInput = ""
       , urlErrors = []
+      , isLoading = True
       }
     , LoggedIn.maybeInitWith CompletedLoadCommunity .selectedCommunity loggedIn
     )
-
-
-defaultLogo : String
-defaultLogo =
-    "https://cambiatus-uploads.s3.amazonaws.com/cambiatus-uploads/community_2.png"
 
 
 
@@ -71,6 +73,7 @@ type Msg
     | EnteredDescription String
     | EnteredUrl String
     | ClickedSave
+    | GotSaveResponse (Result Value Eos.Symbol)
 
 
 type alias UpdateResult =
@@ -82,9 +85,10 @@ update msg model loggedIn =
     case msg of
         CompletedLoadCommunity community ->
             { model
-                | logoUrl = Just community.logo
+                | logoUrl = community.logo
                 , nameInput = community.name
                 , descriptionInput = community.description
+                , isLoading = False
 
                 -- TODO - use community subdomain
                 , urlInput =
@@ -101,7 +105,7 @@ update msg model loggedIn =
             UR.init model
 
         CompletedLogoUpload (Ok url) ->
-            { model | logoUrl = Just url }
+            { model | logoUrl = url }
                 |> UR.init
 
         CompletedLogoUpload (Err e) ->
@@ -128,12 +132,86 @@ update msg model loggedIn =
                 |> UR.init
 
         ClickedSave ->
-            if isModelValid model then
-                -- TODO - Update community
-                UR.init model
+            case ( LoggedIn.isAuth loggedIn, isModelValid model, loggedIn.selectedCommunity ) of
+                ( True, True, RemoteData.Success community ) ->
+                    let
+                        authorization =
+                            { actor = loggedIn.accountName
+                            , permissionName = Eos.samplePermission
+                            }
 
-            else
-                UR.init model
+                        asset amount =
+                            { amount = amount
+                            , symbol = community.symbol
+                            }
+                    in
+                    { model | isLoading = True }
+                        |> UR.init
+                        |> UR.addPort
+                            { responseAddress = ClickedSave
+                            , responseData = Encode.string (Eos.symbolToString community.symbol)
+                            , data =
+                                Eos.encodeTransaction
+                                    [ { accountName = loggedIn.shared.contracts.community
+                                      , name = "update"
+                                      , authorization = authorization
+                                      , data =
+                                            { asset = asset 0
+                                            , logo = model.logoUrl
+                                            , name = model.nameInput
+                                            , description = model.descriptionInput
+                                            , inviterReward = asset community.inviterReward
+                                            , invitedReward = asset community.invitedReward
+                                            , hasObjectives = boolToInt community.hasObjectives
+                                            , hasShop = boolToInt community.hasShop
+                                            }
+                                                |> Community.encodeUpdateData
+                                      }
+                                    ]
+                            }
+
+                ( False, True, RemoteData.Success _ ) ->
+                    UR.init model
+                        |> UR.addExt (Just ClickedSave |> LoggedIn.RequiredAuthentication)
+
+                _ ->
+                    UR.init model
+
+        GotSaveResponse (Ok _) ->
+            case loggedIn.selectedCommunity of
+                RemoteData.Success community ->
+                    { model | isLoading = False }
+                        |> UR.init
+                        |> UR.addExt (LoggedIn.ShowFeedback LoggedIn.Success (loggedIn.shared.translators.t "community.create.success"))
+                        |> UR.addCmd (Route.replaceUrl loggedIn.shared.navKey Route.Dashboard)
+                        |> UR.addExt
+                            (LoggedIn.CommunityLoaded
+                                { community
+                                    | name = model.nameInput
+                                    , description = model.descriptionInput
+                                    , logo = model.logoUrl
+                                }
+                                |> LoggedIn.ExternalBroadcast
+                            )
+
+                _ ->
+                    model
+                        |> UR.init
+                        |> UR.logImpossible msg [ "CommunityNotLoaded" ]
+
+        GotSaveResponse (Err _) ->
+            { model | isLoading = False }
+                |> UR.init
+                |> UR.addExt (LoggedIn.ShowFeedback LoggedIn.Failure (loggedIn.shared.translators.t "community.error_saving"))
+
+
+boolToInt : Bool -> Int
+boolToInt bool =
+    if bool then
+        1
+
+    else
+        0
 
 
 type Field
@@ -282,7 +360,11 @@ view_ loggedIn model =
                 , viewDescription loggedIn.shared model
                 , viewUrl loggedIn.shared model
                 ]
-            , button [ class "button button-primary w-full mt-8" ] [ text (t "menu.save") ]
+            , button
+                [ class "button button-primary w-full mt-8"
+                , disabled model.isLoading
+                ]
+                [ text (t "menu.save") ]
             ]
         ]
 
@@ -292,14 +374,6 @@ viewLogo shared model =
     let
         text_ =
             text << shared.translators.t
-
-        logo =
-            case model.logoUrl of
-                Nothing ->
-                    defaultLogo
-
-                Just logoUrl ->
-                    logoUrl
     in
     div []
         [ div [ class "input-label" ]
@@ -312,13 +386,14 @@ viewLogo shared model =
                 , accept "image/*"
                 , Page.onFileChange EnteredLogo
                 , multiple False
+                , disabled model.isLoading
                 ]
                 []
             , label
                 [ for "community-upload-logo"
                 , class "block cursor-pointer"
                 ]
-                [ img [ class "object-cover rounded-full w-20 h-20", src logo ] []
+                [ img [ class "object-cover rounded-full w-20 h-20", src model.logoUrl ] []
                 , span [ class "absolute bottom-0 right-0 bg-orange-300 w-8 h-8 p-2 rounded-full" ] [ Icons.camera "" ]
                 ]
             ]
@@ -339,7 +414,7 @@ viewName shared model =
         { label = t "settings.community_info.fields.name"
         , id = "community_name_input"
         , onInput = EnteredName
-        , disabled = False
+        , disabled = model.isLoading
         , value = model.nameInput
         , placeholder = Just (t "settings.community_info.placeholders.name")
         , problems =
@@ -361,7 +436,7 @@ viewDescription shared model =
         { label = t "settings.community_info.fields.description"
         , id = "community_description_input"
         , onInput = EnteredDescription
-        , disabled = False
+        , disabled = model.isLoading
         , value = model.descriptionInput
         , placeholder = Just (t "settings.community_info.placeholders.description")
         , problems =
@@ -387,7 +462,7 @@ viewUrl shared model =
             { label = t "settings.community_info.fields.url"
             , id = "community_description_input"
             , onInput = EnteredUrl
-            , disabled = False
+            , disabled = model.isLoading
             , value = model.urlInput
             , placeholder = Just (t "settings.community_info.placeholders.url")
             , problems =
@@ -429,6 +504,26 @@ receiveBroadcast broadcastMsg =
             Nothing
 
 
+jsAddressToMsg : List String -> Value -> Maybe Msg
+jsAddressToMsg addr val =
+    case addr of
+        "ClickedSave" :: [] ->
+            Decode.decodeValue
+                (Decode.oneOf
+                    [ Decode.map2 (\_ symbol -> Ok symbol)
+                        (Decode.field "transactionId" Decode.string)
+                        (Decode.field "addressData" Eos.symbolDecoder)
+                    , Decode.succeed (Err val)
+                    ]
+                )
+                val
+                |> Result.map (Just << GotSaveResponse)
+                |> Result.withDefault Nothing
+
+        _ ->
+            Nothing
+
+
 msgToString : Msg -> List String
 msgToString msg =
     case msg of
@@ -452,3 +547,6 @@ msgToString msg =
 
         ClickedSave ->
             [ "ClickedSave" ]
+
+        GotSaveResponse r ->
+            [ "GotSaveResponse", UR.resultToString r ]

@@ -390,6 +390,7 @@
     "create_button": "Criar uma comunidade",
     "not_found": "Comunidade não encontrada",
     "error_loading": "Erro ao carregar comunidade",
+    "error_saving": "Erro ao salvar comunidade",
     "create": {
       "title": "Criar comunidade",
       "success": "Comunidade salva com sucesso",

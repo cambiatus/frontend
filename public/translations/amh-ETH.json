@@ -344,6 +344,7 @@
       "create_button": "ማህበረሰብ ፍጠር",
       "not_found": "ምህበረሰብ አልተገኘም",
       "error_loading": "ማህበረሰብን መጫን ላይ ስህተት",
+      "error_saving": "ማህበረሰብን ማዳን ላይ ስህተት",
       "create": {
         "title": "ማህበረሰብ ፍጠር",
         "success": "ማህበረሰብ በትክክል ተቀምጧል",

@@ -24,7 +24,7 @@ module Community exposing
     , encodeCreateCommunityData
     , encodeCreateObjectiveAction
     , encodeCreateTokenData
-    , encodeUpdateLogoData
+    , encodeUpdateData
     , encodeUpdateObjectiveAction
     , inviteQuery
     , logoBackground
@@ -441,8 +441,8 @@ type alias UpdateCommunityData =
     }
 
 
-encodeUpdateLogoData : UpdateCommunityData -> Value
-encodeUpdateLogoData c =
+encodeUpdateData : UpdateCommunityData -> Value
+encodeUpdateData c =
     Encode.object
         [ ( "logo", Encode.string c.logo )
         , ( "cmm_asset", Eos.encodeAsset c.asset )

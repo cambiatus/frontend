@@ -910,7 +910,7 @@ save msg loggedIn ({ model } as uResult) =
 
                                                 -- , hasKyc = 0
                                                 }
-                                                    |> Community.encodeUpdateLogoData
+                                                    |> Community.encodeUpdateData
                                           }
                                         ]
                                 }
