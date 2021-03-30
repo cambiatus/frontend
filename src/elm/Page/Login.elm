@@ -19,7 +19,7 @@ init guest =
         authModel =
             Auth.init guest.shared
     in
-    ( initModel authModel
+    ( authModel
     , Cmd.none
     )
 
@@ -30,7 +30,7 @@ init guest =
 
 subscriptions : Model -> Sub Msg
 subscriptions model =
-    Sub.map GotAuthMsg (Auth.subscriptions model.auth)
+    Sub.map GotAuthMsg (Auth.subscriptions model)
 
 
 
@@ -38,16 +38,7 @@ subscriptions model =
 
 
 type alias Model =
-    { loginError : Maybe String
-    , auth : Auth.Model
-    }
-
-
-initModel : Auth.Model -> Model
-initModel authModel =
-    { loginError = Nothing
-    , auth = authModel
-    }
+    Auth.Model
 
 
 
@@ -58,7 +49,7 @@ view : Guest.Model -> Model -> { title : String, content : Html Msg }
 view guest model =
     let
         authView =
-            Auth.view False guest.shared model.auth
+            Auth.view False guest.shared model
                 |> List.map (Html.map GotAuthMsg)
     in
     { title =
@@ -85,9 +76,9 @@ update : Msg -> Model -> Guest.Model -> UpdateResult
 update msg model guest =
     case msg of
         GotAuthMsg authMsg ->
-            Auth.update authMsg guest.shared model.auth
+            Auth.update authMsg guest.shared model
                 |> UR.map
-                    (\a -> { model | auth = a })
+                    identity
                     GotAuthMsg
                     (\extMsg uResult ->
                         case extMsg of
@@ -102,6 +93,10 @@ update msg model guest =
                                             |> Route.replaceUrl guest.shared.navKey
                                         )
                                     |> UR.addExt (LoggedIn signInResponse authModel)
+
+                            Auth.SetFeedback feedback ->
+                                uResult
+                                    |> UR.addExt (Guest.SetFeedback feedback)
                     )
 
 

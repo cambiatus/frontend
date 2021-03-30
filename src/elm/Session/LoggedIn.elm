@@ -2,8 +2,6 @@ module Session.LoggedIn exposing
     ( External(..)
     , ExternalMsg(..)
     , FeatureStatus(..)
-    , FeedbackStatus(..)
-    , FeedbackVisibility(..)
     , Model
     , Msg(..)
     , Page(..)
@@ -70,6 +68,7 @@ import Task
 import Time exposing (Posix)
 import Translation
 import UpdateResult as UR
+import View.Feedback as Feedback
 import View.Modal as Modal
 
 
@@ -159,7 +158,7 @@ type alias Model =
     , showAuthModal : Bool
     , auth : Auth.Model
     , showCommunitySelector : Bool
-    , feedback : FeedbackVisibility
+    , feedback : Feedback.Model
     , hasShop : FeatureStatus
     , hasObjectives : FeatureStatus
     , hasKyc : FeatureStatus
@@ -191,7 +190,7 @@ initModel shared authModel accountName selectedCommunity authToken =
     , unreadCount = 0
     , showAuthModal = False
     , auth = authModel
-    , feedback = Hidden
+    , feedback = Feedback.Hidden
     , showCommunitySelector = False
     , hasShop = FeatureLoading
     , hasObjectives = FeatureLoading
@@ -203,16 +202,6 @@ initModel shared authModel accountName selectedCommunity authToken =
     , date = Nothing
     , authToken = authToken
     }
-
-
-type FeedbackStatus
-    = Success
-    | Failure
-
-
-type FeedbackVisibility
-    = Show FeedbackStatus String
-    | Hidden
 
 
 type ProfileStatus
@@ -293,37 +282,6 @@ view thisMsg page ({ shared } as model) content =
             viewHelper thisMsg page profile_ model content
 
 
-viewFeedback : FeedbackStatus -> String -> Html Msg
-viewFeedback status message =
-    let
-        color =
-            case status of
-                Success ->
-                    " bg-green"
-
-                Failure ->
-                    " bg-red"
-    in
-    div
-        [ class <| "w-full sticky z-10 top-0 bg-blue-500 hover:bg-red-500" ++ color
-        , style "display" "grid"
-        , style "grid-template" "\". text x\" 100% / 10% 80% 10%"
-        ]
-        [ span
-            [ class "flex justify-center items-center transition duration-500 ease-in-out text-sm h-10 leading-snug text-white font-bold transform hover:-translate-y-1 hover:scale-110"
-            , style "grid-area" "text"
-            ]
-            [ text message ]
-        , span
-            [ class "flex justify-center items-center ml-auto mr-6 cursor-pointer"
-            , style "grid-area" "x"
-            , onClick HideFeedbackLocal
-            ]
-            [ Icons.close "fill-current text-white"
-            ]
-        ]
-
-
 viewHelper : (Msg -> pageMsg) -> Page -> Profile.Model -> Model -> Html pageMsg -> Html pageMsg
 viewHelper pageMsg page profile_ ({ shared } as model) content =
     let
@@ -342,12 +300,8 @@ viewHelper pageMsg page profile_ ({ shared } as model) content =
                   else
                     viewMainMenu page model |> Html.map pageMsg
                 ]
-            , case model.feedback of
-                Show status message ->
-                    viewFeedback status message |> Html.map pageMsg
-
-                Hidden ->
-                    text ""
+            , Feedback.view model.feedback
+                |> Html.map (GotFeedbackMsg >> pageMsg)
             ]
          ]
             ++ (let
@@ -786,7 +740,7 @@ viewFooter _ =
 type External msg
     = UpdatedLoggedIn Model
     | RequiredAuthentication (Maybe msg)
-    | ShowFeedback FeedbackStatus String
+    | ShowFeedback Feedback.Status String
     | HideFeedback
     | ShowContactModal
 
@@ -839,7 +793,7 @@ type Msg
     | OpenCommunitySelector
     | CloseCommunitySelector
     | SelectCommunity Symbol (Cmd Msg)
-    | HideFeedbackLocal
+    | GotFeedbackMsg Feedback.Msg
     | ClosedAddContactModal
     | GotContactMsg Contact.Msg
     | GotSearchMsg Search.Msg
@@ -1095,6 +1049,10 @@ update msg model =
                                         )
                                     |> UR.addExt AuthenticationSucceed
                                     |> UR.addCmd cmd
+
+                            Auth.SetFeedback feedback ->
+                                uResult
+                                    |> UR.mapModel (\m -> { m | feedback = feedback })
                     )
 
         CompletedLoadUnread payload ->
@@ -1116,8 +1074,8 @@ update msg model =
                 model
                     |> UR.init
 
-        HideFeedbackLocal ->
-            { model | feedback = Hidden }
+        GotFeedbackMsg subMsg ->
+            { model | feedback = Feedback.update subMsg model.feedback }
                 |> UR.init
 
         OpenCommunitySelector ->
@@ -1171,14 +1129,14 @@ update msg model =
 
                                 Contact.WithError errorMessage ->
                                     { model_ | showContactModal = False }
-                                        |> showFeedback Failure errorMessage
+                                        |> showFeedback Feedback.Failure errorMessage
 
                                 Contact.WithContacts successMessage contacts ->
                                     { model_
                                         | profile = Loaded { userProfile | contacts = Just contacts }
                                         , showContactModal = False
                                     }
-                                        |> showFeedback Success successMessage
+                                        |> showFeedback Feedback.Success successMessage
                     in
                     { model | contactModel = contactModel }
                         |> addContactResponse
@@ -1206,10 +1164,10 @@ handleActionMsg ({ shared } as model) actionMsg =
                             model.feedback
 
                         ( Just (Action.Failure s), _ ) ->
-                            Show Failure s
+                            Feedback.Shown Feedback.Failure s
 
                         ( Just (Action.Success s), _ ) ->
-                            Show Success s
+                            Feedback.Shown Feedback.Success s
 
                         ( Nothing, _ ) ->
                             model.feedback
@@ -1260,9 +1218,9 @@ askedAuthentication model =
     }
 
 
-showFeedback : FeedbackStatus -> String -> Model -> Model
+showFeedback : Feedback.Status -> String -> Model -> Model
 showFeedback feedbackStatus feedback model =
-    { model | feedback = Show feedbackStatus feedback }
+    { model | feedback = Feedback.Shown feedbackStatus feedback }
 
 
 
@@ -1446,8 +1404,8 @@ msgToString msg =
         SelectCommunity _ _ ->
             [ "SelectCommunity" ]
 
-        HideFeedbackLocal ->
-            [ "HideFeedbackLocal" ]
+        GotFeedbackMsg _ ->
+            [ "GotFeedbackMsg" ]
 
         ClosedAddContactModal ->
             [ "ClosedAddContactModal" ]

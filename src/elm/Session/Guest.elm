@@ -20,6 +20,7 @@ import Route exposing (Route)
 import Session.Shared as Shared exposing (Shared)
 import Translation
 import UpdateResult as UR
+import View.Feedback as Feedback
 
 
 
@@ -87,6 +88,7 @@ type alias Model =
     , afterLoginRedirect : Maybe Route
     , community : CommunityStatus
     , isLoggingIn : Bool
+    , feedback : Feedback.Model
     }
 
 
@@ -109,6 +111,7 @@ initModel shared =
             Nothing ->
                 Default
     , isLoggingIn = False
+    , feedback = Feedback.Hidden
     }
 
 
@@ -189,6 +192,8 @@ view thisMsg page ({ shared } as model) content =
                     ]
                     [ viewPageHeader model shared
                         |> Html.map thisMsg
+                    , Feedback.view model.feedback
+                        |> Html.map (GotFeedbackMsg >> thisMsg)
                     , content
                     ]
                 ]
@@ -293,6 +298,7 @@ viewPageHeader model shared =
 type External
     = UpdatedGuest Model
     | LoggedIn Auth.SignInResponse Auth.Model
+    | SetFeedback Feedback.Model
 
 
 type alias UpdateResult =
@@ -306,6 +312,7 @@ type Msg
     | ClickedLanguage String
     | KeyDown String
     | CompletedLoadInvite (RemoteData (Graphql.Http.Error (Maybe Invite)) (Maybe Invite))
+    | GotFeedbackMsg Feedback.Msg
 
 
 update : Msg -> Model -> UpdateResult
@@ -353,6 +360,10 @@ update msg ({ shared } as model) =
         CompletedLoadInvite _ ->
             UR.init model
 
+        GotFeedbackMsg subMsg ->
+            { model | feedback = Feedback.update subMsg model.feedback }
+                |> UR.init
+
 
 
 -- TRANSFORM
@@ -383,3 +394,6 @@ msgToString msg =
 
         CompletedLoadInvite _ ->
             [ "CompletedLoadInvite" ]
+
+        GotFeedbackMsg _ ->
+            [ "GotFeedbackMsg" ]

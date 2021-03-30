@@ -44,6 +44,7 @@ import Task
 import UpdateResult as UR
 import Utils
 import Validate exposing (Validator, validate)
+import View.Feedback as Feedback
 import View.Form
 import View.Pin as Pin
 
@@ -450,9 +451,7 @@ viewLoginSteps isModal shared model loginStep =
                 LoginStepPIN ->
                     viewCreatePin
     in
-    [ div [ class "mx-4 mt-4 md:max-w-sm md:mx-auto" ]
-        [ viewAuthError shared model.loginError ]
-    , div [ class "sf-wrapper w-full px-4 md:max-w-sm md:mx-auto md:pt-20 md:px-0" ]
+    [ div [ class "sf-wrapper w-full px-4 md:max-w-sm md:mx-auto md:pt-20 md:px-0" ]
         stepBody
     ]
 
@@ -586,6 +585,7 @@ type alias SignInResponse =
 type ExternalMsg
     = ClickedCancel
     | CompletedAuth SignInResponse Model
+    | SetFeedback Feedback.Model
 
 
 trimPinNumber : Int -> String -> String -> String
@@ -787,8 +787,13 @@ update msg shared model =
                 |> UR.addExt (CompletedAuth signInResponse newModel)
 
         CompletedSignIn _ (RemoteData.Success Nothing) ->
-            { model | loginError = Just (t "error.unknown") }
+            let
+                errorString =
+                    t "error.unknown"
+            in
+            { model | loginError = Just errorString }
                 |> UR.init
+                |> UR.addExt (SetFeedback (Feedback.Shown Feedback.Failure errorString))
 
         CompletedSignIn _ (RemoteData.Failure err) ->
             loginFailedGraphql err model
@@ -799,7 +804,7 @@ update msg shared model =
         GotPrivateKeyLogin (Err err) ->
             UR.init
                 { model
-                    | loginError = Just err
+                    | loginError = Just (t err)
                     , status =
                         case model.status of
                             LoggingInWithPrivateKeyAccounts accounts form ->
@@ -808,6 +813,7 @@ update msg shared model =
                             _ ->
                                 model.status
                 }
+                |> UR.addExt (SetFeedback (Feedback.Shown Feedback.Failure (t err)))
 
         SubmittedLoginPIN ->
             if String.isEmpty model.form.enteredPin then
@@ -840,9 +846,13 @@ update msg shared model =
                     )
 
         GotPinLogin (Err err) ->
+            let
+                errorString =
+                    t err
+            in
             UR.init
                 { model
-                    | loginError = Just err
+                    | loginError = Just errorString
                     , status =
                         case model.status of
                             LoggingInWithPin ->
@@ -851,6 +861,7 @@ update msg shared model =
                             _ ->
                                 model.status
                 }
+                |> UR.addExt (SetFeedback (Feedback.Shown Feedback.Failure errorString))
 
         TogglePinVisibility ->
             { model | pinVisibility = not model.pinVisibility } |> UR.init
@@ -922,6 +933,7 @@ loginFailedGraphql httpError model =
                     , ( "container", Encode.string "chat-manager" )
                     ]
             }
+        |> UR.addExt (SetFeedback (Feedback.Shown Feedback.Failure "Auth failed"))
 
 
 jsAddressToMsg : List String -> Value -> Maybe Msg

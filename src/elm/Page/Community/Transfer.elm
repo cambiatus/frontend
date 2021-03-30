@@ -35,6 +35,7 @@ import Task
 import Transfer
 import UpdateResult as UR
 import Utils
+import View.Feedback as Feedback
 import View.Form.InputCounter
 
 
@@ -597,11 +598,7 @@ update msg model ({ shared } as loggedIn) =
                 Loaded c (SendingTransfer form) ->
                     { model | status = Loaded c (EditingTransfer form) }
                         |> UR.init
-                        |> UR.addExt
-                            (LoggedIn.ShowFeedback
-                                LoggedIn.Failure
-                                errorMessage
-                            )
+                        |> UR.addExt (LoggedIn.ShowFeedback Feedback.Failure errorMessage)
 
                 _ ->
                     onlyLogImpossible []

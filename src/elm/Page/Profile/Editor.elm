@@ -15,9 +15,10 @@ import Page
 import Profile exposing (Model)
 import RemoteData exposing (RemoteData)
 import Route
-import Session.LoggedIn exposing (External(..), FeedbackStatus(..))
+import Session.LoggedIn exposing (External(..))
 import Session.Shared exposing (Translators)
 import UpdateResult as UR
+import View.Feedback as Feedback
 
 
 
@@ -339,7 +340,7 @@ update msg model loggedIn =
 
                 showSuccessMsg =
                     if model.wasSaved then
-                        UR.addExt (ShowFeedback Success (t "profile.edit_success"))
+                        UR.addExt (ShowFeedback Feedback.Success (t "profile.edit_success"))
 
                     else
                         UR.addExt HideFeedback

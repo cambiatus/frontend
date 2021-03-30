@@ -38,10 +38,11 @@ import Page.ViewTransfer as ViewTransfer
 import Ports
 import Route exposing (Route)
 import Session.Guest as Guest
-import Session.LoggedIn as LoggedIn exposing (External(..), FeedbackVisibility(..))
+import Session.LoggedIn as LoggedIn exposing (External(..))
 import Shop
 import UpdateResult as UR exposing (UpdateResult)
 import Url exposing (Url)
+import View.Feedback as Feedback
 
 
 main : Program Value Model Msg
@@ -491,6 +492,16 @@ updateGuestUResult toStatus toMsg model uResult =
                       }
                     , Cmd.map (Page.GotLoggedInMsg >> GotPageMsg) cmd :: cmds_
                     )
+
+                Guest.SetFeedback feedback ->
+                    case m.session of
+                        Page.LoggedIn _ ->
+                            ( m, cmds_ )
+
+                        Page.Guest guest ->
+                            ( { m | session = Page.Guest { guest | feedback = feedback } }
+                            , cmds_
+                            )
         )
         ( { model | status = toStatus uResult.model }
         , []
@@ -546,11 +557,8 @@ updateLoggedInUResult toStatus toMsg model uResult =
 
                 LoggedIn.HideFeedback ->
                     case m.session of
-                        Page.LoggedIn loggedIn ->
-                            ( { m
-                                | session =
-                                    Page.LoggedIn { loggedIn | feedback = Hidden }
-                              }
+                        Page.LoggedIn _ ->
+                            ( hideFeedback m
                             , cmds_
                             )
 
@@ -587,11 +595,11 @@ hideFeedback model =
         Page.LoggedIn loggedIn ->
             { model
                 | session =
-                    Page.LoggedIn { loggedIn | feedback = Hidden }
+                    Page.LoggedIn { loggedIn | feedback = Feedback.Hidden }
             }
 
-        _ ->
-            model
+        Page.Guest guest ->
+            { model | session = Page.Guest { guest | feedback = Feedback.Hidden } }
 
 
 changeRouteTo : Maybe Route -> Model -> ( Model, Cmd Msg )

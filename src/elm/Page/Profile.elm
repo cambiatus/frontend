@@ -30,10 +30,11 @@ import Profile.Contact as Contact
 import PushSubscription exposing (PushSubscription)
 import RemoteData exposing (RemoteData)
 import Route
-import Session.LoggedIn as LoggedIn exposing (External(..), FeedbackStatus(..), ProfileStatus(..))
+import Session.LoggedIn as LoggedIn exposing (External(..), ProfileStatus(..))
 import Session.Shared exposing (Shared, Translators)
 import Task
 import UpdateResult as UR
+import View.Feedback as Feedback
 import View.Modal as Modal
 import View.Pin as Pin
 
@@ -755,7 +756,7 @@ update msg model loggedIn =
                     model
                         |> UR.init
                         |> UR.addCmd reloadProfile
-                        |> UR.addExt (ShowFeedback Success (t "community.kyc.delete.success"))
+                        |> UR.addExt (ShowFeedback Feedback.Success (t "community.kyc.delete.success"))
 
                 RemoteData.Failure err ->
                     model
@@ -852,7 +853,7 @@ update msg model loggedIn =
                 , newPin = Nothing
             }
                 |> UR.init
-                |> UR.addExt (ShowFeedback Success (t "profile.pin.successMsg"))
+                |> UR.addExt (ShowFeedback Feedback.Success (t "profile.pin.successMsg"))
 
         ClickedViewPrivateKeyAuth ->
             case LoggedIn.maybePrivateKey loggedIn of

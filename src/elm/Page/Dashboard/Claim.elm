@@ -22,6 +22,7 @@ import Strftime
 import Time
 import UpdateResult as UR
 import Utils
+import View.Feedback as Feedback
 
 
 
@@ -483,7 +484,7 @@ update msg model loggedIn =
                         , isValidated = True
                     }
                         |> UR.init
-                        |> UR.addExt (LoggedIn.ShowFeedback LoggedIn.Success (message value))
+                        |> UR.addExt (LoggedIn.ShowFeedback Feedback.Success (message value))
 
                 _ ->
                     { model
@@ -503,7 +504,7 @@ update msg model loggedIn =
                         , claimModalStatus = Claim.Closed
                     }
                         |> UR.init
-                        |> UR.addExt (LoggedIn.ShowFeedback LoggedIn.Failure errorMsg)
+                        |> UR.addExt (LoggedIn.ShowFeedback Feedback.Failure errorMsg)
 
                 _ ->
                     model |> UR.init

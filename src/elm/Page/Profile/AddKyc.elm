@@ -18,8 +18,9 @@ import Profile exposing (Model)
 import Profile.EditKycForm as KycForm
 import RemoteData exposing (RemoteData)
 import Route
-import Session.LoggedIn as LoggedIn exposing (External(..), FeedbackStatus(..), ProfileStatus(..))
+import Session.LoggedIn as LoggedIn exposing (External(..), ProfileStatus(..))
 import UpdateResult as UR
+import View.Feedback as Feedback
 
 
 
@@ -85,11 +86,7 @@ update msg model loggedIn =
                             (Route.Profile
                                 |> Route.replaceUrl loggedIn.shared.navKey
                             )
-                        |> UR.addExt
-                            (ShowFeedback
-                                Failure
-                                (t "community.kyc.add.restricted")
-                            )
+                        |> UR.addExt (ShowFeedback Feedback.Failure (t "community.kyc.add.restricted"))
 
                 Nothing ->
                     { model
@@ -139,7 +136,7 @@ update msg model loggedIn =
                         Just error ->
                             newModel
                                 |> UR.init
-                                |> UR.addExt (ShowFeedback Failure error)
+                                |> UR.addExt (ShowFeedback Feedback.Failure error)
 
                         Nothing ->
                             model
@@ -148,11 +145,7 @@ update msg model loggedIn =
                                     (Route.Profile
                                         |> Route.replaceUrl loggedIn.shared.navKey
                                     )
-                                |> UR.addExt
-                                    (ShowFeedback
-                                        Success
-                                        (t "community.kyc.add.success")
-                                    )
+                                |> UR.addExt (ShowFeedback Feedback.Success (t "community.kyc.add.success"))
 
                 _ ->
                     newModel |> UR.init
