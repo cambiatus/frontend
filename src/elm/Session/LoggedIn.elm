@@ -310,7 +310,7 @@ viewFeedback status message =
         , style "grid-template" "\". text x\" 100% / 10% 80% 10%"
         ]
         [ span
-            [ class "flex justify-center items-center transition duration-500 ease-in-out text-sm h-10 leading-snug text-white font-bold transform hover:-translate-y-1 hover:scale-110"
+            [ class "flex justify-center items-center text-sm h-10 leading-snug text-white font-bold transform hover:-translate-y-1 hover:scale-110"
             , style "grid-area" "text"
             ]
             [ text message ]
