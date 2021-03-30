@@ -18,7 +18,6 @@ module Auth exposing
     )
 
 import Api.Graphql
-import Asset.Icon as Icon
 import Browser.Dom as Dom
 import Browser.Events
 import Cambiatus.Mutation
@@ -28,8 +27,8 @@ import Graphql.Http
 import Graphql.Operation exposing (RootMutation)
 import Graphql.OptionalArgument as OptionalArgument
 import Graphql.SelectionSet exposing (SelectionSet, with)
-import Html exposing (Html, a, button, div, form, h2, img, label, li, p, span, strong, text, textarea, ul)
-import Html.Attributes exposing (autocomplete, autofocus, class, classList, disabled, for, id, placeholder, required, src, title, type_, value)
+import Html exposing (Html, a, button, div, form, img, label, li, p, span, strong, text, textarea, ul)
+import Html.Attributes exposing (autocomplete, autofocus, class, classList, disabled, for, id, placeholder, required, src, value)
 import Html.Events exposing (onClick, onInput, onSubmit)
 import Json.Decode as Decode
 import Json.Decode.Pipeline as Decode
@@ -69,15 +68,15 @@ init : Shared -> Model
 init shared =
     case shared.maybeAccount of
         Just ( _, True ) ->
-            { initModel | status = LoginWithPin }
+            initModel WithoutPrivateKey
 
         _ ->
-            initModel
+            initModel (Unauthenticated LoginStepPassphrase)
 
 
 initRegister : String -> Model
 initRegister pk =
-    { initModel | status = LoggedInWithPin pk }
+    initModel (WithPrivateKey pk)
 
 
 
@@ -95,7 +94,6 @@ subscriptions _ =
 
 type alias Model =
     { status : Status
-    , loginError : Maybe String
     , form : LoginFormData
     , isSigningIn : Bool
     , pinVisibility : Bool
@@ -104,10 +102,9 @@ type alias Model =
     }
 
 
-initModel : Model
-initModel =
-    { status = Options LoginStepPassphrase
-    , loginError = Nothing
+initModel : Status -> Model
+initModel status =
+    { status = status
     , form = initLoginFormData
     , isSigningIn = False
     , pinVisibility = True
@@ -116,12 +113,21 @@ initModel =
     }
 
 
+{-| Represents the state of the user's authentication. A user can be:
+
+  - Unauthenticated - The user needs to see a form to insert the 12 words and create a PIN
+  - Authenticated, but without theprivate key - This means the user is logged in,
+    but we don't have their PIN, so we can't get their private key. If we ever need
+    the user's private key, we should prompt them for their PIN
+  - Authenticated, with private key - This means the user is logged in and we
+    have access to their private key. The user can perform actions that need
+    authentication without having to type in their PIN
+
+-}
 type Status
-    = Options LoginStep
-    | LoggedInWithPrivateKey PrivateKey
-    | LoginWithPin
-    | LoggingInWithPin
-    | LoggedInWithPin PrivateKey
+    = Unauthenticated LoginStep
+    | WithoutPrivateKey
+    | WithPrivateKey PrivateKey
 
 
 type alias LoginFormData =
@@ -229,12 +235,10 @@ type alias PrivateKey =
 isAuth : Model -> Bool
 isAuth model =
     case model.status of
-        LoggedInWithPin _ ->
+        WithPrivateKey _ ->
             True
 
-        LoggedInWithPrivateKey _ ->
-            True
-
+        -- TODO - Should `WithoutPrivateKey` be considered authed here? (Check usage in other modules)
         _ ->
             False
 
@@ -242,10 +246,7 @@ isAuth model =
 maybePrivateKey : Model -> Maybe String
 maybePrivateKey model =
     case model.status of
-        LoggedInWithPin pk ->
-            Just pk
-
-        LoggedInWithPrivateKey pk ->
+        WithPrivateKey pk ->
             Just pk
 
         _ ->
@@ -259,35 +260,14 @@ maybePrivateKey model =
 view : Bool -> Shared -> Model -> List (Html Msg)
 view isModal shared model =
     case model.status of
-        Options loginStep ->
+        Unauthenticated loginStep ->
             viewLoginSteps isModal shared model loginStep
 
-        LoggedInWithPrivateKey _ ->
-            viewLoginSteps isModal shared model LoginStepPassphrase
+        WithoutPrivateKey ->
+            viewLoginWithPin isModal False shared model
 
-        LoginWithPin ->
-            case shared.maybeAccount of
-                Just ( _, True ) ->
-                    viewLoginWithPin isModal False shared model
-
-                _ ->
-                    viewLoginSteps isModal shared model LoginStepPassphrase
-
-        LoggingInWithPin ->
-            case shared.maybeAccount of
-                Just ( _, True ) ->
-                    viewLoginWithPin isModal True shared model
-
-                _ ->
-                    viewLoginSteps isModal shared model LoginStepPassphrase
-
-        LoggedInWithPin _ ->
-            case shared.maybeAccount of
-                Just ( _, True ) ->
-                    viewLoginWithPin isModal True shared model
-
-                _ ->
-                    viewLoginSteps isModal shared model LoginStepPassphrase
+        WithPrivateKey _ ->
+            viewLoginWithPin isModal True shared model
 
 
 type LoginStep
@@ -467,7 +447,6 @@ viewLoginWithPin isModal isDisabled shared model =
             ]
         , p [ class "text-sm" ]
             [ text <| t "auth.login.enterPinToContinue" ]
-        , viewAuthError shared model.loginError
         ]
     , Html.form
         [ onSubmit SubmittedLoginPIN
@@ -481,19 +460,6 @@ viewLoginWithPin isModal isDisabled shared model =
             [ text <| t "auth.login.continue" ]
         ]
     ]
-
-
-viewAuthError : Shared -> Maybe String -> Html Msg
-viewAuthError shared maybeLoginError =
-    case maybeLoginError of
-        Nothing ->
-            text ""
-
-        Just error ->
-            div [ class "bg-red border-lg rounded p-4 mt-2" ]
-                [ p [ class "text-white" ]
-                    [ text (shared.translators.t error) ]
-                ]
 
 
 viewFieldLabel : Translators -> String -> String -> Html msg
@@ -543,6 +509,7 @@ type alias SignInResponse =
 type ExternalMsg
     = ClickedCancel
     | CompletedAuth SignInResponse Model
+      -- TODO - Need to change this when isModal
     | SetFeedback Feedback.Model
 
 
@@ -580,7 +547,6 @@ update msg shared model =
                     { currentForm
                         | enteredPin = trimPinNumber 6 currentForm.enteredPin pin
                     }
-                , loginError = Nothing -- show validation errors only when form submitted
                 , problems = []
             }
                 |> UR.init
@@ -595,7 +561,6 @@ update msg shared model =
                     { currentForm
                         | enteredPinConfirmation = trimPinNumber 6 currentForm.enteredPinConfirmation pin
                     }
-                , loginError = Nothing -- show validation errors only when form is submitted
                 , problems = []
             }
                 |> UR.init
@@ -604,11 +569,7 @@ update msg shared model =
             UR.init model
 
         ClickedViewOptions ->
-            UR.init
-                { model
-                    | loginError = Nothing
-                    , status = Options LoginStepPassphrase
-                }
+            UR.init { model | status = Unauthenticated LoginStepPassphrase }
 
         ClickedViewLoginPinStep ->
             case validate passphraseValidator model.form of
@@ -625,10 +586,9 @@ update msg shared model =
                             { currentForm | passphrase = passphraseWithOnlySpaces }
                     in
                     { model
-                        | loginError = Nothing
-                        , form = newForm
+                        | form = newForm
                         , problems = []
-                        , status = Options LoginStepPIN
+                        , status = Unauthenticated LoginStepPIN
                     }
                         |> UR.init
                         |> UR.addCmd
@@ -651,7 +611,7 @@ update msg shared model =
                     }
             in
             case model.status of
-                Options LoginStepPassphrase ->
+                Unauthenticated LoginStepPassphrase ->
                     { model
                         | form = newForm
                         , problems = []
@@ -722,7 +682,7 @@ update msg shared model =
                     (Api.Graphql.mutation shared
                         Nothing
                         (signIn accountName shared Nothing)
-                        (CompletedSignIn (LoggedInWithPrivateKey privateKey))
+                        (CompletedSignIn (WithPrivateKey privateKey))
                     )
 
         CompletedSignIn status (RemoteData.Success (Just ({ token } as signInResponse))) ->
@@ -740,8 +700,8 @@ update msg shared model =
                 errorString =
                     t "error.unknown"
             in
-            { model | loginError = Just errorString }
-                |> UR.init
+            model
+                |> loginFailed
                 |> UR.addExt (SetFeedback (Feedback.Shown Feedback.Failure errorString))
 
         CompletedSignIn _ (RemoteData.Failure err) ->
@@ -751,33 +711,25 @@ update msg shared model =
             UR.init model
 
         GotPrivateKeyLogin (Err err) ->
-            UR.init
-                { model
-                    | loginError = Just (t err)
-                    , status = model.status
-                }
+            model
+                |> loginFailed
                 |> UR.addExt (SetFeedback (Feedback.Shown Feedback.Failure (t err)))
 
         SubmittedLoginPIN ->
-            if String.isEmpty model.form.enteredPin then
-                { model | loginError = Just "Please fill in all the PIN digits" }
-                    |> UR.init
-
-            else
-                let
-                    pinString =
-                        model.form.enteredPin
-                in
-                UR.init { model | status = LoggingInWithPin }
-                    |> UR.addPort
-                        { responseAddress = SubmittedLoginPIN
-                        , responseData = Encode.null
-                        , data =
-                            Encode.object
-                                [ ( "name", Encode.string "loginWithPin" )
-                                , ( "pin", Encode.string pinString )
-                                ]
-                        }
+            let
+                pinString =
+                    model.form.enteredPin
+            in
+            UR.init { model | isSigningIn = True }
+                |> UR.addPort
+                    { responseAddress = SubmittedLoginPIN
+                    , responseData = Encode.null
+                    , data =
+                        Encode.object
+                            [ ( "name", Encode.string "loginWithPin" )
+                            , ( "pin", Encode.string pinString )
+                            ]
+                    }
 
         GotPinLogin (Ok ( accountName, privateKey )) ->
             UR.init model
@@ -785,7 +737,7 @@ update msg shared model =
                     (Api.Graphql.mutation shared
                         Nothing
                         (signIn accountName shared Nothing)
-                        (CompletedSignIn (LoggedInWithPrivateKey privateKey))
+                        (CompletedSignIn (WithPrivateKey privateKey))
                     )
 
         GotPinLogin (Err err) ->
@@ -793,17 +745,8 @@ update msg shared model =
                 errorString =
                     t err
             in
-            UR.init
-                { model
-                    | loginError = Just errorString
-                    , status =
-                        case model.status of
-                            LoggingInWithPin ->
-                                LoginWithPin
-
-                            _ ->
-                                model.status
-                }
+            model
+                |> loginFailed
                 |> UR.addExt (SetFeedback (Feedback.Shown Feedback.Failure errorString))
 
         TogglePinVisibility ->
@@ -815,14 +758,14 @@ update msg shared model =
         KeyPressed isEnter ->
             if isEnter then
                 case model.status of
-                    Options LoginStepPassphrase ->
+                    Unauthenticated LoginStepPassphrase ->
                         UR.init model
                             |> UR.addCmd
                                 (Task.succeed ClickedViewLoginPinStep
                                     |> Task.perform identity
                                 )
 
-                    Options LoginStepPIN ->
+                    Unauthenticated LoginStepPIN ->
                         UR.init model
                             |> UR.addCmd
                                 (Task.succeed (SubmittedLoginPrivateKey model.form)
@@ -849,20 +792,29 @@ signIn accountName shared maybeInvitationId =
         )
 
 
+loginFailed : Model -> UpdateResult
+loginFailed model =
+    { model
+        | status =
+            case model.status of
+                WithoutPrivateKey ->
+                    WithoutPrivateKey
+
+                Unauthenticated _ ->
+                    Unauthenticated LoginStepPassphrase
+
+                WithPrivateKey _ ->
+                    WithoutPrivateKey
+        , form = initLoginFormData
+        , isSigningIn = False
+    }
+        |> UR.init
+
+
 loginFailedGraphql : Graphql.Http.Error e -> Model -> UpdateResult
 loginFailedGraphql httpError model =
-    UR.init
-        { model
-            | loginError =
-                Just "Auth failed"
-            , status =
-                case model.status of
-                    LoggingInWithPin ->
-                        LoginWithPin
-
-                    _ ->
-                        Options LoginStepPassphrase
-        }
+    model
+        |> loginFailed
         |> UR.addCmd (Log.graphqlError httpError)
         |> UR.addPort
             { responseAddress = Ignored
