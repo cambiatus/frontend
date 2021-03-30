@@ -326,10 +326,6 @@ viewFeedback status message =
 
 viewHelper : (Msg -> pageMsg) -> Page -> Profile.Model -> Model -> Html pageMsg -> Html pageMsg
 viewHelper pageMsg page profile_ ({ shared } as model) content =
-    let
-        { t } =
-            shared.translators
-    in
     div
         [ class "min-h-screen flex flex-col" ]
         ([ div [ class "bg-white" ]
