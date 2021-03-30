@@ -118,8 +118,6 @@ initModel =
 
 type Status
     = Options LoginStep
-    | LoginWithPrivateKeyAccounts (List Eos.Name) LoginFormData
-    | LoggingInWithPrivateKeyAccounts (List Eos.Name) LoginFormData
     | LoggedInWithPrivateKey PrivateKey
     | LoginWithPin
     | LoggingInWithPin
@@ -263,12 +261,6 @@ view isModal shared model =
     case model.status of
         Options loginStep ->
             viewLoginSteps isModal shared model loginStep
-
-        LoginWithPrivateKeyAccounts accounts form ->
-            viewMultipleAccount accounts form False shared model
-
-        LoggingInWithPrivateKeyAccounts accounts form ->
-            viewMultipleAccount accounts form True shared model
 
         LoggedInWithPrivateKey _ ->
             viewLoginSteps isModal shared model LoginStepPassphrase
@@ -454,40 +446,6 @@ viewLoginSteps isModal shared model loginStep =
     [ div [ class "sf-wrapper w-full px-4 md:max-w-sm md:mx-auto md:pt-20 md:px-0" ]
         stepBody
     ]
-
-
-viewMultipleAccount : List Eos.Name -> LoginFormData -> Bool -> Shared -> Model -> List (Html Msg)
-viewMultipleAccount accounts form isDisabled shared model =
-    let
-        text_ s =
-            Html.text (shared.translators.t s)
-
-        btnClass =
-            class "btn btn--outline btn--login"
-    in
-    div [ class "card__login-header" ]
-        [ h2 [ class "card__title" ]
-            [ text_ "auth.chooseAccount" ]
-        , viewAuthError shared model.loginError
-        , button
-            [ class "card__close-btn"
-            , onClick ClickedViewOptions
-            , type_ "button"
-            , disabled isDisabled
-            , title (shared.translators.t "menu.cancel")
-            ]
-            [ Icon.close "" ]
-        ]
-        :: List.map
-            (\a ->
-                button
-                    [ btnClass
-                    , disabled isDisabled
-                    , onClick (ClickedPrivateKeyAccount a form)
-                    ]
-                    [ text (Eos.nameToString a) ]
-            )
-            accounts
 
 
 {-| Popup asking the logged-in user to enter the PIN when needed.
@@ -745,16 +703,7 @@ update msg shared model =
                 }
 
         ClickedPrivateKeyAccount accountName form ->
-            UR.init
-                { model
-                    | status =
-                        case model.status of
-                            LoginWithPrivateKeyAccounts accounts frm ->
-                                LoggingInWithPrivateKeyAccounts accounts frm
-
-                            _ ->
-                                model.status
-                }
+            UR.init model
                 |> UR.addPort
                     { responseAddress = ClickedPrivateKeyAccount accountName form
                     , responseData = Encode.null
@@ -805,13 +754,7 @@ update msg shared model =
             UR.init
                 { model
                     | loginError = Just (t err)
-                    , status =
-                        case model.status of
-                            LoggingInWithPrivateKeyAccounts accounts form ->
-                                LoginWithPrivateKeyAccounts accounts form
-
-                            _ ->
-                                model.status
+                    , status = model.status
                 }
                 |> UR.addExt (SetFeedback (Feedback.Shown Feedback.Failure (t err)))
 
@@ -914,9 +857,6 @@ loginFailedGraphql httpError model =
                 Just "Auth failed"
             , status =
                 case model.status of
-                    LoggingInWithPrivateKeyAccounts accounts form ->
-                        LoginWithPrivateKeyAccounts accounts form
-
                     LoggingInWithPin ->
                         LoginWithPin
 
