@@ -134,7 +134,6 @@ type Page
     = Register
     | Login
     | Shop
-    | PaymentHistory
     | Other
 
 
