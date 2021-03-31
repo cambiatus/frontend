@@ -340,7 +340,7 @@ viewLoginSteps isModal shared model loginStep =
                         , id passphraseId
                         , value model.form.passphrase
                         , onInput EnteredPassphrase
-                        , onSubmit ClickedViewLoginPinStep
+                        , onSubmit ClickedNextStep
                         , required True
                         , autocomplete False
                         ]
@@ -369,7 +369,7 @@ viewLoginSteps isModal shared model loginStep =
                     text ""
                 , button
                     [ class buttonClass
-                    , onClick ClickedViewLoginPinStep
+                    , onClick ClickedNextStep
                     ]
                     [ text (t "dashboard.next") ]
                 ]
@@ -401,7 +401,7 @@ viewLoginSteps isModal shared model loginStep =
                     [ class buttonClass
                     , class "mt-10"
                     , disabled model.isSigningIn
-                    , onClick (SubmittedLoginPrivateKey model.form)
+                    , onClick (SubmittedForm model.form)
                     ]
                     [ text <|
                         t
@@ -483,21 +483,23 @@ type alias UpdateResult =
 
 type Msg
     = Ignored
-    | ClickedViewOptions
-    | ClickedViewLoginPinStep
+      -- Input
     | EnteredPassphrase String
-    | SubmittedLoginPrivateKey LoginFormData
-    | GotMultipleAccountsLogin (List Eos.Name)
-    | ClickedPrivateKeyAccount Eos.Name LoginFormData
-    | GotPrivateKeyLogin (Result String ( Eos.Name, String ))
-    | SubmittedLoginPIN
-    | GotPinLogin (Result String ( Eos.Name, String ))
-    | CompletedSignIn Status (RemoteData (Graphql.Http.Error (Maybe SignInResponse)) (Maybe SignInResponse))
+    | EnteredPin String
+    | EnteredPinConf String
     | TogglePinVisibility
     | TogglePinConfirmationVisibility
     | KeyPressed Bool
-    | EnteredPin String
-    | EnteredPinConf String
+      -- Submission
+    | ClickedNextStep
+    | SubmittedForm LoginFormData
+    | SubmittedLoginPIN
+    | CompletedSignIn Status (RemoteData (Graphql.Http.Error (Maybe SignInResponse)) (Maybe SignInResponse))
+      -- Response
+    | GotMultipleAccountsLogin (List Eos.Name)
+    | ClickedPrivateKeyAccount Eos.Name LoginFormData
+    | GotPrivateKeyLogin (Result String ( Eos.Name, String ))
+    | GotPinLogin (Result String ( Eos.Name, String ))
 
 
 type alias SignInResponse =
@@ -568,10 +570,7 @@ update msg shared model =
         Ignored ->
             UR.init model
 
-        ClickedViewOptions ->
-            UR.init { model | status = Unauthenticated LoginStepPassphrase }
-
-        ClickedViewLoginPinStep ->
+        ClickedNextStep ->
             case validate passphraseValidator model.form of
                 Ok _ ->
                     let
@@ -621,7 +620,7 @@ update msg shared model =
                 _ ->
                     UR.init model
 
-        SubmittedLoginPrivateKey form ->
+        SubmittedForm form ->
             case validate pinValidator form of
                 Ok _ ->
                     let
@@ -637,7 +636,7 @@ update msg shared model =
                     }
                         |> UR.init
                         |> UR.addPort
-                            { responseAddress = SubmittedLoginPrivateKey form
+                            { responseAddress = SubmittedForm form
                             , responseData = Encode.null
                             , data =
                                 Encode.object
@@ -685,6 +684,11 @@ update msg shared model =
                         (CompletedSignIn (WithPrivateKey privateKey))
                     )
 
+        GotPrivateKeyLogin (Err err) ->
+            model
+                |> loginFailed
+                |> UR.addExt (SetFeedback (Feedback.Shown Feedback.Failure (t err)))
+
         CompletedSignIn status (RemoteData.Success (Just ({ token } as signInResponse))) ->
             let
                 newModel =
@@ -709,11 +713,6 @@ update msg shared model =
 
         CompletedSignIn _ _ ->
             UR.init model
-
-        GotPrivateKeyLogin (Err err) ->
-            model
-                |> loginFailed
-                |> UR.addExt (SetFeedback (Feedback.Shown Feedback.Failure (t err)))
 
         SubmittedLoginPIN ->
             let
@@ -761,14 +760,14 @@ update msg shared model =
                     Unauthenticated LoginStepPassphrase ->
                         UR.init model
                             |> UR.addCmd
-                                (Task.succeed ClickedViewLoginPinStep
+                                (Task.succeed ClickedNextStep
                                     |> Task.perform identity
                                 )
 
                     Unauthenticated LoginStepPIN ->
                         UR.init model
                             |> UR.addCmd
-                                (Task.succeed (SubmittedLoginPrivateKey model.form)
+                                (Task.succeed (SubmittedForm model.form)
                                     |> Task.perform identity
                                 )
 
@@ -871,16 +870,13 @@ msgToString msg =
         CompletedSignIn _ _ ->
             [ "CompletedSignIn" ]
 
-        ClickedViewOptions ->
-            [ "ClickedViewOptions" ]
-
-        ClickedViewLoginPinStep ->
+        ClickedNextStep ->
             [ "ClickedViewLoginPinStep" ]
 
         EnteredPassphrase _ ->
             [ "EnteredPrivateKey" ]
 
-        SubmittedLoginPrivateKey _ ->
+        SubmittedForm _ ->
             [ "SubmittedLoginPrivateKey" ]
 
         GotMultipleAccountsLogin _ ->
