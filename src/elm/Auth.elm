@@ -5,7 +5,6 @@ module Auth exposing
     , Msg
     , SignInResponse
     , init
-    , initRegister
     , isAuth
     , jsAddressToMsg
     , maybePrivateKey
@@ -28,7 +27,7 @@ import Graphql.Operation exposing (RootMutation)
 import Graphql.OptionalArgument as OptionalArgument
 import Graphql.SelectionSet exposing (SelectionSet, with)
 import Html exposing (Html, a, button, div, form, img, label, li, p, span, strong, text, textarea, ul)
-import Html.Attributes exposing (autocomplete, autofocus, class, classList, disabled, for, id, placeholder, required, src, value)
+import Html.Attributes exposing (autocomplete, autofocus, class, disabled, for, id, placeholder, required, src, value)
 import Html.Events exposing (onClick, onInput, onSubmit)
 import Json.Decode as Decode
 import Json.Decode.Pipeline as Decode
@@ -74,11 +73,6 @@ init shared =
             initModel (Unauthenticated LoginStepPassphrase)
 
 
-initRegister : String -> Model
-initRegister pk =
-    initModel (WithPrivateKey pk)
-
-
 
 -- SUBSCRIPTIONS
 
@@ -95,6 +89,7 @@ subscriptions _ =
 type alias Model =
     { status : Status
     , form : LoginFormData
+    , error : Maybe String
     , isSigningIn : Bool
     , pinVisibility : Bool
     , pinConfirmationVisibility : Bool
@@ -106,6 +101,7 @@ initModel : Status -> Model
 initModel status =
     { status = status
     , form = initLoginFormData
+    , error = Nothing
     , isSigningIn = False
     , pinVisibility = True
     , pinConfirmationVisibility = True
@@ -257,17 +253,17 @@ maybePrivateKey model =
 -- VIEW
 
 
-view : Bool -> Shared -> Model -> List (Html Msg)
-view isModal shared model =
+view : Shared -> Model -> List (Html Msg)
+view shared model =
     case model.status of
         Unauthenticated loginStep ->
-            viewLoginSteps isModal shared model loginStep
+            viewUnauthenticated shared model loginStep
 
         WithoutPrivateKey ->
-            viewLoginWithPin isModal False shared model
+            viewAuthenticated shared model
 
         WithPrivateKey _ ->
-            viewLoginWithPin isModal True shared model
+            viewAuthenticated shared model
 
 
 type LoginStep
@@ -275,8 +271,10 @@ type LoginStep
     | LoginStepPIN
 
 
-viewLoginSteps : Bool -> Shared -> Model -> LoginStep -> List (Html Msg)
-viewLoginSteps isModal shared model loginStep =
+{-| The view that is presented to an unauthenticated user (the login page)
+-}
+viewUnauthenticated : Shared -> Model -> LoginStep -> List (Html Msg)
+viewUnauthenticated shared model loginStep =
     let
         { t, tr } =
             shared.translators
@@ -357,16 +355,12 @@ viewLoginSteps isModal shared model loginStep =
                 , ul [ class "form-error-on-dark-bg absolute" ] errors
                 ]
             , div [ class "sf-footer" ]
-                [ if not isModal then
-                    p [ class "text-white text-body text-center mt-16 mb-6 block" ]
-                        [ text (t "auth.login.register")
-                        , a [ Route.href (Route.Register Nothing Nothing), class "text-orange-300 underline" ]
-                            [ text (t "auth.login.registerLink")
-                            ]
+                [ p [ class "text-white text-body text-center mt-16 mb-6 block" ]
+                    [ text (t "auth.login.register")
+                    , a [ Route.href (Route.Register Nothing Nothing), class "text-orange-300 underline" ]
+                        [ text (t "auth.login.registerLink")
                         ]
-
-                  else
-                    text ""
+                    ]
                 , button
                     [ class buttonClass
                     , onClick ClickedNextStep
@@ -428,18 +422,30 @@ viewLoginSteps isModal shared model loginStep =
     ]
 
 
-{-| Popup asking the logged-in user to enter the PIN when needed.
+{-| Modal that asks for the user's PIN whenever needed. They must be authenticated
+already (`WithPrivateKey` or `WithoutPrivateKey`)
 -}
-viewLoginWithPin : Bool -> Bool -> Shared -> Model -> List (Html Msg)
-viewLoginWithPin isModal isDisabled shared model =
+viewAuthenticated : Shared -> Model -> List (Html Msg)
+viewAuthenticated shared model =
+    -- TODO - Better visualization for when isSigningIn
     let
         { t } =
             shared.translators
 
-        nonModalClasses =
-            "w-full px-4 md:max-w-sm md:mx-auto md:px-0 "
+        isDisabled =
+            model.isSigningIn
+                || (case model.status of
+                        WithPrivateKey _ ->
+                            True
+
+                        WithoutPrivateKey ->
+                            False
+
+                        Unauthenticated _ ->
+                            True
+                   )
     in
-    [ div [ classList [ ( nonModalClasses ++ "md:pt-20 text-white", not isModal ) ] ]
+    [ div []
         [ p
             [ class "modal-header px-0"
             ]
@@ -448,10 +454,7 @@ viewLoginWithPin isModal isDisabled shared model =
         , p [ class "text-sm" ]
             [ text <| t "auth.login.enterPinToContinue" ]
         ]
-    , Html.form
-        [ onSubmit SubmittedLoginPIN
-        , classList [ ( nonModalClasses, not isModal ) ]
-        ]
+    , Html.form [ onSubmit SubmittedLoginPIN ]
         [ viewPin model shared
         , button
             [ class "button button-primary w-full"
@@ -511,7 +514,6 @@ type alias SignInResponse =
 type ExternalMsg
     = ClickedCancel
     | CompletedAuth SignInResponse Model
-      -- TODO - Need to change this when isModal
     | SetFeedback Feedback.Model
 
 
@@ -687,7 +689,7 @@ update msg shared model =
         GotPrivateKeyLogin (Err err) ->
             model
                 |> loginFailed
-                |> UR.addExt (SetFeedback (Feedback.Shown Feedback.Failure (t err)))
+                |> addError (t err)
 
         CompletedSignIn status (RemoteData.Success (Just ({ token } as signInResponse))) ->
             let
@@ -700,13 +702,9 @@ update msg shared model =
                 |> UR.addExt (CompletedAuth signInResponse newModel)
 
         CompletedSignIn _ (RemoteData.Success Nothing) ->
-            let
-                errorString =
-                    t "error.unknown"
-            in
             model
                 |> loginFailed
-                |> UR.addExt (SetFeedback (Feedback.Shown Feedback.Failure errorString))
+                |> addError (t "error.unknown")
 
         CompletedSignIn _ (RemoteData.Failure err) ->
             loginFailedGraphql err model
@@ -740,13 +738,9 @@ update msg shared model =
                     )
 
         GotPinLogin (Err err) ->
-            let
-                errorString =
-                    t err
-            in
             model
                 |> loginFailed
-                |> UR.addExt (SetFeedback (Feedback.Shown Feedback.Failure errorString))
+                |> addError (t err)
 
         TogglePinVisibility ->
             { model | pinVisibility = not model.pinVisibility } |> UR.init
@@ -791,6 +785,29 @@ signIn accountName shared maybeInvitationId =
         )
 
 
+addError : String -> UpdateResult -> UpdateResult
+addError error uResult =
+    let
+        isModal =
+            case uResult.model.status of
+                WithPrivateKey _ ->
+                    True
+
+                WithoutPrivateKey ->
+                    True
+
+                Unauthenticated _ ->
+                    False
+    in
+    if isModal then
+        uResult
+            |> UR.mapModel (\m -> { m | error = Just error })
+
+    else
+        uResult
+            |> UR.addExt (SetFeedback (Feedback.Shown Feedback.Failure error))
+
+
 loginFailed : Model -> UpdateResult
 loginFailed model =
     { model
@@ -824,7 +841,8 @@ loginFailedGraphql httpError model =
                     , ( "container", Encode.string "chat-manager" )
                     ]
             }
-        |> UR.addExt (SetFeedback (Feedback.Shown Feedback.Failure "Auth failed"))
+        -- TODO - I18N
+        |> addError "Auth failed"
 
 
 jsAddressToMsg : List String -> Value -> Maybe Msg
@@ -933,6 +951,17 @@ viewPin ({ form } as model) shared =
         errors =
             List.filter isPinError model.problems
                 |> List.map (\( _, err ) -> err)
+
+        modalErrors =
+            case ( model.status, model.error ) of
+                ( WithPrivateKey _, Just error ) ->
+                    [ error ]
+
+                ( WithoutPrivateKey, Just error ) ->
+                    [ error ]
+
+                _ ->
+                    []
     in
     Pin.view
         shared
@@ -942,7 +971,7 @@ viewPin ({ form } as model) shared =
         , onInputMsg = EnteredPin
         , onToggleMsg = TogglePinVisibility
         , isVisible = model.pinVisibility
-        , errors = errors
+        , errors = modalErrors ++ errors
         }
 
 

@@ -338,7 +338,7 @@ viewHelper pageMsg page profile_ ({ shared } as model) content =
                     , isVisible = model.showAuthModal
                     }
                     |> Modal.withBody
-                        (Auth.view True shared model.auth
+                        (Auth.view shared model.auth
                             |> List.map (Html.map GotAuthMsg)
                         )
                     |> Modal.toHtml

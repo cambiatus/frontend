@@ -49,7 +49,7 @@ view : Guest.Model -> Model -> { title : String, content : Html Msg }
 view guest model =
     let
         authView =
-            Auth.view False guest.shared model
+            Auth.view guest.shared model
                 |> List.map (Html.map GotAuthMsg)
     in
     { title =
