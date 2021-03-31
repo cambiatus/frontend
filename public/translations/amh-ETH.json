@@ -140,7 +140,9 @@
             "toggle": "የግል ቁልፍ መጠቀም እፈልጋልሁ",
             "notPassphraseError": "እባኮን , 12 ቃላትን ያስገቡ",
             "notLatinLettersError": "እባኮን , የላትን ፊደል ብቻ ይጠቀሙ",
-            "atLeastThreeLettersError": "ሁሉም ቃላት ቢያንስ 3 ፊደል ያላቸዉ መሆን አለበት"
+            "atLeastThreeLettersError": "ሁሉም ቃላት ቢያንስ 3 ፊደል ያላቸዉ መሆን አለበት",
+            "paste": "ለጥፍ",
+            "pasted": "ተለጠፈ"
           }
         },
         "submit": "ግባ",

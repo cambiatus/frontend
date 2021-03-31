@@ -174,7 +174,9 @@
           "toggle": "Vull utilitzar la clau privada",
           "notPassphraseError": "Introduïu 12 paraules",
           "notLatinLettersError": "Si us plau, utilitzeu només lletres bàsiques llatines",
-          "atLeastThreeLettersError": "Totes les paraules han de tenir almenys 3 lletres"
+          "atLeastThreeLettersError": "Totes les paraules han de tenir almenys 3 lletres",
+          "paste": "Enganxa",
+          "pasted": "Enganxat"
         }
       },
       "submit": "Inicieu la sessió",

@@ -27,7 +27,7 @@ import Graphql.Operation exposing (RootMutation)
 import Graphql.OptionalArgument as OptionalArgument
 import Graphql.SelectionSet exposing (SelectionSet, with)
 import Html exposing (Html, a, button, div, form, img, label, li, p, span, strong, text, textarea, ul)
-import Html.Attributes exposing (autocomplete, autofocus, class, disabled, for, id, placeholder, required, src, value)
+import Html.Attributes exposing (autocomplete, autofocus, class, classList, disabled, for, id, placeholder, required, src, type_, value)
 import Html.Events exposing (onClick, onInput, onSubmit)
 import Json.Decode as Decode
 import Json.Decode.Pipeline as Decode
@@ -128,6 +128,7 @@ type Status
 
 type alias LoginFormData =
     { passphrase : String
+    , hasPasted : Bool
     , usePin : Maybe String
     , enteredPin : String
     , enteredPinConfirmation : String
@@ -137,6 +138,7 @@ type alias LoginFormData =
 initLoginFormData : LoginFormData
 initLoginFormData =
     { passphrase = ""
+    , hasPasted = False
     , usePin = Nothing
     , enteredPin = ""
     , enteredPinConfirmation = ""
@@ -288,6 +290,27 @@ viewUnauthenticated shared model loginStep =
         pClass =
             "text-white text-body mb-5"
 
+        viewPasteButton =
+            if shared.canReadClipboard then
+                button
+                    [ class "absolute bottom-0 left-0 button m-2"
+                    , classList
+                        [ ( "button-secondary", not model.form.hasPasted )
+                        , ( "button-primary", model.form.hasPasted )
+                        ]
+                    , type_ "button"
+                    , onClick ClickedPaste
+                    ]
+                    [ if model.form.hasPasted then
+                        text (t "auth.login.wordsMode.input.pasted")
+
+                      else
+                        text (t "auth.login.wordsMode.input.paste")
+                    ]
+
+            else
+                text ""
+
         viewPassphrase =
             let
                 passphraseId =
@@ -325,7 +348,8 @@ viewUnauthenticated shared model loginStep =
                 , viewFieldLabel shared.translators "auth.login.wordsMode.input" passphraseId
                 , div [ class "relative" ]
                     [ textarea
-                        [ class "form-textarea h-19 min-w-full block"
+                        [ class "form-textarea min-h-19 min-w-full block"
+                        , classList [ ( "pb-16", shared.canReadClipboard ) ]
                         , placeholder (t "auth.login.wordsMode.input.placeholder")
                         , View.Form.noGrammarly
                         , autofocus True
@@ -343,6 +367,7 @@ viewUnauthenticated shared model loginStep =
                         , autocomplete False
                         ]
                         []
+                    , viewPasteButton
                     , div [ class "input-label pr-1 absolute right-0 text-white font-bold mt-1 text-right" ]
                         [ text <|
                             tr
@@ -493,6 +518,8 @@ type Msg
     | TogglePinVisibility
     | TogglePinConfirmationVisibility
     | KeyPressed Bool
+    | ClickedPaste
+    | GotClipboardContent (Maybe String)
       -- Submission
     | ClickedNextStep
     | SubmittedForm LoginFormData
@@ -609,6 +636,7 @@ update msg shared model =
                 newForm =
                     { currentForm
                         | passphrase = phrase
+                        , hasPasted = False
                     }
             in
             case model.status of
@@ -771,6 +799,34 @@ update msg shared model =
             else
                 UR.init model
 
+        ClickedPaste ->
+            UR.init model
+                |> UR.addPort
+                    { responseAddress = ClickedPaste
+                    , responseData = Encode.null
+                    , data =
+                        Encode.object [ ( "name", Encode.string "readClipboard" ) ]
+                    }
+
+        GotClipboardContent Nothing ->
+            -- Browser doesn't support the clipboard API
+            UR.init model
+                |> UR.logImpossible msg [ "ClipboardApiNotSupported" ]
+
+        GotClipboardContent (Just content) ->
+            let
+                form =
+                    model.form
+            in
+            { model
+                | form =
+                    { form
+                        | passphrase = content
+                        , hasPasted = True
+                    }
+            }
+                |> UR.init
+
 
 signIn : Eos.Name -> Shared -> Maybe String -> SelectionSet (Maybe SignInResponse) RootMutation
 signIn accountName shared maybeInvitationId =
@@ -857,6 +913,14 @@ jsAddressToMsg addr val =
         "SubmittedLoginPIN" :: [] ->
             decodeAccountNameOrStringError GotPinLogin val
 
+        "ClickedPaste" :: [] ->
+            Decode.decodeValue
+                (Decode.succeed GotClipboardContent
+                    |> Decode.required "clipboardContent" (Decode.nullable Decode.string)
+                )
+                val
+                |> Result.toMaybe
+
         _ ->
             Nothing
 
@@ -926,6 +990,12 @@ msgToString msg =
 
         KeyPressed _ ->
             [ "KeyPressed" ]
+
+        ClickedPaste ->
+            [ "ClickedPaste" ]
+
+        GotClipboardContent _ ->
+            [ "GotClipboardContent" ]
 
 
 viewPin : Model -> Shared -> Html Msg

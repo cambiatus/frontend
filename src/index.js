@@ -83,6 +83,10 @@ function getUserLanguage () {
   )
 }
 
+function canReadClipboard () {
+  return navigator.clipboard && !!navigator.clipboard.readText
+}
+
 function flags () {
   const user = JSON.parse(window.localStorage.getItem(USER_KEY))
   return {
@@ -100,7 +104,8 @@ function flags () {
     allowCommunityCreation: config.allowCommunityCreation,
     selectedCommunity: getSelectedCommunity() || config.selectedCommunity,
     tokenContract: config.tokenContract,
-    communityContract: config.communityContract
+    communityContract: config.communityContract,
+    canReadClipboard: canReadClipboard()
   }
 }
 
@@ -943,6 +948,21 @@ async function handleJavascriptPort (arg) {
         address: arg.responseAddress,
         addressData: arg.responseData
       }
+      app.ports.javascriptInPort.send(response)
+      break
+    }
+    case 'readClipboard': {
+      debugLog('readClipboard port started', '')
+      const response = {
+        address: arg.responseAddress,
+        addressData: arg.responseData,
+        clipboardContent: null
+      }
+
+      if (canReadClipboard()) {
+        response.clipboardContent = await navigator.clipboard.readText()
+      }
+
       app.ports.javascriptInPort.send(response)
       break
     }

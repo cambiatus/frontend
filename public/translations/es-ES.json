@@ -174,7 +174,9 @@
           "toggle": "Quiero usar la clave privada",
           "notPassphraseError": "Por favor, ingrese sus 12 palabras",
           "notLatinLettersError": "Por favor, use solo letras",
-          "atLeastThreeLettersError": "Todas las palabras deben tener al menos 3 letras."
+          "atLeastThreeLettersError": "Todas las palabras deben tener al menos 3 letras.",
+          "paste": "Pegar",
+          "pasted": "Pegado"
         }
       },
       "submit": "Iniciar sesión",

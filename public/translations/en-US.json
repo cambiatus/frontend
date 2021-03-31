@@ -174,7 +174,9 @@
           "toggle": "I want to use the Private Key",
           "notPassphraseError": "Please, enter 12 words",
           "notLatinLettersError": "Please, use only basic Latin letters",
-          "atLeastThreeLettersError": "All words should have at least 3 letters"
+          "atLeastThreeLettersError": "All words should have at least 3 letters",
+          "paste": "Paste",
+          "pasted": "Pasted"
         }
       },
       "submit": "Sign In",
