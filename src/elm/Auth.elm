@@ -623,6 +623,7 @@ update msg shared model =
                             (Dom.focus "pinInput"
                                 |> Task.attempt (\_ -> Ignored)
                             )
+                        |> UR.addExt (SetFeedback Feedback.Hidden)
 
                 Err errors ->
                     { model | problems = errors }
@@ -646,6 +647,7 @@ update msg shared model =
                         , problems = []
                     }
                         |> UR.init
+                        |> UR.addExt (SetFeedback Feedback.Hidden)
 
                 _ ->
                     UR.init model
@@ -807,6 +809,11 @@ update msg shared model =
                     , data =
                         Encode.object [ ( "name", Encode.string "readClipboard" ) ]
                     }
+                |> UR.addCmd
+                    (Dom.focus "passphrase"
+                        |> Task.attempt (\_ -> Ignored)
+                    )
+                |> UR.addExt (SetFeedback Feedback.Hidden)
 
         GotClipboardContent Nothing ->
             -- Browser doesn't support the clipboard API
@@ -821,9 +828,10 @@ update msg shared model =
             { model
                 | form =
                     { form
-                        | passphrase = content
+                        | passphrase = String.trim content
                         , hasPasted = True
                     }
+                , problems = []
             }
                 |> UR.init
 
