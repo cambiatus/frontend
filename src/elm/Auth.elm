@@ -737,7 +737,19 @@ update msg shared model =
                 |> addError (t "error.unknown")
 
         CompletedSignIn _ (RemoteData.Failure err) ->
-            loginFailedGraphql err model
+            model
+                |> loginFailed
+                |> UR.addCmd (Log.graphqlError err)
+                |> UR.addPort
+                    { responseAddress = Ignored
+                    , responseData = Encode.null
+                    , data =
+                        Encode.object
+                            [ ( "name", Encode.string "logout" )
+                            , ( "container", Encode.string "chat-manager" )
+                            ]
+                    }
+                |> addError (t "auth.failed")
 
         CompletedSignIn _ _ ->
             UR.init model
@@ -889,24 +901,6 @@ loginFailed model =
         , isSigningIn = False
     }
         |> UR.init
-
-
-loginFailedGraphql : Graphql.Http.Error e -> Model -> UpdateResult
-loginFailedGraphql httpError model =
-    model
-        |> loginFailed
-        |> UR.addCmd (Log.graphqlError httpError)
-        |> UR.addPort
-            { responseAddress = Ignored
-            , responseData = Encode.null
-            , data =
-                Encode.object
-                    [ ( "name", Encode.string "logout" )
-                    , ( "container", Encode.string "chat-manager" )
-                    ]
-            }
-        -- TODO - I18N
-        |> addError "Auth failed"
 
 
 jsAddressToMsg : List String -> Value -> Maybe Msg

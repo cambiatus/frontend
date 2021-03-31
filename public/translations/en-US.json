@@ -152,6 +152,7 @@
     "chooseAccount": "Choose an Account",
     "required": "Authentication required for this action",
     "pin_instr": "6 numbers",
+    "failed": "Authentication failed",
     "login": {
       "modalFormTitle": "Enter your PIN",
       "enterPinToContinue": "Please, enter your current security PIN to continue.",

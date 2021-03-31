@@ -152,6 +152,7 @@
     "chooseAccount": "Escull un compte",
     "required": "Autenticació requerida per a aquesta acció",
     "pin_instr": "6 números",
+    "failed": "L'autenticació ha fallat",
     "login": {
       "modalFormTitle": "Introduïu el PIN",
       "enterPinToContinue": "Introduïu el PIN de seguretat actual per continuar.",
