@@ -794,6 +794,10 @@
       "status": {
         "label": "Estado da ação",
         "pending_review": "Sob análise (meu voto está pendente)"
+      },
+      "sort": {
+        "asc": "Ordenação ascendente",
+        "desc": "Ordenação descendente"
       }
     }
   },

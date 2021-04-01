@@ -790,6 +790,10 @@
       "status": {
         "label": "Estat de l’acció",
         "pending_review": "En revisió (el meu vot està pendent)"
+      },
+      "sort": {
+        "asc": "Ordenació ascendent",
+        "desc": "Ordenant descendent"
       }
     }
   },
