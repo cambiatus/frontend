@@ -78,7 +78,7 @@ type alias Model =
         , bio : Maybe String
         , localization : Maybe String
         , account : Eos.Name
-        , contacts : Maybe (List Contact.Normalized)
+        , contacts : List Contact.Normalized
         , interests : List String
         , communities : List CommunityInfo
         , analysisCount : Int
@@ -135,7 +135,7 @@ selectionSet =
             )
         |> with
             (User.contacts Contact.selectionSet
-                |> SelectionSet.map (Maybe.map (List.filterMap identity))
+                |> SelectionSet.map (List.filterMap identity)
             )
         |> with (User.communities communityInfoSelectionSet)
         |> with User.analysisCount
@@ -172,7 +172,7 @@ decode =
         |> optional "bio" (nullable string) Nothing
         |> optional "localization" (nullable string) Nothing
         |> optional "interests" decodeInterests []
-        |> optional "contacts" (Decode.list Contact.decode |> Decode.map Just) Nothing
+        |> optional "contacts" (Decode.list Contact.decode) []
         |> Decode.hardcoded []
         |> Decode.at [ "data", "user" ]
         |> optional "analysisCount" int 0
@@ -378,7 +378,7 @@ profileToForm { name, email, bio, localization, avatar, interests, contacts } =
     , bio = Maybe.withDefault "" bio
     , localization = Maybe.withDefault "" localization
     , avatar = Avatar.toMaybeString avatar
-    , contacts = Maybe.withDefault [] contacts
+    , contacts = contacts
     , interest = ""
     , interests = interests
     , errors = Dict.empty
@@ -442,20 +442,13 @@ updateContacts : Model -> List Contact.Normalized -> Model
 updateContacts ({ contacts } as profile) newContacts =
     { profile
         | contacts =
-            case contacts of
-                Nothing ->
-                    Just newContacts
-
-                Just contactsList ->
-                    Just
-                        (List.filter
-                            (\contact ->
-                                List.any (Contact.hasSameType contact) newContacts
-                                    |> not
-                            )
-                            contactsList
-                            ++ newContacts
-                        )
+            List.filter
+                (\contact ->
+                    List.any (Contact.hasSameType contact) newContacts
+                        |> not
+                )
+                contacts
+                ++ newContacts
     }
 
 

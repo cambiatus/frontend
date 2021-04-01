@@ -595,6 +595,9 @@ fetchAnalysis { selectedCommunity, shared, authToken } { profile, statusFilter }
         filterRecord =
             { claimer = optionalClaimer
             , status = optionalStatus
+
+            -- TODO
+            , direction = Absent
             }
 
         filter =
@@ -624,6 +627,10 @@ fetchAnalysis { selectedCommunity, shared, authToken } { profile, statusFilter }
                         Maybe.andThen mapFn maybeCursorAfter
                             |> Maybe.withDefault Absent
                     , filter = filter
+
+                    -- TODO
+                    , before = Absent
+                    , last = Absent
                 }
     in
     Api.Graphql.query shared
