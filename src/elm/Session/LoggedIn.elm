@@ -858,10 +858,7 @@ showContactModal ({ shared } as model) =
         Just profile_ ->
             { model
                 | showContactModal =
-                    showContactModalFromDate
-                        && (Maybe.map (List.length >> (>) 1) profile_.contacts
-                                |> Maybe.withDefault False
-                           )
+                    showContactModalFromDate && List.isEmpty profile_.contacts
             }
 
         Nothing ->
@@ -1171,7 +1168,7 @@ update msg model =
 
                                 Contact.WithContacts successMessage contacts ->
                                     { model_
-                                        | profile = Loaded { userProfile | contacts = Just contacts }
+                                        | profile = Loaded { userProfile | contacts = contacts }
                                         , showContactModal = False
                                     }
                                         |> showFeedback Success successMessage

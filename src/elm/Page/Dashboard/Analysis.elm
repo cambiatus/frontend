@@ -637,11 +637,12 @@ fetchAnalysis { selectedCommunity, shared, authToken } { profile, statusFilter, 
             { claimer = optionalClaimer
             , status = optionalStatus
             , direction =
-                if direction == ASC then
-                    Present Cambiatus.Enum.Direction.Asc
+                case direction of
+                    ASC ->
+                        Present Cambiatus.Enum.Direction.Asc
 
-                else
-                    Present Cambiatus.Enum.Direction.Desc
+                    DESC ->
+                        Present Cambiatus.Enum.Direction.Desc
             }
 
         required =
