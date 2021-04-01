@@ -2,57 +2,54 @@
 -- https://github.com/dillonkearns/elm-graphql
 
 
-module Cambiatus.Enum.ClaimStatus exposing (..)
+module Cambiatus.Enum.Direction exposing (..)
 
 import Json.Decode as Decode exposing (Decoder)
 
 
-{-| Claim possible status
+{-| Sort direction
+
+  - Asc - Ascending order
+  - Desc - Descending order
+
 -}
-type ClaimStatus
-    = Approved
-    | Pending
-    | Rejected
+type Direction
+    = Asc
+    | Desc
 
 
-list : List ClaimStatus
+list : List Direction
 list =
-    [ Approved, Pending, Rejected ]
+    [ Asc, Desc ]
 
 
-decoder : Decoder ClaimStatus
+decoder : Decoder Direction
 decoder =
     Decode.string
         |> Decode.andThen
             (\string ->
                 case string of
-                    "APPROVED" ->
-                        Decode.succeed Approved
+                    "ASC" ->
+                        Decode.succeed Asc
 
-                    "PENDING" ->
-                        Decode.succeed Pending
-
-                    "REJECTED" ->
-                        Decode.succeed Rejected
+                    "DESC" ->
+                        Decode.succeed Desc
 
                     _ ->
-                        Decode.fail ("Invalid ClaimStatus type, " ++ string ++ " try re-running the @dillonkearns/elm-graphql CLI ")
+                        Decode.fail ("Invalid Direction type, " ++ string ++ " try re-running the @dillonkearns/elm-graphql CLI ")
             )
 
 
 {-| Convert from the union type representing the Enum to a string that the GraphQL server will recognize.
 -}
-toString : ClaimStatus -> String
+toString : Direction -> String
 toString enum =
     case enum of
-        Approved ->
-            "APPROVED"
+        Asc ->
+            "ASC"
 
-        Pending ->
-            "PENDING"
-
-        Rejected ->
-            "REJECTED"
+        Desc ->
+            "DESC"
 
 
 {-| Convert from a String representation to an elm representation enum.
@@ -66,17 +63,14 @@ This is the inverse of the Enum `toString` function. So you can call `toString` 
 This can be useful for generating Strings to use for <select> menus to check which item was selected.
 
 -}
-fromString : String -> Maybe ClaimStatus
+fromString : String -> Maybe Direction
 fromString enumString =
     case enumString of
-        "APPROVED" ->
-            Just Approved
+        "ASC" ->
+            Just Asc
 
-        "PENDING" ->
-            Just Pending
-
-        "REJECTED" ->
-            Just Rejected
+        "DESC" ->
+            Just Desc
 
         _ ->
             Nothing
