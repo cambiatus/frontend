@@ -342,7 +342,7 @@ viewUserInfo loggedIn profile pageType privateView =
                             , Route.href Route.ProfileAddContact
                             ]
                             [ text
-                                (if Maybe.map List.isEmpty profile.contacts |> Maybe.withDefault False then
+                                (if List.isEmpty profile.contacts then
                                     t "menu.add"
 
                                  else
@@ -355,7 +355,6 @@ viewUserInfo loggedIn profile pageType privateView =
 
                 Public ->
                     profile.contacts
-                        |> Maybe.withDefault []
                         |> List.map (viewContactButton translators)
                         |> div [ class "flex flex-col space-y-4 mt-4 mb-2" ]
 

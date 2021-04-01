@@ -5,6 +5,7 @@
 module Cambiatus.InputObject exposing (..)
 
 import Cambiatus.Enum.ContactType
+import Cambiatus.Enum.Direction
 import Cambiatus.Enum.VerificationType
 import Cambiatus.Interface
 import Cambiatus.Object
@@ -142,13 +143,14 @@ buildClaimAnalysisHistoryFilter fillOptionals =
     let
         optionals =
             fillOptionals
-                { claimer = Absent, status = Absent }
+                { claimer = Absent, direction = Absent, status = Absent }
     in
-    { claimer = optionals.claimer, status = optionals.status }
+    { claimer = optionals.claimer, direction = optionals.direction, status = optionals.status }
 
 
 type alias ClaimAnalysisHistoryFilterOptionalFields =
     { claimer : OptionalArgument String
+    , direction : OptionalArgument Cambiatus.Enum.Direction.Direction
     , status : OptionalArgument String
     }
 
@@ -157,6 +159,7 @@ type alias ClaimAnalysisHistoryFilterOptionalFields =
 -}
 type alias ClaimAnalysisHistoryFilter =
     { claimer : OptionalArgument String
+    , direction : OptionalArgument Cambiatus.Enum.Direction.Direction
     , status : OptionalArgument String
     }
 
@@ -166,7 +169,7 @@ type alias ClaimAnalysisHistoryFilter =
 encodeClaimAnalysisHistoryFilter : ClaimAnalysisHistoryFilter -> Value
 encodeClaimAnalysisHistoryFilter input =
     Encode.maybeObject
-        [ ( "claimer", Encode.string |> Encode.optional input.claimer ), ( "status", Encode.string |> Encode.optional input.status ) ]
+        [ ( "claimer", Encode.string |> Encode.optional input.claimer ), ( "direction", Encode.enum Cambiatus.Enum.Direction.toString |> Encode.optional input.direction ), ( "status", Encode.string |> Encode.optional input.status ) ]
 
 
 buildClaimInput :

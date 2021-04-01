@@ -181,7 +181,7 @@ defaultContactType =
 
 type alias Profile =
     { account : Eos.Name
-    , contacts : Maybe (List Normalized)
+    , contacts : List Normalized
     }
 
 
@@ -200,13 +200,6 @@ type ContactResponse
     = NotAsked
     | WithContacts String (List Normalized)
     | WithError String
-
-
-contactResponseFromMaybe : Translators -> String -> Maybe (List Normalized) -> ContactResponse
-contactResponseFromMaybe { t } baseTranslation maybeContacts =
-    maybeContacts
-        |> Maybe.map (WithContacts (t <| baseTranslation ++ "success"))
-        |> Maybe.withDefault (WithError (t <| baseTranslation ++ "failure"))
 
 
 
@@ -319,12 +312,36 @@ update msg model ({ translators } as shared) authToken =
 
                         Multiple _ ->
                             "multiple"
+
+                feedbackString isSuccess =
+                    String.join "."
+                        [ "contact_form.feedback"
+                        , feedbackScope
+                        , if isSuccess then
+                            "success"
+
+                          else
+                            "failure"
+                        ]
+                        |> translators.t
             in
             ( { model | state = result }
             , Cmd.none
-            , RemoteData.toMaybe result
-                |> Maybe.andThen (Maybe.andThen .contacts)
-                |> contactResponseFromMaybe translators ("contact_form.feedback." ++ feedbackScope ++ ".")
+            , case result of
+                RemoteData.Success (Just profile) ->
+                    WithContacts (feedbackString True) profile.contacts
+
+                RemoteData.Success Nothing ->
+                    WithError (feedbackString False)
+
+                RemoteData.Failure _ ->
+                    WithError (feedbackString False)
+
+                RemoteData.NotAsked ->
+                    NotAsked
+
+                RemoteData.Loading ->
+                    NotAsked
             )
 
 
@@ -900,7 +917,7 @@ profileSelectionSet =
         |> with (Eos.nameSelectionSet User.account)
         |> with
             (User.contacts selectionSet
-                |> SelectionSet.map (Maybe.map (List.filterMap identity))
+                |> SelectionSet.map (List.filterMap identity)
             )
 
 
