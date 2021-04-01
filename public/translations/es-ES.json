@@ -790,6 +790,10 @@
       "status": {
         "label": "estado de acción",
         "pending_review": "Bajo revisión (mi voto está pendiente)"
+      },
+      "sort": {
+        "asc": "Orden ascendente",
+        "desc": "Orden descendente"
       }
     }
   },

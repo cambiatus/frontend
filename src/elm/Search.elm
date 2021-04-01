@@ -91,6 +91,8 @@ type alias Offer =
     , title : String
     , price : Float
     , image : Maybe String
+    , units : Int
+    , trackStock : Bool
     }
 
 
@@ -124,11 +126,13 @@ searchResultSelectionSet queryString =
 
 offersSelectionSet : SelectionSet Offer Cambiatus.Object.Product
 offersSelectionSet =
-    SelectionSet.map4 Offer
+    SelectionSet.map6 Offer
         Cambiatus.Object.Product.id
         Cambiatus.Object.Product.title
         Cambiatus.Object.Product.price
         Cambiatus.Object.Product.image
+        Cambiatus.Object.Product.units
+        Cambiatus.Object.Product.trackStock
 
 
 
@@ -360,7 +364,7 @@ viewSearchBody translators selectedCommunity maybeToday searchToMsg actionToMsg 
                             Just OffersTab ->
                                 div [ class "w-full" ]
                                     [ viewTabs translators results OffersTab
-                                    , viewOffers selectedCommunity results.offers
+                                    , viewOffers translators selectedCommunity results.offers
                                     ]
                                     |> Html.map searchToMsg
 
@@ -516,31 +520,44 @@ viewResultsOverview { t } { offers, actions } =
         ]
 
 
-viewOffers : Symbol -> List Offer -> Html Msg
-viewOffers symbol offers =
+viewOffers : Translators -> Symbol -> List Offer -> Html Msg
+viewOffers translators symbol offers =
     let
         viewOffer : Offer -> Html Msg
         viewOffer offer =
+            let
+                imageUrl =
+                    case offer.image of
+                        Nothing ->
+                            "/icons/shop-placeholder1.svg"
+
+                        Just "" ->
+                            "/icons/shop-placeholder1.svg"
+
+                        Just url ->
+                            url
+            in
             li
                 [ class "flex px-2 w-1/2 sm:w-1/3 md:w-1/4" ]
                 [ div
                     [ class "rounded-md overflow-hidden bg-white flex-grow mb-4 pb-4 cursor-pointer hover:shadow"
                     , onClick (FoundItemClicked (Route.ViewSale (String.fromInt offer.id)))
                     ]
-                    [ case offer.image of
-                        Nothing ->
-                            text ""
-
-                        Just url ->
-                            img [ src url ] []
+                    [ img [ src imageUrl ] []
                     , h3 [ class "p-3" ] [ text offer.title ]
-                    , p [ class "px-3 leading-none" ]
-                        [ span [ class "text-xl text-green font-medium" ] [ text <| String.fromFloat offer.price ]
-                        , br [] []
-                        , span [ class "text-gray-300 text-xs" ]
-                            [ text <| Eos.symbolToSymbolCodeString symbol
+                    , if offer.units == 0 && offer.trackStock then
+                        p [ class "px-3 leading-none text-xl text-red" ]
+                            [ text (translators.t "shop.out_of_stock")
                             ]
-                        ]
+
+                      else
+                        p [ class "px-3 leading-none" ]
+                            [ span [ class "text-xl text-green font-medium" ] [ text <| String.fromFloat offer.price ]
+                            , br [] []
+                            , span [ class "text-gray-300 text-xs" ]
+                                [ text <| Eos.symbolToSymbolCodeString symbol
+                                ]
+                            ]
                     ]
                 ]
     in

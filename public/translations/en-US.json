@@ -788,6 +788,10 @@
       "status": {
         "label": "Action state",
         "pending_review": "Under Review (my vote is pending)"
+      },
+      "sort": {
+        "asc": "Ordering ascending",
+        "desc": "Ordering descending"
       }
     }
   },

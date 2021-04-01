@@ -10,6 +10,7 @@ module Page.Dashboard.Analysis exposing
 
 import Api.Graphql
 import Api.Relay
+import Cambiatus.Enum.Direction
 import Cambiatus.Query
 import Claim
 import Community
@@ -87,12 +88,18 @@ type CommunityStatus
 type alias Filter =
     { profile : Maybe Profile.Minimal
     , statusFilter : StatusFilter
+    , direction : FilterDirection
     }
+
+
+type FilterDirection
+    = ASC
+    | DESC
 
 
 initFilter : Filter
 initFilter =
-    { profile = Nothing, statusFilter = All }
+    { profile = Nothing, statusFilter = All, direction = DESC }
 
 
 type StatusFilter
@@ -177,11 +184,8 @@ view ({ shared } as loggedIn) model =
 viewFilters : LoggedIn.Model -> Model -> Html Msg
 viewFilters ({ shared } as loggedIn) model =
     let
-        t =
-            shared.translators.t
-
         text_ s =
-            text (t s)
+            text (shared.translators.t s)
     in
     div [ class "mt-4 mb-12" ]
         [ div []
@@ -253,6 +257,19 @@ viewFilters ({ shared } as loggedIn) model =
                     [ text_ "all_analysis.pending" ]
                 ]
             ]
+        , div [ class "mt-6" ]
+            [ button
+                [ class "w-full button button-secondary relative"
+                , onClick ToggleSorting
+                ]
+                [ if model.filters.direction == ASC then
+                    text_ "all_analysis.filter.sort.asc"
+
+                  else
+                    text_ "all_analysis.filter.sort.desc"
+                , Icons.sortDirection "absolute right-1"
+                ]
+            ]
         ]
 
 
@@ -317,6 +334,7 @@ type Msg
     | ShowMore
     | ClearSelectSelection
     | SelectStatusFilter StatusFilter
+    | ToggleSorting
     | ClearFilters
 
 
@@ -566,9 +584,32 @@ update msg model loggedIn =
                 |> UR.init
                 |> UR.addCmd (fetchAnalysis loggedIn initFilter Nothing)
 
+        ToggleSorting ->
+            let
+                oldFilters =
+                    model.filters
+
+                sortDirection =
+                    if model.filters.direction == ASC then
+                        DESC
+
+                    else
+                        ASC
+
+                newModel =
+                    { model
+                        | filters = { oldFilters | direction = sortDirection }
+                        , reloadOnNextQuery = True
+                        , status = Loading
+                    }
+            in
+            newModel
+                |> UR.init
+                |> UR.addCmd (fetchAnalysis loggedIn newModel.filters Nothing)
+
 
 fetchAnalysis : LoggedIn.Model -> Filter -> Maybe String -> Cmd Msg
-fetchAnalysis { selectedCommunity, shared, authToken } { profile, statusFilter } maybeCursorAfter =
+fetchAnalysis { selectedCommunity, shared, authToken } { profile, statusFilter, direction } maybeCursorAfter =
     let
         optionalClaimer =
             case profile of
@@ -595,18 +636,14 @@ fetchAnalysis { selectedCommunity, shared, authToken } { profile, statusFilter }
         filterRecord =
             { claimer = optionalClaimer
             , status = optionalStatus
+            , direction =
+                case direction of
+                    ASC ->
+                        Present Cambiatus.Enum.Direction.Asc
 
-            -- TODO
-            , direction = Absent
+                    DESC ->
+                        Present Cambiatus.Enum.Direction.Desc
             }
-
-        filter =
-            case ( filterRecord.claimer, filterRecord.status ) of
-                ( Absent, Absent ) ->
-                    Absent
-
-                ( _, _ ) ->
-                    Present filterRecord
 
         required =
             { communityId = Eos.symbolToString selectedCommunity }
@@ -626,11 +663,7 @@ fetchAnalysis { selectedCommunity, shared, authToken } { profile, statusFilter }
                     , after =
                         Maybe.andThen mapFn maybeCursorAfter
                             |> Maybe.withDefault Absent
-                    , filter = filter
-
-                    -- TODO
-                    , before = Absent
-                    , last = Absent
+                    , filter = Present filterRecord
                 }
     in
     Api.Graphql.query shared
@@ -751,3 +784,6 @@ msgToString msg =
 
         ClearFilters ->
             [ "ClearFilters" ]
+
+        ToggleSorting ->
+            [ "ToggleSorting" ]
