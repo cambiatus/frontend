@@ -811,6 +811,8 @@
       "1": "Aquesta solicitud es va",
       "2": "rebutjat"
     },
+    "title_action_completed": "Aquesta reclamació està pendent, però, ja que l'acció s'ha completat, no és possible votar",
+    "title_action_closed": "Aquesta reclamació està pendent, però, ja que l'acció està tancada, no és possible votar",
     "pending": "Pendent",
     "disapproved": "Desaprovat",
     "approved": "Aprovat",

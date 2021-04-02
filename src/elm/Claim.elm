@@ -19,7 +19,7 @@ module Claim exposing
     , viewVoteClaimModal
     )
 
-import Action exposing (Action)
+import Action exposing (Action, isClosed)
 import Api.Relay exposing (Edge, PageConnection)
 import Cambiatus.Enum.ClaimStatus as ClaimStatus
 import Cambiatus.Object
@@ -94,10 +94,12 @@ isValidator accountName claim =
             (\v -> v.account == accountName)
 
 
-isVotable : Model -> Eos.Name -> Bool
-isVotable claim accountName =
+isVotable : Model -> Eos.Name -> Maybe Time.Posix -> Bool
+isVotable claim accountName now =
     isValidator accountName claim
         && not (isValidated claim accountName)
+        && not (isClosed claim.action now)
+        && not claim.action.isCompleted
 
 
 encodeVerification : ClaimId -> Eos.Name -> Bool -> Encode.Value
@@ -368,8 +370,8 @@ viewClaimCard { selectedCommunity, shared, accountName } claim =
         ]
 
 
-viewPhotoModal : LoggedIn.Model -> Model -> Html Msg
-viewPhotoModal loggedIn claim =
+viewPhotoModal : LoggedIn.Model -> Model -> Maybe Time.Posix -> Html Msg
+viewPhotoModal loggedIn claim now =
     let
         { t } =
             loggedIn.shared.translators
@@ -411,7 +413,7 @@ viewPhotoModal loggedIn claim =
             ]
 
         withPhotoModalFooter =
-            if isVotable claim loggedIn.accountName then
+            if isVotable claim loggedIn.accountName now then
                 Modal.withFooter
                     [ button
                         [ class "modal-cancel"

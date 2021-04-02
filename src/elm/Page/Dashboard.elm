@@ -368,7 +368,7 @@ viewAnalysisList loggedIn profile model =
                         in
                         div [ class "flex flex-wrap -mx-2" ] <|
                             List.append pendingClaims
-                                [ viewVoteConfirmationModal loggedIn model.claimModalStatus ]
+                                [ viewVoteConfirmationModal loggedIn model ]
                     ]
                 ]
 
@@ -376,8 +376,8 @@ viewAnalysisList loggedIn profile model =
             div [] [ Page.fullPageGraphQLError "Failed load" err ]
 
 
-viewVoteConfirmationModal : LoggedIn.Model -> Claim.ModalStatus -> Html Msg
-viewVoteConfirmationModal loggedIn claimModalStatus =
+viewVoteConfirmationModal : LoggedIn.Model -> Model -> Html Msg
+viewVoteConfirmationModal loggedIn { claimModalStatus, date } =
     let
         viewVoteModal claimId isApproving isLoading =
             Claim.viewVoteClaimModal
@@ -397,7 +397,7 @@ viewVoteConfirmationModal loggedIn claimModalStatus =
             viewVoteModal claimId vote True
 
         Claim.PhotoModal claim ->
-            Claim.viewPhotoModal loggedIn claim
+            Claim.viewPhotoModal loggedIn claim date
                 |> Html.map ClaimMsg
 
         Claim.Closed ->
@@ -645,10 +645,6 @@ type Msg
 
 update : Msg -> Model -> LoggedIn.Model -> UpdateResult
 update msg model loggedIn =
-    let
-        { t } =
-            loggedIn.shared.translators
-    in
     case msg of
         GotTime date ->
             UR.init { model | date = Just date }

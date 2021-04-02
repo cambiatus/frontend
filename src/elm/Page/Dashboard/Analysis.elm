@@ -35,6 +35,8 @@ import Select
 import Session.LoggedIn as LoggedIn exposing (External(..))
 import Session.Shared exposing (Shared)
 import Simple.Fuzzy
+import Task
+import Time
 import UpdateResult as UR
 
 
@@ -43,6 +45,7 @@ init ({ shared, selectedCommunity, authToken } as loggedIn) =
     ( initModel
     , Cmd.batch
         [ fetchAnalysis loggedIn initFilter Nothing
+        , Task.perform GotTime Time.now
         , Api.Graphql.query shared (Just authToken) (Community.communityQuery selectedCommunity) CompletedCommunityLoad
         ]
     )
@@ -59,6 +62,7 @@ type alias Model =
     , autoCompleteState : Select.State
     , reloadOnNextQuery : Bool
     , filters : Filter
+    , now : Maybe Time.Posix
     }
 
 
@@ -70,6 +74,7 @@ initModel =
     , autoCompleteState = Select.newState ""
     , reloadOnNextQuery = False
     , filters = initFilter
+    , now = Nothing
     }
 
 
@@ -166,7 +171,7 @@ view ({ shared } as loggedIn) model =
                                 viewVoteModal claimId vote True
 
                             Claim.PhotoModal claim ->
-                                Claim.viewPhotoModal loggedIn claim
+                                Claim.viewPhotoModal loggedIn claim model.now
                                     |> Html.map ClaimMsg
 
                             _ ->
@@ -336,6 +341,7 @@ type Msg
     | SelectStatusFilter StatusFilter
     | ToggleSorting
     | ClearFilters
+    | GotTime Time.Posix
 
 
 update : Msg -> Model -> LoggedIn.Model -> UpdateResult
@@ -607,6 +613,9 @@ update msg model loggedIn =
                 |> UR.init
                 |> UR.addCmd (fetchAnalysis loggedIn newModel.filters Nothing)
 
+        GotTime date ->
+            UR.init { model | now = Just date }
+
 
 fetchAnalysis : LoggedIn.Model -> Filter -> Maybe String -> Cmd Msg
 fetchAnalysis { selectedCommunity, shared, authToken } { profile, statusFilter, direction } maybeCursorAfter =
@@ -787,3 +796,6 @@ msgToString msg =
 
         ToggleSorting ->
             [ "ToggleSorting" ]
+
+        GotTime _ ->
+            [ "GotTime" ]

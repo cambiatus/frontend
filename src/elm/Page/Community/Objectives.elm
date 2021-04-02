@@ -17,7 +17,7 @@ import Route
 import Session.LoggedIn as LoggedIn exposing (External(..))
 import Strftime
 import Task
-import Time exposing (Posix, posixToMillis)
+import Time exposing (Posix)
 import UpdateResult as UR
 import Utils
 
@@ -207,25 +207,14 @@ viewAction ({ shared } as loggedIn) model objectiveId action =
             posixDeadline
                 |> Strftime.format "%d %B %Y" Time.utc
 
-        pastDeadline : Bool
         pastDeadline =
-            case action.deadline of
-                Just _ ->
-                    case model.date of
-                        Just today ->
-                            posixToMillis today > posixToMillis posixDeadline
-
-                        Nothing ->
-                            False
-
-                Nothing ->
-                    False
+            Action.isPastDeadline action model.date
 
         ( usages, usagesLeft ) =
             ( String.fromInt action.usages, String.fromInt action.usagesLeft )
 
         isClosed =
-            pastDeadline || (action.usages > 0 && action.usagesLeft == 0)
+            Action.isPastDeadline action model.date
 
         validationType =
             action.verificationType
@@ -282,7 +271,13 @@ viewAction ({ shared } as loggedIn) model objectiveId action =
                                 text ""
                             , case action.deadline of
                                 Just _ ->
-                                    p [ classList [ ( "text-red", pastDeadline ), ( "text-white", not pastDeadline ) ] ] [ text deadlineStr ]
+                                    p
+                                        [ classList
+                                            [ ( "text-red", pastDeadline )
+                                            , ( "text-white", not pastDeadline )
+                                            ]
+                                        ]
+                                        [ text deadlineStr ]
 
                                 Nothing ->
                                     text ""
