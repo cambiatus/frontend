@@ -135,7 +135,7 @@ view ({ shared } as loggedIn) model =
                 Loaded claims pageInfo ->
                     let
                         viewClaim claim =
-                            Claim.viewClaimCard loggedIn claim
+                            Claim.viewClaimCard loggedIn claim model.now
                                 |> Html.map ClaimMsg
                     in
                     div []

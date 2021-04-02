@@ -136,6 +136,36 @@ encodeChecksInput input =
         [ ( "validator", Encode.string |> Encode.optional input.validator ) ]
 
 
+buildClaimAnalysisFilter :
+    (ClaimAnalysisFilterOptionalFields -> ClaimAnalysisFilterOptionalFields)
+    -> ClaimAnalysisFilter
+buildClaimAnalysisFilter fillOptionals =
+    let
+        optionals =
+            fillOptionals
+                { direction = Absent }
+    in
+    { direction = optionals.direction }
+
+
+type alias ClaimAnalysisFilterOptionalFields =
+    { direction : OptionalArgument Cambiatus.Enum.Direction.Direction }
+
+
+{-| Type for the ClaimAnalysisFilter input object.
+-}
+type alias ClaimAnalysisFilter =
+    { direction : OptionalArgument Cambiatus.Enum.Direction.Direction }
+
+
+{-| Encode a ClaimAnalysisFilter into a value that can be used as an argument.
+-}
+encodeClaimAnalysisFilter : ClaimAnalysisFilter -> Value
+encodeClaimAnalysisFilter input =
+    Encode.maybeObject
+        [ ( "direction", Encode.enum Cambiatus.Enum.Direction.toString |> Encode.optional input.direction ) ]
+
+
 buildClaimAnalysisHistoryFilter :
     (ClaimAnalysisHistoryFilterOptionalFields -> ClaimAnalysisHistoryFilterOptionalFields)
     -> ClaimAnalysisHistoryFilter

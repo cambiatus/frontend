@@ -275,8 +275,8 @@ updateClaimModalStatus msg model =
 
 {-| Claim card with a short claim overview. Used on Dashboard and Analysis pages.
 -}
-viewClaimCard : LoggedIn.Model -> Model -> Html Msg
-viewClaimCard { selectedCommunity, shared, accountName } claim =
+viewClaimCard : LoggedIn.Model -> Model -> Maybe Time.Posix -> Html Msg
+viewClaimCard { shared, accountName } claim now =
     let
         { t } =
             shared.translators
@@ -334,19 +334,25 @@ viewClaimCard { selectedCommunity, shared, accountName } claim =
                     Nothing ->
                         text ""
                 ]
-            , div [ class "bg-gray-100 flex items-center justify-center h-6 w-32 mb-2" ]
-                [ p
-                    [ class ("text-caption uppercase " ++ textColor) ]
-                    [ text claimStatus ]
+            , a [ Route.href claimRoute ]
+                [ div [ class "bg-gray-100 flex items-center justify-center h-6 w-32 mb-2" ]
+                    [ p
+                        [ class ("text-caption uppercase " ++ textColor) ]
+                        [ text claimStatus ]
+                    ]
+                , div [ class "mb-6" ]
+                    [ p [ class "text-body overflow-ellipsis overflow-hidden" ]
+                        [ text claim.action.description ]
+                    , p
+                        [ class "text-gray-900 text-caption uppercase" ]
+                        [ text (date claim.createdAt) ]
+                    ]
                 ]
-            , div [ class "mb-6" ]
-                [ p [ class "text-body overflow-ellipsis overflow-hidden" ]
-                    [ text claim.action.description ]
-                , p
-                    [ class "text-gray-900 text-caption uppercase" ]
-                    [ text (date claim.createdAt) ]
-                ]
-            , if isValidated claim accountName || not (isValidator accountName claim) then
+            , if
+                isValidated claim accountName
+                    || not (isValidator accountName claim)
+                    || (Action.isClosed claim.action now || Action.isPastDeadline claim.action now)
+              then
                 a
                     [ class "button button-secondary w-full font-medium mb-2"
                     , Route.href claimRoute

@@ -88,7 +88,7 @@ view loggedIn model =
                 Loaded profileClaims ->
                     div []
                         [ Page.viewHeader loggedIn pageTitle Route.Dashboard
-                        , viewResults loggedIn profileClaims
+                        , viewResults loggedIn profileClaims model.now
                         , viewClaimVoteModal loggedIn model
                         ]
 
@@ -103,11 +103,11 @@ view loggedIn model =
     { title = pageTitle, content = content }
 
 
-viewResults : LoggedIn.Model -> List Claim.Model -> Html Msg
-viewResults loggedIn claims =
+viewResults : LoggedIn.Model -> List Claim.Model -> Maybe Time.Posix -> Html Msg
+viewResults loggedIn claims now =
     let
         viewClaim claim =
-            Claim.viewClaimCard loggedIn claim
+            Claim.viewClaimCard loggedIn claim now
                 |> Html.map ClaimMsg
     in
     div [ class "container mx-auto px-4 mb-10" ]
