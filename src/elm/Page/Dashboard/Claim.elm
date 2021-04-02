@@ -288,8 +288,6 @@ viewDetails { shared } model claim =
 
               else
                 text ""
-
-            -- ]
             ]
         , div [ class "mb-8" ]
             [ div

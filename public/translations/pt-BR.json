@@ -805,9 +805,7 @@
     "title_under_review": {
       "1": "Esta reinvindicação está",
       "2": "em análise",
-      "3": ", outros membros ainda precisam votar",
-      "4": "pendente",
-      "5": ". No entanto, a ação já foi concluída e possível votar"
+      "3": ", outros membros ainda precisam votar"
     },
     "title_approved": {
       "1": "Esta reinvindicação foi",
