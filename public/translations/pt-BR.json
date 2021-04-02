@@ -815,6 +815,8 @@
       "1": "Esta reinvindicação foi",
       "2": "rejeitada"
     },
+    "title_action_completed": "Esta reinvidicação está pendente, no entanto, como a ação foi concluída, não é possível votar",
+    "title_action_closed": "Esta reinvidicação está pendente, no entanto, como a ação foi encerrada, não é possível votar",
     "pending": "Pendente",
     "disapproved_by": "Reprovado por",
     "approved_by": "Aprovado por",

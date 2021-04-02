@@ -811,6 +811,8 @@
       "1": "Este reclamo fue",
       "2": "rechazado"
     },
+    "title_action_completed": "Este reclamo está pendiente, sin embargo, dado que la acción se completó, no es posible votar",
+    "title_action_closed": "Este reclamo está pendiente, sin embargo, dado que la acción está cerrada, no es posible votar.",
     "pending": "Pendiente",
     "disapproved": "Rechazado",
     "approved": "Aprobado",

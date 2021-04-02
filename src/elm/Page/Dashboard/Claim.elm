@@ -1,5 +1,6 @@
 module Page.Dashboard.Claim exposing (Model, Msg, init, jsAddressToMsg, msgToString, update, view, viewVoters)
 
+import Action
 import Api.Graphql
 import Cambiatus.Query
 import Claim
@@ -19,7 +20,8 @@ import Route
 import Session.LoggedIn as LoggedIn exposing (External)
 import Session.Shared exposing (Shared, Translators)
 import Strftime
-import Time
+import Task
+import Time exposing (Posix)
 import UpdateResult as UR
 import Utils
 
@@ -31,7 +33,10 @@ import Utils
 init : LoggedIn.Model -> Claim.ClaimId -> ( Model, Cmd Msg )
 init { shared, authToken } claimId =
     ( initModel claimId
-    , fetchClaim claimId shared authToken
+    , Cmd.batch
+        [ Task.perform GotTime Time.now
+        , fetchClaim claimId shared authToken
+        ]
     )
 
 
@@ -44,6 +49,7 @@ type alias Model =
     , statusClaim : Status
     , claimModalStatus : Claim.ModalStatus
     , isValidated : Bool
+    , now : Maybe Posix
     }
 
 
@@ -53,6 +59,7 @@ initModel claimId =
     , statusClaim = Loading
     , claimModalStatus = Claim.Closed
     , isValidated = False
+    , now = Nothing
     }
 
 
@@ -93,19 +100,19 @@ view ({ shared } as loggedIn) model =
                                 [ Profile.viewLarge shared loggedIn.accountName claim.claimer
                                 ]
                             , div [ class "mx-auto container px-4" ]
-                                [ viewTitle shared claim
+                                [ viewTitle shared model claim
                                 , viewProofs shared.translators claim
                                 , viewDetails loggedIn model claim
                                 , viewVoters loggedIn claim
                                 ]
                             , case model.claimModalStatus of
                                 Claim.PhotoModal c ->
-                                    Claim.viewPhotoModal loggedIn c
+                                    Claim.viewPhotoModal loggedIn c model.now
                                         |> Html.map ClaimMsg
 
                                 _ ->
                                     if
-                                        Claim.isVotable claim loggedIn.accountName
+                                        Claim.isVotable claim loggedIn.accountName model.now
                                             && not model.isValidated
                                     then
                                         viewVoteButtons shared.translators claim.id model.claimModalStatus
@@ -207,8 +214,8 @@ viewVoteButtons ({ t } as translators) claimId modalStatus =
         ]
 
 
-viewTitle : Shared -> Claim.Model -> Html msg
-viewTitle shared claim =
+viewTitle : Shared -> Model -> Claim.Model -> Html msg
+viewTitle shared model claim =
     let
         text_ s =
             text (shared.translators.t s)
@@ -228,16 +235,29 @@ viewTitle shared claim =
                     ]
 
             Claim.Pending ->
-                div [ class "inline-block" ]
-                    [ text_ "claim.title_under_review.1"
-                    , span [ class "text-gray ml-1" ] [ text_ "claim.title_under_review.2" ]
-                    , span [ class "mr-1" ] [ text_ "claim.title_under_review.3" ]
-                    ]
+                if claim.action.isCompleted then
+                    div
+                        [ class "inline-block" ]
+                        [ text_ "claim.title_action_completed"
+                        ]
+
+                else if Action.isClosed claim.action model.now then
+                    div
+                        [ class "inline-block" ]
+                        [ text_ "claim.title_action_closed"
+                        ]
+
+                else
+                    div [ class "inline-block" ]
+                        [ text_ "claim.title_under_review.1"
+                        , span [ class "text-gray ml-1" ] [ text_ "claim.title_under_review.2" ]
+                        , span [ class "mr-1" ] [ text_ "claim.title_under_review.3" ]
+                        ]
         ]
 
 
 viewDetails : LoggedIn.Model -> Model -> Claim.Model -> Html msg
-viewDetails { shared, selectedCommunity } model claim =
+viewDetails { shared } model claim =
     let
         text_ s =
             text (shared.translators.t s)
@@ -251,9 +271,23 @@ viewDetails { shared, selectedCommunity } model claim =
                 [ class "text-caption uppercase text-green" ]
                 [ text_ "claim.action" ]
             , div [ class "mb-2" ]
-                [ p [ class "pt-2 text-body" ]
+                [ p [ class "pt-2" ]
                     [ text claim.action.description ]
                 ]
+            , if claim.action.isCompleted then
+                div [ class "flex mb-2" ]
+                    [ div [ class "tag bg-green" ] [ text_ "community.actions.completed" ]
+                    ]
+
+              else if Action.isClosed claim.action model.now then
+                div [ class "flex mb-2" ]
+                    [ div
+                        [ class "tag bg-gray-500 text-red" ]
+                        [ text_ "community.actions.closed" ]
+                    ]
+
+              else
+                text ""
             ]
         , div [ class "mb-8" ]
             [ div
@@ -261,7 +295,7 @@ viewDetails { shared, selectedCommunity } model claim =
                 [ div [ class "mr-6" ]
                     [ p [ class "text-caption uppercase text-green" ]
                         [ text_ "claim.date" ]
-                    , p [ class "pt-2 text-body" ]
+                    , p [ class "pt-2" ]
                         [ text
                             (claim.createdAt
                                 |> Just
@@ -275,7 +309,7 @@ viewDetails { shared, selectedCommunity } model claim =
                         [ class "text-caption uppercase text-green" ]
                         [ text_ "claim.claimer_reward" ]
                     , p
-                        [ class "pt-2 text-body"
+                        [ class "pt-2"
                         , classList [ ( "text-red line-through", isRejected ) ]
                         ]
                         [ text
@@ -292,7 +326,7 @@ viewDetails { shared, selectedCommunity } model claim =
                 [ class "text-caption uppercase text-green" ]
                 [ text_ "claim.objective" ]
             , p
-                [ class "pt-2 text-body" ]
+                [ class "pt-2" ]
                 [ text claim.action.objective.description
                 ]
             ]
@@ -301,7 +335,7 @@ viewDetails { shared, selectedCommunity } model claim =
                 [ class "text-caption uppercase text-green" ]
                 [ text_ "claim.your_reward" ]
             , p
-                [ class "pt-2 text-body" ]
+                [ class "pt-2" ]
                 [ text
                     (String.fromFloat claim.action.verifierReward
                         ++ " "
@@ -402,12 +436,13 @@ type Msg
     | VoteClaim Claim.ClaimId Bool
     | GotVoteResult Claim.ClaimId (Result (Maybe Value) String)
     | ClaimMsg Claim.Msg
+    | GotTime Posix
 
 
 update : Msg -> Model -> LoggedIn.Model -> UpdateResult
 update msg model loggedIn =
     let
-        { t, tr } =
+        { tr } =
             loggedIn.shared.translators
     in
     case msg of
@@ -508,6 +543,9 @@ update msg model loggedIn =
                 _ ->
                     model |> UR.init
 
+        GotTime date ->
+            UR.init { model | now = Just date }
+
 
 
 -- HELPERS
@@ -561,3 +599,6 @@ msgToString msg =
 
         ClaimMsg _ ->
             [ "ClaimMsg" ]
+
+        GotTime _ ->
+            [ "GotTime" ]
