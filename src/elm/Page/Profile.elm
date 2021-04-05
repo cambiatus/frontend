@@ -175,7 +175,7 @@ viewSettings loggedIn model profile =
                                     pin
 
                                 Nothing ->
-                                    loggedIn.auth.form.enteredPin
+                                    loggedIn.auth.pin
                     in
                     DownloadPdf currentPin
 
@@ -814,7 +814,7 @@ update msg model loggedIn =
                                 pin
 
                             Nothing ->
-                                loggedIn.auth.form.enteredPin
+                                loggedIn.auth.pin
 
                     newPin =
                         Maybe.withDefault "" model.newPin
@@ -871,7 +871,7 @@ update msg model loggedIn =
                 Just _ ->
                     model
                         |> UR.init
-                        |> downloadPdfPort loggedIn.auth.form.enteredPin
+                        |> downloadPdfPort loggedIn.auth.pin
 
         DownloadPdf pin ->
             model

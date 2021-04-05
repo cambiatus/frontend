@@ -342,6 +342,7 @@ type PinMsg
     | EnteredPinConfirmation String
     | ToggledPinVisibility
     | ToggledPinConfirmationVisibility
+    | ClickedSubmit
 
 
 update : Msg -> Model -> Guest.Model -> UpdateResult
@@ -470,6 +471,40 @@ updateWithPin msg model =
             { model | isPinConfirmationVisible = not model.isPinConfirmationVisible }
                 |> UR.init
 
+        ClickedSubmit ->
+            case Validate.validate pinValidator model of
+                Ok _ ->
+                    { model | problems = [] }
+                        -- TODO
+                        |> UR.init
+
+                Err errors ->
+                    { model
+                        | problems =
+                            List.filterMap
+                                (\( field, error ) ->
+                                    case field of
+                                        Pin ->
+                                            Just error
+
+                                        PinConfirmation ->
+                                            Nothing
+                                )
+                                errors
+                        , confirmationProblems =
+                            List.filterMap
+                                (\( field, error ) ->
+                                    case field of
+                                        Pin ->
+                                            Nothing
+
+                                        PinConfirmation ->
+                                            Just error
+                                )
+                                errors
+                    }
+                        |> UR.init
+
 
 
 -- UTILS
@@ -478,10 +513,10 @@ updateWithPin msg model =
 passphraseValidator : Validator String PassphraseModel
 passphraseValidator =
     Validate.fromErrors
-        (\form ->
+        (\model ->
             let
                 words =
-                    String.words form.passphrase
+                    String.words model.passphrase
 
                 has12words =
                     List.length words == 12
@@ -501,6 +536,45 @@ passphraseValidator =
             else
                 []
         )
+
+
+type PinField
+    = Pin
+    | PinConfirmation
+
+
+pinValidator : Validator ( PinField, String ) PinModel
+pinValidator =
+    Validate.fromErrors
+        (\model ->
+            if not (Pin.isValid model.pin) then
+                [ ( Pin, "auth.pin.shouldHaveSixDigitsError" ) ]
+
+            else if not (Pin.isValid model.pinConfirmation) then
+                [ ( PinConfirmation, "auth.pin.shouldHaveSixDigitsError" ) ]
+
+            else if model.pin /= model.pinConfirmation then
+                [ ( PinConfirmation, "auth.pinConfirmation.differsFromPinError" ) ]
+
+            else
+                []
+        )
+
+
+
+-- TODO
+-- encodeLoginFormData : LoginFormData -> Value
+-- encodeLoginFormData formData =
+--     Encode.object
+--         [ ( "passphrase", Encode.string formData.passphrase )
+--         , ( "usePin"
+--           , case formData.usePin of
+--                 Nothing ->
+--                     Encode.null
+--                 Just pin ->
+--                     Encode.string pin
+--           )
+--         ]
 
 
 jsAddressToMsg : List String -> Value -> Maybe Msg
@@ -567,3 +641,6 @@ pinMsgToString msg =
 
         ToggledPinConfirmationVisibility ->
             [ "ToggledPinConfirmationVisibility" ]
+
+        ClickedSubmit ->
+            [ "ClickedSubmit" ]

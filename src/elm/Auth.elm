@@ -1,24 +1,20 @@
 module Auth exposing
     ( ExternalMsg(..)
-    , LoginFormData
     , Model
     , Msg
     , SignInResponse
+    , hasPrivateKey
     , init
-    , isAuth
     , jsAddressToMsg
     , maybePrivateKey
     , msgToString
     , signIn
-    , subscriptions
     , update
     , view
     , viewFieldLabel
     )
 
 import Api.Graphql
-import Browser.Dom as Dom
-import Browser.Events
 import Cambiatus.Mutation
 import Cambiatus.Object.Session
 import Eos.Account as Eos
@@ -26,9 +22,9 @@ import Graphql.Http
 import Graphql.Operation exposing (RootMutation)
 import Graphql.OptionalArgument as OptionalArgument
 import Graphql.SelectionSet exposing (SelectionSet, with)
-import Html exposing (Html, a, button, div, form, img, label, li, p, span, strong, text, textarea, ul)
-import Html.Attributes exposing (autocomplete, autofocus, class, classList, disabled, for, id, placeholder, required, src, type_, value)
-import Html.Events exposing (onClick, onInput, onSubmit)
+import Html exposing (Html, button, div, label, p, span, text)
+import Html.Attributes exposing (class, disabled, for, value)
+import Html.Events exposing (onSubmit)
 import Json.Decode as Decode
 import Json.Decode.Pipeline as Decode
 import Json.Encode as Encode exposing (Value)
@@ -36,14 +32,9 @@ import Log
 import Ports
 import Profile exposing (Model)
 import RemoteData exposing (RemoteData)
-import Route
 import Session.Shared exposing (Shared, Translators)
-import Task
 import UpdateResult as UR
-import Utils
-import Validate exposing (Validator, validate)
 import View.Feedback as Feedback
-import View.Form
 import View.Pin as Pin
 
 
@@ -64,22 +55,8 @@ because it's more convenient for humans.
 
 
 init : Shared -> Model
-init shared =
-    case shared.maybeAccount of
-        Just ( _, True ) ->
-            initModel WithoutPrivateKey
-
-        _ ->
-            initModel (Unauthenticated LoginStepPassphrase)
-
-
-
--- SUBSCRIPTIONS
-
-
-subscriptions : Model -> Sub Msg
-subscriptions _ =
-    Sub.map KeyPressed (Browser.Events.onKeyDown Utils.decodeEnterKeyDown)
+init _ =
+    initModel WithoutPrivateKey
 
 
 
@@ -88,30 +65,27 @@ subscriptions _ =
 
 type alias Model =
     { status : Status
-    , form : LoginFormData
+    , pin : String
     , error : Maybe String
     , isSigningIn : Bool
     , pinVisibility : Bool
-    , pinConfirmationVisibility : Bool
-    , problems : List ( Field, String )
+    , problems : List String
     }
 
 
 initModel : Status -> Model
 initModel status =
     { status = status
-    , form = initLoginFormData
-    , error = Nothing
+    , pin = ""
+    , error = Nothing -- TODO
     , isSigningIn = False
     , pinVisibility = True
-    , pinConfirmationVisibility = True
     , problems = []
     }
 
 
 {-| Represents the state of the user's authentication. A user can be:
 
-  - Unauthenticated - The user needs to see a form to insert the 12 words and create a PIN
   - Authenticated, but without theprivate key - This means the user is logged in,
     but we don't have their PIN, so we can't get their private key. If we ever need
     the user's private key, we should prompt them for their PIN
@@ -121,123 +95,21 @@ initModel status =
 
 -}
 type Status
-    = Unauthenticated LoginStep
-    | WithoutPrivateKey
+    = WithoutPrivateKey
     | WithPrivateKey PrivateKey
-
-
-type alias LoginFormData =
-    { passphrase : String
-    , hasPasted : Bool
-    , usePin : Maybe String
-    , enteredPin : String
-    , enteredPinConfirmation : String
-    }
-
-
-initLoginFormData : LoginFormData
-initLoginFormData =
-    { passphrase = ""
-    , hasPasted = False
-    , usePin = Nothing
-    , enteredPin = ""
-    , enteredPinConfirmation = ""
-    }
-
-
-type Field
-    = Passphrase
-    | Pin
-    | PinConfirmation
-
-
-passphraseValidator : Validator ( Field, String ) LoginFormData
-passphraseValidator =
-    Validate.fromErrors
-        (\form ->
-            let
-                words : List String
-                words =
-                    String.words form.passphrase
-
-                has12words : Bool
-                has12words =
-                    List.length words == 12
-
-                allWordsHaveAtLeastThreeLetters : Bool
-                allWordsHaveAtLeastThreeLetters =
-                    List.all (\w -> String.length w > 2) words
-
-                trPrefix s =
-                    "auth.login.wordsMode.input." ++ s
-            in
-            {- These rules force user to use 12 words instead of PK. -}
-            if not has12words then
-                [ ( Passphrase, trPrefix "notPassphraseError" ) ]
-
-            else if not allWordsHaveAtLeastThreeLetters then
-                [ ( Passphrase, trPrefix "atLeastThreeLettersError" ) ]
-
-            else
-                []
-        )
-
-
-pinValidator : Validator ( Field, String ) LoginFormData
-pinValidator =
-    Validate.fromErrors
-        (\form ->
-            let
-                pin =
-                    form.enteredPin
-
-                pinConfirmed =
-                    form.enteredPinConfirmation
-
-                isPinConfirmedCorrectly =
-                    pin == pinConfirmed
-            in
-            if not (Pin.isValid pin) then
-                [ ( Pin, "auth.pin.shouldHaveSixDigitsError" ) ]
-
-            else if not (Pin.isValid pinConfirmed) then
-                [ ( PinConfirmation, "auth.pin.shouldHaveSixDigitsError" ) ]
-
-            else if not isPinConfirmedCorrectly then
-                [ ( PinConfirmation, "auth.pinConfirmation.differsFromPinError" ) ]
-
-            else
-                []
-        )
-
-
-encodeLoginFormData : LoginFormData -> Value
-encodeLoginFormData formData =
-    Encode.object
-        [ ( "passphrase", Encode.string formData.passphrase )
-        , ( "usePin"
-          , case formData.usePin of
-                Nothing ->
-                    Encode.null
-
-                Just pin ->
-                    Encode.string pin
-          )
-        ]
 
 
 type alias PrivateKey =
     String
 
 
-isAuth : Model -> Bool
-isAuth model =
+hasPrivateKey : Model -> Bool
+hasPrivateKey model =
     case model.status of
         WithPrivateKey _ ->
             True
 
-        -- TODO - Should `WithoutPrivateKey` be considered authed here? (Check usage in other modules)
-        _ ->
+        WithoutPrivateKey ->
             False
 
 
@@ -247,7 +119,7 @@ maybePrivateKey model =
         WithPrivateKey pk ->
             Just pk
 
-        _ ->
+        WithoutPrivateKey ->
             Nothing
 
 
@@ -255,220 +127,18 @@ maybePrivateKey model =
 -- VIEW
 
 
-view : Shared -> Model -> List (Html Msg)
-view shared model =
-    case model.status of
-        Unauthenticated loginStep ->
-            viewUnauthenticated shared model loginStep
-
-        WithoutPrivateKey ->
-            viewAuthenticated shared model
-
-        WithPrivateKey _ ->
-            viewAuthenticated shared model
-
-
-type LoginStep
-    = LoginStepPassphrase
-    | LoginStepPIN
-
-
-{-| The view that is presented to an unauthenticated user (the login page)
--}
-viewUnauthenticated : Shared -> Model -> LoginStep -> List (Html Msg)
-viewUnauthenticated shared model loginStep =
-    let
-        { t, tr } =
-            shared.translators
-
-        illustration fileName =
-            img [ class "h-40 mx-auto mt-8 mb-7", src ("images/" ++ fileName) ] []
-
-        buttonClass =
-            "button button-primary min-w-full mb-8"
-
-        pClass =
-            "text-white text-body mb-5"
-
-        viewPasteButton =
-            if shared.canReadClipboard then
-                button
-                    [ class "absolute bottom-0 left-0 button m-2"
-                    , classList
-                        [ ( "button-secondary", not model.form.hasPasted )
-                        , ( "button-primary", model.form.hasPasted )
-                        ]
-                    , type_ "button"
-                    , onClick ClickedPaste
-                    ]
-                    [ if model.form.hasPasted then
-                        text (t "auth.login.wordsMode.input.pasted")
-
-                      else
-                        text (t "auth.login.wordsMode.input.paste")
-                    ]
-
-            else
-                text ""
-
-        viewPassphrase =
-            let
-                passphraseId =
-                    "passphrase"
-
-                isPassphraseError ( problemType, _ ) =
-                    case problemType of
-                        Passphrase ->
-                            True
-
-                        _ ->
-                            False
-
-                passphraseErrors =
-                    List.filter isPassphraseError model.problems
-
-                errors =
-                    List.map (\( _, errorDescription ) -> li [] [ text (t errorDescription) ]) passphraseErrors
-
-                passphraseWordsCount =
-                    model.form.passphrase
-                        |> String.words
-                        |> List.filter (not << String.isEmpty)
-                        |> List.length
-                        |> String.fromInt
-            in
-            [ form [ class "sf-content" ]
-                [ illustration "login_key.svg"
-                , p [ class pClass ]
-                    [ span [ class "text-green text-caption tracking-wide uppercase block mb-1" ]
-                        [ text (t "menu.my_communities") ]
-                    , span [ class "text-white block leading-relaxed" ]
-                        [ text (t "auth.login.wordsMode.input.description") ]
-                    ]
-                , viewFieldLabel shared.translators "auth.login.wordsMode.input" passphraseId
-                , div [ class "relative" ]
-                    [ textarea
-                        [ class "form-textarea min-h-19 min-w-full block"
-                        , classList [ ( "pb-16", shared.canReadClipboard ) ]
-                        , placeholder (t "auth.login.wordsMode.input.placeholder")
-                        , View.Form.noGrammarly
-                        , autofocus True
-                        , class <|
-                            if not (List.isEmpty passphraseErrors) then
-                                "field-with-error"
-
-                            else
-                                ""
-                        , id passphraseId
-                        , value model.form.passphrase
-                        , onInput EnteredPassphrase
-                        , onSubmit ClickedNextStep
-                        , required True
-                        , autocomplete False
-                        ]
-                        []
-                    , viewPasteButton
-                    , div [ class "input-label pr-1 absolute right-0 text-white font-bold mt-1 text-right" ]
-                        [ text <|
-                            tr
-                                "edit.input_counter"
-                                [ ( "current", passphraseWordsCount )
-                                , ( "max", "12" )
-                                ]
-                        ]
-                    ]
-                , ul [ class "form-error-on-dark-bg absolute" ] errors
-                ]
-            , div [ class "sf-footer" ]
-                [ p [ class "text-white text-body text-center mt-16 mb-6 block" ]
-                    [ text (t "auth.login.register")
-                    , a [ Route.href (Route.Register Nothing Nothing), class "text-orange-300 underline" ]
-                        [ text (t "auth.login.registerLink")
-                        ]
-                    ]
-                , button
-                    [ class buttonClass
-                    , onClick ClickedNextStep
-                    ]
-                    [ text (t "dashboard.next") ]
-                ]
-            ]
-
-        viewCreatePin =
-            let
-                trPrefix s =
-                    "auth.pin.instruction." ++ s
-            in
-            [ div [ class "sf-content" ]
-                [ illustration "login_pin.svg"
-                , p [ class pClass ]
-                    [ text (t (trPrefix "nowCreate"))
-                    , text " "
-                    , strong [] [ text (t (trPrefix "sixDigitPin")) ]
-                    , text ". "
-                    , text (t <| trPrefix "thePin")
-                    , text " "
-                    , strong [] [ text <| t (trPrefix "notPassword") ]
-                    , text " "
-                    , text <| t (trPrefix "eachLogin")
-                    ]
-                , viewPin model shared
-                , viewPinConfirmation model shared
-                ]
-            , div [ class "sf-footer" ]
-                [ button
-                    [ class buttonClass
-                    , class "mt-10"
-                    , disabled model.isSigningIn
-                    , onClick (SubmittedForm model.form)
-                    ]
-                    [ text <|
-                        t
-                            (if model.isSigningIn then
-                                "auth.login.submitting"
-
-                             else
-                                "auth.login.submit"
-                            )
-                    ]
-                ]
-            ]
-
-        stepBody =
-            case loginStep of
-                LoginStepPassphrase ->
-                    viewPassphrase
-
-                LoginStepPIN ->
-                    viewCreatePin
-    in
-    [ div [ class "sf-wrapper w-full px-4 md:max-w-sm md:mx-auto md:pt-20 md:px-0" ]
-        stepBody
-    ]
-
-
 {-| Modal that asks for the user's PIN whenever needed. They must be authenticated
 already (`WithPrivateKey` or `WithoutPrivateKey`)
 -}
-viewAuthenticated : Shared -> Model -> List (Html Msg)
-viewAuthenticated shared model =
+view : Shared -> Model -> List (Html Msg)
+view shared model =
     -- TODO - Better visualization for when isSigningIn
     let
         { t } =
             shared.translators
 
         isDisabled =
-            model.isSigningIn
-                || (case model.status of
-                        WithPrivateKey _ ->
-                            True
-
-                        WithoutPrivateKey ->
-                            False
-
-                        Unauthenticated _ ->
-                            True
-                   )
+            model.isSigningIn || hasPrivateKey model
     in
     [ div []
         [ p
@@ -512,22 +182,13 @@ type alias UpdateResult =
 type Msg
     = Ignored
       -- Input
-    | EnteredPassphrase String
     | EnteredPin String
-    | EnteredPinConf String
     | TogglePinVisibility
-    | TogglePinConfirmationVisibility
-    | KeyPressed Bool
-    | ClickedPaste
-    | GotClipboardContent (Maybe String)
       -- Submission
-    | ClickedNextStep
-    | SubmittedForm LoginFormData
     | SubmittedLoginPIN
     | CompletedSignIn Status (RemoteData (Graphql.Http.Error (Maybe SignInResponse)) (Maybe SignInResponse))
       -- Response
     | GotMultipleAccountsLogin (List Eos.Name)
-    | ClickedPrivateKeyAccount Eos.Name LoginFormData
     | GotPrivateKeyLogin (Result String ( Eos.Name, String ))
     | GotPinLogin (Result String ( Eos.Name, String ))
 
@@ -569,120 +230,14 @@ update msg shared model =
     in
     case msg of
         EnteredPin pin ->
-            let
-                currentForm =
-                    model.form
-            in
             { model
-                | form =
-                    { currentForm
-                        | enteredPin = trimPinNumber 6 currentForm.enteredPin pin
-                    }
-                , problems = []
-            }
-                |> UR.init
-
-        EnteredPinConf pin ->
-            let
-                currentForm =
-                    model.form
-            in
-            { model
-                | form =
-                    { currentForm
-                        | enteredPinConfirmation = trimPinNumber 6 currentForm.enteredPinConfirmation pin
-                    }
+                | pin = trimPinNumber 6 model.pin pin
                 , problems = []
             }
                 |> UR.init
 
         Ignored ->
             UR.init model
-
-        ClickedNextStep ->
-            case validate passphraseValidator model.form of
-                Ok _ ->
-                    let
-                        passphraseWithOnlySpaces =
-                            -- Make sure that we have only spaces as a word separators (e.g. line brakes won't work)
-                            String.join " " <| String.words model.form.passphrase
-
-                        currentForm =
-                            model.form
-
-                        newForm =
-                            { currentForm | passphrase = passphraseWithOnlySpaces }
-                    in
-                    { model
-                        | form = newForm
-                        , problems = []
-                        , status = Unauthenticated LoginStepPIN
-                    }
-                        |> UR.init
-                        |> UR.addCmd
-                            (Dom.focus "pinInput"
-                                |> Task.attempt (\_ -> Ignored)
-                            )
-                        |> UR.addExt (SetFeedback Feedback.Hidden)
-
-                Err errors ->
-                    { model | problems = errors }
-                        |> UR.init
-
-        EnteredPassphrase phrase ->
-            let
-                currentForm =
-                    model.form
-
-                newForm =
-                    { currentForm
-                        | passphrase = phrase
-                        , hasPasted = False
-                    }
-            in
-            case model.status of
-                Unauthenticated LoginStepPassphrase ->
-                    { model
-                        | form = newForm
-                        , problems = []
-                    }
-                        |> UR.init
-                        |> UR.addExt (SetFeedback Feedback.Hidden)
-
-                _ ->
-                    UR.init model
-
-        SubmittedForm form ->
-            case validate pinValidator form of
-                Ok _ ->
-                    let
-                        pinString =
-                            form.enteredPin
-
-                        newForm =
-                            { form | usePin = Just pinString }
-                    in
-                    { model
-                        | form = newForm
-                        , isSigningIn = True
-                    }
-                        |> UR.init
-                        |> UR.addPort
-                            { responseAddress = SubmittedForm form
-                            , responseData = Encode.null
-                            , data =
-                                Encode.object
-                                    [ ( "name", Encode.string "loginWithPrivateKey" )
-                                    , ( "form", encodeLoginFormData newForm )
-                                    ]
-                            }
-
-                Err errors ->
-                    { model
-                        | problems = errors
-                        , isSigningIn = False
-                    }
-                        |> UR.init
 
         GotMultipleAccountsLogin _ ->
             UR.init
@@ -692,19 +247,6 @@ update msg shared model =
                             _ ->
                                 model.status
                 }
-
-        ClickedPrivateKeyAccount accountName form ->
-            UR.init model
-                |> UR.addPort
-                    { responseAddress = ClickedPrivateKeyAccount accountName form
-                    , responseData = Encode.null
-                    , data =
-                        Encode.object
-                            [ ( "name", Encode.string "loginWithPrivateKeyAccount" )
-                            , ( "accountName", Eos.encodeName accountName )
-                            , ( "form", encodeLoginFormData form )
-                            ]
-                    }
 
         GotPrivateKeyLogin (Ok ( accountName, privateKey )) ->
             model
@@ -757,7 +299,7 @@ update msg shared model =
         SubmittedLoginPIN ->
             let
                 pinString =
-                    model.form.enteredPin
+                    model.pin
             in
             UR.init { model | isSigningIn = True }
                 |> UR.addPort
@@ -787,66 +329,6 @@ update msg shared model =
         TogglePinVisibility ->
             { model | pinVisibility = not model.pinVisibility } |> UR.init
 
-        TogglePinConfirmationVisibility ->
-            { model | pinConfirmationVisibility = not model.pinConfirmationVisibility } |> UR.init
-
-        KeyPressed isEnter ->
-            if isEnter then
-                case model.status of
-                    Unauthenticated LoginStepPassphrase ->
-                        UR.init model
-                            |> UR.addCmd
-                                (Task.succeed ClickedNextStep
-                                    |> Task.perform identity
-                                )
-
-                    Unauthenticated LoginStepPIN ->
-                        UR.init model
-                            |> UR.addCmd
-                                (Task.succeed (SubmittedForm model.form)
-                                    |> Task.perform identity
-                                )
-
-                    _ ->
-                        UR.init model
-
-            else
-                UR.init model
-
-        ClickedPaste ->
-            UR.init model
-                |> UR.addPort
-                    { responseAddress = ClickedPaste
-                    , responseData = Encode.null
-                    , data =
-                        Encode.object [ ( "name", Encode.string "readClipboard" ) ]
-                    }
-                |> UR.addCmd
-                    (Dom.focus "passphrase"
-                        |> Task.attempt (\_ -> Ignored)
-                    )
-                |> UR.addExt (SetFeedback Feedback.Hidden)
-
-        GotClipboardContent Nothing ->
-            -- Browser doesn't support the clipboard API
-            UR.init model
-                |> UR.logImpossible msg [ "ClipboardApiNotSupported" ]
-
-        GotClipboardContent (Just content) ->
-            let
-                form =
-                    model.form
-            in
-            { model
-                | form =
-                    { form
-                        | passphrase = String.trim content
-                        , hasPasted = True
-                    }
-                , problems = []
-            }
-                |> UR.init
-
 
 signIn : Eos.Name -> Shared -> Maybe String -> SelectionSet (Maybe SignInResponse) RootMutation
 signIn accountName shared maybeInvitationId =
@@ -863,25 +345,8 @@ signIn accountName shared maybeInvitationId =
 
 addError : String -> UpdateResult -> UpdateResult
 addError error uResult =
-    let
-        isModal =
-            case uResult.model.status of
-                WithPrivateKey _ ->
-                    True
-
-                WithoutPrivateKey ->
-                    True
-
-                Unauthenticated _ ->
-                    False
-    in
-    if isModal then
-        uResult
-            |> UR.mapModel (\m -> { m | error = Just error })
-
-    else
-        uResult
-            |> UR.addExt (SetFeedback (Feedback.Shown Feedback.Failure error))
+    uResult
+        |> UR.mapModel (\m -> { m | error = Just error })
 
 
 loginFailed : Model -> UpdateResult
@@ -892,12 +357,10 @@ loginFailed model =
                 WithoutPrivateKey ->
                     WithoutPrivateKey
 
-                Unauthenticated _ ->
-                    Unauthenticated LoginStepPassphrase
-
                 WithPrivateKey _ ->
                     WithoutPrivateKey
-        , form = initLoginFormData
+        , pin = ""
+        , problems = []
         , isSigningIn = False
     }
         |> UR.init
@@ -914,14 +377,6 @@ jsAddressToMsg addr val =
 
         "SubmittedLoginPIN" :: [] ->
             decodeAccountNameOrStringError GotPinLogin val
-
-        "ClickedPaste" :: [] ->
-            Decode.decodeValue
-                (Decode.succeed GotClipboardContent
-                    |> Decode.required "clipboardContent" (Decode.nullable Decode.string)
-                )
-                val
-                |> Result.toMaybe
 
         _ ->
             Nothing
@@ -954,20 +409,8 @@ msgToString msg =
         CompletedSignIn _ _ ->
             [ "CompletedSignIn" ]
 
-        ClickedNextStep ->
-            [ "ClickedViewLoginPinStep" ]
-
-        EnteredPassphrase _ ->
-            [ "EnteredPrivateKey" ]
-
-        SubmittedForm _ ->
-            [ "SubmittedLoginPrivateKey" ]
-
         GotMultipleAccountsLogin _ ->
             [ "GotMultipleAccountsLogin" ]
-
-        ClickedPrivateKeyAccount _ _ ->
-            [ "ClickedPrivateKeyAccount" ]
 
         GotPrivateKeyLogin r ->
             [ "GotPrivateKeyLogin", UR.resultToString r ]
@@ -981,48 +424,15 @@ msgToString msg =
         EnteredPin _ ->
             [ "EnteredPin" ]
 
-        EnteredPinConf _ ->
-            [ "EnteredPinConf" ]
-
         TogglePinVisibility ->
             [ "TogglePinVisibility" ]
 
-        TogglePinConfirmationVisibility ->
-            [ "TogglePinConfirmationVisibility" ]
-
-        KeyPressed _ ->
-            [ "KeyPressed" ]
-
-        ClickedPaste ->
-            [ "ClickedPaste" ]
-
-        GotClipboardContent _ ->
-            [ "GotClipboardContent" ]
-
 
 viewPin : Model -> Shared -> Html Msg
-viewPin ({ form } as model) shared =
+viewPin model shared =
     let
         pinLabel =
-            case shared.maybeAccount of
-                Just _ ->
-                    -- Popup with PIN input for logged-in user has different label
-                    shared.translators.t "auth.pinPopup.label"
-
-                Nothing ->
-                    shared.translators.t "auth.pin.label"
-
-        isPinError ( problemType, _ ) =
-            case problemType of
-                Pin ->
-                    True
-
-                _ ->
-                    False
-
-        errors =
-            List.filter isPinError model.problems
-                |> List.map (\( _, err ) -> err)
+            shared.translators.t "auth.pinPopup.label"
 
         modalErrors =
             case ( model.status, model.error ) of
@@ -1039,36 +449,9 @@ viewPin ({ form } as model) shared =
         shared
         { labelText = pinLabel
         , inputId = "pinInput"
-        , inputValue = form.enteredPin
+        , inputValue = model.pin
         , onInputMsg = EnteredPin
         , onToggleMsg = TogglePinVisibility
         , isVisible = model.pinVisibility
-        , errors = modalErrors ++ errors
-        }
-
-
-viewPinConfirmation : Model -> Shared -> Html Msg
-viewPinConfirmation ({ form } as model) shared =
-    let
-        isPinConfirmError ( problemType, _ ) =
-            case problemType of
-                PinConfirmation ->
-                    True
-
-                _ ->
-                    False
-
-        errors =
-            List.filter isPinConfirmError model.problems
-                |> List.map (\( _, err ) -> err)
-    in
-    Pin.view
-        shared
-        { labelText = shared.translators.t "auth.pinConfirmation.label"
-        , inputId = "pinInputConfirmation"
-        , inputValue = form.enteredPinConfirmation
-        , onInputMsg = EnteredPinConf
-        , onToggleMsg = TogglePinConfirmationVisibility
-        , isVisible = model.pinConfirmationVisibility
-        , errors = errors
+        , errors = modalErrors ++ model.problems
         }

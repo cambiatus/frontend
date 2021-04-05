@@ -133,8 +133,7 @@ initLogin shared authModel profile_ authToken =
 subscriptions : Model -> Sub Msg
 subscriptions model =
     Sub.batch
-        [ Sub.map GotAuthMsg (Auth.subscriptions model.auth)
-        , Sub.map KeyDown (Browser.Events.onKeyDown (Decode.field "key" Decode.string))
+        [ Sub.map KeyDown (Browser.Events.onKeyDown (Decode.field "key" Decode.string))
         , Sub.map GotSearchMsg Search.subscriptions
         , Sub.map GotActionMsg (Action.subscriptions model.claimingAction)
         ]
@@ -210,9 +209,13 @@ type ProfileStatus
     | Loaded Profile.Model
 
 
+
+-- TODO - Maybe rename this?
+
+
 isAuth : Model -> Bool
 isAuth model =
-    Auth.isAuth model.auth
+    Auth.hasPrivateKey model.auth
 
 
 maybePrivateKey : Model -> Maybe String
