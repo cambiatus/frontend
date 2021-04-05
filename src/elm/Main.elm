@@ -102,10 +102,6 @@ subscriptions model =
         [ Sub.map GotPageMsg (Page.subscriptions model.session)
         , Ports.javascriptInPort GotJavascriptData
         , case model.status of
-            Login subModel ->
-                Login.subscriptions subModel
-                    |> Sub.map GotLoginMsg
-
             Dashboard subModel ->
                 Dashboard.subscriptions subModel
                     |> Sub.map GotDashboardMsg
@@ -467,38 +463,37 @@ updateGuestUResult : (subModel -> Status) -> (subMsg -> Msg) -> Model -> UpdateR
 updateGuestUResult toStatus toMsg model uResult =
     List.foldl
         (\commExtMsg ( m, cmds_ ) ->
-            case commExtMsg of
-                Guest.UpdatedGuest guest ->
-                    ( { m | session = Page.Guest guest }
-                    , cmds_
-                    )
+            case m.session of
+                Page.LoggedIn _ ->
+                    ( m, cmds_ )
 
-                Guest.LoggedIn signInResponse auth ->
-                    let
-                        shared =
-                            case m.session of
-                                Page.Guest guest ->
+                Page.Guest guest ->
+                    case commExtMsg of
+                        Guest.UpdatedGuest newGuest ->
+                            ( { m | session = Page.Guest newGuest }
+                            , cmds_
+                            )
+
+                        Guest.LoggedIn privateKey signInResponse ->
+                            let
+                                shared =
                                     guest.shared
 
-                                Page.LoggedIn loggedIn ->
-                                    loggedIn.shared
+                                ( session, cmd ) =
+                                    LoggedIn.initLogin shared (Just privateKey) signInResponse.user signInResponse.token
+                            in
+                            ( { m
+                                | session =
+                                    Page.LoggedIn session
+                              }
+                            , Cmd.map (Page.GotLoggedInMsg >> GotPageMsg) cmd
+                                :: (Maybe.withDefault Route.Dashboard guest.afterLoginRedirect
+                                        |> Route.pushUrl guest.shared.navKey
+                                   )
+                                :: cmds_
+                            )
 
-                        ( session, cmd ) =
-                            LoggedIn.initLogin shared auth signInResponse.user signInResponse.token
-                    in
-                    ( { m
-                        | session =
-                            Page.LoggedIn session
-                      }
-                    , Cmd.map (Page.GotLoggedInMsg >> GotPageMsg) cmd :: cmds_
-                    )
-
-                Guest.SetFeedback feedback ->
-                    case m.session of
-                        Page.LoggedIn _ ->
-                            ( m, cmds_ )
-
-                        Page.Guest guest ->
+                        Guest.SetFeedback feedback ->
                             ( { m | session = Page.Guest { guest | feedback = feedback } }
                             , cmds_
                             )

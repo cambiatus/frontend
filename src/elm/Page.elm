@@ -12,7 +12,6 @@ module Page exposing
     , jsAddressToMsg
     , labelWithTooltip
     , loading
-    , login
     , logout
     , msgToString
     , onFileChange
@@ -52,7 +51,6 @@ import Icons
 import Json.Decode as Decode exposing (Decoder)
 import Json.Encode exposing (Value)
 import Ports
-import Profile
 import RemoteData exposing (RemoteData)
 import Route exposing (Route)
 import Session.Guest as Guest
@@ -397,7 +395,7 @@ type ExternalMsg
 
 type Msg
     = CompletedLoadTranslation String (Result Http.Error Translations)
-    | SignedIn (RemoteData (Graphql.Http.Error (Maybe Auth.SignInResponse)) (Maybe Auth.SignInResponse))
+    | SignedIn (RemoteData (Graphql.Http.Error (Maybe Auth.SignInResponse)) (Maybe Auth.SignInResponse)) -- TODO - Move this to Guest?
     | GotGuestMsg Guest.Msg
     | GotLoggedInMsg LoggedIn.Msg
 
@@ -436,7 +434,7 @@ update msg session =
                     guest.shared
 
                 ( loggedIn, cmd ) =
-                    LoggedIn.initLogin shared (Auth.init shared) user token
+                    LoggedIn.initLogin shared Nothing user token
             in
             LoggedIn loggedIn
                 |> UR.init
@@ -470,17 +468,6 @@ updateShared session transform =
 
 
 -- TRANSFORM
-
-
-login : Auth.Model -> Profile.Model -> Guest.Model -> String -> ( LoggedIn.Model, Cmd Msg )
-login auth profile guest authToken =
-    let
-        ( loggedIn, cmd ) =
-            LoggedIn.initLogin guest.shared auth profile authToken
-    in
-    ( loggedIn
-    , Cmd.map GotLoggedInMsg cmd
-    )
 
 
 logout : LoggedIn.Model -> ( Session, Cmd Msg )

@@ -80,11 +80,7 @@ import View.Modal as Modal
 -}
 init : Shared -> Eos.Name -> Flags -> String -> ( Model, Cmd Msg )
 init shared accountName flags authToken =
-    let
-        authModel =
-            Auth.init shared
-    in
-    ( initModel shared authModel accountName flags.selectedCommunity authToken
+    ( initModel shared Nothing accountName flags.selectedCommunity authToken
     , Cmd.batch
         [ Api.Graphql.query shared (Just authToken) (Profile.query accountName) CompletedLoadProfile
         , Api.Graphql.query shared (Just authToken) (Community.settingsQuery flags.selectedCommunity) CompletedLoadSettings
@@ -100,10 +96,14 @@ fetchTranslations language _ =
         |> Translation.get language
 
 
+
+-- TODO - should we have just `PrivateKey` instead of `Maybe PrivateKey`?
+
+
 {-| Initialize logged in user after signing-in.
 -}
-initLogin : Shared -> Auth.Model -> Profile.Model -> String -> ( Model, Cmd Msg )
-initLogin shared authModel profile_ authToken =
+initLogin : Shared -> Maybe String -> Profile.Model -> String -> ( Model, Cmd Msg )
+initLogin shared maybePrivateKey_ profile_ authToken =
     let
         selectedCommunity : Symbol
         selectedCommunity =
@@ -112,7 +112,7 @@ initLogin shared authModel profile_ authToken =
                 |> Maybe.withDefault Eos.cambiatusSymbol
 
         model =
-            initModel shared authModel profile_.account selectedCommunity authToken
+            initModel shared maybePrivateKey_ profile_.account selectedCommunity authToken
     in
     ( { model
         | profile = Loaded profile_
@@ -175,8 +175,8 @@ type FeatureStatus
     | FeatureLoading
 
 
-initModel : Shared -> Auth.Model -> Eos.Name -> Symbol -> String -> Model
-initModel shared authModel accountName selectedCommunity authToken =
+initModel : Shared -> Maybe String -> Eos.Name -> Symbol -> String -> Model
+initModel shared maybePrivateKey_ accountName selectedCommunity authToken =
     { shared = shared
     , accountName = accountName
     , profile = Loading accountName
@@ -188,7 +188,7 @@ initModel shared authModel accountName selectedCommunity authToken =
     , notification = Notification.init
     , unreadCount = 0
     , showAuthModal = False
-    , auth = authModel
+    , auth = Auth.init maybePrivateKey_
     , feedback = Feedback.Hidden
     , showCommunitySelector = False
     , hasShop = FeatureLoading

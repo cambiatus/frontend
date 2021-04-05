@@ -23,7 +23,7 @@ import Graphql.Operation exposing (RootMutation)
 import Graphql.OptionalArgument as OptionalArgument
 import Graphql.SelectionSet exposing (SelectionSet, with)
 import Html exposing (Html, button, div, label, p, span, text)
-import Html.Attributes exposing (class, disabled, for, value)
+import Html.Attributes exposing (class, disabled, for)
 import Html.Events exposing (onSubmit)
 import Json.Decode as Decode
 import Json.Decode.Pipeline as Decode
@@ -54,9 +54,14 @@ because it's more convenient for humans.
 -- INIT
 
 
-init : Shared -> Model
-init _ =
-    initModel WithoutPrivateKey
+init : Maybe PrivateKey -> Model
+init maybePrivateKey_ =
+    case maybePrivateKey_ of
+        Nothing ->
+            initModel WithoutPrivateKey
+
+        Just privateKey ->
+            initModel (WithPrivateKey privateKey)
 
 
 
@@ -69,7 +74,6 @@ type alias Model =
     , error : Maybe String
     , isSigningIn : Bool
     , pinVisibility : Bool
-    , problems : List String
     }
 
 
@@ -77,10 +81,9 @@ initModel : Status -> Model
 initModel status =
     { status = status
     , pin = ""
-    , error = Nothing -- TODO
+    , error = Nothing
     , isSigningIn = False
     , pinVisibility = True
-    , problems = []
     }
 
 
@@ -230,10 +233,7 @@ update msg shared model =
     in
     case msg of
         EnteredPin pin ->
-            { model
-                | pin = trimPinNumber 6 model.pin pin
-                , problems = []
-            }
+            { model | pin = trimPinNumber 6 model.pin pin, error = Nothing }
                 |> UR.init
 
         Ignored ->
@@ -285,11 +285,7 @@ update msg shared model =
                 |> UR.addPort
                     { responseAddress = Ignored
                     , responseData = Encode.null
-                    , data =
-                        Encode.object
-                            [ ( "name", Encode.string "logout" )
-                            , ( "container", Encode.string "chat-manager" )
-                            ]
+                    , data = Encode.object [ ( "name", Encode.string "logout" ) ]
                     }
                 |> addError (t "auth.failed")
 
@@ -360,7 +356,7 @@ loginFailed model =
                 WithPrivateKey _ ->
                     WithoutPrivateKey
         , pin = ""
-        , problems = []
+        , error = Nothing
         , isSigningIn = False
     }
         |> UR.init
@@ -369,35 +365,26 @@ loginFailed model =
 jsAddressToMsg : List String -> Value -> Maybe Msg
 jsAddressToMsg addr val =
     case addr of
-        "SubmittedLoginPrivateKey" :: [] ->
-            decodeAccountNameOrStringError GotPrivateKeyLogin val
-
-        "ClickedPrivateKeyAccount" :: [] ->
-            decodeAccountNameOrStringError GotPrivateKeyLogin val
-
         "SubmittedLoginPIN" :: [] ->
-            decodeAccountNameOrStringError GotPinLogin val
+            Decode.decodeValue
+                (Decode.oneOf
+                    [ Decode.succeed Tuple.pair
+                        |> Decode.required "accountName" Eos.nameDecoder
+                        |> Decode.required "privateKey" Decode.string
+                        |> Decode.map (Ok >> GotPinLogin)
+
+                    -- TODO - Is this still needed?
+                    , Decode.field "accountNames" (Decode.list Eos.nameDecoder)
+                        |> Decode.map GotMultipleAccountsLogin
+                    , Decode.field "error" Decode.string
+                        |> Decode.map (Err >> GotPinLogin)
+                    ]
+                )
+                val
+                |> Result.toMaybe
 
         _ ->
             Nothing
-
-
-decodeAccountNameOrStringError : (Result String ( Eos.Name, String ) -> Msg) -> Value -> Maybe Msg
-decodeAccountNameOrStringError toMsg value =
-    Decode.decodeValue
-        (Decode.oneOf
-            [ Decode.succeed Tuple.pair
-                |> Decode.required "accountName" Eos.nameDecoder
-                |> Decode.required "privateKey" Decode.string
-                |> Decode.map (Ok >> toMsg)
-            , Decode.field "accountNames" (Decode.list Eos.nameDecoder)
-                |> Decode.map GotMultipleAccountsLogin
-            , Decode.field "error" Decode.string
-                |> Decode.map (Err >> toMsg)
-            ]
-        )
-        value
-        |> Result.toMaybe
 
 
 msgToString : Msg -> List String
@@ -434,7 +421,7 @@ viewPin model shared =
         pinLabel =
             shared.translators.t "auth.pinPopup.label"
 
-        modalErrors =
+        errors =
             case ( model.status, model.error ) of
                 ( WithPrivateKey _, Just error ) ->
                     [ error ]
@@ -453,5 +440,5 @@ viewPin model shared =
         , onInputMsg = EnteredPin
         , onToggleMsg = TogglePinVisibility
         , isVisible = model.pinVisibility
-        , errors = modalErrors ++ model.problems
+        , errors = errors
         }

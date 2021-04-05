@@ -296,7 +296,7 @@ viewPageHeader model shared =
 
 type External
     = UpdatedGuest Model
-    | LoggedIn Auth.SignInResponse Auth.Model
+    | LoggedIn String Auth.SignInResponse
     | SetFeedback Feedback.Model
 
 

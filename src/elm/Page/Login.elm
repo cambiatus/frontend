@@ -1,20 +1,26 @@
-module Page.Login exposing (Model, Msg, init, jsAddressToMsg, msgToString, subscriptions, update, view)
+module Page.Login exposing (Model, Msg, init, jsAddressToMsg, msgToString, update, view)
 
+import Api.Graphql
+import Auth
 import Browser.Dom as Dom
-import Browser.Events exposing (onKeyDown)
+import Eos.Account as Eos
+import Graphql.Http
 import Html exposing (Html, a, button, div, form, img, label, li, p, span, strong, text, textarea, ul)
 import Html.Attributes exposing (autocomplete, autofocus, class, classList, disabled, for, id, placeholder, required, src, type_, value)
-import Html.Events exposing (onClick, onInput, onSubmit)
+import Html.Events exposing (keyCode, onClick, onInput, onSubmit, preventDefaultOn)
 import Json.Decode as Decode
 import Json.Decode.Pipeline as Decode
 import Json.Encode as Encode exposing (Value)
+import Log
+import Ports
+import RemoteData exposing (RemoteData)
 import Route
-import Session.Guest as Guest exposing (External(..))
+import Session.Guest as Guest
 import Session.Shared exposing (Shared, Translators)
 import Task
 import UpdateResult as UR
-import Utils
 import Validate exposing (Validator)
+import View.Feedback as Feedback
 import View.Form
 import View.Pin as Pin
 
@@ -26,7 +32,7 @@ import View.Pin as Pin
 
 init : Guest.Model -> ( Model, Cmd Msg )
 init _ =
-    ( CreatingPassphrase initPassphraseModel
+    ( EnteringPassphrase initPassphraseModel
     , Cmd.none
     )
 
@@ -39,8 +45,8 @@ initPassphraseModel =
     }
 
 
-initPinModel : PinModel
-initPinModel =
+initPinModel : Validate.Valid PassphraseModel -> PinModel
+initPinModel passphraseModel =
     { isSigningIn = False
     , pin = ""
     , pinConfirmation = ""
@@ -48,16 +54,8 @@ initPinModel =
     , isPinConfirmationVisible = True
     , problems = []
     , confirmationProblems = []
+    , passphrase = Validate.fromValid passphraseModel |> .passphrase
     }
-
-
-
--- SUBSCRIPTIONS
-
-
-subscriptions : Model -> Sub Msg
-subscriptions _ =
-    Sub.map KeyPressed (onKeyDown Utils.decodeEnterKeyDown)
 
 
 
@@ -65,8 +63,8 @@ subscriptions _ =
 
 
 type Model
-    = CreatingPassphrase PassphraseModel
-    | CreatingPin PinModel
+    = EnteringPassphrase PassphraseModel
+    | EnteringPin PinModel
 
 
 type alias PassphraseModel =
@@ -84,6 +82,7 @@ type alias PinModel =
     , isPinConfirmationVisible : Bool
     , problems : List String
     , confirmationProblems : List String
+    , passphrase : String
     }
 
 
@@ -99,11 +98,11 @@ view guest model =
         div [ class "bg-purple-500 flex-grow flex flex-wrap md:block" ]
             [ div [ class "sf-wrapper w-full px-4 md:max-w-sm md:mx-auto md:pt-20 md:px-0" ]
                 [ case model of
-                    CreatingPassphrase passphraseModel ->
+                    EnteringPassphrase passphraseModel ->
                         viewCreatingPassphrase guest passphraseModel
                             |> Html.map GotPassphraseMsg
 
-                    CreatingPin pinModel ->
+                    EnteringPin pinModel ->
                         viewCreatingPin guest pinModel
                             |> Html.map GotPinMsg
                 ]
@@ -119,6 +118,9 @@ viewCreatingPassphrase { shared } model =
 
         passphraseId =
             "passphrase"
+
+        enterKeyCode =
+            13
 
         viewPasteButton =
             if shared.canReadClipboard then
@@ -181,6 +183,17 @@ viewCreatingPassphrase { shared } model =
                     , onSubmit ClickedNextStep
                     , required True
                     , autocomplete False
+                    , preventDefaultOn "keydown"
+                        (keyCode
+                            |> Decode.map
+                                (\code ->
+                                    if code == enterKeyCode then
+                                        ( ClickedNextStep, True )
+
+                                    else
+                                        ( PassphraseIgnored, False )
+                                )
+                        )
                     ]
                     []
                 , viewPasteButton
@@ -242,8 +255,7 @@ viewCreatingPin { shared } model =
                 [ class "button button-primary min-w-full mb-8"
                 , class "mt-10"
                 , disabled model.isSigningIn
-
-                -- , onClick (SubmittedForm model.form)
+                , onClick ClickedSubmit
                 ]
                 [ text <|
                     t
@@ -307,7 +319,7 @@ viewIllustration fileName =
 
 
 type alias UpdateResult =
-    UR.UpdateResult Model Msg External
+    UR.UpdateResult Model Msg Guest.External
 
 
 type alias PassphraseUpdateResult =
@@ -315,18 +327,18 @@ type alias PassphraseUpdateResult =
 
 
 type alias PinUpdateResult =
-    UR.UpdateResult PinModel PinMsg ()
+    UR.UpdateResult PinModel PinMsg PinExternalMsg
 
 
 type Msg
     = KeyPressed Bool
-    | WentToPin
+    | WentToPin (Validate.Valid PassphraseModel)
     | GotPassphraseMsg PassphraseMsg
     | GotPinMsg PinMsg
 
 
 type PassphraseMsg
-    = Ignored
+    = PassphraseIgnored
     | ClickedPaste
     | GotClipboardContent (Maybe String)
     | EnteredPassphrase String
@@ -334,21 +346,29 @@ type PassphraseMsg
 
 
 type PassphraseExternalMsg
-    = FinishedEnteringPassphrase
+    = FinishedEnteringPassphrase (Validate.Valid PassphraseModel)
 
 
 type PinMsg
-    = EnteredPin String
+    = PinIgnored
+    | EnteredPin String
     | EnteredPinConfirmation String
     | ToggledPinVisibility
     | ToggledPinConfirmationVisibility
     | ClickedSubmit
+    | GotSubmitResult (Result String ( Eos.Name, String ))
+    | GotSignInResult String (RemoteData (Graphql.Http.Error (Maybe Auth.SignInResponse)) (Maybe Auth.SignInResponse))
+
+
+type PinExternalMsg
+    = GuestExternal Guest.External
+    | RevertProcess
 
 
 update : Msg -> Model -> Guest.Model -> UpdateResult
-update msg model _ =
+update msg model guest =
     case ( msg, model ) of
-        ( KeyPressed isEnter, CreatingPassphrase _ ) ->
+        ( KeyPressed isEnter, EnteringPassphrase _ ) ->
             let
                 cmd =
                     if isEnter then
@@ -362,43 +382,53 @@ update msg model _ =
             UR.init model
                 |> UR.addCmd cmd
 
-        ( KeyPressed _, CreatingPin _ ) ->
+        ( KeyPressed _, EnteringPin _ ) ->
             UR.init model
 
-        ( GotPassphraseMsg passphraseMsg, CreatingPassphrase passphraseModel ) ->
+        ( GotPassphraseMsg passphraseMsg, EnteringPassphrase passphraseModel ) ->
             updateWithPassphrase passphraseMsg passphraseModel
-                |> UR.map CreatingPassphrase
+                |> UR.map EnteringPassphrase
                     GotPassphraseMsg
                     (\ext ur ->
                         case ext of
-                            FinishedEnteringPassphrase ->
+                            FinishedEnteringPassphrase validPassphrase ->
                                 ur
                                     |> UR.addCmd
-                                        (Task.succeed WentToPin
-                                            |> Task.perform identity
+                                        (Task.succeed validPassphrase
+                                            |> Task.perform WentToPin
                                         )
                     )
 
-        ( WentToPin, CreatingPassphrase _ ) ->
-            initPinModel
-                |> CreatingPin
+        ( WentToPin validPassphrase, EnteringPassphrase _ ) ->
+            initPinModel validPassphrase
+                |> EnteringPin
                 |> UR.init
 
-        ( GotPinMsg pinMsg, CreatingPin pinModel ) ->
-            updateWithPin pinMsg pinModel
-                -- TODO
-                |> UR.map CreatingPin GotPinMsg (\ext ur -> ur)
+        ( GotPinMsg pinMsg, EnteringPin pinModel ) ->
+            updateWithPin pinMsg pinModel guest
+                |> UR.map EnteringPin
+                    GotPinMsg
+                    (\ext ur ->
+                        case ext of
+                            GuestExternal guestExternal ->
+                                UR.addExt guestExternal ur
+
+                            RevertProcess ->
+                                initPassphraseModel
+                                    |> EnteringPassphrase
+                                    |> UR.setModel ur
+                    )
 
         -- Impossible Msgs
-        ( GotPassphraseMsg _, CreatingPin _ ) ->
+        ( GotPassphraseMsg _, EnteringPin _ ) ->
             UR.init model
                 |> UR.logImpossible msg [ "CreatingPin" ]
 
-        ( WentToPin, CreatingPin _ ) ->
+        ( WentToPin _, EnteringPin _ ) ->
             UR.init model
                 |> UR.logImpossible msg [ "CreatingPin" ]
 
-        ( GotPinMsg _, CreatingPassphrase _ ) ->
+        ( GotPinMsg _, EnteringPassphrase _ ) ->
             UR.init model
                 |> UR.logImpossible msg [ "CreatingPassphrase" ]
 
@@ -406,7 +436,7 @@ update msg model _ =
 updateWithPassphrase : PassphraseMsg -> PassphraseModel -> PassphraseUpdateResult
 updateWithPassphrase msg model =
     case msg of
-        Ignored ->
+        PassphraseIgnored ->
             UR.init model
 
         ClickedPaste ->
@@ -418,7 +448,7 @@ updateWithPassphrase msg model =
                     }
                 |> UR.addCmd
                     (Dom.focus "passphrase"
-                        |> Task.attempt (\_ -> Ignored)
+                        |> Task.attempt (\_ -> PassphraseIgnored)
                     )
 
         GotClipboardContent (Just content) ->
@@ -442,19 +472,22 @@ updateWithPassphrase msg model =
 
         ClickedNextStep ->
             case Validate.validate passphraseValidator model of
-                Ok _ ->
+                Ok validModel ->
                     { model | problems = [] }
                         |> UR.init
-                        |> UR.addExt FinishedEnteringPassphrase
+                        |> UR.addExt (FinishedEnteringPassphrase validModel)
 
                 Err errors ->
                     { model | problems = errors }
                         |> UR.init
 
 
-updateWithPin : PinMsg -> PinModel -> PinUpdateResult
-updateWithPin msg model =
+updateWithPin : PinMsg -> PinModel -> Guest.Model -> PinUpdateResult
+updateWithPin msg model { shared } =
     case msg of
+        PinIgnored ->
+            UR.init model
+
         EnteredPin pin ->
             { model | pin = pin }
                 |> UR.init
@@ -474,9 +507,19 @@ updateWithPin msg model =
         ClickedSubmit ->
             case Validate.validate pinValidator model of
                 Ok _ ->
-                    { model | problems = [] }
-                        -- TODO
+                    { model | problems = [], isSigningIn = True }
                         |> UR.init
+                        |> UR.addPort
+                            { responseAddress = ClickedSubmit
+                            , responseData = Encode.null
+                            , data =
+                                Encode.object
+                                    [ ( "name", Encode.string "loginWithPrivateKey" )
+                                    , ( "form"
+                                      , Encode.object [ ( "passphrase", Encode.string model.passphrase ) ]
+                                      )
+                                    ]
+                            }
 
                 Err errors ->
                     { model
@@ -504,6 +547,46 @@ updateWithPin msg model =
                                 errors
                     }
                         |> UR.init
+
+        GotSubmitResult (Ok ( accountName, privateKey )) ->
+            UR.init model
+                |> UR.addCmd
+                    (Api.Graphql.mutation shared
+                        Nothing
+                        (Auth.signIn accountName shared Nothing)
+                        (GotSignInResult privateKey)
+                    )
+
+        GotSubmitResult (Err err) ->
+            UR.init model
+                |> UR.addExt (GuestExternal <| Guest.SetFeedback <| Feedback.Shown Feedback.Failure (shared.translators.t err))
+                |> UR.addExt RevertProcess
+
+        GotSignInResult privateKey (RemoteData.Success (Just signInResponse)) ->
+            UR.init model
+                |> UR.addCmd (Ports.storeAuthToken signInResponse.token)
+                |> UR.addExt (GuestExternal <| Guest.LoggedIn privateKey signInResponse)
+
+        GotSignInResult _ (RemoteData.Success Nothing) ->
+            {model | isSigningIn = False, pin = "", pinConfirmation = "", problems = []}
+                |> UR.init 
+                |> UR.addExt (GuestExternal <| Guest.SetFeedback <| Feedback.Shown Feedback.Failure (shared.translators.t "error.unknown"))
+
+        GotSignInResult _ (RemoteData.Failure err) ->
+            UR.init model
+                |> UR.addCmd (Log.graphqlError err)
+                |> UR.addPort
+                    { responseAddress = PinIgnored
+                    , responseData = Encode.null
+                    , data = Encode.object [ ( "name", Encode.string "logout" ) ]
+                    }
+                |> UR.addExt RevertProcess
+
+        GotSignInResult _ RemoteData.NotAsked ->
+            UR.init model
+
+        GotSignInResult _ RemoteData.Loading ->
+            UR.init model
 
 
 
@@ -561,22 +644,6 @@ pinValidator =
         )
 
 
-
--- TODO
--- encodeLoginFormData : LoginFormData -> Value
--- encodeLoginFormData formData =
---     Encode.object
---         [ ( "passphrase", Encode.string formData.passphrase )
---         , ( "usePin"
---           , case formData.usePin of
---                 Nothing ->
---                     Encode.null
---                 Just pin ->
---                     Encode.string pin
---           )
---         ]
-
-
 jsAddressToMsg : List String -> Value -> Maybe Msg
 jsAddressToMsg addr val =
     case addr of
@@ -584,6 +651,22 @@ jsAddressToMsg addr val =
             Decode.decodeValue
                 (Decode.succeed (GotPassphraseMsg << GotClipboardContent)
                     |> Decode.required "clipboardContent" (Decode.nullable Decode.string)
+                )
+                val
+                |> Result.toMaybe
+
+        "GotPinMsg" :: "ClickedSubmit" :: [] ->
+            Decode.decodeValue
+                (Decode.oneOf
+                    [ Decode.succeed Tuple.pair
+                        |> Decode.required "accountName" Eos.nameDecoder
+                        |> Decode.required "privateKey" Decode.string
+                        |> Decode.map (Ok >> GotSubmitResult >> GotPinMsg)
+
+                    -- TODO - Is `GotMultipleAccountsLogin` still a thing?
+                    , Decode.field "error" Decode.string
+                        |> Decode.map (Err >> GotSubmitResult >> GotPinMsg)
+                    ]
                 )
                 val
                 |> Result.toMaybe
@@ -598,7 +681,7 @@ msgToString msg =
         KeyPressed _ ->
             [ "KeyPressed" ]
 
-        WentToPin ->
+        WentToPin _ ->
             [ "WentToPin" ]
 
         GotPassphraseMsg passphraseMsg ->
@@ -611,8 +694,8 @@ msgToString msg =
 passphraseMsgToString : PassphraseMsg -> List String
 passphraseMsgToString msg =
     case msg of
-        Ignored ->
-            [ "Ignored" ]
+        PassphraseIgnored ->
+            [ "PassphraseIgnored" ]
 
         ClickedPaste ->
             [ "ClickedPaste" ]
@@ -630,6 +713,9 @@ passphraseMsgToString msg =
 pinMsgToString : PinMsg -> List String
 pinMsgToString msg =
     case msg of
+        PinIgnored ->
+            [ "PinIgnored" ]
+
         EnteredPin _ ->
             [ "EnteredPin" ]
 
@@ -644,3 +730,9 @@ pinMsgToString msg =
 
         ClickedSubmit ->
             [ "ClickedSubmit" ]
+
+        GotSubmitResult r ->
+            [ "GotLoginResult", UR.resultToString r ]
+
+        GotSignInResult _ r ->
+            [ "GotSignInResult", UR.remoteDataToString r ]
