@@ -284,10 +284,6 @@ view thisMsg page ({ shared } as model) content =
 
 viewHelper : (Msg -> pageMsg) -> Page -> Profile.Model -> Model -> Html pageMsg -> Html pageMsg
 viewHelper pageMsg page profile_ ({ shared } as model) content =
-    let
-        { t } =
-            shared.translators
-    in
     div
         [ class "min-h-screen flex flex-col" ]
         ([ div [ class "bg-white" ]
@@ -300,9 +296,9 @@ viewHelper pageMsg page profile_ ({ shared } as model) content =
                   else
                     viewMainMenu page model |> Html.map pageMsg
                 ]
-            , Feedback.view model.feedback
-                |> Html.map (GotFeedbackMsg >> pageMsg)
             ]
+         , Feedback.view model.feedback
+            |> Html.map (GotFeedbackMsg >> pageMsg)
          ]
             ++ (let
                     viewClaimWithProofs action proof =
@@ -447,7 +443,7 @@ viewHeader ({ shared } as model) profile_ =
                   else
                     text ""
                 ]
-            , div [ class "relative z-20" ]
+            , div [ class "relative z-50" ]
                 [ button
                     [ class "h-12 z-10 bg-gray-200 py-2 px-3 relative hidden lg:visible lg:flex"
                     , classList [ ( "rounded-tr-lg rounded-tl-lg", model.showUserNav ) ]
@@ -488,7 +484,7 @@ viewHeader ({ shared } as model) profile_ =
                   else
                     text ""
                 , nav
-                    [ class "absolute right-0 lg:w-full py-2 px-4 shadow-lg bg-white rounded-t-lg rounded-b-lg lg:rounded-t-none"
+                    [ class "absolute right-0 lg:w-full py-2 px-4 shadow-lg bg-white rounded-t-lg rounded-b-lg lg:rounded-t-none z-50"
                     , classList
                         [ ( "hidden", not model.showUserNav )
                         ]

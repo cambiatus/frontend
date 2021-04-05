@@ -41,7 +41,7 @@ view model =
                             "bg-red"
             in
             div
-                [ class ("w-full sticky top-0 text-white py-2 grid grid-cols-10 " ++ bgColor)
+                [ class ("w-full sticky top-0 text-white py-2 grid grid-cols-10 z-40 " ++ bgColor)
                 ]
                 [ span
                     [ class "text-center text-sm text-white font-bold col-start-2 col-end-10" ]
