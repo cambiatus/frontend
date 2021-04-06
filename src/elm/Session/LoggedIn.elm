@@ -1015,10 +1015,6 @@ update msg model =
                     GotAuthMsg
                     (\extMsg uResult ->
                         case extMsg of
-                            Auth.ClickedCancel ->
-                                closeModal uResult
-                                    |> UR.addExt AuthenticationFailed
-
                             Auth.CompletedAuth { user, token } auth ->
                                 let
                                     cmd =
@@ -1044,10 +1040,6 @@ update msg model =
                                         )
                                     |> UR.addExt AuthenticationSucceed
                                     |> UR.addCmd cmd
-
-                            Auth.SetFeedback feedback ->
-                                uResult
-                                    |> UR.mapModel (\m -> { m | feedback = feedback })
                     )
 
         CompletedLoadUnread payload ->

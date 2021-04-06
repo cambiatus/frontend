@@ -1,5 +1,23 @@
 module Page.Login exposing (Model, Msg, init, jsAddressToMsg, msgToString, update, view)
 
+{-| This module is responsible for signing a user in, and showing the "Login" page.
+
+For more information on the authentication architecture, checkout the Auth module.
+
+The login process has two steps: `EnteringPassphrase` and `EnteringPin`.
+
+First, the user enters the passphrase that was generated during the registering
+process, and we check if that's valid. If so, we go on to the next step, and have
+the user create a PIN. We store all the data we're going to need in localStorage
+and in our application, and then perform a `signIn` mutation to get an auth token
+from the backend.
+
+The passphrase is a sequence of 12 english words that uniquely identifies the user,
+and the PIN is a 6-digit sequence that we use to encrypt the passphrase, generating
+the Private Key (PK), which can be used to sign EOS transactions.
+
+-}
+
 import Api.Graphql
 import Auth
 import Browser.Dom as Dom
@@ -550,8 +568,6 @@ jsAddressToMsg addr val =
                         |> Decode.required "accountName" Eos.nameDecoder
                         |> Decode.required "privateKey" Decode.string
                         |> Decode.map (Ok >> GotSubmitResult >> GotPinMsg)
-
-                    -- TODO - Is `GotMultipleAccountsLogin` still a thing?
                     , Decode.field "error" Decode.string
                         |> Decode.map (Err >> GotSubmitResult >> GotPinMsg)
                     ]

@@ -12,8 +12,23 @@ module Auth exposing
     , signIn
     , update
     , view
-    , viewFieldLabel
     )
+
+{-| Authentication of a user with Passphrase or Private Key.
+
+  - Passphrase consists of 12 unique words given to the user during the registration. Only users knows this phrase.
+  - Private Key (PK) is a hashed analogue of a Passphrase.
+  - PIN is used to encrypt the Passphrase/PK in the browser. Each time the user logs-in the new PIN is created.
+
+This module handles already logged in users, so we already know we have all the data we need in localStorage.
+For more information on the login process, checkout the Login module.
+
+After having logged in at least once, the data we need is stored in localStorage.
+If we need to prove the user is authenticated (and haven't done so in this session),
+we can request the user to type in the PIN they created when signing in the last time,
+so we can retrieve their Private Key from localStorage.
+
+-}
 
 import Api.Graphql
 import Cambiatus.Mutation
@@ -23,8 +38,8 @@ import Graphql.Http
 import Graphql.Operation exposing (RootMutation)
 import Graphql.OptionalArgument as OptionalArgument
 import Graphql.SelectionSet exposing (SelectionSet, with)
-import Html exposing (Html, div, label, p, span, text)
-import Html.Attributes exposing (class, for)
+import Html exposing (Html, div, p, text)
+import Html.Attributes exposing (class)
 import Json.Decode as Decode
 import Json.Decode.Pipeline as Decode
 import Json.Encode as Encode exposing (Value)
@@ -32,22 +47,9 @@ import Log
 import Ports
 import Profile exposing (Model)
 import RemoteData exposing (RemoteData)
-import Session.Shared exposing (Shared, Translators)
+import Session.Shared exposing (Shared)
 import UpdateResult as UR
-import View.Feedback as Feedback
 import View.Pin as Pin
-
-
-{-| Authentication of a user with Passphrase or Private Key.
-
-  - Passphrase consists of 12 unique words given to the user during the registration. Only users knows this phrase.
-  - Private Key (PK) is a hashed analogue of a Passphrase.
-  - PIN is used to encrypt the Passphrase/PK in the browser. Each time the user logs-in the new PIN is created.
-
-User may use Passphrase and PK interchangeable for logging in, although we push the user forward to use the Passphrase
-because it's more convenient for humans.
-
--}
 
 
 
@@ -104,7 +106,7 @@ initPinModel status =
 
 {-| Represents the state of the user's authentication. A user can be:
 
-  - Authenticated, but without theprivate key - This means the user is logged in,
+  - Authenticated, but without the private key - This means the user is logged in,
     but we don't have their PIN, so we can't get their private key. If we ever need
     the user's private key, we should prompt them for their PIN
   - Authenticated, with private key - This means the user is logged in and we
@@ -168,17 +170,6 @@ view shared model =
     ]
 
 
-viewFieldLabel : Translators -> String -> String -> Html msg
-viewFieldLabel { t } tSuffix id_ =
-    label
-        [ class "block"
-        , for id_
-        ]
-        [ span [ class "text-green tracking-wide uppercase text-caption block mb-1" ]
-            [ text <| t (tSuffix ++ ".label") ]
-        ]
-
-
 
 -- UPDATE
 
@@ -189,15 +180,10 @@ type alias UpdateResult =
 
 type Msg
     = Ignored
-      -- Input
     | GotPinMsg Pin.Msg
-      -- Submission
     | SubmittedPin String
-      -- Response
+    | GotSubmittedPinResponse (Result String ( Eos.Name, String ))
     | CompletedSignIn Status (RemoteData (Graphql.Http.Error (Maybe SignInResponse)) (Maybe SignInResponse))
-    | GotMultipleAccountsLogin (List Eos.Name)
-    | GotPrivateKeyLogin (Result String ( Eos.Name, String ))
-    | GotPinLogin (Result String ( Eos.Name, String ))
 
 
 type alias SignInResponse =
@@ -207,17 +193,11 @@ type alias SignInResponse =
 
 
 type ExternalMsg
-    = ClickedCancel
-    | CompletedAuth SignInResponse Model
-    | SetFeedback Feedback.Model
+    = CompletedAuth SignInResponse Model
 
 
 update : Msg -> Shared -> Model -> UpdateResult
 update msg shared model =
-    let
-        { t } =
-            shared.translators
-    in
     case msg of
         Ignored ->
             UR.init model
@@ -231,34 +211,13 @@ update msg shared model =
                 |> UR.init
                 |> UR.addCmd (Pin.maybeSubmitCmd submitStatus SubmittedPin)
 
-        GotMultipleAccountsLogin _ ->
-            UR.init
-                { model
-                    | status =
-                        case model.status of
-                            _ ->
-                                model.status
-                }
-
-        GotPrivateKeyLogin (Ok ( accountName, privateKey )) ->
-            model
-                |> UR.init
-                |> UR.addCmd
-                    (Api.Graphql.mutation shared
-                        Nothing
-                        (signIn accountName shared Nothing)
-                        (CompletedSignIn (WithPrivateKey privateKey))
-                    )
-
-        GotPrivateKeyLogin (Err err) ->
-            model
-                |> loginFailed
-                |> addError (t err)
-
         CompletedSignIn status (RemoteData.Success (Just ({ token } as signInResponse))) ->
             let
                 newModel =
-                    { model | status = status }
+                    { model
+                        | status = status
+                        , pinModel = Pin.withDisabled False model.pinModel
+                    }
             in
             newModel
                 |> UR.init
@@ -267,25 +226,27 @@ update msg shared model =
 
         CompletedSignIn _ (RemoteData.Success Nothing) ->
             model
-                |> loginFailed
-                |> addError (t "error.unknown")
+                |> authFailed "error.unknown"
 
         CompletedSignIn _ (RemoteData.Failure err) ->
             model
-                |> loginFailed
+                |> authFailed "auth.failed"
                 |> UR.addCmd (Log.graphqlError err)
                 |> UR.addPort
                     { responseAddress = Ignored
                     , responseData = Encode.null
                     , data = Encode.object [ ( "name", Encode.string "logout" ) ]
                     }
-                |> addError (t "auth.failed")
 
-        CompletedSignIn _ _ ->
+        CompletedSignIn _ RemoteData.NotAsked ->
+            UR.init model
+
+        CompletedSignIn _ RemoteData.Loading ->
             UR.init model
 
         SubmittedPin pin ->
-            UR.init model
+            { model | pinModel = Pin.withDisabled True model.pinModel }
+                |> UR.init
                 |> UR.addPort
                     { responseAddress = SubmittedPin pin
                     , responseData = Encode.null
@@ -296,7 +257,7 @@ update msg shared model =
                             ]
                     }
 
-        GotPinLogin (Ok ( accountName, privateKey )) ->
+        GotSubmittedPinResponse (Ok ( accountName, privateKey )) ->
             UR.init model
                 |> UR.addCmd
                     (Api.Graphql.mutation shared
@@ -305,10 +266,9 @@ update msg shared model =
                         (CompletedSignIn (WithPrivateKey privateKey))
                     )
 
-        GotPinLogin (Err err) ->
+        GotSubmittedPinResponse (Err err) ->
             model
-                |> loginFailed
-                |> addError (t err)
+                |> authFailed err
 
 
 signIn : Eos.Name -> Shared -> Maybe String -> SelectionSet (Maybe SignInResponse) RootMutation
@@ -324,30 +284,14 @@ signIn accountName shared maybeInvitationId =
         )
 
 
-addError : String -> UpdateResult -> UpdateResult
-addError error uResult =
-    uResult
-        |> UR.mapModel
-            (\m ->
-                { m
-                    | pinModel =
-                        Pin.withProblem Pin.Pin error m.pinModel
-                }
-            )
-
-
-loginFailed : Model -> UpdateResult
-loginFailed model =
+authFailed : String -> Model -> UpdateResult
+authFailed error model =
     { model
-        | status =
-            case model.status of
-                WithoutPrivateKey ->
-                    WithoutPrivateKey
-
-                WithPrivateKey _ ->
-                    WithoutPrivateKey
+        | status = WithoutPrivateKey
         , error = Nothing
-        , pinModel = initPinModel model.status
+        , pinModel =
+            initPinModel model.status
+                |> Pin.withProblem Pin.Pin error
     }
         |> UR.init
 
@@ -355,19 +299,15 @@ loginFailed model =
 jsAddressToMsg : List String -> Value -> Maybe Msg
 jsAddressToMsg addr val =
     case addr of
-        "SubmittedPin" :: _ :: [] ->
+        "SubmittedPin" :: [] ->
             Decode.decodeValue
                 (Decode.oneOf
                     [ Decode.succeed Tuple.pair
                         |> Decode.required "accountName" Eos.nameDecoder
                         |> Decode.required "privateKey" Decode.string
-                        |> Decode.map (Ok >> GotPinLogin)
-
-                    -- TODO - Is this still needed?
-                    , Decode.field "accountNames" (Decode.list Eos.nameDecoder)
-                        |> Decode.map GotMultipleAccountsLogin
+                        |> Decode.map (Ok >> GotSubmittedPinResponse)
                     , Decode.field "error" Decode.string
-                        |> Decode.map (Err >> GotPinLogin)
+                        |> Decode.map (Err >> GotSubmittedPinResponse)
                     ]
                 )
                 val
@@ -386,16 +326,10 @@ msgToString msg =
         CompletedSignIn _ _ ->
             [ "CompletedSignIn" ]
 
-        GotMultipleAccountsLogin _ ->
-            [ "GotMultipleAccountsLogin" ]
+        SubmittedPin _ ->
+            [ "SubmittedPin" ]
 
-        GotPrivateKeyLogin r ->
-            [ "GotPrivateKeyLogin", UR.resultToString r ]
-
-        SubmittedPin pin ->
-            [ "SubmittedPin", pin ]
-
-        GotPinLogin r ->
+        GotSubmittedPinResponse r ->
             [ "GotPinLogin", UR.resultToString r ]
 
         GotPinMsg subMsg ->

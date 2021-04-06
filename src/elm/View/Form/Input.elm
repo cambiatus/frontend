@@ -121,12 +121,7 @@ input options =
                 ++ options.extraAttrs
             )
             []
-        , case options.extraElement of
-            Nothing ->
-                text ""
-
-            Just element ->
-                element
+        , Maybe.withDefault (text "") options.extraElement
         ]
 
 
