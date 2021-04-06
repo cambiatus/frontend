@@ -6,7 +6,7 @@ import Browser.Dom as Dom
 import Eos.Account as Eos
 import Graphql.Http
 import Html exposing (Html, a, button, div, form, img, label, li, p, span, strong, text, textarea, ul)
-import Html.Attributes exposing (autocomplete, autofocus, class, classList, disabled, for, id, placeholder, required, src, type_, value)
+import Html.Attributes exposing (autocomplete, autofocus, class, classList, for, id, placeholder, required, src, type_, value)
 import Html.Events exposing (keyCode, onClick, onInput, onSubmit, preventDefaultOn)
 import Json.Decode as Decode
 import Json.Decode.Pipeline as Decode
@@ -16,7 +16,7 @@ import Ports
 import RemoteData exposing (RemoteData)
 import Route
 import Session.Guest as Guest
-import Session.Shared exposing (Shared, Translators)
+import Session.Shared exposing (Translators)
 import Task
 import UpdateResult as UR
 import Validate exposing (Validator)
@@ -45,16 +45,18 @@ initPassphraseModel =
     }
 
 
-initPinModel : Validate.Valid PassphraseModel -> PinModel
-initPinModel passphraseModel =
+initPinModel : String -> PinModel
+initPinModel passphrase =
     { isSigningIn = False
-    , pin = ""
-    , pinConfirmation = ""
-    , isPinVisible = True
-    , isPinConfirmationVisible = True
-    , problems = []
-    , confirmationProblems = []
-    , passphrase = Validate.fromValid passphraseModel |> .passphrase
+    , passphrase = passphrase
+    , pinModel =
+        Pin.init
+            { label = "auth.pin.label"
+            , id = "pinInput"
+            , withConfirmation = True
+            , submitLabel = "auth.login.submit"
+            , submittingLabel = "auth.login.submitting"
+            }
     }
 
 
@@ -76,13 +78,8 @@ type alias PassphraseModel =
 
 type alias PinModel =
     { isSigningIn : Bool
-    , pin : String
-    , pinConfirmation : String
-    , isPinVisible : Bool
-    , isPinConfirmationVisible : Bool
-    , problems : List String
-    , confirmationProblems : List String
     , passphrase : String
+    , pinModel : Pin.Model
     }
 
 
@@ -234,68 +231,21 @@ viewCreatingPin { shared } model =
             shared.translators
     in
     div []
-        [ div [ class "sf-content" ]
-            [ viewIllustration "login_pin.svg"
-            , p [ class "text-white text-body mb-5" ]
-                [ text (t (trPrefix "nowCreate"))
-                , text " "
-                , strong [] [ text (t (trPrefix "sixDigitPin")) ]
-                , text ". "
-                , text (t <| trPrefix "thePin")
-                , text " "
-                , strong [] [ text <| t (trPrefix "notPassword") ]
-                , text " "
-                , text <| t (trPrefix "eachLogin")
-                ]
-            , viewPin model shared
-            , viewPinConfirmation model shared
+        [ viewIllustration "login_pin.svg"
+        , p [ class "text-white text-body mb-5" ]
+            [ text (t (trPrefix "nowCreate"))
+            , text " "
+            , strong [] [ text (t (trPrefix "sixDigitPin")) ]
+            , text ". "
+            , text (t <| trPrefix "thePin")
+            , text " "
+            , strong [] [ text <| t (trPrefix "notPassword") ]
+            , text " "
+            , text <| t (trPrefix "eachLogin")
             ]
-        , div [ class "sf-footer" ]
-            [ button
-                [ class "button button-primary min-w-full mb-8"
-                , class "mt-10"
-                , disabled model.isSigningIn
-                , onClick ClickedSubmit
-                ]
-                [ text <|
-                    t
-                        (if model.isSigningIn then
-                            "auth.login.submitting"
-
-                         else
-                            "auth.login.submit"
-                        )
-                ]
-            ]
+        , Pin.view model.pinModel shared.translators
+            |> Html.map GotPinComponentMsg
         ]
-
-
-viewPin : PinModel -> Shared -> Html PinMsg
-viewPin model shared =
-    Pin.view
-        shared
-        { labelText = shared.translators.t "auth.pin.label"
-        , inputId = "pinInput"
-        , inputValue = model.pin
-        , onInputMsg = EnteredPin
-        , onToggleMsg = ToggledPinVisibility
-        , isVisible = model.isPinVisible
-        , errors = model.problems
-        }
-
-
-viewPinConfirmation : PinModel -> Shared -> Html PinMsg
-viewPinConfirmation model shared =
-    Pin.view
-        shared
-        { labelText = shared.translators.t "auth.pinConfirmation.label"
-        , inputId = "pinInputConfirmation"
-        , inputValue = model.pinConfirmation
-        , onInputMsg = EnteredPinConfirmation
-        , onToggleMsg = ToggledPinConfirmationVisibility
-        , isVisible = model.isPinConfirmationVisible
-        , errors = model.confirmationProblems
-        }
 
 
 viewFieldLabel : Translators -> String -> String -> Html msg
@@ -351,13 +301,10 @@ type PassphraseExternalMsg
 
 type PinMsg
     = PinIgnored
-    | EnteredPin String
-    | EnteredPinConfirmation String
-    | ToggledPinVisibility
-    | ToggledPinConfirmationVisibility
-    | ClickedSubmit
+    | SubmittedPinWithSuccess String
     | GotSubmitResult (Result String ( Eos.Name, String ))
     | GotSignInResult String (RemoteData (Graphql.Http.Error (Maybe Auth.SignInResponse)) (Maybe Auth.SignInResponse))
+    | GotPinComponentMsg Pin.Msg
 
 
 type PinExternalMsg
@@ -400,9 +347,15 @@ update msg model guest =
                     )
 
         ( WentToPin validPassphrase, EnteringPassphrase _ ) ->
-            initPinModel validPassphrase
+            Validate.fromValid validPassphrase
+                |> .passphrase
+                |> initPinModel
                 |> EnteringPin
                 |> UR.init
+                |> UR.addCmd
+                    (Dom.focus "pinInput"
+                        |> Task.attempt (\_ -> GotPinMsg PinIgnored)
+                    )
 
         ( GotPinMsg pinMsg, EnteringPin pinModel ) ->
             updateWithPin pinMsg pinModel guest
@@ -488,65 +441,23 @@ updateWithPin msg model { shared } =
         PinIgnored ->
             UR.init model
 
-        EnteredPin pin ->
-            { model | pin = pin }
+        SubmittedPinWithSuccess pin ->
+            { model | isSigningIn = True }
                 |> UR.init
-
-        EnteredPinConfirmation pinConfirmation ->
-            { model | pinConfirmation = pinConfirmation }
-                |> UR.init
-
-        ToggledPinVisibility ->
-            { model | isPinVisible = not model.isPinVisible }
-                |> UR.init
-
-        ToggledPinConfirmationVisibility ->
-            { model | isPinConfirmationVisible = not model.isPinConfirmationVisible }
-                |> UR.init
-
-        ClickedSubmit ->
-            case Validate.validate pinValidator model of
-                Ok _ ->
-                    { model | problems = [], isSigningIn = True }
-                        |> UR.init
-                        |> UR.addPort
-                            { responseAddress = ClickedSubmit
-                            , responseData = Encode.null
-                            , data =
-                                Encode.object
-                                    [ ( "name", Encode.string "loginWithPrivateKey" )
-                                    , ( "form"
-                                      , Encode.object [ ( "passphrase", Encode.string model.passphrase ) ]
-                                      )
+                |> UR.addPort
+                    { responseAddress = SubmittedPinWithSuccess pin
+                    , responseData = Encode.null
+                    , data =
+                        Encode.object
+                            [ ( "name", Encode.string "loginWithPrivateKey" )
+                            , ( "form"
+                              , Encode.object
+                                    [ ( "passphrase", Encode.string model.passphrase )
+                                    , ( "usePin", Encode.string pin )
                                     ]
-                            }
-
-                Err errors ->
-                    { model
-                        | problems =
-                            List.filterMap
-                                (\( field, error ) ->
-                                    case field of
-                                        Pin ->
-                                            Just error
-
-                                        PinConfirmation ->
-                                            Nothing
-                                )
-                                errors
-                        , confirmationProblems =
-                            List.filterMap
-                                (\( field, error ) ->
-                                    case field of
-                                        Pin ->
-                                            Nothing
-
-                                        PinConfirmation ->
-                                            Just error
-                                )
-                                errors
+                              )
+                            ]
                     }
-                        |> UR.init
 
         GotSubmitResult (Ok ( accountName, privateKey )) ->
             UR.init model
@@ -568,8 +479,8 @@ updateWithPin msg model { shared } =
                 |> UR.addExt (GuestExternal <| Guest.LoggedIn privateKey signInResponse)
 
         GotSignInResult _ (RemoteData.Success Nothing) ->
-            {model | isSigningIn = False, pin = "", pinConfirmation = "", problems = []}
-                |> UR.init 
+            initPinModel model.passphrase
+                |> UR.init
                 |> UR.addExt (GuestExternal <| Guest.SetFeedback <| Feedback.Shown Feedback.Failure (shared.translators.t "error.unknown"))
 
         GotSignInResult _ (RemoteData.Failure err) ->
@@ -587,6 +498,15 @@ updateWithPin msg model { shared } =
 
         GotSignInResult _ RemoteData.Loading ->
             UR.init model
+
+        GotPinComponentMsg subMsg ->
+            let
+                ( pinModel, submitStatus ) =
+                    Pin.update subMsg model.pinModel
+            in
+            { model | pinModel = pinModel }
+                |> UR.init
+                |> UR.addCmd (Pin.maybeSubmitCmd submitStatus SubmittedPinWithSuccess)
 
 
 
@@ -621,29 +541,6 @@ passphraseValidator =
         )
 
 
-type PinField
-    = Pin
-    | PinConfirmation
-
-
-pinValidator : Validator ( PinField, String ) PinModel
-pinValidator =
-    Validate.fromErrors
-        (\model ->
-            if not (Pin.isValid model.pin) then
-                [ ( Pin, "auth.pin.shouldHaveSixDigitsError" ) ]
-
-            else if not (Pin.isValid model.pinConfirmation) then
-                [ ( PinConfirmation, "auth.pin.shouldHaveSixDigitsError" ) ]
-
-            else if model.pin /= model.pinConfirmation then
-                [ ( PinConfirmation, "auth.pinConfirmation.differsFromPinError" ) ]
-
-            else
-                []
-        )
-
-
 jsAddressToMsg : List String -> Value -> Maybe Msg
 jsAddressToMsg addr val =
     case addr of
@@ -655,7 +552,7 @@ jsAddressToMsg addr val =
                 val
                 |> Result.toMaybe
 
-        "GotPinMsg" :: "ClickedSubmit" :: [] ->
+        "GotPinMsg" :: "SubmittedPinWithSuccess" :: _ :: [] ->
             Decode.decodeValue
                 (Decode.oneOf
                     [ Decode.succeed Tuple.pair
@@ -716,23 +613,14 @@ pinMsgToString msg =
         PinIgnored ->
             [ "PinIgnored" ]
 
-        EnteredPin _ ->
-            [ "EnteredPin" ]
-
-        EnteredPinConfirmation _ ->
-            [ "EnteredPinConfirmation" ]
-
-        ToggledPinVisibility ->
-            [ "ToggledPinVisibility" ]
-
-        ToggledPinConfirmationVisibility ->
-            [ "ToggledPinConfirmationVisibility" ]
-
-        ClickedSubmit ->
-            [ "ClickedSubmit" ]
+        SubmittedPinWithSuccess pin ->
+            [ "SubmittedPinWithSuccess", pin ]
 
         GotSubmitResult r ->
             [ "GotLoginResult", UR.resultToString r ]
 
         GotSignInResult _ r ->
             [ "GotSignInResult", UR.remoteDataToString r ]
+
+        GotPinComponentMsg subMsg ->
+            "GotPinComponentMsg" :: Pin.msgToString subMsg

@@ -22,9 +22,8 @@ import Graphql.Http
 import Graphql.Operation exposing (RootMutation)
 import Graphql.OptionalArgument as OptionalArgument
 import Graphql.SelectionSet exposing (SelectionSet, with)
-import Html exposing (Html, button, div, label, p, span, text)
-import Html.Attributes exposing (class, disabled, for)
-import Html.Events exposing (onSubmit)
+import Html exposing (Html, div, label, p, span, text)
+import Html.Attributes exposing (class, for)
 import Json.Decode as Decode
 import Json.Decode.Pipeline as Decode
 import Json.Encode as Encode exposing (Value)
@@ -70,21 +69,36 @@ init maybePrivateKey_ =
 
 type alias Model =
     { status : Status
-    , pin : String
     , error : Maybe String
-    , isSigningIn : Bool
-    , pinVisibility : Bool
+    , pinModel : Pin.Model
     }
 
 
 initModel : Status -> Model
 initModel status =
     { status = status
-    , pin = ""
     , error = Nothing
-    , isSigningIn = False
-    , pinVisibility = True
+    , pinModel = initPinModel status
     }
+
+
+initPinModel : Status -> Pin.Model
+initPinModel status =
+    Pin.init
+        { label = "auth.pinPopup.label"
+        , id = "pinPopup"
+        , withConfirmation = False
+        , submitLabel = "auth.login.continue"
+        , submittingLabel = "auth.login.continue"
+        }
+        |> Pin.withDisabled
+            (case status of
+                WithoutPrivateKey ->
+                    False
+
+                WithPrivateKey _ ->
+                    True
+            )
 
 
 {-| Represents the state of the user's authentication. A user can be:
@@ -135,13 +149,9 @@ already (`WithPrivateKey` or `WithoutPrivateKey`)
 -}
 view : Shared -> Model -> List (Html Msg)
 view shared model =
-    -- TODO - Better visualization for when isSigningIn
     let
         { t } =
             shared.translators
-
-        isDisabled =
-            model.isSigningIn || hasPrivateKey model
     in
     [ div []
         [ p
@@ -152,14 +162,8 @@ view shared model =
         , p [ class "text-sm" ]
             [ text <| t "auth.login.enterPinToContinue" ]
         ]
-    , Html.form [ onSubmit SubmittedLoginPIN ]
-        [ viewPin model shared
-        , button
-            [ class "button button-primary w-full"
-            , disabled isDisabled
-            ]
-            [ text <| t "auth.login.continue" ]
-        ]
+    , Pin.view model.pinModel shared.translators
+        |> Html.map GotPinMsg
     ]
 
 
@@ -185,12 +189,11 @@ type alias UpdateResult =
 type Msg
     = Ignored
       -- Input
-    | EnteredPin String
-    | TogglePinVisibility
+    | GotPinMsg Pin.Msg
       -- Submission
-    | SubmittedLoginPIN
-    | CompletedSignIn Status (RemoteData (Graphql.Http.Error (Maybe SignInResponse)) (Maybe SignInResponse))
+    | SubmittedPin String
       -- Response
+    | CompletedSignIn Status (RemoteData (Graphql.Http.Error (Maybe SignInResponse)) (Maybe SignInResponse))
     | GotMultipleAccountsLogin (List Eos.Name)
     | GotPrivateKeyLogin (Result String ( Eos.Name, String ))
     | GotPinLogin (Result String ( Eos.Name, String ))
@@ -208,23 +211,6 @@ type ExternalMsg
     | SetFeedback Feedback.Model
 
 
-trimPinNumber : Int -> String -> String -> String
-trimPinNumber desiredLength oldPin newPin =
-    let
-        correctedPIN =
-            if String.all Char.isDigit newPin then
-                newPin
-
-            else
-                oldPin
-    in
-    if String.length correctedPIN > desiredLength then
-        String.slice 0 desiredLength correctedPIN
-
-    else
-        correctedPIN
-
-
 update : Msg -> Shared -> Model -> UpdateResult
 update msg shared model =
     let
@@ -232,12 +218,17 @@ update msg shared model =
             shared.translators
     in
     case msg of
-        EnteredPin pin ->
-            { model | pin = trimPinNumber 6 model.pin pin, error = Nothing }
-                |> UR.init
-
         Ignored ->
             UR.init model
+
+        GotPinMsg subMsg ->
+            let
+                ( newPinModel, submitStatus ) =
+                    Pin.update subMsg model.pinModel
+            in
+            { model | pinModel = newPinModel }
+                |> UR.init
+                |> UR.addCmd (Pin.maybeSubmitCmd submitStatus SubmittedPin)
 
         GotMultipleAccountsLogin _ ->
             UR.init
@@ -292,19 +283,15 @@ update msg shared model =
         CompletedSignIn _ _ ->
             UR.init model
 
-        SubmittedLoginPIN ->
-            let
-                pinString =
-                    model.pin
-            in
-            UR.init { model | isSigningIn = True }
+        SubmittedPin pin ->
+            UR.init model
                 |> UR.addPort
-                    { responseAddress = SubmittedLoginPIN
+                    { responseAddress = SubmittedPin pin
                     , responseData = Encode.null
                     , data =
                         Encode.object
                             [ ( "name", Encode.string "loginWithPin" )
-                            , ( "pin", Encode.string pinString )
+                            , ( "pin", Encode.string pin )
                             ]
                     }
 
@@ -321,9 +308,6 @@ update msg shared model =
             model
                 |> loginFailed
                 |> addError (t err)
-
-        TogglePinVisibility ->
-            { model | pinVisibility = not model.pinVisibility } |> UR.init
 
 
 signIn : Eos.Name -> Shared -> Maybe String -> SelectionSet (Maybe SignInResponse) RootMutation
@@ -342,7 +326,13 @@ signIn accountName shared maybeInvitationId =
 addError : String -> UpdateResult -> UpdateResult
 addError error uResult =
     uResult
-        |> UR.mapModel (\m -> { m | error = Just error })
+        |> UR.mapModel
+            (\m ->
+                { m
+                    | pinModel =
+                        Pin.withProblem Pin.Pin error m.pinModel
+                }
+            )
 
 
 loginFailed : Model -> UpdateResult
@@ -355,9 +345,8 @@ loginFailed model =
 
                 WithPrivateKey _ ->
                     WithoutPrivateKey
-        , pin = ""
         , error = Nothing
-        , isSigningIn = False
+        , pinModel = initPinModel model.status
     }
         |> UR.init
 
@@ -365,7 +354,7 @@ loginFailed model =
 jsAddressToMsg : List String -> Value -> Maybe Msg
 jsAddressToMsg addr val =
     case addr of
-        "SubmittedLoginPIN" :: [] ->
+        "SubmittedPin" :: _ :: [] ->
             Decode.decodeValue
                 (Decode.oneOf
                     [ Decode.succeed Tuple.pair
@@ -402,43 +391,11 @@ msgToString msg =
         GotPrivateKeyLogin r ->
             [ "GotPrivateKeyLogin", UR.resultToString r ]
 
-        SubmittedLoginPIN ->
-            [ "SubmittedLoginPIN" ]
+        SubmittedPin pin ->
+            [ "SubmittedPin", pin ]
 
         GotPinLogin r ->
             [ "GotPinLogin", UR.resultToString r ]
 
-        EnteredPin _ ->
-            [ "EnteredPin" ]
-
-        TogglePinVisibility ->
-            [ "TogglePinVisibility" ]
-
-
-viewPin : Model -> Shared -> Html Msg
-viewPin model shared =
-    let
-        pinLabel =
-            shared.translators.t "auth.pinPopup.label"
-
-        errors =
-            case ( model.status, model.error ) of
-                ( WithPrivateKey _, Just error ) ->
-                    [ error ]
-
-                ( WithoutPrivateKey, Just error ) ->
-                    [ error ]
-
-                _ ->
-                    []
-    in
-    Pin.view
-        shared
-        { labelText = pinLabel
-        , inputId = "pinInput"
-        , inputValue = model.pin
-        , onInputMsg = EnteredPin
-        , onToggleMsg = TogglePinVisibility
-        , isVisible = model.pinVisibility
-        , errors = errors
-        }
+        GotPinMsg subMsg ->
+            "GotPinMsg" :: Pin.msgToString subMsg
