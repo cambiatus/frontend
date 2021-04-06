@@ -10,6 +10,7 @@ module View.Pin exposing
     , msgToString
     , update
     , view
+    , withAttrs
     , withDisabled
     , withProblem
     )
@@ -54,6 +55,7 @@ type alias Model =
     , isSubmitting : Bool
     , submitLabel : String
     , submittingLabel : String
+    , extraAttrs : List (Html.Attribute Msg)
     }
 
 
@@ -93,6 +95,7 @@ init { label, id, withConfirmation, submitLabel, submittingLabel } =
     , isSubmitting = False
     , submitLabel = submitLabel
     , submittingLabel = submittingLabel
+    , extraAttrs = []
     }
 
 
@@ -102,13 +105,13 @@ init { label, id, withConfirmation, submitLabel, submittingLabel } =
 
 {-| Converts the `Model` into `Html`
 -}
-view : Model -> Translators -> Html Msg
-view model ({ t } as translators) =
+view : Translators -> Model -> Html Msg
+view ({ t } as translators) model =
     let
         text_ =
             t >> text
     in
-    div []
+    div (class "flex flex-col flex-grow" :: model.extraAttrs)
         [ viewField Pin model translators
         , case model.pinConfirmation of
             Nothing ->
@@ -117,7 +120,7 @@ view model ({ t } as translators) =
             Just _ ->
                 viewField PinConfirmation model translators
         , button
-            [ class "button button-primary min-w-full"
+            [ class "button button-primary min-w-full mt-auto"
             , disabled (model.disabled || model.isSubmitting)
             , onClick ClickedSubmit
             ]
@@ -326,6 +329,11 @@ withDisabled disabled model =
 withProblem : Field -> String -> Model -> Model
 withProblem field problem model =
     { model | problems = ( field, problem ) :: model.problems }
+
+
+withAttrs : List (Html.Attribute Msg) -> Model -> Model
+withAttrs attrs model =
+    { model | extraAttrs = attrs }
 
 
 {-| The length of a PIN

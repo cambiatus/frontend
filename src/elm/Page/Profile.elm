@@ -563,7 +563,7 @@ viewNewPinModal model shared =
                 [ p [ class "text-sm" ]
                     [ tr "profile.changePinPrompt" ]
                 ]
-            , Pin.view model.pinInputModel shared.translators
+            , Pin.view shared.translators model.pinInputModel
                 |> Html.map GotPinMsg
             ]
     in

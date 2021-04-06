@@ -1,4 +1,4 @@
-module View.Form.Input exposing (init, input, toHtml, withAttrs, withCounter, withCounterAttrs, withElement, withErrorAttrs)
+module View.Form.Input exposing (FieldType(..), init, input, toHtml, withAttrs, withCounter, withCounterAttrs, withCounterType, withElement, withErrorAttrs, withType)
 
 {-| Creates a Cambiatus-style text input that supports error reporting, placeholders, localization
 and character counters.
@@ -19,7 +19,7 @@ and character counters.
 -}
 
 import Html exposing (Html, div, input, li, text, ul)
-import Html.Attributes exposing (class, disabled, id, placeholder, value)
+import Html.Attributes exposing (class, classList, disabled, id, placeholder, value)
 import Html.Events exposing (onInput)
 import Session.Shared exposing (Translators)
 import View.Form
@@ -57,6 +57,8 @@ init options =
     , counterAttrs = []
     , extraElement = Nothing
     , errorAttrs = []
+    , fieldType = Text
+    , counterType = View.Form.InputCounter.CountLetters
     }
 
 
@@ -69,7 +71,11 @@ toHtml options =
         , input options
         , case options.maximumCounterValue of
             Just number ->
-                View.Form.InputCounter.viewWithAttrs options.translators.tr number options.value options.counterAttrs
+                View.Form.InputCounter.viewWithAttrs options.translators.tr
+                    number
+                    options.value
+                    options.counterAttrs
+                    options.counterType
 
             Nothing ->
                 text ""
@@ -85,11 +91,29 @@ toHtml options =
 -}
 input : InputOptions a -> Html a
 input options =
+    let
+        inputElement =
+            case options.fieldType of
+                Text ->
+                    Html.input
+
+                TextArea ->
+                    Html.textarea
+
+        isInput =
+            case options.fieldType of
+                Text ->
+                    True
+
+                TextArea ->
+                    False
+    in
     Html.div [ class "relative" ]
-        [ Html.input
+        [ inputElement
             ([ id options.id
              , onInput options.onInput
-             , class "input min-w-full"
+             , class "min-w-full"
+             , classList [ ( "input", isInput ) ]
              , disabled options.disabled
              , value options.value
              , placeholder (Maybe.withDefault "" options.placeholder)
@@ -137,6 +161,16 @@ withElement element options =
     { options | extraElement = Just element }
 
 
+withType : FieldType -> InputOptions a -> InputOptions a
+withType fieldType options =
+    { options | fieldType = fieldType }
+
+
+withCounterType : View.Form.InputCounter.CounterType -> InputOptions a -> InputOptions a
+withCounterType counterType options =
+    { options | counterType = counterType }
+
+
 
 --- INTERNAL
 
@@ -160,4 +194,11 @@ type alias InputOptions a =
     , counterAttrs : List (Html.Attribute a)
     , extraElement : Maybe (Html a)
     , errorAttrs : List (Html.Attribute a)
+    , fieldType : FieldType
+    , counterType : View.Form.InputCounter.CounterType
     }
+
+
+type FieldType
+    = Text
+    | TextArea

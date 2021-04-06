@@ -163,7 +163,7 @@ view shared model =
         , p [ class "text-sm" ]
             [ text <| t "auth.login.enterPinToContinue" ]
         ]
-    , Pin.view model.pinModel shared.translators
+    , Pin.view shared.translators model.pinModel
         |> Html.map GotPinMsg
     ]
 

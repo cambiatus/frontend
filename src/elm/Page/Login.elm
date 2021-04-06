@@ -5,9 +5,9 @@ import Auth
 import Browser.Dom as Dom
 import Eos.Account as Eos
 import Graphql.Http
-import Html exposing (Html, a, button, div, form, img, label, li, p, span, strong, text, textarea, ul)
-import Html.Attributes exposing (autocomplete, autofocus, class, classList, for, id, placeholder, required, src, type_, value)
-import Html.Events exposing (keyCode, onClick, onInput, onSubmit, preventDefaultOn)
+import Html exposing (Html, a, button, div, form, img, p, span, strong, text)
+import Html.Attributes exposing (autocomplete, autofocus, class, classList, required, rows, src, type_)
+import Html.Events exposing (keyCode, onClick, preventDefaultOn)
 import Json.Decode as Decode
 import Json.Decode.Pipeline as Decode
 import Json.Encode as Encode exposing (Value)
@@ -16,17 +16,17 @@ import Ports
 import RemoteData exposing (RemoteData)
 import Route
 import Session.Guest as Guest
-import Session.Shared exposing (Translators)
 import Task
 import UpdateResult as UR
 import Validate exposing (Validator)
 import View.Feedback as Feedback
 import View.Form
+import View.Form.Input as Input
+import View.Form.InputCounter as InputCounter
 import View.Pin as Pin
 
 
 
--- TODO - Try to use View.Form
 -- INIT
 
 
@@ -92,29 +92,26 @@ view guest model =
     { title =
         guest.shared.translators.t "auth.login.loginTab"
     , content =
-        div [ class "bg-purple-500 flex-grow flex flex-wrap md:block" ]
-            [ div [ class "sf-wrapper w-full px-4 md:max-w-sm md:mx-auto md:pt-20 md:px-0" ]
-                [ case model of
+        div [ class "bg-purple-500 flex-grow flex flex-col justify-center md:block" ]
+            [ div [ class "sf-wrapper flex-grow w-full px-4 md:max-w-sm md:mx-auto md:pt-20 md:px-0" ]
+                (case model of
                     EnteringPassphrase passphraseModel ->
-                        viewCreatingPassphrase guest passphraseModel
-                            |> Html.map GotPassphraseMsg
+                        viewPassphrase guest passphraseModel
+                            |> List.map (Html.map GotPassphraseMsg)
 
                     EnteringPin pinModel ->
-                        viewCreatingPin guest pinModel
-                            |> Html.map GotPinMsg
-                ]
+                        viewPin guest pinModel
+                            |> List.map (Html.map GotPinMsg)
+                )
             ]
     }
 
 
-viewCreatingPassphrase : Guest.Model -> PassphraseModel -> Html PassphraseMsg
-viewCreatingPassphrase { shared } model =
+viewPassphrase : Guest.Model -> PassphraseModel -> List (Html PassphraseMsg)
+viewPassphrase { shared } model =
     let
-        { t, tr } =
+        { t } =
             shared.translators
-
-        passphraseId =
-            "passphrase"
 
         enterKeyCode =
             13
@@ -139,90 +136,77 @@ viewCreatingPassphrase { shared } model =
 
             else
                 text ""
-
-        errors =
-            model.problems
-                |> List.map (\error -> li [] [ text (t error) ])
-
-        passphraseWordsCount =
-            model.passphrase
-                |> String.words
-                |> List.filter (not << String.isEmpty)
-                |> List.length
-                |> String.fromInt
     in
-    div []
-        [ form [ class "sf-content" ]
-            [ viewIllustration "login_key.svg"
-            , p [ class "text-white text-body mb-5" ]
-                [ span [ class "text-green text-caption tracking-wide uppercase block mb-1" ]
-                    [ text (t "menu.my_communities") ]
-                , span [ class "text-white block leading-relaxed" ]
-                    [ text (t "auth.login.wordsMode.input.description") ]
-                ]
-            , viewFieldLabel shared.translators "auth.login.wordsMode.input" passphraseId
-            , div [ class "relative" ]
-                [ textarea
-                    [ class "form-textarea min-h-19 min-w-full block"
-                    , classList [ ( "pb-16", shared.canReadClipboard ) ]
-                    , placeholder (t "auth.login.wordsMode.input.placeholder")
-                    , View.Form.noGrammarly
-                    , autofocus True
-                    , class <|
-                        if List.isEmpty model.problems then
-                            ""
-
-                        else
-                            "field-with-error"
-                    , id passphraseId
-                    , value model.passphrase
-                    , onInput EnteredPassphrase
-                    , onSubmit ClickedNextStep
-                    , required True
-                    , autocomplete False
-                    , preventDefaultOn "keydown"
-                        (keyCode
-                            |> Decode.map
-                                (\code ->
-                                    if code == enterKeyCode then
-                                        ( ClickedNextStep, True )
-
-                                    else
-                                        ( PassphraseIgnored, False )
-                                )
-                        )
-                    ]
-                    []
-                , viewPasteButton
-                , div [ class "input-label pr-1 absolute right-0 text-white font-bold mt-1 text-right" ]
-                    [ text <|
-                        tr
-                            "edit.input_counter"
-                            [ ( "current", passphraseWordsCount )
-                            , ( "max", "12" )
-                            ]
-                    ]
-                ]
-            , ul [ class "form-error-on-dark-bg absolute" ] errors
+    [ form [ class "sf-content flex flex-col flex-grow justify-center" ]
+        [ viewIllustration "login_key.svg"
+        , p [ class "text-white text-body mb-5" ]
+            [ span [ class "text-green text-caption tracking-wide uppercase block mb-1" ]
+                [ text (t "menu.my_communities") ]
+            , span [ class "text-white block leading-relaxed" ]
+                [ text (t "auth.login.wordsMode.input.description") ]
             ]
-        , div [ class "sf-footer" ]
-            [ p [ class "text-white text-body text-center mt-16 mb-6 block" ]
-                [ text (t "auth.login.register")
-                , a [ Route.href (Route.Register Nothing Nothing), class "text-orange-300 underline" ]
-                    [ text (t "auth.login.registerLink")
+        , Input.init
+            { label = t "auth.login.wordsMode.input.label"
+            , id = "passphrase"
+            , onInput = EnteredPassphrase
+            , disabled = False
+            , value = model.passphrase
+            , placeholder = Just <| t "auth.login.wordsMode.input.placeholder"
+            , problems =
+                model.problems
+                    |> List.map t
+                    |> Just
+            , translators = shared.translators
+            }
+            |> Input.withType Input.TextArea
+            |> Input.withAttrs
+                [ class "form-textarea min-w-full block text-base"
+                , classList
+                    [ ( "field-with-error", not (List.isEmpty model.problems) )
+                    , ( "pb-16", shared.canReadClipboard )
                     ]
+                , rows 2
+                , View.Form.noGrammarly
+                , autofocus True
+                , required True
+                , autocomplete False
+                , preventDefaultOn "keydown"
+                    (keyCode
+                        |> Decode.map
+                            (\code ->
+                                if code == enterKeyCode then
+                                    ( ClickedNextStep, True )
+
+                                else
+                                    ( PassphraseIgnored, False )
+                            )
+                    )
                 ]
-            , button
-                [ class "button button-primary min-w-full mb-8"
-                , onClick ClickedNextStep
-                ]
-                [ text (t "dashboard.next") ]
-            ]
+            |> Input.withCounter 12
+            |> Input.withCounterType InputCounter.CountWords
+            |> Input.withCounterAttrs [ class "text-white" ]
+            |> Input.withErrorAttrs [ class "form-error-on-dark-bg" ]
+            |> Input.withElement viewPasteButton
+            |> Input.toHtml
         ]
+    , div [ class "sf-footer" ]
+        [ p [ class "text-white text-body text-center mb-6 block" ]
+            [ text (t "auth.login.register")
+            , a [ Route.href (Route.Register Nothing Nothing), class "text-orange-300 underline" ]
+                [ text (t "auth.login.registerLink")
+                ]
+            ]
+        , button
+            [ class "button button-primary min-w-full mb-8"
+            , onClick ClickedNextStep
+            ]
+            [ text (t "dashboard.next") ]
+        ]
+    ]
 
 
-viewCreatingPin : Guest.Model -> PinModel -> Html PinMsg
-viewCreatingPin { shared } model =
+viewPin : Guest.Model -> PinModel -> List (Html PinMsg)
+viewPin { shared } model =
     let
         trPrefix s =
             "auth.pin.instruction." ++ s
@@ -230,33 +214,22 @@ viewCreatingPin { shared } model =
         { t } =
             shared.translators
     in
-    div []
-        [ viewIllustration "login_pin.svg"
-        , p [ class "text-white text-body mb-5" ]
-            [ text (t (trPrefix "nowCreate"))
-            , text " "
-            , strong [] [ text (t (trPrefix "sixDigitPin")) ]
-            , text ". "
-            , text (t <| trPrefix "thePin")
-            , text " "
-            , strong [] [ text <| t (trPrefix "notPassword") ]
-            , text " "
-            , text <| t (trPrefix "eachLogin")
-            ]
-        , Pin.view model.pinModel shared.translators
-            |> Html.map GotPinComponentMsg
+    [ viewIllustration "login_pin.svg"
+    , p [ class "text-white text-body mb-5" ]
+        [ text (t (trPrefix "nowCreate"))
+        , text " "
+        , strong [] [ text (t (trPrefix "sixDigitPin")) ]
+        , text ". "
+        , text (t <| trPrefix "thePin")
+        , text " "
+        , strong [] [ text <| t (trPrefix "notPassword") ]
+        , text " "
+        , text <| t (trPrefix "eachLogin")
         ]
-
-
-viewFieldLabel : Translators -> String -> String -> Html msg
-viewFieldLabel { t } tSuffix id_ =
-    label
-        [ class "block"
-        , for id_
-        ]
-        [ span [ class "text-green tracking-wide uppercase text-caption block mb-1" ]
-            [ text <| t (tSuffix ++ ".label") ]
-        ]
+    , Pin.withAttrs [ class "mb-8" ] model.pinModel
+        |> Pin.view shared.translators
+        |> Html.map GotPinComponentMsg
+    ]
 
 
 viewIllustration : String -> Html msg
@@ -420,6 +393,7 @@ updateWithPassphrase msg model =
             { model
                 | passphrase = passphrase
                 , hasPasted = False
+                , problems = []
             }
                 |> UR.init
 
@@ -491,6 +465,7 @@ updateWithPin msg model { shared } =
                     , responseData = Encode.null
                     , data = Encode.object [ ( "name", Encode.string "logout" ) ]
                     }
+                |> UR.addExt (GuestExternal <| Guest.SetFeedback <| Feedback.Shown Feedback.Failure (shared.translators.t "auth.failed"))
                 |> UR.addExt RevertProcess
 
         GotSignInResult _ RemoteData.NotAsked ->
