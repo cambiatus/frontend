@@ -84,7 +84,7 @@ function getUserLanguage () {
 }
 
 function canReadClipboard () {
-  return navigator.clipboard && !!navigator.clipboard.readText
+  return !!navigator.clipboard && !!navigator.clipboard.readText
 }
 
 function flags () {
