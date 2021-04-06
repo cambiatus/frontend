@@ -250,7 +250,7 @@ saveFeaturePort ({ shared } as loggedIn) feature status state =
     in
     case status of
         Loaded community ->
-            if LoggedIn.isAuth loggedIn then
+            if LoggedIn.hasPrivateKey loggedIn then
                 UR.addPort (saveFeature feature state authorization loggedIn community)
 
             else

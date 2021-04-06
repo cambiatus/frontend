@@ -699,7 +699,7 @@ update msg model loggedIn =
                             }
 
         ClickedSave ->
-            if LoggedIn.isAuth loggedIn then
+            if LoggedIn.hasPrivateKey loggedIn then
                 save msg loggedIn (UR.init model)
 
             else

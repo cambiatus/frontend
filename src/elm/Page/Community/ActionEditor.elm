@@ -1062,7 +1062,7 @@ update msg model ({ shared } as loggedIn) =
                 newModel =
                     { model | form = { oldForm | saveStatus = Saving } }
             in
-            if LoggedIn.isAuth loggedIn then
+            if LoggedIn.hasPrivateKey loggedIn then
                 upsertAction loggedIn newModel isoDate
 
             else

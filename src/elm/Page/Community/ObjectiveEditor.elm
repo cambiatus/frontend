@@ -399,7 +399,7 @@ update msg model loggedIn =
                                             ]
                                     }
             in
-            if LoggedIn.isAuth loggedIn then
+            if LoggedIn.hasPrivateKey loggedIn then
                 case model.status of
                     Loaded c (NewObjective objForm) ->
                         save objForm Nothing c.precision

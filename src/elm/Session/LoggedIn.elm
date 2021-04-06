@@ -9,11 +9,11 @@ module Session.LoggedIn exposing
     , addCommunity
     , addNotification
     , askedAuthentication
+    , hasPrivateKey
     , init
     , initLogin
     , isAccount
     , isActive
-    , isAuth
     , jsAddressToMsg
     , mapExternal
     , maybePrivateKey
@@ -209,12 +209,8 @@ type ProfileStatus
     | Loaded Profile.Model
 
 
-
--- TODO - Maybe rename this?
-
-
-isAuth : Model -> Bool
-isAuth model =
+hasPrivateKey : Model -> Bool
+hasPrivateKey model =
     Auth.hasPrivateKey model.auth
 
 
@@ -305,7 +301,7 @@ viewHelper pageMsg page profile_ ({ shared } as model) content =
          ]
             ++ (let
                     viewClaimWithProofs action proof =
-                        [ Action.viewClaimWithProofs proof shared.translators (isAuth model) action
+                        [ Action.viewClaimWithProofs proof shared.translators (hasPrivateKey model) action
                             |> Html.map (GotActionMsg >> pageMsg)
                         ]
                 in
@@ -1178,7 +1174,7 @@ handleActionMsg ({ shared } as model) actionMsg =
                         identity
                    )
     in
-    Action.update (isAuth model) shared (Api.uploadImage shared) model.selectedCommunity model.accountName actionMsg model.claimingAction
+    Action.update (hasPrivateKey model) shared (Api.uploadImage shared) model.selectedCommunity model.accountName actionMsg model.claimingAction
         |> UR.map
             actionModelToLoggedIn
             GotActionMsg

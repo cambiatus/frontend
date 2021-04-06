@@ -767,7 +767,7 @@ update msg model loggedIn =
             UR.init model
 
         ClickedChangePin ->
-            if LoggedIn.isAuth loggedIn then
+            if LoggedIn.hasPrivateKey loggedIn then
                 UR.init { model | isNewPinModalVisible = True }
                     |> UR.addCmd
                         (Dom.focus "pinInput"
@@ -783,7 +783,7 @@ update msg model loggedIn =
                         )
 
         ChangePinSubmitted newPin ->
-            if LoggedIn.isAuth loggedIn then
+            if LoggedIn.hasPrivateKey loggedIn then
                 let
                     currentPin =
                         case model.currentPin of

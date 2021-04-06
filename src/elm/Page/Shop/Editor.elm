@@ -753,7 +753,7 @@ update msg model loggedIn =
                 |> UR.init
 
         ClickedSave ->
-            if LoggedIn.isAuth loggedIn then
+            if LoggedIn.hasPrivateKey loggedIn then
                 let
                     validatedModel =
                         model
@@ -867,7 +867,7 @@ update msg model loggedIn =
                     UR.init model
 
         ClickedDeleteConfirm ->
-            if LoggedIn.isAuth loggedIn then
+            if LoggedIn.hasPrivateKey loggedIn then
                 case model of
                     EditingUpdate balances sale (Uploaded url) _ form ->
                         performRequest

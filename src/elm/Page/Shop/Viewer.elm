@@ -252,7 +252,7 @@ update msg model loggedIn =
                     validateForm sale model.form
             in
             if isFormValid validatedForm then
-                if LoggedIn.isAuth loggedIn then
+                if LoggedIn.hasPrivateKey loggedIn then
                     let
                         authorization =
                             { actor = loggedIn.accountName

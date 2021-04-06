@@ -378,7 +378,7 @@ update msg model loggedIn =
                                 | claimModalStatus = Claim.Loading claimId vote
                             }
                     in
-                    if LoggedIn.isAuth loggedIn then
+                    if LoggedIn.hasPrivateKey loggedIn then
                         UR.init newModel
                             |> UR.addPort
                                 { responseAddress = msg

@@ -523,7 +523,7 @@ update msg model ({ shared } as loggedIn) =
                     model |> UR.init
 
         PushTransaction ->
-            case ( model.status, LoggedIn.isAuth loggedIn ) of
+            case ( model.status, LoggedIn.hasPrivateKey loggedIn ) of
                 ( Loaded c (CreatingSubscription form), True ) ->
                     let
                         account =
