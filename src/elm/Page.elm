@@ -33,7 +33,6 @@ module Page exposing
     , viewTitle
     )
 
-import Api.Graphql
 import Asset.Icon as Icon
 import Auth
 import Browser.Navigation as Nav
@@ -85,19 +84,14 @@ init flags navKey url =
 
         ( Just ( accountName, _ ), Nothing ) ->
             let
-                ( model, cmd ) =
-                    Guest.initLoggingIn shared
+                ( model, cmd, signedInCmd ) =
+                    Guest.initLoggingIn shared accountName SignedIn
             in
             Guest model
                 |> UR.init
                 |> UR.addCmd (Cmd.map GotGuestMsg cmd)
                 |> UR.addCmd (fetchTranslations shared shared.language)
-                |> UR.addCmd
-                    (Api.Graphql.mutation shared
-                        Nothing
-                        (Auth.signIn accountName shared Nothing)
-                        SignedIn
-                    )
+                |> UR.addCmd signedInCmd
 
         ( Nothing, _ ) ->
             let
@@ -395,7 +389,7 @@ type ExternalMsg
 
 type Msg
     = CompletedLoadTranslation String (Result Http.Error Translations)
-    | SignedIn (RemoteData (Graphql.Http.Error (Maybe Auth.SignInResponse)) (Maybe Auth.SignInResponse)) -- TODO - Move this to Guest?
+    | SignedIn (RemoteData (Graphql.Http.Error (Maybe Auth.SignInResponse)) (Maybe Auth.SignInResponse))
     | GotGuestMsg Guest.Msg
     | GotLoggedInMsg LoggedIn.Msg
 

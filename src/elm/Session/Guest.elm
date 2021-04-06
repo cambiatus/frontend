@@ -4,6 +4,7 @@ import Api.Graphql
 import Auth
 import Browser.Events
 import Community exposing (Invite)
+import Eos.Account as Eos
 import Graphql.Http
 import Html exposing (Html, a, button, div, header, img, text)
 import Html.Attributes exposing (class, classList, src, style, tabindex, type_)
@@ -41,9 +42,19 @@ init shared =
             ( { defaultModel | community = Default }, Cmd.none )
 
 
-initLoggingIn : Shared -> ( Model, Cmd Msg )
-initLoggingIn =
-    init >> Tuple.mapFirst (\m -> { m | isLoggingIn = True })
+initLoggingIn : Shared -> Eos.Name -> (RemoteData (Graphql.Http.Error (Maybe Auth.SignInResponse)) (Maybe Auth.SignInResponse) -> msg) -> ( Model, Cmd Msg, Cmd msg )
+initLoggingIn shared accountName signInMessage =
+    let
+        ( model, cmd ) =
+            init shared
+    in
+    ( { model | isLoggingIn = True }
+    , cmd
+    , Api.Graphql.mutation shared
+        Nothing
+        (Auth.signIn accountName shared Nothing)
+        signInMessage
+    )
 
 
 getInvitationId : String -> Maybe String
@@ -296,7 +307,7 @@ viewPageHeader model shared =
 
 type External
     = UpdatedGuest Model
-    | LoggedIn String Auth.SignInResponse
+    | LoggedIn Auth.PrivateKey Auth.SignInResponse
     | SetFeedback Feedback.Model
 
 
