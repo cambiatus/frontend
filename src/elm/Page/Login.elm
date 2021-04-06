@@ -379,7 +379,11 @@ updateWithPassphrase msg model =
 
         GotClipboardContent (Just content) ->
             { model
-                | passphrase = String.trim content
+                | passphrase =
+                    String.trim content
+                        |> String.words
+                        |> List.take 12
+                        |> String.join " "
                 , hasPasted = True
                 , problems = []
             }
@@ -391,7 +395,14 @@ updateWithPassphrase msg model =
 
         EnteredPassphrase passphrase ->
             { model
-                | passphrase = passphrase
+                | passphrase =
+                    if List.length (String.words passphrase) >= 12 then
+                        String.words passphrase
+                            |> List.take 12
+                            |> String.join " "
+
+                    else
+                        passphrase
                 , hasPasted = False
                 , problems = []
             }
@@ -453,9 +464,14 @@ updateWithPin msg model { shared } =
                 |> UR.addExt (GuestExternal <| Guest.LoggedIn privateKey signInResponse)
 
         GotSignInResult _ (RemoteData.Success Nothing) ->
-            initPinModel model.passphrase
-                |> UR.init
+            UR.init model
                 |> UR.addExt (GuestExternal <| Guest.SetFeedback <| Feedback.Shown Feedback.Failure (shared.translators.t "error.unknown"))
+                |> UR.addPort
+                    { responseAddress = PinIgnored
+                    , responseData = Encode.null
+                    , data = Encode.object [ ( "name", Encode.string "logout" ) ]
+                    }
+                |> UR.logImpossible msg [ "NoSignInResponse" ]
 
         GotSignInResult _ (RemoteData.Failure err) ->
             UR.init model
@@ -542,6 +558,9 @@ jsAddressToMsg addr val =
                 )
                 val
                 |> Result.toMaybe
+
+        "GotPinMsg" :: "PinIgnored" :: [] ->
+            Just (GotPinMsg PinIgnored)
 
         _ ->
             Nothing
