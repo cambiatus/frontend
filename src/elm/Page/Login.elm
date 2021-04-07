@@ -489,7 +489,7 @@ updateWithPin msg model { shared } =
 
         GotSignInResult _ (RemoteData.Failure err) ->
             UR.init model
-                |> UR.addCmd (Log.graphqlError err)
+                |> UR.logGraphqlError msg err
                 |> UR.addPort
                     { responseAddress = PinIgnored
                     , responseData = Encode.null

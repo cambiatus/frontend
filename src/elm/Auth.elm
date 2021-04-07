@@ -226,11 +226,12 @@ update msg shared model =
         CompletedSignIn _ (RemoteData.Success Nothing) ->
             model
                 |> authFailed "error.unknown"
+                |> UR.logDebugValue msg (Encode.string "CompletedSignIn with Nothing")
 
         CompletedSignIn _ (RemoteData.Failure err) ->
             model
                 |> authFailed "auth.failed"
-                |> UR.addCmd (Log.graphqlError err)
+                |> UR.logGraphqlError msg err
                 |> UR.addPort
                     { responseAddress = Ignored
                     , responseData = Encode.null
@@ -268,6 +269,7 @@ update msg shared model =
         GotSubmittedPinResponse (Err err) ->
             model
                 |> authFailed err
+                |> UR.logDebugValue msg (Encode.string err)
 
 
 signIn : Eos.Name -> Shared -> Maybe String -> SelectionSet (Maybe SignInResponse) RootMutation
