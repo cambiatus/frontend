@@ -452,13 +452,9 @@ updateWithPin msg model { shared } =
                     , responseData = Encode.null
                     , data =
                         Encode.object
-                            [ ( "name", Encode.string "loginWithPrivateKey" )
-                            , ( "form"
-                              , Encode.object
-                                    [ ( "passphrase", Encode.string model.passphrase )
-                                    , ( "usePin", Encode.string pin )
-                                    ]
-                              )
+                            [ ( "name", Encode.string "login" )
+                            , ( "passphrase", Encode.string model.passphrase )
+                            , ( "pin", Encode.string pin )
                             ]
                     }
 

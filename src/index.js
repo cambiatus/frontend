@@ -62,7 +62,6 @@ if (process.env.NODE_ENV === 'development') {
 let eos = null
 const USER_KEY = 'bespiral.user'
 const LANGUAGE_KEY = 'bespiral.language'
-const AUTH_PREF_KEY = 'bespiral.auth.pref'
 const PUSH_PREF = 'bespiral.push.pref'
 const SELECTED_COMMUNITY_KEY = 'bespiral.selected_community'
 const AUTH_TOKEN = 'bespiral.auth_token'
@@ -96,7 +95,6 @@ function flags () {
     language: getUserLanguage(),
     accountName: (user && user.accountName) || null,
     isPinAvailable: !!(user && user.encryptedKey),
-    authPreference: window.localStorage.getItem(AUTH_PREF_KEY),
     authToken: window.localStorage.getItem(AUTH_TOKEN),
     logo: config.logo,
     logoMobile: config.logoMobile,
@@ -202,25 +200,9 @@ app.ports.getRecentSearches.subscribe(() => {
   app.ports.gotRecentSearches.send(window.localStorage.getItem(RECENT_SEARCHES) || '[]')
 })
 
-// STORE AUTH PREFERENCE
-
-function storeAuthPreference (auth) {
-  window.localStorage.setItem(AUTH_PREF_KEY, auth)
-}
-
 app.ports.storeAuthToken.subscribe(token =>
   window.localStorage.setItem(AUTH_TOKEN, token)
 )
-
-// STORE ACCOUNTNAME
-
-function storeAccountName (accountName) {
-  var storeData = {
-    accountName: accountName
-  }
-  window.localStorage.removeItem(USER_KEY)
-  window.localStorage.setItem(USER_KEY, JSON.stringify(storeData))
-}
 
 // STORE PUSH PREF
 
@@ -326,113 +308,74 @@ async function handleJavascriptPort (arg) {
       app.ports.javascriptInPort.send(response)
       break
     }
-    case 'loginWithPrivateKey': {
-      debugLog('loginWithPrivateKey', '')
-      const passphrase = arg.data.form.passphrase
+    case 'login': {
+      debugLog('login port started', '')
+      const passphrase = arg.data.passphrase
       const privateKey = ecc.seedPrivate(mnemonic.toSeedHex(passphrase))
 
-      if (ecc.isValidPrivate(privateKey)) {
+      if (!ecc.isValidPrivate(privateKey)) {
+        const response = {
+          address: arg.responseAddress,
+          addressData: arg.responseData,
+          error: 'error.invalidKey'
+        }
+        debugLog('login port failed', response)
+        app.ports.javascriptInPort.send(response)
+      } else {
         const publicKey = ecc.privateToPublic(privateKey)
         const accounts = await eos.getKeyAccounts(publicKey)
         const user = JSON.parse(window.localStorage.getItem(USER_KEY))
-        debugLog('loginWithPrivateKey port accounts', accounts)
+        debugLog('login port accounts', accounts)
 
-        if (
-          !accounts ||
-          !accounts.account_names ||
-          accounts.account_names.length === 0
-        ) {
+        const isUserLoggedIn = user && user.accountName
+        // If there are no accounts found
+        if (!accounts || !accounts.account_names || accounts.account_names.length === 0) {
           const response = {
             address: arg.responseAddress,
             addressData: arg.responseData,
             error: 'error.accountNotFound'
           }
-          debugLog('loginWithPrivateKey port failed', response)
+          debugLog('login port failed', response)
           app.ports.javascriptInPort.send(response)
-        } else if (
-          user &&
-          user.accountName &&
-          !accounts.account_names.some(aN => aN === user.accountName)
-        ) {
+          // If user is already logged in, but the key doesn't match their account
+        } else if (isUserLoggedIn && !accounts.account_names.some(accountName => accountName === user.accountName)) {
           const response = {
             address: arg.responseAddress,
             addressData: arg.responseData,
-            error:
-              'This private key does not correspond to logged in account. Please logout to use a different account.'
+            error: 'error.accountDoesNotCorrespond'
           }
-          debugLog('loginWithPrivateKey port failed', response)
+          debugLog('login port failed', response)
           app.ports.javascriptInPort.send(response)
-        } else if (accounts.account_names.length === 1) {
-          arg.data.name = 'loginWithPrivateKeyAccount'
-          arg.data.accountName = accounts.account_names[0]
-          handleJavascriptPort(arg)
-        } else if (
-          user &&
-          user.accountName &&
-          accounts.account_names.some(aN => aN === user.accountName)
-        ) {
-          arg.data.name = 'loginWithPrivateKeyAccount'
-          arg.data.accountName = user.accountName
-          handleJavascriptPort(arg)
-
-          // There is multiple accounts
+          // If user is either not logged in or is logged in and the key matches their account
         } else {
+          const accountName = user && user.accountName ? user.accountName : accounts.account_names[0]
+
+          storePin(
+            {
+              accountName,
+              privateKey,
+              passphrase
+            },
+            arg.data.pin
+          )
+
+          // Save credentials to EOS
+          eos = Eos(Object.assign(config.eosOptions, { keyProvider: privateKey }))
+
+          // Configure Sentry logged user
+          Sentry.setUser({ email: accountName })
+
           const response = {
             address: arg.responseAddress,
             addressData: arg.responseData,
-            accountNames: accounts.account_names
+            accountName,
+            privateKey
           }
-          debugLog('loginWithPrivateKey port finished', response)
+
+          debugLog('login port finished', response)
           app.ports.javascriptInPort.send(response)
         }
-      } else {
-        const response = {
-          address: arg.responseAddress,
-          addressData: arg.responseData,
-          error: 'Invalid key'
-        }
-        debugLog('loginWithPrivateKey port failed', response)
-        app.ports.javascriptInPort.send(response)
       }
-      break
-    }
-    case 'loginWithPrivateKeyAccount': {
-      debugLog('loginWithPrivateKeyAccount port started', '')
-      const loginForm = arg.data.form
-      const accountName = arg.data.accountName
-      const passphrase = loginForm.passphrase
-      const privateKey = ecc.seedPrivate(mnemonic.toSeedHex(passphrase))
-
-      // Storing stuff
-      if (loginForm.usePin) {
-        storePin(
-          {
-            accountName: accountName,
-            privateKey: privateKey,
-            passphrase: passphrase
-          },
-          loginForm.usePin
-        )
-        storeAuthPreference('pin')
-      } else {
-        storeAccountName(accountName)
-        storeAuthPreference('private_key')
-      }
-
-      // Save credentials to EOS
-      eos = Eos(Object.assign(config.eosOptions, { keyProvider: privateKey }))
-
-      // Configure Sentry logged user
-      Sentry.setUser({ email: accountName })
-
-      const response = {
-        address: arg.responseAddress,
-        addressData: arg.responseData,
-        accountName: accountName,
-        privateKey: privateKey
-      }
-      debugLog('loginWithPrivateKeyAccount port finished', response)
-      app.ports.javascriptInPort.send(response)
       break
     }
     case 'changePin': {
@@ -469,20 +412,28 @@ async function handleJavascriptPort (arg) {
       app.ports.javascriptInPort.send(response)
       break
     }
-    case 'loginWithPin': {
-      debugLog('loginWithPin port started', '')
-      const store = JSON.parse(window.localStorage.getItem(USER_KEY))
+    case 'getPrivateKey': {
+      debugLog('getPrivateKey port started', '')
+      const user = JSON.parse(window.localStorage.getItem(USER_KEY))
       const pin = arg.data.pin
-      if (store && store.encryptedKey && store.accountName) {
+      // If private key and accountName are stored in localStorage
+      const isUserLoggedIn = user && user.encryptedKey && user.accountName
+      if (!isUserLoggedIn) {
+        const response = {
+          address: arg.responseAddress,
+          addressData: arg.responseData,
+          error: 'error.unavailablePin'
+        }
+        debugLog('getPrivateKey port failed', response)
+        app.ports.javascriptInPort.send(response)
+      } else {
         try {
-          const decryptedKey = sjcl.decrypt(pin, store.encryptedKey)
+          const decryptedKey = sjcl.decrypt(pin, user.encryptedKey)
 
           eos = Eos(Object.assign(config.eosOptions, { keyProvider: decryptedKey }))
 
           // Configure Sentry logged user
-          Sentry.setUser({ account: store.accountName })
-
-          storeAuthPreference('pin')
+          Sentry.setUser({ account: user.accountName })
 
           // Set default selected community
           window.localStorage.setItem(
@@ -493,35 +444,27 @@ async function handleJavascriptPort (arg) {
           Sentry.addBreadcrumb({
             category: 'auth',
             level: Sentry.Severity.Info,
-            message: 'Logged user with PIN: ' + store.accountName
+            message: 'Logged user with PIN: ' + user.accountName
           })
 
           const response = {
             address: arg.responseAddress,
             addressData: arg.responseData,
-            accountName: store.accountName,
+            accountName: user.accountName,
             privateKey: decryptedKey
           }
 
-          debugLog('loginWithPin port finished', response)
+          debugLog('getPrivateKey port finished', response)
           app.ports.javascriptInPort.send(response)
         } catch (e) {
           const response = {
             address: arg.responseAddress,
             addressData: arg.responseData,
-            error: 'Invalid PIN'
+            error: 'error.invalidPin'
           }
-          debugLog('loginWithPin port failed', response)
+          debugLog('getPrivateKey port failed', response)
           app.ports.javascriptInPort.send(response)
         }
-      } else {
-        const response = {
-          address: arg.responseAddress,
-          addressData: arg.responseData,
-          error: 'PIN is unavailable'
-        }
-        debugLog('loginWithPin port failed', response)
-        app.ports.javascriptInPort.send(response)
       }
       break
     }
@@ -588,7 +531,6 @@ async function handleJavascriptPort (arg) {
     case 'logout': {
       debugLog('logout port started', '')
       window.localStorage.removeItem(USER_KEY)
-      window.localStorage.removeItem(AUTH_PREF_KEY)
       window.localStorage.removeItem(SELECTED_COMMUNITY_KEY)
       window.localStorage.removeItem(AUTH_TOKEN)
       Sentry.addBreadcrumb({

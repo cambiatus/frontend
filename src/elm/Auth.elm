@@ -252,7 +252,7 @@ update msg shared model =
                     , responseData = Encode.null
                     , data =
                         Encode.object
-                            [ ( "name", Encode.string "loginWithPin" )
+                            [ ( "name", Encode.string "getPrivateKey" )
                             , ( "pin", Encode.string pin )
                             ]
                     }
