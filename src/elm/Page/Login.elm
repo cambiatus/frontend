@@ -29,7 +29,6 @@ import Html.Events exposing (keyCode, onClick, preventDefaultOn)
 import Json.Decode as Decode
 import Json.Decode.Pipeline as Decode
 import Json.Encode as Encode exposing (Value)
-import Log
 import Ports
 import RemoteData exposing (RemoteData)
 import Route

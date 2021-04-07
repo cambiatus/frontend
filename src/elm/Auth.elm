@@ -43,7 +43,6 @@ import Html.Attributes exposing (class)
 import Json.Decode as Decode
 import Json.Decode.Pipeline as Decode
 import Json.Encode as Encode exposing (Value)
-import Log
 import Ports
 import Profile exposing (Model)
 import RemoteData exposing (RemoteData)
