@@ -714,12 +714,6 @@ changeRouteTo maybeRoute model =
                 >> updateStatusWith PaymentHistory GotPaymentHistoryMsg model
                 |> withLoggedIn (Route.PaymentHistory accountName)
 
-        Just (Route.LoginWithPrivateKey maybeRedirect) ->
-            withGuest
-                Login.init
-                (updateStatusWith Login GotLoginMsg)
-                maybeRedirect
-
         Just Route.Logout ->
             Page.logout
                 >> updateSessionWith GotPageMsg model
