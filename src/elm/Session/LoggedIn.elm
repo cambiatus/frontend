@@ -96,10 +96,6 @@ fetchTranslations language _ =
         |> Translation.get language
 
 
-
--- TODO - should we have just `PrivateKey` instead of `Maybe PrivateKey`?
-
-
 {-| Initialize logged in user after signing-in.
 -}
 initLogin : Shared -> Maybe String -> Profile.Model -> String -> ( Model, Cmd Msg )
@@ -114,9 +110,7 @@ initLogin shared maybePrivateKey_ profile_ authToken =
         model =
             initModel shared maybePrivateKey_ profile_.account selectedCommunity authToken
     in
-    ( { model
-        | profile = Loaded profile_
-      }
+    ( { model | profile = Loaded profile_ }
     , Cmd.batch
         [ Task.perform
             (\_ -> SelectCommunity selectedCommunity Cmd.none)

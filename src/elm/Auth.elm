@@ -58,12 +58,19 @@ import View.Pin as Pin
 
 init : Maybe PrivateKey -> Model
 init maybePrivateKey_ =
-    case maybePrivateKey_ of
-        Nothing ->
-            initModel WithoutPrivateKey
+    let
+        status =
+            case maybePrivateKey_ of
+                Nothing ->
+                    WithoutPrivateKey
 
-        Just privateKey ->
-            initModel (WithPrivateKey privateKey)
+                Just privateKey ->
+                    WithPrivateKey privateKey
+    in
+    { status = status
+    , error = Nothing
+    , pinModel = initPinModel status
+    }
 
 
 
@@ -74,14 +81,6 @@ type alias Model =
     { status : Status
     , error : Maybe String
     , pinModel : Pin.Model
-    }
-
-
-initModel : Status -> Model
-initModel status =
-    { status = status
-    , error = Nothing
-    , pinModel = initPinModel status
     }
 
 

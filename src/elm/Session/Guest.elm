@@ -144,7 +144,6 @@ subscriptions _ =
 type Page
     = Register
     | Login
-    | Shop
     | Other
 
 
