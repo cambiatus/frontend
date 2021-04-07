@@ -31,7 +31,6 @@ init ({ shared } as loggedIn) =
     case loggedIn.profile of
         LoggedIn.Loaded profile ->
             ( profile.contacts
-                |> Maybe.withDefault []
                 |> Contact.initMultiple
                 |> RemoteData.Success
             , Cmd.none
@@ -65,16 +64,24 @@ type alias UpdateResult =
 update : Msg -> Model -> LoggedIn.Model -> UpdateResult
 update msg model { shared, authToken } =
     case msg of
-        CompletedProfileLoad result ->
-            result
-                |> RemoteData.map
-                    (Maybe.map .contacts
-                        >> Maybe.andThen identity
-                        >> Maybe.withDefault []
-                        >> Contact.initMultiple
-                    )
-                |> RemoteData.mapError (\_ -> shared.translators.t "Something went wrong")
+        CompletedProfileLoad (RemoteData.Success (Just profile)) ->
+            Contact.initMultiple profile.contacts
+                |> RemoteData.Success
                 |> UR.init
+
+        CompletedProfileLoad (RemoteData.Success Nothing) ->
+            RemoteData.Failure (shared.translators.t "Something went wrong")
+                |> UR.init
+
+        CompletedProfileLoad (RemoteData.Failure _) ->
+            RemoteData.Failure (shared.translators.t "Something went wrong")
+                |> UR.init
+
+        CompletedProfileLoad RemoteData.Loading ->
+            UR.init RemoteData.Loading
+
+        CompletedProfileLoad RemoteData.NotAsked ->
+            UR.init RemoteData.NotAsked
 
         GotContactMsg subMsg ->
             case model of

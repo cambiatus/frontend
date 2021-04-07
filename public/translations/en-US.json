@@ -795,6 +795,10 @@
       "status": {
         "label": "Action state",
         "pending_review": "Under Review (my vote is pending)"
+      },
+      "sort": {
+        "asc": "Ordering ascending",
+        "desc": "Ordering descending"
       }
     }
   },
@@ -812,6 +816,8 @@
       "1": "This claim was",
       "2": "rejected"
     },
+    "title_action_completed": "This claim is pending, however, since the action is completed, it's not possible to vote",
+    "title_action_closed": "This claim is pending, however, since the action is closed, it's not possible to vote",
     "pending": "Pending",
     "disapproved": "Disapproved",
     "approved": "Approved",

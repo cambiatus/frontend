@@ -36,6 +36,7 @@ claim requiredArgs object_ =
 type alias ClaimsAnalysisOptionalArguments =
     { after : OptionalArgument String
     , before : OptionalArgument String
+    , filter : OptionalArgument Cambiatus.InputObject.ClaimAnalysisFilter
     , first : OptionalArgument Int
     , last : OptionalArgument Int
     }
@@ -55,10 +56,10 @@ claimsAnalysis :
 claimsAnalysis fillInOptionals requiredArgs object_ =
     let
         filledInOptionals =
-            fillInOptionals { after = Absent, before = Absent, first = Absent, last = Absent }
+            fillInOptionals { after = Absent, before = Absent, filter = Absent, first = Absent, last = Absent }
 
         optionalArgs =
-            [ Argument.optional "after" filledInOptionals.after Encode.string, Argument.optional "before" filledInOptionals.before Encode.string, Argument.optional "first" filledInOptionals.first Encode.int, Argument.optional "last" filledInOptionals.last Encode.int ]
+            [ Argument.optional "after" filledInOptionals.after Encode.string, Argument.optional "before" filledInOptionals.before Encode.string, Argument.optional "filter" filledInOptionals.filter Cambiatus.InputObject.encodeClaimAnalysisFilter, Argument.optional "first" filledInOptionals.first Encode.int, Argument.optional "last" filledInOptionals.last Encode.int ]
                 |> List.filterMap identity
     in
     Object.selectionForCompositeField "claimsAnalysis" (optionalArgs ++ [ Argument.required "communityId" requiredArgs.communityId Encode.string ]) object_ (identity >> Decode.nullable)
@@ -121,7 +122,7 @@ type alias CountryRequiredArguments =
     { input : Cambiatus.InputObject.CountryInput }
 
 
-{-| [Auth required] List of supported countries
+{-| List of supported countries
 -}
 country :
     CountryRequiredArguments

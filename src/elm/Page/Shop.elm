@@ -332,7 +332,12 @@ viewCard model ({ shared } as loggedIn) index card =
         ]
         [ div [ class "md:hidden rounded-lg bg-white h-32 flex" ]
             [ div [ class "w-1/4" ]
-                [ img [ class "rounded-l-lg object-cover h-32 w-full", src image, on "error" (Json.Decode.succeed (OnImageError index)) ] []
+                [ img
+                    [ class "rounded-l-lg object-cover h-32 w-full"
+                    , src image
+                    , on "error" (Json.Decode.succeed (OnImageError index))
+                    ]
+                    []
                 ]
             , div [ class "px-4 pb-2 flex flex-wrap" ]
                 [ p [ class "font-medium pt-2 w-full" ] [ text card.product.title ]
