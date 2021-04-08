@@ -256,7 +256,7 @@ viewPageHeader model shared =
                 _ ->
                     imageElement logo
             ]
-        , div [ class "relative z-10" ]
+        , div [ class "relative z-50" ]
             [ button
                 [ type_ "button"
                 , tabindex -1
