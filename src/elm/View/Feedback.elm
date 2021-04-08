@@ -17,7 +17,7 @@ type Status
 
 type Model
     = Hidden
-    | Shown Status String
+    | Visible Status String
 
 
 
@@ -30,7 +30,7 @@ view model =
         Hidden ->
             text ""
 
-        Shown status content ->
+        Visible status content ->
             let
                 bgColor =
                     case status of

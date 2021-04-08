@@ -528,7 +528,7 @@ viewDownloadPdfErrorModal model loggedIn =
                     ""
 
                 Just pk ->
-                    pk
+                    Eos.privateKeyToString pk
 
         body =
             [ p [ class "my-3" ]

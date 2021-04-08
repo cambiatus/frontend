@@ -801,12 +801,12 @@ update _ msg model { shared } =
                 Nothing ->
                     model
                         |> UR.init
-                        |> UR.addExt (Guest.SetFeedback <| Feedback.Shown Feedback.Failure (t "register.account_error.title"))
+                        |> UR.addExt (Guest.SetFeedback <| Feedback.Visible Feedback.Failure (t "register.account_error.title"))
 
         CompletedSignUp (RemoteData.Failure error) ->
             model
                 |> UR.init
-                |> UR.addExt (Guest.SetFeedback <| Feedback.Shown Feedback.Failure (t "register.account_error.title"))
+                |> UR.addExt (Guest.SetFeedback <| Feedback.Visible Feedback.Failure (t "register.account_error.title"))
                 |> UR.logGraphqlError msg error
                 |> scrollTop
 
@@ -844,7 +844,7 @@ update _ msg model { shared } =
         CompletedLoadInvite (RemoteData.Failure error) ->
             { model | status = ErrorShowed (FailedInvite error) }
                 |> UR.init
-                |> UR.addExt (Guest.SetFeedback <| Feedback.Shown Feedback.Failure (t "error.unknown"))
+                |> UR.addExt (Guest.SetFeedback <| Feedback.Visible Feedback.Failure (t "error.unknown"))
                 |> UR.logGraphqlError msg error
 
         CompletedLoadInvite _ ->

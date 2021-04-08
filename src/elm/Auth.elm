@@ -2,7 +2,6 @@ module Auth exposing
     ( ExternalMsg(..)
     , Model
     , Msg
-    , PrivateKey
     , SignInResponse
     , hasPrivateKey
     , init
@@ -55,7 +54,7 @@ import View.Pin as Pin
 -- INIT
 
 
-init : Maybe PrivateKey -> Model
+init : Maybe Eos.PrivateKey -> Model
 init maybePrivateKey_ =
     let
         status =
@@ -114,11 +113,7 @@ initPinModel status =
 -}
 type Status
     = WithoutPrivateKey
-    | WithPrivateKey PrivateKey
-
-
-type alias PrivateKey =
-    String
+    | WithPrivateKey Eos.PrivateKey
 
 
 hasPrivateKey : Model -> Bool
@@ -131,7 +126,7 @@ hasPrivateKey model =
             False
 
 
-maybePrivateKey : Model -> Maybe String
+maybePrivateKey : Model -> Maybe Eos.PrivateKey
 maybePrivateKey model =
     case model.status of
         WithPrivateKey pk ->
@@ -180,7 +175,7 @@ type Msg
     = Ignored
     | GotPinMsg Pin.Msg
     | SubmittedPin String
-    | GotSubmittedPinResponse (Result String ( Eos.Name, String ))
+    | GotSubmittedPinResponse (Result String ( Eos.Name, Eos.PrivateKey ))
     | CompletedSignIn Status (RemoteData (Graphql.Http.Error (Maybe SignInResponse)) (Maybe SignInResponse))
 
 
@@ -304,7 +299,7 @@ jsAddressToMsg addr val =
                 (Decode.oneOf
                     [ Decode.succeed Tuple.pair
                         |> Decode.required "accountName" Eos.nameDecoder
-                        |> Decode.required "privateKey" Decode.string
+                        |> Decode.required "privateKey" Eos.privateKeyDecoder
                         |> Decode.map (Ok >> GotSubmittedPinResponse)
                     , Decode.field "error" Decode.string
                         |> Decode.map (Err >> GotSubmittedPinResponse)

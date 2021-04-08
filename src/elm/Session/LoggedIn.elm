@@ -98,7 +98,7 @@ fetchTranslations language _ =
 
 {-| Initialize logged in user after signing-in.
 -}
-initLogin : Shared -> Maybe String -> Profile.Model -> String -> ( Model, Cmd Msg )
+initLogin : Shared -> Maybe Eos.PrivateKey -> Profile.Model -> String -> ( Model, Cmd Msg )
 initLogin shared maybePrivateKey_ profile_ authToken =
     let
         selectedCommunity : Symbol
@@ -169,7 +169,7 @@ type FeatureStatus
     | FeatureLoading
 
 
-initModel : Shared -> Maybe String -> Eos.Name -> Symbol -> String -> Model
+initModel : Shared -> Maybe Eos.PrivateKey -> Eos.Name -> Symbol -> String -> Model
 initModel shared maybePrivateKey_ accountName selectedCommunity authToken =
     { shared = shared
     , accountName = accountName
@@ -208,7 +208,7 @@ hasPrivateKey model =
     Auth.hasPrivateKey model.auth
 
 
-maybePrivateKey : Model -> Maybe String
+maybePrivateKey : Model -> Maybe Eos.PrivateKey
 maybePrivateKey model =
     Auth.maybePrivateKey model.auth
 
@@ -1142,10 +1142,10 @@ handleActionMsg ({ shared } as model) actionMsg =
                             model.feedback
 
                         ( Just (Action.Failure s), _ ) ->
-                            Feedback.Shown Feedback.Failure s
+                            Feedback.Visible Feedback.Failure s
 
                         ( Just (Action.Success s), _ ) ->
-                            Feedback.Shown Feedback.Success s
+                            Feedback.Visible Feedback.Success s
 
                         ( Nothing, _ ) ->
                             model.feedback
@@ -1198,7 +1198,7 @@ askedAuthentication model =
 
 showFeedback : Feedback.Status -> String -> Model -> Model
 showFeedback feedbackStatus feedback model =
-    { model | feedback = Feedback.Shown feedbackStatus feedback }
+    { model | feedback = Feedback.Visible feedbackStatus feedback }
 
 
 

@@ -292,8 +292,8 @@ type PassphraseExternalMsg
 type PinMsg
     = PinIgnored
     | SubmittedPinWithSuccess String
-    | GotSubmitResult (Result String ( Eos.Name, String ))
-    | GotSignInResult String (RemoteData (Graphql.Http.Error (Maybe Auth.SignInResponse)) (Maybe Auth.SignInResponse))
+    | GotSubmitResult (Result String ( Eos.Name, Eos.PrivateKey ))
+    | GotSignInResult Eos.PrivateKey (RemoteData (Graphql.Http.Error (Maybe Auth.SignInResponse)) (Maybe Auth.SignInResponse))
     | GotPinComponentMsg Pin.Msg
 
 
@@ -468,7 +468,7 @@ updateWithPin msg model { shared } =
 
         GotSubmitResult (Err err) ->
             UR.init model
-                |> UR.addExt (GuestExternal <| Guest.SetFeedback <| Feedback.Shown Feedback.Failure (shared.translators.t err))
+                |> UR.addExt (GuestExternal <| Guest.SetFeedback <| Feedback.Visible Feedback.Failure (shared.translators.t err))
                 |> UR.addExt RevertProcess
 
         GotSignInResult privateKey (RemoteData.Success (Just signInResponse)) ->
@@ -478,7 +478,7 @@ updateWithPin msg model { shared } =
 
         GotSignInResult _ (RemoteData.Success Nothing) ->
             UR.init model
-                |> UR.addExt (GuestExternal <| Guest.SetFeedback <| Feedback.Shown Feedback.Failure (shared.translators.t "error.unknown"))
+                |> UR.addExt (GuestExternal <| Guest.SetFeedback <| Feedback.Visible Feedback.Failure (shared.translators.t "error.unknown"))
                 |> UR.addPort
                     { responseAddress = PinIgnored
                     , responseData = Encode.null
@@ -494,7 +494,7 @@ updateWithPin msg model { shared } =
                     , responseData = Encode.null
                     , data = Encode.object [ ( "name", Encode.string "logout" ) ]
                     }
-                |> UR.addExt (GuestExternal <| Guest.SetFeedback <| Feedback.Shown Feedback.Failure (shared.translators.t "auth.failed"))
+                |> UR.addExt (GuestExternal <| Guest.SetFeedback <| Feedback.Visible Feedback.Failure (shared.translators.t "auth.failed"))
                 |> UR.addExt RevertProcess
 
         GotSignInResult _ RemoteData.NotAsked ->
@@ -561,7 +561,7 @@ jsAddressToMsg addr val =
                 (Decode.oneOf
                     [ Decode.succeed Tuple.pair
                         |> Decode.required "accountName" Eos.nameDecoder
-                        |> Decode.required "privateKey" Decode.string
+                        |> Decode.required "privateKey" Eos.privateKeyDecoder
                         |> Decode.map (Ok >> GotSubmitResult >> GotPinMsg)
                     , Decode.field "error" Decode.string
                         |> Decode.map (Err >> GotSubmitResult >> GotPinMsg)
