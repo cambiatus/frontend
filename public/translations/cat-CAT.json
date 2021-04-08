@@ -110,7 +110,6 @@
     "invalidSymbol": "Símbol invàlid.",
     "unknown": "Oh oh. Alguna cosa ha anat malament.",
     "accountNotFound": "Compte no trobat. Esteu segur que heu creat el vostre compte?",
-    "accountDoesNotCorrespond": "Aquesta clau privada no es correspon amb el compte registrat. Inicieu la sessió per utilitzar un altre compte.",
     "invalidKey": "Clau no vàlida",
     "invalidPin": "PIN no vàlid",
     "unavailablePin": "El PIN no està disponible",

@@ -110,7 +110,6 @@
     "invalidSymbol": "Simbolo inválido.",
     "unknown": "Opa. Algo de errado aconteceu =(.",
     "accountNotFound": "Conta não encontrada. Tem certeza que criou uma conta com essa chave?",
-    "accountDoesNotCorrespond": "Essa chave privada não corresponde à conta atual. Por favor faça logout para usar outra conta.",
     "invalidKey": "Chave inválida",
     "invalidPin": "PIN inválido",
     "unavailablePin": "PIN está indisponível",

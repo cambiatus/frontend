@@ -110,7 +110,6 @@
     "invalidSymbol": "Simbolo invalido.",
     "unknown": "Oh oh. Algo salió mal.",
     "accountNotFound": "Cuenta no encontrada. ¿Estás seguro de haber creado tu cuenta?",
-    "accountDoesNotCorrespond": "Esta clave privada no corresponde a la cuenta registrada. Cierre la sesión para usar una cuenta diferente.",
     "invalidKey": "Tecla inválida",
     "invalidPin": "PIN inválido",
     "unavailablePin": "El PIN no está disponible",

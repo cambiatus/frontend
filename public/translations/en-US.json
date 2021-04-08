@@ -110,7 +110,6 @@
     "invalidSymbol": "Invalid symbol.",
     "unknown": "Uoh. Something wrong happened.",
     "accountNotFound": "Account not found. Are you sure you created your account?",
-    "accountDoesNotCorrespond": "This private key does not correspond to logged in account. Please logout to use a different account.",
     "invalidKey": "Invalid key",
     "invalidPin": "Invalid PIN",
     "unavailablePin": "PIN is unavailable",
