@@ -255,6 +255,19 @@ function getSelectedCommunity () {
   return selectedCommunity
 }
 
+function logout () {
+  window.localStorage.removeItem(USER_KEY)
+  window.localStorage.removeItem(SELECTED_COMMUNITY_KEY)
+  window.localStorage.removeItem(AUTH_TOKEN)
+
+  Sentry.addBreadcrumb({
+    category: 'auth',
+    message: 'User logged out'
+  })
+  Sentry.setUser(null)
+  debugLog('set sentry user to null', '')
+}
+
 function downloadPdf (accountName, passphrase) {
   debugLog('started downloadPdf', accountName)
   const definition = pdfDefinition(passphrase)
@@ -328,40 +341,40 @@ async function handleJavascriptPort (arg) {
       if (!ecc.isValidPrivate(privateKey)) {
         return { error: 'error.invalidKey' }
       } else {
-        const publicKey = ecc.privateToPublic(privateKey)
-        const accounts = await eos.getKeyAccounts(publicKey)
-        const user = JSON.parse(window.localStorage.getItem(USER_KEY))
-        debugLog(`got ${accounts.account_names.length} accounts`, accounts)
+        try {
+          const publicKey = ecc.privateToPublic(privateKey)
+          const accounts = await eos.getKeyAccounts(publicKey)
+          debugLog(`got ${accounts.account_names.length} accounts`, accounts)
 
-        const isUserLoggedIn = user && user.accountName
-        if (!accounts || !accounts.account_names || accounts.account_names.length === 0) {
-          // If there are no accounts found
-          return { error: 'error.accountNotFound' }
-        } else if (isUserLoggedIn && !accounts.account_names.some(accountName => accountName === user.accountName)) {
-          // If user is already logged in, but the key doesn't match their account
-          return { error: 'error.accountDoesNotCorrespond' }
-        } else {
-          // If user is either not logged in or is logged in and the key matches their account
-          const accountName = user && user.accountName ? user.accountName : accounts.account_names[0]
+          if (!accounts || !accounts.account_names || accounts.account_names.length === 0) {
+            return { error: 'error.accountNotFound' }
+          } else {
+            const accountName = accounts.account_names[0]
 
-          storePin(
-            {
-              accountName,
-              privateKey,
-              passphrase
-            },
-            arg.data.pin
-          )
+            logout()
 
-          // Save credentials to EOS
-          eos = Eos(Object.assign(config.eosOptions, { keyProvider: privateKey }))
-          debugLog('saved credentials to EOS', '')
+            storePin(
+              {
+                accountName,
+                privateKey,
+                passphrase
+              },
+              arg.data.pin
+            )
 
-          // Configure Sentry logged user
-          Sentry.setUser({ email: accountName })
-          debugLog('set sentry user', accountName)
+            // Save credentials to EOS
+            eos = Eos(Object.assign(config.eosOptions, { keyProvider: privateKey }))
+            debugLog('saved credentials to EOS', '')
 
-          return { accountName, privateKey }
+            // Configure Sentry logged user
+            Sentry.setUser({ email: accountName })
+            debugLog('set sentry user', accountName)
+
+            return { accountName, privateKey }
+          }
+        } catch (err) {
+          debugLog(`login port error: ${err.message}`, err)
+          return { error: 'error.unknown' }
         }
       }
     }
@@ -471,15 +484,7 @@ async function handleJavascriptPort (arg) {
         })
     }
     case 'logout': {
-      window.localStorage.removeItem(USER_KEY)
-      window.localStorage.removeItem(SELECTED_COMMUNITY_KEY)
-      window.localStorage.removeItem(AUTH_TOKEN)
-      Sentry.addBreadcrumb({
-        category: 'auth',
-        message: 'User logged out'
-      })
-      Sentry.setUser(null)
-      debugLog('set sentry user to null', '')
+      logout()
 
       return {}
     }
