@@ -91,6 +91,12 @@
     "objective": {
       "invalid_id": "ID de objetivo no válido "
     },
+    "clipboard": {
+      "permissionDenied": "¡Debe darnos permiso para pegar desde el portapapeles! Intente cambiar la configuración en el candado o el botón de información",
+      "paste": {
+        "notSupported": "Su navegador no admite pegar desde el portapapeles, pegue manualmente"
+      }
+    },
     "pageNotFound": "¡Pagina no encontrada.",
     "required": "Parece que olvidaste completar esto.",
     "email": "Por favor, utilice un correo electrónico válido.",

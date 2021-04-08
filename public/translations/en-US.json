@@ -91,6 +91,12 @@
     "objective": {
       "invalid_id": "Invalid objective id "
     },
+    "clipboard": {
+      "permissionDenied": "You need to give us permission to paste from the clipboard! Try changing the settings in the padlock or info button",
+      "paste": {
+        "notSupported": "Your browser does not support pasting from clipboard, please paste manually"
+      }
+    },
     "pageNotFound": "Page not found",
     "required": "It looks like you forgot to fill this one out.",
     "email": "Please, use a valid email.",

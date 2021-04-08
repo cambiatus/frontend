@@ -91,6 +91,12 @@
     "objective": {
       "invalid_id": "ID do objetivo inválido "
     },
+    "clipboard": {
+      "permissionDenied": "Você precisa nos dar permissão para colar! Tente mudar as configurações no botão de cadeado ou informações",
+      "paste": {
+        "notSupported": "Seu navegador não suporta colar, por favor cole manualmente"
+      }
+    },
     "pageNotFound": "Pagina não encontrada",
     "required": "Parece que voce esqueceu de preencher esse.",
     "email": "Por favor, use um email válido.",

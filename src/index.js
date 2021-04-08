@@ -86,6 +86,17 @@ function canReadClipboard () {
   return !!navigator.clipboard && !!navigator.clipboard.readText
 }
 
+/** Assumes we already have clipboard permissions */
+async function readClipboardWithPermission () {
+  try {
+    const clipboardContent = await navigator.clipboard.readText()
+    return { clipboardContent }
+  } catch (err) {
+    debugLog('clipboard.readText() error', err)
+    return { error: err.message }
+  }
+}
+
 function flags () {
   const user = JSON.parse(window.localStorage.getItem(USER_KEY))
   return {
@@ -744,10 +755,44 @@ async function handleJavascriptPort (arg) {
     }
     case 'readClipboard': {
       if (canReadClipboard()) {
-        const clipboardContent = await navigator.clipboard.readText()
-        return { clipboardContent }
+        try {
+          const permissionStatus = await navigator.permissions.query({
+            name: 'clipboard-read',
+            allowWithoutGesture: true
+          })
+
+          switch (permissionStatus.state) {
+            case 'denied': {
+              debugLog('clipboard-read permission denied', '')
+              // We can't request for permission, the user needs to do it manually
+              return { isDenied: true }
+            }
+            case 'granted': {
+              debugLog('clipboard-read permission granted', '')
+              return readClipboardWithPermission()
+            }
+            case 'prompt': {
+              debugLog('clipboard-read permission prompt', '')
+              try {
+                const clipboardContent = await navigator.clipboard.readText()
+                debugLog('clipboard-read permission prompt accepted', '')
+                return { clipboardContent }
+              } catch (err) {
+                debugLog('clipboard-read permission prompt denied', err)
+                return { isDenied: true }
+              }
+            }
+            default: {
+              return { error: 'permissionStatus state unkown' }
+            }
+          }
+        } catch (permissionError) {
+          debugLog('permissions API not supported', permissionError)
+          return readClipboardWithPermission()
+        }
       } else {
-        return { clipboardContent: null }
+        debugLog('clipboard.readText() not supported', '')
+        return { notSupported: true }
       }
     }
     case 'setSelectedCommunity': {

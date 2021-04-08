@@ -91,6 +91,12 @@
     "objective": {
       "invalid_id": "Identificador d'objectius no vàlid "
     },
+    "clipboard": {
+      "permissionDenied": "Heu de donar-nos permís per enganxar-lo del porta-retalls. Proveu de canviar la configuració del cadenat o del botó d'informació",
+      "paste": {
+        "notSupported": "El vostre navegador no admet enganxar des del porta-retalls, enganxeu-lo manualment"
+      }
+    },
     "pageNotFound": "Pàgina no trobada!",
     "required": "Sembla que t’has oblidat de completar això.",
     "email": "Si us plau, utilitzeu un correu electrònic vàlid.",

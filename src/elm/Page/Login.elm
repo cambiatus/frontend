@@ -280,13 +280,21 @@ type Msg
 type PassphraseMsg
     = PassphraseIgnored
     | ClickedPaste
-    | GotClipboardContent (Maybe String)
+    | GotClipboardResponse ClipboardResponse
     | EnteredPassphrase String
     | ClickedNextStep
 
 
+type ClipboardResponse
+    = Denied
+    | NotSupported
+    | WithContent String
+    | WithError String
+
+
 type PassphraseExternalMsg
     = FinishedEnteringPassphrase (Validate.Valid PassphraseModel)
+    | PassphraseGuestExternal Guest.External
 
 
 type PinMsg
@@ -298,7 +306,7 @@ type PinMsg
 
 
 type PinExternalMsg
-    = GuestExternal Guest.External
+    = PinGuestExternal Guest.External
     | RevertProcess
 
 
@@ -323,7 +331,7 @@ update msg model guest =
             UR.init model
 
         ( GotPassphraseMsg passphraseMsg, EnteringPassphrase passphraseModel ) ->
-            updateWithPassphrase passphraseMsg passphraseModel
+            updateWithPassphrase passphraseMsg passphraseModel guest
                 |> UR.map EnteringPassphrase
                     GotPassphraseMsg
                     (\ext ur ->
@@ -334,6 +342,9 @@ update msg model guest =
                                         (Task.succeed validPassphrase
                                             |> Task.perform WentToPin
                                         )
+
+                            PassphraseGuestExternal guestExternal ->
+                                UR.addExt guestExternal ur
                     )
 
         ( WentToPin validPassphrase, EnteringPassphrase _ ) ->
@@ -353,7 +364,7 @@ update msg model guest =
                     GotPinMsg
                     (\ext ur ->
                         case ext of
-                            GuestExternal guestExternal ->
+                            PinGuestExternal guestExternal ->
                                 UR.addExt guestExternal ur
 
                             RevertProcess ->
@@ -376,8 +387,8 @@ update msg model guest =
                 |> UR.logImpossible msg [ "CreatingPassphrase" ]
 
 
-updateWithPassphrase : PassphraseMsg -> PassphraseModel -> PassphraseUpdateResult
-updateWithPassphrase msg model =
+updateWithPassphrase : PassphraseMsg -> PassphraseModel -> Guest.Model -> PassphraseUpdateResult
+updateWithPassphrase msg model { shared } =
     case msg of
         PassphraseIgnored ->
             UR.init model
@@ -393,8 +404,42 @@ updateWithPassphrase msg model =
                     (Dom.focus "passphrase"
                         |> Task.attempt (\_ -> PassphraseIgnored)
                     )
+                |> UR.addExt
+                    (Feedback.Hidden
+                        |> Guest.SetFeedback
+                        |> PassphraseGuestExternal
+                    )
 
-        GotClipboardContent (Just content) ->
+        GotClipboardResponse Denied ->
+            { model | hasPasted = False }
+                |> UR.init
+                |> UR.addExt
+                    (Feedback.Visible Feedback.Failure (shared.translators.t "error.clipboard.permissionDenied")
+                        |> Guest.SetFeedback
+                        |> PassphraseGuestExternal
+                    )
+
+        GotClipboardResponse NotSupported ->
+            { model | hasPasted = False }
+                |> UR.init
+                |> UR.logImpossible msg [ "NotSupported" ]
+                |> UR.addExt
+                    (Feedback.Visible Feedback.Failure (shared.translators.t "error.clipboard.paste.notSupported")
+                        |> Guest.SetFeedback
+                        |> PassphraseGuestExternal
+                    )
+
+        GotClipboardResponse (WithError error) ->
+            { model | hasPasted = False }
+                |> UR.init
+                |> UR.logDebugValue msg (Encode.string error)
+                |> UR.addExt
+                    (Feedback.Visible Feedback.Failure (shared.translators.t "error.unknown")
+                        |> Guest.SetFeedback
+                        |> PassphraseGuestExternal
+                    )
+
+        GotClipboardResponse (WithContent content) ->
             { model
                 | passphrase =
                     String.trim content
@@ -405,10 +450,11 @@ updateWithPassphrase msg model =
                 , problems = []
             }
                 |> UR.init
-
-        GotClipboardContent Nothing ->
-            UR.init model
-                |> UR.logImpossible msg [ "ClipboardApiNotSupported" ]
+                |> UR.addExt
+                    (Feedback.Hidden
+                        |> Guest.SetFeedback
+                        |> PassphraseGuestExternal
+                    )
 
         EnteredPassphrase passphrase ->
             { model
@@ -468,17 +514,25 @@ updateWithPin msg model { shared } =
 
         GotSubmitResult (Err err) ->
             UR.init model
-                |> UR.addExt (GuestExternal <| Guest.SetFeedback <| Feedback.Visible Feedback.Failure (shared.translators.t err))
+                |> UR.addExt
+                    (Feedback.Visible Feedback.Failure (shared.translators.t err)
+                        |> Guest.SetFeedback
+                        |> PinGuestExternal
+                    )
                 |> UR.addExt RevertProcess
 
         GotSignInResult privateKey (RemoteData.Success (Just signInResponse)) ->
             UR.init model
                 |> UR.addCmd (Ports.storeAuthToken signInResponse.token)
-                |> UR.addExt (GuestExternal <| Guest.LoggedIn privateKey signInResponse)
+                |> UR.addExt (Guest.LoggedIn privateKey signInResponse |> PinGuestExternal)
 
         GotSignInResult _ (RemoteData.Success Nothing) ->
             UR.init model
-                |> UR.addExt (GuestExternal <| Guest.SetFeedback <| Feedback.Visible Feedback.Failure (shared.translators.t "error.unknown"))
+                |> UR.addExt
+                    (Feedback.Visible Feedback.Failure (shared.translators.t "error.unknown")
+                        |> Guest.SetFeedback
+                        |> PinGuestExternal
+                    )
                 |> UR.addPort
                     { responseAddress = PinIgnored
                     , responseData = Encode.null
@@ -494,7 +548,11 @@ updateWithPin msg model { shared } =
                     , responseData = Encode.null
                     , data = Encode.object [ ( "name", Encode.string "logout" ) ]
                     }
-                |> UR.addExt (GuestExternal <| Guest.SetFeedback <| Feedback.Visible Feedback.Failure (shared.translators.t "auth.failed"))
+                |> UR.addExt
+                    (Feedback.Visible Feedback.Failure (shared.translators.t "auth.failed")
+                        |> Guest.SetFeedback
+                        |> PinGuestExternal
+                    )
                 |> UR.addExt RevertProcess
 
         GotSignInResult _ RemoteData.NotAsked ->
@@ -550,8 +608,17 @@ jsAddressToMsg addr val =
     case addr of
         "GotPassphraseMsg" :: "ClickedPaste" :: [] ->
             Decode.decodeValue
-                (Decode.succeed (GotPassphraseMsg << GotClipboardContent)
-                    |> Decode.required "clipboardContent" (Decode.nullable Decode.string)
+                (Decode.oneOf
+                    [ Decode.field "isDenied" Decode.bool
+                        |> Decode.map (\_ -> Denied)
+                    , Decode.field "notSupported" Decode.bool
+                        |> Decode.map (\_ -> NotSupported)
+                    , Decode.field "clipboardContent" Decode.string
+                        |> Decode.map WithContent
+                    , Decode.field "error" Decode.string
+                        |> Decode.map WithError
+                    ]
+                    |> Decode.map (GotPassphraseMsg << GotClipboardResponse)
                 )
                 val
                 |> Result.toMaybe
@@ -602,8 +669,8 @@ passphraseMsgToString msg =
         ClickedPaste ->
             [ "ClickedPaste" ]
 
-        GotClipboardContent _ ->
-            [ "GotClipboardContent" ]
+        GotClipboardResponse _ ->
+            [ "GotClipboardResponse" ]
 
         EnteredPassphrase _ ->
             [ "EnteredPassphrase" ]
