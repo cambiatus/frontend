@@ -13,6 +13,7 @@ module Page.Dashboard exposing
 import Api
 import Api.Graphql
 import Api.Relay
+import Cambiatus.Enum.Direction
 import Cambiatus.Query
 import Claim
 import Community exposing (Balance)
@@ -77,6 +78,7 @@ type alias Model =
     { date : Maybe Posix
     , balance : RemoteData Http.Error (Maybe Balance)
     , analysis : GraphqlStatus (Maybe Claim.Paginated) (List ClaimStatus)
+    , analysisFilter : Direction
     , lastSocket : String
     , transfers : GraphqlStatus (Maybe QueryTransfers) (List Transfer)
     , inviteModalStatus : InviteModalStatus
@@ -90,12 +92,18 @@ initModel =
     { date = Nothing
     , balance = RemoteData.NotAsked
     , analysis = LoadingGraphql
+    , analysisFilter = initAnalysisFilter
     , lastSocket = ""
     , transfers = LoadingGraphql
     , inviteModalStatus = InviteModalClosed
     , claimModalStatus = Claim.Closed
     , copied = False
     }
+
+
+initAnalysisFilter : Direction
+initAnalysisFilter =
+    DESC
 
 
 type GraphqlStatus err a
@@ -116,6 +124,11 @@ type InviteModalStatus
     | InviteModalLoading
     | InviteModalFailed String
     | InviteModalLoaded String
+
+
+type Direction
+    = ASC
+    | DESC
 
 
 
@@ -337,11 +350,19 @@ viewAnalysisList loggedIn model =
                                 ]
                             , text_ "dashboard.analysis.title.2"
                             ]
-                        , a
-                            [ class "button button-secondary font-medium h-8 w-20"
-                            , Route.href Route.Analysis
+                        , div [ class "flex justify-between space-x-4" ]
+                            [ button
+                                [ class "w-full button button-secondary"
+                                , onClick ToggleAnalysisSorting
+                                ]
+                                [ Icons.sortDirection ""
+                                ]
+                            , a
+                                [ class "button button-secondary font-medium "
+                                , Route.href Route.Analysis
+                                ]
+                                [ text_ "dashboard.analysis.all" ]
                             ]
-                            [ text_ "dashboard.analysis.all" ]
                         ]
                     , if isVoted claims then
                         div [ class "flex flex-col w-full items-center justify-center px-3 py-12 my-2 rounded-lg bg-white" ]
@@ -356,11 +377,11 @@ viewAnalysisList loggedIn model =
                       else
                         let
                             pendingClaims =
-                                List.map (viewAnalysis loggedIn) claims
+                                List.map (\c -> viewAnalysis loggedIn c model.date) claims
                         in
                         div [ class "flex flex-wrap -mx-2" ] <|
                             List.append pendingClaims
-                                [ viewVoteConfirmationModal loggedIn model.claimModalStatus ]
+                                [ viewVoteConfirmationModal loggedIn model ]
                     ]
                 ]
 
@@ -368,8 +389,8 @@ viewAnalysisList loggedIn model =
             div [] [ Page.fullPageGraphQLError "Failed load" err ]
 
 
-viewVoteConfirmationModal : LoggedIn.Model -> Claim.ModalStatus -> Html Msg
-viewVoteConfirmationModal loggedIn claimModalStatus =
+viewVoteConfirmationModal : LoggedIn.Model -> Model -> Html Msg
+viewVoteConfirmationModal loggedIn { claimModalStatus, date } =
     let
         viewVoteModal claimId isApproving isLoading =
             Claim.viewVoteClaimModal
@@ -389,18 +410,18 @@ viewVoteConfirmationModal loggedIn claimModalStatus =
             viewVoteModal claimId vote True
 
         Claim.PhotoModal claim ->
-            Claim.viewPhotoModal loggedIn claim
+            Claim.viewPhotoModal loggedIn claim date
                 |> Html.map ClaimMsg
 
         Claim.Closed ->
             text ""
 
 
-viewAnalysis : LoggedIn.Model -> ClaimStatus -> Html Msg
-viewAnalysis loggedIn claimStatus =
+viewAnalysis : LoggedIn.Model -> ClaimStatus -> Maybe Time.Posix -> Html Msg
+viewAnalysis loggedIn claimStatus now =
     case claimStatus of
         ClaimLoaded claim ->
-            Claim.viewClaimCard loggedIn claim
+            Claim.viewClaimCard loggedIn claim now
                 |> Html.map ClaimMsg
 
         ClaimLoading _ ->
@@ -413,7 +434,7 @@ viewAnalysis loggedIn claimStatus =
             text ""
 
         ClaimVoteFailed claim ->
-            Claim.viewClaimCard loggedIn claim
+            Claim.viewClaimCard loggedIn claim now
                 |> Html.map ClaimMsg
 
 
@@ -642,6 +663,7 @@ type Msg
     | CompletedInviteCreation (Result Http.Error String)
     | CopyToClipboard String
     | CopiedToClipboard
+    | ToggleAnalysisSorting
 
 
 update : Msg -> Model -> LoggedIn.Model -> UpdateResult
@@ -657,7 +679,7 @@ update msg model ({ shared, accountName } as loggedIn) =
                     , analysis = LoadingGraphql
                 }
                 |> UR.addCmd (fetchBalance shared accountName community)
-                |> UR.addCmd (fetchAvailableAnalysis loggedIn Nothing community)
+                |> UR.addCmd (fetchAvailableAnalysis loggedIn Nothing model.analysisFilter community)
                 |> UR.addExt LoggedIn.ShowContactModal
 
         CompletedLoadBalance (Ok balance) ->
@@ -778,7 +800,7 @@ update msg model ({ shared, accountName } as loggedIn) =
                                     case ( pageInfo, loggedIn.selectedCommunity ) of
                                         ( Just page, RemoteData.Success community ) ->
                                             if page.hasNextPage then
-                                                fetchAvailableAnalysis loggedIn page.endCursor community
+                                                fetchAvailableAnalysis loggedIn page.endCursor model.analysisFilter community
 
                                             else
                                                 Cmd.none
@@ -861,6 +883,32 @@ update msg model ({ shared, accountName } as loggedIn) =
             { model | copied = True }
                 |> UR.init
 
+        ToggleAnalysisSorting ->
+            let
+                newModel =
+                    { model
+                        | analysisFilter =
+                            case model.analysisFilter of
+                                ASC ->
+                                    DESC
+
+                                DESC ->
+                                    ASC
+                        , analysis = LoadingGraphql
+                    }
+
+                fetchCmd =
+                    case loggedIn.selectedCommunity of
+                        RemoteData.Success community ->
+                            fetchAvailableAnalysis loggedIn Nothing newModel.analysisFilter community
+
+                        _ ->
+                            Cmd.none
+            in
+            newModel
+                |> UR.init
+                |> UR.addCmd fetchCmd
+
 
 
 -- HELPERS
@@ -900,13 +948,14 @@ fetchTransfers shared accountName authToken =
         CompletedLoadUserTransfers
 
 
-fetchAvailableAnalysis : LoggedIn.Model -> Maybe String -> Community.Model -> Cmd Msg
-fetchAvailableAnalysis { shared, authToken } maybeCursor community =
+fetchAvailableAnalysis : LoggedIn.Model -> Maybe String -> Direction -> Community.Model -> Cmd Msg
+fetchAvailableAnalysis { shared, authToken } maybeCursor direction community =
     let
         arg =
-            { communityId = Eos.symbolToString community.symbol }
+            { communityId = Eos.symbolToString community.symbol
+            }
 
-        pagination =
+        optionalArguments =
             \a ->
                 { a
                     | first =
@@ -927,11 +976,21 @@ fetchAvailableAnalysis { shared, authToken } maybeCursor community =
                             )
                             maybeCursor
                             |> Maybe.withDefault Absent
+                    , filter =
+                        Present
+                            { direction =
+                                case direction of
+                                    ASC ->
+                                        Present Cambiatus.Enum.Direction.Asc
+
+                                    DESC ->
+                                        Present Cambiatus.Enum.Direction.Desc
+                            }
                 }
     in
     Api.Graphql.query shared
         (Just authToken)
-        (Cambiatus.Query.claimsAnalysis pagination arg Claim.claimPaginatedSelectionSet)
+        (Cambiatus.Query.claimsAnalysis optionalArguments arg Claim.claimPaginatedSelectionSet)
         ClaimsLoaded
 
 
@@ -1062,3 +1121,6 @@ msgToString msg =
 
         CopiedToClipboard ->
             [ "CopiedToClipboard" ]
+
+        ToggleAnalysisSorting ->
+            [ "ToggleAnalysisSorting" ]

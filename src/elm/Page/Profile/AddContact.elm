@@ -45,7 +45,6 @@ update msg model ({ shared, authToken } as loggedIn) =
     case msg of
         CompletedLoadProfile profile ->
             profile.contacts
-                |> Maybe.withDefault []
                 |> Contact.initMultiple
                 |> RemoteData.Success
                 |> UR.init
@@ -65,7 +64,7 @@ update msg model ({ shared, authToken } as loggedIn) =
                                             updateResult
                                                 |> UR.addExt (LoggedIn.ShowFeedback LoggedIn.Success successMessage)
                                                 |> UR.addExt
-                                                    ({ profile | contacts = Just contacts }
+                                                    ({ profile | contacts = contacts }
                                                         |> LoggedIn.ProfileLoaded
                                                         |> LoggedIn.ExternalBroadcast
                                                     )

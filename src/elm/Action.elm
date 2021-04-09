@@ -7,6 +7,8 @@ module Action exposing
     , Proof(..)
     , ProofPhotoStatus(..)
     , claimActionPort
+    , isClosed
+    , isPastDeadline
     , jsAddressToMsg
     , msgToString
     , selectionSet
@@ -489,33 +491,10 @@ viewClaimConfirmation { t } model =
 
 
 viewClaimButton : Translators -> Maybe Posix -> Action -> Html Msg
-viewClaimButton { t } maybeToday action =
+viewClaimButton { t } maybeNow action =
     let
-        posixDeadline : Posix
-        posixDeadline =
-            action.deadline
-                |> Utils.posixDateTime
-
-        pastDeadline : Bool
-        pastDeadline =
-            case action.deadline of
-                Just _ ->
-                    case maybeToday of
-                        Just today ->
-                            posixToMillis today > posixToMillis posixDeadline
-
-                        Nothing ->
-                            False
-
-                Nothing ->
-                    False
-
-        isClosed =
-            pastDeadline
-                || (action.usages > 0 && action.usagesLeft == 0)
-
         ( buttonMsg, buttonClasses, buttonText ) =
-            if isClosed then
+            if isClosed action maybeNow then
                 ( NoOp, "button-disabled", "dashboard.closed" )
 
             else
@@ -847,6 +826,27 @@ generateVerificationCode actionId makerAccountUint64 proofTimeSeconds =
     )
         |> sha256
         |> String.slice 0 8
+
+
+isPastDeadline : Action -> Maybe Posix -> Bool
+isPastDeadline action maybeNow =
+    case action.deadline of
+        Just _ ->
+            case maybeNow of
+                Just now ->
+                    posixToMillis now > posixToMillis (Utils.posixDateTime action.deadline)
+
+                Nothing ->
+                    False
+
+        Nothing ->
+            False
+
+
+isClosed : Action -> Maybe Posix -> Bool
+isClosed action maybeNow =
+    isPastDeadline action maybeNow
+        || (action.usages > 0 && action.usagesLeft == 0)
 
 
 

@@ -20,7 +20,7 @@ import Eos.Account as Eos
 import Eos.EosError as EosError
 import Graphql.Http
 import Graphql.OptionalArgument exposing (OptionalArgument(..))
-import Graphql.SelectionSet as SelectionSet exposing (SelectionSet, with)
+import Graphql.SelectionSet exposing (SelectionSet)
 import Html exposing (Html, div, img, text)
 import Html.Attributes exposing (class, src)
 import Json.Decode as Decode exposing (Value)
@@ -30,6 +30,7 @@ import Page
 import RemoteData exposing (RemoteData)
 import Route
 import Session.LoggedIn as LoggedIn exposing (External(..))
+import Time
 import UpdateResult as UR
 
 
@@ -44,6 +45,7 @@ type alias Model =
     { status : Status
     , accountString : String
     , claimModalStatus : Claim.ModalStatus
+    , now : Maybe Time.Posix
     }
 
 
@@ -52,6 +54,7 @@ initModel account =
     { status = Loading
     , accountString = account
     , claimModalStatus = Claim.Closed
+    , now = Nothing
     }
 
 
@@ -80,10 +83,10 @@ view loggedIn model =
                 Loading ->
                     Page.fullPageLoading loggedIn.shared
 
-                Loaded profile ->
+                Loaded profileClaims ->
                     div []
                         [ Page.viewHeader loggedIn pageTitle Route.Dashboard
-                        , viewResults loggedIn profile.claims
+                        , viewResults loggedIn profileClaims model.now
                         , viewClaimVoteModal loggedIn model
                         ]
 
@@ -98,11 +101,11 @@ view loggedIn model =
     { title = pageTitle, content = content }
 
 
-viewResults : LoggedIn.Model -> List Claim.Model -> Html Msg
-viewResults loggedIn claims =
+viewResults : LoggedIn.Model -> List Claim.Model -> Maybe Time.Posix -> Html Msg
+viewResults loggedIn claims now =
     let
         viewClaim claim =
-            Claim.viewClaimCard loggedIn claim
+            Claim.viewClaimCard loggedIn claim now
                 |> Html.map ClaimMsg
     in
     div [ class "container mx-auto px-4 mb-10" ]
@@ -139,7 +142,7 @@ viewClaimVoteModal loggedIn model =
             viewVoteModal claimId vote True
 
         Claim.PhotoModal claimId ->
-            Claim.viewPhotoModal loggedIn claimId
+            Claim.viewPhotoModal loggedIn claimId model.now
                 |> Html.map ClaimMsg
 
         _ ->
@@ -163,7 +166,7 @@ viewEmptyResults { shared } =
 
 
 type alias ProfileClaims =
-    { claims : List Claim.Model }
+    List Claim.Model
 
 
 type alias UpdateResult =
@@ -176,6 +179,7 @@ type Msg
     | ClaimMsg Claim.Msg
     | VoteClaim Claim.ClaimId Bool
     | GotVoteResult Claim.ClaimId (Result (Maybe Value) String)
+    | GotTime Time.Posix
 
 
 update : Msg -> Model -> LoggedIn.Model -> UpdateResult
@@ -183,8 +187,8 @@ update msg model loggedIn =
     case msg of
         ClaimsLoaded (RemoteData.Success results) ->
             case results of
-                Just { claims } ->
-                    { model | status = Loaded { claims = List.reverse claims } }
+                Just claims ->
+                    { model | status = Loaded (List.reverse claims) }
                         |> UR.init
 
                 Nothing ->
@@ -253,11 +257,11 @@ update msg model loggedIn =
 
         GotVoteResult claimId (Ok _) ->
             case model.status of
-                Loaded profile ->
+                Loaded profileClaims ->
                     let
                         maybeClaim : Maybe Claim.Model
                         maybeClaim =
-                            List.find (\c -> c.id == claimId) profile.claims
+                            List.find (\c -> c.id == claimId) profileClaims
 
                         message val =
                             [ ( "value", val ) ]
@@ -272,7 +276,7 @@ update msg model loggedIn =
                                         ++ Eos.symbolToSymbolCodeString claim.action.objective.community.symbol
                             in
                             { model
-                                | status = Loaded profile
+                                | status = Loaded profileClaims
                             }
                                 |> UR.init
                                 |> UR.addExt (LoggedIn.ShowFeedback LoggedIn.Success (message value))
@@ -302,6 +306,9 @@ update msg model loggedIn =
                 _ ->
                     model |> UR.init
 
+        GotTime date ->
+            UR.init { model | now = Just date }
+
 
 profileClaimQuery : LoggedIn.Model -> String -> Community.Model -> Cmd Msg
 profileClaimQuery { shared, authToken } accountName community =
@@ -313,8 +320,7 @@ profileClaimQuery { shared, authToken } accountName community =
 
 selectionSet : Eos.Symbol -> SelectionSet ProfileClaims Cambiatus.Object.User
 selectionSet communityId =
-    SelectionSet.succeed ProfileClaims
-        |> with (Profile.claims (\_ -> { communityId = Present (Eos.symbolToString communityId) }) Claim.selectionSet)
+    Profile.claims (\_ -> { communityId = Present (Eos.symbolToString communityId) }) Claim.selectionSet
 
 
 receiveBroadcast : LoggedIn.BroadcastMsg -> Maybe Msg
@@ -369,3 +375,6 @@ msgToString msg =
 
         GotVoteResult _ r ->
             [ "GotVoteResult", UR.resultToString r ]
+
+        GotTime _ ->
+            [ "GotTime" ]

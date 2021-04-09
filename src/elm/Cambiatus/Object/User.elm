@@ -86,9 +86,9 @@ communities object_ =
 
 contacts :
     SelectionSet decodesTo Cambiatus.Object.Contact
-    -> SelectionSet (Maybe (List decodesTo)) Cambiatus.Object.User
+    -> SelectionSet (List decodesTo) Cambiatus.Object.User
 contacts object_ =
-    Object.selectionForCompositeField "contacts" [] object_ (identity >> Decode.list >> Decode.nullable)
+    Object.selectionForCompositeField "contacts" [] object_ (identity >> Decode.list)
 
 
 createdAt : SelectionSet (Maybe String) Cambiatus.Object.User

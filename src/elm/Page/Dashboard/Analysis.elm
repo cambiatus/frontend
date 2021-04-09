@@ -11,6 +11,7 @@ module Page.Dashboard.Analysis exposing
 
 import Api.Graphql
 import Api.Relay
+import Cambiatus.Enum.Direction
 import Cambiatus.Query
 import Claim
 import Community
@@ -35,18 +36,14 @@ import Select
 import Session.LoggedIn as LoggedIn exposing (External(..))
 import Session.Shared exposing (Shared)
 import Simple.Fuzzy
+import Time
 import UpdateResult as UR
 
 
 init : LoggedIn.Model -> ( Model, Cmd Msg )
 init loggedIn =
     ( initModel
-    , case loggedIn.selectedCommunity of
-        RemoteData.Success community ->
-            fetchAnalysis loggedIn initFilter Nothing community
-
-        _ ->
-            Cmd.none
+    , LoggedIn.maybeInitWith CompletedLoadCommunity .selectedCommunity loggedIn
     )
 
 
@@ -60,6 +57,7 @@ type alias Model =
     , autoCompleteState : Select.State
     , reloadOnNextQuery : Bool
     , filters : Filter
+    , now : Maybe Time.Posix
     }
 
 
@@ -70,6 +68,7 @@ initModel =
     , autoCompleteState = Select.newState ""
     , reloadOnNextQuery = False
     , filters = initFilter
+    , now = Nothing
     }
 
 
@@ -82,12 +81,18 @@ type Status
 type alias Filter =
     { profile : Maybe Profile.Minimal
     , statusFilter : StatusFilter
+    , direction : FilterDirection
     }
+
+
+type FilterDirection
+    = ASC
+    | DESC
 
 
 initFilter : Filter
 initFilter =
-    { profile = Nothing, statusFilter = All }
+    { profile = Nothing, statusFilter = All, direction = DESC }
 
 
 type StatusFilter
@@ -118,7 +123,7 @@ view ({ shared } as loggedIn) model =
                 Loaded claims pageInfo ->
                     let
                         viewClaim claim =
-                            Claim.viewClaimCard loggedIn claim
+                            Claim.viewClaimCard loggedIn claim model.now
                                 |> Html.map ClaimMsg
                     in
                     div []
@@ -154,7 +159,7 @@ view ({ shared } as loggedIn) model =
                                 viewVoteModal claimId vote True
 
                             Claim.PhotoModal claim ->
-                                Claim.viewPhotoModal loggedIn claim
+                                Claim.viewPhotoModal loggedIn claim model.now
                                     |> Html.map ClaimMsg
 
                             _ ->
@@ -172,11 +177,8 @@ view ({ shared } as loggedIn) model =
 viewFilters : LoggedIn.Model -> Model -> Html Msg
 viewFilters ({ shared } as loggedIn) model =
     let
-        t =
-            shared.translators.t
-
         text_ s =
-            text (t s)
+            text (shared.translators.t s)
     in
     div [ class "mt-4 mb-12" ]
         [ div []
@@ -248,6 +250,19 @@ viewFilters ({ shared } as loggedIn) model =
                     [ text_ "all_analysis.pending" ]
                 ]
             ]
+        , div [ class "mt-6" ]
+            [ button
+                [ class "w-full button button-secondary relative"
+                , onClick ToggleSorting
+                ]
+                [ if model.filters.direction == ASC then
+                    text_ "all_analysis.filter.sort.asc"
+
+                  else
+                    text_ "all_analysis.filter.sort.desc"
+                , Icons.sortDirection "absolute right-1"
+                ]
+            ]
         ]
 
 
@@ -312,7 +327,9 @@ type Msg
     | ShowMore
     | ClearSelectSelection
     | SelectStatusFilter StatusFilter
+    | ToggleSorting
     | ClearFilters
+    | GotTime Time.Posix
 
 
 update : Msg -> Model -> LoggedIn.Model -> UpdateResult
@@ -563,9 +580,43 @@ update msg model loggedIn =
                             Cmd.none
                     )
 
+        ToggleSorting ->
+            let
+                oldFilters =
+                    model.filters
+
+                sortDirection =
+                    if model.filters.direction == ASC then
+                        DESC
+
+                    else
+                        ASC
+
+                newModel =
+                    { model
+                        | filters = { oldFilters | direction = sortDirection }
+                        , reloadOnNextQuery = True
+                        , status = Loading
+                    }
+
+                fetchCmd =
+                    case loggedIn.selectedCommunity of
+                        RemoteData.Success community ->
+                            fetchAnalysis loggedIn newModel.filters Nothing community
+
+                        _ ->
+                            Cmd.none
+            in
+            newModel
+                |> UR.init
+                |> UR.addCmd fetchCmd
+
+        GotTime date ->
+            UR.init { model | now = Just date }
+
 
 fetchAnalysis : LoggedIn.Model -> Filter -> Maybe String -> Community.Model -> Cmd Msg
-fetchAnalysis { shared, authToken } { profile, statusFilter } maybeCursorAfter community =
+fetchAnalysis { shared, authToken } { profile, statusFilter, direction } maybeCursorAfter community =
     let
         optionalClaimer =
             case profile of
@@ -592,15 +643,14 @@ fetchAnalysis { shared, authToken } { profile, statusFilter } maybeCursorAfter c
         filterRecord =
             { claimer = optionalClaimer
             , status = optionalStatus
+            , direction =
+                case direction of
+                    ASC ->
+                        Present Cambiatus.Enum.Direction.Asc
+
+                    DESC ->
+                        Present Cambiatus.Enum.Direction.Desc
             }
-
-        filter =
-            case ( filterRecord.claimer, filterRecord.status ) of
-                ( Absent, Absent ) ->
-                    Absent
-
-                ( _, _ ) ->
-                    Present filterRecord
 
         required =
             { communityId = Eos.symbolToString community.symbol }
@@ -620,7 +670,7 @@ fetchAnalysis { shared, authToken } { profile, statusFilter } maybeCursorAfter c
                     , after =
                         Maybe.andThen mapFn maybeCursorAfter
                             |> Maybe.withDefault Absent
-                    , filter = filter
+                    , filter = Present filterRecord
                 }
     in
     Api.Graphql.query shared
@@ -751,3 +801,9 @@ msgToString msg =
 
         ClearFilters ->
             [ "ClearFilters" ]
+
+        ToggleSorting ->
+            [ "ToggleSorting" ]
+
+        GotTime _ ->
+            [ "GotTime" ]
