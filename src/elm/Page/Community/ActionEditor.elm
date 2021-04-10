@@ -1056,7 +1056,7 @@ update msg model ({ shared } as loggedIn) =
                 |> UR.addCmd (Route.replaceUrl loggedIn.shared.navKey Route.Objectives)
                 |> UR.addExt (ShowFeedback Success (t "community.actions.save_success"))
                 -- TODO - This only works sometimes
-                |> UR.addExt LoggedIn.ReloadCommunity
+                |> UR.addExt (LoggedIn.ReloadResource LoggedIn.CommunityResource)
 
         GotSaveAction (Err val) ->
             let

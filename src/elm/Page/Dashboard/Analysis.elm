@@ -36,7 +36,6 @@ import Select
 import Session.LoggedIn as LoggedIn exposing (External(..))
 import Session.Shared exposing (Shared)
 import Simple.Fuzzy
-import Time
 import UpdateResult as UR
 
 
@@ -57,7 +56,6 @@ type alias Model =
     , autoCompleteState : Select.State
     , reloadOnNextQuery : Bool
     , filters : Filter
-    , now : Maybe Time.Posix
     }
 
 
@@ -68,7 +66,6 @@ initModel =
     , autoCompleteState = Select.newState ""
     , reloadOnNextQuery = False
     , filters = initFilter
-    , now = Nothing
     }
 
 
@@ -123,7 +120,7 @@ view ({ shared } as loggedIn) model =
                 Loaded claims pageInfo ->
                     let
                         viewClaim claim =
-                            Claim.viewClaimCard loggedIn claim model.now
+                            Claim.viewClaimCard loggedIn claim
                                 |> Html.map ClaimMsg
                     in
                     div []
@@ -159,7 +156,7 @@ view ({ shared } as loggedIn) model =
                                 viewVoteModal claimId vote True
 
                             Claim.PhotoModal claim ->
-                                Claim.viewPhotoModal loggedIn claim model.now
+                                Claim.viewPhotoModal loggedIn claim
                                     |> Html.map ClaimMsg
 
                             _ ->
@@ -329,7 +326,6 @@ type Msg
     | SelectStatusFilter StatusFilter
     | ToggleSorting
     | ClearFilters
-    | GotTime Time.Posix
 
 
 update : Msg -> Model -> LoggedIn.Model -> UpdateResult
@@ -369,6 +365,7 @@ update msg model loggedIn =
         CompletedLoadCommunity community ->
             UR.init model
                 |> UR.addCmd (fetchAnalysis loggedIn model.filters Nothing community)
+                |> UR.addExt (LoggedIn.ReloadResource LoggedIn.TimeResource)
 
         ClaimMsg m ->
             let
@@ -611,9 +608,6 @@ update msg model loggedIn =
                 |> UR.init
                 |> UR.addCmd fetchCmd
 
-        GotTime date ->
-            UR.init { model | now = Just date }
-
 
 fetchAnalysis : LoggedIn.Model -> Filter -> Maybe String -> Community.Model -> Cmd Msg
 fetchAnalysis { shared, authToken } { profile, statusFilter, direction } maybeCursorAfter community =
@@ -804,6 +798,3 @@ msgToString msg =
 
         ToggleSorting ->
             [ "ToggleSorting" ]
-
-        GotTime _ ->
-            [ "GotTime" ]

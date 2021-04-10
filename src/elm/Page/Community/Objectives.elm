@@ -14,7 +14,6 @@ import RemoteData
 import Route
 import Session.LoggedIn as LoggedIn exposing (External(..))
 import Strftime
-import Task
 import Time exposing (Posix)
 import UpdateResult as UR
 import Utils
@@ -23,10 +22,7 @@ import Utils
 init : LoggedIn.Model -> ( Model, Cmd Msg )
 init loggedIn =
     ( initModel
-    , Cmd.batch
-        [ LoggedIn.maybeInitWith CompletedLoadCommunity .selectedCommunity loggedIn
-        , Task.perform GotTime Time.now
-        ]
+    , LoggedIn.maybeInitWith CompletedLoadCommunity .selectedCommunity loggedIn
     )
 
 
@@ -37,7 +33,6 @@ init loggedIn =
 type alias Model =
     { status : Status
     , openObjective : Maybe Int
-    , date : Maybe Posix
     }
 
 
@@ -45,7 +40,6 @@ initModel : Model
 initModel =
     { status = Loading
     , openObjective = Nothing
-    , date = Nothing
     }
 
 
@@ -207,13 +201,13 @@ viewAction ({ shared } as loggedIn) model objectiveId action =
                 |> Strftime.format "%d %B %Y" Time.utc
 
         pastDeadline =
-            Action.isPastDeadline action model.date
+            Action.isPastDeadline action shared.now
 
         ( usages, usagesLeft ) =
             ( String.fromInt action.usages, String.fromInt action.usagesLeft )
 
         isClosed =
-            Action.isPastDeadline action model.date
+            Action.isPastDeadline action shared.now
 
         validationType =
             action.verificationType
@@ -332,7 +326,6 @@ type alias UpdateResult =
 
 type Msg
     = CompletedLoadCommunity Community.Model
-    | GotTime Posix
     | OpenObjective Int
 
 
@@ -352,9 +345,6 @@ update msg model loggedIn =
                         else
                             Unauthorized
                 }
-
-        GotTime date ->
-            UR.init { model | date = Just date }
 
         OpenObjective index ->
             if model.openObjective == Just index then
@@ -381,9 +371,6 @@ msgToString msg =
     case msg of
         CompletedLoadCommunity _ ->
             [ "CompletedLoadCommunity" ]
-
-        GotTime _ ->
-            [ "GotTime" ]
 
         OpenObjective _ ->
             [ "OpenObjective" ]

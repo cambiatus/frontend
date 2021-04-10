@@ -7,6 +7,7 @@ module Session.LoggedIn exposing
     , Model
     , Msg(..)
     , Page(..)
+    , Resource(..)
     , addCommunity
     , addNotification
     , askedAuthentication
@@ -68,7 +69,7 @@ import Search exposing (State(..))
 import Session.Shared as Shared exposing (Shared)
 import Shop
 import Task
-import Time exposing (Posix)
+import Time
 import Translation
 import UpdateResult as UR
 import Url exposing (Url)
@@ -96,7 +97,7 @@ init shared accountName authToken =
         [ Api.Graphql.query shared (Just authToken) (Profile.query accountName) CompletedLoadProfile
         , Api.Graphql.query shared (Just authToken) (Community.communityNameQuery communityName) CompletedLoadCommunity
         , Ports.getRecentSearches () -- run on the page refresh, duplicated in `initLogin`
-        , Task.perform GotTime Time.now
+        , Task.perform GotTimeInternal Time.now
         ]
     )
 
@@ -126,6 +127,7 @@ initLogin shared authModel profile_ authToken =
         [ Ports.getRecentSearches () -- run on the passphrase login, duplicated in `init`
         , loadedProfile
         , Api.Graphql.query shared (Just authToken) (Community.communityNameQuery communityName) CompletedLoadCommunity
+        , Task.perform GotTimeInternal Time.now
         ]
     )
 
@@ -167,7 +169,6 @@ type alias Model =
     , showContactModal : Bool
     , searchModel : Search.Model
     , claimingAction : Action.Model
-    , date : Maybe Posix
     , authToken : String
     }
 
@@ -192,7 +193,6 @@ initModel shared authModel accountName authToken =
     , showContactModal = False
     , searchModel = Search.init
     , claimingAction = { status = Action.NotAsked, feedback = Nothing, needsPinConfirmation = False }
-    , date = Nothing
     , authToken = authToken
     }
 
@@ -348,7 +348,7 @@ viewHelper pageMsg page profile_ ({ shared } as model) content =
                                 [ Search.viewSearchBody
                                     shared.translators
                                     community.symbol
-                                    model.date
+                                    shared.now
                                     (GotSearchMsg >> pageMsg)
                                     (GotActionMsg >> pageMsg)
                                     model.searchModel
@@ -772,12 +772,17 @@ viewFooter _ =
 type External msg
     = UpdatedLoggedIn Model
     | ExternalBroadcast BroadcastMsg
-    | ReloadCommunity
-    | ReloadProfile
+    | ReloadResource Resource
     | RequiredAuthentication (Maybe msg)
     | ShowFeedback FeedbackStatus String
     | HideFeedback
     | ShowContactModal
+
+
+type Resource
+    = CommunityResource
+    | ProfileResource
+    | TimeResource
 
 
 mapExternal : (msg -> msg2) -> External msg -> External msg2
@@ -789,11 +794,8 @@ mapExternal transform ext =
         ExternalBroadcast broadcastMsg ->
             ExternalBroadcast broadcastMsg
 
-        ReloadCommunity ->
-            ReloadCommunity
-
-        ReloadProfile ->
-            ReloadProfile
+        ReloadResource resource ->
+            ReloadResource resource
 
         RequiredAuthentication maybeM ->
             RequiredAuthentication (Maybe.map transform maybeM)
@@ -818,45 +820,43 @@ updateExternal :
         , broadcastMsg : Maybe BroadcastMsg
         , afterAuthMsg : Maybe msg
         }
-updateExternal externalMsg model =
-    case externalMsg of
-        UpdatedLoggedIn newModel ->
-            { model = newModel
+updateExternal externalMsg ({ shared } as model) =
+    let
+        defaultResult =
+            { model = model
             , cmd = Cmd.none
             , externalCmd = Cmd.none
             , broadcastMsg = Nothing
             , afterAuthMsg = Nothing
             }
+    in
+    case externalMsg of
+        UpdatedLoggedIn newModel ->
+            { defaultResult | model = newModel }
 
         ExternalBroadcast broadcastMsg ->
             case broadcastMsg of
                 CommunityLoaded community ->
                     case setCommunity community model of
                         Err cmd ->
-                            { model = model
-                            , cmd = cmd
-                            , externalCmd = Cmd.none
-                            , broadcastMsg = Nothing
-                            , afterAuthMsg = Nothing
-                            }
+                            { defaultResult | cmd = cmd }
 
                         Ok newModel ->
-                            { model = newModel
-                            , cmd = Cmd.none
-                            , externalCmd = Cmd.none
-                            , broadcastMsg = Just broadcastMsg
-                            , afterAuthMsg = Nothing
-                            }
+                            { defaultResult | model = newModel, broadcastMsg = Just broadcastMsg }
 
                 ProfileLoaded profile_ ->
-                    { model = { model | profile = RemoteData.Success profile_ }
-                    , cmd = Cmd.none
-                    , externalCmd = Cmd.none
-                    , broadcastMsg = Just broadcastMsg
-                    , afterAuthMsg = Nothing
+                    { defaultResult
+                        | model = { model | profile = RemoteData.Success profile_ }
+                        , broadcastMsg = Just broadcastMsg
                     }
 
-        ReloadCommunity ->
+                GotTime time ->
+                    { defaultResult
+                        | model = { model | shared = { shared | now = time } }
+                        , broadcastMsg = Just broadcastMsg
+                    }
+
+        ReloadResource CommunityResource ->
             let
                 ( newModel, cmd ) =
                     case model.selectedCommunity of
@@ -866,56 +866,34 @@ updateExternal externalMsg model =
                         _ ->
                             ( model, Cmd.none )
             in
-            { model = newModel
-            , cmd = cmd
-            , externalCmd = Cmd.none
-            , broadcastMsg = Nothing
-            , afterAuthMsg = Nothing
+            { defaultResult | model = newModel, cmd = cmd }
+
+        ReloadResource ProfileResource ->
+            { defaultResult
+                | cmd =
+                    Api.Graphql.query model.shared
+                        (Just model.authToken)
+                        (Profile.query model.accountName)
+                        CompletedLoadProfile
             }
 
-        ReloadProfile ->
-            { model = model
-            , cmd =
-                Api.Graphql.query model.shared
-                    (Just model.authToken)
-                    (Profile.query model.accountName)
-                    CompletedLoadProfile
-            , externalCmd = Cmd.none
-            , broadcastMsg = Nothing
-            , afterAuthMsg = Nothing
-            }
+        ReloadResource TimeResource ->
+            { defaultResult | cmd = Task.perform GotTimeInternal Time.now }
 
         RequiredAuthentication maybeMsg ->
-            { model = askedAuthentication model
-            , cmd = Cmd.none
-            , externalCmd = Cmd.none
-            , broadcastMsg = Nothing
-            , afterAuthMsg = maybeMsg
+            { defaultResult
+                | model = askedAuthentication model
+                , afterAuthMsg = maybeMsg
             }
 
         ShowFeedback status message ->
-            { model = { model | feedback = Show status message }
-            , cmd = Cmd.none
-            , externalCmd = Cmd.none
-            , broadcastMsg = Nothing
-            , afterAuthMsg = Nothing
-            }
+            { defaultResult | model = { model | feedback = Show status message } }
 
         HideFeedback ->
-            { model = { model | feedback = Hidden }
-            , cmd = Cmd.none
-            , externalCmd = Cmd.none
-            , broadcastMsg = Nothing
-            , afterAuthMsg = Nothing
-            }
+            { defaultResult | model = { model | feedback = Hidden } }
 
         ShowContactModal ->
-            { model = showContactModal model
-            , cmd = Cmd.none
-            , externalCmd = Cmd.none
-            , broadcastMsg = Nothing
-            , afterAuthMsg = Nothing
-            }
+            { defaultResult | model = showContactModal model }
 
 
 type alias UpdateResult =
@@ -933,6 +911,7 @@ type ExternalMsg
 type BroadcastMsg
     = CommunityLoaded Community.Model
     | ProfileLoaded Profile.Model
+    | GotTime Time.Posix
 
 
 type Msg
@@ -961,7 +940,7 @@ type Msg
     | GotSearchMsg Search.Msg
     | GotActionMsg Action.Msg
     | SearchClosed
-    | GotTime Posix
+    | GotTimeInternal Time.Posix
 
 
 showContactModal : Model -> Model
@@ -1012,8 +991,9 @@ update msg model =
         NoOp ->
             UR.init model
 
-        GotTime date ->
-            UR.init { model | date = Just date }
+        GotTimeInternal time ->
+            UR.init { model | shared = { shared | now = time } }
+                |> UR.addExt (GotTime time |> Broadcast)
 
         GotActionMsg actionMsg ->
             handleActionMsg model actionMsg
@@ -1605,8 +1585,8 @@ msgToString msg =
         NoOp ->
             [ "Ignored" ]
 
-        GotTime _ ->
-            [ "GotTime" ]
+        GotTimeInternal _ ->
+            [ "GotTimeInternal" ]
 
         SearchClosed ->
             [ "SearchClosed" ]

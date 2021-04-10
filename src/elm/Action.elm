@@ -490,11 +490,11 @@ viewClaimConfirmation { t } model =
             text ""
 
 
-viewClaimButton : Translators -> Maybe Posix -> Action -> Html Msg
-viewClaimButton { t } maybeNow action =
+viewClaimButton : Translators -> Posix -> Action -> Html Msg
+viewClaimButton { t } now action =
     let
         ( buttonMsg, buttonClasses, buttonText ) =
-            if isClosed action maybeNow then
+            if isClosed action now then
                 ( NoOp, "button-disabled", "dashboard.closed" )
 
             else
@@ -514,8 +514,8 @@ viewClaimButton { t } maybeNow action =
         ]
 
 
-viewSearchActions : Translators -> Maybe Posix -> List Action -> Html Msg
-viewSearchActions ({ t } as translators) maybeToday actions =
+viewSearchActions : Translators -> Posix -> List Action -> Html Msg
+viewSearchActions ({ t } as translators) today actions =
     let
         viewAction action =
             if action.isCompleted then
@@ -534,7 +534,7 @@ viewSearchActions ({ t } as translators) maybeToday actions =
                                 , text " "
                                 , text <| Eos.symbolToSymbolCodeString action.objective.community.symbol
                                 ]
-                            , viewClaimButton translators maybeToday action
+                            , viewClaimButton translators today action
                             ]
                         ]
                     ]
@@ -828,24 +828,19 @@ generateVerificationCode actionId makerAccountUint64 proofTimeSeconds =
         |> String.slice 0 8
 
 
-isPastDeadline : Action -> Maybe Posix -> Bool
-isPastDeadline action maybeNow =
+isPastDeadline : Action -> Posix -> Bool
+isPastDeadline action now =
     case action.deadline of
         Just _ ->
-            case maybeNow of
-                Just now ->
-                    posixToMillis now > posixToMillis (Utils.posixDateTime action.deadline)
-
-                Nothing ->
-                    False
+            posixToMillis now > posixToMillis (Utils.posixDateTime action.deadline)
 
         Nothing ->
             False
 
 
-isClosed : Action -> Maybe Posix -> Bool
-isClosed action maybeNow =
-    isPastDeadline action maybeNow
+isClosed : Action -> Posix -> Bool
+isClosed action now =
+    isPastDeadline action now
         || (action.usages > 0 && action.usagesLeft == 0)
 
 

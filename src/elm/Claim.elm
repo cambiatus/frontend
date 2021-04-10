@@ -94,7 +94,7 @@ isValidator accountName claim =
             (\v -> v.account == accountName)
 
 
-isVotable : Model -> Eos.Name -> Maybe Time.Posix -> Bool
+isVotable : Model -> Eos.Name -> Time.Posix -> Bool
 isVotable claim accountName now =
     isValidator accountName claim
         && not (isValidated claim accountName)
@@ -275,8 +275,8 @@ updateClaimModalStatus msg model =
 
 {-| Claim card with a short claim overview. Used on Dashboard and Analysis pages.
 -}
-viewClaimCard : LoggedIn.Model -> Model -> Maybe Time.Posix -> Html Msg
-viewClaimCard { shared, accountName } claim now =
+viewClaimCard : LoggedIn.Model -> Model -> Html Msg
+viewClaimCard { shared, accountName } claim =
     let
         { t } =
             shared.translators
@@ -351,7 +351,7 @@ viewClaimCard { shared, accountName } claim now =
             , if
                 isValidated claim accountName
                     || not (isValidator accountName claim)
-                    || (Action.isClosed claim.action now || Action.isPastDeadline claim.action now)
+                    || (Action.isClosed claim.action shared.now || Action.isPastDeadline claim.action shared.now)
               then
                 a
                     [ class "button button-secondary w-full font-medium mb-2"
@@ -376,8 +376,8 @@ viewClaimCard { shared, accountName } claim now =
         ]
 
 
-viewPhotoModal : LoggedIn.Model -> Model -> Maybe Time.Posix -> Html Msg
-viewPhotoModal loggedIn claim now =
+viewPhotoModal : LoggedIn.Model -> Model -> Html Msg
+viewPhotoModal loggedIn claim =
     let
         { t } =
             loggedIn.shared.translators
@@ -419,7 +419,7 @@ viewPhotoModal loggedIn claim now =
             ]
 
         withPhotoModalFooter =
-            if isVotable claim loggedIn.accountName now then
+            if isVotable claim loggedIn.accountName loggedIn.shared.now then
                 Modal.withFooter
                     [ button
                         [ class "modal-cancel"

@@ -332,12 +332,12 @@ viewForm { t } model =
 viewSearchBody :
     Translators
     -> Symbol
-    -> Maybe Posix
+    -> Posix
     -> (Msg -> parentMsg)
     -> (Action.Msg -> parentMsg)
     -> Model
     -> Html parentMsg
-viewSearchBody translators selectedCommunity maybeToday searchToMsg actionToMsg searchModel =
+viewSearchBody translators selectedCommunity today searchToMsg actionToMsg searchModel =
     div [ class "container mx-auto flex flex-grow" ]
         [ case searchModel.state of
             ResultsShowed (RemoteData.Success { actions, offers }) activeTab ->
@@ -365,7 +365,7 @@ viewSearchBody translators selectedCommunity maybeToday searchToMsg actionToMsg 
                                 div [ class "w-full" ]
                                     [ viewTabs translators results ActionsTab
                                         |> Html.map searchToMsg
-                                    , Action.viewSearchActions translators maybeToday results.actions
+                                    , Action.viewSearchActions translators today results.actions
                                         |> Html.map actionToMsg
                                     ]
 

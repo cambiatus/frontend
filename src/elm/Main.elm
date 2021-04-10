@@ -42,6 +42,7 @@ import Session.Guest as Guest
 import Session.LoggedIn as LoggedIn exposing (External(..), FeedbackVisibility(..))
 import Shop
 import Task
+import Time
 import UpdateResult as UR exposing (UpdateResult)
 import Url exposing (Url)
 
@@ -729,7 +730,23 @@ changeRouteTo maybeRoute model =
         withLoggedIn route fn =
             case session of
                 Page.LoggedIn loggedIn ->
-                    fn loggedIn
+                    let
+                        ( newModel, newCmd ) =
+                            fn loggedIn
+                    in
+                    ( newModel
+                    , Cmd.batch
+                        [ newCmd
+
+                        -- Reload time on every page change
+                        , Task.perform
+                            (LoggedIn.GotTimeInternal
+                                >> Page.GotLoggedInMsg
+                                >> GotPageMsg
+                            )
+                            Time.now
+                        ]
+                    )
 
                 Page.Guest guest ->
                     ( { model

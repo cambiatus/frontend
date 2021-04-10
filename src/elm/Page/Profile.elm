@@ -731,14 +731,14 @@ update msg model loggedIn =
                 RemoteData.Success _ ->
                     model
                         |> UR.init
-                        |> UR.addExt LoggedIn.ReloadProfile
+                        |> UR.addExt (LoggedIn.ReloadResource LoggedIn.ProfileResource)
                         |> UR.addExt (ShowFeedback Success (t "community.kyc.delete.success"))
 
                 RemoteData.Failure err ->
                     model
                         |> UR.init
                         |> UR.logGraphqlError msg err
-                        |> UR.addExt LoggedIn.ReloadProfile
+                        |> UR.addExt (LoggedIn.ReloadResource LoggedIn.ProfileResource)
 
                 _ ->
                     UR.init model

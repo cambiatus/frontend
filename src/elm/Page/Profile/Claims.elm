@@ -30,7 +30,6 @@ import Page
 import RemoteData exposing (RemoteData)
 import Route
 import Session.LoggedIn as LoggedIn exposing (External(..))
-import Time
 import UpdateResult as UR
 
 
@@ -45,7 +44,6 @@ type alias Model =
     { status : Status
     , accountString : String
     , claimModalStatus : Claim.ModalStatus
-    , now : Maybe Time.Posix
     }
 
 
@@ -54,7 +52,6 @@ initModel account =
     { status = Loading
     , accountString = account
     , claimModalStatus = Claim.Closed
-    , now = Nothing
     }
 
 
@@ -86,7 +83,7 @@ view loggedIn model =
                 Loaded profileClaims ->
                     div []
                         [ Page.viewHeader loggedIn pageTitle Route.Dashboard
-                        , viewResults loggedIn profileClaims model.now
+                        , viewResults loggedIn profileClaims
                         , viewClaimVoteModal loggedIn model
                         ]
 
@@ -101,11 +98,11 @@ view loggedIn model =
     { title = pageTitle, content = content }
 
 
-viewResults : LoggedIn.Model -> List Claim.Model -> Maybe Time.Posix -> Html Msg
-viewResults loggedIn claims now =
+viewResults : LoggedIn.Model -> List Claim.Model -> Html Msg
+viewResults loggedIn claims =
     let
         viewClaim claim =
-            Claim.viewClaimCard loggedIn claim now
+            Claim.viewClaimCard loggedIn claim
                 |> Html.map ClaimMsg
     in
     div [ class "container mx-auto px-4 mb-10" ]
@@ -142,7 +139,7 @@ viewClaimVoteModal loggedIn model =
             viewVoteModal claimId vote True
 
         Claim.PhotoModal claimId ->
-            Claim.viewPhotoModal loggedIn claimId model.now
+            Claim.viewPhotoModal loggedIn claimId
                 |> Html.map ClaimMsg
 
         _ ->
@@ -179,7 +176,6 @@ type Msg
     | ClaimMsg Claim.Msg
     | VoteClaim Claim.ClaimId Bool
     | GotVoteResult Claim.ClaimId (Result (Maybe Value) String)
-    | GotTime Time.Posix
 
 
 update : Msg -> Model -> LoggedIn.Model -> UpdateResult
@@ -306,9 +302,6 @@ update msg model loggedIn =
                 _ ->
                     model |> UR.init
 
-        GotTime date ->
-            UR.init { model | now = Just date }
-
 
 profileClaimQuery : LoggedIn.Model -> String -> Community.Model -> Cmd Msg
 profileClaimQuery { shared, authToken } accountName community =
@@ -375,6 +368,3 @@ msgToString msg =
 
         GotVoteResult _ r ->
             [ "GotVoteResult", UR.resultToString r ]
-
-        GotTime _ ->
-            [ "GotTime" ]

@@ -25,7 +25,6 @@ import Route
 import Session.LoggedIn as LoggedIn exposing (External(..), FeedbackStatus(..))
 import Session.Shared exposing (Translators)
 import Strftime
-import Task
 import Time exposing (Posix, posixToMillis)
 import UpdateResult as UR
 import Utils
@@ -38,15 +37,13 @@ import Utils
 init : LoggedIn.Model -> ( Model, Cmd Msg )
 init loggedIn =
     ( initModel loggedIn
-    , Task.perform GotTime Time.now
+    , Cmd.none
     )
 
 
 initModel : LoggedIn.Model -> Model
 initModel _ =
-    { date = Nothing
-    , openObjectiveId = Nothing
-    }
+    { openObjectiveId = Nothing }
 
 
 
@@ -63,9 +60,7 @@ subscriptions _ =
 
 
 type alias Model =
-    { date : Maybe Posix
-    , openObjectiveId : Maybe Int
-    }
+    { openObjectiveId : Maybe Int }
 
 
 
@@ -228,7 +223,7 @@ viewObjective loggedIn model metadata index objective =
                     (\action ->
                         viewAction loggedIn.shared.translators
                             (LoggedIn.isAccount metadata.creator loggedIn)
-                            model.date
+                            loggedIn.shared.now
                             action
                     )
     in
@@ -288,7 +283,6 @@ type alias UpdateResult =
 
 type Msg
     = NoOp
-    | GotTime Posix
       -- Objective
     | ClickedOpenObjective Int
     | ClickedCloseObjective
@@ -296,13 +290,10 @@ type Msg
 
 
 update : Msg -> Model -> LoggedIn.Model -> UpdateResult
-update msg model ({ shared } as loggedIn) =
+update msg model loggedIn =
     case msg of
         NoOp ->
             UR.init model
-
-        GotTime date ->
-            UR.init { model | date = Just date }
 
         GotActionMsg (Action.ClaimButtonClicked action) ->
             model
@@ -344,9 +335,6 @@ msgToString msg =
         NoOp ->
             [ "NoOp" ]
 
-        GotTime _ ->
-            [ "GotTime" ]
-
         GotActionMsg _ ->
             [ "GotCommunityActionMsg" ]
 
@@ -357,8 +345,8 @@ msgToString msg =
             [ "ClickedCloseObjective" ]
 
 
-viewAction : Translators -> Bool -> Maybe Posix -> Action -> Html Msg
-viewAction translators canEdit maybeDate action =
+viewAction : Translators -> Bool -> Posix -> Action -> Html Msg
+viewAction translators canEdit date action =
     let
         { t, tr } =
             translators
@@ -380,12 +368,7 @@ viewAction translators canEdit maybeDate action =
         pastDeadline =
             case action.deadline of
                 Just _ ->
-                    case maybeDate of
-                        Just today ->
-                            posixToMillis today > posixToMillis posixDeadline
-
-                        Nothing ->
-                            False
+                    posixToMillis date > posixToMillis posixDeadline
 
                 Nothing ->
                     False

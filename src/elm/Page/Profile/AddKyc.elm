@@ -99,7 +99,7 @@ update msg model loggedIn =
                                     (Route.Profile
                                         |> Route.replaceUrl loggedIn.shared.navKey
                                     )
-                                |> UR.addExt LoggedIn.ReloadProfile
+                                |> UR.addExt (LoggedIn.ReloadResource LoggedIn.ProfileResource)
                                 |> UR.addExt
                                     (ShowFeedback
                                         Success

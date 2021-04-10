@@ -38,8 +38,6 @@ import Route
 import Session.LoggedIn as LoggedIn
 import Session.Shared exposing (Shared)
 import Shop
-import Task
-import Time exposing (Posix)
 import Transfer exposing (QueryTransfers, Transfer)
 import UpdateResult as UR
 import Url
@@ -55,7 +53,6 @@ init ({ shared, accountName, authToken } as loggedIn) =
     ( initModel
     , Cmd.batch
         [ fetchTransfers shared accountName authToken
-        , Task.perform GotTime Time.now
         , LoggedIn.maybeInitWith CompletedLoadCommunity .selectedCommunity loggedIn
         ]
     )
@@ -75,8 +72,7 @@ subscriptions _ =
 
 
 type alias Model =
-    { date : Maybe Posix
-    , balance : RemoteData Http.Error (Maybe Balance)
+    { balance : RemoteData Http.Error (Maybe Balance)
     , analysis : GraphqlStatus (Maybe Claim.Paginated) (List ClaimStatus)
     , analysisFilter : Direction
     , lastSocket : String
@@ -89,8 +85,7 @@ type alias Model =
 
 initModel : Model
 initModel =
-    { date = Nothing
-    , balance = RemoteData.NotAsked
+    { balance = RemoteData.NotAsked
     , analysis = LoadingGraphql
     , analysisFilter = initAnalysisFilter
     , lastSocket = ""
@@ -377,7 +372,7 @@ viewAnalysisList loggedIn model =
                       else
                         let
                             pendingClaims =
-                                List.map (\c -> viewAnalysis loggedIn c model.date) claims
+                                List.map (\c -> viewAnalysis loggedIn c) claims
                         in
                         div [ class "flex flex-wrap -mx-2" ] <|
                             List.append pendingClaims
@@ -390,7 +385,7 @@ viewAnalysisList loggedIn model =
 
 
 viewVoteConfirmationModal : LoggedIn.Model -> Model -> Html Msg
-viewVoteConfirmationModal loggedIn { claimModalStatus, date } =
+viewVoteConfirmationModal loggedIn { claimModalStatus } =
     let
         viewVoteModal claimId isApproving isLoading =
             Claim.viewVoteClaimModal
@@ -410,18 +405,18 @@ viewVoteConfirmationModal loggedIn { claimModalStatus, date } =
             viewVoteModal claimId vote True
 
         Claim.PhotoModal claim ->
-            Claim.viewPhotoModal loggedIn claim date
+            Claim.viewPhotoModal loggedIn claim
                 |> Html.map ClaimMsg
 
         Claim.Closed ->
             text ""
 
 
-viewAnalysis : LoggedIn.Model -> ClaimStatus -> Maybe Time.Posix -> Html Msg
-viewAnalysis loggedIn claimStatus now =
+viewAnalysis : LoggedIn.Model -> ClaimStatus -> Html Msg
+viewAnalysis loggedIn claimStatus =
     case claimStatus of
         ClaimLoaded claim ->
-            Claim.viewClaimCard loggedIn claim now
+            Claim.viewClaimCard loggedIn claim
                 |> Html.map ClaimMsg
 
         ClaimLoading _ ->
@@ -434,7 +429,7 @@ viewAnalysis loggedIn claimStatus now =
             text ""
 
         ClaimVoteFailed claim ->
-            Claim.viewClaimCard loggedIn claim now
+            Claim.viewClaimCard loggedIn claim
                 |> Html.map ClaimMsg
 
 
@@ -650,8 +645,7 @@ type alias UpdateResult =
 
 
 type Msg
-    = GotTime Posix
-    | CompletedLoadCommunity Community.Model
+    = CompletedLoadCommunity Community.Model
     | CompletedLoadBalance (Result Http.Error (Maybe Balance))
     | CompletedLoadUserTransfers (RemoteData (Graphql.Http.Error (Maybe QueryTransfers)) (Maybe QueryTransfers))
     | ClaimsLoaded (RemoteData (Graphql.Http.Error (Maybe Claim.Paginated)) (Maybe Claim.Paginated))
@@ -669,9 +663,6 @@ type Msg
 update : Msg -> Model -> LoggedIn.Model -> UpdateResult
 update msg model ({ shared, accountName } as loggedIn) =
     case msg of
-        GotTime date ->
-            UR.init { model | date = Just date }
-
         CompletedLoadCommunity community ->
             UR.init
                 { model
@@ -1083,9 +1074,6 @@ jsAddressToMsg addr val =
 msgToString : Msg -> List String
 msgToString msg =
     case msg of
-        GotTime _ ->
-            [ "GotTime" ]
-
         CompletedLoadCommunity _ ->
             [ "CompletedLoadCommunity" ]
 
