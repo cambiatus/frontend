@@ -42,6 +42,7 @@ import Time exposing (Posix)
 import Transfer exposing (QueryTransfers, Transfer)
 import UpdateResult as UR
 import Url
+import View.Feedback as Feedback
 import View.Modal as Modal
 
 
@@ -759,7 +760,7 @@ update msg model loggedIn =
                                 , claimModalStatus = Claim.Closed
                             }
                     in
-                    if LoggedIn.isAuth loggedIn then
+                    if LoggedIn.hasPrivateKey loggedIn then
                         UR.init newModel
                             |> UR.addPort
                                 { responseAddress = msg
@@ -821,7 +822,7 @@ update msg model loggedIn =
                                 | analysis = LoadedGraphql (setClaimStatus claims claimId ClaimVoted) pageInfo
                             }
                                 |> UR.init
-                                |> UR.addExt (ShowFeedback LoggedIn.Success (message value))
+                                |> UR.addExt (ShowFeedback Feedback.Success (message value))
                                 |> UR.addCmd cmd
 
                         Nothing ->
@@ -840,7 +841,7 @@ update msg model loggedIn =
                 LoadedGraphql claims pageInfo ->
                     { model | analysis = LoadedGraphql (setClaimStatus claims claimId ClaimVoteFailed) pageInfo }
                         |> UR.init
-                        |> UR.addExt (ShowFeedback LoggedIn.Failure errorMessage)
+                        |> UR.addExt (ShowFeedback Feedback.Failure errorMessage)
 
                 _ ->
                     model |> UR.init

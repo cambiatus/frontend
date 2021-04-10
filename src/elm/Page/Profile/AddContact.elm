@@ -19,6 +19,7 @@ import RemoteData exposing (RemoteData)
 import Route
 import Session.LoggedIn as LoggedIn
 import UpdateResult as UR
+import View.Feedback as Feedback
 
 
 type alias Model =
@@ -93,12 +94,12 @@ update msg model { shared, authToken } =
                             case newContacts of
                                 Contact.WithContacts successMessage _ ->
                                     updateResult
-                                        |> UR.addExt (LoggedIn.ShowFeedback LoggedIn.Success successMessage)
+                                        |> UR.addExt (LoggedIn.ShowFeedback Feedback.Success successMessage)
                                         |> UR.addCmd (Route.replaceUrl shared.navKey Route.Profile)
 
                                 Contact.WithError errorMessage ->
                                     updateResult
-                                        |> UR.addExt (LoggedIn.ShowFeedback LoggedIn.Failure errorMessage)
+                                        |> UR.addExt (LoggedIn.ShowFeedback Feedback.Failure errorMessage)
 
                                 Contact.NotAsked ->
                                     updateResult

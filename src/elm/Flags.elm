@@ -27,6 +27,7 @@ type alias Flags =
     , communityContract : String
     , graphqlSecret : String
     , authToken : Maybe String
+    , canReadClipboard : Bool
     }
 
 
@@ -45,6 +46,7 @@ default =
     , communityContract = "bes.cmm"
     , graphqlSecret = ""
     , authToken = Nothing
+    , canReadClipboard = False
     }
 
 
@@ -71,6 +73,7 @@ decode =
         |> required "communityContract" Decode.string
         |> required "graphqlSecret" Decode.string
         |> required "authToken" (Decode.nullable Decode.string)
+        |> required "canReadClipboard" Decode.bool
 
 
 type alias Endpoints =

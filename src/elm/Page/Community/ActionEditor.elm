@@ -45,7 +45,7 @@ import Profile
 import RemoteData exposing (RemoteData)
 import Route
 import Select
-import Session.LoggedIn as LoggedIn exposing (External(..), FeedbackStatus(..))
+import Session.LoggedIn as LoggedIn exposing (External(..))
 import Session.Shared exposing (Shared)
 import Simple.Fuzzy
 import Strftime
@@ -53,6 +53,7 @@ import Task
 import Time
 import UpdateResult as UR
 import Utils
+import View.Feedback as Feedback
 import View.Form.InputCounter
 
 
@@ -1061,7 +1062,7 @@ update msg model ({ shared } as loggedIn) =
                 newModel =
                     { model | form = { oldForm | saveStatus = Saving } }
             in
-            if LoggedIn.isAuth loggedIn then
+            if LoggedIn.hasPrivateKey loggedIn then
                 upsertAction loggedIn newModel isoDate
 
             else
@@ -1076,7 +1077,7 @@ update msg model ({ shared } as loggedIn) =
             model
                 |> UR.init
                 |> UR.addCmd (Route.replaceUrl loggedIn.shared.navKey (Route.Objectives model.communityId))
-                |> UR.addExt (ShowFeedback Success (t "community.actions.save_success"))
+                |> UR.addExt (ShowFeedback Feedback.Success (t "community.actions.save_success"))
 
         GotSaveAction (Err val) ->
             let
@@ -1087,7 +1088,7 @@ update msg model ({ shared } as loggedIn) =
                 |> UR.init
                 |> UR.logDebugValue msg val
                 |> UR.logImpossible msg []
-                |> UR.addExt (ShowFeedback Failure (t "error.unknown"))
+                |> UR.addExt (ShowFeedback Feedback.Failure (t "error.unknown"))
 
         PressedEnter val ->
             if val then

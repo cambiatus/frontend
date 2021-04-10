@@ -91,6 +91,12 @@
     "objective": {
       "invalid_id": "ID de objetivo no válido "
     },
+    "clipboard": {
+      "permissionDenied": "¡Debe darnos permiso para pegar desde el portapapeles! Intente cambiar la configuración en el candado o el botón de información",
+      "paste": {
+        "notSupported": "Su navegador no admite pegar desde el portapapeles, pegue manualmente"
+      }
+    },
     "pageNotFound": "¡Pagina no encontrada.",
     "required": "Parece que olvidaste completar esto.",
     "email": "Por favor, utilice un correo electrónico válido.",
@@ -104,6 +110,9 @@
     "invalidSymbol": "Simbolo invalido.",
     "unknown": "Oh oh. Algo salió mal.",
     "accountNotFound": "Cuenta no encontrada. ¿Estás seguro de haber creado tu cuenta?",
+    "invalidKey": "Tecla inválida",
+    "invalidPin": "PIN inválido",
+    "unavailablePin": "El PIN no está disponible",
     "phone": "Utilice un número de teléfono válido",
     "zipcode": "Código postal no válido",
     "contracts": {
@@ -152,6 +161,7 @@
     "chooseAccount": "Escoge una cuenta",
     "required": "Autenticación requerida para esta acción",
     "pin_instr": "6 números",
+    "failed": "Autenticación fallida",
     "login": {
       "modalFormTitle": "Introduce tu PIN",
       "enterPinToContinue": "Por favor, ingrese su PIN de seguridad actual para continuar.",
@@ -174,7 +184,9 @@
           "toggle": "Quiero usar la clave privada",
           "notPassphraseError": "Por favor, ingrese sus 12 palabras",
           "notLatinLettersError": "Por favor, use solo letras",
-          "atLeastThreeLettersError": "Todas las palabras deben tener al menos 3 letras."
+          "atLeastThreeLettersError": "Todas las palabras deben tener al menos 3 letras.",
+          "paste": "Pegar",
+          "pasted": "Pegado"
         }
       },
       "submit": "Iniciar sesión",

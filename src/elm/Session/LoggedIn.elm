@@ -2,8 +2,6 @@ module Session.LoggedIn exposing
     ( External(..)
     , ExternalMsg(..)
     , FeatureStatus(..)
-    , FeedbackStatus(..)
-    , FeedbackVisibility(..)
     , Model
     , Msg(..)
     , Page(..)
@@ -11,11 +9,11 @@ module Session.LoggedIn exposing
     , addCommunity
     , addNotification
     , askedAuthentication
+    , hasPrivateKey
     , init
     , initLogin
     , isAccount
     , isActive
-    , isAuth
     , jsAddressToMsg
     , mapExternal
     , maybePrivateKey
@@ -48,8 +46,8 @@ import Graphql.Document
 import Graphql.Http
 import Graphql.Operation exposing (RootSubscription)
 import Graphql.SelectionSet exposing (SelectionSet)
-import Html exposing (Html, a, button, div, footer, img, nav, p, span, text)
-import Html.Attributes exposing (class, classList, src, style, type_)
+import Html exposing (Html, a, button, div, footer, img, nav, p, text)
+import Html.Attributes exposing (class, classList, src, type_)
 import Html.Events exposing (onClick, onMouseEnter)
 import Http
 import I18Next exposing (Delims(..), Translations)
@@ -70,6 +68,7 @@ import Task
 import Time exposing (Posix)
 import Translation
 import UpdateResult as UR
+import View.Feedback as Feedback
 import View.Modal as Modal
 
 
@@ -81,11 +80,7 @@ import View.Modal as Modal
 -}
 init : Shared -> Eos.Name -> Flags -> String -> ( Model, Cmd Msg )
 init shared accountName flags authToken =
-    let
-        authModel =
-            Auth.init shared
-    in
-    ( initModel shared authModel accountName flags.selectedCommunity authToken
+    ( initModel shared Nothing accountName flags.selectedCommunity authToken
     , Cmd.batch
         [ Api.Graphql.query shared (Just authToken) (Profile.query accountName) CompletedLoadProfile
         , Api.Graphql.query shared (Just authToken) (Community.settingsQuery flags.selectedCommunity) CompletedLoadSettings
@@ -103,8 +98,8 @@ fetchTranslations language _ =
 
 {-| Initialize logged in user after signing-in.
 -}
-initLogin : Shared -> Auth.Model -> Profile.Model -> String -> ( Model, Cmd Msg )
-initLogin shared authModel profile_ authToken =
+initLogin : Shared -> Maybe Eos.PrivateKey -> Profile.Model -> String -> ( Model, Cmd Msg )
+initLogin shared maybePrivateKey_ profile_ authToken =
     let
         selectedCommunity : Symbol
         selectedCommunity =
@@ -113,11 +108,9 @@ initLogin shared authModel profile_ authToken =
                 |> Maybe.withDefault Eos.cambiatusSymbol
 
         model =
-            initModel shared authModel profile_.account selectedCommunity authToken
+            initModel shared maybePrivateKey_ profile_.account selectedCommunity authToken
     in
-    ( { model
-        | profile = Loaded profile_
-      }
+    ( { model | profile = Loaded profile_ }
     , Cmd.batch
         [ Task.perform
             (\_ -> SelectCommunity selectedCommunity Cmd.none)
@@ -134,8 +127,7 @@ initLogin shared authModel profile_ authToken =
 subscriptions : Model -> Sub Msg
 subscriptions model =
     Sub.batch
-        [ Sub.map GotAuthMsg (Auth.subscriptions model.auth)
-        , Sub.map KeyDown (Browser.Events.onKeyDown (Decode.field "key" Decode.string))
+        [ Sub.map KeyDown (Browser.Events.onKeyDown (Decode.field "key" Decode.string))
         , Sub.map GotSearchMsg Search.subscriptions
         , Sub.map GotActionMsg (Action.subscriptions model.claimingAction)
         ]
@@ -159,7 +151,7 @@ type alias Model =
     , showAuthModal : Bool
     , auth : Auth.Model
     , showCommunitySelector : Bool
-    , feedback : FeedbackVisibility
+    , feedback : Feedback.Model
     , hasShop : FeatureStatus
     , hasObjectives : FeatureStatus
     , hasKyc : FeatureStatus
@@ -177,8 +169,8 @@ type FeatureStatus
     | FeatureLoading
 
 
-initModel : Shared -> Auth.Model -> Eos.Name -> Symbol -> String -> Model
-initModel shared authModel accountName selectedCommunity authToken =
+initModel : Shared -> Maybe Eos.PrivateKey -> Eos.Name -> Symbol -> String -> Model
+initModel shared maybePrivateKey_ accountName selectedCommunity authToken =
     { shared = shared
     , accountName = accountName
     , profile = Loading accountName
@@ -190,8 +182,8 @@ initModel shared authModel accountName selectedCommunity authToken =
     , notification = Notification.init
     , unreadCount = 0
     , showAuthModal = False
-    , auth = authModel
-    , feedback = Hidden
+    , auth = Auth.init maybePrivateKey_
+    , feedback = Feedback.Hidden
     , showCommunitySelector = False
     , hasShop = FeatureLoading
     , hasObjectives = FeatureLoading
@@ -205,28 +197,18 @@ initModel shared authModel accountName selectedCommunity authToken =
     }
 
 
-type FeedbackStatus
-    = Success
-    | Failure
-
-
-type FeedbackVisibility
-    = Show FeedbackStatus String
-    | Hidden
-
-
 type ProfileStatus
     = Loading Eos.Name
     | LoadingFailed Eos.Name (Graphql.Http.Error (Maybe Profile.Model))
     | Loaded Profile.Model
 
 
-isAuth : Model -> Bool
-isAuth model =
-    Auth.isAuth model.auth
+hasPrivateKey : Model -> Bool
+hasPrivateKey model =
+    Auth.hasPrivateKey model.auth
 
 
-maybePrivateKey : Model -> Maybe String
+maybePrivateKey : Model -> Maybe Eos.PrivateKey
 maybePrivateKey model =
     Auth.maybePrivateKey model.auth
 
@@ -293,37 +275,6 @@ view thisMsg page ({ shared } as model) content =
             viewHelper thisMsg page profile_ model content
 
 
-viewFeedback : FeedbackStatus -> String -> Html Msg
-viewFeedback status message =
-    let
-        color =
-            case status of
-                Success ->
-                    " bg-green"
-
-                Failure ->
-                    " bg-red"
-    in
-    div
-        [ class <| "w-full sticky z-10 top-0 bg-blue-500 hover:bg-red-500" ++ color
-        , style "display" "grid"
-        , style "grid-template" "\". text x\" 100% / 10% 80% 10%"
-        ]
-        [ span
-            [ class "flex justify-center items-center text-sm h-10 leading-snug text-white font-bold"
-            , style "grid-area" "text"
-            ]
-            [ text message ]
-        , span
-            [ class "flex justify-center items-center ml-auto mr-6 cursor-pointer"
-            , style "grid-area" "x"
-            , onClick HideFeedbackLocal
-            ]
-            [ Icons.close "fill-current text-white"
-            ]
-        ]
-
-
 viewHelper : (Msg -> pageMsg) -> Page -> Profile.Model -> Model -> Html pageMsg -> Html pageMsg
 viewHelper pageMsg page profile_ ({ shared } as model) content =
     div
@@ -338,17 +289,13 @@ viewHelper pageMsg page profile_ ({ shared } as model) content =
                   else
                     viewMainMenu page model |> Html.map pageMsg
                 ]
-            , case model.feedback of
-                Show status message ->
-                    viewFeedback status message |> Html.map pageMsg
-
-                Hidden ->
-                    text ""
             ]
+         , Feedback.view model.feedback
+            |> Html.map (GotFeedbackMsg >> pageMsg)
          ]
             ++ (let
                     viewClaimWithProofs action proof =
-                        [ Action.viewClaimWithProofs proof shared.translators (isAuth model) action
+                        [ Action.viewClaimWithProofs proof shared.translators (hasPrivateKey model) action
                             |> Html.map (GotActionMsg >> pageMsg)
                         ]
                 in
@@ -380,7 +327,7 @@ viewHelper pageMsg page profile_ ({ shared } as model) content =
                     , isVisible = model.showAuthModal
                     }
                     |> Modal.withBody
-                        (Auth.view True shared model.auth
+                        (Auth.view shared model.auth
                             |> List.map (Html.map GotAuthMsg)
                         )
                     |> Modal.toHtml
@@ -489,7 +436,7 @@ viewHeader ({ shared } as model) profile_ =
                   else
                     text ""
                 ]
-            , div [ class "relative z-20" ]
+            , div [ class "relative z-50" ]
                 [ button
                     [ class "h-12 z-10 bg-gray-200 py-2 px-3 relative hidden lg:visible lg:flex"
                     , classList [ ( "rounded-tr-lg rounded-tl-lg", model.showUserNav ) ]
@@ -530,7 +477,7 @@ viewHeader ({ shared } as model) profile_ =
                   else
                     text ""
                 , nav
-                    [ class "absolute right-0 lg:w-full py-2 px-4 shadow-lg bg-white rounded-t-lg rounded-b-lg lg:rounded-t-none"
+                    [ class "absolute right-0 lg:w-full py-2 px-4 shadow-lg bg-white rounded-t-lg rounded-b-lg lg:rounded-t-none z-50"
                     , classList
                         [ ( "hidden", not model.showUserNav )
                         ]
@@ -782,7 +729,7 @@ viewFooter _ =
 type External msg
     = UpdatedLoggedIn Model
     | RequiredAuthentication (Maybe msg)
-    | ShowFeedback FeedbackStatus String
+    | ShowFeedback Feedback.Status String
     | HideFeedback
     | ShowContactModal
 
@@ -835,7 +782,7 @@ type Msg
     | OpenCommunitySelector
     | CloseCommunitySelector
     | SelectCommunity Symbol (Cmd Msg)
-    | HideFeedbackLocal
+    | GotFeedbackMsg Feedback.Msg
     | ClosedAddContactModal
     | GotContactMsg Contact.Msg
     | GotSearchMsg Search.Msg
@@ -1059,10 +1006,6 @@ update msg model =
                     GotAuthMsg
                     (\extMsg uResult ->
                         case extMsg of
-                            Auth.ClickedCancel ->
-                                closeModal uResult
-                                    |> UR.addExt AuthenticationFailed
-
                             Auth.CompletedAuth { user, token } auth ->
                                 let
                                     cmd =
@@ -1109,8 +1052,8 @@ update msg model =
                 model
                     |> UR.init
 
-        HideFeedbackLocal ->
-            { model | feedback = Hidden }
+        GotFeedbackMsg subMsg ->
+            { model | feedback = Feedback.update subMsg model.feedback }
                 |> UR.init
 
         OpenCommunitySelector ->
@@ -1164,14 +1107,14 @@ update msg model =
 
                                 Contact.WithError errorMessage ->
                                     { model_ | showContactModal = False }
-                                        |> showFeedback Failure errorMessage
+                                        |> showFeedback Feedback.Failure errorMessage
 
                                 Contact.WithContacts successMessage contacts ->
                                     { model_
                                         | profile = Loaded { userProfile | contacts = contacts }
                                         , showContactModal = False
                                     }
-                                        |> showFeedback Success successMessage
+                                        |> showFeedback Feedback.Success successMessage
                     in
                     { model | contactModel = contactModel }
                         |> addContactResponse
@@ -1199,10 +1142,10 @@ handleActionMsg ({ shared } as model) actionMsg =
                             model.feedback
 
                         ( Just (Action.Failure s), _ ) ->
-                            Show Failure s
+                            Feedback.Visible Feedback.Failure s
 
                         ( Just (Action.Success s), _ ) ->
-                            Show Success s
+                            Feedback.Visible Feedback.Success s
 
                         ( Nothing, _ ) ->
                             model.feedback
@@ -1214,7 +1157,7 @@ handleActionMsg ({ shared } as model) actionMsg =
                         identity
                    )
     in
-    Action.update (isAuth model) shared (Api.uploadImage shared) model.selectedCommunity model.accountName actionMsg model.claimingAction
+    Action.update (hasPrivateKey model) shared (Api.uploadImage shared) model.selectedCommunity model.accountName actionMsg model.claimingAction
         |> UR.map
             actionModelToLoggedIn
             GotActionMsg
@@ -1253,9 +1196,9 @@ askedAuthentication model =
     }
 
 
-showFeedback : FeedbackStatus -> String -> Model -> Model
+showFeedback : Feedback.Status -> String -> Model -> Model
 showFeedback feedbackStatus feedback model =
-    { model | feedback = Show feedbackStatus feedback }
+    { model | feedback = Feedback.Visible feedbackStatus feedback }
 
 
 
@@ -1439,8 +1382,8 @@ msgToString msg =
         SelectCommunity _ _ ->
             [ "SelectCommunity" ]
 
-        HideFeedbackLocal ->
-            [ "HideFeedbackLocal" ]
+        GotFeedbackMsg _ ->
+            [ "GotFeedbackMsg" ]
 
         ClosedAddContactModal ->
             [ "ClosedAddContactModal" ]

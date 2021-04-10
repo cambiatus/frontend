@@ -38,6 +38,7 @@ import Simple.Fuzzy
 import Task
 import Time
 import UpdateResult as UR
+import View.Feedback as Feedback
 
 
 init : LoggedIn.Model -> ( Model, Cmd Msg )
@@ -401,7 +402,7 @@ update msg model loggedIn =
                                 | claimModalStatus = Claim.Loading claimId vote
                             }
                     in
-                    if LoggedIn.isAuth loggedIn then
+                    if LoggedIn.hasPrivateKey loggedIn then
                         UR.init newModel
                             |> UR.addPort
                                 { responseAddress = msg
@@ -456,7 +457,7 @@ update msg model loggedIn =
                                 | status = Loaded updatedClaims pageInfo
                             }
                                 |> UR.init
-                                |> UR.addExt (LoggedIn.ShowFeedback LoggedIn.Success (message value))
+                                |> UR.addExt (LoggedIn.ShowFeedback Feedback.Success (message value))
                                 |> UR.addCmd (Route.replaceUrl loggedIn.shared.navKey Route.Analysis)
 
                         Nothing ->
@@ -478,7 +479,7 @@ update msg model loggedIn =
                         , claimModalStatus = Claim.Closed
                     }
                         |> UR.init
-                        |> UR.addExt (ShowFeedback LoggedIn.Failure errorMessage)
+                        |> UR.addExt (ShowFeedback Feedback.Failure errorMessage)
 
                 _ ->
                     model |> UR.init

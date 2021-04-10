@@ -30,10 +30,11 @@ import Profile.Contact as Contact
 import PushSubscription exposing (PushSubscription)
 import RemoteData exposing (RemoteData)
 import Route
-import Session.LoggedIn as LoggedIn exposing (External(..), FeedbackStatus(..), ProfileStatus(..))
+import Session.LoggedIn as LoggedIn exposing (External(..), ProfileStatus(..))
 import Session.Shared exposing (Shared, Translators)
 import Task
 import UpdateResult as UR
+import View.Feedback as Feedback
 import View.Modal as Modal
 import View.Pin as Pin
 
@@ -67,12 +68,10 @@ type alias Model =
     { status : ProfileStatus
     , currentPin : Maybe String
     , isNewPinModalVisible : Bool
-    , newPin : Maybe String
-    , isNewPinReadable : Bool
-    , newPinErrorMsg : Maybe String
     , isPushNotificationsEnabled : Bool
     , maybePdfDownloadedSuccessfully : Maybe Bool
     , isDeleteKycModalShowed : Bool
+    , pinInputModel : Pin.Model
     }
 
 
@@ -81,12 +80,17 @@ initModel loggedIn =
     { status = Loading loggedIn.accountName
     , currentPin = Nothing
     , isNewPinModalVisible = False
-    , newPin = Nothing
-    , isNewPinReadable = True
-    , newPinErrorMsg = Nothing
     , isPushNotificationsEnabled = False
     , maybePdfDownloadedSuccessfully = Nothing
     , isDeleteKycModalShowed = False
+    , pinInputModel =
+        Pin.init
+            { label = "profile.newPin"
+            , id = "new-pin-input"
+            , withConfirmation = False
+            , submitLabel = "profile.pin.button"
+            , submittingLabel = "profile.pin.button"
+            }
     }
 
 
@@ -174,7 +178,7 @@ viewSettings loggedIn model profile =
                                     pin
 
                                 Nothing ->
-                                    loggedIn.auth.form.enteredPin
+                                    loggedIn.auth.pinModel.pin
                     in
                     DownloadPdf currentPin
 
@@ -524,7 +528,7 @@ viewDownloadPdfErrorModal model loggedIn =
                     ""
 
                 Just pk ->
-                    pk
+                    Eos.privateKeyToString pk
 
         body =
             [ p [ class "my-3" ]
@@ -553,35 +557,13 @@ viewNewPinModal model shared =
         tr str =
             text (shared.translators.t str)
 
-        pinField =
-            Pin.view
-                shared
-                { labelText = shared.translators.t "profile.newPin"
-                , inputId = "pinInput"
-                , inputValue = Maybe.withDefault "" model.newPin
-                , onInputMsg = EnteredPin
-                , onToggleMsg = TogglePinReadability
-                , isVisible = True
-                , errors =
-                    case model.newPinErrorMsg of
-                        Just err ->
-                            [ err ]
-
-                        Nothing ->
-                            []
-                }
-
         body =
             [ div []
                 [ p [ class "text-sm" ]
                     [ tr "profile.changePinPrompt" ]
                 ]
-            , div [ class "mb-4" ] [ pinField ]
-            , button
-                [ class "button button-primary w-full"
-                , onClick ChangePinSubmitted
-                ]
-                [ tr "profile.pin.button" ]
+            , Pin.view shared.translators model.pinInputModel
+                |> Html.map GotPinMsg
             ]
     in
     Modal.initWith
@@ -683,11 +665,10 @@ type Msg
     | ClickedClosePdfDownloadError
     | ClickedViewPrivateKeyAuth
     | ClickedChangePin
-    | ChangePinSubmitted
-    | EnteredPin String
+    | ChangePinSubmitted String
+    | GotPinMsg Pin.Msg
     | ClickedCloseChangePin
     | PinChanged
-    | TogglePinReadability
     | GotPushPreference Bool
     | RequestPush
     | ToggleDeleteKycModal
@@ -754,7 +735,7 @@ update msg model loggedIn =
                     model
                         |> UR.init
                         |> UR.addCmd reloadProfile
-                        |> UR.addExt (ShowFeedback Success (t "community.kyc.delete.success"))
+                        |> UR.addExt (ShowFeedback Feedback.Success (t "community.kyc.delete.success"))
 
                 RemoteData.Failure err ->
                     model
@@ -785,7 +766,7 @@ update msg model loggedIn =
             UR.init model
 
         ClickedChangePin ->
-            if LoggedIn.isAuth loggedIn then
+            if LoggedIn.hasPrivateKey loggedIn then
                 UR.init { model | isNewPinModalVisible = True }
                     |> UR.addCmd
                         (Dom.focus "pinInput"
@@ -800,11 +781,8 @@ update msg model loggedIn =
                             |> Task.attempt (\_ -> Ignored)
                         )
 
-        TogglePinReadability ->
-            UR.init { model | isNewPinReadable = not model.isNewPinReadable }
-
-        ChangePinSubmitted ->
-            if LoggedIn.isAuth loggedIn then
+        ChangePinSubmitted newPin ->
+            if LoggedIn.hasPrivateKey loggedIn then
                 let
                     currentPin =
                         case model.currentPin of
@@ -812,34 +790,31 @@ update msg model loggedIn =
                                 pin
 
                             Nothing ->
-                                loggedIn.auth.form.enteredPin
-
-                    newPin =
-                        Maybe.withDefault "" model.newPin
+                                loggedIn.auth.pinModel.pin
                 in
-                if Pin.isValid newPin then
-                    UR.init model
-                        |> UR.addPort
-                            { responseAddress = PinChanged
-                            , responseData = Encode.null
-                            , data =
-                                Encode.object
-                                    [ ( "name", Encode.string "changePin" )
-                                    , ( "currentPin", Encode.string currentPin )
-                                    , ( "newPin", Encode.string newPin )
-                                    ]
-                            }
-
-                else
-                    UR.init { model | newPinErrorMsg = Just (t "auth.pin.shouldHaveSixDigitsError") }
-                        |> UR.addCmd Cmd.none
+                UR.init model
+                    |> UR.addPort
+                        { responseAddress = PinChanged
+                        , responseData = Encode.null
+                        , data =
+                            Encode.object
+                                [ ( "name", Encode.string "changePin" )
+                                , ( "currentPin", Encode.string currentPin )
+                                , ( "newPin", Encode.string newPin )
+                                ]
+                        }
 
             else
                 UR.init model
                     |> UR.addExt (Just ClickedChangePin |> RequiredAuthentication)
 
-        EnteredPin newPin ->
-            UR.init { model | newPinErrorMsg = Nothing, newPin = Just newPin }
+        GotPinMsg subMsg ->
+            let
+                ( newPinModel, submitStatus ) =
+                    Pin.update subMsg model.pinInputModel
+            in
+            UR.init { model | pinInputModel = newPinModel }
+                |> UR.addCmd (Pin.maybeSubmitCmd submitStatus ChangePinSubmitted)
 
         ClickedCloseChangePin ->
             UR.init { model | isNewPinModalVisible = False }
@@ -847,11 +822,10 @@ update msg model loggedIn =
         PinChanged ->
             { model
                 | isNewPinModalVisible = False
-                , currentPin = model.newPin
-                , newPin = Nothing
+                , currentPin = Just model.pinInputModel.pin
             }
                 |> UR.init
-                |> UR.addExt (ShowFeedback Success (t "profile.pin.successMsg"))
+                |> UR.addExt (ShowFeedback Feedback.Success (t "profile.pin.successMsg"))
 
         ClickedViewPrivateKeyAuth ->
             case LoggedIn.maybePrivateKey loggedIn of
@@ -869,7 +843,7 @@ update msg model loggedIn =
                 Just _ ->
                     model
                         |> UR.init
-                        |> downloadPdfPort loggedIn.auth.form.enteredPin
+                        |> downloadPdfPort loggedIn.auth.pinModel.pin
 
         DownloadPdf pin ->
             model
@@ -1004,11 +978,8 @@ jsAddressToMsg addr val =
                 Err _ ->
                     Nothing
 
-        "ChangePinSubmitted" :: [] ->
-            Just ChangePinSubmitted
-
-        "TogglePinReadability" :: [] ->
-            Just TogglePinReadability
+        "ChangePinSubmitted" :: pin :: [] ->
+            Just (ChangePinSubmitted pin)
 
         "GotPushPreference" :: _ ->
             decodePushPref val
@@ -1062,14 +1033,8 @@ msgToString msg =
         ClickedViewPrivateKeyAuth ->
             [ "ClickedViewPrivateKeyAuth" ]
 
-        TogglePinReadability ->
-            [ "TogglePinReadability" ]
-
-        ChangePinSubmitted ->
-            [ "ChangePinSubmitted" ]
-
-        EnteredPin _ ->
-            [ "EnteredPin" ]
+        ChangePinSubmitted pin ->
+            [ "ChangePinSubmitted", pin ]
 
         GotPushPreference _ ->
             [ "GotPushPreference" ]
@@ -1085,3 +1050,6 @@ msgToString msg =
 
         CompletedPushUpload _ ->
             [ "CompletedPushUpload" ]
+
+        GotPinMsg subMsg ->
+            "GotPinMsg" :: Pin.msgToString subMsg

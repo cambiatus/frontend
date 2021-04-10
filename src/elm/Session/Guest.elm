@@ -4,6 +4,7 @@ import Api.Graphql
 import Auth
 import Browser.Events
 import Community exposing (Invite)
+import Eos.Account as Eos
 import Graphql.Http
 import Html exposing (Html, a, button, div, header, img, text)
 import Html.Attributes exposing (class, classList, src, style, tabindex, type_)
@@ -20,6 +21,7 @@ import Route exposing (Route)
 import Session.Shared as Shared exposing (Shared)
 import Translation
 import UpdateResult as UR
+import View.Feedback as Feedback
 
 
 
@@ -40,9 +42,19 @@ init shared =
             ( { defaultModel | community = Default }, Cmd.none )
 
 
-initLoggingIn : Shared -> ( Model, Cmd Msg )
-initLoggingIn =
-    init >> Tuple.mapFirst (\m -> { m | isLoggingIn = True })
+initLoggingIn : Shared -> Eos.Name -> (RemoteData (Graphql.Http.Error (Maybe Auth.SignInResponse)) (Maybe Auth.SignInResponse) -> msg) -> ( Model, Cmd Msg, Cmd msg )
+initLoggingIn shared accountName signInMessage =
+    let
+        ( model, cmd ) =
+            init shared
+    in
+    ( { model | isLoggingIn = True }
+    , cmd
+    , Api.Graphql.mutation shared
+        Nothing
+        (Auth.signIn accountName shared Nothing)
+        signInMessage
+    )
 
 
 getInvitationId : String -> Maybe String
@@ -87,6 +99,7 @@ type alias Model =
     , afterLoginRedirect : Maybe Route
     , community : CommunityStatus
     , isLoggingIn : Bool
+    , feedback : Feedback.Model
     }
 
 
@@ -109,6 +122,7 @@ initModel shared =
             Nothing ->
                 Default
     , isLoggingIn = False
+    , feedback = Feedback.Hidden
     }
 
 
@@ -130,8 +144,6 @@ subscriptions _ =
 type Page
     = Register
     | Login
-    | Shop
-    | PaymentHistory
     | Other
 
 
@@ -189,6 +201,8 @@ view thisMsg page ({ shared } as model) content =
                     ]
                     [ viewPageHeader model shared
                         |> Html.map thisMsg
+                    , Feedback.view model.feedback
+                        |> Html.map (GotFeedbackMsg >> thisMsg)
                     , content
                     ]
                 ]
@@ -242,7 +256,7 @@ viewPageHeader model shared =
                 _ ->
                     imageElement logo
             ]
-        , div [ class "relative z-10" ]
+        , div [ class "relative z-50" ]
             [ button
                 [ type_ "button"
                 , tabindex -1
@@ -292,7 +306,8 @@ viewPageHeader model shared =
 
 type External
     = UpdatedGuest Model
-    | LoggedIn Auth.SignInResponse Auth.Model
+    | LoggedIn Eos.PrivateKey Auth.SignInResponse
+    | SetFeedback Feedback.Model
 
 
 type alias UpdateResult =
@@ -306,6 +321,7 @@ type Msg
     | ClickedLanguage String
     | KeyDown String
     | CompletedLoadInvite (RemoteData (Graphql.Http.Error (Maybe Invite)) (Maybe Invite))
+    | GotFeedbackMsg Feedback.Msg
 
 
 update : Msg -> Model -> UpdateResult
@@ -353,6 +369,10 @@ update msg ({ shared } as model) =
         CompletedLoadInvite _ ->
             UR.init model
 
+        GotFeedbackMsg subMsg ->
+            { model | feedback = Feedback.update subMsg model.feedback }
+                |> UR.init
+
 
 
 -- TRANSFORM
@@ -383,3 +403,6 @@ msgToString msg =
 
         CompletedLoadInvite _ ->
             [ "CompletedLoadInvite" ]
+
+        GotFeedbackMsg _ ->
+            [ "GotFeedbackMsg" ]

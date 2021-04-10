@@ -12,7 +12,6 @@ module Page exposing
     , jsAddressToMsg
     , labelWithTooltip
     , loading
-    , login
     , logout
     , msgToString
     , onFileChange
@@ -34,7 +33,6 @@ module Page exposing
     , viewTitle
     )
 
-import Api.Graphql
 import Asset.Icon as Icon
 import Auth
 import Browser.Navigation as Nav
@@ -52,7 +50,6 @@ import Icons
 import Json.Decode as Decode exposing (Decoder)
 import Json.Encode exposing (Value)
 import Ports
-import Profile
 import RemoteData exposing (RemoteData)
 import Route exposing (Route)
 import Session.Guest as Guest
@@ -87,19 +84,14 @@ init flags navKey url =
 
         ( Just ( accountName, _ ), Nothing ) ->
             let
-                ( model, cmd ) =
-                    Guest.initLoggingIn shared
+                ( model, cmd, signedInCmd ) =
+                    Guest.initLoggingIn shared accountName SignedIn
             in
             Guest model
                 |> UR.init
                 |> UR.addCmd (Cmd.map GotGuestMsg cmd)
                 |> UR.addCmd (fetchTranslations shared shared.language)
-                |> UR.addCmd
-                    (Api.Graphql.mutation shared
-                        Nothing
-                        (Auth.signIn accountName shared Nothing)
-                        SignedIn
-                    )
+                |> UR.addCmd signedInCmd
 
         ( Nothing, _ ) ->
             let
@@ -436,7 +428,7 @@ update msg session =
                     guest.shared
 
                 ( loggedIn, cmd ) =
-                    LoggedIn.initLogin shared (Auth.init shared) user token
+                    LoggedIn.initLogin shared Nothing user token
             in
             LoggedIn loggedIn
                 |> UR.init
@@ -470,17 +462,6 @@ updateShared session transform =
 
 
 -- TRANSFORM
-
-
-login : Auth.Model -> Profile.Model -> Guest.Model -> String -> ( LoggedIn.Model, Cmd Msg )
-login auth profile guest authToken =
-    let
-        ( loggedIn, cmd ) =
-            LoggedIn.initLogin guest.shared auth profile authToken
-    in
-    ( loggedIn
-    , Cmd.map GotLoggedInMsg cmd
-    )
 
 
 logout : LoggedIn.Model -> ( Session, Cmd Msg )

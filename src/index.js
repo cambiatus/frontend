@@ -62,7 +62,6 @@ if (process.env.NODE_ENV === 'development') {
 let eos = null
 const USER_KEY = 'bespiral.user'
 const LANGUAGE_KEY = 'bespiral.language'
-const AUTH_PREF_KEY = 'bespiral.auth.pref'
 const PUSH_PREF = 'bespiral.push.pref'
 const SELECTED_COMMUNITY_KEY = 'bespiral.selected_community'
 const AUTH_TOKEN = 'bespiral.auth_token'
@@ -83,6 +82,21 @@ function getUserLanguage () {
   )
 }
 
+function canReadClipboard () {
+  return !!navigator.clipboard && !!navigator.clipboard.readText
+}
+
+/** Assumes we already have clipboard permissions */
+async function readClipboardWithPermission () {
+  try {
+    const clipboardContent = await navigator.clipboard.readText()
+    return { clipboardContent }
+  } catch (err) {
+    errorLog('clipboard.readText() error', err, false)
+    return { error: err.message }
+  }
+}
+
 function flags () {
   const user = JSON.parse(window.localStorage.getItem(USER_KEY))
   return {
@@ -92,7 +106,6 @@ function flags () {
     language: getUserLanguage(),
     accountName: (user && user.accountName) || null,
     isPinAvailable: !!(user && user.encryptedKey),
-    authPreference: window.localStorage.getItem(AUTH_PREF_KEY),
     authToken: window.localStorage.getItem(AUTH_TOKEN),
     logo: config.logo,
     logoMobile: config.logoMobile,
@@ -100,7 +113,8 @@ function flags () {
     allowCommunityCreation: config.allowCommunityCreation,
     selectedCommunity: getSelectedCommunity() || config.selectedCommunity,
     tokenContract: config.tokenContract,
-    communityContract: config.communityContract
+    communityContract: config.communityContract,
+    canReadClipboard: canReadClipboard()
   }
 }
 
@@ -136,40 +150,48 @@ Sentry.init({
   environment: env
 })
 
-// Ports error Reporter
-app.ports.logError.subscribe((msg, err) => {
+function errorLog (msg, err, isFromElm) {
+  const languageString = isFromElm ? 'Elm' : 'Javascript'
+  const startMessage = `Begin errorLog from ${languageString}`
   Sentry.addBreadcrumb({
-    message: 'Begin Elm Error port javascript handler',
+    message: startMessage,
     level: Sentry.Severity.Info,
     type: 'debug',
     category: 'started'
   })
+
   if (env === 'development') {
     console.error(msg, err)
   } else {
-    let error = 'Generic Elm Error port msg'
+    let error = `Generic ${languageString} errorLog`
     let details = ''
 
     if (Object.prototype.toString.call(msg) === '[object Array]') {
       [error, details] = msg
     }
 
+    const type = isFromElm ? 'elm-error' : 'javascript-error'
     Sentry.withScope(scope => {
-      scope.setTag('type', 'elm-error')
+      scope.setTag('type', type)
       scope.setLevel(Sentry.Severity.Error)
-      scope.setExtra('Error shared by Elm', err)
+      scope.setExtra(`Error shared by ${languageString}`, err)
       scope.setExtra('raw msg', msg)
       scope.setExtra('Parsed details', details)
       Sentry.captureMessage(error + details)
     })
   }
+
+  const endMessage = `End errorLog from ${languageString}`
   Sentry.addBreadcrumb({
-    message: 'Ended Elm Error port javascript handler',
+    message: endMessage,
     level: Sentry.Severity.Info,
     type: 'debug',
     category: 'ended'
   })
-})
+}
+
+// Ports error Reporter
+app.ports.logError.subscribe((msg, err) => { errorLog(msg, err, true) })
 
 app.ports.logDebug.subscribe(debugLog)
 
@@ -185,47 +207,37 @@ app.ports.storeLanguage.subscribe(storeLanguage)
 
 function storeLanguage (lang) {
   window.localStorage.setItem(LANGUAGE_KEY, lang)
+  debugLog(`stored language: ${lang}`, '')
 }
 
 // STORE RECENT SEARCHES
-app.ports.storeRecentSearches.subscribe(query =>
+app.ports.storeRecentSearches.subscribe(query => {
   window.localStorage.setItem(RECENT_SEARCHES, query)
-)
+  debugLog(`stored recent searches: ${query}`, '')
+})
 
 // RETRIEVE RECENT SEARCHES
 app.ports.getRecentSearches.subscribe(() => {
-  app.ports.gotRecentSearches.send(window.localStorage.getItem(RECENT_SEARCHES) || '[]')
+  const recentSearches = window.localStorage.getItem(RECENT_SEARCHES) || '[]'
+  app.ports.gotRecentSearches.send(recentSearches)
+  debugLog(`got recent searches: ${recentSearches}`, '')
 })
 
-// STORE AUTH PREFERENCE
-
-function storeAuthPreference (auth) {
-  window.localStorage.setItem(AUTH_PREF_KEY, auth)
-}
-
-app.ports.storeAuthToken.subscribe(token =>
+app.ports.storeAuthToken.subscribe(token => {
   window.localStorage.setItem(AUTH_TOKEN, token)
-)
-
-// STORE ACCOUNTNAME
-
-function storeAccountName (accountName) {
-  var storeData = {
-    accountName: accountName
-  }
-  window.localStorage.removeItem(USER_KEY)
-  window.localStorage.setItem(USER_KEY, JSON.stringify(storeData))
-}
+  debugLog(`stored auth token`, token)
+})
 
 // STORE PUSH PREF
 
 function storePushPref (pref) {
   window.localStorage.setItem(PUSH_PREF, pref)
+  debugLog(`stored push pref: ${pref}`, '')
 }
 
 // STORE PIN
 
-async function storePin (data, pin) {
+function storePin (data, pin) {
   // encrypt key using PIN
   const hashedKey = ecc.sha256(data.privateKey)
   const encryptedKey = sjcl.encrypt(pin, data.privateKey)
@@ -242,72 +254,85 @@ async function storePin (data, pin) {
 
   window.localStorage.removeItem(USER_KEY)
   window.localStorage.setItem(USER_KEY, JSON.stringify(storeData))
+  debugLog('stored pin', pin)
 }
 
 function getSelectedCommunity () {
-  return window.localStorage.getItem(SELECTED_COMMUNITY_KEY)
+  const selectedCommunity = window.localStorage.getItem(SELECTED_COMMUNITY_KEY)
+  debugLog(`got selected community: ${selectedCommunity}`, '')
+  return selectedCommunity
 }
 
-function downloadPdf (accountName, passphrase, responseAddress, responseData) {
+function logout () {
+  window.localStorage.removeItem(USER_KEY)
+  window.localStorage.removeItem(SELECTED_COMMUNITY_KEY)
+  window.localStorage.removeItem(AUTH_TOKEN)
+
+  Sentry.addBreadcrumb({
+    category: 'auth',
+    message: 'User logged out'
+  })
+  Sentry.setUser(null)
+  debugLog('set sentry user to null', '')
+}
+
+function downloadPdf (accountName, passphrase) {
+  debugLog('started downloadPdf', accountName)
   const definition = pdfDefinition(passphrase)
   const pdf = pdfMake.createPdf(definition)
 
   pdf.download(accountName + '_cambiatus.pdf')
 
-  Sentry.addBreadcrumb(
-    {
-      type: 'debug',
-      message: 'downloaded PDF'
-    }
-  )
-  const response = {
-    address: responseAddress,
-    addressData: responseData,
-    isDownloaded: true
-  }
+  debugLog('downloadPdf finished', '')
 
-  app.ports.javascriptInPort.send(response)
+  return { isDownloaded: true }
 }
 
-app.ports.javascriptOutPort.subscribe(handleJavascriptPort)
+app.ports.javascriptOutPort.subscribe(async (arg) => {
+  debugLog(`${arg.data.name} port started`, arg)
+  const defaultResponse = {
+    address: arg.responseAddress,
+    addressData: arg.responseData
+  }
+
+  const portResponse = await handleJavascriptPort(arg)
+  debugLog(`got ${arg.data.name} port response`, portResponse)
+
+  const response = { ...defaultResponse, ...portResponse }
+
+  if (response.error) {
+    debugLog(`${arg.data.name} port failed: ${response.error}`, response)
+  } else {
+    debugLog(`${arg.data.name} port finished`, response)
+  }
+
+  // Only send data through port if there is a portResponse, and the port is not a subscription
+  if (Object.keys(portResponse).length !== 0 && !response.isSubscription) {
+    app.ports.javascriptInPort.send(response)
+  }
+})
+
 async function handleJavascriptPort (arg) {
   switch (arg.data.name) {
     case 'checkAccountAvailability': {
-      debugLog('checkAccountAvailability', '')
-      var sendResponse = function (isAvailable, error) {
-        const response = {
-          address: arg.responseAddress,
-          addressData: arg.responseData,
-          isAvailable: isAvailable,
-          error: error
-        }
-        debugLog('checkAccountAvailability port finished', response)
-        app.ports.javascriptInPort.send(response)
-      }
-      eos
-        .getAccount(arg.data.account)
-        .then(_ => sendResponse(false))
+      return eos.getAccount(arg.data.account)
+        .then(_ => ({ isAvailable: false, error: 'account not available' }))
         .catch(e => {
           // Invalid name exception
           if (JSON.parse(e.message).error.code === 3010001) {
-            debugLog('checkAccountAvailability port failed', e)
-            sendResponse(false)
+            return { isAvailable: false, error: e.message }
           } else {
-            sendResponse(true)
+            return { isAvailable: true }
           }
         })
-      break
     }
     case 'generateKeys': {
-      debugLog('generateKeys port started', '')
       const userLang = getUserLanguage()
       const [randomWords, hexRandomWords] = mnemonic.generateRandom(userLang)
       const privateKey = ecc.seedPrivate(hexRandomWords)
       const publicKey = ecc.privateToPublic(privateKey)
 
-      const response = {
-        address: arg.responseAddress,
-        addressData: arg.responseData,
+      return {
         data: {
           ownerKey: publicKey,
           activeKey: publicKey,
@@ -316,123 +341,52 @@ async function handleJavascriptPort (arg) {
           privateKey: privateKey
         }
       }
-
-      debugLog('generateKeys port finished', response)
-      app.ports.javascriptInPort.send(response)
-      break
     }
-    case 'loginWithPrivateKey': {
-      debugLog('loginWithPrivateKey', '')
-      const passphrase = arg.data.form.passphrase
+    case 'login': {
+      const passphrase = arg.data.passphrase
       const privateKey = ecc.seedPrivate(mnemonic.toSeedHex(passphrase))
 
-      if (ecc.isValidPrivate(privateKey)) {
-        const publicKey = ecc.privateToPublic(privateKey)
-        const accounts = await eos.getKeyAccounts(publicKey)
-        const user = JSON.parse(window.localStorage.getItem(USER_KEY))
-        debugLog('loginWithPrivateKey port accounts', accounts)
-
-        if (
-          !accounts ||
-          !accounts.account_names ||
-          accounts.account_names.length === 0
-        ) {
-          const response = {
-            address: arg.responseAddress,
-            addressData: arg.responseData,
-            error: 'error.accountNotFound'
-          }
-          debugLog('loginWithPrivateKey port failed', response)
-          app.ports.javascriptInPort.send(response)
-        } else if (
-          user &&
-          user.accountName &&
-          !accounts.account_names.some(aN => aN === user.accountName)
-        ) {
-          const response = {
-            address: arg.responseAddress,
-            addressData: arg.responseData,
-            error:
-              'This private key does not correspond to logged in account. Please logout to use a different account.'
-          }
-          debugLog('loginWithPrivateKey port failed', response)
-          app.ports.javascriptInPort.send(response)
-        } else if (accounts.account_names.length === 1) {
-          arg.data.name = 'loginWithPrivateKeyAccount'
-          arg.data.accountName = accounts.account_names[0]
-          handleJavascriptPort(arg)
-        } else if (
-          user &&
-          user.accountName &&
-          accounts.account_names.some(aN => aN === user.accountName)
-        ) {
-          arg.data.name = 'loginWithPrivateKeyAccount'
-          arg.data.accountName = user.accountName
-          handleJavascriptPort(arg)
-
-          // There is multiple accounts
-        } else {
-          const response = {
-            address: arg.responseAddress,
-            addressData: arg.responseData,
-            accountNames: accounts.account_names
-          }
-          debugLog('loginWithPrivateKey port finished', response)
-          app.ports.javascriptInPort.send(response)
-        }
+      if (!ecc.isValidPrivate(privateKey)) {
+        return { error: 'error.invalidKey' }
       } else {
-        const response = {
-          address: arg.responseAddress,
-          addressData: arg.responseData,
-          error: 'Invalid key'
+        try {
+          const publicKey = ecc.privateToPublic(privateKey)
+          const accounts = await eos.getKeyAccounts(publicKey)
+          debugLog(`got ${accounts.account_names.length} accounts`, accounts)
+
+          if (!accounts || !accounts.account_names || accounts.account_names.length === 0) {
+            return { error: 'error.accountNotFound' }
+          } else {
+            const accountName = accounts.account_names[0]
+
+            logout()
+
+            storePin(
+              {
+                accountName,
+                privateKey,
+                passphrase
+              },
+              arg.data.pin
+            )
+
+            // Save credentials to EOS
+            eos = Eos(Object.assign(config.eosOptions, { keyProvider: privateKey }))
+            debugLog('saved credentials to EOS', '')
+
+            // Configure Sentry logged user
+            Sentry.setUser({ email: accountName })
+            debugLog('set sentry user', accountName)
+
+            return { accountName, privateKey }
+          }
+        } catch (err) {
+          errorLog('login port error', err, false)
+          return { error: 'error.unknown' }
         }
-        debugLog('loginWithPrivateKey port failed', response)
-        app.ports.javascriptInPort.send(response)
       }
-      break
-    }
-    case 'loginWithPrivateKeyAccount': {
-      debugLog('loginWithPrivateKeyAccount port started', '')
-      const loginForm = arg.data.form
-      const accountName = arg.data.accountName
-      const passphrase = loginForm.passphrase
-      const privateKey = ecc.seedPrivate(mnemonic.toSeedHex(passphrase))
-
-      // Storing stuff
-      if (loginForm.usePin) {
-        storePin(
-          {
-            accountName: accountName,
-            privateKey: privateKey,
-            passphrase: passphrase
-          },
-          loginForm.usePin
-        )
-        storeAuthPreference('pin')
-      } else {
-        storeAccountName(accountName)
-        storeAuthPreference('private_key')
-      }
-
-      // Save credentials to EOS
-      eos = Eos(Object.assign(config.eosOptions, { keyProvider: privateKey }))
-
-      // Configure Sentry logged user
-      Sentry.setUser({ email: accountName })
-
-      const response = {
-        address: arg.responseAddress,
-        addressData: arg.responseData,
-        accountName: accountName,
-        privateKey: privateKey
-      }
-      debugLog('loginWithPrivateKeyAccount port finished', response)
-      app.ports.javascriptInPort.send(response)
-      break
     }
     case 'changePin': {
-      debugLog('changePin port started', '')
-
       const userStorage = JSON.parse(window.localStorage.getItem(USER_KEY))
       const currentPin = arg.data.currentPin
       const newPin = arg.data.newPin
@@ -453,31 +407,27 @@ async function handleJavascriptPort (arg) {
         )
       }
 
-      await storePin(data, newPin)
+      storePin(data, newPin)
 
-      const response = {
-        address: arg.responseAddress,
-        addressData: arg.responseData,
-        accountName: arg.data.accountName,
-        privateKey: decryptedKey
-      }
-      app.ports.javascriptInPort.send(response)
-      break
+      return { accountName: arg.data.accountName, privateKey: decryptedKey }
     }
-    case 'loginWithPin': {
-      debugLog('loginWithPin port started', '')
-      const store = JSON.parse(window.localStorage.getItem(USER_KEY))
+    case 'getPrivateKey': {
+      const user = JSON.parse(window.localStorage.getItem(USER_KEY))
       const pin = arg.data.pin
-      if (store && store.encryptedKey && store.accountName) {
+      // If private key and accountName are stored in localStorage
+      const isUserLoggedIn = user && user.encryptedKey && user.accountName
+      if (!isUserLoggedIn) {
+        return { error: 'error.unavailablePin' }
+      } else {
         try {
-          const decryptedKey = sjcl.decrypt(pin, store.encryptedKey)
+          const decryptedKey = sjcl.decrypt(pin, user.encryptedKey)
 
           eos = Eos(Object.assign(config.eosOptions, { keyProvider: decryptedKey }))
+          debugLog('saved credentials to EOS', '')
 
           // Configure Sentry logged user
-          Sentry.setUser({ account: store.accountName })
-
-          storeAuthPreference('pin')
+          Sentry.setUser({ account: user.accountName })
+          debugLog('set sentry user', user.accountName)
 
           // Set default selected community
           window.localStorage.setItem(
@@ -488,41 +438,16 @@ async function handleJavascriptPort (arg) {
           Sentry.addBreadcrumb({
             category: 'auth',
             level: Sentry.Severity.Info,
-            message: 'Logged user with PIN: ' + store.accountName
+            message: 'Logged user with PIN: ' + user.accountName
           })
 
-          const response = {
-            address: arg.responseAddress,
-            addressData: arg.responseData,
-            accountName: store.accountName,
-            privateKey: decryptedKey
-          }
-
-          debugLog('loginWithPin port finished', response)
-          app.ports.javascriptInPort.send(response)
+          return { accountName: user.accountName, privateKey: decryptedKey }
         } catch (e) {
-          const response = {
-            address: arg.responseAddress,
-            addressData: arg.responseData,
-            error: 'Invalid PIN'
-          }
-          debugLog('loginWithPin port failed', response)
-          app.ports.javascriptInPort.send(response)
+          return { error: 'error.invalidPin' }
         }
-      } else {
-        const response = {
-          address: arg.responseAddress,
-          addressData: arg.responseData,
-          error: 'PIN is unavailable'
-        }
-        debugLog('loginWithPin port failed', response)
-        app.ports.javascriptInPort.send(response)
       }
-      break
     }
     case 'eosTransaction': {
-      debugLog('eosTransaction port started', arg.data)
-
       Sentry.addBreadcrumb({
         type: 'debug',
         category: 'started',
@@ -530,16 +455,8 @@ async function handleJavascriptPort (arg) {
         message: 'Begin pushing transaction to EOS'
       })
 
-      eos
-        .transaction({
-          actions: arg.data.actions
-        })
+      return eos.transaction({ actions: arg.data.actions })
         .then(res => {
-          const response = {
-            address: arg.responseAddress,
-            addressData: arg.responseData,
-            transactionId: res.transaction_id
-          }
           Sentry.addBreadcrumb({
             type: 'debug',
             category: 'ended',
@@ -547,17 +464,11 @@ async function handleJavascriptPort (arg) {
             message: 'Success pushing transaction to EOS'
           })
 
-          debugLog('eosTransaction port response', response)
-          app.ports.javascriptInPort.send(response)
+          return { transactionId: res.transaction_id }
         })
         .catch(errorString => {
           const error = JSON.parse(errorString)
-          const errorResponse = {
-            address: arg.responseAddress,
-            addressData: arg.responseData,
-            error: error
-          }
-          debugLog('eosTransaction port failed', errorResponse)
+          const response = { error }
 
           // Send to sentry
           Sentry.addBreadcrumb({
@@ -570,31 +481,22 @@ async function handleJavascriptPort (arg) {
             const message = error.error.details[0].message || 'Generic EOS Error'
             scope.setTag('type', 'eos-transaction')
             scope.setExtra('Sent data', arg.data)
-            scope.setExtra('Response', errorResponse)
-            scope.setExtra('Error', errorResponse.error)
+            scope.setExtra('Response', response)
+            scope.setExtra('Error', response.error)
             scope.setExtra('Error String', errorString)
             scope.setLevel(Sentry.Severity.Error)
             Sentry.captureMessage(message)
           })
-          app.ports.javascriptInPort.send(errorResponse)
+
+          return response
         })
-      break
     }
     case 'logout': {
-      debugLog('logout port started', '')
-      window.localStorage.removeItem(USER_KEY)
-      window.localStorage.removeItem(AUTH_PREF_KEY)
-      window.localStorage.removeItem(SELECTED_COMMUNITY_KEY)
-      window.localStorage.removeItem(AUTH_TOKEN)
-      Sentry.addBreadcrumb({
-        category: 'auth',
-        message: 'User logged out'
-      })
-      Sentry.setUser(null)
-      break
+      logout()
+
+      return {}
     }
     case 'requestPushPermission': {
-      debugLog('requestingPushPermissions port started', '')
       const swUrl = `${process.env.PUBLIC_URL}/service-worker.js`
       const pKey = config.pushKey
       if (pushSub.isPushSupported()) {
@@ -603,73 +505,34 @@ async function handleJavascriptPort (arg) {
           .then(sw => pushSub.askPermission())
           .then(sw => pushSub.subscribeUserToPush(pKey))
           .then(sub => {
-            const stringSub = JSON.stringify(sub)
-            const response = {
-              address: arg.responseAddress,
-              addressData: arg.responseData,
-              sub: stringSub
-            }
-            debugLog('requestPushPermission port ended', response)
-            app.ports.javascriptInPort.send(response)
+            return { sub: JSON.stringify(sub) }
           })
-          .catch(err => debugLog('requestPushPermission port error: Push Permission Denied', err))
+          .catch(err => {
+            debugLog('requestPushPermission port error: Push Permission Denied', err)
+            return { error: `push permission denied: ${err}` }
+          })
       } else {
         debugLog('requestPushPermission port error: Push not supported on this agent', '')
+        return { error: 'push not supported on this agent' }
       }
-      break
     }
     case 'completedPushUpload': {
-      debugLog('cachingPushSubscription port started', '')
       storePushPref('set')
-      const response = {
-        address: arg.responseAddress,
-        addressData: arg.responseData,
-        isSet: true
-      }
-      app.ports.javascriptInPort.send(response)
-      break
+      return { isSet: true }
     }
     case 'checkPushPref': {
-      debugLog('checkingPushPref port started', '')
-      let sendResponse = function (isSet) {
-        const response = {
-          address: arg.responseAddress,
-          addressData: arg.responseData,
-          isSet: isSet
-        }
-        debugLog('checkPushPref port ended', response)
-        app.ports.javascriptInPort.send(response)
-      }
-
-      sendResponse(window.localStorage.getItem(PUSH_PREF) !== null)
-      break
+      return { isSet: window.localStorage.getItem(PUSH_PREF) !== null }
     }
     case 'disablePushPref': {
-      debugLog('disablePushPref port started', '')
       window.localStorage.removeItem(PUSH_PREF)
       pushSub.unsubscribeFromPush()
-      const response = {
-        address: arg.responseAddress,
-        addressData: arg.responseData,
-        isSet: false
-      }
-      app.ports.javascriptInPort.send(response)
-      break
+      return { isSet: false }
     }
     case 'downloadAuthPdfFromRegistration': {
-      debugLog('downloadAuthPdfFromRegistration port started', '')
-      const accountName = arg.data.accountName
-      const passphrase = arg.data.passphrase
-      downloadPdf(
-        accountName,
-        passphrase,
-        arg.responseAddress,
-        arg.responseData
-      )
-      break
+      const { accountName, passphrase } = arg.data
+      return downloadPdf(accountName, passphrase)
     }
     case 'downloadAuthPdfFromProfile': {
-      debugLog('downloadAuthPdfFromProfile port started', '')
       const store = JSON.parse(window.localStorage.getItem(USER_KEY))
       const pin = arg.data.pin
 
@@ -679,73 +542,36 @@ async function handleJavascriptPort (arg) {
       // for further processing.
       if (store.encryptedPassphrase) {
         const decryptedPassphrase = sjcl.decrypt(pin, store.encryptedPassphrase)
-        downloadPdf(
-          store.accountName,
-          decryptedPassphrase,
-          arg.responseAddress,
-          arg.responseData
-        )
+        return downloadPdf(store.accountName, decryptedPassphrase)
       } else {
         // The case when there's not passphrase stored in user's browser, only the Private Key
-        const response = {
-          address: arg.responseAddress,
-          addressData: arg.responseData,
-          isDownloaded: false
-        }
-
-        app.ports.javascriptInPort.send(response)
+        return { isDownloaded: false }
       }
-      break
     }
     case 'accountNameToUint64': {
-      debugLog('accountNameToUint64 port started', '')
-      const response = {
-        address: arg.responseAddress,
-        addressData: arg.responseData,
-        uint64name: eos.modules.format.encodeName(arg.data.accountName, false)
-      }
-      app.ports.javascriptInPort.send(response)
-      break
+      return { uint64name: eos.modules.format.encodeName(arg.data.accountName, false) }
     }
     case 'scrollIntoView': {
-      debugLog('scrollIntoView port started', '')
       document.getElementById(arg.data.id).scrollIntoView(true)
-      break
+
+      return {}
     }
     case 'validateDeadline': {
-      debugLog('validatingDate port started', '')
-
       const parsedDate = new Date(arg.data.deadline)
       const now = new Date()
 
-      console.log('p', parsedDate)
       if (parsedDate.toString() === 'Invalid Date' || parsedDate < now) {
-        const response = {
-          address: arg.responseAddress,
-          addressData: arg.responseData,
-          error: parsedDate
-        }
-        app.ports.javascriptInPort.send(response)
-        break
+        return { error: parsedDate }
       } else {
         const isoDate = parsedDate.toISOString()
-
-        const response = {
-          address: arg.responseAddress,
-          addressData: arg.responseData,
-          date: isoDate
-        }
-        app.ports.javascriptInPort.send(response)
-        break
+        return { date: isoDate }
       }
     }
     case 'hideFooter': {
-      debugLog('hideFooter port started', '')
       document.getElementById('guest-footer').className += ' guest__footer'
-      break
+      return {}
     }
     case 'subscribeToNewCommunity': {
-      debugLog('subscribeToNewCommunity port started', arg)
       let notifiers = []
 
       // Open a socket connection
@@ -806,11 +632,10 @@ async function handleJavascriptPort (arg) {
           onResult
         })
       })
-      break
+
+      return { isSubscription: true }
     }
     case 'subscribeToTransfer': {
-      debugLog('subscribeToTransfer port started', arg)
-
       let notifiers = []
 
       // Open a socket connection
@@ -874,10 +699,9 @@ async function handleJavascriptPort (arg) {
         })
       })
 
-      break
+      return { isSubscription: true }
     }
     case 'subscribeToUnreadCount': {
-      debugLog('unreadCountSubscription port started', arg.data.subscription)
       let notifiers = []
 
       // Open a socket connection
@@ -933,22 +757,58 @@ async function handleJavascriptPort (arg) {
           onResult
         })
       })
-      break
+
+      return { isSubscription: true }
     }
     case 'copyToClipboard': {
-      debugLog('copyToClipboard port started', '')
       document.querySelector('#' + arg.data.id).select()
       document.execCommand('copy')
-      const response = {
-        address: arg.responseAddress,
-        addressData: arg.responseData
+
+      return {}
+    }
+    case 'readClipboard': {
+      if (canReadClipboard()) {
+        try {
+          const permissionStatus = await navigator.permissions.query({
+            name: 'clipboard-read',
+            allowWithoutGesture: true
+          })
+
+          switch (permissionStatus.state) {
+            case 'denied': {
+              debugLog('clipboard-read permission denied', '')
+              // We can't request for permission, the user needs to do it manually
+              return { isDenied: true }
+            }
+            case 'granted': {
+              debugLog('clipboard-read permission granted', '')
+              return readClipboardWithPermission()
+            }
+            case 'prompt': {
+              debugLog('clipboard-read permission prompt', '')
+              try {
+                const clipboardContent = await navigator.clipboard.readText()
+                debugLog('clipboard-read permission prompt accepted', '')
+                return { clipboardContent }
+              } catch (err) {
+                debugLog('clipboard-read permission prompt denied', err)
+                return { isDenied: true }
+              }
+            }
+            default: {
+              return { error: 'permissionStatus state unkown' }
+            }
+          }
+        } catch (permissionError) {
+          debugLog('permissions API not supported', permissionError)
+          return readClipboardWithPermission()
+        }
+      } else {
+        debugLog('clipboard.readText() not supported', '')
+        return { notSupported: true }
       }
-      app.ports.javascriptInPort.send(response)
-      break
     }
     case 'setSelectedCommunity': {
-      debugLog('setSelectedCommunity port started', '')
-
       Sentry.addBreadcrumb({
         type: 'navigation',
         category: 'navigation',
@@ -966,10 +826,10 @@ async function handleJavascriptPort (arg) {
         arg.data.selectedCommunity
       )
 
-      break
+      return {}
     }
     default: {
-      debugLog('No treatment found for Elm port ', arg.data.name)
+      return { error: `No treatment found for Elm port ${arg.data.name}` }
     }
   }
 }

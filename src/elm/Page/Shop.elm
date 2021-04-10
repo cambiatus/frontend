@@ -438,7 +438,7 @@ update msg model loggedIn =
                     validateForm card.product card.form
             in
             if isFormValid newForm then
-                if LoggedIn.isAuth loggedIn then
+                if LoggedIn.hasPrivateKey loggedIn then
                     let
                         authorization =
                             { actor = loggedIn.accountName

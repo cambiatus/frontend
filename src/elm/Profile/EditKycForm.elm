@@ -19,7 +19,7 @@ import Kyc.CostaRica.Nite as Nite
 import Kyc.CostaRica.Phone as Phone
 import Profile
 import RemoteData exposing (RemoteData)
-import Session.LoggedIn as LoggedIn exposing (External(..), FeedbackStatus(..))
+import Session.LoggedIn as LoggedIn exposing (External(..))
 import Session.Shared exposing (Translators)
 import Validate exposing (Validator, ifBlank, validate)
 

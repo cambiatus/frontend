@@ -91,6 +91,12 @@
     "objective": {
       "invalid_id": "Identificador d'objectius no vàlid "
     },
+    "clipboard": {
+      "permissionDenied": "Heu de donar-nos permís per enganxar-lo del porta-retalls. Proveu de canviar la configuració del cadenat o del botó d'informació",
+      "paste": {
+        "notSupported": "El vostre navegador no admet enganxar des del porta-retalls, enganxeu-lo manualment"
+      }
+    },
     "pageNotFound": "Pàgina no trobada!",
     "required": "Sembla que t’has oblidat de completar això.",
     "email": "Si us plau, utilitzeu un correu electrònic vàlid.",
@@ -104,6 +110,9 @@
     "invalidSymbol": "Símbol invàlid.",
     "unknown": "Oh oh. Alguna cosa ha anat malament.",
     "accountNotFound": "Compte no trobat. Esteu segur que heu creat el vostre compte?",
+    "invalidKey": "Clau no vàlida",
+    "invalidPin": "PIN no vàlid",
+    "unavailablePin": "El PIN no està disponible",
     "phone": "Utilitzeu un número de telèfon vàlid",
     "zipcode": "Codi postal no vàlid",
     "contracts": {
@@ -152,6 +161,7 @@
     "chooseAccount": "Escull un compte",
     "required": "Autenticació requerida per a aquesta acció",
     "pin_instr": "6 números",
+    "failed": "L'autenticació ha fallat",
     "login": {
       "modalFormTitle": "Introduïu el PIN",
       "enterPinToContinue": "Introduïu el PIN de seguretat actual per continuar.",
@@ -174,7 +184,9 @@
           "toggle": "Vull utilitzar la clau privada",
           "notPassphraseError": "Introduïu 12 paraules",
           "notLatinLettersError": "Si us plau, utilitzeu només lletres bàsiques llatines",
-          "atLeastThreeLettersError": "Totes les paraules han de tenir almenys 3 lletres"
+          "atLeastThreeLettersError": "Totes les paraules han de tenir almenys 3 lletres",
+          "paste": "Enganxa",
+          "pasted": "Enganxat"
         }
       },
       "submit": "Inicieu la sessió",
