@@ -92,7 +92,7 @@ async function readClipboardWithPermission () {
     const clipboardContent = await navigator.clipboard.readText()
     return { clipboardContent }
   } catch (err) {
-    debugLog('clipboard.readText() error', err)
+    errorLog('clipboard.readText() error', err, false)
     return { error: err.message }
   }
 }
@@ -150,40 +150,48 @@ Sentry.init({
   environment: env
 })
 
-// Ports error Reporter
-app.ports.logError.subscribe((msg, err) => {
+function errorLog (msg, err, isFromElm) {
+  const languageString = isFromElm ? 'Elm' : 'Javascript'
+  const startMessage = `Begin errorLog from ${languageString}`
   Sentry.addBreadcrumb({
-    message: 'Begin Elm Error port javascript handler',
+    message: startMessage,
     level: Sentry.Severity.Info,
     type: 'debug',
     category: 'started'
   })
+
   if (env === 'development') {
     console.error(msg, err)
   } else {
-    let error = 'Generic Elm Error port msg'
+    let error = `Generic ${languageString} errorLog`
     let details = ''
 
     if (Object.prototype.toString.call(msg) === '[object Array]') {
       [error, details] = msg
     }
 
+    const type = isFromElm ? 'elm-error' : 'javascript-error'
     Sentry.withScope(scope => {
-      scope.setTag('type', 'elm-error')
+      scope.setTag('type', type)
       scope.setLevel(Sentry.Severity.Error)
-      scope.setExtra('Error shared by Elm', err)
+      scope.setExtra(`Error shared by ${languageString}`, err)
       scope.setExtra('raw msg', msg)
       scope.setExtra('Parsed details', details)
       Sentry.captureMessage(error + details)
     })
   }
+
+  const endMessage = `End errorLog from ${languageString}`
   Sentry.addBreadcrumb({
-    message: 'Ended Elm Error port javascript handler',
+    message: endMessage,
     level: Sentry.Severity.Info,
     type: 'debug',
     category: 'ended'
   })
-})
+}
+
+// Ports error Reporter
+app.ports.logError.subscribe((msg, err) => { errorLog(msg, err, true) })
 
 app.ports.logDebug.subscribe(debugLog)
 
@@ -373,7 +381,7 @@ async function handleJavascriptPort (arg) {
             return { accountName, privateKey }
           }
         } catch (err) {
-          debugLog(`login port error: ${err.message}`, err)
+          errorLog('login port error', err, false)
           return { error: 'error.unknown' }
         }
       }

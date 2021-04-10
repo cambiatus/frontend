@@ -432,7 +432,7 @@ updateWithPassphrase msg model { shared } =
         GotClipboardResponse (WithError error) ->
             { model | hasPasted = False }
                 |> UR.init
-                |> UR.logDebugValue msg (Encode.string error)
+                |> UR.logImpossible msg [ "WithError", error ]
                 |> UR.addExt
                     (Feedback.Visible Feedback.Failure (shared.translators.t "error.unknown")
                         |> Guest.SetFeedback
