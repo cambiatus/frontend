@@ -884,7 +884,9 @@
       "fields": {
         "name": "Community name",
         "description": "What is the community",
-        "url": "Community custom URL"
+        "url": "Community custom URL",
+        "invitation": "Invitation",
+        "invitation_tooltip": "If this is enabled, users can only join if they're invited by a member of the community"
       },
       "placeholders": {
         "name": "Give your community a name",

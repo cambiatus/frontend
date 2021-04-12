@@ -886,7 +886,9 @@
       "fields": {
         "name": "Nom de la Comunitat",
         "description": "Què és la comunitat.",
-        "url": "URL personalitzat de la comunitat."
+        "url": "URL personalitzat de la comunitat.",
+        "invitation": "Invitació",
+        "invitation_tooltip": "Si aquesta opció està activada, els usuaris només es poden unir si els convida un membre de la comunitat"
       },
       "placeholders": {
         "name": "Doneu un nom a la vostra comunitat",

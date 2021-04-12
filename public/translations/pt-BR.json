@@ -888,7 +888,9 @@
       "fields": {
         "name": "Nome da comunidade",
         "description": "O que é a comunidade",
-        "url": "URL personalizado da comunidade"
+        "url": "URL personalizado da comunidade",
+        "invitation": "Convite",
+        "invitation_tooltip": "Ao habilitar esta função, usuários só poderão se juntar à comunidade se forem convidados por um membro"
       },
       "placeholders": {
         "name": "Dê um nome à sua comunidade",

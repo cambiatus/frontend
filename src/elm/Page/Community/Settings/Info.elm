@@ -29,6 +29,7 @@ import Session.Shared exposing (Shared)
 import UpdateResult as UR
 import View.Feedback as Feedback
 import View.Form.Input as Input
+import View.Toggle
 
 
 
@@ -73,6 +74,7 @@ type Msg
     | EnteredName String
     | EnteredDescription String
     | EnteredUrl String
+    | ToggledAutoInvite Bool
     | ClickedSave
     | GotSaveResponse (Result Value Eos.Symbol)
 
@@ -130,6 +132,11 @@ update msg model loggedIn =
         EnteredUrl url ->
             { model | urlInput = url }
                 |> validateUrl
+                |> UR.init
+
+        ToggledAutoInvite _ ->
+            -- TODO - Update community's auto invitation
+            model
                 |> UR.init
 
         ClickedSave ->
@@ -360,6 +367,22 @@ view_ loggedIn model =
                 , viewName loggedIn.shared model
                 , viewDescription loggedIn.shared model
                 , viewUrl loggedIn.shared model
+                , View.Toggle.init
+                    { label = "settings.community_info.fields.invitation_tooltip"
+                    , id = "invitation_toggle"
+                    , onToggle = ToggledAutoInvite
+                    , disabled = False
+                    , value =
+                        case loggedIn.selectedCommunity of
+                            RemoteData.Success _ ->
+                                -- TODO - Use community auto invite attribute
+                                True
+
+                            _ ->
+                                False
+                    }
+                    |> View.Toggle.withTooltip "settings.community_info.fields.invitation_tooltip"
+                    |> View.Toggle.toHtml loggedIn.shared.translators
                 ]
             , button
                 [ class "button button-primary w-full mt-8"
@@ -555,6 +578,9 @@ msgToString msg =
 
         EnteredUrl _ ->
             [ "EnteredUrl" ]
+
+        ToggledAutoInvite _ ->
+            [ "ToggledAutoInvite" ]
 
         ClickedSave ->
             [ "ClickedSave" ]

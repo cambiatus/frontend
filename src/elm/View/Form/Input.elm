@@ -19,7 +19,7 @@ and character counters.
 -}
 
 import Html exposing (Html, div, input, li, text, ul)
-import Html.Attributes exposing (class, classList, disabled, id, placeholder, value)
+import Html.Attributes exposing (class, disabled, id, placeholder, value)
 import Html.Events exposing (onInput)
 import Session.Shared exposing (Translators)
 import View.Form
