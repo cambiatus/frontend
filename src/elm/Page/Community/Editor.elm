@@ -29,11 +29,12 @@ import Json.Encode as Encode exposing (Value)
 import List.Extra as List
 import Page
 import Route
-import Session.LoggedIn as LoggedIn exposing (External(..), FeedbackStatus(..))
+import Session.LoggedIn as LoggedIn exposing (External(..))
 import Session.Shared exposing (Shared)
 import Task
 import UpdateResult as UR
 import Utils exposing (decodeEnterKeyDown)
+import View.Feedback as Feedback
 
 
 
@@ -678,7 +679,7 @@ update msg model loggedIn =
                             }
 
         ClickedSave ->
-            if LoggedIn.isAuth loggedIn then
+            if LoggedIn.hasPrivateKey loggedIn then
                 save msg loggedIn (UR.init model)
 
             else
@@ -745,7 +746,7 @@ update msg model loggedIn =
                                 |> LoggedIn.ExternalBroadcast
                             )
                         |> UR.addCmd (Route.Community |> Route.replaceUrl loggedIn.shared.navKey)
-                        |> UR.addExt (ShowFeedback Success (t "community.create.success"))
+                        |> UR.addExt (ShowFeedback Feedback.Success (t "community.create.success"))
 
                 _ ->
                     model
@@ -761,19 +762,19 @@ update msg model loggedIn =
                     Editing community err form
                         |> UR.init
                         |> UR.logDebugValue msg val
-                        |> UR.addExt (ShowFeedback Failure (t "error.unknown"))
+                        |> UR.addExt (ShowFeedback Feedback.Failure (t "error.unknown"))
 
                 Creating form ->
                     EditingNew err form
                         |> UR.init
                         |> UR.logDebugValue msg val
-                        |> UR.addExt (ShowFeedback Failure (t "error.unknown"))
+                        |> UR.addExt (ShowFeedback Feedback.Failure (t "error.unknown"))
 
                 _ ->
                     UR.init model
                         |> UR.logImpossible msg []
                         |> UR.logDebugValue msg val
-                        |> UR.addExt (ShowFeedback Failure (t "error.unknown"))
+                        |> UR.addExt (ShowFeedback Feedback.Failure (t "error.unknown"))
 
         Redirect ->
             case model of

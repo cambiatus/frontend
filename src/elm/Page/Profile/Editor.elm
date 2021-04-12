@@ -15,9 +15,10 @@ import Page
 import Profile exposing (Model)
 import RemoteData exposing (RemoteData)
 import Route
-import Session.LoggedIn as LoggedIn exposing (External(..), FeedbackStatus(..))
+import Session.LoggedIn as LoggedIn exposing (External(..))
 import Session.Shared exposing (Translators)
 import UpdateResult as UR
+import View.Feedback as Feedback
 
 
 
@@ -400,7 +401,7 @@ update msg model loggedIn =
             model
                 |> UR.init
                 |> UR.addExt (LoggedIn.ProfileLoaded profile |> LoggedIn.ExternalBroadcast)
-                |> UR.addExt (LoggedIn.ShowFeedback Success (t "profile.edit_success"))
+                |> UR.addExt (LoggedIn.ShowFeedback Feedback.Success (t "profile.edit_success"))
                 |> UR.addCmd (Route.pushUrl loggedIn.shared.navKey Route.Profile)
 
         GotSaveResult (RemoteData.Success Nothing) ->

@@ -1,7 +1,7 @@
-module View.Form.Input exposing (init, input, toHtml, toHtmlTextArea, withAttrs, withCounter, withElement)
+module View.Form.Input exposing (FieldType(..), init, input, toHtml, withAttrs, withCounter, withCounterAttrs, withCounterType, withElement, withErrorAttrs, withType)
 
-{- | Creates a Cambiatus-style text input that supports error reporting, placeholders, localization
-   and character counters.
+{-| Creates a Cambiatus-style text input that supports error reporting, placeholders, localization
+and character counters.
 
        View.Form.Input.init
            { label = "Username"
@@ -19,7 +19,7 @@ module View.Form.Input exposing (init, input, toHtml, toHtmlTextArea, withAttrs,
 -}
 
 import Html exposing (Html, div, input, li, text, ul)
-import Html.Attributes exposing (class, disabled, id, placeholder, value)
+import Html.Attributes exposing (class, classList, disabled, id, placeholder, value)
 import Html.Events exposing (onInput)
 import Session.Shared exposing (Translators)
 import View.Form
@@ -40,13 +40,6 @@ type alias RequiredInputOptions a =
     }
 
 
-{-| Lists out the possible input types
--}
-type InputType
-    = Input
-    | TextArea
-
-
 {-| Initializes an input
 -}
 init : RequiredInputOptions a -> InputOptions a
@@ -61,63 +54,65 @@ init options =
     , maximumCounterValue = Nothing
     , translators = options.translators
     , extraAttrs = []
+    , counterAttrs = []
     , extraElement = Nothing
+    , errorAttrs = []
+    , fieldType = Text
+    , counterType = View.Form.InputCounter.CountLetters
     }
 
 
 {-| Converts a Cambiatus input into Html to be used in view code
 -}
-toHtmlWith : InputType -> InputOptions a -> Html a
-toHtmlWith inputType options =
+toHtml : InputOptions a -> Html a
+toHtml options =
     div [ class "mb-10 relative" ]
         [ View.Form.label options.id options.label
-        , input inputType options
+        , input options
         , case options.maximumCounterValue of
             Just number ->
-                View.Form.InputCounter.view options.translators.tr number options.value
+                View.Form.InputCounter.viewWithAttrs options.translators.tr
+                    number
+                    options.value
+                    options.counterAttrs
+                    options.counterType
 
             Nothing ->
                 text ""
         , ul []
             (options.problems
                 |> Maybe.withDefault []
-                |> List.map viewFieldProblem
+                |> List.map (viewFieldProblem options.errorAttrs)
             )
         ]
 
 
-{-| Converts a Cambiatus input into Html to be used in view code, using Html.input
--}
-toHtml : InputOptions a -> Html a
-toHtml =
-    toHtmlWith Input
-
-
-{-| Converts a Cambiatus input into Html to be used in view code, using Html.textarea
--}
-toHtmlTextArea : InputOptions a -> Html a
-toHtmlTextArea =
-    toHtmlWith TextArea
-
-
 {-| Basic Cambiatus-style input
 -}
-input : InputType -> InputOptions a -> Html a
-input inputType options =
+input : InputOptions a -> Html a
+input options =
     let
         inputElement =
-            case inputType of
-                Input ->
+            case options.fieldType of
+                Text ->
                     Html.input
 
                 TextArea ->
                     Html.textarea
+
+        inputClass =
+            case options.fieldType of
+                Text ->
+                    "input"
+
+                TextArea ->
+                    "form-textarea"
     in
-    div [ class "relative" ]
+    Html.div [ class "relative" ]
         [ inputElement
             ([ id options.id
              , onInput options.onInput
-             , class "input min-w-full relative"
+             , class ("w-full " ++ inputClass)
              , disabled options.disabled
              , value options.value
              , placeholder (Maybe.withDefault "" options.placeholder)
@@ -125,12 +120,7 @@ input inputType options =
                 ++ options.extraAttrs
             )
             []
-        , case options.extraElement of
-            Nothing ->
-                text ""
-
-            Just extraElement ->
-                div [ class "absolute inset-y-0 right-0 flex items-center pr-3" ] [ extraElement ]
+        , Maybe.withDefault (text "") options.extraElement
         ]
 
 
@@ -145,25 +135,43 @@ withCounter maximum options =
     { options | maximumCounterValue = Just maximum }
 
 
+withCounterAttrs : List (Html.Attribute a) -> InputOptions a -> InputOptions a
+withCounterAttrs attrs options =
+    { options | counterAttrs = attrs }
+
+
+withErrorAttrs : List (Html.Attribute a) -> InputOptions a -> InputOptions a
+withErrorAttrs attrs options =
+    { options | errorAttrs = attrs }
+
+
 withAttrs : List (Html.Attribute a) -> InputOptions a -> InputOptions a
 withAttrs attrs options =
     { options | extraAttrs = attrs }
 
 
-{-| Adds an HTML element to be displayed on the right side of the input
--}
 withElement : Html a -> InputOptions a -> InputOptions a
 withElement element options =
     { options | extraElement = Just element }
+
+
+withType : FieldType -> InputOptions a -> InputOptions a
+withType fieldType options =
+    { options | fieldType = fieldType }
+
+
+withCounterType : View.Form.InputCounter.CounterType -> InputOptions a -> InputOptions a
+withCounterType counterType options =
+    { options | counterType = counterType }
 
 
 
 --- INTERNAL
 
 
-viewFieldProblem : String -> Html a
-viewFieldProblem problem =
-    li [ class "form-error absolute mr-10" ] [ text problem ]
+viewFieldProblem : List (Html.Attribute a) -> String -> Html a
+viewFieldProblem attrs problem =
+    li (class "form-error absolute mr-10" :: attrs) [ text problem ]
 
 
 type alias InputOptions a =
@@ -177,5 +185,14 @@ type alias InputOptions a =
     , translators : Translators
     , maximumCounterValue : Maybe Int
     , extraAttrs : List (Html.Attribute a)
+    , counterAttrs : List (Html.Attribute a)
     , extraElement : Maybe (Html a)
+    , errorAttrs : List (Html.Attribute a)
+    , fieldType : FieldType
+    , counterType : View.Form.InputCounter.CounterType
     }
+
+
+type FieldType
+    = Text
+    | TextArea

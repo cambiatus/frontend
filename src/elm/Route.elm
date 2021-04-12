@@ -16,7 +16,6 @@ type Route
     | ComingSoon
     | Register (Maybe String) (Maybe Route)
     | Login (Maybe Route)
-    | LoginWithPrivateKey (Maybe Route)
     | Logout
     | Notification
     | ProfileEditor
@@ -69,13 +68,6 @@ parser url =
             )
         , Url.map Login
             (s "login"
-                <?> Query.map
-                        (parseRedirect url)
-                        (Query.string "redirect")
-            )
-        , Url.map LoginWithPrivateKey
-            (s "login"
-                </> s "mnemonic"
                 <?> Query.map
                         (parseRedirect url)
                         (Query.string "redirect")
@@ -259,11 +251,6 @@ routeToString route =
 
                 Login maybeRedirect ->
                     ( [ "login" ]
-                    , queryBuilder routeToString maybeRedirect "redirect"
-                    )
-
-                LoginWithPrivateKey maybeRedirect ->
-                    ( [ "login", "mnemonic" ]
                     , queryBuilder routeToString maybeRedirect "redirect"
                     )
 

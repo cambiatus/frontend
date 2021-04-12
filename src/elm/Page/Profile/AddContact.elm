@@ -18,6 +18,7 @@ import RemoteData exposing (RemoteData)
 import Route
 import Session.LoggedIn as LoggedIn
 import UpdateResult as UR
+import View.Feedback as Feedback
 
 
 type alias Model =
@@ -58,11 +59,13 @@ update msg model ({ shared, authToken } as loggedIn) =
 
                         actOnNewContacts updateResult =
                             case newContacts of
+                                -- TODO
+                                -- <<<<<<< HEAD
                                 Contact.WithContacts successMessage contacts ->
                                     case loggedIn.profile of
                                         RemoteData.Success profile ->
                                             updateResult
-                                                |> UR.addExt (LoggedIn.ShowFeedback LoggedIn.Success successMessage)
+                                                |> UR.addExt (LoggedIn.ShowFeedback Feedback.Success successMessage)
                                                 |> UR.addExt
                                                     ({ profile | contacts = contacts }
                                                         |> LoggedIn.ProfileLoaded
@@ -74,9 +77,15 @@ update msg model ({ shared, authToken } as loggedIn) =
                                             updateResult
                                                 |> UR.logImpossible msg [ "WithContacts", "NoProfile" ]
 
+                                -- =======
+                                -- Contact.WithContacts successMessage _ ->
+                                --     updateResult
+                                --         |> UR.addExt (LoggedIn.ShowFeedback Feedback.Success successMessage)
+                                --         |> UR.addCmd (Route.replaceUrl shared.navKey Route.Profile)
+                                -- >>>>>>> master
                                 Contact.WithError errorMessage ->
                                     updateResult
-                                        |> UR.addExt (LoggedIn.ShowFeedback LoggedIn.Failure errorMessage)
+                                        |> UR.addExt (LoggedIn.ShowFeedback Feedback.Failure errorMessage)
 
                                 Contact.NotAsked ->
                                     updateResult

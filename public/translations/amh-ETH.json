@@ -91,6 +91,12 @@
       "objective": {
         "invalid_id": "ትክክል ያልሆነ የዓላማ መታዉቂያ "
       },
+      "clipboard": {
+        "permissionDenied": "ከቅንጥብ ሰሌዳው ላይ ለመለጠፍ ፈቃድ መስጠት ያስፈልግዎታል! በመቆለፊያ ቁልፍ ወይም በመረጃ ቁልፍ ውስጥ ቅንብሮቹን ለመቀየር ይሞክሩ",
+        "paste": {
+          "notSupported": "አሳሽዎ ከቅንጥብ ሰሌዳ መለጠፍን አይደግፍም ፣ እባክዎ በእጅ ይለጥፉ"
+        }
+      },
       "pageNotFound": "ገጽ የለም",
       "required": "ለመሙላት የተረሳ ይመስላል.",
       "email": "እባኮን , ትክክለኛ ኢ-ሜይል ይጠቀሙ.",
@@ -104,6 +110,9 @@
       "invalidSymbol": "ትክክል ያለሆነ ምልክት.",
       "unknown": "አይ. የሆነ ነገር ተሳሰተዋል.",
       "accountNotFound": "መለያ አልተገኘም. አዲስ መለያዎትን ለመከፈት እርግጠኛ ኖት?",
+      "invalidKey": "ልክ ያልሆነ ቁልፍ",
+      "invalidPin": "ልክ ያልሆነ ፒን",
+      "unavailablePin": "ፒን የለም",
       "phone": "እባኮን ትክክለኛ ስልክ ቁጥር ይጠቀሙ",
       "zipcode": "የተሳሳተ አካባቢያዊ መለያ ቁጥር",
           "contracts": {
@@ -118,6 +127,7 @@
       "chooseAccount": "መለያ ይመጡ",
       "required": "በኢህ ምዕራፍ ማረጋገጫ ያስፈልጋል",
       "pin_instr": "6 ቁጥሮች",
+      "failed": "ማረጋገጥ አልተሳካም",
       "login": {
         "modalFormTitle": "የሚስጢር ቁጥር ያስገቡ",
         "enterPinToContinue": "እባኮን, ለመቀጠል የአሁኑን የደህንነት ሚስጢር ቁጥር ያስገቡ.",
@@ -140,7 +150,9 @@
             "toggle": "የግል ቁልፍ መጠቀም እፈልጋልሁ",
             "notPassphraseError": "እባኮን , 12 ቃላትን ያስገቡ",
             "notLatinLettersError": "እባኮን , የላትን ፊደል ብቻ ይጠቀሙ",
-            "atLeastThreeLettersError": "ሁሉም ቃላት ቢያንስ 3 ፊደል ያላቸዉ መሆን አለበት"
+            "atLeastThreeLettersError": "ሁሉም ቃላት ቢያንስ 3 ፊደል ያላቸዉ መሆን አለበት",
+            "paste": "ለጥፍ",
+            "pasted": "ተለጠፈ"
           }
         },
         "submit": "ግባ",

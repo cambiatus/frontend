@@ -39,12 +39,13 @@ import Page.ViewTransfer as ViewTransfer
 import Ports
 import Route exposing (Route)
 import Session.Guest as Guest
-import Session.LoggedIn as LoggedIn exposing (External(..), FeedbackVisibility(..))
+import Session.LoggedIn as LoggedIn exposing (External(..))
 import Shop
 import Task
 import Time
 import UpdateResult as UR exposing (UpdateResult)
 import Url exposing (Url)
+import View.Feedback as Feedback
 
 
 main : Program Value Model Msg
@@ -104,10 +105,6 @@ subscriptions model =
         [ Sub.map GotPageMsg (Page.subscriptions model.session)
         , Ports.javascriptInPort GotJavascriptData
         , case model.status of
-            Login subModel ->
-                Login.subscriptions subModel
-                    |> Sub.map GotLoginMsg
-
             Dashboard subModel ->
                 Dashboard.subscriptions subModel
                     |> Sub.map GotDashboardMsg
@@ -557,31 +554,40 @@ updateGuestUResult : (subModel -> Status) -> (subMsg -> Msg) -> Model -> UpdateR
 updateGuestUResult toStatus toMsg model uResult =
     List.foldl
         (\commExtMsg ( m, cmds_ ) ->
-            case commExtMsg of
-                Guest.UpdatedGuest guest ->
-                    ( { m | session = Page.Guest guest }
-                    , cmds_
-                    )
+            case m.session of
+                Page.LoggedIn _ ->
+                    ( m, cmds_ )
 
-                Guest.LoggedIn signInResponse auth ->
-                    let
-                        shared =
-                            case m.session of
-                                Page.Guest guest ->
+                Page.Guest guest ->
+                    case commExtMsg of
+                        Guest.UpdatedGuest newGuest ->
+                            ( { m | session = Page.Guest newGuest }
+                            , cmds_
+                            )
+
+                        Guest.LoggedIn privateKey signInResponse ->
+                            let
+                                shared =
                                     guest.shared
 
-                                Page.LoggedIn loggedIn ->
-                                    loggedIn.shared
+                                ( session, cmd ) =
+                                    LoggedIn.initLogin shared (Just privateKey) signInResponse.user signInResponse.token
+                            in
+                            ( { m
+                                | session =
+                                    Page.LoggedIn session
+                              }
+                            , Cmd.map (Page.GotLoggedInMsg >> GotPageMsg) cmd
+                                :: (Maybe.withDefault Route.Dashboard guest.afterLoginRedirect
+                                        |> Route.pushUrl guest.shared.navKey
+                                   )
+                                :: cmds_
+                            )
 
-                        ( session, cmd ) =
-                            LoggedIn.initLogin shared auth signInResponse.user signInResponse.token
-                    in
-                    ( { m
-                        | session =
-                            Page.LoggedIn session
-                      }
-                    , Cmd.map (Page.GotLoggedInMsg >> GotPageMsg) cmd :: cmds_
-                    )
+                        Guest.SetFeedback feedback ->
+                            ( { m | session = Page.Guest { guest | feedback = feedback } }
+                            , cmds_
+                            )
         )
         ( { model | status = toStatus uResult.model }
         , []
@@ -655,11 +661,11 @@ hideFeedback model =
         Page.LoggedIn loggedIn ->
             { model
                 | session =
-                    Page.LoggedIn { loggedIn | feedback = Hidden }
+                    Page.LoggedIn { loggedIn | feedback = Feedback.Hidden }
             }
 
-        _ ->
-            model
+        Page.Guest guest ->
+            { model | session = Page.Guest { guest | feedback = Feedback.Hidden } }
 
 
 changeRouteTo : Maybe Route -> Model -> ( Model, Cmd Msg )
@@ -794,12 +800,6 @@ changeRouteTo maybeRoute model =
             PaymentHistory.init
                 >> updateStatusWith PaymentHistory GotPaymentHistoryMsg model
                 |> withLoggedIn (Route.PaymentHistory accountName)
-
-        Just (Route.LoginWithPrivateKey maybeRedirect) ->
-            withGuest
-                Login.init
-                (updateStatusWith Login GotLoginMsg)
-                maybeRedirect
 
         Just Route.Logout ->
             Page.logout

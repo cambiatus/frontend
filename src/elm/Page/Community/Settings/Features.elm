@@ -13,8 +13,9 @@ import Page
 import Ports
 import RemoteData
 import Route
-import Session.LoggedIn as LoggedIn exposing (External, FeedbackStatus(..))
+import Session.LoggedIn as LoggedIn exposing (External(..))
 import UpdateResult as UR
+import View.Feedback as Feedback
 
 
 init : LoggedIn.Model -> ( Model, Cmd Msg )
@@ -228,7 +229,7 @@ update msg model loggedIn =
             in
             model
                 |> UR.init
-                |> UR.addExt (LoggedIn.ShowFeedback Success (translate "settings.success"))
+                |> UR.addExt (LoggedIn.ShowFeedback Feedback.Success (translate "settings.success"))
                 |> addBroadcast
 
 
@@ -242,7 +243,7 @@ updateCommunity community model =
 
 
 saveFeaturePort : LoggedIn.Model -> Feature -> Status -> Bool -> (UR.UpdateResult Model Msg (External Msg) -> UR.UpdateResult Model Msg (External Msg))
-saveFeaturePort loggedIn feature status state =
+saveFeaturePort ({ shared } as loggedIn) feature status state =
     let
         authorization =
             { actor = loggedIn.accountName
@@ -262,7 +263,7 @@ saveFeaturePort loggedIn feature status state =
     in
     case ( loggedIn.selectedCommunity, status ) of
         ( RemoteData.Success community, Authorized ) ->
-            if LoggedIn.isAuth loggedIn then
+            if LoggedIn.hasPrivateKey loggedIn then
                 UR.addPort (saveFeature feature state authorization loggedIn community)
 
             else
@@ -272,10 +273,10 @@ saveFeaturePort loggedIn feature status state =
             UR.addExt (Just (function state) |> LoggedIn.RequiredAuthentication)
 
         ( _, Loading ) ->
-            UR.addExt (LoggedIn.ShowFeedback Failure "Error")
+            UR.addExt (LoggedIn.ShowFeedback Feedback.Failure (shared.translators.t "error.unknown"))
 
         ( _, Unauthorized ) ->
-            UR.addExt (LoggedIn.ShowFeedback Failure "Error")
+            UR.addExt (LoggedIn.ShowFeedback Feedback.Failure (shared.translators.t "error.unknown"))
 
 
 saveFeature : Feature -> Bool -> Eos.Authorization -> LoggedIn.Model -> Community.Model -> Ports.JavascriptOutModel Msg

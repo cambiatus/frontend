@@ -11,7 +11,7 @@ import Page.Profile exposing (ProfilePage(..), viewUserInfo)
 import Profile exposing (Model)
 import RemoteData exposing (RemoteData)
 import Route
-import Session.LoggedIn as LoggedIn exposing (External(..), FeedbackStatus(..))
+import Session.LoggedIn as LoggedIn exposing (External(..))
 import UpdateResult as UR
 
 

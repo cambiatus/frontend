@@ -15,8 +15,9 @@ import Profile exposing (Model)
 import Profile.EditKycForm as KycForm
 import RemoteData
 import Route
-import Session.LoggedIn as LoggedIn exposing (External(..), FeedbackStatus(..))
+import Session.LoggedIn as LoggedIn exposing (External(..))
 import UpdateResult as UR
+import View.Feedback as Feedback
 
 
 
@@ -57,6 +58,30 @@ update msg model loggedIn =
             loggedIn.shared.translators
     in
     case msg of
+        -- TODO
+        -- CompletedProfileLoad (RemoteData.Success Nothing) ->
+        --     UR.init model
+        -- CompletedProfileLoad (RemoteData.Success (Just profile)) ->
+        --     case profile.kyc of
+        --         Just _ ->
+        --             -- Users with already filled KYC data are restricted from seeing this page.
+        --             model
+        --                 |> UR.init
+        --                 |> UR.addCmd
+        --                     (Route.Profile
+        --                         |> Route.replaceUrl loggedIn.shared.navKey
+        --                     )
+        --                 |> UR.addExt (ShowFeedback Feedback.Failure (t "community.kyc.add.restricted"))
+        --         Nothing ->
+        --             { model
+        --                 | status = Loaded profile
+        --             }
+        --                 |> UR.init
+        -- CompletedProfileLoad (RemoteData.Failure err) ->
+        --     UR.init { model | status = LoadingFailed loggedIn.accountName err }
+        --         |> UR.logGraphqlError msg err
+        -- CompletedProfileLoad _ ->
+        --     UR.init model
         FormMsg kycFormMsg ->
             let
                 newModel =
@@ -90,7 +115,7 @@ update msg model loggedIn =
                         Just error ->
                             newModel
                                 |> UR.init
-                                |> UR.addExt (ShowFeedback Failure error)
+                                |> UR.addExt (ShowFeedback Feedback.Failure error)
 
                         Nothing ->
                             model
@@ -100,11 +125,7 @@ update msg model loggedIn =
                                         |> Route.replaceUrl loggedIn.shared.navKey
                                     )
                                 |> UR.addExt (LoggedIn.ReloadResource LoggedIn.ProfileResource)
-                                |> UR.addExt
-                                    (ShowFeedback
-                                        Success
-                                        (t "community.kyc.add.success")
-                                    )
+                                |> UR.addExt (ShowFeedback Feedback.Success (t "community.kyc.add.success"))
 
                 _ ->
                     newModel |> UR.init

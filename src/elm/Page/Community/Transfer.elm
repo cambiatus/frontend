@@ -34,6 +34,7 @@ import Task
 import Transfer
 import UpdateResult as UR
 import Utils
+import View.Feedback as Feedback
 import View.Form.InputCounter
 
 
@@ -494,7 +495,7 @@ update msg model ({ shared } as loggedIn) =
                     model |> UR.init
 
         PushTransaction ->
-            case ( model.transferStatus, LoggedIn.isAuth loggedIn, loggedIn.selectedCommunity ) of
+            case ( model.transferStatus, LoggedIn.hasPrivateKey loggedIn, loggedIn.selectedCommunity ) of
                 ( CreatingSubscription form, True, RemoteData.Success community ) ->
                     let
                         account =
@@ -569,11 +570,7 @@ update msg model ({ shared } as loggedIn) =
                 SendingTransfer form ->
                     { model | transferStatus = EditingTransfer form }
                         |> UR.init
-                        |> UR.addExt
-                            (LoggedIn.ShowFeedback
-                                LoggedIn.Failure
-                                errorMessage
-                            )
+                        |> UR.addExt (LoggedIn.ShowFeedback Feedback.Failure errorMessage)
 
                 _ ->
                     onlyLogImpossible []

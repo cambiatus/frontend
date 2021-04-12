@@ -13,8 +13,9 @@ import Json.Encode as Encode exposing (Value)
 import Page
 import RemoteData
 import Route
-import Session.LoggedIn as LoggedIn exposing (External(..), FeedbackStatus(..))
+import Session.LoggedIn as LoggedIn exposing (External(..))
 import UpdateResult as UR
+import View.Feedback as Feedback
 
 
 
@@ -357,7 +358,7 @@ update msg model loggedIn =
                         _ ->
                             newModel
             in
-            if LoggedIn.isAuth loggedIn then
+            if LoggedIn.hasPrivateKey loggedIn then
                 case ( loggedIn.selectedCommunity, model.status ) of
                     ( RemoteData.Success community, Authorized (NewObjective objForm) ) ->
                         save objForm Nothing community.precision
@@ -377,7 +378,7 @@ update msg model loggedIn =
         GotSaveObjectiveResponse (Ok _) ->
             UR.init model
                 |> updateObjective msg (\o -> { o | save = Saved })
-                |> UR.addExt (ShowFeedback Success (t "community.objectives.create_success"))
+                |> UR.addExt (ShowFeedback Feedback.Success (t "community.objectives.create_success"))
                 -- TODO - This only works sometimes
                 |> UR.addExt (LoggedIn.ReloadResource LoggedIn.CommunityResource)
                 |> UR.addCmd (Route.replaceUrl loggedIn.shared.navKey Route.Community)
@@ -386,7 +387,7 @@ update msg model loggedIn =
             UR.init model
                 |> updateObjective msg (\o -> { o | save = SaveFailed })
                 |> UR.logDebugValue msg v
-                |> UR.addExt (ShowFeedback Failure (t "errors.unknown"))
+                |> UR.addExt (ShowFeedback Feedback.Failure (t "errors.unknown"))
 
 
 

@@ -2,8 +2,6 @@ module Session.LoggedIn exposing
     ( BroadcastMsg(..)
     , External(..)
     , ExternalMsg(..)
-    , FeedbackStatus(..)
-    , FeedbackVisibility(..)
     , Model
     , Msg(..)
     , Page(..)
@@ -11,11 +9,11 @@ module Session.LoggedIn exposing
     , addCommunity
     , addNotification
     , askedAuthentication
+    , hasPrivateKey
     , init
     , initLogin
     , isAccount
     , isActive
-    , isAuth
     , jsAddressToMsg
     , mapExternal
     , maybeInitWith
@@ -50,8 +48,8 @@ import Graphql.Document
 import Graphql.Http
 import Graphql.Operation exposing (RootSubscription)
 import Graphql.SelectionSet exposing (SelectionSet)
-import Html exposing (Html, a, button, div, footer, img, nav, p, span, text)
-import Html.Attributes exposing (class, classList, src, style, type_)
+import Html exposing (Html, a, button, div, footer, img, nav, p, text)
+import Html.Attributes exposing (class, classList, src, type_)
 import Html.Events exposing (onClick, onMouseEnter)
 import Http
 import I18Next exposing (Delims(..), Translations)
@@ -74,6 +72,7 @@ import Translation
 import UpdateResult as UR
 import Url exposing (Url)
 import View.Components
+import View.Feedback as Feedback
 import View.Modal as Modal
 
 
@@ -86,13 +85,10 @@ import View.Modal as Modal
 init : Shared -> Eos.Name -> String -> ( Model, Cmd Msg )
 init shared accountName authToken =
     let
-        authModel =
-            Auth.init shared
-
         communityName =
             communityNameFromUrl shared.url
     in
-    ( initModel shared authModel accountName authToken
+    ( initModel shared Nothing accountName authToken
     , Cmd.batch
         [ Api.Graphql.query shared (Just authToken) (Profile.query accountName) CompletedLoadProfile
         , Api.Graphql.query shared (Just authToken) (Community.communityNameQuery communityName) CompletedLoadCommunity
@@ -110,8 +106,8 @@ fetchTranslations language _ =
 
 {-| Initialize logged in user after signing-in.
 -}
-initLogin : Shared -> Auth.Model -> Profile.Model -> String -> ( Model, Cmd Msg )
-initLogin shared authModel profile_ authToken =
+initLogin : Shared -> Maybe Eos.PrivateKey -> Profile.Model -> String -> ( Model, Cmd Msg )
+initLogin shared maybePrivateKey_ profile_ authToken =
     let
         loadedProfile =
             Just profile_
@@ -122,7 +118,7 @@ initLogin shared authModel profile_ authToken =
         communityName =
             communityNameFromUrl shared.url
     in
-    ( initModel shared authModel profile_.account authToken
+    ( initModel shared maybePrivateKey_ profile_.account authToken
     , Cmd.batch
         [ Ports.getRecentSearches () -- run on the passphrase login, duplicated in `init`
         , loadedProfile
@@ -139,8 +135,7 @@ initLogin shared authModel profile_ authToken =
 subscriptions : Model -> Sub Msg
 subscriptions model =
     Sub.batch
-        [ Sub.map GotAuthMsg (Auth.subscriptions model.auth)
-        , Sub.map KeyDown (Browser.Events.onKeyDown (Decode.field "key" Decode.string))
+        [ Sub.map KeyDown (Browser.Events.onKeyDown (Decode.field "key" Decode.string))
         , Sub.map GotSearchMsg Search.subscriptions
         , Sub.map GotActionMsg (Action.subscriptions model.claimingAction)
         ]
@@ -164,7 +159,7 @@ type alias Model =
     , showAuthModal : Bool
     , auth : Auth.Model
     , showCommunitySelector : Bool
-    , feedback : FeedbackVisibility
+    , feedback : Feedback.Model
     , contactModel : Contact.Model
     , showContactModal : Bool
     , searchModel : Search.Model
@@ -173,8 +168,8 @@ type alias Model =
     }
 
 
-initModel : Shared -> Auth.Model -> Eos.Name -> String -> Model
-initModel shared authModel accountName authToken =
+initModel : Shared -> Maybe Eos.PrivateKey -> Eos.Name -> String -> Model
+initModel shared maybePrivateKey_ accountName authToken =
     { shared = shared
     , accountName = accountName
     , profile = RemoteData.Loading
@@ -186,8 +181,8 @@ initModel shared authModel accountName authToken =
     , notification = Notification.init
     , unreadCount = 0
     , showAuthModal = False
-    , auth = authModel
-    , feedback = Hidden
+    , auth = Auth.init maybePrivateKey_
+    , feedback = Feedback.Hidden
     , showCommunitySelector = False
     , contactModel = Contact.initSingle
     , showContactModal = False
@@ -197,22 +192,12 @@ initModel shared authModel accountName authToken =
     }
 
 
-type FeedbackStatus
-    = Success
-    | Failure
+hasPrivateKey : Model -> Bool
+hasPrivateKey model =
+    Auth.hasPrivateKey model.auth
 
 
-type FeedbackVisibility
-    = Show FeedbackStatus String
-    | Hidden
-
-
-isAuth : Model -> Bool
-isAuth model =
-    Auth.isAuth model.auth
-
-
-maybePrivateKey : Model -> Maybe String
+maybePrivateKey : Model -> Maybe Eos.PrivateKey
 maybePrivateKey model =
     Auth.maybePrivateKey model.auth
 
@@ -283,42 +268,11 @@ view thisMsg page ({ shared } as model) content =
             viewHelper thisMsg page profile_ model content
 
 
-viewFeedback : FeedbackStatus -> String -> Html Msg
-viewFeedback status message =
-    let
-        color =
-            case status of
-                Success ->
-                    " bg-green"
-
-                Failure ->
-                    " bg-red"
-    in
-    div
-        [ class <| "w-full sticky z-10 top-0 bg-blue-500 hover:bg-red-500" ++ color
-        , style "display" "grid"
-        , style "grid-template" "\". text x\" 100% / 10% 80% 10%"
-        ]
-        [ span
-            [ class "flex justify-center items-center text-sm h-10 leading-snug text-white font-bold"
-            , style "grid-area" "text"
-            ]
-            [ text message ]
-        , span
-            [ class "flex justify-center items-center ml-auto mr-6 cursor-pointer"
-            , style "grid-area" "x"
-            , onClick HideFeedbackLocal
-            ]
-            [ Icons.close "fill-current text-white"
-            ]
-        ]
-
-
 viewHelper : (Msg -> pageMsg) -> Page -> Profile.Model -> Model -> Html pageMsg -> Html pageMsg
 viewHelper pageMsg page profile_ ({ shared } as model) content =
     div
         [ class "min-h-screen flex flex-col" ]
-        (div [ class "bg-white" ]
+        ([ div [ class "bg-white" ]
             [ div [ class "container mx-auto" ]
                 [ viewHeader model profile_
                     |> Html.map pageMsg
@@ -328,16 +282,13 @@ viewHelper pageMsg page profile_ ({ shared } as model) content =
                   else
                     viewMainMenu page model |> Html.map pageMsg
                 ]
-            , case model.feedback of
-                Show status message ->
-                    viewFeedback status message |> Html.map pageMsg
-
-                Hidden ->
-                    text ""
             ]
-            :: (let
+         , Feedback.view model.feedback
+            |> Html.map (GotFeedbackMsg >> pageMsg)
+         ]
+            ++ (let
                     viewClaimWithProofs action proof =
-                        [ Action.viewClaimWithProofs proof shared.translators (isAuth model) action
+                        [ Action.viewClaimWithProofs proof shared.translators (hasPrivateKey model) action
                             |> Html.map (GotActionMsg >> pageMsg)
                         ]
                 in
@@ -374,7 +325,7 @@ viewHelper pageMsg page profile_ ({ shared } as model) content =
                     , isVisible = model.showAuthModal
                     }
                     |> Modal.withBody
-                        (Auth.view True shared model.auth
+                        (Auth.view shared model.auth
                             |> List.map (Html.map GotAuthMsg)
                         )
                     |> Modal.toHtml
@@ -490,7 +441,7 @@ viewHeader ({ shared } as model) profile_ =
                   else
                     text ""
                 ]
-            , div [ class "relative z-20" ]
+            , div [ class "relative z-50" ]
                 [ button
                     [ class "h-12 z-10 bg-gray-200 py-2 px-3 relative hidden lg:visible lg:flex"
                     , classList [ ( "rounded-tr-lg rounded-tl-lg", model.showUserNav ) ]
@@ -531,7 +482,7 @@ viewHeader ({ shared } as model) profile_ =
                   else
                     text ""
                 , nav
-                    [ class "absolute right-0 lg:w-full py-2 px-4 shadow-lg bg-white rounded-t-lg rounded-b-lg lg:rounded-t-none"
+                    [ class "absolute right-0 lg:w-full py-2 px-4 shadow-lg bg-white rounded-t-lg rounded-b-lg lg:rounded-t-none z-50"
                     , classList
                         [ ( "hidden", not model.showUserNav )
                         ]
@@ -774,7 +725,7 @@ type External msg
     | ExternalBroadcast BroadcastMsg
     | ReloadResource Resource
     | RequiredAuthentication (Maybe msg)
-    | ShowFeedback FeedbackStatus String
+    | ShowFeedback Feedback.Status String
     | HideFeedback
     | ShowContactModal
 
@@ -887,10 +838,10 @@ updateExternal externalMsg ({ shared } as model) =
             }
 
         ShowFeedback status message ->
-            { defaultResult | model = { model | feedback = Show status message } }
+            { defaultResult | model = { model | feedback = Feedback.Visible status message } }
 
         HideFeedback ->
-            { defaultResult | model = { model | feedback = Hidden } }
+            { defaultResult | model = { model | feedback = Feedback.Hidden } }
 
         ShowContactModal ->
             { defaultResult | model = showContactModal model }
@@ -934,7 +885,7 @@ type Msg
     | OpenCommunitySelector
     | CloseCommunitySelector
     | SelectedCommunity Profile.CommunityInfo
-    | HideFeedbackLocal
+    | GotFeedbackMsg Feedback.Msg
     | ClosedAddContactModal
     | GotContactMsg Contact.Msg
     | GotSearchMsg Search.Msg
@@ -1168,10 +1119,6 @@ update msg model =
                     GotAuthMsg
                     (\extMsg uResult ->
                         case extMsg of
-                            Auth.ClickedCancel ->
-                                closeModal uResult
-                                    |> UR.addExt AuthenticationFailed
-
                             Auth.CompletedAuth { user, token } auth ->
                                 let
                                     cmd =
@@ -1218,8 +1165,8 @@ update msg model =
                 model
                     |> UR.init
 
-        HideFeedbackLocal ->
-            { model | feedback = Hidden }
+        GotFeedbackMsg subMsg ->
+            { model | feedback = Feedback.update subMsg model.feedback }
                 |> UR.init
 
         OpenCommunitySelector ->
@@ -1280,14 +1227,14 @@ update msg model =
 
                                 Contact.WithError errorMessage ->
                                     { model_ | showContactModal = False }
-                                        |> showFeedback Failure errorMessage
+                                        |> showFeedback Feedback.Failure errorMessage
 
                                 Contact.WithContacts successMessage contacts ->
                                     { model_
                                         | profile = RemoteData.Success { userProfile | contacts = contacts }
                                         , showContactModal = False
                                     }
-                                        |> showFeedback Success successMessage
+                                        |> showFeedback Feedback.Success successMessage
                     in
                     { model | contactModel = contactModel }
                         |> addContactResponse
@@ -1314,10 +1261,10 @@ handleActionMsg ({ shared } as model) actionMsg =
                                     model.feedback
 
                                 ( Just (Action.Failure s), _ ) ->
-                                    Show Failure s
+                                    Feedback.Visible Feedback.Failure s
 
                                 ( Just (Action.Success s), _ ) ->
-                                    Show Success s
+                                    Feedback.Visible Feedback.Success s
 
                                 ( Nothing, _ ) ->
                                     model.feedback
@@ -1329,7 +1276,7 @@ handleActionMsg ({ shared } as model) actionMsg =
                                 identity
                            )
             in
-            Action.update (isAuth model)
+            Action.update (hasPrivateKey model)
                 shared
                 (Api.uploadImage shared)
                 community.symbol
@@ -1455,9 +1402,9 @@ askedAuthentication model =
     }
 
 
-showFeedback : FeedbackStatus -> String -> Model -> Model
+showFeedback : Feedback.Status -> String -> Model -> Model
 showFeedback feedbackStatus feedback model =
-    { model | feedback = Show feedbackStatus feedback }
+    { model | feedback = Feedback.Visible feedbackStatus feedback }
 
 
 
@@ -1649,10 +1596,10 @@ msgToString msg =
             [ "CloseCommunitySelector" ]
 
         SelectedCommunity _ ->
-            [ "SelectCommunity" ]
+            [ "SelectedCommunity" ]
 
-        HideFeedbackLocal ->
-            [ "HideFeedbackLocal" ]
+        GotFeedbackMsg _ ->
+            [ "GotFeedbackMsg" ]
 
         ClosedAddContactModal ->
             [ "ClosedAddContactModal" ]

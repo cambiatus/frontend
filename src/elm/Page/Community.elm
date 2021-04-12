@@ -22,7 +22,7 @@ import Json.Encode exposing (Value)
 import Page
 import RemoteData
 import Route
-import Session.LoggedIn as LoggedIn exposing (External(..), FeedbackStatus(..))
+import Session.LoggedIn as LoggedIn exposing (External(..))
 import Session.Shared exposing (Translators)
 import Strftime
 import Time exposing (Posix, posixToMillis)

@@ -15,7 +15,7 @@ import Eos
 import Eos.Account as Eos
 import File exposing (File)
 import Html exposing (Html, button, div, form, img, input, label, li, span, text, ul)
-import Html.Attributes exposing (accept, class, disabled, for, id, maxlength, multiple, src, type_)
+import Html.Attributes exposing (accept, class, classList, disabled, for, id, maxlength, multiple, src, type_)
 import Html.Events exposing (onSubmit)
 import Http
 import Icons
@@ -27,7 +27,8 @@ import Route
 import Session.LoggedIn as LoggedIn
 import Session.Shared exposing (Shared)
 import UpdateResult as UR
-import View.Form.Input
+import View.Feedback as Feedback
+import View.Form.Input as Input
 
 
 
@@ -111,7 +112,7 @@ update msg model loggedIn =
         CompletedLogoUpload (Err e) ->
             UR.init model
                 |> UR.addExt
-                    (LoggedIn.ShowFeedback LoggedIn.Failure
+                    (LoggedIn.ShowFeedback Feedback.Failure
                         (loggedIn.shared.translators.t "settings.community_info.errors.logo_upload")
                     )
                 |> UR.logHttpError msg e
@@ -132,7 +133,7 @@ update msg model loggedIn =
                 |> UR.init
 
         ClickedSave ->
-            case ( LoggedIn.isAuth loggedIn, isModelValid model, loggedIn.selectedCommunity ) of
+            case ( LoggedIn.hasPrivateKey loggedIn, isModelValid model, loggedIn.selectedCommunity ) of
                 ( True, True, RemoteData.Success community ) ->
                     let
                         authorization =
@@ -182,7 +183,7 @@ update msg model loggedIn =
                 RemoteData.Success community ->
                     { model | isLoading = False }
                         |> UR.init
-                        |> UR.addExt (LoggedIn.ShowFeedback LoggedIn.Success (loggedIn.shared.translators.t "community.create.success"))
+                        |> UR.addExt (LoggedIn.ShowFeedback Feedback.Success (loggedIn.shared.translators.t "community.create.success"))
                         |> UR.addCmd (Route.replaceUrl loggedIn.shared.navKey Route.Dashboard)
                         |> UR.addExt
                             (LoggedIn.CommunityLoaded
@@ -202,7 +203,7 @@ update msg model loggedIn =
         GotSaveResponse (Err _) ->
             { model | isLoading = False }
                 |> UR.init
-                |> UR.addExt (LoggedIn.ShowFeedback LoggedIn.Failure (loggedIn.shared.translators.t "community.error_saving"))
+                |> UR.addExt (LoggedIn.ShowFeedback Feedback.Failure (loggedIn.shared.translators.t "community.error_saving"))
 
 
 boolToInt : Bool -> Int
@@ -410,7 +411,7 @@ viewName shared model =
         { t } =
             shared.translators
     in
-    View.Form.Input.init
+    Input.init
         { label = t "settings.community_info.fields.name"
         , id = "community_name_input"
         , onInput = EnteredName
@@ -423,7 +424,7 @@ viewName shared model =
                 |> Maybe.map (\x -> [ x ])
         , translators = shared.translators
         }
-        |> View.Form.Input.toHtml
+        |> Input.toHtml
 
 
 viewDescription : Shared -> Model -> Html Msg
@@ -432,7 +433,7 @@ viewDescription shared model =
         { t } =
             shared.translators
     in
-    View.Form.Input.init
+    Input.init
         { label = t "settings.community_info.fields.description"
         , id = "community_description_input"
         , onInput = EnteredDescription
@@ -445,7 +446,8 @@ viewDescription shared model =
                 |> Maybe.map (\x -> [ x ])
         , translators = shared.translators
         }
-        |> View.Form.Input.toHtmlTextArea
+        |> Input.withType Input.TextArea
+        |> Input.toHtml
 
 
 viewUrl : Shared -> Model -> Html Msg
@@ -458,7 +460,7 @@ viewUrl shared model =
             text << t
     in
     div []
-        [ View.Form.Input.init
+        [ Input.init
             { label = t "settings.community_info.fields.url"
             , id = "community_description_input"
             , onInput = EnteredUrl
@@ -471,10 +473,19 @@ viewUrl shared model =
                     |> Maybe.map (\x -> [ x ])
             , translators = shared.translators
             }
-            |> View.Form.Input.withCounter 30
-            |> View.Form.Input.withAttrs [ maxlength 30 ]
-            |> View.Form.Input.withElement (text ".cambiatus.io")
-            |> View.Form.Input.toHtml
+            |> Input.withCounter 30
+            |> Input.withAttrs
+                [ maxlength 30
+                , classList [ ( "pr-29", not <| String.isEmpty model.urlInput ) ]
+                ]
+            |> Input.withElement
+                (span
+                    [ class "absolute inset-y-0 right-1 flex items-center bg-white pl-1 my-2"
+                    , classList [ ( "hidden", String.isEmpty model.urlInput ) ]
+                    ]
+                    [ text ".cambiatus.io" ]
+                )
+            |> Input.toHtml
         , div [ class "font-bold" ] [ text_ "settings.community_info.guidance" ]
         , ul [ class "text-gray-600" ]
             [ ul []

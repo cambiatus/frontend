@@ -22,9 +22,10 @@ import Profile exposing (Model)
 import Profile.EditKycForm as KycForm
 import RemoteData exposing (RemoteData)
 import Route
-import Session.LoggedIn as LoggedIn exposing (External(..), FeedbackStatus(..))
+import Session.LoggedIn as LoggedIn exposing (External(..))
 import Session.Shared exposing (Translators)
 import UpdateResult as UR
+import View.Feedback as Feedback
 import View.Modal as Modal
 
 
@@ -355,7 +356,7 @@ update session msg model =
                                 Just error ->
                                     newModel
                                         |> UR.init
-                                        |> UR.addExt (ShowFeedback Failure error)
+                                        |> UR.addExt (ShowFeedback Feedback.Failure error)
 
                                 Nothing ->
                                     model

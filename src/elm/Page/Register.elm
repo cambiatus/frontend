@@ -29,6 +29,7 @@ import Session.Guest as Guest exposing (External(..))
 import Session.Shared exposing (Shared, Translators)
 import UpdateResult as UR
 import Validate
+import View.Feedback as Feedback
 import View.Form
 
 
@@ -52,7 +53,6 @@ init invitationId { shared } =
             { accountKeys = Nothing
             , hasAgreedToSavePassphrase = False
             , isPassphraseCopiedToClipboard = False
-            , serverError = Nothing
             , status = initialStatus
             , invitationId = invitationId
             , invitation = Nothing
@@ -84,7 +84,6 @@ type alias Model =
     { accountKeys : Maybe AccountKeys
     , hasAgreedToSavePassphrase : Bool
     , isPassphraseCopiedToClipboard : Bool
-    , serverError : ServerError
     , status : Status
     , invitationId : InvitationId
     , invitation : Maybe Invite
@@ -129,10 +128,6 @@ type alias PdfData =
 type Error
     = FailedInvite (Graphql.Http.Error (Maybe Invite))
     | FailedCountry (Graphql.Http.Error (Maybe Address.Country))
-
-
-type alias ServerError =
-    Maybe String
 
 
 type alias InvitationId =
@@ -210,14 +205,7 @@ viewCreateAccount translators model =
                     [ class formClasses
                     , onSubmit (ValidateForm formModel)
                     ]
-                    [ case model.serverError of
-                        Just e ->
-                            div [ class "bg-red border-lg rounded p-4 mt-2 text-white mb-4" ]
-                                [ text e ]
-
-                        Nothing ->
-                            text ""
-                    , viewAccountTypeSelector translators model
+                    [ viewAccountTypeSelector translators model
                     , div [ class "sf-content" ]
                         [ viewRegistrationForm translators formModel ]
                     , viewFooterEnabled translators
@@ -811,14 +799,14 @@ update _ msg model { shared } =
                         |> UR.init
 
                 Nothing ->
-                    { model
-                        | serverError = Just (t "register.account_error.title")
-                    }
+                    model
                         |> UR.init
+                        |> UR.addExt (Guest.SetFeedback <| Feedback.Visible Feedback.Failure (t "register.account_error.title"))
 
         CompletedSignUp (RemoteData.Failure error) ->
-            { model | serverError = Just (t "register.account_error.title") }
+            model
                 |> UR.init
+                |> UR.addExt (Guest.SetFeedback <| Feedback.Visible Feedback.Failure (t "register.account_error.title"))
                 |> UR.logGraphqlError msg error
                 |> scrollTop
 
@@ -854,11 +842,9 @@ update _ msg model { shared } =
             UR.init { model | status = NotFound }
 
         CompletedLoadInvite (RemoteData.Failure error) ->
-            { model
-                | status = ErrorShowed (FailedInvite error)
-                , serverError = Just (t "error.unknown")
-            }
+            { model | status = ErrorShowed (FailedInvite error) }
                 |> UR.init
+                |> UR.addExt (Guest.SetFeedback <| Feedback.Visible Feedback.Failure (t "error.unknown"))
                 |> UR.logGraphqlError msg error
 
         CompletedLoadInvite _ ->

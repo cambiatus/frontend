@@ -33,6 +33,7 @@ import Session.Shared exposing (Shared, Translators)
 import Shop exposing (Product)
 import Transfer
 import UpdateResult as UR
+import View.Feedback as Feedback
 
 
 
@@ -186,7 +187,7 @@ update msg model loggedIn =
                     model
                         |> UR.init
                         |> UR.addExt
-                            (ShowFeedback LoggedIn.Success (t "shop.transfer.success"))
+                            (ShowFeedback Feedback.Success (t "shop.transfer.success"))
                         |> UR.addCmd
                             (Route.replaceUrl loggedIn.shared.navKey (Route.Shop Shop.All))
 
@@ -204,7 +205,7 @@ update msg model loggedIn =
                     model
                         |> UR.init
                         |> UR.addExt
-                            (LoggedIn.ShowFeedback LoggedIn.Failure errorMessage)
+                            (LoggedIn.ShowFeedback Feedback.Failure errorMessage)
 
                 _ ->
                     model
@@ -251,7 +252,7 @@ update msg model loggedIn =
                     validateForm sale model.form
             in
             if isFormValid validatedForm then
-                if LoggedIn.isAuth loggedIn then
+                if LoggedIn.hasPrivateKey loggedIn then
                     let
                         authorization =
                             { actor = loggedIn.accountName

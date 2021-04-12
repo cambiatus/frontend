@@ -30,11 +30,12 @@ import Page
 import RemoteData exposing (RemoteData)
 import Result exposing (Result)
 import Route
-import Session.LoggedIn as LoggedIn exposing (External(..), FeedbackStatus(..))
+import Session.LoggedIn as LoggedIn exposing (External(..))
 import Shop exposing (Product, ProductId)
 import Task
 import UpdateResult as UR
 import Utils exposing (decodeEnterKeyDown)
+import View.Feedback as Feedback
 import View.Form.InputCounter
 import View.Modal as Modal
 
@@ -763,7 +764,7 @@ update msg model loggedIn =
                 |> UR.init
 
         ClickedSave ->
-            if LoggedIn.isAuth loggedIn then
+            if LoggedIn.hasPrivateKey loggedIn then
                 let
                     validatedModel =
                         model
@@ -892,7 +893,7 @@ update msg model loggedIn =
                     UR.init model
 
         ClickedDeleteConfirm ->
-            if LoggedIn.isAuth loggedIn then
+            if LoggedIn.hasPrivateKey loggedIn then
                 case model of
                     EditingUpdate balances sale (Uploaded url) _ form ->
                         performRequest
@@ -932,7 +933,7 @@ update msg model loggedIn =
             UR.init model
                 |> UR.addCmd
                     (Route.replaceUrl loggedIn.shared.navKey (Route.Shop Shop.All))
-                |> UR.addExt (ShowFeedback Success (t "shop.create_offer_success"))
+                |> UR.addExt (ShowFeedback Feedback.Success (t "shop.create_offer_success"))
 
         GotSaveResponse (Err error) ->
             let
@@ -972,7 +973,7 @@ update msg model loggedIn =
                 |> UR.init
                 |> UR.addCmd
                     (Route.replaceUrl loggedIn.shared.navKey (Route.Shop Shop.All))
-                |> UR.addExt (ShowFeedback Success (t "shop.delete_offer_success"))
+                |> UR.addExt (ShowFeedback Feedback.Success (t "shop.delete_offer_success"))
 
         GotDeleteResponse (Err error) ->
             let

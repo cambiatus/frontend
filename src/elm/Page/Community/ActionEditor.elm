@@ -44,7 +44,7 @@ import Profile
 import RemoteData
 import Route
 import Select
-import Session.LoggedIn as LoggedIn exposing (External(..), FeedbackStatus(..))
+import Session.LoggedIn as LoggedIn exposing (External(..))
 import Session.Shared exposing (Shared)
 import Simple.Fuzzy
 import Strftime
@@ -52,6 +52,7 @@ import Task
 import Time
 import UpdateResult as UR
 import Utils
+import View.Feedback as Feedback
 import View.Form.InputCounter
 
 
@@ -1035,17 +1036,18 @@ update msg model ({ shared } as loggedIn) =
                 newModel =
                     { model | form = { oldForm | saveStatus = Saving } }
             in
-            case ( loggedIn.selectedCommunity, LoggedIn.isAuth loggedIn ) of
-                ( RemoteData.Success community, True ) ->
-                    upsertAction loggedIn community newModel isoDate
+            case loggedIn.selectedCommunity of
+                RemoteData.Success community ->
+                    if LoggedIn.hasPrivateKey loggedIn then
+                        upsertAction loggedIn community newModel isoDate
 
-                ( RemoteData.Success _, False ) ->
-                    newModel
-                        |> UR.init
-                        |> UR.addExt
-                            (Just (SaveAction isoDate)
-                                |> RequiredAuthentication
-                            )
+                    else
+                        newModel
+                            |> UR.init
+                            |> UR.addExt
+                                (Just (SaveAction isoDate)
+                                    |> RequiredAuthentication
+                                )
 
                 _ ->
                     UR.init newModel
@@ -1054,7 +1056,7 @@ update msg model ({ shared } as loggedIn) =
             model
                 |> UR.init
                 |> UR.addCmd (Route.replaceUrl loggedIn.shared.navKey Route.Objectives)
-                |> UR.addExt (ShowFeedback Success (t "community.actions.save_success"))
+                |> UR.addExt (ShowFeedback Feedback.Success (t "community.actions.save_success"))
                 -- TODO - This only works sometimes
                 |> UR.addExt (LoggedIn.ReloadResource LoggedIn.CommunityResource)
 
@@ -1067,7 +1069,7 @@ update msg model ({ shared } as loggedIn) =
                 |> UR.init
                 |> UR.logDebugValue msg val
                 |> UR.logImpossible msg []
-                |> UR.addExt (ShowFeedback Failure (t "error.unknown"))
+                |> UR.addExt (ShowFeedback Feedback.Failure (t "error.unknown"))
 
         PressedEnter val ->
             if val then
