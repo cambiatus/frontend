@@ -28,6 +28,7 @@ import Session.LoggedIn as LoggedIn
 import Session.Shared exposing (Shared)
 import UpdateResult as UR
 import View.Feedback as Feedback
+import View.Form
 import View.Form.Input as Input
 import View.Toggle
 
@@ -44,6 +45,7 @@ type alias Model =
     , descriptionErrors : List String
     , urlInput : String
     , urlErrors : List String
+    , requiresInvitation : Bool
     , isLoading : Bool
     }
 
@@ -57,6 +59,7 @@ init loggedIn =
       , descriptionErrors = []
       , urlInput = ""
       , urlErrors = []
+      , requiresInvitation = False
       , isLoading = True
       }
     , LoggedIn.maybeInitWith CompletedLoadCommunity .selectedCommunity loggedIn
@@ -74,7 +77,7 @@ type Msg
     | EnteredName String
     | EnteredDescription String
     | EnteredUrl String
-    | ToggledAutoInvite Bool
+    | ToggledInvitation Bool
     | ClickedSave
     | GotSaveResponse (Result Value Eos.Symbol)
 
@@ -91,12 +94,15 @@ update msg model loggedIn =
                 | logoUrl = community.logo
                 , nameInput = community.name
                 , descriptionInput = community.description
-                , isLoading = False
 
                 -- TODO - use community subdomain
                 , urlInput =
                     String.toLower community.name
                         |> String.replace " " "_"
+
+                -- TODO - Use community's requiresInvitation
+                , requiresInvitation = False
+                , isLoading = False
             }
                 |> UR.init
 
@@ -134,9 +140,8 @@ update msg model loggedIn =
                 |> validateUrl
                 |> UR.init
 
-        ToggledAutoInvite _ ->
-            -- TODO - Update community's auto invitation
-            model
+        ToggledInvitation requiresInvitation ->
+            { model | requiresInvitation = requiresInvitation }
                 |> UR.init
 
         ClickedSave ->
@@ -156,6 +161,7 @@ update msg model loggedIn =
                     { model | isLoading = True }
                         |> UR.init
                         |> UR.addPort
+                            -- TODO - Update requiresInvitation
                             { responseAddress = ClickedSave
                             , responseData = Encode.string (Eos.symbolToString community.symbol)
                             , data =
@@ -361,27 +367,16 @@ view_ loggedIn _ model =
         [ class "w-full px-4 pb-10"
         , onSubmit ClickedSave
         ]
-        -- TODO - Can we join this div into the form?
         [ div [ class "container mx-auto pt-4" ]
             [ div [ class "space-y-10" ]
                 [ viewLogo loggedIn.shared model
                 , viewName loggedIn.shared model
                 , viewDescription loggedIn.shared model
                 , viewUrl loggedIn.shared model
-                , View.Toggle.init
-                    { label = "settings.community_info.fields.invitation_tooltip"
-                    , id = "invitation_toggle"
-                    , onToggle = ToggledAutoInvite
-                    , disabled = False
-
-                    -- TODO - Use community auto invite attribute
-                    , value = True
-                    }
-                    |> View.Toggle.withTooltip "settings.community_info.fields.invitation_tooltip"
-                    |> View.Toggle.toHtml loggedIn.shared.translators
+                , viewInvitation loggedIn.shared model
                 ]
             , button
-                [ class "button button-primary w-full mt-8"
+                [ class "button button-primary w-full mt-14"
                 , disabled model.isLoading
                 ]
                 [ text (t "menu.save") ]
@@ -481,7 +476,7 @@ viewUrl shared model =
     div []
         [ Input.init
             { label = t "settings.community_info.fields.url"
-            , id = "community_description_input"
+            , id = "community_url_input"
             , onInput = EnteredUrl
             , disabled = model.isLoading
             , value = model.urlInput
@@ -517,6 +512,22 @@ viewUrl shared model =
                 , li [] [ text_ "settings.community_info.constraints.accents" ]
                 ]
             ]
+        ]
+
+
+viewInvitation : Shared -> Model -> Html Msg
+viewInvitation { translators } model =
+    div [ class "flex flex-col" ]
+        [ View.Form.label "" (translators.t "settings.community_info.invitation.title")
+        , span [ class "mt-5 mb-7" ] [ text (translators.t "settings.community_info.invitation.description") ]
+        , View.Toggle.init
+            { label = "settings.community_info.fields.invitation"
+            , id = "invitation_toggle"
+            , onToggle = ToggledInvitation
+            , disabled = False
+            , value = model.requiresInvitation
+            }
+            |> View.Toggle.toHtml translators
         ]
 
 
@@ -575,8 +586,8 @@ msgToString msg =
         EnteredUrl _ ->
             [ "EnteredUrl" ]
 
-        ToggledAutoInvite _ ->
-            [ "ToggledAutoInvite" ]
+        ToggledInvitation _ ->
+            [ "ToggledInvitation" ]
 
         ClickedSave ->
             [ "ClickedSave" ]

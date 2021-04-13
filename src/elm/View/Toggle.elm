@@ -2,6 +2,7 @@ module View.Toggle exposing
     ( init
     , withTooltip
     , toHtml
+    , withAttrs
     )
 
 {-| Creates a Cambiatus-style toggle input
@@ -60,6 +61,7 @@ type alias Options msg =
     , disabled : Bool
     , value : Bool
     , tooltip : Maybe String
+    , extraAttrs : List (Html.Attribute msg)
     }
 
 
@@ -73,6 +75,7 @@ init requiredOptions =
     , disabled = requiredOptions.disabled
     , value = requiredOptions.value
     , tooltip = Nothing
+    , extraAttrs = []
     }
 
 
@@ -85,6 +88,13 @@ init requiredOptions =
 withTooltip : String -> Options msg -> Options msg
 withTooltip tooltip options =
     { options | tooltip = Just tooltip }
+
+
+{-| Adds a list of attributes to the toggle
+-}
+withAttrs : List (Html.Attribute a) -> Options a -> Options a
+withAttrs attrs options =
+    { options | extraAttrs = options.extraAttrs ++ attrs }
 
 
 
@@ -110,14 +120,19 @@ toHtml ({ t } as translators) options =
             else
                 "text-grey"
     in
-    div [ class "flex w-full justify-between items-center text-sm" ]
+    label
+        ([ class "flex w-full justify-between items-center text-sm"
+         , for options.id
+         ]
+            ++ options.extraAttrs
+        )
         [ div [ class "flex items-center" ]
             [ text_ options.label
             , viewTooltip translators options
             ]
-        , div [ class ("flex items-center font-medium lowercase " ++ statusColor) ]
+        , div [ class ("flex items-center font-medium lowercase ml-2 " ++ statusColor) ]
             [ label [ for options.id ] [ text_ (statusText options) ]
-            , div [ class "form-switch ml-2" ]
+            , div [ class "form-switch ml-7" ]
                 [ input
                     [ type_ "checkbox"
                     , id options.id

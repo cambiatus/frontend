@@ -881,12 +881,15 @@
         "title": "Community logo",
         "description": "Your file must be in PNG, JPG or SVG format. It should measure 80px in width and 80px in height to be better viewed on the interface."
       },
+      "invitation": {
+        "title": "Access to the community",
+        "description": "When a community \"invitation\" is set, new members only get access through an invitation."
+      },
       "fields": {
         "name": "Community name",
         "description": "What is the community",
         "url": "Community custom URL",
-        "invitation": "Invitation",
-        "invitation_tooltip": "If this is enabled, users can only join if they're invited by a member of the community"
+        "invitation": "Invitation"
       },
       "placeholders": {
         "name": "Give your community a name",

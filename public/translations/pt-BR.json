@@ -885,12 +885,15 @@
         "title": "Logo da comunidade",
         "description": "Seu arquivo deve estar no formato PNG, JPG ou SVG. Ele deve medir 80px em largura e 80px em altura para ser melhor visualizado na interface."
       },
+      "invitation": {
+        "title": "Acesso à comunidade",
+        "description": "Quando o \"convite\" da comunidade está habilitado, novos membros só conseguem acesso através de um convite."
+      },
       "fields": {
         "name": "Nome da comunidade",
         "description": "O que é a comunidade",
         "url": "URL personalizado da comunidade",
-        "invitation": "Convite",
-        "invitation_tooltip": "Ao habilitar esta função, usuários só poderão se juntar à comunidade se forem convidados por um membro"
+        "invitation": "Convite"
       },
       "placeholders": {
         "name": "Dê um nome à sua comunidade",

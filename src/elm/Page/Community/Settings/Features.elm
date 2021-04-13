@@ -94,23 +94,21 @@ view loggedIn model =
                         , div
                             [ class "container divide-y px-4"
                             ]
-                            [ View.Toggle.init
+                            ([ View.Toggle.init
                                 { label = "community.objectives.title_plural"
                                 , id = "actions-toggle"
                                 , onToggle = ToggleObjectives
                                 , disabled = False
                                 , value = community.hasObjectives
                                 }
-                                |> View.Toggle.toHtml loggedIn.shared.translators
-                            , View.Toggle.init
+                             , View.Toggle.init
                                 { label = "menu.shop"
                                 , id = "shop-toggle"
                                 , onToggle = ToggleShop
                                 , disabled = False
                                 , value = community.hasShop
                                 }
-                                |> View.Toggle.toHtml loggedIn.shared.translators
-                            , View.Toggle.init
+                             , View.Toggle.init
                                 { label = "community.kyc.title"
                                 , id = "kyc-toggle"
                                 , onToggle = ToggleKyc
@@ -118,8 +116,12 @@ view loggedIn model =
                                 , value = community.hasKyc
                                 }
                                 |> View.Toggle.withTooltip "community.kyc.info"
-                                |> View.Toggle.toHtml loggedIn.shared.translators
-                            ]
+                             ]
+                                |> List.map
+                                    (View.Toggle.withAttrs [ class "py-6" ]
+                                        >> View.Toggle.toHtml loggedIn.shared.translators
+                                    )
+                            )
                         ]
 
                 ( RemoteData.Success _, Unauthorized ) ->

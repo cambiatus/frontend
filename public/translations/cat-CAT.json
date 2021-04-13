@@ -883,12 +883,15 @@
         "title": "Logotip de la comunitat",
         "description": "El fitxer ha de ser en format PNG, JPG o SVG. Ha de mesurar 80px d’amplada i 80px d’alçada per poder-se veure millor a la interfície."
       },
+      "invitation": {
+        "title": "Accés a la comunitat",
+        "description": "Quan s'estableix una \"invitació\" de la comunitat, els membres nous només podran accedir mitjançant una invitació."
+      },
       "fields": {
         "name": "Nom de la Comunitat",
         "description": "Què és la comunitat.",
         "url": "URL personalitzat de la comunitat.",
-        "invitation": "Invitació",
-        "invitation_tooltip": "Si aquesta opció està activada, els usuaris només es poden unir si els convida un membre de la comunitat"
+        "invitation": "Invitació"
       },
       "placeholders": {
         "name": "Doneu un nom a la vostra comunitat",

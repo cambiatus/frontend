@@ -883,12 +883,15 @@
         "title": "Logotipo de la comunidad",
         "description": "Su archivo debe estar en formato PNG, JPG o SVG. Debe medir 80px de ancho y 80px de alto para que se vea mejor en la interfaz."
       },
+      "invitation": {
+        "title": "Acceso a la comunidad",
+        "description": "Cuando se establece una \"invitación\" de la comunidad, los nuevos miembros solo obtienen acceso a través de una invitación."
+      },
       "fields": {
         "name": "Nombre de la comunidad",
         "description": "Que es la comunidad",
         "url": "URL personalizada de la comunidad",
-        "invitation": "Invitación",
-        "invitation_tooltip": "Si está habilitado, los usuarios solo pueden unirse si son invitados por un miembro de la comunidad"
+        "invitation": "Invitación"
       },
       "placeholders": {
         "name": "Dale un nombre a tu comunidad",
