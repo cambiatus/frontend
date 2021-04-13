@@ -916,9 +916,10 @@
         "accents": "Do not use special characters and letters with accents. Eg. @!?:;âãá"
       }
     },
-    "currency": {
-      "title": "Currency",
-      "description": ""
+    "community_currency": {
+      "title": "Currency and Rewards",
+      "decimal_places": "Decimal places",
+      "format": "Your currency format"
     },
     "actions": {
       "title": "Objectives and Actions",

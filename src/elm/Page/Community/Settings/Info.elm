@@ -340,10 +340,10 @@ view ({ shared } as loggedIn) model =
                 RemoteData.NotAsked ->
                     Page.fullPageLoading shared
 
-                RemoteData.Success _ ->
+                RemoteData.Success community ->
                     div [ class "bg-white" ]
                         [ Page.viewHeader loggedIn title Route.CommunitySettings
-                        , view_ loggedIn model
+                        , view_ loggedIn community model
                         ]
     in
     { title = title
@@ -351,8 +351,8 @@ view ({ shared } as loggedIn) model =
     }
 
 
-view_ : LoggedIn.Model -> Model -> Html Msg
-view_ loggedIn model =
+view_ : LoggedIn.Model -> Community.Model -> Model -> Html Msg
+view_ loggedIn _ model =
     let
         { t } =
             loggedIn.shared.translators
@@ -361,6 +361,7 @@ view_ loggedIn model =
         [ class "w-full px-4 pb-10"
         , onSubmit ClickedSave
         ]
+        -- TODO - Can we join this div into the form?
         [ div [ class "container mx-auto pt-4" ]
             [ div [ class "space-y-10" ]
                 [ viewLogo loggedIn.shared model
@@ -372,14 +373,9 @@ view_ loggedIn model =
                     , id = "invitation_toggle"
                     , onToggle = ToggledAutoInvite
                     , disabled = False
-                    , value =
-                        case loggedIn.selectedCommunity of
-                            RemoteData.Success _ ->
-                                -- TODO - Use community auto invite attribute
-                                True
 
-                            _ ->
-                                False
+                    -- TODO - Use community auto invite attribute
+                    , value = True
                     }
                     |> View.Toggle.withTooltip "settings.community_info.fields.invitation_tooltip"
                     |> View.Toggle.toHtml loggedIn.shared.translators

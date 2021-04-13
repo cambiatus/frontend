@@ -918,9 +918,10 @@
         "accents": "No utilitzeu caràcters especials ni lletres amb accents. Per exemple. @!?:; âãá"
       }
     },
-    "currency": {
-      "title": "Moeda",
-      "description": ""
+    "community_currency": {
+      "title": "Moneda i Recompenses",
+      "decimal_places": "Llocs decimals",
+      "format": "El vostre format de moneda"
     },
     "actions": {
       "title": "Objetius i Ações",

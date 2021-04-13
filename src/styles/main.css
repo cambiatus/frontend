@@ -68,6 +68,10 @@ body {
   @apply form-input h-12 text-sm outline-none transition-colors duration-100 text-black;
 }
 
+.input:disabled {
+  @apply bg-gray-500;
+}
+
 textarea.input {
   @apply h-40;
 }

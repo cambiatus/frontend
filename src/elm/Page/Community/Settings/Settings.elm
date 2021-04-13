@@ -1,6 +1,7 @@
 module Page.Community.Settings.Settings exposing (Model, Msg, init, msgToString, receiveBroadcast, update, view)
 
 import Community
+import Eos
 import Html exposing (Html, a, button, div, span, text)
 import Html.Attributes exposing (class, style)
 import Page
@@ -99,6 +100,7 @@ viewSettingsList shared community =
         , style "grid-gap" "16px"
         ]
         [ settingCard (translate "settings.community_info.title") (translate "menu.edit") (translate "settings.community_info.description") Route.CommunitySettingsInfo
+        , settingCard (translate "settings.community_currency.title") (translate "menu.edit") (Eos.symbolToSymbolCodeString community.symbol) Route.CommunitySettingsCurrency
         , if community.hasObjectives then
             settingCard (translate "settings.actions.title") (translate "menu.edit") "" Route.Objectives
 

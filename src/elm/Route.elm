@@ -31,6 +31,7 @@ type Route
     | CommunitySettings
     | CommunitySettingsFeatures
     | CommunitySettingsInfo
+    | CommunitySettingsCurrency
     | EditCommunity
     | Objectives
     | NewObjective
@@ -88,6 +89,7 @@ parser url =
         , Url.map CommunitySettings (s "community" </> s "settings")
         , Url.map CommunitySettingsFeatures (s "community" </> s "settings" </> s "features")
         , Url.map CommunitySettingsInfo (s "community" </> s "settings" </> s "info")
+        , Url.map CommunitySettingsCurrency (s "community" </> s "settings" </> s "currency")
         , Url.map Objectives (s "community" </> s "objectives")
         , Url.map NewObjective (s "community" </> s "objectives" </> s "new")
         , Url.map EditObjective (s "community" </> s "objectives" </> int </> s "edit")
@@ -295,6 +297,9 @@ routeToString route =
 
                 CommunitySettingsInfo ->
                     ( [ "community", "settings", "info" ], [] )
+
+                CommunitySettingsCurrency ->
+                    ( [ "community", "settings", "currency" ], [] )
 
                 NewCommunity ->
                     ( [ "community", "new" ], [] )

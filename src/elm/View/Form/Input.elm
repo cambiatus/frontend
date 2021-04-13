@@ -1,4 +1,4 @@
-module View.Form.Input exposing (FieldType(..), init, input, toHtml, withAttrs, withCounter, withCounterAttrs, withCounterType, withElement, withErrorAttrs, withType)
+module View.Form.Input exposing (FieldType(..), init, input, toHtml, withAttrs, withCounter, withCounterAttrs, withCounterType, withCurrency, withElement, withErrorAttrs, withType)
 
 {-| Creates a Cambiatus-style text input that supports error reporting, placeholders, localization
 and character counters.
@@ -18,7 +18,8 @@ and character counters.
 
 -}
 
-import Html exposing (Html, div, input, li, text, ul)
+import Eos
+import Html exposing (Html, div, input, li, span, text, ul)
 import Html.Attributes exposing (class, disabled, id, placeholder, value)
 import Html.Events exposing (onInput)
 import Session.Shared exposing (Translators)
@@ -147,12 +148,19 @@ withErrorAttrs attrs options =
 
 withAttrs : List (Html.Attribute a) -> InputOptions a -> InputOptions a
 withAttrs attrs options =
-    { options | extraAttrs = attrs }
+    { options | extraAttrs = options.extraAttrs ++ attrs }
 
 
 withElement : Html a -> InputOptions a -> InputOptions a
 withElement element options =
     { options | extraElement = Just element }
+
+
+withCurrency : Eos.Symbol -> InputOptions a -> InputOptions a
+withCurrency symbol options =
+    options
+        |> withElement (viewCurrencyElement symbol)
+        |> withAttrs [ class "pr-20" ]
 
 
 withType : FieldType -> InputOptions a -> InputOptions a
@@ -172,6 +180,12 @@ withCounterType counterType options =
 viewFieldProblem : List (Html.Attribute a) -> String -> Html a
 viewFieldProblem attrs problem =
     li (class "form-error absolute mr-10" :: attrs) [ text problem ]
+
+
+viewCurrencyElement : Eos.Symbol -> Html a
+viewCurrencyElement symbol =
+    span [ class "absolute right-0 rounded-r border-gray border bg-purple-500 uppercase inset-y-0 px-4 text-white flex items-center" ]
+        [ text <| Eos.symbolToSymbolCodeString symbol ]
 
 
 type alias InputOptions a =

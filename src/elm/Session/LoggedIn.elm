@@ -214,6 +214,7 @@ type Page
     | CommunitySettings
     | CommunitySettingsFeatures
     | CommunitySettingsInfo
+    | CommunitySettingsCurrency
     | CommunityEditor
     | Objectives
     | ObjectiveEditor

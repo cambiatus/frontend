@@ -365,7 +365,7 @@
           "symbol": "ምልክት",
           "description": "ማብራሪያ",
           "max_supply": "ከፍተኛዉ አቅርቦት",
-          "min balance": "ዝቅተኛዉ አቅርቦት",
+          "min_balance": "ዝቅተኛዉ አቅርቦት",
           "inviter_reward": "የጋባዥ ሽልማት",
           "invited_reward": "የተጋባዥ ሽልማት",
           "currency_name": "የገንዘብ ስም",
@@ -877,9 +877,10 @@
           "accents": "ልዩ ቁምፊዎችን እና ፊደላትን ከድምጽ ጋር አይጠቀሙ ፡፡ ለምሳሌ. @!?:; âãá"
         }
       },
-      "currency": {
-        "title": "ገንዘብ",
-        "description": ""
+      "community_currency": {
+        "title": "ምንዛሬ እና ሽልማት",
+        "decimal_places": "የአስርዮሽ ቦታዎች",
+        "format": "የእርስዎ ምንዛሬ ቅርጸት"
       },
       "actions": {
         "title": "ተጠባቂ ዉጤቶች እና ተግባራት",
