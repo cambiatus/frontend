@@ -21,14 +21,55 @@ let eos = null
 const USER_KEY = 'bespiral.user'
 const LANGUAGE_KEY = 'bespiral.language'
 const PUSH_PREF = 'bespiral.push.pref'
-const SELECTED_COMMUNITY_KEY = 'bespiral.selected_community'
 const AUTH_TOKEN = 'bespiral.auth_token'
 const RECENT_SEARCHES = 'bespiral.recent_search'
 const env = process.env.NODE_ENV || 'development'
 const graphqlSecret = process.env.GRAPHQL_SECRET || ''
 const config = configuration[env]
 
-const main = (setupIframe, getItem, removeItem, setItem) => {
+const GLOBAL_STORAGE_IFRAME_ID = 'cambiatus-globalstorage-iframe'
+
+const main = (setupIframe) => {
+  const operationsBeforeIframeLoad = []
+
+  // const isIframeLoaded = (iframe) => {
+
+  //   const iframeDoc = iframe.contentDocument || iframe.contentWindow.document
+  //   return iframeDoc.readyState === 'complete'
+  // }
+  let isIframeLoaded = false
+
+  const getItem = (key) => window.localStorage.getItem(key)
+
+  const removeItem = (key) => {
+    const iframe = document.getElementById(GLOBAL_STORAGE_IFRAME_ID)
+    if (isIframeLoaded) {
+      iframe.contentWindow.postMessage({
+        method: 'remove',
+        key
+      }, config.endpoints.globalStorage)
+    } else {
+      operationsBeforeIframeLoad.push({ method: 'remove', key })
+      debugLog('[==== OPERATIONS]: ', operationsBeforeIframeLoad)
+    }
+    window.localStorage.removeItem(key)
+  }
+
+  const setItem = (key, value) => {
+    const iframe = document.getElementById(GLOBAL_STORAGE_IFRAME_ID)
+    if (isIframeLoaded) {
+      iframe.contentWindow.postMessage({
+        method: 'set',
+        key,
+        value
+      }, config.endpoints.globalStorage)
+    } else {
+      operationsBeforeIframeLoad.push({ method: 'set', key, value })
+      debugLog('[==== OPERATIONS]: ', operationsBeforeIframeLoad)
+    }
+    window.localStorage.setItem(key, value)
+  }
+
   pdfMake.vfs = pdfFonts.pdfMake.vfs
   pdfMake.fonts = {
     Nunito: {
@@ -113,7 +154,6 @@ const main = (setupIframe, getItem, removeItem, setItem) => {
       logoMobile: config.logoMobile,
       now: Date.now(),
       allowCommunityCreation: config.allowCommunityCreation,
-      selectedCommunity: getSelectedCommunity() || config.selectedCommunity,
       tokenContract: config.tokenContract,
       communityContract: config.communityContract,
       canReadClipboard: canReadClipboard()
@@ -124,6 +164,14 @@ const main = (setupIframe, getItem, removeItem, setItem) => {
   const app = Elm.Main.init({
     flags: flags()
   })
+  setupIframe(false, (iframe) => {
+    operationsBeforeIframeLoad.forEach(operation => {
+      iframe.contentWindow.postMessage(operation, config.endpoints.globalStorage)
+    })
+
+    isIframeLoaded = true
+  })
+
   Sentry.addBreadcrumb({
     message: 'Started Elm app',
     level: Sentry.Severity.Info,
@@ -133,8 +181,6 @@ const main = (setupIframe, getItem, removeItem, setItem) => {
       flags: flags()
     }
   })
-
-  setupIframe(false)
 
   // Register Service Worker After App
   // registerServiceWorker()
@@ -261,15 +307,8 @@ const main = (setupIframe, getItem, removeItem, setItem) => {
     debugLog('stored pin', pin)
   }
 
-  function getSelectedCommunity () {
-    const selectedCommunity = getItem(SELECTED_COMMUNITY_KEY)
-    debugLog(`got selected community: ${selectedCommunity}`, '')
-    return selectedCommunity
-  }
-
   function logout () {
     removeItem(USER_KEY)
-    removeItem(SELECTED_COMMUNITY_KEY)
     removeItem(AUTH_TOKEN)
 
     Sentry.addBreadcrumb({
@@ -432,12 +471,6 @@ const main = (setupIframe, getItem, removeItem, setItem) => {
             // Configure Sentry logged user
             Sentry.setUser({ account: user.accountName })
             debugLog('set sentry user', user.accountName)
-
-            // Set default selected community
-            setItem(
-              SELECTED_COMMUNITY_KEY,
-              flags().selectedCommunity
-            )
 
             Sentry.addBreadcrumb({
               category: 'auth',
@@ -812,26 +845,6 @@ const main = (setupIframe, getItem, removeItem, setItem) => {
           return { notSupported: true }
         }
       }
-      case 'setSelectedCommunity': {
-        Sentry.addBreadcrumb({
-          type: 'navigation',
-          category: 'navigation',
-          data: {
-            from: getItem(SELECTED_COMMUNITY_KEY),
-            to: arg.data.selectedCommunity
-          },
-          message: 'Changed to community ' + arg.data.selectedCommunity,
-          level: Sentry.Severity.Info
-        })
-
-        removeItem(SELECTED_COMMUNITY_KEY)
-        setItem(
-          SELECTED_COMMUNITY_KEY,
-          arg.data.selectedCommunity
-        )
-
-        return {}
-      }
       default: {
         return { error: `No treatment found for Elm port ${arg.data.name}` }
       }
@@ -840,19 +853,7 @@ const main = (setupIframe, getItem, removeItem, setItem) => {
 }
 
 const mainApp = () => {
-  let setItem = (key, value) => {
-    console.log('DEFAULT SET ITEM')
-    window.localStorage.setItem(key, value)
-  }
-
-  let getItem = (key) => window.localStorage.getItem(key)
-
-  let removeItem = (key) => {
-    console.log('DEFAULT REMOVE ITEM')
-    window.localStorage.removeItem(key)
-  }
-
-  const setupIframe = (isInitial) => {
+  const setupIframe = (isInitial, onLoad) => {
     const iframe = document.createElement('iframe')
     const src = config.endpoints.globalStorage
 
@@ -862,35 +863,19 @@ const mainApp = () => {
         contentWindow.postMessage(message, src)
       }
 
-      setItem = (key, value) => {
-        console.log('CUSTOM SET ITEM')
-        postMessage({
-          method: 'set',
-          key,
-          value
-        })
-        window.localStorage.setItem(key, value)
-      }
-
-      removeItem = (key) => {
-        console.log('CUSTOM REMOVE ITEM')
-        postMessage({
-          method: 'remove',
-          key
-        })
-        window.localStorage.removeItem(key)
-      }
-
       if (isInitial) {
         postMessage({
           method: 'getMany',
-          keys: [USER_KEY, LANGUAGE_KEY, PUSH_PREF, SELECTED_COMMUNITY_KEY, AUTH_TOKEN, RECENT_SEARCHES]
+          keys: [USER_KEY, LANGUAGE_KEY, PUSH_PREF, AUTH_TOKEN, RECENT_SEARCHES]
         })
       }
+
+      onLoad(iframe)
     }
 
     iframe.src = src
     iframe.style = 'display: none'
+    iframe.id = GLOBAL_STORAGE_IFRAME_ID
     document.body.appendChild(iframe)
   }
 
@@ -908,27 +893,26 @@ const mainApp = () => {
 
       if (!hasRunMain) {
         hasRunMain = true
-        main(setupIframe, getItem, removeItem, setItem)
+        main(setupIframe)
       }
     }
   }
 
   // Read globalStorage data on load
   window.onload = () => {
-    setupIframe(true)
+    setupIframe(true, (iframe) => {})
   }
 }
 
 const globalStorage = () => {
-  // const allowedDomains = ['localhost', 'cambiatus.io']
+  const allowedDomains = ['localhost', 'cambiatus.io']
 
   window.onmessage = (e) => {
     const payload = e.data
-    // const isAllowed = allowedDomains.some(
-    //   (domain) =>
-    //     e.origin.endsWith(domain) || e.origin.includes(`${domain}/`) || e.origin.includes(`${domain}:`)
-    // )
-    const isAllowed = true
+    const isAllowed = allowedDomains.some(
+      (domain) =>
+        e.origin.endsWith(domain) || e.origin.includes(`${domain}/`) || e.origin.includes(`${domain}:`)
+    )
 
     if (!isAllowed || !payload.method) {
       return
@@ -938,7 +922,7 @@ const globalStorage = () => {
       window.parent.postMessage(message, e.origin)
     }
 
-    console.log('[==== GLOBAL STORAGE]', payload)
+    console.log('[==== GLOBAL STORAGE]:', payload)
 
     switch (payload.method) {
       case 'set':
@@ -965,7 +949,6 @@ const globalStorage = () => {
 }
 
 if (window.location.pathname === '/globalstorage') {
-  console.log('Starting globalstorage')
   globalStorage()
 } else {
   mainApp()
