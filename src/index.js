@@ -28,7 +28,7 @@ const env = process.env.NODE_ENV || 'development'
 const graphqlSecret = process.env.GRAPHQL_SECRET || ''
 const config = configuration[env]
 
-const main = (getItem, removeItem, setItem) => {
+const main = (setupIframe, getItem, removeItem, setItem) => {
   pdfMake.vfs = pdfFonts.pdfMake.vfs
   pdfMake.fonts = {
     Nunito: {
@@ -133,6 +133,8 @@ const main = (getItem, removeItem, setItem) => {
       flags: flags()
     }
   })
+
+  setupIframe(false)
 
   // Register Service Worker After App
   // registerServiceWorker()
@@ -839,12 +841,14 @@ const main = (getItem, removeItem, setItem) => {
 
 const mainApp = () => {
   let setItem = (key, value) => {
+    console.log('DEFAULT SET ITEM')
     window.localStorage.setItem(key, value)
   }
 
   let getItem = (key) => window.localStorage.getItem(key)
 
   let removeItem = (key) => {
+    console.log('DEFAULT REMOVE ITEM')
     window.localStorage.removeItem(key)
   }
 
@@ -859,6 +863,7 @@ const mainApp = () => {
       }
 
       setItem = (key, value) => {
+        console.log('CUSTOM SET ITEM')
         postMessage({
           method: 'set',
           key,
@@ -868,6 +873,7 @@ const mainApp = () => {
       }
 
       removeItem = (key) => {
+        console.log('CUSTOM REMOVE ITEM')
         postMessage({
           method: 'remove',
           key
@@ -902,7 +908,7 @@ const mainApp = () => {
 
       if (!hasRunMain) {
         hasRunMain = true
-        main(getItem, removeItem, setItem)
+        main(setupIframe, getItem, removeItem, setItem)
       }
     }
   }
@@ -914,14 +920,15 @@ const mainApp = () => {
 }
 
 const globalStorage = () => {
-  const allowedDomains = ['localhost', 'cambiatus.io']
+  // const allowedDomains = ['localhost', 'cambiatus.io']
 
   window.onmessage = (e) => {
     const payload = e.data
-    const isAllowed = allowedDomains.some(
-      (domain) =>
-        e.origin.endsWith(domain) || e.origin.includes(`${domain}/`) || e.origin.includes(`${domain}:`)
-    )
+    // const isAllowed = allowedDomains.some(
+    //   (domain) =>
+    //     e.origin.endsWith(domain) || e.origin.includes(`${domain}/`) || e.origin.includes(`${domain}:`)
+    // )
+    const isAllowed = true
 
     if (!isAllowed || !payload.method) {
       return
@@ -930,6 +937,8 @@ const globalStorage = () => {
     const respond = (message) => {
       window.parent.postMessage(message, e.origin)
     }
+
+    console.log('[==== GLOBAL STORAGE]', payload)
 
     switch (payload.method) {
       case 'set':
@@ -956,6 +965,7 @@ const globalStorage = () => {
 }
 
 if (window.location.pathname === '/globalstorage') {
+  console.log('Starting globalstorage')
   globalStorage()
 } else {
   mainApp()
