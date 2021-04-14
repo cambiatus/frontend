@@ -1,4 +1,11 @@
-module View.Form.Input exposing (FieldType(..), init, input, toHtml, withAttrs, withCounter, withCounterAttrs, withCounterType, withCurrency, withElement, withErrorAttrs, withType)
+module View.Form.Input exposing
+    ( init
+    , withCounter, withElement, withCurrency
+    , withCounterAttrs, withErrorAttrs, withAttrs
+    , withType, withCounterType, asNumeric
+    , toHtml, input
+    , FieldType(..)
+    )
 
 {-| Creates a Cambiatus-style text input that supports error reporting, placeholders, localization
 and character counters.
@@ -16,11 +23,39 @@ and character counters.
            |> View.Form.Input.withCounter 12
            |> View.Form.Input.toHtml
 
+
+# Initializing
+
+@docs init
+
+
+# Helpers
+
+
+## Adding elements
+
+@docs withCounter, withElement, withCurrency
+
+
+## Adding attributes
+
+@docs withCounterAttrs, withErrorAttrs, withAttrs
+
+
+## Changing types
+
+@docs withType, withCounterType, asNumeric
+
+
+# Converting to HTML
+
+@docs toHtml, input
+
 -}
 
 import Eos
 import Html exposing (Html, div, input, li, span, text, ul)
-import Html.Attributes exposing (class, disabled, id, placeholder, value)
+import Html.Attributes exposing (attribute, class, disabled, id, placeholder, value)
 import Html.Events exposing (onInput)
 import Session.Shared exposing (Translators)
 import View.Form
@@ -136,41 +171,72 @@ withCounter maximum options =
     { options | maximumCounterValue = Just maximum }
 
 
+{-| Adds attributes to the counter
+-}
 withCounterAttrs : List (Html.Attribute a) -> InputOptions a -> InputOptions a
 withCounterAttrs attrs options =
-    { options | counterAttrs = attrs }
+    { options | counterAttrs = options.counterAttrs ++ attrs }
 
 
+{-| Adds attributes to the field error
+-}
 withErrorAttrs : List (Html.Attribute a) -> InputOptions a -> InputOptions a
 withErrorAttrs attrs options =
-    { options | errorAttrs = attrs }
+    { options | errorAttrs = options.errorAttrs ++ attrs }
 
 
+{-| Adds attributes to the input field
+-}
 withAttrs : List (Html.Attribute a) -> InputOptions a -> InputOptions a
 withAttrs attrs options =
     { options | extraAttrs = options.extraAttrs ++ attrs }
 
 
+{-| Adds an element to the input, so we can have elements inside the input
+
+**Note**: the element isn't inside the input by default. You should use the
+`absolute` class, along with other classes you may need to position the element
+
+-}
 withElement : Html a -> InputOptions a -> InputOptions a
 withElement element options =
     { options | extraElement = Just element }
 
 
+{-| Displays the currency symbol in the input field
+
+**Note**: this is purely visual, you should still validate to check if the number
+is valid and has the symbol's precision
+
+-}
 withCurrency : Eos.Symbol -> InputOptions a -> InputOptions a
 withCurrency symbol options =
     options
         |> withElement (viewCurrencyElement symbol)
         |> withAttrs [ class "pr-20" ]
+        |> asNumeric
 
 
+{-| Determines the type of the input
+-}
 withType : FieldType -> InputOptions a -> InputOptions a
 withType fieldType options =
     { options | fieldType = fieldType }
 
 
+{-| Determines the counting strategy for the input
+-}
 withCounterType : View.Form.InputCounter.CounterType -> InputOptions a -> InputOptions a
 withCounterType counterType options =
     { options | counterType = counterType }
+
+
+{-| Defines the input as a numeric input
+-}
+asNumeric : InputOptions a -> InputOptions a
+asNumeric options =
+    options
+        |> withAttrs [ attribute "inputmode" "numeric" ]
 
 
 
@@ -207,6 +273,8 @@ type alias InputOptions a =
     }
 
 
+{-| All possible input types
+-}
 type FieldType
     = Text
     | TextArea
