@@ -906,8 +906,8 @@ save msg loggedIn ({ model } as uResult) =
                                                 , description = createAction.description
                                                 , inviterReward = createAction.inviterReward
                                                 , invitedReward = createAction.invitedReward
-                                                , hasObjectives = 1
-                                                , hasShop = 1
+                                                , hasObjectives = createAction.hasObjectives
+                                                , hasShop = createAction.hasShop
 
                                                 -- , hasKyc = 0
                                                 }

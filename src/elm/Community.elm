@@ -10,6 +10,7 @@ module Community exposing
     , Model
     , Objective
     , Transaction
+    , UpdateTokenData
     , Verification(..)
     , Verifiers
     , WithObjectives
@@ -26,6 +27,7 @@ module Community exposing
     , encodeCreateTokenData
     , encodeUpdateData
     , encodeUpdateObjectiveAction
+    , encodeUpdateTokenData
     , inviteQuery
     , logoBackground
     , logoUrl
@@ -427,6 +429,20 @@ encodeCreateTokenData c =
         ]
 
 
+type alias UpdateTokenData =
+    { maxSupply : Eos.Asset
+    , minBalance : Eos.Asset
+    }
+
+
+encodeUpdateTokenData : UpdateTokenData -> Value
+encodeUpdateTokenData c =
+    Encode.object
+        [ ( "max_supply", Eos.encodeAsset c.maxSupply )
+        , ( "min_balance", Eos.encodeAsset c.minBalance )
+        ]
+
+
 type alias UpdateCommunityData =
     { asset : Eos.Asset
     , logo : String
@@ -434,8 +450,8 @@ type alias UpdateCommunityData =
     , description : String
     , inviterReward : Eos.Asset
     , invitedReward : Eos.Asset
-    , hasObjectives : Int
-    , hasShop : Int
+    , hasObjectives : Eos.EosBool
+    , hasShop : Eos.EosBool
 
     -- , hasKyc : Int
     }
@@ -450,8 +466,8 @@ encodeUpdateData c =
         , ( "description", Encode.string c.description )
         , ( "inviter_reward", Eos.encodeAsset c.inviterReward )
         , ( "invited_reward", Eos.encodeAsset c.invitedReward )
-        , ( "has_objectives", Encode.int c.hasObjectives )
-        , ( "has_shop", Encode.int c.hasShop )
+        , ( "has_objectives", Eos.encodeEosBool c.hasObjectives )
+        , ( "has_shop", Eos.encodeEosBool c.hasShop )
 
         -- , ( "has_kyc", Encode.int c.hasKyc )
         ]

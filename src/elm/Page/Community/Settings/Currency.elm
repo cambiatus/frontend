@@ -2,6 +2,7 @@ module Page.Community.Settings.Currency exposing
     ( Model
     , Msg
     , init
+    , jsAddressToMsg
     , msgToString
     , receiveBroadcast
     , update
@@ -10,15 +11,20 @@ module Page.Community.Settings.Currency exposing
 
 import Community
 import Eos
+import Eos.Account as Eos
 import Html exposing (Html, button, div, form, span, text)
 import Html.Attributes exposing (class, disabled)
 import Html.Events exposing (onSubmit)
+import Json.Decode as Decode
+import Json.Encode as Encode
 import Page
+import Ports
 import RemoteData
 import Route
 import Session.LoggedIn as LoggedIn
 import Session.Shared exposing (Translators)
 import UpdateResult as UR
+import View.Feedback as Feedback
 import View.Form.Input as Input
 
 
@@ -32,6 +38,13 @@ type alias Model =
     , minimumBalance : String
     , isLoading : Bool
     , errors : List ( Field, String )
+    }
+
+
+type alias ValidModel =
+    { inviterReward : Float
+    , invitedReward : Float
+    , minimumBalance : Float
     }
 
 
@@ -57,6 +70,7 @@ type Msg
     | EnteredInvitedReward String
     | EnteredMinimumBalance String
     | ClickedSubmit
+    | GotSubmitResponse (Result Encode.Value ValidModel)
     | CompletedLoadCommunity Community.Model
 
 
@@ -65,24 +79,24 @@ type alias UpdateResult =
 
 
 update : Msg -> Model -> LoggedIn.Model -> UpdateResult
-update msg model loggedIn =
+update msg model ({ shared } as loggedIn) =
     case msg of
         Ignored ->
             UR.init model
 
         EnteredInviterReward inviterReward ->
             { model | inviterReward = inviterReward }
-                |> withSymbol validateInviterReward loggedIn
+                |> withSymbolValidation validateInviterReward InviterReward loggedIn
                 |> UR.init
 
         EnteredInvitedReward invitedReward ->
             { model | invitedReward = invitedReward }
-                |> withSymbol validateInvitedReward loggedIn
+                |> withSymbolValidation validateInvitedReward InvitedReward loggedIn
                 |> UR.init
 
         EnteredMinimumBalance minimumBalance ->
             { model | minimumBalance = minimumBalance }
-                |> withSymbol validateMinimumBalance loggedIn
+                |> withSymbolValidation validateMinimumBalance MinimumBalance loggedIn
                 |> UR.init
 
         ClickedSubmit ->
@@ -91,12 +105,12 @@ update msg model loggedIn =
                     case validateModel community.symbol model of
                         Ok validatedModel ->
                             if LoggedIn.hasPrivateKey loggedIn then
-                                -- TODO - Persist data
-                                { validatedModel | isLoading = True }
+                                { model | isLoading = True }
                                     |> UR.init
+                                    |> UR.addPort (savePort validatedModel loggedIn community)
 
                             else
-                                UR.init validatedModel
+                                UR.init model
                                     |> UR.addExt
                                         (Just ClickedSubmit
                                             |> LoggedIn.RequiredAuthentication
@@ -108,6 +122,36 @@ update msg model loggedIn =
                 _ ->
                     UR.init model
                         |> UR.logImpossible msg [ "CommunityNotLoaded" ]
+
+        GotSubmitResponse (Ok validModel) ->
+            { model | isLoading = False }
+                |> UR.init
+                |> (case loggedIn.selectedCommunity of
+                        RemoteData.Success community ->
+                            UR.addExt
+                                ({ community
+                                    | inviterReward = validModel.inviterReward
+                                    , invitedReward = validModel.invitedReward
+                                    , minBalance = Just validModel.minimumBalance
+                                 }
+                                    |> LoggedIn.CommunityLoaded
+                                    |> LoggedIn.ExternalBroadcast
+                                )
+                                >> UR.addExt
+                                    (LoggedIn.ShowFeedback Feedback.Success
+                                        (shared.translators.t "community.create.success")
+                                    )
+                                >> UR.addCmd (Route.pushUrl shared.navKey Route.CommunitySettings)
+
+                        _ ->
+                            UR.logImpossible msg [ "WithoutCommunity" ]
+                   )
+
+        GotSubmitResponse (Err val) ->
+            { model | isLoading = False }
+                |> UR.init
+                |> UR.addExt (LoggedIn.ShowFeedback Feedback.Failure (shared.translators.t "community.error_saving"))
+                |> UR.logDebugValue msg val
 
         CompletedLoadCommunity community ->
             { model
@@ -121,14 +165,60 @@ update msg model loggedIn =
                 |> UR.init
 
 
-withSymbol : (Eos.Symbol -> Model -> Model) -> LoggedIn.Model -> Model -> Model
-withSymbol fn loggedIn model =
-    case loggedIn.selectedCommunity of
+withSymbolValidation : (Eos.Symbol -> Model -> Result String a) -> Field -> LoggedIn.Model -> Model -> Model
+withSymbolValidation fn field loggedIn_ model_ =
+    case loggedIn_.selectedCommunity of
         RemoteData.Success community ->
-            fn community.symbol model
+            fn community.symbol model_
+                |> (\result -> setErrors field result model_)
 
         _ ->
-            model
+            model_
+
+
+savePort : ValidModel -> LoggedIn.Model -> Community.Model -> Ports.JavascriptOutModel Msg
+savePort validModel loggedIn community =
+    let
+        authorization =
+            { actor = loggedIn.accountName
+            , permissionName = Eos.samplePermission
+            }
+
+        asset amount =
+            { amount = amount
+            , symbol = community.symbol
+            }
+    in
+    { responseAddress = ClickedSubmit
+    , responseData = encodeValidModel validModel
+    , data =
+        Eos.encodeTransaction
+            [ { accountName = loggedIn.shared.contracts.community
+              , name = "update"
+              , authorization = authorization
+              , data =
+                    { asset = asset 0
+                    , logo = community.logo
+                    , name = community.name
+                    , description = community.description
+                    , inviterReward = asset validModel.inviterReward
+                    , invitedReward = asset validModel.invitedReward
+                    , hasObjectives = Eos.boolToEosBool community.hasObjectives
+                    , hasShop = Eos.boolToEosBool community.hasShop
+                    }
+                        |> Community.encodeUpdateData
+              }
+            , { accountName = loggedIn.shared.contracts.token
+              , name = "update"
+              , authorization = authorization
+              , data =
+                    { maxSupply = asset 21000000.0
+                    , minBalance = asset validModel.minimumBalance
+                    }
+                        |> Community.encodeUpdateTokenData
+              }
+            ]
+    }
 
 
 
@@ -146,16 +236,12 @@ isFieldError field ( errorField, _ ) =
     field == errorField
 
 
-validateNumberInput : Eos.Symbol -> String -> Result String String
+validateNumberInput : Eos.Symbol -> String -> Result String Float
 validateNumberInput symbol numberInput =
     let
         validateParsing =
-            case String.toFloat numberInput of
-                Nothing ->
-                    Err "error.validator.text.only_numbers"
-
-                Just _ ->
-                    Ok numberInput
+            String.toFloat numberInput
+                |> Result.fromMaybe "error.validator.text.only_numbers"
     in
     case String.split "." numberInput of
         [] ->
@@ -168,18 +254,15 @@ validateNumberInput symbol numberInput =
             validateParsing
 
         _ :: decimalDigits :: _ ->
-            if
-                (String.isEmpty decimalDigits && Eos.getSymbolPrecision symbol == 0)
-                    || (String.length decimalDigits > Eos.getSymbolPrecision symbol)
-            then
+            if String.length decimalDigits > Eos.getSymbolPrecision symbol then
                 Err "error.contracts.transfer.symbol precision mismatch"
 
             else
                 validateParsing
 
 
-setErrors : Field -> Model -> Result String String -> Model
-setErrors field model validationResult =
+setErrors : Field -> Result String a -> Model -> Model
+setErrors field validationResult model =
     let
         errorsWithoutField =
             List.filter (not << isFieldError field) model.errors
@@ -195,38 +278,43 @@ setErrors field model validationResult =
     }
 
 
-validateInviterReward : Eos.Symbol -> Model -> Model
+validateInviterReward : Eos.Symbol -> Model -> Result String Float
 validateInviterReward symbol model =
     validateNumberInput symbol model.inviterReward
-        |> setErrors InviterReward model
 
 
-validateInvitedReward : Eos.Symbol -> Model -> Model
+validateInvitedReward : Eos.Symbol -> Model -> Result String Float
 validateInvitedReward symbol model =
     validateNumberInput symbol model.invitedReward
-        |> setErrors InvitedReward model
 
 
-validateMinimumBalance : Eos.Symbol -> Model -> Model
+validateMinimumBalance : Eos.Symbol -> Model -> Result String Float
 validateMinimumBalance symbol model =
     validateNumberInput symbol model.minimumBalance
-        |> setErrors MinimumBalance model
 
 
-validateModel : Eos.Symbol -> Model -> Result Model Model
+validateModel : Eos.Symbol -> Model -> Result Model ValidModel
 validateModel symbol model =
     let
-        validatedModel =
-            model
-                |> validateInviterReward symbol
-                |> validateInvitedReward symbol
-                |> validateMinimumBalance symbol
-    in
-    if List.isEmpty validatedModel.errors then
-        Ok validatedModel
+        inviterValidation =
+            validateInviterReward symbol model
 
-    else
-        Err validatedModel
+        invitedValidation =
+            validateInvitedReward symbol model
+
+        minimumBalanceValidation =
+            validateMinimumBalance symbol model
+    in
+    case Result.map3 ValidModel inviterValidation invitedValidation minimumBalanceValidation of
+        Ok valid ->
+            Ok valid
+
+        Err _ ->
+            model
+                |> setErrors InviterReward inviterValidation
+                |> setErrors InvitedReward invitedValidation
+                |> setErrors MinimumBalance minimumBalanceValidation
+                |> Err
 
 
 
@@ -400,11 +488,48 @@ errorsForField translators field model =
 -- UTILS
 
 
+encodeValidModel : ValidModel -> Encode.Value
+encodeValidModel validModel =
+    Encode.object
+        [ ( "inviterReward", Encode.float validModel.inviterReward )
+        , ( "invitedReward", Encode.float validModel.invitedReward )
+        , ( "minimumBalance", Encode.float validModel.minimumBalance )
+        ]
+
+
+validModelDecoder : Decode.Decoder ValidModel
+validModelDecoder =
+    Decode.map3 ValidModel
+        (Decode.field "inviterReward" Decode.float)
+        (Decode.field "invitedReward" Decode.float)
+        (Decode.field "minimumBalance" Decode.float)
+
+
 receiveBroadcast : LoggedIn.BroadcastMsg -> Maybe Msg
 receiveBroadcast broadcastMsg =
     case broadcastMsg of
         LoggedIn.CommunityLoaded community ->
             Just (CompletedLoadCommunity community)
+
+        _ ->
+            Nothing
+
+
+jsAddressToMsg : List String -> Encode.Value -> Maybe Msg
+jsAddressToMsg addr val =
+    case addr of
+        "ClickedSubmit" :: [] ->
+            Decode.decodeValue
+                (Decode.oneOf
+                    [ Decode.map2 (\_ validModel -> Ok validModel)
+                        (Decode.field "transactionId" Decode.string)
+                        (Decode.field "addressData" validModelDecoder)
+                    , Decode.succeed (Err val)
+                    ]
+                )
+                val
+                |> Result.map GotSubmitResponse
+                |> Result.toMaybe
 
         _ ->
             Nothing
@@ -427,6 +552,9 @@ msgToString msg =
 
         ClickedSubmit ->
             [ "ClickedSubmit" ]
+
+        GotSubmitResponse r ->
+            [ "GotSubmitResponse", UR.resultToString r ]
 
         CompletedLoadCommunity _ ->
             [ "CompletedLoadCommunity" ]

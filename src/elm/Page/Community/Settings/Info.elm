@@ -176,8 +176,8 @@ update msg model loggedIn =
                                             , description = model.descriptionInput
                                             , inviterReward = asset community.inviterReward
                                             , invitedReward = asset community.invitedReward
-                                            , hasObjectives = boolToInt community.hasObjectives
-                                            , hasShop = boolToInt community.hasShop
+                                            , hasObjectives = Eos.boolToEosBool community.hasObjectives
+                                            , hasShop = Eos.boolToEosBool community.hasShop
                                             }
                                                 |> Community.encodeUpdateData
                                       }
@@ -217,15 +217,6 @@ update msg model loggedIn =
             { model | isLoading = False }
                 |> UR.init
                 |> UR.addExt (LoggedIn.ShowFeedback Feedback.Failure (loggedIn.shared.translators.t "community.error_saving"))
-
-
-boolToInt : Bool -> Int
-boolToInt bool =
-    if bool then
-        1
-
-    else
-        0
 
 
 type Field
