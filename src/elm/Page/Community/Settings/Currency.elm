@@ -3,6 +3,7 @@ module Page.Community.Settings.Currency exposing
     , Msg
     , init
     , msgToString
+    , receiveBroadcast
     , update
     , view
     )
@@ -10,12 +11,13 @@ module Page.Community.Settings.Currency exposing
 import Community
 import Eos
 import Html exposing (Html, button, div, form, span, text)
-import Html.Attributes exposing (class)
+import Html.Attributes exposing (class, disabled)
 import Html.Events exposing (onSubmit)
 import Page
 import RemoteData
 import Route
 import Session.LoggedIn as LoggedIn
+import Session.Shared exposing (Translators)
 import UpdateResult as UR
 import View.Form.Input as Input
 
@@ -28,16 +30,20 @@ type alias Model =
     { inviterReward : String
     , invitedReward : String
     , minimumBalance : String
+    , isLoading : Bool
+    , errors : List ( Field, String )
     }
 
 
 init : LoggedIn.Model -> ( Model, Cmd Msg )
-init _ =
+init loggedIn =
     ( { inviterReward = ""
       , invitedReward = ""
       , minimumBalance = ""
+      , isLoading = True
+      , errors = []
       }
-    , Cmd.none
+    , LoggedIn.maybeInitWith CompletedLoadCommunity .selectedCommunity loggedIn
     )
 
 
@@ -51,6 +57,7 @@ type Msg
     | EnteredInvitedReward String
     | EnteredMinimumBalance String
     | ClickedSubmit
+    | CompletedLoadCommunity Community.Model
 
 
 type alias UpdateResult =
@@ -65,19 +72,161 @@ update msg model loggedIn =
 
         EnteredInviterReward inviterReward ->
             { model | inviterReward = inviterReward }
+                |> withSymbol validateInviterReward loggedIn
                 |> UR.init
 
         EnteredInvitedReward invitedReward ->
             { model | invitedReward = invitedReward }
+                |> withSymbol validateInvitedReward loggedIn
                 |> UR.init
 
         EnteredMinimumBalance minimumBalance ->
             { model | minimumBalance = minimumBalance }
+                |> withSymbol validateMinimumBalance loggedIn
                 |> UR.init
 
         ClickedSubmit ->
-            -- TODO
-            UR.init model
+            case loggedIn.selectedCommunity of
+                RemoteData.Success community ->
+                    case validateModel community.symbol model of
+                        Ok validatedModel ->
+                            if LoggedIn.hasPrivateKey loggedIn then
+                                -- TODO - Persist data
+                                { validatedModel | isLoading = True }
+                                    |> UR.init
+
+                            else
+                                UR.init validatedModel
+                                    |> UR.addExt
+                                        (Just ClickedSubmit
+                                            |> LoggedIn.RequiredAuthentication
+                                        )
+
+                        Err withError ->
+                            UR.init withError
+
+                _ ->
+                    UR.init model
+                        |> UR.logImpossible msg [ "CommunityNotLoaded" ]
+
+        CompletedLoadCommunity community ->
+            { model
+                | inviterReward = String.fromFloat community.inviterReward
+                , invitedReward = String.fromFloat community.invitedReward
+                , minimumBalance =
+                    Maybe.map String.fromFloat community.minBalance
+                        |> Maybe.withDefault "0"
+                , isLoading = False
+            }
+                |> UR.init
+
+
+withSymbol : (Eos.Symbol -> Model -> Model) -> LoggedIn.Model -> Model -> Model
+withSymbol fn loggedIn model =
+    case loggedIn.selectedCommunity of
+        RemoteData.Success community ->
+            fn community.symbol model
+
+        _ ->
+            model
+
+
+
+-- VALIDATION
+
+
+type Field
+    = InviterReward
+    | InvitedReward
+    | MinimumBalance
+
+
+isFieldError : Field -> ( Field, String ) -> Bool
+isFieldError field ( errorField, _ ) =
+    field == errorField
+
+
+validateNumberInput : Eos.Symbol -> String -> Result String String
+validateNumberInput symbol numberInput =
+    let
+        validateParsing =
+            case String.toFloat numberInput of
+                Nothing ->
+                    Err "error.validator.text.only_numbers"
+
+                Just _ ->
+                    Ok numberInput
+    in
+    case String.split "." numberInput of
+        [] ->
+            Err "error.required"
+
+        [ "" ] ->
+            Err "error.required"
+
+        [ _ ] ->
+            validateParsing
+
+        _ :: decimalDigits :: _ ->
+            if
+                (String.isEmpty decimalDigits && Eos.getSymbolPrecision symbol == 0)
+                    || (String.length decimalDigits > Eos.getSymbolPrecision symbol)
+            then
+                Err "error.contracts.transfer.symbol precision mismatch"
+
+            else
+                validateParsing
+
+
+setErrors : Field -> Model -> Result String String -> Model
+setErrors field model validationResult =
+    let
+        errorsWithoutField =
+            List.filter (not << isFieldError field) model.errors
+    in
+    { model
+        | errors =
+            case validationResult of
+                Err err ->
+                    ( field, err ) :: errorsWithoutField
+
+                Ok _ ->
+                    errorsWithoutField
+    }
+
+
+validateInviterReward : Eos.Symbol -> Model -> Model
+validateInviterReward symbol model =
+    validateNumberInput symbol model.inviterReward
+        |> setErrors InviterReward model
+
+
+validateInvitedReward : Eos.Symbol -> Model -> Model
+validateInvitedReward symbol model =
+    validateNumberInput symbol model.invitedReward
+        |> setErrors InvitedReward model
+
+
+validateMinimumBalance : Eos.Symbol -> Model -> Model
+validateMinimumBalance symbol model =
+    validateNumberInput symbol model.minimumBalance
+        |> setErrors MinimumBalance model
+
+
+validateModel : Eos.Symbol -> Model -> Result Model Model
+validateModel symbol model =
+    let
+        validatedModel =
+            model
+                |> validateInviterReward symbol
+                |> validateInvitedReward symbol
+                |> validateMinimumBalance symbol
+    in
+    if List.isEmpty validatedModel.errors then
+        Ok validatedModel
+
+    else
+        Err validatedModel
 
 
 
@@ -125,7 +274,11 @@ view_ { shared } community model =
             Eos.getSymbolPrecision community.symbol
 
         fillWithPrecision amount =
-            String.join "," (String.fromInt amount :: List.repeat precision "0")
+            if precision == 0 then
+                String.fromInt amount
+
+            else
+                String.fromInt amount ++ "." ++ String.join "" (List.repeat precision "0")
     in
     form
         [ class "w-full px-4 pb-10"
@@ -137,7 +290,7 @@ view_ { shared } community model =
                 , id = "currency_name_field"
                 , onInput = \_ -> Ignored
                 , disabled = True
-                , value = community.name -- TODO - This should be currency name
+                , value = community.name
                 , placeholder = Nothing
                 , problems = Nothing
                 , translators = shared.translators
@@ -198,7 +351,7 @@ view_ { shared } community model =
                 , disabled = False
                 , value = model.inviterReward
                 , placeholder = Just (fillWithPrecision 10)
-                , problems = Nothing
+                , problems = errorsForField shared.translators InviterReward model
                 , translators = shared.translators
                 }
                 |> Input.withCurrency community.symbol
@@ -210,7 +363,7 @@ view_ { shared } community model =
                 , disabled = False
                 , value = model.invitedReward
                 , placeholder = Just (fillWithPrecision 5)
-                , problems = Nothing
+                , problems = errorsForField shared.translators InvitedReward model
                 , translators = shared.translators
                 }
                 |> Input.withCurrency community.symbol
@@ -222,23 +375,39 @@ view_ { shared } community model =
                 , disabled = False
                 , value = model.minimumBalance
                 , placeholder = Just (fillWithPrecision 0)
-                , problems = Nothing
+                , problems = errorsForField shared.translators MinimumBalance model
                 , translators = shared.translators
                 }
                 |> Input.withCurrency community.symbol
                 |> Input.toHtml
             , button
-                [ class "button button-primary w-full mt-8"
-
-                -- , disabled model.isLoading
+                [ class "button button-primary w-full mt-12"
+                , disabled model.isLoading
                 ]
                 [ text (t "menu.save") ]
             ]
         ]
 
 
+errorsForField : Translators -> Field -> Model -> Maybe (List String)
+errorsForField translators field model =
+    List.filter (isFieldError field) model.errors
+        |> List.map (Tuple.second >> translators.t)
+        |> Just
+
+
 
 -- UTILS
+
+
+receiveBroadcast : LoggedIn.BroadcastMsg -> Maybe Msg
+receiveBroadcast broadcastMsg =
+    case broadcastMsg of
+        LoggedIn.CommunityLoaded community ->
+            Just (CompletedLoadCommunity community)
+
+        _ ->
+            Nothing
 
 
 msgToString : Msg -> List String
@@ -258,3 +427,6 @@ msgToString msg =
 
         ClickedSubmit ->
             [ "ClickedSubmit" ]
+
+        CompletedLoadCommunity _ ->
+            [ "CompletedLoadCommunity" ]
