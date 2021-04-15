@@ -32,11 +32,6 @@ const GLOBAL_STORAGE_IFRAME_ID = 'cambiatus-globalstorage-iframe'
 const main = (setupIframe) => {
   const operationsBeforeIframeLoad = []
 
-  // const isIframeLoaded = (iframe) => {
-
-  //   const iframeDoc = iframe.contentDocument || iframe.contentWindow.document
-  //   return iframeDoc.readyState === 'complete'
-  // }
   let isIframeLoaded = false
 
   const getItem = (key) => window.localStorage.getItem(key)
@@ -50,7 +45,6 @@ const main = (setupIframe) => {
       }, config.endpoints.globalStorage)
     } else {
       operationsBeforeIframeLoad.push({ method: 'remove', key })
-      debugLog('[==== OPERATIONS]: ', operationsBeforeIframeLoad)
     }
     window.localStorage.removeItem(key)
   }
@@ -65,7 +59,6 @@ const main = (setupIframe) => {
       }, config.endpoints.globalStorage)
     } else {
       operationsBeforeIframeLoad.push({ method: 'set', key, value })
-      debugLog('[==== OPERATIONS]: ', operationsBeforeIframeLoad)
     }
     window.localStorage.setItem(key, value)
   }
@@ -888,6 +881,8 @@ const mainApp = () => {
       payload.data.forEach(({ key, value }) => {
         if (value) {
           window.localStorage.setItem(key, value)
+        } else {
+          window.localStorage.removeItem(key)
         }
       })
 
@@ -921,8 +916,6 @@ const globalStorage = () => {
     const respond = (message) => {
       window.parent.postMessage(message, e.origin)
     }
-
-    console.log('[==== GLOBAL STORAGE]:', payload)
 
     switch (payload.method) {
       case 'set':
