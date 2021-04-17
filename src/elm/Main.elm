@@ -884,14 +884,9 @@ changeRouteTo maybeRoute model =
                 |> withLoggedIn Route.CommunitySettingsCurrency
 
         Just Route.NewCommunity ->
-            CommunityEditor.initNew
+            CommunityEditor.init
                 >> updateStatusWith CommunityEditor GotCommunityEditorMsg model
                 |> withLoggedIn Route.NewCommunity
-
-        Just Route.EditCommunity ->
-            CommunityEditor.initEdit
-                >> updateStatusWith CommunityEditor GotCommunityEditorMsg model
-                |> withLoggedIn Route.EditCommunity
 
         Just Route.Objectives ->
             Objectives.init

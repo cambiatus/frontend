@@ -3,7 +3,7 @@ module View.Form.Input exposing
     , withCounter, withElement, withCurrency
     , withCounterAttrs, withErrorAttrs, withAttrs
     , withType, withCounterType, asNumeric
-    , toHtml, input
+    , toHtml
     , FieldType(..)
     )
 
@@ -49,7 +49,7 @@ and character counters.
 
 # Converting to HTML
 
-@docs toHtml, input
+@docs toHtml
 
 -}
 

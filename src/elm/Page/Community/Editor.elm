@@ -1,8 +1,7 @@
 module Page.Community.Editor exposing
     ( Model
     , Msg
-    , initEdit
-    , initNew
+    , init
     , jsAddressToMsg
     , msgToString
     , receiveBroadcast
@@ -15,14 +14,13 @@ import Api
 import Asset.Icon as Icon
 import Browser.Events as Events
 import Community exposing (Model)
-import Dict exposing (Dict)
 import Eos exposing (Symbol)
 import Eos.Account as Eos
 import File exposing (File)
 import Graphql.Document
-import Html exposing (Html, br, button, div, input, label, span, text, textarea)
-import Html.Attributes exposing (accept, class, classList, disabled, for, id, maxlength, minlength, multiple, placeholder, required, type_, value)
-import Html.Events exposing (onClick, onInput, onSubmit)
+import Html exposing (Html, button, div, input, label, span, text)
+import Html.Attributes exposing (accept, class, classList, disabled, for, id, maxlength, minlength, multiple, required, type_)
+import Html.Events exposing (onClick, onSubmit)
 import Http
 import Json.Decode as Decode
 import Json.Encode as Encode exposing (Value)
@@ -34,24 +32,19 @@ import Session.Shared exposing (Shared)
 import Task
 import UpdateResult as UR
 import Utils exposing (decodeEnterKeyDown)
+import View.Components
 import View.Feedback as Feedback
+import View.Form.Input as Input
 
 
 
 -- INIT
 
 
-initNew : LoggedIn.Model -> ( Model, Cmd Msg )
-initNew _ =
-    ( EditingNew Dict.empty newForm
+init : LoggedIn.Model -> ( Model, Cmd Msg )
+init _ =
+    ( Editing [] initForm
     , Cmd.none
-    )
-
-
-initEdit : LoggedIn.Model -> ( Model, Cmd Msg )
-initEdit loggedIn =
-    ( Loading
-    , LoggedIn.maybeInitWith CompletedLoadCommunity .selectedCommunity loggedIn
     )
 
 
@@ -72,17 +65,23 @@ type alias Model =
     Status
 
 
+type alias Errors =
+    List ( FormField, FormError )
+
+
 type Status
-    = -- Edit Community
-      Loading
-    | Unauthorized Community.Model
-    | Editing Community.Model (Dict String FormError) Form
-    | WaitingEditLogoUpload Community.Model Form
-    | Saving Community.Model Form
-      -- New Community
-    | EditingNew (Dict String FormError) Form
-    | WaitingNewLogoUpload Form
+    = Editing Errors Form
+    | WaitingLogoUpload Form
     | Creating Form
+
+
+type FormField
+    = Description
+    | CurrencyName
+    | SymbolField
+    | InvitedReward
+    | InviterReward
+    | MinimumBalance
 
 
 type alias Form =
@@ -100,8 +99,8 @@ type alias Form =
     }
 
 
-newForm : Form
-newForm =
+initForm : Form
+initForm =
     { name = ""
     , description = ""
     , symbol = ""
@@ -113,35 +112,6 @@ newForm =
     , hasShop = True
     , hasObjectives = True
     , hasKyc = False
-    }
-
-
-editForm : Community.Model -> Form
-editForm community =
-    let
-        ( logoSelected, logoList ) =
-            case List.elemIndex (Uploaded community.logo) defaultLogos of
-                Just index ->
-                    ( index
-                    , defaultLogos
-                    )
-
-                Nothing ->
-                    ( List.length defaultLogos
-                    , defaultLogos ++ [ Uploaded community.logo ]
-                    )
-    in
-    { name = community.name
-    , description = community.description
-    , symbol = Eos.symbolToString community.symbol
-    , logoSelected = logoSelected
-    , logoList = logoList
-    , inviterReward = String.fromFloat community.inviterReward
-    , invitedReward = String.fromFloat community.invitedReward
-    , minBalance = String.fromFloat (community.minBalance |> Maybe.withDefault 0.0)
-    , hasShop = community.hasShop
-    , hasObjectives = community.hasObjectives
-    , hasKyc = community.hasKyc
     }
 
 
@@ -157,8 +127,11 @@ defaultLogos =
 
 type LogoStatus
     = Uploading
-    | UploadingFailed Http.Error
     | Uploaded String
+
+
+
+-- TODO - Check which are needed
 
 
 type FormError
@@ -169,7 +142,7 @@ type FormError
 
 type FormStatus
     = Valid Community.CreateCommunityData
-    | Invalid (Dict String FormError)
+    | Invalid Errors
     | UploadingLogo
 
 
@@ -181,9 +154,6 @@ encodeForm loggedIn form =
 
         Just (Uploaded logoUrl) ->
             encodeFormHelper logoUrl loggedIn form
-
-        Just (UploadingFailed _) ->
-            Invalid (Dict.singleton fieldLogoId ChooseOrUploadLogo)
 
         Nothing ->
             encodeFormHelper "" loggedIn form
@@ -197,7 +167,7 @@ encodeFormHelper logoUrl { accountName } form =
     in
     case maybeSymbol of
         Nothing ->
-            Invalid (Dict.singleton fieldSymbolId InvalidSymbol)
+            Invalid [ ( SymbolField, InvalidSymbol ) ]
 
         Just symbol ->
             { accountName = accountName
@@ -226,216 +196,155 @@ view ({ shared } as loggedIn) model =
         t =
             shared.translators.t
 
-        content =
+        ( errors, isDisabled, form ) =
             case model of
-                Loading ->
-                    Page.fullPageLoading shared
+                Editing problems form_ ->
+                    ( problems, False, form_ )
 
-                Unauthorized _ ->
-                    div [ class "container mx-auto px-4" ]
-                        [ Page.viewTitle (t "community.edit.title")
-                        , div [ class "card" ]
-                            [ text (t "community.edit.unauthorized") ]
-                        ]
+                WaitingLogoUpload form_ ->
+                    ( [], True, form_ )
 
-                Editing _ problems form ->
-                    viewForm loggedIn True False problems form model
-
-                WaitingEditLogoUpload _ form ->
-                    viewForm loggedIn True True Dict.empty form model
-
-                Saving _ form ->
-                    viewForm loggedIn True True Dict.empty form model
-
-                EditingNew problems form ->
-                    viewForm loggedIn False False problems form model
-
-                WaitingNewLogoUpload form ->
-                    viewForm loggedIn False True Dict.empty form model
-
-                Creating form ->
-                    viewForm loggedIn False True Dict.empty form model
-    in
-    { title = t "community.edit.title"
-    , content = content
-    }
-
-
-viewForm : LoggedIn.Model -> Bool -> Bool -> Dict String FormError -> Form -> Model -> Html Msg
-viewForm ({ shared } as loggedIn) isEdit isDisabled errors form model =
-    let
-        t =
-            shared.translators.t
-
-        ( titleText, actionText ) =
-            if isEdit then
-                ( t "community.edit.title", t "community.edit.submit" )
-
-            else
-                ( t "community.create.title", t "community.create.submit" )
+                Creating form_ ->
+                    ( [], True, form_ )
 
         cmd =
             case model of
-                EditingNew _ _ ->
+                Editing _ _ ->
                     NewCommunitySubscription form.symbol
 
                 _ ->
                     ClickedSave
     in
-    div [ class "bg-white pb-10" ]
-        [ Page.viewHeader loggedIn titleText Route.Dashboard
-        , Html.form
-            [ class "container mx-auto px-4"
-            , onSubmit cmd
-            ]
-            [ div [ class "my-10" ]
-                [ viewFieldDescription shared isDisabled form.description errors
-                , viewFieldCurrencyName shared isDisabled form.name errors
-                , div [ class "flex flex-row mt-4" ]
-                    [ div [ class "w-1/2 pr-2" ]
-                        [ viewFieldCurrencySymbol shared (isEdit || isDisabled) form.symbol errors
-                        , viewFieldInviterReward shared isDisabled form.inviterReward errors
+    { title = t "community.create.title"
+    , content =
+        div [ class "bg-white pb-10" ]
+            [ Page.viewHeader loggedIn (t "community.create.title") Route.Dashboard
+            , Html.form
+                [ class "container mx-auto px-4"
+                , onSubmit cmd
+                ]
+                [ div [ class "my-10" ]
+                    [ viewDescription shared isDisabled form.description errors
+                    , viewCurrencyName shared isDisabled form.name errors
+                    , div [ class "flex flex-row mt-4" ]
+                        [ div [ class "w-1/2 pr-2" ]
+                            [ viewSymbol shared isDisabled form.symbol errors
+                            , viewInviterReward shared isDisabled form.inviterReward errors
+                            ]
+                        , div [ class "w-1/2 pl-2" ]
+                            [ viewInvitedReward shared isDisabled form.invitedReward errors
+                            , viewMinBalance shared isDisabled form.minBalance errors
+                            ]
                         ]
-                    , div [ class "w-1/2 pl-2" ]
-                        [ viewFieldInvitedReward shared isDisabled form.invitedReward errors
-                        , viewFieldMinBalance shared isDisabled form.minBalance errors
-                        ]
+                    , viewLogo shared isDisabled form.logoSelected form.logoList
                     ]
-                , viewFieldLogo shared isDisabled form.logoSelected form.logoList errors
-                , viewFieldError shared "form" errors
+                , button
+                    [ class "button button-primary w-full"
+                    , disabled isDisabled
+                    ]
+                    [ text (t "community.create.submit") ]
                 ]
-            , button
-                [ class "button button-primary w-full"
-                , disabled isDisabled
-                ]
-                [ text actionText ]
             ]
+    }
+
+
+viewDescription : Shared -> Bool -> String -> Errors -> Html Msg
+viewDescription ({ translators } as shared) isDisabled defVal errors =
+    div []
+        [ span [ class "input-label" ] [ text (translators.t "community.create.labels.description") ]
+        , Input.init
+            { label = translators.t "community.create.tooltips.description"
+            , id = "comm-description"
+            , onInput = EnteredDescription
+            , disabled = isDisabled
+            , value = defVal
+            , placeholder = Nothing
+            , problems = Just (getFieldProblems shared Description errors)
+            , translators = translators
+            }
+            |> Input.withType Input.TextArea
+            |> Input.withAttrs [ maxlength 255, class "h-40" ]
+            |> Input.toHtml
         ]
 
 
-viewFieldDescription : Shared -> Bool -> String -> Dict String FormError -> Html Msg
-viewFieldDescription shared isDisabled defVal errors =
+viewCurrencyName : Shared -> Bool -> String -> Errors -> Html Msg
+viewCurrencyName ({ translators } as shared) isDisabled defVal errors =
+    Input.init
+        { label = translators.t "community.create.labels.currency_name"
+        , id = "comm-currency-name"
+        , onInput = EnteredTitle
+        , disabled = isDisabled
+        , value = defVal
+        , placeholder = Nothing
+        , problems = Just (getFieldProblems shared CurrencyName errors)
+        , translators = translators
+        }
+        |> Input.withAttrs [ maxlength 255, required True ]
+        |> Input.toHtml
+
+
+viewSymbol : Shared -> Bool -> String -> Errors -> Html Msg
+viewSymbol ({ translators } as shared) isDisabled defVal errors =
+    Input.init
+        { label = translators.t "community.create.labels.currency_symbol"
+        , id = "comm-currency-symbol"
+        , onInput = EnteredSymbol
+        , disabled = isDisabled
+        , value = defVal
+        , placeholder = Just "_, _ _ _ _"
+        , problems = Just (getFieldProblems shared SymbolField errors)
+        , translators = translators
+        }
+        |> Input.withAttrs [ minlength 5, maxlength 6, required True ]
+        |> Input.toHtml
+
+
+viewLogo : Shared -> Bool -> Int -> List LogoStatus -> Html Msg
+viewLogo shared isDisabled selected logos =
     let
+        t =
+            shared.translators.t
+
         id_ =
-            "comm-description"
+            "community-editor-logo-upload"
 
-        t =
-            shared.translators.t
-    in
-    formField
-        [ span [ class "input-label" ]
-            [ text (t "community.create.labels.description")
-            , br [] []
-            , span [] [ text (t "community.create.tooltips.description") ]
-            ]
-        , textarea
-            [ class "w-full input rounded-sm"
-            , id id_
-            , value defVal
-            , maxlength 255
-            , onInput EnteredDescription
-            , disabled isDisabled
-            ]
-            []
-        , viewFieldError shared id_ errors
-        ]
+        activeClass =
+            "border border-gray-900 shadow-lg"
 
-
-viewFieldCurrencyName : Shared -> Bool -> String -> Dict String FormError -> Html Msg
-viewFieldCurrencyName shared isDisabled defVal errors =
-    let
-        id_ =
-            "comm-currency-name"
-
-        t =
-            shared.translators.t
-    in
-    formField
-        [ span [ class "input-label" ]
-            [ text <| t "community.create.labels.currency_name" ]
-        , input
-            [ class "w-full input rounded-sm"
-            , id id_
-            , value defVal
-            , maxlength 255
-            , required True
-            , onInput EnteredTitle
-            , disabled isDisabled
-            ]
-            []
-        , viewFieldError shared id_ errors
-        ]
-
-
-viewFieldCurrencySymbol : Shared -> Bool -> String -> Dict String FormError -> Html Msg
-viewFieldCurrencySymbol shared isDisabled defVal errors =
-    let
-        t =
-            shared.translators.t
-    in
-    formField
-        [ span [ class "input-label" ]
-            [ text <| t "community.create.labels.currency_symbol" ]
-        , input
-            [ class "w-full input rounded-sm"
-            , id fieldSymbolId
-            , value defVal
-            , minlength 5
-            , maxlength 6
-            , required True
-            , onInput EnteredSymbol
-            , disabled isDisabled
-            , placeholder "_ , _ _ _ _"
-            ]
-            []
-        , viewFieldError shared fieldSymbolId errors
-        ]
-
-
-viewFieldLogo : Shared -> Bool -> Int -> List LogoStatus -> Dict String FormError -> Html Msg
-viewFieldLogo shared isDisabled selected logos errors =
-    let
-        t =
-            shared.translators.t
-
-        logoClass s =
-            "create-community-logo-list-item" ++ s
+        itemClass =
+            String.words activeClass
+                |> List.map (\word -> String.join " " [ "hover:" ++ word, "focus:" ++ word ])
+                |> String.join " "
+                |> String.append "p-4 border border-white focus:outline-none rounded-md w-full h-full flex items-center justify-center "
 
         item index logoStatus =
             button
-                [ classList
-                    [ ( logoClass "", True )
-                    , ( logoClass "--selected", index == selected )
-                    ]
+                [ class itemClass
+                , classList [ ( activeClass, index == selected ) ]
                 , type_ "button"
                 , disabled isDisabled
                 , onClick (ClickedLogo index)
                 ]
                 [ case logoStatus of
                     Uploading ->
-                        div [ class "spinner" ] []
-
-                    UploadingFailed _ ->
-                        span [] [ text (t "error.unknown") ]
+                        div [ class "w-16 h-16" ]
+                            [ View.Components.loadingLogoAnimatedFluid ]
 
                     Uploaded url ->
                         div
-                            [ class (logoClass "-img")
+                            [ class "w-16 h-16 bg-contain bg-center bg-no-repeat"
                             , Community.logoBackground (Just url)
                             ]
                             []
                 ]
     in
-    div [ class "create-community-logo-list mt-8" ]
+    div [ class "grid gap-4 xs-max:grid-cols-1 grid-cols-2 sm:grid-cols-3 md:grid-cols-5 lg:grid-cols-7" ]
         (List.indexedMap item logos
-            ++ [ div
-                    [ classList
-                        [ ( "create-community-logo-upload", True ) ]
-                    , type_ "button"
-                    ]
+            ++ [ div []
                     [ input
-                        [ id fieldLogoId
-                        , class "hidden-img-input"
+                        [ id id_
+                        , class "hidden"
                         , type_ "file"
                         , accept "image/*"
                         , Page.onFileChange (EnteredLogo (List.length logos))
@@ -444,121 +353,79 @@ viewFieldLogo shared isDisabled selected logos errors =
                         ]
                         []
                     , label
-                        [ for fieldLogoId
+                        [ for id_
+                        , class ("flex-col text-center cursor-pointer " ++ itemClass)
                         , classList [ ( "disabled", isDisabled ) ]
                         ]
-                        [ div [ class "create-community-logo-upload-svg" ] [ Icon.imageMultiple "" ]
+                        [ div [ class "bg-gradient-to-bl from-orange-300 to-orange-500 rounded-full p-2 mb-1 w-12 h-12 flex items-center justify-center" ]
+                            [ Icon.imageMultiple "text-white fill-current w-8 h-8" ]
                         , text (t "community.create.labels.upload_icon")
                         ]
                     ]
-               , viewFieldError shared fieldLogoId errors
                ]
         )
 
 
-viewFieldInviterReward : Shared -> Bool -> String -> Dict String FormError -> Html Msg
-viewFieldInviterReward shared isDisabled defVal errors =
-    let
-        id_ =
-            "comm-inviter-reward"
-
-        t =
-            shared.translators.t
-    in
-    formField
-        [ span [ class "input-label" ]
-            [ text <| t "community.create.labels.inviter_reward" ]
-        , input
-            [ class "w-full input rounded-sm"
-            , id id_
-            , value defVal
-            , maxlength 255
-            , required True
-            , onInput EnteredInviterReward
-            , disabled isDisabled
-            ]
-            []
-        , viewFieldError shared id_ errors
-        ]
+viewInviterReward : Shared -> Bool -> String -> Errors -> Html Msg
+viewInviterReward ({ translators } as shared) isDisabled defVal errors =
+    Input.init
+        { label = translators.t "community.create.labels.inviter_reward"
+        , id = "comm-inviter-reward"
+        , onInput = EnteredInviterReward
+        , disabled = isDisabled
+        , value = defVal
+        , placeholder = Nothing
+        , problems = Just (getFieldProblems shared InviterReward errors)
+        , translators = translators
+        }
+        |> Input.withAttrs [ maxlength 255 ]
+        |> Input.asNumeric
+        |> Input.toHtml
 
 
-viewFieldInvitedReward : Shared -> Bool -> String -> Dict String FormError -> Html Msg
-viewFieldInvitedReward shared isDisabled defVal errors =
-    let
-        id_ =
-            "comm-invited-reward"
-
-        t =
-            shared.translators.t
-    in
-    formField
-        [ span [ class "input-label" ]
-            [ text <| t "community.create.labels.invited_reward" ]
-        , input
-            [ class "w-full input rounded-sm"
-            , value defVal
-            , maxlength 255
-            , required True
-            , onInput EnteredInvitedReward
-            , disabled isDisabled
-            ]
-            []
-        , viewFieldError shared id_ errors
-        ]
+viewInvitedReward : Shared -> Bool -> String -> Errors -> Html Msg
+viewInvitedReward ({ translators } as shared) isDisabled defVal errors =
+    Input.init
+        { label = translators.t "community.create.labels.invited_reward"
+        , id = "comm-invited-reward"
+        , onInput = EnteredInvitedReward
+        , disabled = isDisabled
+        , value = defVal
+        , placeholder = Nothing
+        , problems = Just (getFieldProblems shared InvitedReward errors)
+        , translators = translators
+        }
+        |> Input.withAttrs [ maxlength 255, required True ]
+        |> Input.asNumeric
+        |> Input.toHtml
 
 
-viewFieldMinBalance : Shared -> Bool -> String -> Dict String FormError -> Html Msg
-viewFieldMinBalance shared isDisabled defVal errors =
-    let
-        id_ =
-            "min-balance"
-
-        t =
-            shared.translators.t
-    in
-    formField
-        [ span [ class "input-label" ] [ text <| t "community.create.labels.min_balance" ]
-        , input
-            [ class "w-full input rounded-sm"
-            , value defVal
-            , maxlength 255
-            , required True
-            , onInput EnteredMinBalance
-            , disabled isDisabled
-            ]
-            []
-        , viewFieldError shared id_ errors
-        ]
-
-
-fieldLogoId : String
-fieldLogoId =
-    "community-editor-logo-upload"
-
-
-fieldSymbolId : String
-fieldSymbolId =
-    "comm-currency-symbol"
+viewMinBalance : Shared -> Bool -> String -> Errors -> Html Msg
+viewMinBalance ({ translators } as shared) isDisabled defVal errors =
+    Input.init
+        { label = translators.t "community.create.labels.min_balance"
+        , id = "min-balance"
+        , onInput = EnteredMinBalance
+        , disabled = isDisabled
+        , value = defVal
+        , placeholder = Nothing
+        , problems = Just (getFieldProblems shared MinimumBalance errors)
+        , translators = translators
+        }
+        |> Input.withAttrs [ maxlength 255, required True ]
+        |> Input.asNumeric
+        |> Input.toHtml
 
 
 
 -- HELPERS
 
 
-formField : List (Html msg) -> Html msg
-formField =
-    div [ class "form-field" ]
-
-
-viewFieldError : Shared -> String -> Dict String FormError -> Html msg
-viewFieldError shared fieldId errors =
-    case Dict.get fieldId errors of
-        Just e ->
-            span [ class "field-error" ]
-                [ text (errorToString shared e) ]
-
-        Nothing ->
-            text ""
+getFieldProblems : Shared -> FormField -> Errors -> List String
+getFieldProblems shared formField errors =
+    errors
+        |> List.filter (\( field, _ ) -> field == formField)
+        |> List.map (Tuple.second >> errorToString shared)
 
 
 errorToString : Shared -> FormError -> String
@@ -587,8 +454,7 @@ type alias UpdateResult =
 
 
 type Msg
-    = CompletedLoadCommunity Community.Model
-    | EnteredTitle String
+    = EnteredTitle String
     | EnteredDescription String
     | EnteredSymbol String
     | EnteredInviterReward String
@@ -612,20 +478,17 @@ update msg model loggedIn =
             loggedIn.shared.translators.t
     in
     case msg of
-        CompletedLoadCommunity community ->
-            case model of
-                Loading ->
-                    if LoggedIn.isAccount community.creator loggedIn then
-                        Editing community Dict.empty (editForm community)
-                            |> UR.init
-
-                    else
-                        Unauthorized community
-                            |> UR.init
-
-                _ ->
-                    UR.init model
-
+        -- CompletedLoadCommunity community ->
+        --     case model of
+        -- Loading ->
+        --     if LoggedIn.isAccount community.creator loggedIn then
+        --         Editing community Dict.empty (editForm community)
+        --             |> UR.init
+        --     else
+        --         Unauthorized community
+        --             |> UR.init
+        -- _ ->
+        --     UR.init model
         EnteredTitle input ->
             UR.init model
                 |> updateForm (\form -> { form | name = input })
@@ -703,69 +566,58 @@ update msg model loggedIn =
         EnteredLogo _ [] ->
             UR.init model
 
-        CompletedLogoUpload index resultUrl ->
-            let
-                ( newLogoUrl, addHttpError ) =
-                    case resultUrl of
-                        Ok url ->
-                            ( Uploaded url, identity )
+        CompletedLogoUpload index (Err err) ->
+            UR.init model
+                |> updateForm
+                    (\form ->
+                        { form
+                            | logoList = List.removeAt index form.logoList
+                            , logoSelected = 0
+                        }
+                    )
+                |> UR.logHttpError msg err
+                |> UR.addExt (LoggedIn.ShowFeedback Feedback.Failure (t "error.unknown"))
 
-                        Err err ->
-                            ( UploadingFailed err
-                            , UR.logHttpError msg err
-                            )
-
-                uResult =
-                    updateForm
-                        (\form ->
-                            { form
-                                | logoList = List.setAt index newLogoUrl form.logoList
-                            }
-                        )
-                        (UR.init model)
-                        |> addHttpError
-            in
+        CompletedLogoUpload index (Ok url) ->
             case model of
-                WaitingEditLogoUpload _ _ ->
-                    save msg loggedIn uResult
-
-                WaitingNewLogoUpload _ ->
-                    save msg loggedIn uResult
+                WaitingLogoUpload _ ->
+                    UR.init model
+                        |> updateForm (\form -> { form | logoList = List.setAt index (Uploaded url) form.logoList })
+                        |> save msg loggedIn
 
                 _ ->
-                    uResult
+                    UR.init model
 
         GotSaveResponse (Ok _) ->
             case model of
-                Saving community form ->
-                    model
-                        |> UR.init
-                        |> UR.addExt
-                            (updateCommunity form community
-                                |> LoggedIn.CommunityLoaded
-                                |> LoggedIn.ExternalBroadcast
-                            )
-                        |> UR.addCmd (Route.Community |> Route.replaceUrl loggedIn.shared.navKey)
-                        |> UR.addExt (ShowFeedback Feedback.Success (t "community.create.success"))
-
+                -- Saving community form ->
+                --     model
+                --         |> UR.init
+                --         |> UR.addExt
+                --             (updateCommunity form community
+                --                 |> LoggedIn.CommunityLoaded
+                --                 |> LoggedIn.ExternalBroadcast
+                --             )
+                --         |> UR.addCmd (Route.Community |> Route.replaceUrl loggedIn.shared.navKey)
+                --         |> UR.addExt (ShowFeedback Feedback.Success (t "community.create.success"))
                 _ ->
                     model
                         |> UR.init
 
         GotSaveResponse (Err val) ->
-            let
-                err =
-                    Dict.singleton "form" InternalError
-            in
+            -- TODO
+            -- let
+            --     err =
+            --         Dict.singleton "form" InternalError
+            -- in
             case model of
-                Saving community form ->
-                    Editing community err form
-                        |> UR.init
-                        |> UR.logDebugValue msg val
-                        |> UR.addExt (ShowFeedback Feedback.Failure (t "error.unknown"))
-
+                -- Saving community form ->
+                --     Editing community err form
+                --         |> UR.init
+                --         |> UR.logDebugValue msg val
+                --         |> UR.addExt (ShowFeedback Feedback.Failure (t "error.unknown"))
                 Creating form ->
-                    EditingNew err form
+                    Editing [] form
                         |> UR.init
                         |> UR.logDebugValue msg val
                         |> UR.addExt (ShowFeedback Feedback.Failure (t "error.unknown"))
@@ -817,30 +669,25 @@ update msg model loggedIn =
 updateForm : (Form -> Form) -> UpdateResult -> UpdateResult
 updateForm transform ({ model } as uResult) =
     case model of
-        Loading ->
-            uResult
-
-        Unauthorized _ ->
-            uResult
-
-        Editing community errors form ->
-            Editing community errors (transform form)
+        -- Loading ->
+        --     uResult
+        -- Unauthorized _ ->
+        --     uResult
+        -- Editing community errors form ->
+        --     Editing community errors (transform form)
+        --         |> UR.setModel uResult
+        -- WaitingEditLogoUpload community form ->
+        --     WaitingEditLogoUpload community (transform form)
+        --         |> UR.setModel uResult
+        -- Saving community form ->
+        --     Saving community (transform form)
+        --         |> UR.setModel uResult
+        Editing errors form ->
+            Editing errors (transform form)
                 |> UR.setModel uResult
 
-        WaitingEditLogoUpload community form ->
-            WaitingEditLogoUpload community (transform form)
-                |> UR.setModel uResult
-
-        Saving community form ->
-            Saving community (transform form)
-                |> UR.setModel uResult
-
-        EditingNew errors form ->
-            EditingNew errors (transform form)
-                |> UR.setModel uResult
-
-        WaitingNewLogoUpload form ->
-            WaitingNewLogoUpload (transform form)
+        WaitingLogoUpload form ->
+            WaitingLogoUpload (transform form)
                 |> UR.setModel uResult
 
         Creating form ->
@@ -848,32 +695,32 @@ updateForm transform ({ model } as uResult) =
                 |> UR.setModel uResult
 
 
-updateCommunity : Form -> Community.Model -> Community.Model
-updateCommunity form community =
-    { community
-        | name = form.name
-        , description = form.description
-        , symbol =
-            Eos.symbolFromString form.symbol
-                |> Maybe.withDefault community.symbol
-        , logo =
-            case List.getAt form.logoSelected form.logoList of
-                Just (Uploaded logo) ->
-                    logo
 
-                _ ->
-                    community.logo
-        , invitedReward =
-            String.toFloat form.invitedReward
-                |> Maybe.withDefault community.invitedReward
-        , inviterReward =
-            String.toFloat form.inviterReward
-                |> Maybe.withDefault community.inviterReward
-        , minBalance = String.toFloat form.minBalance
-        , hasShop = form.hasShop
-        , hasObjectives = form.hasObjectives
-        , hasKyc = form.hasKyc
-    }
+-- updateCommunity : Form -> Community.Model -> Community.Model
+-- updateCommunity form community =
+--     { community
+--         | name = form.name
+--         , description = form.description
+--         , symbol =
+--             Eos.symbolFromString form.symbol
+--                 |> Maybe.withDefault community.symbol
+--         , logo =
+--             case List.getAt form.logoSelected form.logoList of
+--                 Just (Uploaded logo) ->
+--                     logo
+--                 _ ->
+--                     community.logo
+--         , invitedReward =
+--             String.toFloat form.invitedReward
+--                 |> Maybe.withDefault community.invitedReward
+--         , inviterReward =
+--             String.toFloat form.inviterReward
+--                 |> Maybe.withDefault community.inviterReward
+--         , minBalance = String.toFloat form.minBalance
+--         , hasShop = form.hasShop
+--         , hasObjectives = form.hasObjectives
+--         , hasKyc = form.hasKyc
+--     }
 
 
 save : Msg -> LoggedIn.Model -> UpdateResult -> UpdateResult
@@ -952,17 +799,15 @@ save msg loggedIn ({ model } as uResult) =
                         |> UR.setModel uResult
     in
     case model of
-        Editing community _ form ->
-            save_ form (Saving community) (WaitingEditLogoUpload community) (Editing community) True
+        -- Editing community _ form ->
+        --     save_ form (Saving community) (WaitingEditLogoUpload community) (Editing community) True
+        -- WaitingEditLogoUpload community form ->
+        --     save_ form (Saving community) (WaitingEditLogoUpload community) (Editing community) True
+        Editing _ form ->
+            save_ form Creating WaitingLogoUpload Editing False
 
-        WaitingEditLogoUpload community form ->
-            save_ form (Saving community) (WaitingEditLogoUpload community) (Editing community) True
-
-        EditingNew _ form ->
-            save_ form Creating WaitingNewLogoUpload EditingNew False
-
-        WaitingNewLogoUpload form ->
-            save_ form Creating WaitingNewLogoUpload EditingNew False
+        WaitingLogoUpload form ->
+            save_ form Creating WaitingLogoUpload Editing False
 
         _ ->
             uResult
@@ -971,10 +816,8 @@ save msg loggedIn ({ model } as uResult) =
 
 receiveBroadcast : LoggedIn.BroadcastMsg -> Maybe Msg
 receiveBroadcast broadcastMsg =
+    -- TODO
     case broadcastMsg of
-        LoggedIn.CommunityLoaded community ->
-            Just (CompletedLoadCommunity community)
-
         _ ->
             Nothing
 
@@ -1020,9 +863,8 @@ jsAddressToMsg addr val =
 msgToString : Msg -> List String
 msgToString msg =
     case msg of
-        CompletedLoadCommunity _ ->
-            [ "CompletedLoadCommunity" ]
-
+        -- CompletedLoadCommunity _ ->
+        --     [ "CompletedLoadCommunity" ]
         EnteredTitle _ ->
             [ "EnteredTitle" ]
 
