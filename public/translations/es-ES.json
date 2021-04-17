@@ -107,6 +107,7 @@
     "alreadyTaken": "Ya esta en uso. Por favor, intenta de nuevo.",
     "notMember": "Este usuario no es miembro.",
     "chooseOrUploadLogo": "Escoje o sube tu propio logo.",
+    "waitForLogoUpload": "Espere hasta que se cargue el logotipo",
     "invalidSymbol": "Simbolo invalido.",
     "unknown": "Oh oh. Algo salió mal.",
     "accountNotFound": "Cuenta no encontrada. ¿Estás seguro de haber creado tu cuenta?",

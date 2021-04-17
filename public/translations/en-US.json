@@ -107,6 +107,7 @@
     "alreadyTaken": "This one is already taken. Please, Try another.",
     "notMember": "This user is not a member.",
     "chooseOrUploadLogo": "Choose or upload a logo.",
+    "waitForLogoUpload": "Wait until logo is uploaded",
     "invalidSymbol": "Invalid symbol.",
     "unknown": "Uoh. Something wrong happened.",
     "accountNotFound": "Account not found. Are you sure you created your account?",

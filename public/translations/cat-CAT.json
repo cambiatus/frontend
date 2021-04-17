@@ -107,6 +107,7 @@
     "alreadyTaken": "Ja està en ús. Si et plau, intenta-ho de nou.",
     "notMember": "Aquest usuari no és membre.",
     "chooseOrUploadLogo": "Escull o puja el teu propi logotip.",
+    "waitForLogoUpload": "Espereu fins que es carregui el logotip",
     "invalidSymbol": "Símbol invàlid.",
     "unknown": "Oh oh. Alguna cosa ha anat malament.",
     "accountNotFound": "Compte no trobat. Esteu segur que heu creat el vostre compte?",

@@ -20,6 +20,7 @@ module Eos exposing
     , encodeSymbol
     , encodeTableQuery
     , encodeTransaction
+    , eosBoolDecoder
     , getSymbolPrecision
     , symbolDecoder
     , symbolFromString
@@ -383,6 +384,21 @@ encodeEosBool eosBool =
 
         EosFalse ->
             Encode.int 0
+
+
+intToEosBool : Int -> EosBool
+intToEosBool v =
+    if v == 1 then
+        EosTrue
+
+    else
+        EosFalse
+
+
+eosBoolDecoder : Decoder EosBool
+eosBoolDecoder =
+    Decode.int
+        |> Decode.map intToEosBool
 
 
 

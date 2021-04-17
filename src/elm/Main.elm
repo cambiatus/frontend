@@ -495,10 +495,6 @@ broadcast broadcastMessage status =
                     ActionEditor.receiveBroadcast broadcastMessage
                         |> Maybe.map GotActionEditorMsg
 
-                CommunityEditor _ ->
-                    CommunityEditor.receiveBroadcast broadcastMessage
-                        |> Maybe.map GotCommunityEditorMsg
-
                 Objectives _ ->
                     Objectives.receiveBroadcast broadcastMessage
                         |> Maybe.map GotObjectivesMsg

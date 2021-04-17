@@ -107,6 +107,7 @@
     "alreadyTaken": "Esse ja esta em uso. Por favor, tente outro.",
     "notMember": "Esse usuario não é membro",
     "chooseOrUploadLogo": "Escolha ou envie um logo.",
+    "waitForLogoUpload": "Espere até o logo ser enviado",
     "invalidSymbol": "Simbolo inválido.",
     "unknown": "Opa. Algo de errado aconteceu =(.",
     "accountNotFound": "Conta não encontrada. Tem certeza que criou uma conta com essa chave?",

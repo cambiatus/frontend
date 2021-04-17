@@ -4,7 +4,6 @@ module Page.Community.Editor exposing
     , init
     , jsAddressToMsg
     , msgToString
-    , receiveBroadcast
     , subscriptions
     , update
     , view
@@ -13,8 +12,9 @@ module Page.Community.Editor exposing
 import Api
 import Asset.Icon as Icon
 import Browser.Events as Events
+import Browser.Navigation
 import Community exposing (Model)
-import Eos exposing (Symbol)
+import Eos
 import Eos.Account as Eos
 import File exposing (File)
 import Graphql.Document
@@ -23,6 +23,7 @@ import Html.Attributes exposing (accept, class, classList, disabled, for, id, ma
 import Html.Events exposing (onClick, onSubmit)
 import Http
 import Json.Decode as Decode
+import Json.Decode.Pipeline as Decode
 import Json.Encode as Encode exposing (Value)
 import List.Extra as List
 import Page
@@ -31,6 +32,7 @@ import Session.LoggedIn as LoggedIn exposing (External(..))
 import Session.Shared exposing (Shared)
 import Task
 import UpdateResult as UR
+import Url
 import Utils exposing (decodeEnterKeyDown)
 import View.Components
 import View.Feedback as Feedback
@@ -43,7 +45,7 @@ import View.Form.Input as Input
 
 init : LoggedIn.Model -> ( Model, Cmd Msg )
 init _ =
-    ( Editing [] initForm
+    ( initModel
     , Cmd.none
     )
 
@@ -62,17 +64,36 @@ subscriptions _ =
 
 
 type alias Model =
-    Status
+    { name : String
+    , description : String
+    , symbol : String
+    , logoSelected : Int
+    , logoList : List LogoStatus
+    , inviterReward : String
+    , invitedReward : String
+    , minimumBalance : String
+    , isDisabled : Bool
+    , errors : List Error
+    }
 
 
-type alias Errors =
-    List ( FormField, FormError )
+initModel : Model
+initModel =
+    { name = ""
+    , description = ""
+    , symbol = ""
+    , logoSelected = 0
+    , logoList = defaultLogos
+    , inviterReward = "0"
+    , invitedReward = "10"
+    , minimumBalance = "-100"
+    , isDisabled = False
+    , errors = []
+    }
 
 
-type Status
-    = Editing Errors Form
-    | WaitingLogoUpload Form
-    | Creating Form
+type alias Error =
+    ( FormField, FormError )
 
 
 type FormField
@@ -82,37 +103,7 @@ type FormField
     | InvitedReward
     | InviterReward
     | MinimumBalance
-
-
-type alias Form =
-    { name : String
-    , description : String
-    , symbol : String
-    , logoSelected : Int
-    , logoList : List LogoStatus
-    , inviterReward : String
-    , invitedReward : String
-    , minBalance : String
-    , hasShop : Bool
-    , hasObjectives : Bool
-    , hasKyc : Bool
-    }
-
-
-initForm : Form
-initForm =
-    { name = ""
-    , description = ""
-    , symbol = ""
-    , logoSelected = 0
-    , logoList = defaultLogos
-    , inviterReward = "0"
-    , invitedReward = "10"
-    , minBalance = "-100"
-    , hasShop = True
-    , hasObjectives = True
-    , hasKyc = False
-    }
+    | Logo
 
 
 defaultLogos : List LogoStatus
@@ -130,60 +121,12 @@ type LogoStatus
     | Uploaded String
 
 
-
--- TODO - Check which are needed
-
-
 type FormError
-    = ChooseOrUploadLogo
-    | InternalError
+    = ChooseLogo
+    | WaitForLogoUpload
     | InvalidSymbol
-
-
-type FormStatus
-    = Valid Community.CreateCommunityData
-    | Invalid Errors
-    | UploadingLogo
-
-
-encodeForm : LoggedIn.Model -> Form -> FormStatus
-encodeForm loggedIn form =
-    case List.getAt form.logoSelected form.logoList of
-        Just Uploading ->
-            UploadingLogo
-
-        Just (Uploaded logoUrl) ->
-            encodeFormHelper logoUrl loggedIn form
-
-        Nothing ->
-            encodeFormHelper "" loggedIn form
-
-
-encodeFormHelper : String -> LoggedIn.Model -> Form -> FormStatus
-encodeFormHelper logoUrl { accountName } form =
-    let
-        maybeSymbol =
-            Eos.symbolFromString form.symbol
-    in
-    case maybeSymbol of
-        Nothing ->
-            Invalid [ ( SymbolField, InvalidSymbol ) ]
-
-        Just symbol ->
-            { accountName = accountName
-            , symbol = symbol
-            , logoUrl = logoUrl
-            , name = form.name
-            , description = form.description
-            , inviterReward = String.toFloat form.inviterReward |> Maybe.withDefault 0.0
-            , invitedReward = String.toFloat form.invitedReward |> Maybe.withDefault 0.0
-            , minBalance = String.toFloat form.minBalance |> Maybe.withDefault 0.0
-            , hasShop = form.hasShop
-            , hasObjectives = form.hasObjectives
-            , hasKyc = form.hasKyc
-            }
-                |> Community.createCommunityData
-                |> Valid
+    | EmptyRequired
+    | InvalidNumber
 
 
 
@@ -195,25 +138,6 @@ view ({ shared } as loggedIn) model =
     let
         t =
             shared.translators.t
-
-        ( errors, isDisabled, form ) =
-            case model of
-                Editing problems form_ ->
-                    ( problems, False, form_ )
-
-                WaitingLogoUpload form_ ->
-                    ( [], True, form_ )
-
-                Creating form_ ->
-                    ( [], True, form_ )
-
-        cmd =
-            case model of
-                Editing _ _ ->
-                    NewCommunitySubscription form.symbol
-
-                _ ->
-                    ClickedSave
     in
     { title = t "community.create.title"
     , content =
@@ -221,26 +145,26 @@ view ({ shared } as loggedIn) model =
             [ Page.viewHeader loggedIn (t "community.create.title") Route.Dashboard
             , Html.form
                 [ class "container mx-auto px-4"
-                , onSubmit cmd
+                , onSubmit SubmittedForm
                 ]
-                [ div [ class "my-10" ]
-                    [ viewDescription shared isDisabled form.description errors
-                    , viewCurrencyName shared isDisabled form.name errors
+                [ div [ class "mt-10 mb-14" ]
+                    [ viewDescription shared model.isDisabled model.description model.errors
+                    , viewCurrencyName shared model.isDisabled model.name model.errors
                     , div [ class "flex flex-row mt-4" ]
                         [ div [ class "w-1/2 pr-2" ]
-                            [ viewSymbol shared isDisabled form.symbol errors
-                            , viewInviterReward shared isDisabled form.inviterReward errors
+                            [ viewSymbol shared model.isDisabled model.symbol model.errors
+                            , viewInviterReward shared model.isDisabled model.inviterReward model.errors
                             ]
                         , div [ class "w-1/2 pl-2" ]
-                            [ viewInvitedReward shared isDisabled form.invitedReward errors
-                            , viewMinBalance shared isDisabled form.minBalance errors
+                            [ viewInvitedReward shared model.isDisabled model.invitedReward model.errors
+                            , viewMinimumBalance shared model.isDisabled model.minimumBalance model.errors
                             ]
                         ]
-                    , viewLogo shared isDisabled form.logoSelected form.logoList
+                    , viewLogo shared model.isDisabled model.logoSelected model.logoList
                     ]
                 , button
                     [ class "button button-primary w-full"
-                    , disabled isDisabled
+                    , disabled (model.isDisabled || not (isLogoUploaded model))
                     ]
                     [ text (t "community.create.submit") ]
                 ]
@@ -248,7 +172,20 @@ view ({ shared } as loggedIn) model =
     }
 
 
-viewDescription : Shared -> Bool -> String -> Errors -> Html Msg
+isLogoUploaded : Model -> Bool
+isLogoUploaded model =
+    case List.getAt model.logoSelected model.logoList of
+        Just Uploading ->
+            False
+
+        Just (Uploaded _) ->
+            True
+
+        Nothing ->
+            False
+
+
+viewDescription : Shared -> Bool -> String -> List Error -> Html Msg
 viewDescription ({ translators } as shared) isDisabled defVal errors =
     div []
         [ span [ class "input-label" ] [ text (translators.t "community.create.labels.description") ]
@@ -268,12 +205,12 @@ viewDescription ({ translators } as shared) isDisabled defVal errors =
         ]
 
 
-viewCurrencyName : Shared -> Bool -> String -> Errors -> Html Msg
+viewCurrencyName : Shared -> Bool -> String -> List Error -> Html Msg
 viewCurrencyName ({ translators } as shared) isDisabled defVal errors =
     Input.init
         { label = translators.t "community.create.labels.currency_name"
         , id = "comm-currency-name"
-        , onInput = EnteredTitle
+        , onInput = EnteredName
         , disabled = isDisabled
         , value = defVal
         , placeholder = Nothing
@@ -284,7 +221,7 @@ viewCurrencyName ({ translators } as shared) isDisabled defVal errors =
         |> Input.toHtml
 
 
-viewSymbol : Shared -> Bool -> String -> Errors -> Html Msg
+viewSymbol : Shared -> Bool -> String -> List Error -> Html Msg
 viewSymbol ({ translators } as shared) isDisabled defVal errors =
     Input.init
         { label = translators.t "community.create.labels.currency_symbol"
@@ -366,7 +303,7 @@ viewLogo shared isDisabled selected logos =
         )
 
 
-viewInviterReward : Shared -> Bool -> String -> Errors -> Html Msg
+viewInviterReward : Shared -> Bool -> String -> List Error -> Html Msg
 viewInviterReward ({ translators } as shared) isDisabled defVal errors =
     Input.init
         { label = translators.t "community.create.labels.inviter_reward"
@@ -383,7 +320,7 @@ viewInviterReward ({ translators } as shared) isDisabled defVal errors =
         |> Input.toHtml
 
 
-viewInvitedReward : Shared -> Bool -> String -> Errors -> Html Msg
+viewInvitedReward : Shared -> Bool -> String -> List Error -> Html Msg
 viewInvitedReward ({ translators } as shared) isDisabled defVal errors =
     Input.init
         { label = translators.t "community.create.labels.invited_reward"
@@ -400,12 +337,12 @@ viewInvitedReward ({ translators } as shared) isDisabled defVal errors =
         |> Input.toHtml
 
 
-viewMinBalance : Shared -> Bool -> String -> Errors -> Html Msg
-viewMinBalance ({ translators } as shared) isDisabled defVal errors =
+viewMinimumBalance : Shared -> Bool -> String -> List Error -> Html Msg
+viewMinimumBalance ({ translators } as shared) isDisabled defVal errors =
     Input.init
         { label = translators.t "community.create.labels.min_balance"
         , id = "min-balance"
-        , onInput = EnteredMinBalance
+        , onInput = EnteredMinimumBalance
         , disabled = isDisabled
         , value = defVal
         , placeholder = Nothing
@@ -418,10 +355,175 @@ viewMinBalance ({ translators } as shared) isDisabled defVal errors =
 
 
 
--- HELPERS
+-- VALIDATING
 
 
-getFieldProblems : Shared -> FormField -> Errors -> List String
+validateField : (Model -> Result Error a) -> FormField -> Model -> Model
+validateField validation field model =
+    let
+        errorsWithoutField =
+            List.filter (\( errorField, _ ) -> errorField /= field) model.errors
+    in
+    case validation model of
+        Ok _ ->
+            { model | errors = errorsWithoutField }
+
+        Err error ->
+            { model | errors = error :: errorsWithoutField }
+
+
+validateName : Model -> Result Error String
+validateName model =
+    if String.isEmpty model.name then
+        Err ( CurrencyName, EmptyRequired )
+
+    else
+        Ok model.name
+
+
+validateSymbol : Model -> Result Error Eos.Symbol
+validateSymbol model =
+    if String.isEmpty model.symbol then
+        Err ( SymbolField, EmptyRequired )
+
+    else
+        case Eos.symbolFromString model.symbol of
+            Nothing ->
+                Err ( SymbolField, InvalidSymbol )
+
+            Just symbol ->
+                Ok symbol
+
+
+validateInviterReward : Model -> Result Error Float
+validateInviterReward model =
+    if String.isEmpty model.inviterReward then
+        Err ( InviterReward, EmptyRequired )
+
+    else
+        case String.toFloat model.inviterReward of
+            Nothing ->
+                Err ( InviterReward, InvalidNumber )
+
+            Just inviterReward ->
+                Ok inviterReward
+
+
+validateInvitedReward : Model -> Result Error Float
+validateInvitedReward model =
+    if String.isEmpty model.invitedReward then
+        Err ( InvitedReward, EmptyRequired )
+
+    else
+        case String.toFloat model.invitedReward of
+            Nothing ->
+                Err ( InvitedReward, InvalidNumber )
+
+            Just invitedReward ->
+                Ok invitedReward
+
+
+validateMinimumBalance : Model -> Result Error Float
+validateMinimumBalance model =
+    if String.isEmpty model.minimumBalance then
+        Err ( MinimumBalance, EmptyRequired )
+
+    else
+        case String.toFloat model.minimumBalance of
+            Nothing ->
+                Err ( MinimumBalance, InvalidNumber )
+
+            Just minimumBalance ->
+                Ok minimumBalance
+
+
+validateLogoUrl : Model -> Result Error String
+validateLogoUrl model =
+    case List.getAt model.logoSelected model.logoList of
+        Just (Uploaded logoUrl) ->
+            Ok logoUrl
+
+        Just Uploading ->
+            Err ( Logo, WaitForLogoUpload )
+
+        Nothing ->
+            Err ( Logo, ChooseLogo )
+
+
+validateModel : Eos.Name -> Model -> Result Model Community.CreateCommunityData
+validateModel accountName model =
+    let
+        nameValidation =
+            validateName model
+
+        symbolValidation =
+            validateSymbol model
+
+        logoValidation =
+            validateLogoUrl model
+
+        inviterRewardValidation =
+            validateInviterReward model
+
+        invitedRewardValidation =
+            validateInvitedReward model
+
+        minimumBalanceValidation =
+            validateMinimumBalance model
+
+        rewardsValidation =
+            Result.map2
+                (\inviterReward invitedReward -> { inviterReward = inviterReward, invitedReward = invitedReward })
+                inviterRewardValidation
+                invitedRewardValidation
+    in
+    case
+        Result.map5
+            (\{ inviterReward, invitedReward } name symbol logoUrl minimumBalance ->
+                Community.createCommunityData
+                    { accountName = accountName
+                    , symbol = symbol
+                    , logoUrl = logoUrl
+                    , name = name
+                    , description = model.description
+                    , inviterReward = inviterReward
+                    , invitedReward = invitedReward
+                    , minBalance = minimumBalance
+                    , hasShop = True
+                    , hasObjectives = True
+                    , hasKyc = False
+                    }
+            )
+            rewardsValidation
+            nameValidation
+            symbolValidation
+            logoValidation
+            minimumBalanceValidation
+    of
+        Ok validModel ->
+            Ok validModel
+
+        Err _ ->
+            let
+                turnToString =
+                    Result.map (\_ -> "")
+
+                errors =
+                    [ nameValidation, turnToString symbolValidation, logoValidation, turnToString inviterRewardValidation, turnToString invitedRewardValidation, turnToString minimumBalanceValidation ]
+                        |> List.filterMap
+                            (\r ->
+                                case r of
+                                    Err err ->
+                                        Just err
+
+                                    Ok _ ->
+                                        Nothing
+                            )
+            in
+            Err { model | errors = errors }
+
+
+getFieldProblems : Shared -> FormField -> List Error -> List String
 getFieldProblems shared formField errors =
     errors
         |> List.filter (\( field, _ ) -> field == formField)
@@ -429,20 +531,26 @@ getFieldProblems shared formField errors =
 
 
 errorToString : Shared -> FormError -> String
-errorToString shared v =
+errorToString shared error =
     let
         t =
             shared.translators.t
     in
-    case v of
-        ChooseOrUploadLogo ->
+    case error of
+        ChooseLogo ->
             t "error.chooseOrUploadLogo"
 
-        InternalError ->
-            t "error.unknown"
+        WaitForLogoUpload ->
+            t "error.waitForLogoUpload"
 
         InvalidSymbol ->
             t "error.invalidSymbol"
+
+        EmptyRequired ->
+            t "error.required"
+
+        InvalidNumber ->
+            t "error.validator.text.only_numbers"
 
 
 
@@ -454,20 +562,19 @@ type alias UpdateResult =
 
 
 type Msg
-    = EnteredTitle String
+    = EnteredName String
     | EnteredDescription String
     | EnteredSymbol String
     | EnteredInviterReward String
     | EnteredInvitedReward String
-    | EnteredMinBalance String
+    | EnteredMinimumBalance String
     | ClickedLogo Int
     | EnteredLogo Int (List File)
     | CompletedLogoUpload Int (Result Http.Error String)
-    | ClickedSave
-    | GotSaveResponse (Result Value Symbol)
-      -- New Community
-    | NewCommunitySubscription String
-    | Redirect
+    | SubmittedForm
+    | StartedCreatingCommunity Community.CreateCommunityData
+    | GotCreateCommunityResponse (Result Encode.Value Community.CreateCommunityData)
+    | Redirect Community.CreateCommunityData
     | PressedEnter Bool
 
 
@@ -478,187 +585,147 @@ update msg model loggedIn =
             loggedIn.shared.translators.t
     in
     case msg of
-        -- CompletedLoadCommunity community ->
-        --     case model of
-        -- Loading ->
-        --     if LoggedIn.isAccount community.creator loggedIn then
-        --         Editing community Dict.empty (editForm community)
-        --             |> UR.init
-        --     else
-        --         Unauthorized community
-        --             |> UR.init
-        -- _ ->
-        --     UR.init model
-        EnteredTitle input ->
-            UR.init model
-                |> updateForm (\form -> { form | name = input })
+        EnteredName name ->
+            { model | name = name }
+                |> validateField validateName CurrencyName
+                |> UR.init
 
-        EnteredDescription input ->
-            UR.init model
-                |> updateForm (\form -> { form | description = input })
+        EnteredDescription description ->
+            { model | description = description }
+                |> UR.init
 
-        EnteredInviterReward input ->
-            UR.init model
-                |> updateForm (\form -> { form | inviterReward = input })
+        EnteredInviterReward inviterReward ->
+            { model | inviterReward = inviterReward }
+                |> validateField validateInviterReward InviterReward
+                |> UR.init
 
-        EnteredInvitedReward input ->
-            UR.init model
-                |> updateForm (\form -> { form | invitedReward = input })
+        EnteredInvitedReward invitedReward ->
+            { model | invitedReward = invitedReward }
+                |> validateField validateInvitedReward InvitedReward
+                |> UR.init
 
-        EnteredMinBalance input ->
-            UR.init model
-                |> updateForm (\f -> { f | minBalance = input })
+        EnteredMinimumBalance minimumBalance ->
+            { model | minimumBalance = minimumBalance }
+                |> validateField validateMinimumBalance MinimumBalance
+                |> UR.init
 
-        EnteredSymbol input ->
-            UR.init model
-                |> updateForm (\form -> { form | symbol = input })
+        EnteredSymbol symbol ->
+            { model | symbol = symbol }
+                |> validateField validateSymbol SymbolField
+                |> UR.init
 
         ClickedLogo index ->
-            UR.init model
-                |> updateForm (\form -> { form | logoSelected = index })
-
-        NewCommunitySubscription stringSymbol ->
-            case Eos.symbolFromString stringSymbol of
-                Nothing ->
-                    model
-                        |> UR.init
-
-                Just s ->
-                    let
-                        subscriptionDoc =
-                            Community.newCommunitySubscription s
-                                |> Graphql.Document.serializeSubscription
-                    in
-                    model
-                        |> UR.init
-                        |> UR.addPort
-                            { responseAddress = NewCommunitySubscription stringSymbol
-                            , responseData = Encode.null
-                            , data =
-                                Encode.object
-                                    [ ( "name", Encode.string "subscribeToNewCommunity" )
-                                    , ( "subscription", Encode.string subscriptionDoc )
-                                    ]
-                            }
-
-        ClickedSave ->
-            if LoggedIn.hasPrivateKey loggedIn then
-                save msg loggedIn (UR.init model)
-
-            else
-                UR.init model
-                    |> UR.addExt
-                        (Just ClickedSave
-                            |> RequiredAuthentication
-                        )
+            let
+                newModel =
+                    { model | logoSelected = index }
+            in
+            { newModel | isDisabled = isLogoUploaded newModel }
+                |> UR.init
 
         EnteredLogo index (file :: _) ->
-            UR.init model
+            { model | logoSelected = index, logoList = model.logoList ++ [ Uploading ] }
+                |> UR.init
                 |> UR.addCmd (Api.uploadImage loggedIn.shared file (CompletedLogoUpload index))
-                |> updateForm
-                    (\form ->
-                        { form
-                            | logoSelected = index
-                            , logoList = form.logoList ++ [ Uploading ]
-                        }
-                    )
 
         EnteredLogo _ [] ->
             UR.init model
 
         CompletedLogoUpload index (Err err) ->
-            UR.init model
-                |> updateForm
-                    (\form ->
-                        { form
-                            | logoList = List.removeAt index form.logoList
-                            , logoSelected = 0
-                        }
-                    )
+            { model | logoList = List.removeAt index model.logoList, logoSelected = 0, isDisabled = False }
+                |> UR.init
                 |> UR.logHttpError msg err
-                |> UR.addExt (LoggedIn.ShowFeedback Feedback.Failure (t "error.unknown"))
+                |> UR.addExt (LoggedIn.ShowFeedback Feedback.Failure (t "settings.community_info.errors.logo_upload"))
 
         CompletedLogoUpload index (Ok url) ->
-            case model of
-                WaitingLogoUpload _ ->
-                    UR.init model
-                        |> updateForm (\form -> { form | logoList = List.setAt index (Uploaded url) form.logoList })
-                        |> save msg loggedIn
+            { model
+                | logoList = List.updateAt index (\_ -> Uploaded url) model.logoList
+                , isDisabled = model.isDisabled || model.logoSelected == index
+            }
+                |> UR.init
 
-                _ ->
-                    UR.init model
+        SubmittedForm ->
+            case validateModel loggedIn.accountName model of
+                Ok createData ->
+                    if LoggedIn.hasPrivateKey loggedIn then
+                        let
+                            subscriptionDoc =
+                                Community.newCommunitySubscription createData.cmmAsset.symbol
+                                    |> Graphql.Document.serializeSubscription
+                        in
+                        { model | isDisabled = True }
+                            |> UR.init
+                            |> UR.addPort
+                                { responseAddress = SubmittedForm
+                                , responseData = Community.encodeCreateCommunityData createData
+                                , data =
+                                    Encode.object
+                                        [ ( "name", Encode.string "subscribeToNewCommunity" )
+                                        , ( "subscription", Encode.string subscriptionDoc )
+                                        ]
+                                }
 
-        GotSaveResponse (Ok _) ->
-            case model of
-                -- Saving community form ->
-                --     model
-                --         |> UR.init
-                --         |> UR.addExt
-                --             (updateCommunity form community
-                --                 |> LoggedIn.CommunityLoaded
-                --                 |> LoggedIn.ExternalBroadcast
-                --             )
-                --         |> UR.addCmd (Route.Community |> Route.replaceUrl loggedIn.shared.navKey)
-                --         |> UR.addExt (ShowFeedback Feedback.Success (t "community.create.success"))
-                _ ->
-                    model
-                        |> UR.init
+                    else
+                        UR.init model
+                            |> UR.addExt
+                                (Just SubmittedForm
+                                    |> RequiredAuthentication
+                                )
 
-        GotSaveResponse (Err val) ->
-            -- TODO
-            -- let
-            --     err =
-            --         Dict.singleton "form" InternalError
-            -- in
-            case model of
-                -- Saving community form ->
-                --     Editing community err form
-                --         |> UR.init
-                --         |> UR.logDebugValue msg val
-                --         |> UR.addExt (ShowFeedback Feedback.Failure (t "error.unknown"))
-                Creating form ->
-                    Editing [] form
-                        |> UR.init
-                        |> UR.logDebugValue msg val
-                        |> UR.addExt (ShowFeedback Feedback.Failure (t "error.unknown"))
+                Err withError ->
+                    UR.init withError
 
-                _ ->
-                    UR.init model
-                        |> UR.logImpossible msg []
-                        |> UR.logDebugValue msg val
-                        |> UR.addExt (ShowFeedback Feedback.Failure (t "error.unknown"))
+        StartedCreatingCommunity createCommunityData ->
+            let
+                authorization =
+                    { actor = loggedIn.accountName
+                    , permissionName = Eos.samplePermission
+                    }
+            in
+            UR.init model
+                |> UR.addPort
+                    { responseAddress = StartedCreatingCommunity createCommunityData
+                    , responseData = Community.encodeCreateCommunityData createCommunityData
+                    , data =
+                        Eos.encodeTransaction
+                            [ { accountName = loggedIn.shared.contracts.community
+                              , name = "create"
+                              , authorization = authorization
+                              , data = Community.encodeCreateCommunityData createCommunityData
+                              }
+                            , { accountName = loggedIn.shared.contracts.token
+                              , name = "create"
+                              , authorization = authorization
+                              , data =
+                                    { creator = loggedIn.accountName
+                                    , maxSupply = { amount = 21000000.0, symbol = createCommunityData.cmmAsset.symbol }
+                                    , minBalance = createCommunityData.minBalance
+                                    , tokenType = "mcc"
+                                    }
+                                        |> Community.encodeCreateTokenData
+                              }
+                            ]
+                    }
 
-        Redirect ->
-            case model of
-                Creating form ->
-                    let
-                        sym =
-                            Eos.symbolFromString form.symbol
-                    in
-                    case sym of
-                        Just _ ->
-                            model
-                                |> UR.init
-                                |> UR.addCmd
-                                    (Route.Community
-                                        |> Route.replaceUrl loggedIn.shared.navKey
-                                    )
+        GotCreateCommunityResponse (Ok communityData) ->
+            { model | isDisabled = False }
+                |> UR.init
+                |> UR.addCmd (redirectToCommunity loggedIn.shared.url communityData)
 
-                        Nothing ->
-                            model
-                                |> UR.init
-                                |> UR.logImpossible msg []
+        GotCreateCommunityResponse (Err val) ->
+            { model | isDisabled = False }
+                |> UR.init
+                |> UR.addExt (LoggedIn.ShowFeedback Feedback.Failure (t "error.unknown"))
+                |> UR.logDebugValue msg val
 
-                _ ->
-                    model
-                        |> UR.init
-                        |> UR.logImpossible msg []
+        Redirect communityData ->
+            UR.init model
+                |> UR.addCmd (redirectToCommunity loggedIn.shared.url communityData)
 
-        PressedEnter val ->
-            if val then
+        PressedEnter isEnter ->
+            if isEnter then
                 UR.init model
                     |> UR.addCmd
-                        (Task.succeed ClickedSave
+                        (Task.succeed SubmittedForm
                             |> Task.perform identity
                         )
 
@@ -666,195 +733,49 @@ update msg model loggedIn =
                 UR.init model
 
 
-updateForm : (Form -> Form) -> UpdateResult -> UpdateResult
-updateForm transform ({ model } as uResult) =
-    case model of
-        -- Loading ->
-        --     uResult
-        -- Unauthorized _ ->
-        --     uResult
-        -- Editing community errors form ->
-        --     Editing community errors (transform form)
-        --         |> UR.setModel uResult
-        -- WaitingEditLogoUpload community form ->
-        --     WaitingEditLogoUpload community (transform form)
-        --         |> UR.setModel uResult
-        -- Saving community form ->
-        --     Saving community (transform form)
-        --         |> UR.setModel uResult
-        Editing errors form ->
-            Editing errors (transform form)
-                |> UR.setModel uResult
-
-        WaitingLogoUpload form ->
-            WaitingLogoUpload (transform form)
-                |> UR.setModel uResult
-
-        Creating form ->
-            Creating (transform form)
-                |> UR.setModel uResult
-
-
-
--- updateCommunity : Form -> Community.Model -> Community.Model
--- updateCommunity form community =
---     { community
---         | name = form.name
---         , description = form.description
---         , symbol =
---             Eos.symbolFromString form.symbol
---                 |> Maybe.withDefault community.symbol
---         , logo =
---             case List.getAt form.logoSelected form.logoList of
---                 Just (Uploaded logo) ->
---                     logo
---                 _ ->
---                     community.logo
---         , invitedReward =
---             String.toFloat form.invitedReward
---                 |> Maybe.withDefault community.invitedReward
---         , inviterReward =
---             String.toFloat form.inviterReward
---                 |> Maybe.withDefault community.inviterReward
---         , minBalance = String.toFloat form.minBalance
---         , hasShop = form.hasShop
---         , hasObjectives = form.hasObjectives
---         , hasKyc = form.hasKyc
---     }
-
-
-save : Msg -> LoggedIn.Model -> UpdateResult -> UpdateResult
-save msg loggedIn ({ model } as uResult) =
-    let
-        save_ form toLoading toUploadingLogo toError isEdit =
-            case encodeForm loggedIn form of
-                Valid createAction ->
-                    let
-                        authorization =
-                            { actor = loggedIn.accountName
-                            , permissionName = Eos.samplePermission
-                            }
-                    in
-                    toLoading form
-                        |> UR.setModel uResult
-                        |> UR.addPort
-                            (if isEdit then
-                                { responseAddress = ClickedSave
-                                , responseData = Encode.string form.symbol
-                                , data =
-                                    Eos.encodeTransaction
-                                        [ { accountName = loggedIn.shared.contracts.community
-                                          , name = "update"
-                                          , authorization = authorization
-                                          , data =
-                                                { asset = createAction.cmmAsset
-                                                , logo = createAction.logoUrl
-                                                , name = createAction.name
-                                                , description = createAction.description
-                                                , inviterReward = createAction.inviterReward
-                                                , invitedReward = createAction.invitedReward
-                                                , hasObjectives = createAction.hasObjectives
-                                                , hasShop = createAction.hasShop
-
-                                                -- , hasKyc = 0
-                                                }
-                                                    |> Community.encodeUpdateData
-                                          }
-                                        ]
-                                }
-
-                             else
-                                { responseAddress = ClickedSave
-                                , responseData = Encode.string form.symbol
-                                , data =
-                                    Eos.encodeTransaction
-                                        [ { accountName = loggedIn.shared.contracts.community
-                                          , name = "create"
-                                          , authorization = authorization
-                                          , data =
-                                                createAction
-                                                    |> Community.encodeCreateCommunityData
-                                          }
-                                        , { accountName = loggedIn.shared.contracts.token
-                                          , name = "create"
-                                          , authorization = authorization
-                                          , data =
-                                                { creator = loggedIn.accountName
-                                                , maxSupply = { amount = 21000000.0, symbol = createAction.cmmAsset.symbol }
-                                                , minBalance = createAction.minBalance
-                                                , tokenType = "mcc"
-                                                }
-                                                    |> Community.encodeCreateTokenData
-                                          }
-                                        ]
-                                }
-                            )
-
-                UploadingLogo ->
-                    toUploadingLogo form
-                        |> UR.setModel uResult
-
-                Invalid problems ->
-                    toError problems form
-                        |> UR.setModel uResult
-    in
-    case model of
-        -- Editing community _ form ->
-        --     save_ form (Saving community) (WaitingEditLogoUpload community) (Editing community) True
-        -- WaitingEditLogoUpload community form ->
-        --     save_ form (Saving community) (WaitingEditLogoUpload community) (Editing community) True
-        Editing _ form ->
-            save_ form Creating WaitingLogoUpload Editing False
-
-        WaitingLogoUpload form ->
-            save_ form Creating WaitingLogoUpload Editing False
-
-        _ ->
-            uResult
-                |> UR.logImpossible msg []
-
-
-receiveBroadcast : LoggedIn.BroadcastMsg -> Maybe Msg
-receiveBroadcast broadcastMsg =
-    -- TODO
-    case broadcastMsg of
-        _ ->
-            Nothing
+redirectToCommunity : Url.Url -> Community.CreateCommunityData -> Cmd msg
+redirectToCommunity url communityData =
+    Browser.Navigation.load
+        (Route.externalCommunityLink url
+            (Just { symbol = communityData.cmmAsset.symbol, name = communityData.name })
+            (Just Route.Dashboard)
+            |> Url.toString
+        )
 
 
 jsAddressToMsg : List String -> Value -> Maybe Msg
 jsAddressToMsg addr val =
     case addr of
-        "ClickedSave" :: [] ->
-            Decode.decodeValue
-                (Decode.oneOf
-                    [ Decode.map2 (\_ symbol -> Ok symbol)
-                        (Decode.field "transactionId" Decode.string)
-                        (Decode.at [ "addressData" ] Eos.symbolDecoder)
-                    , Decode.succeed (Err val)
-                    ]
-                )
-                val
-                |> Result.map (Just << GotSaveResponse)
-                |> Result.withDefault Nothing
-
-        "NewCommunitySubscription" :: [] ->
+        "SubmittedForm" :: [] ->
             let
-                resp =
+                response =
                     Decode.decodeValue
-                        (Decode.field "state" Decode.string)
+                        (Decode.map2 Tuple.pair
+                            (Decode.field "state" Decode.string)
+                            (Decode.field "addressData" Community.createCommunityDataDecoder)
+                        )
                         val
-                        |> Result.withDefault ""
             in
-            case resp of
-                "starting" ->
-                    Just ClickedSave
+            case response of
+                Ok ( "starting", createCommunityData ) ->
+                    Just (StartedCreatingCommunity createCommunityData)
 
-                "responded" ->
-                    Just Redirect
+                Ok ( "responded", createCommunityData ) ->
+                    Just (Redirect createCommunityData)
 
                 _ ->
                     Nothing
+
+        "StartedCreatingCommunity" :: [] ->
+            Decode.decodeValue
+                (Decode.map2 (\_ communityData -> communityData)
+                    (Decode.field "transactionId" Decode.string)
+                    (Decode.field "addressData" Community.createCommunityDataDecoder)
+                )
+                val
+                |> Result.mapError (\_ -> val)
+                |> GotCreateCommunityResponse
+                |> Just
 
         _ ->
             Nothing
@@ -863,10 +784,8 @@ jsAddressToMsg addr val =
 msgToString : Msg -> List String
 msgToString msg =
     case msg of
-        -- CompletedLoadCommunity _ ->
-        --     [ "CompletedLoadCommunity" ]
-        EnteredTitle _ ->
-            [ "EnteredTitle" ]
+        EnteredName _ ->
+            [ "EnteredName" ]
 
         EnteredDescription _ ->
             [ "EnteredDescription" ]
@@ -880,8 +799,8 @@ msgToString msg =
         EnteredInviterReward _ ->
             [ "EnteredInviterReward" ]
 
-        EnteredMinBalance _ ->
-            [ "EnteredMinBalance" ]
+        EnteredMinimumBalance _ ->
+            [ "EnteredMinimumBalance" ]
 
         ClickedLogo _ ->
             [ "ClickedLogo" ]
@@ -892,16 +811,16 @@ msgToString msg =
         CompletedLogoUpload _ r ->
             [ "CompletedLogoUpload", UR.resultToString r ]
 
-        NewCommunitySubscription _ ->
-            [ "NewCommunitySubscription" ]
+        SubmittedForm ->
+            [ "SubmittedForm" ]
 
-        ClickedSave ->
-            [ "ClickedSave" ]
+        StartedCreatingCommunity _ ->
+            [ "StartedCreatingCommunity" ]
 
-        GotSaveResponse r ->
-            [ "GotSaveResponse", UR.resultToString r ]
+        GotCreateCommunityResponse _ ->
+            [ "GotCreateCommunityResponse" ]
 
-        Redirect ->
+        Redirect _ ->
             [ "Redirect" ]
 
         PressedEnter _ ->
