@@ -619,7 +619,7 @@ update msg model loggedIn =
                 newModel =
                     { model | logoSelected = index }
             in
-            { newModel | isDisabled = isLogoUploaded newModel }
+            { newModel | isDisabled = not (isLogoUploaded newModel) }
                 |> UR.init
 
         EnteredLogo index (file :: _) ->
@@ -637,9 +637,12 @@ update msg model loggedIn =
                 |> UR.addExt (LoggedIn.ShowFeedback Feedback.Failure (t "settings.community_info.errors.logo_upload"))
 
         CompletedLogoUpload index (Ok url) ->
-            { model
-                | logoList = List.updateAt index (\_ -> Uploaded url) model.logoList
-                , isDisabled = model.isDisabled || model.logoSelected == index
+            let
+                newModel =
+                    { model | logoList = List.updateAt index (\_ -> Uploaded url) model.logoList }
+            in
+            { newModel
+                | isDisabled = not (isLogoUploaded newModel)
             }
                 |> UR.init
 
