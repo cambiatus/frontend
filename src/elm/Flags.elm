@@ -26,6 +26,7 @@ type alias Flags =
     , graphqlSecret : String
     , authToken : Maybe String
     , canReadClipboard : Bool
+    , useSubdomain : Bool
     }
 
 
@@ -44,6 +45,7 @@ default =
     , graphqlSecret = ""
     , authToken = Nothing
     , canReadClipboard = False
+    , useSubdomain = True
     }
 
 
@@ -70,6 +72,7 @@ decode =
         |> required "graphqlSecret" Decode.string
         |> required "authToken" (Decode.nullable Decode.string)
         |> required "canReadClipboard" Decode.bool
+        |> required "useSubdomain" Decode.bool
 
 
 type alias Endpoints =

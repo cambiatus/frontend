@@ -12,7 +12,6 @@ module Page.Community.Editor exposing
 import Api
 import Asset.Icon as Icon
 import Browser.Events as Events
-import Browser.Navigation
 import Community exposing (Model)
 import Eos
 import Eos.Account as Eos
@@ -32,7 +31,6 @@ import Session.LoggedIn as LoggedIn exposing (External(..))
 import Session.Shared exposing (Shared)
 import Task
 import UpdateResult as UR
-import Url
 import Utils exposing (decodeEnterKeyDown)
 import View.Components
 import View.Feedback as Feedback
@@ -573,7 +571,7 @@ type Msg
     | CompletedLogoUpload Int (Result Http.Error String)
     | SubmittedForm
     | StartedCreatingCommunity Community.CreateCommunityData
-    | GotCreateCommunityResponse (Result Encode.Value Community.CreateCommunityData)
+    | GotCreateCommunityResponse (Result Encode.Value String)
     | Redirect Community.CreateCommunityData
     | PressedEnter Bool
 
@@ -709,10 +707,9 @@ update msg model loggedIn =
                             ]
                     }
 
-        GotCreateCommunityResponse (Ok communityData) ->
-            { model | isDisabled = False }
+        GotCreateCommunityResponse (Ok _) ->
+            model
                 |> UR.init
-                |> UR.addCmd (redirectToCommunity loggedIn.shared.url communityData)
 
         GotCreateCommunityResponse (Err val) ->
             { model | isDisabled = False }
@@ -721,8 +718,18 @@ update msg model loggedIn =
                 |> UR.logDebugValue msg val
 
         Redirect communityData ->
+            let
+                communityInfo =
+                    { symbol = communityData.cmmAsset.symbol
+                    , name = communityData.name
+                    , logo = communityData.logoUrl
+                    , hasShop = Eos.eosBoolToBool communityData.hasShop
+                    , hasActions = Eos.eosBoolToBool communityData.hasObjectives
+                    , hasKyc = Eos.eosBoolToBool communityData.hasKyc
+                    }
+            in
             UR.init model
-                |> UR.addCmd (redirectToCommunity loggedIn.shared.url communityData)
+                |> UR.addExt (LoggedIn.AddedCommunity communityInfo)
 
         PressedEnter isEnter ->
             if isEnter then
@@ -734,16 +741,6 @@ update msg model loggedIn =
 
             else
                 UR.init model
-
-
-redirectToCommunity : Url.Url -> Community.CreateCommunityData -> Cmd msg
-redirectToCommunity url communityData =
-    Browser.Navigation.load
-        (Route.externalCommunityLink url
-            (Just { symbol = communityData.cmmAsset.symbol, name = communityData.name })
-            (Just Route.Dashboard)
-            |> Url.toString
-        )
 
 
 jsAddressToMsg : List String -> Value -> Maybe Msg
@@ -771,10 +768,7 @@ jsAddressToMsg addr val =
 
         "StartedCreatingCommunity" :: [] ->
             Decode.decodeValue
-                (Decode.map2 (\_ communityData -> communityData)
-                    (Decode.field "transactionId" Decode.string)
-                    (Decode.field "addressData" Community.createCommunityDataDecoder)
-                )
+                (Decode.field "transactionId" Decode.string)
                 val
                 |> Result.mapError (\_ -> val)
                 |> GotCreateCommunityResponse

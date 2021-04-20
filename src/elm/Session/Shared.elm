@@ -45,6 +45,7 @@ type alias Shared =
     , contracts : { token : String, community : String }
     , graphqlSecret : String
     , canReadClipboard : Bool
+    , useSubdomain : Bool
     }
 
 
@@ -66,6 +67,7 @@ init ({ environment, maybeAccount, endpoints, allowCommunityCreation, tokenContr
     , contracts = { token = tokenContract, community = communityContract }
     , graphqlSecret = flags.graphqlSecret
     , canReadClipboard = flags.canReadClipboard
+    , useSubdomain = flags.useSubdomain
     }
 
 

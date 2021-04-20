@@ -494,24 +494,38 @@ update session msg model =
                             )
 
         CompletedSignIn loggedIn (RemoteData.Success (Just { user, token })) ->
-            let
-                newLoggedIn =
-                    { loggedIn | authToken = token }
+            case getInvite model of
+                Just { community } ->
+                    let
+                        communityInfo =
+                            { symbol = community.symbol
+                            , name = community.name
+                            , logo = community.logo
+                            , hasShop = community.hasShop
+                            , hasActions = community.hasObjectives
+                            , hasKyc = community.hasKyc
+                            }
 
-                ( withCommunity, cmd ) =
-                    case getInvite model of
-                        Just invite ->
-                            invite.community
-                                |> LoggedIn.addCommunity newLoggedIn
+                        newProfile =
+                            { user | communities = communityInfo :: user.communities }
+                    in
+                    model
+                        |> UR.init
+                        |> UR.addCmd (Route.pushUrl loggedIn.shared.navKey Route.Dashboard)
+                        |> UR.addExt
+                            ({ loggedIn
+                                | selectedCommunity = RemoteData.Success community
+                                , profile = RemoteData.Success newProfile
+                                , authToken = token
+                             }
+                                |> LoggedIn.UpdatedLoggedIn
+                            )
 
-                        Nothing ->
-                            ( newLoggedIn, Cmd.none )
-            in
-            model
-                |> UR.init
-                |> UR.addExt (withCommunity |> LoggedIn.UpdatedLoggedIn)
-                |> UR.addExt (LoggedIn.ProfileLoaded user |> LoggedIn.ExternalBroadcast)
-                |> UR.addCmd cmd
+                Nothing ->
+                    model
+                        |> UR.init
+                        |> UR.addExt (LoggedIn.ProfileLoaded user |> LoggedIn.ExternalBroadcast)
+                        |> UR.logImpossible msg [ "NoInvite" ]
 
         CompletedSignIn _ (RemoteData.Failure error) ->
             { model | pageStatus = Error Http.NetworkError }

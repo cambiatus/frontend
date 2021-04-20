@@ -25,6 +25,7 @@ const AUTH_TOKEN = 'bespiral.auth_token'
 const RECENT_SEARCHES = 'bespiral.recent_search'
 const env = process.env.NODE_ENV || 'development'
 const graphqlSecret = process.env.GRAPHQL_SECRET || ''
+const useSubdomain = process.env.USE_SUBDOMAIN
 const config = configuration[env]
 
 const GLOBAL_STORAGE_IFRAME_ID = 'cambiatus-globalstorage-iframe'
@@ -149,7 +150,8 @@ const main = (setupIframe) => {
       allowCommunityCreation: config.allowCommunityCreation,
       tokenContract: config.tokenContract,
       communityContract: config.communityContract,
-      canReadClipboard: canReadClipboard()
+      canReadClipboard: canReadClipboard(),
+      useSubdomain: useSubdomain
     }
   }
 

@@ -6,7 +6,6 @@ module Session.LoggedIn exposing
     , Msg(..)
     , Page(..)
     , Resource(..)
-    , addCommunity
     , addNotification
     , askedAuthentication
     , hasPrivateKey
@@ -723,6 +722,7 @@ viewFooter _ =
 -}
 type External msg
     = UpdatedLoggedIn Model
+    | AddedCommunity Profile.CommunityInfo
     | ExternalBroadcast BroadcastMsg
     | ReloadResource Resource
     | RequiredAuthentication (Maybe msg)
@@ -742,6 +742,9 @@ mapExternal transform ext =
     case ext of
         UpdatedLoggedIn m ->
             UpdatedLoggedIn m
+
+        AddedCommunity communityInfo ->
+            AddedCommunity communityInfo
 
         ExternalBroadcast broadcastMsg ->
             ExternalBroadcast broadcastMsg
@@ -786,12 +789,35 @@ updateExternal externalMsg ({ shared } as model) =
         UpdatedLoggedIn newModel ->
             { defaultResult | model = newModel }
 
+        AddedCommunity communityInfo ->
+            let
+                ( newModel, cmd ) =
+                    selectCommunity model (Just communityInfo) (Just Route.Community)
+
+                profileWithCommunity =
+                    case profile newModel of
+                        Nothing ->
+                            newModel.profile
+
+                        Just profile_ ->
+                            RemoteData.Success { profile_ | communities = communityInfo :: profile_.communities }
+            in
+            { defaultResult
+                | model = { newModel | profile = profileWithCommunity }
+                , cmd =
+                    if shared.useSubdomain then
+                        cmd
+
+                    else
+                        Route.pushUrl shared.navKey Route.Community
+            }
+
         ExternalBroadcast broadcastMsg ->
             case broadcastMsg of
                 CommunityLoaded community ->
                     case setCommunity community model of
-                        Err cmd ->
-                            { defaultResult | cmd = cmd }
+                        Err ( newModel, cmd ) ->
+                            { defaultResult | model = newModel, cmd = cmd }
 
                         Ok newModel ->
                             { defaultResult | model = newModel, broadcastMsg = Just broadcastMsg }
@@ -1034,8 +1060,8 @@ update msg model =
             case maybeCommunity of
                 Just community ->
                     case setCommunity community model of
-                        Err cmd ->
-                            UR.init model
+                        Err ( newModel, cmd ) ->
+                            UR.init newModel
                                 |> UR.addCmd cmd
 
                         Ok newModel ->
@@ -1044,8 +1070,12 @@ update msg model =
 
                 Nothing ->
                     -- The community doesn't exist, so redirect to the cambiatus community
-                    UR.init model
-                        |> UR.addCmd (redirectToCommunity shared.url Nothing Nothing)
+                    let
+                        ( newModel, cmd ) =
+                            selectCommunity model Nothing Nothing
+                    in
+                    UR.init newModel
+                        |> UR.addCmd cmd
 
         CompletedLoadCommunity (RemoteData.Failure e) ->
             UR.init { model | selectedCommunity = RemoteData.Failure e }
@@ -1189,12 +1219,12 @@ update msg model =
                         UR.init { model | showCommunitySelector = False }
 
                     else
-                        UR.init { model | showCommunitySelector = False }
-                            |> UR.addCmd
-                                (redirectToCommunity shared.url
-                                    (Just newCommunity)
-                                    Nothing
-                                )
+                        let
+                            ( newModel, cmd ) =
+                                selectCommunity model (Just newCommunity) Nothing
+                        in
+                        UR.init { newModel | showCommunitySelector = False }
+                            |> UR.addCmd cmd
 
                 RemoteData.NotAsked ->
                     UR.init loadCommunityModel
@@ -1314,7 +1344,7 @@ loadCommunity ({ shared } as model) symbol =
     )
 
 
-setCommunity : Community.Model -> Model -> Result (Cmd msg) Model
+setCommunity : Community.Model -> Model -> Result ( Model, Cmd Msg ) Model
 setCommunity community model =
     let
         isMember =
@@ -1353,7 +1383,7 @@ setCommunity community model =
     else
         -- Community is loaded, but user is not a member of it
         -- TODO - Need to change this to use auto invite communities
-        Err (redirectToCommunity model.shared.url Nothing Nothing)
+        Err (selectCommunity model Nothing Nothing)
 
 
 communityNameFromUrl : Url -> String
@@ -1372,11 +1402,26 @@ communityNameFromUrl url =
            )
 
 
-redirectToCommunity : Url -> Maybe { community | name : String, symbol : Eos.Symbol } -> Maybe Route -> Cmd msg
-redirectToCommunity currentUrl maybeCommunity maybeRoute =
-    Route.externalCommunityLink currentUrl maybeCommunity maybeRoute
-        |> Url.toString
-        |> Browser.Navigation.load
+selectCommunity : Model -> Maybe { community | name : String, symbol : Eos.Symbol } -> Maybe Route -> ( Model, Cmd Msg )
+selectCommunity ({ shared, authToken } as model) maybeCommunity maybeRoute =
+    if shared.useSubdomain then
+        ( model
+        , Route.externalCommunityLink shared.url maybeCommunity maybeRoute
+            |> Url.toString
+            |> Browser.Navigation.load
+        )
+
+    else
+        ( { model | selectedCommunity = RemoteData.Loading }
+        , Api.Graphql.query shared
+            (Just authToken)
+            (Community.communityNameQuery
+                (Maybe.map .name maybeCommunity
+                    |> Maybe.withDefault "cambiatus"
+                )
+            )
+            CompletedLoadCommunity
+        )
 
 
 closeModal : UpdateResult -> UpdateResult
@@ -1422,34 +1467,6 @@ addNotification notification model =
 readAllNotifications : Model -> Model
 readAllNotifications model =
     { model | notification = Notification.readAll model.notification }
-
-
-addCommunity : Model -> Community.Model -> ( Model, Cmd msg )
-addCommunity model community =
-    let
-        info =
-            { symbol = community.symbol
-            , name = community.name
-            , logo = community.logo
-            , hasShop = community.hasShop
-            , hasActions = community.hasObjectives
-            , hasKyc = community.hasKyc
-            }
-
-        newProfile =
-            case model.profile of
-                RemoteData.Success profile_ ->
-                    RemoteData.Success { profile_ | communities = info :: profile_.communities }
-
-                _ ->
-                    model.profile
-    in
-    ( { model
-        | selectedCommunity = RemoteData.Success community
-        , profile = newProfile
-      }
-    , redirectToCommunity model.shared.url (Just community) (Just Route.Dashboard)
-    )
 
 
 
