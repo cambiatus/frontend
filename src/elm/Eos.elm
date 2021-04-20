@@ -21,6 +21,7 @@ module Eos exposing
     , encodeTableQuery
     , encodeTransaction
     , eosBoolDecoder
+    , eosBoolToBool
     , getSymbolPrecision
     , symbolDecoder
     , symbolFromString
@@ -313,7 +314,7 @@ symbolFromString str =
     in
     case ( maybeSymbolCode, maybePrecision ) of
         ( Just symbolCode, Just precision ) ->
-            if String.length symbolCode == 3 || String.length symbolCode == 4 then
+            if String.all Char.isAlpha symbolCode && (String.length symbolCode == 3 || String.length symbolCode == 4) then
                 Just (Symbol (String.toUpper symbolCode) precision)
 
             else
@@ -374,6 +375,16 @@ boolToEosBool b =
 
     else
         EosFalse
+
+
+eosBoolToBool : EosBool -> Bool
+eosBoolToBool eosBool =
+    case eosBool of
+        EosTrue ->
+            True
+
+        EosFalse ->
+            False
 
 
 encodeEosBool : EosBool -> Value
