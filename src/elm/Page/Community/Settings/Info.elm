@@ -46,6 +46,10 @@ type alias Model =
     , urlInput : String
     , urlErrors : List String
     , requiresInvitation : Bool
+    , inviterRewardInput : String
+    , inviterRewardErrors : List String
+    , invitedRewardInput : String
+    , invitedRewardErrors : List String
     , isLoading : Bool
     }
 
@@ -60,6 +64,10 @@ init loggedIn =
       , urlInput = ""
       , urlErrors = []
       , requiresInvitation = False
+      , inviterRewardInput = ""
+      , inviterRewardErrors = []
+      , invitedRewardInput = ""
+      , invitedRewardErrors = []
       , isLoading = True
       }
     , LoggedIn.maybeInitWith CompletedLoadCommunity .selectedCommunity loggedIn
@@ -78,6 +86,8 @@ type Msg
     | EnteredDescription String
     | EnteredUrl String
     | ToggledInvitation Bool
+    | EnteredInviterReward String
+    | EnteredInvitedReward String
     | ClickedSave
     | GotSaveResponse (Result Value Eos.Symbol)
 
@@ -102,6 +112,8 @@ update msg model loggedIn =
 
                 -- TODO - Use community's requiresInvitation
                 , requiresInvitation = False
+                , inviterRewardInput = String.fromFloat community.inviterReward
+                , invitedRewardInput = String.fromFloat community.invitedReward
                 , isLoading = False
             }
                 |> UR.init
@@ -144,8 +156,23 @@ update msg model loggedIn =
             { model | requiresInvitation = requiresInvitation }
                 |> UR.init
 
+        EnteredInviterReward inviterReward ->
+            { model | inviterRewardInput = inviterReward }
+                |> validateInviterReward (RemoteData.toMaybe loggedIn.selectedCommunity)
+                |> UR.init
+
+        EnteredInvitedReward invitedReward ->
+            { model | invitedRewardInput = invitedReward }
+                |> validateInvitedReward (RemoteData.toMaybe loggedIn.selectedCommunity)
+                |> UR.init
+
         ClickedSave ->
-            case ( LoggedIn.hasPrivateKey loggedIn, isModelValid model, loggedIn.selectedCommunity ) of
+            case
+                ( LoggedIn.hasPrivateKey loggedIn
+                , isModelValid (RemoteData.toMaybe loggedIn.selectedCommunity) model
+                , loggedIn.selectedCommunity
+                )
+            of
                 ( True, True, RemoteData.Success community ) ->
                     let
                         authorization =
@@ -174,8 +201,14 @@ update msg model loggedIn =
                                             , logo = model.logoUrl
                                             , name = model.nameInput
                                             , description = model.descriptionInput
-                                            , inviterReward = asset community.inviterReward
-                                            , invitedReward = asset community.invitedReward
+                                            , inviterReward =
+                                                String.toFloat model.inviterRewardInput
+                                                    |> Maybe.withDefault community.inviterReward
+                                                    |> asset
+                                            , invitedReward =
+                                                String.toFloat model.invitedRewardInput
+                                                    |> Maybe.withDefault community.invitedReward
+                                                    |> asset
                                             , hasObjectives = Eos.boolToEosBool community.hasObjectives
                                             , hasShop = Eos.boolToEosBool community.hasShop
                                             }
@@ -204,6 +237,14 @@ update msg model loggedIn =
                                     | name = model.nameInput
                                     , description = model.descriptionInput
                                     , logo = model.logoUrl
+                                    , inviterReward =
+                                        model.inviterRewardInput
+                                            |> String.toFloat
+                                            |> Maybe.withDefault community.inviterReward
+                                    , invitedReward =
+                                        model.invitedRewardInput
+                                            |> String.toFloat
+                                            |> Maybe.withDefault community.invitedReward
                                 }
                                 |> LoggedIn.ExternalBroadcast
                             )
@@ -242,21 +283,24 @@ error field key =
     String.join "." [ "settings.community_info.errors", fieldString, key ]
 
 
-isModelValid : Model -> Bool
-isModelValid model =
+isModelValid : Maybe Community.Model -> Model -> Bool
+isModelValid maybeCommunity model =
     let
         validatedModel =
-            validateModel model
+            validateModel maybeCommunity model
     in
-    List.all (\f -> f validatedModel |> List.isEmpty) [ .nameErrors, .descriptionErrors, .urlErrors ]
+    List.all (\f -> f validatedModel |> List.isEmpty)
+        [ .nameErrors, .descriptionErrors, .urlErrors, .inviterRewardErrors, .invitedRewardErrors ]
 
 
-validateModel : Model -> Model
-validateModel model =
+validateModel : Maybe Community.Model -> Model -> Model
+validateModel maybeCommunity model =
     model
         |> validateName
         |> validateDescription
         |> validateUrl
+        |> validateInviterReward maybeCommunity
+        |> validateInvitedReward maybeCommunity
 
 
 validateName : Model -> Model
@@ -313,6 +357,56 @@ validateUrl model =
     { model | urlErrors = validateChars ++ validateCase ++ validateLength }
 
 
+validateNumberInput : Maybe Eos.Symbol -> String -> Result String Float
+validateNumberInput maybeSymbol numberInput =
+    let
+        validateParsing =
+            String.toFloat numberInput
+                |> Result.fromMaybe "error.validator.text.only_numbers"
+    in
+    case String.split "." numberInput of
+        [] ->
+            Err "error.required"
+
+        [ "" ] ->
+            Err "error.required"
+
+        [ _ ] ->
+            validateParsing
+
+        _ :: decimalDigits :: _ ->
+            case maybeSymbol of
+                Just symbol ->
+                    if String.length decimalDigits > Eos.getSymbolPrecision symbol then
+                        Err "error.contracts.transfer.symbol precision mismatch"
+
+                    else
+                        validateParsing
+
+                Nothing ->
+                    validateParsing
+
+
+validateInviterReward : Maybe Community.Model -> Model -> Model
+validateInviterReward maybeCommunity model =
+    case validateNumberInput (Maybe.map .symbol maybeCommunity) model.inviterRewardInput of
+        Ok _ ->
+            { model | inviterRewardErrors = [] }
+
+        Err err ->
+            { model | inviterRewardErrors = [ err ] }
+
+
+validateInvitedReward : Maybe Community.Model -> Model -> Model
+validateInvitedReward maybeCommunity model =
+    case validateNumberInput (Maybe.map .symbol maybeCommunity) model.invitedRewardInput of
+        Ok _ ->
+            { model | invitedRewardErrors = [] }
+
+        Err err ->
+            { model | invitedRewardErrors = [ err ] }
+
+
 
 -- VIEW
 
@@ -349,7 +443,7 @@ view ({ shared } as loggedIn) model =
 
 
 view_ : LoggedIn.Model -> Community.Model -> Model -> Html Msg
-view_ loggedIn _ model =
+view_ loggedIn community model =
     let
         { t } =
             loggedIn.shared.translators
@@ -365,6 +459,8 @@ view_ loggedIn _ model =
                 , viewDescription loggedIn.shared model
                 , viewUrl loggedIn.shared model
                 , viewInvitation loggedIn.shared model
+                , viewInviterReward loggedIn.shared community.symbol model
+                , viewInvitedReward loggedIn.shared community.symbol model
                 ]
             , button
                 [ class "button button-primary w-full mt-14"
@@ -426,7 +522,7 @@ viewName shared model =
         , problems =
             List.map t model.nameErrors
                 |> List.head
-                |> Maybe.map (\x -> [ x ])
+                |> Maybe.map List.singleton
         , translators = shared.translators
         }
         |> Input.toHtml
@@ -448,7 +544,7 @@ viewDescription shared model =
         , problems =
             List.map t model.descriptionErrors
                 |> List.head
-                |> Maybe.map (\x -> [ x ])
+                |> Maybe.map List.singleton
         , translators = shared.translators
         }
         |> Input.withType Input.TextArea
@@ -522,8 +618,67 @@ viewInvitation { translators } model =
         ]
 
 
+viewInviterReward : Shared -> Eos.Symbol -> Model -> Html Msg
+viewInviterReward { translators } symbol model =
+    let
+        { t } =
+            translators
+    in
+    Input.init
+        { label = t "community.create.labels.inviter_reward"
+        , id = "inviter_reward_input"
+        , onInput = EnteredInviterReward
+        , disabled = model.isLoading
+        , value = model.inviterRewardInput
+        , placeholder = Just (symbolPlaceholder symbol 10)
+        , problems =
+            List.map t model.inviterRewardErrors
+                |> List.head
+                |> Maybe.map List.singleton
+        , translators = translators
+        }
+        |> Input.withCurrency symbol
+        |> Input.toHtml
+
+
+viewInvitedReward : Shared -> Eos.Symbol -> Model -> Html Msg
+viewInvitedReward { translators } symbol model =
+    let
+        { t } =
+            translators
+    in
+    Input.init
+        { label = t "community.create.labels.invited_reward"
+        , id = "invited_reward_input"
+        , onInput = EnteredInvitedReward
+        , disabled = model.isLoading
+        , value = model.invitedRewardInput
+        , placeholder = Just (symbolPlaceholder symbol 5)
+        , problems =
+            List.map t model.invitedRewardErrors
+                |> List.head
+                |> Maybe.map List.singleton
+        , translators = translators
+        }
+        |> Input.withCurrency symbol
+        |> Input.toHtml
+
+
 
 -- UTILS
+
+
+symbolPlaceholder : Eos.Symbol -> Int -> String
+symbolPlaceholder symbol amount =
+    let
+        precision =
+            Eos.getSymbolPrecision symbol
+    in
+    if precision == 0 then
+        String.fromInt amount
+
+    else
+        String.fromInt amount ++ "." ++ String.join "" (List.repeat precision "0")
 
 
 receiveBroadcast : LoggedIn.BroadcastMsg -> Maybe Msg
@@ -579,6 +734,12 @@ msgToString msg =
 
         ToggledInvitation _ ->
             [ "ToggledInvitation" ]
+
+        EnteredInviterReward _ ->
+            [ "EnteredInviterReward" ]
+
+        EnteredInvitedReward _ ->
+            [ "EnteredInvitedReward" ]
 
         ClickedSave ->
             [ "ClickedSave" ]

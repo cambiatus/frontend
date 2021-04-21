@@ -33,26 +33,19 @@ import View.Form.Input as Input
 
 
 type alias Model =
-    { inviterReward : String
-    , invitedReward : String
-    , minimumBalance : String
+    { minimumBalance : String
     , isLoading : Bool
     , errors : List ( Field, String )
     }
 
 
 type alias ValidModel =
-    { inviterReward : Float
-    , invitedReward : Float
-    , minimumBalance : Float
-    }
+    { minimumBalance : Float }
 
 
 init : LoggedIn.Model -> ( Model, Cmd Msg )
 init loggedIn =
-    ( { inviterReward = ""
-      , invitedReward = ""
-      , minimumBalance = ""
+    ( { minimumBalance = ""
       , isLoading = True
       , errors = []
       }
@@ -66,8 +59,6 @@ init loggedIn =
 
 type Msg
     = Ignored
-    | EnteredInviterReward String
-    | EnteredInvitedReward String
     | EnteredMinimumBalance String
     | ClickedSubmit
     | GotSubmitResponse (Result Encode.Value ValidModel)
@@ -83,16 +74,6 @@ update msg model ({ shared } as loggedIn) =
     case msg of
         Ignored ->
             UR.init model
-
-        EnteredInviterReward inviterReward ->
-            { model | inviterReward = inviterReward }
-                |> withSymbolValidation validateInviterReward InviterReward loggedIn
-                |> UR.init
-
-        EnteredInvitedReward invitedReward ->
-            { model | invitedReward = invitedReward }
-                |> withSymbolValidation validateInvitedReward InvitedReward loggedIn
-                |> UR.init
 
         EnteredMinimumBalance minimumBalance ->
             { model | minimumBalance = minimumBalance }
@@ -129,11 +110,7 @@ update msg model ({ shared } as loggedIn) =
                 |> (case loggedIn.selectedCommunity of
                         RemoteData.Success community ->
                             UR.addExt
-                                ({ community
-                                    | inviterReward = validModel.inviterReward
-                                    , invitedReward = validModel.invitedReward
-                                    , minBalance = Just validModel.minimumBalance
-                                 }
+                                ({ community | minBalance = Just validModel.minimumBalance }
                                     |> LoggedIn.CommunityLoaded
                                     |> LoggedIn.ExternalBroadcast
                                 )
@@ -155,9 +132,7 @@ update msg model ({ shared } as loggedIn) =
 
         CompletedLoadCommunity community ->
             { model
-                | inviterReward = String.fromFloat community.inviterReward
-                , invitedReward = String.fromFloat community.invitedReward
-                , minimumBalance =
+                | minimumBalance =
                     Maybe.map String.fromFloat community.minBalance
                         |> Maybe.withDefault "0"
                 , isLoading = False
@@ -193,22 +168,7 @@ savePort validModel loggedIn community =
     , responseData = encodeValidModel validModel
     , data =
         Eos.encodeTransaction
-            [ { accountName = loggedIn.shared.contracts.community
-              , name = "update"
-              , authorization = authorization
-              , data =
-                    { asset = asset 0
-                    , logo = community.logo
-                    , name = community.name
-                    , description = community.description
-                    , inviterReward = asset validModel.inviterReward
-                    , invitedReward = asset validModel.invitedReward
-                    , hasObjectives = Eos.boolToEosBool community.hasObjectives
-                    , hasShop = Eos.boolToEosBool community.hasShop
-                    }
-                        |> Community.encodeUpdateData
-              }
-            , { accountName = loggedIn.shared.contracts.token
+            [ { accountName = loggedIn.shared.contracts.token
               , name = "update"
               , authorization = authorization
               , data =
@@ -226,9 +186,7 @@ savePort validModel loggedIn community =
 
 
 type Field
-    = InviterReward
-    | InvitedReward
-    | MinimumBalance
+    = MinimumBalance
 
 
 isFieldError : Field -> ( Field, String ) -> Bool
@@ -278,16 +236,6 @@ setErrors field validationResult model =
     }
 
 
-validateInviterReward : Eos.Symbol -> Model -> Result String Float
-validateInviterReward symbol model =
-    validateNumberInput symbol model.inviterReward
-
-
-validateInvitedReward : Eos.Symbol -> Model -> Result String Float
-validateInvitedReward symbol model =
-    validateNumberInput symbol model.invitedReward
-
-
 validateMinimumBalance : Eos.Symbol -> Model -> Result String Float
 validateMinimumBalance symbol model =
     validateNumberInput symbol model.minimumBalance
@@ -296,23 +244,15 @@ validateMinimumBalance symbol model =
 validateModel : Eos.Symbol -> Model -> Result Model ValidModel
 validateModel symbol model =
     let
-        inviterValidation =
-            validateInviterReward symbol model
-
-        invitedValidation =
-            validateInvitedReward symbol model
-
         minimumBalanceValidation =
             validateMinimumBalance symbol model
     in
-    case Result.map3 ValidModel inviterValidation invitedValidation minimumBalanceValidation of
+    case Result.map ValidModel minimumBalanceValidation of
         Ok valid ->
             Ok valid
 
         Err _ ->
             model
-                |> setErrors InviterReward inviterValidation
-                |> setErrors InvitedReward invitedValidation
                 |> setErrors MinimumBalance minimumBalanceValidation
                 |> Err
 
@@ -433,30 +373,6 @@ view_ { shared } community model =
                     [ text (t "settings.community_currency.format") ]
                 ]
             , Input.init
-                { label = t "community.create.labels.inviter_reward"
-                , id = "inviter_reward_field"
-                , onInput = EnteredInviterReward
-                , disabled = False
-                , value = model.inviterReward
-                , placeholder = Just (fillWithPrecision 10)
-                , problems = errorsForField shared.translators InviterReward model
-                , translators = shared.translators
-                }
-                |> Input.withCurrency community.symbol
-                |> Input.toHtml
-            , Input.init
-                { label = t "community.create.labels.invited_reward"
-                , id = "invited_reward_field"
-                , onInput = EnteredInvitedReward
-                , disabled = False
-                , value = model.invitedReward
-                , placeholder = Just (fillWithPrecision 5)
-                , problems = errorsForField shared.translators InvitedReward model
-                , translators = shared.translators
-                }
-                |> Input.withCurrency community.symbol
-                |> Input.toHtml
-            , Input.init
                 { label = t "community.create.labels.min_balance"
                 , id = "minimum_balance_field"
                 , onInput = EnteredMinimumBalance
@@ -491,17 +407,13 @@ errorsForField translators field model =
 encodeValidModel : ValidModel -> Encode.Value
 encodeValidModel validModel =
     Encode.object
-        [ ( "inviterReward", Encode.float validModel.inviterReward )
-        , ( "invitedReward", Encode.float validModel.invitedReward )
-        , ( "minimumBalance", Encode.float validModel.minimumBalance )
+        [ ( "minimumBalance", Encode.float validModel.minimumBalance )
         ]
 
 
 validModelDecoder : Decode.Decoder ValidModel
 validModelDecoder =
-    Decode.map3 ValidModel
-        (Decode.field "inviterReward" Decode.float)
-        (Decode.field "invitedReward" Decode.float)
+    Decode.map ValidModel
         (Decode.field "minimumBalance" Decode.float)
 
 
@@ -540,12 +452,6 @@ msgToString msg =
     case msg of
         Ignored ->
             [ "Ignored" ]
-
-        EnteredInviterReward _ ->
-            [ "EnteredInviterReward" ]
-
-        EnteredInvitedReward _ ->
-            [ "EnteredInvitedReward" ]
 
         EnteredMinimumBalance _ ->
             [ "EnteredMinimumBalance" ]
