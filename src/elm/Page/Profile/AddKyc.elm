@@ -58,30 +58,6 @@ update msg model loggedIn =
             loggedIn.shared.translators
     in
     case msg of
-        -- TODO
-        -- CompletedProfileLoad (RemoteData.Success Nothing) ->
-        --     UR.init model
-        -- CompletedProfileLoad (RemoteData.Success (Just profile)) ->
-        --     case profile.kyc of
-        --         Just _ ->
-        --             -- Users with already filled KYC data are restricted from seeing this page.
-        --             model
-        --                 |> UR.init
-        --                 |> UR.addCmd
-        --                     (Route.Profile
-        --                         |> Route.replaceUrl loggedIn.shared.navKey
-        --                     )
-        --                 |> UR.addExt (ShowFeedback Feedback.Failure (t "community.kyc.add.restricted"))
-        --         Nothing ->
-        --             { model
-        --                 | status = Loaded profile
-        --             }
-        --                 |> UR.init
-        -- CompletedProfileLoad (RemoteData.Failure err) ->
-        --     UR.init { model | status = LoadingFailed loggedIn.accountName err }
-        --         |> UR.logGraphqlError msg err
-        -- CompletedProfileLoad _ ->
-        --     UR.init model
         FormMsg kycFormMsg ->
             let
                 newModel =

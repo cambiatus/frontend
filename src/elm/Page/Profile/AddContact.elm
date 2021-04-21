@@ -59,8 +59,6 @@ update msg model ({ shared, authToken } as loggedIn) =
 
                         actOnNewContacts updateResult =
                             case newContacts of
-                                -- TODO
-                                -- <<<<<<< HEAD
                                 Contact.WithContacts successMessage contacts ->
                                     case loggedIn.profile of
                                         RemoteData.Success profile ->
@@ -77,12 +75,6 @@ update msg model ({ shared, authToken } as loggedIn) =
                                             updateResult
                                                 |> UR.logImpossible msg [ "WithContacts", "NoProfile" ]
 
-                                -- =======
-                                -- Contact.WithContacts successMessage _ ->
-                                --     updateResult
-                                --         |> UR.addExt (LoggedIn.ShowFeedback Feedback.Success successMessage)
-                                --         |> UR.addCmd (Route.replaceUrl shared.navKey Route.Profile)
-                                -- >>>>>>> master
                                 Contact.WithError errorMessage ->
                                     updateResult
                                         |> UR.addExt (LoggedIn.ShowFeedback Feedback.Failure errorMessage)
