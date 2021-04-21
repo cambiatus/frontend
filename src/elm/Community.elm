@@ -21,6 +21,7 @@ module Community exposing
     , communitySelectionSet
     , createCommunityData
     , createCommunityDataDecoder
+    , createTokenDataDecoder
     , decodeBalance
     , decodeTransaction
     , encodeCreateCommunityData
@@ -348,7 +349,6 @@ type alias CreateCommunityData =
     , description : String
     , inviterReward : Eos.Asset
     , invitedReward : Eos.Asset
-    , minBalance : Eos.Asset
     , hasShop : Eos.EosBool
     , hasObjectives : Eos.EosBool
     , hasKyc : Eos.EosBool
@@ -363,7 +363,6 @@ createCommunityData :
     , description : String
     , inviterReward : Float
     , invitedReward : Float
-    , minBalance : Float
     , hasShop : Bool
     , hasObjectives : Bool
     , hasKyc : Bool
@@ -386,10 +385,6 @@ createCommunityData params =
         { amount = params.invitedReward
         , symbol = params.symbol
         }
-    , minBalance =
-        { amount = params.minBalance
-        , symbol = params.symbol
-        }
     , hasShop = params.hasShop |> Eos.boolToEosBool
     , hasObjectives = params.hasObjectives |> Eos.boolToEosBool
     , hasKyc = params.hasKyc |> Eos.boolToEosBool
@@ -406,7 +401,6 @@ encodeCreateCommunityData c =
         , ( "description", Encode.string c.description )
         , ( "inviter_reward", Eos.encodeAsset c.inviterReward )
         , ( "invited_reward", Eos.encodeAsset c.invitedReward )
-        , ( "min_balance", Eos.encodeAsset c.minBalance )
         , ( "has_objectives", Eos.encodeEosBool c.hasObjectives )
         , ( "has_shop", Eos.encodeEosBool c.hasShop )
         , ( "has_kyc", Eos.encodeEosBool c.hasKyc )
@@ -423,7 +417,6 @@ createCommunityDataDecoder =
         |> required "description" Decode.string
         |> required "inviter_reward" Eos.decodeAsset
         |> required "invited_reward" Eos.decodeAsset
-        |> required "min_balance" Eos.decodeAsset
         |> required "has_objectives" Eos.eosBoolDecoder
         |> required "has_shop" Eos.eosBoolDecoder
         |> required "has_kyc" Eos.eosBoolDecoder
@@ -445,6 +438,15 @@ encodeCreateTokenData c =
         , ( "min_balance", Eos.encodeAsset c.minBalance )
         , ( "type", Encode.string c.tokenType )
         ]
+
+
+createTokenDataDecoder : Decoder CreateTokenData
+createTokenDataDecoder =
+    Decode.succeed CreateTokenData
+        |> required "issuer" Eos.nameDecoder
+        |> required "max_supply" Eos.decodeAsset
+        |> required "min_balance" Eos.decodeAsset
+        |> required "type" Decode.string
 
 
 type alias UpdateTokenData =

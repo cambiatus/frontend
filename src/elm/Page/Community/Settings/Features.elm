@@ -276,7 +276,6 @@ saveFeature feature state authorization { shared, accountName } community =
             , description = community.description
             , inviterReward = community.inviterReward
             , invitedReward = community.invitedReward
-            , minBalance = community.minBalance |> Maybe.withDefault -100
             , hasShop = hasShop
             , hasObjectives = hasObjectives
             , hasKyc = hasKyc

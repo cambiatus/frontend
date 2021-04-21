@@ -448,7 +448,7 @@ validateLogoUrl model =
             Err ( Logo, ChooseLogo )
 
 
-validateModel : Eos.Name -> Model -> Result Model Community.CreateCommunityData
+validateModel : Eos.Name -> Model -> Result Model ( Community.CreateCommunityData, Community.CreateTokenData )
 validateModel accountName model =
     let
         nameValidation =
@@ -469,37 +469,49 @@ validateModel accountName model =
         minimumBalanceValidation =
             validateMinimumBalance model
 
-        rewardsValidation =
-            Result.map2
-                (\inviterReward invitedReward -> { inviterReward = inviterReward, invitedReward = invitedReward })
+        createCommunityData =
+            Result.map5
+                (\symbol logoUrl name inviterReward invitedReward ->
+                    Community.createCommunityData
+                        { accountName = accountName
+                        , symbol = symbol
+                        , logoUrl = logoUrl
+                        , name = name
+                        , description = model.description
+                        , inviterReward = inviterReward
+                        , invitedReward = invitedReward
+                        , hasShop = True
+                        , hasObjectives = True
+                        , hasKyc = False
+                        }
+                )
+                symbolValidation
+                logoValidation
+                nameValidation
                 inviterRewardValidation
                 invitedRewardValidation
-    in
-    case
-        Result.map5
-            (\{ inviterReward, invitedReward } name symbol logoUrl minimumBalance ->
-                Community.createCommunityData
-                    { accountName = accountName
-                    , symbol = symbol
-                    , logoUrl = logoUrl
-                    , name = name
-                    , description = model.description
-                    , inviterReward = inviterReward
-                    , invitedReward = invitedReward
-                    , minBalance = minimumBalance
-                    , hasShop = True
-                    , hasObjectives = True
-                    , hasKyc = False
+
+        createTokenData =
+            Result.map2
+                (\symbol minimumBalance ->
+                    let
+                        asset amount =
+                            { amount = amount
+                            , symbol = symbol
+                            }
+                    in
+                    { creator = accountName
+                    , maxSupply = asset 21000000.0
+                    , minBalance = asset minimumBalance
+                    , tokenType = "mcc"
                     }
-            )
-            rewardsValidation
-            nameValidation
-            symbolValidation
-            logoValidation
-            minimumBalanceValidation
-    of
-        Ok validModel ->
-            Ok validModel
+                )
+                symbolValidation
+                minimumBalanceValidation
+    in
+    case Result.map2 Tuple.pair createCommunityData createTokenData of
+        Ok valid ->
+            Ok valid
 
         Err _ ->
             let
@@ -570,7 +582,7 @@ type Msg
     | EnteredLogo Int (List File)
     | CompletedLogoUpload Int (Result Http.Error String)
     | SubmittedForm
-    | StartedCreatingCommunity Community.CreateCommunityData
+    | StartedCreatingCommunity Community.CreateCommunityData Community.CreateTokenData
     | GotCreateCommunityResponse (Result Encode.Value String)
     | Redirect Community.CreateCommunityData
     | PressedEnter Bool
@@ -646,18 +658,22 @@ update msg model loggedIn =
 
         SubmittedForm ->
             case validateModel loggedIn.accountName model of
-                Ok createData ->
+                Ok ( createCommunityData, createTokenData ) ->
                     if LoggedIn.hasPrivateKey loggedIn then
                         let
                             subscriptionDoc =
-                                Community.newCommunitySubscription createData.cmmAsset.symbol
+                                Community.newCommunitySubscription createCommunityData.cmmAsset.symbol
                                     |> Graphql.Document.serializeSubscription
                         in
                         { model | isDisabled = True }
                             |> UR.init
                             |> UR.addPort
                                 { responseAddress = SubmittedForm
-                                , responseData = Community.encodeCreateCommunityData createData
+                                , responseData =
+                                    Encode.object
+                                        [ ( "createCommunityData", Community.encodeCreateCommunityData createCommunityData )
+                                        , ( "createTokenData", Community.encodeCreateTokenData createTokenData )
+                                        ]
                                 , data =
                                     Encode.object
                                         [ ( "name", Encode.string "subscribeToNewCommunity" )
@@ -675,7 +691,7 @@ update msg model loggedIn =
                 Err withError ->
                     UR.init withError
 
-        StartedCreatingCommunity createCommunityData ->
+        StartedCreatingCommunity createCommunityData createTokenData ->
             let
                 authorization =
                     { actor = loggedIn.accountName
@@ -684,8 +700,8 @@ update msg model loggedIn =
             in
             UR.init model
                 |> UR.addPort
-                    { responseAddress = StartedCreatingCommunity createCommunityData
-                    , responseData = Community.encodeCreateCommunityData createCommunityData
+                    { responseAddress = StartedCreatingCommunity createCommunityData createTokenData
+                    , responseData = Encode.null
                     , data =
                         Eos.encodeTransaction
                             [ { accountName = loggedIn.shared.contracts.community
@@ -696,13 +712,7 @@ update msg model loggedIn =
                             , { accountName = loggedIn.shared.contracts.token
                               , name = "create"
                               , authorization = authorization
-                              , data =
-                                    { creator = loggedIn.accountName
-                                    , maxSupply = { amount = 21000000.0, symbol = createCommunityData.cmmAsset.symbol }
-                                    , minBalance = createCommunityData.minBalance
-                                    , tokenType = "mcc"
-                                    }
-                                        |> Community.encodeCreateTokenData
+                              , data = Community.encodeCreateTokenData createTokenData
                               }
                             ]
                     }
@@ -752,15 +762,20 @@ jsAddressToMsg addr val =
                     Decode.decodeValue
                         (Decode.map2 Tuple.pair
                             (Decode.field "state" Decode.string)
-                            (Decode.field "addressData" Community.createCommunityDataDecoder)
+                            (Decode.field "addressData"
+                                (Decode.map2 Tuple.pair
+                                    (Decode.field "createCommunityData" Community.createCommunityDataDecoder)
+                                    (Decode.field "createTokenData" Community.createTokenDataDecoder)
+                                )
+                            )
                         )
                         val
             in
             case response of
-                Ok ( "starting", createCommunityData ) ->
-                    Just (StartedCreatingCommunity createCommunityData)
+                Ok ( "starting", ( createCommunityData, createTokenData ) ) ->
+                    Just (StartedCreatingCommunity createCommunityData createTokenData)
 
-                Ok ( "responded", createCommunityData ) ->
+                Ok ( "responded", ( createCommunityData, _ ) ) ->
                     Just (Redirect createCommunityData)
 
                 _ ->
@@ -811,7 +826,7 @@ msgToString msg =
         SubmittedForm ->
             [ "SubmittedForm" ]
 
-        StartedCreatingCommunity _ ->
+        StartedCreatingCommunity _ _ ->
             [ "StartedCreatingCommunity" ]
 
         GotCreateCommunityResponse _ ->
