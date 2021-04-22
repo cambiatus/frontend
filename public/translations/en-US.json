@@ -921,9 +921,16 @@
       }
     },
     "community_currency": {
-      "title": "Currency and Rewards",
+      "title": "Currency",
       "decimal_places": "Decimal places",
-      "format": "Your currency format"
+      "format": "Your currency format",
+      "token_type": "Type",
+      "expiry": "Expiry",
+      "natural_expiration_period": "Natural person expiration period",
+      "juridical_expiration_period": "Juridical person expiration period",
+      "renovation_amount": "Renovation amount",
+      "expiryopts_not_found": "We couldn't find the expiry options for your token",
+      "seconds": "seconds"
     },
     "actions": {
       "title": "Objectives and Actions",

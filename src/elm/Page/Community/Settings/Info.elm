@@ -606,7 +606,7 @@ viewInvitation : Shared -> Model -> Html Msg
 viewInvitation { translators } model =
     div [ class "flex flex-col" ]
         [ View.Form.label "" (translators.t "settings.community_info.invitation.title")
-        , span [ class "mt-5 mb-7" ] [ text (translators.t "settings.community_info.invitation.description") ]
+        , span [ class "mt-4 mb-7" ] [ text (translators.t "settings.community_info.invitation.description") ]
         , View.Toggle.init
             { label = "settings.community_info.fields.invitation"
             , id = "invitation_toggle"

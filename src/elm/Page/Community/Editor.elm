@@ -30,6 +30,7 @@ import Route
 import Session.LoggedIn as LoggedIn exposing (External(..))
 import Session.Shared exposing (Shared)
 import Task
+import Token
 import UpdateResult as UR
 import Utils exposing (decodeEnterKeyDown)
 import View.Components
@@ -448,7 +449,7 @@ validateLogoUrl model =
             Err ( Logo, ChooseLogo )
 
 
-validateModel : Eos.Name -> Model -> Result Model ( Community.CreateCommunityData, Community.CreateTokenData )
+validateModel : Eos.Name -> Model -> Result Model ( Community.CreateCommunityData, Token.CreateTokenData )
 validateModel accountName model =
     let
         nameValidation =
@@ -503,7 +504,7 @@ validateModel accountName model =
                     { creator = accountName
                     , maxSupply = asset 21000000.0
                     , minBalance = asset minimumBalance
-                    , tokenType = "mcc"
+                    , tokenType = Token.Mcc
                     }
                 )
                 symbolValidation
@@ -582,7 +583,7 @@ type Msg
     | EnteredLogo Int (List File)
     | CompletedLogoUpload Int (Result Http.Error String)
     | SubmittedForm
-    | StartedCreatingCommunity Community.CreateCommunityData Community.CreateTokenData
+    | StartedCreatingCommunity Community.CreateCommunityData Token.CreateTokenData
     | GotCreateCommunityResponse (Result Encode.Value String)
     | Redirect Community.CreateCommunityData
     | PressedEnter Bool
@@ -672,7 +673,7 @@ update msg model loggedIn =
                                 , responseData =
                                     Encode.object
                                         [ ( "createCommunityData", Community.encodeCreateCommunityData createCommunityData )
-                                        , ( "createTokenData", Community.encodeCreateTokenData createTokenData )
+                                        , ( "createTokenData", Token.encodeCreateTokenData createTokenData )
                                         ]
                                 , data =
                                     Encode.object
@@ -712,7 +713,7 @@ update msg model loggedIn =
                             , { accountName = loggedIn.shared.contracts.token
                               , name = "create"
                               , authorization = authorization
-                              , data = Community.encodeCreateTokenData createTokenData
+                              , data = Token.encodeCreateTokenData createTokenData
                               }
                             ]
                     }
@@ -765,7 +766,7 @@ jsAddressToMsg addr val =
                             (Decode.field "addressData"
                                 (Decode.map2 Tuple.pair
                                     (Decode.field "createCommunityData" Community.createCommunityDataDecoder)
-                                    (Decode.field "createTokenData" Community.createTokenDataDecoder)
+                                    (Decode.field "createTokenData" Token.createTokenDataDecoder)
                                 )
                             )
                         )

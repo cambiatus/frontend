@@ -9,12 +9,14 @@ module Page.Community.Settings.Currency exposing
     , view
     )
 
+import Api
 import Community
 import Eos
 import Eos.Account as Eos
 import Html exposing (Html, button, div, form, span, text)
 import Html.Attributes exposing (class, disabled)
 import Html.Events exposing (onSubmit)
+import Http
 import Json.Decode as Decode
 import Json.Encode as Encode
 import Page
@@ -23,9 +25,11 @@ import RemoteData
 import Route
 import Session.LoggedIn as LoggedIn
 import Session.Shared exposing (Translators)
+import Token
 import UpdateResult as UR
 import View.Feedback as Feedback
 import View.Form.Input as Input
+import View.Form.Radio as Radio
 
 
 
@@ -34,18 +38,24 @@ import View.Form.Input as Input
 
 type alias Model =
     { minimumBalance : String
+    , maximumSupply : String
+    , tokenType : Token.TokenType
+    , naturalExpirationPeriod : String
+    , juridicalExpirationPeriod : String
+    , renovationAmount : String
     , isLoading : Bool
     , errors : List ( Field, String )
     }
 
 
-type alias ValidModel =
-    { minimumBalance : Float }
-
-
 init : LoggedIn.Model -> ( Model, Cmd Msg )
 init loggedIn =
     ( { minimumBalance = ""
+      , maximumSupply = ""
+      , tokenType = Token.Mcc
+      , naturalExpirationPeriod = ""
+      , juridicalExpirationPeriod = ""
+      , renovationAmount = ""
       , isLoading = True
       , errors = []
       }
@@ -60,9 +70,14 @@ init loggedIn =
 type Msg
     = Ignored
     | EnteredMinimumBalance String
+    | EnteredMaximumSupply String
+    | EnteredNaturalExpirationPeriod String
+    | EnteredJuridicalExpirationPeriod String
+    | EnteredRenovationAmount String
     | ClickedSubmit
-    | GotSubmitResponse (Result Encode.Value ValidModel)
+    | GotSubmitResponse (Result Encode.Value Token.UpdateTokenData)
     | CompletedLoadCommunity Community.Model
+    | CompletedLoadExpiryOpts (Result Http.Error (Maybe Token.ExpiryOptsData))
 
 
 type alias UpdateResult =
@@ -80,15 +95,35 @@ update msg model ({ shared } as loggedIn) =
                 |> withSymbolValidation validateMinimumBalance MinimumBalance loggedIn
                 |> UR.init
 
+        EnteredMaximumSupply maximumSupply ->
+            { model | maximumSupply = maximumSupply }
+                |> withSymbolValidation validateMaximumSupply MaximumSupply loggedIn
+                |> UR.init
+
+        EnteredNaturalExpirationPeriod naturalExpirationPeriod ->
+            { model | naturalExpirationPeriod = naturalExpirationPeriod }
+                |> setErrors NaturalExpirationPeriod validateNaturalExpirationPeriod
+                |> UR.init
+
+        EnteredJuridicalExpirationPeriod juridicalExpirationPeriod ->
+            { model | juridicalExpirationPeriod = juridicalExpirationPeriod }
+                |> setErrors JuridicalExpirationPeriod validateJuridicalExpirationPeriod
+                |> UR.init
+
+        EnteredRenovationAmount renovationAmount ->
+            { model | renovationAmount = renovationAmount }
+                |> withSymbolValidation validateRenovationAmount RenovationAmount loggedIn
+                |> UR.init
+
         ClickedSubmit ->
             case loggedIn.selectedCommunity of
                 RemoteData.Success community ->
                     case validateModel community.symbol model of
-                        Ok validatedModel ->
+                        Ok ( validUpdateTokenData, validExpiryOptsData ) ->
                             if LoggedIn.hasPrivateKey loggedIn then
                                 { model | isLoading = True }
                                     |> UR.init
-                                    |> UR.addPort (savePort validatedModel loggedIn community)
+                                    |> UR.addPort (savePort validUpdateTokenData validExpiryOptsData loggedIn)
 
                             else
                                 UR.init model
@@ -104,13 +139,13 @@ update msg model ({ shared } as loggedIn) =
                     UR.init model
                         |> UR.logImpossible msg [ "CommunityNotLoaded" ]
 
-        GotSubmitResponse (Ok validModel) ->
+        GotSubmitResponse (Ok updateTokenData) ->
             { model | isLoading = False }
                 |> UR.init
                 |> (case loggedIn.selectedCommunity of
                         RemoteData.Success community ->
                             UR.addExt
-                                ({ community | minBalance = Just validModel.minimumBalance }
+                                ({ community | minBalance = Just updateTokenData.minBalance.amount }
                                     |> LoggedIn.CommunityLoaded
                                     |> LoggedIn.ExternalBroadcast
                                 )
@@ -131,53 +166,109 @@ update msg model ({ shared } as loggedIn) =
                 |> UR.logDebugValue msg val
 
         CompletedLoadCommunity community ->
+            let
+                tokenType =
+                    community.tokenType |> Maybe.withDefault Token.Mcc
+
+                fetchExpiryOptsData =
+                    case tokenType of
+                        Token.Mcc ->
+                            identity
+
+                        Token.Expiry ->
+                            UR.addCmd (Api.getExpiryOpts shared community.symbol CompletedLoadExpiryOpts)
+            in
             { model
                 | minimumBalance =
                     Maybe.map String.fromFloat community.minBalance
                         |> Maybe.withDefault "0"
+                , maximumSupply =
+                    Maybe.map String.fromFloat community.maxSupply
+                        |> Maybe.withDefault "21000000"
+                , tokenType = tokenType
+                , isLoading =
+                    case tokenType of
+                        Token.Mcc ->
+                            False
+
+                        Token.Expiry ->
+                            True
+            }
+                |> UR.init
+                |> fetchExpiryOptsData
+
+        CompletedLoadExpiryOpts (Ok (Just expiryOptsData)) ->
+            { model
+                | naturalExpirationPeriod =
+                    expiryOptsData.naturalExpirationPeriod
+                        |> String.fromInt
+                , juridicalExpirationPeriod =
+                    expiryOptsData.juridicalExpirationPeriod
+                        |> String.fromInt
+                , renovationAmount =
+                    expiryOptsData.renovationAmount.amount
+                        |> String.fromFloat
                 , isLoading = False
             }
                 |> UR.init
+
+        CompletedLoadExpiryOpts (Ok Nothing) ->
+            { model | isLoading = False }
+                |> UR.init
+                |> UR.logImpossible msg [ "NoExpiryOpts" ]
+                |> UR.addExt
+                    (LoggedIn.ShowFeedback Feedback.Failure
+                        (shared.translators.t "settings.community_currency.expiryopts_not_found")
+                    )
+
+        CompletedLoadExpiryOpts (Err err) ->
+            { model | isLoading = False }
+                |> UR.init
+                |> UR.logHttpError msg err
+                |> UR.addExt (LoggedIn.ShowFeedback Feedback.Failure (shared.translators.t "error.unknown"))
 
 
 withSymbolValidation : (Eos.Symbol -> Model -> Result String a) -> Field -> LoggedIn.Model -> Model -> Model
 withSymbolValidation fn field loggedIn_ model_ =
     case loggedIn_.selectedCommunity of
         RemoteData.Success community ->
-            fn community.symbol model_
-                |> (\result -> setErrors field result model_)
+            model_
+                |> setErrors field (fn community.symbol)
 
         _ ->
             model_
 
 
-savePort : ValidModel -> LoggedIn.Model -> Community.Model -> Ports.JavascriptOutModel Msg
-savePort validModel loggedIn community =
+savePort : Token.UpdateTokenData -> Maybe Token.ExpiryOptsData -> LoggedIn.Model -> Ports.JavascriptOutModel Msg
+savePort updateTokenData maybeExpiryOpts loggedIn =
     let
         authorization =
             { actor = loggedIn.accountName
             , permissionName = Eos.samplePermission
             }
-
-        asset amount =
-            { amount = amount
-            , symbol = community.symbol
-            }
     in
     { responseAddress = ClickedSubmit
-    , responseData = encodeValidModel validModel
+    , responseData = Token.encodeUpdateTokenData updateTokenData
     , data =
         Eos.encodeTransaction
-            [ { accountName = loggedIn.shared.contracts.token
-              , name = "update"
-              , authorization = authorization
-              , data =
-                    { maxSupply = asset 21000000.0
-                    , minBalance = asset validModel.minimumBalance
-                    }
-                        |> Community.encodeUpdateTokenData
-              }
-            ]
+            ({ accountName = loggedIn.shared.contracts.token
+             , name = "update"
+             , authorization = authorization
+             , data = Token.encodeUpdateTokenData updateTokenData
+             }
+                :: (case maybeExpiryOpts of
+                        Just expiryOpts ->
+                            [ { accountName = loggedIn.shared.contracts.token
+                              , name = "setexpiry"
+                              , authorization = authorization
+                              , data = Token.encodeExpiryOpts expiryOpts
+                              }
+                            ]
+
+                        Nothing ->
+                            []
+                   )
+            )
     }
 
 
@@ -187,6 +278,10 @@ savePort validModel loggedIn community =
 
 type Field
     = MinimumBalance
+    | MaximumSupply
+    | NaturalExpirationPeriod
+    | JuridicalExpirationPeriod
+    | RenovationAmount
 
 
 isFieldError : Field -> ( Field, String ) -> Bool
@@ -194,11 +289,18 @@ isFieldError field ( errorField, _ ) =
     field == errorField
 
 
-validateNumberInput : Eos.Symbol -> String -> Result String Float
-validateNumberInput symbol numberInput =
+validateIntInput : String -> Result String Int
+validateIntInput numberInput =
+    String.toInt numberInput
+        |> Result.fromMaybe "error.validator.text.only_numbers"
+
+
+validateSymbolInput : Eos.Symbol -> String -> Result String Eos.Asset
+validateSymbolInput symbol numberInput =
     let
         validateParsing =
             String.toFloat numberInput
+                |> Maybe.map (\amount -> { symbol = symbol, amount = amount })
                 |> Result.fromMaybe "error.validator.text.only_numbers"
     in
     case String.split "." numberInput of
@@ -219,15 +321,15 @@ validateNumberInput symbol numberInput =
                 validateParsing
 
 
-setErrors : Field -> Result String a -> Model -> Model
-setErrors field validationResult model =
+setErrors : Field -> (Model -> Result String a) -> Model -> Model
+setErrors field modelValidation model =
     let
         errorsWithoutField =
             List.filter (not << isFieldError field) model.errors
     in
     { model
         | errors =
-            case validationResult of
+            case modelValidation model of
                 Err err ->
                     ( field, err ) :: errorsWithoutField
 
@@ -236,25 +338,69 @@ setErrors field validationResult model =
     }
 
 
-validateMinimumBalance : Eos.Symbol -> Model -> Result String Float
+validateMinimumBalance : Eos.Symbol -> Model -> Result String Eos.Asset
 validateMinimumBalance symbol model =
-    validateNumberInput symbol model.minimumBalance
+    validateSymbolInput symbol model.minimumBalance
 
 
-validateModel : Eos.Symbol -> Model -> Result Model ValidModel
+validateMaximumSupply : Eos.Symbol -> Model -> Result String Eos.Asset
+validateMaximumSupply symbol model =
+    validateSymbolInput symbol model.maximumSupply
+
+
+validateNaturalExpirationPeriod : Model -> Result String Int
+validateNaturalExpirationPeriod model =
+    validateIntInput model.naturalExpirationPeriod
+
+
+validateJuridicalExpirationPeriod : Model -> Result String Int
+validateJuridicalExpirationPeriod model =
+    validateIntInput model.juridicalExpirationPeriod
+
+
+validateRenovationAmount : Eos.Symbol -> Model -> Result String Eos.Asset
+validateRenovationAmount symbol model =
+    validateSymbolInput symbol model.renovationAmount
+
+
+validateModel : Eos.Symbol -> Model -> Result Model ( Token.UpdateTokenData, Maybe Token.ExpiryOptsData )
 validateModel symbol model =
     let
-        minimumBalanceValidation =
-            validateMinimumBalance symbol model
-    in
-    case Result.map ValidModel minimumBalanceValidation of
-        Ok valid ->
-            Ok valid
+        tokenValidation =
+            Result.map2 Token.UpdateTokenData
+                (validateMaximumSupply symbol model)
+                (validateMinimumBalance symbol model)
 
-        Err _ ->
+        expiryOptsValidation =
+            Result.map3 (Token.ExpiryOptsData symbol)
+                (validateNaturalExpirationPeriod model)
+                (validateJuridicalExpirationPeriod model)
+                (validateRenovationAmount symbol model)
+
+        modelWithErrors =
             model
-                |> setErrors MinimumBalance minimumBalanceValidation
-                |> Err
+                |> setErrors MinimumBalance (validateMinimumBalance symbol)
+                |> setErrors MaximumSupply (validateMaximumSupply symbol)
+                |> setErrors NaturalExpirationPeriod validateNaturalExpirationPeriod
+                |> setErrors JuridicalExpirationPeriod validateJuridicalExpirationPeriod
+                |> setErrors RenovationAmount (validateRenovationAmount symbol)
+    in
+    case model.tokenType of
+        Token.Mcc ->
+            case tokenValidation of
+                Ok validToken ->
+                    Ok ( validToken, Nothing )
+
+                Err _ ->
+                    Err modelWithErrors
+
+        Token.Expiry ->
+            case Result.map2 Tuple.pair tokenValidation expiryOptsValidation of
+                Ok ( validToken, validOpts ) ->
+                    Ok ( validToken, Just validOpts )
+
+                Err _ ->
+                    Err modelWithErrors
 
 
 
@@ -297,100 +443,190 @@ view_ { shared } community model =
     let
         { t } =
             shared.translators
-
-        precision =
-            Eos.getSymbolPrecision community.symbol
-
-        fillWithPrecision amount =
-            if precision == 0 then
-                String.fromInt amount
-
-            else
-                String.fromInt amount ++ "." ++ String.join "" (List.repeat precision "0")
     in
     form
         [ class "w-full px-4 pb-10"
         , onSubmit ClickedSubmit
         ]
         [ div [ class "container mx-auto pt-4" ]
+            ([ viewInformativeFields shared.translators community
+             , viewGeneralFields shared.translators community model
+             , case model.tokenType of
+                Token.Mcc ->
+                    []
+
+                Token.Expiry ->
+                    viewExpiryFields shared.translators community model
+             , [ button
+                    [ class "button button-primary w-full mt-12"
+                    , disabled model.isLoading
+                    ]
+                    [ text (t "menu.save") ]
+               ]
+             ]
+                |> List.concat
+            )
+        ]
+
+
+viewInformativeFields : Translators -> Community.Model -> List (Html Msg)
+viewInformativeFields ({ t } as translators) community =
+    let
+        precision =
+            Eos.getSymbolPrecision community.symbol
+    in
+    [ Input.init
+        { label = t "community.create.labels.currency_name"
+        , id = "currency_name_field"
+        , onInput = \_ -> Ignored
+        , disabled = True
+        , value = community.name
+        , placeholder = Nothing
+        , problems = Nothing
+        , translators = translators
+        }
+        |> Input.toHtml
+    , div [ class "flex w-full space-x-8" ]
+        [ div [ class "w-full" ]
             [ Input.init
-                { label = t "community.create.labels.currency_name"
-                , id = "currency_name_field"
+                { label = t "community.create.labels.currency_symbol"
+                , id = "currency_symbol_field"
                 , onInput = \_ -> Ignored
                 , disabled = True
-                , value = community.name
+                , value = Eos.symbolToSymbolCodeString community.symbol
                 , placeholder = Nothing
                 , problems = Nothing
-                , translators = shared.translators
+                , translators = translators
                 }
                 |> Input.toHtml
-            , div [ class "flex w-full space-x-8" ]
-                [ div [ class "w-full" ]
-                    [ Input.init
-                        { label = t "community.create.labels.currency_symbol"
-                        , id = "currency_symbol_field"
-                        , onInput = \_ -> Ignored
-                        , disabled = True
-                        , value = Eos.symbolToSymbolCodeString community.symbol
-                        , placeholder = Nothing
-                        , problems = Nothing
-                        , translators = shared.translators
-                        }
-                        |> Input.toHtml
-                    ]
-                , div [ class "w-full" ]
-                    [ Input.init
-                        { label = t "settings.community_currency.decimal_places"
-                        , id = "currency_precision_field"
-                        , onInput = \_ -> Ignored
-                        , disabled = True
-                        , value = String.fromInt precision
-                        , placeholder = Nothing
-                        , problems = Nothing
-                        , translators = shared.translators
-                        }
-                        |> Input.withAttrs [ class "w-full" ]
-                        |> Input.toHtml
-                    ]
-                ]
-            , div [ class "bg-gray-100 py-4 text-center mb-10" ]
-                [ div [ class "text-xl font-medium space-x-4 mb-4" ]
-                    [ span [ class "text-black" ]
-                        [ text
-                            (String.fromFloat pi
-                                |> String.left
-                                    (if precision == 0 then
-                                        1
-
-                                     else
-                                        2 + precision
-                                    )
-                            )
-                        ]
-                    , span [ class "text-green" ] [ text (Eos.symbolToSymbolCodeString community.symbol) ]
-                    ]
-                , span [ class "uppercase text-black text-xs tracking-widest" ]
-                    [ text (t "settings.community_currency.format") ]
-                ]
-            , Input.init
-                { label = t "community.create.labels.min_balance"
-                , id = "minimum_balance_field"
-                , onInput = EnteredMinimumBalance
-                , disabled = False
-                , value = model.minimumBalance
-                , placeholder = Just (fillWithPrecision 0)
-                , problems = errorsForField shared.translators MinimumBalance model
-                , translators = shared.translators
+            ]
+        , div [ class "w-full" ]
+            [ Input.init
+                { label = t "settings.community_currency.decimal_places"
+                , id = "currency_precision_field"
+                , onInput = \_ -> Ignored
+                , disabled = True
+                , value = String.fromInt precision
+                , placeholder = Nothing
+                , problems = Nothing
+                , translators = translators
                 }
-                |> Input.withCurrency community.symbol
+                |> Input.withAttrs [ class "w-full" ]
                 |> Input.toHtml
-            , button
-                [ class "button button-primary w-full mt-12"
-                , disabled model.isLoading
-                ]
-                [ text (t "menu.save") ]
             ]
         ]
+    , div [ class "bg-gray-100 py-4 text-center mb-10" ]
+        [ div [ class "text-xl font-medium space-x-4 mb-4" ]
+            [ span [ class "text-black" ]
+                [ text
+                    (String.fromFloat pi
+                        |> String.left
+                            (if precision == 0 then
+                                1
+
+                             else
+                                2 + precision
+                            )
+                    )
+                ]
+            , span [ class "text-green" ] [ text (Eos.symbolToSymbolCodeString community.symbol) ]
+            ]
+        , span [ class "uppercase text-black text-xs tracking-widest" ]
+            [ text (t "settings.community_currency.format") ]
+        ]
+    ]
+
+
+viewGeneralFields : Translators -> Community.Model -> Model -> List (Html Msg)
+viewGeneralFields ({ t } as translators) community model =
+    [ Input.init
+        { label = t "community.create.labels.min_balance"
+        , id = "minimum_balance_field"
+        , onInput = EnteredMinimumBalance
+        , disabled = False
+        , value = model.minimumBalance
+        , placeholder = Just (fillWithPrecision community.symbol 0)
+        , problems = errorsForField translators MinimumBalance model
+        , translators = translators
+        }
+        |> Input.withCurrency community.symbol
+        |> Input.toHtml
+    , Input.init
+        { label = t "community.create.labels.max_supply"
+        , id = "maximum_supply_field"
+        , onInput = EnteredMaximumSupply
+        , disabled = False
+        , value = model.maximumSupply
+        , placeholder = Just (fillWithPrecision community.symbol 21000000)
+        , problems = errorsForField translators MaximumSupply model
+        , translators = translators
+        }
+        |> Input.withCurrency community.symbol
+        |> Input.toHtml
+    , Radio.init
+        { label = "settings.community_currency.token_type"
+        , name = "token_type_radio"
+        , optionToString = Token.tokenTypeToString
+        , activeOption = model.tokenType
+        , onSelect = \_ -> Ignored
+        , areOptionsEqual = (==)
+        }
+        |> Radio.withOption Token.Mcc (Html.text "MCC")
+        |> Radio.withOption Token.Expiry (Html.text (t "settings.community_currency.expiry"))
+        |> Radio.withAttrs [ class "mb-8" ]
+        |> Radio.withDisabled True
+        |> Radio.toHtml translators
+    ]
+
+
+viewExpiryFields : Translators -> Community.Model -> Model -> List (Html Msg)
+viewExpiryFields ({ t } as translators) community model =
+    let
+        withSeconds input =
+            input
+                |> Input.withAttrs [ class "pr-20" ]
+                |> Input.withElement
+                    (span [ class "absolute inset-y-0 right-1 flex items-center bg-white pl-1 my-2" ]
+                        [ text (t "settings.community_currency.seconds") ]
+                    )
+    in
+    [ Input.init
+        { label = t "settings.community_currency.natural_expiration_period"
+        , id = "natural_expiration_period_field"
+        , onInput = EnteredNaturalExpirationPeriod
+        , disabled = False
+        , value = model.naturalExpirationPeriod
+        , placeholder = Just "10"
+        , problems = errorsForField translators NaturalExpirationPeriod model
+        , translators = translators
+        }
+        |> withSeconds
+        |> Input.toHtml
+    , Input.init
+        { label = t "settings.community_currency.juridical_expiration_period"
+        , id = "juridical_expiration_period_field"
+        , onInput = EnteredJuridicalExpirationPeriod
+        , disabled = False
+        , value = model.juridicalExpirationPeriod
+        , placeholder = Just "15"
+        , problems = errorsForField translators JuridicalExpirationPeriod model
+        , translators = translators
+        }
+        |> withSeconds
+        |> Input.toHtml
+    , Input.init
+        { label = t "settings.community_currency.renovation_amount"
+        , id = "renovation_amount_field"
+        , onInput = EnteredRenovationAmount
+        , disabled = False
+        , value = model.renovationAmount
+        , placeholder = Just (fillWithPrecision community.symbol 100)
+        , problems = errorsForField translators RenovationAmount model
+        , translators = translators
+        }
+        |> Input.withCurrency community.symbol
+        |> Input.toHtml
+    ]
 
 
 errorsForField : Translators -> Field -> Model -> Maybe (List String)
@@ -400,21 +636,21 @@ errorsForField translators field model =
         |> Just
 
 
+fillWithPrecision : Eos.Symbol -> Int -> String
+fillWithPrecision symbol amount =
+    let
+        precision =
+            Eos.getSymbolPrecision symbol
+    in
+    if precision == 0 then
+        String.fromInt amount
+
+    else
+        String.fromInt amount ++ "." ++ String.join "" (List.repeat precision "0")
+
+
 
 -- UTILS
-
-
-encodeValidModel : ValidModel -> Encode.Value
-encodeValidModel validModel =
-    Encode.object
-        [ ( "minimumBalance", Encode.float validModel.minimumBalance )
-        ]
-
-
-validModelDecoder : Decode.Decoder ValidModel
-validModelDecoder =
-    Decode.map ValidModel
-        (Decode.field "minimumBalance" Decode.float)
 
 
 receiveBroadcast : LoggedIn.BroadcastMsg -> Maybe Msg
@@ -433,9 +669,9 @@ jsAddressToMsg addr val =
         "ClickedSubmit" :: [] ->
             Decode.decodeValue
                 (Decode.oneOf
-                    [ Decode.map2 (\_ validModel -> Ok validModel)
+                    [ Decode.map2 (\_ updateTokenData -> Ok updateTokenData)
                         (Decode.field "transactionId" Decode.string)
-                        (Decode.field "addressData" validModelDecoder)
+                        (Decode.field "addressData" Token.updateTokenDataDecoder)
                     , Decode.succeed (Err val)
                     ]
                 )
@@ -456,6 +692,18 @@ msgToString msg =
         EnteredMinimumBalance _ ->
             [ "EnteredMinimumBalance" ]
 
+        EnteredMaximumSupply _ ->
+            [ "EnteredMaximumSupply" ]
+
+        EnteredNaturalExpirationPeriod _ ->
+            [ "EnteredNaturalExpirationPeriod" ]
+
+        EnteredJuridicalExpirationPeriod _ ->
+            [ "EnteredJuridicalExpirationPeriod" ]
+
+        EnteredRenovationAmount _ ->
+            [ "EnteredRenovationAmount" ]
+
         ClickedSubmit ->
             [ "ClickedSubmit" ]
 
@@ -464,3 +712,6 @@ msgToString msg =
 
         CompletedLoadCommunity _ ->
             [ "CompletedLoadCommunity" ]
+
+        CompletedLoadExpiryOpts r ->
+            [ "CompletedLoadExpiryOpts", UR.resultToString r ]

@@ -882,9 +882,16 @@
         }
       },
       "community_currency": {
-        "title": "ምንዛሬ እና ሽልማት",
+        "title": "ምንዛሬ",
         "decimal_places": "የአስርዮሽ ቦታዎች",
-        "format": "የእርስዎ ምንዛሬ ቅርጸት"
+        "format": "የእርስዎ ምንዛሬ ቅርጸት",
+        "token_type": "ዓይነት",
+        "expiry": "ማብቂያ",
+        "natural_expiration_period": "የተፈጥሮ ሰው ማብቂያ ጊዜ",
+        "juridical_expiration_period": "የሕግ ሰው ማብቂያ ጊዜ",
+        "renovation_amount": "የማደስ መጠን",
+        "expiryopts_not_found": "የምልክትዎ ጊዜ ማብቂያ አማራጮችን ማግኘት አልቻልንም",
+        "seconds": "ሰከንዶች"
       },
       "actions": {
         "title": "ተጠባቂ ዉጤቶች እና ተግባራት",

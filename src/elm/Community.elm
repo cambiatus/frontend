@@ -4,13 +4,11 @@ module Community exposing
     , Balance
     , ClaimResponse
     , CreateCommunityData
-    , CreateTokenData
     , Invite
     , Metadata
     , Model
     , Objective
     , Transaction
-    , UpdateTokenData
     , Verification(..)
     , Verifiers
     , WithObjectives
@@ -21,15 +19,12 @@ module Community exposing
     , communitySelectionSet
     , createCommunityData
     , createCommunityDataDecoder
-    , createTokenDataDecoder
     , decodeBalance
     , decodeTransaction
     , encodeCreateCommunityData
     , encodeCreateObjectiveAction
-    , encodeCreateTokenData
     , encodeUpdateData
     , encodeUpdateObjectiveAction
-    , encodeUpdateTokenData
     , inviteQuery
     , logoBackground
     , logoUrl
@@ -63,6 +58,7 @@ import Json.Decode.Pipeline as Decode exposing (required)
 import Json.Encode as Encode exposing (Value)
 import Profile
 import Time exposing (Posix)
+import Token
 import Utils
 import View.Tag as Tag
 
@@ -95,6 +91,8 @@ type alias Model =
     , inviterReward : Float
     , invitedReward : Float
     , minBalance : Maybe Float
+    , maxSupply : Maybe Float
+    , tokenType : Maybe Token.TokenType
     , memberCount : Int
     , actionCount : Int
     , claimCount : Int
@@ -137,6 +135,8 @@ communitySelectionSet =
         |> with Community.inviterReward
         |> with Community.invitedReward
         |> with Community.minBalance
+        |> with Community.maxSupply
+        |> with Token.tokenTypeSelectionSet
         |> with Community.memberCount
         |> with Community.actionCount
         |> with Community.claimCount
@@ -420,47 +420,6 @@ createCommunityDataDecoder =
         |> required "has_objectives" Eos.eosBoolDecoder
         |> required "has_shop" Eos.eosBoolDecoder
         |> required "has_kyc" Eos.eosBoolDecoder
-
-
-type alias CreateTokenData =
-    { creator : Eos.Name
-    , maxSupply : Eos.Asset
-    , minBalance : Eos.Asset
-    , tokenType : String
-    }
-
-
-encodeCreateTokenData : CreateTokenData -> Value
-encodeCreateTokenData c =
-    Encode.object
-        [ ( "issuer", Eos.encodeName c.creator )
-        , ( "max_supply", Eos.encodeAsset c.maxSupply )
-        , ( "min_balance", Eos.encodeAsset c.minBalance )
-        , ( "type", Encode.string c.tokenType )
-        ]
-
-
-createTokenDataDecoder : Decoder CreateTokenData
-createTokenDataDecoder =
-    Decode.succeed CreateTokenData
-        |> required "issuer" Eos.nameDecoder
-        |> required "max_supply" Eos.decodeAsset
-        |> required "min_balance" Eos.decodeAsset
-        |> required "type" Decode.string
-
-
-type alias UpdateTokenData =
-    { maxSupply : Eos.Asset
-    , minBalance : Eos.Asset
-    }
-
-
-encodeUpdateTokenData : UpdateTokenData -> Value
-encodeUpdateTokenData c =
-    Encode.object
-        [ ( "max_supply", Eos.encodeAsset c.maxSupply )
-        , ( "min_balance", Eos.encodeAsset c.minBalance )
-        ]
 
 
 type alias UpdateCommunityData =

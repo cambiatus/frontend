@@ -923,9 +923,16 @@
       }
     },
     "community_currency": {
-      "title": "Moneda y Recompensas",
+      "title": "Moneda",
       "decimal_places": "Casas decimales",
-      "format": "Tu formato de moneda"
+      "format": "Tu formato de moneda",
+      "token_type": "Tipo",
+      "expiry": "Expiración",
+      "natural_expiration_period": "Plazo de caducidad persona física",
+      "juridical_expiration_period": "Plazo de caducidad persona jurídica",
+      "renovation_amount": "Monto de la renovación",
+      "expiryopts_not_found": "No pudimos encontrar las opciones de vencimiento para su token",
+      "seconds": "segundos"
     },
     "actions": {
       "title": "Objetivos y acciones",

@@ -54,6 +54,7 @@ import UpdateResult as UR
 import Utils
 import View.Feedback as Feedback
 import View.Form.InputCounter
+import View.Form.Radio
 
 
 
@@ -465,7 +466,7 @@ type Msg
     | TogglePhotoProofNumber Bool
     | ToggleUsages Bool
     | MarkAsCompleted
-    | SetVerification String
+    | SetVerification Verification
     | ValidateForm
     | ValidateDeadline
     | GotValidDate (Result Value String)
@@ -960,20 +961,7 @@ update msg model ({ shared } as loggedIn) =
             }
                 |> UR.init
 
-        SetVerification val ->
-            let
-                verification =
-                    if val == "automatic" then
-                        Automatic
-
-                    else
-                        Manual
-                            { verifiersValidator = defaultVerifiersValidator [] (getInput defaultMinVotes)
-                            , verifierRewardValidator = defaultVerificationReward
-                            , minVotesValidator = defaultMinVotes
-                            , photoProof = Disabled
-                            }
-            in
+        SetVerification verification ->
             { model | form = { oldForm | verification = verification } }
                 |> UR.init
 
@@ -1551,61 +1539,57 @@ viewVerifications ({ shared } as loggedIn) model community =
             text (t s)
     in
     div [ class "mb-10" ]
-        [ div [ class "flex flex-row justify-between mb-6" ]
-            [ p [ class "input-label" ]
-                [ text_ "community.actions.form.verification_label" ]
-            ]
-        , div [ class "mb-6" ]
-            [ label [ class "inline-flex items-top" ]
-                [ input
-                    [ type_ "radio"
-                    , class "form-radio h-5 w-5 text-green"
-                    , name "verification"
-                    , value "automatic"
-                    , checked (model.form.verification == Automatic)
-                    , onClick (SetVerification "automatic")
-                    ]
-                    []
-                , span
-                    [ class "flex ml-2 text-body"
-                    , classList [ ( "text-green", model.form.verification == Automatic ) ]
-                    ]
-                    [ p [ class "mr-1" ]
-                        [ b []
-                            [ text_ "community.actions.form.automatic" ]
-                        , text_ "community.actions.form.automatic_detail"
-                        ]
-                    ]
-                ]
-            ]
-        , div [ class "mb-6" ]
-            [ label [ class "inline-flex items-top" ]
-                [ input
-                    [ type_ "radio"
-                    , class "form-radio h-5 w-5 text-green"
-                    , name "verification"
-                    , value "manual"
-                    , checked (model.form.verification /= Automatic)
-                    , onClick (SetVerification "manual")
-                    ]
-                    []
-                , span
-                    [ class "flex ml-2 text-body"
-                    , classList [ ( "text-green", model.form.verification /= Automatic ) ]
-                    ]
-                    [ p [ class "mr-1" ]
-                        [ b []
-                            [ text_ "community.actions.form.manual" ]
-                        , text_ "community.actions.form.manual_detail"
-                        ]
-                    ]
-                ]
-            , if model.form.verification /= Automatic then
-                viewManualVerificationForm loggedIn model community
+        [ View.Form.Radio.init
+            { label = "community.actions.form.verification_label"
+            , name = "verification_radio"
+            , optionToString =
+                \option ->
+                    case option of
+                        Manual _ ->
+                            "manual"
 
-              else
-                text ""
-            ]
+                        Automatic ->
+                            "automatic"
+            , activeOption = model.form.verification
+            , onSelect = SetVerification
+            , areOptionsEqual =
+                \firstOption secondOption ->
+                    case ( firstOption, secondOption ) of
+                        ( Manual _, Manual _ ) ->
+                            True
+
+                        ( Automatic, Automatic ) ->
+                            True
+
+                        _ ->
+                            False
+            }
+            |> View.Form.Radio.withOption Automatic
+                (span []
+                    [ b [] [ text_ "community.actions.form.automatic" ]
+                    , text_ "community.actions.form.automatic_detail"
+                    ]
+                )
+            |> View.Form.Radio.withOption
+                (Manual
+                    { verifiersValidator = defaultVerifiersValidator [] (getInput defaultMinVotes)
+                    , verifierRewardValidator = defaultVerificationReward
+                    , minVotesValidator = defaultMinVotes
+                    , photoProof = Disabled
+                    }
+                )
+                (span []
+                    [ b [] [ text_ "community.actions.form.manual" ]
+                    , text_ "community.actions.form.manual_detail"
+                    ]
+                )
+            |> View.Form.Radio.withVertical True
+            |> View.Form.Radio.toHtml shared.translators
+        , if model.form.verification /= Automatic then
+            viewManualVerificationForm loggedIn model community
+
+          else
+            text ""
         ]
 
 

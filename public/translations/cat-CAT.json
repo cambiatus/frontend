@@ -923,9 +923,16 @@
       }
     },
     "community_currency": {
-      "title": "Moneda i Recompenses",
+      "title": "Moneda",
       "decimal_places": "Llocs decimals",
-      "format": "El vostre format de moneda"
+      "format": "El vostre format de moneda",
+      "token_type": "Tipus",
+      "expiry": "Caducitat",
+      "natural_expiration_period": "Període de caducitat de la persona física",
+      "juridical_expiration_period": "Període de caducitat de la persona jurídica",
+      "renovation_amount": "Import de la renovació",
+      "expiryopts_not_found": "No hem pogut trobar les opcions de caducitat del vostre testimoni",
+      "seconds": "segons"
     },
     "actions": {
       "title": "Objetius i Ações",
