@@ -16,7 +16,7 @@ const dev = {
     api: 'https://staging.cambiatus.io',
     chat: 'https://app.cambiatus.io/chat',
     eosio: 'https://staging.cambiatus.io/',
-    graphql: 'http://staging.cambiatus.io/api/graph',
+    graphql: 'https://staging.cambiatus.io/api/graph',
     globalStorage: 'http://localhost:3000/globalstorage',
     // TODO - Use this after deploying to staging
     // globalStorage: 'http://staging.cambiatus.io/globalstorage',

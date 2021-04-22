@@ -39,7 +39,7 @@ const main = (setupIframe) => {
 
   const removeItem = (key) => {
     const iframe = document.getElementById(GLOBAL_STORAGE_IFRAME_ID)
-    if (isIframeLoaded) {
+    if (isIframeLoaded && iframe) {
       iframe.contentWindow.postMessage({
         method: 'remove',
         key
@@ -52,7 +52,7 @@ const main = (setupIframe) => {
 
   const setItem = (key, value) => {
     const iframe = document.getElementById(GLOBAL_STORAGE_IFRAME_ID)
-    if (isIframeLoaded) {
+    if (isIframeLoaded && iframe) {
       iframe.contentWindow.postMessage({
         method: 'set',
         key,
