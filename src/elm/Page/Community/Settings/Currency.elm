@@ -474,6 +474,19 @@ viewInformativeFields ({ t } as translators) community =
     let
         precision =
             Eos.getSymbolPrecision community.symbol
+
+        symbolExample =
+            case Eos.formatSymbolAmount community.symbol 100 |> String.split "." of
+                [] ->
+                    []
+
+                [ withoutDecimalPlaces ] ->
+                    [ span [ class "text-xl" ] [ text withoutDecimalPlaces ] ]
+
+                beforeSeparator :: afterSeparator :: _ ->
+                    [ span [ class "text-xl" ] [ text beforeSeparator ]
+                    , span [ class "text-sm" ] [ text ("," ++ afterSeparator) ]
+                    ]
     in
     [ Input.init
         { label = t "community.create.labels.currency_name"
@@ -512,25 +525,18 @@ viewInformativeFields ({ t } as translators) community =
                 , translators = translators
                 }
                 |> Input.withAttrs [ class "w-full" ]
+                |> Input.withElement
+                    (span [ class "absolute right-0 inset-y-0 flex items-center pr-3 text-gray-900" ]
+                        [ text (Eos.formatSymbolAmount community.symbol 100) ]
+                    )
                 |> Input.toHtml
             ]
         ]
     , div [ class "bg-gray-100 py-4 text-center mb-10" ]
-        [ div [ class "text-xl font-medium space-x-4 mb-4" ]
-            [ span [ class "text-black" ]
-                [ text
-                    (String.fromFloat pi
-                        |> String.left
-                            (if precision == 0 then
-                                1
-
-                             else
-                                2 + precision
-                            )
-                    )
-                ]
-            , span [ class "text-green" ] [ text (Eos.symbolToSymbolCodeString community.symbol) ]
-            ]
+        [ div [ class "text-xl font-medium mb-4" ]
+            (symbolExample
+                ++ [ span [ class "ml-4 text-green" ] [ text (Eos.symbolToSymbolCodeString community.symbol) ] ]
+            )
         , span [ class "uppercase text-black text-xs tracking-widest" ]
             [ text (t "settings.community_currency.format") ]
         ]
@@ -545,7 +551,7 @@ viewGeneralFields ({ t } as translators) community model =
         , onInput = EnteredMinimumBalance
         , disabled = False
         , value = model.minimumBalance
-        , placeholder = Just (fillWithPrecision community.symbol 0)
+        , placeholder = Just (Eos.formatSymbolAmount community.symbol 0)
         , problems = errorsForField translators MinimumBalance model
         , translators = translators
         }
@@ -557,7 +563,7 @@ viewGeneralFields ({ t } as translators) community model =
         , onInput = EnteredMaximumSupply
         , disabled = False
         , value = model.maximumSupply
-        , placeholder = Just (fillWithPrecision community.symbol 21000000)
+        , placeholder = Just (Eos.formatSymbolAmount community.symbol 21000000)
         , problems = errorsForField translators MaximumSupply model
         , translators = translators
         }
@@ -620,7 +626,7 @@ viewExpiryFields ({ t } as translators) community model =
         , onInput = EnteredRenovationAmount
         , disabled = False
         , value = model.renovationAmount
-        , placeholder = Just (fillWithPrecision community.symbol 100)
+        , placeholder = Just (Eos.formatSymbolAmount community.symbol 100)
         , problems = errorsForField translators RenovationAmount model
         , translators = translators
         }
@@ -634,19 +640,6 @@ errorsForField translators field model =
     List.filter (isFieldError field) model.errors
         |> List.map (Tuple.second >> translators.t)
         |> Just
-
-
-fillWithPrecision : Eos.Symbol -> Int -> String
-fillWithPrecision symbol amount =
-    let
-        precision =
-            Eos.getSymbolPrecision symbol
-    in
-    if precision == 0 then
-        String.fromInt amount
-
-    else
-        String.fromInt amount ++ "." ++ String.join "" (List.repeat precision "0")
 
 
 

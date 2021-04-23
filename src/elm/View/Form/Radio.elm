@@ -141,6 +141,9 @@ withDisabled isDisabled options =
 
 
 {-| Transform `Radio.Options` into`Html`
+
+**NOTE**: By default, it turns vertical below the `xs-max` breakpoint
+
 -}
 toHtml : Translators -> Options option msg -> Html msg
 toHtml { t } options =
@@ -151,7 +154,10 @@ toHtml { t } options =
         viewOption ( option, view ) =
             label
                 ([ class "flex items-center"
-                 , classList [ ( "mb-6", options.isVertical ) ]
+                 , classList
+                    [ ( "mb-6", options.isVertical )
+                    , ( "xs-max:mb-6 mr-29", not options.isVertical )
+                    ]
                  ]
                     ++ options.optionAttrs
                 )
@@ -167,7 +173,10 @@ toHtml { t } options =
                     []
                 , span
                     [ class "flex ml-2 text-body"
-                    , classList [ ( "text-green", isActive option ) ]
+                    , classList
+                        [ ( "text-green", isActive option && not options.isDisabled )
+                        , ( "text-gray-600", options.isDisabled )
+                        ]
                     ]
                     [ view ]
                 ]
@@ -178,7 +187,7 @@ toHtml { t } options =
             [ class "flex mt-6"
             , classList
                 [ ( "flex-col", options.isVertical )
-                , ( "space-x-29", not options.isVertical )
+                , ( "xs-max:flex-col flex-row xs:flex-wrap", not options.isVertical )
                 ]
             ]
             (List.map viewOption options.options)

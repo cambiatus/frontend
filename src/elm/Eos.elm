@@ -22,6 +22,7 @@ module Eos exposing
     , encodeTransaction
     , eosBoolDecoder
     , eosBoolToBool
+    , formatSymbolAmount
     , getSymbolPrecision
     , symbolDecoder
     , symbolFromString
@@ -290,6 +291,33 @@ symbolToString : Symbol -> String
 symbolToString (Symbol symbol precision) =
     [ String.fromInt precision, ",", symbol ]
         |> String.join ""
+
+
+formatSymbolAmount : Symbol -> Float -> String
+formatSymbolAmount (Symbol _ precision) amount =
+    let
+        separator =
+            "."
+    in
+    case String.fromFloat amount |> String.split separator of
+        [] ->
+            -- Impossible
+            String.fromFloat amount
+
+        [ withoutSeparator ] ->
+            if precision == 0 then
+                withoutSeparator
+
+            else
+                withoutSeparator ++ separator ++ String.repeat precision "0"
+
+        beforeSeparator :: afterSeparator :: _ ->
+            beforeSeparator
+                ++ separator
+                ++ (afterSeparator
+                        ++ String.repeat (precision - String.length afterSeparator) "0"
+                        |> String.left precision
+                   )
 
 
 symbolToSymbolCodeString : Symbol -> String
