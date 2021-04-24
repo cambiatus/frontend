@@ -13,7 +13,7 @@ import Api
 import Community
 import Eos
 import Eos.Account as Eos
-import Html exposing (Html, button, div, form, span, text)
+import Html exposing (Html, br, button, div, form, span, text)
 import Html.Attributes exposing (class, disabled)
 import Html.Events exposing (onSubmit)
 import Http
@@ -470,7 +470,7 @@ view_ { shared } community model =
 
 
 viewInformativeFields : Translators -> Community.Model -> List (Html Msg)
-viewInformativeFields ({ t } as translators) community =
+viewInformativeFields ({ t, tr } as translators) community =
     let
         precision =
             Eos.getSymbolPrecision community.symbol
@@ -538,7 +538,10 @@ viewInformativeFields ({ t } as translators) community =
                 ++ [ span [ class "ml-4 text-green" ] [ text (Eos.symbolToSymbolCodeString community.symbol) ] ]
             )
         , span [ class "uppercase text-black text-xs tracking-widest" ]
-            [ text (t "settings.community_currency.format") ]
+            [ text (t "settings.community_currency.format")
+            , br [] []
+            , text (tr "settings.community_currency.supports_decimal_places" [ ( "amount", String.fromInt precision ) ])
+            ]
         ]
     ]
 

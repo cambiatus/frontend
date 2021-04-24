@@ -884,7 +884,8 @@
       "community_currency": {
         "title": "ምንዛሬ",
         "decimal_places": "የአስርዮሽ ቦታዎች",
-        "format": "የእርስዎ ምንዛሬ ቅርጸት",
+        "format": "ይህ የእርስዎ የመገበያያ ገንዘብ ምሳሌ ነው",
+        "supports_decimal_places": "የእርስዎ ምንዛሬ {{amount}} የአስርዮሽ ቦታዎችን ይደግፋል",
         "token_type": "ዓይነት",
         "expiry": "ማብቂያ",
         "natural_expiration_period": "የተፈጥሮ ሰው ማብቂያ ጊዜ",

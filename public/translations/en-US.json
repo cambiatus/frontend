@@ -923,7 +923,8 @@
     "community_currency": {
       "title": "Currency",
       "decimal_places": "Decimal places",
-      "format": "Your currency format",
+      "format": "This is your currency's example",
+      "supports_decimal_places": "Your currency supports {{amount}} decimal places",
       "token_type": "Type",
       "expiry": "Expiry",
       "natural_expiration_period": "Natural person expiration period",

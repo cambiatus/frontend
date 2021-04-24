@@ -925,7 +925,8 @@
     "community_currency": {
       "title": "Moneda",
       "decimal_places": "Llocs decimals",
-      "format": "El vostre format de moneda",
+      "format": "Aquest és l'exemple de la vostra moneda",
+      "supports_decimal_places": "La vostra moneda admet {{amount}} posicions decimals",
       "token_type": "Tipus",
       "expiry": "Caducitat",
       "natural_expiration_period": "Període de caducitat de la persona física",
