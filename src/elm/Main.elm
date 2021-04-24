@@ -10,8 +10,8 @@ import Page exposing (Session)
 import Page.ComingSoon as ComingSoon
 import Page.Community as CommunityPage
 import Page.Community.ActionEditor as ActionEditor
-import Page.Community.Editor as CommunityEditor
 import Page.Community.Invite as Invite
+import Page.Community.New as CommunityEditor
 import Page.Community.ObjectiveEditor as ObjectiveEditor
 import Page.Community.Objectives as Objectives
 import Page.Community.Settings.Currency as CommunitySettingsCurrency

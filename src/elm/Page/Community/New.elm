@@ -1,4 +1,4 @@
-module Page.Community.Editor exposing
+module Page.Community.New exposing
     ( Model
     , Msg
     , init
