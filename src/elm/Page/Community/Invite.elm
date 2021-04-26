@@ -2,6 +2,7 @@ module Page.Community.Invite exposing
     ( Model
     , Msg
     , init
+    , initWithLoggedIn
     , msgToString
     , update
     , view
@@ -59,7 +60,7 @@ type ModalStatus
 type alias Model =
     { pageStatus : PageStatus
     , confirmationModalStatus : ModalStatus
-    , invitationId : InvitationId
+    , invitationId : Maybe InvitationId
     , kycForm : Maybe KycForm.Model
     }
 
@@ -68,7 +69,7 @@ type alias Model =
 -- INIT
 
 
-initModel : String -> Model
+initModel : Maybe InvitationId -> Model
 initModel invitationId =
     { pageStatus = Loading
     , confirmationModalStatus = Closed
@@ -77,9 +78,14 @@ initModel invitationId =
     }
 
 
+initWithLoggedIn : LoggedIn.Model -> ( Model, Cmd Msg )
+initWithLoggedIn loggedIn =
+    ( initModel Nothing, Cmd.none )
+
+
 init : Session -> InvitationId -> ( Model, Cmd Msg )
 init session invitationId =
-    ( initModel invitationId
+    ( initModel (Just invitationId)
     , Api.Graphql.query
         (toShared session)
         Nothing
@@ -140,6 +146,7 @@ view session model =
                         ]
 
                 JoinConfirmation invite ->
+                    -- TODO
                     let
                         inner =
                             viewNewMemberConfirmation shared.translators model.invitationId invite
@@ -198,7 +205,7 @@ viewExistingMemberNotice { t, tr } communityTitle =
         ]
 
 
-viewNewMemberConfirmation : Translators -> InvitationId -> Invite -> Html Msg
+viewNewMemberConfirmation : Translators -> Maybe InvitationId -> Invite -> Html Msg
 viewNewMemberConfirmation { t } invitationId ({ community } as invite) =
     div []
         [ div [ class "mt-6 px-4 text-center" ]
@@ -214,7 +221,8 @@ viewNewMemberConfirmation { t } invitationId ({ community } as invite) =
                 [ text (t "community.invitation.no") ]
             , button
                 [ class "button button-primary w-full md:w-48 uppercase"
-                , onClick (InvitationAccepted invitationId invite)
+
+                -- , onClick (InvitationAccepted invitationId invite)
                 ]
                 [ text (t "community.invitation.yes") ]
             ]
@@ -256,7 +264,7 @@ viewContent { t } { creator, community } innerContent =
         ]
 
 
-viewModal : Translators -> ModalStatus -> InvitationId -> Invite -> Html Msg
+viewModal : Translators -> ModalStatus -> Maybe InvitationId -> Invite -> Html Msg
 viewModal { t } modalStatus invitationId invite =
     let
         isModalVisible =
@@ -283,7 +291,8 @@ viewModal { t } modalStatus invitationId invite =
                 ]
             , button
                 [ class "modal-accept"
-                , onClick (InvitationAccepted invitationId invite)
+
+                -- , onClick (InvitationAccepted invitationId invite)
                 ]
                 [ text (t "community.invitation.modal.yes") ]
             ]
@@ -364,7 +373,7 @@ update session msg model =
                                         |> UR.addCmd
                                             (Api.Graphql.mutation shared
                                                 Nothing
-                                                (Auth.signIn accountName shared (Just model.invitationId))
+                                                (Auth.signIn accountName shared model.invitationId)
                                                 (CompletedSignIn loggedIn)
                                             )
 
@@ -477,7 +486,7 @@ update session msg model =
                             |> UR.addCmd
                                 (Api.Graphql.mutation shared
                                     Nothing
-                                    (Auth.signIn accountName shared (Just model.invitationId))
+                                    (Auth.signIn accountName shared model.invitationId)
                                     (CompletedSignIn loggedIn)
                                 )
 

@@ -43,7 +43,7 @@ type Route
     | EditSale String
     | ViewSale String
     | ViewTransfer Int
-    | Invite String
+    | Invite (Maybe String)
     | Transfer (Maybe String)
     | Analysis
 
@@ -110,7 +110,8 @@ parser url =
         , Url.map ViewSale (s "shop" </> string)
         , Url.map EditSale (s "shop" </> string </> s "edit")
         , Url.map ViewTransfer (s "transfer" </> int)
-        , Url.map Invite (s "invite" </> string)
+        , Url.map (Just >> Invite) (s "invite" </> string)
+        , Url.map (Invite Nothing) (s "invite")
         , Url.map Transfer (s "community" </> s "transfer" <?> Query.string "to")
         , Url.map Analysis (s "dashboard" </> s "analysis")
         ]
@@ -140,15 +141,14 @@ pushUrl key route =
     Nav.pushUrl key (routeToString route)
 
 
-externalCommunityLink : Url -> Maybe { community | symbol : Eos.Symbol, subdomain : Maybe String } -> Route -> Url
-externalCommunityLink currentUrl maybeCommunity route =
+externalCommunityLink : Url -> { community | symbol : Eos.Symbol, subdomain : Maybe String } -> Route -> Url
+externalCommunityLink currentUrl community route =
     let
         defaultSubdomain =
             "cambiatus"
 
         communitySubdomain =
-            maybeCommunity
-                |> Maybe.andThen .subdomain
+            community.subdomain
                 |> Maybe.map (String.split ".")
                 |> Maybe.andThen List.head
                 |> Maybe.withDefault defaultSubdomain
@@ -338,8 +338,11 @@ routeToString route =
                 ViewTransfer transferId ->
                     ( [ "transfer", String.fromInt transferId ], [] )
 
-                Invite invitationId ->
+                Invite (Just invitationId) ->
                     ( [ "invite", invitationId ], [] )
+
+                Invite Nothing ->
+                    ( [ "invite" ], [] )
 
                 Transfer maybeTo ->
                     ( [ "community"

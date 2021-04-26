@@ -235,7 +235,7 @@ update msg model ({ shared } as loggedIn) =
                                             , logo = model.logoUrl
                                             , name = model.nameInput
                                             , description = model.descriptionInput
-                                            , subdomain = model.subdomainInput
+                                            , subdomain = model.subdomainInput ++ ".cambiatus.io"
                                             , inviterReward =
                                                 String.toFloat model.inviterRewardInput
                                                     |> Maybe.withDefault community.inviterReward

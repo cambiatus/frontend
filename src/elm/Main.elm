@@ -939,7 +939,12 @@ changeRouteTo maybeRoute model =
                 >> updateStatusWith (ViewTransfer transferId) GotViewTransferScreenMsg model
                 |> withLoggedIn (Route.ViewTransfer transferId)
 
-        Just (Route.Invite invitationId) ->
+        Just (Route.Invite Nothing) ->
+            Invite.initWithLoggedIn
+                >> updateStatusWith Invite GotInviteMsg model
+                |> withLoggedIn (Route.Invite Nothing)
+
+        Just (Route.Invite (Just invitationId)) ->
             Invite.init session invitationId
                 |> updateStatusWith Invite GotInviteMsg model
 

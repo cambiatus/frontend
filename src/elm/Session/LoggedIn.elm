@@ -794,7 +794,7 @@ updateExternal externalMsg ({ shared } as model) =
         AddedCommunity communityInfo ->
             let
                 ( newModel, cmd ) =
-                    selectCommunity model (Just communityInfo) Route.Community
+                    selectCommunity model communityInfo Route.Community
 
                 profileWithCommunity =
                     case profile newModel of
@@ -817,12 +817,11 @@ updateExternal externalMsg ({ shared } as model) =
         ExternalBroadcast broadcastMsg ->
             case broadcastMsg of
                 CommunityLoaded community ->
-                    case setCommunity community model of
-                        Err ( newModel, cmd ) ->
-                            { defaultResult | model = newModel, cmd = cmd }
-
-                        Ok ( newModel, cmd ) ->
-                            { defaultResult | model = newModel, cmd = cmd, broadcastMsg = Just broadcastMsg }
+                    let
+                        ( newModel, cmd ) =
+                            setCommunity community model
+                    in
+                    { defaultResult | model = newModel, cmd = cmd, broadcastMsg = Just broadcastMsg }
 
                 ProfileLoaded profile_ ->
                     { defaultResult
@@ -1058,28 +1057,18 @@ update msg model =
         CompletedLoadProfile RemoteData.Loading ->
             UR.init model
 
-        CompletedLoadCommunity (RemoteData.Success maybeCommunity) ->
-            case maybeCommunity of
-                Just community ->
-                    case setCommunity community model of
-                        Err ( newModel, cmd ) ->
-                            UR.init newModel
-                                |> UR.addCmd cmd
+        CompletedLoadCommunity (RemoteData.Success (Just community)) ->
+            let
+                ( newModel, cmd ) =
+                    setCommunity community model
+            in
+            UR.init newModel
+                |> UR.addCmd cmd
+                |> UR.addExt (CommunityLoaded community |> Broadcast)
 
-                        Ok ( newModel, cmd ) ->
-                            UR.init newModel
-                                |> UR.addCmd cmd
-                                |> UR.addExt (CommunityLoaded community |> Broadcast)
-
-                Nothing ->
-                    -- The community doesn't exist, so redirect to the cambiatus community
-                    -- TODO - Show community selector
-                    let
-                        ( newModel, cmd ) =
-                            selectCommunity model Nothing Route.Dashboard
-                    in
-                    UR.init newModel
-                        |> UR.addCmd cmd
+        CompletedLoadCommunity (RemoteData.Success Nothing) ->
+            -- TODO - Show community selector
+            UR.init model
 
         CompletedLoadCommunity (RemoteData.Failure e) ->
             UR.init { model | selectedCommunity = RemoteData.Failure e }
@@ -1225,7 +1214,7 @@ update msg model =
                     else
                         let
                             ( newModel, cmd ) =
-                                selectCommunity model (Just newCommunity) Route.Dashboard
+                                selectCommunity model newCommunity Route.Dashboard
                         in
                         UR.init { newModel | showCommunitySelector = False }
                             |> UR.addCmd cmd
@@ -1351,7 +1340,7 @@ loadCommunity ({ shared } as model) symbol =
 {-| Given a `Community.Model`, check if the user is part of it (or if it has
 auto invites), and set it as default or redirect the user
 -}
-setCommunity : Community.Model -> Model -> Result ( Model, Cmd Msg ) ( Model, Cmd Msg )
+setCommunity : Community.Model -> Model -> ( Model, Cmd Msg )
 setCommunity community model =
     let
         isMember =
@@ -1384,31 +1373,32 @@ setCommunity community model =
             cmd =
                 if community.hasAutoInvite then
                     -- TODO - Change invite
-                    Route.pushUrl model.shared.navKey (Route.Invite "")
+                    -- Route.pushUrl model.shared.navKey (Route.Invite Nothing)
+                    Cmd.none
 
                 else
                     Cmd.none
         in
-        Ok
-            ( { model
-                | selectedCommunity = RemoteData.Success community
-                , profile = newProfile
-              }
-            , cmd
-            )
+        ( { model
+            | selectedCommunity = RemoteData.Success community
+            , profile = newProfile
+          }
+        , cmd
+        )
 
     else
-        Err (selectCommunity model Nothing Route.Dashboard)
+        -- TODO - Show selector
+        ( model, Cmd.none )
 
 
 {-| Given minimal information, selects a community. This means querying for the
 entire `Community.Model`, and then setting it in the `Model`
 -}
-selectCommunity : Model -> Maybe { community | symbol : Eos.Symbol, subdomain : Maybe String } -> Route -> ( Model, Cmd Msg )
-selectCommunity ({ shared, authToken } as model) maybeCommunity route =
+selectCommunity : Model -> { community | symbol : Eos.Symbol, subdomain : Maybe String } -> Route -> ( Model, Cmd Msg )
+selectCommunity ({ shared, authToken } as model) community route =
     if shared.useSubdomain then
         ( model
-        , Route.externalCommunityLink shared.url maybeCommunity route
+        , Route.externalCommunityLink shared.url community route
             |> Url.toString
             |> Browser.Navigation.load
         )
@@ -1418,7 +1408,7 @@ selectCommunity ({ shared, authToken } as model) maybeCommunity route =
         , Api.Graphql.query shared
             (Just authToken)
             (Community.subdomainQuery
-                (Maybe.andThen .subdomain maybeCommunity
+                (community.subdomain
                     |> Maybe.withDefault "cambiatus.cambiatus.io"
                 )
             )
