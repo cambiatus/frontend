@@ -2,13 +2,17 @@
 -- https://github.com/dillonkearns/elm-graphql
 
 
-module Cambiatus.Scalar exposing (Codecs, Date(..), DateTime(..), Id(..), NaiveDateTime(..), defaultCodecs, defineCodecs, unwrapCodecs, unwrapEncoder)
+module Cambiatus.Scalar exposing (Codecs, CustomId(..), Date(..), DateTime(..), Id(..), NaiveDateTime(..), defaultCodecs, defineCodecs, unwrapCodecs, unwrapEncoder)
 
 import Graphql.Codec exposing (Codec)
 import Graphql.Internal.Builder.Object as Object
 import Graphql.Internal.Encode
 import Json.Decode as Decode exposing (Decoder)
 import Json.Encode as Encode
+
+
+type CustomId
+    = CustomId String
 
 
 type Date
@@ -28,20 +32,22 @@ type NaiveDateTime
 
 
 defineCodecs :
-    { codecDate : Codec valueDate
+    { codecCustomId : Codec valueCustomId
+    , codecDate : Codec valueDate
     , codecDateTime : Codec valueDateTime
     , codecId : Codec valueId
     , codecNaiveDateTime : Codec valueNaiveDateTime
     }
-    -> Codecs valueDate valueDateTime valueId valueNaiveDateTime
+    -> Codecs valueCustomId valueDate valueDateTime valueId valueNaiveDateTime
 defineCodecs definitions =
     Codecs definitions
 
 
 unwrapCodecs :
-    Codecs valueDate valueDateTime valueId valueNaiveDateTime
+    Codecs valueCustomId valueDate valueDateTime valueId valueNaiveDateTime
     ->
-        { codecDate : Codec valueDate
+        { codecCustomId : Codec valueCustomId
+        , codecDate : Codec valueDate
         , codecDateTime : Codec valueDateTime
         , codecId : Codec valueId
         , codecNaiveDateTime : Codec valueNaiveDateTime
@@ -54,21 +60,26 @@ unwrapEncoder getter (Codecs unwrappedCodecs) =
     (unwrappedCodecs |> getter |> .encoder) >> Graphql.Internal.Encode.fromJson
 
 
-type Codecs valueDate valueDateTime valueId valueNaiveDateTime
-    = Codecs (RawCodecs valueDate valueDateTime valueId valueNaiveDateTime)
+type Codecs valueCustomId valueDate valueDateTime valueId valueNaiveDateTime
+    = Codecs (RawCodecs valueCustomId valueDate valueDateTime valueId valueNaiveDateTime)
 
 
-type alias RawCodecs valueDate valueDateTime valueId valueNaiveDateTime =
-    { codecDate : Codec valueDate
+type alias RawCodecs valueCustomId valueDate valueDateTime valueId valueNaiveDateTime =
+    { codecCustomId : Codec valueCustomId
+    , codecDate : Codec valueDate
     , codecDateTime : Codec valueDateTime
     , codecId : Codec valueId
     , codecNaiveDateTime : Codec valueNaiveDateTime
     }
 
 
-defaultCodecs : RawCodecs Date DateTime Id NaiveDateTime
+defaultCodecs : RawCodecs CustomId Date DateTime Id NaiveDateTime
 defaultCodecs =
-    { codecDate =
+    { codecCustomId =
+        { encoder = \(CustomId raw) -> Encode.string raw
+        , decoder = Object.scalarDecoder |> Decode.map CustomId
+        }
+    , codecDate =
         { encoder = \(Date raw) -> Encode.string raw
         , decoder = Object.scalarDecoder |> Decode.map Date
         }

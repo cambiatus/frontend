@@ -13,6 +13,7 @@ import Cambiatus.Object
 import Cambiatus.Object.Product
 import Cambiatus.Object.User as User
 import Cambiatus.Query as Query
+import Cambiatus.Scalar
 import Eos exposing (Symbol)
 import Eos.Account as Eos
 import Graphql.Operation exposing (RootQuery)
@@ -128,7 +129,7 @@ shopProfileSelectionSet =
 
 productQuery : Int -> SelectionSet (Maybe Product) RootQuery
 productQuery saleId =
-    Query.product { id = saleId } productSelection
+    Query.product { id = Cambiatus.Scalar.CustomId (String.fromInt saleId) } productSelection
 
 
 productsQuery : Filter -> Eos.Name -> Symbol -> SelectionSet (List Product) RootQuery

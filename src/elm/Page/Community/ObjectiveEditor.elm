@@ -361,10 +361,10 @@ update msg model loggedIn =
             if LoggedIn.hasPrivateKey loggedIn then
                 case ( loggedIn.selectedCommunity, model.status ) of
                     ( RemoteData.Success community, Authorized (NewObjective objForm) ) ->
-                        save objForm Nothing community.precision
+                        save objForm Nothing (Eos.getSymbolPrecision community.symbol)
 
                     ( RemoteData.Success community, Authorized (EditObjective objectiveId objForm) ) ->
-                        save objForm (Just objectiveId) community.precision
+                        save objForm (Just objectiveId) (Eos.getSymbolPrecision community.symbol)
 
                     _ ->
                         newModel

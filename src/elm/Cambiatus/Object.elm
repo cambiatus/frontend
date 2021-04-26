@@ -49,6 +49,10 @@ type DeleteKycAddress
     = DeleteKycAddress
 
 
+type Exists
+    = Exists
+
+
 type Invite
     = Invite
 

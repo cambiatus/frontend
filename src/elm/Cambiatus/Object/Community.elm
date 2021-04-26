@@ -147,14 +147,14 @@ orders object_ =
     Object.selectionForCompositeField "orders" [] object_ (identity >> Decode.list)
 
 
-precision : SelectionSet Int Cambiatus.Object.Community
-precision =
-    Object.selectionForField "Int" "precision" [] Decode.int
-
-
 productCount : SelectionSet Int Cambiatus.Object.Community
 productCount =
     Object.selectionForField "Int" "productCount" [] Decode.int
+
+
+subdomain : SelectionSet (Maybe String) Cambiatus.Object.Community
+subdomain =
+    Object.selectionForField "(Maybe String)" "subdomain" [] (Decode.string |> Decode.nullable)
 
 
 supply : SelectionSet (Maybe Float) Cambiatus.Object.Community

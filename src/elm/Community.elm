@@ -87,6 +87,7 @@ type alias Model =
     , description : String
     , symbol : Symbol
     , logo : String
+    , subdomain : Maybe String
     , creator : Eos.Name
     , inviterReward : Float
     , invitedReward : Float
@@ -101,7 +102,6 @@ type alias Model =
     , orderCount : Int
     , members : List Profile.Minimal
     , objectives : List Objective
-    , precision : Int
     , hasObjectives : Bool
     , hasShop : Bool
     , hasKyc : Bool
@@ -131,6 +131,7 @@ communitySelectionSet =
         |> with Community.description
         |> with (Eos.symbolSelectionSet Community.symbol)
         |> with Community.logo
+        |> with Community.subdomain
         |> with (Eos.nameSelectionSet Community.creator)
         |> with Community.inviterReward
         |> with Community.invitedReward
@@ -145,7 +146,6 @@ communitySelectionSet =
         |> with Community.orderCount
         |> with (Community.members Profile.minimalSelectionSet)
         |> with (Community.objectives objectiveSelectionSet)
-        |> with Community.precision
         |> with Community.hasObjectives
         |> with Community.hasShop
         |> with Community.hasKyc

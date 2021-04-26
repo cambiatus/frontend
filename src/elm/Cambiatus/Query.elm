@@ -132,6 +132,18 @@ country requiredArgs object_ =
     Object.selectionForCompositeField "country" [ Argument.required "input" requiredArgs.input Cambiatus.InputObject.encodeCountryInput ] object_ (identity >> Decode.nullable)
 
 
+type alias DomainAvailableRequiredArguments =
+    { domain : String }
+
+
+domainAvailable :
+    DomainAvailableRequiredArguments
+    -> SelectionSet decodesTo Cambiatus.Object.Exists
+    -> SelectionSet (Maybe decodesTo) RootQuery
+domainAvailable requiredArgs object_ =
+    Object.selectionForCompositeField "domainAvailable" [ Argument.required "domain" requiredArgs.domain Encode.string ] object_ (identity >> Decode.nullable)
+
+
 type alias InviteRequiredArguments =
     { input : Cambiatus.InputObject.InviteInput }
 
@@ -170,7 +182,7 @@ objective requiredArgs object_ =
 
 
 type alias ProductRequiredArguments =
-    { id : Int }
+    { id : Cambiatus.ScalarCodecs.CustomId }
 
 
 {-| [Auth required] Gets a single product
@@ -180,7 +192,7 @@ product :
     -> SelectionSet decodesTo Cambiatus.Object.Product
     -> SelectionSet (Maybe decodesTo) RootQuery
 product requiredArgs object_ =
-    Object.selectionForCompositeField "product" [ Argument.required "id" requiredArgs.id Encode.int ] object_ (identity >> Decode.nullable)
+    Object.selectionForCompositeField "product" [ Argument.required "id" requiredArgs.id (Cambiatus.ScalarCodecs.codecs |> Cambiatus.Scalar.unwrapEncoder .codecCustomId) ] object_ (identity >> Decode.nullable)
 
 
 type alias ProductsOptionalArguments =

@@ -527,13 +527,13 @@ buildTransferInput required =
 
 
 type alias TransferInputRequiredFields =
-    { id : Int }
+    { id : Cambiatus.ScalarCodecs.CustomId }
 
 
 {-| Type for the TransferInput input object.
 -}
 type alias TransferInput =
-    { id : Int }
+    { id : Cambiatus.ScalarCodecs.CustomId }
 
 
 {-| Encode a TransferInput into a value that can be used as an argument.
@@ -541,7 +541,7 @@ type alias TransferInput =
 encodeTransferInput : TransferInput -> Value
 encodeTransferInput input =
     Encode.maybeObject
-        [ ( "id", Encode.int input.id |> Just ) ]
+        [ ( "id", (Cambiatus.ScalarCodecs.codecs |> Cambiatus.Scalar.unwrapEncoder .codecCustomId) input.id |> Just ) ]
 
 
 buildTransferSucceedInput :
