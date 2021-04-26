@@ -508,6 +508,7 @@ validateModel accountName model =
                         , hasShop = True
                         , hasObjectives = True
                         , hasKyc = False
+                        , hasAutoInvite = False
                         }
                 )
                 symbolValidation

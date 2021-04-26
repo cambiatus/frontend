@@ -280,6 +280,7 @@ saveFeature feature state authorization { shared, accountName } community =
             , hasShop = hasShop
             , hasObjectives = hasObjectives
             , hasKyc = hasKyc
+            , hasAutoInvite = community.hasAutoInvite
             }
     in
     { responseAddress = SaveSuccess

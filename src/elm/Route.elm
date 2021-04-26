@@ -144,7 +144,7 @@ externalCommunityLink : Url -> Maybe { community | symbol : Eos.Symbol, subdomai
 externalCommunityLink currentUrl maybeCommunity route =
     let
         defaultSubdomain =
-            "app"
+            "cambiatus"
 
         communitySubdomain =
             maybeCommunity
@@ -157,7 +157,7 @@ externalCommunityLink currentUrl maybeCommunity route =
             case currentUrl.host |> String.split "." of
                 [] ->
                     -- This will never happen
-                    { currentUrl | host = "app.cambiatus.io" }
+                    { currentUrl | host = defaultSubdomain ++ ".cambiatus.io" }
 
                 [ singlePart ] ->
                     { currentUrl | host = String.join "." [ communitySubdomain, singlePart ] }

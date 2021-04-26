@@ -48,7 +48,7 @@ type alias Model =
     , descriptionErrors : List String
     , subdomainInput : String
     , subdomainErrors : List String
-    , requiresInvitation : Bool
+    , hasAutoInvite : Bool
     , inviterRewardInput : String
     , inviterRewardErrors : List String
     , invitedRewardInput : String
@@ -66,7 +66,7 @@ init loggedIn =
       , descriptionErrors = []
       , subdomainInput = ""
       , subdomainErrors = []
-      , requiresInvitation = False
+      , hasAutoInvite = False
       , inviterRewardInput = ""
       , inviterRewardErrors = []
       , invitedRewardInput = ""
@@ -113,7 +113,7 @@ update msg model ({ shared } as loggedIn) =
                         |> Maybe.map (String.split ".")
                         |> Maybe.andThen List.head
                         |> Maybe.withDefault ""
-                , requiresInvitation = not community.hasAutoInvite
+                , hasAutoInvite = community.hasAutoInvite
                 , inviterRewardInput = String.fromFloat community.inviterReward
                 , invitedRewardInput = String.fromFloat community.invitedReward
                 , isLoading = False
@@ -155,7 +155,7 @@ update msg model ({ shared } as loggedIn) =
                 |> UR.init
 
         ToggledInvitation requiresInvitation ->
-            { model | requiresInvitation = requiresInvitation }
+            { model | hasAutoInvite = not requiresInvitation }
                 |> UR.init
 
         EnteredInviterReward inviterReward ->
@@ -223,7 +223,6 @@ update msg model ({ shared } as loggedIn) =
                     { model | isLoading = True }
                         |> UR.init
                         |> UR.addPort
-                            -- TODO - Update requiresInvitation
                             { responseAddress = GotDomainAvailableResponse (RemoteData.Success True)
                             , responseData = Encode.string (Eos.symbolToString community.symbol)
                             , data =
@@ -248,6 +247,7 @@ update msg model ({ shared } as loggedIn) =
                                             , hasObjectives = Eos.boolToEosBool community.hasObjectives
                                             , hasShop = Eos.boolToEosBool community.hasShop
                                             , hasKyc = Eos.boolToEosBool community.hasKyc
+                                            , hasAutoInvite = Eos.boolToEosBool model.hasAutoInvite
                                             }
                                                 |> Community.encodeUpdateData
                                       }
@@ -301,6 +301,7 @@ update msg model ({ shared } as loggedIn) =
                                         model.invitedRewardInput
                                             |> String.toFloat
                                             |> Maybe.withDefault community.invitedReward
+                                    , hasAutoInvite = model.hasAutoInvite
                                 }
                                 |> LoggedIn.ExternalBroadcast
                             )
@@ -671,7 +672,7 @@ viewInvitation { translators } model =
             , id = "invitation_toggle"
             , onToggle = ToggledInvitation
             , disabled = False
-            , value = model.requiresInvitation
+            , value = not model.hasAutoInvite
             }
             |> View.Toggle.toHtml translators
         ]

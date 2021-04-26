@@ -350,6 +350,7 @@ type alias CreateCommunityData =
     , hasShop : Eos.EosBool
     , hasObjectives : Eos.EosBool
     , hasKyc : Eos.EosBool
+    , hasAutoInvite : Eos.EosBool
     }
 
 
@@ -365,6 +366,7 @@ createCommunityData :
     , hasShop : Bool
     , hasObjectives : Bool
     , hasKyc : Bool
+    , hasAutoInvite : Bool
     }
     -> CreateCommunityData
 createCommunityData params =
@@ -388,6 +390,7 @@ createCommunityData params =
     , hasShop = params.hasShop |> Eos.boolToEosBool
     , hasObjectives = params.hasObjectives |> Eos.boolToEosBool
     , hasKyc = params.hasKyc |> Eos.boolToEosBool
+    , hasAutoInvite = params.hasAutoInvite |> Eos.boolToEosBool
     }
 
 
@@ -405,6 +408,7 @@ encodeCreateCommunityData c =
         , ( "has_objectives", Eos.encodeEosBool c.hasObjectives )
         , ( "has_shop", Eos.encodeEosBool c.hasShop )
         , ( "has_kyc", Eos.encodeEosBool c.hasKyc )
+        , ( "auto_invite", Eos.encodeEosBool c.hasAutoInvite )
         ]
 
 
@@ -422,6 +426,7 @@ createCommunityDataDecoder =
         |> required "has_objectives" Eos.eosBoolDecoder
         |> required "has_shop" Eos.eosBoolDecoder
         |> required "has_kyc" Eos.eosBoolDecoder
+        |> required "auto_invite" Eos.eosBoolDecoder
 
 
 type alias UpdateCommunityData =
@@ -435,6 +440,7 @@ type alias UpdateCommunityData =
     , hasObjectives : Eos.EosBool
     , hasShop : Eos.EosBool
     , hasKyc : Eos.EosBool
+    , hasAutoInvite : Eos.EosBool
     }
 
 
@@ -451,6 +457,7 @@ encodeUpdateData c =
         , ( "has_objectives", Eos.encodeEosBool c.hasObjectives )
         , ( "has_shop", Eos.encodeEosBool c.hasShop )
         , ( "has_kyc", Eos.encodeEosBool c.hasKyc )
+        , ( "auto_invite", Eos.encodeEosBool c.hasAutoInvite )
         ]
 
 
