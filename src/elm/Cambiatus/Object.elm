@@ -37,6 +37,10 @@ type Community
     = Community
 
 
+type CommunityPreview
+    = CommunityPreview
+
+
 type Contact
     = Contact
 
@@ -107,6 +111,10 @@ type Session
 
 type State
     = State
+
+
+type Subdomain
+    = Subdomain
 
 
 type Transfer

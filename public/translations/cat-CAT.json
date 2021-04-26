@@ -911,7 +911,8 @@
           "blank": "La vostra comunitat necessita un URL",
           "invalid_char": "No utilitzeu caràcters especials",
           "invalid_case": "Només es permet la minúscula",
-          "too_short": "L'URL ha de tenir com a mínim 2 caràcters"
+          "too_short": "L'URL ha de tenir com a mínim 2 caràcters",
+          "already_taken": "L'URL que trieu ja s'ha pres"
         }
       },
       "constraints": {

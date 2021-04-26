@@ -10,6 +10,7 @@ module Page.Community.New exposing
     )
 
 import Api
+import Api.Graphql
 import Asset.Icon as Icon
 import Browser.Events as Events
 import Community exposing (Model)
@@ -17,6 +18,7 @@ import Eos
 import Eos.Account as Eos
 import File exposing (File)
 import Graphql.Document
+import Graphql.Http
 import Html exposing (Html, button, div, input, label, span, text)
 import Html.Attributes exposing (accept, class, classList, disabled, for, id, maxlength, minlength, multiple, required, type_)
 import Html.Events exposing (onClick, onSubmit)
@@ -26,6 +28,7 @@ import Json.Decode.Pipeline as Decode
 import Json.Encode as Encode exposing (Value)
 import List.Extra as List
 import Page
+import RemoteData exposing (RemoteData)
 import Route
 import Session.LoggedIn as LoggedIn exposing (External(..))
 import Session.Shared exposing (Shared)
@@ -65,6 +68,7 @@ subscriptions _ =
 type alias Model =
     { name : String
     , description : String
+    , subdomain : String
     , symbol : String
     , logoSelected : Int
     , logoList : List LogoStatus
@@ -80,6 +84,7 @@ initModel : Model
 initModel =
     { name = ""
     , description = ""
+    , subdomain = ""
     , symbol = ""
     , logoSelected = 0
     , logoList = defaultLogos
@@ -149,6 +154,7 @@ view ({ shared } as loggedIn) model =
                 [ div [ class "mt-10 mb-14" ]
                     [ viewDescription shared model.isDisabled model.description model.errors
                     , viewCurrencyName shared model.isDisabled model.name model.errors
+                    , viewSubdomain shared model.isDisabled model.subdomain model.errors
                     , div [ class "flex flex-row mt-4" ]
                         [ div [ class "w-1/2 pr-2" ]
                             [ viewSymbol shared model.isDisabled model.symbol model.errors
@@ -217,6 +223,21 @@ viewCurrencyName ({ translators } as shared) isDisabled defVal errors =
         , translators = translators
         }
         |> Input.withAttrs [ maxlength 255, required True ]
+        |> Input.toHtml
+
+
+viewSubdomain : Shared -> Bool -> String -> List Error -> Html Msg
+viewSubdomain { translators } isDisabled defVal _ =
+    Input.init
+        { label = translators.t "settings.community_info.fields.url"
+        , id = "comm-subdomain"
+        , onInput = EnteredSubdomain
+        , disabled = isDisabled
+        , value = defVal
+        , placeholder = Nothing
+        , problems = Nothing
+        , translators = translators
+        }
         |> Input.toHtml
 
 
@@ -449,6 +470,8 @@ validateLogoUrl model =
             Err ( Logo, ChooseLogo )
 
 
+{-| Assumes `Model.subdomain` is available
+-}
 validateModel : Eos.Name -> Model -> Result Model ( Community.CreateCommunityData, Token.CreateTokenData )
 validateModel accountName model =
     let
@@ -479,6 +502,7 @@ validateModel accountName model =
                         , logoUrl = logoUrl
                         , name = name
                         , description = model.description
+                        , subdomain = Just model.subdomain
                         , inviterReward = inviterReward
                         , invitedReward = invitedReward
                         , hasShop = True
@@ -575,6 +599,7 @@ type alias UpdateResult =
 type Msg
     = EnteredName String
     | EnteredDescription String
+    | EnteredSubdomain String
     | EnteredSymbol String
     | EnteredInviterReward String
     | EnteredInvitedReward String
@@ -583,6 +608,7 @@ type Msg
     | EnteredLogo Int (List File)
     | CompletedLogoUpload Int (Result Http.Error String)
     | SubmittedForm
+    | GotDomainAvailableResponse (RemoteData (Graphql.Http.Error Bool) Bool)
     | StartedCreatingCommunity Community.CreateCommunityData Token.CreateTokenData
     | GotCreateCommunityResponse (Result Encode.Value String)
     | Redirect Community.CreateCommunityData
@@ -603,6 +629,10 @@ update msg model loggedIn =
 
         EnteredDescription description ->
             { model | description = description }
+                |> UR.init
+
+        EnteredSubdomain subdomain ->
+            { model | subdomain = subdomain }
                 |> UR.init
 
         EnteredInviterReward inviterReward ->
@@ -658,6 +688,16 @@ update msg model loggedIn =
                 |> UR.init
 
         SubmittedForm ->
+            { model | isDisabled = True }
+                |> UR.init
+                |> UR.addCmd
+                    (Api.Graphql.query loggedIn.shared
+                        (Just loggedIn.authToken)
+                        (Community.domainAvailableQuery model.subdomain)
+                        GotDomainAvailableResponse
+                    )
+
+        GotDomainAvailableResponse (RemoteData.Success True) ->
             case validateModel loggedIn.accountName model of
                 Ok ( createCommunityData, createTokenData ) ->
                     if LoggedIn.hasPrivateKey loggedIn then
@@ -669,7 +709,7 @@ update msg model loggedIn =
                         { model | isDisabled = True }
                             |> UR.init
                             |> UR.addPort
-                                { responseAddress = SubmittedForm
+                                { responseAddress = GotDomainAvailableResponse (RemoteData.Success True)
                                 , responseData =
                                     Encode.object
                                         [ ( "createCommunityData", Community.encodeCreateCommunityData createCommunityData )
@@ -691,6 +731,26 @@ update msg model loggedIn =
 
                 Err withError ->
                     UR.init withError
+
+        GotDomainAvailableResponse (RemoteData.Success False) ->
+            { model | isDisabled = False }
+                |> UR.init
+                |> UR.addExt
+                    (LoggedIn.ShowFeedback Feedback.Failure
+                        (loggedIn.shared.translators.t "settings.community_info.errors.url.already_taken")
+                    )
+
+        GotDomainAvailableResponse (RemoteData.Failure err) ->
+            { model | isDisabled = False }
+                |> UR.init
+                |> UR.logGraphqlError msg err
+                |> UR.addExt (LoggedIn.ShowFeedback Feedback.Failure (loggedIn.shared.translators.t "error.unknown"))
+
+        GotDomainAvailableResponse RemoteData.NotAsked ->
+            UR.init model
+
+        GotDomainAvailableResponse RemoteData.Loading ->
+            UR.init model
 
         StartedCreatingCommunity createCommunityData createTokenData ->
             let
@@ -734,6 +794,7 @@ update msg model loggedIn =
                     { symbol = communityData.cmmAsset.symbol
                     , name = communityData.name
                     , logo = communityData.logoUrl
+                    , subdomain = communityData.subdomain
                     , hasShop = Eos.eosBoolToBool communityData.hasShop
                     , hasActions = Eos.eosBoolToBool communityData.hasObjectives
                     , hasKyc = Eos.eosBoolToBool communityData.hasKyc
@@ -757,7 +818,7 @@ update msg model loggedIn =
 jsAddressToMsg : List String -> Value -> Maybe Msg
 jsAddressToMsg addr val =
     case addr of
-        "SubmittedForm" :: [] ->
+        "GotDomainAvailableResponse" :: _ ->
             let
                 response =
                     Decode.decodeValue
@@ -803,6 +864,9 @@ msgToString msg =
         EnteredDescription _ ->
             [ "EnteredDescription" ]
 
+        EnteredSubdomain _ ->
+            [ "EnteredSubdomain" ]
+
         EnteredSymbol _ ->
             [ "EnteredSymbol" ]
 
@@ -826,6 +890,9 @@ msgToString msg =
 
         SubmittedForm ->
             [ "SubmittedForm" ]
+
+        GotDomainAvailableResponse r ->
+            [ "GotDomainAvailableResponse", UR.remoteDataToString r ]
 
         StartedCreatingCommunity _ _ ->
             [ "StartedCreatingCommunity" ]

@@ -30,6 +30,7 @@ import Cambiatus.Subscription as Subscription
 import Eos exposing (Symbol, symbolToString)
 import Eos.Account as Eos exposing (Name)
 import Graphql.Operation exposing (RootQuery)
+import Graphql.OptionalArgument exposing (OptionalArgument(..))
 import Graphql.SelectionSet as SelectionSet exposing (SelectionSet, with)
 import Json.Encode as Encode exposing (Value)
 import Profile
@@ -173,7 +174,7 @@ transfersUserQuery name paginateArgs =
 transfersCommunityQuery : Symbol -> (PaginationArgs -> PaginationArgs) -> SelectionSet (Maybe QueryTransfers) RootQuery
 transfersCommunityQuery symbol paginateArgs =
     communityTransfersSelectionSet paginateArgs
-        |> Cambiatus.Query.community { symbol = Eos.symbolToString symbol }
+        |> Cambiatus.Query.community (\optionals -> { optionals | symbol = Present <| Eos.symbolToString symbol })
 
 
 getTransfers : Maybe { t | transfers : Maybe ConnectionTransfer } -> List Transfer

@@ -39,6 +39,7 @@ import Cambiatus.Mutation
 import Cambiatus.Object
 import Cambiatus.Object.Community as Community
 import Cambiatus.Object.DeleteKycAddress
+import Cambiatus.Object.Subdomain as Subdomain
 import Cambiatus.Object.User as User
 import Cambiatus.Query
 import Cambiatus.Scalar exposing (Id(..))
@@ -112,6 +113,7 @@ type alias CommunityInfo =
     { symbol : Symbol
     , name : String
     , logo : String
+    , subdomain : Maybe String
     , hasShop : Bool
     , hasActions : Bool
     , hasKyc : Bool
@@ -158,6 +160,7 @@ communityInfoSelectionSet =
         |> with (Eos.symbolSelectionSet Community.symbol)
         |> with Community.name
         |> with Community.logo
+        |> with (Community.subdomain Subdomain.name)
         |> with Community.hasShop
         |> with Community.hasObjectives
         |> with Community.hasKyc

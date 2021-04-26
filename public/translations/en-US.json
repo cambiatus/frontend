@@ -909,7 +909,8 @@
           "blank": "Your community needs a URL",
           "invalid_char": "Do not use special characters",
           "invalid_case": "Only downcase is allowed",
-          "too_short": "The URL must have at least 2 characters"
+          "too_short": "The URL must have at least 2 characters",
+          "already_taken": "The URL you chose is already taken"
         }
       },
       "constraints": {

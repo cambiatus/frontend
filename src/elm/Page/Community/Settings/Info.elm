@@ -10,10 +10,12 @@ module Page.Community.Settings.Info exposing
     )
 
 import Api
+import Api.Graphql
 import Community
 import Eos
 import Eos.Account as Eos
 import File exposing (File)
+import Graphql.Http
 import Html exposing (Html, button, div, form, img, input, label, li, span, text, ul)
 import Html.Attributes exposing (accept, class, classList, disabled, for, id, maxlength, multiple, src, type_)
 import Html.Events exposing (onSubmit)
@@ -22,10 +24,11 @@ import Icons
 import Json.Decode as Decode exposing (Value)
 import Json.Encode as Encode
 import Page
-import RemoteData
+import RemoteData exposing (RemoteData)
 import Route
 import Session.LoggedIn as LoggedIn
 import Session.Shared exposing (Shared)
+import Task
 import UpdateResult as UR
 import View.Feedback as Feedback
 import View.Form
@@ -43,8 +46,8 @@ type alias Model =
     , nameErrors : List String
     , descriptionInput : String
     , descriptionErrors : List String
-    , urlInput : String
-    , urlErrors : List String
+    , subdomainInput : String
+    , subdomainErrors : List String
     , requiresInvitation : Bool
     , inviterRewardInput : String
     , inviterRewardErrors : List String
@@ -61,8 +64,8 @@ init loggedIn =
       , nameErrors = []
       , descriptionInput = ""
       , descriptionErrors = []
-      , urlInput = ""
-      , urlErrors = []
+      , subdomainInput = ""
+      , subdomainErrors = []
       , requiresInvitation = False
       , inviterRewardInput = ""
       , inviterRewardErrors = []
@@ -84,11 +87,12 @@ type Msg
     | CompletedLogoUpload (Result Http.Error String)
     | EnteredName String
     | EnteredDescription String
-    | EnteredUrl String
+    | EnteredSubdomain String
     | ToggledInvitation Bool
     | EnteredInviterReward String
     | EnteredInvitedReward String
     | ClickedSave
+    | GotDomainAvailableResponse (RemoteData (Graphql.Http.Error Bool) Bool)
     | GotSaveResponse (Result Value Eos.Symbol)
 
 
@@ -97,21 +101,19 @@ type alias UpdateResult =
 
 
 update : Msg -> Model -> LoggedIn.Model -> UpdateResult
-update msg model loggedIn =
+update msg model ({ shared } as loggedIn) =
     case msg of
         CompletedLoadCommunity community ->
             { model
                 | logoUrl = community.logo
                 , nameInput = community.name
                 , descriptionInput = community.description
-
-                -- TODO - use community subdomain
-                , urlInput =
-                    String.toLower community.name
-                        |> String.replace " " "_"
-
-                -- TODO - Use community's requiresInvitation
-                , requiresInvitation = False
+                , subdomainInput =
+                    community.subdomain
+                        |> Maybe.map (String.split ".")
+                        |> Maybe.andThen List.head
+                        |> Maybe.withDefault ""
+                , requiresInvitation = not community.hasAutoInvite
                 , inviterRewardInput = String.fromFloat community.inviterReward
                 , invitedRewardInput = String.fromFloat community.invitedReward
                 , isLoading = False
@@ -120,7 +122,7 @@ update msg model loggedIn =
 
         EnteredLogo (file :: _) ->
             UR.init model
-                |> UR.addCmd (Api.uploadImage loggedIn.shared file CompletedLogoUpload)
+                |> UR.addCmd (Api.uploadImage shared file CompletedLogoUpload)
 
         EnteredLogo [] ->
             UR.init model
@@ -133,7 +135,7 @@ update msg model loggedIn =
             UR.init model
                 |> UR.addExt
                     (LoggedIn.ShowFeedback Feedback.Failure
-                        (loggedIn.shared.translators.t "settings.community_info.errors.logo_upload")
+                        (shared.translators.t "settings.community_info.errors.logo_upload")
                     )
                 |> UR.logHttpError msg e
 
@@ -147,9 +149,9 @@ update msg model loggedIn =
                 |> validateDescription
                 |> UR.init
 
-        EnteredUrl url ->
-            { model | urlInput = url }
-                |> validateUrl
+        EnteredSubdomain subdomain ->
+            { model | subdomainInput = subdomain }
+                |> validateSubdomain
                 |> UR.init
 
         ToggledInvitation requiresInvitation ->
@@ -167,6 +169,39 @@ update msg model loggedIn =
                 |> UR.init
 
         ClickedSave ->
+            let
+                maybeCommunity =
+                    RemoteData.toMaybe loggedIn.selectedCommunity
+
+                isSameSubdomain =
+                    maybeCommunity
+                        |> Maybe.andThen .subdomain
+                        |> Maybe.map ((==) (model.subdomainInput ++ ".cambiatus.io"))
+                        |> Maybe.withDefault False
+            in
+            if isModelValid maybeCommunity model then
+                if isSameSubdomain then
+                    { model | isLoading = True }
+                        |> UR.init
+                        |> UR.addCmd
+                            (Task.succeed (RemoteData.Success True)
+                                |> Task.perform GotDomainAvailableResponse
+                            )
+
+                else
+                    { model | isLoading = True }
+                        |> UR.init
+                        |> UR.addCmd
+                            (Api.Graphql.query shared
+                                (Just loggedIn.authToken)
+                                (Community.domainAvailableQuery (model.subdomainInput ++ ".cambiatus.io"))
+                                GotDomainAvailableResponse
+                            )
+
+            else
+                UR.init model
+
+        GotDomainAvailableResponse (RemoteData.Success True) ->
             case
                 ( LoggedIn.hasPrivateKey loggedIn
                 , isModelValid (RemoteData.toMaybe loggedIn.selectedCommunity) model
@@ -189,7 +224,7 @@ update msg model loggedIn =
                         |> UR.init
                         |> UR.addPort
                             -- TODO - Update requiresInvitation
-                            { responseAddress = ClickedSave
+                            { responseAddress = GotDomainAvailableResponse (RemoteData.Success True)
                             , responseData = Encode.string (Eos.symbolToString community.symbol)
                             , data =
                                 Eos.encodeTransaction
@@ -201,6 +236,7 @@ update msg model loggedIn =
                                             , logo = model.logoUrl
                                             , name = model.nameInput
                                             , description = model.descriptionInput
+                                            , subdomain = model.subdomainInput
                                             , inviterReward =
                                                 String.toFloat model.inviterRewardInput
                                                     |> Maybe.withDefault community.inviterReward
@@ -211,6 +247,7 @@ update msg model loggedIn =
                                                     |> asset
                                             , hasObjectives = Eos.boolToEosBool community.hasObjectives
                                             , hasShop = Eos.boolToEosBool community.hasShop
+                                            , hasKyc = Eos.boolToEosBool community.hasKyc
                                             }
                                                 |> Community.encodeUpdateData
                                       }
@@ -224,13 +261,32 @@ update msg model loggedIn =
                 _ ->
                     UR.init model
 
+        GotDomainAvailableResponse (RemoteData.Success False) ->
+            { model | isLoading = False }
+                |> UR.init
+                |> UR.addExt
+                    (LoggedIn.ShowFeedback Feedback.Failure
+                        (shared.translators.t "settings.community_info.errors.url.already_taken")
+                    )
+
+        GotDomainAvailableResponse (RemoteData.Failure err) ->
+            UR.init model
+                |> UR.logGraphqlError msg err
+                |> UR.addExt (LoggedIn.ShowFeedback Feedback.Failure (shared.translators.t "error.unknown"))
+
+        GotDomainAvailableResponse RemoteData.Loading ->
+            UR.init model
+
+        GotDomainAvailableResponse RemoteData.NotAsked ->
+            UR.init model
+
         GotSaveResponse (Ok _) ->
             case loggedIn.selectedCommunity of
                 RemoteData.Success community ->
                     { model | isLoading = False }
                         |> UR.init
-                        |> UR.addExt (LoggedIn.ShowFeedback Feedback.Success (loggedIn.shared.translators.t "community.create.success"))
-                        |> UR.addCmd (Route.replaceUrl loggedIn.shared.navKey Route.Dashboard)
+                        |> UR.addExt (LoggedIn.ShowFeedback Feedback.Success (shared.translators.t "community.create.success"))
+                        |> UR.addCmd (Route.replaceUrl shared.navKey Route.Dashboard)
                         |> UR.addExt
                             (LoggedIn.CommunityLoaded
                                 { community
@@ -257,13 +313,13 @@ update msg model loggedIn =
         GotSaveResponse (Err _) ->
             { model | isLoading = False }
                 |> UR.init
-                |> UR.addExt (LoggedIn.ShowFeedback Feedback.Failure (loggedIn.shared.translators.t "community.error_saving"))
+                |> UR.addExt (LoggedIn.ShowFeedback Feedback.Failure (shared.translators.t "community.error_saving"))
 
 
 type Field
     = NameField
     | DescriptionField
-    | UrlField
+    | SubdomainField
 
 
 error : Field -> String -> String
@@ -277,7 +333,7 @@ error field key =
                 DescriptionField ->
                     "description"
 
-                UrlField ->
+                SubdomainField ->
                     "url"
     in
     String.join "." [ "settings.community_info.errors", fieldString, key ]
@@ -290,7 +346,7 @@ isModelValid maybeCommunity model =
             validateModel maybeCommunity model
     in
     List.all (\f -> f validatedModel |> List.isEmpty)
-        [ .nameErrors, .descriptionErrors, .urlErrors, .inviterRewardErrors, .invitedRewardErrors ]
+        [ .nameErrors, .descriptionErrors, .subdomainErrors, .inviterRewardErrors, .invitedRewardErrors ]
 
 
 validateModel : Maybe Community.Model -> Model -> Model
@@ -298,7 +354,7 @@ validateModel maybeCommunity model =
     model
         |> validateName
         |> validateDescription
-        |> validateUrl
+        |> validateSubdomain
         |> validateInviterReward maybeCommunity
         |> validateInvitedReward maybeCommunity
 
@@ -327,34 +383,34 @@ validateDescription model =
     }
 
 
-validateUrl : Model -> Model
-validateUrl model =
+validateSubdomain : Model -> Model
+validateSubdomain model =
     let
         isAllowed character =
             Char.isAlphaNum character || character == '-'
 
         validateLength =
-            if String.length model.urlInput > 1 then
+            if String.length model.subdomainInput > 1 then
                 []
 
             else
-                [ error UrlField "too_short" ]
+                [ error SubdomainField "too_short" ]
 
         validateChars =
-            if String.all isAllowed model.urlInput then
+            if String.all isAllowed model.subdomainInput then
                 []
 
             else
-                [ error UrlField "invalid_char" ]
+                [ error SubdomainField "invalid_char" ]
 
         validateCase =
-            if String.filter Char.isAlphaNum model.urlInput |> String.all Char.isLower then
+            if String.filter Char.isAlphaNum model.subdomainInput |> String.all Char.isLower then
                 []
 
             else
-                [ error UrlField "invalid_case" ]
+                [ error SubdomainField "invalid_case" ]
     in
-    { model | urlErrors = validateChars ++ validateCase ++ validateLength }
+    { model | subdomainErrors = validateChars ++ validateCase ++ validateLength }
 
 
 validateNumberInput : Maybe Eos.Symbol -> String -> Result String Float
@@ -457,7 +513,7 @@ view_ loggedIn community model =
                 [ viewLogo loggedIn.shared model
                 , viewName loggedIn.shared model
                 , viewDescription loggedIn.shared model
-                , viewUrl loggedIn.shared model
+                , viewSubdomain loggedIn.shared model
                 , viewInvitation loggedIn.shared model
                 , viewInviterReward loggedIn.shared community.symbol model
                 , viewInvitedReward loggedIn.shared community.symbol model
@@ -551,8 +607,8 @@ viewDescription shared model =
         |> Input.toHtml
 
 
-viewUrl : Shared -> Model -> Html Msg
-viewUrl shared model =
+viewSubdomain : Shared -> Model -> Html Msg
+viewSubdomain shared model =
     let
         { t } =
             shared.translators
@@ -564,12 +620,12 @@ viewUrl shared model =
         [ Input.init
             { label = t "settings.community_info.fields.url"
             , id = "community_url_input"
-            , onInput = EnteredUrl
+            , onInput = EnteredSubdomain
             , disabled = model.isLoading
-            , value = model.urlInput
+            , value = model.subdomainInput
             , placeholder = Just (t "settings.community_info.placeholders.url")
             , problems =
-                List.map t model.urlErrors
+                List.map t model.subdomainErrors
                     |> List.head
                     |> Maybe.map (\x -> [ x ])
             , translators = shared.translators
@@ -577,12 +633,15 @@ viewUrl shared model =
             |> Input.withCounter 30
             |> Input.withAttrs
                 [ maxlength 30
-                , classList [ ( "pr-29", not <| String.isEmpty model.urlInput ) ]
+                , classList [ ( "pr-29", not <| String.isEmpty model.subdomainInput ) ]
                 ]
             |> Input.withElement
                 (span
                     [ class "absolute inset-y-0 right-1 flex items-center bg-white pl-1 my-2"
-                    , classList [ ( "hidden", String.isEmpty model.urlInput ) ]
+                    , classList
+                        [ ( "hidden", String.isEmpty model.subdomainInput )
+                        , ( "bg-gray-500", model.isLoading )
+                        ]
                     ]
                     [ text ".cambiatus.io" ]
                 )
@@ -694,7 +753,7 @@ receiveBroadcast broadcastMsg =
 jsAddressToMsg : List String -> Value -> Maybe Msg
 jsAddressToMsg addr val =
     case addr of
-        "ClickedSave" :: [] ->
+        "GotDomainAvailableResponse" :: _ ->
             Decode.decodeValue
                 (Decode.oneOf
                     [ Decode.map2 (\_ symbol -> Ok symbol)
@@ -729,8 +788,8 @@ msgToString msg =
         EnteredDescription _ ->
             [ "EnteredDescription" ]
 
-        EnteredUrl _ ->
-            [ "EnteredUrl" ]
+        EnteredSubdomain _ ->
+            [ "EnteredSubdomain" ]
 
         ToggledInvitation _ ->
             [ "ToggledInvitation" ]
@@ -743,6 +802,9 @@ msgToString msg =
 
         ClickedSave ->
             [ "ClickedSave" ]
+
+        GotDomainAvailableResponse r ->
+            [ "GotDomainAvailableResponse", UR.remoteDataToString r ]
 
         GotSaveResponse r ->
             [ "GotSaveResponse", UR.resultToString r ]

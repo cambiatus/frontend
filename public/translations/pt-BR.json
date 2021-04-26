@@ -913,7 +913,8 @@
           "blank": "Sua communidade precisa de uma URL",
           "invalid_char": "Não use caracteres especiais",
           "invalid_case": "Somente letras minúsculas são permitidas",
-          "too_short": "O URL precisa de pelo menos 2 caracteres"
+          "too_short": "O URL precisa de pelo menos 2 caracteres",
+          "already_taken": "O URL que você escolheu já está sendo usado"
         }
       },
       "constraints": {

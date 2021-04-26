@@ -501,6 +501,7 @@ update session msg model =
                             { symbol = community.symbol
                             , name = community.name
                             , logo = community.logo
+                            , subdomain = community.subdomain
                             , hasShop = community.hasShop
                             , hasActions = community.hasObjectives
                             , hasKyc = community.hasKyc

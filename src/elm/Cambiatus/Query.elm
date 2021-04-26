@@ -104,18 +104,52 @@ communities object_ =
     Object.selectionForCompositeField "communities" [] object_ (identity >> Decode.list)
 
 
-type alias CommunityRequiredArguments =
-    { symbol : String }
+type alias CommunityOptionalArguments =
+    { subdomain : OptionalArgument String
+    , symbol : OptionalArgument String
+    }
 
 
 {-| [Auth required] A single community
 -}
 community :
-    CommunityRequiredArguments
+    (CommunityOptionalArguments -> CommunityOptionalArguments)
     -> SelectionSet decodesTo Cambiatus.Object.Community
     -> SelectionSet (Maybe decodesTo) RootQuery
-community requiredArgs object_ =
-    Object.selectionForCompositeField "community" [ Argument.required "symbol" requiredArgs.symbol Encode.string ] object_ (identity >> Decode.nullable)
+community fillInOptionals object_ =
+    let
+        filledInOptionals =
+            fillInOptionals { subdomain = Absent, symbol = Absent }
+
+        optionalArgs =
+            [ Argument.optional "subdomain" filledInOptionals.subdomain Encode.string, Argument.optional "symbol" filledInOptionals.symbol Encode.string ]
+                |> List.filterMap identity
+    in
+    Object.selectionForCompositeField "community" optionalArgs object_ (identity >> Decode.nullable)
+
+
+type alias CommunityPreviewOptionalArguments =
+    { subdomain : OptionalArgument String
+    , symbol : OptionalArgument String
+    }
+
+
+{-| Community Preview, public data available for all communities
+-}
+communityPreview :
+    (CommunityPreviewOptionalArguments -> CommunityPreviewOptionalArguments)
+    -> SelectionSet decodesTo Cambiatus.Object.CommunityPreview
+    -> SelectionSet (Maybe decodesTo) RootQuery
+communityPreview fillInOptionals object_ =
+    let
+        filledInOptionals =
+            fillInOptionals { subdomain = Absent, symbol = Absent }
+
+        optionalArgs =
+            [ Argument.optional "subdomain" filledInOptionals.subdomain Encode.string, Argument.optional "symbol" filledInOptionals.symbol Encode.string ]
+                |> List.filterMap identity
+    in
+    Object.selectionForCompositeField "communityPreview" optionalArgs object_ (identity >> Decode.nullable)
 
 
 type alias CountryRequiredArguments =
@@ -136,6 +170,8 @@ type alias DomainAvailableRequiredArguments =
     { domain : String }
 
 
+{-| [Auth required] Informs if a domain is available or not under Cambiatus
+-}
 domainAvailable :
     DomainAvailableRequiredArguments
     -> SelectionSet decodesTo Cambiatus.Object.Exists

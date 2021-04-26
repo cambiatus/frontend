@@ -140,24 +140,18 @@ pushUrl key route =
     Nav.pushUrl key (routeToString route)
 
 
-externalCommunityLink : Url -> Maybe { community | symbol : Eos.Symbol, name : String } -> Maybe Route -> Url
-externalCommunityLink currentUrl maybeCommunity maybeRoute =
+externalCommunityLink : Url -> Maybe { community | symbol : Eos.Symbol, subdomain : Maybe String } -> Route -> Url
+externalCommunityLink currentUrl maybeCommunity route =
     let
         defaultSubdomain =
             "app"
 
-        communityStub =
-            case maybeCommunity of
-                Nothing ->
-                    defaultSubdomain
-
-                -- TODO - Use community subdomain
-                Just community ->
-                    if community.symbol == Eos.cambiatusSymbol then
-                        defaultSubdomain
-
-                    else
-                        String.toLower community.name
+        communitySubdomain =
+            maybeCommunity
+                |> Maybe.andThen .subdomain
+                |> Maybe.map (String.split ".")
+                |> Maybe.andThen List.head
+                |> Maybe.withDefault defaultSubdomain
 
         communityUrl =
             case currentUrl.host |> String.split "." of
@@ -166,17 +160,12 @@ externalCommunityLink currentUrl maybeCommunity maybeRoute =
                     { currentUrl | host = "app.cambiatus.io" }
 
                 [ singlePart ] ->
-                    { currentUrl | host = String.join "." [ communityStub, singlePart ] }
+                    { currentUrl | host = String.join "." [ communitySubdomain, singlePart ] }
 
                 _ :: rest ->
-                    { currentUrl | host = String.join "." (communityStub :: rest) }
+                    { currentUrl | host = String.join "." (communitySubdomain :: rest) }
     in
-    case maybeRoute of
-        Nothing ->
-            communityUrl
-
-        Just route ->
-            { communityUrl | path = routeToString route }
+    { communityUrl | path = routeToString route }
 
 
 

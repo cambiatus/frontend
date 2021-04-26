@@ -274,6 +274,7 @@ saveFeature feature state authorization { shared, accountName } community =
             , logoUrl = community.logo
             , name = community.name
             , description = community.description
+            , subdomain = community.subdomain
             , inviterReward = community.inviterReward
             , invitedReward = community.invitedReward
             , hasShop = hasShop

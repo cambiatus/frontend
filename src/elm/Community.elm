@@ -14,13 +14,12 @@ module Community exposing
     , WithObjectives
     , claimSelectionSet
     , communitiesQuery
-    , communityNameQuery
-    , communityQuery
     , communitySelectionSet
     , createCommunityData
     , createCommunityDataDecoder
     , decodeBalance
     , decodeTransaction
+    , domainAvailableQuery
     , encodeCreateCommunityData
     , encodeCreateObjectiveAction
     , encodeUpdateData
@@ -30,6 +29,8 @@ module Community exposing
     , logoUrl
     , newCommunitySubscription
     , objectiveSelectionSet
+    , subdomainQuery
+    , symbolQuery
     , toVerifications
     )
 
@@ -40,8 +41,10 @@ import Cambiatus.Object.Action as ActionObject
 import Cambiatus.Object.Check as Check
 import Cambiatus.Object.Claim as Claim exposing (ChecksOptionalArguments)
 import Cambiatus.Object.Community as Community
+import Cambiatus.Object.Exists
 import Cambiatus.Object.Invite as Invite
 import Cambiatus.Object.Objective as Objective
+import Cambiatus.Object.Subdomain as Subdomain
 import Cambiatus.Object.User as Profile
 import Cambiatus.Query as Query
 import Cambiatus.Scalar exposing (DateTime(..))
@@ -105,6 +108,7 @@ type alias Model =
     , hasObjectives : Bool
     , hasShop : Bool
     , hasKyc : Bool
+    , hasAutoInvite : Bool
     , validators : List Eos.Name
     }
 
@@ -131,7 +135,7 @@ communitySelectionSet =
         |> with Community.description
         |> with (Eos.symbolSelectionSet Community.symbol)
         |> with Community.logo
-        |> with Community.subdomain
+        |> with (Community.subdomain Subdomain.name)
         |> with (Eos.nameSelectionSet Community.creator)
         |> with Community.inviterReward
         |> with Community.invitedReward
@@ -149,6 +153,7 @@ communitySelectionSet =
         |> with Community.hasObjectives
         |> with Community.hasShop
         |> with Community.hasKyc
+        |> with Community.autoInvite
         |> with (Community.validators (Eos.nameSelectionSet Profile.account))
 
 
@@ -191,22 +196,14 @@ type alias WithObjectives =
     }
 
 
-communityQuery : Symbol -> SelectionSet (Maybe Model) RootQuery
-communityQuery symbol =
-    Query.community { symbol = symbolToString symbol } communitySelectionSet
+symbolQuery : Symbol -> SelectionSet (Maybe Model) RootQuery
+symbolQuery symbol =
+    Query.community (\optionals -> { optionals | symbol = Present <| symbolToString symbol }) communitySelectionSet
 
 
-communityNameQuery : String -> SelectionSet (Maybe Model) RootQuery
-communityNameQuery name =
-    Query.communities communitySelectionSet
-        |> SelectionSet.map
-            (List.filter
-                (.name
-                    >> String.toLower
-                    >> (==) (String.toLower name)
-                )
-                >> List.head
-            )
+subdomainQuery : String -> SelectionSet (Maybe Model) RootQuery
+subdomainQuery subdomain =
+    Query.community (\optionals -> { optionals | subdomain = Present subdomain }) communitySelectionSet
 
 
 logoUrl : Maybe String -> String
@@ -347,6 +344,7 @@ type alias CreateCommunityData =
     , logoUrl : String
     , name : String
     , description : String
+    , subdomain : Maybe String
     , inviterReward : Eos.Asset
     , invitedReward : Eos.Asset
     , hasShop : Eos.EosBool
@@ -361,6 +359,7 @@ createCommunityData :
     , logoUrl : String
     , name : String
     , description : String
+    , subdomain : Maybe String
     , inviterReward : Float
     , invitedReward : Float
     , hasShop : Bool
@@ -377,6 +376,7 @@ createCommunityData params =
     , logoUrl = params.logoUrl
     , name = params.name
     , description = params.description
+    , subdomain = params.subdomain
     , inviterReward =
         { amount = params.inviterReward
         , symbol = params.symbol
@@ -399,6 +399,7 @@ encodeCreateCommunityData c =
         , ( "logo", Encode.string c.logoUrl )
         , ( "name", Encode.string c.name )
         , ( "description", Encode.string c.description )
+        , ( "subdomain", Maybe.map Encode.string c.subdomain |> Maybe.withDefault Encode.null )
         , ( "inviter_reward", Eos.encodeAsset c.inviterReward )
         , ( "invited_reward", Eos.encodeAsset c.invitedReward )
         , ( "has_objectives", Eos.encodeEosBool c.hasObjectives )
@@ -415,6 +416,7 @@ createCommunityDataDecoder =
         |> required "logo" Decode.string
         |> required "name" Decode.string
         |> required "description" Decode.string
+        |> required "subdomain" (Decode.nullable Decode.string)
         |> required "inviter_reward" Eos.decodeAsset
         |> required "invited_reward" Eos.decodeAsset
         |> required "has_objectives" Eos.eosBoolDecoder
@@ -427,12 +429,12 @@ type alias UpdateCommunityData =
     , logo : String
     , name : String
     , description : String
+    , subdomain : String
     , inviterReward : Eos.Asset
     , invitedReward : Eos.Asset
     , hasObjectives : Eos.EosBool
     , hasShop : Eos.EosBool
-
-    -- , hasKyc : Int
+    , hasKyc : Eos.EosBool
     }
 
 
@@ -443,13 +445,25 @@ encodeUpdateData c =
         , ( "cmm_asset", Eos.encodeAsset c.asset )
         , ( "name", Encode.string c.name )
         , ( "description", Encode.string c.description )
+        , ( "subdomain", Encode.string c.subdomain )
         , ( "inviter_reward", Eos.encodeAsset c.inviterReward )
         , ( "invited_reward", Eos.encodeAsset c.invitedReward )
         , ( "has_objectives", Eos.encodeEosBool c.hasObjectives )
         , ( "has_shop", Eos.encodeEosBool c.hasShop )
-
-        -- , ( "has_kyc", Encode.int c.hasKyc )
+        , ( "has_kyc", Eos.encodeEosBool c.hasKyc )
         ]
+
+
+domainAvailableSelectionSet : SelectionSet Bool Cambiatus.Object.Exists
+domainAvailableSelectionSet =
+    Cambiatus.Object.Exists.exists
+        |> SelectionSet.map (Maybe.withDefault False)
+
+
+domainAvailableQuery : String -> SelectionSet Bool RootQuery
+domainAvailableQuery domain =
+    Query.domainAvailable { domain = domain } domainAvailableSelectionSet
+        |> SelectionSet.map (Maybe.map not >> Maybe.withDefault False)
 
 
 

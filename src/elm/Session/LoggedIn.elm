@@ -69,7 +69,7 @@ import Task
 import Time
 import Translation
 import UpdateResult as UR
-import Url exposing (Url)
+import Url
 import View.Components
 import View.Feedback as Feedback
 import View.Modal as Modal
@@ -83,14 +83,10 @@ import View.Modal as Modal
 -}
 init : Shared -> Eos.Name -> String -> ( Model, Cmd Msg )
 init shared accountName authToken =
-    let
-        communityName =
-            communityNameFromUrl shared.url
-    in
     ( initModel shared Nothing accountName authToken
     , Cmd.batch
         [ Api.Graphql.query shared (Just authToken) (Profile.query accountName) CompletedLoadProfile
-        , Api.Graphql.query shared (Just authToken) (Community.communityNameQuery communityName) CompletedLoadCommunity
+        , Api.Graphql.query shared (Just authToken) (Community.subdomainQuery (subdomainForQuery shared.url)) CompletedLoadCommunity
         , Ports.getRecentSearches () -- run on the page refresh, duplicated in `initLogin`
         , Task.perform GotTimeInternal Time.now
         ]
@@ -113,18 +109,24 @@ initLogin shared maybePrivateKey_ profile_ authToken =
                 |> RemoteData.Success
                 |> Task.succeed
                 |> Task.perform CompletedLoadProfile
-
-        communityName =
-            communityNameFromUrl shared.url
     in
     ( initModel shared maybePrivateKey_ profile_.account authToken
     , Cmd.batch
         [ Ports.getRecentSearches () -- run on the passphrase login, duplicated in `init`
         , loadedProfile
-        , Api.Graphql.query shared (Just authToken) (Community.communityNameQuery communityName) CompletedLoadCommunity
+        , Api.Graphql.query shared (Just authToken) (Community.subdomainQuery (subdomainForQuery shared.url)) CompletedLoadCommunity
         , Task.perform GotTimeInternal Time.now
         ]
     )
+
+
+subdomainForQuery : Url.Url -> String
+subdomainForQuery url =
+    url.host
+        |> String.split "."
+        |> List.head
+        |> Maybe.map (\subdomain -> subdomain ++ ".cambiatus.io")
+        |> Maybe.withDefault url.host
 
 
 
@@ -792,7 +794,7 @@ updateExternal externalMsg ({ shared } as model) =
         AddedCommunity communityInfo ->
             let
                 ( newModel, cmd ) =
-                    selectCommunity model (Just communityInfo) (Just Route.Community)
+                    selectCommunity model (Just communityInfo) Route.Community
 
                 profileWithCommunity =
                     case profile newModel of
@@ -819,8 +821,8 @@ updateExternal externalMsg ({ shared } as model) =
                         Err ( newModel, cmd ) ->
                             { defaultResult | model = newModel, cmd = cmd }
 
-                        Ok newModel ->
-                            { defaultResult | model = newModel, broadcastMsg = Just broadcastMsg }
+                        Ok ( newModel, cmd ) ->
+                            { defaultResult | model = newModel, cmd = cmd, broadcastMsg = Just broadcastMsg }
 
                 ProfileLoaded profile_ ->
                     { defaultResult
@@ -1064,15 +1066,17 @@ update msg model =
                             UR.init newModel
                                 |> UR.addCmd cmd
 
-                        Ok newModel ->
+                        Ok ( newModel, cmd ) ->
                             UR.init newModel
+                                |> UR.addCmd cmd
                                 |> UR.addExt (CommunityLoaded community |> Broadcast)
 
                 Nothing ->
                     -- The community doesn't exist, so redirect to the cambiatus community
+                    -- TODO - Show community selector
                     let
                         ( newModel, cmd ) =
-                            selectCommunity model Nothing Nothing
+                            selectCommunity model Nothing Route.Dashboard
                     in
                     UR.init newModel
                         |> UR.addCmd cmd
@@ -1221,7 +1225,7 @@ update msg model =
                     else
                         let
                             ( newModel, cmd ) =
-                                selectCommunity model (Just newCommunity) Nothing
+                                selectCommunity model (Just newCommunity) Route.Dashboard
                         in
                         UR.init { newModel | showCommunitySelector = False }
                             |> UR.addCmd cmd
@@ -1339,18 +1343,21 @@ loadCommunity ({ shared } as model) symbol =
       }
     , Api.Graphql.query shared
         (Just model.authToken)
-        (Community.communityQuery symbol)
+        (Community.symbolQuery symbol)
         CompletedLoadCommunity
     )
 
 
-setCommunity : Community.Model -> Model -> Result ( Model, Cmd Msg ) Model
+{-| Given a `Community.Model`, check if the user is part of it (or if it has
+auto invites), and set it as default or redirect the user
+-}
+setCommunity : Community.Model -> Model -> Result ( Model, Cmd Msg ) ( Model, Cmd Msg )
 setCommunity community model =
     let
         isMember =
             List.any (.account >> (==) model.accountName) community.members
     in
-    if isMember then
+    if isMember || community.hasAutoInvite then
         let
             newProfile =
                 case profile model of
@@ -1373,40 +1380,35 @@ setCommunity community model =
                                         )
                                         profile_.communities
                             }
-        in
-        Ok
-            { model
-                | selectedCommunity = RemoteData.Success community
-                , profile = newProfile
-            }
 
-    else
-        -- Community is loaded, but user is not a member of it
-        -- TODO - Need to change this to use auto invite communities
-        Err (selectCommunity model Nothing Nothing)
-
-
-communityNameFromUrl : Url -> String
-communityNameFromUrl url =
-    url.host
-        |> String.toLower
-        |> String.split "."
-        |> List.head
-        |> Maybe.withDefault "app"
-        |> (\name ->
-                if name == "app" then
-                    "cambiatus"
+            cmd =
+                if community.hasAutoInvite then
+                    -- TODO - Change invite
+                    Route.pushUrl model.shared.navKey (Route.Invite "")
 
                 else
-                    name
-           )
+                    Cmd.none
+        in
+        Ok
+            ( { model
+                | selectedCommunity = RemoteData.Success community
+                , profile = newProfile
+              }
+            , cmd
+            )
+
+    else
+        Err (selectCommunity model Nothing Route.Dashboard)
 
 
-selectCommunity : Model -> Maybe { community | name : String, symbol : Eos.Symbol } -> Maybe Route -> ( Model, Cmd Msg )
-selectCommunity ({ shared, authToken } as model) maybeCommunity maybeRoute =
+{-| Given minimal information, selects a community. This means querying for the
+entire `Community.Model`, and then setting it in the `Model`
+-}
+selectCommunity : Model -> Maybe { community | symbol : Eos.Symbol, subdomain : Maybe String } -> Route -> ( Model, Cmd Msg )
+selectCommunity ({ shared, authToken } as model) maybeCommunity route =
     if shared.useSubdomain then
         ( model
-        , Route.externalCommunityLink shared.url maybeCommunity maybeRoute
+        , Route.externalCommunityLink shared.url maybeCommunity route
             |> Url.toString
             |> Browser.Navigation.load
         )
@@ -1415,9 +1417,9 @@ selectCommunity ({ shared, authToken } as model) maybeCommunity maybeRoute =
         ( { model | selectedCommunity = RemoteData.Loading }
         , Api.Graphql.query shared
             (Just authToken)
-            (Community.communityNameQuery
-                (Maybe.map .name maybeCommunity
-                    |> Maybe.withDefault "cambiatus"
+            (Community.subdomainQuery
+                (Maybe.andThen .subdomain maybeCommunity
+                    |> Maybe.withDefault "cambiatus.cambiatus.io"
                 )
             )
             CompletedLoadCommunity
