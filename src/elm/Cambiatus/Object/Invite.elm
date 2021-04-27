@@ -19,11 +19,11 @@ import Graphql.SelectionSet exposing (SelectionSet)
 import Json.Decode as Decode
 
 
-community :
-    SelectionSet decodesTo Cambiatus.Object.Community
+communityPreview :
+    SelectionSet decodesTo Cambiatus.Object.CommunityPreview
     -> SelectionSet decodesTo Cambiatus.Object.Invite
-community object_ =
-    Object.selectionForCompositeField "community" [] object_ identity
+communityPreview object_ =
+    Object.selectionForCompositeField "communityPreview" [] object_ identity
 
 
 creator :

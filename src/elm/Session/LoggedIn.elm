@@ -209,6 +209,7 @@ maybePrivateKey model =
 
 type Page
     = Other
+    | Invite
     | Dashboard
     | Communities
     | Community
@@ -357,6 +358,7 @@ viewPageBody ({ shared } as model) profile_ page content =
         availableWithoutKyc : List Page
         availableWithoutKyc =
             [ Other
+            , Invite
             , Profile
             , Notification
             , ProfilePublic
@@ -794,7 +796,7 @@ updateExternal externalMsg ({ shared } as model) =
         AddedCommunity communityInfo ->
             let
                 ( newModel, cmd ) =
-                    selectCommunity model communityInfo Route.Community
+                    signUpForCommunity model communityInfo
 
                 profileWithCommunity =
                     case profile newModel of
@@ -806,12 +808,7 @@ updateExternal externalMsg ({ shared } as model) =
             in
             { defaultResult
                 | model = { newModel | profile = profileWithCommunity }
-                , cmd =
-                    if shared.useSubdomain then
-                        cmd
-
-                    else
-                        Route.pushUrl shared.navKey Route.Community
+                , cmd = cmd
             }
 
         ExternalBroadcast broadcastMsg ->
@@ -1346,7 +1343,7 @@ setCommunity community model =
         isMember =
             List.any (.account >> (==) model.accountName) community.members
     in
-    if isMember || community.hasAutoInvite then
+    if isMember then
         let
             newProfile =
                 case profile model of
@@ -1362,33 +1359,39 @@ setCommunity community model =
                                             { c
                                                 | name = community.name
                                                 , logo = community.logo
-                                                , hasShop = community.hasShop
-                                                , hasActions = community.hasObjectives
                                                 , hasKyc = community.hasKyc
                                             }
                                         )
                                         profile_.communities
                             }
-
-            cmd =
-                if community.hasAutoInvite then
-                    -- TODO - Change invite
-                    -- Route.pushUrl model.shared.navKey (Route.Invite Nothing)
-                    Cmd.none
-
-                else
-                    Cmd.none
         in
         ( { model
             | selectedCommunity = RemoteData.Success community
             , profile = newProfile
           }
-        , cmd
+        , Cmd.none
+        )
+
+    else if community.hasAutoInvite then
+        ( { model | selectedCommunity = RemoteData.Success community }
+          -- TODO - Redirect to "join community" page
+          -- , Route.pushUrl model.shared.navKey (Route.Invite Nothing)
+        , Cmd.none
         )
 
     else
-        -- TODO - Show selector
+        -- TODO - Show community selector
         ( model, Cmd.none )
+
+
+signUpForCommunity : Model -> Profile.CommunityInfo -> ( Model, Cmd Msg )
+signUpForCommunity ({ shared, authToken } as model) communityInfo =
+    ( { model | selectedCommunity = RemoteData.Loading }
+    , Api.Graphql.query shared
+        (Just authToken)
+        (Community.symbolQuery communityInfo.symbol)
+        CompletedLoadCommunity
+    )
 
 
 {-| Given minimal information, selects a community. This means querying for the

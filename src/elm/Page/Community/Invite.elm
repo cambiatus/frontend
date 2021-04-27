@@ -2,8 +2,8 @@ module Page.Community.Invite exposing
     ( Model
     , Msg
     , init
-    , initWithLoggedIn
     , msgToString
+    , receiveBroadcast
     , update
     , view
     )
@@ -60,7 +60,7 @@ type ModalStatus
 type alias Model =
     { pageStatus : PageStatus
     , confirmationModalStatus : ModalStatus
-    , invitationId : Maybe InvitationId
+    , invitationId : InvitationId
     , kycForm : Maybe KycForm.Model
     }
 
@@ -69,7 +69,7 @@ type alias Model =
 -- INIT
 
 
-initModel : Maybe InvitationId -> Model
+initModel : InvitationId -> Model
 initModel invitationId =
     { pageStatus = Loading
     , confirmationModalStatus = Closed
@@ -78,19 +78,19 @@ initModel invitationId =
     }
 
 
-initWithLoggedIn : LoggedIn.Model -> ( Model, Cmd Msg )
-initWithLoggedIn loggedIn =
-    ( initModel Nothing, Cmd.none )
-
-
 init : Session -> InvitationId -> ( Model, Cmd Msg )
 init session invitationId =
-    ( initModel (Just invitationId)
-    , Api.Graphql.query
-        (toShared session)
-        Nothing
-        (Community.inviteQuery invitationId)
-        CompletedLoad
+    ( initModel invitationId
+    , case session of
+        Guest _ ->
+            Api.Graphql.query
+                (toShared session)
+                Nothing
+                (Community.inviteQuery invitationId)
+                CompletedLoadInvite
+
+        LoggedIn loggedIn ->
+            LoggedIn.maybeInitWith CompletedLoadProfile .profile loggedIn
     )
 
 
@@ -205,7 +205,7 @@ viewExistingMemberNotice { t, tr } communityTitle =
         ]
 
 
-viewNewMemberConfirmation : Translators -> Maybe InvitationId -> Invite -> Html Msg
+viewNewMemberConfirmation : Translators -> InvitationId -> Invite -> Html Msg
 viewNewMemberConfirmation { t } invitationId ({ community } as invite) =
     div []
         [ div [ class "mt-6 px-4 text-center" ]
@@ -221,8 +221,7 @@ viewNewMemberConfirmation { t } invitationId ({ community } as invite) =
                 [ text (t "community.invitation.no") ]
             , button
                 [ class "button button-primary w-full md:w-48 uppercase"
-
-                -- , onClick (InvitationAccepted invitationId invite)
+                , onClick (InvitationAccepted invitationId invite)
                 ]
                 [ text (t "community.invitation.yes") ]
             ]
@@ -264,7 +263,7 @@ viewContent { t } { creator, community } innerContent =
         ]
 
 
-viewModal : Translators -> ModalStatus -> Maybe InvitationId -> Invite -> Html Msg
+viewModal : Translators -> ModalStatus -> InvitationId -> Invite -> Html Msg
 viewModal { t } modalStatus invitationId invite =
     let
         isModalVisible =
@@ -291,8 +290,7 @@ viewModal { t } modalStatus invitationId invite =
                 ]
             , button
                 [ class "modal-accept"
-
-                -- , onClick (InvitationAccepted invitationId invite)
+                , onClick (InvitationAccepted invitationId invite)
                 ]
                 [ text (t "community.invitation.modal.yes") ]
             ]
@@ -308,7 +306,8 @@ type alias UpdateResult =
 
 
 type Msg
-    = CompletedLoad (RemoteData (Graphql.Http.Error (Maybe Invite)) (Maybe Invite))
+    = CompletedLoadInvite (RemoteData (Graphql.Http.Error (Maybe Invite)) (Maybe Invite))
+    | CompletedLoadProfile Profile.Model
     | OpenConfirmationModal
     | CloseConfirmationModal
     | InvitationRejected
@@ -373,7 +372,7 @@ update session msg model =
                                         |> UR.addCmd
                                             (Api.Graphql.mutation shared
                                                 Nothing
-                                                (Auth.signIn accountName shared model.invitationId)
+                                                (Auth.signIn accountName shared (Just model.invitationId))
                                                 (CompletedSignIn loggedIn)
                                             )
 
@@ -385,7 +384,7 @@ update session msg model =
                     model
                         |> UR.init
 
-        CompletedLoad (RemoteData.Success (Just invite)) ->
+        CompletedLoadInvite (RemoteData.Success (Just invite)) ->
             let
                 userCommunities =
                     case session of
@@ -416,16 +415,25 @@ update session msg model =
             in
             UR.init { model | pageStatus = newPageStatus invite }
 
-        CompletedLoad (RemoteData.Success Nothing) ->
+        CompletedLoadInvite (RemoteData.Success Nothing) ->
             UR.init { model | pageStatus = NotFound }
 
-        CompletedLoad (RemoteData.Failure error) ->
+        CompletedLoadInvite (RemoteData.Failure error) ->
             { model | pageStatus = Failed error }
                 |> UR.init
                 |> UR.logGraphqlError msg error
 
-        CompletedLoad _ ->
+        CompletedLoadInvite _ ->
             UR.init model
+
+        CompletedLoadProfile _ ->
+            UR.init model
+                |> UR.addCmd
+                    (Api.Graphql.query (toShared session)
+                        Nothing
+                        (Community.inviteQuery model.invitationId)
+                        CompletedLoadInvite
+                    )
 
         OpenConfirmationModal ->
             { model | confirmationModalStatus = Open }
@@ -486,7 +494,7 @@ update session msg model =
                             |> UR.addCmd
                                 (Api.Graphql.mutation shared
                                     Nothing
-                                    (Auth.signIn accountName shared model.invitationId)
+                                    (Auth.signIn accountName shared (Just model.invitationId))
                                     (CompletedSignIn loggedIn)
                                 )
 
@@ -515,21 +523,11 @@ update session msg model =
                             , hasActions = community.hasObjectives
                             , hasKyc = community.hasKyc
                             }
-
-                        newProfile =
-                            { user | communities = communityInfo :: user.communities }
                     in
                     model
                         |> UR.init
-                        |> UR.addCmd (Route.pushUrl loggedIn.shared.navKey Route.Dashboard)
-                        |> UR.addExt
-                            ({ loggedIn
-                                | selectedCommunity = RemoteData.Success community
-                                , profile = RemoteData.Success newProfile
-                                , authToken = token
-                             }
-                                |> LoggedIn.UpdatedLoggedIn
-                            )
+                        |> UR.addExt ({ loggedIn | authToken = token } |> LoggedIn.UpdatedLoggedIn)
+                        |> UR.addExt (LoggedIn.AddedCommunity communityInfo)
 
                 Nothing ->
                     model
@@ -566,11 +564,24 @@ getInvite model =
 -- INTEROP
 
 
+receiveBroadcast : LoggedIn.BroadcastMsg -> Maybe Msg
+receiveBroadcast broadcastMsg =
+    case broadcastMsg of
+        LoggedIn.ProfileLoaded profile ->
+            Just (CompletedLoadProfile profile)
+
+        _ ->
+            Nothing
+
+
 msgToString : Msg -> List String
 msgToString msg =
     case msg of
-        CompletedLoad r ->
-            [ "CompletedLoad", UR.remoteDataToString r ]
+        CompletedLoadInvite r ->
+            [ "CompletedLoadInvite", UR.remoteDataToString r ]
+
+        CompletedLoadProfile _ ->
+            [ "CompletedLoadProfile" ]
 
         OpenConfirmationModal ->
             [ "OpenConfirmationModal" ]

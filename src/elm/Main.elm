@@ -527,6 +527,10 @@ broadcast broadcastMessage status =
                     ProfileEditor.receiveBroadcast broadcastMessage
                         |> Maybe.map GotProfileEditorMsg
 
+                Invite _ ->
+                    Invite.receiveBroadcast broadcastMessage
+                        |> Maybe.map GotInviteMsg
+
                 _ ->
                     Nothing
     in
@@ -939,12 +943,7 @@ changeRouteTo maybeRoute model =
                 >> updateStatusWith (ViewTransfer transferId) GotViewTransferScreenMsg model
                 |> withLoggedIn (Route.ViewTransfer transferId)
 
-        Just (Route.Invite Nothing) ->
-            Invite.initWithLoggedIn
-                >> updateStatusWith Invite GotInviteMsg model
-                |> withLoggedIn (Route.Invite Nothing)
-
-        Just (Route.Invite (Just invitationId)) ->
+        Just (Route.Invite invitationId) ->
             Invite.init session invitationId
                 |> updateStatusWith Invite GotInviteMsg model
 
@@ -1244,7 +1243,7 @@ view model =
             viewPage Guest.Other LoggedIn.Other (\_ -> Ignored) (ComingSoon.view model.session)
 
         Invite subModel ->
-            viewPage Guest.Other LoggedIn.Other GotInviteMsg (Invite.view model.session subModel)
+            viewPage Guest.Invite LoggedIn.Invite GotInviteMsg (Invite.view model.session subModel)
 
         PaymentHistory subModel ->
             viewLoggedIn subModel LoggedIn.PaymentHistory GotPaymentHistoryMsg PaymentHistory.view

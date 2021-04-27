@@ -3,6 +3,7 @@ module Community exposing
     , ActionVerificationsResponse
     , Balance
     , ClaimResponse
+    , CommunityPreview
     , CreateCommunityData
     , Invite
     , Metadata
@@ -14,6 +15,8 @@ module Community exposing
     , WithObjectives
     , claimSelectionSet
     , communitiesQuery
+    , communityPreviewQuery
+    , communityPreviewSelectionSet
     , communitySelectionSet
     , createCommunityData
     , createCommunityDataDecoder
@@ -41,6 +44,7 @@ import Cambiatus.Object.Action as ActionObject
 import Cambiatus.Object.Check as Check
 import Cambiatus.Object.Claim as Claim exposing (ChecksOptionalArguments)
 import Cambiatus.Object.Community as Community
+import Cambiatus.Object.CommunityPreview as CommunityPreview
 import Cambiatus.Object.Exists
 import Cambiatus.Object.Invite as Invite
 import Cambiatus.Object.Objective as Objective
@@ -616,7 +620,7 @@ toVerifications actionVerificationResponse =
 
 
 type alias Invite =
-    { community : Model
+    { community : CommunityPreview
     , creator : Profile.Minimal
     }
 
@@ -624,10 +628,47 @@ type alias Invite =
 inviteSelectionSet : SelectionSet Invite Cambiatus.Object.Invite
 inviteSelectionSet =
     SelectionSet.succeed Invite
-        |> with (Invite.community communitySelectionSet)
+        |> with (Invite.communityPreview communityPreviewSelectionSet)
         |> with (Invite.creator Profile.minimalSelectionSet)
 
 
 inviteQuery : String -> SelectionSet (Maybe Invite) RootQuery
 inviteQuery invitationId =
-    Query.invite { input = { id = Present invitationId } } inviteSelectionSet
+    Query.invite { id = invitationId } inviteSelectionSet
+
+
+
+-- PREVIEW
+
+
+type alias CommunityPreview =
+    { name : String
+    , description : String
+    , logo : String
+    , symbol : Eos.Symbol
+    , subdomain : Maybe String
+    , hasShop : Bool
+    , hasObjectives : Bool
+    , hasKyc : Bool
+    , hasAutoInvite : Bool
+    }
+
+
+communityPreviewSelectionSet : SelectionSet CommunityPreview Cambiatus.Object.CommunityPreview
+communityPreviewSelectionSet =
+    SelectionSet.succeed CommunityPreview
+        |> with CommunityPreview.name
+        |> with CommunityPreview.description
+        |> with CommunityPreview.logo
+        |> with (Eos.symbolSelectionSet CommunityPreview.symbol)
+        |> with (CommunityPreview.subdomain Subdomain.name)
+        |> with CommunityPreview.hasShop
+        |> with CommunityPreview.hasObjectives
+        |> with CommunityPreview.hasKyc
+        |> with CommunityPreview.autoInvite
+
+
+communityPreviewQuery : String -> SelectionSet (Maybe CommunityPreview) RootQuery
+communityPreviewQuery subdomain =
+    Query.communityPreview (\optionals -> { optionals | subdomain = Present subdomain })
+        communityPreviewSelectionSet

@@ -29,6 +29,21 @@ description =
     Object.selectionForField "String" "description" [] Decode.string
 
 
+hasKyc : SelectionSet Bool Cambiatus.Object.CommunityPreview
+hasKyc =
+    Object.selectionForField "Bool" "hasKyc" [] Decode.bool
+
+
+hasObjectives : SelectionSet Bool Cambiatus.Object.CommunityPreview
+hasObjectives =
+    Object.selectionForField "Bool" "hasObjectives" [] Decode.bool
+
+
+hasShop : SelectionSet Bool Cambiatus.Object.CommunityPreview
+hasShop =
+    Object.selectionForField "Bool" "hasShop" [] Decode.bool
+
+
 logo : SelectionSet String Cambiatus.Object.CommunityPreview
 logo =
     Object.selectionForField "String" "logo" [] Decode.string

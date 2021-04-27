@@ -43,7 +43,7 @@ type Route
     | EditSale String
     | ViewSale String
     | ViewTransfer Int
-    | Invite (Maybe String)
+    | Invite String
     | Transfer (Maybe String)
     | Analysis
 
@@ -110,8 +110,7 @@ parser url =
         , Url.map ViewSale (s "shop" </> string)
         , Url.map EditSale (s "shop" </> string </> s "edit")
         , Url.map ViewTransfer (s "transfer" </> int)
-        , Url.map (Just >> Invite) (s "invite" </> string)
-        , Url.map (Invite Nothing) (s "invite")
+        , Url.map Invite (s "invite" </> string)
         , Url.map Transfer (s "community" </> s "transfer" <?> Query.string "to")
         , Url.map Analysis (s "dashboard" </> s "analysis")
         ]
@@ -338,11 +337,8 @@ routeToString route =
                 ViewTransfer transferId ->
                     ( [ "transfer", String.fromInt transferId ], [] )
 
-                Invite (Just invitationId) ->
+                Invite invitationId ->
                     ( [ "invite", invitationId ], [] )
-
-                Invite Nothing ->
-                    ( [ "invite" ], [] )
 
                 Transfer maybeTo ->
                     ( [ "community"

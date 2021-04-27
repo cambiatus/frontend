@@ -181,7 +181,7 @@ domainAvailable requiredArgs object_ =
 
 
 type alias InviteRequiredArguments =
-    { input : Cambiatus.InputObject.InviteInput }
+    { id : String }
 
 
 {-| An invite
@@ -191,7 +191,7 @@ invite :
     -> SelectionSet decodesTo Cambiatus.Object.Invite
     -> SelectionSet (Maybe decodesTo) RootQuery
 invite requiredArgs object_ =
-    Object.selectionForCompositeField "invite" [ Argument.required "input" requiredArgs.input Cambiatus.InputObject.encodeInviteInput ] object_ (identity >> Decode.nullable)
+    Object.selectionForCompositeField "invite" [ Argument.required "id" requiredArgs.id Encode.string ] object_ (identity >> Decode.nullable)
 
 
 {-| [Auth required] User's notifications

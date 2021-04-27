@@ -105,7 +105,7 @@ type alias Model =
 
 type CommunityStatus
     = Loading
-    | Loaded Community.Model
+    | Loaded Community.CommunityPreview
     | Default
 
 
@@ -144,6 +144,7 @@ subscriptions _ =
 type Page
     = Register
     | Login
+    | Invite
     | Other
 
 
@@ -158,6 +159,9 @@ view thisMsg page ({ shared } as model) content =
 
                 Register ->
                     True
+
+                Invite ->
+                    False
 
                 Other ->
                     False
