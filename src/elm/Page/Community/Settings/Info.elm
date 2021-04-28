@@ -11,6 +11,7 @@ module Page.Community.Settings.Info exposing
 
 import Api
 import Api.Graphql
+import Browser.Navigation
 import Community
 import Eos
 import Eos.Account as Eos
@@ -30,6 +31,7 @@ import Session.LoggedIn as LoggedIn
 import Session.Shared exposing (Shared)
 import Task
 import UpdateResult as UR
+import Url
 import View.Feedback as Feedback
 import View.Form
 import View.Form.Input as Input
@@ -283,10 +285,27 @@ update msg model ({ shared } as loggedIn) =
         GotSaveResponse (Ok _) ->
             case loggedIn.selectedCommunity of
                 RemoteData.Success community ->
+                    let
+                        newCommunity =
+                            { symbol = community.symbol
+                            , subdomain = Just (model.subdomainInput ++ ".cambiatus.io")
+                            }
+
+                        redirectToCommunity =
+                            if newCommunity.subdomain == community.subdomain then
+                                Route.replaceUrl shared.navKey Route.Dashboard
+
+                            else
+                                Route.externalCommunityLink loggedIn.shared.url
+                                    newCommunity
+                                    Route.Dashboard
+                                    |> Url.toString
+                                    |> Browser.Navigation.load
+                    in
                     { model | isLoading = False }
                         |> UR.init
                         |> UR.addExt (LoggedIn.ShowFeedback Feedback.Success (shared.translators.t "community.create.success"))
-                        |> UR.addCmd (Route.replaceUrl shared.navKey Route.Dashboard)
+                        |> UR.addCmd redirectToCommunity
                         |> UR.addExt
                             (LoggedIn.CommunityLoaded
                                 { community

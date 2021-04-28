@@ -1400,9 +1400,7 @@ setCommunity community model =
 
     else if community.hasAutoInvite then
         ( { model | selectedCommunity = RemoteData.Success community }
-          -- TODO - Redirect to "join community" page
-          -- , Route.pushUrl model.shared.navKey (Route.Invite Nothing)
-        , Cmd.none
+        , Route.pushUrl model.shared.navKey Route.Join
         )
 
     else

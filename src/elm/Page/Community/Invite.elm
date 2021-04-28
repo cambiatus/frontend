@@ -146,7 +146,6 @@ view session model =
                         ]
 
                 JoinConfirmation invite ->
-                    -- TODO
                     let
                         inner =
                             viewNewMemberConfirmation shared.translators model.invitationId invite
