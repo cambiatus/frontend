@@ -14,6 +14,7 @@ import Page.Community.Invite as Invite
 import Page.Community.New as CommunityEditor
 import Page.Community.ObjectiveEditor as ObjectiveEditor
 import Page.Community.Objectives as Objectives
+import Page.Community.Selector as CommunitySelector
 import Page.Community.Settings.Currency as CommunitySettingsCurrency
 import Page.Community.Settings.Features as CommunitySettingsFeatures
 import Page.Community.Settings.Info as CommunitySettingsInfo
@@ -154,6 +155,7 @@ type Status
     | CommunitySettingsFeatures CommunitySettingsFeatures.Model
     | CommunitySettingsInfo CommunitySettingsInfo.Model
     | CommunitySettingsCurrency CommunitySettingsCurrency.Model
+    | CommunitySelector CommunitySelector.Model
     | Objectives Objectives.Model
     | ObjectiveEditor ObjectiveEditor.Model
     | ActionEditor ActionEditor.Model
@@ -195,6 +197,7 @@ type Msg
     | GotCommunitySettingsFeaturesMsg CommunitySettingsFeatures.Msg
     | GotCommunitySettingsInfoMsg CommunitySettingsInfo.Msg
     | GotCommunitySettingsCurrencyMsg CommunitySettingsCurrency.Msg
+    | GotCommunitySelectorMsg CommunitySelector.Msg
     | GotObjectivesMsg Objectives.Msg
     | GotActionEditorMsg ActionEditor.Msg
     | GotObjectiveEditorMsg ObjectiveEditor.Msg
@@ -417,6 +420,11 @@ update msg model =
         ( GotCommunitySettingsCurrencyMsg subMsg, CommunitySettingsCurrency subModel ) ->
             CommunitySettingsCurrency.update subMsg subModel
                 >> updateLoggedInUResult CommunitySettingsCurrency GotCommunitySettingsCurrencyMsg model
+                |> withLoggedIn
+
+        ( GotCommunitySelectorMsg subMsg, CommunitySelector subModel ) ->
+            CommunitySelector.update subMsg subModel
+                >> updateLoggedInUResult CommunitySelector GotCommunitySelectorMsg model
                 |> withLoggedIn
 
         ( GotShopMsg subMsg, Shop maybeFilter subModel ) ->
@@ -894,6 +902,11 @@ changeRouteTo maybeRoute model =
                 >> updateStatusWith CommunitySettingsCurrency GotCommunitySettingsCurrencyMsg model
                 |> withLoggedIn Route.CommunitySettingsCurrency
 
+        Just Route.CommunitySelector ->
+            CommunitySelector.init
+                >> updateStatusWith CommunitySelector GotCommunitySelectorMsg model
+                |> withLoggedIn Route.CommunitySelector
+
         Just Route.NewCommunity ->
             CommunityEditor.init
                 >> updateStatusWith CommunityEditor GotCommunityEditorMsg model
@@ -1096,6 +1109,9 @@ msgToString msg =
         GotCommunitySettingsCurrencyMsg subMsg ->
             "GotCommunitySettingsCurrencyMsg" :: CommunitySettingsCurrency.msgToString subMsg
 
+        GotCommunitySelectorMsg subMsg ->
+            "GotCommunitySelectorMsg" :: CommunitySelector.msgToString subMsg
+
         GotObjectivesMsg subMsg ->
             "GotObjectives" :: Objectives.msgToString subMsg
 
@@ -1292,6 +1308,9 @@ view model =
 
         CommunitySettingsCurrency subModel ->
             viewLoggedIn subModel LoggedIn.CommunitySettingsCurrency GotCommunitySettingsCurrencyMsg CommunitySettingsCurrency.view
+
+        CommunitySelector subModel ->
+            viewLoggedIn subModel LoggedIn.CommunitySelector GotCommunitySelectorMsg CommunitySelector.view
 
         CommunityEditor subModel ->
             viewLoggedIn subModel LoggedIn.CommunityEditor GotCommunityEditorMsg CommunityEditor.view

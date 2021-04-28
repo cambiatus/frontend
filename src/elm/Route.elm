@@ -1,4 +1,4 @@
-module Route exposing (Route(..), externalCommunityLink, fromUrl, href, pushUrl, replaceUrl)
+module Route exposing (Route(..), externalCommunityLink, externalHref, fromUrl, href, pushUrl, replaceUrl)
 
 import Browser.Navigation as Nav
 import Eos
@@ -32,6 +32,7 @@ type Route
     | CommunitySettingsFeatures
     | CommunitySettingsInfo
     | CommunitySettingsCurrency
+    | CommunitySelector
     | Objectives
     | NewObjective
     | EditObjective Int
@@ -89,6 +90,7 @@ parser url =
         , Url.map CommunitySettingsFeatures (s "community" </> s "settings" </> s "features")
         , Url.map CommunitySettingsInfo (s "community" </> s "settings" </> s "info")
         , Url.map CommunitySettingsCurrency (s "community" </> s "settings" </> s "currency")
+        , Url.map CommunitySelector (s "community" </> s "selector")
         , Url.map Objectives (s "community" </> s "objectives")
         , Url.map NewObjective (s "community" </> s "objectives" </> s "new")
         , Url.map EditObjective (s "community" </> s "objectives" </> int </> s "edit")
@@ -140,6 +142,13 @@ fromUrl url =
 pushUrl : Nav.Key -> Route -> Cmd msg
 pushUrl key route =
     Nav.pushUrl key (routeToString route)
+
+
+externalHref : Url -> { community | symbol : Eos.Symbol, subdomain : Maybe String } -> Route -> Attribute msg
+externalHref currentUrl community route =
+    externalCommunityLink currentUrl community route
+        |> Url.toString
+        |> Attr.href
 
 
 externalCommunityLink : Url -> { community | symbol : Eos.Symbol, subdomain : Maybe String } -> Route -> Url
@@ -288,6 +297,9 @@ routeToString route =
 
                 CommunitySettingsCurrency ->
                     ( [ "community", "settings", "currency" ], [] )
+
+                CommunitySelector ->
+                    ( [ "community", "selector" ], [] )
 
                 NewCommunity ->
                     ( [ "community", "new" ], [] )

@@ -219,6 +219,7 @@ type Page
     | CommunitySettingsInfo
     | CommunitySettingsCurrency
     | CommunityEditor
+    | CommunitySelector
     | Objectives
     | ObjectiveEditor
     | ActionEditor
@@ -272,16 +273,24 @@ view thisMsg page ({ shared } as model) content =
             viewHelper thisMsg page profile_ model content
 
 
-hideCommunityAndSearch : Model -> Profile.Model -> Bool
-hideCommunityAndSearch model profile_ =
-    case model.selectedCommunity of
-        RemoteData.Success community ->
-            List.map .account community.members
-                |> List.member profile_.account
-                |> not
+hideCommunityAndSearch : Page -> Model -> Profile.Model -> Bool
+hideCommunityAndSearch currentPage model profile_ =
+    let
+        hiddenPages =
+            [ CommunitySelector ]
+    in
+    if List.member currentPage hiddenPages then
+        True
 
-        _ ->
-            True
+    else
+        case model.selectedCommunity of
+            RemoteData.Success community ->
+                List.map .account community.members
+                    |> List.member profile_.account
+                    |> not
+
+            _ ->
+                True
 
 
 viewHelper : (Msg -> pageMsg) -> Page -> Profile.Model -> Model -> Html pageMsg -> Html pageMsg
@@ -290,9 +299,9 @@ viewHelper pageMsg page profile_ ({ shared } as model) content =
         [ class "min-h-screen flex flex-col" ]
         ([ div [ class "bg-white" ]
             [ div [ class "container mx-auto" ]
-                [ viewHeader model profile_
+                [ viewHeader page model profile_
                     |> Html.map pageMsg
-                , if hideCommunityAndSearch model profile_ || Search.isActive model.searchModel then
+                , if hideCommunityAndSearch page model profile_ || Search.isActive model.searchModel then
                     text ""
 
                   else
@@ -372,6 +381,7 @@ viewPageBody ({ shared } as model) profile_ page content =
         availableWithoutKyc =
             [ Other
             , Invite
+            , CommunitySelector
             , Profile
             , Notification
             , ProfilePublic
@@ -425,23 +435,41 @@ viewPageBody ({ shared } as model) profile_ page content =
                     viewKycRestriction
 
             RemoteData.Failure _ ->
-                text ""
+                let
+                    isContentAllowed =
+                        List.member page availableWithoutKyc
+                in
+                if isContentAllowed then
+                    content
+
+                else
+                    text ""
         ]
     ]
 
 
-viewHeader : Model -> Profile.Model -> Html Msg
-viewHeader ({ shared } as model) profile_ =
+viewHeader : Page -> Model -> Profile.Model -> Html Msg
+viewHeader page ({ shared } as model) profile_ =
     let
         text_ str =
             text (shared.translators.t str)
 
         tr str values =
             shared.translators.tr str values
+
+        hideCommunitySelectorPages =
+            [ CommunitySelector ]
+
+        hideCommunitySelector =
+            List.member page hideCommunitySelectorPages
     in
     div [ class "flex flex-wrap items-center justify-between px-4 pt-6 pb-4" ]
-        [ viewCommunitySelector model
-        , if hideCommunityAndSearch model profile_ then
+        [ if hideCommunitySelector then
+            text ""
+
+          else
+            viewCommunitySelector model
+        , if hideCommunityAndSearch page model profile_ then
             div [] []
 
           else
@@ -1090,12 +1118,13 @@ update msg model =
                 |> UR.addExt (CommunityLoaded community |> Broadcast)
 
         CompletedLoadCommunity (RemoteData.Success Nothing) ->
-            -- TODO - Show community selector
             UR.init model
+                |> UR.addCmd (Route.pushUrl shared.navKey Route.CommunitySelector)
 
         CompletedLoadCommunity (RemoteData.Failure e) ->
             UR.init { model | selectedCommunity = RemoteData.Failure e }
                 |> UR.logGraphqlError msg e
+                |> UR.addCmd (Route.pushUrl shared.navKey Route.CommunitySelector)
 
         CompletedLoadCommunity RemoteData.NotAsked ->
             UR.init { model | selectedCommunity = RemoteData.NotAsked }
@@ -1404,8 +1433,7 @@ setCommunity community model =
         )
 
     else
-        -- TODO - Show community selector
-        ( model, Cmd.none )
+        ( { model | selectedCommunity = RemoteData.Success community }, Route.pushUrl model.shared.navKey Route.CommunitySelector )
 
 
 signUpForCommunity : Model -> Profile.CommunityInfo -> ( Model, Cmd Msg )

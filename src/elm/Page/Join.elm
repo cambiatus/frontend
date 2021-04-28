@@ -58,7 +58,7 @@ update session msg model =
                             (Route.pushUrl guest.shared.navKey (Route.Register Nothing (Just Route.Dashboard)))
 
                 Page.LoggedIn loggedIn ->
-                    -- TODO - Sign up for community
+                    -- TODO - Sign up for community and redirect to Dashboard
                     UR.init model
 
         CompletedLoadCommunity community ->
