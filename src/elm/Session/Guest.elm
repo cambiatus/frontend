@@ -3,7 +3,8 @@ module Session.Guest exposing (External(..), Model, Msg(..), Page(..), addAfterL
 import Api.Graphql
 import Auth
 import Browser.Events
-import Community exposing (Invite)
+import Browser.Navigation
+import Community
 import Eos.Account as Eos
 import Graphql.Http
 import Html exposing (Html, a, button, div, header, img, text)
@@ -31,15 +32,19 @@ import View.Feedback as Feedback
 init : Shared -> ( Model, Cmd Msg )
 init shared =
     let
-        defaultModel =
-            initModel shared
+        subdomainForQuery =
+            shared.url.host
+                |> String.split "."
+                |> List.head
+                |> Maybe.map (\subdomain -> subdomain ++ ".cambiatus.io")
+                |> Maybe.withDefault shared.url.host
     in
-    case getInvitationId shared.url.path of
-        Just id ->
-            ( defaultModel, Api.Graphql.query shared Nothing (Community.inviteQuery id) CompletedLoadInvite )
-
-        Nothing ->
-            ( { defaultModel | community = Default }, Cmd.none )
+    ( initModel shared
+    , Api.Graphql.query shared
+        Nothing
+        (Community.communityPreviewQuery subdomainForQuery)
+        CompletedLoadCommunityPreview
+    )
 
 
 initLoggingIn : Shared -> Eos.Name -> (RemoteData (Graphql.Http.Error (Maybe Auth.SignInResponse)) (Maybe Auth.SignInResponse) -> msg) -> ( Model, Cmd Msg, Cmd msg )
@@ -57,32 +62,6 @@ initLoggingIn shared accountName signInMessage =
     )
 
 
-getInvitationId : String -> Maybe String
-getInvitationId str =
-    let
-        getId : List String -> Maybe String
-        getId strings =
-            strings
-                |> List.reverse
-                |> List.head
-                |> Maybe.andThen
-                    (\x ->
-                        if x == "" then
-                            Nothing
-
-                        else
-                            Just x
-                    )
-    in
-    if String.startsWith "/register/" str then
-        str
-            |> String.split "/"
-            |> getId
-
-    else
-        Nothing
-
-
 fetchTranslations : String -> Cmd Msg
 fetchTranslations language =
     CompletedLoadTranslation language
@@ -97,16 +76,10 @@ type alias Model =
     { shared : Shared
     , showLanguageNav : Bool
     , afterLoginRedirect : Maybe Route
-    , community : CommunityStatus
+    , community : RemoteData (Graphql.Http.Error (Maybe Community.CommunityPreview)) Community.CommunityPreview
     , isLoggingIn : Bool
     , feedback : Feedback.Model
     }
-
-
-type CommunityStatus
-    = Loading
-    | Loaded Community.CommunityPreview
-    | Default
 
 
 initModel : Shared -> Model
@@ -114,13 +87,7 @@ initModel shared =
     { shared = shared
     , showLanguageNav = False
     , afterLoginRedirect = Nothing
-    , community =
-        case getInvitationId shared.url.path of
-            Just _ ->
-                Loading
-
-            Nothing ->
-                Default
+    , community = RemoteData.Loading
     , isLoggingIn = False
     , feedback = Feedback.Hidden
     }
@@ -145,40 +112,36 @@ type Page
     = Register
     | Login
     | Invite
+    | Join
     | Other
 
 
 view : (Msg -> msg) -> Page -> Model -> Html msg -> Html msg
 view thisMsg page ({ shared } as model) content =
     let
-        isLeftArtAvailable =
+        ( maybeLeftArt, rightColWidth ) =
             -- Some guest pages have the half-width block with the picture and the user quotes
             case page of
                 Login ->
-                    True
+                    ( Just loginLeftCol, "md:w-3/5" )
 
                 Register ->
-                    True
+                    ( Just loginLeftCol, "md:w-3/5" )
 
                 Invite ->
-                    False
+                    ( Nothing, "md:w-full" )
+
+                Join ->
+                    model.community
+                        |> RemoteData.toMaybe
+                        |> Maybe.map
+                            (\community ->
+                                ( Just (Community.communityPreviewImage True model.shared community), "md:w-1/2" )
+                            )
+                        |> Maybe.withDefault ( Nothing, "md:w-full" )
 
                 Other ->
-                    False
-
-        leftColWidth =
-            if isLeftArtAvailable then
-                "md:w-2/5"
-
-            else
-                ""
-
-        rightColWidth =
-            if isLeftArtAvailable then
-                "md:w-3/5"
-
-            else
-                "md:w-full"
+                    ( Nothing, "md:w-full" )
     in
     case Shared.translationStatus shared of
         Shared.LoadingTranslation ->
@@ -194,11 +157,12 @@ view thisMsg page ({ shared } as model) content =
         _ ->
             div
                 [ class "md:flex" ]
-                [ if isLeftArtAvailable then
-                    viewLeftCol leftColWidth
+                [ case maybeLeftArt of
+                    Just leftArt ->
+                        leftArt
 
-                  else
-                    text ""
+                    Nothing ->
+                        text ""
                 , div
                     [ class "min-h-screen flex flex-col"
                     , class rightColWidth
@@ -212,12 +176,11 @@ view thisMsg page ({ shared } as model) content =
                 ]
 
 
-viewLeftCol : String -> Html msg
-viewLeftCol mdWidth =
+loginLeftCol : Html msg
+loginLeftCol =
     div
         -- Left part with background and quote (desktop only)
-        [ class "hidden md:block md:visible h-screen sticky top-0 bg-bottom bg-no-repeat"
-        , class mdWidth
+        [ class "hidden md:block md:visible md:w-2/5 h-screen sticky top-0 bg-bottom bg-no-repeat"
         , style "background-color" "#EFF9FB"
         , style "background-size" "auto 80%"
         , style "background-image" "url(/images/auth_bg_full.png)"
@@ -230,7 +193,7 @@ viewPageHeader model shared =
     let
         imageElement url =
             img
-                [ class "h-5"
+                [ class "h-6"
                 , src url
                 ]
                 []
@@ -241,20 +204,23 @@ viewPageHeader model shared =
 
         logo =
             case model.community of
-                Loading ->
+                RemoteData.Loading ->
                     ""
 
-                Loaded comm ->
+                RemoteData.NotAsked ->
+                    ""
+
+                RemoteData.Success comm ->
                     comm.logo
 
-                Default ->
+                RemoteData.Failure _ ->
                     shared.logo
     in
     header
         [ class "flex items-center justify-between pl-4 md:pl-6 py-3 bg-white" ]
         [ a [ Route.href (Route.Login Nothing) ]
             [ case model.community of
-                Loading ->
+                RemoteData.Loading ->
                     loadingSpinner
 
                 _ ->
@@ -324,7 +290,7 @@ type Msg
     | ShowLanguageNav Bool
     | ClickedLanguage String
     | KeyDown String
-    | CompletedLoadInvite (RemoteData (Graphql.Http.Error (Maybe Invite)) (Maybe Invite))
+    | CompletedLoadCommunityPreview (RemoteData (Graphql.Http.Error (Maybe Community.CommunityPreview)) (Maybe Community.CommunityPreview))
     | GotFeedbackMsg Feedback.Msg
 
 
@@ -366,12 +332,24 @@ update msg ({ shared } as model) =
                 model
                     |> UR.init
 
-        CompletedLoadInvite (RemoteData.Success (Just invitation)) ->
-            { model | community = Loaded invitation.community }
+        CompletedLoadCommunityPreview (RemoteData.Success (Just communityPreview)) ->
+            { model | community = RemoteData.Success communityPreview }
                 |> UR.init
 
-        CompletedLoadInvite _ ->
+        CompletedLoadCommunityPreview (RemoteData.Success Nothing) ->
             UR.init model
+                |> UR.addCmd (Browser.Navigation.load "https://cambiatus.com")
+
+        CompletedLoadCommunityPreview (RemoteData.Failure err) ->
+            UR.init { model | community = RemoteData.Failure err }
+                |> UR.logGraphqlError msg err
+                |> UR.addCmd (Browser.Navigation.load "https://cambiatus.com")
+
+        CompletedLoadCommunityPreview RemoteData.NotAsked ->
+            UR.init { model | community = RemoteData.NotAsked }
+
+        CompletedLoadCommunityPreview RemoteData.Loading ->
+            UR.init { model | community = RemoteData.Loading }
 
         GotFeedbackMsg subMsg ->
             { model | feedback = Feedback.update subMsg model.feedback }
@@ -405,8 +383,8 @@ msgToString msg =
         KeyDown _ ->
             [ "KeyDown" ]
 
-        CompletedLoadInvite _ ->
-            [ "CompletedLoadInvite" ]
+        CompletedLoadCommunityPreview r ->
+            [ "CompletedLoadCommunityPreview", UR.remoteDataToString r ]
 
         GotFeedbackMsg _ ->
             [ "GotFeedbackMsg" ]

@@ -459,6 +459,13 @@
         "no": "No, cancel"
       }
     },
+    "join": {
+      "title_generic": "Join community",
+      "title_with_community": "Join {{community_name}}",
+      "member_count": "{{member_count}} members",
+      "only_invited": "This community only allows invited members",
+      "visit_website": "Visit the website"
+    },
     "details": {
       "creator": "Creator",
       "supply": "Supply",

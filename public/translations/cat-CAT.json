@@ -463,6 +463,13 @@
         "no": "No, cancel·la"
       }
     },
+    "join": {
+      "title_generic": "Uniu-vos a la comunitat",
+      "title_with_community": "Introduïu {{community_name}}",
+      "member_count": "{{member_count}} membres",
+      "only_invited": "Aquesta comunitat només permet als hostes",
+      "visit_website": "Visiteu el lloc web"
+    },
     "details": {
       "creator": "Creador",
       "supply": "Monedes emeses",

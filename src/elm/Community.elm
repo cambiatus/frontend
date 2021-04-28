@@ -15,6 +15,7 @@ module Community exposing
     , WithObjectives
     , claimSelectionSet
     , communitiesQuery
+    , communityPreviewImage
     , communityPreviewQuery
     , communityPreviewSelectionSet
     , communitySelectionSet
@@ -58,12 +59,13 @@ import Eos.Account as Eos
 import Graphql.Operation exposing (RootQuery, RootSubscription)
 import Graphql.OptionalArgument exposing (OptionalArgument(..))
 import Graphql.SelectionSet as SelectionSet exposing (SelectionSet, with)
-import Html
-import Html.Attributes
+import Html exposing (Html, div, img, span, text)
+import Html.Attributes exposing (class, classList, src)
 import Json.Decode as Decode exposing (Decoder, string)
 import Json.Decode.Pipeline as Decode exposing (required)
 import Json.Encode as Encode exposing (Value)
 import Profile
+import Session.Shared exposing (Shared)
 import Time exposing (Posix)
 import Token
 import Utils
@@ -672,3 +674,29 @@ communityPreviewQuery : String -> SelectionSet (Maybe CommunityPreview) RootQuer
 communityPreviewQuery subdomain =
     Query.communityPreview (\optionals -> { optionals | subdomain = Present subdomain })
         communityPreviewSelectionSet
+
+
+communityPreviewImage : Bool -> Shared -> { community | name : String } -> Html msg
+communityPreviewImage isLeftSide { translators } community =
+    div
+        [ class "relative"
+        , classList
+            [ ( "md:hidden w-full", not isLeftSide )
+            , ( "w-1/2 flex-grow hidden md:block", isLeftSide )
+            ]
+        ]
+        [ img
+            [ class "w-full"
+            , classList [ ( "h-full object-cover", isLeftSide ) ]
+
+            -- TODO - Use community image
+            , src "https://picsum.photos/1920/1080"
+            ]
+            []
+        , div [ class "absolute inset-0 flex flex-col items-center justify-center text-white uppercase px-5" ]
+            [ span [ class "font-medium text-xl" ] [ text community.name ]
+
+            -- TODO - Use community memberCount
+            , span [ class "text-xs mt-2" ] [ text (translators.tr "community.join.member_count" [ ( "member_count", "1900" ) ]) ]
+            ]
+        ]

@@ -421,6 +421,13 @@
           "no": "አይ , ተዉ"
         }
       },
+      "join": {
+        "title_generic": "ማህበረሰቡን ይቀላቀሉ",
+        "title_with_community": "{{community_name}} ያስገቡ",
+        "member_count": "{{member_count}} አባላት",
+        "only_invited": "ይህ ማህበረሰብ እንግዶችን ብቻ ይፈቅዳል",
+        "visit_website": "ድር ጣቢያ ይጎብኙ"
+      },
       "details": {
         "creator": "ፈጣሪዉ",
         "supply": "አቅርቦት",

@@ -463,6 +463,13 @@
         "no": "No, cancelar"
       }
     },
+    "join": {
+      "title_generic": "Unete a la communidad",
+      "title_with_community": "Ingresa {{community_name}}",
+      "member_count": "{{member_count}} miembros",
+      "only_invited": "Esta comunidad solo permite invitados",
+      "visit_website": "Visita la página web"
+    },
     "details": {
       "creator": "Creador/a",
       "supply": "Monedas emitidas",

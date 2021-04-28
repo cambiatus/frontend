@@ -467,6 +467,13 @@
         "no": "Não, cancelar"
       }
     },
+    "join": {
+      "title_generic": "Entrar na comunidade",
+      "title_with_community": "Entrar em {{community_name}}",
+      "member_count": "{{member_count}} membros",
+      "only_invited": "Essa comunidade permite apenas convidados",
+      "visit_website": "Visitar o site"
+    },
     "details": {
       "creator": "Criador(a)",
       "supply": "Moedas emitidas",

@@ -22,6 +22,7 @@ import Page.Community.Transfer as Transfer
 import Page.Dashboard as Dashboard
 import Page.Dashboard.Analysis as Analysis
 import Page.Dashboard.Claim as Claim
+import Page.Join as Join
 import Page.Login as Login
 import Page.NotFound as NotFound
 import Page.Notification as Notification
@@ -172,6 +173,7 @@ type Status
     | ShopViewer String ShopViewer.Model
     | ViewTransfer Int ViewTransfer.Model
     | Invite Invite.Model
+    | Join Join.Model
     | Transfer Transfer.Model
     | Analysis Analysis.Model
 
@@ -212,6 +214,7 @@ type Msg
     | GotShopViewerMsg ShopViewer.Msg
     | GotViewTransferScreenMsg ViewTransfer.Msg
     | GotInviteMsg Invite.Msg
+    | GotJoinMsg Join.Msg
     | GotTransferMsg Transfer.Msg
     | GotAnalysisMsg Analysis.Msg
 
@@ -450,6 +453,10 @@ update msg model =
             Invite.update model.session subMsg subModel
                 |> updateLoggedInUResult Invite GotInviteMsg model
 
+        ( GotJoinMsg subMsg, Join subModel ) ->
+            Join.update model.session subMsg subModel
+                |> updateLoggedInUResult Join GotJoinMsg model
+
         ( GotTransferMsg subMsg, Transfer subModel ) ->
             Transfer.update subMsg subModel
                 >> updateLoggedInUResult Transfer GotTransferMsg model
@@ -530,6 +537,10 @@ broadcast broadcastMessage status =
                 Invite _ ->
                     Invite.receiveBroadcast broadcastMessage
                         |> Maybe.map GotInviteMsg
+
+                Join _ ->
+                    Join.receiveBroadcast broadcastMessage
+                        |> Maybe.map GotJoinMsg
 
                 _ ->
                     Nothing
@@ -947,6 +958,10 @@ changeRouteTo maybeRoute model =
             Invite.init session invitationId
                 |> updateStatusWith Invite GotInviteMsg model
 
+        Just Route.Join ->
+            Join.init session
+                |> updateStatusWith Join GotJoinMsg model
+
         Just (Route.Transfer maybeTo) ->
             (\l -> Transfer.init l maybeTo)
                 >> updateStatusWith Transfer GotTransferMsg model
@@ -1141,6 +1156,9 @@ msgToString msg =
         GotInviteMsg subMsg ->
             "GotInviteMsg" :: Invite.msgToString subMsg
 
+        GotJoinMsg subMsg ->
+            "GotJoinMsg" :: Join.msgToString subMsg
+
         GotTransferMsg subMsg ->
             "GotTransferMsg" :: Transfer.msgToString subMsg
 
@@ -1244,6 +1262,9 @@ view model =
 
         Invite subModel ->
             viewPage Guest.Invite LoggedIn.Invite GotInviteMsg (Invite.view model.session subModel)
+
+        Join subModel ->
+            viewPage Guest.Join LoggedIn.Join GotJoinMsg (Join.view model.session subModel)
 
         PaymentHistory subModel ->
             viewLoggedIn subModel LoggedIn.PaymentHistory GotPaymentHistoryMsg PaymentHistory.view

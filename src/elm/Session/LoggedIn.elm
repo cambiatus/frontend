@@ -210,6 +210,7 @@ maybePrivateKey model =
 type Page
     = Other
     | Invite
+    | Join
     | Dashboard
     | Communities
     | Community
@@ -271,6 +272,18 @@ view thisMsg page ({ shared } as model) content =
             viewHelper thisMsg page profile_ model content
 
 
+hideCommunityAndSearch : Model -> Profile.Model -> Bool
+hideCommunityAndSearch model profile_ =
+    case model.selectedCommunity of
+        RemoteData.Success community ->
+            List.map .account community.members
+                |> List.member profile_.account
+                |> not
+
+        _ ->
+            True
+
+
 viewHelper : (Msg -> pageMsg) -> Page -> Profile.Model -> Model -> Html pageMsg -> Html pageMsg
 viewHelper pageMsg page profile_ ({ shared } as model) content =
     div
@@ -279,7 +292,7 @@ viewHelper pageMsg page profile_ ({ shared } as model) content =
             [ div [ class "container mx-auto" ]
                 [ viewHeader model profile_
                     |> Html.map pageMsg
-                , if Search.isActive model.searchModel then
+                , if hideCommunityAndSearch model profile_ || Search.isActive model.searchModel then
                     text ""
 
                   else
@@ -428,10 +441,14 @@ viewHeader ({ shared } as model) profile_ =
     in
     div [ class "flex flex-wrap items-center justify-between px-4 pt-6 pb-4" ]
         [ viewCommunitySelector model
-        , div [ class "order-last w-full md:order-none mt-2 md:ml-2 md:flex-grow md:w-auto" ]
-            [ Search.viewForm shared.translators model.searchModel
-                |> Html.map GotSearchMsg
-            ]
+        , if hideCommunityAndSearch model profile_ then
+            div [] []
+
+          else
+            div [ class "order-last w-full md:order-none mt-2 md:ml-2 md:flex-grow md:w-auto" ]
+                [ Search.viewForm shared.translators model.searchModel
+                    |> Html.map GotSearchMsg
+                ]
         , div [ class "flex items-center float-right" ]
             [ a
                 [ class "outline-none relative mx-6"
@@ -538,7 +555,16 @@ viewCommunitySelector model =
         hasMultipleCommunities =
             case model.profile of
                 RemoteData.Success p ->
-                    List.length p.communities > 1
+                    List.length p.communities > 1 || not (isMember p)
+
+                _ ->
+                    False
+
+        isMember p =
+            case model.selectedCommunity of
+                RemoteData.Success community ->
+                    List.map .account community.members
+                        |> List.member p.account
 
                 _ ->
                     False
