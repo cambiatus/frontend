@@ -33,11 +33,14 @@ import Json.Decode as Decode exposing (Value)
 import Json.Encode as Encode
 import List.Extra as List
 import Page
+import Profile
+import Profile.Contact as Contact
 import RemoteData exposing (RemoteData)
 import Route
 import Session.LoggedIn as LoggedIn
 import Session.Shared exposing (Shared)
 import Shop
+import Time
 import Transfer exposing (QueryTransfers, Transfer)
 import UpdateResult as UR
 import Url
@@ -55,6 +58,7 @@ init ({ shared, accountName, authToken } as loggedIn) =
     , Cmd.batch
         [ fetchTransfers shared accountName authToken
         , LoggedIn.maybeInitWith CompletedLoadCommunity .selectedCommunity loggedIn
+        , LoggedIn.maybeInitWith CompletedLoadProfile .profile loggedIn
         ]
     )
 
@@ -78,6 +82,8 @@ type alias Model =
     , analysisFilter : Direction
     , lastSocket : String
     , transfers : GraphqlStatus (Maybe QueryTransfers) (List Transfer)
+    , contactModel : Contact.Model
+    , showContactModal : Bool
     , inviteModalStatus : InviteModalStatus
     , claimModalStatus : Claim.ModalStatus
     , copied : Bool
@@ -91,6 +97,8 @@ initModel =
     , analysisFilter = initAnalysisFilter
     , lastSocket = ""
     , transfers = LoadingGraphql
+    , contactModel = Contact.initSingle
+    , showContactModal = False
     , inviteModalStatus = InviteModalClosed
     , claimModalStatus = Claim.Closed
     , copied = False
@@ -175,6 +183,7 @@ view ({ shared, accountName } as loggedIn) model =
                             text ""
                         , viewTransfers loggedIn model
                         , viewInvitationModal loggedIn model
+                        , addContactModal shared model
                         ]
 
                 ( RemoteData.Success _, _ ) ->
@@ -204,6 +213,40 @@ viewHeader loggedIn community isCommunityAdmin =
           else
             text ""
         ]
+
+
+addContactModal : Shared -> Model -> Html Msg
+addContactModal shared ({ contactModel } as model) =
+    let
+        text_ s =
+            shared.translators.t s
+                |> text
+
+        header =
+            div [ class "mt-4" ]
+                [ p [ class "inline bg-purple-100 text-white rounded-full py-0.5 px-2 text-caption uppercase" ]
+                    [ text_ "contact_modal.new" ]
+                , p [ class "text-heading font-bold mt-2" ]
+                    [ text_ "contact_modal.title" ]
+                ]
+
+        form =
+            Contact.view shared.translators contactModel
+                |> Html.map GotContactMsg
+    in
+    Modal.initWith
+        { closeMsg = ClosedAddContactModal
+        , isVisible = model.showContactModal
+        }
+        |> Modal.withBody
+            [ header
+            , img [ class "mx-auto mt-10", src "/images/girl-with-phone.svg" ] []
+            , form
+            , p [ class "text-caption text-center uppercase my-4" ]
+                [ text_ "contact_modal.footer" ]
+            ]
+        |> Modal.withLarge True
+        |> Modal.toHtml
 
 
 viewInvitationModal : LoggedIn.Model -> Model -> Html Msg
@@ -647,6 +690,7 @@ type alias UpdateResult =
 
 type Msg
     = CompletedLoadCommunity Community.Model
+    | CompletedLoadProfile Profile.Model
     | CompletedLoadBalance (Result Http.Error (Maybe Balance))
     | CompletedLoadUserTransfers (RemoteData (Graphql.Http.Error (Maybe QueryTransfers)) (Maybe QueryTransfers))
     | ClaimsLoaded (RemoteData (Graphql.Http.Error (Maybe Claim.Paginated)) (Maybe Claim.Paginated))
@@ -654,6 +698,8 @@ type Msg
     | VoteClaim Claim.ClaimId Bool
     | GotVoteResult Claim.ClaimId (Result (Maybe Value) String)
     | CreateInvite
+    | GotContactMsg Contact.Msg
+    | ClosedAddContactModal
     | CloseInviteModal
     | CompletedInviteCreation (Result Http.Error String)
     | CopyToClipboard String
@@ -672,7 +718,18 @@ update msg model ({ shared, accountName } as loggedIn) =
                 }
                 |> UR.addCmd (fetchBalance shared accountName community)
                 |> UR.addCmd (fetchAvailableAnalysis loggedIn Nothing model.analysisFilter community)
-                |> UR.addExt LoggedIn.ShowContactModal
+
+        CompletedLoadProfile profile ->
+            let
+                addContactLimitDate =
+                    -- 01/01/2022
+                    1641006000000
+
+                showContactModalFromDate =
+                    addContactLimitDate - Time.posixToMillis shared.now > 0
+            in
+            { model | showContactModal = showContactModalFromDate && List.isEmpty profile.contacts }
+                |> UR.init
 
         CompletedLoadBalance (Ok balance) ->
             UR.init { model | balance = RemoteData.Success balance }
@@ -841,6 +898,51 @@ update msg model ({ shared, accountName } as loggedIn) =
                 _ ->
                     UR.init model
                         |> UR.logImpossible msg [ "balanceNotLoaded" ]
+
+        GotContactMsg subMsg ->
+            case LoggedIn.profile loggedIn of
+                Just userProfile ->
+                    let
+                        ( contactModel, cmd, contactResponse ) =
+                            Contact.update subMsg
+                                model.contactModel
+                                loggedIn.shared
+                                loggedIn.authToken
+
+                        addContactResponse model_ =
+                            case contactResponse of
+                                Contact.NotAsked ->
+                                    model_
+                                        |> UR.init
+
+                                Contact.WithError errorMessage ->
+                                    { model_ | showContactModal = False }
+                                        |> UR.init
+                                        |> UR.addExt (LoggedIn.ShowFeedback Feedback.Failure errorMessage)
+
+                                Contact.WithContacts successMessage contacts ->
+                                    let
+                                        newProfile =
+                                            { userProfile | contacts = contacts }
+                                    in
+                                    { model_ | showContactModal = False }
+                                        |> UR.init
+                                        |> UR.addExt (LoggedIn.ShowFeedback Feedback.Success successMessage)
+                                        |> UR.addExt
+                                            (LoggedIn.ProfileLoaded newProfile
+                                                |> LoggedIn.ExternalBroadcast
+                                            )
+                    in
+                    { model | contactModel = contactModel }
+                        |> addContactResponse
+                        |> UR.addCmd (Cmd.map GotContactMsg cmd)
+
+                Nothing ->
+                    model |> UR.init
+
+        ClosedAddContactModal ->
+            { model | showContactModal = False }
+                |> UR.init
 
         CloseInviteModal ->
             UR.init
@@ -1040,6 +1142,9 @@ receiveBroadcast broadcastMsg =
         LoggedIn.CommunityLoaded community ->
             Just (CompletedLoadCommunity community)
 
+        LoggedIn.ProfileLoaded profile ->
+            Just (CompletedLoadProfile profile)
+
         _ ->
             Nothing
 
@@ -1078,6 +1183,9 @@ msgToString msg =
         CompletedLoadCommunity _ ->
             [ "CompletedLoadCommunity" ]
 
+        CompletedLoadProfile _ ->
+            [ "CompletedLoadProfile" ]
+
         CompletedLoadBalance result ->
             [ "CompletedLoadBalance", UR.resultToString result ]
 
@@ -1098,6 +1206,12 @@ msgToString msg =
 
         CreateInvite ->
             [ "CreateInvite" ]
+
+        GotContactMsg _ ->
+            [ "GotContactMsg" ]
+
+        ClosedAddContactModal ->
+            [ "ClosedAddContactModal" ]
 
         CloseInviteModal ->
             [ "CloseInviteModal" ]
