@@ -20,7 +20,6 @@ module Session.LoggedIn exposing
     , msgToString
     , profile
     , readAllNotifications
-    , showContactModal
     , showFeedback
     , subscriptions
     , update
@@ -58,7 +57,6 @@ import List.Extra as List
 import Notification exposing (Notification)
 import Ports
 import Profile exposing (Model)
-import Profile.Contact as Contact
 import RemoteData exposing (RemoteData)
 import Route exposing (Route)
 import Search exposing (State(..))
@@ -155,8 +153,6 @@ type alias Model =
     , hasShop : FeatureStatus
     , hasObjectives : FeatureStatus
     , hasKyc : FeatureStatus
-    , contactModel : Contact.Model
-    , showContactModal : Bool
     , searchModel : Search.Model
     , claimingAction : Action.Model
     , date : Maybe Posix
@@ -188,8 +184,6 @@ initModel shared maybePrivateKey_ accountName selectedCommunity authToken =
     , hasShop = FeatureLoading
     , hasObjectives = FeatureLoading
     , hasKyc = FeatureLoading
-    , contactModel = Contact.initSingle
-    , showContactModal = False
     , searchModel = Search.init selectedCommunity
     , claimingAction = { status = Action.NotAsked, feedback = Nothing, needsPinConfirmation = False }
     , date = Nothing
@@ -333,8 +327,6 @@ viewHelper pageMsg page profile_ ({ shared } as model) content =
                     |> Modal.toHtml
                     |> Html.map pageMsg
                , communitySelectorModal model
-                    |> Html.map pageMsg
-               , addContactModal model
                     |> Html.map pageMsg
                ]
         )
@@ -613,40 +605,6 @@ communitySelectorModal model =
         text ""
 
 
-addContactModal : Model -> Html Msg
-addContactModal ({ contactModel, shared } as model) =
-    let
-        text_ s =
-            shared.translators.t s
-                |> text
-
-        header =
-            div [ class "mt-4" ]
-                [ p [ class "inline bg-purple-100 text-white rounded-full py-0.5 px-2 text-caption uppercase" ]
-                    [ text_ "contact_modal.new" ]
-                , p [ class "text-heading font-bold mt-2" ]
-                    [ text_ "contact_modal.title" ]
-                ]
-
-        form =
-            Contact.view shared.translators contactModel
-                |> Html.map GotContactMsg
-    in
-    Modal.initWith
-        { closeMsg = ClosedAddContactModal
-        , isVisible = model.showContactModal
-        }
-        |> Modal.withBody
-            [ header
-            , img [ class "mx-auto mt-10", src "/images/girl-with-phone.svg" ] []
-            , form
-            , p [ class "text-caption text-center uppercase my-4" ]
-                [ text_ "contact_modal.footer" ]
-            ]
-        |> Modal.withLarge True
-        |> Modal.toHtml
-
-
 viewMainMenu : Page -> Model -> Html Msg
 viewMainMenu page model =
     let
@@ -731,7 +689,6 @@ type External msg
     | RequiredAuthentication (Maybe msg)
     | ShowFeedback Feedback.Status String
     | HideFeedback
-    | ShowContactModal
 
 
 mapExternal : (msg -> msg2) -> External msg -> External msg2
@@ -748,9 +705,6 @@ mapExternal transform ext =
 
         HideFeedback ->
             HideFeedback
-
-        ShowContactModal ->
-            ShowContactModal
 
 
 type alias UpdateResult =
@@ -783,33 +737,10 @@ type Msg
     | CloseCommunitySelector
     | SelectCommunity Symbol (Cmd Msg)
     | GotFeedbackMsg Feedback.Msg
-    | ClosedAddContactModal
-    | GotContactMsg Contact.Msg
     | GotSearchMsg Search.Msg
     | GotActionMsg Action.Msg
     | SearchClosed
     | GotTime Posix
-
-
-showContactModal : Model -> Model
-showContactModal ({ shared } as model) =
-    let
-        addContactLimitDate =
-            -- 01/01/2022
-            1641006000000
-
-        showContactModalFromDate =
-            addContactLimitDate - Time.posixToMillis shared.now > 0
-    in
-    case profile model of
-        Just profile_ ->
-            { model
-                | showContactModal =
-                    showContactModalFromDate && List.isEmpty profile_.contacts
-            }
-
-        Nothing ->
-            model
 
 
 update : Msg -> Model -> UpdateResult
@@ -891,7 +822,6 @@ update msg model =
             case profile_ of
                 Just p ->
                     { model | profile = Loaded p }
-                        |> showContactModal
                         |> UR.init
                         |> UR.addPort
                             { responseAddress = CompletedLoadUnread (Encode.string "")
@@ -1086,44 +1016,6 @@ update msg model =
                     }
                 |> UR.addCmd doNext
 
-        ClosedAddContactModal ->
-            { model | showContactModal = False }
-                |> UR.init
-
-        GotContactMsg subMsg ->
-            case profile model of
-                Just userProfile ->
-                    let
-                        ( contactModel, cmd, contactResponse ) =
-                            Contact.update subMsg
-                                model.contactModel
-                                shared
-                                model.authToken
-
-                        addContactResponse model_ =
-                            case contactResponse of
-                                Contact.NotAsked ->
-                                    model_
-
-                                Contact.WithError errorMessage ->
-                                    { model_ | showContactModal = False }
-                                        |> showFeedback Feedback.Failure errorMessage
-
-                                Contact.WithContacts successMessage contacts ->
-                                    { model_
-                                        | profile = Loaded { userProfile | contacts = contacts }
-                                        , showContactModal = False
-                                    }
-                                        |> showFeedback Feedback.Success successMessage
-                    in
-                    { model | contactModel = contactModel }
-                        |> addContactResponse
-                        |> UR.init
-                        |> UR.addCmd (Cmd.map GotContactMsg cmd)
-
-                Nothing ->
-                    model |> UR.init
-
 
 handleActionMsg : Model -> Action.Msg -> UpdateResult
 handleActionMsg ({ shared } as model) actionMsg =
@@ -1181,7 +1073,6 @@ closeModal ({ model } as uResult) =
                 , showUserNav = False
                 , showMainNav = False
                 , showAuthModal = False
-                , showContactModal = False
             }
     }
 
@@ -1384,9 +1275,3 @@ msgToString msg =
 
         GotFeedbackMsg _ ->
             [ "GotFeedbackMsg" ]
-
-        ClosedAddContactModal ->
-            [ "ClosedAddContactModal" ]
-
-        GotContactMsg _ ->
-            [ "GotContactMsg" ]
