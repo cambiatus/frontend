@@ -32,6 +32,8 @@ import Json.Decode as Decode exposing (Value)
 import Json.Encode as Encode
 import List.Extra as List
 import Page
+import Profile
+import Profile.Contact as Contact
 import RemoteData exposing (RemoteData)
 import Route
 import Session.LoggedIn as LoggedIn exposing (External(..), FeatureStatus(..))
@@ -84,6 +86,8 @@ type alias Model =
     , analysisFilter : Direction
     , lastSocket : String
     , transfers : GraphqlStatus (Maybe QueryTransfers) (List Transfer)
+    , contactModel : Contact.Model
+    , showContactModal : Bool
     , inviteModalStatus : InviteModalStatus
     , claimModalStatus : Claim.ModalStatus
     , copied : Bool
@@ -99,6 +103,8 @@ initModel =
     , analysisFilter = initAnalysisFilter
     , lastSocket = ""
     , transfers = LoadingGraphql
+    , contactModel = Contact.initSingle
+    , showContactModal = False
     , inviteModalStatus = InviteModalClosed
     , claimModalStatus = Claim.Closed
     , copied = False
@@ -187,6 +193,7 @@ view ({ shared, accountName } as loggedIn) model =
                             text ""
                         , viewTransfers loggedIn model
                         , viewInvitationModal loggedIn model
+                        , addContactModal shared profile model
                         ]
 
                 ( _, _, _ ) ->
@@ -216,6 +223,47 @@ viewHeader loggedIn community isCommunityAdmin =
           else
             text ""
         ]
+
+
+addContactModal : Shared -> Profile.Model -> Model -> Html Msg
+addContactModal shared profile ({ contactModel } as model) =
+    let
+        addContactLimitDate =
+            -- 01/01/2022
+            1641006000000
+
+        showContactModalFromDate =
+            addContactLimitDate - Time.posixToMillis shared.now > 0
+
+        text_ s =
+            shared.translators.t s
+                |> text
+
+        header =
+            div [ class "mt-4" ]
+                [ p [ class "inline bg-purple-100 text-white rounded-full py-0.5 px-2 text-caption uppercase" ]
+                    [ text_ "contact_modal.new" ]
+                , p [ class "text-heading font-bold mt-2" ]
+                    [ text_ "contact_modal.title" ]
+                ]
+
+        form =
+            Contact.view shared.translators contactModel
+                |> Html.map GotContactMsg
+    in
+    Modal.initWith
+        { closeMsg = ClosedAddContactModal
+        , isVisible = model.showContactModal && showContactModalFromDate && List.isEmpty profile.contacts
+        }
+        |> Modal.withBody
+            [ header
+            , img [ class "mx-auto mt-10", src "/images/girl-with-phone.svg" ] []
+            , form
+            , p [ class "text-caption text-center uppercase my-4" ]
+                [ text_ "contact_modal.footer" ]
+            ]
+        |> Modal.withLarge True
+        |> Modal.toHtml
 
 
 viewInvitationModal : LoggedIn.Model -> Model -> Html Msg
@@ -658,6 +706,8 @@ type Msg
     | VoteClaim Claim.ClaimId Bool
     | GotVoteResult Claim.ClaimId (Result (Maybe Value) String)
     | CreateInvite
+    | GotContactMsg Contact.Msg
+    | ClosedAddContactModal
     | CloseInviteModal
     | CompletedInviteCreation (Result Http.Error String)
     | CopyToClipboard String
@@ -693,6 +743,7 @@ update msg model loggedIn =
             UR.init
                 { model
                     | balance = statusBalance
+                    , showContactModal = True
                 }
 
         CompletedLoadBalances (Err httpError) ->
@@ -851,7 +902,6 @@ update msg model loggedIn =
                 Just c ->
                     { model | community = LoadedGraphql c Nothing }
                         |> UR.init
-                        |> UR.addExt ShowContactModal
 
                 Nothing ->
                     model
@@ -877,6 +927,48 @@ update msg model loggedIn =
 
                 _ ->
                     UR.init model
+
+        GotContactMsg subMsg ->
+            case LoggedIn.profile loggedIn of
+                Just userProfile ->
+                    let
+                        ( contactModel, cmd, contactResponse ) =
+                            Contact.update subMsg
+                                model.contactModel
+                                loggedIn.shared
+                                loggedIn.authToken
+
+                        addContactResponse model_ =
+                            case contactResponse of
+                                Contact.NotAsked ->
+                                    model_
+                                        |> UR.init
+
+                                Contact.WithError errorMessage ->
+                                    { model_ | showContactModal = False }
+                                        |> UR.init
+                                        |> UR.addExt (LoggedIn.ShowFeedback Feedback.Failure errorMessage)
+
+                                Contact.WithContacts successMessage contacts ->
+                                    let
+                                        newProfile =
+                                            { userProfile | contacts = contacts }
+                                    in
+                                    { model_ | showContactModal = False }
+                                        |> UR.init
+                                        |> UR.addExt (LoggedIn.ShowFeedback Feedback.Success successMessage)
+                                        |> UR.addExt (LoggedIn.UpdatedLoggedIn { loggedIn | profile = LoggedIn.Loaded newProfile })
+                    in
+                    { model | contactModel = contactModel }
+                        |> addContactResponse
+                        |> UR.addCmd (Cmd.map GotContactMsg cmd)
+
+                Nothing ->
+                    model |> UR.init
+
+        ClosedAddContactModal ->
+            { model | showContactModal = False }
+                |> UR.init
 
         CloseInviteModal ->
             UR.init
@@ -1112,6 +1204,12 @@ msgToString msg =
 
         CreateInvite ->
             [ "CreateInvite" ]
+
+        GotContactMsg _ ->
+            [ "GotContactMsg" ]
+
+        ClosedAddContactModal ->
+            [ "ClosedAddContactModal" ]
 
         CloseInviteModal ->
             [ "CloseInviteModal" ]
