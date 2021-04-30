@@ -29,6 +29,10 @@ jobs:
         # You may pin to the exact commit or the version.
         # uses: getsentry/action-release@641a80f3e05619b174bcacbfa3b69dff382d2a33
         uses: getsentry/action-release@v1.1.5
+        env:
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+          SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
+          SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT }}
         with:
           # Set the environment for this release. E.g. "production" or "staging". Omit to skip adding deploy to release.
           environment: production
