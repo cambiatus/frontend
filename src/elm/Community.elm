@@ -121,7 +121,6 @@ type alias Model =
     , orderCount : Int
     , members : List Profile.Minimal
     , objectives : List Objective
-    , precision : Int
     , hasObjectives : Bool
     , hasShop : Bool
     , hasKyc : Bool
@@ -176,7 +175,6 @@ communitySelectionSet =
         |> with Community.orderCount
         |> with (Community.members Profile.minimalSelectionSet)
         |> with (Community.objectives objectiveSelectionSet)
-        |> with Community.precision
         |> with Community.hasObjectives
         |> with Community.hasShop
         |> with Community.hasKyc
