@@ -85,7 +85,6 @@ type alias Community =
     { symbol : Symbol
     , creator : Eos.Name
     , objectives : List Objective
-    , precision : Int
     }
 
 
@@ -233,7 +232,6 @@ communityQuery symbol =
             |> with (Eos.symbolSelectionSet Community.symbol)
             |> with (Eos.nameSelectionSet Community.creator)
             |> with (Community.objectives objectiveSelectionSet)
-            |> with Community.precision
         )
 
 
@@ -402,10 +400,10 @@ update msg model loggedIn =
             if LoggedIn.hasPrivateKey loggedIn then
                 case model.status of
                     Loaded c (NewObjective objForm) ->
-                        save objForm Nothing c.precision
+                        save objForm Nothing (Eos.getSymbolPrecision c.symbol)
 
                     Loaded c (EditObjective objectiveId objForm) ->
-                        save objForm (Just objectiveId) c.precision
+                        save objForm (Just objectiveId) (Eos.getSymbolPrecision c.symbol)
 
                     _ ->
                         newModel
