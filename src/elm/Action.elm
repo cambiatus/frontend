@@ -376,6 +376,7 @@ type alias Objective =
     { id : Int
     , description : String
     , community : Community
+    , isCompleted : Bool
     }
 
 
@@ -385,6 +386,7 @@ objectiveSelectionSet =
         |> with Cambiatus.Object.Objective.id
         |> with Cambiatus.Object.Objective.description
         |> with (Cambiatus.Object.Objective.community communitySelectionSet)
+        |> with Cambiatus.Object.Objective.isCompleted
 
 
 selectionSet : SelectionSet Action Cambiatus.Object.Action
@@ -398,6 +400,7 @@ selectionSet =
                     { id = o.id
                     , description = o.description
                     , community = o.community
+                    , isCompleted = o.isCompleted
                     }
                 )
                 (ActionObject.objective objectiveSelectionSet)

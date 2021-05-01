@@ -430,6 +430,7 @@
         "subtitle": "{{objectives}} አላማዎች እና{{actions}} ተግባራት",
         "new": "አዲስ ዓላማ ፍጠር",
         "action_count": "{{actions}} ተግባራት",
+        "complete": "ተጠናቅቋል",
         "edit": "አርትእ ዓላማዎችን",
         "editor": {
           "not_found": "አልተገኘም",

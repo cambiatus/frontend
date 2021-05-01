@@ -472,6 +472,7 @@
       "subtitle": "{{objectives}} objetivos y {{actions}} acciones",
       "new": "Crear nuevo objetivo",
       "action_count": "{{actions}} acciones",
+      "complete": "Terminado",
       "edit": "Editar objetivo",
       "editor": {
         "not_found": "No encontrado",

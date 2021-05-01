@@ -368,7 +368,7 @@ textarea.input {
 
 /* Button Modifiers (must be below all other button's styles) */
 .button-disabled {
-  @apply bg-gray-500 text-white rounded-super text-body cursor-not-allowed;
+  @apply bg-gray-500 text-gray-900 rounded-super text-body pointer-events-none;
 }
 
 .button-disabled:hover {

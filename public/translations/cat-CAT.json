@@ -472,6 +472,7 @@
       "subtitle": "{{objectives}} objectius i {{actions}} accions",
       "new": "Crear un objectiu nou",
       "action_count": "{{actions}} accions",
+      "complete": "Completat",
       "edit": "Edita l'objectiu",
       "editor": {
         "not_found": "No trobat",
