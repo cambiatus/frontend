@@ -478,7 +478,9 @@
         "error": "¡Huy! Algo salió mal",
         "description_label": "¿Cual es tu objetivo?",
         "description_placeholder": "Define un objetivo que atienda el problema que enfrenta tu comunidad.",
-        "submit": "Salvar"
+        "submit": "Salvar",
+        "mark_as_complete": "Marcar como completo",
+        "error_marking_as_complete": "Algo salió mal al marcar tu objetivo como completado"
       },
       "disabled": {
         "description": "Las reivindicaciones, las acciones y los objetivos están deshabilitados en esta comunidad."

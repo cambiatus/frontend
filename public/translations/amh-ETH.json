@@ -436,7 +436,9 @@
           "error": "ዉይ የሆነ ችግር ተከስቷል!",
           "description_label": "ዓላማ ምንድነዉ?",
           "description_placeholder": "የማህበረሰቡን ችግሮች እንዲትፈታ የሚግዝህን  ግብ አስላ.",
-          "submit": "አስቀምጥ"
+          "submit": "አስቀምጥ",
+          "mark_as_complete": "እንደ ተጠናቀቀ ምልክት ያድርጉ",
+          "error_marking_as_complete": "ዓላማዎ እንደ ተጠናቀቀ ምልክት ሲያደርግ አንድ ነገር ተሳስቷል"
         },
         "disabled": {
           "description": "የማህበረሰቡ ጥያቄ፣ተግባራት እና ዓላማዎች ተከልክለዋል."

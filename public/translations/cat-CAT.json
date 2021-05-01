@@ -478,7 +478,9 @@
         "error": "Ui! Quelcom ha fallat",
         "description_label": "Quin és el teu objectiu?",
         "description_placeholder": "Defineix un objectiu que resolgui el problema al que s’enfronta la teva comunitat.",
-        "submit": "Guardar"
+        "submit": "Guardar",
+        "mark_as_complete": "Marca com a completat",
+        "error_marking_as_complete": "S'ha produït un error en marcar l'objectiu com a completat"
       },
       "disabled": {
         "description": "Les reclamacions, les accions i els objectius estan desactivats en aquesta comunitat."

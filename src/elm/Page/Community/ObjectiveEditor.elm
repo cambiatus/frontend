@@ -1,6 +1,7 @@
 module Page.Community.ObjectiveEditor exposing (Model, Msg, initEdit, initNew, jsAddressToMsg, msgToString, update, view)
 
 import Api.Graphql
+import Cambiatus.Mutation as Mutation
 import Cambiatus.Object
 import Cambiatus.Object.Community as Community
 import Cambiatus.Object.Objective as Objective
@@ -9,7 +10,7 @@ import Community
 import Eos exposing (Symbol, symbolToString)
 import Eos.Account as Eos
 import Graphql.Http
-import Graphql.Operation exposing (RootQuery)
+import Graphql.Operation exposing (RootMutation, RootQuery)
 import Graphql.SelectionSet as SelectionSet exposing (SelectionSet, with)
 import Html exposing (Html, button, div, span, text, textarea)
 import Html.Attributes exposing (class, disabled, maxlength, placeholder, required, rows, type_, value)
@@ -78,6 +79,7 @@ type SaveStatus
 type alias ObjectiveForm =
     { description : String
     , save : SaveStatus
+    , isCompleted : Bool
     }
 
 
@@ -91,6 +93,7 @@ type alias Community =
 type alias Objective =
     { id : Int
     , description : String
+    , isCompleted : Bool
     }
 
 
@@ -102,6 +105,8 @@ type Msg
     = CompletedCommunityLoad (RemoteData (Graphql.Http.Error (Maybe Community)) (Maybe Community))
     | EnteredDescription String
     | ClickedSaveObjective
+    | ClickedCompleteObjective
+    | GotCompleteObjectiveResponse (RemoteData (Graphql.Http.Error (Maybe Objective)) (Maybe Objective))
     | GotSaveObjectiveResponse (Result Value String)
 
 
@@ -109,6 +114,7 @@ initObjectiveForm : ObjectiveForm
 initObjectiveForm =
     { description = ""
     , save = NotAsked
+    , isCompleted = False
     }
 
 
@@ -160,10 +166,10 @@ view ({ shared } as loggedIn) model =
                         [ Page.viewHeader loggedIn (t "community.objectives.title") (Route.Objectives symbol)
                         , case editStatus of
                             NewObjective objForm ->
-                                viewForm loggedIn objForm
+                                viewForm loggedIn objForm False
 
                             EditObjective _ objForm ->
-                                viewForm loggedIn objForm
+                                viewForm loggedIn objForm True
                         ]
     in
     { title = title
@@ -182,8 +188,8 @@ view ({ shared } as loggedIn) model =
     }
 
 
-viewForm : LoggedIn.Model -> ObjectiveForm -> Html Msg
-viewForm { shared } objForm =
+viewForm : LoggedIn.Model -> ObjectiveForm -> Bool -> Html Msg
+viewForm { shared } objForm isEdit =
     let
         t =
             shared.translators.t
@@ -210,13 +216,26 @@ viewForm { shared } objForm =
                     ]
                     []
                 ]
-            , button
-                [ class "button button-primary"
-                , type_ "submit"
-                , onClick ClickedSaveObjective
-                , disabled isDisabled
+            , div [ class "flex flex-col w-full space-y-4 md:space-y-0 md:flex-row md:justify-between" ]
+                [ button
+                    [ class "button button-primary w-full md:w-48"
+                    , type_ "button"
+                    , onClick ClickedSaveObjective
+                    , disabled isDisabled
+                    ]
+                    [ text (t "community.objectives.editor.submit") ]
+                , if isEdit && not objForm.isCompleted then
+                    button
+                        [ class "button button-secondary w-full md:w-48"
+                        , type_ "button"
+                        , onClick ClickedCompleteObjective
+                        , disabled isDisabled
+                        ]
+                        [ text (t "community.objectives.editor.mark_as_complete") ]
+
+                  else
+                    text ""
                 ]
-                [ text (t "community.objectives.editor.submit") ]
             ]
         ]
 
@@ -240,6 +259,13 @@ objectiveSelectionSet =
     SelectionSet.succeed Objective
         |> with Objective.id
         |> with Objective.description
+        |> with Objective.isCompleted
+
+
+completeObjectiveSelectionSet : Int -> SelectionSet (Maybe Objective) RootMutation
+completeObjectiveSelectionSet objectiveId =
+    Mutation.completeObjective { input = { objectiveId = objectiveId } }
+        objectiveSelectionSet
 
 
 loadObjectiveForm : Community -> Int -> ObjectiveForm
@@ -249,7 +275,7 @@ loadObjectiveForm community objectiveId =
             List.filterMap
                 (\o ->
                     if o.id == objectiveId then
-                        Just (ObjectiveForm o.description NotAsked)
+                        Just (ObjectiveForm o.description NotAsked o.isCompleted)
 
                     else
                         Nothing
@@ -342,6 +368,36 @@ update msg model loggedIn =
         EnteredDescription val ->
             UR.init model
                 |> updateObjective msg (\o -> { o | description = val })
+
+        ClickedCompleteObjective ->
+            case model.status of
+                Loaded _ (EditObjective id _) ->
+                    UR.init model
+                        |> UR.addCmd
+                            (Api.Graphql.mutation
+                                loggedIn.shared
+                                (Just loggedIn.authToken)
+                                (completeObjectiveSelectionSet id)
+                                GotCompleteObjectiveResponse
+                            )
+
+                _ ->
+                    UR.init model
+
+        GotCompleteObjectiveResponse (RemoteData.Success _) ->
+            UR.init model
+                |> UR.addCmd
+                    (Route.pushUrl loggedIn.shared.navKey
+                        (Route.Objectives model.community)
+                    )
+
+        GotCompleteObjectiveResponse (RemoteData.Failure err) ->
+            UR.init model
+                |> UR.addExt (ShowFeedback Feedback.Failure (t "community.objectives.editor.error_marking_as_complete"))
+                |> UR.logGraphqlError msg err
+
+        GotCompleteObjectiveResponse _ ->
+            UR.init model
 
         ClickedSaveObjective ->
             let
@@ -464,6 +520,12 @@ msgToString msg =
 
         ClickedSaveObjective ->
             [ "ClickedSaveObjective" ]
+
+        ClickedCompleteObjective ->
+            [ "ClickedCompleteObjective" ]
+
+        GotCompleteObjectiveResponse r ->
+            [ "GotCompleteObjectiveResponse", UR.remoteDataToString r ]
 
         GotSaveObjectiveResponse r ->
             [ "GotSaveObjectiveResponse", UR.resultToString r ]

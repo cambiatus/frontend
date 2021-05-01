@@ -474,7 +474,9 @@
         "error": "Ops something went wrong!",
         "description_label": "What is your objective?",
         "description_placeholder": "Set a goal that helps resolve the community problem.",
-        "submit": "Save"
+        "submit": "Save",
+        "mark_as_complete": "Mark as complete",
+        "error_marking_as_complete": "Something went wrong when marking your objective as completed"
       },
       "disabled": {
         "description": "Claims, Actions, and Objectives are disabled in this community."
