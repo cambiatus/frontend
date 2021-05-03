@@ -482,7 +482,13 @@
         "description_placeholder": "Defineix un objectiu que resolgui el problema al que s’enfronta la teva comunitat.",
         "submit": "Guardar",
         "mark_as_complete": "Marca com a completat",
-        "error_marking_as_complete": "S'ha produït un error en marcar l'objectiu com a completat"
+        "error_marking_as_complete": "S'ha produït un error en marcar l'objectiu com a completat",
+        "modal": {
+          "title": "Marca l'objectiu com a complet",
+          "body": "No es pot desfer la marca de l’objectiu com a complet. Les accions d'aquest objectiu ja no estaran disponibles per a l'anàlisi. Segur que voleu marcar aquest objectiu com a complet?",
+          "confirm": "Sí",
+          "cancel": "No"
+        }
       },
       "disabled": {
         "description": "Les reclamacions, les accions i els objectius estan desactivats en aquesta comunitat."

@@ -13,7 +13,7 @@ import Graphql.Http
 import Graphql.Operation exposing (RootMutation, RootQuery)
 import Graphql.SelectionSet as SelectionSet exposing (SelectionSet, with)
 import Html exposing (Html, button, div, span, text, textarea)
-import Html.Attributes exposing (class, disabled, maxlength, placeholder, required, rows, type_, value)
+import Html.Attributes exposing (class, classList, disabled, maxlength, placeholder, required, rows, type_, value)
 import Html.Events exposing (onClick, onInput)
 import I18Next exposing (t)
 import Json.Decode as Decode
@@ -22,8 +22,10 @@ import Page
 import RemoteData exposing (RemoteData)
 import Route
 import Session.LoggedIn as LoggedIn exposing (External(..))
+import Session.Shared exposing (Translators)
 import UpdateResult as UR
 import View.Feedback as Feedback
+import View.Modal as Modal
 
 
 
@@ -32,14 +34,24 @@ import View.Feedback as Feedback
 
 initNew : LoggedIn.Model -> Symbol -> ( Model, Cmd Msg )
 initNew { shared, authToken } communityId =
-    ( { status = Loading, community = communityId, objectiveId = Nothing }
+    ( { status = Loading
+      , community = communityId
+      , objectiveId = Nothing
+      , showMarkAsCompletedConfirmationModal = False
+      , isMarkAsCompletedConfirmationModalLoading = False
+      }
     , Api.Graphql.query shared (Just authToken) (communityQuery communityId) CompletedCommunityLoad
     )
 
 
 initEdit : LoggedIn.Model -> Symbol -> Int -> ( Model, Cmd Msg )
 initEdit { shared, authToken } communityId objectiveId =
-    ( { status = Loading, community = communityId, objectiveId = Just objectiveId }
+    ( { status = Loading
+      , community = communityId
+      , objectiveId = Just objectiveId
+      , showMarkAsCompletedConfirmationModal = False
+      , isMarkAsCompletedConfirmationModalLoading = False
+      }
     , Api.Graphql.query shared (Just authToken) (communityQuery communityId) CompletedCommunityLoad
     )
 
@@ -52,6 +64,8 @@ type alias Model =
     { status : Status
     , community : Symbol
     , objectiveId : Maybe Int
+    , showMarkAsCompletedConfirmationModal : Bool
+    , isMarkAsCompletedConfirmationModalLoading : Bool
     }
 
 
@@ -106,6 +120,8 @@ type Msg
     | EnteredDescription String
     | ClickedSaveObjective
     | ClickedCompleteObjective
+    | AcceptedCompleteObjective
+    | DeniedCompleteObjective
     | GotCompleteObjectiveResponse (RemoteData (Graphql.Http.Error (Maybe Objective)) (Maybe Objective))
     | GotSaveObjectiveResponse (Result Value String)
 
@@ -170,6 +186,7 @@ view ({ shared } as loggedIn) model =
 
                             EditObjective _ objForm ->
                                 viewForm loggedIn objForm True
+                        , viewMarkAsCompletedConfirmationModal shared.translators model
                         ]
     in
     { title = title
@@ -238,6 +255,35 @@ viewForm { shared } objForm isEdit =
                 ]
             ]
         ]
+
+
+viewMarkAsCompletedConfirmationModal : Translators -> Model -> Html Msg
+viewMarkAsCompletedConfirmationModal { t } model =
+    Modal.initWith
+        { closeMsg = DeniedCompleteObjective
+        , isVisible = model.showMarkAsCompletedConfirmationModal
+        }
+        |> Modal.withHeader (t "community.objectives.editor.modal.title")
+        |> Modal.withBody
+            [ text (t "community.objectives.editor.modal.body")
+            ]
+        |> Modal.withFooter
+            [ button
+                [ class "modal-cancel"
+                , classList [ ( "button-disabled", model.isMarkAsCompletedConfirmationModalLoading ) ]
+                , onClick DeniedCompleteObjective
+                , disabled model.isMarkAsCompletedConfirmationModalLoading
+                ]
+                [ text (t "community.objectives.editor.modal.cancel") ]
+            , button
+                [ class "modal-accept"
+                , classList [ ( "button-disabled", model.isMarkAsCompletedConfirmationModalLoading ) ]
+                , onClick AcceptedCompleteObjective
+                , disabled model.isMarkAsCompletedConfirmationModalLoading
+                ]
+                [ text (t "community.objectives.editor.modal.confirm") ]
+            ]
+        |> Modal.toHtml
 
 
 
@@ -370,9 +416,14 @@ update msg model loggedIn =
                 |> updateObjective msg (\o -> { o | description = val })
 
         ClickedCompleteObjective ->
+            { model | showMarkAsCompletedConfirmationModal = True }
+                |> UR.init
+
+        AcceptedCompleteObjective ->
             case model.status of
                 Loaded _ (EditObjective id _) ->
-                    UR.init model
+                    { model | isMarkAsCompletedConfirmationModalLoading = True }
+                        |> UR.init
                         |> UR.addCmd
                             (Api.Graphql.mutation
                                 loggedIn.shared
@@ -383,6 +434,10 @@ update msg model loggedIn =
 
                 _ ->
                     UR.init model
+
+        DeniedCompleteObjective ->
+            { model | showMarkAsCompletedConfirmationModal = False }
+                |> UR.init
 
         GotCompleteObjectiveResponse (RemoteData.Success _) ->
             UR.init model
@@ -523,6 +578,12 @@ msgToString msg =
 
         ClickedCompleteObjective ->
             [ "ClickedCompleteObjective" ]
+
+        AcceptedCompleteObjective ->
+            [ "AcceptedCompleteObjective" ]
+
+        DeniedCompleteObjective ->
+            [ "DeniedCompleteObjective" ]
 
         GotCompleteObjectiveResponse r ->
             [ "GotCompleteObjectiveResponse", UR.remoteDataToString r ]

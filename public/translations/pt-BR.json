@@ -486,7 +486,13 @@
         "description_placeholder": "Defina uma meta que ajude a resolver o problema da comunidade.",
         "submit": "Salvar",
         "mark_as_complete": "Marcar como completo",
-        "error_marking_as_complete": "Algo de errado aconteceu ao marcar seu objetivo como completo"
+        "error_marking_as_complete": "Algo de errado aconteceu ao marcar seu objetivo como completo",
+        "modal": {
+          "title": "Marcar objetivo como completo",
+          "body": "Marcar o objectivo como completo não pode ser desfeito. Ações deste objetivo não estarão mais disponíveis para análise. Você quer mesmo marcar este objetivo como completo?",
+          "confirm": "Sim",
+          "cancel": "Não"
+        }
       },
       "disabled": {
         "description": "Reivindicações, ações e objetivos estão desativados nesta comunidade."
