@@ -114,6 +114,7 @@
       "invalidPin": "ልክ ያልሆነ ፒን",
       "unavailablePin": "ፒን የለም",
       "phone": "እባኮን ትክክለኛ ስልክ ቁጥር ይጠቀሙ",
+      "invalid_image_file": "ምስል በመስቀል ላይ ስህተት",
       "zipcode": "የተሳሳተ አካባቢያዊ መለያ ቁጥር",
           "contracts": {
         "transfer": {

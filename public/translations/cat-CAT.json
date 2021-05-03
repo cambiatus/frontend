@@ -114,6 +114,7 @@
     "invalidPin": "PIN no vàlid",
     "unavailablePin": "El PIN no està disponible",
     "phone": "Utilitzeu un número de telèfon vàlid",
+    "invalid_image_file": "S'ha produït un error en penjar la imatge",
     "zipcode": "Codi postal no vàlid",
     "contracts": {
       "transfer": {

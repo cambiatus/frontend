@@ -358,7 +358,7 @@ update isPinConfirmed shared uploadFile selectedCommunity accName msg model =
         ( PhotoUploaded (Err error), PhotoUploaderShowed action (Proof _ proofCode) ) ->
             { model
                 | status = PhotoUploaderShowed action (Proof (UploadFailed error) proofCode)
-                , feedback = Nothing
+                , feedback = Just <| Failure (t "error.invalid_image_file")
                 , needsPinConfirmation = False
             }
                 |> UR.init

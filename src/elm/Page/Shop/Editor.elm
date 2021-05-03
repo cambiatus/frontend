@@ -656,16 +656,19 @@ update msg model loggedIn =
                     EditingCreate balances (UploadFailed error) form
                         |> UR.init
                         |> UR.logHttpError msg error
+                        |> UR.addExt (LoggedIn.ShowFeedback Feedback.Failure (t "error.invalid_image_file"))
 
                 EditingUpdate balances sale _ _ form ->
                     EditingUpdate balances sale (UploadFailed error) Closed form
                         |> UR.init
                         |> UR.logHttpError msg error
+                        |> UR.addExt (LoggedIn.ShowFeedback Feedback.Failure (t "error.invalid_image_file"))
 
                 _ ->
                     model
                         |> UR.init
                         |> UR.logHttpError msg error
+                        |> UR.addExt (LoggedIn.ShowFeedback Feedback.Failure (t "error.invalid_image_file"))
 
         EnteredImage (file :: _) ->
             let
