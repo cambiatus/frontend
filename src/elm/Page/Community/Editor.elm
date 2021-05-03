@@ -733,6 +733,7 @@ update msg model loggedIn =
                         Err err ->
                             ( UploadingFailed err
                             , UR.logHttpError msg err
+                                >> UR.addExt (LoggedIn.ShowFeedback Feedback.Success (t "error.invalid_image_file"))
                             )
 
                 uResult =
