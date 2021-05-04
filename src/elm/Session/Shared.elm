@@ -177,7 +177,7 @@ viewLanguageItems shared toMsg =
         |> List.map
             (\lang ->
                 button
-                    [ class "flex block px-4 py-2 text-gray justify-between items-center text-xs"
+                    [ class "flex px-4 py-2 text-gray justify-between items-center text-xs"
                     , onClick (toMsg lang)
                     ]
                     [ langFlag lang
@@ -206,7 +206,7 @@ langFlag st =
                 "/icons/flag-usa.svg"
     in
     img
-        [ class "object-cover w-6 h-6 lang-flag"
+        [ class "object-cover rounded-full w-6 h-6 lang-flag mr-2"
         , src iconLink
         ]
         []
