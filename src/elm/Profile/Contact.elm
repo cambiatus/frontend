@@ -46,6 +46,7 @@ import View.Components
 import View.Form
 import View.Form.Input as Input
 import View.Form.Select as Select
+import View.Modal as Modal
 
 
 
@@ -55,6 +56,7 @@ import View.Form.Select as Select
 type alias Model =
     { state : UpdatedData
     , kind : Kind
+    , contactTypeToDelete : Maybe ContactType
     }
 
 
@@ -62,6 +64,7 @@ initSingle : Model
 initSingle =
     { state = RemoteData.NotAsked
     , kind = Single (initBasic defaultContactType)
+    , contactTypeToDelete = Nothing
     }
 
 
@@ -79,6 +82,7 @@ initMultiple initialContacts =
                 )
                 ContactType.list
             )
+    , contactTypeToDelete = Nothing
     }
 
 
@@ -210,6 +214,9 @@ type Msg
     = SelectedCountry ContactType SupportedCountry
     | ClickedToggleContactFlags ContactType
     | EnteredContactText ContactType String
+    | ClickedDeleteContact ContactType
+    | ClosedDeleteModal
+    | ConfirmedDeleteContact ContactType
     | EnteredContactOption String
     | ClickedSubmit
     | CompletedUpdateContact UpdatedData
@@ -255,6 +262,28 @@ update msg model ({ translators } as shared) authToken =
 
         EnteredContactText contactType newContact ->
             ( updateKind contactType (setContact newContact)
+            , Cmd.none
+            , NotAsked
+            )
+
+        ClosedDeleteModal ->
+            ( { model | contactTypeToDelete = Nothing }
+            , Cmd.none
+            , NotAsked
+            )
+
+        ClickedDeleteContact contactType ->
+            ( { model | contactTypeToDelete = Just contactType }
+            , Cmd.none
+            , NotAsked
+            )
+
+        ConfirmedDeleteContact contactType ->
+            let
+                withoutContact =
+                    updateKind contactType (setContact "")
+            in
+            ( { withoutContact | contactTypeToDelete = Nothing }
             , Cmd.none
             , NotAsked
             )
@@ -388,7 +417,6 @@ submitMultiple translators basics =
                 )
                 ( [], [] )
                 basics
-                |> Debug.log "error and valid"
     in
     if List.length valid > 0 then
         Ok valid
@@ -441,35 +469,76 @@ view translators model =
                         submitText
                 ]
     in
-    (case model.kind of
-        Single contact ->
-            [ viewContactTypeSelect translators contact.contactType
-            , viewInput translators contact
+    div
+        [ classList
+            [ ( "container mx-auto", isMultiple model.kind )
             ]
-
-        Multiple contacts ->
-            List.map (viewInputWithBackground translators) contacts
-    )
-        ++ [ submitButton
-           , if RemoteData.isFailure model.state then
-                text (translators.t "contact_form.error")
-
-             else
-                text ""
-           ]
-        |> Html.form
-            [ class "w-full md:w-5/6 mx-auto mt-12"
-            , classList [ ( "px-4 lg:w-2/3", isMultiple model.kind ) ]
+        ]
+        [ Html.form
+            [ class "mt-12"
+            , classList
+                [ ( "px-4", isMultiple model.kind )
+                , ( "w-full md:w-5/6 mx-auto lg:w-2/3", not (isMultiple model.kind) )
+                ]
             , onSubmit ClickedSubmit
             ]
+            ((case model.kind of
+                Single contact ->
+                    [ viewContactTypeSelect translators contact.contactType
+                    , viewInput translators contact
+                    ]
+
+                Multiple contacts ->
+                    List.map (viewInputWithBackground translators) contacts
+             )
+                ++ [ submitButton
+                   , if RemoteData.isFailure model.state then
+                        text (translators.t "contact_form.error")
+
+                     else
+                        text ""
+                   ]
+            )
+        , case model.contactTypeToDelete of
+            Just contactType ->
+                Modal.initWith
+                    { closeMsg = ClosedDeleteModal
+                    , isVisible = True
+                    }
+                    |> Modal.withHeader (translators.t "contact_form.delete.title")
+                    |> Modal.withBody [ text (translators.t "contact_form.delete.body") ]
+                    |> Modal.withFooter
+                        [ button
+                            [ class "modal-cancel"
+                            , onClick ClosedDeleteModal
+                            ]
+                            [ text (translators.t "contact_form.delete.cancel") ]
+                        , button
+                            [ class "modal-accept"
+                            , onClick (ConfirmedDeleteContact contactType)
+                            ]
+                            [ text (translators.t "contact_form.delete.accept") ]
+                        ]
+                    |> Modal.toHtml
+
+            Nothing ->
+                text ""
+        ]
 
 
 viewInputWithBackground : Translators -> Basic -> Html Msg
 viewInputWithBackground translators basic =
     div [ class "bg-gray-100 p-4 pb-0 rounded mb-4" ]
-        [ div [ class "font-menu font-medium flex items-center mb-4" ]
-            [ contactTypeToIcon "mr-2" False basic.contactType
-            , text (contactTypeToString translators basic.contactType)
+        [ div [ class "font-menu font-medium flex items-center mb-4 justify-between" ]
+            [ div [ class "flex items-center" ]
+                [ contactTypeToIcon "mr-2" False basic.contactType
+                , text (contactTypeToString translators basic.contactType)
+                ]
+            , button
+                [ onClick (ClickedDeleteContact basic.contactType)
+                , type_ "button"
+                ]
+                [ Icons.trash "" ]
             ]
         , viewInput translators basic
         ]
@@ -718,7 +787,7 @@ isMultiple kind =
             True
 
         Single _ ->
-            True
+            False
 
 
 

@@ -950,6 +950,12 @@
         "success": "Contacts saved successfully",
         "failure": "Something went wrong while trying to save your contacts"
       }
+    },
+    "delete": {
+      "title": "Delete",
+      "body": "Do you really want to delete your contact information?",
+      "cancel": "No",
+      "accept": "Yes"
     }
   }
 }

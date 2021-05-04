@@ -952,6 +952,12 @@
         "success": "Tus contactos se han guardado correctamente",
         "failure": "Se produjo un error al intentar guardar tus contactos."
       }
+    },
+    "delete": {
+      "title": "Borrar",
+      "body": "¿Realmente desea eliminar su información de contacto?",
+      "cancel": "No",
+      "accept": "Sí"
     }
   }
 }

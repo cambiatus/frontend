@@ -954,6 +954,12 @@
         "success": "Seus contatos foram salvos com sucesso",
         "failure": "Algo deu errado ao tentar salvar seus contatos"
       }
+    },
+    "delete": {
+      "title": "Excluir",
+      "body": "Quer mesmo excluir sua informação de contato?",
+      "cancel": "Não",
+      "accept": "Sim"
     }
   }
 }
