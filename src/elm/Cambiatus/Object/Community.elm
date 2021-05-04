@@ -19,48 +19,9 @@ import Graphql.SelectionSet exposing (SelectionSet)
 import Json.Decode as Decode
 
 
-logo : SelectionSet String Cambiatus.Object.Community
-logo =
-    Object.selectionForField "String" "logo" [] Decode.string
-
-
-subdomain :
-    SelectionSet decodesTo Cambiatus.Object.Subdomain
-    -> SelectionSet (Maybe decodesTo) Cambiatus.Object.Community
-subdomain object_ =
-    Object.selectionForCompositeField "subdomain" [] object_ (identity >> Decode.nullable)
-
-
-symbol : SelectionSet String Cambiatus.Object.Community
-symbol =
-    Object.selectionForField "String" "symbol" [] Decode.string
-
-
-createdBlock : SelectionSet Int Cambiatus.Object.Community
-createdBlock =
-    Object.selectionForField "Int" "createdBlock" [] Decode.int
-
-
-mints :
-    SelectionSet decodesTo Cambiatus.Object.Mint
-    -> SelectionSet (List decodesTo) Cambiatus.Object.Community
-mints object_ =
-    Object.selectionForCompositeField "mints" [] object_ (identity >> Decode.list)
-
-
-maxSupply : SelectionSet (Maybe Float) Cambiatus.Object.Community
-maxSupply =
-    Object.selectionForField "(Maybe Float)" "maxSupply" [] (Decode.float |> Decode.nullable)
-
-
-transferCount : SelectionSet Int Cambiatus.Object.Community
-transferCount =
-    Object.selectionForField "Int" "transferCount" [] Decode.int
-
-
-hasKyc : SelectionSet Bool Cambiatus.Object.Community
-hasKyc =
-    Object.selectionForField "Bool" "hasKyc" [] Decode.bool
+actionCount : SelectionSet Int Cambiatus.Object.Community
+actionCount =
+    Object.selectionForField "Int" "actionCount" [] Decode.int
 
 
 autoInvite : SelectionSet Bool Cambiatus.Object.Community
@@ -68,9 +29,84 @@ autoInvite =
     Object.selectionForField "Bool" "autoInvite" [] Decode.bool
 
 
+claimCount : SelectionSet Int Cambiatus.Object.Community
+claimCount =
+    Object.selectionForField "Int" "claimCount" [] Decode.int
+
+
+createdAt : SelectionSet Cambiatus.ScalarCodecs.DateTime Cambiatus.Object.Community
+createdAt =
+    Object.selectionForField "ScalarCodecs.DateTime" "createdAt" [] (Cambiatus.ScalarCodecs.codecs |> Cambiatus.Scalar.unwrapCodecs |> .codecDateTime |> .decoder)
+
+
+createdBlock : SelectionSet Int Cambiatus.Object.Community
+createdBlock =
+    Object.selectionForField "Int" "createdBlock" [] Decode.int
+
+
 createdEosAccount : SelectionSet String Cambiatus.Object.Community
 createdEosAccount =
     Object.selectionForField "String" "createdEosAccount" [] Decode.string
+
+
+createdTx : SelectionSet String Cambiatus.Object.Community
+createdTx =
+    Object.selectionForField "String" "createdTx" [] Decode.string
+
+
+creator : SelectionSet String Cambiatus.Object.Community
+creator =
+    Object.selectionForField "String" "creator" [] Decode.string
+
+
+description : SelectionSet String Cambiatus.Object.Community
+description =
+    Object.selectionForField "String" "description" [] Decode.string
+
+
+hasKyc : SelectionSet Bool Cambiatus.Object.Community
+hasKyc =
+    Object.selectionForField "Bool" "hasKyc" [] Decode.bool
+
+
+hasObjectives : SelectionSet Bool Cambiatus.Object.Community
+hasObjectives =
+    Object.selectionForField "Bool" "hasObjectives" [] Decode.bool
+
+
+hasShop : SelectionSet Bool Cambiatus.Object.Community
+hasShop =
+    Object.selectionForField "Bool" "hasShop" [] Decode.bool
+
+
+invitedReward : SelectionSet Float Cambiatus.Object.Community
+invitedReward =
+    Object.selectionForField "Float" "invitedReward" [] Decode.float
+
+
+inviterReward : SelectionSet Float Cambiatus.Object.Community
+inviterReward =
+    Object.selectionForField "Float" "inviterReward" [] Decode.float
+
+
+issuer : SelectionSet (Maybe String) Cambiatus.Object.Community
+issuer =
+    Object.selectionForField "(Maybe String)" "issuer" [] (Decode.string |> Decode.nullable)
+
+
+logo : SelectionSet String Cambiatus.Object.Community
+logo =
+    Object.selectionForField "String" "logo" [] Decode.string
+
+
+maxSupply : SelectionSet (Maybe Float) Cambiatus.Object.Community
+maxSupply =
+    Object.selectionForField "(Maybe Float)" "maxSupply" [] (Decode.float |> Decode.nullable)
+
+
+memberCount : SelectionSet Int Cambiatus.Object.Community
+memberCount =
+    Object.selectionForField "Int" "memberCount" [] Decode.int
 
 
 members :
@@ -80,59 +116,21 @@ members object_ =
     Object.selectionForCompositeField "members" [] object_ (identity >> Decode.list)
 
 
-issuer : SelectionSet (Maybe String) Cambiatus.Object.Community
-issuer =
-    Object.selectionForField "(Maybe String)" "issuer" [] (Decode.string |> Decode.nullable)
-
-
-orderCount : SelectionSet Int Cambiatus.Object.Community
-orderCount =
-    Object.selectionForField "Int" "orderCount" [] Decode.int
-
-
-actionCount : SelectionSet Int Cambiatus.Object.Community
-actionCount =
-    Object.selectionForField "Int" "actionCount" [] Decode.int
-
-
-claimCount : SelectionSet Int Cambiatus.Object.Community
-claimCount =
-    Object.selectionForField "Int" "claimCount" [] Decode.int
-
-
-memberCount : SelectionSet Int Cambiatus.Object.Community
-memberCount =
-    Object.selectionForField "Int" "memberCount" [] Decode.int
-
-
-creator : SelectionSet String Cambiatus.Object.Community
-creator =
-    Object.selectionForField "String" "creator" [] Decode.string
-
-
 minBalance : SelectionSet (Maybe Float) Cambiatus.Object.Community
 minBalance =
     Object.selectionForField "(Maybe Float)" "minBalance" [] (Decode.float |> Decode.nullable)
 
 
-invitedReward : SelectionSet Float Cambiatus.Object.Community
-invitedReward =
-    Object.selectionForField "Float" "invitedReward" [] Decode.float
+mints :
+    SelectionSet decodesTo Cambiatus.Object.Mint
+    -> SelectionSet (List decodesTo) Cambiatus.Object.Community
+mints object_ =
+    Object.selectionForCompositeField "mints" [] object_ (identity >> Decode.list)
 
 
-supply : SelectionSet (Maybe Float) Cambiatus.Object.Community
-supply =
-    Object.selectionForField "(Maybe Float)" "supply" [] (Decode.float |> Decode.nullable)
-
-
-inviterReward : SelectionSet Float Cambiatus.Object.Community
-inviterReward =
-    Object.selectionForField "Float" "inviterReward" [] Decode.float
-
-
-hasShop : SelectionSet Bool Cambiatus.Object.Community
-hasShop =
-    Object.selectionForField "Bool" "hasShop" [] Decode.bool
+name : SelectionSet String Cambiatus.Object.Community
+name =
+    Object.selectionForField "String" "name" [] Decode.string
 
 
 objectives :
@@ -142,18 +140,9 @@ objectives object_ =
     Object.selectionForCompositeField "objectives" [] object_ (identity >> Decode.list)
 
 
-description : SelectionSet String Cambiatus.Object.Community
-description =
-    Object.selectionForField "String" "description" [] Decode.string
-
-
-{-| List of users that are claim validators
--}
-validators :
-    SelectionSet decodesTo Cambiatus.Object.User
-    -> SelectionSet (List decodesTo) Cambiatus.Object.Community
-validators object_ =
-    Object.selectionForCompositeField "validators" [] object_ (identity >> Decode.list)
+orderCount : SelectionSet Int Cambiatus.Object.Community
+orderCount =
+    Object.selectionForField "Int" "orderCount" [] Decode.int
 
 
 orders :
@@ -161,6 +150,33 @@ orders :
     -> SelectionSet (List decodesTo) Cambiatus.Object.Community
 orders object_ =
     Object.selectionForCompositeField "orders" [] object_ (identity >> Decode.list)
+
+
+productCount : SelectionSet Int Cambiatus.Object.Community
+productCount =
+    Object.selectionForField "Int" "productCount" [] Decode.int
+
+
+subdomain :
+    SelectionSet decodesTo Cambiatus.Object.Subdomain
+    -> SelectionSet (Maybe decodesTo) Cambiatus.Object.Community
+subdomain object_ =
+    Object.selectionForCompositeField "subdomain" [] object_ (identity >> Decode.nullable)
+
+
+supply : SelectionSet (Maybe Float) Cambiatus.Object.Community
+supply =
+    Object.selectionForField "(Maybe Float)" "supply" [] (Decode.float |> Decode.nullable)
+
+
+symbol : SelectionSet String Cambiatus.Object.Community
+symbol =
+    Object.selectionForField "String" "symbol" [] Decode.string
+
+
+transferCount : SelectionSet Int Cambiatus.Object.Community
+transferCount =
+    Object.selectionForField "Int" "transferCount" [] Decode.int
 
 
 type alias TransfersOptionalArguments =
@@ -187,31 +203,27 @@ transfers fillInOptionals object_ =
     Object.selectionForCompositeField "transfers" optionalArgs object_ (identity >> Decode.nullable)
 
 
-productCount : SelectionSet Int Cambiatus.Object.Community
-productCount =
-    Object.selectionForField "Int" "productCount" [] Decode.int
-
-
-createdAt : SelectionSet Cambiatus.ScalarCodecs.DateTime Cambiatus.Object.Community
-createdAt =
-    Object.selectionForField "ScalarCodecs.DateTime" "createdAt" [] (Cambiatus.ScalarCodecs.codecs |> Cambiatus.Scalar.unwrapCodecs |> .codecDateTime |> .decoder)
-
-
-hasObjectives : SelectionSet Bool Cambiatus.Object.Community
-hasObjectives =
-    Object.selectionForField "Bool" "hasObjectives" [] Decode.bool
-
-
-createdTx : SelectionSet String Cambiatus.Object.Community
-createdTx =
-    Object.selectionForField "String" "createdTx" [] Decode.string
-
-
 type_ : SelectionSet (Maybe String) Cambiatus.Object.Community
 type_ =
     Object.selectionForField "(Maybe String)" "type" [] (Decode.string |> Decode.nullable)
 
 
-name : SelectionSet String Cambiatus.Object.Community
-name =
-    Object.selectionForField "String" "name" [] Decode.string
+uploads :
+    SelectionSet decodesTo Cambiatus.Object.Upload
+    -> SelectionSet (Maybe (List (Maybe decodesTo))) Cambiatus.Object.Community
+uploads object_ =
+    Object.selectionForCompositeField "uploads" [] object_ (identity >> Decode.nullable >> Decode.list >> Decode.nullable)
+
+
+{-| List of users that are claim validators
+-}
+validators :
+    SelectionSet decodesTo Cambiatus.Object.User
+    -> SelectionSet (List decodesTo) Cambiatus.Object.Community
+validators object_ =
+    Object.selectionForCompositeField "validators" [] object_ (identity >> Decode.list)
+
+
+website : SelectionSet (Maybe String) Cambiatus.Object.Community
+website =
+    Object.selectionForField "(Maybe String)" "website" [] (Decode.string |> Decode.nullable)

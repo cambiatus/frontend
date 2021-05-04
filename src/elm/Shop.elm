@@ -129,7 +129,7 @@ shopProfileSelectionSet =
 
 productQuery : Int -> SelectionSet (Maybe Product) RootQuery
 productQuery saleId =
-    Query.product { id = Cambiatus.Scalar.CustomId (String.fromInt saleId) } productSelection
+    Query.product { id = saleId } productSelection
 
 
 productsQuery : Filter -> Eos.Name -> Symbol -> SelectionSet (List Product) RootQuery

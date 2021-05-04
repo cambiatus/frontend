@@ -8,10 +8,6 @@ import Cambiatus.Scalar exposing (defaultCodecs)
 import Json.Decode as Decode exposing (Decoder)
 
 
-type alias CustomId =
-    Cambiatus.Scalar.CustomId
-
-
 type alias Date =
     Cambiatus.Scalar.Date
 
@@ -28,11 +24,10 @@ type alias NaiveDateTime =
     Cambiatus.Scalar.NaiveDateTime
 
 
-codecs : Cambiatus.Scalar.Codecs CustomId Date DateTime Id NaiveDateTime
+codecs : Cambiatus.Scalar.Codecs Date DateTime Id NaiveDateTime
 codecs =
     Cambiatus.Scalar.defineCodecs
-        { codecCustomId = defaultCodecs.codecCustomId
-        , codecDate = defaultCodecs.codecDate
+        { codecDate = defaultCodecs.codecDate
         , codecDateTime = defaultCodecs.codecDateTime
         , codecId = defaultCodecs.codecId
         , codecNaiveDateTime = defaultCodecs.codecNaiveDateTime

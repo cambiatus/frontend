@@ -20,9 +20,9 @@ import Json.Decode as Decode
 
 
 type alias Fragments decodesTo =
-    { onTransfer : SelectionSet decodesTo Cambiatus.Object.Transfer
+    { onMint : SelectionSet decodesTo Cambiatus.Object.Mint
     , onOrder : SelectionSet decodesTo Cambiatus.Object.Order
-    , onMint : SelectionSet decodesTo Cambiatus.Object.Mint
+    , onTransfer : SelectionSet decodesTo Cambiatus.Object.Transfer
     }
 
 
@@ -33,9 +33,9 @@ fragments :
     -> SelectionSet decodesTo Cambiatus.Union.NotificationType
 fragments selections =
     Object.exhaustiveFragmentSelection
-        [ Object.buildFragment "Transfer" selections.onTransfer
+        [ Object.buildFragment "Mint" selections.onMint
         , Object.buildFragment "Order" selections.onOrder
-        , Object.buildFragment "Mint" selections.onMint
+        , Object.buildFragment "Transfer" selections.onTransfer
         ]
 
 
@@ -44,7 +44,7 @@ update syntax to add `SelectionSet`s for the types you want to handle.
 -}
 maybeFragments : Fragments (Maybe decodesTo)
 maybeFragments =
-    { onTransfer = Graphql.SelectionSet.empty |> Graphql.SelectionSet.map (\_ -> Nothing)
+    { onMint = Graphql.SelectionSet.empty |> Graphql.SelectionSet.map (\_ -> Nothing)
     , onOrder = Graphql.SelectionSet.empty |> Graphql.SelectionSet.map (\_ -> Nothing)
-    , onMint = Graphql.SelectionSet.empty |> Graphql.SelectionSet.map (\_ -> Nothing)
+    , onTransfer = Graphql.SelectionSet.empty |> Graphql.SelectionSet.map (\_ -> Nothing)
     }

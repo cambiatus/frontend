@@ -489,31 +489,6 @@ encodeReadNotificationInput input =
         [ ( "id", Encode.int input.id |> Just ) ]
 
 
-buildTransferInput :
-    TransferInputRequiredFields
-    -> TransferInput
-buildTransferInput required =
-    { id = required.id }
-
-
-type alias TransferInputRequiredFields =
-    { id : Cambiatus.ScalarCodecs.CustomId }
-
-
-{-| Type for the TransferInput input object.
--}
-type alias TransferInput =
-    { id : Cambiatus.ScalarCodecs.CustomId }
-
-
-{-| Encode a TransferInput into a value that can be used as an argument.
--}
-encodeTransferInput : TransferInput -> Value
-encodeTransferInput input =
-    Encode.maybeObject
-        [ ( "id", (Cambiatus.ScalarCodecs.codecs |> Cambiatus.Scalar.unwrapEncoder .codecCustomId) input.id |> Just ) ]
-
-
 buildTransferSucceedInput :
     TransferSucceedInputRequiredFields
     -> TransferSucceedInput

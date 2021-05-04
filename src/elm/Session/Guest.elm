@@ -22,6 +22,7 @@ import Route exposing (Route)
 import Session.Shared as Shared exposing (Shared)
 import Translation
 import UpdateResult as UR
+import Url
 import View.Feedback as Feedback
 
 
@@ -296,6 +297,18 @@ type Msg
 
 update : Msg -> Model -> UpdateResult
 update msg ({ shared } as model) =
+    let
+        currentUrl =
+            shared.url
+
+        invalidCommunityRedirectUrl =
+            if String.contains "localhost:" (Url.toString currentUrl) && shared.useSubdomain then
+                { currentUrl | host = "cambiatus.localhost" }
+                    |> Url.toString
+
+            else
+                "https://cambiatus.com"
+    in
     case msg of
         CompletedLoadTranslation lang (Ok transl) ->
             { model | shared = Shared.loadTranslation (Ok ( lang, transl )) shared }
@@ -338,12 +351,12 @@ update msg ({ shared } as model) =
 
         CompletedLoadCommunityPreview (RemoteData.Success Nothing) ->
             UR.init model
-                |> UR.addCmd (Browser.Navigation.load "https://cambiatus.com")
+                |> UR.addCmd (Browser.Navigation.load invalidCommunityRedirectUrl)
 
         CompletedLoadCommunityPreview (RemoteData.Failure err) ->
             UR.init { model | community = RemoteData.Failure err }
                 |> UR.logGraphqlError msg err
-                |> UR.addCmd (Browser.Navigation.load "https://cambiatus.com")
+                |> UR.addCmd (Browser.Navigation.load invalidCommunityRedirectUrl)
 
         CompletedLoadCommunityPreview RemoteData.NotAsked ->
             UR.init { model | community = RemoteData.NotAsked }

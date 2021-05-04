@@ -19,15 +19,11 @@ import Graphql.SelectionSet exposing (SelectionSet)
 import Json.Decode as Decode
 
 
-{-| A cursor for use in pagination
--}
-cursor : SelectionSet String Cambiatus.Object.ClaimEdge
+cursor : SelectionSet (Maybe String) Cambiatus.Object.ClaimEdge
 cursor =
-    Object.selectionForField "String" "cursor" [] Decode.string
+    Object.selectionForField "(Maybe String)" "cursor" [] (Decode.string |> Decode.nullable)
 
 
-{-| The item at the end of the edge
--}
 node :
     SelectionSet decodesTo Cambiatus.Object.Claim
     -> SelectionSet (Maybe decodesTo) Cambiatus.Object.ClaimEdge

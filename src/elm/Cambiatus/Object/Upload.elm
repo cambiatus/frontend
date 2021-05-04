@@ -2,7 +2,7 @@
 -- https://github.com/dillonkearns/elm-graphql
 
 
-module Cambiatus.Object.TransferEdge exposing (..)
+module Cambiatus.Object.Upload exposing (..)
 
 import Cambiatus.InputObject
 import Cambiatus.Interface
@@ -19,13 +19,6 @@ import Graphql.SelectionSet exposing (SelectionSet)
 import Json.Decode as Decode
 
 
-cursor : SelectionSet (Maybe String) Cambiatus.Object.TransferEdge
-cursor =
-    Object.selectionForField "(Maybe String)" "cursor" [] (Decode.string |> Decode.nullable)
-
-
-node :
-    SelectionSet decodesTo Cambiatus.Object.Transfer
-    -> SelectionSet (Maybe decodesTo) Cambiatus.Object.TransferEdge
-node object_ =
-    Object.selectionForCompositeField "node" [] object_ (identity >> Decode.nullable)
+url : SelectionSet (Maybe String) Cambiatus.Object.Upload
+url =
+    Object.selectionForField "(Maybe String)" "url" [] (Decode.string |> Decode.nullable)

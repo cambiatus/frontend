@@ -133,5 +133,9 @@ type UnreadNotifications
     = UnreadNotifications
 
 
+type Upload
+    = Upload
+
+
 type User
     = User

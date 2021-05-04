@@ -218,7 +218,7 @@ objective requiredArgs object_ =
 
 
 type alias ProductRequiredArguments =
-    { id : Cambiatus.ScalarCodecs.CustomId }
+    { id : Int }
 
 
 {-| [Auth required] Gets a single product
@@ -228,7 +228,7 @@ product :
     -> SelectionSet decodesTo Cambiatus.Object.Product
     -> SelectionSet (Maybe decodesTo) RootQuery
 product requiredArgs object_ =
-    Object.selectionForCompositeField "product" [ Argument.required "id" requiredArgs.id (Cambiatus.ScalarCodecs.codecs |> Cambiatus.Scalar.unwrapEncoder .codecCustomId) ] object_ (identity >> Decode.nullable)
+    Object.selectionForCompositeField "product" [ Argument.required "id" requiredArgs.id Encode.int ] object_ (identity >> Decode.nullable)
 
 
 type alias ProductsOptionalArguments =
@@ -273,7 +273,7 @@ search requiredArgs object_ =
 
 
 type alias TransferRequiredArguments =
-    { input : Cambiatus.InputObject.TransferInput }
+    { id : Int }
 
 
 {-| [Auth required] A single Transfer
@@ -283,7 +283,7 @@ transfer :
     -> SelectionSet decodesTo Cambiatus.Object.Transfer
     -> SelectionSet (Maybe decodesTo) RootQuery
 transfer requiredArgs object_ =
-    Object.selectionForCompositeField "transfer" [ Argument.required "input" requiredArgs.input Cambiatus.InputObject.encodeTransferInput ] object_ (identity >> Decode.nullable)
+    Object.selectionForCompositeField "transfer" [ Argument.required "id" requiredArgs.id Encode.int ] object_ (identity >> Decode.nullable)
 
 
 type alias UserRequiredArguments =

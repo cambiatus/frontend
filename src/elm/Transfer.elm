@@ -240,7 +240,7 @@ transferQuery : Int -> SelectionSet (Maybe Transfer) RootQuery
 transferQuery tID =
     let
         args =
-            { input = { id = Cambiatus.Scalar.CustomId (String.fromInt tID) } }
+            { id = tID }
     in
     Cambiatus.Query.transfer args transferItemSelectionSet
 

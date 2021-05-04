@@ -49,6 +49,11 @@ logo =
     Object.selectionForField "String" "logo" [] Decode.string
 
 
+memberCount : SelectionSet Int Cambiatus.Object.CommunityPreview
+memberCount =
+    Object.selectionForField "Int" "memberCount" [] Decode.int
+
+
 name : SelectionSet String Cambiatus.Object.CommunityPreview
 name =
     Object.selectionForField "String" "name" [] Decode.string
@@ -64,3 +69,15 @@ subdomain object_ =
 symbol : SelectionSet String Cambiatus.Object.CommunityPreview
 symbol =
     Object.selectionForField "String" "symbol" [] Decode.string
+
+
+uploads :
+    SelectionSet decodesTo Cambiatus.Object.Upload
+    -> SelectionSet (Maybe (List (Maybe decodesTo))) Cambiatus.Object.CommunityPreview
+uploads object_ =
+    Object.selectionForCompositeField "uploads" [] object_ (identity >> Decode.nullable >> Decode.list >> Decode.nullable)
+
+
+website : SelectionSet (Maybe String) Cambiatus.Object.CommunityPreview
+website =
+    Object.selectionForField "(Maybe String)" "website" [] (Decode.string |> Decode.nullable)
