@@ -354,7 +354,7 @@ submit : Translators -> Kind -> Result Kind (List Normalized)
 submit translators kind =
     case kind of
         Single contact ->
-            submitSingle translators contact
+            submitSingle translators False contact
                 |> Result.mapError Single
                 |> Result.map List.singleton
 
@@ -363,10 +363,10 @@ submit translators kind =
                 |> Result.mapError Multiple
 
 
-submitSingle : Translators -> Basic -> Result Basic Normalized
-submitSingle translators basic =
+submitSingle : Translators -> Bool -> Basic -> Result Basic Normalized
+submitSingle translators acceptsEmpty basic =
     basic
-        |> Validate.validate (validator basic.contactType translators)
+        |> Validate.validate (validator basic.contactType acceptsEmpty translators)
         |> Result.mapError (\errors -> addErrors errors basic)
         |> Result.map (\valid -> normalize basic.supportedCountry valid)
 
@@ -377,7 +377,7 @@ submitMultiple translators basics =
         ( withError, valid ) =
             List.foldr
                 (\basic ( basicsAcc, normalizedsAcc ) ->
-                    case submitSingle translators basic of
+                    case submitSingle translators True basic of
                         Err basicWithErrors ->
                             ( basicWithErrors :: basicsAcc, normalizedsAcc )
 
@@ -388,6 +388,7 @@ submitMultiple translators basics =
                 )
                 ( [], [] )
                 basics
+                |> Debug.log "error and valid"
     in
     if List.length valid > 0 then
         Ok valid
@@ -764,11 +765,14 @@ instagramRegex =
         |> Maybe.withDefault Regex.never
 
 
-validateRegex : Regex -> String -> Validate.Validator String Basic
-validateRegex regex error =
+validateRegex : Regex -> String -> Bool -> Validate.Validator String Basic
+validateRegex regex error acceptsEmpty =
     Validate.fromErrors
         (\{ contact } ->
-            if Regex.contains regex contact then
+            if
+                Regex.contains regex contact
+                    || (acceptsEmpty && String.isEmpty contact)
+            then
                 []
 
             else
@@ -776,8 +780,8 @@ validateRegex regex error =
         )
 
 
-validatePhone : String -> Validate.Validator String Basic
-validatePhone error =
+validatePhone : String -> Bool -> Validate.Validator String Basic
+validatePhone error acceptsEmpty =
     Validate.fromErrors
         (\{ supportedCountry, contact } ->
             if
@@ -787,6 +791,7 @@ validatePhone error =
                     , types = PhoneNumber.anyType
                     }
                     contact
+                    || (acceptsEmpty && String.isEmpty contact)
             then
                 []
 
@@ -795,8 +800,8 @@ validatePhone error =
         )
 
 
-validator : ContactType -> Translators -> Validate.Validator String Basic
-validator contactType translators =
+validator : ContactType -> Bool -> Translators -> Validate.Validator String Basic
+validator contactType acceptsEmpty translators =
     let
         ( specificValidation, field ) =
             case contactType of
@@ -816,11 +821,19 @@ validator contactType translators =
             "contact_form.validation"
     in
     Validate.all
-        [ Validate.ifBlank .contact
-            (translators.t (String.join "." [ baseTranslation, field, "blank" ]))
-        , specificValidation
-            (translators.t (String.join "." [ baseTranslation, field, "invalid" ]))
-        ]
+        ((if acceptsEmpty then
+            []
+
+          else
+            [ Validate.ifBlank .contact
+                (translators.t (String.join "." [ baseTranslation, field, "blank" ]))
+            ]
+         )
+            ++ [ specificValidation
+                    (translators.t (String.join "." [ baseTranslation, field, "invalid" ]))
+                    acceptsEmpty
+               ]
+        )
 
 
 
