@@ -115,6 +115,7 @@
     "invalidPin": "PIN no vàlid",
     "unavailablePin": "El PIN no està disponible",
     "phone": "Utilitzeu un número de telèfon vàlid",
+    "invalid_image_file": "S'ha produït un error en penjar la imatge",
     "zipcode": "Codi postal no vàlid",
     "contracts": {
       "transfer": {
@@ -482,13 +483,22 @@
       "subtitle": "{{objectives}} objectius i {{actions}} accions",
       "new": "Crear un objectiu nou",
       "action_count": "{{actions}} accions",
+      "complete": "Completat",
       "edit": "Edita l'objectiu",
       "editor": {
         "not_found": "No trobat",
         "error": "Ui! Quelcom ha fallat",
         "description_label": "Quin és el teu objectiu?",
         "description_placeholder": "Defineix un objectiu que resolgui el problema al que s’enfronta la teva comunitat.",
-        "submit": "Guardar"
+        "submit": "Guardar",
+        "mark_as_complete": "Marca com a completat",
+        "error_marking_as_complete": "S'ha produït un error en marcar l'objectiu com a completat",
+        "modal": {
+          "title": "Marca l'objectiu com a complet",
+          "body": "No es pot desfer la marca de l’objectiu com a complet. Les accions d'aquest objectiu ja no estaran disponibles per a l'anàlisi. Segur que voleu marcar aquest objectiu com a complet?",
+          "confirm": "Sí",
+          "cancel": "No"
+        }
       },
       "disabled": {
         "description": "Les reclamacions, les accions i els objectius estan desactivats en aquesta comunitat."
@@ -1012,7 +1022,17 @@
       "multiple": {
         "success": "Els vostres contactes s'han desat correctament",
         "failure": "S'ha produït un error en intentar desar els vostres contactes"
+      },
+      "delete": {
+        "success": "El contacte s'ha suprimit correctament",
+        "failure": "S'ha produït un error en intentar suprimir el contacte"
       }
+    },
+    "delete": {
+      "title": "Suprimeix",
+      "body": "Confirmes que vols suprimir la teva informació de contacte?",
+      "cancel": "No",
+      "accept": "Sí"
     }
   }
 }

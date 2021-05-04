@@ -441,6 +441,7 @@ update msg model loggedIn =
         CompletedAvatarUpload (Err err) ->
             UR.init model
                 |> UR.logHttpError msg err
+                |> UR.addExt (LoggedIn.ShowFeedback Feedback.Failure (t "error.invalid_image_file"))
 
 
 modelToProfile : Model -> Profile.Model -> Profile.Model

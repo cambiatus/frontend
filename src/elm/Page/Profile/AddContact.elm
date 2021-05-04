@@ -51,15 +51,19 @@ update msg model ({ shared, authToken } as loggedIn) =
                 |> UR.init
 
         GotContactMsg subMsg ->
-            case model of
-                RemoteData.Success contactModel ->
+            case ( model, LoggedIn.profile loggedIn ) of
+                ( RemoteData.Success contactModel, Just profile_ ) ->
                     let
                         ( newModel, cmd, newContacts ) =
-                            Contact.update subMsg contactModel shared authToken
+                            Contact.update subMsg
+                                contactModel
+                                shared
+                                authToken
+                                profile_.contacts
 
                         actOnNewContacts updateResult =
                             case newContacts of
-                                Contact.WithContacts successMessage contacts ->
+                                Contact.WithContacts successMessage contacts shouldRedirect ->
                                     case loggedIn.profile of
                                         RemoteData.Success profile ->
                                             updateResult
@@ -69,7 +73,12 @@ update msg model ({ shared, authToken } as loggedIn) =
                                                         |> LoggedIn.ProfileLoaded
                                                         |> LoggedIn.ExternalBroadcast
                                                     )
-                                                |> UR.addCmd (Route.replaceUrl shared.navKey Route.Profile)
+                                                |> (if shouldRedirect then
+                                                        UR.addCmd (Route.replaceUrl shared.navKey Route.Profile)
+
+                                                    else
+                                                        identity
+                                                   )
 
                                         _ ->
                                             updateResult

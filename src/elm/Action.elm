@@ -39,6 +39,7 @@ import Json.Decode as Decode
 import Json.Encode as Encode exposing (Value)
 import Ports
 import Profile
+import Route
 import Session.Shared exposing (Shared, Translators)
 import Sha256 exposing (sha256)
 import Task
@@ -216,17 +217,11 @@ update isPinConfirmed shared uploadFile selectedCommunity accName msg model =
                 |> UR.init
                 |> UR.addCmd (Task.perform GotProofTime Time.now)
 
-        ( GotActionClaimedResponse resp, _ ) ->
+        ( GotActionClaimedResponse (Ok _), _ ) ->
             let
                 feedback =
-                    case resp of
-                        Ok _ ->
-                            tr "dashboard.check_claim.success"
-                                [ ( "symbolCode", Eos.symbolToSymbolCodeString selectedCommunity ) ]
-                                |> Success
-
-                        Err _ ->
-                            Failure (t "dashboard.check_claim.failure")
+                    tr "dashboard.check_claim.success" [ ( "symbolCode", Eos.symbolToSymbolCodeString selectedCommunity ) ]
+                        |> Success
             in
             { model
                 | status = NotAsked
@@ -234,6 +229,24 @@ update isPinConfirmed shared uploadFile selectedCommunity accName msg model =
                 , needsPinConfirmation = False
             }
                 |> UR.init
+                |> UR.addCmd
+                    (Eos.nameToString accName
+                        |> Route.ProfileClaims
+                        |> Route.pushUrl shared.navKey
+                    )
+
+        ( GotActionClaimedResponse (Err val), _ ) ->
+            let
+                feedback =
+                    Failure (t "dashboard.check_claim.failure")
+            in
+            { model
+                | status = NotAsked
+                , feedback = Just feedback
+                , needsPinConfirmation = False
+            }
+                |> UR.init
+                |> UR.logDebugValue msg val
 
         ( ClaimConfirmationClosed, _ ) ->
             { model
@@ -345,7 +358,7 @@ update isPinConfirmed shared uploadFile selectedCommunity accName msg model =
         ( PhotoUploaded (Err error), PhotoUploaderShowed action (Proof _ proofCode) ) ->
             { model
                 | status = PhotoUploaderShowed action (Proof (UploadFailed error) proofCode)
-                , feedback = Nothing
+                , feedback = Just <| Failure (t "error.invalid_image_file")
                 , needsPinConfirmation = False
             }
                 |> UR.init
@@ -376,6 +389,7 @@ type alias Objective =
     { id : Int
     , description : String
     , community : Community
+    , isCompleted : Bool
     }
 
 
@@ -385,6 +399,7 @@ objectiveSelectionSet =
         |> with Cambiatus.Object.Objective.id
         |> with Cambiatus.Object.Objective.description
         |> with (Cambiatus.Object.Objective.community communitySelectionSet)
+        |> with Cambiatus.Object.Objective.isCompleted
 
 
 selectionSet : SelectionSet Action Cambiatus.Object.Action
@@ -398,6 +413,7 @@ selectionSet =
                     { id = o.id
                     , description = o.description
                     , community = o.community
+                    , isCompleted = o.isCompleted
                     }
                 )
                 (ActionObject.objective objectiveSelectionSet)

@@ -115,6 +115,7 @@
     "invalidPin": "PIN inválido",
     "unavailablePin": "PIN está indisponível",
     "phone": "Por favor insira um número de telefone válido",
+    "invalid_image_file": "Erro ao fazer upload de imagem",
     "zipcode": "CEP inválido",
     "contracts": {
       "transfer": {
@@ -486,13 +487,22 @@
       "subtitle": "{{objectives}} objetivos e {{actions}} ações",
       "new": "Criar novo objetivo",
       "action_count": "{{actions}} ações",
+      "complete": "Completado",
       "edit": "Editar objetivo",
       "editor": {
         "not_found": "Não encontrado",
         "error": "Ops algo deu errado!",
         "description_label": "Qual o seu objetivo?",
         "description_placeholder": "Defina uma meta que ajude a resolver o problema da comunidade.",
-        "submit": "Salvar"
+        "submit": "Salvar",
+        "mark_as_complete": "Marcar como completo",
+        "error_marking_as_complete": "Algo de errado aconteceu ao marcar seu objetivo como completo",
+        "modal": {
+          "title": "Marcar objetivo como completo",
+          "body": "Marcar o objectivo como completo não pode ser desfeito. Ações deste objetivo não estarão mais disponíveis para análise. Você quer mesmo marcar este objetivo como completo?",
+          "confirm": "Sim",
+          "cancel": "Não"
+        }
       },
       "disabled": {
         "description": "Reivindicações, ações e objetivos estão desativados nesta comunidade."
@@ -1014,7 +1024,17 @@
       "multiple": {
         "success": "Seus contatos foram salvos com sucesso",
         "failure": "Algo deu errado ao tentar salvar seus contatos"
+      },
+      "delete": {
+        "success": "Seu contato foi removido com sucesso",
+        "failure": "Algo deu errado ao tentar excluir seu contato"
       }
+    },
+    "delete": {
+      "title": "Excluir",
+      "body": "Quer mesmo excluir sua informação de contato?",
+      "cancel": "Não",
+      "accept": "Sim"
     }
   }
 }

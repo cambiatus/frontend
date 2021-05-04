@@ -46,6 +46,7 @@ import View.Components
 import View.Form
 import View.Form.Input as Input
 import View.Form.Select as Select
+import View.Modal as Modal
 
 
 
@@ -55,6 +56,7 @@ import View.Form.Select as Select
 type alias Model =
     { state : UpdatedData
     , kind : Kind
+    , contactTypeToDelete : Maybe ContactType
     }
 
 
@@ -62,6 +64,7 @@ initSingle : Model
 initSingle =
     { state = RemoteData.NotAsked
     , kind = Single (initBasic defaultContactType)
+    , contactTypeToDelete = Nothing
     }
 
 
@@ -79,6 +82,7 @@ initMultiple initialContacts =
                 )
                 ContactType.list
             )
+    , contactTypeToDelete = Nothing
     }
 
 
@@ -92,7 +96,7 @@ type Kind
 
 
 type alias Basic =
-    { country : Country
+    { supportedCountry : SupportedCountry
     , contactType : ContactType
     , contact : String
     , errors : Maybe (List String)
@@ -102,7 +106,7 @@ type alias Basic =
 
 initBasic : ContactType -> Basic
 initBasic contactType =
-    { country = Countries.countryBR
+    { supportedCountry = defaultCountry
     , contactType = contactType
     , contact = ""
     , errors = Nothing
@@ -137,13 +141,13 @@ initBasicWith ((Normalized { contactType }) as normalized) =
     in
     { initial
         | contact = newContact
-        , country =
+        , supportedCountry =
             maybeCountry
-                |> Maybe.withDefault Countries.countryBR
+                |> Maybe.withDefault defaultCountry
     }
 
 
-countryFromNormalized : Normalized -> ( Maybe Country, String )
+countryFromNormalized : Normalized -> ( Maybe SupportedCountry, String )
 countryFromNormalized (Normalized { contactType, contact }) =
     if usesPhone contactType then
         let
@@ -153,16 +157,16 @@ countryFromNormalized (Normalized { contactType, contact }) =
                     |> LE.takeWhile ((/=) ' ')
                     |> String.fromList
 
-            country =
-                List.filter (.countryCode >> (==) countryCode) supportedCountries
+            supportedCountry =
+                List.filter (.country >> .countryCode >> (==) countryCode) supportedCountries
                     |> List.head
 
             newContact =
-                Maybe.map (.countryCode >> String.length >> (+) 1) country
+                Maybe.map (.country >> .countryCode >> String.length >> (+) 1) supportedCountry
                     |> Maybe.withDefault 0
                     |> (\n -> String.dropLeft n contact |> String.trim)
         in
-        ( country, newContact )
+        ( supportedCountry, newContact )
 
     else
         ( Nothing, contact )
@@ -198,7 +202,7 @@ type alias UpdatedData =
 
 type ContactResponse
     = NotAsked
-    | WithContacts String (List Normalized)
+    | WithContacts String (List Normalized) Bool
     | WithError String
 
 
@@ -207,22 +211,26 @@ type ContactResponse
 
 
 type Msg
-    = SelectedCountry ContactType Country
+    = SelectedCountry ContactType SupportedCountry
     | ClickedToggleContactFlags ContactType
     | EnteredContactText ContactType String
+    | ClickedDeleteContact ContactType
+    | ClosedDeleteModal
+    | ConfirmedDeleteContact ContactType
     | EnteredContactOption String
     | ClickedSubmit
     | CompletedUpdateContact UpdatedData
+    | CompletedDeleteContact UpdatedData
 
 
-update : Msg -> Model -> Shared -> String -> ( Model, Cmd Msg, ContactResponse )
-update msg model ({ translators } as shared) authToken =
+update : Msg -> Model -> Shared -> String -> List Normalized -> ( Model, Cmd Msg, ContactResponse )
+update msg model ({ translators } as shared) authToken profileContacts =
     let
         toggleFlags ({ showFlags } as contact) =
             { contact | showFlags = not showFlags }
 
         setCountry newCountry contact =
-            { contact | country = newCountry, errors = Nothing }
+            { contact | supportedCountry = newCountry, errors = Nothing }
 
         setContact newContact contact =
             { contact | contact = newContact }
@@ -239,6 +247,14 @@ update msg model ({ translators } as shared) authToken =
                             updateIfContactType contactType updateFn contacts
                                 |> Multiple
             }
+
+        feedbackScope =
+            case model.kind of
+                Single _ ->
+                    "single"
+
+                Multiple _ ->
+                    "multiple"
     in
     case msg of
         SelectedCountry contactType country ->
@@ -256,6 +272,45 @@ update msg model ({ translators } as shared) authToken =
         EnteredContactText contactType newContact ->
             ( updateKind contactType (setContact newContact)
             , Cmd.none
+            , NotAsked
+            )
+
+        ClosedDeleteModal ->
+            ( { model | contactTypeToDelete = Nothing }
+            , Cmd.none
+            , NotAsked
+            )
+
+        ClickedDeleteContact contactType ->
+            ( { model | contactTypeToDelete = Just contactType }
+            , Cmd.none
+            , NotAsked
+            )
+
+        ConfirmedDeleteContact contactTypeToDelete ->
+            let
+                withoutContact =
+                    updateKind contactTypeToDelete
+                        (\basic ->
+                            { basic
+                                | errors = Nothing
+                                , contact = ""
+                            }
+                        )
+
+                newContacts =
+                    List.filter
+                        (\(Normalized { contactType }) -> contactType /= contactTypeToDelete)
+                        profileContacts
+            in
+            ( { withoutContact
+                | contactTypeToDelete = Nothing
+                , state = RemoteData.Loading
+              }
+            , Api.Graphql.mutation shared
+                (Just authToken)
+                (mutation newContacts)
+                CompletedDeleteContact
             , NotAsked
             )
 
@@ -305,14 +360,6 @@ update msg model ({ translators } as shared) authToken =
 
         CompletedUpdateContact result ->
             let
-                feedbackScope =
-                    case model.kind of
-                        Single _ ->
-                            "single"
-
-                        Multiple _ ->
-                            "multiple"
-
                 feedbackString isSuccess =
                     String.join "."
                         [ "contact_form.feedback"
@@ -329,7 +376,39 @@ update msg model ({ translators } as shared) authToken =
             , Cmd.none
             , case result of
                 RemoteData.Success (Just profile) ->
-                    WithContacts (feedbackString True) profile.contacts
+                    WithContacts (feedbackString True) profile.contacts True
+
+                RemoteData.Success Nothing ->
+                    WithError (feedbackString False)
+
+                RemoteData.Failure _ ->
+                    WithError (feedbackString False)
+
+                RemoteData.NotAsked ->
+                    NotAsked
+
+                RemoteData.Loading ->
+                    NotAsked
+            )
+
+        CompletedDeleteContact result ->
+            let
+                feedbackString isSuccess =
+                    String.join "."
+                        [ "contact_form.feedback.delete"
+                        , if isSuccess then
+                            "success"
+
+                          else
+                            "failure"
+                        ]
+                        |> translators.t
+            in
+            ( { model | state = RemoteData.NotAsked }
+            , Cmd.none
+            , case result of
+                RemoteData.Success (Just profile) ->
+                    WithContacts (feedbackString True) profile.contacts False
 
                 RemoteData.Success Nothing ->
                     WithError (feedbackString False)
@@ -368,7 +447,7 @@ submitSingle translators basic =
     basic
         |> Validate.validate (validator basic.contactType translators)
         |> Result.mapError (\errors -> addErrors errors basic)
-        |> Result.map (\valid -> normalize basic.country valid)
+        |> Result.map (\valid -> normalize basic.supportedCountry valid)
 
 
 submitMultiple : Translators -> List Basic -> Result (List Basic) (List Normalized)
@@ -389,7 +468,10 @@ submitMultiple translators basics =
                 ( [], [] )
                 basics
     in
-    if List.length valid > 0 then
+    if List.all (.contact >> String.isEmpty) basics then
+        Ok []
+
+    else if List.length valid > 0 then
         Ok valid
 
     else
@@ -440,35 +522,76 @@ view translators model =
                         submitText
                 ]
     in
-    (case model.kind of
-        Single contact ->
-            [ viewContactTypeSelect translators contact.contactType
-            , viewInput translators contact
+    div
+        [ classList
+            [ ( "container mx-auto", isMultiple model.kind )
             ]
-
-        Multiple contacts ->
-            List.map (viewInputWithBackground translators) contacts
-    )
-        ++ [ submitButton
-           , if RemoteData.isFailure model.state then
-                text (translators.t "contact_form.error")
-
-             else
-                text ""
-           ]
-        |> Html.form
-            [ class "w-full md:w-5/6 mx-auto mt-12"
-            , classList [ ( "px-4 lg:w-2/3", isMultiple model.kind ) ]
+        ]
+        [ Html.form
+            [ class "mt-12"
+            , classList
+                [ ( "px-4", isMultiple model.kind )
+                , ( "w-full md:w-5/6 mx-auto lg:w-2/3", not (isMultiple model.kind) )
+                ]
             , onSubmit ClickedSubmit
             ]
+            ((case model.kind of
+                Single contact ->
+                    [ viewContactTypeSelect translators contact.contactType
+                    , viewInput translators contact
+                    ]
+
+                Multiple contacts ->
+                    List.map (viewInputWithBackground translators) contacts
+             )
+                ++ [ submitButton
+                   , if RemoteData.isFailure model.state then
+                        text (translators.t "contact_form.error")
+
+                     else
+                        text ""
+                   ]
+            )
+        , case model.contactTypeToDelete of
+            Just contactType ->
+                Modal.initWith
+                    { closeMsg = ClosedDeleteModal
+                    , isVisible = True
+                    }
+                    |> Modal.withHeader (translators.t "contact_form.delete.title")
+                    |> Modal.withBody [ text (translators.t "contact_form.delete.body") ]
+                    |> Modal.withFooter
+                        [ button
+                            [ class "modal-cancel"
+                            , onClick ClosedDeleteModal
+                            ]
+                            [ text (translators.t "contact_form.delete.cancel") ]
+                        , button
+                            [ class "modal-accept"
+                            , onClick (ConfirmedDeleteContact contactType)
+                            ]
+                            [ text (translators.t "contact_form.delete.accept") ]
+                        ]
+                    |> Modal.toHtml
+
+            Nothing ->
+                text ""
+        ]
 
 
 viewInputWithBackground : Translators -> Basic -> Html Msg
 viewInputWithBackground translators basic =
     div [ class "bg-gray-100 p-4 pb-0 rounded mb-4" ]
-        [ div [ class "font-menu font-medium flex items-center mb-4" ]
-            [ contactTypeToIcon "mr-2" False basic.contactType
-            , text (contactTypeToString translators basic.contactType)
+        [ div [ class "font-menu font-medium flex items-center mb-4 justify-between" ]
+            [ div [ class "flex items-center" ]
+                [ contactTypeToIcon "mr-2" False basic.contactType
+                , text (contactTypeToString translators basic.contactType)
+                ]
+            , button
+                [ onClick (ClickedDeleteContact basic.contactType)
+                , type_ "button"
+                ]
+                [ Icons.trash "" ]
             ]
         , viewInput translators basic
         ]
@@ -581,22 +704,22 @@ viewFlagsSelect : Translators -> Basic -> Html Msg
 viewFlagsSelect { t } basic =
     let
         countryOptions =
-            basic.country
-                :: List.filter (\country -> country /= basic.country) supportedCountries
+            basic.supportedCountry
+                :: List.filter (\country -> country /= basic.supportedCountry) supportedCountries
 
-        flag classes country =
+        flag classes supportedCountry =
             button
                 [ class ("w-full flex items-center space-x-2 text-menu " ++ classes)
-                , onClick (SelectedCountry basic.contactType country)
+                , onClick (SelectedCountry basic.contactType supportedCountry)
                 , type_ "button"
                 ]
                 [ img
                     [ class "w-7"
-                    , src (countryToFlag country)
+                    , src supportedCountry.flagIcon
                     ]
                     []
                 , p [ class "justify-self-center text-left", style "min-width" "4ch" ]
-                    [ text ("+" ++ country.countryCode) ]
+                    [ text ("+" ++ supportedCountry.country.countryCode) ]
                 ]
 
         id =
@@ -605,7 +728,7 @@ viewFlagsSelect { t } basic =
     div [ class "mb-10 flex-shrink-0", Html.Attributes.id id ]
         [ if basic.showFlags then
             button
-                [ class "absolute top-0 left-0 w-full h-full cursor-default z-40"
+                [ class "fixed top-0 left-0 h-screen w-screen cursor-default z-40"
                 , onClick (ClickedToggleContactFlags basic.contactType)
                 , type_ "button"
                 ]
@@ -620,11 +743,11 @@ viewFlagsSelect { t } basic =
             , onClick (ClickedToggleContactFlags basic.contactType)
             , type_ "button"
             ]
-            [ flag "" basic.country
+            [ flag "" basic.supportedCountry
             , if basic.showFlags then
                 div
-                    [ class "absolute form-input -mx-px inset-x-0 top-0 space-y-4 z-50" ]
-                    (List.map (flag "mt-px") countryOptions)
+                    [ class "absolute form-input -mx-px inset-x-0 top-0 space-y-4 z-50 h-44 overflow-auto" ]
+                    (List.map (flag "mt-1") countryOptions)
 
               else
                 text ""
@@ -644,7 +767,7 @@ viewPhoneInput ({ t, tr } as translators) basic =
             , placeholder =
                 Just
                     (tr "contact_form.phone.placeholder"
-                        [ ( "example_number", phonePlaceholder basic.country ) ]
+                        [ ( "example_number", basic.supportedCountry.phonePlaceholder ) ]
                     )
             , problems = basic.errors
             , translators = translators
@@ -717,15 +840,15 @@ isMultiple kind =
             True
 
         Single _ ->
-            True
+            False
 
 
 
 -- NORMALIZING
 
 
-normalize : Country -> Validate.Valid Basic -> Normalized
-normalize country validatedContact =
+normalize : SupportedCountry -> Validate.Valid Basic -> Normalized
+normalize { country } validatedContact =
     let
         { contactType, contact } =
             Validate.fromValid validatedContact
@@ -779,10 +902,10 @@ validateRegex regex error =
 validatePhone : String -> Validate.Validator String Basic
 validatePhone error =
     Validate.fromErrors
-        (\{ country, contact } ->
+        (\{ supportedCountry, contact } ->
             if
                 PhoneNumber.valid
-                    { defaultCountry = country
+                    { defaultCountry = supportedCountry.country
                     , otherCountries = []
                     , types = PhoneNumber.anyType
                     }
@@ -827,49 +950,53 @@ validator contactType translators =
 -- COUNTRY
 
 
-supportedCountries : List Country
+type alias SupportedCountry =
+    { country : Country
+    , phonePlaceholder : String
+    , flagIcon : String
+    }
+
+
+defaultCountry : SupportedCountry
+defaultCountry =
+    { country = Countries.countryBR
+    , phonePlaceholder = "11 91234 5678"
+    , flagIcon = "/icons/flag-brazil.svg"
+    }
+
+
+supportedCountries : List SupportedCountry
 supportedCountries =
-    [ Countries.countryBR
-    , Countries.countryCR
-    , Countries.countryET
-    , Countries.countryUS
+    [ defaultCountry
+    , { country = Countries.countryCA
+      , phonePlaceholder = "123 456 7890"
+      , flagIcon = "/icons/flag-canada.svg"
+      }
+    , { country = Countries.countryCR
+      , phonePlaceholder = "8123 4567"
+      , flagIcon = "/icons/flag-costa-rica.svg"
+      }
+    , { country = Countries.countryET
+      , phonePlaceholder = "91 234 5678"
+      , flagIcon = "/icons/flag-ethiopia.svg"
+      }
+    , { country = Countries.countryGB
+      , phonePlaceholder = "20 1234 5678"
+      , flagIcon = "/icons/flag-united-kingdom.svg"
+      }
+    , { country = Countries.countryNZ
+      , phonePlaceholder = "2123 4567(89)"
+      , flagIcon = "/icons/flag-new-zealand.svg"
+      }
+    , { country = Countries.countryPT
+      , phonePlaceholder = "12 345 6789"
+      , flagIcon = "/icons/flag-portugal.svg"
+      }
+    , { country = Countries.countryUS
+      , phonePlaceholder = "209 123 4567"
+      , flagIcon = "/icons/flag-usa.svg"
+      }
     ]
-
-
-countryToFlag : Country -> String
-countryToFlag country =
-    if country == Countries.countryBR then
-        "/icons/flag-brazil.svg"
-
-    else if country == Countries.countryCR then
-        "/icons/flag-costa-rica.svg"
-
-    else if country == Countries.countryET then
-        "/icons/flag-ethiopia.svg"
-
-    else if country == Countries.countryUS then
-        "/icons/flag-usa.svg"
-
-    else
-        ""
-
-
-phonePlaceholder : Country -> String
-phonePlaceholder country =
-    if country == Countries.countryBR then
-        "11 91234 5678"
-
-    else if country == Countries.countryCR then
-        "8123 4567"
-
-    else if country == Countries.countryET then
-        "91 234 5678"
-
-    else if country == Countries.countryUS then
-        "209 123 4567"
-
-    else
-        ""
 
 
 

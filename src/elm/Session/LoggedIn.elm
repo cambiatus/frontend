@@ -547,7 +547,7 @@ viewHeader page ({ shared } as model) profile_ =
                     , if model.showLanguageItems then
                         div [ class "ml-10 mb-2" ]
                             (button
-                                [ class "flex block px-4 py-2 text-gray justify-between items-center text-indigo-500 font-bold text-xs"
+                                [ class "flex px-4 py-2 text-gray items-center text-indigo-500 font-bold text-xs"
                                 ]
                                 [ Shared.langFlag shared.language, text (String.toUpper shared.language) ]
                                 :: Shared.viewLanguageItems shared ClickedLanguage
