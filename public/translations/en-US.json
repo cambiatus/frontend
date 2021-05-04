@@ -469,13 +469,22 @@
       "subtitle": "{{objectives}} objectives and {{actions}} actions",
       "new": "Create new objective",
       "action_count": "{{actions}} actions",
+      "complete": "Complete",
       "edit": "Edit objective",
       "editor": {
         "not_found": "Not Found",
         "error": "Ops something went wrong!",
         "description_label": "What is your objective?",
         "description_placeholder": "Set a goal that helps resolve the community problem.",
-        "submit": "Save"
+        "submit": "Save",
+        "mark_as_complete": "Mark as complete",
+        "error_marking_as_complete": "Something went wrong when marking your objective as completed",
+        "modal": {
+          "title": "Mark objective as complete",
+          "body": "Marking the objective as complete cannot be undone. Actions from this objective will no longer be available for analysis. Do you really want to mark this objective as complete?",
+          "confirm": "Yes",
+          "cancel": "No"
+        }
       },
       "disabled": {
         "description": "Claims, Actions, and Objectives are disabled in this community."

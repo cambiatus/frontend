@@ -157,6 +157,12 @@ viewObjective ({ shared } as loggedIn) model community index objective =
                                 [ ( "actions", objective.actions |> List.length |> String.fromInt ) ]
                             )
                         ]
+                    , if objective.isCompleted then
+                        p [ class "bg-green rounded-sm text-center inline-block px-7 py-1 text-xs text-black uppercase mt-4 tracking-wide" ]
+                            [ text_ "community.objectives.complete" ]
+
+                      else
+                        text ""
                     ]
                 , button
                     [ class "h-8" ]
@@ -173,11 +179,13 @@ viewObjective ({ shared } as loggedIn) model community index objective =
                 [ div [ class "flex flex-wrap mt-2" ]
                     [ a
                         [ class "button button-secondary button-sm w-full sm:w-48 mt-2 px-1 sm:mr-4"
+                        , classList [ ( "button-disabled", objective.isCompleted ) ]
                         , Route.href (Route.EditObjective model.communityId objective.id)
                         ]
                         [ text_ "community.objectives.edit" ]
                     , a
                         [ class "button button-secondary button-sm w-full sm:w-48 mt-2 px-1 mb-4"
+                        , classList [ ( "button-disabled", objective.isCompleted ) ]
                         , Route.href
                             (Route.NewAction community.symbol objective.id)
                         ]
@@ -315,6 +323,7 @@ viewAction ({ shared } as loggedIn) model objectiveId action =
                     ]
                 , a
                     [ class "button button-primary button-sm w-full sm:w-40 mt-8"
+                    , classList [ ( "button-disabled", action.objective.isCompleted ) ]
                     , Route.href (Route.EditAction model.communityId objectiveId action.id)
                     ]
                     [ text_ "community.actions.edit" ]

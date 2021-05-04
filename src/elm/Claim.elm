@@ -351,7 +351,9 @@ viewClaimCard { shared, accountName } claim now =
             , if
                 isValidated claim accountName
                     || not (isValidator accountName claim)
-                    || (Action.isClosed claim.action now || Action.isPastDeadline claim.action now)
+                    || claim.action.isCompleted
+                    || Action.isClosed claim.action now
+                    || Action.isPastDeadline claim.action now
               then
                 a
                     [ class "button button-secondary w-full font-medium mb-2"

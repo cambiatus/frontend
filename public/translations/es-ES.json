@@ -473,13 +473,22 @@
       "subtitle": "{{objectives}} objetivos y {{actions}} acciones",
       "new": "Crear nuevo objetivo",
       "action_count": "{{actions}} acciones",
+      "complete": "Terminado",
       "edit": "Editar objetivo",
       "editor": {
         "not_found": "No encontrado",
         "error": "¡Huy! Algo salió mal",
         "description_label": "¿Cual es tu objetivo?",
         "description_placeholder": "Define un objetivo que atienda el problema que enfrenta tu comunidad.",
-        "submit": "Salvar"
+        "submit": "Salvar",
+        "mark_as_complete": "Marcar como completo",
+        "error_marking_as_complete": "Algo salió mal al marcar tu objetivo como completado",
+        "modal": {
+          "title": "Marcar objetivo como completo",
+          "body": "Marcar el objetivo como completo no se puede deshacer. Las acciones de este objetivo ya no estarán disponibles para su análisis. ¿De verdad quieres marcar este objetivo como completo?",
+          "confirm": "Sí",
+          "cancel": "No"
+        }
       },
       "disabled": {
         "description": "Las reivindicaciones, las acciones y los objetivos están deshabilitados en esta comunidad."
