@@ -202,7 +202,7 @@ type alias UpdatedData =
 
 type ContactResponse
     = NotAsked
-    | WithContacts String (List Normalized)
+    | WithContacts String (List Normalized) Bool
     | WithError String
 
 
@@ -220,10 +220,11 @@ type Msg
     | EnteredContactOption String
     | ClickedSubmit
     | CompletedUpdateContact UpdatedData
+    | CompletedDeleteContact UpdatedData
 
 
-update : Msg -> Model -> Shared -> String -> ( Model, Cmd Msg, ContactResponse )
-update msg model ({ translators } as shared) authToken =
+update : Msg -> Model -> Shared -> String -> List Normalized -> ( Model, Cmd Msg, ContactResponse )
+update msg model ({ translators } as shared) authToken profileContacts =
     let
         toggleFlags ({ showFlags } as contact) =
             { contact | showFlags = not showFlags }
@@ -246,6 +247,14 @@ update msg model ({ translators } as shared) authToken =
                             updateIfContactType contactType updateFn contacts
                                 |> Multiple
             }
+
+        feedbackScope =
+            case model.kind of
+                Single _ ->
+                    "single"
+
+                Multiple _ ->
+                    "multiple"
     in
     case msg of
         SelectedCountry contactType country ->
@@ -278,13 +287,30 @@ update msg model ({ translators } as shared) authToken =
             , NotAsked
             )
 
-        ConfirmedDeleteContact contactType ->
+        ConfirmedDeleteContact contactTypeToDelete ->
             let
                 withoutContact =
-                    updateKind contactType (setContact "")
+                    updateKind contactTypeToDelete
+                        (\basic ->
+                            { basic
+                                | errors = Nothing
+                                , contact = ""
+                            }
+                        )
+
+                newContacts =
+                    List.filter
+                        (\(Normalized { contactType }) -> contactType /= contactTypeToDelete)
+                        profileContacts
             in
-            ( { withoutContact | contactTypeToDelete = Nothing }
-            , Cmd.none
+            ( { withoutContact
+                | contactTypeToDelete = Nothing
+                , state = RemoteData.Loading
+              }
+            , Api.Graphql.mutation shared
+                (Just authToken)
+                (mutation newContacts)
+                CompletedDeleteContact
             , NotAsked
             )
 
@@ -334,14 +360,6 @@ update msg model ({ translators } as shared) authToken =
 
         CompletedUpdateContact result ->
             let
-                feedbackScope =
-                    case model.kind of
-                        Single _ ->
-                            "single"
-
-                        Multiple _ ->
-                            "multiple"
-
                 feedbackString isSuccess =
                     String.join "."
                         [ "contact_form.feedback"
@@ -358,7 +376,40 @@ update msg model ({ translators } as shared) authToken =
             , Cmd.none
             , case result of
                 RemoteData.Success (Just profile) ->
-                    WithContacts (feedbackString True) profile.contacts
+                    WithContacts (feedbackString True) profile.contacts True
+
+                RemoteData.Success Nothing ->
+                    WithError (feedbackString False)
+
+                RemoteData.Failure _ ->
+                    WithError (feedbackString False)
+
+                RemoteData.NotAsked ->
+                    NotAsked
+
+                RemoteData.Loading ->
+                    NotAsked
+            )
+
+        CompletedDeleteContact result ->
+            let
+                feedbackString isSuccess =
+                    String.join "."
+                        [ "contact_form.feedback"
+                        , feedbackScope
+                        , if isSuccess then
+                            "success_deleting"
+
+                          else
+                            "failure_deleting"
+                        ]
+                        |> translators.t
+            in
+            ( { model | state = RemoteData.NotAsked }
+            , Cmd.none
+            , case result of
+                RemoteData.Success (Just profile) ->
+                    WithContacts (feedbackString True) profile.contacts False
 
                 RemoteData.Success Nothing ->
                     WithError (feedbackString False)
@@ -383,7 +434,7 @@ submit : Translators -> Kind -> Result Kind (List Normalized)
 submit translators kind =
     case kind of
         Single contact ->
-            submitSingle translators False contact
+            submitSingle translators contact
                 |> Result.mapError Single
                 |> Result.map List.singleton
 
@@ -392,10 +443,10 @@ submit translators kind =
                 |> Result.mapError Multiple
 
 
-submitSingle : Translators -> Bool -> Basic -> Result Basic Normalized
-submitSingle translators acceptsEmpty basic =
+submitSingle : Translators -> Basic -> Result Basic Normalized
+submitSingle translators basic =
     basic
-        |> Validate.validate (validator basic.contactType acceptsEmpty translators)
+        |> Validate.validate (validator basic.contactType translators)
         |> Result.mapError (\errors -> addErrors errors basic)
         |> Result.map (\valid -> normalize basic.supportedCountry valid)
 
@@ -406,7 +457,7 @@ submitMultiple translators basics =
         ( withError, valid ) =
             List.foldr
                 (\basic ( basicsAcc, normalizedsAcc ) ->
-                    case submitSingle translators True basic of
+                    case submitSingle translators basic of
                         Err basicWithErrors ->
                             ( basicWithErrors :: basicsAcc, normalizedsAcc )
 
@@ -418,7 +469,10 @@ submitMultiple translators basics =
                 ( [], [] )
                 basics
     in
-    if List.length valid > 0 then
+    if List.all (.contact >> String.isEmpty) basics then
+        Ok []
+
+    else if List.length valid > 0 then
         Ok valid
 
     else
@@ -675,7 +729,7 @@ viewFlagsSelect { t } basic =
     div [ class "mb-10 flex-shrink-0", Html.Attributes.id id ]
         [ if basic.showFlags then
             button
-                [ class "absolute top-0 left-0 w-full h-full cursor-default z-40"
+                [ class "fixed top-0 left-0 h-screen w-screen cursor-default z-40"
                 , onClick (ClickedToggleContactFlags basic.contactType)
                 , type_ "button"
                 ]
@@ -834,14 +888,11 @@ instagramRegex =
         |> Maybe.withDefault Regex.never
 
 
-validateRegex : Regex -> String -> Bool -> Validate.Validator String Basic
-validateRegex regex error acceptsEmpty =
+validateRegex : Regex -> String -> Validate.Validator String Basic
+validateRegex regex error =
     Validate.fromErrors
         (\{ contact } ->
-            if
-                Regex.contains regex contact
-                    || (acceptsEmpty && String.isEmpty contact)
-            then
+            if Regex.contains regex contact then
                 []
 
             else
@@ -849,8 +900,8 @@ validateRegex regex error acceptsEmpty =
         )
 
 
-validatePhone : String -> Bool -> Validate.Validator String Basic
-validatePhone error acceptsEmpty =
+validatePhone : String -> Validate.Validator String Basic
+validatePhone error =
     Validate.fromErrors
         (\{ supportedCountry, contact } ->
             if
@@ -860,7 +911,6 @@ validatePhone error acceptsEmpty =
                     , types = PhoneNumber.anyType
                     }
                     contact
-                    || (acceptsEmpty && String.isEmpty contact)
             then
                 []
 
@@ -869,8 +919,8 @@ validatePhone error acceptsEmpty =
         )
 
 
-validator : ContactType -> Bool -> Translators -> Validate.Validator String Basic
-validator contactType acceptsEmpty translators =
+validator : ContactType -> Translators -> Validate.Validator String Basic
+validator contactType translators =
     let
         ( specificValidation, field ) =
             case contactType of
@@ -890,19 +940,11 @@ validator contactType acceptsEmpty translators =
             "contact_form.validation"
     in
     Validate.all
-        ((if acceptsEmpty then
-            []
-
-          else
-            [ Validate.ifBlank .contact
-                (translators.t (String.join "." [ baseTranslation, field, "blank" ]))
-            ]
-         )
-            ++ [ specificValidation
-                    (translators.t (String.join "." [ baseTranslation, field, "invalid" ]))
-                    acceptsEmpty
-               ]
-        )
+        [ Validate.ifBlank .contact
+            (translators.t (String.join "." [ baseTranslation, field, "blank" ]))
+        , specificValidation
+            (translators.t (String.join "." [ baseTranslation, field, "invalid" ]))
+        ]
 
 
 

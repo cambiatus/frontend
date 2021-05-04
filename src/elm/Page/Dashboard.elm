@@ -937,6 +937,7 @@ update msg model loggedIn =
                                 model.contactModel
                                 loggedIn.shared
                                 loggedIn.authToken
+                                userProfile.contacts
 
                         addContactResponse model_ =
                             case contactResponse of
@@ -949,7 +950,7 @@ update msg model loggedIn =
                                         |> UR.init
                                         |> UR.addExt (LoggedIn.ShowFeedback Feedback.Failure errorMessage)
 
-                                Contact.WithContacts successMessage contacts ->
+                                Contact.WithContacts successMessage contacts _ ->
                                     let
                                         newProfile =
                                             { userProfile | contacts = contacts }
