@@ -746,7 +746,7 @@ viewFlagsSelect { t } basic =
             [ flag "" basic.supportedCountry
             , if basic.showFlags then
                 div
-                    [ class "absolute form-input -mx-px inset-x-0 top-0 space-y-4 z-50 h-40 overflow-auto" ]
+                    [ class "absolute form-input -mx-px inset-x-0 top-0 space-y-4 z-50 h-44 overflow-auto" ]
                     (List.map (flag "mt-1") countryOptions)
 
               else
