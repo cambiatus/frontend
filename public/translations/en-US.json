@@ -949,6 +949,10 @@
       "multiple": {
         "success": "Contacts saved successfully",
         "failure": "Something went wrong while trying to save your contacts"
+      },
+      "delete": {
+        "success": "Contact deleted successfully",
+        "failure": "Something went wrong while trying to delete contact"
       }
     },
     "delete": {

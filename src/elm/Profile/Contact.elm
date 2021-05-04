@@ -395,13 +395,12 @@ update msg model ({ translators } as shared) authToken profileContacts =
             let
                 feedbackString isSuccess =
                     String.join "."
-                        [ "contact_form.feedback"
-                        , feedbackScope
+                        [ "contact_form.feedback.delete"
                         , if isSuccess then
-                            "success_deleting"
+                            "success"
 
                           else
-                            "failure_deleting"
+                            "failure"
                         ]
                         |> translators.t
             in

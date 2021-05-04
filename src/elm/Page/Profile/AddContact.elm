@@ -102,8 +102,8 @@ update msg model ({ shared, authToken } as loggedIn) =
                                             { profile_ | contacts = contacts }
                                     in
                                     updateResult
-                                        |> UR.addExt (LoggedIn.ShowFeedback Feedback.Success successMessage)
                                         |> UR.addExt (LoggedIn.UpdatedLoggedIn { loggedIn | profile = LoggedIn.Loaded newProfile })
+                                        |> UR.addExt (LoggedIn.ShowFeedback Feedback.Success successMessage)
                                         |> (if shouldRedirect then
                                                 UR.addCmd (Route.replaceUrl shared.navKey Route.Profile)
 

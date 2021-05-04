@@ -951,6 +951,10 @@
       "multiple": {
         "success": "Tus contactos se han guardado correctamente",
         "failure": "Se produjo un error al intentar guardar tus contactos."
+      },
+      "delete": {
+        "success": "Contacto eliminado con éxito",
+        "failure": "Se produjo un error al intentar eliminar el contacto"
       }
     },
     "delete": {
