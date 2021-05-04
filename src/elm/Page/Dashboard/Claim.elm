@@ -31,9 +31,9 @@ import View.Feedback as Feedback
 -- INIT
 
 
-init : LoggedIn.Model -> Claim.ClaimId -> ( Model, Cmd Msg )
-init { shared, authToken } claimId =
-    ( initModel claimId
+init : LoggedIn.Model -> Claim.ClaimId -> Maybe String -> ( Model, Cmd Msg )
+init { shared, authToken } claimId maybeCursorId =
+    ( initModel claimId maybeCursorId
     , Cmd.batch
         [ Task.perform GotTime Time.now
         , fetchClaim claimId shared authToken
@@ -51,16 +51,18 @@ type alias Model =
     , claimModalStatus : Claim.ModalStatus
     , isValidated : Bool
     , now : Maybe Posix
+    , maybeCursorId : Maybe String
     }
 
 
-initModel : Claim.ClaimId -> Model
-initModel claimId =
+initModel : Claim.ClaimId -> Maybe String -> Model
+initModel claimId maybeCursorId =
     { claimId = claimId
     , statusClaim = Loading
     , claimModalStatus = Claim.Closed
     , isValidated = False
     , now = Nothing
+    , maybeCursorId = maybeCursorId
     }
 
 
@@ -96,7 +98,7 @@ view ({ shared } as loggedIn) model =
 
                     Loaded claim ->
                         div [ class "bg-gray-100" ]
-                            [ Page.viewHeader loggedIn claim.action.description Route.Analysis
+                            [ Page.viewHeader loggedIn claim.action.description (Route.Analysis model.maybeCursorId)
                             , div [ class "mt-10 mb-8" ]
                                 [ Profile.viewLarge shared loggedIn.accountName claim.claimer
                                 ]

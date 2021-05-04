@@ -41,11 +41,11 @@ import UpdateResult as UR
 import View.Feedback as Feedback
 
 
-init : LoggedIn.Model -> ( Model, Cmd Msg )
-init ({ shared, selectedCommunity, authToken } as loggedIn) =
+init : LoggedIn.Model -> Maybe String -> ( Model, Cmd Msg )
+init ({ shared, selectedCommunity, authToken } as loggedIn) maybeCursorId =
     ( initModel
     , Cmd.batch
-        [ fetchAnalysis loggedIn initFilter Nothing
+        [ fetchAnalysis loggedIn initFilter maybeCursorId True
         , Task.perform GotTime Time.now
         , Api.Graphql.query shared (Just authToken) (Community.communityQuery selectedCommunity) CompletedCommunityLoad
         ]
@@ -136,7 +136,7 @@ view ({ shared } as loggedIn) model =
                 Loaded claims pageInfo ->
                     let
                         viewClaim claim =
-                            Claim.viewClaimCard loggedIn claim model.now
+                            Claim.viewClaimCard loggedIn claim model.now (Maybe.andThen .startCursor pageInfo)
                                 |> Html.map ClaimMsg
                     in
                     div []
@@ -145,9 +145,10 @@ view ({ shared } as loggedIn) model =
                             [ viewFilters loggedIn model
                             , if List.length claims > 0 then
                                 div []
-                                    [ div [ class "flex flex-wrap -mx-2" ]
+                                    [ viewPagination False loggedIn pageInfo
+                                    , div [ class "flex flex-wrap -mx-2" ]
                                         (List.map viewClaim claims)
-                                    , viewPagination loggedIn pageInfo
+                                    , viewPagination True loggedIn pageInfo
                                     ]
 
                               else
@@ -296,20 +297,24 @@ viewEmptyResults { shared } =
         ]
 
 
-viewPagination : LoggedIn.Model -> Maybe Api.Relay.PageInfo -> Html Msg
-viewPagination { shared } maybePageInfo =
+viewPagination : Bool -> LoggedIn.Model -> Maybe Api.Relay.PageInfo -> Html Msg
+viewPagination isForward { shared } maybePageInfo =
     let
         text_ s =
             text (shared.translators.t s)
     in
     case maybePageInfo of
         Just pageInfo ->
+            let
+                hasMore =
+                    (pageInfo.hasNextPage && isForward) || (pageInfo.hasPreviousPage && not isForward)
+            in
             div [ class "flex justify-center" ]
-                [ if pageInfo.hasNextPage then
+                [ if hasMore then
                     button
-                        [ Route.href Route.Analysis
+                        [ Route.href (Route.Analysis Nothing)
                         , class "button button-primary uppercase w-full"
-                        , onClick ShowMore
+                        , onClick (ShowMore isForward)
                         ]
                         [ text_ "all_analysis.show_more" ]
 
@@ -337,7 +342,7 @@ type Msg
     | SelectMsg (Select.Msg Profile.Minimal)
     | OnSelectVerifier (Maybe Profile.Minimal)
     | CompletedCommunityLoad (RemoteData (Graphql.Http.Error (Maybe Community.Model)) (Maybe Community.Model))
-    | ShowMore
+    | ShowMore Bool
     | ClearSelectSelection
     | SelectStatusFilter StatusFilter
     | ToggleSorting
@@ -458,7 +463,7 @@ update msg model loggedIn =
                             }
                                 |> UR.init
                                 |> UR.addExt (LoggedIn.ShowFeedback Feedback.Success (message value))
-                                |> UR.addCmd (Route.replaceUrl loggedIn.shared.navKey Route.Analysis)
+                                |> UR.addCmd (Route.replaceUrl loggedIn.shared.navKey (Route.Analysis Nothing))
 
                         Nothing ->
                             model
@@ -509,7 +514,7 @@ update msg model loggedIn =
                     in
                     newModel
                         |> UR.init
-                        |> UR.addCmd (fetchAnalysis loggedIn newModel.filters Nothing)
+                        |> UR.addCmd (fetchAnalysis loggedIn newModel.filters Nothing True)
 
                 _ ->
                     UR.init model
@@ -530,17 +535,17 @@ update msg model loggedIn =
         CompletedCommunityLoad _ ->
             UR.init model
 
-        ShowMore ->
+        ShowMore isForward ->
             case model.status of
                 Loaded _ pageInfo ->
                     let
                         cursor : Maybe String
                         cursor =
-                            Maybe.andThen .endCursor pageInfo
+                            Maybe.andThen .endCursor (pageInfo |> Debug.log "pageInfo")
                     in
                     model
                         |> UR.init
-                        |> UR.addCmd (fetchAnalysis loggedIn model.filters cursor)
+                        |> UR.addCmd (fetchAnalysis loggedIn model.filters cursor isForward)
 
                 _ ->
                     UR.init model
@@ -561,7 +566,7 @@ update msg model loggedIn =
                     in
                     newModel
                         |> UR.init
-                        |> UR.addCmd (fetchAnalysis loggedIn newModel.filters Nothing)
+                        |> UR.addCmd (fetchAnalysis loggedIn newModel.filters Nothing True)
 
                 _ ->
                     UR.init model
@@ -580,7 +585,7 @@ update msg model loggedIn =
             in
             newModel
                 |> UR.init
-                |> UR.addCmd (fetchAnalysis loggedIn newModel.filters Nothing)
+                |> UR.addCmd (fetchAnalysis loggedIn newModel.filters Nothing True)
 
         ClearFilters ->
             { model
@@ -589,7 +594,7 @@ update msg model loggedIn =
                 , status = Loading
             }
                 |> UR.init
-                |> UR.addCmd (fetchAnalysis loggedIn initFilter Nothing)
+                |> UR.addCmd (fetchAnalysis loggedIn initFilter Nothing True)
 
         ToggleSorting ->
             let
@@ -612,14 +617,14 @@ update msg model loggedIn =
             in
             newModel
                 |> UR.init
-                |> UR.addCmd (fetchAnalysis loggedIn newModel.filters Nothing)
+                |> UR.addCmd (fetchAnalysis loggedIn newModel.filters Nothing True)
 
         GotTime date ->
             UR.init { model | now = Just date }
 
 
-fetchAnalysis : LoggedIn.Model -> Filter -> Maybe String -> Cmd Msg
-fetchAnalysis { selectedCommunity, shared, authToken } { profile, statusFilter, direction } maybeCursorAfter =
+fetchAnalysis : LoggedIn.Model -> Filter -> Maybe String -> Bool -> Cmd Msg
+fetchAnalysis { selectedCommunity, shared, authToken } { profile, statusFilter, direction } maybeCursorAfter isForward =
     let
         optionalClaimer =
             case profile of
@@ -666,15 +671,28 @@ fetchAnalysis { selectedCommunity, shared, authToken } { profile, statusFilter, 
                 else
                     Just (Present s)
 
+        addCursor opts =
+            if isForward then
+                { opts
+                    | after =
+                        Maybe.andThen mapFn maybeCursorAfter
+                            |> Maybe.withDefault Absent
+                }
+
+            else
+                { opts
+                    | before =
+                        Maybe.andThen mapFn maybeCursorAfter
+                            |> Maybe.withDefault Absent
+                }
+
         optionals =
             \opts ->
                 { opts
                     | first = Present 16
-                    , after =
-                        Maybe.andThen mapFn maybeCursorAfter
-                            |> Maybe.withDefault Absent
                     , filter = Present filterRecord
                 }
+                    |> addCursor
     in
     Api.Graphql.query shared
         (Just authToken)
@@ -783,7 +801,7 @@ msgToString msg =
         CompletedCommunityLoad r ->
             [ "CompletedCommunityLoad", UR.remoteDataToString r ]
 
-        ShowMore ->
+        ShowMore _ ->
             [ "ShowMore" ]
 
         ClearSelectSelection ->

@@ -108,7 +108,7 @@ viewResults : LoggedIn.Model -> List Claim.Model -> Maybe Time.Posix -> Html Msg
 viewResults loggedIn claims now =
     let
         viewClaim claim =
-            Claim.viewClaimCard loggedIn claim now
+            Claim.viewClaimCard loggedIn claim now Nothing
                 |> Html.map ClaimMsg
     in
     div [ class "container mx-auto px-4 mb-10" ]

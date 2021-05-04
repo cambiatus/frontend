@@ -36,7 +36,7 @@ type Route
     | EditObjective Symbol Int
     | NewAction Symbol Int
     | EditAction Symbol Int Int
-    | Claim Int Int Int
+    | Claim Int Int Int (Maybe String)
     | Shop Shop.Filter
     | NewSale
     | EditSale String
@@ -44,7 +44,7 @@ type Route
     | ViewTransfer Int
     | Invite String
     | Transfer Symbol (Maybe String)
-    | Analysis
+    | Analysis (Maybe String)
 
 
 parser : Url -> Parser (Route -> a) a
@@ -91,7 +91,7 @@ parser url =
         , Url.map EditObjective (s "community" </> Eos.symbolUrlParser </> s "objectives" </> int </> s "edit")
         , Url.map NewAction (s "community" </> Eos.symbolUrlParser </> s "objectives" </> int </> s "action" </> s "new")
         , Url.map EditAction (s "community" </> Eos.symbolUrlParser </> s "objectives" </> int </> s "action" </> int </> s "edit")
-        , Url.map Claim (s "objectives" </> int </> s "action" </> int </> s "claim" </> int)
+        , Url.map Claim (s "objectives" </> int </> s "action" </> int </> s "claim" </> int <?> Query.string "cursorId")
         , Url.map Shop
             (s "shop"
                 <?> Query.map
@@ -110,7 +110,7 @@ parser url =
         , Url.map ViewTransfer (s "transfer" </> int)
         , Url.map Invite (s "invite" </> string)
         , Url.map Transfer (s "community" </> Eos.symbolUrlParser </> s "transfer" <?> Query.string "to")
-        , Url.map Analysis (s "dashboard" </> s "analysis")
+        , Url.map Analysis (s "dashboard" </> s "analysis" <?> Query.string "cursorId")
         ]
 
 
@@ -277,7 +277,7 @@ routeToString route =
                     , []
                     )
 
-                Claim objectiveId actionId claimId ->
+                Claim objectiveId actionId claimId maybeCursorId ->
                     ( [ "objectives"
                       , String.fromInt objectiveId
                       , "action"
@@ -285,7 +285,7 @@ routeToString route =
                       , "claim"
                       , String.fromInt claimId
                       ]
-                    , []
+                    , [ Url.Builder.string "cursorId" (Maybe.withDefault "" maybeCursorId) ]
                     )
 
                 Shop maybeFilter ->
@@ -316,7 +316,7 @@ routeToString route =
                     , [ Url.Builder.string "to" (Maybe.withDefault "" maybeTo) ]
                     )
 
-                Analysis ->
-                    ( [ "dashboard", "analysis" ], [] )
+                Analysis maybeCursorId ->
+                    ( [ "dashboard", "analysis" ], [ Url.Builder.string "cursorId" (Maybe.withDefault "" maybeCursorId) ] )
     in
     Url.Builder.absolute paths queries

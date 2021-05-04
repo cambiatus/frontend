@@ -275,8 +275,8 @@ updateClaimModalStatus msg model =
 
 {-| Claim card with a short claim overview. Used on Dashboard and Analysis pages.
 -}
-viewClaimCard : LoggedIn.Model -> Model -> Maybe Time.Posix -> Html Msg
-viewClaimCard { shared, accountName } claim now =
+viewClaimCard : LoggedIn.Model -> Model -> Maybe Time.Posix -> Maybe String -> Html Msg
+viewClaimCard { shared, accountName } claim now maybeCursorId =
     let
         { t } =
             shared.translators
@@ -302,6 +302,7 @@ viewClaimCard { shared, accountName } claim now =
                 claim.action.objective.id
                 claim.action.id
                 claim.id
+                maybeCursorId
     in
     div [ class "w-full sm:w-1/2 lg:w-1/3 xl:w-1/4 px-2" ]
         [ div

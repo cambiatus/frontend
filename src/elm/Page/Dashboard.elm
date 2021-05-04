@@ -415,7 +415,7 @@ viewAnalysisList loggedIn model =
                                 ]
                             , a
                                 [ class "button button-secondary font-medium "
-                                , Route.href Route.Analysis
+                                , Route.href (Route.Analysis Nothing)
                                 ]
                                 [ text_ "dashboard.analysis.all" ]
                             ]
@@ -477,7 +477,7 @@ viewAnalysis : LoggedIn.Model -> ClaimStatus -> Maybe Time.Posix -> Html Msg
 viewAnalysis loggedIn claimStatus now =
     case claimStatus of
         ClaimLoaded claim ->
-            Claim.viewClaimCard loggedIn claim now
+            Claim.viewClaimCard loggedIn claim now Nothing
                 |> Html.map ClaimMsg
 
         ClaimLoading _ ->
@@ -490,7 +490,7 @@ viewAnalysis loggedIn claimStatus now =
             text ""
 
         ClaimVoteFailed claim ->
-            Claim.viewClaimCard loggedIn claim now
+            Claim.viewClaimCard loggedIn claim now Nothing
                 |> Html.map ClaimMsg
 
 

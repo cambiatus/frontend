@@ -801,10 +801,10 @@ changeRouteTo maybeRoute model =
                 >> updateStatusWith ActionEditor GotActionEditorMsg model
                 |> withLoggedIn (Route.EditAction symbol objectiveId actionId)
 
-        Just (Route.Claim objectiveId actionId claimId) ->
-            (\l -> Claim.init l claimId)
+        Just (Route.Claim objectiveId actionId claimId maybeCursorId) ->
+            (\l -> Claim.init l claimId maybeCursorId)
                 >> updateStatusWith Claim GotVerifyClaimMsg model
-                |> withLoggedIn (Route.Claim objectiveId actionId claimId)
+                |> withLoggedIn (Route.Claim objectiveId actionId claimId maybeCursorId)
 
         Just (Route.Shop maybeFilter) ->
             (\l -> Shop.init l maybeFilter)
@@ -840,10 +840,10 @@ changeRouteTo maybeRoute model =
                 >> updateStatusWith Transfer GotTransferMsg model
                 |> withLoggedIn (Route.Transfer symbol maybeTo)
 
-        Just Route.Analysis ->
-            (\l -> Analysis.init l)
+        Just (Route.Analysis  maybeCursorId) ->
+            (\l -> Analysis.init l maybeCursorId)
                 >> updateStatusWith Analysis GotAnalysisMsg model
-                |> withLoggedIn Route.Analysis
+                |> withLoggedIn (Route.Analysis maybeCursorId)
 
 
 jsAddressToMsg : List String -> Value -> Maybe Msg
