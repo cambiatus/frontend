@@ -135,6 +135,7 @@ module.exports = {
         '7': '1.75rem',
         heading: '1.375rem',
         '14': '3.5rem',
+        '44': '11rem',
         '72': '18rem',
         '80': '20rem',
         select: '18.75rem',
