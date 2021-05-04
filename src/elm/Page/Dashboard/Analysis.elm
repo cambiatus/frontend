@@ -541,7 +541,7 @@ update msg model loggedIn =
                     let
                         cursor : Maybe String
                         cursor =
-                            Maybe.andThen .endCursor (pageInfo |> Debug.log "pageInfo")
+                            Maybe.andThen .endCursor pageInfo
                     in
                     model
                         |> UR.init
