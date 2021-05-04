@@ -92,7 +92,7 @@ type Kind
 
 
 type alias Basic =
-    { country : Country
+    { supportedCountry : SupportedCountry
     , contactType : ContactType
     , contact : String
     , errors : Maybe (List String)
@@ -102,7 +102,7 @@ type alias Basic =
 
 initBasic : ContactType -> Basic
 initBasic contactType =
-    { country = Countries.countryBR
+    { supportedCountry = defaultCountry
     , contactType = contactType
     , contact = ""
     , errors = Nothing
@@ -137,13 +137,13 @@ initBasicWith ((Normalized { contactType }) as normalized) =
     in
     { initial
         | contact = newContact
-        , country =
+        , supportedCountry =
             maybeCountry
-                |> Maybe.withDefault Countries.countryBR
+                |> Maybe.withDefault defaultCountry
     }
 
 
-countryFromNormalized : Normalized -> ( Maybe Country, String )
+countryFromNormalized : Normalized -> ( Maybe SupportedCountry, String )
 countryFromNormalized (Normalized { contactType, contact }) =
     if usesPhone contactType then
         let
@@ -153,16 +153,16 @@ countryFromNormalized (Normalized { contactType, contact }) =
                     |> LE.takeWhile ((/=) ' ')
                     |> String.fromList
 
-            country =
-                List.filter (.countryCode >> (==) countryCode) supportedCountries
+            supportedCountry =
+                List.filter (.country >> .countryCode >> (==) countryCode) supportedCountries
                     |> List.head
 
             newContact =
-                Maybe.map (.countryCode >> String.length >> (+) 1) country
+                Maybe.map (.country >> .countryCode >> String.length >> (+) 1) supportedCountry
                     |> Maybe.withDefault 0
                     |> (\n -> String.dropLeft n contact |> String.trim)
         in
-        ( country, newContact )
+        ( supportedCountry, newContact )
 
     else
         ( Nothing, contact )
@@ -207,7 +207,7 @@ type ContactResponse
 
 
 type Msg
-    = SelectedCountry ContactType Country
+    = SelectedCountry ContactType SupportedCountry
     | ClickedToggleContactFlags ContactType
     | EnteredContactText ContactType String
     | EnteredContactOption String
@@ -222,7 +222,7 @@ update msg model ({ translators } as shared) authToken =
             { contact | showFlags = not showFlags }
 
         setCountry newCountry contact =
-            { contact | country = newCountry, errors = Nothing }
+            { contact | supportedCountry = newCountry, errors = Nothing }
 
         setContact newContact contact =
             { contact | contact = newContact }
@@ -368,7 +368,7 @@ submitSingle translators basic =
     basic
         |> Validate.validate (validator basic.contactType translators)
         |> Result.mapError (\errors -> addErrors errors basic)
-        |> Result.map (\valid -> normalize basic.country valid)
+        |> Result.map (\valid -> normalize basic.supportedCountry valid)
 
 
 submitMultiple : Translators -> List Basic -> Result (List Basic) (List Normalized)
@@ -581,22 +581,22 @@ viewFlagsSelect : Translators -> Basic -> Html Msg
 viewFlagsSelect { t } basic =
     let
         countryOptions =
-            basic.country
-                :: List.filter (\country -> country /= basic.country) supportedCountries
+            basic.supportedCountry
+                :: List.filter (\country -> country /= basic.supportedCountry) supportedCountries
 
-        flag classes country =
+        flag classes supportedCountry =
             button
                 [ class ("w-full flex items-center space-x-2 text-menu " ++ classes)
-                , onClick (SelectedCountry basic.contactType country)
+                , onClick (SelectedCountry basic.contactType supportedCountry)
                 , type_ "button"
                 ]
                 [ img
                     [ class "w-7"
-                    , src (countryToFlag country)
+                    , src supportedCountry.flagIcon
                     ]
                     []
                 , p [ class "justify-self-center text-left", style "min-width" "4ch" ]
-                    [ text ("+" ++ country.countryCode) ]
+                    [ text ("+" ++ supportedCountry.country.countryCode) ]
                 ]
 
         id =
@@ -620,11 +620,11 @@ viewFlagsSelect { t } basic =
             , onClick (ClickedToggleContactFlags basic.contactType)
             , type_ "button"
             ]
-            [ flag "" basic.country
+            [ flag "" basic.supportedCountry
             , if basic.showFlags then
                 div
-                    [ class "absolute form-input -mx-px inset-x-0 top-0 space-y-4 z-50" ]
-                    (List.map (flag "mt-px") countryOptions)
+                    [ class "absolute form-input -mx-px inset-x-0 top-0 space-y-4 z-50 h-40 overflow-auto" ]
+                    (List.map (flag "mt-1") countryOptions)
 
               else
                 text ""
@@ -644,7 +644,7 @@ viewPhoneInput ({ t, tr } as translators) basic =
             , placeholder =
                 Just
                     (tr "contact_form.phone.placeholder"
-                        [ ( "example_number", phonePlaceholder basic.country ) ]
+                        [ ( "example_number", basic.supportedCountry.phonePlaceholder ) ]
                     )
             , problems = basic.errors
             , translators = translators
@@ -724,8 +724,8 @@ isMultiple kind =
 -- NORMALIZING
 
 
-normalize : Country -> Validate.Valid Basic -> Normalized
-normalize country validatedContact =
+normalize : SupportedCountry -> Validate.Valid Basic -> Normalized
+normalize { country } validatedContact =
     let
         { contactType, contact } =
             Validate.fromValid validatedContact
@@ -779,10 +779,10 @@ validateRegex regex error =
 validatePhone : String -> Validate.Validator String Basic
 validatePhone error =
     Validate.fromErrors
-        (\{ country, contact } ->
+        (\{ supportedCountry, contact } ->
             if
                 PhoneNumber.valid
-                    { defaultCountry = country
+                    { defaultCountry = supportedCountry.country
                     , otherCountries = []
                     , types = PhoneNumber.anyType
                     }
@@ -827,49 +827,53 @@ validator contactType translators =
 -- COUNTRY
 
 
-supportedCountries : List Country
+type alias SupportedCountry =
+    { country : Country
+    , phonePlaceholder : String
+    , flagIcon : String
+    }
+
+
+defaultCountry : SupportedCountry
+defaultCountry =
+    { country = Countries.countryBR
+    , phonePlaceholder = "11 91234 5678"
+    , flagIcon = "/icons/flag-brazil.svg"
+    }
+
+
+supportedCountries : List SupportedCountry
 supportedCountries =
-    [ Countries.countryBR
-    , Countries.countryCR
-    , Countries.countryET
-    , Countries.countryUS
+    [ defaultCountry
+    , { country = Countries.countryCA
+      , phonePlaceholder = "123 456 7890"
+      , flagIcon = "/icons/flag-canada.svg"
+      }
+    , { country = Countries.countryCR
+      , phonePlaceholder = "8123 4567"
+      , flagIcon = "/icons/flag-costa-rica.svg"
+      }
+    , { country = Countries.countryET
+      , phonePlaceholder = "91 234 5678"
+      , flagIcon = "/icons/flag-ethiopia.svg"
+      }
+    , { country = Countries.countryGB
+      , phonePlaceholder = "20 1234 5678"
+      , flagIcon = "/icons/flag-united-kingdom.svg"
+      }
+    , { country = Countries.countryNZ
+      , phonePlaceholder = "2123 4567(89)"
+      , flagIcon = "/icons/flag-new-zealand.svg"
+      }
+    , { country = Countries.countryPT
+      , phonePlaceholder = "12 345 6789"
+      , flagIcon = "/icons/flag-portugal.svg"
+      }
+    , { country = Countries.countryUS
+      , phonePlaceholder = "209 123 4567"
+      , flagIcon = "/icons/flag-usa.svg"
+      }
     ]
-
-
-countryToFlag : Country -> String
-countryToFlag country =
-    if country == Countries.countryBR then
-        "/icons/flag-brazil.svg"
-
-    else if country == Countries.countryCR then
-        "/icons/flag-costa-rica.svg"
-
-    else if country == Countries.countryET then
-        "/icons/flag-ethiopia.svg"
-
-    else if country == Countries.countryUS then
-        "/icons/flag-usa.svg"
-
-    else
-        ""
-
-
-phonePlaceholder : Country -> String
-phonePlaceholder country =
-    if country == Countries.countryBR then
-        "11 91234 5678"
-
-    else if country == Countries.countryCR then
-        "8123 4567"
-
-    else if country == Countries.countryET then
-        "91 234 5678"
-
-    else if country == Countries.countryUS then
-        "209 123 4567"
-
-    else
-        ""
 
 
 
