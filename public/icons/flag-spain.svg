@@ -1,19 +1,22 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<svg width="17px" height="17px" viewBox="0 0 17 17" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
-    <!-- Generator: Sketch 53.2 (72643) - https://sketchapp.com -->
-    <title>spain</title>
-    <desc>Created with Sketch.</desc>
-    <g id="----Login-e-Criar-conta" stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
-        <g id="INICIAL-&gt;-Language" transform="translate(-1280.000000, -133.000000)" fill-rule="nonzero">
-            <g id="Group-4" transform="translate(1263.000000, 17.000000)">
-                <g id="spain" transform="translate(17.000000, 116.000000)">
-                    <path d="M0,8.5 C0,9.54790352 0.187033203,10.551701 0.528693359,11.4797686 L8.5,12.2247191 L16.4713066,11.4797686 C16.8129668,10.551701 17,9.54790352 17,8.5 C17,7.45209648 16.8129668,6.448299 16.4713066,5.52023141 L8.5,4.7752809 L0.528693359,5.52023141 C0.187033203,6.448299 0,7.45209648 0,8.5 Z" id="Path" fill="#FFDA44"></path>
-                    <g id="Group" transform="translate(0.573034, 0.000000)" fill="#D80027">
-                        <path d="M16.0142188,5.54349414 C14.8101489,2.3067207 11.6865445,0 8.02247191,0 C4.35839927,0 1.23479491,2.3067207 0.0307250688,5.54349414 L16.0142188,5.54349414 Z" id="Path"></path>
-                        <path d="M0.0307250688,11.4565059 C1.23479491,14.6932793 4.35839927,17 8.02247191,17 C11.6865445,17 14.8101489,14.6932793 16.0142188,11.4565059 L0.0307250688,11.4565059 Z" id="Path"></path>
-                    </g>
-                </g>
-            </g>
-        </g>
+<svg width="21" height="15" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <mask id="a" maskUnits="userSpaceOnUse" x="0" y="0" width="21" height="15">
+        <path d="M19 0H2a2 2 0 00-2 2v11a2 2 0 002 2h17a2 2 0 002-2V2a2 2 0 00-2-2z" fill="#fff" />
+    </mask>
+    <g mask="url(#a)">
+        <path d="M19 0H2a2 2 0 00-2 2v11a2 2 0 002 2h17a2 2 0 002-2V2a2 2 0 00-2-2z" fill="#CD0B20" />
+        <path fill-rule="evenodd" clip-rule="evenodd" d="M0 4h21v7H0V4z" fill="#FFCB00" />
+        <path fill-rule="evenodd" clip-rule="evenodd"
+            d="M9 6.222v2.52c0 .7-.672 1.26-1.5 1.26h-2C4.674 10 4 9.437 4 8.74V6.22c0-.572.448-1.05 1.064-1.205.186-.52.758-.054 1.436-.054.682 0 1.25-.463 1.436.055C8.55 5.175 9 5.654 9 6.222z"
+            fill="#C8B47C" />
+        <path fill-rule="evenodd" clip-rule="evenodd" d="M9 7h1v3H9V7zM3 7h1v3H3V7z" fill="#B5B5B5" />
+        <path fill-rule="evenodd" clip-rule="evenodd" d="M9 9h1v1H9V9zM3 9h1v1H3V9z" fill="#165C96" />
+        <path fill-rule="evenodd" clip-rule="evenodd" d="M9 6h1v1H9V6zM3 6h1v1H3V6z" fill="#A0790A" />
+        <path fill-rule="evenodd" clip-rule="evenodd" d="M5 6h1v1.5H5V6zm2 2h1v1.5H7V8z" fill="#D20636" />
+        <path fill-rule="evenodd" clip-rule="evenodd" d="M7 6h1v1.5H7V6z" fill="#A18793" />
+        <path fill-rule="evenodd" clip-rule="evenodd" d="M5 8h1v1.5H5V8z" fill="#FFE100" />
+        <path fill-rule="evenodd" clip-rule="evenodd" d="M6 6L5 5h3L7 6H6z" fill="#B6161A" />
+        <path fill-rule="evenodd" clip-rule="evenodd" d="M6 4h1v1H6V4z" fill="#AC9300" />
+        <path d="M19 .5H2A1.5 1.5 0 00.5 2v11A1.5 1.5 0 002 14.5h17a1.5 1.5 0 001.5-1.5V2A1.5 1.5 0 0019 .5z"
+            stroke="#000" stroke-opacity=".1" />
     </g>
 </svg>

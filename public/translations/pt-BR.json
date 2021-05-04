@@ -953,7 +953,17 @@
       "multiple": {
         "success": "Seus contatos foram salvos com sucesso",
         "failure": "Algo deu errado ao tentar salvar seus contatos"
+      },
+      "delete": {
+        "success": "Seu contato foi removido com sucesso",
+        "failure": "Algo deu errado ao tentar excluir seu contato"
       }
+    },
+    "delete": {
+      "title": "Excluir",
+      "body": "Quer mesmo excluir sua informação de contato?",
+      "cancel": "Não",
+      "accept": "Sim"
     }
   }
 }

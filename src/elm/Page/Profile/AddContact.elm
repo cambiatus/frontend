@@ -62,10 +62,10 @@ type alias UpdateResult =
 
 
 update : Msg -> Model -> LoggedIn.Model -> UpdateResult
-update msg model { shared, authToken } =
+update msg model ({ shared, authToken } as loggedIn) =
     case msg of
-        CompletedProfileLoad (RemoteData.Success (Just profile)) ->
-            Contact.initMultiple profile.contacts
+        CompletedProfileLoad (RemoteData.Success (Just profile_)) ->
+            Contact.initMultiple profile_.contacts
                 |> RemoteData.Success
                 |> UR.init
 
@@ -84,18 +84,32 @@ update msg model { shared, authToken } =
             UR.init RemoteData.NotAsked
 
         GotContactMsg subMsg ->
-            case model of
-                RemoteData.Success contactModel ->
+            case ( model, LoggedIn.profile loggedIn ) of
+                ( RemoteData.Success contactModel, Just profile_ ) ->
                     let
                         ( newModel, cmd, newContacts ) =
-                            Contact.update subMsg contactModel shared authToken
+                            Contact.update subMsg
+                                contactModel
+                                shared
+                                authToken
+                                profile_.contacts
 
                         actOnNewContacts updateResult =
                             case newContacts of
-                                Contact.WithContacts successMessage _ ->
+                                Contact.WithContacts successMessage contacts shouldRedirect ->
+                                    let
+                                        newProfile =
+                                            { profile_ | contacts = contacts }
+                                    in
                                     updateResult
+                                        |> UR.addExt (LoggedIn.UpdatedLoggedIn { loggedIn | profile = LoggedIn.Loaded newProfile })
                                         |> UR.addExt (LoggedIn.ShowFeedback Feedback.Success successMessage)
-                                        |> UR.addCmd (Route.replaceUrl shared.navKey Route.Profile)
+                                        |> (if shouldRedirect then
+                                                UR.addCmd (Route.replaceUrl shared.navKey Route.Profile)
+
+                                            else
+                                                identity
+                                           )
 
                                 Contact.WithError errorMessage ->
                                     updateResult

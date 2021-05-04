@@ -951,7 +951,17 @@
       "multiple": {
         "success": "Els vostres contactes s'han desat correctament",
         "failure": "S'ha produït un error en intentar desar els vostres contactes"
+      },
+      "delete": {
+        "success": "El contacte s'ha suprimit correctament",
+        "failure": "S'ha produït un error en intentar suprimir el contacte"
       }
+    },
+    "delete": {
+      "title": "Suprimeix",
+      "body": "Confirmes que vols suprimir la teva informació de contacte?",
+      "cancel": "No",
+      "accept": "Sí"
     }
   }
 }
