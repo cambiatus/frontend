@@ -1049,6 +1049,7 @@ update msg model =
                 |> UR.addCmd (Route.pushUrl shared.navKey Route.CommunitySelector)
 
         CompletedLoadCommunity (RemoteData.Failure e) ->
+            -- TODO - look into error and see if it's actually from community not existing
             UR.init { model | selectedCommunity = RemoteData.Failure e }
                 |> UR.logGraphqlError msg e
                 |> UR.addCmd (Route.pushUrl shared.navKey Route.CommunitySelector)

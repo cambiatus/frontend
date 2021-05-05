@@ -9,6 +9,8 @@ module Page.Community.Settings.Info exposing
     , view
     )
 
+-- TODO - Add website input
+
 import Api
 import Api.Graphql
 import Browser.Navigation
@@ -17,11 +19,10 @@ import Eos
 import Eos.Account as Eos
 import File exposing (File)
 import Graphql.Http
-import Html exposing (Html, button, div, form, img, input, label, li, span, text, ul)
-import Html.Attributes exposing (accept, class, classList, disabled, for, id, maxlength, multiple, src, type_)
+import Html exposing (Html, button, div, form, li, p, span, text, ul)
+import Html.Attributes exposing (class, classList, disabled, maxlength)
 import Html.Events exposing (onSubmit)
 import Http
-import Icons
 import Json.Decode as Decode exposing (Value)
 import Json.Encode as Encode
 import Page
@@ -34,6 +35,7 @@ import UpdateResult as UR
 import Url
 import View.Feedback as Feedback
 import View.Form
+import View.Form.FileUploader as FileUploader
 import View.Form.Input as Input
 import View.Toggle
 
@@ -48,6 +50,8 @@ type alias Model =
     , nameErrors : List String
     , descriptionInput : String
     , descriptionErrors : List String
+    , websiteInput : String
+    , coverPhoto : RemoteData Http.Error String
     , subdomainInput : String
     , subdomainErrors : List String
     , hasAutoInvite : Bool
@@ -66,6 +70,8 @@ init loggedIn =
       , nameErrors = []
       , descriptionInput = ""
       , descriptionErrors = []
+      , websiteInput = ""
+      , coverPhoto = RemoteData.Loading
       , subdomainInput = ""
       , subdomainErrors = []
       , hasAutoInvite = False
@@ -89,6 +95,8 @@ type Msg
     | CompletedLogoUpload (Result Http.Error String)
     | EnteredName String
     | EnteredDescription String
+    | EnteredCoverPhoto (List File)
+    | CompletedCoverPhotoUpload (Result Http.Error String)
     | EnteredSubdomain String
     | ToggledInvitation Bool
     | EnteredInviterReward String
@@ -110,6 +118,13 @@ update msg model ({ shared } as loggedIn) =
                 | logoUrl = community.logo
                 , nameInput = community.name
                 , descriptionInput = community.description
+                , coverPhoto =
+                    case community.coverPhoto of
+                        Just photo ->
+                            RemoteData.Success photo
+
+                        Nothing ->
+                            RemoteData.NotAsked
                 , subdomainInput =
                     community.subdomain
                         |> Maybe.map (String.split ".")
@@ -119,6 +134,7 @@ update msg model ({ shared } as loggedIn) =
                 , inviterRewardInput = String.fromFloat community.inviterReward
                 , invitedRewardInput = String.fromFloat community.invitedReward
                 , isLoading = False
+                , websiteInput = Maybe.withDefault "" community.website
             }
                 |> UR.init
 
@@ -150,6 +166,25 @@ update msg model ({ shared } as loggedIn) =
             { model | descriptionInput = description }
                 |> validateDescription
                 |> UR.init
+
+        EnteredCoverPhoto (file :: _) ->
+            UR.init { model | coverPhoto = RemoteData.Loading }
+                |> UR.addCmd (Api.uploadImage shared file CompletedCoverPhotoUpload)
+
+        EnteredCoverPhoto [] ->
+            UR.init model
+
+        CompletedCoverPhotoUpload (Ok url) ->
+            { model | coverPhoto = RemoteData.Success url }
+                |> UR.init
+
+        CompletedCoverPhotoUpload (Err e) ->
+            UR.init { model | coverPhoto = RemoteData.Failure e }
+                |> UR.addExt
+                    (LoggedIn.ShowFeedback Feedback.Failure
+                        (shared.translators.t "settings.community_info.errors.cover_upload")
+                    )
+                |> UR.logHttpError msg e
 
         EnteredSubdomain subdomain ->
             { model | subdomainInput = subdomain }
@@ -250,6 +285,7 @@ update msg model ({ shared } as loggedIn) =
                                             , hasShop = Eos.boolToEosBool community.hasShop
                                             , hasKyc = Eos.boolToEosBool community.hasKyc
                                             , hasAutoInvite = Eos.boolToEosBool model.hasAutoInvite
+                                            , website = model.websiteInput
                                             }
                                                 |> Community.encodeUpdateData
                                       }
@@ -321,6 +357,9 @@ update msg model ({ shared } as loggedIn) =
                                             |> String.toFloat
                                             |> Maybe.withDefault community.invitedReward
                                     , hasAutoInvite = model.hasAutoInvite
+                                    , coverPhoto = RemoteData.toMaybe model.coverPhoto
+
+                                    -- TODO - Update website
                                 }
                                 |> LoggedIn.ExternalBroadcast
                             )
@@ -533,6 +572,7 @@ view_ loggedIn community model =
                 [ viewLogo loggedIn.shared model
                 , viewName loggedIn.shared model
                 , viewDescription loggedIn.shared model
+                , viewCoverPhoto loggedIn.shared model
                 , viewSubdomain loggedIn.shared model
                 , viewInvitation loggedIn.shared model
                 , viewInviterReward loggedIn.shared community.symbol model
@@ -554,27 +594,14 @@ viewLogo shared model =
             text << shared.translators.t
     in
     div []
-        [ div [ class "input-label" ]
-            [ text_ "settings.community_info.logo.title" ]
-        , div [ class "mt-2 m-auto w-20 h-20 relative" ]
-            [ input
-                [ id "community-upload-logo"
-                , class "profile-img-input"
-                , type_ "file"
-                , accept "image/*"
-                , Page.onFileChange EnteredLogo
-                , multiple False
-                , disabled model.isLoading
-                ]
-                []
-            , label
-                [ for "community-upload-logo"
-                , class "block cursor-pointer"
-                ]
-                [ img [ class "object-cover rounded-full w-20 h-20", src model.logoUrl ] []
-                , span [ class "absolute bottom-0 right-0 bg-orange-300 w-8 h-8 p-2 rounded-full" ] [ Icons.camera "" ]
-                ]
-            ]
+        [ FileUploader.init
+            { label = "settings.community_info.logo.title"
+            , id = "community_logo_upload"
+            , onFileInput = EnteredLogo
+            , status = RemoteData.Success model.logoUrl
+            }
+            |> FileUploader.withVariant FileUploader.Small
+            |> FileUploader.toHtml shared.translators
         , div [ class "mt-4" ]
             [ div [ class "font-bold" ] [ text_ "settings.community_info.guidance" ]
             , div [ class "text-gray-600" ] [ text_ "settings.community_info.logo.description" ]
@@ -625,6 +652,22 @@ viewDescription shared model =
         }
         |> Input.withType Input.TextArea
         |> Input.toHtml
+
+
+viewCoverPhoto : Shared -> Model -> Html Msg
+viewCoverPhoto { translators } model =
+    div []
+        [ FileUploader.init
+            { label = "settings.community_info.cover_photo.title"
+            , id = "community_cover_upload"
+            , onFileInput = EnteredCoverPhoto
+            , status = model.coverPhoto
+            }
+            |> FileUploader.withAttrs [ class "w-full" ]
+            |> FileUploader.toHtml translators
+        , p [ class "mt-2 text-center text-gray-900 uppercase text-caption tracking-wide" ]
+            [ text (translators.t "Be sure to add a picture that has good quality") ]
+        ]
 
 
 viewSubdomain : Shared -> Model -> Html Msg
@@ -807,6 +850,12 @@ msgToString msg =
 
         EnteredDescription _ ->
             [ "EnteredDescription" ]
+
+        EnteredCoverPhoto _ ->
+            [ "EnteredCoverPhoto" ]
+
+        CompletedCoverPhotoUpload r ->
+            [ "CompletedCoverPhotoUpload", UR.resultToString r ]
 
         EnteredSubdomain _ ->
             [ "EnteredSubdomain" ]

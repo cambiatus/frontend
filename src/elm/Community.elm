@@ -116,6 +116,8 @@ type alias Model =
     , hasKyc : Bool
     , hasAutoInvite : Bool
     , validators : List Eos.Name
+    , coverPhoto : Maybe String
+    , website : Maybe String
     }
 
 
@@ -161,9 +163,21 @@ communitySelectionSet =
         |> with Community.hasKyc
         |> with Community.autoInvite
         |> with (Community.validators (Eos.nameSelectionSet Profile.account))
+        |> SelectionSet.hardcoded Nothing
+        |> with Community.website
 
 
 
+-- TODO
+-- |> with
+-- (Community.uploads Upload.url
+--     |> SelectionSet.map
+--         (Maybe.withDefault []
+--             >> List.filterMap identity
+--             >> List.head
+--             >> Maybe.andThen identity
+--         )
+-- )
 -- Communities Query
 
 
@@ -447,6 +461,7 @@ type alias UpdateCommunityData =
     , hasShop : Eos.EosBool
     , hasKyc : Eos.EosBool
     , hasAutoInvite : Eos.EosBool
+    , website : String
     }
 
 
@@ -464,6 +479,7 @@ encodeUpdateData c =
         , ( "has_shop", Eos.encodeEosBool c.hasShop )
         , ( "has_kyc", Eos.encodeEosBool c.hasKyc )
         , ( "auto_invite", Eos.encodeEosBool c.hasAutoInvite )
+        , ( "website", Encode.string c.website )
         ]
 
 

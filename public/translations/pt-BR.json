@@ -907,6 +907,10 @@
         "title": "Acesso à comunidade",
         "description": "Quando o \"convite\" da comunidade está habilitado, novos membros só conseguem acesso através de um convite."
       },
+      "cover_photo": {
+        "title": "Foto de capa da comunidade",
+        "description": "Use uma foto que tenha boa qualidade"
+      },
       "fields": {
         "name": "Nome da comunidade",
         "description": "O que é a comunidade",
@@ -920,6 +924,7 @@
       },
       "errors": {
         "logo_upload": "Houve um erro ao fazer o upload da logo",
+        "cover_upload": "Houve um erro ao fazer o upload da imagem de capa",
         "name": {
           "blank": "Sua comunidade precisa de um nome"
         },

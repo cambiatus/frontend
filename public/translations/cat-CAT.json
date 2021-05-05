@@ -905,6 +905,10 @@
         "title": "Accés a la comunitat",
         "description": "Quan s'estableix una \"invitació\" de la comunitat, els membres nous només podran accedir mitjançant una invitació."
       },
+      "cover_photo": {
+        "title": "Imatge de portada de la comunitat",
+        "description": "Assegureu-vos d’afegir una imatge de bona qualitat"
+      },
       "fields": {
         "name": "Nom de la Comunitat",
         "description": "Què és la comunitat.",
@@ -918,6 +922,7 @@
       },
       "errors": {
         "logo_upload": "S'ha produït un error en penjar el logotip",
+        "cover_upload": "S'ha produït un error en penjar la imatge de portada",
         "name": {
           "blank": "La vostra comunitat necessita un nom"
         },

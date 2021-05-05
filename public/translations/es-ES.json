@@ -905,6 +905,10 @@
         "title": "Acceso a la comunidad",
         "description": "Cuando se establece una \"invitación\" de la comunidad, los nuevos miembros solo obtienen acceso a través de una invitación."
       },
+      "cover_photo": {
+        "title": "Imagen de portada de la comunidad",
+        "description": "Asegúrese de agregar una imagen de buena calidad"
+      },
       "fields": {
         "name": "Nombre de la comunidad",
         "description": "Que es la comunidad",
@@ -918,6 +922,7 @@
       },
       "errors": {
         "logo_upload": "Hubo un error al cargar el logo",
+        "cover_upload": "Hubo un error al cargar la imagen de portada",
         "name": {
           "blank": "Tu comunidad necesita un nombre"
         },

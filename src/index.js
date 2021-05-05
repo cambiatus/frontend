@@ -499,7 +499,13 @@ const main = (setupIframe) => {
             return { transactionId: res.transaction_id }
           })
           .catch(errorString => {
-            const error = JSON.parse(errorString)
+            let error
+            try {
+              error = JSON.parse(errorString)
+            } catch {
+              error = errorString
+            }
+
             const response = { error }
 
             // Send to sentry
@@ -510,7 +516,13 @@ const main = (setupIframe) => {
               message: 'Failure pushing transaction to EOS'
             })
             Sentry.withScope(scope => {
-              const message = error.error.details[0].message || 'Generic EOS Error'
+              let message
+              try {
+                message = error.error.details[0].message || 'Generic EOS Error'
+              } catch {
+                message = errorString
+              }
+
               scope.setTag('type', 'eos-transaction')
               scope.setExtra('Sent data', arg.data)
               scope.setExtra('Response', response)

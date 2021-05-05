@@ -903,6 +903,10 @@
         "title": "Access to the community",
         "description": "When a community \"invitation\" is set, new members only get access through an invitation."
       },
+      "cover_photo": {
+        "title": "Community cover picture",
+        "description": "Be sure to add a picture that has good quality"
+      },
       "fields": {
         "name": "Community name",
         "description": "What is the community",
@@ -916,6 +920,7 @@
       },
       "errors": {
         "logo_upload": "There was an error uploading the logo",
+        "cover_upload": "There was an error uploading the cover picture",
         "name": {
           "blank": "Your community needs a name"
         },
