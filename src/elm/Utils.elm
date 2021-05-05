@@ -1,6 +1,8 @@
-module Utils exposing (decodeDate, decodeEnterKeyDown, decodeTimestamp, onClickNoBubble, posixDateTime)
+module Utils exposing (decodeDate, decodeEnterKeyDown, decodeTimestamp, errorToString, onClickNoBubble, posixDateTime)
 
 import Cambiatus.Scalar exposing (DateTime(..))
+import Graphql.Http
+import Graphql.Http.GraphqlError
 import Html
 import Html.Events
 import Iso8601
@@ -76,3 +78,20 @@ onClickNoBubble message =
             , preventDefault = False
             }
         )
+
+
+errorToString : Graphql.Http.Error parsedData -> String
+errorToString errorData =
+    case errorData of
+        Graphql.Http.GraphqlError _ graphqlErrors ->
+            graphqlErrors
+                |> List.map graphqlErrorToString
+                |> String.join "\n"
+
+        Graphql.Http.HttpError _ ->
+            "Http Error"
+
+
+graphqlErrorToString : Graphql.Http.GraphqlError.GraphqlError -> String
+graphqlErrorToString error =
+    error.message

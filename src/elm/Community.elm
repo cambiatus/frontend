@@ -29,6 +29,7 @@ module Community exposing
     , encodeUpdateData
     , encodeUpdateObjectiveAction
     , inviteQuery
+    , isNonExistingCommunityError
     , logoBackground
     , logoUrl
     , newCommunitySubscription
@@ -56,6 +57,7 @@ import Cambiatus.Scalar exposing (DateTime(..))
 import Cambiatus.Subscription as Subscription
 import Eos exposing (EosBool(..), Symbol, symbolToString)
 import Eos.Account as Eos
+import Graphql.Http
 import Graphql.Operation exposing (RootQuery, RootSubscription)
 import Graphql.OptionalArgument exposing (OptionalArgument(..))
 import Graphql.SelectionSet as SelectionSet exposing (SelectionSet, with)
@@ -734,3 +736,10 @@ communityPreviewImage isLeftSide { translators } community =
                 ]
             ]
         ]
+
+
+isNonExistingCommunityError : Graphql.Http.Error community -> Bool
+isNonExistingCommunityError error =
+    Utils.errorToString error
+        |> String.toLower
+        |> String.contains "no community found using the domain"

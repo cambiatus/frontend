@@ -2,7 +2,6 @@ module Page exposing
     ( ExternalMsg(..)
     , Msg(..)
     , Session(..)
-    , errorToString
     , fullPageError
     , fullPageGraphQLError
     , fullPageLoading
@@ -40,7 +39,6 @@ import DateDistance
 import File exposing (File)
 import Flags exposing (Flags)
 import Graphql.Http
-import Graphql.Http.GraphqlError
 import Html exposing (Attribute, Html, a, br, button, div, img, label, li, p, span, text, ul)
 import Html.Attributes exposing (attribute, class, classList, for, src, title, type_, value)
 import Html.Events exposing (on)
@@ -59,6 +57,7 @@ import Time exposing (Posix)
 import Translation
 import UpdateResult as UR
 import Url exposing (Url)
+import Utils
 import View.Components
 
 
@@ -336,7 +335,7 @@ fullPageGraphQLError title_ e =
     div [ class "mx-auto container p-16 flex flex-wrap" ]
         [ div [ class "w-full" ]
             [ p [ class "text-2xl font-bold text-center" ] [ text title_ ]
-            , p [ class "text-center" ] [ text (errorToString e) ]
+            , p [ class "text-center" ] [ text (Utils.errorToString e) ]
             ]
         , img [ class "w-full", src "/images/error.svg" ] []
         ]
@@ -356,23 +355,6 @@ fullPageNotFound title subTitle =
 loading : Html msg
 loading =
     div [ class "spinner spinner--delay" ] []
-
-
-errorToString : Graphql.Http.Error parsedData -> String
-errorToString errorData =
-    case errorData of
-        Graphql.Http.GraphqlError _ graphqlErrors ->
-            graphqlErrors
-                |> List.map graphqlErrorToString
-                |> String.join "\n"
-
-        Graphql.Http.HttpError _ ->
-            "Http Error"
-
-
-graphqlErrorToString : Graphql.Http.GraphqlError.GraphqlError -> String
-graphqlErrorToString error =
-    error.message
 
 
 

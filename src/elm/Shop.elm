@@ -13,7 +13,6 @@ import Cambiatus.Object
 import Cambiatus.Object.Product
 import Cambiatus.Object.User as User
 import Cambiatus.Query as Query
-import Cambiatus.Scalar
 import Eos exposing (Symbol)
 import Eos.Account as Eos
 import Graphql.Operation exposing (RootQuery)

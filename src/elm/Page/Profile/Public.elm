@@ -85,7 +85,7 @@ view loggedIn status =
                     Page.fullPageNotFound (t "error.unknown") (t "error.pageNotFound")
 
                 LoadingFailed err ->
-                    Page.fullPageNotFound (t "error.unknown") (Page.errorToString err)
+                    Page.fullPageGraphQLError (t "error.unknown") err
     in
     { title = title
     , content = content
