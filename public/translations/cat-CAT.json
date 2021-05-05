@@ -912,6 +912,7 @@
       "fields": {
         "name": "Nom de la Comunitat",
         "description": "Què és la comunitat.",
+        "website": "Lloc web de la comunitat",
         "url": "URL personalitzat de la comunitat.",
         "invitation": "Invitació"
       },
@@ -928,6 +929,9 @@
         },
         "description": {
           "blank": "La vostra comunitat necessita una descripció"
+        },
+        "website": {
+          "invalid": "Introduïu un lloc web vàlid"
         },
         "url": {
           "blank": "La vostra comunitat necessita un URL",

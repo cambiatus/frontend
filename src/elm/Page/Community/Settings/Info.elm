@@ -9,8 +9,6 @@ module Page.Community.Settings.Info exposing
     , view
     )
 
--- TODO - Add website input
-
 import Api
 import Api.Graphql
 import Browser.Navigation
@@ -51,6 +49,7 @@ type alias Model =
     , descriptionInput : String
     , descriptionErrors : List String
     , websiteInput : String
+    , websiteErrors : List String
     , coverPhoto : RemoteData Http.Error String
     , subdomainInput : String
     , subdomainErrors : List String
@@ -71,6 +70,7 @@ init loggedIn =
       , descriptionInput = ""
       , descriptionErrors = []
       , websiteInput = ""
+      , websiteErrors = []
       , coverPhoto = RemoteData.Loading
       , subdomainInput = ""
       , subdomainErrors = []
@@ -95,6 +95,7 @@ type Msg
     | CompletedLogoUpload (Result Http.Error String)
     | EnteredName String
     | EnteredDescription String
+    | EnteredWebsite String
     | EnteredCoverPhoto (List File)
     | CompletedCoverPhotoUpload (Result Http.Error String)
     | EnteredSubdomain String
@@ -165,6 +166,11 @@ update msg model ({ shared } as loggedIn) =
         EnteredDescription description ->
             { model | descriptionInput = description }
                 |> validateDescription
+                |> UR.init
+
+        EnteredWebsite website ->
+            { model | websiteInput = website }
+                |> validateWebsite
                 |> UR.init
 
         EnteredCoverPhoto (file :: _) ->
@@ -347,6 +353,12 @@ update msg model ({ shared } as loggedIn) =
                                 { community
                                     | name = model.nameInput
                                     , description = model.descriptionInput
+                                    , website =
+                                        if String.isEmpty model.websiteInput then
+                                            Nothing
+
+                                        else
+                                            Just (addProtocolToUrlString model.websiteInput)
                                     , logo = model.logoUrl
                                     , inviterReward =
                                         model.inviterRewardInput
@@ -358,8 +370,6 @@ update msg model ({ shared } as loggedIn) =
                                             |> Maybe.withDefault community.invitedReward
                                     , hasAutoInvite = model.hasAutoInvite
                                     , coverPhoto = RemoteData.toMaybe model.coverPhoto
-
-                                    -- TODO - Update website
                                 }
                                 |> LoggedIn.ExternalBroadcast
                             )
@@ -378,6 +388,7 @@ update msg model ({ shared } as loggedIn) =
 type Field
     = NameField
     | DescriptionField
+    | WebsiteField
     | SubdomainField
 
 
@@ -391,6 +402,9 @@ error field key =
 
                 DescriptionField ->
                     "description"
+
+                WebsiteField ->
+                    "website"
 
                 SubdomainField ->
                     "url"
@@ -413,6 +427,7 @@ validateModel maybeCommunity model =
     model
         |> validateName
         |> validateDescription
+        |> validateWebsite
         |> validateSubdomain
         |> validateInviterReward maybeCommunity
         |> validateInvitedReward maybeCommunity
@@ -442,11 +457,41 @@ validateDescription model =
     }
 
 
+addProtocolToUrlString : String -> String
+addProtocolToUrlString url =
+    if String.startsWith "https://" url || String.startsWith "http://" url then
+        url
+
+    else
+        "https://" ++ url
+
+
+validateWebsite : Model -> Model
+validateWebsite model =
+    let
+        withProtocol =
+            addProtocolToUrlString model.websiteInput
+    in
+    { model
+        | websiteErrors =
+            if String.isEmpty model.websiteInput then
+                []
+
+            else
+                case Url.fromString withProtocol of
+                    Nothing ->
+                        [ error WebsiteField "invalid" ]
+
+                    Just _ ->
+                        []
+    }
+
+
 validateSubdomain : Model -> Model
 validateSubdomain model =
     let
         isAllowed character =
-            Char.isAlphaNum character || character == '-'
+            Char.isAlpha character || character == '-'
 
         validateLength =
             if String.length model.subdomainInput > 1 then
@@ -463,7 +508,7 @@ validateSubdomain model =
                 [ error SubdomainField "invalid_char" ]
 
         validateCase =
-            if String.filter Char.isAlphaNum model.subdomainInput |> String.all Char.isLower then
+            if String.filter Char.isAlpha model.subdomainInput |> String.all Char.isLower then
                 []
 
             else
@@ -572,6 +617,7 @@ view_ loggedIn community model =
                 [ viewLogo loggedIn.shared model
                 , viewName loggedIn.shared model
                 , viewDescription loggedIn.shared model
+                , viewWebsite loggedIn.shared model
                 , viewCoverPhoto loggedIn.shared model
                 , viewSubdomain loggedIn.shared model
                 , viewInvitation loggedIn.shared model
@@ -651,6 +697,28 @@ viewDescription shared model =
         , translators = shared.translators
         }
         |> Input.withType Input.TextArea
+        |> Input.toHtml
+
+
+viewWebsite : Shared -> Model -> Html Msg
+viewWebsite shared model =
+    let
+        { t } =
+            shared.translators
+    in
+    Input.init
+        { label = t "settings.community_info.fields.website"
+        , id = "community_website_input"
+        , onInput = EnteredWebsite
+        , disabled = model.isLoading
+        , value = model.websiteInput
+        , placeholder = Just "cambiatus.com"
+        , problems =
+            List.map t model.websiteErrors
+                |> List.head
+                |> Maybe.map List.singleton
+        , translators = shared.translators
+        }
         |> Input.toHtml
 
 
@@ -850,6 +918,9 @@ msgToString msg =
 
         EnteredDescription _ ->
             [ "EnteredDescription" ]
+
+        EnteredWebsite _ ->
+            [ "EnteredWebsite" ]
 
         EnteredCoverPhoto _ ->
             [ "EnteredCoverPhoto" ]

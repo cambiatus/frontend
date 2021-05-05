@@ -914,6 +914,7 @@
       "fields": {
         "name": "Nome da comunidade",
         "description": "O que é a comunidade",
+        "website": "Site da comunidade",
         "url": "URL personalizado da comunidade",
         "invitation": "Convite"
       },
@@ -930,6 +931,9 @@
         },
         "description": {
           "blank": "Sua comunidade precisa de uma descrição"
+        },
+        "website": {
+          "invalid": "Por favor insira um site válido"
         },
         "url": {
           "blank": "Sua communidade precisa de uma URL",

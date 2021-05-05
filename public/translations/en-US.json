@@ -910,6 +910,7 @@
       "fields": {
         "name": "Community name",
         "description": "What is the community",
+        "website": "Community's website",
         "url": "Community custom URL",
         "invitation": "Invitation"
       },
@@ -926,6 +927,9 @@
         },
         "description": {
           "blank": "Your community needs a description"
+        },
+        "website": {
+          "invalid": "Please enter a valid website"
         },
         "url": {
           "blank": "Your community needs a URL",
