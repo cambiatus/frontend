@@ -281,6 +281,7 @@ saveFeature feature state authorization { shared, accountName } community =
             , hasObjectives = hasObjectives
             , hasKyc = hasKyc
             , hasAutoInvite = community.hasAutoInvite
+            , website = Maybe.withDefault "" community.website
             }
     in
     { responseAddress = SaveSuccess

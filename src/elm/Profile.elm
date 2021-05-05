@@ -113,7 +113,7 @@ type alias CommunityInfo =
     { symbol : Symbol
     , name : String
     , logo : String
-    , subdomain : Maybe String
+    , subdomain : String
     , hasShop : Bool
     , hasActions : Bool
     , hasKyc : Bool
@@ -160,7 +160,7 @@ communityInfoSelectionSet =
         |> with (Eos.symbolSelectionSet Community.symbol)
         |> with Community.name
         |> with Community.logo
-        |> with (Community.subdomain Subdomain.name)
+        |> with (Community.subdomain Subdomain.name |> SelectionSet.map (Maybe.withDefault ""))
         |> with Community.hasShop
         |> with Community.hasObjectives
         |> with Community.hasKyc

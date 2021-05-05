@@ -96,7 +96,7 @@ type alias Model =
     , description : String
     , symbol : Symbol
     , logo : String
-    , subdomain : Maybe String
+    , subdomain : String
     , creator : Eos.Name
     , inviterReward : Float
     , invitedReward : Float
@@ -143,7 +143,7 @@ communitySelectionSet =
         |> with Community.description
         |> with (Eos.symbolSelectionSet Community.symbol)
         |> with Community.logo
-        |> with (Community.subdomain Subdomain.name)
+        |> with (Community.subdomain Subdomain.name |> SelectionSet.map (Maybe.withDefault ""))
         |> with (Eos.nameSelectionSet Community.creator)
         |> with Community.inviterReward
         |> with Community.invitedReward
@@ -355,13 +355,14 @@ type alias CreateCommunityData =
     , logoUrl : String
     , name : String
     , description : String
-    , subdomain : Maybe String
+    , subdomain : String
     , inviterReward : Eos.Asset
     , invitedReward : Eos.Asset
     , hasShop : Eos.EosBool
     , hasObjectives : Eos.EosBool
     , hasKyc : Eos.EosBool
     , hasAutoInvite : Eos.EosBool
+    , website : String
     }
 
 
@@ -371,13 +372,14 @@ createCommunityData :
     , logoUrl : String
     , name : String
     , description : String
-    , subdomain : Maybe String
+    , subdomain : String
     , inviterReward : Float
     , invitedReward : Float
     , hasShop : Bool
     , hasObjectives : Bool
     , hasKyc : Bool
     , hasAutoInvite : Bool
+    , website : String
     }
     -> CreateCommunityData
 createCommunityData params =
@@ -402,6 +404,7 @@ createCommunityData params =
     , hasObjectives = params.hasObjectives |> Eos.boolToEosBool
     , hasKyc = params.hasKyc |> Eos.boolToEosBool
     , hasAutoInvite = params.hasAutoInvite |> Eos.boolToEosBool
+    , website = params.website
     }
 
 
@@ -413,13 +416,14 @@ encodeCreateCommunityData c =
         , ( "logo", Encode.string c.logoUrl )
         , ( "name", Encode.string c.name )
         , ( "description", Encode.string c.description )
-        , ( "subdomain", Maybe.map Encode.string c.subdomain |> Maybe.withDefault Encode.null )
+        , ( "subdomain", Encode.string c.subdomain )
         , ( "inviter_reward", Eos.encodeAsset c.inviterReward )
         , ( "invited_reward", Eos.encodeAsset c.invitedReward )
         , ( "has_objectives", Eos.encodeEosBool c.hasObjectives )
         , ( "has_shop", Eos.encodeEosBool c.hasShop )
         , ( "has_kyc", Eos.encodeEosBool c.hasKyc )
         , ( "auto_invite", Eos.encodeEosBool c.hasAutoInvite )
+        , ( "website", Encode.string c.website )
         ]
 
 
@@ -431,13 +435,14 @@ createCommunityDataDecoder =
         |> required "logo" Decode.string
         |> required "name" Decode.string
         |> required "description" Decode.string
-        |> required "subdomain" (Decode.nullable Decode.string)
+        |> required "subdomain" Decode.string
         |> required "inviter_reward" Eos.decodeAsset
         |> required "invited_reward" Eos.decodeAsset
         |> required "has_objectives" Eos.eosBoolDecoder
         |> required "has_shop" Eos.eosBoolDecoder
         |> required "has_kyc" Eos.eosBoolDecoder
         |> required "auto_invite" Eos.eosBoolDecoder
+        |> required "website" Decode.string
 
 
 type alias UpdateCommunityData =
@@ -655,7 +660,7 @@ type alias CommunityPreview =
     , description : String
     , logo : String
     , symbol : Eos.Symbol
-    , subdomain : Maybe String
+    , subdomain : String
     , hasShop : Bool
     , hasObjectives : Bool
     , hasKyc : Bool
@@ -673,7 +678,7 @@ communityPreviewSelectionSet =
         |> with CommunityPreview.description
         |> with CommunityPreview.logo
         |> with (Eos.symbolSelectionSet CommunityPreview.symbol)
-        |> with (CommunityPreview.subdomain Subdomain.name)
+        |> with (CommunityPreview.subdomain Subdomain.name |> SelectionSet.map (Maybe.withDefault ""))
         |> with CommunityPreview.hasShop
         |> with CommunityPreview.hasObjectives
         |> with CommunityPreview.hasKyc

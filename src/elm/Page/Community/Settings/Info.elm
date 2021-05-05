@@ -127,8 +127,8 @@ update msg model ({ shared } as loggedIn) =
                             RemoteData.NotAsked
                 , subdomainInput =
                     community.subdomain
-                        |> Maybe.map (String.split ".")
-                        |> Maybe.andThen List.head
+                        |> String.split "."
+                        |> List.head
                         |> Maybe.withDefault ""
                 , hasAutoInvite = community.hasAutoInvite
                 , inviterRewardInput = String.fromFloat community.inviterReward
@@ -212,7 +212,7 @@ update msg model ({ shared } as loggedIn) =
 
                 isSameSubdomain =
                     maybeCommunity
-                        |> Maybe.andThen .subdomain
+                        |> Maybe.map .subdomain
                         |> Maybe.map ((==) (model.subdomainInput ++ ".cambiatus.io"))
                         |> Maybe.withDefault False
             in
@@ -324,7 +324,7 @@ update msg model ({ shared } as loggedIn) =
                     let
                         newCommunity =
                             { symbol = community.symbol
-                            , subdomain = Just (model.subdomainInput ++ ".cambiatus.io")
+                            , subdomain = model.subdomainInput ++ ".cambiatus.io"
                             }
 
                         redirectToCommunity =

@@ -144,14 +144,14 @@ pushUrl key route =
     Nav.pushUrl key (routeToString route)
 
 
-externalHref : Url -> { community | symbol : Eos.Symbol, subdomain : Maybe String } -> Route -> Attribute msg
+externalHref : Url -> { community | symbol : Eos.Symbol, subdomain : String } -> Route -> Attribute msg
 externalHref currentUrl community route =
     externalCommunityLink currentUrl community route
         |> Url.toString
         |> Attr.href
 
 
-externalCommunityLink : Url -> { community | symbol : Eos.Symbol, subdomain : Maybe String } -> Route -> Url
+externalCommunityLink : Url -> { community | symbol : Eos.Symbol, subdomain : String } -> Route -> Url
 externalCommunityLink currentUrl community route =
     let
         defaultSubdomain =
@@ -159,8 +159,8 @@ externalCommunityLink currentUrl community route =
 
         communitySubdomain =
             community.subdomain
-                |> Maybe.map (String.split ".")
-                |> Maybe.andThen List.head
+                |> String.split "."
+                |> List.head
                 |> Maybe.withDefault defaultSubdomain
 
         communityUrl =

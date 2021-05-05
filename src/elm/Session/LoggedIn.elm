@@ -739,6 +739,7 @@ viewFooter _ =
 type External msg
     = UpdatedLoggedIn Model
     | AddedCommunity Profile.CommunityInfo
+    | CreatedCommunity Eos.Symbol String
     | ExternalBroadcast BroadcastMsg
     | ReloadResource Resource
     | RequiredAuthentication (Maybe msg)
@@ -760,6 +761,9 @@ mapExternal transform ext =
 
         AddedCommunity communityInfo ->
             AddedCommunity communityInfo
+
+        CreatedCommunity symbol subdomain ->
+            CreatedCommunity symbol subdomain
 
         ExternalBroadcast broadcastMsg ->
             ExternalBroadcast broadcastMsg
@@ -818,6 +822,13 @@ updateExternal externalMsg ({ shared } as model) =
                 | model = { newModel | profile = profileWithCommunity }
                 , cmd = cmd
             }
+
+        CreatedCommunity symbol subdomain ->
+            let
+                ( newModel, cmd ) =
+                    selectCommunity model { symbol = symbol, subdomain = subdomain } Route.Dashboard
+            in
+            { defaultResult | model = newModel, cmd = cmd }
 
         ExternalBroadcast broadcastMsg ->
             case broadcastMsg of
@@ -1339,7 +1350,7 @@ signUpForCommunity ({ shared, authToken } as model) communityInfo =
 {-| Given minimal information, selects a community. This means querying for the
 entire `Community.Model`, and then setting it in the `Model`
 -}
-selectCommunity : Model -> { community | symbol : Eos.Symbol, subdomain : Maybe String } -> Route -> ( Model, Cmd Msg )
+selectCommunity : Model -> { community | symbol : Eos.Symbol, subdomain : String } -> Route -> ( Model, Cmd Msg )
 selectCommunity ({ shared, authToken } as model) community route =
     if shared.useSubdomain then
         ( model
@@ -1352,11 +1363,7 @@ selectCommunity ({ shared, authToken } as model) community route =
         ( { model | selectedCommunity = RemoteData.Loading }
         , Api.Graphql.query shared
             (Just authToken)
-            (Community.subdomainQuery
-                (community.subdomain
-                    |> Maybe.withDefault "cambiatus.cambiatus.io"
-                )
-            )
+            (Community.subdomainQuery community.subdomain)
             CompletedLoadCommunity
         )
 

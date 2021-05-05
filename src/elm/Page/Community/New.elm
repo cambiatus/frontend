@@ -238,6 +238,16 @@ viewSubdomain { translators } isDisabled defVal _ =
         , problems = Nothing
         , translators = translators
         }
+        |> Input.withElement
+            (span
+                [ class "absolute inset-y-0 right-1 flex items-center bg-white pl-1 my-2"
+                , classList
+                    [ ( "hidden", String.isEmpty defVal )
+                    , ( "bg-gray-500", isDisabled )
+                    ]
+                ]
+                [ text ".cambiatus.io" ]
+            )
         |> Input.toHtml
 
 
@@ -502,13 +512,14 @@ validateModel accountName model =
                         , logoUrl = logoUrl
                         , name = name
                         , description = model.description
-                        , subdomain = Just model.subdomain
+                        , subdomain = model.subdomain ++ ".cambiatus.io"
                         , inviterReward = inviterReward
                         , invitedReward = invitedReward
                         , hasShop = True
                         , hasObjectives = True
                         , hasKyc = False
                         , hasAutoInvite = False
+                        , website = ""
                         }
                 )
                 symbolValidation
@@ -611,7 +622,7 @@ type Msg
     | SubmittedForm
     | GotDomainAvailableResponse (RemoteData (Graphql.Http.Error Bool) Bool)
     | StartedCreatingCommunity Community.CreateCommunityData Token.CreateTokenData
-    | GotCreateCommunityResponse (Result Encode.Value String)
+    | GotCreateCommunityResponse (Result Encode.Value ( Eos.Symbol, String ))
     | Redirect Community.CreateCommunityData
     | PressedEnter Bool
 
@@ -763,7 +774,11 @@ update msg model loggedIn =
             UR.init model
                 |> UR.addPort
                     { responseAddress = StartedCreatingCommunity createCommunityData createTokenData
-                    , responseData = Encode.null
+                    , responseData =
+                        Encode.object
+                            [ ( "symbol", Eos.encodeSymbol createCommunityData.cmmAsset.symbol )
+                            , ( "subdomain", Encode.string createCommunityData.subdomain )
+                            ]
                     , data =
                         Eos.encodeTransaction
                             [ { accountName = loggedIn.shared.contracts.community
@@ -779,9 +794,10 @@ update msg model loggedIn =
                             ]
                     }
 
-        GotCreateCommunityResponse (Ok _) ->
+        GotCreateCommunityResponse (Ok ( symbol, subdomain )) ->
             model
                 |> UR.init
+                |> UR.addExt (LoggedIn.CreatedCommunity symbol subdomain)
 
         GotCreateCommunityResponse (Err val) ->
             { model | isDisabled = False }
@@ -846,7 +862,15 @@ jsAddressToMsg addr val =
 
         "StartedCreatingCommunity" :: [] ->
             Decode.decodeValue
-                (Decode.field "transactionId" Decode.string)
+                (Decode.map2 (\_ s -> s)
+                    (Decode.field "transactionId" Decode.string)
+                    (Decode.field "addressData"
+                        (Decode.map2 Tuple.pair
+                            (Decode.field "symbol" Eos.symbolDecoder)
+                            (Decode.field "subdomain" Decode.string)
+                        )
+                    )
+                )
                 val
                 |> Result.mapError (\_ -> val)
                 |> GotCreateCommunityResponse
