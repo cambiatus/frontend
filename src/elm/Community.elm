@@ -163,21 +163,12 @@ communitySelectionSet =
         |> with Community.hasKyc
         |> with Community.autoInvite
         |> with (Community.validators (Eos.nameSelectionSet Profile.account))
+        -- TODO
         |> SelectionSet.hardcoded Nothing
         |> with Community.website
 
 
 
--- TODO
--- |> with
--- (Community.uploads Upload.url
---     |> SelectionSet.map
---         (Maybe.withDefault []
---             >> List.filterMap identity
---             >> List.head
---             >> Maybe.andThen identity
---         )
--- )
 -- Communities Query
 
 
@@ -669,6 +660,9 @@ type alias CommunityPreview =
     , hasObjectives : Bool
     , hasKyc : Bool
     , hasAutoInvite : Bool
+    , coverPhoto : Maybe String
+    , memberCount : Int
+    , website : Maybe String
     }
 
 
@@ -684,6 +678,10 @@ communityPreviewSelectionSet =
         |> with CommunityPreview.hasObjectives
         |> with CommunityPreview.hasKyc
         |> with CommunityPreview.autoInvite
+        -- TODO
+        |> SelectionSet.hardcoded Nothing
+        |> with CommunityPreview.memberCount
+        |> with CommunityPreview.website
 
 
 communityPreviewQuery : String -> SelectionSet (Maybe CommunityPreview) RootQuery
@@ -692,7 +690,16 @@ communityPreviewQuery subdomain =
         communityPreviewSelectionSet
 
 
-communityPreviewImage : Bool -> Shared -> { community | name : String } -> Html msg
+defaultCommunityCoverPhoto : String
+defaultCommunityCoverPhoto =
+    "https://cambiatus-uploads.s3.amazonaws.com/cambiatus-uploads/832a40918a9042c994b92ecde4e49705"
+
+
+communityPreviewImage :
+    Bool
+    -> Shared
+    -> { community | name : String, coverPhoto : Maybe String, memberCount : Int }
+    -> Html msg
 communityPreviewImage isLeftSide { translators } community =
     div
         [ class "relative"
@@ -701,18 +708,24 @@ communityPreviewImage isLeftSide { translators } community =
             , ( "w-1/2 flex-grow hidden md:block", isLeftSide )
             ]
         ]
-        [ img
-            [ class "w-full"
-            , classList [ ( "h-full object-cover", isLeftSide ) ]
-
-            -- TODO - Use community image
-            , src "https://picsum.photos/1920/1080"
+        [ div [ class "bg-black" ]
+            [ img
+                [ class "w-full opacity-60"
+                , classList
+                    [ ( "h-screen object-cover", isLeftSide )
+                    , ( "max-h-108", not isLeftSide )
+                    ]
+                , src (Maybe.withDefault defaultCommunityCoverPhoto community.coverPhoto)
+                ]
+                []
             ]
-            []
         , div [ class "absolute inset-0 flex flex-col items-center justify-center text-white uppercase px-5" ]
             [ span [ class "font-medium text-xl" ] [ text community.name ]
-
-            -- TODO - Use community memberCount
-            , span [ class "text-xs mt-2" ] [ text (translators.tr "community.join.member_count" [ ( "member_count", "1900" ) ]) ]
+            , span [ class "text-xs mt-2" ]
+                [ text
+                    (translators.tr "community.join.member_count"
+                        [ ( "member_count", String.fromInt community.memberCount ) ]
+                    )
+                ]
             ]
         ]

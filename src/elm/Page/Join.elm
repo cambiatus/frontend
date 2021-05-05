@@ -133,6 +133,9 @@ type alias GenericCommunity community =
         | name : String
         , hasAutoInvite : Bool
         , description : String
+        , coverPhoto : Maybe String
+        , memberCount : Int
+        , website : Maybe String
     }
 
 
@@ -163,13 +166,16 @@ view_ isGuest ({ translators } as shared) community =
                         else
                             [ span [ class "block text-center text-sm" ]
                                 [ text (translators.t "community.join.only_invited") ]
-                            , a
-                                [ class "button button-primary w-full mt-4 cursor-pointer"
+                            , case community.website of
+                                Nothing ->
+                                    text ""
 
-                                -- TODO - Use community website
-                                , href "https://cambiatus.com"
-                                ]
-                                [ text (translators.t "community.join.visit_website") ]
+                                Just website ->
+                                    a
+                                        [ class "button button-primary w-full mt-4 cursor-pointer"
+                                        , href website
+                                        ]
+                                        [ text (translators.t "community.join.visit_website") ]
                             ]
                        )
                 )

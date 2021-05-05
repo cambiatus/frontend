@@ -149,6 +149,9 @@ module.exports = {
         '1/3': '33%',
         '1/2': '50%'
       },
+      maxHeight: {
+        '108': '27rem'
+      },
       lineHeight: {
         caption: 0.75
       },
@@ -167,7 +170,8 @@ module.exports = {
         form: '45.625rem'
       },
       opacity: {
-        '10': '0.1'
+        '10': '0.1',
+        '60': '0.6'
       },
       screens: {
         'xs-max': {
