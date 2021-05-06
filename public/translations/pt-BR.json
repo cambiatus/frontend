@@ -487,7 +487,7 @@
       "subtitle": "{{objectives}} objetivos e {{actions}} ações",
       "new": "Criar novo objetivo",
       "action_count": "{{actions}} ações",
-      "complete": "Completado",
+      "complete": "Completo",
       "edit": "Editar objetivo",
       "editor": {
         "not_found": "Não encontrado",
@@ -496,10 +496,10 @@
         "description_placeholder": "Defina uma meta que ajude a resolver o problema da comunidade.",
         "submit": "Salvar",
         "mark_as_complete": "Marcar como completo",
-        "error_marking_as_complete": "Algo de errado aconteceu ao marcar seu objetivo como completo",
+        "error_marking_as_complete": "Algo de errado aconteceu ao completar seu objetivo",
         "modal": {
           "title": "Marcar objetivo como completo",
-          "body": "Marcar o objectivo como completo não pode ser desfeito. Ações deste objetivo não estarão mais disponíveis para análise. Você quer mesmo marcar este objetivo como completo?",
+          "body": "Não é possível reverter após completar um objetivo. Ações deste objetivo não estarão mais disponíveis para análise. Tem certeza que deseja completar esse objetivo?",
           "confirm": "Sim",
           "cancel": "Não"
         }
@@ -909,7 +909,7 @@
       },
       "cover_photo": {
         "title": "Foto de capa da comunidade",
-        "description": "Use uma foto que tenha boa qualidade"
+        "description": "Use uma foto de boa qualidade"
       },
       "fields": {
         "name": "Nome da comunidade",
@@ -925,7 +925,7 @@
       },
       "errors": {
         "logo_upload": "Houve um erro ao fazer o upload da logo",
-        "cover_upload": "Houve um erro ao fazer o upload da imagem de capa",
+        "cover_upload": "Houve um erro ao carregar a imagem de capa",
         "name": {
           "blank": "Sua comunidade precisa de um nome"
         },
