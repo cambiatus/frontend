@@ -729,9 +729,10 @@ communityPreviewImage isLeftSide { translators } community =
                     [ ( "h-screen object-cover", isLeftSide )
                     , ( "max-h-108", not isLeftSide )
                     ]
-                , src (
-                    List.head community.uploads
-                    |> Maybe.withDefault defaultCommunityCoverPhoto)
+                , src
+                    (List.head community.uploads
+                        |> Maybe.withDefault defaultCommunityCoverPhoto
+                    )
                 ]
                 []
             ]
