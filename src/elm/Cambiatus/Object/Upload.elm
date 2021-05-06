@@ -19,6 +19,6 @@ import Graphql.SelectionSet exposing (SelectionSet)
 import Json.Decode as Decode
 
 
-url : SelectionSet (Maybe String) Cambiatus.Object.Upload
+url : SelectionSet String Cambiatus.Object.Upload
 url =
-    Object.selectionForField "(Maybe String)" "url" [] (Decode.string |> Decode.nullable)
+    Object.selectionForField "String" "url" [] Decode.string

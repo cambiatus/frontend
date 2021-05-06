@@ -376,7 +376,7 @@ viewSearchBody translators selectedCommunity today searchToMsg actionToMsg searc
                                     |> Html.map searchToMsg
 
             ResultsShowed RemoteData.Loading _ ->
-                View.Components.loadingLogoAnimated translators
+                View.Components.loadingLogoAnimated translators ""
 
             _ ->
                 viewRecentQueries translators searchModel.recentQueries

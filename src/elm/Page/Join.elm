@@ -133,7 +133,7 @@ type alias GenericCommunity community =
         | name : String
         , hasAutoInvite : Bool
         , description : String
-        , coverPhoto : Maybe String
+        , uploads : List String
         , memberCount : Int
         , website : Maybe String
     }
@@ -186,7 +186,7 @@ view_ isGuest ({ translators } as shared) community =
 viewLoading : Shared -> Html msg
 viewLoading shared =
     div [ class "flex flex-col flex-grow items-center md:justify-center" ]
-        [ View.Components.loadingLogoAnimated shared.translators ]
+        [ View.Components.loadingLogoAnimated shared.translators "" ]
 
 
 viewAsGuest : String -> Guest.Model -> Html Msg

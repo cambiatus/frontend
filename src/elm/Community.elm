@@ -13,6 +13,7 @@ module Community exposing
     , Verification(..)
     , Verifiers
     , WithObjectives
+    , addPhotosMutation
     , claimSelectionSet
     , communitiesQuery
     , communityPreviewImage
@@ -41,6 +42,7 @@ module Community exposing
 
 import Action exposing (Action)
 import Cambiatus.Enum.VerificationType exposing (VerificationType(..))
+import Cambiatus.Mutation as Mutation
 import Cambiatus.Object
 import Cambiatus.Object.Action as ActionObject
 import Cambiatus.Object.Check as Check
@@ -51,6 +53,7 @@ import Cambiatus.Object.Exists
 import Cambiatus.Object.Invite as Invite
 import Cambiatus.Object.Objective as Objective
 import Cambiatus.Object.Subdomain as Subdomain
+import Cambiatus.Object.Upload as Upload
 import Cambiatus.Object.User as Profile
 import Cambiatus.Query as Query
 import Cambiatus.Scalar exposing (DateTime(..))
@@ -58,7 +61,7 @@ import Cambiatus.Subscription as Subscription
 import Eos exposing (EosBool(..), Symbol, symbolToString)
 import Eos.Account as Eos
 import Graphql.Http
-import Graphql.Operation exposing (RootQuery, RootSubscription)
+import Graphql.Operation exposing (RootMutation, RootQuery, RootSubscription)
 import Graphql.OptionalArgument exposing (OptionalArgument(..))
 import Graphql.SelectionSet as SelectionSet exposing (SelectionSet, with)
 import Html exposing (Html, div, img, span, text)
@@ -118,7 +121,7 @@ type alias Model =
     , hasKyc : Bool
     , hasAutoInvite : Bool
     , validators : List Eos.Name
-    , coverPhoto : Maybe String
+    , uploads : List String
     , website : Maybe String
     }
 
@@ -165,8 +168,7 @@ communitySelectionSet =
         |> with Community.hasKyc
         |> with Community.autoInvite
         |> with (Community.validators (Eos.nameSelectionSet Profile.account))
-        -- TODO
-        |> SelectionSet.hardcoded Nothing
+        |> with (Community.uploads Upload.url)
         |> with Community.website
 
 
@@ -241,6 +243,12 @@ logoBackground : Maybe String -> Html.Attribute msg
 logoBackground maybeUrl =
     Html.Attributes.style "background-image"
         ("url(" ++ logoUrl maybeUrl ++ ")")
+
+
+addPhotosMutation : Eos.Symbol -> List String -> SelectionSet (Maybe Model) RootMutation
+addPhotosMutation symbol photos =
+    Mutation.addCommunityPhotos { symbol = Eos.symbolToString symbol, urls = photos }
+        communitySelectionSet
 
 
 
@@ -667,7 +675,7 @@ type alias CommunityPreview =
     , hasObjectives : Bool
     , hasKyc : Bool
     , hasAutoInvite : Bool
-    , coverPhoto : Maybe String
+    , uploads : List String
     , memberCount : Int
     , website : Maybe String
     }
@@ -685,8 +693,7 @@ communityPreviewSelectionSet =
         |> with CommunityPreview.hasObjectives
         |> with CommunityPreview.hasKyc
         |> with CommunityPreview.autoInvite
-        -- TODO
-        |> SelectionSet.hardcoded Nothing
+        |> with (CommunityPreview.uploads Upload.url)
         |> with CommunityPreview.memberCount
         |> with CommunityPreview.website
 
@@ -705,7 +712,7 @@ defaultCommunityCoverPhoto =
 communityPreviewImage :
     Bool
     -> Shared
-    -> { community | name : String, coverPhoto : Maybe String, memberCount : Int }
+    -> { community | name : String, uploads : List String, memberCount : Int }
     -> Html msg
 communityPreviewImage isLeftSide { translators } community =
     div
@@ -722,7 +729,9 @@ communityPreviewImage isLeftSide { translators } community =
                     [ ( "h-screen object-cover", isLeftSide )
                     , ( "max-h-108", not isLeftSide )
                     ]
-                , src (Maybe.withDefault defaultCommunityCoverPhoto community.coverPhoto)
+                , src (
+                    List.head community.uploads
+                    |> Maybe.withDefault defaultCommunityCoverPhoto)
                 ]
                 []
             ]

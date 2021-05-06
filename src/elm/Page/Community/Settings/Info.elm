@@ -43,7 +43,7 @@ import View.Toggle
 
 
 type alias Model =
-    { logoUrl : String
+    { logo : RemoteData Http.Error String
     , nameInput : String
     , nameErrors : List String
     , descriptionInput : String
@@ -59,12 +59,13 @@ type alias Model =
     , invitedRewardInput : String
     , invitedRewardErrors : List String
     , isLoading : Bool
+    , hasSavedCoverPhoto : Bool
     }
 
 
 init : LoggedIn.Model -> ( Model, Cmd Msg )
 init loggedIn =
-    ( { logoUrl = ""
+    ( { logo = RemoteData.Loading
       , nameInput = ""
       , nameErrors = []
       , descriptionInput = ""
@@ -80,6 +81,7 @@ init loggedIn =
       , invitedRewardInput = ""
       , invitedRewardErrors = []
       , isLoading = True
+      , hasSavedCoverPhoto = False
       }
     , LoggedIn.maybeInitWith CompletedLoadCommunity .selectedCommunity loggedIn
     )
@@ -104,6 +106,7 @@ type Msg
     | EnteredInvitedReward String
     | ClickedSave
     | GotDomainAvailableResponse (RemoteData (Graphql.Http.Error Bool) Bool)
+    | CompletedAddingCoverPhoto String (RemoteData (Graphql.Http.Error (Maybe Community.Model)) (Maybe Community.Model))
     | GotSaveResponse (Result Value Eos.Symbol)
 
 
@@ -116,11 +119,11 @@ update msg model ({ shared } as loggedIn) =
     case msg of
         CompletedLoadCommunity community ->
             { model
-                | logoUrl = community.logo
+                | logo = RemoteData.Success community.logo
                 , nameInput = community.name
                 , descriptionInput = community.description
                 , coverPhoto =
-                    case community.coverPhoto of
+                    case List.head community.uploads of
                         Just photo ->
                             RemoteData.Success photo
 
@@ -147,11 +150,12 @@ update msg model ({ shared } as loggedIn) =
             UR.init model
 
         CompletedLogoUpload (Ok url) ->
-            { model | logoUrl = url }
+            { model | logo = RemoteData.Success url }
                 |> UR.init
 
         CompletedLogoUpload (Err e) ->
-            UR.init model
+            { model | logo = RemoteData.Failure e }
+                |> UR.init
                 |> UR.addExt
                     (LoggedIn.ShowFeedback Feedback.Failure
                         (shared.translators.t "settings.community_info.errors.logo_upload")
@@ -185,7 +189,8 @@ update msg model ({ shared } as loggedIn) =
                 |> UR.init
 
         CompletedCoverPhotoUpload (Err e) ->
-            UR.init { model | coverPhoto = RemoteData.Failure e }
+            { model | coverPhoto = RemoteData.Failure e }
+                |> UR.init
                 |> UR.addExt
                     (LoggedIn.ShowFeedback Feedback.Failure
                         (shared.translators.t "settings.community_info.errors.cover_upload")
@@ -263,7 +268,10 @@ update msg model ({ shared } as loggedIn) =
                             , symbol = community.symbol
                             }
                     in
-                    { model | isLoading = True }
+                    { model
+                        | isLoading = True
+                        , hasSavedCoverPhoto = RemoteData.isNotAsked model.coverPhoto
+                    }
                         |> UR.init
                         |> UR.addPort
                             { responseAddress = GotDomainAvailableResponse (RemoteData.Success True)
@@ -275,7 +283,7 @@ update msg model ({ shared } as loggedIn) =
                                       , authorization = authorization
                                       , data =
                                             { asset = asset 0
-                                            , logo = model.logoUrl
+                                            , logo = RemoteData.withDefault community.logo model.logo
                                             , name = model.nameInput
                                             , description = model.descriptionInput
                                             , subdomain = model.subdomainInput ++ ".cambiatus.io"
@@ -297,6 +305,21 @@ update msg model ({ shared } as loggedIn) =
                                       }
                                     ]
                             }
+                        |> UR.addCmd
+                            (case model.coverPhoto of
+                                RemoteData.Success url ->
+                                    Api.Graphql.mutation
+                                        shared
+                                        (Just loggedIn.authToken)
+                                        (Community.addPhotosMutation
+                                            community.symbol
+                                            (url :: community.uploads)
+                                        )
+                                        (CompletedAddingCoverPhoto url)
+
+                                _ ->
+                                    Cmd.none
+                            )
 
                 ( False, True, RemoteData.Success _ ) ->
                     UR.init model
@@ -324,60 +347,92 @@ update msg model ({ shared } as loggedIn) =
         GotDomainAvailableResponse RemoteData.NotAsked ->
             UR.init model
 
+        CompletedAddingCoverPhoto url (RemoteData.Success (Just community)) ->
+            { model
+                | coverPhoto = RemoteData.Success url
+                , hasSavedCoverPhoto = True
+            }
+                |> UR.init
+                |> UR.addMsg (GotSaveResponse (Ok community.symbol))
+
+        CompletedAddingCoverPhoto _ (RemoteData.Failure err) ->
+            { model | coverPhoto = RemoteData.NotAsked }
+                |> UR.init
+                |> UR.logGraphqlError msg err
+                |> UR.addExt
+                    (LoggedIn.ShowFeedback Feedback.Failure
+                        (shared.translators.t "settings.community_info.errors.cover_upload")
+                    )
+
+        CompletedAddingCoverPhoto _ _ ->
+            UR.init model
+
         GotSaveResponse (Ok _) ->
-            case loggedIn.selectedCommunity of
-                RemoteData.Success community ->
-                    let
-                        newCommunity =
-                            { symbol = community.symbol
-                            , subdomain = model.subdomainInput ++ ".cambiatus.io"
-                            }
+            if not model.hasSavedCoverPhoto then
+                model |> UR.init
 
-                        redirectToCommunity =
-                            if newCommunity.subdomain == community.subdomain then
-                                Route.replaceUrl shared.navKey Route.Dashboard
-
-                            else
-                                Route.externalCommunityLink loggedIn.shared.url
-                                    newCommunity
-                                    Route.Dashboard
-                                    |> Url.toString
-                                    |> Browser.Navigation.load
-                    in
-                    { model | isLoading = False }
-                        |> UR.init
-                        |> UR.addExt (LoggedIn.ShowFeedback Feedback.Success (shared.translators.t "community.create.success"))
-                        |> UR.addCmd redirectToCommunity
-                        |> UR.addExt
-                            (LoggedIn.CommunityLoaded
-                                { community
-                                    | name = model.nameInput
-                                    , description = model.descriptionInput
-                                    , website =
-                                        if String.isEmpty model.websiteInput then
-                                            Nothing
-
-                                        else
-                                            Just (addProtocolToUrlString model.websiteInput)
-                                    , logo = model.logoUrl
-                                    , inviterReward =
-                                        model.inviterRewardInput
-                                            |> String.toFloat
-                                            |> Maybe.withDefault community.inviterReward
-                                    , invitedReward =
-                                        model.invitedRewardInput
-                                            |> String.toFloat
-                                            |> Maybe.withDefault community.invitedReward
-                                    , hasAutoInvite = model.hasAutoInvite
-                                    , coverPhoto = RemoteData.toMaybe model.coverPhoto
+            else
+                case loggedIn.selectedCommunity of
+                    RemoteData.Success community ->
+                        let
+                            newCommunity =
+                                { symbol = community.symbol
+                                , subdomain = model.subdomainInput ++ ".cambiatus.io"
                                 }
-                                |> LoggedIn.ExternalBroadcast
-                            )
 
-                _ ->
-                    model
-                        |> UR.init
-                        |> UR.logImpossible msg [ "CommunityNotLoaded" ]
+                            redirectToCommunity =
+                                if newCommunity.subdomain == community.subdomain then
+                                    Route.replaceUrl shared.navKey Route.Dashboard
+
+                                else
+                                    Route.externalCommunityLink loggedIn.shared.url
+                                        newCommunity
+                                        Route.Dashboard
+                                        |> Url.toString
+                                        |> Browser.Navigation.load
+
+                            newUploads =
+                                case model.coverPhoto of
+                                    RemoteData.Success coverPhoto ->
+                                        coverPhoto :: community.uploads
+
+                                    _ ->
+                                        community.uploads
+                        in
+                        { model | isLoading = False }
+                            |> UR.init
+                            |> UR.addExt (LoggedIn.ShowFeedback Feedback.Success (shared.translators.t "community.create.success"))
+                            |> UR.addCmd redirectToCommunity
+                            |> UR.addExt
+                                (LoggedIn.CommunityLoaded
+                                    { community
+                                        | name = model.nameInput
+                                        , description = model.descriptionInput
+                                        , website =
+                                            if String.isEmpty model.websiteInput then
+                                                Nothing
+
+                                            else
+                                                Just (addProtocolToUrlString model.websiteInput)
+                                        , logo = RemoteData.withDefault community.logo model.logo
+                                        , inviterReward =
+                                            model.inviterRewardInput
+                                                |> String.toFloat
+                                                |> Maybe.withDefault community.inviterReward
+                                        , invitedReward =
+                                            model.invitedRewardInput
+                                                |> String.toFloat
+                                                |> Maybe.withDefault community.invitedReward
+                                        , hasAutoInvite = model.hasAutoInvite
+                                        , uploads = newUploads
+                                    }
+                                    |> LoggedIn.ExternalBroadcast
+                                )
+
+                    _ ->
+                        model
+                            |> UR.init
+                            |> UR.logImpossible msg [ "CommunityNotLoaded" ]
 
         GotSaveResponse (Err _) ->
             { model | isLoading = False }
@@ -419,7 +474,15 @@ isModelValid maybeCommunity model =
             validateModel maybeCommunity model
     in
     List.all (\f -> f validatedModel |> List.isEmpty)
-        [ .nameErrors, .descriptionErrors, .subdomainErrors, .inviterRewardErrors, .invitedRewardErrors ]
+        [ .nameErrors
+        , .descriptionErrors
+        , .websiteErrors
+        , .subdomainErrors
+        , .inviterRewardErrors
+        , .invitedRewardErrors
+        ]
+        && RemoteData.isSuccess model.logo
+        && (RemoteData.isNotAsked model.coverPhoto || RemoteData.isSuccess model.coverPhoto)
 
 
 validateModel : Maybe Community.Model -> Model -> Model
@@ -644,7 +707,7 @@ viewLogo shared model =
             { label = "settings.community_info.logo.title"
             , id = "community_logo_upload"
             , onFileInput = EnteredLogo
-            , status = RemoteData.Success model.logoUrl
+            , status = model.logo
             }
             |> FileUploader.withVariant FileUploader.Small
             |> FileUploader.toHtml shared.translators
@@ -945,6 +1008,9 @@ msgToString msg =
 
         GotDomainAvailableResponse r ->
             [ "GotDomainAvailableResponse", UR.remoteDataToString r ]
+
+        CompletedAddingCoverPhoto _ r ->
+            [ "CompletedAddingCoverPhoto", UR.remoteDataToString r ]
 
         GotSaveResponse r ->
             [ "GotSaveResponse", UR.resultToString r ]

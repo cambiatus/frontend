@@ -210,9 +210,9 @@ type_ =
 
 uploads :
     SelectionSet decodesTo Cambiatus.Object.Upload
-    -> SelectionSet (Maybe (List (Maybe decodesTo))) Cambiatus.Object.Community
+    -> SelectionSet (List decodesTo) Cambiatus.Object.Community
 uploads object_ =
-    Object.selectionForCompositeField "uploads" [] object_ (identity >> Decode.nullable >> Decode.list >> Decode.nullable)
+    Object.selectionForCompositeField "uploads" [] object_ (identity >> Decode.list)
 
 
 {-| List of users that are claim validators

@@ -3,6 +3,7 @@ module UpdateResult exposing
     , addCmd
     , addExt
     , addLog
+    , addMsg
     , addPort
     , init
     , logDebugValue
@@ -27,7 +28,7 @@ module UpdateResult exposing
    @docs UpdateResult
 
    # Common Helpers
-   @docs init, addCmd, addExt, addPort, addLog, logHttpError, logImpossible, logGraphqlError, toModelCmd
+   @docs init, addCmd, addMsg, addExt, addPort, addLog, logHttpError, logImpossible, logGraphqlError, toModelCmd
 
    # Mapping UpdateResults
    @docs map, mapModel, setModel
@@ -41,6 +42,7 @@ import Json.Encode exposing (Value)
 import Log exposing (Log)
 import Ports
 import RemoteData exposing (RemoteData(..))
+import Task
 
 
 {-| Core data structure that enables this project to have an observable update function in our module.
@@ -158,6 +160,14 @@ request
 addCmd : Cmd msg -> UpdateResult m msg eMsg -> UpdateResult m msg eMsg
 addCmd cmd uResult =
     { uResult | cmds = uResult.cmds ++ [ cmd ] }
+
+
+{-| Add a msg to the list of msgs in an UpdateResult, useful to reduce duplication,
+like when performing multiple requests that produce the same msg
+-}
+addMsg : msg -> UpdateResult m msg eMsg -> UpdateResult m msg eMsg
+addMsg msg uResult =
+    { uResult | cmds = uResult.cmds ++ [ Task.succeed () |> Task.perform (\_ -> msg) ] }
 
 
 {-| Adds an external command to the list of commands in an UpdateResult, this is uselful when needing

@@ -251,10 +251,10 @@ view thisMsg page ({ shared } as model) content =
                 |> Html.map thisMsg
 
         ( _, RemoteData.Loading ) ->
-            View.Components.loadingLogoAnimated shared.translators
+            View.Components.loadingLogoAnimated shared.translators ""
 
         ( _, RemoteData.NotAsked ) ->
-            View.Components.loadingLogoAnimated shared.translators
+            View.Components.loadingLogoAnimated shared.translators ""
 
         ( _, RemoteData.Failure err ) ->
             Shared.viewFullGraphqlError shared

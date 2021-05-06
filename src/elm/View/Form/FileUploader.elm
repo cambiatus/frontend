@@ -41,6 +41,7 @@ import Icons
 import Json.Decode as Decode
 import RemoteData exposing (RemoteData)
 import Session.Shared exposing (Translators)
+import View.Components
 
 
 
@@ -136,12 +137,12 @@ onFileChange toMsg =
 
 
 viewLarge : Translators -> Options msg -> Html msg
-viewLarge { t } options =
+viewLarge ({ t } as translators) options =
     let
         uploadedAttrs =
             case options.status of
                 RemoteData.Success url ->
-                    [ class "bg-no-repeat bg-center bg-cover"
+                    [ class "bg-no-repeat bg-center bg-contain"
                     , style "background-image" ("url(" ++ url ++ ")")
                     ]
 
@@ -166,7 +167,7 @@ viewLarge { t } options =
             , div []
                 [ case options.status of
                     RemoteData.Loading ->
-                        div [ class "spinner spinner-light" ] []
+                        View.Components.loadingLogoAnimated translators "text-white"
 
                     RemoteData.Success _ ->
                         span [ class "absolute bottom-0 right-0 mr-4 mb-4 bg-orange-300 w-8 h-8 p-2 rounded-full" ]

@@ -6,9 +6,9 @@ import Icons
 import Session.Shared exposing (Translators)
 
 
-loadingLogoAnimated : Translators -> Html msg
-loadingLogoAnimated { t } =
-    div [ class "w-full text-center" ]
+loadingLogoAnimated : Translators -> String -> Html msg
+loadingLogoAnimated { t } class_ =
+    div [ class ("w-full text-center " ++ class_) ]
         [ img [ class "h-16 mx-auto mt-8", src "/images/loading.gif" ] []
         , p [ class "font-bold text-2xl" ] [ text <| t "loading.title" ]
         , p [ class "text-sm" ] [ text <| t "loading.subtitle" ]

@@ -319,7 +319,7 @@ viewDateDistance date maybeNow =
 
 fullPageLoading : Shared.Shared -> Html msg
 fullPageLoading { translators } =
-    View.Components.loadingLogoAnimated translators
+    View.Components.loadingLogoAnimated translators ""
 
 
 fullPageError : String -> Http.Error -> Html msg
