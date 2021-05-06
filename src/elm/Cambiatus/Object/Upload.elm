@@ -19,6 +19,16 @@ import Graphql.SelectionSet exposing (SelectionSet)
 import Json.Decode as Decode
 
 
+insertedAt : SelectionSet (Maybe Cambiatus.ScalarCodecs.NaiveDateTime) Cambiatus.Object.Upload
+insertedAt =
+    Object.selectionForField "(Maybe ScalarCodecs.NaiveDateTime)" "insertedAt" [] (Cambiatus.ScalarCodecs.codecs |> Cambiatus.Scalar.unwrapCodecs |> .codecNaiveDateTime |> .decoder |> Decode.nullable)
+
+
+updatedAt : SelectionSet Cambiatus.ScalarCodecs.NaiveDateTime Cambiatus.Object.Upload
+updatedAt =
+    Object.selectionForField "ScalarCodecs.NaiveDateTime" "updatedAt" [] (Cambiatus.ScalarCodecs.codecs |> Cambiatus.Scalar.unwrapCodecs |> .codecNaiveDateTime |> .decoder)
+
+
 url : SelectionSet String Cambiatus.Object.Upload
 url =
     Object.selectionForField "String" "url" [] Decode.string
