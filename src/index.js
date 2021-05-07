@@ -43,7 +43,7 @@ const main = (setupIframe) => {
       iframe.contentWindow.postMessage({
         method: 'remove',
         key
-      }, config.endpoints.globalStorageUrl)
+      }, config.endpoints.globalStorage)
     } else {
       operationsBeforeIframeLoad.push({ method: 'remove', key })
     }
@@ -57,7 +57,7 @@ const main = (setupIframe) => {
         method: 'set',
         key,
         value
-      }, config.endpoints.globalStorageUrl)
+      }, config.endpoints.globalStorage)
     } else {
       operationsBeforeIframeLoad.push({ method: 'set', key, value })
     }
@@ -161,7 +161,7 @@ const main = (setupIframe) => {
   })
   setupIframe(false, (iframe) => {
     operationsBeforeIframeLoad.forEach(operation => {
-      iframe.contentWindow.postMessage(operation, config.endpoints.globalStorageUrl)
+      iframe.contentWindow.postMessage(operation, config.endpoints.globalStorage)
     })
 
     isIframeLoaded = true
@@ -862,7 +862,7 @@ const main = (setupIframe) => {
 const mainApp = () => {
   const setupIframe = (isInitial, onLoad) => {
     const iframe = document.createElement('iframe')
-    const src = config.endpoints.globalStorageUrl
+    const src = config.endpoints.globalStorage
 
     iframe.onload = () => {
       const contentWindow = iframe.contentWindow

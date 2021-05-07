@@ -163,6 +163,9 @@ externalCommunityLink currentUrl community route =
                 |> List.head
                 |> Maybe.withDefault defaultSubdomain
 
+        environments =
+            [ "staging", "demo", "cambiatus" ]
+
         communityUrl =
             case currentUrl.host |> String.split "." of
                 [] ->
@@ -172,8 +175,12 @@ externalCommunityLink currentUrl community route =
                 [ singlePart ] ->
                     { currentUrl | host = String.join "." [ communitySubdomain, singlePart ] }
 
-                _ :: rest ->
-                    { currentUrl | host = String.join "." (communitySubdomain :: rest) }
+                first :: rest ->
+                    if List.member first environments then
+                        { currentUrl | host = String.join "." (communitySubdomain :: first :: rest) }
+
+                    else
+                        { currentUrl | host = String.join "." (communitySubdomain :: rest) }
     in
     { communityUrl | path = routeToString route }
 
