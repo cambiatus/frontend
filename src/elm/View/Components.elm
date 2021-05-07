@@ -9,7 +9,7 @@ import Session.Shared exposing (Translators)
 loadingLogoAnimated : Translators -> String -> Html msg
 loadingLogoAnimated { t } class_ =
     div [ class ("w-full text-center " ++ class_) ]
-        [ img [ class "h-16 mx-auto mt-8", src "/images/loading.gif" ] []
+        [ img [ class "h-16 mx-auto mt-8", src "/images/loading.svg" ] []
         , p [ class "font-bold text-2xl" ] [ text <| t "loading.title" ]
         , p [ class "text-sm" ] [ text <| t "loading.subtitle" ]
         ]
@@ -18,7 +18,7 @@ loadingLogoAnimated { t } class_ =
 loadingLogoAnimatedFluid : Html msg
 loadingLogoAnimatedFluid =
     div [ class "w-full text-center h-full py-2" ]
-        [ img [ class "mx-auto h-full", src "/images/loading.gif" ] [] ]
+        [ img [ class "mx-auto h-full", src "/images/loading.svg" ] [] ]
 
 
 tooltip : Translators -> String -> Html msg
