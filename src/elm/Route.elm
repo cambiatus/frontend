@@ -176,7 +176,7 @@ externalCommunityLink currentUrl community route =
                     { currentUrl | host = String.join "." [ communitySubdomain, singlePart ] }
 
                 first :: rest ->
-                    if List.member first environments then
+                    if List.member first environments && not (List.member communitySubdomain environments) then
                         { currentUrl | host = String.join "." (communitySubdomain :: first :: rest) }
 
                     else
