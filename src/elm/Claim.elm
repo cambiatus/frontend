@@ -44,6 +44,7 @@ import Session.Shared exposing (Translators)
 import Strftime
 import Time
 import Utils
+import View.Components
 import View.Modal as Modal
 
 
@@ -251,7 +252,8 @@ type alias VoteClaimModalOptions msg =
 
 
 type Msg
-    = OpenVoteModal ClaimId Bool
+    = Ignored
+    | OpenVoteModal ClaimId Bool
     | CloseClaimModals
     | OpenPhotoModal Model
     | RouteOpened Route
@@ -260,6 +262,9 @@ type Msg
 updateClaimModalStatus : Msg -> { m | claimModalStatus : ModalStatus } -> { m | claimModalStatus : ModalStatus }
 updateClaimModalStatus msg model =
     case msg of
+        Ignored ->
+            model
+
         OpenVoteModal claimId vote ->
             { model | claimModalStatus = VoteConfirmationModal claimId vote }
 
@@ -320,7 +325,14 @@ viewClaimCard { shared, accountName } claim now =
                     Nothing ->
                         class "justify-center"
                 ]
-                [ Profile.view shared accountName claim.claimer
+                [ div [ class "relative" ]
+                    [ Profile.view shared accountName claim.claimer
+                    , View.Components.dialogBubble
+                        [ class "absolute bottom-full right-1/2 transform translate-x-1/2 cursor-auto"
+                        , Utils.onClickNoBubble Ignored
+                        ]
+                        [ Profile.viewSummary claim.claimer ]
+                    ]
                 , case claim.proofPhoto of
                     Just url ->
                         div [ class "claim-photo-thumb" ]

@@ -31,6 +31,7 @@ module Profile exposing
     , viewLarge
     , viewProfileName
     , viewProfileNameTag
+    , viewSummary
     )
 
 import Avatar exposing (Avatar)
@@ -47,7 +48,7 @@ import Eos.Account as Eos
 import Graphql.Operation exposing (RootMutation, RootQuery)
 import Graphql.OptionalArgument exposing (OptionalArgument(..))
 import Graphql.SelectionSet as SelectionSet exposing (SelectionSet, with)
-import Html exposing (Html, a, div, p, span, text)
+import Html exposing (Html, a, div, li, p, span, text, ul)
 import Html.Attributes exposing (class, href, maxlength, minlength, pattern, title, type_)
 import Json.Decode as Decode exposing (Decoder, int, nullable, string)
 import Json.Decode.Pipeline as Decode exposing (optional, required)
@@ -55,6 +56,7 @@ import Json.Encode as Encode
 import Kyc exposing (ProfileKyc)
 import Profile.Address as Address exposing (Address)
 import Profile.Contact as Contact
+import Route
 import Select
 import Session.Shared exposing (Shared)
 import Simple.Fuzzy
@@ -69,41 +71,28 @@ type alias Basic a =
 
 
 type alias Minimal =
-    Basic {}
+    { name : Maybe String
+    , account : Eos.Name
+    , avatar : Avatar
+    , email : Maybe String
+    , bio : Maybe String
+    , contacts : List Contact.Normalized
+    }
 
 
 type alias Model =
-    Basic
-        { email : Maybe String
-        , bio : Maybe String
-        , localization : Maybe String
-        , account : Eos.Name
-        , contacts : List Contact.Normalized
-        , interests : List String
-        , communities : List CommunityInfo
-        , analysisCount : Int
-        , kyc : Maybe ProfileKyc
-        , address : Maybe Address
-        }
-
-
-
--- buildModel : Maybe String -> Eos.Name -> Avatar -> Maybe String -> Maybe String -> Maybe String -> Eos.Name -> List String -> List CommunityInfo -> Int -> Maybe ProfileKyc -> Maybe Address
-
-
-buildModel name account avatar email bio location interests contacts communities analysis kyc address =
-    { name = name
-    , account = account
-    , avatar = avatar
-    , email = email
-    , bio = bio
-    , localization = location
-    , interests = interests
-    , contacts = contacts
-    , communities = communities
-    , analysisCount = analysis
-    , kyc = kyc
-    , address = address
+    { name : Maybe String
+    , account : Eos.Name
+    , avatar : Avatar
+    , email : Maybe String
+    , bio : Maybe String
+    , localization : Maybe String
+    , contacts : List Contact.Normalized
+    , interests : List String
+    , communities : List CommunityInfo
+    , analysisCount : Int
+    , kyc : Maybe ProfileKyc
+    , address : Maybe Address
     }
 
 
@@ -117,25 +106,28 @@ type alias CommunityInfo =
     }
 
 
+userContactSelectionSet : SelectionSet (List Contact.Normalized) Cambiatus.Object.User
+userContactSelectionSet =
+    User.contacts Contact.selectionSet
+        |> SelectionSet.map (List.filterMap identity)
+
+
 selectionSet : SelectionSet Model Cambiatus.Object.User
 selectionSet =
-    SelectionSet.succeed buildModel
+    SelectionSet.succeed Model
         |> with User.name
         |> with (Eos.nameSelectionSet User.account)
         |> with (Avatar.selectionSet User.avatar)
         |> with User.email
         |> with User.bio
         |> with User.location
+        |> with userContactSelectionSet
         |> with
             (User.interests
                 |> SelectionSet.map
                     (\maybeInterests ->
                         Maybe.map (String.split ",") maybeInterests |> Maybe.withDefault []
                     )
-            )
-        |> with
-            (User.contacts Contact.selectionSet
-                |> SelectionSet.map (List.filterMap identity)
             )
         |> with (User.communities communityInfoSelectionSet)
         |> with User.analysisCount
@@ -145,10 +137,13 @@ selectionSet =
 
 minimalSelectionSet : SelectionSet Minimal Cambiatus.Object.User
 minimalSelectionSet =
-    SelectionSet.succeed (\name account avatar -> { name = name, account = account, avatar = avatar })
+    SelectionSet.succeed Minimal
         |> with User.name
         |> with (Eos.nameSelectionSet User.account)
         |> with (Avatar.selectionSet User.avatar)
+        |> with User.email
+        |> with User.bio
+        |> with userContactSelectionSet
 
 
 communityInfoSelectionSet : SelectionSet CommunityInfo Cambiatus.Object.Community
@@ -164,15 +159,15 @@ communityInfoSelectionSet =
 
 decode : Decoder Model
 decode =
-    Decode.succeed buildModel
+    Decode.succeed Model
         |> optional "name" (nullable string) Nothing
         |> required "account" Eos.nameDecoder
         |> optional "avatar" Avatar.decode Avatar.empty
         |> optional "email" (nullable string) Nothing
         |> optional "bio" (nullable string) Nothing
         |> optional "localization" (nullable string) Nothing
-        |> optional "interests" decodeInterests []
         |> optional "contacts" (Decode.list Contact.decode) []
+        |> optional "interests" decodeInterests []
         |> Decode.hardcoded []
         |> Decode.at [ "data", "user" ]
         |> optional "analysisCount" int 0
@@ -467,6 +462,45 @@ view shared loggedInAccount profile =
             ]
         , div [ class "mt-2" ]
             [ viewProfileNameTag shared loggedInAccount profile ]
+        ]
+
+
+viewSummary : Minimal -> Html msg
+viewSummary profile =
+    let
+        userName =
+            profile.name |> Maybe.withDefault ""
+
+        email =
+            profile.email |> Maybe.withDefault ""
+
+        account =
+            profile.account |> Eos.nameToString
+
+        bio =
+            profile.bio |> Maybe.withDefault ""
+    in
+    div [ class "flex flex-col" ]
+        [ div [ class "flex mb-4 items-center justify-center" ]
+            [ Avatar.view profile.avatar "w-20 h-20 mr-6 flex-shrink-0"
+            , div [ class "flex items-center justify-between" ]
+                [ ul [ class "text-sm text-gray-900" ]
+                    [ li [ class "font-medium text-body-black text-2xl xs-max:text-xl" ]
+                        [ text userName ]
+                    , li [] [ a [ href <| "mailto:" ++ email ] [ text email ] ]
+                    , li [] [ text account ]
+                    ]
+                ]
+            ]
+        , p [ class "text-sm text-gray-900" ]
+            [ text bio ]
+        , div [ class "flex justify-evenly mt-6" ]
+            (List.map (Contact.circularIcon "w-9 h-9 hover:opacity-75") profile.contacts)
+        , a
+            [ class "button button-primary w-full mt-6 cursor-pointer"
+            , Route.href (Route.ProfilePublic account)
+            ]
+            [ text "View full profile" ]
         ]
 
 

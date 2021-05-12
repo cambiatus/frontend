@@ -204,7 +204,6 @@ editForm form action =
 
             else
                 action.validators
-                    |> List.map (\v -> { name = v.name, account = v.account, avatar = v.avatar })
 
         verification : Verification
         verification =

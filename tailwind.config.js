@@ -132,8 +132,9 @@ module.exports = {
         hero: '3.375rem'
       },
       spacing: {
-        '7': '1.75rem',
         heading: '1.375rem',
+        '7': '1.75rem',
+        '9': '2.25rem',
         '14': '3.5rem',
         '44': '11rem',
         '72': '18rem',
@@ -141,6 +142,9 @@ module.exports = {
         select: '18.75rem',
         '1/3': '33%',
         '1/2': '50%'
+      },
+      zIndex: {
+        '-10': '-10'
       },
       lineHeight: {
         caption: 0.75
@@ -153,8 +157,10 @@ module.exports = {
       },
       inset: {
         '1': '1rem',
+        '-1': '-0.25rem',
         '1/2': '50%',
-        modal: '10rem'
+        modal: '10rem',
+        'full': '100%'
       },
       width: {
         form: '45.625rem'
