@@ -20,16 +20,18 @@ withAuthToken authToken =
 
 
 query : Shared -> Maybe String -> SelectionSet a RootQuery -> (RemoteData (Graphql.Http.Error a) a -> msg) -> Cmd msg
-query { endpoints } maybeAuthToken query_ toMsg =
+query ({ endpoints } as shared) maybeAuthToken query_ toMsg =
     query_
         |> Graphql.Http.queryRequest endpoints.graphql
+        |> Graphql.Http.withHeader "Community-Domain" ("https://" ++ Session.Shared.communitySubdomain shared)
         |> withAuthToken maybeAuthToken
         |> Graphql.Http.send (RemoteData.fromResult >> toMsg)
 
 
 mutation : Shared -> Maybe String -> SelectionSet a RootMutation -> (RemoteData (Graphql.Http.Error a) a -> msg) -> Cmd msg
-mutation { endpoints } maybeAuthToken mutation_ toMsg =
+mutation ({ endpoints } as shared) maybeAuthToken mutation_ toMsg =
     mutation_
         |> Graphql.Http.mutationRequest endpoints.graphql
+        |> Graphql.Http.withHeader "Community-Domain" ("https://" ++ Session.Shared.communitySubdomain shared)
         |> withAuthToken maybeAuthToken
         |> Graphql.Http.send (RemoteData.fromResult >> toMsg)
