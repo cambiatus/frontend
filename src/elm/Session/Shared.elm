@@ -2,6 +2,7 @@ module Session.Shared exposing
     ( Shared
     , TranslationStatus(..)
     , Translators
+    , communitySubdomain
     , init
     , langFlag
     , language
@@ -119,6 +120,39 @@ language shared =
 translationStatus : Shared -> TranslationStatus
 translationStatus shared =
     shared.translationsStatus
+
+
+communitySubdomain : Shared -> String
+communitySubdomain shared =
+    let
+        allParts =
+            shared.url.host |> String.split "."
+
+        firstPart =
+            case shared.environment of
+                Flags.Development ->
+                    case allParts of
+                        [] ->
+                            [ "cambiatus", "staging" ]
+
+                        [ subdomain ] ->
+                            [ subdomain, "staging" ]
+
+                        subdomain :: "localhost" :: _ ->
+                            [ subdomain, "staging" ]
+
+                        subdomain :: env :: _ ->
+                            [ subdomain, env ]
+
+                Flags.Production ->
+                    case allParts of
+                        [] ->
+                            [ "cambiatus" ]
+
+                        subdomain :: _ ->
+                            [ subdomain ]
+    in
+    String.join "." (firstPart ++ [ "cambiatus", "io" ])
 
 
 

@@ -14,7 +14,6 @@ import Http
 import I18Next exposing (Delims(..), Translations)
 import Icons
 import Json.Decode as Decode
-import List
 import Ports
 import Profile exposing (Model)
 import RemoteData exposing (RemoteData)
@@ -34,11 +33,7 @@ init : Shared -> ( Model, Cmd Msg )
 init shared =
     let
         subdomainForQuery =
-            shared.url.host
-                |> String.split "."
-                |> List.head
-                |> Maybe.map (\subdomain -> subdomain ++ ".cambiatus.io")
-                |> Maybe.withDefault shared.url.host
+            Shared.communitySubdomain shared
     in
     ( initModel shared
     , Api.Graphql.query shared

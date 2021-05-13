@@ -84,7 +84,7 @@ init shared accountName authToken =
     ( initModel shared Nothing accountName authToken
     , Cmd.batch
         [ Api.Graphql.query shared (Just authToken) (Profile.query accountName) CompletedLoadProfile
-        , Api.Graphql.query shared (Just authToken) (Community.subdomainQuery (subdomainForQuery shared.url)) CompletedLoadCommunity
+        , Api.Graphql.query shared (Just authToken) (Community.subdomainQuery (Shared.communitySubdomain shared)) CompletedLoadCommunity
         , Ports.getRecentSearches () -- run on the page refresh, duplicated in `initLogin`
         , Task.perform GotTimeInternal Time.now
         ]
@@ -112,19 +112,10 @@ initLogin shared maybePrivateKey_ profile_ authToken =
     , Cmd.batch
         [ Ports.getRecentSearches () -- run on the passphrase login, duplicated in `init`
         , loadedProfile
-        , Api.Graphql.query shared (Just authToken) (Community.subdomainQuery (subdomainForQuery shared.url)) CompletedLoadCommunity
+        , Api.Graphql.query shared (Just authToken) (Community.subdomainQuery (Shared.communitySubdomain shared)) CompletedLoadCommunity
         , Task.perform GotTimeInternal Time.now
         ]
     )
-
-
-subdomainForQuery : Url.Url -> String
-subdomainForQuery url =
-    url.host
-        |> String.split "."
-        |> List.head
-        |> Maybe.map (\subdomain -> subdomain ++ ".cambiatus.io")
-        |> Maybe.withDefault url.host
 
 
 
