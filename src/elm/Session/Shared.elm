@@ -149,8 +149,14 @@ communitySubdomain shared =
                         [] ->
                             [ "cambiatus" ]
 
-                        subdomain :: _ ->
+                        [ subdomain ] ->
                             [ subdomain ]
+
+                        subdomain :: "cambiatus" :: _ ->
+                            [ subdomain ]
+
+                        subdomain :: env :: _ ->
+                            [ subdomain, env ]
     in
     String.join "." (firstPart ++ [ "cambiatus", "io" ])
 
