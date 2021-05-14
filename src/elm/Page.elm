@@ -448,8 +448,15 @@ updateShared session transform =
 
 logout : LoggedIn.Model -> ( Session, Cmd Msg )
 logout { shared } =
-    ( Guest (Guest.initModel { shared | maybeAccount = Nothing })
-    , Route.replaceUrl shared.navKey (Route.Login Nothing)
+    let
+        ( guest, guestCmd ) =
+            Guest.init shared
+    in
+    ( Guest { guest | shared = { shared | maybeAccount = Nothing } }
+    , Cmd.batch
+        [ Route.replaceUrl shared.navKey (Route.Login Nothing)
+        , Cmd.map GotGuestMsg guestCmd
+        ]
     )
 
 
