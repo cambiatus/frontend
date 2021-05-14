@@ -1,4 +1,12 @@
-module Route exposing (Route(..), externalCommunityLink, externalHref, fromUrl, href, pushUrl, replaceUrl)
+module Route exposing
+    ( Route(..)
+    , externalHref
+    , fromUrl
+    , href
+    , loadExternalCommunity
+    , pushUrl
+    , replaceUrl
+    )
 
 import Browser.Navigation as Nav
 import Eos
@@ -145,11 +153,53 @@ pushUrl key route =
     Nav.pushUrl key (routeToString route)
 
 
+loadExternalCommunity : Shared -> { commuity | symbol : Eos.Symbol, subdomain : String } -> Route -> Cmd msg
+loadExternalCommunity shared community route =
+    if shared.useSubdomain then
+        externalCommunityLink shared community route
+            |> Url.toString
+            |> Nav.load
+
+    else
+        pushUrl shared.navKey route
+
+
 externalHref : Shared -> { community | symbol : Eos.Symbol, subdomain : String } -> Route -> Attribute msg
 externalHref shared community route =
     externalCommunityLink shared community route
         |> Url.toString
         |> Attr.href
+
+
+
+-- INTERNAL
+
+
+parseRedirect : Url -> Maybe String -> Maybe Route
+parseRedirect url maybeQuery =
+    let
+        protocol =
+            case url.protocol of
+                Url.Http ->
+                    "http://"
+
+                Url.Https ->
+                    "https://"
+
+        host =
+            url.host
+
+        port_ =
+            case url.port_ of
+                Nothing ->
+                    ""
+
+                Just p ->
+                    ":" ++ String.fromInt p
+    in
+    maybeQuery
+        |> Maybe.andThen (\query -> Url.fromString (protocol ++ host ++ port_ ++ query))
+        |> Maybe.andThen (\url_ -> Url.parse (parser url_) url_)
 
 
 {-| A link to a community. The link preserves the environment
@@ -213,37 +263,6 @@ externalCommunityLink shared community route =
         | host = communityHost
         , path = routeToString route
     }
-
-
-
--- INTERNAL
-
-
-parseRedirect : Url -> Maybe String -> Maybe Route
-parseRedirect url maybeQuery =
-    let
-        protocol =
-            case url.protocol of
-                Url.Http ->
-                    "http://"
-
-                Url.Https ->
-                    "https://"
-
-        host =
-            url.host
-
-        port_ =
-            case url.port_ of
-                Nothing ->
-                    ""
-
-                Just p ->
-                    ":" ++ String.fromInt p
-    in
-    maybeQuery
-        |> Maybe.andThen (\query -> Url.fromString (protocol ++ host ++ port_ ++ query))
-        |> Maybe.andThen (\url_ -> Url.parse (parser url_) url_)
 
 
 shopFilterToString : Shop.Filter -> String

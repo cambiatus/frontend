@@ -385,11 +385,9 @@ update msg model ({ shared } as loggedIn) =
                                     Route.replaceUrl shared.navKey Route.Dashboard
 
                                 else
-                                    Route.externalCommunityLink loggedIn.shared
+                                    Route.loadExternalCommunity loggedIn.shared
                                         newCommunity
                                         Route.Dashboard
-                                        |> Url.toString
-                                        |> Browser.Navigation.load
 
                             newUploads =
                                 case model.coverPhoto of

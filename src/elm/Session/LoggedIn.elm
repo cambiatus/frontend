@@ -1353,9 +1353,7 @@ selectCommunity : Model -> { community | symbol : Eos.Symbol, subdomain : String
 selectCommunity ({ shared, authToken } as model) community route =
     if shared.useSubdomain then
         ( model
-        , Route.externalCommunityLink shared community route
-            |> Url.toString
-            |> Browser.Navigation.load
+        , Route.loadExternalCommunity shared community route
         )
 
     else
