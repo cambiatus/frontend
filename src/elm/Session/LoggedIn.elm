@@ -84,7 +84,7 @@ init shared accountName authToken =
     ( initModel shared Nothing accountName authToken
     , Cmd.batch
         [ Api.Graphql.query shared (Just authToken) (Profile.query accountName) CompletedLoadProfile
-        , Api.Graphql.query shared (Just authToken) (Community.subdomainQuery (Shared.communitySubdomain shared)) CompletedLoadCommunity
+        , Api.Graphql.query shared (Just authToken) (Community.subdomainQuery (Shared.communityDomain shared)) CompletedLoadCommunity
         , Ports.getRecentSearches () -- run on the page refresh, duplicated in `initLogin`
         , Task.perform GotTimeInternal Time.now
         ]
@@ -112,7 +112,7 @@ initLogin shared maybePrivateKey_ profile_ authToken =
     , Cmd.batch
         [ Ports.getRecentSearches () -- run on the passphrase login, duplicated in `init`
         , loadedProfile
-        , Api.Graphql.query shared (Just authToken) (Community.subdomainQuery (Shared.communitySubdomain shared)) CompletedLoadCommunity
+        , Api.Graphql.query shared (Just authToken) (Community.subdomainQuery (Shared.communityDomain shared)) CompletedLoadCommunity
         , Task.perform GotTimeInternal Time.now
         ]
     )
@@ -1353,7 +1353,7 @@ selectCommunity : Model -> { community | symbol : Eos.Symbol, subdomain : String
 selectCommunity ({ shared, authToken } as model) community route =
     if shared.useSubdomain then
         ( model
-        , Route.externalCommunityLink shared.url community route
+        , Route.externalCommunityLink shared community route
             |> Url.toString
             |> Browser.Navigation.load
         )

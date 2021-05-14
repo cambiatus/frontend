@@ -4,6 +4,7 @@ import Browser.Navigation as Nav
 import Eos
 import Html exposing (Attribute)
 import Html.Attributes as Attr
+import Session.Shared exposing (Shared)
 import Shop
 import Url exposing (Url)
 import Url.Builder exposing (QueryParameter)
@@ -144,16 +145,22 @@ pushUrl key route =
     Nav.pushUrl key (routeToString route)
 
 
-externalHref : Url -> { community | symbol : Eos.Symbol, subdomain : String } -> Route -> Attribute msg
-externalHref currentUrl community route =
-    externalCommunityLink currentUrl community route
+externalHref : Shared -> { community | symbol : Eos.Symbol, subdomain : String } -> Route -> Attribute msg
+externalHref shared community route =
+    externalCommunityLink shared community route
         |> Url.toString
         |> Attr.href
 
 
-externalCommunityLink : Url -> { community | symbol : Eos.Symbol, subdomain : String } -> Route -> Url
-externalCommunityLink currentUrl community route =
+{-| A link to a community. The link preserves the environment
+(staging/demo/prod/localhost) based on the current url
+-}
+externalCommunityLink : Shared -> { community | symbol : Eos.Symbol, subdomain : String } -> Route -> Url
+externalCommunityLink shared community route =
     let
+        currentUrl =
+            shared.url
+
         defaultSubdomain =
             "cambiatus"
 
@@ -164,25 +171,48 @@ externalCommunityLink currentUrl community route =
                 |> Maybe.withDefault defaultSubdomain
 
         environments =
-            [ "staging", "demo", "cambiatus" ]
+            [ "staging", "demo" ]
 
-        communityUrl =
-            case currentUrl.host |> String.split "." of
+        defaultEnding =
+            "cambiatus.io"
+
+        possibleEndings =
+            [ "localhost", defaultEnding ]
+
+        ending =
+            List.filter
+                (\possibleEnding -> String.endsWith possibleEnding currentUrl.host)
+                possibleEndings
+                |> List.head
+                |> Maybe.withDefault defaultEnding
+
+        communityHost =
+            case
+                String.dropRight (String.length ending) currentUrl.host
+                    |> String.split "."
+                    |> List.filter (not << String.isEmpty)
+            of
                 [] ->
-                    -- This will never happen
-                    { currentUrl | host = defaultSubdomain ++ ".cambiatus.io" }
+                    -- Something like `cambiatus.io`, `localhost`
+                    String.join "." [ communitySubdomain, ending ]
 
                 [ singlePart ] ->
-                    { currentUrl | host = String.join "." [ communitySubdomain, singlePart ] }
-
-                first :: rest ->
-                    if List.member first environments && not (List.member first rest) then
-                        { currentUrl | host = String.join "." (communitySubdomain :: first :: rest) }
+                    if List.member singlePart environments then
+                        -- Something like `staging.cambiatus.io`, `demo.cambiatus.io`
+                        String.join "." [ communitySubdomain, singlePart, ending ]
 
                     else
-                        { currentUrl | host = String.join "." (communitySubdomain :: rest) }
+                        -- Something like `community.cambiatus.io`
+                        String.join "." [ communitySubdomain, ending ]
+
+                manyParts ->
+                    -- Something like `community.staging.cambiatus.io`
+                    String.join "." (manyParts ++ [ ending ])
     in
-    { communityUrl | path = routeToString route }
+    { currentUrl
+        | host = communityHost
+        , path = routeToString route
+    }
 
 
 

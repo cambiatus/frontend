@@ -2,7 +2,8 @@ module Session.Shared exposing
     ( Shared
     , TranslationStatus(..)
     , Translators
-    , communitySubdomain
+    , communityDomain
+    , communitySubdomainParts
     , init
     , langFlag
     , language
@@ -122,43 +123,53 @@ translationStatus shared =
     shared.translationsStatus
 
 
-communitySubdomain : Shared -> String
-communitySubdomain shared =
+{-| Get the community subdomain and the current environment, based on current
+url. Example possible outputs:
+
+    [ "cambiatus", "staging" ] -- Cambiatus community in the staging environment
+    , [ "cambiatus", "demo" ] -- Cambiatus community in the demo environment
+    , [ "cambiatus" ] -- Cambiatus community in the prod environment
+
+-}
+communitySubdomainParts : Shared -> List String
+communitySubdomainParts shared =
     let
         allParts =
             shared.url.host |> String.split "."
-
-        firstPart =
-            case shared.environment of
-                Flags.Development ->
-                    case allParts of
-                        [] ->
-                            [ "cambiatus", "staging" ]
-
-                        [ subdomain ] ->
-                            [ subdomain, "staging" ]
-
-                        subdomain :: "localhost" :: _ ->
-                            [ subdomain, "staging" ]
-
-                        subdomain :: env :: _ ->
-                            [ subdomain, env ]
-
-                Flags.Production ->
-                    case allParts of
-                        [] ->
-                            [ "cambiatus" ]
-
-                        [ subdomain ] ->
-                            [ subdomain ]
-
-                        subdomain :: "cambiatus" :: _ ->
-                            [ subdomain ]
-
-                        subdomain :: env :: _ ->
-                            [ subdomain, env ]
     in
-    String.join "." (firstPart ++ [ "cambiatus", "io" ])
+    case shared.environment of
+        Flags.Development ->
+            case allParts of
+                [] ->
+                    [ "cambiatus", "staging" ]
+
+                [ subdomain ] ->
+                    [ subdomain, "staging" ]
+
+                subdomain :: "localhost" :: _ ->
+                    [ subdomain, "staging" ]
+
+                subdomain :: env :: _ ->
+                    [ subdomain, env ]
+
+        Flags.Production ->
+            case allParts of
+                [] ->
+                    [ "cambiatus" ]
+
+                [ subdomain ] ->
+                    [ subdomain ]
+
+                subdomain :: "cambiatus" :: _ ->
+                    [ subdomain ]
+
+                subdomain :: env :: _ ->
+                    [ subdomain, env ]
+
+
+communityDomain : Shared -> String
+communityDomain shared =
+    String.join "." (communitySubdomainParts shared ++ [ "cambiatus", "io" ])
 
 
 

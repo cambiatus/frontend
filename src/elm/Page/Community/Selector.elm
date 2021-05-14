@@ -94,7 +94,7 @@ viewCommunity : Shared -> Profile.CommunityInfo -> Html Msg
 viewCommunity shared community =
     a
         [ class "flex justify-between items-center py-6 text-black hover:text-orange-300"
-        , Route.externalHref shared.url community Route.Dashboard
+        , Route.externalHref shared community Route.Dashboard
         ]
         [ div [ class "flex items-center" ]
             [ img

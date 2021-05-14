@@ -381,11 +381,11 @@ update msg model ({ shared } as loggedIn) =
                                 }
 
                             redirectToCommunity =
-                                if newCommunity.subdomain == community.subdomain then
+                                if newCommunity.subdomain == community.subdomain || not shared.useSubdomain then
                                     Route.replaceUrl shared.navKey Route.Dashboard
 
                                 else
-                                    Route.externalCommunityLink loggedIn.shared.url
+                                    Route.externalCommunityLink loggedIn.shared
                                         newCommunity
                                         Route.Dashboard
                                         |> Url.toString

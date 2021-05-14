@@ -33,7 +33,7 @@ init : Shared -> ( Model, Cmd Msg )
 init shared =
     let
         subdomainForQuery =
-            Shared.communitySubdomain shared
+            Shared.communityDomain shared
     in
     ( initModel shared
     , Api.Graphql.query shared
