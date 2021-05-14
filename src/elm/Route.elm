@@ -255,9 +255,9 @@ externalCommunityLink shared community route =
                         -- Something like `community.cambiatus.io`
                         String.join "." [ communitySubdomain, ending ]
 
-                manyParts ->
+                _ :: env :: _ ->
                     -- Something like `community.staging.cambiatus.io`
-                    String.join "." (manyParts ++ [ ending ])
+                    String.join "." [ communitySubdomain, env, ending ]
     in
     { currentUrl
         | host = communityHost
