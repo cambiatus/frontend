@@ -35,7 +35,6 @@ import Auth
 import Avatar
 import Browser.Dom as Dom
 import Browser.Events
-import Browser.Navigation
 import Cambiatus.Object
 import Cambiatus.Object.UnreadNotifications
 import Cambiatus.Subscription as Subscription
@@ -67,7 +66,6 @@ import Task
 import Time
 import Translation
 import UpdateResult as UR
-import Url
 import View.Components
 import View.Feedback as Feedback
 import View.Modal as Modal
@@ -448,7 +446,10 @@ viewHeader page ({ shared } as model) profile_ =
     in
     div [ class "flex flex-wrap items-center justify-between px-4 pt-6 pb-4" ]
         [ if hideCommunitySelector then
-            text ""
+            div []
+                [ img [ class "hidden sm:block h-5", src shared.logo ] []
+                , img [ class "sm:hidden h-5", src shared.logoMobile ] []
+                ]
 
           else
             viewCommunitySelector model

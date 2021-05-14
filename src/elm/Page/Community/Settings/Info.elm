@@ -11,7 +11,6 @@ module Page.Community.Settings.Info exposing
 
 import Api
 import Api.Graphql
-import Browser.Navigation
 import Community
 import Eos
 import Eos.Account as Eos
@@ -337,7 +336,7 @@ update msg model ({ shared } as loggedIn) =
                     )
 
         GotDomainAvailableResponse (RemoteData.Failure err) ->
-            UR.init model
+            UR.init { model | isLoading = False }
                 |> UR.logGraphqlError msg err
                 |> UR.addExt (LoggedIn.ShowFeedback Feedback.Failure (shared.translators.t "error.unknown"))
 
@@ -356,7 +355,7 @@ update msg model ({ shared } as loggedIn) =
                 |> UR.addMsg (GotSaveResponse (Ok community.symbol))
 
         CompletedAddingCoverPhoto _ (RemoteData.Failure err) ->
-            { model | coverPhoto = RemoteData.NotAsked }
+            { model | coverPhoto = RemoteData.NotAsked, isLoading = False }
                 |> UR.init
                 |> UR.logGraphqlError msg err
                 |> UR.addExt
