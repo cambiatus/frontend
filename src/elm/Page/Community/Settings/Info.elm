@@ -269,10 +269,28 @@ update msg model ({ shared } as loggedIn) =
                             { amount = amount
                             , symbol = community.symbol
                             }
+
+                        newUpload =
+                            case ( model.coverPhoto, List.head community.uploads ) of
+                                ( RemoteData.Success url, Just firstUpload ) ->
+                                    if url == firstUpload then
+                                        Nothing
+
+                                    else
+                                        Just url
+
+                                _ ->
+                                    Nothing
                     in
                     { model
                         | isLoading = True
-                        , hasSavedCoverPhoto = RemoteData.isNotAsked model.coverPhoto
+                        , hasSavedCoverPhoto =
+                            case newUpload of
+                                Nothing ->
+                                    True
+
+                                Just _ ->
+                                    False
                     }
                         |> UR.init
                         |> UR.addPort
@@ -308,8 +326,8 @@ update msg model ({ shared } as loggedIn) =
                                     ]
                             }
                         |> UR.addCmd
-                            (case model.coverPhoto of
-                                RemoteData.Success url ->
+                            (case newUpload of
+                                Just url ->
                                     Api.Graphql.mutation
                                         shared
                                         (Just loggedIn.authToken)
@@ -319,7 +337,7 @@ update msg model ({ shared } as loggedIn) =
                                         )
                                         (CompletedAddingCoverPhoto url)
 
-                                _ ->
+                                Nothing ->
                                     Cmd.none
                             )
 
