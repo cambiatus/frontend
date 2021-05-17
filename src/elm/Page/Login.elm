@@ -125,7 +125,7 @@ view guest model =
 
 
 viewPassphrase : Guest.Model -> PassphraseModel -> List (Html PassphraseMsg)
-viewPassphrase { shared } model =
+viewPassphrase ({ shared } as guest) model =
     let
         { t } =
             shared.translators
@@ -153,6 +153,10 @@ viewPassphrase { shared } model =
 
             else
                 text ""
+
+        showRegisterLink =
+            RemoteData.map .hasAutoInvite guest.community
+                |> RemoteData.withDefault False
     in
     [ form [ class "sf-content flex flex-col flex-grow justify-center" ]
         [ viewIllustration "login_key.svg"
@@ -207,12 +211,16 @@ viewPassphrase { shared } model =
             |> Input.toHtml
         ]
     , div [ class "sf-footer" ]
-        [ p [ class "text-white text-body text-center mb-6 block" ]
-            [ text (t "auth.login.register")
-            , a [ Route.href (Route.Register Nothing Nothing), class "text-orange-300 underline" ]
-                [ text (t "auth.login.registerLink")
+        [ if showRegisterLink then
+            p [ class "text-white text-body text-center mb-6 block" ]
+                [ text (t "auth.login.register")
+                , a [ Route.href (Route.Register Nothing Nothing), class "text-orange-300 underline" ]
+                    [ text (t "auth.login.registerLink")
+                    ]
                 ]
-            ]
+
+          else
+            text ""
         , button
             [ class "button button-primary min-w-full mb-8"
             , onClick ClickedNextStep
