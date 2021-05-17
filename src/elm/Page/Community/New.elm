@@ -513,7 +513,7 @@ validateModel shared accountName model =
                         , logoUrl = logoUrl
                         , name = name
                         , description = model.description
-                        , subdomain = getFullDomain shared model
+                        , subdomain = Route.communityFullDomain shared model.subdomain
                         , inviterReward = inviterReward
                         , invitedReward = invitedReward
                         , hasShop = True
@@ -706,7 +706,7 @@ update msg model loggedIn =
                 |> UR.addCmd
                     (Api.Graphql.query loggedIn.shared
                         (Just loggedIn.authToken)
-                        (Community.domainAvailableQuery (getFullDomain loggedIn.shared model))
+                        (Community.domainAvailableQuery (Route.communityFullDomain loggedIn.shared model.subdomain))
                         GotDomainAvailableResponse
                     )
 
@@ -831,28 +831,6 @@ update msg model loggedIn =
 
             else
                 UR.init model
-
-
-getFullDomain : Shared -> Model -> String
-getFullDomain shared model =
-    let
-        communityUrl =
-            Route.externalCommunityLink shared model.subdomain Route.Root
-    in
-    { communityUrl
-        | host = String.replace "localhost" "staging.cambiatus.io" communityUrl.host
-        , port_ = Nothing
-    }
-        |> Url.toString
-        |> String.replace "http://" ""
-        |> String.replace "https://" ""
-        |> (\domain ->
-                if String.endsWith "/" domain then
-                    String.dropRight 1 domain
-
-                else
-                    domain
-           )
 
 
 jsAddressToMsg : List String -> Value -> Maybe Msg

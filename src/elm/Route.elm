@@ -1,6 +1,6 @@
 module Route exposing
     ( Route(..)
-    , externalCommunityLink
+    , communityFullDomain
     , externalHref
     , fromUrl
     , href
@@ -172,6 +172,32 @@ externalHref shared community route =
         |> Attr.href
 
 
+communityFullDomain : Shared -> String -> String
+communityFullDomain shared subdomain =
+    let
+        communityUrl =
+            externalCommunityLink shared subdomain Root
+    in
+    { communityUrl
+        | host = String.replace "localhost" "staging.cambiatus.io" communityUrl.host
+        , port_ = Nothing
+    }
+        |> Url.toString
+        |> String.replace "http://" ""
+        |> String.replace "https://" ""
+        |> (\domain ->
+                if String.endsWith "/" domain then
+                    String.dropRight 1 domain
+
+                else
+                    domain
+           )
+
+
+
+-- INTERNAL
+
+
 {-| A link to a community. The link preserves the environment
 (staging/demo/prod/localhost) based on the current url
 -}
@@ -230,10 +256,6 @@ externalCommunityLink shared subdomain route =
         | host = communityHost
         , path = routeToString route
     }
-
-
-
--- INTERNAL
 
 
 parseRedirect : Url -> Maybe String -> Maybe Route

@@ -220,10 +220,13 @@ update msg model ({ shared } as loggedIn) =
                 maybeCommunity =
                     RemoteData.toMaybe loggedIn.selectedCommunity
 
+                inputFullDomain =
+                    Route.communityFullDomain shared model.subdomainInput
+
                 isSameSubdomain =
                     maybeCommunity
                         |> Maybe.map .subdomain
-                        |> Maybe.map ((==) (model.subdomainInput ++ ".cambiatus.io"))
+                        |> Maybe.map ((==) inputFullDomain)
                         |> Maybe.withDefault False
             in
             if isModelValid maybeCommunity model then
@@ -241,7 +244,7 @@ update msg model ({ shared } as loggedIn) =
                         |> UR.addCmd
                             (Api.Graphql.query shared
                                 (Just loggedIn.authToken)
-                                (Community.domainAvailableQuery (model.subdomainInput ++ ".cambiatus.io"))
+                                (Community.domainAvailableQuery inputFullDomain)
                                 GotDomainAvailableResponse
                             )
 
@@ -285,7 +288,7 @@ update msg model ({ shared } as loggedIn) =
                                             , logo = RemoteData.withDefault community.logo model.logo
                                             , name = model.nameInput
                                             , description = model.descriptionInput
-                                            , subdomain = model.subdomainInput ++ ".cambiatus.io"
+                                            , subdomain = Route.communityFullDomain shared model.subdomainInput
                                             , inviterReward =
                                                 String.toFloat model.inviterRewardInput
                                                     |> Maybe.withDefault community.inviterReward
@@ -376,7 +379,7 @@ update msg model ({ shared } as loggedIn) =
                         let
                             newCommunity =
                                 { symbol = community.symbol
-                                , subdomain = model.subdomainInput ++ ".cambiatus.io"
+                                , subdomain = Route.communityFullDomain shared model.subdomainInput
                                 }
 
                             redirectToCommunity =
