@@ -796,7 +796,7 @@ changeRouteTo maybeRoute model =
                         Cmd.none
 
                       else
-                        Route.replaceUrl shared.navKey (Route.Login (Just route))
+                        Route.replaceUrl shared.navKey Route.Join
                     )
     in
     case maybeRoute of

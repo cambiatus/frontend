@@ -157,15 +157,40 @@ type alias AccountKeys =
 
 
 view : Guest.Model -> Model -> { title : String, content : Html Msg }
-view { shared } model =
+view ({ shared } as guest) model =
     let
         { t } =
             shared.translators
+
+        content =
+            case guest.community of
+                RemoteData.Success community ->
+                    let
+                        hasInvite =
+                            case model.invitation of
+                                Just _ ->
+                                    True
+
+                                Nothing ->
+                                    False
+                    in
+                    if community.hasAutoInvite || hasInvite then
+                        viewCreateAccount shared.translators model
+
+                    else
+                        Page.fullPageLoading shared
+
+                RemoteData.NotAsked ->
+                    Page.fullPageLoading shared
+
+                RemoteData.Loading ->
+                    Page.fullPageLoading shared
+
+                RemoteData.Failure e ->
+                    Page.fullPageGraphQLError (t "register.registerTab") e
     in
-    { title =
-        t "register.registerTab"
-    , content =
-        viewCreateAccount shared.translators model
+    { title = t "register.registerTab"
+    , content = content
     }
 
 
@@ -814,7 +839,11 @@ update _ msg model { shared } =
             UR.init model
 
         CompletedLoadInvite (RemoteData.Success (Just invitation)) ->
-            if invitation.community.hasKyc then
+            if not invitation.community.hasAutoInvite then
+                UR.init model
+                    |> UR.addCmd (Route.pushUrl shared.navKey Route.Join)
+
+            else if invitation.community.hasKyc then
                 let
                     loadCountryData =
                         Api.Graphql.query
