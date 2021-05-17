@@ -30,7 +30,7 @@ const config = configuration[env]
 
 const GLOBAL_STORAGE_IFRAME_ID = 'cambiatus-globalstorage-iframe'
 
-const main = (setupIframe) => {
+const main = () => {
   const operationsBeforeIframeLoad = []
 
   let isIframeLoaded = false
@@ -159,7 +159,7 @@ const main = (setupIframe) => {
   const app = Elm.Main.init({
     flags: flags()
   })
-  setupIframe(false, (iframe) => {
+  setupIframe((iframe) => {
     operationsBeforeIframeLoad.forEach(operation => {
       iframe.contentWindow.postMessage(operation, config.endpoints.globalStorage)
     })
@@ -859,35 +859,23 @@ const main = (setupIframe) => {
   }
 }
 
-const mainApp = () => {
-  const setupIframe = (isInitial, onLoad) => {
-    const iframe = document.createElement('iframe')
-    const src = config.endpoints.globalStorage
+const setupIframe = (onLoad) => {
+  const iframe = document.createElement('iframe')
+  const src = config.endpoints.globalStorage
 
-    iframe.onload = () => {
-      const contentWindow = iframe.contentWindow
-      const postMessage = (message) => {
-        contentWindow.postMessage(message, src)
-      }
-
-      if (isInitial) {
-        postMessage({
-          method: 'getMany',
-          keys: [USER_KEY, LANGUAGE_KEY, PUSH_PREF, AUTH_TOKEN, RECENT_SEARCHES]
-        })
-      }
-
-      onLoad(iframe)
-    }
-
-    iframe.src = src
-    iframe.style = 'display: none'
-    iframe.id = GLOBAL_STORAGE_IFRAME_ID
-    document.body.appendChild(iframe)
+  iframe.onload = () => {
+    onLoad(iframe)
   }
 
+  iframe.src = src
+  iframe.style = 'display: none'
+  iframe.id = GLOBAL_STORAGE_IFRAME_ID
+  document.body.appendChild(iframe)
+}
+
+const mainApp = () => {
   let hasRunMain = false
-  // Receive a `getMany` message, and write all of the content to localStorage
+  // Receive a `getMany` response, and write all of the content to localStorage
   window.onmessage = (e) => {
     const payload = e.data
 
@@ -902,14 +890,25 @@ const mainApp = () => {
 
       if (!hasRunMain) {
         hasRunMain = true
-        main(setupIframe)
+        main()
       }
     }
   }
 
   // Read globalStorage data on load
   window.onload = () => {
-    setupIframe(true, (iframe) => {})
+    setupIframe((iframe) => {
+      const contentWindow = iframe.contentWindow
+      const src = config.endpoints.globalStorage
+      const postMessage = (message) => {
+        contentWindow.postMessage(message, src)
+      }
+
+      postMessage({
+        method: 'getMany',
+        keys: [USER_KEY, LANGUAGE_KEY, PUSH_PREF, AUTH_TOKEN, RECENT_SEARCHES]
+      })
+    })
   }
 }
 
