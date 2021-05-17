@@ -1,5 +1,6 @@
 module Route exposing
     ( Route(..)
+    , externalCommunityLink
     , externalHref
     , fromUrl
     , href
@@ -156,7 +157,7 @@ pushUrl key route =
 loadExternalCommunity : Shared -> { commuity | symbol : Eos.Symbol, subdomain : String } -> Route -> Cmd msg
 loadExternalCommunity shared community route =
     if shared.useSubdomain then
-        externalCommunityLink shared community route
+        externalCommunityLink shared community.subdomain route
             |> Url.toString
             |> Nav.load
 
@@ -166,59 +167,25 @@ loadExternalCommunity shared community route =
 
 externalHref : Shared -> { community | symbol : Eos.Symbol, subdomain : String } -> Route -> Attribute msg
 externalHref shared community route =
-    externalCommunityLink shared community route
+    externalCommunityLink shared community.subdomain route
         |> Url.toString
         |> Attr.href
-
-
-
--- INTERNAL
-
-
-parseRedirect : Url -> Maybe String -> Maybe Route
-parseRedirect url maybeQuery =
-    let
-        protocol =
-            case url.protocol of
-                Url.Http ->
-                    "http://"
-
-                Url.Https ->
-                    "https://"
-
-        host =
-            url.host
-
-        port_ =
-            case url.port_ of
-                Nothing ->
-                    ""
-
-                Just p ->
-                    ":" ++ String.fromInt p
-    in
-    maybeQuery
-        |> Maybe.andThen (\query -> Url.fromString (protocol ++ host ++ port_ ++ query))
-        |> Maybe.andThen (\url_ -> Url.parse (parser url_) url_)
 
 
 {-| A link to a community. The link preserves the environment
 (staging/demo/prod/localhost) based on the current url
 -}
-externalCommunityLink : Shared -> { community | symbol : Eos.Symbol, subdomain : String } -> Route -> Url
-externalCommunityLink shared community route =
+externalCommunityLink : Shared -> String -> Route -> Url
+externalCommunityLink shared subdomain route =
     let
         currentUrl =
             shared.url
 
-        defaultSubdomain =
-            "cambiatus"
-
         communitySubdomain =
-            community.subdomain
+            subdomain
                 |> String.split "."
                 |> List.head
-                |> Maybe.withDefault defaultSubdomain
+                |> Maybe.withDefault subdomain
 
         environments =
             [ "staging", "demo" ]
@@ -263,6 +230,37 @@ externalCommunityLink shared community route =
         | host = communityHost
         , path = routeToString route
     }
+
+
+
+-- INTERNAL
+
+
+parseRedirect : Url -> Maybe String -> Maybe Route
+parseRedirect url maybeQuery =
+    let
+        protocol =
+            case url.protocol of
+                Url.Http ->
+                    "http://"
+
+                Url.Https ->
+                    "https://"
+
+        host =
+            url.host
+
+        port_ =
+            case url.port_ of
+                Nothing ->
+                    ""
+
+                Just p ->
+                    ":" ++ String.fromInt p
+    in
+    maybeQuery
+        |> Maybe.andThen (\query -> Url.fromString (protocol ++ host ++ port_ ++ query))
+        |> Maybe.andThen (\url_ -> Url.parse (parser url_) url_)
 
 
 shopFilterToString : Shop.Filter -> String

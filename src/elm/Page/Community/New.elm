@@ -35,6 +35,7 @@ import Session.Shared exposing (Shared)
 import Task
 import Token
 import UpdateResult as UR
+import Url
 import Utils exposing (decodeEnterKeyDown)
 import View.Components
 import View.Feedback as Feedback
@@ -482,8 +483,8 @@ validateLogoUrl model =
 
 {-| Assumes `Model.subdomain` is available
 -}
-validateModel : Eos.Name -> Model -> Result Model ( Community.CreateCommunityData, Token.CreateTokenData )
-validateModel accountName model =
+validateModel : Shared -> Eos.Name -> Model -> Result Model ( Community.CreateCommunityData, Token.CreateTokenData )
+validateModel shared accountName model =
     let
         nameValidation =
             validateName model
@@ -512,7 +513,7 @@ validateModel accountName model =
                         , logoUrl = logoUrl
                         , name = name
                         , description = model.description
-                        , subdomain = model.subdomain ++ ".cambiatus.io"
+                        , subdomain = getFullDomain shared model
                         , inviterReward = inviterReward
                         , invitedReward = invitedReward
                         , hasShop = True
@@ -705,12 +706,12 @@ update msg model loggedIn =
                 |> UR.addCmd
                     (Api.Graphql.query loggedIn.shared
                         (Just loggedIn.authToken)
-                        (Community.domainAvailableQuery model.subdomain)
+                        (Community.domainAvailableQuery (getFullDomain loggedIn.shared model))
                         GotDomainAvailableResponse
                     )
 
         GotDomainAvailableResponse (RemoteData.Success True) ->
-            case validateModel loggedIn.accountName model of
+            case validateModel loggedIn.shared loggedIn.accountName model of
                 Ok ( createCommunityData, createTokenData ) ->
                     if LoggedIn.hasPrivateKey loggedIn then
                         let
@@ -830,6 +831,28 @@ update msg model loggedIn =
 
             else
                 UR.init model
+
+
+getFullDomain : Shared -> Model -> String
+getFullDomain shared model =
+    let
+        communityUrl =
+            Route.externalCommunityLink shared model.subdomain Route.Root
+    in
+    { communityUrl
+        | host = String.replace "localhost" "staging.cambiatus.io" communityUrl.host
+        , port_ = Nothing
+    }
+        |> Url.toString
+        |> String.replace "http://" ""
+        |> String.replace "https://" ""
+        |> (\domain ->
+                if String.endsWith "/" domain then
+                    String.dropRight 1 domain
+
+                else
+                    domain
+           )
 
 
 jsAddressToMsg : List String -> Value -> Maybe Msg
