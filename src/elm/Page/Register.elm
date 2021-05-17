@@ -1,4 +1,4 @@
-module Page.Register exposing (Model, Msg, init, jsAddressToMsg, msgToString, update, view)
+module Page.Register exposing (Model, Msg, init, jsAddressToMsg, msgToString, receiveBroadcast, update, view)
 
 import Address
 import Api.Graphql
@@ -38,7 +38,7 @@ import View.Form
 
 
 init : InvitationId -> Guest.Model -> ( Model, Cmd Msg )
-init invitationId { shared } =
+init invitationId ({ shared } as guest) =
     let
         initialStatus =
             case invitationId of
@@ -72,7 +72,10 @@ init invitationId { shared } =
                     Cmd.none
     in
     ( initialModel
-    , loadInvitationData
+    , Cmd.batch
+        [ loadInvitationData
+        , Guest.maybeInitWith CompletedLoadCommunity .community guest
+        ]
     )
 
 
@@ -510,6 +513,7 @@ type alias UpdateResult =
 
 type Msg
     = NoOp
+    | CompletedLoadCommunity Community.CommunityPreview
     | ValidateForm FormModel
     | GotAccountAvailabilityResponse Bool
     | AccountKeysGenerated (Result Decode.Error AccountKeys)
@@ -572,6 +576,19 @@ update _ msg model { shared } =
     case msg of
         NoOp ->
             model |> UR.init
+
+        CompletedLoadCommunity community ->
+            if community.hasAutoInvite then
+                UR.init model
+
+            else
+                case model.invitationId of
+                    Just _ ->
+                        UR.init model
+
+                    Nothing ->
+                        UR.init model
+                            |> UR.addCmd (Route.pushUrl shared.navKey Route.Join)
 
         ValidateForm formType ->
             let
@@ -839,11 +856,7 @@ update _ msg model { shared } =
             UR.init model
 
         CompletedLoadInvite (RemoteData.Success (Just invitation)) ->
-            if not invitation.community.hasAutoInvite then
-                UR.init model
-                    |> UR.addCmd (Route.pushUrl shared.navKey Route.Join)
-
-            else if invitation.community.hasKyc then
+            if invitation.community.hasKyc then
                 let
                     loadCountryData =
                         Api.Graphql.query
@@ -986,6 +999,13 @@ signUp shared { accountName, ownerKey } invitationId form =
 -- INTEROP
 
 
+receiveBroadcast : Guest.BroadcastMsg -> Maybe Msg
+receiveBroadcast broadcastMsg =
+    case broadcastMsg of
+        Guest.CommunityLoaded community ->
+            Just (CompletedLoadCommunity community)
+
+
 jsAddressToMsg : List String -> Value -> Maybe Msg
 jsAddressToMsg addr val =
     case addr of
@@ -1026,6 +1046,9 @@ msgToString msg =
     case msg of
         NoOp ->
             [ "NoOp" ]
+
+        CompletedLoadCommunity _ ->
+            [ "CompletedLoadCommunity" ]
 
         FormMsg _ ->
             [ "FormMsg" ]

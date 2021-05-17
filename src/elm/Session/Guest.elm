@@ -1,4 +1,19 @@
-module Session.Guest exposing (External(..), Model, Msg(..), Page(..), addAfterLoginRedirect, init, initLoggingIn, initModel, msgToString, subscriptions, update, view)
+module Session.Guest exposing
+    ( BroadcastMsg(..)
+    , External(..)
+    , Model
+    , Msg(..)
+    , Page(..)
+    , addAfterLoginRedirect
+    , init
+    , initLoggingIn
+    , initModel
+    , maybeInitWith
+    , msgToString
+    , subscriptions
+    , update
+    , view
+    )
 
 import Api.Graphql
 import Auth
@@ -19,6 +34,7 @@ import Profile exposing (Model)
 import RemoteData exposing (RemoteData)
 import Route exposing (Route)
 import Session.Shared as Shared exposing (Shared)
+import Task
 import Translation
 import UpdateResult as UR
 import Url
@@ -276,8 +292,12 @@ type External
     | SetFeedback Feedback.Model
 
 
+type BroadcastMsg
+    = CommunityLoaded Community.CommunityPreview
+
+
 type alias UpdateResult =
-    UR.UpdateResult Model Msg ()
+    UR.UpdateResult Model Msg BroadcastMsg
 
 
 type Msg
@@ -343,6 +363,7 @@ update msg ({ shared } as model) =
         CompletedLoadCommunityPreview (RemoteData.Success (Just communityPreview)) ->
             { model | community = RemoteData.Success communityPreview }
                 |> UR.init
+                |> UR.addExt (CommunityLoaded communityPreview)
 
         CompletedLoadCommunityPreview (RemoteData.Success Nothing) ->
             UR.init model
@@ -366,6 +387,17 @@ update msg ({ shared } as model) =
 
 
 -- TRANSFORM
+
+
+maybeInitWith : (a -> msg) -> (Model -> RemoteData e a) -> Model -> Cmd msg
+maybeInitWith toMsg attribute model =
+    case attribute model of
+        RemoteData.Success value ->
+            Task.succeed value
+                |> Task.perform toMsg
+
+        _ ->
+            Cmd.none
 
 
 addAfterLoginRedirect : Route -> Model -> Model

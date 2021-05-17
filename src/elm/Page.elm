@@ -367,6 +367,7 @@ type alias UpdateResult =
 
 type ExternalMsg
     = LoggedInExternalMsg LoggedIn.ExternalMsg
+    | GuestBroadcastMsg Guest.BroadcastMsg
 
 
 type Msg
@@ -393,7 +394,11 @@ update msg session =
 
         ( GotGuestMsg subMsg, Guest subModel ) ->
             Guest.update subMsg subModel
-                |> UR.map Guest GotGuestMsg (\() uR -> uR)
+                |> UR.map Guest
+                    GotGuestMsg
+                    (\extMsg uR ->
+                        UR.addExt (GuestBroadcastMsg extMsg) uR
+                    )
 
         ( GotLoggedInMsg subMsg, LoggedIn subModel ) ->
             LoggedIn.update subMsg subModel

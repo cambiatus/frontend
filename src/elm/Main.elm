@@ -314,6 +314,9 @@ update msg model =
 
                             Page.LoggedInExternalMsg (LoggedIn.Broadcast broadcastMsg) ->
                                 ( m, broadcast broadcastMsg m.status )
+
+                            Page.GuestBroadcastMsg broadcastMsg ->
+                                ( m, broadcastGuest broadcastMsg m.status )
                     )
                     msgToString
 
@@ -479,6 +482,26 @@ update msg model =
             ( model
             , Log.impossible ("Main" :: msgToString msg |> String.join ".")
             )
+
+
+broadcastGuest : Guest.BroadcastMsg -> Status -> Cmd Msg
+broadcastGuest broadcastMessage status =
+    let
+        maybeMsg =
+            case status of
+                Register _ _ ->
+                    Register.receiveBroadcast broadcastMessage
+                        |> Maybe.map GotRegisterMsg
+
+                _ ->
+                    Nothing
+    in
+    case maybeMsg of
+        Just msg ->
+            spawnMessage msg
+
+        Nothing ->
+            Cmd.none
 
 
 broadcast : LoggedIn.BroadcastMsg -> Status -> Cmd Msg
