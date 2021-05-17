@@ -127,7 +127,7 @@ view guest model =
 viewPassphrase : Guest.Model -> PassphraseModel -> List (Html PassphraseMsg)
 viewPassphrase ({ shared } as guest) model =
     let
-        { t } =
+        { t, tr } =
             shared.translators
 
         enterKeyCode =
@@ -157,12 +157,20 @@ viewPassphrase ({ shared } as guest) model =
         showRegisterLink =
             RemoteData.map .hasAutoInvite guest.community
                 |> RemoteData.withDefault False
+
+        communityName =
+            case guest.community of
+                RemoteData.Success community ->
+                    community.name
+
+                _ ->
+                    ""
     in
     [ form [ class "sf-content flex flex-col flex-grow justify-center" ]
         [ viewIllustration "login_key.svg"
         , p [ class "text-white text-body mb-5" ]
             [ span [ class "text-green text-caption tracking-wide uppercase block mb-1" ]
-                [ text (t "menu.my_communities") ]
+                [ text (tr "menu.my_communities" [ ( "community_name", communityName ) ]) ]
             , span [ class "text-white block leading-relaxed" ]
                 [ text (t "auth.login.wordsMode.input.description") ]
             ]

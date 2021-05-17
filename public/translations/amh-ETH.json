@@ -7,7 +7,7 @@
     },
     "menu": {
       "title": "የአማራጭ ዝርዝር",
-      "my_communities": "እንኳን ደህና መጡ ወደ ",
+      "my_communities": "ወደ {{community_name}} እንኳን በደህና መጡ",
       "dashboard": "ዳሽቦርድ",
       "news": "ዜና",
       "learn": "መማር",
