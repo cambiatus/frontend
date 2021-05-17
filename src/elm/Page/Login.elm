@@ -170,7 +170,7 @@ viewPassphrase ({ shared } as guest) model =
         [ viewIllustration "login_key.svg"
         , p [ class "text-white text-body mb-5" ]
             [ span [ class "text-green text-caption tracking-wide uppercase block mb-1" ]
-                [ text (tr "menu.my_communities" [ ( "community_name", communityName ) ]) ]
+                [ text (tr "menu.welcome_to" [ ( "community_name", communityName ) ]) ]
             , span [ class "text-white block leading-relaxed" ]
                 [ text (t "auth.login.wordsMode.input.description") ]
             ]

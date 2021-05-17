@@ -7,7 +7,8 @@
   },
   "menu": {
     "title": "Menú",
-    "my_communities": "Benvingut a {{community_name}}",
+    "welcome_to": "Benvingut a {{community_name}}",
+    "my_communities": "Benvingut a ",
     "dashboard": "Inici",
     "news": "Notícies",
     "learn": "Aprendre",
