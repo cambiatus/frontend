@@ -469,6 +469,7 @@
       "title_with_community": "Introduïu {{community_name}}",
       "member_count": "{{member_count}} membres",
       "only_invited": "Aquesta comunitat només permet als hostes",
+      "already_member": "Ja sóc membre",
       "visit_website": "Visiteu el lloc web"
     },
     "details": {

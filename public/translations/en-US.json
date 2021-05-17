@@ -465,6 +465,7 @@
       "title_with_community": "Join {{community_name}}",
       "member_count": "{{member_count}} members",
       "only_invited": "This community only allows invited members",
+      "already_member": "I'm already a member",
       "visit_website": "Visit the website"
     },
     "details": {

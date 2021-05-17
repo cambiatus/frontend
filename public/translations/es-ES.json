@@ -469,6 +469,7 @@
       "title_with_community": "Ingresa {{community_name}}",
       "member_count": "{{member_count}} miembros",
       "only_invited": "Esta comunidad solo permite invitados",
+      "already_member": "Ya soy miembro",
       "visit_website": "Visita la página web"
     },
     "details": {

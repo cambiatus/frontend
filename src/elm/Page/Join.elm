@@ -166,17 +166,24 @@ view_ isGuest ({ translators } as shared) community =
                         else
                             [ span [ class "block text-center text-sm" ]
                                 [ text (translators.t "community.join.only_invited") ]
-                            , case community.website of
-                                Nothing ->
-                                    text ""
-
-                                Just website ->
-                                    a
-                                        [ class "button button-primary w-full mt-4 cursor-pointer"
-                                        , href website
-                                        ]
-                                        [ text (translators.t "community.join.visit_website") ]
+                            , a
+                                [ class "button button-primary w-full mt-4"
+                                , Route.href (Route.Login Nothing)
+                                ]
+                                [ text (translators.t "community.join.already_member") ]
                             ]
+                       )
+                    ++ (case community.website of
+                            Nothing ->
+                                [ text "" ]
+
+                            Just website ->
+                                [ a
+                                    [ class "button button-secondary w-full mt-4 cursor-pointer"
+                                    , href website
+                                    ]
+                                    [ text (translators.t "community.join.visit_website") ]
+                                ]
                        )
                 )
             ]

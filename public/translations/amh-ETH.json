@@ -427,6 +427,7 @@
         "title_with_community": "{{community_name}} ያስገቡ",
         "member_count": "{{member_count}} አባላት",
         "only_invited": "ይህ ማህበረሰብ እንግዶችን ብቻ ይፈቅዳል",
+        "already_member": "እኔ ቀድሞውኑ አባል ነኝ",
         "visit_website": "ድር ጣቢያ ይጎብኙ"
       },
       "details": {

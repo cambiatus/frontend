@@ -473,6 +473,7 @@
       "title_with_community": "Entrar em {{community_name}}",
       "member_count": "{{member_count}} membros",
       "only_invited": "Essa comunidade permite apenas convidados",
+      "already_member": "Já sou membro",
       "visit_website": "Visitar o site"
     },
     "details": {
