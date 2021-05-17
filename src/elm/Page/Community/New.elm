@@ -38,7 +38,9 @@ import UpdateResult as UR
 import Utils exposing (decodeEnterKeyDown)
 import View.Components
 import View.Feedback as Feedback
+import View.Form
 import View.Form.Input as Input
+import View.Toggle as Toggle
 
 
 
@@ -75,6 +77,8 @@ type alias Model =
     , inviterReward : String
     , invitedReward : String
     , minimumBalance : String
+    , website : String
+    , hasAutoInvite : Bool
     , isDisabled : Bool
     , errors : List Error
     }
@@ -91,6 +95,8 @@ initModel =
     , inviterReward = "0"
     , invitedReward = "10"
     , minimumBalance = "-100"
+    , website = ""
+    , hasAutoInvite = False
     , isDisabled = False
     , errors = []
     }
@@ -165,6 +171,8 @@ view ({ shared } as loggedIn) model =
                             , viewMinimumBalance shared model.isDisabled model.minimumBalance model.errors
                             ]
                         ]
+                    , viewWebsite shared model.isDisabled model.website model.errors
+                    , viewAutoInvite shared model.isDisabled model.hasAutoInvite model.errors
                     , viewLogo shared model.isDisabled model.logoSelected model.logoList
                     ]
                 , button
@@ -249,6 +257,38 @@ viewSubdomain { translators } isDisabled defVal _ =
                 [ text ".cambiatus.io" ]
             )
         |> Input.toHtml
+
+
+viewWebsite : Shared -> Bool -> String -> List Error -> Html Msg
+viewWebsite { translators } isDisabled defVal _ =
+    Input.init
+        { label = translators.t "settings.community_info.fields.website"
+        , id = "comm-website"
+        , onInput = EnteredWebsite
+        , disabled = isDisabled
+        , value = defVal
+        , placeholder = Just "cambiatus.com"
+        , problems = Nothing
+        , translators = translators
+        }
+        |> Input.toHtml
+
+
+viewAutoInvite : Shared -> Bool -> Bool -> List Error -> Html Msg
+viewAutoInvite { translators } isDisabled defVal _ =
+    div [ class "flex flex-col" ]
+        [ View.Form.label "comm-autoinvite-title" (translators.t "settings.community_info.invitation.title")
+        , Toggle.init
+            { label = "settings.community_info.fields.invitation"
+            , id = "comm-autoinvite"
+            , onToggle = ToggledAutoInvite
+            , disabled = isDisabled
+            , value = not defVal
+            }
+            |> Toggle.withAttrs [ class "mb-10" ]
+            |> Toggle.withTooltip "settings.community_info.invitation.description"
+            |> Toggle.toHtml translators
+        ]
 
 
 viewSymbol : Shared -> Bool -> String -> List Error -> Html Msg
@@ -518,8 +558,8 @@ validateModel shared accountName model =
                         , hasShop = True
                         , hasObjectives = True
                         , hasKyc = False
-                        , hasAutoInvite = False
-                        , website = ""
+                        , hasAutoInvite = model.hasAutoInvite
+                        , website = model.website
                         }
                 )
                 symbolValidation
@@ -616,6 +656,8 @@ type Msg
     | EnteredInviterReward String
     | EnteredInvitedReward String
     | EnteredMinimumBalance String
+    | EnteredWebsite String
+    | ToggledAutoInvite Bool
     | ClickedLogo Int
     | EnteredLogo Int (List File)
     | CompletedLogoUpload Int (Result Http.Error String)
@@ -660,6 +702,14 @@ update msg model loggedIn =
         EnteredMinimumBalance minimumBalance ->
             { model | minimumBalance = minimumBalance }
                 |> validateField validateMinimumBalance MinimumBalance
+                |> UR.init
+
+        EnteredWebsite website ->
+            { model | website = website }
+                |> UR.init
+
+        ToggledAutoInvite hasAutoInvite ->
+            { model | hasAutoInvite = not hasAutoInvite }
                 |> UR.init
 
         EnteredSymbol symbol ->
@@ -903,6 +953,12 @@ msgToString msg =
 
         EnteredMinimumBalance _ ->
             [ "EnteredMinimumBalance" ]
+
+        EnteredWebsite _ ->
+            [ "EnteredWebsite" ]
+
+        ToggledAutoInvite _ ->
+            [ "ToggledAutoInvite" ]
 
         ClickedLogo _ ->
             [ "ClickedLogo" ]
