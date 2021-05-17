@@ -729,7 +729,7 @@ viewLogo shared model =
             }
             |> FileUploader.withVariant FileUploader.Small
             |> FileUploader.toHtml shared.translators
-        , div [ class "mt-4" ]
+        , div [ class "mt-4 md:text-center" ]
             [ div [ class "font-bold" ] [ text_ "settings.community_info.guidance" ]
             , div [ class "text-gray-600" ] [ text_ "settings.community_info.logo.description" ]
             ]

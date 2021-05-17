@@ -55,7 +55,7 @@ and character counters.
 
 import Eos
 import Html exposing (Html, div, input, li, span, text, ul)
-import Html.Attributes exposing (attribute, class, disabled, id, placeholder, value)
+import Html.Attributes exposing (attribute, class, classList, disabled, id, placeholder, value)
 import Html.Events exposing (onInput)
 import Session.Shared exposing (Translators)
 import View.Form
@@ -102,7 +102,19 @@ init options =
 -}
 toHtml : InputOptions a -> Html a
 toHtml options =
-    div [ class "mb-10 relative" ]
+    let
+        hasCounter =
+            case options.maximumCounterValue of
+                Just _ ->
+                    True
+
+                Nothing ->
+                    False
+    in
+    div
+        [ class "relative"
+        , classList [ ( "mb-10", not hasCounter ), ( "mb-6", hasCounter ) ]
+        ]
         [ View.Form.label options.id options.label
         , input options
         , case options.maximumCounterValue of
