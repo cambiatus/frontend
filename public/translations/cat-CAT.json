@@ -898,24 +898,28 @@
     "community_info": {
       "title": "Informació de la Comunitat",
       "description": "Logo, nom, descripció, url",
-      "guidance": "Orientació",
       "logo": {
         "title": "Logotip de la comunitat",
+        "guidance": "Orientació sobre la imatge del Logotip",
         "description": "El fitxer ha de ser en format PNG, JPG o SVG. Ha de mesurar 80px d’amplada i 80px d’alçada per poder-se veure millor a la interfície."
       },
       "invitation": {
         "title": "Accés a la comunitat",
+        "guidance": "Orientació sobre l'Accés a la Comunitat",
         "description": "Quan la comunitat necessita invitacions, els nous membres només poden accedir mitjançant una invitació."
       },
       "cover_photo": {
         "title": "Imatge de portada de la comunitat",
         "description": "Assegureu-vos d’afegir una imatge de bona qualitat"
       },
+      "url": {
+        "title": "URL personalitzat de la comunitat",
+        "guidance": "Orientació sobre l'URL Personalitzat"
+      },
       "fields": {
         "name": "Nom de la Comunitat",
         "description": "Descriviu la comunitat",
         "website": "Lloc web de la comunitat",
-        "url": "URL personalitzat de la comunitat.",
         "invitation": "Invitació"
       },
       "placeholders": {
@@ -946,9 +950,7 @@
       "constraints": {
         "length": "Màxim de 30 caràcters",
         "characters": "Utilitzeu les lletres de la a la z i els números del 0 al 9.",
-        "bad_words": "No utilitzeu paraules dolentes.",
-        "casing": "No utilitzeu majúscules.",
-        "accents": "No utilitzeu caràcters especials ni lletres amb accents. Per exemple. @!?:; âãá"
+        "donts": "No: utilitzeu paraules dolentes; utilitzeu majúscules; utilitzeu caràcters especials ni lletres amb accents. Per exemple. @!?:; âãá."
       }
     },
     "community_currency": {

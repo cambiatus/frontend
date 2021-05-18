@@ -900,24 +900,28 @@
     "community_info": {
       "title": "Informações da Comunidade",
       "description": "Logo, nome, descrição, url",
-      "guidance": "Orientação",
       "logo": {
         "title": "Logo da comunidade",
+        "guidance": "Orientação sobre a Logo",
         "description": "Seu arquivo deve estar no formato PNG, JPG ou SVG. Ele deve medir 80px em largura e 80px em altura para ser melhor visualizado na interface."
       },
       "invitation": {
         "title": "Acesso à comunidade",
+        "guidance": "Orientação sobre o Acesso à Comunidade",
         "description": "Quando a comunidade precisa de convites, novos membros só conseguem acesso através de um convite."
       },
       "cover_photo": {
         "title": "Foto de capa da comunidade",
         "description": "Use uma foto de boa qualidade"
       },
+      "url": {
+        "title": "URL personalizado da comunidade",
+        "guidance": "Orientação sobre o URL personalizado"
+      },
       "fields": {
         "name": "Nome da comunidade",
         "description": "Descreva a comunidade",
         "website": "Site da comunidade",
-        "url": "URL personalizado da comunidade",
         "invitation": "Convite"
       },
       "placeholders": {
@@ -948,9 +952,7 @@
       "constraints": {
         "length": "Maximo de 30 caractéres.",
         "characters": "Use letras de a a z, e números de 0 a 9.",
-        "bad_words": "Não use palavrões.",
-        "casing": "Não use letra maiúscula.",
-        "accents": "Não use caractéres especiais e letras com acentos. Ex. @!?:;âãá"
+        "donts": "Não: use palavrões; use letra maiúscula; use caractéres especiais e letras com acentos. Ex. @!?:;âãá."
       }
     },
     "community_currency": {

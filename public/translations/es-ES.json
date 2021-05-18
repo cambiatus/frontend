@@ -898,24 +898,28 @@
     "community_info": {
       "title": "Informações da Comunidade",
       "description": "Logo, nombre, descripción, url",
-      "guidance": "Guia",
       "logo": {
         "title": "Logotipo de la comunidad",
+        "guidance": "Orientación sobre la imagen del Logotipo",
         "description": "Su archivo debe estar en formato PNG, JPG o SVG. Debe medir 80px de ancho y 80px de alto para que se vea mejor en la interfaz."
       },
       "invitation": {
         "title": "Acceso a la comunidad",
+        "guidance": "Orientación sobre el Acceso a la Comunidad",
         "description": "Cuando la comunidad necesita invitaciones, los nuevos miembros solo pueden acceder a través de una invitación."
       },
       "cover_photo": {
         "title": "Imagen de portada de la comunidad",
         "description": "Asegúrese de agregar una imagen de buena calidad"
       },
+      "url": {
+        "title": "URL personalizada de la comunidad",
+        "guidance": "Orientación sobre la URL Personalizada"
+      },
       "fields": {
         "name": "Nombre de la comunidad",
         "description": "Describe la comunidad",
         "website": "Sitio web de la comunidad",
-        "url": "URL personalizada de la comunidad",
         "invitation": "Invitación"
       },
       "placeholders": {
@@ -946,9 +950,7 @@
       "constraints": {
         "length": "Máximo de 30 caracteres.",
         "characters": "Utilice letras de la a a la z y números del 0 al 9.",
-        "bad_words": "No uses malas palabras.",
-        "casing": "No use mayúsculas.",
-        "accents": "No utilice caracteres especiales ni letras con acentos. Ej. @!?:; âãá"
+        "donts": "No: uses malas palabras; use mayúsculas; utilice caracteres especiales ni letras con acentos. Ej. @!?:; âãá."
       }
     },
     "community_currency": {

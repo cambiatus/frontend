@@ -733,7 +733,7 @@ viewLogo shared model =
             |> FileUploader.withVariant FileUploader.Small
             |> FileUploader.toHtml shared.translators
         , div [ class "mt-4 md:text-center" ]
-            [ div [ class "font-bold" ] [ text_ "settings.community_info.guidance" ]
+            [ div [ class "font-bold" ] [ text_ "settings.community_info.logo.guidance" ]
             , div [ class "text-gray-600" ] [ text_ "settings.community_info.logo.description" ]
             ]
         ]
@@ -831,9 +831,9 @@ viewSubdomain shared model =
         text_ =
             text << t
     in
-    div []
+    div [ class "border-b border-gray-500 pb-4" ]
         [ Input.init
-            { label = t "settings.community_info.fields.url"
+            { label = t "settings.community_info.url.title"
             , id = "community_url_input"
             , onInput = EnteredSubdomain
             , disabled = model.isLoading
@@ -861,17 +861,11 @@ viewSubdomain shared model =
                     [ text ".cambiatus.io" ]
                 )
             |> Input.toHtml
-        , div [ class "font-bold" ] [ text_ "settings.community_info.guidance" ]
+        , span [ class "font-bold" ] [ text_ "settings.community_info.url.guidance" ]
         , ul [ class "text-gray-600" ]
-            [ ul []
-                [ li [] [ text_ "settings.community_info.constraints.length" ]
-                , li [] [ text_ "settings.community_info.constraints.characters" ]
-                ]
-            , ul [ class "mt-4" ]
-                [ li [] [ text_ "settings.community_info.constraints.bad_words" ]
-                , li [] [ text_ "settings.community_info.constraints.casing" ]
-                , li [] [ text_ "settings.community_info.constraints.accents" ]
-                ]
+            [ li [] [ text_ "settings.community_info.constraints.length" ]
+            , li [] [ text_ "settings.community_info.constraints.characters" ]
+            , li [] [ text_ "settings.community_info.constraints.donts" ]
             ]
         ]
 
@@ -880,7 +874,6 @@ viewInvitation : Shared -> Model -> Html Msg
 viewInvitation { translators } model =
     div [ class "flex flex-col" ]
         [ View.Form.label "" (translators.t "settings.community_info.invitation.title")
-        , span [ class "mt-4 mb-7" ] [ text (translators.t "settings.community_info.invitation.description") ]
         , View.Toggle.init
             { label = "settings.community_info.fields.invitation"
             , id = "invitation_toggle"
@@ -888,7 +881,10 @@ viewInvitation { translators } model =
             , disabled = False
             , value = not model.hasAutoInvite
             }
+            |> View.Toggle.withAttrs [ class "mt-4" ]
             |> View.Toggle.toHtml translators
+        , span [ class "font-bold mt-7" ] [ text (translators.t "settings.community_info.invitation.guidance") ]
+        , span [ class "text-gray-600" ] [ text (translators.t "settings.community_info.invitation.description") ]
         ]
 
 

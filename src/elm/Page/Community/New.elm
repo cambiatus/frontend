@@ -237,7 +237,7 @@ viewCurrencyName ({ translators } as shared) isDisabled defVal errors =
 viewSubdomain : Shared -> Bool -> String -> List Error -> Html Msg
 viewSubdomain { translators } isDisabled defVal _ =
     Input.init
-        { label = translators.t "settings.community_info.fields.url"
+        { label = translators.t "settings.community_info.url.title"
         , id = "comm-subdomain"
         , onInput = EnteredSubdomain
         , disabled = isDisabled

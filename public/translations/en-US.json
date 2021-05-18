@@ -896,24 +896,28 @@
     "community_info": {
       "title": "Community Information",
       "description": "Logo, name, description, url",
-      "guidance": "Guidance",
       "logo": {
         "title": "Community logo",
+        "guidance": "Guidance on the Logo image",
         "description": "Your file must be in PNG, JPG or SVG format. It should measure 80px in width and 80px in height to be better viewed on the interface."
       },
       "invitation": {
         "title": "Access to the community",
+        "guidance": "Guidance on Access to Community",
         "description": "When a community is invite-only, new members only get access through an invitation."
       },
       "cover_photo": {
         "title": "Community cover picture",
         "description": "Be sure to add a picture that has good quality"
       },
+      "url": {
+        "title": "Community custom URL",
+        "guidance": "Guidance on the Custom URL"
+      },
       "fields": {
         "name": "Community name",
         "description": "Describe the community",
         "website": "Community's website",
-        "url": "Community custom URL",
         "invitation": "Invitation"
       },
       "placeholders": {
@@ -944,9 +948,7 @@
       "constraints": {
         "length": "Maximum of 30 characters.",
         "characters": "Use letters a to z, and numbers 0 to 9.",
-        "bad_words": "Do not use bad words.",
-        "casing": "Do not use uppercase.",
-        "accents": "Do not use special characters and letters with accents. Eg. @!?:;âãá"
+        "donts": "Do not: use bad words; use uppercase; use special characters and letters with accents. Eg. @!?:;âãá."
       }
     },
     "community_currency": {
