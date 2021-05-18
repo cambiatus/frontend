@@ -279,6 +279,9 @@ update msg model ({ shared } as loggedIn) =
                                     else
                                         Just url
 
+                                ( RemoteData.Success url, Nothing ) ->
+                                    Just url
+
                                 _ ->
                                     Nothing
                     in
